@@ -65,6 +65,42 @@ async def test_initialize_user_variables__create_and_update(service, session: As
     assert all(i not in variables for i in bad_vars)
 
 
+@pytest.mark.parametrize("var_name", ["WATSONX_APIKEY", "WATSONX_PROJECT_ID"])
+async def test_initialize_user_variables__provider_variables_have_no_automatic_default_fields(
+    service, session: AsyncSession, monkeypatch, var_name
+):
+    user_id = uuid4()
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", [var_name])
+    monkeypatch.setenv(var_name, "provider-value")
+
+    await service.initialize_user_variables(user_id=user_id, session=session)
+
+    variable = await service.get_variable_object(user_id, var_name, session)
+    assert variable.default_fields == []
+
+
+@pytest.mark.parametrize("default_fields", [[], ["API Key"]])
+async def test_initialize_user_variables__preserves_existing_default_fields(
+    service, session: AsyncSession, monkeypatch, default_fields
+):
+    user_id = uuid4()
+    var_name = "WATSONX_APIKEY"
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", [var_name])
+    monkeypatch.setenv(var_name, "environment-key")
+    await service.create_variable(
+        user_id,
+        var_name,
+        "stored-key",
+        default_fields=default_fields,
+        session=session,
+    )
+
+    await service.initialize_user_variables(user_id=user_id, session=session)
+
+    variable = await service.get_variable_object(user_id, var_name, session)
+    assert variable.default_fields == default_fields
+
+
 async def test_initialize_user_variables__not_found_variable(service, session: AsyncSession):
     with patch("langflow.services.variable.service.DatabaseVariableService.create_variable") as m:
         m.side_effect = Exception()

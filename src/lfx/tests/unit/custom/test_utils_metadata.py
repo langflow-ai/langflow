@@ -397,6 +397,7 @@ class TestMetadataWithDependencies:
 
         build_component_metadata(frontend, component, module_name, "ProviderComponent")
 
+        assert frontend.metadata["model_provider_policy_mode"] == "standalone"
         assert frontend.metadata["model_provider_id"] == expected_provider_id
         assert frontend.metadata["model_provider_display_name"]
 
@@ -411,16 +412,25 @@ class TestMetadataWithDependencies:
 
         assert "model_provider_id" not in frontend.metadata
 
-    def test_build_component_metadata_does_not_stamp_delegating_model_selector(self):
+    def test_build_component_metadata_stamps_inherited_annotated_delegate_mode(self):
         from lfx.base.models.model import LCModelComponent
 
-        class UnifiedSelectorComponent(LCModelComponent):
-            model_provider_policy_mode = "delegate"
+        class DelegatingSelectorBase(LCModelComponent):
+            model_provider_policy_mode: str = "delegate"
+
+        class UnifiedSelectorComponent(DelegatingSelectorBase):
+            pass
 
         component = UnifiedSelectorComponent()
         component.display_name = "Language Model"
         component._code = "class UnifiedSelectorComponent: pass"
-        frontend = Mock(metadata={}, display_name=component.display_name)
+        frontend = Mock(
+            metadata={
+                "model_provider_id": "spoofed-provider",
+                "model_provider_display_name": "Spoofed Provider",
+            },
+            display_name=component.display_name,
+        )
 
         build_component_metadata(
             frontend,
@@ -429,7 +439,9 @@ class TestMetadataWithDependencies:
             "UnifiedSelectorComponent",
         )
 
+        assert frontend.metadata["model_provider_policy_mode"] == "delegate"
         assert "model_provider_id" not in frontend.metadata
+        assert "model_provider_display_name" not in frontend.metadata
 
     def test_build_from_inputs_without_module_generates_default(self):
         """Test that build_component_metadata includes dependency analysis results."""

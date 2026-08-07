@@ -678,6 +678,17 @@ def model_component_provider_id(component: object, *, module_name: str | None = 
     return resolve_provider_id(component.__class__.__name__)
 
 
+def model_component_policy_mode(component: object) -> str:
+    """Return the normalized provider-policy mode declared by a model component.
+
+    The attribute may be inherited or type-annotated, so runtime attribute
+    lookup is the authoritative source. Unknown or malformed values fail
+    closed to ``standalone`` rather than creating an exemption.
+    """
+    mode = getattr(component, "model_provider_policy_mode", "standalone")
+    return mode if mode in ("delegate", "none") else "standalone"
+
+
 def uses_standalone_model_provider_policy(component: object) -> bool:
     """Return whether the outer component boundary owns provider enforcement.
 
@@ -685,8 +696,7 @@ def uses_standalone_model_provider_policy(component: object) -> bool:
     the selected provider—not the wrapper's module—is enforced. Local utility
     components can opt out because they do not invoke a model provider.
     """
-    mode = getattr(component, "model_provider_policy_mode", "standalone")
-    return mode not in ("delegate", "none")
+    return model_component_policy_mode(component) == "standalone"
 
 
 def provider_name_for_id(provider_id: str) -> str | None:

@@ -201,9 +201,9 @@ RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
 
 RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data \
-    && mkdir -p /app/langflow \
-    && chown -R 1000:0 /app/langflow \
-    && chmod -R g+rwX /app/langflow
+    && mkdir -p /app/data /app/langflow \
+    && chown -R 1000:0 /app/data /app/langflow \
+    && chmod -R g+rwX /app/data /app/langflow
 
 # Give uid 1000 a writable npm cache. The image ships Node so users can spawn
 # stdio MCP servers via npx, while the UBI HOME is not owned by that uid.
@@ -217,6 +217,7 @@ LABEL org.opencontainers.image.authors=['Langflow'] \
       org.opencontainers.image.source=https://github.com/langflow-ai/langflow
 
 ENV PATH="/app/.venv/bin:$PATH" \
+    HOME=/app/data \
     BASH_ENV="" \
     ENV="" \
     PROMPT_COMMAND="" \

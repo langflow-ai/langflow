@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import builtins
 from dataclasses import FrozenInstanceError
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -15,6 +17,14 @@ from lfx.services.model_provider_policy import (
     reset_current_model_provider_policy_context,
     set_current_model_provider_policy_context,
 )
+from lfx.services.policy_bundle import PolicyBundleService, PolicyBundleSnapshot, policy_bundle_content_hash
+
+_DENIED_RUNTIME_CATALOG_CALLS: list[None] = []
+
+
+def _denied_runtime_catalog_loader():
+    _DENIED_RUNTIME_CATALOG_CALLS.append(None)
+    return [{"name": "blocked-model", "model_type": "llm"}]
 
 
 def _restricted_snapshot(*allowed: str) -> ModelProviderPolicySnapshot:
@@ -52,6 +62,12 @@ def test_default_service_allows_every_candidate():
     assert snapshot.allows("Anthropic")
 
 
+def test_default_service_does_not_claim_an_external_policy_source():
+    service = ModelProviderPolicyService()
+
+    assert service.external_approved_provider_ids is None
+
+
 def test_default_service_allows_every_registered_provider():
     from lfx.base.models.provider_registry import get_registry_snapshot
 
@@ -65,6 +81,111 @@ def test_default_service_allows_every_registered_provider():
     )
 
     assert snapshot.allowed_provider_ids == provider_ids
+
+
+def test_default_service_applies_install_wide_approved_provider_ceiling():
+    service = ModelProviderPolicyService()
+    service.set_approved_provider_ids({"openai"}, version=7)
+
+    snapshot = service.resolve(
+        context=ModelProviderPolicyContext(user_id="user-1"),
+        candidate_provider_ids=frozenset({"openai", "anthropic"}),
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
+
+    assert snapshot.allowed_provider_ids == frozenset({"openai"})
+    assert service.approved_provider_ids == frozenset({"openai"})
+    assert service.policy_version == 7
+
+
+def test_empty_approved_provider_ceiling_preserves_allow_all_default():
+    service = ModelProviderPolicyService()
+    service.set_approved_provider_ids({"openai"})
+    service.set_approved_provider_ids(set())
+
+    snapshot = service.resolve(
+        context=ModelProviderPolicyContext(user_id="user-1"),
+        candidate_provider_ids=frozenset({"openai", "anthropic"}),
+        purpose=ModelProviderPolicyPurpose.CONFIGURE,
+    )
+
+    assert snapshot.allowed_provider_ids == frozenset({"openai", "anthropic"})
+    assert not service.approved_provider_ids
+
+
+def test_shared_bundle_rejects_provider_only_mutation_without_poisoning_revision_or_hash():
+    bundle_service = PolicyBundleService()
+    initial = PolicyBundleSnapshot(
+        revision=3,
+        initialized=True,
+        source="api",
+        approved_provider_ids=frozenset({"openai"}),
+        blocked_component_keys=frozenset({"PythonREPL"}),
+        blocked_template_keys=frozenset({"Starter"}),
+        content_hash=policy_bundle_content_hash(
+            approved_provider_ids={"openai"},
+            blocked_component_keys={"PythonREPL"},
+            blocked_template_keys={"Starter"},
+        ),
+    )
+    bundle_service.publish(initial)
+    service = ModelProviderPolicyService(bundle_service)
+
+    with pytest.raises(RuntimeError, match="Provider-only mutation is not allowed"):
+        service.set_approved_provider_ids({"anthropic"}, version=4)
+
+    assert bundle_service.snapshot is initial
+
+
+def test_default_service_rejects_a_stale_persisted_policy_version():
+    service = ModelProviderPolicyService()
+    service.set_approved_provider_ids({"openai"}, version=5)
+
+    changed = service.set_approved_provider_ids({"anthropic"}, version=4)
+
+    assert changed is False
+    assert service.approved_provider_ids == frozenset({"openai"})
+    assert service.policy_version == 5
+
+
+def test_default_service_fails_closed_until_policy_source_recovers():
+    service = ModelProviderPolicyService()
+    service.set_approved_provider_ids({"openai", "anthropic"}, version=5)
+
+    assert service.fail_closed() is True
+    denied = service.resolve(
+        context=ModelProviderPolicyContext(user_id="user-1"),
+        candidate_provider_ids=frozenset({"openai", "anthropic"}),
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
+
+    assert denied.allowed_provider_ids == frozenset()
+    assert service.policy_source_available is False
+
+    # A same-version refresh is enough to recover because the persisted state
+    # may not have changed while the store was temporarily unavailable.
+    assert service.set_approved_provider_ids({"openai", "anthropic"}, version=5) is True
+    recovered = service.resolve(
+        context=ModelProviderPolicyContext(user_id="user-1"),
+        candidate_provider_ids=frozenset({"openai", "anthropic"}),
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
+    assert recovered.allowed_provider_ids == frozenset({"openai", "anthropic"})
+    assert service.policy_source_available is True
+
+
+def test_default_service_stays_available_when_unrestricted_policy_source_fails():
+    service = ModelProviderPolicyService()
+
+    assert service.fail_closed() is False
+    snapshot = service.resolve(
+        context=ModelProviderPolicyContext(user_id="user-1"),
+        candidate_provider_ids=frozenset({"openai", "anthropic"}),
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
+
+    assert snapshot.allowed_provider_ids == frozenset({"openai", "anthropic"})
+    assert service.policy_source_available is True
 
 
 async def test_async_resolver_caches_until_invalidation():
@@ -133,7 +254,7 @@ def test_snapshot_cache_expires_after_ttl(monkeypatch):
     from lfx.services.model_provider_policy import base as policy_base
 
     now = [100.0]
-    monkeypatch.setattr(policy_base.time, "monotonic", lambda: now[0])
+    monkeypatch.setattr(policy_base, "time", SimpleNamespace(monotonic=lambda: now[0]))
     service = _CountingPolicy()
     service.SNAPSHOT_CACHE_TTL_SECONDS = 5.0
     kwargs = {
@@ -174,6 +295,23 @@ def test_snapshot_cache_evicts_least_recently_used_entry():
     _resolve("second")
 
     assert service.evaluations == 4
+
+
+def test_zero_sized_snapshot_cache_reevaluates_every_resolution():
+    service = _CountingPolicy()
+    service.SNAPSHOT_CACHE_MAX_SIZE = 0
+    kwargs = {
+        "context": ModelProviderPolicyContext(user_id="user-1"),
+        "candidate_provider_ids": frozenset({"openai"}),
+        "purpose": ModelProviderPolicyPurpose.USE,
+    }
+
+    first = service.resolve(**kwargs)
+    second = service.resolve(**kwargs)
+
+    assert second == first
+    assert second is not first
+    assert service.evaluations == 2
 
 
 def test_unhashable_policy_attributes_bypass_snapshot_cache():
@@ -447,13 +585,27 @@ def test_context_attributes_are_deeply_immutable():
 
 def test_runtime_denies_provider_before_credential_resolution(monkeypatch):
     credential_lookup_called = False
+    class_lookup_called = False
+    runtime_imports = []
+    real_import = builtins.__import__
 
     def _credential_lookup(*_args, **_kwargs):
         nonlocal credential_lookup_called
         credential_lookup_called = True
         return "secret"
 
+    def _track_import(name, *args, **kwargs):
+        runtime_imports.append(name)
+        return real_import(name, *args, **kwargs)
+
+    def _class_lookup(*_args, **_kwargs):
+        nonlocal class_lookup_called
+        class_lookup_called = True
+        return object
+
     monkeypatch.setattr("lfx.base.models.unified_models.get_api_key_for_provider", _credential_lookup)
+    monkeypatch.setattr("lfx.base.models.unified_models.get_model_class", _class_lookup)
+    monkeypatch.setattr(builtins, "__import__", _track_import)
 
     with pytest.raises(ModelProviderPolicyError) as exc_info:
         get_llm(
@@ -464,17 +616,34 @@ def test_runtime_denies_provider_before_credential_resolution(monkeypatch):
 
     assert exc_info.value.code == "policy_blocked"
     assert credential_lookup_called is False
+    assert class_lookup_called is False
+    assert "langchain_core.language_models" not in runtime_imports
+    assert not any(name.startswith("langchain_anthropic") for name in runtime_imports)
 
 
 def test_embedding_runtime_denies_provider_before_credential_resolution(monkeypatch):
     credential_lookup_called = False
+    class_lookup_called = False
+    runtime_imports = []
+    real_import = builtins.__import__
 
     def _credential_lookup(*_args, **_kwargs):
         nonlocal credential_lookup_called
         credential_lookup_called = True
         return "secret"
 
+    def _track_import(name, *args, **kwargs):
+        runtime_imports.append(name)
+        return real_import(name, *args, **kwargs)
+
+    def _class_lookup(*_args, **_kwargs):
+        nonlocal class_lookup_called
+        class_lookup_called = True
+        return object
+
     monkeypatch.setattr("lfx.base.models.unified_models.get_api_key_for_provider", _credential_lookup)
+    monkeypatch.setattr("lfx.base.models.unified_models.get_embedding_class", _class_lookup)
+    monkeypatch.setattr(builtins, "__import__", _track_import)
 
     with pytest.raises(ModelProviderPolicyError):
         get_embeddings(
@@ -484,6 +653,43 @@ def test_embedding_runtime_denies_provider_before_credential_resolution(monkeypa
         )
 
     assert credential_lookup_called is False
+    assert class_lookup_called is False
+    assert "langchain_core.embeddings" not in runtime_imports
+    assert not any(name.startswith("langchain_anthropic") for name in runtime_imports)
+
+
+@pytest.mark.parametrize("instantiate", [get_llm, get_embeddings])
+def test_denied_extension_runtime_does_not_execute_catalog_loader(monkeypatch, instantiate):
+    from lfx.base.models.provider_registry import ProviderSpec, register_provider, unregister_provider
+
+    provider = "Denied Runtime Extension"
+    register_provider(
+        ProviderSpec(
+            name=provider,
+            provider_id="denied-runtime-extension",
+            metadata={
+                "icon": "Bot",
+                "variables": [],
+                "mapping": {"model_class": "ChatOpenAI", "model_param": "model"},
+            },
+            catalog_loader=f"{__name__}:_denied_runtime_catalog_loader",
+        )
+    )
+    service = ModelProviderPolicyService()
+    service.set_approved_provider_ids({"openai"})
+    monkeypatch.setattr("lfx.services.deps.get_model_provider_policy_service", lambda: service)
+    _DENIED_RUNTIME_CATALOG_CALLS.clear()
+
+    try:
+        with pytest.raises(ModelProviderPolicyError):
+            instantiate(
+                [{"name": "blocked-model", "provider": provider, "metadata": {}}],
+                user_id="user-1",
+            )
+    finally:
+        unregister_provider(provider)
+
+    assert _DENIED_RUNTIME_CATALOG_CALLS == []
 
 
 @pytest.mark.parametrize("runtime", [get_llm, get_embeddings], ids=["llm", "embeddings"])
@@ -609,6 +815,8 @@ def test_delegating_model_component_skips_outer_provider_gate(monkeypatch):
 
 
 def test_known_llm_provider_ignores_spoofed_runtime_metadata(monkeypatch):
+    from lfx.base.models.unified_models import instantiation
+
     requested_classes = []
     captured = {}
 
@@ -623,6 +831,11 @@ def test_known_llm_provider_ignores_spoofed_runtime_metadata(monkeypatch):
     monkeypatch.setattr("lfx.base.models.unified_models.get_model_class", _get_model_class)
     monkeypatch.setattr("lfx.base.models.unified_models.get_api_key_for_provider", lambda *_args, **_kwargs: None)
     monkeypatch.setattr("lfx.base.models.unified_models.get_all_variables_for_provider", lambda *_args: {})
+    # ollama.test (RFC 6761 reserved TLD) never resolves, so the DNS-pinning
+    # SSRF transport for ChatOllama fails in every environment. The URL value
+    # is irrelevant to this test's subject (spoofed metadata being ignored),
+    # so stub the transport factory (same seam test_provider_registry stubs).
+    monkeypatch.setattr(instantiation, "ssrf_protected_httpx_client_kwargs_for_url", lambda _url: ({}, {}))
 
     result = get_llm(
         [
@@ -670,6 +883,9 @@ def test_known_embedding_provider_ignores_spoofed_runtime_metadata(monkeypatch):
     monkeypatch.setattr("lfx.base.models.unified_models.get_api_key_for_provider", lambda *_args, **_kwargs: None)
     monkeypatch.setattr("lfx.base.models.unified_models.get_all_variables_for_provider", lambda *_args: {})
     monkeypatch.setattr(instantiation, "_get_configured_embedding_providers", lambda *_args: [])
+    # See the LLM variant above: ollama.test never resolves, and DNS is not
+    # what this test is about.
+    monkeypatch.setattr(instantiation, "ssrf_protected_httpx_client_kwargs_for_url", lambda _url: ({}, {}))
 
     result = get_embeddings(
         [
@@ -808,6 +1024,8 @@ def test_model_options_filter_denied_dynamic_sources(option_builder, model_type,
         },
     ]
     live_enabled_providers = []
+    policy = _restricted_snapshot("openai")
+    fetch_enabled = AsyncMock(return_value={"OpenAI", "Anthropic"})
 
     def _replace_with_live_models(groups, _user_id, enabled_providers, *_args, **_kwargs):
         live_enabled_providers.append(set(enabled_providers))
@@ -832,15 +1050,19 @@ def test_model_options_filter_denied_dynamic_sources(option_builder, model_type,
         patch.object(
             model_catalog,
             "_fetch_enabled_providers_for_user",
-            new=AsyncMock(return_value={"OpenAI", "Anthropic"}),
+            new=fetch_enabled,
         ),
         patch.object(model_catalog, "replace_with_live_models", side_effect=_replace_with_live_models),
         patch.object(model_catalog, "inject_custom_enabled_models", side_effect=_inject_custom),
     ):
         options = getattr(model_catalog, option_builder)(
             user_id="00000000-0000-0000-0000-000000000001",
-            provider_policy=_restricted_snapshot("openai"),
+            provider_policy=policy,
         )
 
+    fetch_enabled.assert_awaited_once_with(
+        "00000000-0000-0000-0000-000000000001",
+        provider_policy=policy,
+    )
     assert live_enabled_providers == [{"OpenAI"}]
     assert {(option["provider"], option["name"]) for option in options} == {("OpenAI", openai_model)}

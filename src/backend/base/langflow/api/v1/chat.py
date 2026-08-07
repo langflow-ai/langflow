@@ -14,8 +14,11 @@ from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest, OutputValue
 from lfx.services.cache.utils import CacheMiss
 from lfx.utils.flow_validation import (
+    PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE,
+    CatalogPolicyIdentityUnavailableError,
     CustomComponentValidationError,
     prepare_public_flow_build,
+    validate_catalog_policy_for_flow,
     validate_flow_for_current_settings,
     validate_public_flow_no_code_execution,
 )
@@ -46,7 +49,7 @@ from langflow.api.v1.schemas import (
     VerticesOrderResponse,
 )
 from langflow.exceptions.component import ComponentBuildError
-from langflow.services.auth.utils import get_current_active_user, get_current_user_optional
+from langflow.services.auth.utils import get_current_user_optional
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.chat.service import ChatService
@@ -71,6 +74,26 @@ if TYPE_CHECKING:
     from lfx.graph.vertex.vertex_types import InterfaceVertex
 
 router = APIRouter(tags=["Chat"])
+
+
+def _validate_graph_for_execution(graph: Graph) -> None:
+    """Validate the effective cached graph against the current runtime policy."""
+    try:
+        validate_flow_for_current_settings(graph)
+    except CatalogPolicyIdentityUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except CustomComponentValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+async def _clear_invalid_graph_cache(chat_service: ChatService, flow_id: str) -> None:
+    """Best-effort eviction for a graph rejected by current runtime policy."""
+    try:
+        await chat_service.clear_cache(flow_id)
+    except Exception:  # noqa: BLE001
+        await logger.aexception("Failed to evict a graph rejected by runtime policy")
 
 
 async def _verify_job_ownership(job_id: str, current_user: CurrentActiveUser, queue_service: JobQueueService) -> None:
@@ -311,6 +334,8 @@ async def build_flow(
             validate_flow_for_current_settings(data.model_dump())
         elif flow and flow.data:
             validate_flow_for_current_settings(flow.data)
+    except CatalogPolicyIdentityUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except CustomComponentValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
@@ -486,6 +511,12 @@ async def build_vertex(
             graph.set_run_id(run_id)
         else:
             graph = cache.get("result")
+        try:
+            _validate_graph_for_execution(graph)
+        except HTTPException:
+            await _clear_invalid_graph_cache(chat_service, flow_id_str)
+            raise
+        if not isinstance(cache, CacheMiss):
             await graph.initialize_run()
             run_id = graph.run_id
         vertex = graph.get_vertex(vertex_id)
@@ -583,6 +614,8 @@ async def build_vertex(
                 component_run_id=run_id,
             ),
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_component,
@@ -604,24 +637,31 @@ async def build_vertex(
     return build_response
 
 
-async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService):
-    graph = None
+async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService, graph: Graph | None = None):
     try:
-        try:
-            cache = await chat_service.get_cache(flow_id)
-        except Exception as exc:  # noqa: BLE001
-            await logger.aexception("Error building Component")
-            yield str(StreamData(event="error", data={"error": str(exc)}))
-            return
+        if graph is None:
+            try:
+                cache = await chat_service.get_cache(flow_id)
+            except Exception as exc:  # noqa: BLE001
+                await logger.aexception("Error building Component")
+                yield str(StreamData(event="error", data={"error": str(exc)}))
+                return
 
-        if isinstance(cache, CacheMiss):
-            # If there's no cache
-            msg = f"No cache found for {flow_id}."
-            await logger.aerror(msg)
-            yield str(StreamData(event="error", data={"error": msg}))
-            return
-        else:
+            if isinstance(cache, CacheMiss):
+                # If there's no cache
+                msg = f"No cache found for {flow_id}."
+                await logger.aerror(msg)
+                yield str(StreamData(event="error", data={"error": msg}))
+                return
             graph = cache.get("result")
+
+        try:
+            _validate_graph_for_execution(graph)
+        except HTTPException as exc:
+            await _clear_invalid_graph_cache(chat_service, flow_id)
+            graph = None
+            yield str(StreamData(event="error", data={"error": exc.detail}))
+            return
 
         try:
             vertex: InterfaceVertex = graph.get_vertex(vertex_id)
@@ -690,12 +730,12 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
     "/build/{flow_id}/{vertex_id}/stream",
     response_class=StreamingResponse,
     deprecated=True,
-    dependencies=[Depends(get_current_active_user)],
     include_in_schema=False,
 )
 async def build_vertex_stream(
     flow_id: uuid.UUID,
     vertex_id: str,
+    current_user: CurrentActiveUser,
 ):
     """Build a vertex instead of the entire graph.
 
@@ -722,11 +762,46 @@ async def build_vertex_stream(
     Raises:
         HTTPException: If an error occurs while building the vertex.
     """
+    # The cache is keyed only by flow UUID and may contain another user's
+    # in-memory graph. Authorize before constructing the streaming response so
+    # an authenticated non-owner cannot read a built result or invoke
+    # ``vertex.stream()`` on that cached graph.
+    async with session_scope() as session:
+        stmt = (
+            select(Flow)
+            .where(Flow.id == flow_id)
+            .where((Flow.user_id == current_user.id) | (Flow.access_type == AccessTypeEnum.PUBLIC))
+        )
+        flow = (await session.exec(stmt)).first()
+    if not flow:
+        raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
+    await ensure_flow_permission(
+        current_user,
+        FlowAction.EXECUTE,
+        flow_id=flow_id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
+
+    chat_service = get_chat_service()
     try:
+        cache = await chat_service.get_cache(str(flow_id))
+        if isinstance(cache, CacheMiss):
+            graph = None
+        else:
+            graph = cache.get("result")
+            try:
+                _validate_graph_for_execution(graph)
+            except HTTPException:
+                await _clear_invalid_graph_cache(chat_service, str(flow_id))
+                raise
         return StreamingResponse(
-            _stream_vertex(str(flow_id), vertex_id, get_chat_service()),
+            _stream_vertex(str(flow_id), vertex_id, chat_service, graph),
             media_type="text/event-stream",
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Error building Component") from exc
 
@@ -850,6 +925,13 @@ async def build_public_tmp(
         async with session_scope() as session:
             flow = await session.get(Flow, flow_id)
             if flow and flow.data:
+                # The default anonymous build path sanitizes component code directly
+                # and therefore does not call validate_flow_for_current_settings.
+                # Enforce the exact catalog snapshot after the public-access check
+                # and before any graph is queued or built. The explicit public-custom
+                # opt-in already runs the unified validator inside prepare_public_flow_build.
+                if not settings.allow_public_custom_components:
+                    validate_catalog_policy_for_flow(flow.data)
                 # Block unauthenticated builds of flows that run arbitrary code
                 # (Python interpreter/REPL, legacy Python Code Structured tool,
                 # Smart Transform lambda) or invoke another saved flow (Run Flow,
@@ -895,6 +977,9 @@ async def build_public_tmp(
         # started through this public build path, preventing unauthenticated
         # callers from reading or cancelling private-flow builds by job_id.
         await queue_service.register_public_job(job_id)
+    except CatalogPolicyIdentityUnavailableError as exc:
+        await logger.awarning("Public flow component identities are temporarily unavailable")
+        raise HTTPException(status_code=503, detail=PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE) from exc
     except CustomComponentValidationError as exc:
         await logger.awarning(f"Public flow validation failed: {exc}")
         raise HTTPException(status_code=400, detail="This flow cannot be executed.") from exc

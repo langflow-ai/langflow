@@ -2,6 +2,7 @@ import pytest
 from langchain_core.tools import ToolException
 from lfx.components.tools.python_repl import PythonREPLToolComponent
 from lfx.components.utilities.python_repl_core import PythonREPLComponent
+from lfx.graph import Graph
 
 from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient
 
@@ -190,6 +191,128 @@ class TestPythonREPLComponentSecurity:
         assert "allow_custom_components" in data["error"]
         # The code must never have executed.
         assert "SHOULD_NOT_RUN" not in str(data)
+
+
+class TestPythonREPLToolComponentToolNameDescription(ComponentTestBaseWithoutClient):
+    """build_tool must honor the "Tool Name" / "Tool Description" inputs.
+
+    The class attributes `name = "PythonREPLTool"` and `description = "A tool for..."`
+    shadow the StrInputs of the same names — Component.__getattr__ only fires when
+    normal attribute lookup fails, so self.name/self.description in build_tool always
+    returned the class attributes and the user's input values were silently ignored.
+    """
+
+    @pytest.fixture
+    def component_class(self):
+        return PythonREPLToolComponent
+
+    @pytest.fixture
+    def default_kwargs(self):
+        return {
+            "name": "python_repl",
+            "description": "run code",
+            "global_imports": "math",
+            "code": "print('x')",
+        }
+
+    @pytest.fixture
+    def file_names_mapping(self):
+        return []
+
+    def test_tool_uses_name_and_description_inputs(self):
+        component = PythonREPLToolComponent(
+            name="my_custom_repl",
+            description="Custom description the agent should see.",
+            global_imports="math",
+            code="print('x')",
+        )
+        tool = component.build_tool()
+        assert tool.name == "my_custom_repl"
+        assert tool.description == "Custom description the agent should see."
+
+    def test_tool_uses_input_defaults_when_unset(self):
+        """With no explicit inputs, the input defaults win over the class attributes."""
+        tool = PythonREPLToolComponent().build_tool()
+        assert tool.name == "python_repl"
+        assert tool.description.startswith("A Python shell.")
+
+    def test_tool_falls_back_to_input_defaults_when_inputs_empty(self):
+        """Empty explicit inputs fall back to the input defaults."""
+        component = PythonREPLToolComponent(name="", description="")
+        tool = component.build_tool()
+        assert tool.name == "python_repl"
+        assert tool.description.startswith("A Python shell.")
+
+    def test_tool_falls_back_to_class_attributes_when_all_values_empty(self):
+        """When both the attribute and the input value are empty, the class attributes back-fill."""
+        component = PythonREPLToolComponent(name="", description="")
+        component._inputs["name"].value = ""
+        component._inputs["description"].value = ""
+        tool = component.build_tool()
+        assert tool.name == "PythonREPLTool"
+        assert tool.description == "A tool for running Python code in a REPL environment."
+
+    def test_tool_coerces_non_string_inputs(self):
+        """StrInput only warns on non-string values; tool metadata must still be strings.
+
+        Without coercion a non-string description crashes inside
+        StructuredTool.from_function (it dedents/strips the description).
+        """
+        component = PythonREPLToolComponent(name=123, description=456)
+        tool = component.build_tool()
+        assert tool.name == "123"
+        assert tool.description == "456"
+
+
+class TestPythonREPLToolComponentRunModel:
+    """run_model must execute the Python Code input, not the component's own source.
+
+    `BaseComponent.code` is a class-level property returning the component's source;
+    it shadowed the former StrInput named "code". The runtime field now serializes as
+    "python_code", while "code" remains accepted as a programmatic compatibility alias.
+    """
+
+    def test_run_model_executes_code_input(self):
+        component = PythonREPLToolComponent(
+            name="python_repl",
+            description="run code",
+            global_imports="math",
+            code="print(math.sqrt(16))",
+        )
+        results = component.run_model()
+        assert len(results) == 1
+        assert "4.0" in results[0].data["result"]
+
+    def test_run_model_uses_default_code_when_unset(self):
+        results = PythonREPLToolComponent().run_model()
+        assert "Hello, World!" in results[0].data["result"]
+
+    def test_run_model_does_not_execute_component_source(self):
+        """The input must win over the component's own source.
+
+        The component source starts with imports, so passing it to the tool would
+        raise ToolException("Imports are not allowed...").
+        """
+        component = PythonREPLToolComponent(code="print('input wins')")
+        results = component.run_model()
+        assert "input wins" in results[0].data["result"]
+
+    def test_run_model_accepts_legacy_code_setter(self):
+        component = PythonREPLToolComponent()
+        component.set(code="print('legacy setter input')")
+        results = component.run_model()
+        assert "legacy setter input" in results[0].data["result"]
+
+    @pytest.mark.asyncio
+    async def test_run_model_executes_python_code_after_frontend_round_trip(self):
+        component = PythonREPLToolComponent(python_code="print('round trip input')", _id="python-repl")
+        node = component.to_frontend_node()
+        graph = Graph.from_payload({"nodes": [node], "edges": []})
+
+        _ = [result async for result in graph.async_start()]
+
+        output = graph.get_vertex("python-repl").built_object["api_run_model"]
+        assert output[0].data["result"].strip() == "round trip input"
 
 
 class TestPythonREPLToolComponentSecurity:

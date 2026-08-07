@@ -39,6 +39,39 @@ _convert_field_type_to_type: dict[FieldTypes, type] = {
     FieldTypes.QUERY: str,
 }
 
+# Serialized component templates carry frontend field-type identifiers as strings.
+# Keep the conversion closed over known identifiers so Pydantic never interprets
+# an untrusted string as a ForwardRef during model rebuilding.
+_serialized_field_type_to_type: dict[str, type] = {
+    FieldTypes.TEXT.value: str,
+    FieldTypes.INTEGER.value: int,
+    FieldTypes.FLOAT.value: float,
+    FieldTypes.BOOLEAN.value: bool,
+    "boolean": bool,
+    FieldTypes.DICT.value: dict,
+    FieldTypes.NESTED_DICT.value: dict,
+    FieldTypes.SORTABLE_LIST.value: list,
+    FieldTypes.ACTION_PICKER.value: list,
+    FieldTypes.DURATION.value: dict,
+    FieldTypes.CONNECTION.value: str,
+    FieldTypes.AUTH.value: dict,
+    FieldTypes.FILE.value: str,
+    FieldTypes.PROMPT.value: str,
+    FieldTypes.MUSTACHE_PROMPT.value: str,
+    FieldTypes.CODE.value: str,
+    FieldTypes.OTHER.value: str,
+    FieldTypes.TABLE.value: dict,
+    FieldTypes.LINK.value: str,
+    FieldTypes.SLIDER.value: float,
+    FieldTypes.TAB.value: str,
+    FieldTypes.QUERY.value: str,
+    FieldTypes.TOOLS.value: list,
+    FieldTypes.MCP.value: dict,
+    FieldTypes.MODEL.value: list,
+    FieldTypes.DATA_DISPLAY.value: dict,
+    FieldTypes.DB_PROVIDER.value: str,
+}
+
 
 _convert_type_to_field_type = {
     str: MessageTextInput,
@@ -343,7 +376,11 @@ def create_input_schema_from_dict(inputs: list[dotdict], param_key: str | None =
     fields = {}
     for input_model in inputs:
         # Create a Pydantic Field for each input field
-        field_type = input_model.type
+        try:
+            field_type = _serialized_field_type_to_type[input_model.type]
+        except (KeyError, TypeError) as err:
+            msg = f"Unsupported serialized field type: {input_model.type!r}"
+            raise TypeError(msg) from err
         # Skip enum for large option lists to avoid token waste
         if (
             hasattr(input_model, "options")

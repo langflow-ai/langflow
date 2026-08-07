@@ -177,27 +177,14 @@ def apply_tweaks(node: dict[str, Any], node_tweaks: dict[str, Any]) -> None:
     # field is code-typed, literally named "code", or is a code/sandbox input on a
     # code-execution component — while leaving benign fields (name, description,
     # data, ...) on those components tweakable.
-    from lfx.utils.flow_validation import (
-        CODE_EXECUTION_COMPONENT_TYPES,
-        CODE_EXECUTION_FIELD_NAMES,
-        PROTECTED_TWEAK_FIELDS_BY_COMPONENT,
-    )
+    from lfx.utils.flow_validation import is_protected_tweak_field
 
     component_type = node.get("data", {}).get("type")
-    is_code_exec_component = component_type in CODE_EXECUTION_COMPONENT_TYPES
-    protected_tweak_fields = PROTECTED_TWEAK_FIELDS_BY_COMPONENT.get(component_type, ())
     for tweak_name, tweak_value in node_tweaks.items():
         if tweak_name not in template_data:
             continue
         field_type = template_data[tweak_name].get("type", "")
-        if (
-            field_type == "code"
-            or tweak_name == "code"
-            or (is_code_exec_component and tweak_name in CODE_EXECUTION_FIELD_NAMES)
-        ):
-            logger.warning(f"Security: refusing to override code field {tweak_name!r} via tweaks.")
-            continue
-        if tweak_name in protected_tweak_fields:
+        if is_protected_tweak_field(component_type, tweak_name, field_type):
             logger.warning(f"Security: refusing to override protected field {tweak_name!r} via tweaks.")
             continue
         if field_type == "NestedDict":

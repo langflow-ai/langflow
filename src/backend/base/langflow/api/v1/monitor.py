@@ -510,6 +510,11 @@ async def delete_messages_sessions(
     }
 
 
+def _compute_shared_message_flow_id(user_id: UUID, source_flow_id: UUID) -> UUID:
+    """Derive the authenticated user's virtual flow ID for shared-message storage."""
+    return compute_virtual_flow_id(user_id, source_flow_id, principal_type="user")
+
+
 @router.get("/messages/shared/sessions")
 async def get_shared_message_sessions(
     session: DbSession,
@@ -522,7 +527,7 @@ async def get_shared_message_sessions(
     original flow ID. Only messages stored under this virtual flow_id are returned.
     """
     try:
-        virtual_flow_id = compute_virtual_flow_id(current_user.id, source_flow_id)
+        virtual_flow_id = _compute_shared_message_flow_id(current_user.id, source_flow_id)
         stmt = select(MessageTable.session_id).distinct()
         stmt = stmt.where(MessageTable.flow_id == virtual_flow_id)
         stmt = stmt.where(col(MessageTable.session_id).isnot(None))
@@ -550,7 +555,7 @@ async def get_shared_messages(
     original flow ID. Only messages stored under this virtual flow_id are returned.
     """
     try:
-        virtual_flow_id = compute_virtual_flow_id(current_user.id, source_flow_id)
+        virtual_flow_id = _compute_shared_message_flow_id(current_user.id, source_flow_id)
         stmt = select(MessageTable)
         stmt = stmt.where(MessageTable.flow_id == virtual_flow_id)
 
@@ -590,7 +595,7 @@ async def delete_shared_messages_session(
 ):
     """Delete messages for a session on a shared/public flow, scoped to the authenticated user."""
     try:
-        virtual_flow_id = compute_virtual_flow_id(current_user.id, source_flow_id)
+        virtual_flow_id = _compute_shared_message_flow_id(current_user.id, source_flow_id)
         stmt = (
             delete(MessageTable)
             .where(MessageTable.flow_id == virtual_flow_id)
@@ -612,7 +617,7 @@ async def update_shared_message(
 ):
     """Update a message on a shared/public flow, scoped to the authenticated user."""
     try:
-        virtual_flow_id = compute_virtual_flow_id(current_user.id, source_flow_id)
+        virtual_flow_id = _compute_shared_message_flow_id(current_user.id, source_flow_id)
         db_message = (
             await session.exec(
                 select(MessageTable).where(
@@ -650,7 +655,7 @@ async def rename_shared_session(
 ) -> list[MessageResponse]:
     """Rename a session on a shared/public flow, scoped to the authenticated user."""
     try:
-        virtual_flow_id = compute_virtual_flow_id(current_user.id, source_flow_id)
+        virtual_flow_id = _compute_shared_message_flow_id(current_user.id, source_flow_id)
         stmt = select(MessageTable).where(
             MessageTable.flow_id == virtual_flow_id,
             MessageTable.session_id == old_session_id,

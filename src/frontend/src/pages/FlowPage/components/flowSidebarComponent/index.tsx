@@ -30,6 +30,7 @@ import {
 } from "@/customization/feature-flags";
 import { useAddComponent } from "@/hooks/use-add-component";
 import { useShortcutsStore } from "@/stores/shortcuts";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { setLocalStorage } from "@/utils/local-storage-util";
 import {
   nodeColors,
@@ -162,6 +163,9 @@ interface FlowSidebarComponentProps {
 export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const { t } = useTranslation();
   const rawData = useTypesStore((state) => state.data);
+  const catalogGovernanceEnabled = useUtilityStore(
+    (state) => state.catalogGovernanceEnabled,
+  );
 
   // Filter out knowledge components from files_and_knowledge category when ENABLE_KNOWLEDGE_BASES is OFF
   const data = useMemo(() => {
@@ -409,6 +413,13 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
         (dataFilter["MCP"] && Object.keys(dataFilter["MCP"]).length > 0),
     );
   }, [dataFilter]);
+
+  const isCatalogPolicyEmpty = useMemo(
+    () =>
+      catalogGovernanceEnabled &&
+      Object.values(baseData).every((items) => Object.keys(items).length === 0),
+    [baseData, catalogGovernanceEnabled],
+  );
 
   const handleKeyDownInput = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>, name: string) => {
@@ -875,6 +886,14 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                     ) : (
                       <NoResultsMessage
                         onClearSearch={handleClearSearch}
+                        message={
+                          isCatalogPolicyEmpty && !hasSearchInput
+                            ? t("sidebar.catalogPolicyEmpty")
+                            : undefined
+                        }
+                        showClearSearch={
+                          !(isCatalogPolicyEmpty && !hasSearchInput)
+                        }
                         showConfig={showConfig}
                         setShowConfig={setShowConfig}
                       />

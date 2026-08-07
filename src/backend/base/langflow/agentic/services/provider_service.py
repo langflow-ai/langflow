@@ -6,10 +6,9 @@ from uuid import UUID
 
 from lfx.base.models.model_metadata import CONDITIONAL_LIVE_MODEL_PROVIDERS, LIVE_MODEL_PROVIDERS
 from lfx.base.models.model_utils import get_live_models_for_provider
-from lfx.base.models.provider_registry import is_api_key_optional
+from lfx.base.models.provider_registry import get_registry_snapshot, is_api_key_optional
 from lfx.base.models.unified_models import (
     get_model_provider_variable_mapping,
-    get_model_providers,
     get_provider_required_variable_keys,
     get_unified_models_detailed,
 )
@@ -45,6 +44,11 @@ no longer exist — fall back to the catalog default.
 """
 
 
+def _get_registered_provider_names() -> list[str]:
+    """Return provider names without executing extension catalog loaders."""
+    return sorted(descriptor.name for descriptor in get_registry_snapshot().descriptors_by_id.values())
+
+
 async def get_enabled_providers_for_user(
     user_id: UUID | str,
     session: AsyncSession,
@@ -64,7 +68,7 @@ async def get_enabled_providers_for_user(
     all_variable_names = {var.name for var in all_variables}
 
     provider_variable_map = get_model_provider_variable_mapping()
-    registered_providers = get_model_providers()
+    registered_providers = _get_registered_provider_names()
     provider_candidates = [
         *provider_variable_map,
         *(
@@ -76,7 +80,7 @@ async def get_enabled_providers_for_user(
     provider_policy = resolve_model_provider_policy(
         user_id=user_id,
         providers=[*registered_providers, *provider_candidates],
-        purpose=ModelProviderPolicyPurpose.USE,
+        purpose=ModelProviderPolicyPurpose.CONFIGURE,
     )
 
     enabled_providers = []

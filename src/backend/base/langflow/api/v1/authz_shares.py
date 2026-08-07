@@ -16,6 +16,7 @@ from sqlmodel import select
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas.authz_shares import ShareCreate, ShareRead, ShareUpdate
 from langflow.services.authorization import ShareAction, ensure_share_permission
+from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.auth import (
     AuthzShare,
@@ -302,17 +303,20 @@ async def create_share(
     if owner_id is None:
         # UUID privacy: missing resource → 404.
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
-    await _ensure_can_administer_share(user=current_user, owner_id=owner_id)
-    # SECURITY: pass the *resource* owner (not the caller) so the owner-override
-    # in ensure_share_permission only fast-paths the real resource owner. With
-    # share_user_id=current_user.id the override would always trip and the
-    # authorization plugin's enforce() would never run for non-owner creators
-    # when the OSS floor is bypassed (cross_user_fetch + AUTHZ_ENABLED).
-    await ensure_share_permission(
-        current_user,
-        ShareAction.CREATE,
-        share_user_id=owner_id,
-    )
+    try:
+        await _ensure_can_administer_share(user=current_user, owner_id=owner_id)
+        # SECURITY: pass the *resource* owner (not the caller) so the owner-override
+        # in ensure_share_permission only fast-paths the real resource owner. With
+        # share_user_id=current_user.id the override would always trip and the
+        # authorization plugin's enforce() would never run for non-owner creators
+        # when the OSS floor is bypassed (cross_user_fetch + AUTHZ_ENABLED).
+        await ensure_share_permission(
+            current_user,
+            ShareAction.CREATE,
+            share_user_id=owner_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Resource not found") from exc
 
     row = AuthzShare(
         resource_type=payload.resource_type,

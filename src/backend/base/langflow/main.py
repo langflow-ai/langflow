@@ -270,6 +270,16 @@ def get_lifespan(*, fix_migration=False, version=None):
             except Exception as exc:  # noqa: BLE001 — never block startup on cleanup scheduling
                 await logger.awarning(f"Failed to start authz audit-log cleanup worker: {exc}")
 
+            # Keep the default OSS provider ceiling coherent across backend
+            # worker processes after an administrator commits a replacement.
+            # This worker is part of policy enforcement, so a scheduling failure
+            # must fail startup rather than leave a worker stale indefinitely.
+            from langflow.services.task.model_provider_policy_refresh import (
+                model_provider_policy_refresh_worker,
+            )
+
+            await model_provider_policy_refresh_worker.start()
+
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Setting up LLM caching")
             setup_llm_caching()
@@ -686,6 +696,14 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await audit_log_cleanup_worker.stop()
                     except Exception as e:  # noqa: BLE001
                         await logger.aerror(f"Failed to stop authz audit-log cleanup worker: {e}")
+                    try:
+                        from langflow.services.task.model_provider_policy_refresh import (
+                            model_provider_policy_refresh_worker,
+                        )
+
+                        await model_provider_policy_refresh_worker.stop()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop model-provider policy refresh worker: {e}")
 
                     # Cancel background tasks
                     tasks_to_cancel = []
