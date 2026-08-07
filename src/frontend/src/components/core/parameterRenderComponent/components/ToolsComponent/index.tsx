@@ -27,6 +27,7 @@ export default function ToolsComponent({
   hideButton = false,
   open,
   setOpen,
+  ariaLabelledBy,
   // biome-ignore lint/suspicious/noExplicitAny: legacy
 }: InputProps<any[] | undefined, ToolsComponentType>): JSX.Element | null {
   const { t } = useTranslation();
@@ -89,6 +90,7 @@ export default function ToolsComponent({
               "absolute -top-8 right-0 !text-mmd font-normal group-hover:text-primary",
               !button_description ? "text-muted-foreground" : "",
             )}
+            aria-labelledby={ariaLabelledBy}
           >
             <ForwardedIconComponent
               name={
@@ -150,7 +152,11 @@ export default function ToolsComponent({
               <span className="text-sm text-muted-foreground">
                 {t("input.noActionsAddedToServer")}
               </span>
-              <Button size={"sm"} onClick={() => setIsModalOpen(true)}>
+              <Button
+                size={"sm"}
+                onClick={() => setIsModalOpen(true)}
+                aria-labelledby={ariaLabelledBy}
+              >
                 <span>{t("input.addActions")}</span>
               </Button>
             </div>
@@ -166,6 +172,7 @@ export default function ToolsComponent({
               (disabled ? "pointer-events-none cursor-not-allowed" : "")
             }
             onClick={() => setIsModalOpen(true)}
+            aria-labelledby={ariaLabelledBy}
           >
             <span>
               {placeholder ||

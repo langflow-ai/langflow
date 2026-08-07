@@ -44,6 +44,7 @@ const CustomInputPopoverObject = ({
   handleKeyDown,
   showOptions,
   inspectionPanel,
+  ariaLabelledBy,
 }) => {
   const PopoverContentInput =
     editNode || inspectionPanel ? PopoverContent : PopoverContentWithoutPortal;
@@ -114,6 +115,7 @@ const CustomInputPopoverObject = ({
             if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
           }}
           data-testid={id}
+          aria-labelledby={ariaLabelledBy}
         />
       </PopoverAnchor>
       <PopoverContentInput

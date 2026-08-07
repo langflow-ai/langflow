@@ -90,7 +90,8 @@ const SortableListComponent = ({
   showParameter = true,
   ...baseInputProps
 }: InputProps<any, SortableListComponentProps>) => {
-  const { placeholder, handleOnNewValue, value } = baseInputProps;
+  const { placeholder, handleOnNewValue, value, ariaLabelledBy } =
+    baseInputProps;
   const [open, setOpen] = useState(false);
 
   // Convert value to an array if it exists, otherwise use empty array
@@ -163,6 +164,8 @@ const SortableListComponent = ({
               "dropdown-component-outline input-edit-node w-full",
               editNode ? "py-1" : "py-2",
             )}
+            aria-labelledby={ariaLabelledBy}
+            aria-expanded={open}
             data-testid={
               id
                 ? `button_open_list_selection_${id}`

@@ -44,6 +44,7 @@ interface DBProviderInputProps {
   disabled?: boolean;
   /** Accessible name for the combobox trigger (WCAG 4.1.2). */
   "aria-label"?: string;
+  ariaLabelledBy?: string;
   onValueChange: (
     backendType: AvailableDBProviderId,
     backendConfig: Record<string, DBProviderConfigValue>,
@@ -55,6 +56,7 @@ export default function DBProviderInputComponent({
   value,
   disabled,
   handleOnNewValue,
+  ariaLabelledBy,
 }: BaseInputProps<DBProviderSelection | AvailableDBProviderId>) {
   const {
     data: globalVariables = [],
@@ -84,6 +86,7 @@ export default function DBProviderInputComponent({
       value={currentValue.backend_type}
       globalVariables={globalVariables}
       disabled={disabled}
+      ariaLabelledBy={ariaLabelledBy}
       onValueChange={(backendType, backendConfig) => {
         handleOnNewValue({
           value: {
@@ -102,6 +105,7 @@ export function DBProviderInput({
   globalVariables,
   disabled,
   "aria-label": ariaLabel,
+  ariaLabelledBy,
   onValueChange,
 }: DBProviderInputProps) {
   const { t } = useTranslation();
@@ -156,7 +160,8 @@ export function DBProviderInput({
           role="combobox"
           ref={refButton}
           aria-expanded={open}
-          aria-label={ariaLabel}
+          aria-labelledby={ariaLabelledBy}
+          aria-label={ariaLabelledBy ? undefined : ariaLabel}
           data-testid={id}
           className={cn(
             "dropdown-component-false-outline py-2",

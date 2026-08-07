@@ -20,6 +20,7 @@ export default function InputListComponent({
   placeholder,
   listAddLabel,
   showParameter = true,
+  ariaLabelledBy,
 }: InputProps<string[], InputListComponentType>): JSX.Element | null {
   const { t } = useTranslation();
   const [_dropdownOpen, setDropdownOpen] = useState<number | null>(null);
@@ -110,6 +111,7 @@ export default function InputListComponent({
                 editNode={editNode}
                 onFocus={() => setFocusedIndex(index)}
                 onBlur={() => setFocusedIndex(null)}
+                ariaLabelledBy={index === 0 ? ariaLabelledBy : undefined}
               />
 
               {value.length > 1 && (

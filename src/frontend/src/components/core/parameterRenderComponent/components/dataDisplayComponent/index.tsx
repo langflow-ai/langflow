@@ -247,6 +247,7 @@ export default function DataDisplayComponent({
   showParameter = true,
   buttonText = "View",
   buttonIcon = "Eye",
+  ariaLabelledBy,
 }: InputProps<
   unknown,
   { buttonText?: string; buttonIcon?: string }
@@ -282,6 +283,7 @@ export default function DataDisplayComponent({
             data-testid={
               editNode ? `data_display_edit_${id}` : `data_display_${id}`
             }
+            aria-labelledby={ariaLabelledBy}
           >
             <ForwardedIconComponent name={buttonIcon} className="h-4 w-4" />
             {buttonText}

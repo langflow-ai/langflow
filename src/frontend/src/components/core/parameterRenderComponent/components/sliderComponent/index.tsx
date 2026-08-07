@@ -51,6 +51,7 @@ export default function SliderComponent({
   sliderButtonsOptions = DEFAULT_SLIDER_BUTTONS_OPTIONS,
   handleOnNewValue,
   showParameter = true,
+  ariaLabelledBy,
 }: InputProps<string[] | number[], SliderComponentType>): JSX.Element | null {
   const min = rangeSpec?.min ?? -2;
   const max = rangeSpec?.max ?? 2;
@@ -314,6 +315,7 @@ export default function SliderComponent({
             style={{
               backgroundColor: getThumbColor(percentage),
             }}
+            aria-labelledby={ariaLabelledBy}
           />
         </SliderPrimitive.Root>
       </div>

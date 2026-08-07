@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -42,8 +43,10 @@ const ConnectionComponent = ({
     nodeClass,
     nodeId,
     placeholder,
+    ariaLabelledBy,
   } = baseInputProps;
 
+  const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const [isAuthenticated, setIsAuthenticated] = useState(
@@ -178,6 +181,8 @@ const ConnectionComponent = ({
           role="combobox"
           onClick={handleOpenListSelectionDialog}
           className="dropdown-component-outline input-edit-node w-full py-2"
+          aria-labelledby={ariaLabelledBy}
+          aria-expanded={open}
         >
           <div className={cn("flex w-full items-center justify-start text-sm")}>
             {selectedItem[0]?.icon && (
@@ -207,6 +212,7 @@ const ConnectionComponent = ({
               buttonMetadata.variant && `border-${buttonMetadata.variant}`,
             )}
             onClick={link === "error" ? undefined : handleConnectionButtonClick}
+            aria-label={t("connection.connect")}
           >
             <ForwardedIconComponent
               name={

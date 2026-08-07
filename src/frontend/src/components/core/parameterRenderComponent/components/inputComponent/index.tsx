@@ -33,6 +33,7 @@ interface FormInputBranchProps {
   id: string;
   inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
   allowAutofill?: boolean;
+  ariaLabelledBy?: string;
 }
 
 function FormInputBranch({
@@ -54,6 +55,7 @@ function FormInputBranch({
   id,
   inputProps,
   allowAutofill,
+  ariaLabelledBy,
 }: FormInputBranchProps) {
   const [cursor, setCursor] = useState<number | null>(null);
 
@@ -120,6 +122,7 @@ function FormInputBranch({
           handleKeyDown(e, value, "");
           if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
         }}
+        aria-labelledby={ariaLabelledBy}
       />
     </Form.Control>
   );
@@ -205,6 +208,7 @@ export default function InputComponent({
           id={id}
           inputProps={inputProps}
           allowAutofill={allowAutofill}
+          ariaLabelledBy={ariaLabelledBy}
         />
       ) : (
         <>
@@ -236,6 +240,7 @@ export default function InputComponent({
               optionsPlaceholder={optionsPlaceholder}
               className={className}
               inspectionPanel={inspectionPanel}
+              ariaLabelledBy={ariaLabelledBy}
             />
           ) : (
             <CustomInputPopover
