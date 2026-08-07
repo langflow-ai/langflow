@@ -1,8 +1,13 @@
 """The /build driver's application span, exercised through the real HTTP route.
 
+Note on naming: this drives POST /api/v1/build, which the canvas no longer calls (the frontend
+moved to POST /api/v2/workflows). The driver underneath is shared, so this still covers it for
+every surface that reaches it, but the protocol here is v1.build rather than playground. The
+playground label is asserted on the v2 stream, where the IDE actually is.
+
 The build driver walks the vertices itself and never enters ``Graph.arun`` / ``async_start`` /
 ``process``, so it did not inherit the flow span those three carry. That made the busiest
-surfaces in the product — playground, v2 streaming and background, voice — the ones the
+surfaces in the product — the v2 stream the canvas uses, v2 background, voice — the ones the
 operator's APM could not see. (v2 sync goes through ``arun`` and always had one.)
 
 These tests drive the actual route so both halves are covered: the span the build loop opens,
@@ -56,7 +61,7 @@ def _flow_spans(exporter):
     return [span for span in exporter.get_finished_spans() if span.name == "flow.execute"]
 
 
-async def _run_a_playground_build(client, flow_data, headers) -> None:
+async def _run_a_v1_build(client, flow_data, headers) -> None:
     flow_id = await create_flow(client, flow_data, headers)
     build_response = await build_flow(client, flow_id, headers)
     job_id = build_response["job_id"]
@@ -64,12 +69,12 @@ async def _run_a_playground_build(client, flow_data, headers) -> None:
     await consume_and_assert_stream(events_response, job_id)
 
 
-async def test_the_playground_build_path_emits_exactly_one_flow_span(
+async def test_the_v1_build_path_emits_exactly_one_flow_span(
     client, json_memory_chatbot_no_llm, logged_in_headers, span_exporter
 ):
     span_exporter.clear()
 
-    await _run_a_playground_build(client, json_memory_chatbot_no_llm, logged_in_headers)
+    await _run_a_v1_build(client, json_memory_chatbot_no_llm, logged_in_headers)
 
     spans = _flow_spans(span_exporter)
     assert len(spans) == 1, f"expected one flow span for one build, got {len(spans)}"
@@ -80,17 +85,17 @@ async def test_the_playground_build_path_emits_exactly_one_flow_span(
     assert span.attributes["status"] == "ok"
 
 
-async def test_the_build_route_labels_the_run_as_the_playground(
+async def test_the_build_route_labels_the_run_as_v1_build(
     client, json_memory_chatbot_no_llm, logged_in_headers, span_exporter
 ):
     """The protocol is bound by the route, not the driver, so only a real request proves it."""
     span_exporter.clear()
 
-    await _run_a_playground_build(client, json_memory_chatbot_no_llm, logged_in_headers)
+    await _run_a_v1_build(client, json_memory_chatbot_no_llm, logged_in_headers)
 
     spans = _flow_spans(span_exporter)
     assert len(spans) == 1
-    assert spans[0].attributes["protocol"] == "playground"
+    assert spans[0].attributes["protocol"] == "v1.build"
 
 
 async def test_no_component_spans_reach_the_operators_apm(
@@ -99,7 +104,7 @@ async def test_no_component_spans_reach_the_operators_apm(
     """One unit of work per run. A per-component span here would also carry component payloads."""
     span_exporter.clear()
 
-    await _run_a_playground_build(client, json_memory_chatbot_no_llm, logged_in_headers)
+    await _run_a_v1_build(client, json_memory_chatbot_no_llm, logged_in_headers)
 
     application_spans = [
         span

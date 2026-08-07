@@ -322,10 +322,15 @@ async def build_flow(
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
-    # The build task is created (and copies this context) inside start_flow_build. "playground"
-    # is the default rather than the truth for every caller: voice reaches this same function
+    # v1.build, not "playground": the canvas moved to POST /api/v2/workflows and the frontend
+    # has no reference to this route left (15 hits for api/v2/workflows, 0 for api/v1/build).
+    # What still arrives here is direct API callers and voice, so labelling it playground would
+    # attribute IDE traffic to a route the IDE no longer uses. The playground label is derived
+    # from the agui wire protocol on the v2 stream instead.
+    #
+    # Still a default rather than the truth for every caller: voice reaches this same function
     # through build_flow_and_stream and binds its own protocol first, which wins.
-    with execution_protocol("playground"):
+    with execution_protocol("v1.build"):
         job_id = await start_flow_build(
             flow_id=flow_id,
             background_tasks=background_tasks,
@@ -904,9 +909,9 @@ async def build_public_tmp(
 
         # flow_id=new_flow_id for tracking/sessions/messages (virtual, per-user isolation).
         # source_flow_id=flow_id to load the actual flow data from the database.
-        # Separate from "playground" so an operator can see anonymous shared-link traffic apart
-        # from a signed-in user's own builds; the two have very different load profiles.
-        with execution_protocol("playground.public"):
+        # Anonymous shared-link traffic on the v1 build route. Named for the route rather than
+        # the surface, for the same reason as v1.build above; the v2 public stream is v2.public.
+        with execution_protocol("v1.build.public"):
             job_id = await start_flow_build(
                 flow_id=new_flow_id,
                 source_flow_id=flow_id,

@@ -384,8 +384,17 @@ def _execute_streaming_workflow(
             background_tasks=background_tasks,
             parsed=parsed,
             current_user=current_user,
-            # The live v2 stream. Background and public share this driver and name themselves.
-            protocol="v2",
+            # The live v2 stream, split by wire protocol because that is the only thing on this
+            # route that separates the IDE from an API client. The canvas pins
+            # stream_protocol="agui" (frontend controllers/API/agui/run-agent.ts) and nothing
+            # else does today, so agui traffic is the playground.
+            #
+            # Naming it after the caller rather than the wire is a small claim beyond the
+            # evidence: a third-party client could ask for agui. It is worth making anyway,
+            # because "is this a developer clicking Run or is this production" is the question
+            # the protocol attribute exists to answer, and a label of "v2" answers it for
+            # nobody. Revisit if agui ever becomes a general-purpose client protocol.
+            protocol="playground" if adapter.name == "agui" else "v2",
         ):
             yield frame
 
