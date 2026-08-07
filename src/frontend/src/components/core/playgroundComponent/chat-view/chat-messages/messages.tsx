@@ -289,6 +289,7 @@ export const Messages = ({
       <ResponseCompleteStatus
         completedCount={responseCue.completedCount}
         completedText={responseCue.completedText}
+        isAnnouncing={responseCue.isAnnouncing}
       />
       <SafariScrollFix />
     </StickToBottom>

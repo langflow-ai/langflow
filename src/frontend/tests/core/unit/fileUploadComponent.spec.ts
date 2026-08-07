@@ -298,12 +298,19 @@ test(
 
     await page.getByText("Run Flow", { exact: true }).last().click();
 
-    await expect(page.getByText("this is a test file")).toBeVisible({
+    // Scoped to the output table cell: the chat transcript is mirrored into an
+    // sr-only live region for screen readers, so a page-wide getByText would
+    // match the reply twice.
+    await expect(
+      page.getByRole("cell", { name: "this is a test file" }),
+    ).toBeVisible({
       timeout: 10000,
     });
 
     if (fileManagement) {
-      await expect(page.getByText('{"test":"content"}')).toBeVisible({
+      await expect(
+        page.getByRole("cell", { name: '{"test":"content"}' }),
+      ).toBeVisible({
         timeout: 10000,
       });
       await page.getByTestId("playground-close-button").click();
@@ -413,13 +420,21 @@ test(
         timeout: 180000,
       });
 
-      await expect(page.getByText("this is a test file")).toBeHidden({
+      await expect(
+        page.getByRole("cell", { name: "this is a test file" }),
+      ).toBeHidden({
         timeout: 10000,
       });
-      await expect(page.getByText('{ "test": "content" }')).toBeHidden({
+      await expect(
+        page.getByRole("cell", { name: '{ "test": "content" }' }),
+      ).toBeHidden({
         timeout: 10000,
       });
-      await expect(page.getByText("this is a new test")).toBeVisible({
+      // The .txt output renders as message text rather than a table, so scope
+      // to the transcript to stay clear of the sr-only live region outside it.
+      await expect(
+        page.getByRole("log").getByText("this is a new test").first(),
+      ).toBeVisible({
         timeout: 10000,
       });
     }
@@ -1003,9 +1018,11 @@ test(
 
     await page.getByText("Run Flow", { exact: true }).last().click();
 
-    // Verify
-    await expect(page.getByText(fileContent1)).toBeVisible();
-    await expect(page.getByText(fileContent2)).toBeVisible();
+    // Verify — scoped to the transcript: the reply is also mirrored into an
+    // sr-only live region that sits outside the role="log" region.
+    const transcript = page.getByRole("log");
+    await expect(transcript.getByText(fileContent1).first()).toBeVisible();
+    await expect(transcript.getByText(fileContent2).first()).toBeVisible();
 
     await page.getByTestId("playground-close-button").click();
 
@@ -1023,6 +1040,6 @@ test(
 
     await page.getByText("Run Flow", { exact: true }).last().click();
 
-    await expect(page.getByText(fileContent1).last()).toBeVisible();
+    await expect(transcript.getByText(fileContent1).first()).toBeVisible();
   },
 );

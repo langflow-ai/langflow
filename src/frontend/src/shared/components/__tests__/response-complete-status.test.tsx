@@ -36,6 +36,29 @@ describe("ResponseCompleteStatus", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Response complete");
   });
 
+  it("should_empty_the_region_once_the_announcement_is_retired", () => {
+    const { rerender } = render(
+      <ResponseCompleteStatus
+        completedCount={1}
+        completedText="The answer is 42."
+        isAnnouncing
+      />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("The answer is 42.");
+
+    rerender(
+      <ResponseCompleteStatus
+        completedCount={1}
+        completedText=""
+        isAnnouncing={false}
+      />,
+    );
+
+    // Not the generic cue — a retired announcement must be silent, otherwise
+    // clearing it would speak a second time.
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+  });
+
   it("should_strip_markdown_syntax_from_the_announcement", () => {
     render(
       <ResponseCompleteStatus
