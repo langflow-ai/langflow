@@ -1,9 +1,9 @@
 """Discovery and registration for third-party CLI commands.
 
-Packages can extend both the ``lfx`` and ``langflow`` root CLIs by exposing a
-registration callable through the ``lfx.cli_commands`` entry-point group::
+Packages can extend the ``langflow`` root CLI by exposing a registration
+callable through the ``langflow.cli_commands`` entry-point group::
 
-    [project.entry-points."lfx.cli_commands"]
+    [project.entry-points."langflow.cli_commands"]
     example = "example_package.cli:register"
 
 The callable receives the root :class:`typer.Typer` application and registers
@@ -20,7 +20,7 @@ from typing import TypeAlias
 import typer
 from typer.main import get_command_name, solve_typer_info_defaults
 
-CLI_COMMAND_ENTRY_POINT_GROUP = "lfx.cli_commands"
+CLI_COMMAND_ENTRY_POINT_GROUP = "langflow.cli_commands"
 
 CLICommandRegister: TypeAlias = Callable[[typer.Typer], None]
 
