@@ -127,8 +127,11 @@ def _node_is_in_tool_mode(flow_outputs: list[dict]) -> bool:
     Switching a component to tool mode replaces its authored outputs with a single
     ``component_as_tool`` entry, so those outputs describe a runtime projection rather than
     anything the registry declares.
+
+    Requires *exactly* one output. A malformed node carrying the name more than once is not
+    something tool mode produces, so it keeps going through the authored-output comparison.
     """
-    return {output.get("name") for output in flow_outputs} == {TOOL_OUTPUT_NAME}
+    return len(flow_outputs) == 1 and flow_outputs[0].get("name") == TOOL_OUTPUT_NAME
 
 
 def _registry_supports_tool_mode(registry_entry: Mapping[str, Any]) -> bool:

@@ -21,10 +21,13 @@ const TOOL_OUTPUT_NAME = "component_as_tool";
 
 // Returns true when the saved node's outputs are the synthesized toolset output. Switching a
 // component to tool mode replaces its authored outputs with this single entry, so they describe a
-// runtime projection rather than anything the original component declares.
+// runtime projection rather than anything the original component declares. Requires exactly one
+// output: a malformed node carrying the name more than once is not something tool mode produces, so
+// it keeps going through the authored-output comparison.
 const nodeIsInToolMode = (userOutputs?: OutputFieldType[]): boolean =>
-  !!userOutputs?.length &&
-  userOutputs.every((output) => output.name === TOOL_OUTPUT_NAME);
+  !!userOutputs &&
+  userOutputs.length === 1 &&
+  userOutputs[0].name === TOOL_OUTPUT_NAME;
 
 // Returns true when the original component can still be switched to tool mode: at least one input
 // declares tool_mode. This is the input side of Component._handle_tool_mode, which is what creates
