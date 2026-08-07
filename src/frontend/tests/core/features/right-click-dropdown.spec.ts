@@ -1,4 +1,5 @@
 import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 import { TEXTS } from "../../utils/constants/texts";
@@ -99,5 +100,81 @@ test(
       .locator('[data-testid="more-options-modal"]')
       .first();
     await expect(newDropdown).toBeVisible();
+  },
+);
+
+test(
+  "right-clicking inside a modal opened from a node leaves the node alone",
+  { tag: ["@release", "@components"] },
+  async ({ page }) => {
+    await awaitBootstrapTest(page);
+
+    await page.getByTestId("blank-flow").click();
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
+      timeout: 30000,
+    });
+
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("agent");
+    await page.waitForSelector('[data-testid="models_and_agentsAgent"]', {
+      timeout: 5000,
+    });
+
+    await page
+      .getByTestId("models_and_agentsAgent")
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 400, y: 300 },
+      });
+
+    await adjustScreenView(page);
+
+    // Open the model providers modal from the node's model field. With no
+    // provider configured the field opens the modal directly, so the footer
+    // button of the model list may never render.
+    await page.getByTestId("model_model").first().click();
+    const manageProviders = page.getByTestId("manage-model-providers");
+    if (await manageProviders.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await manageProviders.click();
+    }
+
+    const searchProviders = page.getByTestId("provider-search-input");
+    await searchProviders.waitFor({ state: "visible", timeout: 15000 });
+
+    // Record whether anything cancels the context menu event: the canvas
+    // handler calls preventDefault(), which is what hides the browser's own
+    // cut/copy/paste menu from the user.
+    await page.evaluate(() => {
+      (
+        window as unknown as { __contextMenuPrevented: boolean[] }
+      ).__contextMenuPrevented = [];
+      document.addEventListener("contextmenu", (event) => {
+        (
+          window as unknown as { __contextMenuPrevented: boolean[] }
+        ).__contextMenuPrevented.push(event.defaultPrevented);
+      });
+    });
+
+    await searchProviders.click({ button: "right" });
+
+    // The modal is rendered from inside the node through a portal, and React
+    // bubbles events along the React tree: without a guard this right-click
+    // reaches the canvas, which cancels the browser menu, opens the node
+    // dropdown behind the modal and takes focus away from the search field.
+    const prevented = await page.evaluate(
+      () =>
+        (window as unknown as { __contextMenuPrevented: boolean[] })
+          .__contextMenuPrevented,
+    );
+    expect(prevented.length).toBeGreaterThan(0);
+    expect(prevented.every((wasPrevented) => wasPrevented === false)).toBe(
+      true,
+    );
+
+    await expect(
+      page.locator('[data-testid="more-options-modal"][data-state="open"]'),
+    ).toHaveCount(0);
+
+    await searchProviders.fill("openai");
+    await expect(searchProviders).toHaveValue("openai");
   },
 );
