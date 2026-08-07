@@ -55,10 +55,6 @@ const renderModal = () =>
   );
 
 describe("ShareModal accessibility", () => {
-  // EditFlowSettings always renders its "Lock Flow" Switch, even here where
-  // ShareModal passes no `setLocked` and the control does nothing — but it
-  // now carries aria-label={t("flow.lockFlowAriaLabel")}, so the
-  // previously-documented button-name violation no longer fires.
   it("should_have_no_axe_violations", async () => {
     renderModal();
 
@@ -69,13 +65,13 @@ describe("ShareModal accessibility", () => {
     expect(results.violations).toEqual([]);
   });
 
-  it("should_name_the_non_functional_lock_switch_even_though_it_does_nothing_here", () => {
+  it("should_not_render_a_lock_switch_it_cannot_operate", () => {
     renderModal();
 
-    // The switch is still inert in this context (no setLocked passed), but
-    // it must still have a real accessible name — an unnamed focusable
-    // control is worse than a named one that happens not to do anything.
-    expect(screen.getByRole("switch")).toHaveAccessibleName("Lock flow switch");
+    // ShareModal passes no `setLocked`, so EditFlowSettings must omit the
+    // switch rather than ship a focusable, unnamed, inert control.
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("lock-flow-switch")).not.toBeInTheDocument();
   });
 
   it("should_expose_dialog_role_with_accessible_name", () => {

@@ -89,7 +89,12 @@ async def require_flow_create_permission(
     session: DbSession,
 ) -> tuple[UUID | None, UUID]:
     """Authorize CREATE at the destination workspace/folder before inserting a flow."""
-    destination = await _canonicalize_flow_destination(session, flow, current_user.id)
+    destination = await _canonicalize_flow_destination(
+        session,
+        flow,
+        current_user.id,
+        widen_for_authz=True,
+    )
     await ensure_flow_permission(
         current_user,
         FlowAction.CREATE,

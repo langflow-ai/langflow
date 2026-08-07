@@ -36,7 +36,13 @@ from lfx.utils.component_aliases import ComponentIdentityIndex, build_component_
 from lfx.utils.flow_validation import CustomComponentValidationError
 from sqlmodel import select
 
-from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
+from langflow.api.utils import (
+    CurrentActiveUser,
+    DbSession,
+    extract_global_variables_from_headers,
+    parse_value,
+    release_db_transaction,
+)
 from langflow.api.v1.custom_component_policy import (
     CatalogPolicyHTTPException,
     enforce_catalog_policy_for_component_type,
@@ -947,6 +953,7 @@ async def simplified_run_flow_session(
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
     api_key_user: CurrentActiveUser,
+    session: DbSession,
     context: dict | None = None,
     http_request: Request,
 ):
@@ -962,6 +969,8 @@ async def simplified_run_flow_session(
         input_request (SimplifiedAPIRequest | None): Input parameters for the flow
         stream (bool): Whether to stream the response
         api_key_user (User): Authenticated user from session
+        session (AsyncSession): Request-scoped DB session (shared with the auth
+            dependency); its transaction is released before the flow runs
         context (dict | None): Optional context to pass to the flow
         http_request (Request): The incoming HTTP request for extracting global variables
 
@@ -1002,6 +1011,15 @@ async def simplified_run_flow_session(
         workspace_id=flow.workspace_id,
         folder_id=flow.folder_id,
     )
+
+    # ``session`` is the same cached dependency the auth chain used, so this
+    # ends the transaction opened by the auth reads before the flow runs —
+    # the run can take minutes and would otherwise hold the request
+    # transaction (and its pooled connection) open the whole time (#14445).
+    # The API-key ``/run`` variant is not affected: ``api_key_security``
+    # scopes its own short-lived session.
+    await release_db_transaction(session)
+
     return await _run_flow_internal(
         background_tasks=background_tasks,
         flow=flow,
@@ -1017,6 +1035,7 @@ async def simplified_run_flow_session(
 async def webhook_events_stream(
     auth: Annotated[SseAuth, Depends(get_flow_for_sse_user)],
     request: Request,
+    session: DbSession,
 ):
     """Server-Sent Events (SSE) endpoint for real-time webhook build updates.
 
@@ -1039,6 +1058,12 @@ async def webhook_events_stream(
         workspace_id=getattr(flow, "workspace_id", None),
         folder_id=getattr(flow, "folder_id", None),
     )
+
+    # ``session`` is the same cached dependency the SSE auth chain used. The
+    # EventSource stream below is indefinite and the session dependency is
+    # only torn down when it ends, so without this commit every open tab
+    # would hold a pooled connection in an idle transaction (#14445).
+    await release_db_transaction(session)
 
     async def event_generator() -> AsyncGenerator[str, None]:
         """Generate SSE events from the webhook event manager."""
@@ -1296,6 +1321,12 @@ async def experimental_run_flow(
             raise
         except Exception as exc:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+    # Graph execution below can run for minutes; end the request transaction
+    # opened by the flow re-query above so it doesn't pin a pooled connection
+    # (Postgres: idle-in-transaction) for the whole run (#14445). In the
+    # session_id branch the session was never used, so this is a no-op.
+    await release_db_transaction(session)
 
     try:
         task_result, session_id = await run_graph_internal(
