@@ -46,6 +46,8 @@ _ASCII_CONTROL_CUTOFF = 0x20
 _UTF8_ONE_BYTE_MAX = 0x7F
 _UTF8_TWO_BYTE_MAX = 0x7FF
 _UTF8_THREE_BYTE_MAX = 0xFFFF
+_UNICODE_SURROGATE_MIN = 0xD800
+_UNICODE_SURROGATE_MAX = 0xDFFF
 _VOLATILE_TOP_LEVEL_FIELDS = frozenset({"updated_at", "created_at", "user_id", "folder_id", "access_type", "gradient"})
 _VOLATILE_NODE_FIELDS = frozenset({"positionAbsolute", "dragging", "selected"})
 
@@ -168,6 +170,9 @@ def _json_string_size(value: str) -> int:
     total = 2  # surrounding quotes
     for character in value:
         codepoint = ord(character)
+        if _UNICODE_SURROGATE_MIN <= codepoint <= _UNICODE_SURROGATE_MAX:
+            msg = "project artifact text contains an invalid Unicode surrogate"
+            raise ProjectArtifactError(msg)
         if character in {'"', "\\"}:
             total += 2
         elif codepoint < _ASCII_CONTROL_CUTOFF:
@@ -288,6 +293,11 @@ def _build_archive(
     flow_entries: list[ProjectArtifactFlow] = []
     files: list[tuple[str, bytes]] = []
     expanded_size = 0
+
+    # Validate all manifest-only persisted text before serializing any file.
+    _json_string_size(project_name)
+    for snapshot in snapshots:
+        _json_string_size(snapshot.name)
 
     for snapshot in snapshots:
         path = f"flows/{snapshot.flow_id}.json"
