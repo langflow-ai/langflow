@@ -58,6 +58,11 @@ def test_plugins_are_discovered_from_the_documented_group_in_deterministic_order
 
 def test_registered_plugin_command_is_invokable(monkeypatch):
     app = typer.Typer()
+
+    @app.callback()
+    def root() -> None:
+        pass
+
     entry_point = _FakeEntryPoint(
         "hello",
         "plugins.hello:register",
