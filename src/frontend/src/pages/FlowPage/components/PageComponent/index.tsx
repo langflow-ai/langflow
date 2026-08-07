@@ -87,7 +87,9 @@ import {
   MemoizedSidebarTrigger,
 } from "./MemoizedComponents";
 import { computeNoteScreenPosition } from "./utils/compute-note-position";
+import { getNodeAriaLabel } from "./utils/get-node-aria-label";
 import getRandomName from "./utils/get-random-name";
+import isEventFromOutsideElement from "./utils/is-event-from-outside-element";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
 
 export default function Page({
@@ -121,9 +123,7 @@ export default function Page({
     () =>
       nodes.map((node) => ({
         ...node,
-        ariaLabel: t("flow.nodeAriaLabel", {
-          name: node.data?.node?.display_name ?? node.data?.type,
-        }),
+        ariaLabel: getNodeAriaLabel(node, t),
       })),
     [nodes, t],
   );
@@ -774,6 +774,11 @@ export default function Page({
 
   const onNodeContextMenu = useCallback(
     (event: React.MouseEvent, node: AllNodeType) => {
+      // Overlays opened from a node (model providers modal, parameter popovers)
+      // render through portals, so React bubbles their events to this handler
+      // even though their DOM sits outside the node. Leave those alone: the
+      // browser menu must open and the node behind must not react.
+      if (isEventFromOutsideElement(event)) return;
       event.preventDefault();
       if (effectiveLocked) return;
 
