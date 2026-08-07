@@ -175,9 +175,7 @@ describe("Dropdown accessible name", () => {
       </>,
     );
 
-    expect(
-      screen.getByRole("combobox", { name: "Model" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Model" })).toBeInTheDocument();
   });
 
   it("should_render_with_no_aria_labelledby_when_no_field_label_is_forwarded", () => {

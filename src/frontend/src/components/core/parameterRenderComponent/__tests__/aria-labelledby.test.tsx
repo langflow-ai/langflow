@@ -6,38 +6,97 @@ import { ParameterRenderComponent } from "..";
 // — all need a trivial stub so the module loads. We only care about the
 // EmptyParameterComponent/default path here (real widget behavior is out of
 // scope for this file; see index.test.tsx for the type-level checks).
-jest.mock("@/components/core/parameterRenderComponent/components/codeAreaComponent", () => () => <div data-testid="widget" />);
-jest.mock("@/components/core/parameterRenderComponent/components/dataDisplayComponent", () => () => <div data-testid="widget" />);
-jest.mock("@/components/core/parameterRenderComponent/components/dbProviderInputComponent", () => () => <div data-testid="widget" />);
-jest.mock("@/components/core/parameterRenderComponent/components/modelInputComponent", () => () => <div data-testid="widget" />);
-jest.mock("@/components/core/parameterRenderComponent/components/sliderComponent", () => () => <div data-testid="widget" />);
-jest.mock("@/components/core/parameterRenderComponent/components/TableNodeComponent", () => () => <div data-testid="widget" />);
-jest.mock("@/components/core/parameterRenderComponent/components/tabComponent", () => () => <div data-testid="widget" />);
-jest.mock("@/customization/components/custom-connectionComponent", () => () => <div data-testid="widget" />);
-jest.mock("@/customization/components/custom-input-file", () => () => <div data-testid="widget" />);
-jest.mock("@/customization/components/custom-linkComponent", () => () => <div data-testid="widget" />);
-jest.mock("../components/accordionPromptComponent", () => () => <div data-testid="widget" />);
-jest.mock("../components/actionPickerComponent", () => () => <div data-testid="widget" />);
-jest.mock("../components/dictComponent", () => () => <div data-testid="widget" />);
-jest.mock("../components/durationComponent", () => () => <div data-testid="widget" />);
+jest.mock(
+  "@/components/core/parameterRenderComponent/components/codeAreaComponent",
+  () => () => <div data-testid="widget" />,
+);
+jest.mock(
+  "@/components/core/parameterRenderComponent/components/dataDisplayComponent",
+  () => () => <div data-testid="widget" />,
+);
+jest.mock(
+  "@/components/core/parameterRenderComponent/components/dbProviderInputComponent",
+  () => () => <div data-testid="widget" />,
+);
+jest.mock(
+  "@/components/core/parameterRenderComponent/components/modelInputComponent",
+  () => () => <div data-testid="widget" />,
+);
+jest.mock(
+  "@/components/core/parameterRenderComponent/components/sliderComponent",
+  () => () => <div data-testid="widget" />,
+);
+jest.mock(
+  "@/components/core/parameterRenderComponent/components/TableNodeComponent",
+  () => () => <div data-testid="widget" />,
+);
+jest.mock(
+  "@/components/core/parameterRenderComponent/components/tabComponent",
+  () => () => <div data-testid="widget" />,
+);
+jest.mock("@/customization/components/custom-connectionComponent", () => () => (
+  <div data-testid="widget" />
+));
+jest.mock("@/customization/components/custom-input-file", () => () => (
+  <div data-testid="widget" />
+));
+jest.mock("@/customization/components/custom-linkComponent", () => () => (
+  <div data-testid="widget" />
+));
+jest.mock("../components/accordionPromptComponent", () => () => (
+  <div data-testid="widget" />
+));
+jest.mock("../components/actionPickerComponent", () => () => (
+  <div data-testid="widget" />
+));
+jest.mock("../components/dictComponent", () => () => (
+  <div data-testid="widget" />
+));
+jest.mock("../components/durationComponent", () => () => (
+  <div data-testid="widget" />
+));
 jest.mock("../components/emptyParameterComponent", () => ({
   EmptyParameterComponent: () => <div data-testid="widget" />,
 }));
-jest.mock("../components/floatComponent", () => () => <div data-testid="widget" />);
-jest.mock("../components/inputListComponent", () => () => <div data-testid="widget" />);
-jest.mock("../components/intComponent", () => () => <div data-testid="widget" />);
-jest.mock("../components/keypairListComponent", () => () => <div data-testid="widget" />);
-jest.mock("../components/mcpComponent", () => () => <div data-testid="widget" />);
-jest.mock("../components/multiselectComponent", () => () => <div data-testid="widget" />);
-jest.mock("../components/mustachePromptComponent", () => () => <div data-testid="widget" />);
-jest.mock("../components/promptComponent", () => () => <div data-testid="widget" />);
-jest.mock("../components/queryComponent", () => () => <div data-testid="widget" />);
-jest.mock("../components/sortableListComponent", () => () => <div data-testid="widget" />);
+jest.mock("../components/floatComponent", () => () => (
+  <div data-testid="widget" />
+));
+jest.mock("../components/inputListComponent", () => () => (
+  <div data-testid="widget" />
+));
+jest.mock("../components/intComponent", () => () => (
+  <div data-testid="widget" />
+));
+jest.mock("../components/keypairListComponent", () => () => (
+  <div data-testid="widget" />
+));
+jest.mock("../components/mcpComponent", () => () => (
+  <div data-testid="widget" />
+));
+jest.mock("../components/multiselectComponent", () => () => (
+  <div data-testid="widget" />
+));
+jest.mock("../components/mustachePromptComponent", () => () => (
+  <div data-testid="widget" />
+));
+jest.mock("../components/promptComponent", () => () => (
+  <div data-testid="widget" />
+));
+jest.mock("../components/queryComponent", () => () => (
+  <div data-testid="widget" />
+));
+jest.mock("../components/sortableListComponent", () => () => (
+  <div data-testid="widget" />
+));
 jest.mock("../components/strRenderComponent", () => ({
   StrRenderComponent: () => <div data-testid="widget" />,
 }));
-jest.mock("../components/ToolsComponent", () => () => <div data-testid="widget" />);
-jest.mock("../components/toggleShadComponent", () => () => <div data-testid="widget" />);
+jest.mock("../components/ToolsComponent", () => () => (
+  <div data-testid="widget" />
+));
+jest.mock("../components/toggleShadComponent", () => () => (
+  <div data-testid="widget" />
+));
 
 const baseProps = {
   handleOnNewValue: jest.fn(),

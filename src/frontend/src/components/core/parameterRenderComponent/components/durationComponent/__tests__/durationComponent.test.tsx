@@ -126,7 +126,9 @@ describe("DurationComponent accessibility", () => {
 
   it("should_expose_the_field_label_as_the_unit_tablist_accessible_name", () => {
     renderWithLabel();
-    expect(screen.getByRole("tablist", { name: "Timeout" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("tablist", { name: "Timeout" }),
+    ).toBeInTheDocument();
   });
 
   it("should_render_with_no_accessible_name_when_ariaLabelledBy_is_absent", () => {

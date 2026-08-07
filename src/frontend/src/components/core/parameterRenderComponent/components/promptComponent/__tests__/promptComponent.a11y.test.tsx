@@ -44,15 +44,16 @@ describe("PromptAreaComponent accessibility", () => {
         <PromptAreaComponent {...baseProps} ariaLabelledBy="prompt-label" />
       </>,
     );
-    expect(
-      screen.getByTestId("button_open_prompt_modal"),
-    ).toHaveAttribute("aria-labelledby", "prompt-label");
+    expect(screen.getByTestId("button_open_prompt_modal")).toHaveAttribute(
+      "aria-labelledby",
+      "prompt-label",
+    );
   });
 
   it("should_render_the_trigger_with_no_aria_labelledby_when_no_field_label_is_forwarded", () => {
     render(<PromptAreaComponent {...baseProps} />);
-    expect(
-      screen.getByTestId("button_open_prompt_modal"),
-    ).not.toHaveAttribute("aria-labelledby");
+    expect(screen.getByTestId("button_open_prompt_modal")).not.toHaveAttribute(
+      "aria-labelledby",
+    );
   });
 });

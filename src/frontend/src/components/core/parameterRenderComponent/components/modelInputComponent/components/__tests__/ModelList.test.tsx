@@ -41,7 +41,11 @@ const claude: ModelOption = {
 
 describe("ModelList — empty state", () => {
   it("shows the no-models-enabled message and no options when groupedOptions is empty", () => {
-    renderList({ groupedOptions: {}, selectedModel: null, onSelect: jest.fn() });
+    renderList({
+      groupedOptions: {},
+      selectedModel: null,
+      onSelect: jest.fn(),
+    });
 
     const placeholder = screen.getByText("No Models Enabled");
     expect(placeholder).toBeInTheDocument();
@@ -195,7 +199,9 @@ describe("ModelList — selecting an option", () => {
       onSelect,
     });
 
-    await user.click(screen.getByTestId(getModelOptionTestId("OpenAI", "gpt-4")));
+    await user.click(
+      screen.getByTestId(getModelOptionTestId("OpenAI", "gpt-4")),
+    );
 
     expect(onSelect).toHaveBeenCalledWith("gpt-4", "OpenAI");
   });

@@ -1629,7 +1629,9 @@ describe("ModelInputComponent", () => {
     // highlight both still work.
     it("moves DOM focus to follow the highlighted item on ArrowDown", async () => {
       const user = userEvent.setup();
-      renderWithQueryClient(<ModelInputComponent {...defaultProps} value={[]} />);
+      renderWithQueryClient(
+        <ModelInputComponent {...defaultProps} value={[]} />,
+      );
 
       await user.click(screen.getByRole("combobox"));
       const firstOption = await screen.findByTestId("OpenAI-gpt-4-option");
@@ -1644,7 +1646,9 @@ describe("ModelInputComponent", () => {
 
     it("moves DOM focus to follow the highlighted item on ArrowUp", async () => {
       const user = userEvent.setup();
-      renderWithQueryClient(<ModelInputComponent {...defaultProps} value={[]} />);
+      renderWithQueryClient(
+        <ModelInputComponent {...defaultProps} value={[]} />,
+      );
 
       await user.click(screen.getByRole("combobox"));
       await screen.findByTestId("OpenAI-gpt-4-option");
@@ -1665,7 +1669,9 @@ describe("ModelInputComponent", () => {
     // every provider combined.
     it("sets aria-posinset/aria-setsize across all providers combined, not per group", async () => {
       const user = userEvent.setup();
-      renderWithQueryClient(<ModelInputComponent {...defaultProps} value={[]} />);
+      renderWithQueryClient(
+        <ModelInputComponent {...defaultProps} value={[]} />,
+      );
 
       await user.click(screen.getByRole("combobox"));
       await screen.findByTestId("OpenAI-gpt-4-option");
@@ -1674,9 +1680,10 @@ describe("ModelInputComponent", () => {
         "aria-posinset",
         "1",
       );
-      expect(
-        screen.getByTestId("OpenAI-gpt-3.5-turbo-option"),
-      ).toHaveAttribute("aria-posinset", "2");
+      expect(screen.getByTestId("OpenAI-gpt-3.5-turbo-option")).toHaveAttribute(
+        "aria-posinset",
+        "2",
+      );
       expect(
         screen.getByTestId("Anthropic-claude-3-opus-option"),
       ).toHaveAttribute("aria-posinset", "3");
@@ -1686,10 +1693,7 @@ describe("ModelInputComponent", () => {
         "OpenAI-gpt-3.5-turbo-option",
         "Anthropic-claude-3-opus-option",
       ]) {
-        expect(screen.getByTestId(testId)).toHaveAttribute(
-          "aria-setsize",
-          "3",
-        );
+        expect(screen.getByTestId(testId)).toHaveAttribute("aria-setsize", "3");
       }
     });
 
@@ -1702,14 +1706,16 @@ describe("ModelInputComponent", () => {
     // correctly regardless.
     it("includes a visually-hidden N of M string in each option's accessible name", async () => {
       const user = userEvent.setup();
-      renderWithQueryClient(<ModelInputComponent {...defaultProps} value={[]} />);
+      renderWithQueryClient(
+        <ModelInputComponent {...defaultProps} value={[]} />,
+      );
 
       await user.click(screen.getByRole("combobox"));
       await screen.findByTestId("OpenAI-gpt-4-option");
 
-      expect(
-        screen.getByTestId("OpenAI-gpt-4-option"),
-      ).toHaveAccessibleName(/1 of 3/);
+      expect(screen.getByTestId("OpenAI-gpt-4-option")).toHaveAccessibleName(
+        /1 of 3/,
+      );
       expect(
         screen.getByTestId("OpenAI-gpt-3.5-turbo-option"),
       ).toHaveAccessibleName(/2 of 3/);
@@ -1744,14 +1750,17 @@ describe("ModelInputComponent", () => {
         "tabindex",
         "-1",
       );
-      expect(
-        screen.getByTestId("OpenAI-gpt-3.5-turbo-option"),
-      ).toHaveAttribute("tabindex", "-1");
+      expect(screen.getByTestId("OpenAI-gpt-3.5-turbo-option")).toHaveAttribute(
+        "tabindex",
+        "-1",
+      );
     });
 
     it("moves the tabbable option as arrow-key navigation moves the highlight", async () => {
       const user = userEvent.setup();
-      renderWithQueryClient(<ModelInputComponent {...defaultProps} value={[]} />);
+      renderWithQueryClient(
+        <ModelInputComponent {...defaultProps} value={[]} />,
+      );
 
       await user.click(screen.getByRole("combobox"));
       await screen.findByTestId("OpenAI-gpt-4-option");
