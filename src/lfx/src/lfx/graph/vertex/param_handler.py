@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import ast
+from collections.abc import Mapping
+from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
@@ -11,6 +13,11 @@ from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.services.deps import get_storage_service
 from lfx.utils.constants import DIRECT_TYPES
+from lfx.utils.file_path_security import (
+    LocalFileAccessError,
+    enforce_local_file_access,
+    is_local_file_access_restricted,
+)
 from lfx.utils.util import unescape_string
 
 if TYPE_CHECKING:
@@ -52,6 +59,7 @@ class ParameterHandler:
         # Lazy initialization of storage service
         self._storage_service = storage_service
         self._storage_service_initialized = False
+        self._canonical_file_fields_cache: dict[str, dict[str, Any]] | None = None
 
     @property
     def storage_service(self):
@@ -61,6 +69,108 @@ class ParameterHandler:
                 self._storage_service = get_storage_service()
             self._storage_service_initialized = True
         return self._storage_service
+
+    @staticmethod
+    def _file_input_names_from_code(code: str) -> set[str]:
+        """Extract literal FileInput names from trusted component source."""
+        try:
+            tree = ast.parse(code)
+        except SyntaxError:
+            return set()
+
+        aliases = {"FileInput"}
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom):
+                aliases.update(alias.asname or alias.name for alias in node.names if alias.name == "FileInput")
+
+        names: set[str] = set()
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            is_file_input = (isinstance(node.func, ast.Name) and node.func.id in aliases) or (
+                isinstance(node.func, ast.Attribute) and node.func.attr == "FileInput"
+            )
+            if not is_file_input:
+                continue
+            for keyword in node.keywords:
+                if keyword.arg == "name" and isinstance(keyword.value, ast.Constant):
+                    if isinstance(keyword.value.value, str) and keyword.value.value:
+                        names.add(keyword.value.value)
+                    break
+        return names
+
+    def _canonical_file_fields(self) -> dict[str, dict[str, Any]]:
+        """Return FileInput metadata derived from server-trusted component source."""
+        if self._canonical_file_fields_cache is not None:
+            return self._canonical_file_fields_cache
+
+        canonical_fields: dict[str, dict[str, Any]] = {}
+        code_field = self.template_dict.get("code")
+        submitted_code = code_field.get("value") if isinstance(code_field, dict) else None
+        if not isinstance(submitted_code, str) or not submitted_code:
+            self._canonical_file_fields_cache = canonical_fields
+            return canonical_fields
+
+        # The flow policy may substitute a server-owned source for a matching
+        # submitted hash. Use that same trusted source for input classification;
+        # an exact source comparison below prevents request metadata from
+        # declaring what is or is not a FileInput.
+        from lfx.interface.components import component_cache
+        from lfx.utils.flow_validation import get_trusted_code_for_validation
+
+        trusted_code = get_trusted_code_for_validation(submitted_code) or submitted_code
+        all_types_dict = component_cache.all_types_dict
+        if isinstance(all_types_dict, Mapping):
+            for category_components in all_types_dict.values():
+                if not isinstance(category_components, Mapping):
+                    continue
+                for component_data in category_components.values():
+                    if not isinstance(component_data, Mapping):
+                        continue
+                    template = component_data.get("template")
+                    if not isinstance(template, Mapping):
+                        continue
+                    server_code_field = template.get("code")
+                    server_code = server_code_field.get("value") if isinstance(server_code_field, Mapping) else None
+                    if server_code != trusted_code:
+                        continue
+                    for field_name, field in template.items():
+                        if not isinstance(field_name, str) or not isinstance(field, Mapping):
+                            continue
+                        if field.get("type") == "file" or field.get("_input_type") == "FileInput":
+                            canonical_fields.setdefault(field_name, dict(field))
+
+        # Direct declarations remain detectable while the component registry is
+        # warming, and cover older trusted component versions absent from the
+        # current registry. Registry metadata above still supplies list/required
+        # semantics for inherited or dynamically assembled inputs.
+        for field_name in self._file_input_names_from_code(trusted_code):
+            canonical_fields.setdefault(
+                field_name,
+                {"type": "file", "_input_type": "FileInput", "list": False, "required": False},
+            )
+
+        self._canonical_file_fields_cache = canonical_fields
+        return canonical_fields
+
+    def _effective_file_field(self, field_name: str, field: dict[str, Any]) -> dict[str, Any]:
+        """Overlay server-owned FileInput semantics on request-supplied values."""
+        canonical = self._canonical_file_fields().get(field_name)
+        if canonical is None:
+            return field
+
+        effective = dict(field)
+        for key in ("type", "_input_type", "list", "required", "display_name"):
+            if key in canonical:
+                effective[key] = canonical[key]
+        effective["type"] = "file"
+        effective["_canonical_file_input"] = True
+        effective.setdefault("list", False)
+        return effective
+
+    @staticmethod
+    def _is_file_field(field: Mapping[str, Any]) -> bool:
+        return field.get("type") == "file" or field.get("_input_type") == "FileInput"
 
     def process_edge_parameters(self, edges: list[CycleEdge]) -> dict[str, Any]:
         """Process parameters from edges.
@@ -123,11 +233,13 @@ class ParameterHandler:
         params: dict[str, Any] = {}
         load_from_db_fields: list[str] = []
 
-        for field_name, field in self.template_dict.items():
+        restricted = is_local_file_access_restricted()
+        for field_name, request_field in self.template_dict.items():
+            field = self._effective_file_field(field_name, request_field) if restricted else request_field
             if self.should_skip_field(field_name, field, params):
                 continue
 
-            if field.get("type") == "file":
+            if self._is_file_field(field):
                 params = self.process_file_field(field_name, field, params)
             elif field.get("type") in DIRECT_TYPES and params.get(field_name) is None:
                 params, load_from_db_fields = self._process_direct_type_field(
@@ -157,25 +269,11 @@ class ParameterHandler:
 
         Converts logical paths (flow_id/filename) to component-ready paths.
         """
-        if file_path := field.get("file_path"):
-            try:
-                full_path: str | list[str] = ""
-                if field.get("list"):
-                    full_path = []
-                    if isinstance(file_path, str):
-                        file_path = [file_path]
-                    for p in file_path:
-                        resolved = self.storage_service.resolve_component_path(p)
-                        full_path.append(resolved)
-                else:
-                    full_path = self.storage_service.resolve_component_path(file_path)
-
-            except ValueError as e:
-                if "too many values to unpack" in str(e):
-                    full_path = file_path
-                else:
-                    raise
-            params[field_name] = full_path
+        file_path = field.get("file_path")
+        if not file_path and field.get("_canonical_file_input"):
+            file_path = field.get("value")
+        if file_path:
+            params[field_name] = self.process_file_value(file_path, is_list=bool(field.get("list")))
         elif field.get("required"):
             field_display_name = field.get("display_name")
             logger.warning(
@@ -184,11 +282,112 @@ class ParameterHandler:
                 self.vertex.display_name,
             )
             params[field_name] = None
-        elif field["list"]:
+        elif field.get("list"):
             params[field_name] = []
         else:
             params[field_name] = None
         return params
+
+    def process_runtime_params(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Resolve and contain FileInput values supplied as runtime tweaks."""
+        processed = params.copy()
+        # Runtime tweaks were historically passed through unchanged. Preserve
+        # that behavior when the operator has explicitly disabled containment.
+        if not is_local_file_access_restricted():
+            return processed
+
+        for field_name, value in processed.items():
+            request_field = self.template_dict.get(field_name, {})
+            field = self._effective_file_field(field_name, request_field)
+            empty_value = value is None or (isinstance(value, str | list) and not value)
+            if not self._is_file_field(field) or empty_value:
+                continue
+            file_value = value
+            if isinstance(value, dict):
+                if "file_path" in value:
+                    file_value = value["file_path"]
+                elif set(value) == {"value"}:
+                    file_value = value["value"]
+                else:
+                    msg = "Runtime FileInput tweaks must provide a file path."
+                    raise LocalFileAccessError(msg)
+            processed[field_name] = self.process_file_value(
+                file_value,
+                is_list=bool(field.get("list")) or isinstance(file_value, list),
+            )
+        return processed
+
+    def process_file_value(self, file_path: str | list[str], *, is_list: bool) -> str | list[str]:
+        """Resolve a FileInput value and enforce the configured storage boundary."""
+        try:
+            if is_list:
+                paths = [file_path] if isinstance(file_path, str) else file_path
+                if not isinstance(paths, list) or not all(isinstance(path, str) for path in paths):
+                    msg = "FileInput values must be file path strings."
+                    raise LocalFileAccessError(msg)
+                full_path: str | list[str] = [self.storage_service.resolve_component_path(path) for path in paths]
+            else:
+                if not isinstance(file_path, str):
+                    msg = "FileInput values must be file path strings."
+                    raise LocalFileAccessError(msg)
+                full_path = self.storage_service.resolve_component_path(file_path)
+        except ValueError as e:
+            if "too many values to unpack" in str(e):
+                full_path = file_path
+            else:
+                raise
+        return self._enforce_file_paths(full_path)
+
+    def _file_access_scopes(self) -> list[str]:
+        """Return server-established storage namespaces for the executing graph."""
+        graph = getattr(self.vertex, "graph", None)
+        scopes: list[str] = []
+        for candidate in (
+            getattr(graph, "user_id", None),
+            getattr(graph, "flow_id", None),
+            getattr(graph, "source_flow_id", None),
+        ):
+            if candidate is not None:
+                scope = str(candidate).strip()
+                if scope and scope not in scopes:
+                    scopes.append(scope)
+        return scopes
+
+    def _enforce_file_paths(self, file_paths: str | list[str]) -> str | list[str]:
+        """Apply storage-specific containment before FileInput values reach components."""
+        storage_settings = getattr(getattr(self.storage_service, "settings_service", None), "settings", None)
+        storage_type = str(getattr(storage_settings, "storage_type", "local")).lower()
+        if not is_local_file_access_restricted():
+            return file_paths
+
+        scopes = self._file_access_scopes()
+        if storage_type == "s3":
+            if isinstance(file_paths, list):
+                return [self._enforce_s3_logical_key(path, scopes) for path in file_paths]
+            return self._enforce_s3_logical_key(file_paths, scopes)
+
+        if isinstance(file_paths, list):
+            return [str(enforce_local_file_access(path, scope_ids=scopes)) for path in file_paths]
+        return str(enforce_local_file_access(file_paths, scope_ids=scopes))
+
+    @staticmethod
+    def _enforce_s3_logical_key(file_path: str, scopes: list[str]) -> str:
+        """Reject S3 logical keys that could be interpreted as foreign local paths."""
+        path = str(file_path)
+        segments = path.split("/")
+        logical_path = PurePosixPath(path)
+        if (
+            not path
+            or "\x00" in path
+            or "\\" in path
+            or logical_path.is_absolute()
+            or any(segment in {"", ".", ".."} for segment in segments)
+            or not logical_path.parts
+            or logical_path.parts[0] not in scopes
+        ):
+            msg = "S3 file references must stay within the authenticated user's or executing flow's namespace."
+            raise LocalFileAccessError(msg)
+        return path
 
     def _process_direct_type_field(
         self, field_name: str, field: dict, params: dict[str, Any], load_from_db_fields: list[str]
