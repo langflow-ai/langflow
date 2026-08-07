@@ -70,6 +70,7 @@ async def _build_authorized(
     user: SimpleNamespace,
     project: Folder,
     limits: ProjectArtifactLimits | None = None,
+    flow_ids: list[UUID] | None = None,
 ):
     with (
         patch(f"{MODULE}.authorized_or_owner_scoped", new_callable=AsyncMock, return_value=project) as load_project,
@@ -77,6 +78,8 @@ async def _build_authorized(
         patch(f"{MODULE}.ensure_flows_permission", new_callable=AsyncMock) as ensure_flows,
     ):
         kwargs = {"limits": limits} if limits is not None else {}
+        if flow_ids is not None:
+            kwargs["flow_ids"] = flow_ids
         artifact = await build_project_artifact(session, user, project.id, **kwargs)
     return artifact, load_project, ensure_project, ensure_flows
 
@@ -153,6 +156,61 @@ async def test_build_project_artifact_is_deterministic_and_manifest_binds_exact_
             payload = archive.read(entry["path"])
             assert entry["sha256"] == hashlib.sha256(payload).hexdigest()
             assert entry["size"] == len(payload)
+
+
+@pytest.mark.asyncio
+async def test_build_project_artifact_packages_only_explicit_flow_ids() -> None:
+    actor_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Selected flows", user_id=actor_id)
+    selected_id = UUID("00000000-0000-0000-0000-000000000001")
+    unselected_id = UUID("00000000-0000-0000-0000-000000000002")
+    selected = _flow(flow_id=selected_id, owner_id=actor_id, project_id=project_id, name="Selected")
+    _ = _flow(flow_id=unselected_id, owner_id=actor_id, project_id=project_id, name="Unselected")
+    session = _session_with_flows([selected])
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    artifact, _, _, ensure_flows = await _build_authorized(
+        session=session,
+        user=user,
+        project=project,
+        flow_ids=[selected_id],
+    )
+
+    assert [flow.flow_id for flow in artifact.flows] == [selected_id]
+    assert ensure_flows.await_args.kwargs["flow_ids"] == [selected_id]
+    with zipfile.ZipFile(io.BytesIO(artifact.content)) as archive:
+        assert archive.namelist() == ["manifest.json", f"flows/{selected_id}.json"]
+
+
+@pytest.mark.asyncio
+async def test_build_project_artifact_rejects_missing_or_duplicate_flow_selection() -> None:
+    actor_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Selected flows", user_id=actor_id)
+    selected = _flow(owner_id=actor_id, project_id=project_id)
+    missing_id = uuid4()
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    with (
+        patch(f"{MODULE}.authorized_or_owner_scoped", new_callable=AsyncMock, return_value=project),
+        patch(f"{MODULE}.ensure_project_permission", new_callable=AsyncMock),
+        pytest.raises(ProjectArtifactNotFoundError, match="selected flows were not found"),
+    ):
+        await build_project_artifact(
+            _session_with_flows([selected]),
+            user,
+            project_id,
+            flow_ids=[selected.id, missing_id],
+        )
+
+    with pytest.raises(ProjectArtifactError, match="duplicate flow IDs"):
+        await build_project_artifact(
+            AsyncMock(),
+            user,
+            project_id,
+            flow_ids=[selected.id, selected.id],
+        )
 
 
 @pytest.mark.asyncio
