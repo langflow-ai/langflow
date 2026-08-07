@@ -82,6 +82,11 @@ function ApiInterceptor() {
           for (const [key, value] of Object.entries(customHeaders)) {
             config.headers[key] = value;
           }
+          // The axios interceptor below sets this too, but the canvas runs flows through
+          // fetch, not axios: AG-UI's HttpAgent issues a raw fetch and never touches the
+          // axios instance. Without this the client attribute is absent on the one surface
+          // it exists to identify. See the axios copy for what the value means.
+          config.headers["x-langflow-client"] = "playground";
         }
 
         return [url, config];

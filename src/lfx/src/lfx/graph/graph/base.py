@@ -48,10 +48,12 @@ from lfx.utils.async_helpers import run_until_complete
 
 try:
     from opentelemetry import trace as otel_trace
+    from opentelemetry.context import Context as OtelContext
 except ImportError:
     # lfx does not depend on opentelemetry. Under langflow it is installed and the application
     # span is emitted; under bare lfx this stays None and the span code path is a no-op.
     otel_trace = None
+    OtelContext = None
 
 FLOW_EXECUTION_SPAN_NAME = "flow.execute"
 
@@ -849,6 +851,14 @@ class Graph:
         when a human is still holding it. Span status stays UNSET for a pause so alerting on the
         error rate does not fire, and the attribute carries the distinction.
 
+        A parent that has already ended is turned into a link instead. Several drivers outlive the
+        request that started them: the v1 build route hands the work to a task and returns the
+        job_id, so the server span is closed before the flow runs, and ``create_task`` copies the
+        context regardless. Parenting to it yields a child that starts after its parent finished,
+        which renders as a broken trace. Detecting it here rather than asking callers to declare it
+        keeps the v2 stream correct for free: its server span stays open for the whole response, so
+        it is still a real parent and is left as one.
+
         Yields a :class:`FlowSpanScope`. Callers that let exceptions propagate can ignore it; a
         driver that catches component failures itself must call ``record_error`` or its run is
         exported as a success.
@@ -857,7 +867,20 @@ class Graph:
         if otel_trace is None or self._is_subgraph:
             yield scope
             return
-        span = otel_trace.get_tracer(APPLICATION_TRACER_NAME).start_span(FLOW_EXECUTION_SPAN_NAME)
+        tracer = otel_trace.get_tracer(APPLICATION_TRACER_NAME)
+        # is_recording() goes False once a span has ended, which is the signal that this run
+        # outlived its request. An empty Context is what makes the replacement a root; without it
+        # start_span would pick the dead span up as parent anyway.
+        parent = otel_trace.get_current_span()
+        parent_context = parent.get_span_context()
+        if parent_context.is_valid and not parent.is_recording():
+            span = tracer.start_span(
+                FLOW_EXECUTION_SPAN_NAME,
+                context=OtelContext(),
+                links=[otel_trace.Link(parent_context)],
+            )
+        else:
+            span = tracer.start_span(FLOW_EXECUTION_SPAN_NAME)
         status = "ok"
         try:
             with contextlib.ExitStack() as stack:

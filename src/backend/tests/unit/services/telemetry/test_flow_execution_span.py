@@ -43,6 +43,7 @@ def report(result):
             "description": span.status.description,
             "span_id": span.context.span_id,
             "parent_span_id": span.parent.span_id if span.parent else None,
+            "links": [link.context.span_id for link in span.links],
         }
         for span in exporter.get_finished_spans()
     ]
@@ -167,6 +168,49 @@ asyncio.run(main())
 """
 )
 
+# A driver that outlives its request still has the request's span in context, because
+# asyncio.create_task copies it. Parenting to a span that has already ended renders as a child
+# starting after its parent finished, so the run becomes its own root and links back instead.
+DEAD_PARENT_PROBE = (
+    PROVIDER_SETUP
+    + """
+from opentelemetry import trace as otel_trace
+
+async def main():
+    tracer = otel_trace.get_tracer("probe.request")
+    request_span = tracer.start_span("POST /api/v1/build")
+    request_id = request_span.get_span_context().span_id
+    with otel_trace.use_span(request_span, end_on_exit=False):
+        # The route returns here and the work carries on in the copied context.
+        request_span.end()
+        graph = build_graph()
+        await graph.arun(inputs=[{}], outputs=["chat-output"])
+    report({"request_span_id": request_id})
+
+asyncio.run(main())
+"""
+)
+
+# The same context, but the request is still open (the v2 stream holds its server span for the
+# whole response). That is a real parent and must be left as one.
+LIVE_PARENT_PROBE = (
+    PROVIDER_SETUP
+    + """
+from opentelemetry import trace as otel_trace
+
+async def main():
+    tracer = otel_trace.get_tracer("probe.request")
+    request_span = tracer.start_span("POST /api/v2/workflows")
+    request_id = request_span.get_span_context().span_id
+    with otel_trace.use_span(request_span, end_on_exit=True):
+        graph = build_graph()
+        await graph.arun(inputs=[{}], outputs=["chat-output"])
+    report({"request_span_id": request_id})
+
+asyncio.run(main())
+"""
+)
+
 PROTOCOL_PROBE = (
     PROVIDER_SETUP
     + """
@@ -182,9 +226,10 @@ asyncio.run(main())
 """
 )
 
-# Several surfaces share one driver (voice and the playground both reach the graph through the
-# build loop), so the inner generic binding must not overwrite the outer one that knows how the
-# request actually arrived.
+# Several surfaces share one driver (voice reaches the graph through the build loop), so the
+# inner generic binding must not overwrite the outer one that knows how the request actually
+# arrived. The pair here is the real one: voice enters through build_flow_and_stream, which
+# binds v1.build for itself.
 NESTED_PROTOCOL_PROBE = (
     PROVIDER_SETUP
     + """
@@ -193,7 +238,7 @@ from lfx.observability import execution_protocol, get_execution_protocol
 async def main():
     graph = build_graph()
     with execution_protocol("voice"):
-        with execution_protocol("playground"):
+        with execution_protocol("v1.build"):
             inner = get_execution_protocol()
             await graph.arun(inputs=[{}], outputs=["chat-output"])
     after = get_execution_protocol()
@@ -366,6 +411,37 @@ def test_an_inner_binding_does_not_overwrite_the_surface_that_took_the_request()
     assert result["spans"][0]["attrs"]["protocol"] == "voice"
     # Reset on exit, so a worker reusing this task for the next request starts unbound.
     assert result["after"] is None
+
+
+def test_a_run_that_outlives_its_request_becomes_its_own_root():
+    """A run that outlives its request gets its own trace root.
+
+    The v1 build route returns the job_id and keeps working, so its server span is already
+    closed. A child of a finished parent is a broken trace in any APM that renders the tree.
+    """
+    result = run_probe(DEAD_PARENT_PROBE)
+
+    flow_spans = [span for span in result["spans"] if span["name"] == "flow.execute"]
+    assert len(flow_spans) == 1
+    span = flow_spans[0]
+    assert span["parent_span_id"] is None, "the flow span adopted a parent that had already ended"
+    # The request stays reachable from the run; it just is not pretended to contain it.
+    assert span["links"] == [result["request_span_id"]]
+
+
+def test_a_run_inside_a_live_request_still_nests_under_it():
+    """A run inside a still-open request keeps nesting under it.
+
+    The other half of the same rule: the v2 stream holds its server span open for the whole
+    response, so that one is a real parent and detaching it would lose the correlation.
+    """
+    result = run_probe(LIVE_PARENT_PROBE)
+
+    flow_spans = [span for span in result["spans"] if span["name"] == "flow.execute"]
+    assert len(flow_spans) == 1
+    span = flow_spans[0]
+    assert span["parent_span_id"] == result["request_span_id"]
+    assert span["links"] == []
 
 
 def test_a_cancelled_flow_is_not_recorded_as_a_successful_one():
