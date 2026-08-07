@@ -146,7 +146,13 @@ async def create_flow(
         # into the row we persist so stale caller scope fields cannot retarget
         # the write after the guard has run.
         flow.workspace_id, flow.folder_id = _create
-        return await _new_flow(session=session, flow=flow, user_id=current_user.id, storage_service=storage_service)
+        return await _new_flow(
+            session=session,
+            flow=flow,
+            user_id=current_user.id,
+            storage_service=storage_service,
+            widen_for_authz=True,
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -383,6 +389,7 @@ async def update_flow(
             db_flow.user_id,
             requested_folder_id,
             fallback_folder_id=db_flow.folder_id,
+            authorized_existing_folder_id=db_flow.folder_id,
         )
         flow.workspace_id = target_workspace_id
         if requested_folder_id is not None:
@@ -435,6 +442,7 @@ async def update_flow(
                 db_flow_for_attempt.user_id,
                 flow.folder_id,
                 fallback_folder_id=db_flow_for_attempt.folder_id,
+                authorized_existing_folder_id=db_flow_for_attempt.folder_id,
             )
             if (
                 attempt_target_workspace_id != db_flow_for_attempt.workspace_id
@@ -531,6 +539,7 @@ async def upsert_flow(
                 requested_folder_id,
                 fallback_folder_id=existing_flow.folder_id,
                 reject_invalid=True,
+                authorized_existing_folder_id=existing_flow.folder_id,
             )
             flow.workspace_id = target_workspace_id
             if requested_folder_id is not None:
@@ -585,6 +594,7 @@ async def upsert_flow(
                     requested_folder_id,
                     fallback_folder_id=existing_flow_for_attempt.folder_id,
                     reject_invalid=requested_folder_id is not None,
+                    authorized_existing_folder_id=existing_flow_for_attempt.folder_id,
                 )
                 flow.workspace_id = attempt_target_workspace_id
                 if requested_folder_id is not None:
@@ -836,6 +846,7 @@ async def upload_file(
             flow,
             current_user.id,
             fallback_folder_id=fallback_folder_id,
+            authorized_existing_folder_id=existing_flow.folder_id if existing_flow is not None else None,
         )
         await ensure_flow_permission(
             current_user,
