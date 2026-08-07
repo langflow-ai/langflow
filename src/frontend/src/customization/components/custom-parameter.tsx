@@ -97,6 +97,7 @@ export function getCustomParameterTitle({
   required,
   inspectionPanel,
   labelId,
+  requiredText,
 }: {
   title: string;
   nodeId: string;
@@ -104,6 +105,7 @@ export function getCustomParameterTitle({
   required?: boolean;
   inspectionPanel?: boolean;
   labelId?: string;
+  requiredText?: string;
 }) {
   return (
     <div id={labelId} className={cn(isFlexView && "max-w-56 truncate")}>
@@ -122,7 +124,7 @@ export function getCustomParameterTitle({
           <span className="text-destructive" aria-hidden="true">
             *
           </span>
-          <span className="sr-only">required</span>
+          <span className="sr-only">{requiredText}</span>
         </>
       )}
     </div>

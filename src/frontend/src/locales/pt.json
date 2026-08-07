@@ -1,4 +1,5 @@
 {
+  "field.required": "Obrigatório",
   "accordion.addVariable": "Incluir variável",
   "accordion.fullscreen": "Tela cheia",
   "accordion.collapse": "Recolher",
@@ -898,6 +899,7 @@
   "flow.lastSavedNever": "Nunca",
   "flow.lockFlow": "Bloquear fluxo",
   "flow.lockFlowDescription": "Bloqueie seu fluxo para impedir edições ou alterações acidentais.",
+  "flow.lockFlowAriaLabel": "Interruptor de bloqueio de fluxo",
   "flow.menu.delete": "Excluir",
   "flow.menu.duplicate": "Duplicata",
   "flow.menu.editDetails": "Editar detalhes",

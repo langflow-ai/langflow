@@ -1,4 +1,5 @@
 {
+  "field.required": "必填",
   "accordion.addVariable": "添加变量",
   "accordion.fullscreen": "全屏",
   "accordion.collapse": "收起",
@@ -898,6 +899,7 @@
   "flow.lastSavedNever": "从不",
   "flow.lockFlow": "锁定流量",
   "flow.lockFlowDescription": "锁定流程以防止编辑或意外更改。",
+  "flow.lockFlowAriaLabel": "锁定流程开关",
   "flow.menu.delete": "删除",
   "flow.menu.duplicate": "复制",
   "flow.menu.editDetails": "编辑详细信息",

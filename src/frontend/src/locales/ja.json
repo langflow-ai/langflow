@@ -1,4 +1,5 @@
 {
+  "field.required": "必須",
   "accordion.addVariable": "変数の追加",
   "accordion.fullscreen": "フルスクリーン",
   "accordion.collapse": "折りたたむ",
@@ -898,6 +899,7 @@
   "flow.lastSavedNever": "なし",
   "flow.lockFlow": "フローのロック",
   "flow.lockFlowDescription": "編集や誤った変更を防ぐために、フローをロックしてください。",
+  "flow.lockFlowAriaLabel": "フローロックスイッチ",
   "flow.menu.delete": "削除",
   "flow.menu.duplicate": "重複",
   "flow.menu.editDetails": "詳細の編集",

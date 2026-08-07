@@ -1,4 +1,5 @@
 {
+  "field.required": "Obligatoire",
   "accordion.addVariable": "Ajouter la variable",
   "accordion.fullscreen": "Plein écran",
   "accordion.collapse": "Réduire",
@@ -898,6 +899,7 @@
   "flow.lastSavedNever": "Jamais",
   "flow.lockFlow": "Débit de verrouillage",
   "flow.lockFlowDescription": "Verrouillez votre flux pour empêcher toute modification ou tout changement accidentel.",
+  "flow.lockFlowAriaLabel": "Interrupteur de verrouillage du flux",
   "flow.menu.delete": "Supprimer",
   "flow.menu.duplicate": "Dupliquer",
   "flow.menu.editDetails": "Editer les détails",

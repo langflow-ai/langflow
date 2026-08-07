@@ -1,4 +1,5 @@
 {
+  "field.required": "Erforderlich",
   "accordion.addVariable": "Variable hinzufügen",
   "accordion.fullscreen": "Vollbildschirm",
   "accordion.collapse": "Einklappen",
@@ -898,6 +899,7 @@
   "flow.lastSavedNever": "Niemals",
   "flow.lockFlow": "Durchfluss sperren",
   "flow.lockFlowDescription": "Sperren Sie Ihren Fluss, um Bearbeitungen oder versehentliche Änderungen zu verhindern.",
+  "flow.lockFlowAriaLabel": "Fluss sperren Schalter",
   "flow.menu.delete": "Löschen",
   "flow.menu.duplicate": "Duplikat",
   "flow.menu.editDetails": "Details bearbeiten",

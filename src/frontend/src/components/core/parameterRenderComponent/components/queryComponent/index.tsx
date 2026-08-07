@@ -137,7 +137,10 @@ export default function QueryComponent({
         disabled={disabled}
         className={getInputClassName()}
         placeholder={getPlaceholder(disabled, placeholder)}
-        aria-label={disabled ? value : undefined}
+        // aria-labelledby wins whenever it resolves, which on the canvas
+        // is always — state the precedence explicitly instead of leaving
+        // the aria-label branch as unreachable dead code.
+        aria-label={disabled && !ariaLabelledBy ? value : undefined}
         aria-labelledby={ariaLabelledBy}
         ref={inputRef}
         type={"text"}

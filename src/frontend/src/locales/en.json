@@ -1,4 +1,5 @@
 {
+  "field.required": "required",
   "crash.title": "Sorry, we found an unexpected error!",
   "crash.descriptionBefore": "Please report errors with detailed tracebacks on the",
   "crash.githubIssues": "GitHub Issues",
@@ -1295,7 +1296,6 @@
   "node.buildComponentFirst": "Please build the component first",
   "input.floatNumberShort": "Float number",
   "input.floatNumberFull": "Type a float number",
-  "input.noLimit": "No limit",
   "input.typeKey": "Type key...",
   "input.typeValue": "Type a value...",
   "input.duplicateOrEmptyKey": "Duplicate or empty key",
@@ -1348,6 +1348,7 @@
   "flow.pleaseEnterName": "Please enter a name",
   "flow.lockFlow": "Lock Flow",
   "flow.lockFlowDescription": "Lock your flow to prevent edits or accidental changes.",
+  "flow.lockFlowAriaLabel": "Lock flow switch",
   "flow.pleaseEnterDescription": "Please enter a description",
   "flow.noDescription": "No description",
   "canvas.addStickyNote": "Add Sticky Note",

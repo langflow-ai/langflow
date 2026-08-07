@@ -172,6 +172,7 @@ export default function NodeInputField({
                       isFlexView,
                       required,
                       labelId,
+                      requiredText: t("field.required"),
                     })}
                   </span>
                 }
@@ -184,6 +185,7 @@ export default function NodeInputField({
                   isFlexView,
                   required,
                   labelId,
+                  requiredText: t("field.required"),
                 })}
               </span>
             )}

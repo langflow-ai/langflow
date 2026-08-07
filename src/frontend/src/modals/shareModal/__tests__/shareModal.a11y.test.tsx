@@ -55,30 +55,27 @@ const renderModal = () =>
   );
 
 describe("ShareModal accessibility", () => {
-  // FINDING (documented, not fixed): EditFlowSettings always renders its
-  // "Lock Flow" Switch, even here where ShareModal passes no `setLocked` and
-  // the control does nothing. The Switch has no aria-label and its Form.Label
-  // sits in a different Form.Field, so axe reports `button-name`. Asserting
-  // the exact known-violation set keeps any NEW violation failing while the
-  // pre-existing gap stays visible.
-  it("should_have_no_axe_violations_beyond_the_known_lock_switch_gap", async () => {
+  // EditFlowSettings always renders its "Lock Flow" Switch, even here where
+  // ShareModal passes no `setLocked` and the control does nothing — but it
+  // now carries aria-label={t("flow.lockFlowAriaLabel")}, so the
+  // previously-documented button-name violation no longer fires.
+  it("should_have_no_axe_violations", async () => {
     renderModal();
 
     // BaseModal portals its content to document.body, outside the render
     // container.
     const results = await axe(document.body);
 
-    expect(results.violations.map((violation) => violation.id)).toEqual([
-      "button-name",
-    ]);
-    expect(results.violations[0].nodes[0].html).toContain("lock-flow-switch");
+    expect(results.violations).toEqual([]);
   });
 
-  it("should_render_a_non_functional_lock_switch_that_has_no_name", () => {
+  it("should_name_the_non_functional_lock_switch_even_though_it_does_nothing_here", () => {
     renderModal();
 
-    // Companion to the finding above: the switch is present, inert, unnamed.
-    expect(screen.getByRole("switch")).toHaveAccessibleName("");
+    // The switch is still inert in this context (no setLocked passed), but
+    // it must still have a real accessible name — an unnamed focusable
+    // control is worse than a named one that happens not to do anything.
+    expect(screen.getByRole("switch")).toHaveAccessibleName("Lock flow switch");
   });
 
   it("should_expose_dialog_role_with_accessible_name", () => {

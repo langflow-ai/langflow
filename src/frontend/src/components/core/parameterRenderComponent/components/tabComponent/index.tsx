@@ -42,7 +42,14 @@ export default function TabComponent({
   // containing a space (e.g. "Option A") breaks into two dangling
   // references instead of one valid id. Index-based tokens sidestep that;
   // the real option text is still what gets emitted via handleOnNewValue.
-  const activeIndex = Math.max(validOptions.indexOf(activeTab), 0);
+  //
+  // Don't clamp a miss to 0 — that would make the first tab render as
+  // selected even though the stored value doesn't match any option (e.g.
+  // it's the 4th+ option, or over the 20-char truncation limit). Radix
+  // selecting nothing is the honest state; silently claiming the first
+  // tab is selected would let a user "confirm" a value they can't see.
+  const activeIndex = validOptions.indexOf(activeTab);
+  const tabsValue = activeIndex === -1 ? "" : String(activeIndex);
 
   const handleTabChange = (indexToken: string) => {
     const tab = validOptions[Number(indexToken)];
@@ -57,7 +64,7 @@ export default function TabComponent({
   return (
     <div className="w-full">
       <Tabs
-        value={String(activeIndex)}
+        value={tabsValue}
         onValueChange={handleTabChange}
         className={`w-full ${disabled ? "pointer-events-none opacity-70" : ""}`}
       >

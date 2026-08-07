@@ -202,7 +202,7 @@ describe("ModelList — selecting an option", () => {
 });
 
 describe("ModelList — position announcement", () => {
-  it("computes aria-posinset/aria-setsize and the sr-only N of M text across all providers combined", () => {
+  it("computes the sr-only N of M text across all providers combined", () => {
     renderList({
       groupedOptions: { OpenAI: [gpt4], Anthropic: [claude] },
       selectedModel: null,
@@ -214,11 +214,23 @@ describe("ModelList — position announcement", () => {
       getModelOptionTestId("Anthropic", "claude-3-opus"),
     );
 
-    expect(first).toHaveAttribute("aria-posinset", "1");
-    expect(first).toHaveAttribute("aria-setsize", "2");
-    expect(second).toHaveAttribute("aria-posinset", "2");
-    expect(second).toHaveAttribute("aria-setsize", "2");
     expect(first).toHaveAccessibleName(/1 of 2/);
     expect(second).toHaveAccessibleName(/2 of 2/);
+  });
+
+  // Regression guard: aria-posinset/aria-setsize were dropped entirely —
+  // NVDA/JAWS honor them (unlike VoiceOver), which doubled the "N of M"
+  // announcement alongside the sr-only text. Only the sr-only text remains,
+  // since it's the one mechanism that works across all screen readers.
+  it("does not set aria-posinset/aria-setsize", () => {
+    renderList({
+      groupedOptions: { OpenAI: [gpt4], Anthropic: [claude] },
+      selectedModel: null,
+      onSelect: jest.fn(),
+    });
+
+    const first = screen.getByTestId(getModelOptionTestId("OpenAI", "gpt-4"));
+    expect(first).not.toHaveAttribute("aria-posinset");
+    expect(first).not.toHaveAttribute("aria-setsize");
   });
 });

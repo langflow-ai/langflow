@@ -121,6 +121,7 @@ describe("getCustomParameterTitle", () => {
           isFlexView: false,
           required: true,
           labelId: "api-key-label",
+          requiredText: "required",
         })}
       </div>,
     );
@@ -128,6 +129,28 @@ describe("getCustomParameterTitle", () => {
     const label = screen.getByText("*");
     expect(label).toHaveAttribute("aria-hidden", "true");
     expect(screen.getByText("required")).toHaveClass("sr-only");
+  });
+
+  // Regression guard: getCustomParameterTitle is a plain function, not a
+  // component — it can't call useTranslation itself, so the sr-only text
+  // must come from whatever the caller passes. No caller may hardcode
+  // English text into this function again.
+  it("uses whatever requiredText the caller passes, not a hardcoded English string", () => {
+    render(
+      <div>
+        {getCustomParameterTitle({
+          title: "API Key",
+          nodeId: "node-1",
+          isFlexView: false,
+          required: true,
+          labelId: "api-key-label",
+          requiredText: "erforderlich",
+        })}
+      </div>,
+    );
+
+    expect(screen.getByText("erforderlich")).toHaveClass("sr-only");
+    expect(screen.queryByText("required")).not.toBeInTheDocument();
   });
 
   it("renders no required marker at all when the field isn't required", () => {
