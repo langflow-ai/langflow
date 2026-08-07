@@ -41,7 +41,8 @@ _INVALID_NAMES = {
 # every render path, so a prompt variable landing in that namespace is created in the
 # template but never gets an input or a handle, and resolves to an empty string at run
 # time. Reject the name instead, the same way `_INVALID_NAMES` is rejected.
-# Mirrored in the frontend by `isReservedVariableName`.
+# Mirrored in the frontend by `invalidVariableReason`, together with the other three
+# rejection paths below, so the editor can flag the name while the user is still typing.
 RESERVED_VARIABLE_PREFIX = "_"
 
 

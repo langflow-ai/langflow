@@ -15,6 +15,25 @@ describe("varHighlightHTML", () => {
     );
   });
 
+  it.each(["1var", "my var", "code"])(
+    "uses the invalid class for %s too, the way Check & Save does",
+    (name) => {
+      expect(varHighlightHTML({ name })).toContain(
+        "chat-message-highlight-invalid",
+      );
+    },
+  );
+
+  it("leaves a format spec alone, since the backend reads only the field name", () => {
+    // `{x:>10}` is the variable `x`, and `{"a": 1}` is a JSON literal the backend accepts.
+    expect(varHighlightHTML({ name: "x:>10" })).toContain(
+      '<span class="font-semibold chat-message-highlight">',
+    );
+    expect(varHighlightHTML({ name: '"a": 1' })).toContain(
+      '<span class="font-semibold chat-message-highlight">',
+    );
+  });
+
   it("reads the rule from variableName when it differs from the rendered text", () => {
     // Mustache renders its own braces, so the bare identifier arrives separately.
     expect(
@@ -39,7 +58,7 @@ describe("varHighlightHTML", () => {
     // en/pt/es quote the prefix with a plain `"`. Unescaped, it closed the attribute and
     // the browser read only "Variable names can't start with ", scattering the rest of
     // the sentence into stray attributes.
-    const title = en["modal.prompt.reservedPrefix"];
+    const title = en["modal.prompt.invalidVariable.reservedPrefix"];
     document.body.innerHTML = varHighlightHTML({
       name: "_x",
       addCurlyBraces: true,

@@ -15,7 +15,7 @@ import {
 } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import type { PromptModalType } from "../../types/components";
-import { isReservedVariableName } from "../../utils/promptVariables";
+import { invalidVariableMessageKey } from "../../utils/promptVariables";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
@@ -111,6 +111,7 @@ export default function PromptModal({
 
       // 3) Number of literal braces each side = floor(lenOpen / 2)
       const literal = "{".repeat(Math.floor(lenOpen / 2));
+      const invalidKey = invalidVariableMessageKey(varName);
       return (
         literal +
         varHighlightHTML({
@@ -118,7 +119,7 @@ export default function PromptModal({
           // The braces belong inside the highlight, as the node preview renders them.
           // `literal` above only carries the extra braces of an escaped run.
           addCurlyBraces: true,
-          invalidTitle: t("modal.prompt.reservedPrefix"),
+          invalidTitle: invalidKey ? t(invalidKey) : undefined,
         }) +
         literal.replace(/\{/g, "}") // same amount of closing braces
       );
@@ -306,24 +307,20 @@ export default function PromptModal({
 
                   {Array.from(wordsHighlight).map((word, index) => {
                     const variableName = word.replace(/[{}]/g, "");
-                    const reserved = isReservedVariableName(variableName);
+                    const invalidKey = invalidVariableMessageKey(variableName);
                     return (
                       <ShadTooltip
                         key={index}
-                        content={
-                          reserved
-                            ? t("modal.prompt.reservedPrefix")
-                            : variableName
-                        }
+                        content={invalidKey ? t(invalidKey) : variableName}
                         asChild={false}
                       >
                         <Badge
                           key={index}
-                          variant={reserved ? "errorStatic" : "gray"}
+                          variant={invalidKey ? "errorStatic" : "gray"}
                           size="md"
                           className="max-w-[40vw] cursor-default truncate p-1 text-sm"
                           data-testid={
-                            reserved
+                            invalidKey
                               ? "prompt-variable-badge-invalid"
                               : "prompt-variable-badge"
                           }

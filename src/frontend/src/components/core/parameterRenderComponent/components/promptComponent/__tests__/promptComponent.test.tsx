@@ -85,6 +85,28 @@ describe("PromptAreaComponent variable highlighting", () => {
     expect(html).toContain('<span class="chat-message-highlight">{var}</span>');
   });
 
+  it.each(["1var", "my var", "code"])(
+    "marks %s as invalid, the way Check & Save does",
+    (name) => {
+      render(
+        <PromptAreaComponent {...defaultProps} value={`Hello {${name}}!`} />,
+      );
+
+      expect(screen.getByTestId("sanitized-html").innerHTML).toContain(
+        `<span class="chat-message-highlight-invalid">{${name}}</span>`,
+      );
+    },
+  );
+
+  it("leaves a JSON literal highlighted normally", () => {
+    // The backend reads the field name up to the `:`, so `{"a": 1}` is accepted.
+    render(<PromptAreaComponent {...defaultProps} value={'Body {"a": 1}'} />);
+
+    expect(screen.getByTestId("sanitized-html").innerHTML).not.toContain(
+      "chat-message-highlight-invalid",
+    );
+  });
+
   it("leaves double-brace escapes untouched", () => {
     render(
       <PromptAreaComponent {...defaultProps} value="Literal {{_x}} here" />,

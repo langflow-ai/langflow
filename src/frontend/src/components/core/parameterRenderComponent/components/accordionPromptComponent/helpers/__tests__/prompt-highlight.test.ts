@@ -31,6 +31,25 @@ describe("getHighlightedHTML", () => {
         '<span class="chat-message-highlight">{user_name}</span>',
       );
     });
+
+    it.each(["1var", "my var", "code"])(
+      "marks %s as invalid, the way Check & Save does",
+      (name) => {
+        expect(getHighlightedHTML(`Hello {${name}}!`, false)).toContain(
+          `<span class="chat-message-highlight-invalid">{${name}}</span>`,
+        );
+      },
+    );
+
+    it("leaves a JSON literal highlighted normally", () => {
+      // The backend reads the field name up to the `:`, so `{"a": 1}` is accepted.
+      expect(getHighlightedHTML('Payload {"a": 1}', false)).toContain(
+        '<span class="chat-message-highlight">',
+      );
+      expect(getHighlightedHTML('Payload {"a": 1}', false)).not.toContain(
+        "chat-message-highlight-invalid",
+      );
+    });
   });
 
   describe("double brackets", () => {
@@ -43,6 +62,12 @@ describe("getHighlightedHTML", () => {
     it("keeps a regular name highlighted normally", () => {
       expect(getHighlightedHTML("Hello {{var}}!", true)).toContain(
         '<span class="chat-message-highlight">{{var}}</span>',
+      );
+    });
+
+    it("marks a reserved name as invalid", () => {
+      expect(getHighlightedHTML("Hello {{code}}!", true)).toContain(
+        '<span class="chat-message-highlight-invalid">{{code}}</span>',
       );
     });
   });

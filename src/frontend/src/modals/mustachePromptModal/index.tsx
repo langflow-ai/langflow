@@ -11,7 +11,7 @@ import { Textarea } from "../../components/ui/textarea";
 import { MAX_WORDS_HIGHLIGHT } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { PromptModalType } from "../../types/components";
-import { isReservedVariableName } from "../../utils/promptVariables";
+import { invalidVariableMessageKey } from "../../utils/promptVariables";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
@@ -82,11 +82,12 @@ export default function MustachePromptModal({
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g, (match, varName) => {
+      const invalidKey = invalidVariableMessageKey(varName);
       return varHighlightHTML({
         name: match,
         addCurlyBraces: false,
         variableName: varName,
-        invalidTitle: t("modal.prompt.reservedPrefix"),
+        invalidTitle: invalidKey ? t(invalidKey) : undefined,
       });
     })
     .replace(/\n/g, "<br />");
@@ -271,24 +272,20 @@ export default function MustachePromptModal({
 
                   {Array.from(wordsHighlight).map((word, index) => {
                     const variableName = word.replace(/[{}]/g, "");
-                    const reserved = isReservedVariableName(variableName);
+                    const invalidKey = invalidVariableMessageKey(variableName);
                     return (
                       <ShadTooltip
                         key={index}
-                        content={
-                          reserved
-                            ? t("modal.prompt.reservedPrefix")
-                            : variableName
-                        }
+                        content={invalidKey ? t(invalidKey) : variableName}
                         asChild={false}
                       >
                         <Badge
                           key={index}
-                          variant={reserved ? "errorStatic" : "gray"}
+                          variant={invalidKey ? "errorStatic" : "gray"}
                           size="md"
                           className="max-w-[40vw] cursor-default truncate p-1 text-sm"
                           data-testid={
-                            reserved
+                            invalidKey
                               ? "prompt-variable-badge-invalid"
                               : "prompt-variable-badge"
                           }

@@ -271,6 +271,18 @@ describe("MustachePromptAreaComponent", () => {
       );
     });
 
+    it("should mark a reserved template name as invalid", () => {
+      // `code` is one of the seven names that collide with node-template keys, rejected
+      // by Check & Save for the same reason as the underscore namespace.
+      render(
+        <MustachePromptAreaComponent {...defaultProps} value="Run {{code}}" />,
+      );
+
+      expect(screen.getByTestId("sanitized-html").innerHTML).toContain(
+        '<span class="chat-message-highlight-invalid">{{code}}</span>',
+      );
+    });
+
     it("should keep an underscore that is not the first character valid", () => {
       render(
         <MustachePromptAreaComponent
