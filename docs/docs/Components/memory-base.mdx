@@ -8,6 +8,7 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 A memory base is a per-flow vector store that automatically ingests conversation messages after each flow run.
 The Memory Base component retrieves context from a [memory base](../Develop/memory-bases.mdx) attached to the current flow using semantic search.
+Retrieval uses the [DB Provider](/knowledge#configure-vector-database-providers) selected when the memory base was created.
 The most relevant conversation chunks are returned as a [DataFrame](/data-types#dataframe).
 
 ## Memory Base parameters

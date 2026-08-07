@@ -4,7 +4,7 @@ slug: /memory
 ---
 
 Langflow provides flexible memory management options for storage and retrieval of data relevant to your flows and your Langflow server.
-This includes essential Langflow database tables, file management, and caching, as well as chat memory.
+This includes essential Langflow database tables, file management, caching, and chat memory.
 
 ## Storage options and paths
 
@@ -170,6 +170,8 @@ Components that support chat memory (such as the **Agent** and **Message History
 Retrieval as memory is an important distinction for LLMs and agents because this storage and retrieval mechanism is specifically designed to recall context from past conversations.
 Unlike vector stores, which are designed for semantic search and retrieval of text chunks, chat memory is designed to store and retrieve chat messages in a way that is optimized for conversation history.
 
+For semantic retrieval of past conversations across sessions, use a [memory base](/memory-bases) instead of chronological chat memory.
+
 </details>
 
 ### Session ID and chat memory
@@ -206,6 +208,8 @@ For more information and examples, see [**Message History** component](/message-
 
 ## See also
 
+* [Manage memory bases](/memory-bases)
+* [Configure vector database providers](/knowledge#configure-vector-database-providers)
 * [Database migrations](./database-migrations)
 * [Configure an external PostgreSQL database](/configuration-custom-database)
 * [Langflow file management](/concepts-file-management)
