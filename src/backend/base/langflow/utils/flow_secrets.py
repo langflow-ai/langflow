@@ -1,0 +1,219 @@
+"""Secret-scrubbing helpers for serialized flow data.
+
+This module is deliberately independent of the API and service layers so flow
+payloads can be scrubbed at any export boundary without importing FastAPI.
+"""
+
+from __future__ import annotations
+
+import re
+from copy import deepcopy
+from urllib.parse import parse_qsl, urlsplit
+
+API_WORDS = ["api", "key", "token"]
+
+_SECRET_NAME_PARTS = frozenset({"credential", "credentials", "passwd", "password", "secret"})
+_SECRET_COMPOUND_NAMES = frozenset(
+    {
+        "access_key",
+        "api_key",
+        "apikey",
+        "authorization",
+        "client_secret",
+        "connection_string",
+        "cookie",
+        "database_uri",
+        "database_url",
+        "dsn",
+        "private_key",
+        "proxy_authorization",
+        "set_cookie",
+    }
+)
+
+
+def has_api_terms(word: str) -> bool:
+    """Return whether a field name identifies an API credential."""
+    return "api" in word and ("key" in word or ("token" in word and "tokens" not in word))
+
+
+def remove_api_keys(flow: dict) -> dict:
+    """Null legacy password-marked API key fields in a serialized flow."""
+    flow_data = flow.get("data")
+    if not isinstance(flow_data, dict):
+        return flow
+
+    nodes = flow_data.get("nodes")
+    if not isinstance(nodes, list):
+        return flow
+
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        node_data = node.get("data")
+        if not isinstance(node_data, dict):
+            continue
+        node_inner = node_data.get("node")
+        if not isinstance(node_inner, dict):
+            continue
+        template = node_inner.get("template")
+        if not isinstance(template, dict):
+            continue
+        for value in template.values():
+            if not isinstance(value, dict):
+                continue
+            name = value.get("name")
+            if isinstance(name, str) and has_api_terms(name) and value.get("password"):
+                value["value"] = None
+
+    return flow
+
+
+def strip_secret_field_values(flow_data: dict | None) -> dict | None:
+    """Return a deep-copied flow-data mapping with persisted secrets removed."""
+    if not flow_data:
+        return flow_data
+    return strip_secret_field_values_in_place(deepcopy(flow_data))
+
+
+def _normalized_secret_name(value: object) -> str:
+    """Normalize snake, kebab, and camel-case names for classification."""
+    name = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", str(value or ""))
+    return re.sub(r"[^a-zA-Z0-9]+", "_", name).strip("_").lower()
+
+
+def _is_secret_name(value: object) -> bool:
+    normalized = _normalized_secret_name(value)
+    if normalized in _SECRET_COMPOUND_NAMES:
+        return True
+    parts = set(normalized.split("_"))
+    is_token_value = normalized == "token" or normalized.endswith("_token")
+    return bool(parts & _SECRET_NAME_PARTS) or is_token_value or {"api", "key"}.issubset(parts)
+
+
+def _contains_url_credentials(value: str) -> bool:
+    """Return whether a URL contains userinfo or secret-named parameters."""
+    try:
+        parsed = urlsplit(value)
+    except ValueError:
+        return False
+    if parsed.username is not None or parsed.password is not None:
+        return True
+    return any(
+        _is_secret_name(key)
+        for component in (parsed.query, parsed.fragment)
+        for key, _ in parse_qsl(component, keep_blank_values=True)
+    )
+
+
+def _structured_container_frame(value: object):
+    """Prepare one mutable container for bounded, in-place traversal."""
+    if isinstance(value, dict):
+        discriminator = next(
+            (value.get(key) for key in ("key", "name", "header") if _is_secret_name(value.get(key))),
+            None,
+        )
+        if discriminator is not None and "value" in value:
+            value["value"] = None
+        return value, iter(value), True
+    if isinstance(value, list):
+        return value, iter(range(len(value))), False
+    return None
+
+
+def _strip_structured_secret_values_in_place(value: object) -> object:
+    """Iteratively null secret-named values without copying wide subtrees."""
+    if isinstance(value, str) and _contains_url_credentials(value):
+        return None
+    root_frame = _structured_container_frame(value)
+    if root_frame is None:
+        return value
+
+    frames = [root_frame]
+    while frames:
+        container, keys, classify_keys = frames[-1]
+        try:
+            key = next(keys)
+        except StopIteration:
+            frames.pop()
+            continue
+
+        if classify_keys and _is_secret_name(key):
+            container[key] = None
+            continue
+        nested_value = container[key]
+        if isinstance(nested_value, str) and _contains_url_credentials(nested_value):
+            container[key] = None
+            continue
+        nested_frame = _structured_container_frame(nested_value)
+        if nested_frame is not None:
+            frames.append(nested_frame)
+    return value
+
+
+def _strip_template_field_value(field: dict) -> None:
+    """Strip a template field according to metadata and value shape."""
+    if field.get("password") or _is_secret_name(field.get("name")):
+        field["value"] = None
+        return
+
+    field_type = str(field.get("type") or "").lower()
+    input_type = str(field.get("_input_type") or "").lower()
+    if field_type == "mcp" or input_type == "mcpinput":
+        value = field.get("value")
+        name = value.get("name") if isinstance(value, dict) else None
+        field["value"] = {"name": name} if name else None
+        return
+
+    field["value"] = _strip_structured_secret_values_in_place(field.get("value"))
+
+
+def _strip_secrets_from_nodes(nodes: list) -> None:
+    """Iteratively strip secret values from regular and grouped flow nodes."""
+    node_frames = [iter(nodes)]
+    while node_frames:
+        try:
+            node = next(node_frames[-1])
+        except StopIteration:
+            node_frames.pop()
+            continue
+        if not isinstance(node, dict):
+            continue
+        node_data = node.get("data")
+        if not isinstance(node_data, dict):
+            continue
+        node_inner = node_data.get("node")
+        if not isinstance(node_inner, dict):
+            continue
+        template = node_inner.get("template")
+        if isinstance(template, dict):
+            for value in template.values():
+                if isinstance(value, dict):
+                    _strip_template_field_value(value)
+
+        flow = node_inner.get("flow")
+        if isinstance(flow, dict):
+            nested_flow_data = flow.get("data")
+            if isinstance(nested_flow_data, dict):
+                nested_nodes = nested_flow_data.get("nodes")
+                if isinstance(nested_nodes, list):
+                    node_frames.append(iter(nested_nodes))
+
+
+def strip_secret_field_values_in_place(flow_data: dict | None) -> dict | None:
+    """Scrub a detached flow-data mapping in place with bounded traversal memory."""
+    if not flow_data:
+        return flow_data
+    nodes = flow_data.get("nodes")
+    if isinstance(nodes, list):
+        _strip_secrets_from_nodes(nodes)
+    return flow_data
+
+
+__all__ = [
+    "API_WORDS",
+    "has_api_terms",
+    "remove_api_keys",
+    "strip_secret_field_values",
+    "strip_secret_field_values_in_place",
+]
