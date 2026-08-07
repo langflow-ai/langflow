@@ -154,6 +154,12 @@ test(
       });
     });
 
+    // The node may already be selected from dropping it on the canvas, so the
+    // check below compares against the state right before the right-click
+    // instead of assuming nothing is selected.
+    const selectedNodes = page.locator(".react-flow__node.selected");
+    const selectedBeforeRightClick = await selectedNodes.count();
+
     await searchProviders.click({ button: "right" });
 
     // The modal is rendered from inside the node through a portal, and React
@@ -170,11 +176,18 @@ test(
       true,
     );
 
-    await expect(
-      page.locator('[data-testid="more-options-modal"][data-state="open"]'),
-    ).toHaveCount(0);
-
+    // Interacting with the field first gives the app a real window to react to
+    // the right-click: an auto-retrying negative assertion resolves the moment
+    // its condition holds, so running it immediately would pass before a
+    // dropdown could ever have rendered.
     await searchProviders.fill("openai");
     await expect(searchProviders).toHaveValue("openai");
+
+    // "save-button-modal" lives inside the toolbar's select content, which is
+    // unmounted while the dropdown is closed — the same signal the right-click
+    // case above asserts positively, so a rename cannot make this check vacuous.
+    await expect(page.getByTestId("save-button-modal")).toHaveCount(0);
+
+    await expect(selectedNodes).toHaveCount(selectedBeforeRightClick);
   },
 );
