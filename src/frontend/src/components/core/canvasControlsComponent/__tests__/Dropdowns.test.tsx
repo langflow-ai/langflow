@@ -4,28 +4,44 @@ import { axe } from "@/utils/a11y-test";
 import HelpDropdown from "../HelpDropdown";
 
 jest.mock("@/components/ui/button", () => ({
-  Button: ({ children, ...props }: any) => (
+  Button: ({
+    children,
+    ...props
+  }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
     <button {...props}>{children}</button>
   ),
 }));
 
 jest.mock("@/components/ui/dropdown-menu", () => ({
-  DropdownMenu: ({ children, ...props }: any) => (
+  DropdownMenu: ({
+    children,
+    ...props
+  }: React.HTMLAttributes<HTMLDivElement>) => (
     <div data-testid="dropdown-menu" {...props}>
       {children}
     </div>
   ),
-  DropdownMenuTrigger: ({ children, ...props }: any) => (
+  DropdownMenuTrigger: ({
+    children,
+    ...props
+  }: React.HTMLAttributes<HTMLDivElement>) => (
     <div data-testid="dropdown-trigger" {...props}>
       {children}
     </div>
   ),
-  DropdownMenuContent: ({ children, ...props }: any) => (
+  DropdownMenuContent: ({
+    children,
+    ...props
+  }: React.HTMLAttributes<HTMLDivElement>) => (
     <div data-testid="dropdown-content" role="menu" {...props}>
       {children}
     </div>
   ),
-  DropdownMenuItem: ({ children, onClick, ...props }: any) => (
+  DropdownMenuItem: ({
+    children,
+    onClick,
+    ...props
+  }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
     <button type="button" role="menuitem" onClick={onClick} {...props}>
       {children}
     </button>
@@ -35,7 +51,10 @@ jest.mock("@/components/ui/dropdown-menu", () => ({
     onCheckedChange,
     checked,
     ...props
-  }: any) => (
+  }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    onCheckedChange?: (checked: boolean) => void;
+    checked?: boolean;
+  }) => (
     <button
       type="button"
       role="menuitemcheckbox"
@@ -72,7 +91,7 @@ jest.mock("@/customization/feature-flags", () => ({
 }));
 
 jest.mock("@/utils/utils", () => ({
-  cn: (...args: any[]) => args.filter(Boolean).join(" "),
+  cn: (...args: unknown[]) => args.filter(Boolean).join(" "),
   getOS: () => "macos",
 }));
 

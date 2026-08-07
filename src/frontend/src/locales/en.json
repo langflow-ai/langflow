@@ -2230,7 +2230,6 @@
   "paramRender.removeItem": "Remove item {{index}}",
   "mcp.servers.statusErrorDetail": "{{name}} error: {{error}}",
   "mcp.servers.loadingServers": "Loading MCP servers",
-  "input.selectOption": "Select input option",
   "settings.mcpClient.agentTablistLabel": "Choose a coding agent",
   "settings.mcpClient.copyCommand": "Copy command",
   "settings.mcpClient.copyConfig": "Copy JSON config",
