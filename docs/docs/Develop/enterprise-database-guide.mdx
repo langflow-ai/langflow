@@ -119,7 +119,7 @@ For more information, see [Configure an external PostgreSQL database](/configura
     3. Run `langflow migration --fix` to run the migration and permanently apply the changes.
 
         This is a destructive operation that can delete data.
-        For more information, see [`langflow migration`](/configuration-cli#langflow-migration).
+        For more information, see [Database migrations](./database-migrations).
 
 6. To verify the configuration, create any flow using the Langflow visual editor or API, and then query your database to confirm the tables and activity are recorded there. The content of the flow doesn't matter; you only need to confirm that the flow is stored in your PostgreSQL database.
 You can query the database in two ways:
@@ -287,5 +287,6 @@ For example, use `pg_stat_activity` to monitor connection counts and contention.
 ## See also
 
 * [Configure an external PostgreSQL database](/configuration-custom-database)
+* [Database migrations](./database-migrations)
 * [Langflow architecture on Kubernetes](/deployment-architecture)
 * [Deploy the Langflow production environment on Kubernetes](/deployment-kubernetes-prod)
