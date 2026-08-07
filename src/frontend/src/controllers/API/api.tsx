@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import { IS_AUTO_LOGIN } from "@/constants/constants";
 import { baseURL } from "@/customization/constants";
 import { useCustomApiHeaders } from "@/customization/hooks/use-custom-api-headers";
+import { customShouldSkipAuthRefresh } from "@/customization/utils/custom-should-skip-auth-refresh";
 import {
   getAxiosWithCredentials,
   getFetchCredentials,
@@ -107,6 +108,11 @@ function ApiInterceptor() {
           (isAuthenticationError && !autoLogin && autoLogin !== undefined);
 
         if (shouldRetryRefresh) {
+          // Edition overlays can mark specific 403s as "authenticated but
+          // gated" (e.g. forced password change) so we don't refresh/logout.
+          if (customShouldSkipAuthRefresh(error)) {
+            return Promise.reject(error);
+          }
           if (
             error?.config?.url?.includes("github") ||
             error?.config?.url?.includes("public")

@@ -37,7 +37,7 @@ from langflow.agentic.services.provider_service import (
     get_enabled_providers_for_user,
     list_installed_tool_calling_models,
 )
-from langflow.api.utils.core import CurrentActiveUser, DbSession
+from langflow.api.utils.core import CurrentActiveUser, DbSession, release_db_transaction
 
 router = APIRouter(prefix="/agentic", tags=["Agentic"])
 
@@ -175,6 +175,10 @@ async def execute_named_flow(
     """
     ctx = await _resolve_assistant_context(request, current_user.id, session)
 
+    # The flow run below can wait on a model for minutes; don't hold the
+    # request transaction (and its pooled connection) open across it (#14445).
+    await release_db_transaction(session)
+
     global_vars = dict(ctx.global_vars)
     if request.component_id:
         global_vars["COMPONENT_ID"] = request.component_id
@@ -294,6 +298,10 @@ async def assist(
 
     logger.info(f"Executing {LANGFLOW_ASSISTANT_FLOW} with {ctx.provider}/{ctx.model_name}")
 
+    # The assistant run below can wait on a model for minutes; don't hold the
+    # request transaction (and its pooled connection) open across it (#14445).
+    await release_db_transaction(session)
+
     return await execute_flow_with_validation(
         flow_filename=LANGFLOW_ASSISTANT_FLOW,
         input_value=request.input_value or "",
@@ -317,6 +325,11 @@ async def assist_stream(
     """Chat with the Langflow Assistant with streaming progress updates."""
     await _validate_flow_access(request.flow_id, current_user.id, session)
     ctx = await _resolve_assistant_context(request, current_user.id, session)
+
+    # Dependency teardown only runs after the SSE stream finishes, so without
+    # this commit the request transaction (and its pooled connection) would
+    # stay open for the assistant's whole streaming run (#14445).
+    await release_db_transaction(session)
 
     return StreamingResponse(
         execute_flow_with_validation_streaming(

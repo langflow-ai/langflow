@@ -77,6 +77,26 @@ if TYPE_CHECKING:
 router = APIRouter(tags=["Chat"])
 
 
+def _validate_graph_for_execution(graph: Graph) -> None:
+    """Validate the effective cached graph against the current runtime policy."""
+    try:
+        validate_flow_for_current_settings(graph)
+    except CatalogPolicyIdentityUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except CustomComponentValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+async def _clear_invalid_graph_cache(chat_service: ChatService, flow_id: str) -> None:
+    """Best-effort eviction for a graph rejected by current runtime policy."""
+    try:
+        await chat_service.clear_cache(flow_id)
+    except Exception:  # noqa: BLE001
+        await logger.aexception("Failed to evict a graph rejected by runtime policy")
+
+
 async def _verify_job_ownership(job_id: str, current_user: CurrentActiveUser, queue_service: JobQueueService) -> None:
     """Raise HTTP 404 if the requesting user does not own the job.
 
@@ -501,6 +521,12 @@ async def build_vertex(
             graph.set_run_id(run_id)
         else:
             graph = cache.get("result")
+        try:
+            _validate_graph_for_execution(graph)
+        except HTTPException:
+            await _clear_invalid_graph_cache(chat_service, flow_id_str)
+            raise
+        if not isinstance(cache, CacheMiss):
             await graph.initialize_run()
             run_id = graph.run_id
         vertex = graph.get_vertex(vertex_id)
@@ -598,6 +624,8 @@ async def build_vertex(
                 component_run_id=run_id,
             ),
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_component,
@@ -619,24 +647,31 @@ async def build_vertex(
     return build_response
 
 
-async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService):
-    graph = None
+async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService, graph: Graph | None = None):
     try:
-        try:
-            cache = await chat_service.get_cache(flow_id)
-        except Exception as exc:  # noqa: BLE001
-            await logger.aexception("Error building Component")
-            yield str(StreamData(event="error", data={"error": str(exc)}))
-            return
+        if graph is None:
+            try:
+                cache = await chat_service.get_cache(flow_id)
+            except Exception as exc:  # noqa: BLE001
+                await logger.aexception("Error building Component")
+                yield str(StreamData(event="error", data={"error": str(exc)}))
+                return
 
-        if isinstance(cache, CacheMiss):
-            # If there's no cache
-            msg = f"No cache found for {flow_id}."
-            await logger.aerror(msg)
-            yield str(StreamData(event="error", data={"error": msg}))
-            return
-        else:
+            if isinstance(cache, CacheMiss):
+                # If there's no cache
+                msg = f"No cache found for {flow_id}."
+                await logger.aerror(msg)
+                yield str(StreamData(event="error", data={"error": msg}))
+                return
             graph = cache.get("result")
+
+        try:
+            _validate_graph_for_execution(graph)
+        except HTTPException as exc:
+            await _clear_invalid_graph_cache(chat_service, flow_id)
+            graph = None
+            yield str(StreamData(event="error", data={"error": exc.detail}))
+            return
 
         try:
             vertex: InterfaceVertex = graph.get_vertex(vertex_id)
@@ -759,11 +794,24 @@ async def build_vertex_stream(
         folder_id=flow.folder_id,
     )
 
+    chat_service = get_chat_service()
     try:
+        cache = await chat_service.get_cache(str(flow_id))
+        if isinstance(cache, CacheMiss):
+            graph = None
+        else:
+            graph = cache.get("result")
+            try:
+                _validate_graph_for_execution(graph)
+            except HTTPException:
+                await _clear_invalid_graph_cache(chat_service, str(flow_id))
+                raise
         return StreamingResponse(
-            _stream_vertex(str(flow_id), vertex_id, get_chat_service()),
+            _stream_vertex(str(flow_id), vertex_id, chat_service, graph),
             media_type="text/event-stream",
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Error building Component") from exc
 
