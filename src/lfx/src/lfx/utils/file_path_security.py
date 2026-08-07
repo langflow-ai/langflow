@@ -84,6 +84,16 @@ def _reserved_secret_paths(data_dir: Path) -> set[Path]:
     return reserved
 
 
+def component_authenticated_user_scope(component: object) -> str | None:
+    """Return the authenticated user's storage scope without requiring component properties."""
+    graph = getattr(getattr(component, "_vertex", None), "graph", None)
+    candidate = getattr(component, "_user_id", None) or getattr(graph, "user_id", None)
+    if candidate is None:
+        return None
+    scope = str(candidate).strip()
+    return scope or None
+
+
 def component_file_access_scopes(component: object) -> tuple[str, ...]:
     """Return authenticated user, execution-flow, and trusted source-flow storage scopes.
 
@@ -92,7 +102,7 @@ def component_file_access_scopes(component: object) -> tuple[str, ...]:
     """
     graph = getattr(getattr(component, "_vertex", None), "graph", None)
     candidates = (
-        getattr(component, "_user_id", None) or getattr(graph, "user_id", None),
+        component_authenticated_user_scope(component),
         getattr(graph, "flow_id", None),
         getattr(graph, "source_flow_id", None),
     )
