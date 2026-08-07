@@ -20,14 +20,6 @@ import varHighlightHTML from "../promptModal/utils/var-highlight-html";
 // Simple regex to extract mustache variables - only matches valid {{variable_name}} patterns
 const SIMPLE_VARIABLE_PATTERN = /\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g;
 
-// Type for non-standard caretPositionFromPoint API (not supported in Safari)
-interface CaretPosition {
-  offset: number;
-}
-interface DocumentWithCaretPosition extends Document {
-  caretPositionFromPoint(x: number, y: number): CaretPosition | null;
-}
-
 export default function MustachePromptModal({
   field_name = "",
   value,
@@ -183,8 +175,7 @@ export default function MustachePromptModal({
 
       // Use caretPositionFromPoint to get the closest text position. Does not work on Safari.
       if ("caretPositionFromPoint" in document) {
-        const docWithCaret = document as DocumentWithCaretPosition;
-        const range = docWithCaret.caretPositionFromPoint(x, y)?.offset ?? 0;
+        const range = document.caretPositionFromPoint(x, y)?.offset ?? 0;
         if (range) {
           const position = range;
           textArea.setSelectionRange(position, position);
