@@ -244,6 +244,14 @@ EXPECTED_FIELDS = {
     "mcp_server_docker_hardening",
     "mcp_server_allowed_packages",
     "mcp_server_interpreter_hardening",
+    # ---- Added in 1.12.0 ----
+    # SecuritySettings: opt-in microVM sandbox backend (issue #12029)
+    "sandbox_backend",
+    "sandbox_timeout_seconds",
+    "sandbox_memory_mb",
+    "sandbox_allow_network",
+    "sandbox_allowed_domains",
+    "sandbox_allow_software_emulation",
 }
 
 
