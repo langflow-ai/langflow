@@ -7,7 +7,7 @@ import Icon from "@site/src/components/icon";
 
 Each Langflow server has a file management system where you can store files that you want to use in your flows.
 
-Files uploaded to Langflow file management are stored in Langflow's [storage backend (local or AWS S3)](/concepts-file-management#configure-file-storage), and they are available to all of your flows.
+Files uploaded to Langflow file management are stored in Langflow's [storage backend (local, AWS S3, Google Cloud Storage, or Azure Blob Storage)](/concepts-file-management#configure-file-storage), and they are available to all of your flows.
 
 Uploading files to Langflow file management keeps your files in a central location, and allows you to reuse files across flows without repeated manual uploads.
 
@@ -125,7 +125,7 @@ For videos, see the **Twelve Labs** and **YouTube** <Icon name="Blocks" aria-hid
 
 ## Configure file storage
 
-Langflow supports two storage backends for file management.
+Langflow supports four storage backends for file management.
 
 * **Local storage**: Langflow's default storage backend. Files are stored locally in your [Langflow configuration directory](/memory). Set `LANGFLOW_STORAGE_TYPE=local` or leave it unset to use local storage.
 
@@ -187,6 +187,64 @@ Replace the following placeholders with the actual values for your IAM policy an
 
 For more information, see the [AWS documentation](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_change-permissions.html).
 
+* **GCS storage**: Files are stored in a Google Cloud Storage (GCS) bucket.
+Langflow uses the [google-cloud-storage](https://cloud.google.com/python/docs/reference/storage/latest) library to interact with GCS.
+
+To use GCS as your file storage backend, add the following configuration to your `.env` file:
+
+```text
+# GCS Storage Configuration
+LANGFLOW_STORAGE_TYPE=gcs
+LANGFLOW_OBJECT_STORAGE_BUCKET_NAME=GCS_BUCKET_NAME
+LANGFLOW_OBJECT_STORAGE_PREFIX=GCS_BUCKET_DIRECTORY
+
+# GCS Credentials (required unless running where Application Default Credentials are already available)
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json
+```
+
+Replace the following placeholders with the actual values for your GCS instance:
+
+* `GCS_BUCKET_NAME`: The name of your GCS bucket.
+* `GCS_BUCKET_DIRECTORY`: An optional folder path within the bucket where files are stored, such as `gs://GCS_BUCKET_NAME/GCS_BUCKET_DIRECTORY`.
+
+If `GOOGLE_APPLICATION_CREDENTIALS` isn't set, Langflow falls back to [Application Default Credentials](https://cloud.google.com/docs/authentication/application-default-credentials), such as credentials from `gcloud auth application-default login` or a GCE/GKE/Cloud Run attached service account.
+
+Your GCS service account must have the necessary permissions to perform the required operations for your use case, such as reading, writing, and deleting objects in the bucket. The predefined `roles/storage.objectAdmin` role on the bucket covers create, read, update, delete, and list operations.
+
+`LANGFLOW_OBJECT_STORAGE_TAGS` values are applied as [custom metadata](https://cloud.google.com/storage/docs/metadata#custom-metadata) on each object, since GCS objects don't support AWS-style tags.
+
+* **Azure Blob storage**: Files are stored in an Azure Blob Storage container. This also works against ADLS Gen2 (hierarchical namespace) storage accounts, since ADLS Gen2 remains compatible with the flat Blob API used here.
+Langflow uses the [azure-storage-blob](https://learn.microsoft.com/en-us/python/api/overview/azure/storage-blob-readme) library to interact with Azure Blob Storage.
+
+To use Azure Blob storage as your file storage backend, add the following configuration to your `.env` file:
+
+```text
+# Azure Blob Storage Configuration
+LANGFLOW_STORAGE_TYPE=azure
+LANGFLOW_OBJECT_STORAGE_BUCKET_NAME=AZURE_CONTAINER_NAME
+LANGFLOW_OBJECT_STORAGE_PREFIX=AZURE_CONTAINER_DIRECTORY
+
+# Option 1: Connection string (bundles account name, key, and endpoint)
+AZURE_STORAGE_CONNECTION_STRING=AZURE_CONNECTION_STRING
+
+# Option 2: Account URL or name, authenticated via DefaultAzureCredential
+# (managed identity, AKS workload identity, service principal, or az login)
+AZURE_STORAGE_ACCOUNT_NAME=AZURE_ACCOUNT_NAME
+```
+
+Replace the following placeholders with the actual values for your Azure Blob Storage instance:
+
+* `AZURE_CONTAINER_NAME`: The name of your Azure Blob Storage container.
+* `AZURE_CONTAINER_DIRECTORY`: An optional folder path within the container where files are stored.
+* `AZURE_CONNECTION_STRING`: Your storage account's connection string, from **Access keys** in the Azure Portal.
+* `AZURE_ACCOUNT_NAME`: Your storage account name, used only if you're authenticating with `DefaultAzureCredential` instead of a connection string.
+
+If you don't set `AZURE_STORAGE_CONNECTION_STRING`, Langflow falls back to [`DefaultAzureCredential`](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential), which resolves credentials from a managed identity, AKS workload identity, a service principal (`AZURE_CLIENT_ID`/`AZURE_TENANT_ID`/`AZURE_CLIENT_SECRET`), or an existing `az login` session, in that order. You can also set `AZURE_STORAGE_ACCOUNT_URL` directly instead of `AZURE_STORAGE_ACCOUNT_NAME` if your account uses a non-default endpoint.
+
+Your Azure identity must have the necessary permissions to perform the required operations for your use case. The built-in **Storage Blob Data Contributor** role on the container covers create, read, update, delete, and list operations.
+
+`LANGFLOW_OBJECT_STORAGE_TAGS` values are applied as [Blob Index Tags](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-manage-find-blobs) on each blob.
+
 **Google Drive** storage is available through the [**Read File**](/read-file) and [**Write file**](/write-file) components, but you cannot use environment variables to configure it.
 
 ## File storage environment variables {#file-storage-environment-variables}
@@ -195,10 +253,10 @@ The following environment variables configure file storage backends for Langflow
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
-| `LANGFLOW_STORAGE_TYPE` | String | `local` | Set the file storage backend. Supported values: `local` (files stored in the Langflow configuration directory) or `s3` (files stored in AWS S3). For S3 storage, you must also configure AWS credentials and bucket settings. |
-| `LANGFLOW_OBJECT_STORAGE_BUCKET_NAME` | String | Not set | The name of the S3 bucket to use for file storage. Required when `LANGFLOW_STORAGE_TYPE=s3`. |
-| `LANGFLOW_OBJECT_STORAGE_PREFIX` | String | Not set | Optional prefix/folder path within the S3 bucket where files will be stored. If not set, files are stored at the bucket root. |
-| `LANGFLOW_OBJECT_STORAGE_TAGS` | JSON object | Not set | Optional S3 object tags applied to stored files when `LANGFLOW_STORAGE_TYPE=s3`. Ignored for local storage. Provided as a JSON map of string keys to string values, such as `{"env": "prod", "owner": "data-team"}`. |
+| `LANGFLOW_STORAGE_TYPE` | String | `local` | Set the file storage backend. Supported values: `local` (files stored in the Langflow configuration directory), `s3` (files stored in AWS S3), `gcs` (files stored in Google Cloud Storage), or `azure` (files stored in Azure Blob Storage, including ADLS Gen2 accounts). For S3, GCS, or Azure storage, you must also configure the relevant cloud credentials and bucket/container settings. |
+| `LANGFLOW_OBJECT_STORAGE_BUCKET_NAME` | String | Not set | The name of the S3 bucket, GCS bucket, or Azure Blob container to use for file storage. Required when `LANGFLOW_STORAGE_TYPE` is `s3`, `gcs`, or `azure`. |
+| `LANGFLOW_OBJECT_STORAGE_PREFIX` | String | Not set | Optional prefix/folder path within the bucket or container where files will be stored. If not set, files are stored at the root. |
+| `LANGFLOW_OBJECT_STORAGE_TAGS` | JSON object | Not set | Optional object tags applied to stored files when `LANGFLOW_STORAGE_TYPE` is `s3`, `gcs`, or `azure` (applied as custom metadata for GCS, and as Blob Index Tags for Azure). Ignored for local storage. Provided as a JSON map of string keys to string values, such as `{"env": "prod", "owner": "data-team"}`. |
 
 ## See also
 

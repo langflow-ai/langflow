@@ -126,6 +126,9 @@ dependencies = [
     "openlayer>=0.9.0,<1.0.0",
     "kubernetes>=31.0.0,<33.0.0",
     "aiobotocore>=3.7.0,<4.0.0",
+    "google-cloud-storage>=2.10.0,<4.0.0",
+    "azure-storage-blob>=12.19.0,<13.0.0",
+    "azure-identity>=1.15.0,<2.0.0",
 ]
 
 [dependency-groups]
@@ -421,6 +424,19 @@ aiobotocore = ["aiobotocore>=3.7.0,<4.0.0"]
 # Preserve the legacy extra name so existing langflow-base[aioboto3] install
 # commands continue to enable Langflow's async S3 backend.
 aioboto3 = ["aiobotocore>=3.7.0,<4.0.0"]
+
+# Google Cloud Storage client. The GCS storage backend wraps the official
+# (synchronous) client with asyncio.to_thread, so no separate async variant is needed.
+# Already a hard dependency above; this extra is kept for explicit
+# `langflow-base[gcs]` install commands, matching the aiobotocore/aioboto3 pattern.
+gcs = ["google-cloud-storage>=2.10.0,<4.0.0"]
+
+# Azure Blob Storage client (also covers ADLS Gen2 accounts via the flat Blob API).
+# Uses the official azure-storage-blob asyncio client directly; azure-identity powers
+# DefaultAzureCredential (managed identity / workload identity / service principal)
+# when AZURE_STORAGE_CONNECTION_STRING isn't set. Already hard dependencies above;
+# this extra is kept for explicit `langflow-base[azure]` install commands.
+azure = ["azure-storage-blob>=12.19.0,<13.0.0", "azure-identity>=1.15.0,<2.0.0"]
 
 # Astra
 astrapy = ["astrapy>=2.1.0,<3.0.0"]

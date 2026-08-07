@@ -1,10 +1,32 @@
 """Tests for storage service parse_file_path method."""
 
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
+from langflow.services.storage.azure_blob import AzureBlobStorageService
+from langflow.services.storage.gcs import GCSStorageService
 from langflow.services.storage.local import LocalStorageService
 from langflow.services.storage.s3 import S3StorageService
+
+_FAKE_AZURE_CONNECTION_STRING = (
+    "DefaultEndpointsProtocol=https;AccountName=fake;AccountKey=ZmFrZWtleQ==;EndpointSuffix=core.windows.net"
+)
+
+
+def _make_gcs_service(mock_session, mock_settings):
+    """Construct a GCSStorageService without making a real GCS client call."""
+    with patch("google.cloud.storage.Client", return_value=Mock()):
+        return GCSStorageService(mock_session, mock_settings)
+
+
+def _make_azure_service(mock_session, mock_settings, monkeypatch):
+    """Construct an AzureBlobStorageService without making a real Azure client call."""
+    monkeypatch.setenv("AZURE_STORAGE_CONNECTION_STRING", _FAKE_AZURE_CONNECTION_STRING)
+    with patch("azure.storage.blob.aio.BlobServiceClient.from_connection_string") as mock_from_cs:
+        mock_service_client = Mock()
+        mock_service_client.get_container_client.return_value = Mock()
+        mock_from_cs.return_value = mock_service_client
+        return AzureBlobStorageService(mock_session, mock_settings)
 
 
 class TestLocalStorageParseFilePath:
@@ -169,6 +191,168 @@ class TestS3StorageParseFilePath:
         assert file_name == "image.png"
 
 
+class TestGCSStorageParseFilePath:
+    """Test GCSStorageService.parse_file_path method."""
+
+    def test_parse_with_prefix(self):
+        """Test parsing path that includes GCS prefix."""
+        mock_session = Mock()
+        mock_settings = Mock()
+        mock_settings.settings.config_dir = "/data"
+        mock_settings.settings.object_storage_bucket_name = "test-bucket"
+        mock_settings.settings.object_storage_prefix = "files/"
+        mock_settings.settings.object_storage_tags = {}
+
+        service = _make_gcs_service(mock_session, mock_settings)
+
+        flow_id, file_name = service.parse_file_path("files/user_123/image.png")
+        assert flow_id == "user_123"
+        assert file_name == "image.png"
+
+    def test_parse_without_prefix(self):
+        """Test parsing path without GCS prefix."""
+        mock_session = Mock()
+        mock_settings = Mock()
+        mock_settings.settings.config_dir = "/data"
+        mock_settings.settings.object_storage_bucket_name = "test-bucket"
+        mock_settings.settings.object_storage_prefix = "files/"
+        mock_settings.settings.object_storage_tags = {}
+
+        service = _make_gcs_service(mock_session, mock_settings)
+
+        flow_id, file_name = service.parse_file_path("user_123/image.png")
+        assert flow_id == "user_123"
+        assert file_name == "image.png"
+
+    def test_parse_nested_flow_id(self):
+        """Test parsing path with nested flow_id."""
+        mock_session = Mock()
+        mock_settings = Mock()
+        mock_settings.settings.config_dir = "/data"
+        mock_settings.settings.object_storage_bucket_name = "test-bucket"
+        mock_settings.settings.object_storage_prefix = "files-test-1/"
+        mock_settings.settings.object_storage_tags = {}
+
+        service = _make_gcs_service(mock_session, mock_settings)
+
+        flow_id, file_name = service.parse_file_path(
+            "files-test-1/afffa27a-a9f0-4511-b1a9-7e6cb2b3df05/2025-12-07_14-47-29_langflow_pid_mem_usage.png"
+        )
+        assert flow_id == "afffa27a-a9f0-4511-b1a9-7e6cb2b3df05"
+        assert file_name == "2025-12-07_14-47-29_langflow_pid_mem_usage.png"
+
+    def test_parse_just_filename(self):
+        """Test parsing just a filename with no directory."""
+        mock_session = Mock()
+        mock_settings = Mock()
+        mock_settings.settings.config_dir = "/data"
+        mock_settings.settings.object_storage_bucket_name = "test-bucket"
+        mock_settings.settings.object_storage_prefix = "files/"
+        mock_settings.settings.object_storage_tags = {}
+
+        service = _make_gcs_service(mock_session, mock_settings)
+
+        flow_id, file_name = service.parse_file_path("image.png")
+        assert flow_id == ""
+        assert file_name == "image.png"
+
+    def test_parse_empty_prefix(self):
+        """Test parsing when prefix is empty."""
+        mock_session = Mock()
+        mock_settings = Mock()
+        mock_settings.settings.config_dir = "/data"
+        mock_settings.settings.object_storage_bucket_name = "test-bucket"
+        mock_settings.settings.object_storage_prefix = ""
+        mock_settings.settings.object_storage_tags = {}
+
+        service = _make_gcs_service(mock_session, mock_settings)
+
+        flow_id, file_name = service.parse_file_path("user_123/image.png")
+        assert flow_id == "user_123"
+        assert file_name == "image.png"
+
+
+class TestAzureBlobStorageParseFilePath:
+    """Test AzureBlobStorageService.parse_file_path method."""
+
+    def test_parse_with_prefix(self, monkeypatch):
+        """Test parsing path that includes Azure Blob prefix."""
+        mock_session = Mock()
+        mock_settings = Mock()
+        mock_settings.settings.config_dir = "/data"
+        mock_settings.settings.object_storage_bucket_name = "test-container"
+        mock_settings.settings.object_storage_prefix = "files/"
+        mock_settings.settings.object_storage_tags = {}
+
+        service = _make_azure_service(mock_session, mock_settings, monkeypatch)
+
+        flow_id, file_name = service.parse_file_path("files/user_123/image.png")
+        assert flow_id == "user_123"
+        assert file_name == "image.png"
+
+    def test_parse_without_prefix(self, monkeypatch):
+        """Test parsing path without Azure Blob prefix."""
+        mock_session = Mock()
+        mock_settings = Mock()
+        mock_settings.settings.config_dir = "/data"
+        mock_settings.settings.object_storage_bucket_name = "test-container"
+        mock_settings.settings.object_storage_prefix = "files/"
+        mock_settings.settings.object_storage_tags = {}
+
+        service = _make_azure_service(mock_session, mock_settings, monkeypatch)
+
+        flow_id, file_name = service.parse_file_path("user_123/image.png")
+        assert flow_id == "user_123"
+        assert file_name == "image.png"
+
+    def test_parse_nested_flow_id(self, monkeypatch):
+        """Test parsing path with nested flow_id."""
+        mock_session = Mock()
+        mock_settings = Mock()
+        mock_settings.settings.config_dir = "/data"
+        mock_settings.settings.object_storage_bucket_name = "test-container"
+        mock_settings.settings.object_storage_prefix = "files-test-1/"
+        mock_settings.settings.object_storage_tags = {}
+
+        service = _make_azure_service(mock_session, mock_settings, monkeypatch)
+
+        flow_id, file_name = service.parse_file_path(
+            "files-test-1/afffa27a-a9f0-4511-b1a9-7e6cb2b3df05/2025-12-07_14-47-29_langflow_pid_mem_usage.png"
+        )
+        assert flow_id == "afffa27a-a9f0-4511-b1a9-7e6cb2b3df05"
+        assert file_name == "2025-12-07_14-47-29_langflow_pid_mem_usage.png"
+
+    def test_parse_just_filename(self, monkeypatch):
+        """Test parsing just a filename with no directory."""
+        mock_session = Mock()
+        mock_settings = Mock()
+        mock_settings.settings.config_dir = "/data"
+        mock_settings.settings.object_storage_bucket_name = "test-container"
+        mock_settings.settings.object_storage_prefix = "files/"
+        mock_settings.settings.object_storage_tags = {}
+
+        service = _make_azure_service(mock_session, mock_settings, monkeypatch)
+
+        flow_id, file_name = service.parse_file_path("image.png")
+        assert flow_id == ""
+        assert file_name == "image.png"
+
+    def test_parse_empty_prefix(self, monkeypatch):
+        """Test parsing when prefix is empty."""
+        mock_session = Mock()
+        mock_settings = Mock()
+        mock_settings.settings.config_dir = "/data"
+        mock_settings.settings.object_storage_bucket_name = "test-container"
+        mock_settings.settings.object_storage_prefix = ""
+        mock_settings.settings.object_storage_tags = {}
+
+        service = _make_azure_service(mock_session, mock_settings, monkeypatch)
+
+        flow_id, file_name = service.parse_file_path("user_123/image.png")
+        assert flow_id == "user_123"
+        assert file_name == "image.png"
+
+
 class TestParseFilePathRoundTrip:
     """Test that parse_file_path correctly reverses build_full_path."""
 
@@ -233,6 +417,42 @@ class TestParseFilePathRoundTrip:
         flow_id, file_name = service.parse_file_path(full_path)
         assert flow_id == "afffa27a-a9f0-4511-b1a9-7e6cb2b3df05"
         assert file_name == "2025-12-07_14-47-29_langflow_pid_mem_usage.png"
+
+    def test_gcs_storage_round_trip(self):
+        """Test that parse reverses build for GCS storage."""
+        mock_session = Mock()
+        mock_settings = Mock()
+        mock_settings.settings.config_dir = "/data"
+        mock_settings.settings.object_storage_bucket_name = "test-bucket"
+        mock_settings.settings.object_storage_prefix = "files/"
+        mock_settings.settings.object_storage_tags = {}
+
+        service = _make_gcs_service(mock_session, mock_settings)
+
+        full_path = service.build_full_path("user_123", "image.png")
+        assert full_path == "files/user_123/image.png"
+
+        flow_id, file_name = service.parse_file_path(full_path)
+        assert flow_id == "user_123"
+        assert file_name == "image.png"
+
+    def test_azure_storage_round_trip(self, monkeypatch):
+        """Test that parse reverses build for Azure Blob storage."""
+        mock_session = Mock()
+        mock_settings = Mock()
+        mock_settings.settings.config_dir = "/data"
+        mock_settings.settings.object_storage_bucket_name = "test-container"
+        mock_settings.settings.object_storage_prefix = "files/"
+        mock_settings.settings.object_storage_tags = {}
+
+        service = _make_azure_service(mock_session, mock_settings, monkeypatch)
+
+        full_path = service.build_full_path("user_123", "image.png")
+        assert full_path == "files/user_123/image.png"
+
+        flow_id, file_name = service.parse_file_path(full_path)
+        assert flow_id == "user_123"
+        assert file_name == "image.png"
 
 
 class TestLocalStorageParseFilePathWindowsCompatibility:

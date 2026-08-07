@@ -24,6 +24,14 @@ class StorageServiceFactory(ServiceFactory):
             from .s3 import S3StorageService
 
             return S3StorageService(session_service, settings_service)
+        if storage_type.lower() == "gcs":
+            from .gcs import GCSStorageService
+
+            return GCSStorageService(session_service, settings_service)
+        if storage_type.lower() == "azure":
+            from .azure_blob import AzureBlobStorageService
+
+            return AzureBlobStorageService(session_service, settings_service)
         logger.warning(f"Storage type {storage_type} not supported. Using local storage.")
         from .local import LocalStorageService
 

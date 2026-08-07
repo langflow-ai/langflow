@@ -5,7 +5,7 @@ class StorageSettings(BaseModel):
     """File storage backend (local filesystem or object storage)."""
 
     storage_type: str = "local"
-    """Storage type for file storage. Defaults to 'local'. Supports 'local' and 's3'."""
+    """Storage type for file storage. Defaults to 'local'. Supports 'local', 's3', 'gcs', and 'azure'."""
     object_storage_bucket_name: str | None = "langflow-bucket"
     """Object storage bucket name for file storage. Defaults to 'langflow-bucket'."""
     object_storage_prefix: str | None = "files"
