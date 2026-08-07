@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import isEventFromPortal from "../utils/is-event-from-portal";
+import isEventFromOutsideElement from "../utils/is-event-from-outside-element";
 
 const NodeWithDialog = ({
   onContextMenu,
@@ -20,12 +20,12 @@ const NodeWithDialog = ({
   </div>
 );
 
-describe("isEventFromPortal", () => {
-  it("reports events raised inside the handler element as not portaled", () => {
+describe("isEventFromOutsideElement", () => {
+  it("reports events raised inside the handler element as not outside", () => {
     const results: boolean[] = [];
     render(
       <NodeWithDialog
-        onContextMenu={(e) => results.push(isEventFromPortal(e))}
+        onContextMenu={(e) => results.push(isEventFromOutsideElement(e))}
       />,
     );
 
@@ -34,11 +34,11 @@ describe("isEventFromPortal", () => {
     expect(results).toEqual([false]);
   });
 
-  it("reports events raised inside a dialog portal as portaled", () => {
+  it("reports events raised inside a dialog portal as outside", () => {
     const results: boolean[] = [];
     render(
       <NodeWithDialog
-        onContextMenu={(e) => results.push(isEventFromPortal(e))}
+        onContextMenu={(e) => results.push(isEventFromOutsideElement(e))}
       />,
     );
 
