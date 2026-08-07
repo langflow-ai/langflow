@@ -339,6 +339,22 @@ def test_outdated_breaking_when_tool_mode_node_lost_tool_support():
     assert report.nodes[0].status == "outdated_breaking"
 
 
+def test_outdated_breaking_when_tool_output_appears_more_than_once():
+    """Tool mode synthesizes exactly one output, so a duplicated name is a malformed node.
+
+    Such a node must keep going through the authored-output comparison instead of being
+    treated as a tool-mode node and skipping it.
+    """
+    node = _node(
+        code=REGISTRY_CODE_V1,
+        outputs=_tool_outputs() + _tool_outputs(),
+        template_extra={"query": {"tool_mode": True}, "tools_metadata": {}},
+    )
+    registry = _registry(code=REGISTRY_CODE_V2, template_extra={"query": {"tool_mode": True}})
+    report = check_flow_compatibility(_flow(node), registry)
+    assert report.nodes[0].status == "outdated_breaking"
+
+
 def test_outdated_breaking_when_tool_mode_node_input_types_narrowed():
     """The remaining compatibility checks still apply to a tool-mode node."""
     node = _node(

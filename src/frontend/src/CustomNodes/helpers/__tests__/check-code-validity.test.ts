@@ -218,6 +218,29 @@ describe("checkCodeValidity", () => {
     });
   });
 
+  // Tool mode synthesizes exactly one output, so a duplicated name is a malformed node and
+  // must keep going through the authored-output comparison.
+  it("treats a node with a duplicated tool output as breaking", () => {
+    const data = toolModeNode({
+      code: { value: "old component code" },
+      urls: { value: "", tool_mode: true },
+      tools_metadata: {},
+    });
+    const outputs = data.node!.outputs!;
+    data.node!.outputs = [outputs[0], { ...outputs[0] }];
+    const templates = urlTemplates({
+      code: { value: "current component code" },
+      urls: { value: "", tool_mode: true },
+    });
+
+    expect(checkCodeValidity(data, templates)).toMatchObject({
+      outdated: true,
+      blocked: false,
+      breakingChange: true,
+      userEdited: false,
+    });
+  });
+
   it("still applies the remaining checks to a tool-mode node", () => {
     const data = toolModeNode({
       code: { value: "old component code" },
