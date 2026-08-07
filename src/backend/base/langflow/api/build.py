@@ -637,8 +637,8 @@ async def generate_flow_events(
 
         if source_flow_id is not None:
             # This value comes from the server-resolved public flow, never from
-            # request data. FileInput containment uses it only after flow_id
-            # becomes visitor-virtual.
+            # request data. FileInput containment and ChatInput attachment
+            # validation use it only after flow_id becomes visitor-virtual.
             graph.source_flow_id = str(source_flow_id)
             graph.flow_id = str(flow_id)
         return graph
