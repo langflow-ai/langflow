@@ -12,10 +12,12 @@ Tests cover:
 """
 
 import json
+from types import SimpleNamespace
 
 import pytest
 from fastapi import status
 from httpx import AsyncClient
+from lfx.services.catalog_policy import CatalogPolicySnapshot
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -212,6 +214,39 @@ async def test_activate_version_overwrites_flow_data(client: AsyncClient, logged
     updated_flow = resp.json()
 
     assert updated_flow["data"] == original_data
+
+
+async def test_activate_version_rejects_components_blocked_after_snapshot(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    """A historical version cannot restore a component blocked after it was saved."""
+    from langflow.api.v1 import flow_version as flow_version_module
+
+    blocked_data = {
+        "nodes": [{"id": "Blocked-1", "data": {"type": "BlockedComponent"}}],
+        "edges": [],
+    }
+    flow = await _create_flow(client, logged_in_headers)
+    await _patch_flow_data(client, logged_in_headers, flow["id"], blocked_data)
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"], description="before policy change")
+    current_data = {"nodes": [], "edges": []}
+    await _patch_flow_data(client, logged_in_headers, flow["id"], current_data)
+
+    service = SimpleNamespace(snapshot=CatalogPolicySnapshot(blocked_component_keys={"BlockedComponent"}))
+    monkeypatch.setattr(flow_version_module, "get_catalog_policy_service", lambda: service)
+
+    response = await client.post(
+        f"api/v1/flows/{flow['id']}/versions/{snap['id']}/activate",
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "BlockedComponent" in response.json()["detail"]
+    current = await client.get(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)
+    assert current.status_code == status.HTTP_200_OK
+    assert current.json()["data"] == current_data
 
 
 async def test_activate_creates_auto_snapshot(client: AsyncClient, logged_in_headers):

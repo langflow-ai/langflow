@@ -714,6 +714,66 @@ async def test_build_vertex_invalid_vertex_id(client, added_flow_webhook_test, l
     assert response.status_code == 500
 
 
+async def test_build_vertex_revalidates_cached_graph_after_catalog_policy_change(
+    client,
+    added_flow_webhook_test,
+    logged_in_headers,
+    monkeypatch,
+):
+    """The deprecated per-vertex route must not execute a stale, newly blocked cached graph."""
+    from langflow.api.v1 import chat as chat_module
+    from lfx.utils.flow_validation import CatalogPolicyValidationError
+
+    flow_id = added_flow_webhook_test["id"]
+    order_response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+    assert order_response.status_code == 200
+    vertex_id = order_response.json()["ids"][0]
+    blocked_message = "Flow build blocked: catalog policy blocks components: ChatInput"
+
+    def reject_cached_graph(_graph):
+        raise CatalogPolicyValidationError(blocked_message)
+
+    monkeypatch.setattr(chat_module, "validate_flow_for_current_settings", reject_cached_graph)
+
+    response = await client.post(
+        f"/api/v1/build/{flow_id}/vertices/{vertex_id}",
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 400
+    assert "ChatInput" in response.json()["detail"]
+
+
+async def test_build_vertex_stream_revalidates_cached_graph_after_catalog_policy_change(
+    client,
+    added_flow_webhook_test,
+    logged_in_headers,
+    monkeypatch,
+):
+    """The deprecated stream route rejects a stale graph before response streaming begins."""
+    from langflow.api.v1 import chat as chat_module
+    from lfx.utils.flow_validation import CatalogPolicyValidationError
+
+    flow_id = added_flow_webhook_test["id"]
+    order_response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+    assert order_response.status_code == 200
+    vertex_id = order_response.json()["ids"][0]
+    blocked_message = "Flow build blocked: catalog policy blocks components: ChatInput"
+
+    def reject_cached_graph(_graph):
+        raise CatalogPolicyValidationError(blocked_message)
+
+    monkeypatch.setattr(chat_module, "validate_flow_for_current_settings", reject_cached_graph)
+
+    response = await client.get(
+        f"/api/v1/build/{flow_id}/{vertex_id}/stream",
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 400
+    assert "ChatInput" in response.json()["detail"]
+
+
 async def test_successful_run_no_payload(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]

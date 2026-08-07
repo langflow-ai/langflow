@@ -1,6 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import React from "react";
 import NoResultsMessage from "../emptySearchComponent";
 
 // Mock feature flags
@@ -10,7 +9,13 @@ jest.mock("@/customization/feature-flags", () => ({
 
 // Mock the SearchConfigTrigger component
 jest.mock("../searchConfigTrigger", () => ({
-  SearchConfigTrigger: ({ showConfig, setShowConfig }: any) => (
+  SearchConfigTrigger: ({
+    showConfig,
+    setShowConfig,
+  }: {
+    showConfig: boolean;
+    setShowConfig: (showConfig: boolean) => void;
+  }) => (
     <button
       data-testid="search-config-trigger"
       onClick={() => setShowConfig(!showConfig)}
@@ -99,7 +104,7 @@ describe("NoResultsMessage", () => {
   });
 
   describe("Clear Search Functionality", () => {
-    it("should call onClearSearch when clear link is clicked", async () => {
+    it("should call onClearSearch when the clear action is clicked", async () => {
       const user = userEvent.setup();
       render(<NoResultsMessage {...defaultProps} />);
 
@@ -124,16 +129,17 @@ describe("NoResultsMessage", () => {
       expect(mockOnClearSearch).toHaveBeenCalledTimes(1);
     });
 
-    it("should handle keyboard events on clear link", () => {
+    it("should activate the clear action from the keyboard", async () => {
+      const user = userEvent.setup();
       render(<NoResultsMessage {...defaultProps} />);
 
-      const clearLink = screen.getByText("Clear your search");
-      fireEvent.keyDown(clearLink, { key: "Enter" });
-      fireEvent.keyDown(clearLink, { key: " " });
+      const clearButton = screen.getByRole("button", {
+        name: "Clear your search",
+      });
+      clearButton.focus();
+      await user.keyboard("{Enter}");
 
-      // Note: onClick events in tests don't automatically handle keyboard events
-      // This test ensures the element is focusable and receives keyboard events
-      expect(clearLink).toBeInTheDocument();
+      expect(mockOnClearSearch).toHaveBeenCalledTimes(1);
     });
 
     it("should only call onClearSearch once per click", async () => {
@@ -149,12 +155,27 @@ describe("NoResultsMessage", () => {
   });
 
   describe("Component Structure", () => {
-    it("should render clear link as clickable element", () => {
+    it("should render the clear action as a semantic button", () => {
       render(<NoResultsMessage {...defaultProps} />);
 
-      const clearLink = screen.getByText("Clear your search");
-      expect(clearLink).toBeInTheDocument();
-      expect(clearLink.tagName).toBe("A");
+      expect(
+        screen.getByRole("button", { name: "Clear your search" }),
+      ).toBeInTheDocument();
+    });
+
+    it("should hide the clear action for a policy empty state", () => {
+      render(
+        <NoResultsMessage
+          {...defaultProps}
+          message="No components are available under policy."
+          showClearSearch={false}
+        />,
+      );
+
+      expect(
+        screen.getByText("No components are available under policy."),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("button")).not.toBeInTheDocument();
     });
   });
 
@@ -238,7 +259,7 @@ describe("NoResultsMessage", () => {
   describe("Callback Function", () => {
     it("should handle missing onClearSearch gracefully", () => {
       const propsWithoutCallback = {
-        onClearSearch: undefined as any,
+        onClearSearch: undefined,
       };
 
       expect(() => {
