@@ -21,6 +21,7 @@ from langflow.agentic.api.router import _resolve_assistant_context
 from langflow.agentic.api.schemas import AssistantRequest
 from langflow.agentic.services.assistant_service import execute_flow_with_validation_streaming
 from langflow.agentic.services.flow_types import LANGFLOW_ASSISTANT_FLOW
+from langflow.api.utils.core import release_db_transaction
 from langflow.api.v1.flows import _new_flow, _save_flow_to_fs, _validate_catalog_policy_for_write
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.database.models.flow.guards import ensure_flow_unlocked, lock_flow_for_update
@@ -195,6 +196,12 @@ async def run_assistant_and_persist(
         max_retries=None,
     )
     ctx = await _resolve_assistant_context(request, user_id, session)
+
+    # The agent loop below can run for minutes; end the read transaction now
+    # so it doesn't pin a pooled connection (Postgres: idle-in-transaction)
+    # for the whole run (#14445). Persistence re-reads under a fresh short
+    # transaction (the FOR UPDATE below), so the lock ordering is preserved.
+    await release_db_transaction(session)
 
     stream = execute_flow_with_validation_streaming(
         flow_filename=LANGFLOW_ASSISTANT_FLOW,

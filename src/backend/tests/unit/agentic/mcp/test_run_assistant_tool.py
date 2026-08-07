@@ -232,7 +232,10 @@ class TestRunAssistantAndPersist:
             )
 
         session.refresh.assert_awaited_once_with(flow, with_for_update=True)
-        session.commit.assert_not_awaited()
+        # Exactly one commit: the pre-run transaction release (#14445). The
+        # locked write itself must not be committed.
+        assert session.commit.await_count == 1
+        session.add.assert_not_called()
         save_flow.assert_not_awaited()
 
     @pytest.mark.asyncio
@@ -471,6 +474,56 @@ class TestRunAssistantAndPersist:
         session.delete.assert_awaited_once_with(created_flow)
         assert session.commit.await_count == 2
         save_flow.assert_not_awaited()
+
+
+class TestRunAssistantReleasesTransactionBeforeRun:
+    """Issue #14445: the caller's DB transaction must not span the assistant run.
+
+    The MCP ``run_assistant`` tool hands the runner one session for flow
+    loading, the agent loop, and persistence. The runner must commit the read
+    transaction before the (potentially minutes-long) stream starts; the
+    persistence write then re-reads under a fresh short FOR UPDATE transaction.
+    """
+
+    @pytest.mark.asyncio
+    async def test_should_commit_the_read_transaction_before_the_stream_starts(self):
+        from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
+
+        user_id = uuid4()
+        flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
+        session = AsyncMock()
+        session.get = AsyncMock(return_value=flow)
+
+        commits_when_stream_created: list[int] = []
+
+        def _tracking_stream(*_args, **_kwargs):
+            commits_when_stream_created.append(session.commit.await_count)
+            return _stream_of(EVENTS_WITH_FLOW)()
+
+        with (
+            patch(
+                f"{RUNNER_MODULE}._resolve_assistant_context",
+                new_callable=AsyncMock,
+                return_value=_context_stub(),
+            ),
+            patch(f"{RUNNER_MODULE}.execute_flow_with_validation_streaming", side_effect=_tracking_stream),
+            patch(f"{RUNNER_MODULE}._save_flow_to_fs", new_callable=AsyncMock),
+            patch(f"{RUNNER_MODULE}.get_storage_service", MagicMock()),
+        ):
+            result = await run_assistant_and_persist(
+                session=session,
+                user_id=user_id,
+                instruction="Build a chat flow",
+                flow_id=str(flow.id),
+            )
+
+        assert commits_when_stream_created == [1], (
+            "the read transaction must be committed before the assistant stream is created"
+        )
+        # Second commit is the persistence write, after the FOR UPDATE re-read.
+        assert session.commit.await_count == 2
+        session.refresh.assert_awaited_once_with(flow, with_for_update=True)
+        assert result["flow_changed"] is True
 
 
 class TestRunAssistantAppliesProposedFieldEdits:
