@@ -420,6 +420,60 @@ async def test_build_project_artifact_keeps_newline_heavy_code_as_bounded_string
     assert exported["data"]["nodes"][0]["data"]["node"]["template"]["code"]["value"] == code
 
 
+@pytest.mark.asyncio
+async def test_build_project_artifact_rejects_lone_unicode_surrogate_in_flow_name() -> None:
+    actor_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Valid project", user_id=actor_id)
+    flow = _flow(owner_id=actor_id, project_id=project_id, name="Invalid flow \ud800")
+    session = _session_with_flows([flow])
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    with pytest.raises(ProjectArtifactError, match="Unicode surrogate"):
+        await _build_authorized(session=session, user=user, project=project)
+
+
+@pytest.mark.asyncio
+async def test_build_project_artifact_rejects_lone_unicode_surrogate_in_project_name() -> None:
+    actor_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Invalid project \ud800", user_id=actor_id)
+    flow = _flow(owner_id=actor_id, project_id=project_id)
+    session = _session_with_flows([flow])
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    with pytest.raises(ProjectArtifactError, match="Unicode surrogate"):
+        await _build_authorized(session=session, user=user, project=project)
+
+
+@pytest.mark.asyncio
+async def test_build_project_artifact_rejects_lone_unicode_surrogate_in_persisted_string_value() -> None:
+    actor_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Valid project", user_id=actor_id)
+    flow = _flow(owner_id=actor_id, project_id=project_id)
+    flow.data = {"nodes": [], "edges": [], "persisted": "Invalid value \ud800"}
+    session = _session_with_flows([flow])
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    with pytest.raises(ProjectArtifactError, match="Unicode surrogate"):
+        await _build_authorized(session=session, user=user, project=project)
+
+
+@pytest.mark.asyncio
+async def test_build_project_artifact_rejects_lone_unicode_surrogate_in_persisted_object_key() -> None:
+    actor_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Valid project", user_id=actor_id)
+    flow = _flow(owner_id=actor_id, project_id=project_id)
+    flow.data = {"nodes": [], "edges": [], "persisted": {"Invalid key \ud800": "value"}}
+    session = _session_with_flows([flow])
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    with pytest.raises(ProjectArtifactError, match="Unicode surrogate"):
+        await _build_authorized(session=session, user=user, project=project)
+
+
 def test_secret_scrub_uses_bounded_memory_for_wide_deep_structured_value() -> None:
     from langflow.services.deployment_artifacts import builder
 
