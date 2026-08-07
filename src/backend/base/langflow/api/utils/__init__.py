@@ -35,6 +35,7 @@ from langflow.api.utils.core import (
     parse_exception,
     parse_value,
     raise_error_if_astra_cloud_env,
+    release_db_transaction,
     remove_api_keys,
     validate_is_component,
 )
@@ -88,6 +89,7 @@ __all__ = [
     "parse_exception",
     "parse_value",
     "raise_error_if_astra_cloud_env",
+    "release_db_transaction",
     "remove_api_keys",
     "scope_session_to_namespace",
     "validate_is_component",
