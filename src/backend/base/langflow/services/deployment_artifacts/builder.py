@@ -27,7 +27,7 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.utils.flow_secrets import strip_secret_field_values_in_place
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Iterator, Sequence
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -394,15 +394,26 @@ async def build_project_artifact(
     user: User | UserRead,
     project_id: UUID,
     *,
+    flow_ids: Sequence[UUID] | None = None,
     limits: ProjectArtifactLimits | None = None,
 ) -> ProjectArtifact:
-    """Package every readable current flow in a project as deterministic bytes.
+    """Package selected readable flows, or every current flow by default.
 
     The project lookup widens beyond the caller's owner namespace only when the
     registered authorization service explicitly supports cross-user fetch. Flow
     rows are always loaded from the resolved project's owner namespace, and the
     batched read guard must allow every flow before any archive is constructed.
     """
+    selected_flow_ids: tuple[UUID, ...] | None = None
+    if flow_ids is not None:
+        if not flow_ids:
+            msg = "flow_ids must contain at least one flow ID when provided"
+            raise ProjectArtifactError(msg)
+        if len(set(flow_ids)) != len(flow_ids):
+            msg = "flow_ids must not contain duplicate flow IDs"
+            raise ProjectArtifactError(msg)
+        selected_flow_ids = tuple(sorted(flow_ids, key=str))
+
     project = await authorized_or_owner_scoped(
         session,
         Folder,
@@ -424,17 +435,19 @@ async def build_project_artifact(
     )
 
     effective_limits = limits or ProjectArtifactLimits()
+    if selected_flow_ids is not None and len(selected_flow_ids) > effective_limits.max_flow_count:
+        msg = f"selected flow count {len(selected_flow_ids)} exceeds the {effective_limits.max_flow_count}-flow limit"
+        raise ProjectArtifactLimitError(msg)
     owner_filter = Flow.user_id.is_(None) if project.user_id is None else Flow.user_id == project.user_id
+    revision_statement = select(Flow.id, Flow.updated_at).where(Flow.folder_id == project_id, owner_filter)
+    if selected_flow_ids is not None:
+        revision_statement = revision_statement.where(col(Flow.id).in_(selected_flow_ids))
     revision_rows = list(
-        (
-            await session.exec(
-                select(Flow.id, Flow.updated_at)
-                .where(Flow.folder_id == project_id, owner_filter)
-                .order_by(col(Flow.id))
-                .limit(effective_limits.max_flow_count + 1)
-            )
-        ).all()
+        (await session.exec(revision_statement.order_by(col(Flow.id)).limit(effective_limits.max_flow_count + 1))).all()
     )
+    if selected_flow_ids is not None and len(revision_rows) != len(selected_flow_ids):
+        msg = "one or more selected flows were not found in the project"
+        raise ProjectArtifactNotFoundError(msg)
     if not revision_rows:
         msg = "project has no flows to package"
         raise EmptyProjectArtifactError(msg)
@@ -499,13 +512,13 @@ async def build_project_artifact(
         estimated_bytes += batch.estimated_bytes
         item_count += batch.item_count
 
+    final_revision_statement = select(Flow.id, Flow.updated_at).where(Flow.folder_id == project_id, owner_filter)
+    if selected_flow_ids is not None:
+        final_revision_statement = final_revision_statement.where(col(Flow.id).in_(selected_flow_ids))
     final_revisions = tuple(
         (
             await session.exec(
-                select(Flow.id, Flow.updated_at)
-                .where(Flow.folder_id == project_id, owner_filter)
-                .order_by(col(Flow.id))
-                .limit(effective_limits.max_flow_count + 1)
+                final_revision_statement.order_by(col(Flow.id)).limit(effective_limits.max_flow_count + 1)
             )
         ).all()
     )
