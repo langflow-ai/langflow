@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from lfx.components.input_output import ChatInput, ChatOutput
-from lfx.exceptions.component import ComponentBuildError
 from lfx.graph import Graph
 from lfx.services.storage.local import LocalStorageService
 from lfx.utils.file_path_security import LocalFileAccessError
@@ -61,12 +60,11 @@ async def test_chat_input_rejects_external_local_file_references(tmp_path, file_
     with (
         patch("lfx.components.input_output.chat.get_settings_service", return_value=settings_service),
         patch("lfx.schema.image.get_storage_service", return_value=storage_service),
+        patch("lfx.graph.vertex.param_handler.get_storage_service", return_value=storage_service),
         patch("lfx.utils.file_path_security.get_settings_service", return_value=settings_service),
-        pytest.raises(ComponentBuildError) as exc_info,
+        pytest.raises(LocalFileAccessError),
     ):
         await graph.astep(files=[reference], user_id="user-id")
-
-    assert isinstance(exc_info.value.__cause__, LocalFileAccessError)
 
 
 @pytest.mark.asyncio
@@ -86,12 +84,11 @@ async def test_chat_input_rejects_external_file_when_unsupported_storage_falls_b
     with (
         patch("lfx.components.input_output.chat.get_settings_service", return_value=settings_service),
         patch("lfx.schema.image.get_storage_service", return_value=storage_service),
+        patch("lfx.graph.vertex.param_handler.get_storage_service", return_value=storage_service),
         patch("lfx.utils.file_path_security.get_settings_service", return_value=settings_service),
-        pytest.raises(ComponentBuildError) as exc_info,
+        pytest.raises(LocalFileAccessError),
     ):
         await graph.astep(files=[str(external_file)], user_id="user-id")
-
-    assert isinstance(exc_info.value.__cause__, LocalFileAccessError)
 
 
 @pytest.mark.asyncio
@@ -108,6 +105,7 @@ async def test_chat_input_keeps_valid_stored_file_references(tmp_path, scope_id)
     with (
         patch("lfx.components.input_output.chat.get_settings_service", return_value=settings_service),
         patch("lfx.schema.image.get_storage_service", return_value=storage_service),
+        patch("lfx.graph.vertex.param_handler.get_storage_service", return_value=storage_service),
         patch("lfx.utils.file_path_security.get_settings_service", return_value=settings_service),
     ):
         message = await component.message_response()
@@ -132,6 +130,7 @@ async def test_chat_input_keeps_server_provenance_public_file_reference(tmp_path
     with (
         patch("lfx.components.input_output.chat.get_settings_service", return_value=settings_service),
         patch("lfx.schema.image.get_storage_service", return_value=storage_service),
+        patch("lfx.graph.vertex.param_handler.get_storage_service", return_value=storage_service),
         patch("lfx.utils.file_path_security.get_settings_service", return_value=settings_service),
     ):
         build_result = await graph.astep(files=[f"{source_flow_id}/{stored_file.name}"], user_id="owner-user")
@@ -155,6 +154,7 @@ async def test_chat_input_keeps_public_file_reference_in_subgraph(tmp_path):
     with (
         patch("lfx.components.input_output.chat.get_settings_service", return_value=settings_service),
         patch("lfx.schema.image.get_storage_service", return_value=storage_service),
+        patch("lfx.graph.vertex.param_handler.get_storage_service", return_value=storage_service),
         patch("lfx.utils.file_path_security.get_settings_service", return_value=settings_service),
     ):
         async with graph.create_subgraph({"chat-input", "chat-output"}) as subgraph:
@@ -185,13 +185,13 @@ async def test_chat_input_rejects_untrusted_public_source_scope(tmp_path):
     with (
         patch("lfx.components.input_output.chat.get_settings_service", return_value=settings_service),
         patch("lfx.schema.image.get_storage_service", return_value=storage_service),
+        patch("lfx.graph.vertex.param_handler.get_storage_service", return_value=storage_service),
         patch("lfx.utils.file_path_security.get_settings_service", return_value=settings_service),
-        pytest.raises(ComponentBuildError) as exc_info,
+        pytest.raises(LocalFileAccessError),
     ):
         await graph.astep(files=[f"{source_flow_id}/{stored_file.name}"], user_id="owner-user")
 
     assert graph.source_flow_id is None
-    assert isinstance(exc_info.value.__cause__, LocalFileAccessError)
 
 
 @pytest.mark.asyncio
@@ -206,6 +206,7 @@ async def test_chat_input_keeps_unrestricted_local_file_compatibility(tmp_path):
     with (
         patch("lfx.components.input_output.chat.get_settings_service", return_value=settings_service),
         patch("lfx.schema.image.get_storage_service", return_value=storage_service),
+        patch("lfx.graph.vertex.param_handler.get_storage_service", return_value=storage_service),
         patch("lfx.utils.file_path_security.get_settings_service", return_value=settings_service),
     ):
         message = await component.message_response()

@@ -1331,6 +1331,7 @@ class Graph:
                 copy.deepcopy(self.flow_name, memo),
                 copy.deepcopy(self.user_id, memo),
             )
+            new_graph.source_flow_id = copy.deepcopy(self.source_flow_id, memo)
         else:
             # Create a new graph without start and end, but copy flow_id, flow_name, and user_id
             new_graph = type(self)(
@@ -1340,10 +1341,11 @@ class Graph:
                 copy.deepcopy(self.flow_name, memo),
                 copy.deepcopy(self.user_id, memo),
             )
+            # add_nodes_and_edges synchronously builds FileInput parameters, so
+            # trusted public-flow provenance must exist before reconstruction.
+            new_graph.source_flow_id = copy.deepcopy(self.source_flow_id, memo)
             # Deep copy vertices and edges
             new_graph.add_nodes_and_edges(copy.deepcopy(self._vertices, memo), copy.deepcopy(self._edges, memo))
-
-        new_graph.source_flow_id = copy.deepcopy(self.source_flow_id, memo)
 
         # Store the newly created object in memo
         memo[id(self)] = new_graph
@@ -1351,6 +1353,8 @@ class Graph:
         return new_graph
 
     def __setstate__(self, state):
+        # Graphs cached before source-flow provenance was introduced remain
+        # loadable and simply have no additional trusted storage namespace.
         state.setdefault("source_flow_id", None)
         run_manager = state["run_manager"]
         if isinstance(run_manager, RunnableVerticesManager):
