@@ -35,7 +35,7 @@ def test_langflow_root_app_registers_discovered_plugin_commands(monkeypatch):
         scoped_patch.setattr(
             command_plugins.metadata,
             "entry_points",
-            lambda *, group: [entry_point] if group == "lfx.cli_commands" else [],
+            lambda *, group: [entry_point] if group == "langflow.cli_commands" else [],
         )
         reloaded_main = importlib.reload(langflow_main)
         result = CliRunner().invoke(reloaded_main.app, ["fixture-plugin"])

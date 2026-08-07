@@ -70,7 +70,7 @@ def test_plugins_are_discovered_from_the_documented_group_in_deterministic_order
 
     command_plugins.register_cli_command_plugins(typer.Typer())
 
-    assert requested_groups == ["lfx.cli_commands"]
+    assert requested_groups == ["langflow.cli_commands"]
     assert calls == ["alpha", "zeta"]
 
 
@@ -89,7 +89,7 @@ def test_registered_plugin_command_is_invokable(monkeypatch):
     monkeypatch.setattr(
         command_plugins.metadata,
         "entry_points",
-        lambda *, group: [entry_point] if group == "lfx.cli_commands" else [],
+        lambda *, group: [entry_point] if group == "langflow.cli_commands" else [],
     )
 
     command_plugins.register_cli_command_plugins(app)
@@ -108,7 +108,7 @@ def test_non_callable_plugin_fails_before_mutating_the_app(monkeypatch):
     monkeypatch.setattr(
         command_plugins.metadata,
         "entry_points",
-        lambda *, group: entry_points if group == "lfx.cli_commands" else [],
+        lambda *, group: entry_points if group == "langflow.cli_commands" else [],
     )
 
     with pytest.raises(command_plugins.CLICommandPluginError, match=r"broken.*not callable"):
@@ -123,7 +123,7 @@ def test_plugin_load_failure_names_the_plugin_and_preserves_the_cause(monkeypatc
     monkeypatch.setattr(
         command_plugins.metadata,
         "entry_points",
-        lambda *, group: [entry_point] if group == "lfx.cli_commands" else [],
+        lambda *, group: [entry_point] if group == "langflow.cli_commands" else [],
     )
 
     with pytest.raises(command_plugins.CLICommandPluginError, match=r"broken.*plugins.broken:register") as exc_info:
@@ -148,7 +148,7 @@ def test_plugin_registration_failure_rolls_back_all_plugin_commands(monkeypatch)
     monkeypatch.setattr(
         command_plugins.metadata,
         "entry_points",
-        lambda *, group: [failure_entry_point] if group == "lfx.cli_commands" else [],
+        lambda *, group: [failure_entry_point] if group == "langflow.cli_commands" else [],
     )
 
     with pytest.raises(command_plugins.CLICommandPluginError, match=r"broken.*plugins.broken:register") as exc_info:
@@ -174,7 +174,7 @@ def test_plugin_command_cannot_shadow_builtin_effective_name(monkeypatch):
     monkeypatch.setattr(
         command_plugins.metadata,
         "entry_points",
-        lambda *, group: [entry_point] if group == "lfx.cli_commands" else [],
+        lambda *, group: [entry_point] if group == "langflow.cli_commands" else [],
     )
 
     with pytest.raises(
@@ -201,7 +201,7 @@ def test_plugin_group_cannot_shadow_earlier_plugin_command(monkeypatch):
     monkeypatch.setattr(
         command_plugins.metadata,
         "entry_points",
-        lambda *, group: entry_points if group == "lfx.cli_commands" else [],
+        lambda *, group: entry_points if group == "langflow.cli_commands" else [],
     )
 
     with pytest.raises(
@@ -230,7 +230,7 @@ def test_plugin_callback_cannot_replace_builtin_callback(monkeypatch):
     monkeypatch.setattr(
         command_plugins.metadata,
         "entry_points",
-        lambda *, group: [entry_point] if group == "lfx.cli_commands" else [],
+        lambda *, group: [entry_point] if group == "langflow.cli_commands" else [],
     )
 
     with pytest.raises(
@@ -251,7 +251,7 @@ def test_plugin_callback_cannot_replace_earlier_plugin_callback(monkeypatch):
     monkeypatch.setattr(
         command_plugins.metadata,
         "entry_points",
-        lambda *, group: entry_points if group == "lfx.cli_commands" else [],
+        lambda *, group: entry_points if group == "langflow.cli_commands" else [],
     )
 
     with pytest.raises(
@@ -267,36 +267,41 @@ def test_entry_point_discovery_failure_is_reported_with_its_cause(monkeypatch):
     failure = RuntimeError("metadata unavailable")
 
     def fail_discovery(*, group: str):
-        assert group == "lfx.cli_commands"
+        assert group == "langflow.cli_commands"
         raise failure
 
     monkeypatch.setattr(command_plugins.metadata, "entry_points", fail_discovery)
 
-    with pytest.raises(command_plugins.CLICommandPluginError, match=r"discover.*lfx.cli_commands") as exc_info:
+    with pytest.raises(command_plugins.CLICommandPluginError, match=r"discover.*langflow.cli_commands") as exc_info:
         command_plugins.register_cli_command_plugins(typer.Typer())
 
     assert exc_info.value.__cause__ is failure
 
 
-def test_lfx_root_app_registers_discovered_plugin_commands(monkeypatch):
+def test_lfx_root_app_does_not_discover_langflow_plugin_commands(monkeypatch):
     import lfx.__main__ as lfx_main
 
+    requested_groups: list[str] = []
     entry_point = _FakeEntryPoint(
         "fixture",
         "plugins.fixture:register",
         _command_register("fixture-plugin", [], output="lfx plugin"),
     )
 
+    def discover(*, group: str):
+        requested_groups.append(group)
+        return [entry_point] if group == "langflow.cli_commands" else []
+
     with monkeypatch.context() as scoped_patch:
         scoped_patch.setattr(
             command_plugins.metadata,
             "entry_points",
-            lambda *, group: [entry_point] if group == "lfx.cli_commands" else [],
+            discover,
         )
         reloaded_main = importlib.reload(lfx_main)
         result = CliRunner().invoke(reloaded_main.app, ["fixture-plugin"])
 
     importlib.reload(lfx_main)
 
-    assert result.exit_code == 0
-    assert result.output == "lfx plugin\n"
+    assert "langflow.cli_commands" not in requested_groups
+    assert result.exit_code == 2
