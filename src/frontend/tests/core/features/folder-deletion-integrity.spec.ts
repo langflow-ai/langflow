@@ -2,6 +2,11 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 import { TEXTS } from "../../utils/constants/texts";
+import {
+  getSidebarProjectButton,
+  getSidebarProjectOptionsButton,
+  getSidebarProjectRows,
+} from "../../utils/project-sidebar";
 
 /**
  * Tests for folder deletion integrity
@@ -63,17 +68,18 @@ test(
     });
 
     // Verify the folder exists in the sidebar
-    const folderBeforeDelete = page.getByTestId(
-      "sidebar-nav-test-folder-to-delete",
+    const folderBeforeDelete = getSidebarProjectButton(
+      page,
+      "test-folder-to-delete",
     );
     await expect(folderBeforeDelete).toBeVisible({ timeout: 5000 });
 
     // Delete the folder
     await folderBeforeDelete.hover();
-    await page
-      .getByTestId("more-options-button_test-folder-to-delete")
-      .waitFor({ state: "visible", timeout: 5000 });
-    await page.getByTestId("more-options-button_test-folder-to-delete").click();
+    await getSidebarProjectOptionsButton(page, "test-folder-to-delete").waitFor(
+      { state: "visible", timeout: 5000 },
+    );
+    await getSidebarProjectOptionsButton(page, "test-folder-to-delete").click();
     await page.getByTestId("btn-delete-project").click();
     await page.getByText(TEXTS.delete).last().click();
 
@@ -83,9 +89,7 @@ test(
     });
 
     // Verify the folder is removed from the sidebar immediately (no stale data)
-    await expect(
-      page.getByTestId("sidebar-nav-test-folder-to-delete"),
-    ).not.toBeVisible({ timeout: 5000 });
+    await expect(folderBeforeDelete).not.toBeVisible({ timeout: 5000 });
 
     // Verify the page is still functional by checking for the add project button
     await expect(page.getByTestId("add-project-button")).toBeVisible({
@@ -168,20 +172,21 @@ test(
     });
 
     // Verify both folders exist
-    await expect(page.getByTestId("sidebar-nav-folder-alpha")).toBeVisible({
+    await expect(getSidebarProjectButton(page, "folder-alpha")).toBeVisible({
       timeout: 5000,
     });
-    await expect(page.getByTestId("sidebar-nav-folder-beta")).toBeVisible({
+    await expect(getSidebarProjectButton(page, "folder-beta")).toBeVisible({
       timeout: 5000,
     });
 
     // Delete the first folder
-    const folderAlpha = page.getByTestId("sidebar-nav-folder-alpha");
+    const folderAlpha = getSidebarProjectButton(page, "folder-alpha");
     await folderAlpha.hover();
-    await page
-      .getByTestId("more-options-button_folder-alpha")
-      .waitFor({ state: "visible", timeout: 5000 });
-    await page.getByTestId("more-options-button_folder-alpha").click();
+    await getSidebarProjectOptionsButton(page, "folder-alpha").waitFor({
+      state: "visible",
+      timeout: 5000,
+    });
+    await getSidebarProjectOptionsButton(page, "folder-alpha").click();
     await page.getByTestId("btn-delete-project").click();
     await page.getByText(TEXTS.delete).last().click();
 
@@ -191,12 +196,12 @@ test(
     });
 
     // Verify folder-alpha is removed
-    await expect(page.getByTestId("sidebar-nav-folder-alpha")).not.toBeVisible({
+    await expect(folderAlpha).not.toBeVisible({
       timeout: 5000,
     });
 
     // Verify folder-beta still exists and is accessible
-    const folderBeta = page.getByTestId("sidebar-nav-folder-beta");
+    const folderBeta = getSidebarProjectButton(page, "folder-beta");
     await expect(folderBeta).toBeVisible({ timeout: 5000 });
 
     // Click on folder-beta to ensure the app is functional
@@ -209,10 +214,11 @@ test(
 
     // Clean up - delete the remaining folder
     await folderBeta.hover();
-    await page
-      .getByTestId("more-options-button_folder-beta")
-      .waitFor({ state: "visible", timeout: 5000 });
-    await page.getByTestId("more-options-button_folder-beta").click();
+    await getSidebarProjectOptionsButton(page, "folder-beta").waitFor({
+      state: "visible",
+      timeout: 5000,
+    });
+    await getSidebarProjectOptionsButton(page, "folder-beta").click();
     await page.getByTestId("btn-delete-project").click();
     await page.getByText(TEXTS.delete).last().click();
 
@@ -271,12 +277,13 @@ test(
     });
 
     // Delete the folder
-    const folderOne = page.getByTestId("sidebar-nav-folder-one");
+    const folderOne = getSidebarProjectButton(page, "folder-one");
     await folderOne.hover();
-    await page
-      .getByTestId("more-options-button_folder-one")
-      .waitFor({ state: "visible", timeout: 5000 });
-    await page.getByTestId("more-options-button_folder-one").click();
+    await getSidebarProjectOptionsButton(page, "folder-one").waitFor({
+      state: "visible",
+      timeout: 5000,
+    });
+    await getSidebarProjectOptionsButton(page, "folder-one").click();
     await page.getByTestId("btn-delete-project").click();
     await page.getByText(TEXTS.delete).last().click();
 
@@ -285,7 +292,7 @@ test(
     });
 
     // Verify folder is deleted
-    await expect(page.getByTestId("sidebar-nav-folder-one")).not.toBeVisible({
+    await expect(folderOne).not.toBeVisible({
       timeout: 5000,
     });
 
@@ -315,15 +322,16 @@ test(
       timeout: 30000,
     });
 
-    const folderTwo = page.getByTestId("sidebar-nav-folder-two");
+    const folderTwo = getSidebarProjectButton(page, "folder-two");
     await expect(folderTwo).toBeVisible({ timeout: 5000 });
 
     // Clean up
     await folderTwo.hover();
-    await page
-      .getByTestId("more-options-button_folder-two")
-      .waitFor({ state: "visible", timeout: 5000 });
-    await page.getByTestId("more-options-button_folder-two").click();
+    await getSidebarProjectOptionsButton(page, "folder-two").waitFor({
+      state: "visible",
+      timeout: 5000,
+    });
+    await getSidebarProjectOptionsButton(page, "folder-two").click();
     await page.getByTestId("btn-delete-project").click();
     await page.getByText(TEXTS.delete).last().click();
 
@@ -340,50 +348,23 @@ test(
     await awaitBootstrapTest(page, { skipModal: true });
 
     // Get all folders in the sidebar and delete them one by one
-    const projectSidebar = page.locator("[data-testid='project-sidebar']");
-
     // Delete all folders until none are left
-    let folderCount = await projectSidebar
-      .locator('[data-testid^="sidebar-nav-"]')
-      .filter({ hasNotText: "add_note" })
-      .count();
+    let folderCount = await getSidebarProjectRows(page).count();
 
     while (folderCount > 0) {
       // Get the first folder
-      const firstFolder = projectSidebar
-        .locator('[data-testid^="sidebar-nav-"]')
-        .filter({ hasNotText: "add_note" })
-        .first();
-      const folderTestId = await firstFolder.getAttribute("data-testid");
-
-      if (!folderTestId) {
-        break;
-      }
-
-      // Extract folder name from testid (e.g., "sidebar-nav-Starter Project" -> "starter-project")
-      const folderName = folderTestId.replace("sidebar-nav-", "");
-      const kebabName = folderName.toLowerCase().replace(/\s+/g, "-");
+      const firstFolder = getSidebarProjectRows(page).first();
 
       // Hover and click more options
-      await firstFolder.hover();
+      await firstFolder.getByTestId(/^sidebar-nav-/).hover();
 
-      // Try to find and click the more options button
-      const moreOptionsButton = page.getByTestId(
-        `more-options-button_${kebabName}`,
+      const moreOptionsButton = firstFolder.getByTestId(
+        /^more-options-button_/,
       );
 
       // Wait for the button to appear after hover
-      try {
-        await moreOptionsButton.waitFor({ state: "visible", timeout: 5000 });
-        await moreOptionsButton.click();
-      } catch {
-        // Try with the original name format
-        const altMoreOptions = page
-          .locator(`[data-testid^="more-options-button_"]`)
-          .first();
-        await altMoreOptions.waitFor({ state: "visible", timeout: 5000 });
-        await altMoreOptions.click();
-      }
+      await moreOptionsButton.waitFor({ state: "visible", timeout: 5000 });
+      await moreOptionsButton.click();
 
       await page.getByTestId("btn-delete-project").click();
       await page.getByText(TEXTS.delete).last().click();
@@ -397,10 +378,7 @@ test(
       await page.waitForTimeout(500);
 
       // Recount folders
-      folderCount = await projectSidebar
-        .locator('[data-testid^="sidebar-nav-"]')
-        .filter({ hasNotText: "add_note" })
-        .count();
+      folderCount = await getSidebarProjectRows(page).count();
     }
 
     // Now create a new flow using the empty state button on main page
@@ -446,12 +424,12 @@ test(
     await page.getByTestId("icon-ChevronLeft").first().click();
 
     // Verify that a default folder ("Starter Project") was created
-    await expect(page.getByTestId("sidebar-nav-Starter Project")).toBeVisible({
+    await expect(getSidebarProjectButton(page, "Starter Project")).toBeVisible({
       timeout: 10000,
     });
 
     // Verify we can click on the folder and see the flow
-    await page.getByTestId("sidebar-nav-Starter Project").click();
+    await getSidebarProjectButton(page, "Starter Project").click();
 
     // The folder should contain our newly created flow. Templates render an
     // extra example list-card alongside the user's flow when the folder is
