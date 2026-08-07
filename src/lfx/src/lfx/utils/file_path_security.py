@@ -95,13 +95,17 @@ def component_authenticated_user_scope(component: object) -> str | None:
 
 
 def component_file_access_scopes(component: object) -> tuple[str, ...]:
-    """Return authenticated user and flow storage scopes without requiring component properties.
+    """Return authenticated user, execution-flow, and trusted source-flow storage scopes.
 
     Components are instantiated without a graph while metadata is built. Reading ``user_id`` or
     ``flow_id`` properties in that state raises, so this helper inspects their backing graph safely.
     """
     graph = getattr(getattr(component, "_vertex", None), "graph", None)
-    candidates = (component_authenticated_user_scope(component), getattr(graph, "flow_id", None))
+    candidates = (
+        component_authenticated_user_scope(component),
+        getattr(graph, "flow_id", None),
+        getattr(graph, "source_flow_id", None),
+    )
     scopes: list[str] = []
     for candidate in candidates:
         if candidate is not None:
