@@ -95,6 +95,7 @@ class ProjectArtifactFlow:
     path: str
     sha256: str
     size: int
+    required_variables: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -143,11 +144,15 @@ def _zip_info(path: str) -> zipfile.ZipInfo:
     return info
 
 
-def _normalized_flow_bytes(snapshot: _FlowSnapshot) -> bytes:
+def _normalized_flow_bytes(snapshot: _FlowSnapshot) -> tuple[bytes, tuple[str, ...]]:
     # Scrubbing and volatile-field removal mutate nested values in place. Copy
     # first so aliases held by the snapshot or persisted Flow data stay intact.
     scrubbed = deepcopy(snapshot.payload)
-    scrubbed["data"] = strip_secret_field_values_in_place(scrubbed.get("data"))
+    # Deployment scrubbing keeps ``load_from_db`` variable-name references so
+    # the serving side can provision credentials under the same names; the
+    # collected names feed the manifest's required-variables listing.
+    variable_references: set[str] = set()
+    scrubbed["data"] = strip_secret_field_values_in_place(scrubbed.get("data"), variable_references=variable_references)
     # Deployment packages retain runtime-native code strings. The normal git
     # export path splits code into one list element per line, which is useful
     # for diffs but can amplify a newline-heavy value into millions of Python
@@ -162,7 +167,7 @@ def _normalized_flow_bytes(snapshot: _FlowSnapshot) -> bytes:
                 if isinstance(node, dict):
                     for key in _VOLATILE_NODE_FIELDS:
                         node.pop(key, None)
-    return _canonical_json_bytes(scrubbed)
+    return _canonical_json_bytes(scrubbed), tuple(sorted(variable_references))
 
 
 def _json_string_size(value: str) -> int:
@@ -301,7 +306,7 @@ def _build_archive(
 
     for snapshot in snapshots:
         path = f"flows/{snapshot.flow_id}.json"
-        content = _normalized_flow_bytes(snapshot)
+        content, required_variables = _normalized_flow_bytes(snapshot)
         size = len(content)
         if size > limits.max_flow_bytes:
             msg = f"flow file {snapshot.flow_id} is {size} bytes, exceeding the {limits.max_flow_bytes}-byte limit"
@@ -318,12 +323,16 @@ def _build_archive(
                 path=path,
                 sha256=hashlib.sha256(content).hexdigest(),
                 size=size,
+                required_variables=required_variables,
             )
         )
 
     manifest = {
         "schema_version": 1,
         "project": {"id": str(project_id), "name": project_name},
+        # Names of every load_from_db-bound global variable the packaged flows
+        # reference; the deploy target must provision each name before serving.
+        "required_variables": sorted({name for flow in flow_entries for name in flow.required_variables}),
         "flows": [
             {
                 "id": str(flow.flow_id),
@@ -331,6 +340,7 @@ def _build_archive(
                 "path": flow.path,
                 "sha256": flow.sha256,
                 "size": flow.size,
+                "required_variables": list(flow.required_variables),
             }
             for flow in flow_entries
         ],
