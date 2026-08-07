@@ -220,17 +220,9 @@ export const EditFlowSettings: React.FC<
                 disabled={readOnly}
                 className="data-[state=checked]:bg-primary ml-auto"
                 data-testid="lock-flow-switch"
+                aria-label={t("flow.lockFlowAriaLabel")}
               />
             </div>
-
-            <Switch
-              checked={!!locked}
-              onCheckedChange={(v) => setLocked?.(v)}
-              disabled={readOnly}
-              className="data-[state=checked]:bg-primary ml-auto"
-              data-testid="lock-flow-switch"
-              aria-label={t("flow.lockFlowAriaLabel")}
-            />
           </div>
         )}
       </Form.Field>

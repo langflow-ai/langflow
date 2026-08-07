@@ -12,6 +12,10 @@ describe("EditFlowSettings lock switch", () => {
     description: "",
     setName: jest.fn(),
     setDescription: jest.fn(),
+    // Every real caller (exportModal, flowSettingsComponent) passes this —
+    // the lock switch only renders when it's present (see the guard comment
+    // in the component: an unusable focusable switch is worse than none).
+    setLocked: jest.fn(),
   };
 
   it("should_have_no_axe_violations", async () => {
