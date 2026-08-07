@@ -15,6 +15,29 @@ export type CodeValidityType = {
 
 const transientTemplateKeys = new Set(["is_refresh", "tools_metadata"]);
 
+// Synthetic output name a component receives when it is switched to tool mode. Must match
+// TOOL_OUTPUT_NAME in src/lfx/src/lfx/base/tools/constants.py.
+const TOOL_OUTPUT_NAME = "component_as_tool";
+
+// Returns true when the saved node's outputs are the synthesized toolset output. Switching a
+// component to tool mode replaces its authored outputs with this single entry, so they describe a
+// runtime projection rather than anything the original component declares.
+const nodeIsInToolMode = (userOutputs?: OutputFieldType[]): boolean =>
+  !!userOutputs?.length &&
+  userOutputs.every((output) => output.name === TOOL_OUTPUT_NAME);
+
+// Returns true when the original component can still be switched to tool mode: at least one input
+// declares tool_mode. This is the input side of Component._handle_tool_mode, which is what creates
+// the component_as_tool output at build time. The tool_mode flag on *outputs* marks which outputs a
+// toolset exposes rather than the component's capability, so it is not used. checkHasToolMode in
+// src/utils/reactflowUtils.ts answers a different question (whether to offer the toggle at all) and
+// is not reused here.
+const templateSupportsToolMode = (
+  originalTemplate?: APITemplateType,
+): boolean =>
+  !!originalTemplate &&
+  Object.values(originalTemplate).some((field) => Boolean(field?.tool_mode));
+
 // Returns true if the code is outdated (code string changed and not ignored)
 const codeIsOutdated = (
   currentCode: string,
@@ -37,7 +60,16 @@ const codeHasBreakingChange = (
   userTemplate?: APITemplateType,
 ): boolean => {
   // Check outputs
-  if (
+  if (nodeIsInToolMode(userOutputs)) {
+    // A tool-mode node's saved outputs are the toolset projection, so they never match the
+    // original component's declared outputs and comparing the two always reports a breaking
+    // change. What matters for such a node is whether the component still supports tool mode. A
+    // removed or renamed output cannot disconnect its edges, because its only output is the
+    // toolset.
+    if (!templateSupportsToolMode(originalTemplate)) {
+      return true;
+    }
+  } else if (
     originalOutputs &&
     userOutputs &&
     !outputsAreEqual(originalOutputs, userOutputs)
