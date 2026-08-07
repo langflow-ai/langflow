@@ -22,11 +22,11 @@ from langflow.agentic.api.schemas import AssistantRequest
 from langflow.agentic.services.assistant_service import execute_flow_with_validation_streaming
 from langflow.agentic.services.flow_types import LANGFLOW_ASSISTANT_FLOW
 from langflow.api.utils.core import release_db_transaction
-from langflow.api.v1.flows import _new_flow, _save_flow_to_fs
+from langflow.api.v1.flows import _new_flow, _save_flow_to_fs, _validate_catalog_policy_for_write
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.database.models.flow.guards import ensure_flow_unlocked, lock_flow_for_update
 from langflow.services.database.models.flow.model import Flow, FlowCreate
-from langflow.services.deps import get_storage_service
+from langflow.services.deps import get_catalog_policy_service, get_storage_service
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -157,7 +157,8 @@ async def _consume_stream(
                 data = event.get("data") or {}
                 result_text = data.get("result")
                 working = get_working_flow()
-                if isinstance(working, dict) and working.get("data", {}).get("nodes"):
+                working_data = working.get("data") if isinstance(working, dict) else None
+                if isinstance(working_data, dict) and isinstance(working_data.get("nodes"), list):
                     working_snapshot = copy.deepcopy(working)
             elif event_type == "error":
                 error_text = event.get("message")
@@ -227,6 +228,19 @@ async def run_assistant_and_persist(
         # each to the working flow here or the text edit is dropped (Bug #13641).
         for edit in field_edits:
             _apply_field_edit(flow_data, edit)
+        try:
+            _validate_catalog_policy_for_write(
+                flow_data,
+                snapshot=get_catalog_policy_service().snapshot,
+            )
+        except HTTPException:
+            if created_new:
+                # The assistant needs a committed flow id while it runs. Do not
+                # leave that provisional row behind when its generated graph is
+                # rejected before the caller ever receives the id or link.
+                await session.delete(flow)
+                await session.commit()
+            raise
         flow.data = flow_data
         if created_new and canvas.name:
             flow.name = canvas.name
