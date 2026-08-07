@@ -2,15 +2,19 @@ import { render, screen } from "@testing-library/react";
 import { MarkdownField } from "../edit-message";
 
 /**
- * XSS Security Tests for MarkdownField Component
+ * Wiring tests for the MarkdownField component.
  *
- * Background:
- * - The component uses rehypeRaw which allows raw HTML in markdown
- * - This created an XSS vulnerability where untrusted HTML could be injected
+ * SCOPE — read this before adding "security" assertions here.
  *
- * Fix:
- * - Added rehype-sanitize to the markdown pipeline AFTER rehypeRaw
- * - This sanitizes the parsed HTML, preventing XSS while preserving code blocks
+ * `react-markdown` is mocked below, so NOTHING in this file exercises the
+ * sanitizer. These tests prove that MarkdownField renders and forwards its
+ * props. They cannot prove XSS is blocked, and they would keep passing if
+ * rehype-sanitize were removed from the pipeline entirely.
+ *
+ * The real regression coverage for GHSA-7rw4-v4gc-r864 and its sibling
+ * advisories lives in `src/utils/__tests__/sanitizeSchema.test.ts`, which runs
+ * the actual `hast-util-sanitize` against the actual schema with no mocks.
+ * Add sanitizer assertions there, not here.
  */
 
 // Mock react-markdown to avoid ESM module issues in Jest
@@ -21,10 +25,12 @@ jest.mock("react-markdown", () => {
   };
 });
 
-// Mock the rehype/remark plugins (they're used in the component but not needed for these tests)
+// Mock the rehype/remark plugins (they're used in the component but not needed
+// for these tests). `rehype-sanitize` is deliberately NOT mocked: mocking it
+// makes `defaultSchema` undefined, which silently degrades
+// `markdownSanitizeSchema` for any test that reads it.
 jest.mock("rehype-mathjax/browser", () => ({}));
 jest.mock("rehype-raw", () => ({}));
-jest.mock("rehype-sanitize", () => ({})); // This is the security fix we added
 jest.mock("remark-gfm", () => ({}));
 
 // Mock the markdown preprocessing utility
@@ -98,35 +104,22 @@ describe("MarkdownField XSS Security", () => {
     });
   });
 
-  describe("Security Implementation", () => {
-    it("should use rehype-sanitize in the pipeline", () => {
-      // Test: Verify the component renders with the secure pipeline
-      // The security is in: rehypePlugins={[rehypeMathjax, rehypeRaw, rehypeSanitize]}
-      // rehype-sanitize runs after rehypeRaw to sanitize parsed HTML
-      const { container } = render(<MarkdownField {...defaultProps} />);
-
-      expect(container).toBeInTheDocument();
-    });
-
-    it("should preserve code blocks with HTML-like syntax", () => {
-      // Test: Code blocks with HTML/JSX syntax should render correctly
-      // rehype-sanitize preserves code blocks while sanitizing raw HTML
+  describe("Rendering robustness", () => {
+    // NOTE: these assert only that the component survives the input and keeps
+    // rendering. Sanitization is NOT under test here — see the file header.
+    it("should render without crashing on code-block content", () => {
       const codeMessage = "```jsx\n<Component />\n```";
       render(<MarkdownField {...defaultProps} chatMessage={codeMessage} />);
 
-      // Verify: Component renders without errors (code block is preserved)
       expect(screen.getByTestId("markdown-content")).toBeInTheDocument();
     });
 
-    it("should handle malicious content safely", () => {
-      // Test: Malicious HTML/JavaScript should be sanitized
-      // rehype-sanitize removes dangerous elements like <script>, event handlers, etc.
+    it("should render without crashing on raw-HTML content", () => {
       const maliciousMessage = '<script>alert("XSS")</script>Hello';
       render(
         <MarkdownField {...defaultProps} chatMessage={maliciousMessage} />,
       );
 
-      // Verify: Component renders without executing malicious code
       expect(screen.getByTestId("markdown-content")).toBeInTheDocument();
     });
   });
