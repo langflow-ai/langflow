@@ -426,7 +426,9 @@ class TestRunAssistantAndPersist:
         assert exc_info.value.status_code == 400
         assert "BlockedComponent" in exc_info.value.detail
         assert flow.data is original_data
-        session.commit.assert_not_awaited()
+        # Exactly one commit: the pre-run transaction release (#14445). The
+        # blocked write itself must not be committed.
+        assert session.commit.await_count == 1
         save_flow.assert_not_awaited()
 
     @pytest.mark.asyncio
@@ -472,7 +474,9 @@ class TestRunAssistantAndPersist:
 
         assert exc_info.value.status_code == 400
         session.delete.assert_awaited_once_with(created_flow)
-        assert session.commit.await_count == 2
+        # Three commits: the provisional-flow create, the pre-run transaction
+        # release (#14445), and the delete that cleans the provisional row up.
+        assert session.commit.await_count == 3
         save_flow.assert_not_awaited()
 
 
@@ -758,7 +762,9 @@ class TestRunAssistantPersistsAuthoritativeWorkingFlow:
 
         assert result["flow_changed"] is True
         assert flow.data == {"nodes": [], "edges": []}
-        session.commit.assert_awaited_once()
+        # Two commits: the pre-run transaction release (#14445) and the
+        # persistence write after the FOR UPDATE re-read.
+        assert session.commit.await_count == 2
 
     @pytest.mark.asyncio
     async def test_should_fall_back_to_event_replay_when_working_flow_is_empty(self):
