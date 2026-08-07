@@ -151,11 +151,13 @@ async def test_build_project_artifact_is_deterministic_and_manifest_binds_exact_
         manifest = json.loads(archive.read("manifest.json"))
         assert manifest["schema_version"] == 1
         assert manifest["project"] == {"id": str(project_id), "name": project.name}
+        assert manifest["required_variables"] == []
         assert [entry["id"] for entry in manifest["flows"]] == [str(first_id), str(second_id)]
         for entry in manifest["flows"]:
             payload = archive.read(entry["path"])
             assert entry["sha256"] == hashlib.sha256(payload).hexdigest()
             assert entry["size"] == len(payload)
+            assert entry["required_variables"] == []
 
 
 @pytest.mark.asyncio
@@ -390,6 +392,60 @@ async def test_build_project_artifact_scrubs_secret_fields_without_resolving_ref
 
 
 @pytest.mark.asyncio
+async def test_build_project_artifact_preserves_variable_references_and_lists_required_variables() -> None:
+    actor_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Variable references", user_id=actor_id)
+    flow = _flow(owner_id=actor_id, project_id=project_id)
+    flow.data = {
+        "nodes": [
+            {
+                "data": {
+                    "node": {
+                        "template": {
+                            "api_key": {
+                                "name": "api_key",
+                                "password": True,
+                                "load_from_db": True,
+                                "value": "OPENAI_API_KEY",
+                            },
+                            "password": {"name": "password", "password": True, "value": "raw-password"},
+                            "endpoint": {"name": "endpoint", "load_from_db": True, "value": "MY_INTERNAL_API_URL"},
+                            "mislabeled": {
+                                "name": "token",
+                                "password": True,
+                                "load_from_db": True,
+                                "value": "raw-mislabeled-secret\nwith-newline",
+                            },
+                        }
+                    }
+                }
+            }
+        ],
+        "edges": [],
+    }
+    session = _session_with_flows([flow])
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    artifact, *_ = await _build_authorized(session=session, user=user, project=project)
+
+    assert b"raw-password" not in artifact.content
+    assert b"raw-mislabeled-secret" not in artifact.content
+    assert artifact.flows[0].required_variables == ("MY_INTERNAL_API_URL", "OPENAI_API_KEY")
+    with zipfile.ZipFile(io.BytesIO(artifact.content)) as archive:
+        exported = json.loads(archive.read(f"flows/{flow.id}.json"))
+        manifest = json.loads(archive.read("manifest.json"))
+    template = exported["data"]["nodes"][0]["data"]["node"]["template"]
+    assert template["api_key"]["value"] == "OPENAI_API_KEY"
+    assert template["api_key"]["load_from_db"] is True
+    assert template["password"]["value"] is None
+    assert template["endpoint"]["value"] == "MY_INTERNAL_API_URL"
+    assert template["mislabeled"]["value"] is None
+    assert manifest["required_variables"] == ["MY_INTERNAL_API_URL", "OPENAI_API_KEY"]
+    assert manifest["flows"][0]["required_variables"] == ["MY_INTERNAL_API_URL", "OPENAI_API_KEY"]
+
+
+@pytest.mark.asyncio
 async def test_build_project_artifact_keeps_newline_heavy_code_as_bounded_string() -> None:
     actor_id = uuid4()
     project_id = uuid4()
@@ -503,7 +559,7 @@ def test_secret_scrub_uses_bounded_memory_for_wide_deep_structured_value() -> No
 
     tracemalloc.start()
     try:
-        content = builder._normalized_flow_bytes(snapshot)
+        content, _ = builder._normalized_flow_bytes(snapshot)
         _, peak = tracemalloc.get_traced_memory()
     finally:
         tracemalloc.stop()
@@ -562,7 +618,9 @@ def test_normalized_flow_bytes_accepts_model_valid_sparse_data(data: object, exp
     )
     original_payload = deepcopy(snapshot.payload)
 
-    assert json.loads(builder._normalized_flow_bytes(snapshot)) == {"data": expected_data}
+    content, required_variables = builder._normalized_flow_bytes(snapshot)
+    assert json.loads(content) == {"data": expected_data}
+    assert required_variables == ()
     assert snapshot.payload == original_payload
 
 
@@ -592,7 +650,8 @@ def test_normalized_flow_bytes_does_not_mutate_shared_flow_data() -> None:
         payload={"data": flow.data},
     )
 
-    exported = json.loads(builder._normalized_flow_bytes(snapshot))
+    content, _ = builder._normalized_flow_bytes(snapshot)
+    exported = json.loads(content)
 
     assert exported["data"]["nodes"][0]["data"]["node"]["template"]["password"]["value"] is None
     assert "selected" not in exported["data"]["nodes"][0]

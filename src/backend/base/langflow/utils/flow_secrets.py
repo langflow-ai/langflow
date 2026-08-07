@@ -12,6 +12,10 @@ from urllib.parse import parse_qsl, urlsplit
 
 API_WORDS = ["api", "key", "token"]
 
+_ASCII_CONTROL_CUTOFF = 0x20
+_ASCII_DELETE = 0x7F
+_VARIABLE_REFERENCE_MAX_LENGTH = 256
+
 _SECRET_NAME_PARTS = frozenset({"credential", "credentials", "passwd", "password", "secret"})
 _SECRET_COMPOUND_NAMES = frozenset(
     {
@@ -91,6 +95,24 @@ def _is_secret_name(value: object) -> bool:
     return bool(parts & _SECRET_NAME_PARTS) or is_token_value or {"api", "key"}.issubset(parts)
 
 
+def _is_variable_reference(value: object) -> bool:
+    """Return whether a ``load_from_db`` value looks like a global-variable name.
+
+    A bound field stores the referenced variable's *name* in ``value``, not the
+    secret itself. Anything that does not look like a name — empty, oversized,
+    control characters, a non-string, or a URL carrying credentials — is treated
+    as a raw secret, so a mislabelled field cannot smuggle its value through a
+    scrub that preserves references.
+    """
+    if not isinstance(value, str) or not value.strip():
+        return False
+    if len(value) > _VARIABLE_REFERENCE_MAX_LENGTH:
+        return False
+    if any(ord(character) < _ASCII_CONTROL_CUTOFF or ord(character) == _ASCII_DELETE for character in value):
+        return False
+    return not _contains_url_credentials(value)
+
+
 def _contains_url_credentials(value: str) -> bool:
     """Return whether a URL contains userinfo or secret-named parameters."""
     try:
@@ -151,8 +173,57 @@ def _strip_structured_secret_values_in_place(value: object) -> object:
     return value
 
 
-def _strip_template_field_value(field: dict) -> None:
+def _table_reference_columns(field: dict) -> frozenset[str]:
+    """Return table columns whose cells hold global-variable name references."""
+    schema = field.get("table_schema")
+    if not isinstance(schema, list):
+        return frozenset()
+    return frozenset(
+        column["name"]
+        for column in schema
+        if isinstance(column, dict) and column.get("load_from_db") and isinstance(column.get("name"), str)
+    )
+
+
+def _strip_table_rows_in_place(field: dict, reference_columns: frozenset[str], variable_references: set[str]) -> None:
+    """Strip table rows while preserving valid ``load_from_db`` column references."""
+    rows = field.get("value")
+    if not isinstance(rows, list):
+        field["value"] = _strip_structured_secret_values_in_place(rows)
+        return
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            rows[index] = _strip_structured_secret_values_in_place(row)
+            continue
+        preserved: dict[str, str | None] = {}
+        for column in reference_columns & row.keys():
+            cell = row[column]
+            if _is_variable_reference(cell):
+                variable_references.add(cell)
+                preserved[column] = cell
+            else:
+                preserved[column] = None
+        _strip_structured_secret_values_in_place(row)
+        row.update(preserved)
+
+
+def _strip_template_field_value(field: dict, variable_references: set[str] | None = None) -> None:
     """Strip a template field according to metadata and value shape."""
+    if (
+        variable_references is not None
+        and field.get("load_from_db")
+        and not isinstance(field.get("value"), (dict, list))
+    ):
+        # A bound field stores the global-variable *name*, not the secret, so a
+        # deployment target can re-resolve the credential it provisions under
+        # that name. Anything that fails the reference shape check is nulled.
+        value = field.get("value")
+        if _is_variable_reference(value):
+            variable_references.add(value)
+        else:
+            field["value"] = None
+        return
+
     if field.get("password") or _is_secret_name(field.get("name")):
         field["value"] = None
         return
@@ -165,10 +236,16 @@ def _strip_template_field_value(field: dict) -> None:
         field["value"] = {"name": name} if name else None
         return
 
+    if variable_references is not None:
+        reference_columns = _table_reference_columns(field)
+        if reference_columns:
+            _strip_table_rows_in_place(field, reference_columns, variable_references)
+            return
+
     field["value"] = _strip_structured_secret_values_in_place(field.get("value"))
 
 
-def _strip_secrets_from_nodes(nodes: list) -> None:
+def _strip_secrets_from_nodes(nodes: list, variable_references: set[str] | None = None) -> None:
     """Iteratively strip secret values from regular and grouped flow nodes."""
     node_frames = [iter(nodes)]
     while node_frames:
@@ -189,7 +266,7 @@ def _strip_secrets_from_nodes(nodes: list) -> None:
         if isinstance(template, dict):
             for value in template.values():
                 if isinstance(value, dict):
-                    _strip_template_field_value(value)
+                    _strip_template_field_value(value, variable_references)
 
         flow = node_inner.get("flow")
         if isinstance(flow, dict):
@@ -200,13 +277,28 @@ def _strip_secrets_from_nodes(nodes: list) -> None:
                     node_frames.append(iter(nested_nodes))
 
 
-def strip_secret_field_values_in_place(flow_data: dict | None) -> dict | None:
-    """Scrub a detached flow-data mapping in place with bounded traversal memory."""
+def strip_secret_field_values_in_place(
+    flow_data: dict | None,
+    *,
+    variable_references: set[str] | None = None,
+) -> dict | None:
+    """Scrub a detached flow-data mapping in place with bounded traversal memory.
+
+    By default every secret-bearing value is nulled, including the names of
+    global variables bound via ``load_from_db`` — the right contract for
+    anonymous consumers such as the public-flow endpoint. Deployment packaging
+    passes ``variable_references``: fields (and table columns) marked
+    ``load_from_db`` then keep their variable-*name* values, and every
+    preserved name is added to the set so the caller can emit a
+    required-variables manifest. Names are references, not secrets; values
+    that do not look like variable names are still nulled, so a mislabelled
+    field cannot leak a raw secret through the preserving path.
+    """
     if not flow_data:
         return flow_data
     nodes = flow_data.get("nodes")
     if isinstance(nodes, list):
-        _strip_secrets_from_nodes(nodes)
+        _strip_secrets_from_nodes(nodes, variable_references)
     return flow_data
 
 
