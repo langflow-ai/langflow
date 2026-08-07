@@ -36,6 +36,24 @@ def _command_register(name: str, calls: list[str], output: str = "registered"):
     return register
 
 
+def _group_register(name: str):
+    def register(app: typer.Typer) -> None:
+        app.add_typer(typer.Typer(), name=name)
+
+    return register
+
+
+def _callback_register(name: str):
+    def register(app: typer.Typer) -> None:
+        def plugin_callback() -> None:
+            pass
+
+        plugin_callback.__name__ = name
+        app.callback()(plugin_callback)
+
+    return register
+
+
 def test_plugins_are_discovered_from_the_documented_group_in_deterministic_order(monkeypatch):
     calls: list[str] = []
     requested_groups: list[str] = []
@@ -138,6 +156,111 @@ def test_plugin_registration_failure_rolls_back_all_plugin_commands(monkeypatch)
 
     assert isinstance(exc_info.value.__cause__, RuntimeError)
     assert [command.name for command in app.registered_commands] == ["builtin"]
+
+
+def test_plugin_command_cannot_shadow_builtin_effective_name(monkeypatch):
+    app = typer.Typer()
+
+    @app.command()
+    def existing_command() -> None:
+        pass
+
+    original_commands = list(app.registered_commands)
+    entry_point = _FakeEntryPoint(
+        "collision",
+        "plugins.collision:register",
+        _command_register("existing-command", []),
+    )
+    monkeypatch.setattr(
+        command_plugins.metadata,
+        "entry_points",
+        lambda *, group: [entry_point] if group == "lfx.cli_commands" else [],
+    )
+
+    with pytest.raises(
+        command_plugins.CLICommandPluginError,
+        match=r"collision.*existing-command.*already registered",
+    ):
+        command_plugins.register_cli_command_plugins(app)
+
+    assert app.registered_commands == original_commands
+
+
+def test_plugin_group_cannot_shadow_earlier_plugin_command(monkeypatch):
+    app = typer.Typer()
+
+    @app.command(name="builtin")
+    def builtin() -> None:
+        pass
+
+    original_commands = list(app.registered_commands)
+    entry_points = [
+        _FakeEntryPoint("alpha", "plugins.alpha:register", _command_register("shared", [])),
+        _FakeEntryPoint("beta", "plugins.beta:register", _group_register("shared")),
+    ]
+    monkeypatch.setattr(
+        command_plugins.metadata,
+        "entry_points",
+        lambda *, group: entry_points if group == "lfx.cli_commands" else [],
+    )
+
+    with pytest.raises(
+        command_plugins.CLICommandPluginError,
+        match=r"beta.*shared.*already registered",
+    ):
+        command_plugins.register_cli_command_plugins(app)
+
+    assert app.registered_commands == original_commands
+    assert app.registered_groups == []
+
+
+def test_plugin_callback_cannot_replace_builtin_callback(monkeypatch):
+    app = typer.Typer()
+
+    @app.callback()
+    def builtin_callback() -> None:
+        pass
+
+    original_callback = app.registered_callback
+    entry_point = _FakeEntryPoint(
+        "collision",
+        "plugins.collision:register",
+        _callback_register("plugin"),
+    )
+    monkeypatch.setattr(
+        command_plugins.metadata,
+        "entry_points",
+        lambda *, group: [entry_point] if group == "lfx.cli_commands" else [],
+    )
+
+    with pytest.raises(
+        command_plugins.CLICommandPluginError,
+        match=r"collision.*callback.*already registered",
+    ):
+        command_plugins.register_cli_command_plugins(app)
+
+    assert app.registered_callback is original_callback
+
+
+def test_plugin_callback_cannot_replace_earlier_plugin_callback(monkeypatch):
+    app = typer.Typer()
+    entry_points = [
+        _FakeEntryPoint("alpha", "plugins.alpha:register", _callback_register("alpha")),
+        _FakeEntryPoint("beta", "plugins.beta:register", _callback_register("beta")),
+    ]
+    monkeypatch.setattr(
+        command_plugins.metadata,
+        "entry_points",
+        lambda *, group: entry_points if group == "lfx.cli_commands" else [],
+    )
+
+    with pytest.raises(
+        command_plugins.CLICommandPluginError,
+        match=r"beta.*callback.*already registered",
+    ):
+        command_plugins.register_cli_command_plugins(app)
+
+    assert app.registered_callback is None
 
 
 def test_entry_point_discovery_failure_is_reported_with_its_cause(monkeypatch):
