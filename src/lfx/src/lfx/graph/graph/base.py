@@ -39,7 +39,7 @@ from lfx.graph.vertex.base import Vertex, VertexStates
 from lfx.graph.vertex.schema import NodeData, NodeTypeEnum
 from lfx.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
 from lfx.log.logger import LogConfig, configure, logger
-from lfx.observability import APPLICATION_TRACER_NAME, get_execution_protocol
+from lfx.observability import APPLICATION_TRACER_NAME, get_execution_client, get_execution_protocol
 from lfx.schema.dotdict import dotdict
 from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
 from lfx.services.cache.utils import CacheMiss
@@ -905,6 +905,10 @@ class Graph:
             # gap the operator can see, an "unknown" value looks like a protocol we support.
             if (protocol := get_execution_protocol()) is not None:
                 span.set_attribute("protocol", protocol)
+            # Absent when the caller did not identify itself, same rule as protocol: a missing
+            # attribute is "nobody said", which an operator can see and act on.
+            if (client := get_execution_client()) is not None:
+                span.set_attribute("client", client)
             # A driver that swallowed its own component error exits this scope cleanly, so the
             # only signal is what it recorded on the way out.
             if status == "ok" and scope.error_type is not None:

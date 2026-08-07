@@ -167,3 +167,30 @@ async def test_a_failed_build_is_not_reported_as_a_successful_run(
     assert span.attributes["error.type"] == "ComponentBuildError"
     # The wrapped message embeds component output, so only the type may reach the APM.
     assert SENTINEL not in json.dumps(dict(span.attributes))
+
+
+async def test_a_declared_client_reaches_the_span(client, json_memory_chatbot_no_llm, logged_in_headers, span_exporter):
+    span_exporter.clear()
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    build_response = await build_flow(client, flow_id, {**logged_in_headers, "x-langflow-client": "playground"})
+    events = await get_build_events(client, build_response["job_id"], logged_in_headers)
+    await consume_and_assert_stream(events, build_response["job_id"])
+
+    spans = _flow_spans(span_exporter)
+    assert len(spans) == 1
+    assert spans[0].attributes["client"] == "playground"
+
+
+async def test_an_unknown_client_is_dropped_rather_than_recorded(
+    client, json_memory_chatbot_no_llm, logged_in_headers, span_exporter
+):
+    """A caller must not be able to mint span attribute values."""
+    span_exporter.clear()
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    build_response = await build_flow(client, flow_id, {**logged_in_headers, "x-langflow-client": "not-a-real-client"})
+    events = await get_build_events(client, build_response["job_id"], logged_in_headers)
+    await consume_and_assert_stream(events, build_response["job_id"])
+
+    spans = _flow_spans(span_exporter)
+    assert len(spans) == 1
+    assert "client" not in spans[0].attributes

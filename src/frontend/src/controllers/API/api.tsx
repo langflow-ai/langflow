@@ -210,6 +210,12 @@ function ApiInterceptor() {
           for (const [key, value] of Object.entries(customHeaders)) {
             config.headers[key] = value;
           }
+          // Tells the backend which client this run came from, for the operator's traces. The
+          // playground calls the same public API a user's own script would, so the route cannot
+          // distinguish them and the caller has to say. Advisory only: it is self-reported and
+          // the server ignores anything outside its known vocabulary, so never rely on it for
+          // access decisions.
+          config.headers["x-langflow-client"] = "playground";
         }
 
         return {
@@ -411,4 +417,4 @@ async function performStreamingRequest({
   }
 }
 
-export { api, ApiInterceptor, performStreamingRequest };
+export { ApiInterceptor, api, performStreamingRequest };
