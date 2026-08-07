@@ -75,7 +75,11 @@ describe("TabComponent — selection still emits real option text", () => {
       />,
     );
 
-    for (const testId of ["tab_0_option_a", "tab_1_option_b", "tab_2_option_c"]) {
+    for (const testId of [
+      "tab_0_option_a",
+      "tab_1_option_b",
+      "tab_2_option_c",
+    ]) {
       expect(screen.getByTestId(testId)).toHaveAttribute(
         "aria-selected",
         "false",

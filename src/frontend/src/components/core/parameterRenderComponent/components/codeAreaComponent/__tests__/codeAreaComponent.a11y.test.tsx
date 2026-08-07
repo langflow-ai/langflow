@@ -12,8 +12,9 @@ jest.mock("@/modals/codeAreaModal", () => {
 });
 
 jest.mock("@/stores/utilityStore", () => ({
-  useUtilityStore: (selector: (state: { allowCustomComponents: boolean }) => unknown) =>
-    selector({ allowCustomComponents: true }),
+  useUtilityStore: (
+    selector: (state: { allowCustomComponents: boolean }) => unknown,
+  ) => selector({ allowCustomComponents: true }),
 }));
 
 jest.mock("@/components/common/genericIconComponent", () => ({

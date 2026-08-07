@@ -1629,7 +1629,9 @@ describe("ModelInputComponent", () => {
     // highlight both still work.
     it("moves DOM focus to follow the highlighted item on ArrowDown", async () => {
       const user = userEvent.setup();
-      renderWithQueryClient(<ModelInputComponent {...defaultProps} value={[]} />);
+      renderWithQueryClient(
+        <ModelInputComponent {...defaultProps} value={[]} />,
+      );
 
       await user.click(screen.getByRole("combobox"));
       const firstOption = await screen.findByTestId("OpenAI-gpt-4-option");
@@ -1644,7 +1646,9 @@ describe("ModelInputComponent", () => {
 
     it("moves DOM focus to follow the highlighted item on ArrowUp", async () => {
       const user = userEvent.setup();
-      renderWithQueryClient(<ModelInputComponent {...defaultProps} value={[]} />);
+      renderWithQueryClient(
+        <ModelInputComponent {...defaultProps} value={[]} />,
+      );
 
       await user.click(screen.getByRole("combobox"));
       await screen.findByTestId("OpenAI-gpt-4-option");
@@ -1665,7 +1669,9 @@ describe("ModelInputComponent", () => {
     // every provider combined.
     it("does not set aria-posinset/aria-setsize on any option", async () => {
       const user = userEvent.setup();
-      renderWithQueryClient(<ModelInputComponent {...defaultProps} value={[]} />);
+      renderWithQueryClient(
+        <ModelInputComponent {...defaultProps} value={[]} />,
+      );
 
       await user.click(screen.getByRole("combobox"));
       await screen.findByTestId("OpenAI-gpt-4-option");
@@ -1686,14 +1692,16 @@ describe("ModelInputComponent", () => {
     // so it reads correctly across every screen reader.
     it("includes a visually-hidden N of M string in each option's accessible name", async () => {
       const user = userEvent.setup();
-      renderWithQueryClient(<ModelInputComponent {...defaultProps} value={[]} />);
+      renderWithQueryClient(
+        <ModelInputComponent {...defaultProps} value={[]} />,
+      );
 
       await user.click(screen.getByRole("combobox"));
       await screen.findByTestId("OpenAI-gpt-4-option");
 
-      expect(
-        screen.getByTestId("OpenAI-gpt-4-option"),
-      ).toHaveAccessibleName(/1 of 3/);
+      expect(screen.getByTestId("OpenAI-gpt-4-option")).toHaveAccessibleName(
+        /1 of 3/,
+      );
       expect(
         screen.getByTestId("OpenAI-gpt-3.5-turbo-option"),
       ).toHaveAccessibleName(/2 of 3/);
@@ -1728,14 +1736,17 @@ describe("ModelInputComponent", () => {
         "tabindex",
         "-1",
       );
-      expect(
-        screen.getByTestId("OpenAI-gpt-3.5-turbo-option"),
-      ).toHaveAttribute("tabindex", "-1");
+      expect(screen.getByTestId("OpenAI-gpt-3.5-turbo-option")).toHaveAttribute(
+        "tabindex",
+        "-1",
+      );
     });
 
     it("moves the tabbable option as arrow-key navigation moves the highlight", async () => {
       const user = userEvent.setup();
-      renderWithQueryClient(<ModelInputComponent {...defaultProps} value={[]} />);
+      renderWithQueryClient(
+        <ModelInputComponent {...defaultProps} value={[]} />,
+      );
 
       await user.click(screen.getByRole("combobox"));
       await screen.findByTestId("OpenAI-gpt-4-option");

@@ -139,11 +139,7 @@ export default function CodeAreaComponent({
         setNodeClass={handleNodeClass!}
         setValue={(newValue) => handleOnNewValue({ value: newValue })}
       >
-        <Button
-          unstyled
-          className="w-full"
-          aria-labelledby={ariaLabelledBy}
-        >
+        <Button unstyled className="w-full" aria-labelledby={ariaLabelledBy}>
           <div className="relative w-full">
             {renderCodeText()}
             {renderExternalLinkIcon()}

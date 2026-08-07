@@ -48,11 +48,7 @@ describe("focusCommandListOnOpen", () => {
   });
 
   it("focuses the aria-selected option and calls preventDefault", () => {
-    const { container, items } = buildList([
-      {},
-      { selected: true },
-      {},
-    ]);
+    const { container, items } = buildList([{}, { selected: true }, {}]);
 
     const preventDefault = fireOpen(container);
 
@@ -109,7 +105,8 @@ describe("refocusSelectedCommandItemOnNavigate", () => {
   // cmdk moves aria-selected synchronously in the same onKeyDown pass this
   // fires from, but the refocus itself is deferred a frame (see the file's
   // own comment on why) — wait one animation frame before asserting.
-  const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+  const nextFrame = () =>
+    new Promise((resolve) => requestAnimationFrame(resolve));
 
   it.each(["ArrowDown", "ArrowUp", "Home", "End"])(
     "refocuses the newly-selected option on %s",

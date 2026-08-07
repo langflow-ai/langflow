@@ -382,7 +382,9 @@ export default function AccordionPromptComponent({
             <div
               role="button"
               tabIndex={0}
-              aria-label={isOpen ? t("accordion.collapse") : t("accordion.expand")}
+              aria-label={
+                isOpen ? t("accordion.collapse") : t("accordion.expand")
+              }
               className="flex h-4 w-4 cursor-pointer items-center justify-center"
             >
               <ForwardedIconComponent
