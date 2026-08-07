@@ -119,6 +119,29 @@ class TestSSRFSafeHTTPX:
             ssrf_safe_httpx_get("http://169.254.169.254/latest/meta-data/", timeout=5)
         mock_get.assert_not_called()
 
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "http://127.0.0.1\\@1.1.1.1/",
+            "http://1.1.1.1\\@127.0.0.1/",
+        ],
+    )
+    def test_ambiguous_authority_is_blocked_before_transport(self, url):
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "LANGFLOW_SSRF_PROTECTION_ENABLED": "true",
+                    "LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "true",
+                },
+                clear=True,
+            ),
+            patch("httpx.Client.get") as mock_get,
+            pytest.raises(SSRFProtectionError, match="backslash"),
+        ):
+            ssrf_safe_httpx_get(url, timeout=5)
+        mock_get.assert_not_called()
+
     def test_sync_dns_pinning_prevents_rebinding_attack(self):
         call_count = 0
         connected_to_ip = None

@@ -368,6 +368,17 @@ def _validate_hostname_resolution(hostname: str) -> None:
         raise SSRFProtectionError(msg)
 
 
+def _validate_raw_url_authority(url: str) -> None:
+    """Reject authority forms that urllib.parse and HTTP clients interpret differently."""
+    # Requests/urllib3 treats a backslash in the authority as a path separator,
+    # while urllib.parse can treat the suffix as the hostname. Reject only the
+    # ambiguous authority form; Requests safely quotes backslashes after it.
+    raw_authority = re.split(r"[/#?]", url.partition("://")[2], maxsplit=1)[0]
+    if "\\" in raw_authority:
+        msg = "URL contains a backslash, which is not permitted"
+        raise SSRFProtectionError(msg)
+
+
 def validate_url_for_ssrf(url: str, *, warn_only: bool = False) -> None:
     """Validate a URL to prevent SSRF attacks.
 
@@ -398,6 +409,8 @@ def validate_url_for_ssrf(url: str, *, warn_only: bool = False) -> None:
         raise ValueError(msg) from e
 
     try:
+        _validate_raw_url_authority(url)
+
         # Validate scheme (raises SSRFProtectionError for any non-http/https scheme)
         _validate_url_scheme(parsed.scheme)
 
@@ -491,6 +504,7 @@ def _connector_url_has_loopback_exemption(url: str) -> bool:
     if not is_ssrf_protection_enabled():
         return False
 
+    _validate_raw_url_authority(url)
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https") or not parsed.hostname:
         msg = (
@@ -922,6 +936,8 @@ def validate_and_resolve_url(url: str) -> tuple[str, list[str]]:
         raise ValueError(msg) from e
 
     try:
+        _validate_raw_url_authority(url)
+
         # ============================================================================
         # Step 3: Validate URL scheme (raises SSRFProtectionError for any non-http/https scheme)
         # ============================================================================

@@ -13,6 +13,7 @@ from lfx.utils.ssrf_protection import (
     is_ip_blocked,
     is_ssrf_protection_enabled,
     resolve_hostname,
+    validate_and_resolve_url,
     validate_connector_url_for_ssrf,
     validate_database_url_for_ssrf,
     validate_git_repository_url,
@@ -314,6 +315,16 @@ class TestURLValidation:
             validate_url_for_ssrf("http://example.com", warn_only=False)
             validate_url_for_ssrf("https://example.com", warn_only=False)
             validate_url_for_ssrf("https://api.example.com/v1", warn_only=False)
+
+    def test_dns_pinning_validator_blocks_ambiguous_authority(self):
+        """The DNS-pinning validator applies the same raw-authority validation."""
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve,
+            pytest.raises(SSRFProtectionError, match="backslash"),
+        ):
+            validate_and_resolve_url("http://127.0.0.1\\@1.1.1.1/")
+        mock_resolve.assert_not_called()
 
     def test_direct_ip_blocking(self):
         """Test blocking of direct IP addresses."""
