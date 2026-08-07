@@ -36,11 +36,13 @@ const mockNode: AllNodeType = {
     node: {
       template: {
         param1: {
+          type: "str",
           advanced: false,
           api_editable: true,
           value: "test-value",
         },
         param2: {
+          type: "str",
           advanced: true,
           api_editable: false,
           value: "advanced-value",
@@ -60,6 +62,7 @@ const mockNode2: AllNodeType = {
     node: {
       template: {
         param3: {
+          type: "str",
           advanced: false,
           api_editable: true,
           value: "another-value",
@@ -79,6 +82,7 @@ const mockFrozenNode: AllNodeType = {
     node: {
       template: {
         param4: {
+          type: "str",
           advanced: false,
           api_editable: true,
           value: "frozen-value",

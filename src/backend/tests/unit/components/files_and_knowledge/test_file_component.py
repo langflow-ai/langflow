@@ -1,11 +1,16 @@
+import asyncio
 import json
 import subprocess
 import tempfile
+import threading
 from unittest.mock import MagicMock, patch
 
 import pytest
 from langflow.io import Output
+from lfx.components.files_and_knowledge import file as file_component_module
 from lfx.components.files_and_knowledge.file import FileComponent
+
+from tests.base import ComponentTestBaseWithoutClient
 
 
 class TestFileComponentFrontendMetadata:
@@ -310,8 +315,20 @@ class TestFileComponentDynamicOutputs:
         assert result.text == "Content from file_path_str", "file_path_str should take priority over path"
 
 
-class TestFileComponentToolMode:
+class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
     """Tests for the tool mode functionality of FileComponent."""
+
+    @pytest.fixture
+    def component_class(self):
+        return FileComponent
+
+    @pytest.fixture
+    def default_kwargs(self):
+        return {}
+
+    @pytest.fixture
+    def file_names_mapping(self):
+        return []
 
     def test_get_tool_description_without_files(self):
         """Test tool description when no files are uploaded."""
@@ -535,6 +552,143 @@ class TestFileComponentToolMode:
         result = await tool.coroutine()
 
         assert test_content in result
+
+    @pytest.mark.parametrize(
+        ("advanced_mode", "loader_name"),
+        [(False, "load_files_message"), (True, "load_files_markdown")],
+    )
+    @pytest.mark.asyncio
+    async def test_tool_execution_offloads_sync_loader(
+        self, monkeypatch, component_class, default_kwargs, advanced_mode, loader_name
+    ):
+        """Both synchronous loaders must run outside the event-loop thread (issue #14380)."""
+        component = component_class(**default_kwargs)
+        component.advanced_mode = advanced_mode
+        event_loop_thread = threading.current_thread()
+        loader_thread = None
+
+        def fake_loader(_component):
+            nonlocal loader_thread
+            loader_thread = threading.current_thread()
+            return "file contents"
+
+        monkeypatch.setattr(component_class, loader_name, fake_loader)
+
+        tool = (await component._get_tools())[0]
+        result = await tool.coroutine()
+
+        assert result == "file contents"
+        assert loader_thread is not None
+        assert loader_thread is not event_loop_thread
+
+    @pytest.mark.asyncio
+    async def test_cancelled_standard_loader_holds_bounded_admission_slot(self, monkeypatch, component_class):
+        """A cancelled sync loader keeps its slot until its worker really exits."""
+        load_limiter = asyncio.Semaphore(1)
+        monkeypatch.setattr(file_component_module, "_get_file_tool_limiter", lambda: load_limiter)
+
+        first_started = threading.Event()
+        release_first = threading.Event()
+        first_finished = threading.Event()
+        second_started = threading.Event()
+        call_lock = threading.Lock()
+        call_count = 0
+
+        def fake_loader(_component):
+            nonlocal call_count
+            with call_lock:
+                call_count += 1
+                current_call = call_count
+            if current_call == 1:
+                first_started.set()
+                assert release_first.wait(timeout=2), "Cancelled standard loader was not released by the test"
+                first_finished.set()
+                return "first file"
+            second_started.set()
+            return "second file"
+
+        monkeypatch.setattr(component_class, "load_files_message", fake_loader)
+        first_tool = (await component_class()._get_tools())[0]
+        second_tool = (await component_class()._get_tools())[0]
+        first_task = asyncio.create_task(first_tool.coroutine())
+        assert await asyncio.to_thread(first_started.wait, 1), "Standard loader did not start"
+
+        first_task.cancel()
+        second_task = asyncio.create_task(second_tool.coroutine())
+        try:
+            assert not await asyncio.to_thread(second_started.wait, 0.1), (
+                "A second loader started before the cancelled worker released its admission slot"
+            )
+        finally:
+            release_first.set()
+
+        with pytest.raises(asyncio.CancelledError):
+            await first_task
+        assert first_finished.is_set()
+        assert await asyncio.wait_for(second_task, timeout=2) == "second file"
+        assert second_started.is_set()
+
+    @pytest.mark.asyncio
+    @patch("subprocess.Popen")
+    async def test_tool_cancellation_kills_and_reaps_docling_subprocess(self, mock_popen, monkeypatch, component_class):
+        component = component_class()
+        component.advanced_mode = True
+        component.md_image_placeholder = "<!-- image -->"
+        component.md_page_break_placeholder = ""
+        component.pipeline = "standard"
+        component.ocr_engine = "None"
+
+        started = threading.Event()
+        allow_poll = threading.Event()
+        stopped = threading.Event()
+        released = threading.Event()
+        reaped = threading.Event()
+        finished = threading.Event()
+        communicate_calls = 0
+        mock_proc = MagicMock()
+
+        def communicate(*args, **kwargs):  # noqa: ARG001
+            nonlocal communicate_calls
+            communicate_calls += 1
+            if communicate_calls == 1:
+                started.set()
+                assert allow_poll.wait(timeout=2), "Docling cancellation checkpoint was not released"
+                raise subprocess.TimeoutExpired(cmd="docling", timeout=5)
+            if stopped.is_set():
+                reaped.set()
+                return b"", b""
+            assert released.wait(timeout=2), "Abandoned Docling subprocess was not released by the test"
+            return b"", b""
+
+        mock_proc.communicate.side_effect = communicate
+        mock_proc.kill.side_effect = stopped.set
+        mock_proc.terminate.side_effect = stopped.set
+        mock_popen.return_value = mock_proc
+
+        def fake_loader(file_component):
+            try:
+                return file_component._process_docling_subprocess_impl("test.pdf", "test.pdf")
+            finally:
+                finished.set()
+
+        monkeypatch.setattr(component_class, "load_files_markdown", fake_loader)
+
+        tool = (await component._get_tools())[0]
+        task = asyncio.create_task(tool.coroutine())
+        assert await asyncio.to_thread(started.wait, 1), "Docling subprocess did not start"
+
+        task.cancel()
+        await asyncio.sleep(0.01)
+        allow_poll.set()
+        try:
+            with pytest.raises(asyncio.CancelledError):
+                await task
+            assert stopped.is_set(), "Docling subprocess was not stopped after tool cancellation"
+            assert reaped.is_set(), "Docling subprocess was not reaped after tool cancellation"
+            assert finished.is_set(), "Loader worker did not finish cancellation cleanup"
+        finally:
+            released.set()
+            await asyncio.to_thread(finished.wait, 2)
 
     # ==================== Error Handling Tests ====================
 

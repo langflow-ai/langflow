@@ -104,6 +104,12 @@ If Langflow fails to start with a `get_body_field` error after installing versio
 
     For more information, see [Docker image defaults](/deployment-docker#docker-image-security-defaults).
 
+- Docker runtime home moved to `/app/data`
+
+    Patched 1.11 Docker images set `HOME=/app/data` so the non-root runtime user has a writable home directory.
+    When `LANGFLOW_CONFIG_DIR` isn't set, the default config directory therefore changes from `/opt/app-root/src/.cache/langflow` to `/app/data/.cache/langflow`; SQLite follows that directory when `LANGFLOW_SAVE_DB_IN_CONFIG_DIR=true`.
+    Persist `/app/data` or set `LANGFLOW_CONFIG_DIR` to your existing writable data directory before upgrading to preserve existing data.
+
 - Ongoing breaking changes: bundle separation
 
     Langflow 1.10.x introduced the Extension bundles model.

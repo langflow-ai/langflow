@@ -123,6 +123,7 @@ RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
+ENV HOME=/app/data
 ENV BASH_ENV="" \
     ENV="" \
     PROMPT_COMMAND=""
@@ -134,15 +135,15 @@ ENV BASH_ENV="" \
 # write secret_key, profile_pictures, etc. Without this, the volume is created
 # as root:root and Langflow crashes during startup with PermissionError on
 # /app/langflow/secret_key. See https://github.com/langflow-ai/langflow/issues/10437
-RUN mkdir -p /app/langflow && chown -R 1000:0 /app/langflow && chmod -R g+rwX /app/langflow
+RUN mkdir -p /app/data /app/langflow \
+    && chown -R 1000:0 /app/data /app/langflow \
+    && chmod -R g+rwX /app/data /app/langflow
 
 # Give the runtime user (uid 1000) a writable npm cache. The image ships Node so
-# users can spawn stdio MCP servers via `npx`, but on the ubi10 base
-# HOME=/opt/app-root/src is not owned by uid 1000, so npx otherwise fails with
-# `EACCES` on ~/.npm/_cacache and every stdio MCP server registers but never
-# lists any tools (toolsCount stays null). Pin npm's cache to a
-# uid-1000-owned dir (immune to the base image's HOME) and hand ownership of the
-# default HOME cache to the runtime user as a fallback.
+# users can spawn stdio MCP servers via `npx`. Pin npm's cache to a
+# uid-1000-owned dir so callers that override HOME cannot make the cache
+# read-only, and keep the UBI base image's default HOME cache writable as a
+# fallback.
 # See https://github.com/langflow-ai/langflow/pull/13893 (ubi10 base change).
 ENV NPM_CONFIG_CACHE=/app/.npm
 RUN mkdir -p /app/.npm /opt/app-root/src/.npm \
