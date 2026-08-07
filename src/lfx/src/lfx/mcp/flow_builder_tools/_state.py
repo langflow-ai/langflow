@@ -18,10 +18,27 @@ from typing import Any
 
 from lfx.graph.flow_builder.builder import load_local_registry
 from lfx.graph.flow_builder.flow import empty_flow
+from lfx.services.deps import get_catalog_policy_service
+from lfx.utils.component_aliases import build_component_identity_index
 
 # ---------------------------------------------------------------------------
 # Registry loader (user-overlay aware)
 # ---------------------------------------------------------------------------
+
+
+def _filter_registry_by_catalog_policy(registry: dict[str, dict]) -> dict[str, dict]:
+    """Return a request-local registry without catalog-blocked components."""
+    blocked_component_keys = get_catalog_policy_service().snapshot.blocked_component_keys
+    if not blocked_component_keys:
+        return registry
+
+    identity_index = build_component_identity_index({"components": registry})
+    blocked_identities = identity_index.resolve_many(blocked_component_keys)
+    return {
+        component_type: entry
+        for component_type, entry in registry.items()
+        if identity_index.resolve(component_type).isdisjoint(blocked_identities)
+    }
 
 
 def _load_registry_user_aware() -> dict[str, dict]:
@@ -43,8 +60,10 @@ def _load_registry_user_aware() -> dict[str, dict]:
             load_registry_for_current_user,
         )
     except ImportError:
-        return load_local_registry()
-    return load_registry_for_current_user()
+        registry = load_local_registry()
+    else:
+        registry = load_registry_for_current_user()
+    return _filter_registry_by_catalog_policy(registry)
 
 
 # ---------------------------------------------------------------------------

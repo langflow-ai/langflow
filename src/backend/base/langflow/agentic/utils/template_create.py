@@ -11,11 +11,12 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException
 
 from langflow.agentic.utils.template_search import get_template_by_id
-from langflow.api.v1.flows import _new_flow, _save_flow_to_fs
+from langflow.api.v1.flows import _new_flow, _save_flow_to_fs, _validate_catalog_policy_for_write
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.database.models.flow.model import FlowCreate
 from langflow.services.database.models.folder.model import Folder
-from langflow.services.deps import get_storage_service
+from langflow.services.deps import get_catalog_policy_service, get_storage_service
+from langflow.utils.i18n_keys import safe_flow_key
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -46,6 +47,13 @@ async def create_flow_from_template_and_get_link(
     template = get_template_by_id(template_id=template_id, fields=None)
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
+
+    catalog_policy_snapshot = get_catalog_policy_service().snapshot
+    template_name = template.get("name")
+    template_key = safe_flow_key(template_name) if isinstance(template_name, str) else ""
+    if template_key and catalog_policy_snapshot.is_template_blocked(template_key):
+        raise HTTPException(status_code=400, detail=f"Catalog policy blocks template: {template_key}")
+    _validate_catalog_policy_for_write(template.get("data"), snapshot=catalog_policy_snapshot)
 
     # 2) Resolve target folder
     if target_folder_id:
