@@ -7796,7 +7796,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.11.2"
+version = "1.11.3"
 source = { editable = "." }
 dependencies = [
     { name = "langflow-base", extra = ["complete"] },
@@ -7980,7 +7980,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.11.2"
+version = "0.11.3"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "a2a-sdk" },
@@ -8770,7 +8770,7 @@ dev = [
 
 [[package]]
 name = "langflow-sdk"
-version = "0.3.2"
+version = "0.3.3"
 source = { editable = "src/sdk" }
 dependencies = [
     { name = "httpx", extra = ["http2"] },
@@ -9044,7 +9044,7 @@ wheels = [
 
 [[package]]
 name = "lfx"
-version = "1.11.2"
+version = "1.11.3"
 source = { editable = "src/lfx" }
 dependencies = [
     { name = "a2wsgi", marker = "sys_platform != 'win32'" },
