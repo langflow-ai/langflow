@@ -92,6 +92,22 @@ class WebSearchComponent(Component):
             advanced=True,
         ),
         IntInput(
+            name="max_results",
+            display_name="Max Results",
+            info="Maximum number of web results to fetch and return.",
+            value=5,
+            required=False,
+            advanced=True,
+        ),
+        IntInput(
+            name="max_content_length",
+            display_name="Max Content Length",
+            info="Maximum number of characters of scraped page content returned per web result.",
+            value=4000,
+            required=False,
+            advanced=True,
+        ),
+        IntInput(
             name="timeout",
             display_name="Timeout",
             info="Timeout for the request in seconds.",
@@ -200,8 +216,10 @@ class WebSearchComponent(Component):
 
         soup = BeautifulSoup(response.text, "html.parser")
         results = []
+        max_results = max(self.max_results or 0, 0)
+        max_content_length = max(self.max_content_length or 0, 0)
 
-        for result in soup.select("div.result"):
+        for result in soup.select("div.result")[:max_results]:
             title_tag = result.select_one("a.result__a")
             snippet_tag = result.select_one("a.result__snippet")
             if title_tag:
@@ -221,6 +239,7 @@ class WebSearchComponent(Component):
                         content = f"(Blocked by SSRF protection: {e!s})"
                     else:
                         content = f"(Failed to fetch: {e!s})"
+                content = content[:max_content_length]
 
                 results.append(
                     {
