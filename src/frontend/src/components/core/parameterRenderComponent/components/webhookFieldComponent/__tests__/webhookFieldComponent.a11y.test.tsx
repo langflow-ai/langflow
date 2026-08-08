@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { axe } from "@/utils/a11y-test";
+import { mockGenericIconComponent } from "../../__tests__/a11y-mock-helpers";
 import WebhookFieldComponent from "..";
 
 jest.mock("@/customization/components/custom-secret-key-modal-button", () => ({
@@ -12,10 +13,9 @@ jest.mock(
     useGetBuildsMutation: () => ({ mutate: jest.fn() }),
   }),
 );
-jest.mock("@/components/common/genericIconComponent", () => ({
-  __esModule: true,
-  default: () => null,
-}));
+jest.mock("@/components/common/genericIconComponent", () =>
+  mockGenericIconComponent(),
+);
 
 const baseProps = {
   value: "http://localhost/api/v1/webhook/test",

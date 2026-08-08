@@ -1,6 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { axe } from "@/utils/a11y-test";
+import {
+  mockGenericIconComponent,
+  mockZustandStore,
+} from "../../__tests__/a11y-mock-helpers";
 import McpComponent from "../index";
 
 jest.mock("@/controllers/API/queries/mcp/use-get-mcp-servers", () => ({
@@ -19,27 +23,22 @@ jest.mock("@/controllers/API/queries/nodes/use-post-template-value", () => ({
   usePostTemplateValue: jest.fn(() => ({ mutateAsync: jest.fn() })),
 }));
 
-jest.mock("@/stores/alertStore", () => ({
-  __esModule: true,
-  default: (selector?: (state: unknown) => unknown) =>
-    selector ? selector({ setErrorData: jest.fn() }) : {},
-}));
+jest.mock("@/stores/alertStore", () =>
+  mockZustandStore({ setErrorData: jest.fn() }),
+);
 
-jest.mock("@/stores/flowStore", () => ({
-  __esModule: true,
-  default: (selector?: (state: unknown) => unknown) =>
-    selector ? selector({ updateBuildStatus: jest.fn() }) : {},
-}));
+jest.mock("@/stores/flowStore", () =>
+  mockZustandStore({ updateBuildStatus: jest.fn() }),
+);
 
 jest.mock("@/components/common/shadTooltipComponent", () => ({
   __esModule: true,
   default: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
-jest.mock("@/components/common/genericIconComponent", () => ({
-  __esModule: true,
-  default: () => null,
-}));
+jest.mock("@/components/common/genericIconComponent", () =>
+  mockGenericIconComponent(),
+);
 
 jest.mock("@/modals/addMcpServerModal", () => ({
   __esModule: true,

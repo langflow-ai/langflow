@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { axe } from "@/utils/a11y-test";
+import { mockGenericIconComponent } from "../../__tests__/a11y-mock-helpers";
 import ToolsComponent from "..";
 
 jest.mock("@/modals/toolsModal", () => ({
@@ -7,11 +8,9 @@ jest.mock("@/modals/toolsModal", () => ({
   default: () => null,
 }));
 
-jest.mock("../../../../../common/genericIconComponent", () => ({
-  __esModule: true,
-  ForwardedIconComponent: () => null,
-  default: () => null,
-}));
+jest.mock("../../../../../common/genericIconComponent", () =>
+  mockGenericIconComponent(),
+);
 
 const baseProps = {
   value: [{ name: "search", status: true, tags: [], description: "" }],

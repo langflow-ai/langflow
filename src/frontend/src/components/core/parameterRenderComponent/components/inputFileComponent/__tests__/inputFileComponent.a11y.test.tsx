@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { axe } from "@/utils/a11y-test";
+import { mockZustandStore } from "../../__tests__/a11y-mock-helpers";
 import InputFileComponent from "..";
 
 jest.mock("@/controllers/API/queries/file-management", () => ({
@@ -12,16 +13,12 @@ jest.mock("@/shared/hooks/use-file-size-validator", () => ({
   __esModule: true,
   default: () => ({ validateFileSize: jest.fn() }),
 }));
-jest.mock("../../../../../../stores/alertStore", () => ({
-  __esModule: true,
-  default: (selector: (state: unknown) => unknown) =>
-    selector({ setErrorData: jest.fn() }),
-}));
-jest.mock("../../../../../../stores/flowsManagerStore", () => ({
-  __esModule: true,
-  default: (selector: (state: unknown) => unknown) =>
-    selector({ currentFlowId: "flow-1" }),
-}));
+jest.mock("../../../../../../stores/alertStore", () =>
+  mockZustandStore({ setErrorData: jest.fn() }),
+);
+jest.mock("../../../../../../stores/flowsManagerStore", () =>
+  mockZustandStore({ currentFlowId: "flow-1" }),
+);
 
 // tempFile defaults to true, so ENABLE_FILE_MANAGEMENT's grid/modal branch
 // is skipped and the plain read-only-input trigger (the one under test) is

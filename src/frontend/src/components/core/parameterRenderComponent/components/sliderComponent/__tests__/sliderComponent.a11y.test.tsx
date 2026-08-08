@@ -46,4 +46,26 @@ describe("SliderComponent", () => {
 
     expect(screen.getByRole("slider")).not.toHaveAttribute("aria-labelledby");
   });
+
+  // Regression guard, isolated from label text: the tests above pass
+  // because the thumb's *computed accessible name* happens to match the
+  // label's text — that would still be true if the thumb pointed at some
+  // other element that coincidentally said "Temperature" too. Proving the
+  // wiring itself (not just the end result) means asserting the thumb's
+  // aria-labelledby value is literally the label's id, with a label whose
+  // text gives no hint either way.
+  it("wires the thumb's aria-labelledby to the label element's own id, not merely matching text", () => {
+    render(
+      <>
+        <span id="node-3-field-x-label">x</span>
+        <SliderComponent {...baseProps} ariaLabelledBy="node-3-field-x-label" />
+      </>,
+    );
+
+    const thumb = screen.getByRole("slider");
+    expect(thumb.getAttribute("aria-labelledby")).toBe("node-3-field-x-label");
+    expect(document.getElementById("node-3-field-x-label")).toBe(
+      screen.getByText("x"),
+    );
+  });
 });

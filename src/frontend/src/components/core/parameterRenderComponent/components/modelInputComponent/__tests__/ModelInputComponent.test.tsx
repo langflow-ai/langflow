@@ -1590,6 +1590,40 @@ describe("ModelInputComponent", () => {
         screen.getByRole("combobox", { name: "Embedding model" }),
       ).toBeInTheDocument();
     });
+
+    // Precedence guard: ModelTrigger renders
+    // `aria-label={!ariaLabelledBy ? ariaLabel : undefined}` — the literal
+    // aria-label is only a fallback for callers with no field label id to
+    // forward. When a caller (accidentally or otherwise) supplies both,
+    // ariaLabelledBy must win outright, not merge or get overridden.
+    it("prefers the forwarded field label over a literal aria-label when both are supplied", () => {
+      renderWithQueryClient(
+        <>
+          <span id="model-field-label">Model Name</span>
+          <ModelInputComponent
+            {...defaultProps}
+            value={[mockOptions[0]]}
+            ariaLabelledBy="model-field-label"
+            aria-label="Embedding model"
+          />
+        </>,
+      );
+
+      expect(
+        screen.getByRole("combobox", { name: "Model Name" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("combobox", { name: "Embedding model" }),
+      ).not.toBeInTheDocument();
+      // The literal aria-label must be dropped outright, not merely
+      // shadowed — a stray leftover attribute would still corrupt the
+      // accessible name computation in browsers that don't prioritize
+      // aria-labelledby as strictly as the test-library name algorithm.
+      expect(screen.getByRole("combobox")).not.toHaveAttribute(
+        "aria-label",
+        "Embedding model",
+      );
+    });
   });
 
   describe("popover initial highlight", () => {

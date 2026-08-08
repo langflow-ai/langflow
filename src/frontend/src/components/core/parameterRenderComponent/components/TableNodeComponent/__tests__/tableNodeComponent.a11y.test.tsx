@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { axe } from "@/utils/a11y-test";
+import { mockGenericIconComponent } from "../../__tests__/a11y-mock-helpers";
 import TableNodeComponent from "..";
 
 jest.mock("@/modals/tableModal", () => ({
@@ -7,11 +8,9 @@ jest.mock("@/modals/tableModal", () => ({
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-jest.mock("@/components/common/genericIconComponent", () => ({
-  __esModule: true,
-  default: () => null,
-  ForwardedIconComponent: () => null,
-}));
+jest.mock("@/components/common/genericIconComponent", () =>
+  mockGenericIconComponent(),
+);
 
 const baseProps = {
   value: [],

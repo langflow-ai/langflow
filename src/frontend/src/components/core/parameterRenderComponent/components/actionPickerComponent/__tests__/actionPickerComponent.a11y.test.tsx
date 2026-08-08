@@ -1,26 +1,23 @@
 import { render, screen } from "@testing-library/react";
 import type { ComponentProps, ReactNode } from "react";
 import { axe } from "@/utils/a11y-test";
+import {
+  mockGenericIconComponent,
+  mockZustandStore,
+} from "../../__tests__/a11y-mock-helpers";
 import ActionPickerComponent from "../index";
 
-jest.mock("@/stores/alertStore", () => ({
-  __esModule: true,
-  default: (selector?: (s: unknown) => unknown) =>
-    selector
-      ? selector({ setErrorData: jest.fn(), setNoticeData: jest.fn() })
-      : {},
-}));
+jest.mock("@/stores/alertStore", () =>
+  mockZustandStore({ setErrorData: jest.fn(), setNoticeData: jest.fn() }),
+);
 
-jest.mock("@/stores/flowStore", () => ({
-  __esModule: true,
-  default: (selector?: (s: { edges: unknown[] }) => unknown) =>
-    selector ? selector({ edges: [] }) : {},
-}));
+jest.mock("@/stores/flowStore", () =>
+  mockZustandStore({ edges: [] as unknown[] }),
+);
 
-jest.mock("@/components/common/genericIconComponent", () => ({
-  __esModule: true,
-  default: () => null,
-}));
+jest.mock("@/components/common/genericIconComponent", () =>
+  mockGenericIconComponent(),
+);
 
 jest.mock("@/components/ui/badge", () => ({
   Badge: ({ children }: { children: ReactNode }) => <div>{children}</div>,

@@ -1,15 +1,16 @@
 import { render, screen } from "@testing-library/react";
-import { axe } from "@/utils/a11y-test";
 import type { APIClassType } from "@/types/api";
+import { axe } from "@/utils/a11y-test";
+import { mockUsePostTemplateValue } from "../../__tests__/a11y-mock-helpers";
 
 // The shared Dropdown pulls in DropdownOptionsList -> NodeDialogComponent ->
 // mcpComponent -> addMcpServerModal, which imports the ESM-only `nanoid`
 // package. Stub it out — irrelevant to this a11y regression test and not
 // otherwise transformed by Jest's CJS setup.
 jest.mock("nanoid", () => ({ nanoid: () => "test-id" }));
-jest.mock("@/controllers/API/queries/nodes/use-post-template-value", () => ({
-  usePostTemplateValue: () => jest.fn(),
-}));
+jest.mock("@/controllers/API/queries/nodes/use-post-template-value", () =>
+  mockUsePostTemplateValue(),
+);
 
 import DropdownComponent from "..";
 

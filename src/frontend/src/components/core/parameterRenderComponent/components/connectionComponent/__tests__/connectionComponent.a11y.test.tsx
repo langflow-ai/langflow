@@ -1,6 +1,10 @@
 import { render, screen } from "@testing-library/react";
-import { axe } from "@/utils/a11y-test";
 import type { APIClassType } from "@/types/api";
+import { axe } from "@/utils/a11y-test";
+import {
+  mockUsePostTemplateValue,
+  mockZustandStore,
+} from "../../__tests__/a11y-mock-helpers";
 import ConnectionComponent from "..";
 
 jest.mock(
@@ -10,14 +14,12 @@ jest.mock(
     default: () => null,
   }),
 );
-jest.mock("@/controllers/API/queries/nodes/use-post-template-value", () => ({
-  usePostTemplateValue: () => jest.fn(),
-}));
-jest.mock("@/stores/alertStore", () => ({
-  __esModule: true,
-  default: (selector: (state: unknown) => unknown) =>
-    selector({ setErrorData: jest.fn() }),
-}));
+jest.mock("@/controllers/API/queries/nodes/use-post-template-value", () =>
+  mockUsePostTemplateValue(),
+);
+jest.mock("@/stores/alertStore", () =>
+  mockZustandStore({ setErrorData: jest.fn() }),
+);
 
 const baseProps = {
   value: "",
