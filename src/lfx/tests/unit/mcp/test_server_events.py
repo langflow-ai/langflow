@@ -190,9 +190,9 @@ async def test_tool_mode_connection_rejection_has_no_remote_side_effect(mock_cli
         patch("lfx.mcp.server.configure_component", new_callable=AsyncMock) as configure,
         patch("lfx.mcp.server.fb_add_connection", side_effect=ValueError("unsupported Tool Mode")),
         patch("lfx.mcp.server._patch_flow", new_callable=AsyncMock) as patch_flow,
+        pytest.raises(ValueError, match="unsupported Tool Mode"),
     ):
-        with pytest.raises(ValueError, match="unsupported Tool Mode"):
-            await connect_components("flow-123", "ChatInput-1", "component_as_tool", "Agent-1", "tools")
+        await connect_components("flow-123", "ChatInput-1", "component_as_tool", "Agent-1", "tools")
 
     configure.assert_not_awaited()
     patch_flow.assert_not_awaited()
