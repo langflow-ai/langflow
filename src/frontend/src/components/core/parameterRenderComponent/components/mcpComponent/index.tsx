@@ -254,7 +254,6 @@ export default function McpComponent({
             data-testid="mcp-server-dropdown"
             disabled={disabled || !options}
             aria-labelledby={ariaLabelledBy}
-            aria-expanded={open}
           >
             <div
               className={cn(
