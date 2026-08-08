@@ -212,7 +212,7 @@ export default function TextAreaComponent({
         disabled={disabled}
         className={getInputClassName()}
         placeholder={getPlaceholder(disabled, placeholder)}
-        aria-label={disabled ? displayValue : undefined}
+        aria-label={disabled && !ariaLabelledBy ? displayValue : undefined}
         aria-labelledby={ariaLabelledBy}
         ref={inputRef}
         // Keyed on the secret-ness, not the live type, so revealing a masked

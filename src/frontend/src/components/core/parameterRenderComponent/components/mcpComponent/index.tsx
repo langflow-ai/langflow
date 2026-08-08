@@ -231,7 +231,15 @@ export default function McpComponent({
           <Button
             variant={!showSaveButton ? "primary" : "secondary"}
             size="xs"
-            role="combobox"
+            aria-haspopup={!showSaveButton ? "dialog" : undefined}
+            aria-expanded={!showSaveButton ? open : undefined}
+            aria-label={
+              showSaveButton
+                ? t("mcp.clearServer")
+                : !options
+                  ? t("mcp.loadingServers")
+                  : (selectedItem[0]?.name ?? t("mcp.selectServer"))
+            }
             onClick={
               !showSaveButton
                 ? handleOpenListSelectionDialog
@@ -273,6 +281,7 @@ export default function McpComponent({
               className="px-2.5"
               onClick={handleSaveButtonClick}
               data-testid="save-mcp-server-button"
+              aria-label={t("mcp.saveServer")}
             >
               <ForwardedIconComponent
                 name="Save"
@@ -281,7 +290,10 @@ export default function McpComponent({
             </Button>
           )}
           {name && !showSaveButton && (
-            <ShadTooltip content={t("mcp.refreshServer")}>
+            <ShadTooltip
+              content={t("mcp.refreshServer")}
+              ariaDescribedBy={undefined}
+            >
               <Button
                 variant="ghost"
                 size="iconMd"

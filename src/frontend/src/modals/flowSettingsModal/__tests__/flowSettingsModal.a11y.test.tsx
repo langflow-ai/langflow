@@ -75,32 +75,25 @@ describe("FlowSettingsModal accessibility", () => {
     mockReadOnly = false;
   });
 
-  // Rather than switching `button-name` off wholesale, these two assert the
-  // exact known-violation set. Any NEW violation still fails the suite, and
-  // fixing the lock switch will fail them too — which is the correct prompt to
-  // delete the exemption.
-  it("should_have_no_axe_violations_beyond_the_known_lock_switch_gap", async () => {
+  // The lock switch now carries an aria-label (see editFlowSettingsComponent),
+  // so the modal is fully clean under axe.
+  it("should_have_no_axe_violations", async () => {
     renderModal();
 
     // BaseModal portals its content to document.body, outside the render
     // container.
     const results = await axe(document.body, { rules: FORM_STUB_RULES });
 
-    expect(results.violations.map((violation) => violation.id)).toEqual([
-      "button-name",
-    ]);
-    expect(results.violations[0].nodes[0].html).toContain("lock-flow-switch");
+    expect(results.violations).toEqual([]);
   });
 
-  it("should_have_no_new_axe_violations_in_read_only_state", async () => {
+  it("should_have_no_axe_violations_in_read_only_state", async () => {
     mockReadOnly = true;
     renderModal();
 
     const results = await axe(document.body, { rules: FORM_STUB_RULES });
 
-    expect(results.violations.map((violation) => violation.id)).toEqual([
-      "button-name",
-    ]);
+    expect(results.violations).toEqual([]);
   });
 
   it("should_expose_dialog_role_with_accessible_name", () => {
@@ -133,16 +126,14 @@ describe("FlowSettingsModal accessibility", () => {
     expect(screen.getByTestId("save-flow-settings")).toHaveAttribute("title");
   });
 
-  // FINDING (documented, not fixed): the "Lock Flow" Form.Label sits inside the
-  // `description` Form.Field, so even with the real Radix Form it associates
-  // with the description textarea rather than the Switch. The Switch itself
-  // carries no aria-label / aria-labelledby, so it is announced with no name
-  // (WCAG 4.1.2). This assertion holds regardless of the Form stub, because
-  // the Switch is never inside a Form.Control.
-  it("should_leave_the_lock_switch_without_an_accessible_name", () => {
+  // The "Lock Flow" Form.Label sits inside the `description` Form.Field, so
+  // even with the real Radix Form it associates with the description
+  // textarea rather than the Switch. The Switch carries its own aria-label
+  // to compensate, so it still gets an accessible name (WCAG 4.1.2).
+  it("should_give_the_lock_switch_an_accessible_name_via_aria_label", () => {
     renderModal();
 
-    expect(screen.getByRole("switch")).toHaveAccessibleName("");
+    expect(screen.getByRole("switch")).toHaveAccessibleName("Lock flow switch");
   });
 
   it("should_expose_the_cancel_and_save_actions_as_buttons", () => {

@@ -61,4 +61,29 @@ describe("TabComponent — selection still emits real option text", () => {
       "true",
     );
   });
+
+  // Regression guard: a stored value outside validOptions (4th+ option, or
+  // truncated by the 20-char limit) must not clamp to "first tab selected" —
+  // that would silently misreport what the flow actually holds. No match
+  // should mean no trigger is selected, same as before the index-token fix.
+  it("should_not_select_any_tab_when_the_stored_value_is_not_among_validOptions", () => {
+    render(
+      <TabComponent
+        {...baseProps}
+        options={["Option A", "Option B", "Option C", "Option D"]}
+        value="Option D"
+      />,
+    );
+
+    for (const testId of [
+      "tab_0_option_a",
+      "tab_1_option_b",
+      "tab_2_option_c",
+    ]) {
+      expect(screen.getByTestId(testId)).toHaveAttribute(
+        "aria-selected",
+        "false",
+      );
+    }
+  });
 });

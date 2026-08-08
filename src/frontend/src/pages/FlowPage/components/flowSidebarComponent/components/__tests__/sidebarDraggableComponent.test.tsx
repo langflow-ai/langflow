@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { axe } from "@/utils/a11y-test";
 import { SidebarDraggableComponent } from "../sidebarDraggableComponent";
 
 // Mock all external dependencies
@@ -190,7 +191,13 @@ jest.mock("@/components/ui/select", () => ({
     tabIndex?: number;
     [key: string]: unknown;
   }) => (
-    <div data-testid="select-trigger" tabIndex={tabIndex} {...props}>
+    <div
+      data-testid="select-trigger"
+      role="combobox"
+      aria-expanded={false}
+      tabIndex={tabIndex}
+      {...props}
+    >
       {children}
     </div>
   ),
@@ -259,6 +266,16 @@ describe("SidebarDraggableComponent", () => {
     jest.clearAllMocks();
     mockOnValueChange = undefined;
     mockDeleteFlow.mockClear();
+  });
+
+  describe("Accessibility", () => {
+    it("should_have_no_axe_violations", async () => {
+      const { container } = render(
+        <SidebarDraggableComponent {...defaultProps} />,
+      );
+
+      expect(await axe(container)).toHaveNoViolations();
+    });
   });
 
   describe("Basic Rendering", () => {
@@ -394,6 +411,42 @@ describe("SidebarDraggableComponent", () => {
         "data-content",
       );
     });
+
+    it("should not set pointer-events-none on the disabled row, so its tooltip stays hoverable", () => {
+      // Regression test: `pointer-events-none` makes an element (and its
+      // subtree) unreachable by real mouse hover, which silently defeats
+      // the ShadTooltip trigger attached to this same row and permanently
+      // hides `disabledTooltip` from mouse users.
+      const propsWithDisabled = {
+        ...defaultProps,
+        disabled: true,
+        disabledTooltip: "Test component already added",
+      };
+
+      render(<SidebarDraggableComponent {...propsWithDisabled} />);
+
+      const row = screen.getByTestId("testsection_test component_draggable");
+      expect(row.className).not.toContain("pointer-events-none");
+    });
+
+    it("should not call addComponent on Enter/Space when disabled", () => {
+      const propsWithDisabled = { ...defaultProps, disabled: true };
+      render(<SidebarDraggableComponent {...propsWithDisabled} />);
+
+      const container = screen.getByTestId(/testsectiontest component/i);
+      fireEvent.keyDown(container, { key: "Enter" });
+      fireEvent.keyDown(container, { key: " " });
+
+      expect(mockAddComponentFn).not.toHaveBeenCalled();
+    });
+
+    it("should not be draggable when disabled", () => {
+      const propsWithDisabled = { ...defaultProps, disabled: true };
+      render(<SidebarDraggableComponent {...propsWithDisabled} />);
+
+      const container = screen.getByTestId(/testsectiontest component/i);
+      expect(container).toHaveAttribute("draggable", "false");
+    });
   });
 
   describe("Error State", () => {
@@ -474,15 +527,11 @@ describe("SidebarDraggableComponent", () => {
       );
     });
 
-    it("should call addComponent when Enter key is pressed on the add button", async () => {
-      const user = userEvent.setup();
+    it("should call addComponent when Enter key is pressed", () => {
       render(<SidebarDraggableComponent {...defaultProps} />);
 
-      const addButton = screen.getByTestId(
-        "add-component-button-test-component",
-      );
-      addButton.focus();
-      await user.keyboard("{Enter}");
+      const container = screen.getByTestId(/testsectiontest component/i);
+      fireEvent.keyDown(container, { key: "Enter" });
 
       expect(mockAddComponentFn).toHaveBeenCalledWith(
         mockAPIClass,
@@ -490,15 +539,11 @@ describe("SidebarDraggableComponent", () => {
       );
     });
 
-    it("should call addComponent when Space key is pressed on the add button", async () => {
-      const user = userEvent.setup();
+    it("should call addComponent when Space key is pressed", () => {
       render(<SidebarDraggableComponent {...defaultProps} />);
 
-      const addButton = screen.getByTestId(
-        "add-component-button-test-component",
-      );
-      addButton.focus();
-      await user.keyboard(" ");
+      const container = screen.getByTestId(/testsectiontest component/i);
+      fireEvent.keyDown(container, { key: " " });
 
       expect(mockAddComponentFn).toHaveBeenCalledWith(
         mockAPIClass,
@@ -506,15 +551,11 @@ describe("SidebarDraggableComponent", () => {
       );
     });
 
-    it("should not call addComponent for other keys", async () => {
-      const user = userEvent.setup();
+    it("should not call addComponent for other keys", () => {
       render(<SidebarDraggableComponent {...defaultProps} />);
 
-      const addButton = screen.getByTestId(
-        "add-component-button-test-component",
-      );
-      addButton.focus();
-      await user.keyboard("{Escape}");
+      const container = screen.getByTestId(/testsectiontest component/i);
+      fireEvent.keyDown(container, { key: "Escape" });
 
       expect(mockAddComponentFn).not.toHaveBeenCalled();
     });
@@ -568,39 +609,40 @@ describe("SidebarDraggableComponent", () => {
       expect(draggableDiv).toHaveStyle({ borderLeftColor: "#FF0000" });
     });
 
-    it("should not expose widget semantics on the draggable container", () => {
+    it("should have correct tabIndex", () => {
       render(<SidebarDraggableComponent {...defaultProps} />);
 
-      const container = screen.getByTestId(
-        "testsection_test component_draggable",
-      );
-      expect(container).not.toHaveAttribute("role");
-      expect(container).not.toHaveAttribute("tabIndex");
-      expect(container).not.toHaveAttribute("aria-label");
+      const container = screen.getByTestId(/testsectiontest component/i);
+      expect(container).toHaveAttribute("tabIndex", "0");
     });
 
-    it("should expose the accessible name on the add button only", () => {
+    it("should expose role=button and an accessible name on the draggable content, not the outer wrapper", () => {
       render(<SidebarDraggableComponent {...defaultProps} />);
 
-      const addButton = screen.getByTestId(
-        "add-component-button-test-component",
-      );
-      expect(addButton).toHaveAttribute(
+      const content = screen.getByTestId(/testsectiontest component/i);
+      expect(content).toHaveAttribute("role", "button");
+      expect(content).toHaveAttribute(
         "aria-label",
         "Add Test Component to canvas",
       );
-      expect(
-        screen.getAllByLabelText("Add Test Component to canvas"),
-      ).toHaveLength(1);
+
+      // The outer wrapper must NOT carry role=button, since it also contains
+      // the SelectTrigger (role=combobox) — an interactive descendant is
+      // invalid inside a button-role element (IBM aria_descendant_valid).
+      const outerWrapper = screen.getByTestId(
+        "testsection_test component_draggable",
+      );
+      expect(outerWrapper).not.toHaveAttribute("role");
+      expect(outerWrapper).not.toHaveAttribute("tabIndex");
     });
 
-    it("should keep the add button keyboard-focusable", () => {
+    it("should have add button with tabIndex -1", () => {
       render(<SidebarDraggableComponent {...defaultProps} />);
 
       const addButton = screen.getByTestId(
         "add-component-button-test-component",
       );
-      expect(addButton).not.toHaveAttribute("tabIndex");
+      expect(addButton).toHaveAttribute("tabIndex", "-1");
     });
 
     it("should have select trigger with tabIndex -1", () => {

@@ -44,13 +44,13 @@ const ModelList = ({
   // ("N of M") automatically, but only within its immediate group, so a
   // model would be announced as e.g. "2 of 3" (position in its provider's
   // group) instead of its real position across the whole list.
-  // aria-posinset/aria-setsize (below) are the spec-correct way to fix
-  // that, but several screen readers (VoiceOver included) are known to
-  // ignore them for items nested inside a role="group" wrapper — which is
-  // exactly what CommandGroup renders — and fall back to the per-group
-  // count regardless. A visually-hidden "N of M" string baked into each
-  // option's own accessible name (below) doesn't depend on ARIA property
-  // support at all, so it reads correctly everywhere.
+  // aria-posinset/aria-setsize would be the spec-correct fix, but several
+  // screen readers (VoiceOver included) ignore them for items nested
+  // inside a role="group" wrapper — which is exactly what CommandGroup
+  // renders — and fall back to the per-group count regardless. Others
+  // (NVDA, JAWS) *do* honor them, which would double-announce the position
+  // alongside the sr-only string below. So: sr-only text only, no ARIA
+  // posinset/setsize — one mechanism, that actually works everywhere.
   const totalCount = providerEntries.reduce(
     (sum, [, models]) => sum + models.length,
     0,
@@ -74,8 +74,6 @@ const ModelList = ({
                 onSelect={() => onSelect(data.name, provider)}
                 className="w-full items-center rounded-none"
                 data-testid={getModelOptionTestId(provider, data.name)}
-                aria-setsize={totalCount}
-                aria-posinset={position}
               >
                 <div className="flex w-full items-center gap-2">
                   <ForwardedIconComponent

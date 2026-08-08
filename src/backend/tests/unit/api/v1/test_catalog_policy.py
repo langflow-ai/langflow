@@ -14,6 +14,7 @@ from langflow.api.v1 import catalog_policy
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.catalog_policy import CatalogPolicyRule
+from langflow.services.policy_bundle import PolicyBundleRevisionConflictError
 from lfx.services.catalog_policy import CatalogPolicySnapshot, CatalogPolicyUpdate
 from lfx.services.deps import session_scope_readonly
 from sqlmodel import select
@@ -31,6 +32,10 @@ class _StubCatalogPolicy:
     @property
     def external_policy_snapshot(self):
         return None
+
+    @property
+    def supports_policy_bundle_updates(self):
+        return True
 
     async def replace_blocked_component_keys(self, keys, *, actor_user_id):
         desired = frozenset(keys)
@@ -76,6 +81,22 @@ class _ExternalCatalogPolicy(_StubCatalogPolicy):
     @property
     def external_policy_snapshot(self):
         return self.snapshot
+
+
+class _ConflictingCatalogPolicy(_StubCatalogPolicy):
+    async def replace_blocked_component_keys(self, keys, *, actor_user_id):
+        _ = keys, actor_user_id
+        raise PolicyBundleRevisionConflictError(expected_revision=7, active_revision=8)
+
+    async def replace_blocked_template_keys(self, keys, *, actor_user_id):
+        _ = keys, actor_user_id
+        raise PolicyBundleRevisionConflictError(expected_revision=7, active_revision=8)
+
+
+class _LegacyCatalogPolicy(_StubCatalogPolicy):
+    @property
+    def supports_policy_bundle_updates(self):
+        return False
 
 
 def _client(monkeypatch, *, service=None, superuser=True):
@@ -202,6 +223,20 @@ def test_put_components_normalizes_whole_set_and_audits_each_delta(monkeypatch):
     ]
 
 
+def test_put_rejects_legacy_plugin_without_bundle_update_support(monkeypatch):
+    client, service, _admin, audit = _client(monkeypatch, service=_LegacyCatalogPolicy())
+
+    response = client.put(
+        "/api/v1/catalog-policy/components",
+        json={"blocked": ["NewComponent"]},
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert "does not support shared policy bundle updates" in response.json()["detail"]
+    assert service.component_calls == []
+    audit.assert_not_awaited()
+
+
 def test_put_templates_preserves_case_and_accepts_unknown_keys(monkeypatch):
     client, service, admin, audit = _client(monkeypatch)
 
@@ -236,6 +271,49 @@ def test_put_requires_explicit_whole_set_without_writing_or_auditing(monkeypatch
 
     assert response.status_code == 422
     assert service.component_calls == []
+    audit.assert_not_awaited()
+
+
+@pytest.mark.parametrize("resource_kind", ["components", "templates"])
+@pytest.mark.parametrize(
+    "invalid_keys",
+    [
+        ["x" * 256],
+        [f"catalog-key-{index}" for index in range(1001)],
+    ],
+    ids=["key-too-long", "too-many-keys"],
+)
+def test_put_bounds_catalog_key_sets_without_writing_or_auditing(monkeypatch, resource_kind, invalid_keys):
+    client, service, _admin, audit = _client(monkeypatch)
+
+    response = client.put(
+        f"/api/v1/catalog-policy/{resource_kind}",
+        json={"blocked": invalid_keys},
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert service.component_calls == []
+    assert service.template_calls == []
+    audit.assert_not_awaited()
+
+
+@pytest.mark.parametrize("resource_kind", ["components", "templates"])
+def test_concurrent_legacy_put_returns_bundle_revision_conflict(monkeypatch, resource_kind):
+    client, _service, _admin, audit = _client(monkeypatch, service=_ConflictingCatalogPolicy())
+
+    response = client.put(
+        f"/api/v1/catalog-policy/{resource_kind}",
+        json={"blocked": ["NewKey"]},
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json() == {
+        "detail": {
+            "message": "Policy bundle revision conflict",
+            "expected_revision": 7,
+            "active_revision": 8,
+        }
+    }
     audit.assert_not_awaited()
 
 

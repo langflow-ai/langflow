@@ -164,7 +164,7 @@ export default function CopyFieldAreaComponent({
         value={valueToRender}
         onChange={handleInputChange}
         className={cn(getInputClassName())}
-        aria-label={valueToRender}
+        aria-label={!ariaLabelledBy ? valueToRender : undefined}
         aria-labelledby={ariaLabelledBy}
         ref={inputRef}
         type="text"

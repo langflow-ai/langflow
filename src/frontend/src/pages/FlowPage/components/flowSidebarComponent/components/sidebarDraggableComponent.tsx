@@ -104,6 +104,15 @@ export const SidebarDraggableComponent = forwardRef(
       }
     }
 
+    const handleKeyDown = (e) => {
+      if (disabled) return;
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        e.stopPropagation();
+        addComponent(apiClass, itemName);
+      }
+    };
+
     return (
       <Select
         onValueChange={handleSelectChange}
@@ -123,19 +132,29 @@ export const SidebarDraggableComponent = forwardRef(
             }}
             key={itemName}
             data-tooltip-id={itemName}
+            className={cn(
+              "group/draggable flex items-center gap-2 rounded-md bg-muted p-1 px-2 hover:bg-secondary-hover/75",
+              error && "cursor-not-allowed select-none",
+              disabled
+                ? "cursor-not-allowed bg-accent text-placeholder-foreground h-8"
+                : "bg-muted text-foreground",
+            )}
             data-testid={`${sectionName.toLowerCase()}_${display_name.toLowerCase()}_draggable`}
           >
             <div
               data-testid={sectionName + display_name}
               id={sectionName + display_name}
+              role="button"
+              aria-label={t("sidebar.addComponentToCanvas", {
+                name: display_name,
+              })}
+              tabIndex={0}
+              onKeyDown={handleKeyDown}
               className={cn(
-                "group/draggable flex cursor-grab items-center gap-2 rounded-md bg-muted p-1 px-2 hover:bg-secondary-hover/75",
-                error && "cursor-not-allowed select-none",
-                disabled
-                  ? "pointer-events-none bg-accent text-placeholder-foreground h-8"
-                  : "bg-muted text-foreground",
+                "flex flex-1 items-center gap-2 rounded-md outline-none ring-ring focus-visible:ring-1",
+                disabled ? "cursor-not-allowed" : "cursor-grab",
               )}
-              draggable={!error}
+              draggable={!error && !disabled}
               style={{
                 borderLeftColor: color,
               }}
@@ -187,73 +206,74 @@ export const SidebarDraggableComponent = forwardRef(
                   </Badge>
                 )}
               </div>
-              <div className="flex shrink-0 items-center gap-1">
-                {!disabled && (
-                  <Button
-                    data-testid={`add-component-button-${convertTestName(
-                      display_name,
-                    )}`}
-                    variant="ghost"
-                    size="icon"
-                    aria-label={t("sidebar.addComponentToCanvas", {
-                      name: display_name,
-                    })}
-                    className="text-primary"
-                    onClick={() => addComponent(apiClass, itemName)}
-                  >
-                    <ForwardedIconComponent
-                      name="Plus"
-                      className="h-4 w-4 shrink-0 transition-all group-hover/draggable:opacity-100 group-focus-within/draggable:opacity-100 sm:opacity-0"
-                    />
-                  </Button>
-                )}
-                <div ref={popoverRef}>
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
+              {!disabled && (
+                <Button
+                  data-testid={`add-component-button-${convertTestName(
+                    display_name,
+                  )}`}
+                  variant="ghost"
+                  size="icon"
+                  tabIndex={-1}
+                  aria-label={t("sidebar.addComponentToCanvas", {
+                    name: display_name,
+                  })}
+                  className="text-primary"
+                  onClick={() => addComponent(apiClass, itemName)}
+                >
                   <ForwardedIconComponent
-                    name="GripVertical"
-                    className="h-4 w-4 shrink-0 text-muted-foreground group-hover/draggable:text-primary"
+                    name="Plus"
+                    className="h-4 w-4 shrink-0 transition-all group-hover/draggable:opacity-100 group-focus-within/draggable:opacity-100 sm:opacity-0"
                   />
-                  <SelectTrigger
-                    variant="plain"
-                    tabIndex={-1}
-                    aria-label={t("folder.options")}
-                  ></SelectTrigger>
-                  <SelectContent
-                    position="popper"
-                    side="bottom"
-                    sideOffset={-25}
-                    className="min-w-[11.5rem]"
-                    style={{
-                      position: "absolute",
-                      left: cursorPos.x,
-                      top: cursorPos.y,
-                    }}
-                  >
-                    <SelectItem variant="plain" value={"download"}>
+                </Button>
+              )}
+              <div ref={popoverRef}>
+                <ForwardedIconComponent
+                  name="GripVertical"
+                  className="h-4 w-4 shrink-0 text-muted-foreground group-hover/draggable:text-primary"
+                />
+                <SelectTrigger
+                  variant="plain"
+                  tabIndex={-1}
+                  aria-label={t("folder.options")}
+                ></SelectTrigger>
+                <SelectContent
+                  position="popper"
+                  side="bottom"
+                  sideOffset={-25}
+                  className="min-w-[11.5rem]"
+                  style={{
+                    position: "absolute",
+                    left: cursorPos.x,
+                    top: cursorPos.y,
+                  }}
+                >
+                  <SelectItem variant="plain" value={"download"}>
+                    <div className="flex">
+                      <IconComponent
+                        name="Download"
+                        className="relative top-0.5 mr-2 h-4 w-4"
+                      />{" "}
+                      {t("sidebar.download")}{" "}
+                    </div>{" "}
+                  </SelectItem>
+                  {(!official || onDelete) && (
+                    <SelectItem
+                      variant="plain"
+                      value={"delete"}
+                      data-testid="draggable-component-menu-delete"
+                    >
                       <div className="flex">
                         <IconComponent
-                          name="Download"
+                          name="Trash2"
                           className="relative top-0.5 mr-2 h-4 w-4"
                         />{" "}
-                        {t("sidebar.download")}{" "}
+                        {t("sidebar.delete")}{" "}
                       </div>{" "}
                     </SelectItem>
-                    {(!official || onDelete) && (
-                      <SelectItem
-                        variant="plain"
-                        value={"delete"}
-                        data-testid="draggable-component-menu-delete"
-                      >
-                        <div className="flex">
-                          <IconComponent
-                            name="Trash2"
-                            className="relative top-0.5 mr-2 h-4 w-4"
-                          />{" "}
-                          {t("sidebar.delete")}{" "}
-                        </div>{" "}
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </div>
+                  )}
+                </SelectContent>
               </div>
             </div>
           </div>

@@ -1667,7 +1667,7 @@ describe("ModelInputComponent", () => {
     // group, so claude-3-opus (alone in the Anthropic group) would be
     // announced as "1 of 1" instead of its real position, 3 of 3, across
     // every provider combined.
-    it("sets aria-posinset/aria-setsize across all providers combined, not per group", async () => {
+    it("does not set aria-posinset/aria-setsize on any option", async () => {
       const user = userEvent.setup();
       renderWithQueryClient(
         <ModelInputComponent {...defaultProps} value={[]} />,
@@ -1675,35 +1675,20 @@ describe("ModelInputComponent", () => {
 
       await user.click(screen.getByRole("combobox"));
       await screen.findByTestId("OpenAI-gpt-4-option");
-
-      expect(screen.getByTestId("OpenAI-gpt-4-option")).toHaveAttribute(
-        "aria-posinset",
-        "1",
-      );
-      expect(screen.getByTestId("OpenAI-gpt-3.5-turbo-option")).toHaveAttribute(
-        "aria-posinset",
-        "2",
-      );
-      expect(
-        screen.getByTestId("Anthropic-claude-3-opus-option"),
-      ).toHaveAttribute("aria-posinset", "3");
-
       for (const testId of [
         "OpenAI-gpt-4-option",
         "OpenAI-gpt-3.5-turbo-option",
         "Anthropic-claude-3-opus-option",
       ]) {
-        expect(screen.getByTestId(testId)).toHaveAttribute("aria-setsize", "3");
+        const option = screen.getByTestId(testId);
+        expect(option).not.toHaveAttribute("aria-posinset");
+        expect(option).not.toHaveAttribute("aria-setsize");
       }
     });
 
-    // Regression guard: aria-posinset/aria-setsize alone weren't reliably
-    // read out (several screen readers, VoiceOver included, ignore them for
-    // items nested inside a role="group" wrapper — exactly what
-    // CommandGroup renders — and announce the per-group count instead). A
-    // visually-hidden "N of M" string baked into the option's own
-    // accessible name doesn't depend on ARIA property support, so it reads
-    // correctly regardless.
+    // Regression guard: a visually-hidden "N of M" string baked into the
+    // option's own accessible name doesn't depend on ARIA property support,
+    // so it reads correctly across every screen reader.
     it("includes a visually-hidden N of M string in each option's accessible name", async () => {
       const user = userEvent.setup();
       renderWithQueryClient(
