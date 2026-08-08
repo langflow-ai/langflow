@@ -103,9 +103,7 @@ def describe_component(registry: dict[str, dict], component_type: str) -> dict[s
     if tool_mode_inputs or tmpl.get("add_tool_output"):
         if tool_mode_inputs:
             uses = ", ".join(tool_mode_inputs)
-            description = (
-                f"Wraps this component as a Tool (tool inputs: {uses}). Connect to an Agent's 'tools' input."
-            )
+            description = f"Wraps this component as a Tool (tool inputs: {uses}). Connect to an Agent's 'tools' input."
         else:
             description = "Wraps this component as a Tool. Connect to an Agent's 'tools' input."
         outputs.append(
