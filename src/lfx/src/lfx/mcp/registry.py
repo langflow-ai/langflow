@@ -93,20 +93,21 @@ def describe_component(registry: dict[str, dict], component_type: str) -> dict[s
     tmpl = registry[component_type]
     outputs = [{"name": o["name"], "types": o.get("types", [])} for o in tmpl.get("outputs", [])]
 
-    # Component supports tool mode if any INPUT field has tool_mode=True. This
-    # mirrors the runtime authority in Component._handle_tool_mode and matches
-    # what makes the Tool Mode toggle render in the canvas. Output-based
-    # tool_mode is also accepted for backward compat with components that
-    # declared the flag on the output side instead of the input.
+    # Component supports tool mode if any INPUT field has tool_mode=True or
+    # the component explicitly opts into a synthesized tool output. This
+    # mirrors the runtime authority in Component._handle_tool_mode.
     template_fields = tmpl.get("template", {})
     tool_mode_inputs = [
         name for name, fdata in template_fields.items() if isinstance(fdata, dict) and fdata.get("tool_mode")
     ]
-    tool_mode_outputs = [o["name"] for o in tmpl.get("outputs", []) if o.get("tool_mode")]
-    if tool_mode_inputs or tool_mode_outputs:
-        uses = ", ".join(tool_mode_inputs or tool_mode_outputs)
-        label = "tool inputs" if tool_mode_inputs else "uses"
-        description = f"Wraps this component as a Tool ({label}: {uses}). Connect to an Agent's 'tools' input."
+    if tool_mode_inputs or tmpl.get("add_tool_output"):
+        if tool_mode_inputs:
+            uses = ", ".join(tool_mode_inputs)
+            description = (
+                f"Wraps this component as a Tool (tool inputs: {uses}). Connect to an Agent's 'tools' input."
+            )
+        else:
+            description = "Wraps this component as a Tool. Connect to an Agent's 'tools' input."
         outputs.append(
             {
                 "name": "component_as_tool",

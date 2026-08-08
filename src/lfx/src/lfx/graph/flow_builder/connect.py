@@ -27,18 +27,16 @@ _TOOL_OUTPUT_DISPLAY_NAME = "Toolset"
 
 
 def _node_template_supports_tool_mode(node: dict) -> bool:
-    """Return True when any INPUT field has tool_mode=True.
+    """Return True when the component can synthesize a tool output.
 
-    Matches the runtime heuristic in Component._handle_tool_mode \u2014 the
-    canonical source of truth for whether the Tool Mode toggle would
-    render on the canvas. Output-side tool_mode is also accepted for
-    backward compat with components that placed the flag there instead.
+    Matches the runtime heuristic in Component._handle_tool_mode, the
+    canonical source of truth for whether the Tool Mode toggle renders.
     """
-    template = node.get("data", {}).get("node", {}).get("template", {})
-    if any(isinstance(fdata, dict) and fdata.get("tool_mode") for fdata in template.values()):
-        return True
-    outputs = node.get("data", {}).get("node", {}).get("outputs", [])
-    return any(o.get("tool_mode") for o in outputs)
+    inner = node.get("data", {}).get("node", {})
+    template = inner.get("template", {})
+    return bool(inner.get("add_tool_output")) or any(
+        isinstance(fdata, dict) and fdata.get("tool_mode") for fdata in template.values()
+    )
 
 
 def _enable_tool_mode(flow: dict, source_id: str) -> None:
@@ -48,23 +46,21 @@ def _enable_tool_mode(flow: dict, source_id: str) -> None:
     outputs list is replaced with a single synthesized tool output. The
     source node must already exist in the flow; raises ValueError otherwise.
 
-    Raises ValueError when the component does not declare any tool-mode
-    capable input (i.e. it genuinely cannot be wrapped as a Tool).
+    Raises ValueError when the component does not support Tool Mode.
     """
     for node in flow.get("data", {}).get("nodes", []):
         node_data = node.get("data", {})
         nid = node_data.get("id", node.get("id", ""))
         if nid != source_id:
             continue
+        inner = node_data.setdefault("node", {})
         if not _node_template_supports_tool_mode(node):
             msg = (
-                f"Cannot connect '{source_id}.component_as_tool': this component "
-                "has no tool_mode-capable input. Either pick a different output or "
-                "wire a component whose inputs declare tool_mode=True."
+                f"Cannot connect '{source_id}.component_as_tool': this component does not support Tool Mode. "
+                "Pick a different output or use a component with a tool-mode input or explicit tool output."
             )
             raise ValueError(msg)
-        inner = node_data.setdefault("node", {})
-        # Idempotent: already in tool mode with the synthesized output present.
+        # Idempotent once the component's declared capability has been verified.
         if inner.get("tool_mode") and any(o.get("name") == _TOOL_OUTPUT_NAME for o in inner.get("outputs", [])):
             return
         inner["tool_mode"] = True
@@ -192,8 +188,8 @@ def add_connection(
     source_type = source_id.rsplit("-", 1)[0] if "-" in source_id else source_id
 
     # Auto-enable tool mode on the source when wiring via component_as_tool.
-    # Raises ValueError when the source has no tool-mode-capable input — so
-    # the LLM gets a clear domain error instead of "output not found".
+    # Raises ValueError when the source does not support Tool Mode, so the LLM
+    # gets a clear domain error instead of "output not found".
     if source_output == _TOOL_OUTPUT_NAME:
         _enable_tool_mode(flow, source_id)
 

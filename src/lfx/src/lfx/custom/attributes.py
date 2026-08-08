@@ -34,6 +34,11 @@ def getattr_return_bool(value):
     return None
 
 
+def getattr_return_true(value):
+    """Serialize opt-in capabilities only when they are enabled."""
+    return True if value is True else None
+
+
 def getattr_return_int(value):
     if isinstance(value, int):
         return value
@@ -84,4 +89,5 @@ ATTR_FUNC_MAPPING: dict[str, Callable] = {
     "inputs": getattr_return_list_of_object,
     "metadata": getattr_return_dict,
     "tool_mode": getattr_return_bool,
+    "add_tool_output": getattr_return_true,
 }

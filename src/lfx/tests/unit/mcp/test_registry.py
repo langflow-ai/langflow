@@ -131,12 +131,11 @@ class TestDescribeComponentToolMode:
     """Tests for describe_component's component_as_tool detection.
 
     A component supports tool-mode whenever any INPUT field has
-    ``tool_mode=True`` — this matches the canonical heuristic in
-    ``Component._handle_tool_mode`` which serves as the runtime authority.
-    Regression: previously the registry checked OUTPUTS for ``tool_mode``,
-    which silently excluded most tool-capable components (FirecrawlScrapeApi,
-    every component that follows the ``MessageTextInput(tool_mode=True)``
-    pattern) from the flow builder's tool wiring.
+    ``tool_mode=True`` or it explicitly sets ``add_tool_output`` — this
+    matches ``Component._handle_tool_mode``, the runtime authority.
+    Regression: ``Output.tool_mode`` defaults to true for ordinary outputs,
+    so treating it as a component capability advertises a synthesized output
+    that many components cannot produce at runtime.
     """
 
     def test_should_expose_component_as_tool_when_any_input_has_tool_mode(self) -> None:
@@ -201,16 +200,29 @@ class TestDescribeComponentToolMode:
 
         assert any(o["name"] == "component_as_tool" for o in result["outputs"])
 
-    def test_should_still_expose_component_as_tool_when_output_carries_tool_mode_flag(self) -> None:
-        """Backward compat: if some component sets tool_mode on an output, keep working."""
+    def test_should_not_expose_component_as_tool_when_only_output_carries_tool_mode_flag(self) -> None:
+        """Output.tool_mode describes an output; it is not a component capability signal."""
         registry = {
-            "LegacyTool": {
-                "outputs": [{"name": "result", "types": ["Tool"], "tool_mode": True}],
+            "PlainComponent": {
+                "outputs": [{"name": "result", "types": ["Data"], "tool_mode": True}],
                 "template": {},
             }
         }
 
-        result = describe_component(registry, "LegacyTool")
+        result = describe_component(registry, "PlainComponent")
+
+        assert not any(o["name"] == "component_as_tool" for o in result["outputs"])
+
+    def test_should_expose_component_with_explicit_tool_output_capability(self) -> None:
+        registry = {
+            "RunFlow": {
+                "outputs": [],
+                "template": {},
+                "add_tool_output": True,
+            }
+        }
+
+        result = describe_component(registry, "RunFlow")
 
         assert any(o["name"] == "component_as_tool" for o in result["outputs"])
 

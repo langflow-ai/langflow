@@ -956,12 +956,8 @@ async def connect_components(
     """
     flow = await _get_flow(flow_id)
 
-    # Auto-enable tool_mode when connecting via component_as_tool
-    if source_output == "component_as_tool":
-        await configure_component(flow_id, source_id, {"tool_mode": True})
-        # Re-fetch flow after tool_mode update changed the template
-        flow = await _get_flow(flow_id)
-
+    # fb_add_connection validates Tool Mode support and updates the local node
+    # before the flow is patched, avoiding a partial mutation on invalid input.
     fb_add_connection(flow, source_id, source_output, target_id, target_input)
     layout_flow(flow)
     await _patch_flow(flow_id, flow)

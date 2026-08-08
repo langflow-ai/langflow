@@ -180,6 +180,25 @@ async def test_tool_emits_event(tool_name, call_fn, expected_event_type, mock_cl
     assert isinstance(call_args[0][2], str), f"{tool_name} summary should be a string"
 
 
+async def test_tool_mode_connection_rejection_has_no_remote_side_effect(mock_client, mock_flow):
+    """Capability validation must happen before any server-side flow mutation."""
+    from lfx.mcp.server import connect_components
+
+    with (
+        patch("lfx.mcp.server._get_client", return_value=mock_client),
+        patch("lfx.mcp.server._get_flow", new_callable=AsyncMock, return_value=mock_flow),
+        patch("lfx.mcp.server.configure_component", new_callable=AsyncMock) as configure,
+        patch("lfx.mcp.server.fb_add_connection", side_effect=ValueError("unsupported Tool Mode")),
+        patch("lfx.mcp.server._patch_flow", new_callable=AsyncMock) as patch_flow,
+    ):
+        with pytest.raises(ValueError, match="unsupported Tool Mode"):
+            await connect_components("flow-123", "ChatInput-1", "component_as_tool", "Agent-1", "tools")
+
+    configure.assert_not_awaited()
+    patch_flow.assert_not_awaited()
+    mock_client.post_event.assert_not_awaited()
+
+
 # ---------------------------------------------------------------------------
 # Distinct behavior: create_flow_from_spec emits flow_settled (not just a
 # mutation event) because it signals the end of a batch operation.

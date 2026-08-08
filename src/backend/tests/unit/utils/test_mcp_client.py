@@ -229,13 +229,10 @@ class TestDescribeComponent:
         output_names = {o["name"] for o in info["outputs"]}
         assert output_names == {"text_output", "model_output"}
 
-    def test_describe_component_as_tool_output(self):
+    def test_describe_ignores_output_tool_mode_as_component_capability(self):
         info = describe_component(SAMPLE_REGISTRY, "ChatOutput")
         output_names = {o["name"] for o in info["outputs"]}
-        assert "component_as_tool" in output_names
-        tool_out = next(o for o in info["outputs"] if o["name"] == "component_as_tool")
-        assert tool_out["types"] == ["Tool"]
-        assert "message" in tool_out["description"]
+        assert "component_as_tool" not in output_names
 
     def test_describe_no_tool_output_without_tool_mode(self):
         info = describe_component(SAMPLE_REGISTRY, "OpenAIModel")

@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 
 import orjson
 import pytest
+from lfx.custom.custom_component.base_component import BaseComponent
 from lfx.interface.components import (
     _get_cache_path,
     _parse_dev_mode,
@@ -13,6 +14,42 @@ from lfx.interface.components import (
     _save_generated_index,
     import_langflow_components,
 )
+from lfx.template.frontend_node.custom_components import ComponentFrontendNode
+
+
+class TestToolOutputCapabilitySerialization:
+    def test_enabled_capability_is_serialized(self):
+        component = type(
+            "ExplicitToolComponent",
+            (),
+            {"inputs": [], "outputs": [], "add_tool_output": True},
+        )()
+
+        config = BaseComponent.get_template_config(component)
+        node = ComponentFrontendNode.from_inputs(**config, base_classes=[])
+
+        assert node.to_dict(keep_name=False)["add_tool_output"] is True
+
+    def test_disabled_capability_is_omitted(self):
+        component = type(
+            "PlainComponent",
+            (),
+            {"inputs": [], "outputs": [], "add_tool_output": False},
+        )()
+
+        config = BaseComponent.get_template_config(component)
+        node = ComponentFrontendNode.from_inputs(**config, base_classes=[])
+
+        assert "add_tool_output" not in node.to_dict(keep_name=False)
+
+    def test_bundled_index_preserves_runtime_capabilities(self):
+        index_path = Path(__file__).resolve().parents[2] / "src" / "lfx" / "_assets" / "component_index.json"
+        index = orjson.loads(index_path.read_bytes())
+        components = {name: template for _, category in index["entries"] for name, template in category.items()}
+
+        assert components["RunFlow"]["add_tool_output"] is True
+        assert components["CSVAgent"]["template"]["input_value"]["tool_mode"] is True
+        assert not components["ChatInput"].get("add_tool_output", False)
 
 
 class TestParseDevMode:

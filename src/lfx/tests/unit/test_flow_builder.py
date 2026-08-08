@@ -475,14 +475,23 @@ TOOL_REGISTRY = {
             },
         },
     ),
-    # Component without any tool_mode input — should NOT auto-flip.
+    # Component without any tool_mode input — should NOT auto-flip even
+    # though Output.tool_mode defaults to true in serialized templates.
     "PlainOutput": _make_template(
         "Plain Output",
-        outputs=[{"name": "data", "types": ["Data"]}],
+        outputs=[{"name": "data", "types": ["Data"], "tool_mode": True}],
         template_fields={
             "value": {"type": "str", "show": True, "input_types": ["Message"]},
         },
     ),
+    # Mirrors RunFlow: no tool-mode input, but the runtime explicitly opts in.
+    "ExplicitToolOutput": {
+        "display_name": "Explicit Tool Output",
+        "base_classes": [],
+        "outputs": [],
+        "template": {"value": {"type": "str", "show": True}},
+        "add_tool_output": True,
+    },
     # Agent target with a `tools` input that accepts Tool type.
     "Agent": _make_template(
         "Agent",
@@ -589,6 +598,46 @@ class TestConnectComponentAsTool:
 
         with pytest.raises(ValueError, match=r"component_as_tool|tool_mode"):
             add_connection(flow, source, "component_as_tool", target, "tools")
+
+        src_node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == source)
+        assert src_node["data"]["node"].get("tool_mode", False) is False
+        assert {o["name"] for o in src_node["data"]["node"]["outputs"]} == {"data"}
+
+    def test_should_enable_component_with_explicit_tool_output_capability(self):
+        flow = _fresh_flow()
+        source = add_component(flow, "ExplicitToolOutput", TOOL_REGISTRY)["id"]
+        target = add_component(flow, "Agent", TOOL_REGISTRY)["id"]
+
+        add_connection(flow, source, "component_as_tool", target, "tools")
+
+        src_node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == source)
+        assert src_node["data"]["node"]["tool_mode"] is True
+        assert [o["name"] for o in src_node["data"]["node"]["outputs"]] == ["component_as_tool"]
+
+    def test_should_preserve_already_enabled_capable_component(self):
+        flow = _fresh_flow()
+        source = add_component(flow, "ExplicitToolOutput", TOOL_REGISTRY)["id"]
+        target = add_component(flow, "Agent", TOOL_REGISTRY)["id"]
+        src_node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == source)
+        src_node["data"]["node"]["tool_mode"] = True
+        src_node["data"]["node"]["outputs"] = [{"name": "component_as_tool", "types": ["Tool"]}]
+
+        add_connection(flow, source, "component_as_tool", target, "tools")
+
+        assert len(flow["data"]["edges"]) == 1
+
+    def test_should_reject_spoofed_tool_output_without_runtime_capability(self):
+        flow = _fresh_flow()
+        source = add_component(flow, "PlainOutput", TOOL_REGISTRY)["id"]
+        target = add_component(flow, "Agent", TOOL_REGISTRY)["id"]
+        src_node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == source)
+        src_node["data"]["node"]["tool_mode"] = True
+        src_node["data"]["node"]["outputs"] = [{"name": "component_as_tool", "types": ["Tool"]}]
+
+        with pytest.raises(ValueError, match=r"component_as_tool|Tool Mode"):
+            add_connection(flow, source, "component_as_tool", target, "tools")
+
+        assert flow["data"]["edges"] == []
 
     def test_should_not_touch_source_when_connecting_via_normal_output(self):
         """Non-tool edges must not flip tool_mode (regression guard)."""
