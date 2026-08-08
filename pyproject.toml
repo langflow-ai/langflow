@@ -249,6 +249,9 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 # 50-min step wall. A 90s cap fires below the ~127s stall, and timeout_method="thread" dumps ALL
 # thread stacks (faulthandler) — naming the exact blocking call even when it is a leaked background
 # task. Revert to timeout=150 / timeout_method="signal" once the stall is identified and bounded.
+# NOTE: the thread method's timer needs the GIL, so a C-level hang that holds the GIL defeats it
+# (observed: release-1.11.3 py3.13 Group 5 froze 25+ min with no dump). A second, GIL-proof
+# faulthandler watchdog (120s, dump + exit) backstops it in src/backend/tests/conftest.py.
 timeout = 90
 timeout_method = "thread"
 minversion = "6.0"
