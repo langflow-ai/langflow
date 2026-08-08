@@ -69,7 +69,6 @@ def test_flow_id():
     return f"test_flow_{uuid.uuid4().hex[:8]}"
 
 
-@pytest.mark.asyncio
 class TestGCSStorageServiceInitialization:
     """Test GCSStorageService initialization."""
 
@@ -96,7 +95,6 @@ class TestGCSStorageServiceInitialization:
         assert resolved == logical_path
 
 
-@pytest.mark.asyncio
 class TestGCSStorageServiceFileOperations:
     """Test file operations in GCSStorageService with real GCS."""
 
@@ -164,7 +162,6 @@ class TestGCSStorageServiceFileOperations:
                 await gcs_storage_service.delete_file(test_flow_id, file_name)
 
 
-@pytest.mark.asyncio
 class TestGCSStorageServiceStreamOperations:
     """Test streaming operations in GCSStorageService."""
 
@@ -194,7 +191,6 @@ class TestGCSStorageServiceStreamOperations:
                 pass
 
 
-@pytest.mark.asyncio
 class TestGCSStorageServiceListOperations:
     """Test list operations in GCSStorageService."""
 
@@ -241,7 +237,6 @@ class TestGCSStorageServiceListOperations:
                 await gcs_storage_service.delete_file(other_flow_id, "file2.txt")
 
 
-@pytest.mark.asyncio
 class TestGCSStorageServiceDeleteOperations:
     """Test delete operations in GCSStorageService."""
 
@@ -265,7 +260,6 @@ class TestGCSStorageServiceDeleteOperations:
         await gcs_storage_service.delete_file(test_flow_id, "no_file.txt")
 
 
-@pytest.mark.asyncio
 class TestGCSStorageServiceFileSizeOperations:
     """Test file size operations in GCSStorageService."""
 
@@ -302,7 +296,6 @@ class TestGCSStorageServiceFileSizeOperations:
             await gcs_storage_service.get_file_size(test_flow_id, "no_file.txt")
 
 
-@pytest.mark.asyncio
 class TestGCSStorageServiceEdgeCases:
     """Test edge cases and special scenarios."""
 
@@ -344,7 +337,6 @@ class TestGCSStorageServiceEdgeCases:
                     await gcs_storage_service.delete_file(test_flow_id, file_name)
 
 
-@pytest.mark.asyncio
 class TestGCSStorageServiceTeardown:
     """Test teardown operations in GCSStorageService."""
 

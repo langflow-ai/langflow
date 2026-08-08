@@ -228,7 +228,7 @@ LANGFLOW_OBJECT_STORAGE_PREFIX=AZURE_CONTAINER_DIRECTORY
 AZURE_STORAGE_CONNECTION_STRING=AZURE_CONNECTION_STRING
 
 # Option 2: Account URL or name, authenticated via DefaultAzureCredential
-# (managed identity, AKS workload identity, service principal, or az login)
+# (service principal env vars, AKS workload identity, managed identity, or az login)
 AZURE_STORAGE_ACCOUNT_NAME=AZURE_ACCOUNT_NAME
 ```
 
@@ -239,7 +239,7 @@ Replace the following placeholders with the actual values for your Azure Blob St
 * `AZURE_CONNECTION_STRING`: Your storage account's connection string, from **Access keys** in the Azure Portal.
 * `AZURE_ACCOUNT_NAME`: Your storage account name, used only if you're authenticating with `DefaultAzureCredential` instead of a connection string.
 
-If you don't set `AZURE_STORAGE_CONNECTION_STRING`, Langflow falls back to [`DefaultAzureCredential`](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential), which resolves credentials from a managed identity, AKS workload identity, a service principal (`AZURE_CLIENT_ID`/`AZURE_TENANT_ID`/`AZURE_CLIENT_SECRET`), or an existing `az login` session, in that order. You can also set `AZURE_STORAGE_ACCOUNT_URL` directly instead of `AZURE_STORAGE_ACCOUNT_NAME` if your account uses a non-default endpoint.
+If you don't set `AZURE_STORAGE_CONNECTION_STRING`, Langflow falls back to [`DefaultAzureCredential`](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential), which tries credential sources in this order: a service principal from environment variables (`AZURE_CLIENT_ID`/`AZURE_TENANT_ID`/`AZURE_CLIENT_SECRET`), AKS workload identity, managed identity, then developer tool credentials such as an existing `az login` session. You can also set `AZURE_STORAGE_ACCOUNT_URL` directly instead of `AZURE_STORAGE_ACCOUNT_NAME` if your account uses a non-default endpoint.
 
 Your Azure identity must have the necessary permissions to perform the required operations for your use case. The built-in **Storage Blob Data Contributor** role on the container covers create, read, update, delete, and list operations.
 
@@ -254,8 +254,8 @@ The following environment variables configure file storage backends for Langflow
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
 | `LANGFLOW_STORAGE_TYPE` | String | `local` | Set the file storage backend. Supported values: `local` (files stored in the Langflow configuration directory), `s3` (files stored in AWS S3), `gcs` (files stored in Google Cloud Storage), or `azure` (files stored in Azure Blob Storage, including ADLS Gen2 accounts). For S3, GCS, or Azure storage, you must also configure the relevant cloud credentials and bucket/container settings. |
-| `LANGFLOW_OBJECT_STORAGE_BUCKET_NAME` | String | Not set | The name of the S3 bucket, GCS bucket, or Azure Blob container to use for file storage. Required when `LANGFLOW_STORAGE_TYPE` is `s3`, `gcs`, or `azure`. |
-| `LANGFLOW_OBJECT_STORAGE_PREFIX` | String | Not set | Optional prefix/folder path within the bucket or container where files will be stored. If not set, files are stored at the root. |
+| `LANGFLOW_OBJECT_STORAGE_BUCKET_NAME` | String | `langflow-bucket` | The name of the S3 bucket, GCS bucket, or Azure Blob container to use for file storage. Only used when `LANGFLOW_STORAGE_TYPE` is `s3`, `gcs`, or `azure`; set this to a bucket/container you actually own before switching to one of those backends. |
+| `LANGFLOW_OBJECT_STORAGE_PREFIX` | String | `files` | Optional prefix/folder path within the bucket or container where files will be stored. Set to an empty string to store files at the bucket/container root. |
 | `LANGFLOW_OBJECT_STORAGE_TAGS` | JSON object | Not set | Optional object tags applied to stored files when `LANGFLOW_STORAGE_TYPE` is `s3`, `gcs`, or `azure` (applied as custom metadata for GCS, and as Blob Index Tags for Azure). Ignored for local storage. Provided as a JSON map of string keys to string values, such as `{"env": "prod", "owner": "data-team"}`. |
 
 ## See also

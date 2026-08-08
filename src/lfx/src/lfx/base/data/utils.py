@@ -333,7 +333,7 @@ async def parse_pdf_to_text_async(file_path: str) -> str:
 def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
     """Parse a text file to Data (sync version).
 
-    For S3 storage, this will use async operations to fetch the file.
+    For remote (S3/GCS/Azure) storage, this will use async operations to fetch the file.
     For local storage, reads directly from filesystem.
     """
     settings = get_settings_service().settings

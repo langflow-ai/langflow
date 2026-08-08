@@ -10,6 +10,7 @@ langflow.services.variable.kubernetes for the synchronous Kubernetes client).
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from typing import TYPE_CHECKING
 
 from langflow.logging.logger import logger
@@ -359,7 +360,7 @@ class GCSStorageService(StorageService):
             logger.exception(f"Error getting file size for {file_name} in GCS flow {flow_id}")
             raise
 
-        if blob is None:
+        if blob is None or blob.size is None:
             await logger.awarning(f"File {file_name} not found in GCS flow {flow_id}")
             msg = f"File not found: {file_name}"
             raise FileNotFoundError(msg)
@@ -367,9 +368,9 @@ class GCSStorageService(StorageService):
         return blob.size
 
     async def teardown(self) -> None:
-        """Perform any cleanup operations when the service is being torn down.
-
-        For GCS, the client holds no persistent connection that needs explicit
-        closing beyond its internal HTTP session, so there is nothing to do here.
-        """
+        """Close the GCS client's HTTP session, if the installed SDK version exposes one."""
+        close = getattr(self._client, "close", None)
+        if callable(close):
+            with contextlib.suppress(Exception):
+                await asyncio.to_thread(close)
         logger.info("GCS storage service teardown complete")

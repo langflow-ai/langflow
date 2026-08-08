@@ -77,7 +77,6 @@ def test_flow_id():
     return f"test_flow_{uuid.uuid4().hex[:8]}"
 
 
-@pytest.mark.asyncio
 class TestAzureBlobStorageServiceInitialization:
     """Test AzureBlobStorageService initialization."""
 
@@ -104,7 +103,6 @@ class TestAzureBlobStorageServiceInitialization:
         assert resolved == logical_path
 
 
-@pytest.mark.asyncio
 class TestAzureBlobStorageServiceFileOperations:
     """Test file operations in AzureBlobStorageService with real Azure Blob storage."""
 
@@ -172,7 +170,6 @@ class TestAzureBlobStorageServiceFileOperations:
                 await azure_storage_service.delete_file(test_flow_id, file_name)
 
 
-@pytest.mark.asyncio
 class TestAzureBlobStorageServiceStreamOperations:
     """Test streaming operations in AzureBlobStorageService."""
 
@@ -202,7 +199,6 @@ class TestAzureBlobStorageServiceStreamOperations:
                 pass
 
 
-@pytest.mark.asyncio
 class TestAzureBlobStorageServiceListOperations:
     """Test list operations in AzureBlobStorageService."""
 
@@ -249,7 +245,6 @@ class TestAzureBlobStorageServiceListOperations:
                 await azure_storage_service.delete_file(other_flow_id, "file2.txt")
 
 
-@pytest.mark.asyncio
 class TestAzureBlobStorageServiceDeleteOperations:
     """Test delete operations in AzureBlobStorageService."""
 
@@ -273,7 +268,6 @@ class TestAzureBlobStorageServiceDeleteOperations:
         await azure_storage_service.delete_file(test_flow_id, "no_file.txt")
 
 
-@pytest.mark.asyncio
 class TestAzureBlobStorageServiceFileSizeOperations:
     """Test file size operations in AzureBlobStorageService."""
 
@@ -310,7 +304,6 @@ class TestAzureBlobStorageServiceFileSizeOperations:
             await azure_storage_service.get_file_size(test_flow_id, "no_file.txt")
 
 
-@pytest.mark.asyncio
 class TestAzureBlobStorageServiceEdgeCases:
     """Test edge cases and special scenarios."""
 
@@ -352,7 +345,6 @@ class TestAzureBlobStorageServiceEdgeCases:
                     await azure_storage_service.delete_file(test_flow_id, file_name)
 
 
-@pytest.mark.asyncio
 class TestAzureBlobStorageServiceTeardown:
     """Test teardown operations in AzureBlobStorageService."""
 

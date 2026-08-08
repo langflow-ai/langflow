@@ -488,10 +488,10 @@ class BaseFileComponent(Component, ABC):
         files = self._validate_and_resolve_paths()
         settings = get_settings_service().settings
 
-        # For S3 storage, paths are virtual storage keys that don't exist on the local filesystem.
-        # Skip the exists() check for S3 files to preserve them in the output.
-        # Validation of S3 file existence is deferred until file processing (see _validate_and_resolve_paths).
-        # If a file was removed from S3, it will fail when attempting to read/process it later.
+        # For remote (S3/GCS/Azure) storage, paths are virtual storage keys that don't exist on the
+        # local filesystem. Skip the exists() check for remote files to preserve them in the output.
+        # Validation of remote file existence is deferred until file processing (see _validate_and_resolve_paths).
+        # If a file was removed from remote storage, it will fail when attempting to read/process it later.
         if is_remote_storage_type(settings.storage_type):
             paths = [file.path.as_posix() for file in files]
         else:
@@ -508,9 +508,9 @@ class BaseFileComponent(Component, ABC):
 
         settings = get_settings_service().settings
 
-        # For S3 storage, download file bytes first
+        # For remote (S3/GCS/Azure) storage, download file bytes first
         if is_remote_storage_type(settings.storage_type):
-            # Download file content from S3
+            # Download file content from remote storage
             content = run_until_complete(read_file_bytes(file_path))
 
             # Map file extensions to pandas read functions that support BytesIO
@@ -758,7 +758,7 @@ class BaseFileComponent(Component, ABC):
             path_str = str(path)
             settings = get_settings_service().settings
 
-            # When using object storage (S3), file paths are storage keys (e.g., "<flow_id>/<filename>")
+            # When using object storage (S3/GCS/Azure), file paths are storage keys (e.g., "<flow_id>/<filename>")
             # that don't exist on the local filesystem. We defer validation until file processing.
             # For local storage, validate the file exists immediately to fail fast.
             if is_remote_storage_type(settings.storage_type):
@@ -984,14 +984,14 @@ class BaseFileComponent(Component, ABC):
             ValueError: If unsupported files are encountered and `ignore_unsupported_extensions` is False.
         """
         settings = get_settings_service().settings
-        is_s3_storage = is_remote_storage_type(settings.storage_type)
+        is_remote_storage = is_remote_storage_type(settings.storage_type)
         final_files = []
         ignored_files = []
 
         for file in files:
             # For local storage, verify the path is actually a file
-            # For S3 storage, paths are virtual keys that don't exist locally
-            if not is_s3_storage and not file.path.is_file():
+            # For remote (S3/GCS/Azure) storage, paths are virtual keys that don't exist locally
+            if not is_remote_storage and not file.path.is_file():
                 self.log(f"Not a file: {file.path.name}")
                 continue
 
@@ -999,7 +999,7 @@ class BaseFileComponent(Component, ABC):
             extension = file.path.suffix[1:].lower() if file.path.suffix else ""
             if extension not in self.valid_extensions:
                 # For local storage, optionally ignore unsupported extensions
-                if not is_s3_storage and self.ignore_unsupported_extensions:
+                if not is_remote_storage and self.ignore_unsupported_extensions:
                     ignored_files.append(file.path.name)
                     continue
 

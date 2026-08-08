@@ -217,7 +217,7 @@ class CSVAgentComponent(LCAgentComponent):
         return agent_csv
 
     def _get_local_path(self) -> str:
-        """Get a local file path, downloading from S3 storage if necessary.
+        """Get a local file path, downloading from remote (S3/GCS/Azure) storage if necessary.
 
         Returns:
             str: Local file path that can be used by LangChain
@@ -225,9 +225,9 @@ class CSVAgentComponent(LCAgentComponent):
         file_path = self._path()
         settings = get_settings_service().settings
 
-        # If using S3 storage, download the file to temp
+        # If using remote storage, download the file to temp
         if is_remote_storage_type(settings.storage_type):
-            # Download from S3 to temp file
+            # Download from remote storage to temp file
             csv_bytes = run_until_complete(read_file_bytes(file_path))
 
             # Create temp file with .csv extension

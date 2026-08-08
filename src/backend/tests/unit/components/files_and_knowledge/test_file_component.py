@@ -221,7 +221,7 @@ class TestFileComponentDynamicOutputs:
         unmarked_file.write_bytes(b"pdf")
         component = FileComponent()
 
-        with pytest.raises(ValueError, match="Invalid S3 path format"):
+        with pytest.raises(ValueError, match="Invalid storage path format"):
             component._process_docling_in_subprocess(str(unmarked_file))
 
         mock_storage.assert_not_called()

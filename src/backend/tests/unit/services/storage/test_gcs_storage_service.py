@@ -86,7 +86,6 @@ _MALICIOUS_FILE_NAMES = [
 ]
 
 
-@pytest.mark.asyncio
 class TestGCSStorageServicePathValidation:
     """GHSA-rcjh-r59h-gq37: GCS backend must reject untrusted identifiers locally."""
 
@@ -142,7 +141,43 @@ class TestGCSStorageServicePathValidation:
             await gcs_service_offline.get_file("/etc", "hosts")
 
 
-@pytest.mark.asyncio
 async def test_save_file_append_not_supported(gcs_service_offline):
     with pytest.raises(NotImplementedError, match="Append"):
         await gcs_service_offline.save_file("legit_flow", "file.txt", b"x", append=True)
+
+
+async def test_get_file_size_raises_not_found_when_blob_size_is_none(gcs_service_offline, monkeypatch):
+    """A Blob with no populated size (e.g. a partial/unavailable GCS response) must not be treated as 0 bytes."""
+    blob = Mock()
+    blob.size = None
+    monkeypatch.setattr(gcs_service_offline, "_get_existing_blob", lambda _key: blob)
+
+    with pytest.raises(FileNotFoundError, match="File not found"):
+        await gcs_service_offline.get_file_size("legit_flow", "file.txt")
+
+
+async def test_get_file_size_returns_populated_size(gcs_service_offline, monkeypatch):
+    blob = Mock()
+    blob.size = 42
+    monkeypatch.setattr(gcs_service_offline, "_get_existing_blob", lambda _key: blob)
+
+    assert await gcs_service_offline.get_file_size("legit_flow", "file.txt") == 42
+
+
+async def test_teardown_closes_client_when_supported(mock_session_service, mock_settings_service, monkeypatch):
+    client = Mock()
+    monkeypatch.setattr("google.cloud.storage.Client", lambda: client)
+    service = GCSStorageService(mock_session_service, mock_settings_service)
+
+    await service.teardown()
+
+    client.close.assert_called_once()
+
+
+async def test_teardown_tolerates_client_without_close(mock_session_service, mock_settings_service, monkeypatch):
+    """Older google-cloud-storage clients without .close() must not break teardown."""
+    client = Mock(spec=["bucket"])  # only .bucket() is available, no `close`
+    monkeypatch.setattr("google.cloud.storage.Client", lambda: client)
+    service = GCSStorageService(mock_session_service, mock_settings_service)
+
+    await service.teardown()  # must not raise

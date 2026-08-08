@@ -889,10 +889,10 @@ class FileComponent(BaseFileComponent):
     async def _get_local_file_for_docling(
         self, file_path: str, *, is_local_temp_file: bool = False
     ) -> tuple[str, bool]:
-        """Get a local file path for Docling processing, downloading from S3 if needed.
+        """Get a local file path for Docling processing, downloading from remote storage if needed.
 
         Args:
-            file_path: Either a local path or S3 key (format "flow_id/filename")
+            file_path: Either a local path or a remote storage key (format "flow_id/filename")
             is_local_temp_file: Whether file_path is an internally created local temporary file.
 
         Returns:
@@ -910,16 +910,16 @@ class FileComponent(BaseFileComponent):
         if settings.storage_type == "local":
             return file_path, False
 
-        # S3 storage - download to temp file
+        # Remote (S3/GCS/Azure) storage - download to temp file
         parsed = parse_storage_path(file_path)
         if not parsed:
-            msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
+            msg = f"Invalid storage path format: {file_path}. Expected 'flow_id/filename'"
             raise ValueError(msg)
 
         storage_service = get_storage_service()
         flow_id, filename = parsed
 
-        # Get file content from S3
+        # Get file content from remote storage
         content = await storage_service.get_file(flow_id, filename)
 
         suffix = Path(filename).suffix
@@ -935,7 +935,7 @@ class FileComponent(BaseFileComponent):
         We avoid multiprocessing pickling by launching `python -c "<script>"` and
         passing JSON config via stdin. The child prints a JSON result to stdout.
 
-        For S3 storage, the file is downloaded to a temp file first.
+        For remote (S3/GCS/Azure) storage, the file is downloaded to a temp file first.
         """
         if not file_path:
             return None
@@ -1285,7 +1285,7 @@ class FileComponent(BaseFileComponent):
                 # Read bytes based on storage type
                 try:
                     if is_remote_storage_type(settings.storage_type):
-                        # For S3 storage, use storage service to read file bytes
+                        # For remote (S3/GCS/Azure) storage, use storage service to read file bytes
                         file_path_str = str(file.path)
                         content = run_until_complete(read_file_bytes(file_path_str))
                     else:

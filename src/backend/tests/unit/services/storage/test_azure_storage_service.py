@@ -6,7 +6,7 @@ the equivalent S3/GCS backend tests (regression pattern for GHSA-rcjh-r59h-gq37 
 defense in depth at the object-storage backend).
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from langflow.services.storage.azure_blob import AzureBlobStorageService
@@ -121,7 +121,6 @@ _MALICIOUS_FILE_NAMES = [
 ]
 
 
-@pytest.mark.asyncio
 class TestAzureBlobStorageServicePathValidation:
     """GHSA-rcjh-r59h-gq37: Azure Blob backend must reject untrusted identifiers locally."""
 
@@ -177,7 +176,39 @@ class TestAzureBlobStorageServicePathValidation:
             await azure_service_offline.get_file("/etc", "hosts")
 
 
-@pytest.mark.asyncio
 async def test_save_file_append_not_supported(azure_service_offline):
     with pytest.raises(NotImplementedError, match="Append"):
         await azure_service_offline.save_file("legit_flow", "file.txt", b"x", append=True)
+
+
+async def test_get_file_stream_pins_download_to_blob_etag(mock_session_service, mock_settings_service, monkeypatch):
+    """get_file_stream must snapshot the blob via its ETag rather than issuing independent ranged reads.
+
+    A blob overwritten mid-stream should raise (via the SDK's own ETag mismatch
+    error) instead of silently splicing bytes from two different blob versions.
+    """
+    from azure.core import MatchConditions
+
+    service = _build_service(mock_session_service, mock_settings_service, monkeypatch)
+
+    properties = Mock()
+    properties.etag = '"fake-etag"'
+
+    async def _chunks():
+        yield b"hello "
+        yield b"world"
+
+    downloader = Mock()
+    downloader.chunks = _chunks
+
+    blob_client = Mock()
+    blob_client.get_blob_properties = AsyncMock(return_value=properties)
+    blob_client.download_blob = AsyncMock(return_value=downloader)
+    monkeypatch.setattr(service, "_get_blob_client", lambda _key: blob_client)
+
+    chunks = [chunk async for chunk in service.get_file_stream("legit_flow", "file.txt")]
+
+    assert chunks == [b"hello ", b"world"]
+    blob_client.download_blob.assert_called_once_with(
+        etag='"fake-etag"', match_condition=MatchConditions.IfNotModified
+    )

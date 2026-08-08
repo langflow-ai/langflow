@@ -214,7 +214,11 @@ class AzureBlobStorageService(StorageService):
         key = self.build_full_path(flow_id, file_name)
 
         try:
-            from azure.core.exceptions import ClientAuthenticationError, HttpResponseError, ResourceNotFoundError
+            from azure.core.exceptions import (
+                ClientAuthenticationError,
+                HttpResponseError,
+                ResourceNotFoundError,
+            )
 
             blob_client = self._get_blob_client(key)
             await blob_client.upload_blob(data, overwrite=True, tags=self.tags or None)
@@ -229,15 +233,11 @@ class AzureBlobStorageService(StorageService):
             msg = "Authentication to Azure Blob storage failed. Please check your credentials"
             logger.exception(f"Error saving file {file_name} to Azure Blob storage in flow {flow_id}: {msg}")
             raise PermissionError(msg) from e
-        except HttpResponseError as e:
-            if e.status_code == 403:  # noqa: PLR2004
+        except Exception as e:
+            if isinstance(e, HttpResponseError) and e.status_code == 403:
                 msg = "Access denied to Azure Blob container. Please check your role assignment and permissions"
                 logger.exception(f"Error saving file {file_name} to Azure Blob storage in flow {flow_id}: {msg}")
                 raise PermissionError(msg) from e
-            logger.exception(f"Error saving file {file_name} to Azure Blob storage in flow {flow_id}")
-            msg = f"Failed to save file to Azure Blob storage: {e}"
-            raise RuntimeError(msg) from e
-        except Exception as e:
             logger.exception(f"Error saving file {file_name} to Azure Blob storage in flow {flow_id}")
             msg = f"Failed to save file to Azure Blob storage: {e}"
             raise RuntimeError(msg) from e
@@ -277,13 +277,17 @@ class AzureBlobStorageService(StorageService):
     async def get_file_stream(self, flow_id: str, file_name: str, chunk_size: int = 8192) -> AsyncIterator[bytes]:
         """Retrieve a file from Azure Blob storage as a stream.
 
-        Each chunk is fetched via a ranged download so an arbitrary chunk_size can be
-        honored without buffering the whole blob in memory.
+        Downloads via a single request pinned to the blob's ETag (IfNotModified) and
+        yields the SDK's own chunk boundaries via downloader.chunks(), so a blob that
+        gets overwritten mid-stream raises instead of silently splicing together bytes
+        from two different versions of the blob. chunk_size is accepted for interface
+        parity with the other backends, but the actual chunk boundaries are determined
+        by the Azure SDK's internal transfer settings, not this value.
 
         Args:
             flow_id: The flow/user identifier for namespacing
             file_name: The name of the file to retrieve
-            chunk_size: Size of chunks to yield (default: 8192 bytes)
+            chunk_size: Unused; retained for interface parity with the other backends
 
         Yields:
             bytes: Chunks of the file content
@@ -294,23 +298,22 @@ class AzureBlobStorageService(StorageService):
         self._validate_identifiers(flow_id, file_name)
         key = self.build_full_path(flow_id, file_name)
 
+        from azure.core import MatchConditions
         from azure.core.exceptions import ResourceNotFoundError
 
         blob_client = self._get_blob_client(key)
         try:
             properties = await blob_client.get_blob_properties()
+            downloader = await blob_client.download_blob(
+                etag=properties.etag, match_condition=MatchConditions.IfNotModified
+            )
         except ResourceNotFoundError as e:
             await logger.awarning(f"File {file_name} not found in Azure Blob flow {flow_id}")
             msg = f"File not found: {file_name}"
             raise FileNotFoundError(msg) from e
 
-        total_size = properties.size
-        offset = 0
-        while offset < total_size:
-            length = min(chunk_size, total_size - offset)
-            downloader = await blob_client.download_blob(offset=offset, length=length)
-            yield await downloader.readall()
-            offset += length
+        async for chunk in downloader.chunks():
+            yield chunk
 
     async def list_files(self, flow_id: str) -> list[str]:
         """List all files in a specified Azure Blob prefix (flow namespace).
