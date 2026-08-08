@@ -73,6 +73,7 @@ class WarmGraphRegistry:
         max_entries: int = 128,
         max_flow_bytes: int = 2_000_000,
         max_total_bytes: int = 32_000_000,
+        preload_limit: int = 0,
     ) -> None:
         # flow UUID (str) -> immutable entry. One dict per
         # worker process; nothing is shared across processes/machines — the
@@ -100,6 +101,11 @@ class WarmGraphRegistry:
         self._max_entries = max_entries
         self._max_flow_bytes = max_flow_bytes
         self._max_total_bytes = max_total_bytes
+        # Preload scan window. The tombstone budget is sized against this (the population
+        # that can be selected and rejected), NOT against max_entries (an unrelated
+        # resident-entry limit) — otherwise un-warmable flows above 2*max_entries rotate
+        # their tombstones forever and are re-selected/re-read every reconcile pass.
+        self._preload_limit = preload_limit
         self._flow_payload_bytes: dict[str, int] = {}
         self._total_payload_bytes = 0
         # Charge concurrent builds against the same budgets as resident entries.
@@ -118,7 +124,26 @@ class WarmGraphRegistry:
         """Record a bounded retry tombstone while the registry lock is held."""
         self._failed_revisions[flow_id] = (version, revision)
         self._failed_revisions.move_to_end(flow_id)
-        max_tombstones = self._max_entries * 2
+        # Budget must cover the flows preload can scan and reject, not the resident-entry
+        # limit. Sizing it against max_entries alone let an un-warmable population larger
+        # than 2*max_entries evict older tombstones, so those flows dropped out of the
+        # backoff and were re-selected as "new" every pass — a full SELECT + deepcopy +
+        # serialize per flow per interval, forever, with no cache benefit.
+        #
+        # Known limitation: if the preloadable set holds MORE un-warmable flows than this
+        # budget, the oldest tombstone is still dropped and that flow can be re-attempted on
+        # a later pass. The warning below surfaces that so an operator can raise
+        # max_flow_bytes or lower preload_limit; a full fix (cheap size pre-check so
+        # oversized flows are skipped without a tombstone) is tracked separately.
+        max_tombstones = max(self._max_entries * 2, self._preload_limit)
+        if len(self._failed_revisions) > max_tombstones:
+            logger.warning(
+                "warm_registry: tombstone budget (%d) reached; dropping the oldest failure marker. "
+                "More flows are un-warmable than the budget can track, so some will be re-attempted "
+                "each reconcile pass (extra DB reads for no cache benefit). Raise "
+                "LANGFLOW_WARM_REGISTRY_MAX_FLOW_BYTES or lower LANGFLOW_WARM_REGISTRY_PRELOAD_LIMIT.",
+                max_tombstones,
+            )
         while len(self._failed_revisions) > max_tombstones:
             self._failed_revisions.popitem(last=False)
 
@@ -599,10 +624,27 @@ def get_warm_registry() -> WarmGraphRegistry:
         from langflow.services.deps import get_settings_service
 
         settings = get_settings_service().settings
+        max_entries = settings.warm_registry_max_entries
+        preload_limit = settings.warm_registry_preload_limit
+        # A preload_limit above max_entries is a misconfiguration: the cache can hold at
+        # most max_entries resident templates, so preload effectively fills no more than
+        # that (preload_slots is min()'d against remaining capacity). Warn — don't clamp —
+        # so the operator can fix the config; the value is still passed through so the
+        # tombstone budget can size against the operator's stated preload intent.
+        if preload_limit > max_entries:
+            logger.warning(
+                "warm_registry: LANGFLOW_WARM_REGISTRY_PRELOAD_LIMIT (%d) exceeds "
+                "LANGFLOW_WARM_REGISTRY_MAX_ENTRIES (%d); at most %d flows can stay resident, "
+                "so preload cannot warm more than that. Set preload_limit <= max_entries.",
+                preload_limit,
+                max_entries,
+                max_entries,
+            )
         _warm_registry = WarmGraphRegistry(
-            max_entries=settings.warm_registry_max_entries,
+            max_entries=max_entries,
             max_flow_bytes=settings.warm_registry_max_flow_bytes,
             max_total_bytes=settings.warm_registry_max_total_bytes,
+            preload_limit=preload_limit,
         )
         logger.debug("warm_registry: initialized process-local registry")
     return _warm_registry

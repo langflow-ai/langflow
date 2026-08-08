@@ -675,3 +675,31 @@ async def test_warm_all_releases_startup_lock_after_query_error(monkeypatch, tmp
 
     monkeypatch.setattr(reconcile_mod, "session_scope", _working_scope)
     await asyncio.wait_for(reconcile_mod.warm_all(), timeout=1)
+
+
+def test_tombstone_budget_covers_preload_window():
+    """Un-warmable flows above 2*max_entries must NOT rotate out of the tombstone set.
+
+    Regression for the reconcile churn: when the tombstone budget was sized against
+    ``max_entries`` alone, an un-warmable population larger than ``2*max_entries`` evicted
+    older tombstones, so those flows dropped out of backoff and were re-selected as "new"
+    every pass (full SELECT + deepcopy + serialize, forever). The budget must instead cover
+    the preload scan window (``preload_limit``), the population that can be selected.
+    """
+    # 6 un-warmable flows, max_entries=2 (old budget = 2*2 = 4), preload_limit=50.
+    reg = WarmGraphRegistry(max_entries=2, preload_limit=50)
+    for i in range(6):
+        reg._record_failed_locked(f"flow-{i}", "v1", ("v1",))
+    # New budget = max(4, 50) = 50 -> all 6 survive -> reconcile skips them next pass -> converges.
+    assert reg.rejection_count() == 6
+    for i in range(6):
+        assert reg.rejects_version(f"flow-{i}", "v1") is True
+
+
+def test_tombstone_budget_default_preserves_prior_bound():
+    """With preload disabled (preload_limit=0, the default) the budget stays 2*max_entries."""
+    reg = WarmGraphRegistry(max_entries=2, preload_limit=0)
+    for i in range(10):
+        reg._record_failed_locked(f"flow-{i}", "v1", ("v1",))
+    # max(2*2, 0) = 4 -> oldest evicted, newest 4 kept (backwards-compatible behavior).
+    assert reg.rejection_count() == 4

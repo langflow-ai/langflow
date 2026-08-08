@@ -147,6 +147,11 @@ async def _warm_all_unlocked() -> None:
                 flow=flow,
             )
             warmed += 1
+        except WarmRegistryCapacityError:
+            # Capacity is a cache decision, never an execution error (see class docstring).
+            # Log at INFO without a stack trace — matches the resolver-side handling above —
+            # so an operator holding oversized flows doesn't get a traceback per flow.
+            logger.info("warm_registry: flow %s is outside configured cache bounds during warm_all", flow_id)
         except Exception:  # noqa: BLE001 — one bad flow must not abort warming the rest
             logger.exception("warm_registry: failed to build flow %s during warm_all", flow_id)
     logger.info("warm_registry: warmed %d flow(s) at startup", warmed)
@@ -299,6 +304,11 @@ async def reconcile_once() -> None:
                 )
                 verb = "added new" if flow.id in new_ids else "rebuilt changed"
                 logger.info("warm_registry: %s flow %s (%r)", verb, flow.id, flow.name)
+            except WarmRegistryCapacityError:
+                # Capacity is a cache decision, never an execution error (see class docstring).
+                # INFO, no stack trace — matches the resolver-side handling at the top of this
+                # module — so an oversized flow doesn't emit a traceback every reconcile pass.
+                logger.info("warm_registry: flow %s is outside configured cache bounds", flow.id)
             except Exception:  # noqa: BLE001
                 logger.exception("warm_registry: rebuild failed for %s", flow.id)
 
