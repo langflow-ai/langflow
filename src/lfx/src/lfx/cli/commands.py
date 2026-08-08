@@ -354,7 +354,7 @@ def serve_command(
             typer.echo(f"Error: Environment file '{env_file}' does not exist.", err=True)
             raise typer.Exit(1)
         verbose_print(f"Loading environment variables from: {env_file}")
-        load_dotenv(env_file)
+        load_dotenv(env_file, override=True)
 
     try:
         api_key = get_api_key()

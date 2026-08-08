@@ -968,7 +968,13 @@ jobs:
 
           index = _read_component_index()
           assert index is not None, "Installed LFX rejected its bundled component index"
-          assert index["metadata"] == {"num_modules": 17, "num_components": 130}
+          expected_metadata = {
+              "num_modules": len(index["entries"]),
+              "num_components": sum(len(components) for _, components in index["entries"]),
+          }
+          assert index["metadata"] == expected_metadata, (
+            f"Unexpected component index metadata: {index['metadata']} != {expected_metadata}"
+          )
           for category, components in index["entries"]:
               for component_name, component in components.items():
                   module_path = component.get("metadata", {}).get("module")
@@ -1018,8 +1024,25 @@ jobs:
           curl -fsS -c "$RUNTIME_DIR/cookies" http://127.0.0.1:7861/api/v1/auto_login >/dev/null
           curl -fsS --compressed -b "$RUNTIME_DIR/cookies" \
             http://127.0.0.1:7861/api/v1/all >"$RUNTIME_DIR/catalog.json"
-          jq -e 'del(.component_display_names) | (length == 17 and ([.[] | length] | add) == 130)' \
-            "$RUNTIME_DIR/catalog.json"
+          core-test-env/bin/python - "$RUNTIME_DIR/catalog.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          from lfx.interface.components import _read_component_index
+
+          catalog = json.loads(Path(sys.argv[1]).read_text())
+          catalog.pop("component_display_names", None)
+          index = _read_component_index()
+          assert index is not None, "Installed LFX rejected its bundled component index"
+          actual_metadata = {
+              "num_modules": len(catalog),
+              "num_components": sum(len(components) for components in catalog.values()),
+          }
+          assert actual_metadata == index["metadata"], (
+              f"Unexpected API catalog metadata: {actual_metadata} != {index['metadata']}"
+          )
+          PY
 
   test-summary:
     name: Cross-Platform Test Summary

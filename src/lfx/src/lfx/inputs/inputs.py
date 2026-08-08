@@ -94,6 +94,35 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
         return v
 
 
+class DataDisplayInput(BaseInputMixin):
+    """A read-only display field: a node button that opens a modal showing structured, dynamic data.
+
+    The component supplies a structured payload as ``value`` (refresh it via ``real_time_refresh``).
+    All keys are optional; the modal renders whatever is present::
+
+        {"title": str,                                   # header title
+         "version": str,                                 # small pill next to the title
+         "subtitle": str,                                # muted line under the title
+         "accent": int,                                  # hue 0-360; else derived from the title
+         "chips": [{"label": str, "tone": str, "icon": str}],   # quick-facts pills under the header
+         "sections": [{"heading": str,                   # section label
+                       "text": str,                      # paragraph
+                       "rows": [{"label": str, "value": str}],          # key/value grid
+                       "fields": [{"name": str, "type": str, "required": bool, "description": str}],
+                       "tags": [str],                    # chips
+                       "cards": [{"title": str, "description": str}],    # bordered cards
+                       "items": [str],                   # bullet list
+                       "badges": [str | {"label": str, "icon": str, "tone": str}]}]}
+
+    ``tone`` is one of ``accent | muted | success | warning``. Reusable by any component that wants
+    to surface fetched/dynamic data without a bespoke modal.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.DATA_DISPLAY
+    button_text: str = "View"
+    button_icon: str = "Eye"
+
+
 class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
     """Represents an Input that has a Handle to a specific type (e.g. BaseLanguageModel, BaseRetriever, etc.).
 
@@ -1069,6 +1098,7 @@ InputTypes: TypeAlias = (
     | TabInput
     | ActionPickerInput
     | DurationInput
+    | DataDisplayInput
 )
 
 InputTypesMap: dict[str, type[InputTypes]] = {t.__name__: t for t in get_args(InputTypes)}

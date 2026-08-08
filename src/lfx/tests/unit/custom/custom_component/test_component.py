@@ -6,6 +6,7 @@ from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.custom.custom_component.component import Component
 from lfx.custom.custom_component.custom_component import CustomComponent
 from lfx.custom.utils import update_component_build_config
+from lfx.inputs.inputs import MultilineSecretInput, SecretStrInput, StrInput
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
 from lfx.template import Output
@@ -213,3 +214,37 @@ def test_extract_data_returns_series_unchanged():
 
     extracted = component.extract_data(series)
     assert extracted is series
+
+
+def test_trace_redacts_runtime_and_metadata_secrets():
+    class TraceComponent(Component):
+        inputs = [
+            # These two types do not opt into the predefined-input trace map,
+            # so they exercise the runtime-input map exclusively.
+            SecretStrInput(name="runtime_secret", display_name="Runtime Secret"),
+            StrInput(name="runtime_label", display_name="Runtime Label", value="metadata-safe-label"),
+            MultilineSecretInput(
+                name="metadata_secret",
+                display_name="Metadata Secret",
+                value="metadata-secret-sentinel",  # pragma: allowlist secret
+            ),
+        ]
+
+    component = TraceComponent()
+    component.set_attributes(
+        {
+            "runtime_secret": "secret-sentinel",  # pragma: allowlist secret
+            "runtime_label": "runtime-safe-label",
+            "metadata_secret": "runtime-metadata-secret-sentinel",  # pragma: allowlist secret
+        }
+    )
+
+    assert component.get_trace_as_inputs() == {
+        "runtime_secret": "**********",
+        "runtime_label": "runtime-safe-label",
+        "metadata_secret": "**********",
+    }
+    assert component.get_trace_as_metadata() == {
+        "runtime_label": "metadata-safe-label",
+        "metadata_secret": "**********",
+    }

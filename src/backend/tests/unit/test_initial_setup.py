@@ -674,6 +674,52 @@ def test_update_projects_resolves_prompt_via_component_type_alias():
     )
 
 
+def test_update_projects_preserves_current_prompt_custom_fields():
+    """Current Prompt Template nodes must retain serialized dynamic inputs."""
+    url_field = {
+        "name": "URL",
+        "type": "str",
+        "value": "",
+        "input_types": ["Message", "Text"],
+    }
+    all_types_dict = {
+        "models_and_agents": {
+            "Prompt Template": {
+                "template": {
+                    "_type": "Component",
+                    "code": {"value": "new_prompt_code"},
+                    "template": {"type": "prompt", "value": ""},
+                },
+                "display_name": "Prompt Template",
+            }
+        }
+    }
+    project_data = {
+        "nodes": [
+            {
+                "data": {
+                    "type": "Prompt Template",
+                    "node": {
+                        "custom_fields": {"template": ["URL"]},
+                        "template": {
+                            "_type": "Component",
+                            "code": {"value": "old_prompt_code"},
+                            "template": {"type": "prompt", "value": "Source: {URL}"},
+                            "URL": url_field,
+                        },
+                        "outputs": [],
+                    },
+                }
+            }
+        ]
+    }
+
+    updated_project = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+
+    updated_template = updated_project["nodes"][0]["data"]["node"]["template"]
+    assert updated_template["URL"] == url_field
+
+
 def test_update_projects_direct_key_takes_precedence_over_alias():
     """Test that a direct key match is preferred over the derived alias."""
     all_types_dict = {

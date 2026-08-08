@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { ReactNode, useContext } from "react";
 
 // Mock all dependencies
@@ -41,18 +41,26 @@ jest.mock("@/utils/local-storage-util", () => ({
 const mockSetIsAuthenticated = jest.fn();
 const mockSetIsAdmin = jest.fn();
 
-const mockAuthStore = (selector: any) => {
-  const state = {
-    setIsAuthenticated: mockSetIsAuthenticated,
-    setIsAdmin: mockSetIsAdmin,
-  };
-  return selector ? selector(state) : state;
+type MockAuthState = {
+  setIsAuthenticated: typeof mockSetIsAuthenticated;
+  setIsAdmin: typeof mockSetIsAdmin;
 };
 
-(mockAuthStore as any).getState = () => ({
+const getMockAuthState = (): MockAuthState => ({
   setIsAuthenticated: mockSetIsAuthenticated,
   setIsAdmin: mockSetIsAdmin,
 });
+
+const mockAuthStore = Object.assign(
+  <T,>(selector: (state: MockAuthState) => T): T => {
+    const state = {
+      setIsAuthenticated: mockSetIsAuthenticated,
+      setIsAdmin: mockSetIsAdmin,
+    };
+    return selector(state);
+  },
+  { getState: getMockAuthState },
+);
 
 jest.mock("@/stores/authStore", () => ({
   __esModule: true,
@@ -62,8 +70,13 @@ jest.mock("@/stores/authStore", () => ({
 const mockCheckHasStore = jest.fn();
 const mockFetchApiData = jest.fn();
 
+type MockStoreState = {
+  checkHasStore: typeof mockCheckHasStore;
+  fetchApiData: typeof mockFetchApiData;
+};
+
 jest.mock("@/stores/storeStore", () => ({
-  useStoreStore: (selector: any) => {
+  useStoreStore: <T,>(selector: (state: MockStoreState) => T): T => {
     const state = {
       checkHasStore: mockCheckHasStore,
       fetchApiData: mockFetchApiData,
@@ -148,12 +161,6 @@ describe("AuthContext - Login Fix for Race Condition", () => {
       mockCookiesInstance.get.mockImplementation((name) => {
         if (name === "access_token_lf") return accessToken;
         return null;
-      });
-
-      // Track when setIsAuthenticated is called
-      let authSetCallCount = 0;
-      mockSetIsAuthenticated.mockImplementation(() => {
-        authSetCallCount++;
       });
 
       // Start login
@@ -299,8 +306,14 @@ describe("AuthContext - Login Fix for Race Condition", () => {
         result.current.login(accessToken, "login", refreshToken);
       });
 
-      // Verify cookies were set BEFORE mutations started
-      expect(mockCookiesInstance.set).toHaveBeenCalledTimes(3); // access, auto_login, refresh
+      // Only the non-sensitive UI preference is written by JavaScript. The
+      // server owns both token cookies so they retain HttpOnly.
+      expect(mockCookiesInstance.set).toHaveBeenCalledTimes(1);
+      expect(mockCookiesInstance.set).toHaveBeenCalledWith(
+        "auto_login_lf",
+        "login",
+        expect.any(Object),
+      );
 
       // Advance timers to trigger the verifyAndProceed function
       act(() => {
@@ -364,7 +377,7 @@ describe("AuthContext - Login Fix for Race Condition", () => {
   });
 
   describe("Cookie Synchronization", () => {
-    it("should set all auth cookies during login", () => {
+    it("should leave token cookies server-owned during login", () => {
       const { result } = renderHook(() => useTestContext(), { wrapper });
 
       const accessToken = "access_token_123";
@@ -374,37 +387,30 @@ describe("AuthContext - Login Fix for Race Condition", () => {
         result.current.login(accessToken, "login", refreshToken);
       });
 
-      // Verify all cookies were set (with options parameter)
-      expect(mockCookiesInstance.set).toHaveBeenCalledWith(
-        "access_token_lf",
-        accessToken,
-        expect.any(Object),
-      );
       expect(mockCookiesInstance.set).toHaveBeenCalledWith(
         "auto_login_lf",
         "login",
         expect.any(Object),
       );
-      expect(mockCookiesInstance.set).toHaveBeenCalledWith(
-        "refresh_token_lf",
-        refreshToken,
-        expect.any(Object),
+      const setCallArgs = mockCookiesInstance.set.mock.calls.map(
+        (call) => call[0],
       );
+      expect(setCallArgs).not.toContain("access_token_lf");
+      expect(setCallArgs).not.toContain("refresh_token_lf");
     });
 
-    it("should not set refresh token cookie if not provided", () => {
+    it("should leave token cookies server-owned when refresh token is omitted", () => {
       const { result } = renderHook(() => useTestContext(), { wrapper });
 
       act(() => {
         result.current.login("access_token_123", "login");
       });
 
-      // Should only set access_token and auto_login cookies
       const setCallArgs = mockCookiesInstance.set.mock.calls.map(
         (call) => call[0],
       );
 
-      expect(setCallArgs).toContain("access_token_lf");
+      expect(setCallArgs).not.toContain("access_token_lf");
       expect(setCallArgs).toContain("auto_login_lf");
       expect(setCallArgs).not.toContain("refresh_token_lf");
     });
@@ -437,8 +443,8 @@ describe("AuthContext - Login Fix for Race Condition", () => {
         result.current.login(accessToken, "login", refreshToken);
       });
 
-      // Verify cookies set
-      expect(mockCookiesInstance.set).toHaveBeenCalledTimes(3);
+      // Only the auto-login UI preference is written by JavaScript.
+      expect(mockCookiesInstance.set).toHaveBeenCalledTimes(1);
 
       // Verify isAuthenticated NOT set yet
       expect(mockSetIsAuthenticated).not.toHaveBeenCalled();

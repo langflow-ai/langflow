@@ -8,12 +8,7 @@ jest.mock("@/modals/apiModal/utils/get-changes-types", () => ({
 }));
 
 jest.mock("@/modals/apiModal/utils/get-nodes-with-default-value", () => ({
-  getNodesWithDefaultValue: jest.fn((nodes, tweaks) => nodes),
-}));
-
-jest.mock("@/utils/local-storage-util", () => ({
-  getLocalStorage: jest.fn(),
-  setLocalStorage: jest.fn(),
+  getNodesWithDefaultValue: jest.fn((nodes) => nodes),
 }));
 
 jest.mock("../flowStore", () => ({
@@ -21,6 +16,7 @@ jest.mock("../flowStore", () => ({
   default: {
     getState: jest.fn(() => ({
       unselectAll: jest.fn(),
+      edges: [],
     })),
   },
 }));
@@ -30,10 +26,6 @@ const mockGetChangesType =
   require("@/modals/apiModal/utils/get-changes-types").getChangesType;
 const mockGetNodesWithDefaultValue =
   require("@/modals/apiModal/utils/get-nodes-with-default-value").getNodesWithDefaultValue;
-const mockGetLocalStorage =
-  require("@/utils/local-storage-util").getLocalStorage;
-const mockSetLocalStorage =
-  require("@/utils/local-storage-util").setLocalStorage;
 const mockFlowStore = require("../flowStore").default;
 
 const mockNode: AllNodeType = {
@@ -45,10 +37,12 @@ const mockNode: AllNodeType = {
       template: {
         param1: {
           advanced: false,
+          api_editable: true,
           value: "test-value",
         },
         param2: {
           advanced: true,
+          api_editable: false,
           value: "advanced-value",
         },
       },
@@ -67,6 +61,7 @@ const mockNode2: AllNodeType = {
       template: {
         param3: {
           advanced: false,
+          api_editable: true,
           value: "another-value",
         },
       },
@@ -85,6 +80,7 @@ const mockFrozenNode: AllNodeType = {
       template: {
         param4: {
           advanced: false,
+          api_editable: true,
           value: "frozen-value",
         },
       },
@@ -100,10 +96,10 @@ describe("useTweaksStore", () => {
 
     // Reset mocks to default behavior
     mockGetChangesType.mockImplementation((value, template) => value);
-    mockGetNodesWithDefaultValue.mockImplementation((nodes, tweaks) => nodes);
-    mockGetLocalStorage.mockReturnValue("{}");
+    mockGetNodesWithDefaultValue.mockImplementation((nodes) => nodes);
     mockFlowStore.getState.mockReturnValue({
       unselectAll: jest.fn(),
+      edges: [],
     });
 
     act(() => {
@@ -157,8 +153,8 @@ describe("useTweaksStore", () => {
         result.current.setNodes([mockNode]);
       });
 
-      // updateTweaks should be called during setNodes
-      expect(mockSetLocalStorage).toHaveBeenCalled();
+      // updateTweaks runs during setNodes and derives from api_editable
+      expect(result.current.tweaks).toHaveProperty("node-1");
     });
 
     it("should handle empty nodes array", () => {
@@ -291,33 +287,14 @@ describe("useTweaksStore", () => {
       expect(mockFlowStore.getState().unselectAll).toHaveBeenCalled();
     });
 
-    it("should load tweaks from localStorage", () => {
-      const savedTweaks = { "node-1": { param1: "saved-value" } };
-      mockGetLocalStorage.mockReturnValue(JSON.stringify(savedTweaks));
-
+    it("should seed nodes from the flow (api_editable is the source of truth)", () => {
       const { result } = renderHook(() => useTweaksStore());
 
       act(() => {
         result.current.initialSetup([mockNode], "flow-123");
       });
 
-      expect(mockGetLocalStorage).toHaveBeenCalledWith("lf_tweaks_flow-123");
-      expect(mockGetNodesWithDefaultValue).toHaveBeenCalledWith(
-        [mockNode],
-        savedTweaks,
-      );
-    });
-
-    it("should handle empty localStorage", () => {
-      mockGetLocalStorage.mockReturnValue(null);
-
-      const { result } = renderHook(() => useTweaksStore());
-
-      act(() => {
-        result.current.initialSetup([mockNode], "flow-456");
-      });
-
-      expect(mockGetNodesWithDefaultValue).toHaveBeenCalledWith([mockNode], {});
+      expect(mockGetNodesWithDefaultValue).toHaveBeenCalledWith([mockNode], []);
     });
 
     it("should call updateTweaks after initial setup", () => {
@@ -327,8 +304,23 @@ describe("useTweaksStore", () => {
         result.current.initialSetup([mockNode], "flow-789");
       });
 
-      // updateTweaks should be called during initialSetup
-      expect(mockSetLocalStorage).toHaveBeenCalled();
+      expect(result.current.tweaks).toHaveProperty("node-1");
+    });
+
+    it("should clean up orphaned lf_tweaks_* localStorage keys (retired state)", () => {
+      window.localStorage.setItem("lf_tweaks_flow-a", "{}");
+      window.localStorage.setItem("lf_tweaks_flow-b", "{}");
+      window.localStorage.setItem("unrelated_key", "keep");
+      const { result } = renderHook(() => useTweaksStore());
+
+      act(() => {
+        result.current.initialSetup([mockNode], "flow-a");
+      });
+
+      expect(window.localStorage.getItem("lf_tweaks_flow-a")).toBeNull();
+      expect(window.localStorage.getItem("lf_tweaks_flow-b")).toBeNull();
+      expect(window.localStorage.getItem("unrelated_key")).toBe("keep");
+      window.localStorage.removeItem("unrelated_key");
     });
   });
 
@@ -352,13 +344,9 @@ describe("useTweaksStore", () => {
         "another-value",
         mockNode2.data.node?.template.param3,
       );
-      expect(mockSetLocalStorage).toHaveBeenCalledWith(
-        "lf_tweaks_test-flow",
-        expect.any(String),
-      );
     });
 
-    it("should only include non-advanced parameters", () => {
+    it("should only include api_editable parameters", () => {
       const { result } = renderHook(() => useTweaksStore());
 
       act(() => {
@@ -412,7 +400,7 @@ describe("useTweaksStore", () => {
       expect(result.current.tweaks).toEqual({});
     });
 
-    it("should save tweaks to localStorage", () => {
+    it("should expose only flagged fields in the tweaks object", () => {
       const { result } = renderHook(() => useTweaksStore());
 
       act(() => {
@@ -423,10 +411,8 @@ describe("useTweaksStore", () => {
         result.current.updateTweaks();
       });
 
-      expect(mockSetLocalStorage).toHaveBeenCalledWith(
-        "lf_tweaks_test-flow",
-        expect.stringContaining("node-1"),
-      );
+      expect(result.current.tweaks["node-1"]).toHaveProperty("param1");
+      expect(result.current.tweaks["node-1"]).not.toHaveProperty("param2");
     });
 
     it("should update tweaks state", () => {
@@ -442,6 +428,100 @@ describe("useTweaksStore", () => {
 
       expect(result.current.tweaks).toHaveProperty("node-1");
       expect(result.current.tweaks).toHaveProperty("node-2");
+    });
+
+    it("should NOT include an exposed field whose handle is edge-connected (LE-1810 I1)", () => {
+      const { scapedJSONStringfy } = require("@/utils/reactflowUtils");
+      mockFlowStore.getState.mockReturnValue({
+        unselectAll: jest.fn(),
+        edges: [
+          {
+            id: "edge-1",
+            source: "other-node",
+            target: "node-1",
+            targetHandle: scapedJSONStringfy({
+              fieldName: "param1",
+              id: "node-1",
+              inputTypes: ["Message"],
+              type: "str",
+            }),
+          },
+        ],
+      });
+      const { result } = renderHook(() => useTweaksStore());
+
+      act(() => {
+        useTweaksStore.setState({
+          currentFlowId: "test-flow",
+          nodes: [mockNode],
+        });
+        result.current.updateTweaks();
+      });
+
+      // param1 is api_editable but connected — it must not reach the snippet.
+      expect(result.current.tweaks).toEqual({});
+    });
+
+    it("should NOT include an exposed field that is off the node (LE-1810 coupling)", () => {
+      const offNode = {
+        ...mockNode,
+        data: {
+          ...mockNode.data,
+          node: {
+            ...mockNode.data.node,
+            template: {
+              param1: {
+                advanced: true,
+                api_editable: true,
+                value: "hidden-value",
+              },
+            },
+          },
+        } as unknown as NodeDataType,
+      };
+      const { result } = renderHook(() => useTweaksStore());
+
+      act(() => {
+        useTweaksStore.setState({
+          currentFlowId: "test-flow",
+          nodes: [offNode],
+        });
+        result.current.updateTweaks();
+      });
+
+      expect(result.current.tweaks).toEqual({});
+    });
+
+    it("should NOT include an exposed field disabled by active tool mode", () => {
+      const toolModeNode = {
+        ...mockNode,
+        data: {
+          ...mockNode.data,
+          node: {
+            ...mockNode.data.node,
+            tool_mode: true,
+            template: {
+              param1: {
+                advanced: false,
+                api_editable: true,
+                tool_mode: true,
+                value: "tool-value",
+              },
+            },
+          },
+        } as unknown as NodeDataType,
+      };
+      const { result } = renderHook(() => useTweaksStore());
+
+      act(() => {
+        useTweaksStore.setState({
+          currentFlowId: "test-flow",
+          nodes: [toolModeNode],
+        });
+        result.current.updateTweaks();
+      });
+
+      expect(result.current.tweaks).toEqual({});
     });
   });
 
@@ -504,10 +584,6 @@ describe("useTweaksStore", () => {
       });
 
       expect(result.current.tweaks).toEqual({});
-      expect(mockSetLocalStorage).toHaveBeenCalledWith(
-        "lf_tweaks_empty-flow",
-        "{}",
-      );
     });
 
     it("should handle nodes with empty templates", () => {
@@ -533,28 +609,6 @@ describe("useTweaksStore", () => {
       });
 
       expect(result.current.tweaks).toEqual({});
-    });
-
-    it("should handle malformed localStorage data gracefully", () => {
-      mockGetLocalStorage.mockReturnValue("invalid-json");
-      // Mock JSON.parse to handle the error gracefully
-      const originalParse = JSON.parse;
-      jest.spyOn(JSON, "parse").mockImplementation((str) => {
-        if (str === "invalid-json") {
-          throw new SyntaxError("Unexpected token");
-        }
-        return originalParse(str);
-      });
-
-      const { result } = renderHook(() => useTweaksStore());
-
-      expect(() => {
-        act(() => {
-          result.current.initialSetup([mockNode], "error-flow");
-        });
-      }).toThrow();
-
-      JSON.parse.mockRestore();
     });
 
     it("should handle multiple node updates with same ID", () => {

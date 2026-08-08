@@ -350,48 +350,45 @@ class TestOpenSearchMultimodalComponent(ComponentTestBaseWithoutClient):
         assert len(models) == 2
 
     def test_authentication_basic(self, component_class):
-        """Test component configuration with basic authentication."""
+        """Test basic authentication configuration."""
         component = component_class().set(
             opensearch_url="http://localhost:9200",
             index_name="test_index",
             embedding=MockEmbeddings(),
-            auth_mode="Basic Authentication",
+            auth_mode="basic",
             username="test_user",
             password="test_password",  # pragma: allowlist secret  # noqa: S106
         )
 
-        # Verify auth settings
-        assert component.auth_mode == "Basic Authentication"
-        assert component.username == "test_user"
-        assert component.password == "test_password"  # pragma: allowlist secret  # noqa: S105
+        assert component._build_auth_kwargs() == {"http_auth": ("test_user", "test_password")}
 
     def test_authentication_jwt(self, component_class):
-        """Test component configuration with JWT authentication."""
+        """Test JWT authentication without a Bearer prefix."""
         component = component_class().set(
             opensearch_url="http://localhost:9200",
             index_name="test_index",
             embedding=MockEmbeddings(),
-            auth_mode="JWT Token",
+            auth_mode="jwt",
             jwt_token="test_jwt_token",  # pragma: allowlist secret  # noqa: S106
+            jwt_header="Authorization",
+            bearer_prefix=False,
         )
 
-        # Verify JWT settings
-        assert component.auth_mode == "JWT Token"
-        assert component.jwt_token == "test_jwt_token"  # pragma: allowlist secret  # noqa: S105
+        assert component._build_auth_kwargs() == {"headers": {"Authorization": "test_jwt_token"}}
 
-    def test_authentication_bearer(self, component_class):
-        """Test component configuration with Bearer token authentication."""
+    def test_authentication_jwt_with_bearer_prefix(self, component_class):
+        """Test JWT authentication with a Bearer prefix."""
         component = component_class().set(
             opensearch_url="http://localhost:9200",
             index_name="test_index",
             embedding=MockEmbeddings(),
-            auth_mode="Bearer Token",
-            bearer_token="test_bearer_token",  # pragma: allowlist secret  # noqa: S106
+            auth_mode="jwt",
+            jwt_token="test_jwt_token",  # pragma: allowlist secret  # noqa: S106
+            jwt_header="Authorization",
+            bearer_prefix=True,
         )
 
-        # Verify Bearer settings
-        assert component.auth_mode == "Bearer Token"
-        assert component.bearer_token == "test_bearer_token"  # pragma: allowlist secret  # noqa: S105
+        assert component._build_auth_kwargs() == {"headers": {"Authorization": "Bearer test_jwt_token"}}
 
     def test_default_auth_mode_and_bearer_prefix_inputs(self, component_class):
         """Test default auth-mode related input values for new instances."""

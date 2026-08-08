@@ -48,6 +48,7 @@ dependencies = [
     "lfx-empiriolabs>=0.1.0,<1.0.0",
     "lfx-openai-compatible>=0.1.0,<1.0.0",
     "lfx-exa>=0.1.0,<1.0.0",
+    "lfx-valkey>=0.1.0,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -123,6 +124,7 @@ lfx-vllm = { workspace = true }
 lfx-empiriolabs = { workspace = true }
 lfx-openai-compatible = { workspace = true }
 lfx-exa = { workspace = true }
+lfx-valkey = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -153,6 +155,7 @@ members = [
     "src/bundles/empiriolabs",
     "src/bundles/openai-compatible",
     "src/bundles/exa",
+    "src/bundles/valkey",
     # langflow-extensions:bundle-members-end
 ]
 
@@ -220,9 +223,8 @@ override-dependencies = [
     "dynaconf>=3.2.13",
     "pillow>=12.1.1",  # Force Pillow 12.1.1+ to prevent CVE-vulnerable versions
     "playwright>=1.59.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
-    # Keep uv workspace resolution on the supported LiteLLM floor without forcing
-    # an upstream package that declares Requires-Python <3.14 onto Python 3.14.
-    "litellm>=1.85.1,<2.0.0; python_version < '3.14'",
+    # Keep uv workspace resolution on the Python 3.14-compatible LiteLLM floor.
+    "litellm>=1.93.0,<2.0.0",
     # Transitive dependency CVE fixes
     "lxml>=6.1.0,<7.0.0",  # CVE-2026-41066
     "mako>=1.3.12,<2.0.0",  # CVE-2026-44307

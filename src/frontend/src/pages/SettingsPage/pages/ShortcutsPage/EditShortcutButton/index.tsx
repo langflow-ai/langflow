@@ -12,6 +12,7 @@ import {
   findShortcutByName,
   getFixedCombination,
   isDuplicateCombination,
+  isModifierOnlyCombination,
   normalizeRecordedCombination,
 } from "./helpers";
 
@@ -87,6 +88,18 @@ export default function EditShortcutButton({
       setErrorData({
         title: t("errors.errorSavingKeyCombination"),
         list: [t("shortcuts.noKeyCombination")],
+      });
+      return;
+    }
+    if (isModifierOnlyCombination(key)) {
+      setErrorData({
+        title: t("errors.errorSavingKeyCombination"),
+        list: [
+          t("shortcuts.modifierOnly", {
+            defaultValue:
+              "Add at least one non-modifier key (e.g. a letter or number).",
+          }),
+        ],
       });
       return;
     }

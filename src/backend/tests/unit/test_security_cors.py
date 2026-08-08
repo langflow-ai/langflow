@@ -447,6 +447,7 @@ class TestRefreshTokenSecurity:
             # Current behavior: refresh token uses 'none' (allows cross-site)
             assert auth_settings.REFRESH_SAME_SITE == "none"  # Current: allows cross-site (less secure)
             assert auth_settings.ACCESS_SAME_SITE == "lax"  # Access token is already lax (good)
+            assert auth_settings.ACCESS_HTTPONLY is True
 
             # Warn about security implications
             warnings.warn(

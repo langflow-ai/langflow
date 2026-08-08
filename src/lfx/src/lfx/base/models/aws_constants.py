@@ -12,7 +12,29 @@ AWS_MODELS_DETAILED = [
     create_model_metadata(
         provider="Amazon Bedrock", name="amazon.titan-text-premier-v1:0", icon="Amazon", tool_calling=True
     ),
-    # Anthropic Models
+    # Anthropic Models - Claude 4.x
+    create_model_metadata(
+        provider="Amazon Bedrock", name="anthropic.claude-opus-4-7", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="anthropic.claude-opus-4-6-v1", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="anthropic.claude-sonnet-4-6", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="anthropic.claude-sonnet-4-5-20250929-v1:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="anthropic.claude-opus-4-5-20251101-v1:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="anthropic.claude-haiku-4-5-20251001-v1:0", icon="Amazon", tool_calling=True
+    ),
+    # Anthropic Models - Claude 3.x (legacy)
+    create_model_metadata(
+        provider="Amazon Bedrock", name="anthropic.claude-3-7-sonnet-20250219-v1:0", icon="Amazon", tool_calling=True
+    ),
     create_model_metadata(provider="Amazon Bedrock", name="anthropic.claude-v2", icon="Amazon", tool_calling=True),
     create_model_metadata(provider="Amazon Bedrock", name="anthropic.claude-v2:1", icon="Amazon", tool_calling=True),
     create_model_metadata(

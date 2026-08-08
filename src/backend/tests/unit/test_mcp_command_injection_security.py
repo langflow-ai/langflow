@@ -742,6 +742,18 @@ class TestMCPCommandInjectionSecurity:
         error_msg = str(exc_info.value)
         assert "not allowed" in error_msg.lower()
 
+    @pytest.mark.parametrize(
+        "args",
+        [
+            ["cp", "other:/run/secrets/token", "/workspace/token"],
+            ["inspect", "other"],
+            ["network", "connect", "shared", "other"],
+        ],
+    )
+    def test_docker_non_run_subcommands_rejected(self, args):
+        with pytest.raises(ValidationError, match="not allowed"):
+            MCPServerConfig(command="docker", args=args)
+
     def test_docker_net_host_rejected(self):
         """Test that docker --net=host is rejected."""
         with pytest.raises(ValidationError) as exc_info:

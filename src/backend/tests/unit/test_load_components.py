@@ -153,7 +153,7 @@ class TestComponentLoading:
         """A ModuleNotFoundError during import is an expected condition (optional dependency absent).
 
         It must produce a single-line warning without a traceback, not an error with exc_info
-        (e.g. litellm/toolguard are deliberately excluded from Python 3.14 images).
+        (for example, when a provider extra is absent from a minimal installation).
         """
         from unittest.mock import MagicMock, patch
 
