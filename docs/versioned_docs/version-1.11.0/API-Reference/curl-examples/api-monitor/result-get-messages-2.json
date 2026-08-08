@@ -1,0 +1,30 @@
+[
+  {
+    "id": "1c1d6134-9b8b-4079-931c-84dcaddf19ba",
+    "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
+    "timestamp": "2024-12-23 19:20:11 UTC",
+    "sender": "Machine",
+    "sender_name": "AI",
+    "session_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
+    "text": "Hello! It's great to see you here! What exciting project or idea are you thinking about diving into today? Whether it's something fresh and innovative or a classic concept with a twist, I'm here to help you get started! Let's brainstorm together!",
+    "files": "[]",
+    "edit": false,
+    "properties": {
+      "text_color": "",
+      "background_color": "",
+      "edited": false,
+      "source": {
+        "id": "OpenAIModel-7AjrN",
+        "display_name": "OpenAI",
+        "source": "gpt-4o-mini"
+      },
+      "icon": "OpenAI",
+      "allow_markdown": false,
+      "positive_feedback": null,
+      "state": "complete",
+      "targets": []
+    },
+    "category": "message",
+    "content_blocks": []
+  }
+]

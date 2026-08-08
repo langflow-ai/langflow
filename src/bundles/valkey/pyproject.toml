@@ -1,0 +1,72 @@
+[project]
+name = "lfx-valkey"
+version = "0.1.0"
+description = "Valkey component(s) as a standalone Langflow Extension Bundle."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = ["langflow", "lfx", "extension", "bundle", "valkey"]
+
+# Runtime deps: lfx (the BUNDLE_API surface) plus any third-party imports
+# the bundle's components rely on.  REVIEW THIS LIST -- the script ports
+# only ``lfx``; add any other deps the moved component(s) import.
+# lfx is floored at the current major.minor line and capped below the next
+# lfx major (e.g. "lfx>=1.10.0,<2.0.0"); the floor is read from
+# src/lfx/pyproject.toml at port time and re-synced on ``make patch`` via
+# scripts/ci/sync_bundle_lfx_pin.py.  Fine-grained BUNDLE_API compatibility
+# is enforced via extension.json's lfx.compat list against BUNDLE_API_VERSION.
+#
+# * The ``valkey`` extra on ``langchain-aws`` pulls ``valkey-glide`` /
+#   ``valkey-glide-sync``, which publish no Windows wheels.  On Windows uv
+#   falls back to a source build that needs ``protoc`` + Rust and fails
+#   ("Failed to find protoc in PATH"), breaking ``pip install`` and the
+#   release wheel matrix.  Gate the extra off Windows -- same pattern used
+#   for ``ibm-db`` in the ibm bundle.  The base ``langchain-aws`` still
+#   installs on Windows so non-Glide imports resolve; the Valkey Vector
+#   Store (which imports ``ValkeyVectorStore`` lazily) is the only path that
+#   requires Glide and is unsupported on Windows.
+dependencies = [
+    "lfx>=1.11.0.dev0,<2.0.0",
+    "langchain-aws[valkey]>=1.4.1,<2.0.0; sys_platform != 'win32'",
+    "langchain-aws>=1.4.1,<2.0.0; sys_platform == 'win32'",
+    "langchain-community>=0.4.1,<1.0.0",
+    "redis>=7.4.0,<8.0.0",
+    "structlog>=25.4.0,<26.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org/extensions"
+Repository = "https://github.com/langflow-ai/langflow"
+
+# Manifest-shipping distributions are discovered via the
+# ``langflow.extensions`` entry-point.  Editable installs whose
+# ``dist.files`` only surfaces dist-info entries fall back to this
+# entry-point to find the manifest.
+[project.entry-points."langflow.extensions"]
+lfx-valkey = "lfx_valkey"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# extension.json + components live inside the lfx_valkey package so
+# ``importlib.metadata.files(dist)`` finds them and the loader resolves
+# bundles[].path relative to the manifest's directory.
+packages = ["src/lfx_valkey"]
+include = [
+    "src/lfx_valkey/extension.json",
+    "src/lfx_valkey/components/**/*.py",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_valkey",
+    "extension.json",
+    "README.md",
+    "pyproject.toml",
+]

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from contextlib import ExitStack
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -81,7 +82,7 @@ def mock_mapper():
 
 
 @pytest.fixture
-def mock_db_crud(mock_mapper):
+def mock_db_crud(mock_mapper, active_user):
     with ExitStack() as stack:
         mock_create = stack.enter_context(patch("langflow.api.v1.deployments.create_provider_account_row"))
         mock_get_owned = stack.enter_context(patch("langflow.api.v1.deployments.get_owned_provider_account_or_404"))
@@ -154,19 +155,22 @@ def mock_db_crud(mock_mapper):
         # The fake deployment row carries a stable user_id so the candidate
         # filter keeps it under the OSS pass-through path.
         snapshot_deployment_id = uuid4()
-        snapshot_owner_id = uuid4()
+        snapshot_owner_id = active_user.id
+        snapshot_project_id = uuid4()
         mock_list_att_by_snapshot.return_value = [
-            AsyncMock(
+            SimpleNamespace(
                 deployment_id=snapshot_deployment_id,
                 flow_version_id=uuid4(),
                 user_id=snapshot_owner_id,
-                provider_snapshot_id="tool-1",
+                provider_snapshot_id="snap-1",
             )
         ]
-        mock_get_dep_row.return_value = AsyncMock(
+        mock_get_dep_row.return_value = SimpleNamespace(
             id=snapshot_deployment_id,
             user_id=snapshot_owner_id,
             deployment_provider_account_id=uuid4(),
+            workspace_id=None,
+            project_id=snapshot_project_id,
         )
         mock_get_fv.return_value = AsyncMock(flow_id=uuid4(), data={})
         mock_upd_fv.return_value = 1
@@ -231,7 +235,7 @@ async def test_create_deployment_telemetry(
 ):
     response = await client.post(
         "api/v1/deployments",
-        json={"provider_id": str(uuid4()), "display_name": "Test", "type": "agent", "provider_data": {}},
+        json={"provider_id": str(uuid4()), "type": "agent", "provider_data": {"display_name": "Test"}},
         headers=logged_in_headers,
     )
     assert response.status_code == status.HTTP_201_CREATED, response.json()
@@ -249,7 +253,7 @@ async def test_update_deployment_telemetry(
 ):
     response = await client.patch(
         f"api/v1/deployments/{uuid4()}",
-        json={"display_name": "Test"},
+        json={"provider_data": {"display_name": "Test"}},
         headers=logged_in_headers,
     )
     assert response.status_code == status.HTTP_200_OK
@@ -336,7 +340,7 @@ async def test_cross_route_smoke_exception_after_provider_set(
     mock_adapter.create.side_effect = RuntimeError("Something went wrong")
     response = await client.post(
         "api/v1/deployments",
-        json={"provider_id": str(uuid4()), "display_name": "Test", "type": "agent", "provider_data": {}},
+        json={"provider_id": str(uuid4()), "type": "agent", "provider_data": {"display_name": "Test"}},
         headers=logged_in_headers,
     )
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR

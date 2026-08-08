@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from langflow.services.tracing.base import BaseTracer
 from langflow.services.tracing.service import (
+    TraceContext,
     TracingService,
     component_context_var,
     trace_context_var,
@@ -696,3 +697,26 @@ def test_set_outputs_without_component_context(tracing_service):
     component_context_var.set(None)
     # Should not raise
     tracing_service.set_outputs("some_trace", {"key": "value"})
+
+
+@pytest.mark.asyncio
+async def test_stop_drains_pending_queue_items(tracing_service):
+    """A trace event still queued when the worker is torn down must be processed, not lost.
+
+    Reproduces the dropped terminal-component span (e.g. Chat Output): its end event lands on
+    the queue as end_tracers runs, so _stop must drain it inline rather than abandon it.
+    """
+    trace_context = TraceContext(
+        run_id=uuid.uuid4(),
+        run_name="run",
+        project_name="proj",
+        user_id="u",
+        session_id="s",
+    )
+    processed: list[str] = []
+    trace_context.traces_queue.put_nowait((lambda name: processed.append(name), ("Chat Output",)))
+
+    await tracing_service._stop(trace_context)
+
+    assert processed == ["Chat Output"]
+    assert trace_context.traces_queue.empty()

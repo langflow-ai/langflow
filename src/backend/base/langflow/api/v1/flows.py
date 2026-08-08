@@ -23,6 +23,7 @@ from langflow.api.utils import (
     normalize_code_for_import,
     validate_is_component,
 )
+from langflow.api.utils.core import strip_secret_field_values
 from langflow.api.utils.zip_utils import extract_flows_from_zip
 from langflow.api.v1.authz_route_dependencies import (
     AuthorizedDeleteFlow,
@@ -64,6 +65,7 @@ from langflow.services.database.models.flow.model import (
     FlowCreate,
     FlowHeader,
     FlowRead,
+    FlowType,
     FlowUpdate,
 )
 
@@ -128,6 +130,7 @@ async def read_flows(
     components_only: bool = False,
     get_all: bool = True,
     folder_id: UUID | None = None,
+    flow_type: FlowType | None = None,
     params: Annotated[Params, Depends()],
     header_flows: bool = False,
 ):
@@ -182,6 +185,9 @@ async def read_flows(
 
         if components_only:
             stmt = stmt.where(Flow.is_component == True)  # noqa: E712
+
+        if flow_type is not None:
+            stmt = stmt.where(Flow.flow_type == flow_type)
 
         if get_all:
             flows = (await session.exec(stmt)).all()
@@ -295,13 +301,20 @@ async def read_public_flow(
     session: DbSession,
     flow_id: UUID,
 ):
-    """Read a public flow without requiring authorization (public means public)."""
+    """Read a public flow without requiring authorization (public means public).
+
+    Because this endpoint is unauthenticated, secret field values (every template
+    field marked ``password``) are stripped before returning so a PUBLIC flow does
+    not leak the owner's stored API keys / credentials to anonymous callers.
+    """
     flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
     if flow is None:
         raise HTTPException(status_code=404, detail="Flow not found")
     if flow.access_type is not AccessTypeEnum.PUBLIC:
         raise HTTPException(status_code=403, detail="Flow is not public")
-    return FlowRead.model_validate(flow, from_attributes=True)
+    flow_read = FlowRead.model_validate(flow, from_attributes=True)
+    flow_read.data = strip_secret_field_values(flow_read.data)
+    return flow_read
 
 
 @router.patch("/{flow_id}", response_model=FlowRead, status_code=200)

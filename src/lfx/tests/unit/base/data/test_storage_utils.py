@@ -143,6 +143,58 @@ class TestReadFileBytes:
 
         mock_storage.get_file.assert_called_once_with("flow_456", "subdir1/subdir2/file.txt")
 
+    async def test_should_read_existing_local_file_when_storage_type_is_s3(self, tmp_path):
+        """Regression for #13798: a real local file must be read from disk under S3 mode.
+
+        The Langflow Assistant injects an absolute local path (the installed lfx
+        components dir) into a Directory node. That path is not an S3 key, so the
+        S3 reader must fall back to a local read instead of raising
+        "Invalid S3 path format".
+        """
+        test_file = tmp_path / "_importing.py"
+        test_content = b"x = 1\n"
+        test_file.write_bytes(test_content)
+
+        mock_settings = Mock()
+        mock_settings.settings.storage_type = "s3"
+
+        mock_storage = AsyncMock()
+
+        with (
+            patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings),
+            patch("lfx.base.data.storage_utils.get_storage_service", return_value=mock_storage),
+        ):
+            content = await read_file_bytes(str(test_file))
+
+        assert content == test_content
+        mock_storage.get_file.assert_not_called()
+
+    async def test_should_route_relative_key_to_s3_even_if_cwd_file_collides(self, tmp_path, monkeypatch):
+        """A relative S3 key must always go to S3, never to a same-named CWD file.
+
+        S3 keys are relative ("flow_id/filename"). The local-file short-circuit is
+        absolute-only so a coincidental file under the process CWD can never hijack
+        a legitimate S3 fetch (#13798 hardening).
+        """
+        (tmp_path / "flow_123").mkdir()
+        (tmp_path / "flow_123" / "test.txt").write_bytes(b"local decoy")
+        monkeypatch.chdir(tmp_path)
+
+        mock_settings = Mock()
+        mock_settings.settings.storage_type = "s3"
+
+        mock_storage = AsyncMock()
+        mock_storage.get_file.return_value = b"from s3"
+
+        with (
+            patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings),
+            patch("lfx.base.data.storage_utils.get_storage_service", return_value=mock_storage),
+        ):
+            content = await read_file_bytes("flow_123/test.txt")
+
+        assert content == b"from s3"
+        mock_storage.get_file.assert_called_once_with("flow_123", "test.txt")
+
 
 @pytest.mark.asyncio
 class TestReadFileText:
@@ -193,6 +245,26 @@ class TestReadFileText:
 
         assert content == expected_content
 
+    async def test_should_read_existing_local_text_file_when_storage_type_is_s3(self, tmp_path):
+        """Regression for #13798: read_file_text must read a real local file under S3 mode."""
+        test_file = tmp_path / "notes.txt"
+        test_content = "hello from disk"
+        test_file.write_text(test_content, encoding="utf-8")
+
+        mock_settings = Mock()
+        mock_settings.settings.storage_type = "s3"
+
+        mock_storage = AsyncMock()
+
+        with (
+            patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings),
+            patch("lfx.base.data.storage_utils.get_storage_service", return_value=mock_storage),
+        ):
+            content = await read_file_text(str(test_file))
+
+        assert content == test_content
+        mock_storage.get_file.assert_not_called()
+
 
 class TestGetFileSize:
     """Test get_file_size function."""
@@ -219,6 +291,25 @@ class TestGetFileSize:
         with patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings):  # noqa: SIM117
             with pytest.raises(FileNotFoundError):
                 get_file_size("/nonexistent/file.txt")
+
+    def test_should_get_existing_local_file_size_when_storage_type_is_s3(self, tmp_path):
+        """Regression for #13798: get_file_size must stat a real local file under S3 mode."""
+        test_file = tmp_path / "sized.txt"
+        test_file.write_bytes(b"X" * 1234)
+
+        mock_settings = Mock()
+        mock_settings.settings.storage_type = "s3"
+
+        mock_storage = AsyncMock()
+
+        with (
+            patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings),
+            patch("lfx.base.data.storage_utils.get_storage_service", return_value=mock_storage),
+        ):
+            size = get_file_size(str(test_file))
+
+        assert size == 1234
+        mock_storage.get_file_size.assert_not_called()
 
     def test_get_s3_file_size(self):
         """Test getting size of S3 file."""

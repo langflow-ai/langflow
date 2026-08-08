@@ -51,6 +51,18 @@ export function usePermissions(): PermissionsContextValue {
   return useContext(PermissionsContext);
 }
 
+/**
+ * Returns whether a flow detail surface must be treated as read-only.
+ *
+ * Permission queries intentionally fail open on errors and when no provider is
+ * mounted. While an active provider is still resolving, however, flow editors
+ * fail closed so a denied user cannot briefly mutate the in-memory canvas.
+ */
+export function useIsFlowReadOnly(flowId: string | undefined | null): boolean {
+  const { can, isLoading } = usePermissions();
+  return Boolean(flowId) && (isLoading || !can(flowId, "write"));
+}
+
 export interface PermissionsProviderProps {
   resourceType: PermissionResourceType;
   resourceIds: string[];

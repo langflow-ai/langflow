@@ -18,6 +18,7 @@ from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
     FlowVersionDeploymentAttachment,
 )
+from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import session_scope
 from lfx.services.adapters.deployment.schema import DeploymentType
 
@@ -135,6 +136,32 @@ async def test_update_project(client: AsyncClient, logged_in_headers, basic_case
     assert "description" in result, "The dictionary must contain a key called 'description'"
     assert "id" in result, "The dictionary must contain a key called 'id'"
     assert "parent_id" in result, "The dictionary must contain a key called 'parent_id'"
+
+
+async def test_update_project_rejects_unowned_parent_id(
+    client: AsyncClient, logged_in_headers, basic_case, active_user
+):
+    """Reparenting under a folder the caller does not own returns 404.
+
+    Regression for an IDOR footgun: a tenant-supplied parent_id was assigned without verifying
+    the parent folder belongs to the caller.
+    """
+    other_user_id, _ = await _create_other_user(client)
+    async with session_scope() as session:
+        project = Folder(name=f"Project {uuid4()}", description="", user_id=active_user.id)
+        other_parent = Folder(name=f"Other User Parent {uuid4()}", description="", user_id=UUID(other_user_id))
+        session.add(project)
+        session.add(other_parent)
+        await session.commit()
+        await session.refresh(project)
+        await session.refresh(other_parent)
+        proj_id = project.id
+        other_parent_id = other_parent.id
+
+    update_case = basic_case.copy()
+    update_case["parent_id"] = str(other_parent_id)
+    response = await client.patch(f"api/v1/projects/{proj_id}", json=update_case, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 async def test_create_project_validation_error(client: AsyncClient, logged_in_headers, basic_case):

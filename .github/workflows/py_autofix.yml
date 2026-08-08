@@ -70,7 +70,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git merge origin/${{ github.base_ref }} --no-edit || {
+          git remote add upstream "${{ github.event.pull_request.base.repo.clone_url }}"
+          git fetch --no-tags upstream "${{ github.base_ref }}"
+          git merge upstream/${{ github.base_ref }} --no-edit || {
             # Check which files have conflicts
             CONFLICTED=$(git diff --name-only --diff-filter=U)
 

@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
+import { openFlowCard } from "../../utils/flow/open-flow-card";
 import { renameFlow } from "../../utils/rename-flow";
 
 test(
@@ -37,7 +38,7 @@ test(
 
     expect(await page.getByText(randomName).count()).toBe(1);
 
-    await page.getByText(randomName).click();
+    await openFlowCard(page, randomName);
 
     await renameFlow(page, { flowName: randomName2 });
 
@@ -58,7 +59,7 @@ test(
 
     expect(await page.getByText(randomName2).count()).toBe(1);
 
-    await page.getByText(randomName2).click();
+    await openFlowCard(page, randomName2);
 
     await renameFlow(page, { flowName: randomName3 });
 
@@ -79,7 +80,7 @@ test(
 
     expect(await page.getByText(randomName3).count()).toBe(1);
 
-    await page.getByText(randomName3).click();
+    await openFlowCard(page, randomName3);
 
     await renameFlow(page, { flowName: randomName4 });
 

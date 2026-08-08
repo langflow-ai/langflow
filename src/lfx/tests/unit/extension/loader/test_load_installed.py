@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from lfx.extension import (
     SLOT_OFFICIAL,
     load_installed_extensions,
@@ -99,6 +100,47 @@ def test_duplicate_distribution_emits_warning(tmp_path: Path) -> None:
     assert err.hint  # AC: fix-hint payload
     # Winner's components still load -- only the conflict status changes.
     assert result.components, "Winner's components should still be loaded"
+
+
+def test_symlink_aliased_manifest_paths_are_not_duplicates(tmp_path: Path) -> None:
+    """Two sys.path spellings of ONE physical manifest must not emit duplicate-distribution.
+
+    RHEL-family (ubi) venvs create ``lib64`` as a symlink to ``lib`` and put
+    both spellings on ``sys.path``, so ``importlib.metadata.distributions()``
+    yields every installed distribution twice.  Both manifest paths resolve
+    to the same file, so the loader collapses them to one clean load instead
+    of a false ``duplicate-distribution`` error.  Physically distinct
+    manifests still error -- see
+    :func:`test_duplicate_distribution_emits_warning`.
+    """
+    lib_root = tmp_path / "lib"
+    make_installed_extension(lib_root, "lfx-pilot")
+    _populate_bundle(lib_root, "lfx-pilot")
+    lib64_root = tmp_path / "lib64"
+    try:
+        lib64_root.symlink_to(lib_root, target_is_directory=True)
+    except OSError:
+        pytest.skip("platform does not permit creating symlinks")
+
+    dist_lib = FakeDist(
+        name="lfx-pilot",
+        root=lib_root,
+        files=[Path("lfx-pilot") / "extension.json"],
+    )
+    dist_lib64 = FakeDist(
+        name="lfx-pilot",
+        root=lib64_root,
+        files=[Path("lfx-pilot") / "extension.json"],
+    )
+
+    results = load_installed_extensions(distributions=[dist_lib, dist_lib64])
+    assert len(results) == 1
+    result = results[0]
+    assert result.ok, [e.code for e in result.errors]
+    assert all(e.code != "duplicate-distribution" for e in result.errors)
+    # The lexicographically-first spelling (lib < lib64) is the winner.
+    assert result.source_path == (lib_root / "lfx-pilot").resolve()
+    assert result.components, "Aliased spellings must still load the winner's components"
 
 
 def test_no_installed_extensions_returns_empty(tmp_path: Path) -> None:

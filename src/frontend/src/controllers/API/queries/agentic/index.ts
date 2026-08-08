@@ -12,6 +12,7 @@ export type {
   AgenticSSEEvent,
   AgenticStepType,
   AgenticTokenEvent,
+  AssistantModelNotice,
   FlowAction,
 } from "./types";
 export { postAssistStream } from "./use-post-assist-stream";

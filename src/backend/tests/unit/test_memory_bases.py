@@ -179,6 +179,24 @@ class TestKBIngestionHelperBuildEmbeddings:
         assert selected["metadata"]["embedding_class"] == "OpenAIEmbeddings"
         assert selected["metadata"]["model_type"] == "embeddings"
         assert "param_mapping" in selected["metadata"]
+        assert kwargs.get("api_base") is None
+        assert kwargs.get("ollama_base_url") is None
+
+    @pytest.mark.asyncio
+    async def test_builds_embeddings_for_azure_ai_foundry(self):
+        from langflow.api.utils.kb_helpers import KBIngestionHelper
+
+        with patch("langflow.api.utils.kb_helpers.EmbeddingModelComponent") as mock_component_cls:
+            mock_component_cls.return_value.build_embeddings.return_value = MagicMock()
+            user = MagicMock(id=uuid.uuid4())
+
+            await KBIngestionHelper.build_embeddings("Azure AI Foundry", "text-embedding-3-small", user)
+
+        kwargs = mock_component_cls.call_args.kwargs
+        selected = kwargs["model"][0]
+        assert selected["provider"] == "Azure AI Foundry"
+        assert selected["metadata"]["embedding_class"] == "OpenAIEmbeddings"
+        assert kwargs.get("api_base") is None
 
     @pytest.mark.asyncio
     async def test_builds_embeddings_for_google_gemini_model(self):

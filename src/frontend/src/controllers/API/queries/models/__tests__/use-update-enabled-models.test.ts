@@ -14,10 +14,10 @@ jest.mock("@/controllers/API/helpers/constants", () => ({
 jest.mock("@/controllers/API/services/request-processor", () => ({
   UseRequestProcessor: jest.fn(() => ({
     mutate: jest.fn((_key, fn, _options) => ({
-      mutate: async (data: any) => {
+      mutate: async (data: unknown) => {
         return await fn(data);
       },
-      mutateAsync: async (data: any) => {
+      mutateAsync: async (data: unknown) => {
         return await fn(data);
       },
     })),
@@ -43,7 +43,12 @@ describe("useUpdateEnabledModels", () => {
       mockApiPost.mockResolvedValue({ data: mockResponse });
 
       const updates: ModelStatusUpdate[] = [
-        { provider: "OpenAI", model_id: "gpt-4", enabled: true },
+        {
+          provider: "OpenAI",
+          model_id: "gpt-4",
+          model_type: "llm",
+          enabled: true,
+        },
       ];
 
       const mutation = useUpdateEnabledModels();
@@ -62,9 +67,24 @@ describe("useUpdateEnabledModels", () => {
       mockApiPost.mockResolvedValue({ data: mockResponse });
 
       const updates: ModelStatusUpdate[] = [
-        { provider: "OpenAI", model_id: "gpt-4", enabled: true },
-        { provider: "OpenAI", model_id: "gpt-3.5-turbo", enabled: false },
-        { provider: "Anthropic", model_id: "claude-3", enabled: true },
+        {
+          provider: "OpenAI",
+          model_id: "gpt-4",
+          model_type: "llm",
+          enabled: true,
+        },
+        {
+          provider: "OpenAI",
+          model_id: "gpt-3.5-turbo",
+          model_type: "llm",
+          enabled: false,
+        },
+        {
+          provider: "Anthropic",
+          model_id: "claude-3",
+          model_type: "llm",
+          enabled: true,
+        },
       ];
 
       const mutation = useUpdateEnabledModels();
@@ -85,8 +105,18 @@ describe("useUpdateEnabledModels", () => {
       mockApiPost.mockResolvedValue({ data: mockResponse });
 
       const updates: ModelStatusUpdate[] = [
-        { provider: "OpenAI", model_id: "gpt-3.5-turbo", enabled: false },
-        { provider: "OpenAI", model_id: "gpt-4-mini", enabled: false },
+        {
+          provider: "OpenAI",
+          model_id: "gpt-3.5-turbo",
+          model_type: "llm",
+          enabled: false,
+        },
+        {
+          provider: "OpenAI",
+          model_id: "gpt-4-mini",
+          model_type: "llm",
+          enabled: false,
+        },
       ];
 
       const mutation = useUpdateEnabledModels();
@@ -102,7 +132,12 @@ describe("useUpdateEnabledModels", () => {
       mockApiPost.mockResolvedValue({ data: mockResponse });
 
       const updates: ModelStatusUpdate[] = [
-        { provider: "OpenAI", model_id: "gpt-4", enabled: true },
+        {
+          provider: "OpenAI",
+          model_id: "gpt-4",
+          model_type: "llm",
+          enabled: true,
+        },
       ];
 
       const mutation = useUpdateEnabledModels();
@@ -118,7 +153,12 @@ describe("useUpdateEnabledModels", () => {
       mockApiPost.mockRejectedValue(mockError);
 
       const updates: ModelStatusUpdate[] = [
-        { provider: "OpenAI", model_id: "gpt-4", enabled: true },
+        {
+          provider: "OpenAI",
+          model_id: "gpt-4",
+          model_type: "llm",
+          enabled: true,
+        },
       ];
 
       const mutation = useUpdateEnabledModels();
@@ -134,7 +174,12 @@ describe("useUpdateEnabledModels", () => {
       mockApiPost.mockResolvedValue({ data: { disabled_models: [] } });
 
       const updates: ModelStatusUpdate[] = [
-        { provider: "OpenAI", model_id: "gpt-4", enabled: true },
+        {
+          provider: "OpenAI",
+          model_id: "gpt-4",
+          model_type: "llm",
+          enabled: true,
+        },
       ];
 
       const mutation = useUpdateEnabledModels();
@@ -144,6 +189,7 @@ describe("useUpdateEnabledModels", () => {
       expect(calledWith[0]).toEqual({
         provider: "OpenAI",
         model_id: "gpt-4",
+        model_type: "llm",
         enabled: true,
       });
     });
@@ -154,7 +200,12 @@ describe("useUpdateEnabledModels", () => {
       });
 
       const updates: ModelStatusUpdate[] = [
-        { provider: "OpenAI", model_id: "gpt-4", enabled: false },
+        {
+          provider: "OpenAI",
+          model_id: "gpt-4",
+          model_type: "llm",
+          enabled: false,
+        },
       ];
 
       const mutation = useUpdateEnabledModels();

@@ -5,6 +5,7 @@ from lfx.base.models.unified_models import (
     handle_model_input_update,
 )
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
+from lfx.components.models_and_agents.model_selection import apply_model_overrides
 from lfx.field_typing import Embeddings
 from lfx.io import (
     BoolInput,
@@ -49,6 +50,25 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             required=True,
             model_type="embedding",
             input_types=["Embeddings"],  # Override default to accept Embeddings instead of LanguageModel
+        ),
+        StrInput(
+            name="model_name",
+            display_name="Model Name Override",
+            info=(
+                "Optional embedding model name to use instead of the selected model. "
+                "Can be set from a global variable for runtime model selection."
+            ),
+            advanced=True,
+            load_from_db=False,
+        ),
+        StrInput(
+            name="provider",
+            display_name="Provider Override",
+            info=(
+                "Optional provider to use with Model Name Override. Leave blank to use the selected model's provider."
+            ),
+            advanced=True,
+            load_from_db=False,
         ),
         SecretStrInput(
             name="api_key",
@@ -146,8 +166,15 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
 
     def build_embeddings(self) -> Embeddings:
         """Build and return an embeddings instance based on the selected model."""
+        model = apply_model_overrides(
+            self.model,
+            model_name=getattr(self, "model_name", None),
+            provider=getattr(self, "provider", None),
+            user_id=self.user_id,
+            get_options=get_embedding_model_options,
+        )
         return get_embeddings(
-            model=self.model,
+            model=model,
             user_id=self.user_id,
             api_key=self.api_key,
             api_base=self.api_base,

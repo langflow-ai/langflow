@@ -148,6 +148,10 @@ export default function MCPServersPage() {
                       <Button
                         variant="ghost"
                         size="iconSm"
+                        aria-label={t("mcp.servers.actionsMenu", {
+                          defaultValue: "Actions for {{name}}",
+                          name: server.name,
+                        })}
                         data-testid={`mcp-server-menu-button-${server.name}`}
                         className="text-muted-foreground hover:bg-accent"
                       >

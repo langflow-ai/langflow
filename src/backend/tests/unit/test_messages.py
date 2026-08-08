@@ -1,9 +1,12 @@
+import asyncio
 import base64
 from datetime import datetime, timezone
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
+from langflow import memory as memory_module
 from langflow.memory import (
     aadd_messages,
     aadd_messagetables,
@@ -116,6 +119,114 @@ async def test_aadd_messagetables(async_session):
     added_messages = await aadd_messagetables(messages, async_session)
     assert len(added_messages) == 1
     assert added_messages[0].text == "New Test message"
+
+
+async def test_aadd_messagetables_propagates_cancelled_error_from_commit():
+    cancellation = asyncio.CancelledError("commit cancelled")
+    message = MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")
+    session = SimpleNamespace(
+        add=lambda _message: None,
+        commit=AsyncMock(side_effect=cancellation),
+        refresh=AsyncMock(),
+        rollback=AsyncMock(),
+    )
+
+    with pytest.raises(asyncio.CancelledError) as exc_info:
+        await aadd_messagetables([message], session)
+
+    assert exc_info.value is cancellation
+    session.commit.assert_awaited_once()
+    session.rollback.assert_awaited_once()
+    session.refresh.assert_not_awaited()
+
+
+async def test_aadd_messagetables_propagates_cancelled_error_from_refresh():
+    cancellation = asyncio.CancelledError("refresh cancelled")
+    message = MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")
+    session = SimpleNamespace(
+        add=lambda _message: None,
+        commit=AsyncMock(),
+        refresh=AsyncMock(side_effect=cancellation),
+        rollback=AsyncMock(),
+    )
+
+    with pytest.raises(asyncio.CancelledError) as exc_info:
+        await aadd_messagetables([message], session)
+
+    assert exc_info.value is cancellation
+    session.commit.assert_awaited_once()
+    session.refresh.assert_awaited_once_with(message)
+    session.rollback.assert_awaited_once()
+
+
+async def test_aadd_messagetables_preserves_cancellation_when_rollback_and_logging_fail(monkeypatch):
+    cancellation = asyncio.CancelledError("commit cancelled")
+    log_exception = AsyncMock(side_effect=RuntimeError("logging failed"))
+    monkeypatch.setattr(memory_module, "logger", SimpleNamespace(aexception=log_exception))
+    message = MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")
+    session = SimpleNamespace(
+        add=lambda _message: None,
+        commit=AsyncMock(side_effect=cancellation),
+        refresh=AsyncMock(),
+        rollback=AsyncMock(side_effect=RuntimeError("rollback failed")),
+    )
+
+    with pytest.raises(asyncio.CancelledError) as exc_info:
+        await aadd_messagetables([message], session)
+
+    assert exc_info.value is cancellation
+    session.commit.assert_awaited_once()
+    session.rollback.assert_awaited_once()
+    session.refresh.assert_not_awaited()
+    log_exception.assert_awaited_once()
+
+
+async def test_aadd_messagetables_allows_cancellation_to_interrupt_rollback():
+    commit_started = asyncio.Event()
+    rollback_started = asyncio.Event()
+    rollback_cancelled = asyncio.Event()
+    wait_forever = asyncio.Event()
+
+    async def commit():
+        commit_started.set()
+        await wait_forever.wait()
+
+    async def rollback():
+        rollback_started.set()
+        try:
+            await wait_forever.wait()
+        except asyncio.CancelledError:
+            rollback_cancelled.set()
+            raise
+
+    message = MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")
+    session = SimpleNamespace(
+        add=lambda _message: None,
+        commit=AsyncMock(side_effect=commit),
+        refresh=AsyncMock(),
+        rollback=AsyncMock(side_effect=rollback),
+    )
+    add_task = asyncio.create_task(aadd_messagetables([message], session))
+
+    try:
+        await asyncio.wait_for(commit_started.wait(), timeout=1)
+        add_task.cancel()
+        await asyncio.wait_for(rollback_started.wait(), timeout=1)
+        add_task.cancel()
+
+        done, _ = await asyncio.wait({add_task}, timeout=1)
+        assert add_task in done
+        with pytest.raises(asyncio.CancelledError):
+            add_task.result()
+    finally:
+        wait_forever.set()
+        if not add_task.done():
+            await asyncio.gather(add_task, return_exceptions=True)
+
+    assert rollback_cancelled.is_set()
+    session.commit.assert_awaited_once()
+    session.rollback.assert_awaited_once()
+    session.refresh.assert_not_awaited()
 
 
 @pytest.mark.usefixtures("client")
@@ -539,6 +650,49 @@ async def test_aupdate_message_with_dataframe_in_tool_output(created_message):
 # =============================================================================
 # Tests for MessageBase.from_message file path handling
 # =============================================================================
+
+
+class TestMessageBaseFromMessageAgentInit:
+    """Regression: in-flight agent Message must survive the no_content check.
+
+    The agent now initializes with flat ``content_blocks=[]`` (the wrapping
+    ``ContentBlock('Agent Steps', ...)`` is gone) and uses ``text=""`` as
+    the "intentionally created, content will arrive" sentinel. If either
+    side regresses, the build dies with "The message does not have the
+    required fields (text, sender, sender_name)." before any agent event
+    can populate the content_blocks list.
+    """
+
+    def test_from_message_accepts_in_flight_agent_message(self):
+        from langflow.services.database.models.message.model import MessageTable
+
+        # Mirrors what AgentComponent / LCToolsAgentComponent / altk build.
+        message = Message(
+            text="",
+            sender="Machine",
+            sender_name="Agent",
+            content_blocks=[],
+            session_id="test-session",
+            properties={"icon": "Bot", "state": "partial"},
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert result.sender == "Machine"
+        assert result.sender_name == "Agent"
+        assert result.text == ""
+
+    def test_from_message_rejects_truly_empty_message(self):
+        from langflow.services.database.models.message.model import MessageTable
+
+        # Explicit text=None with no stream and no content_blocks is the
+        # genuinely-empty signal that must be rejected. (A bare message with no
+        # text argument seeds data["text"]="" -- the intentional-empty ChatInput
+        # convention -- and is accepted, like an in-flight agent message.)
+        message = Message(sender="Machine", sender_name="Agent", text=None, content_blocks=[])
+
+        with pytest.raises(ValueError, match="required fields"):
+            MessageTable.from_message(message, flow_id=uuid4())
 
 
 class TestMessageBaseFromMessageFilePaths:

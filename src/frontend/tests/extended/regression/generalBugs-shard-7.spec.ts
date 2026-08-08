@@ -38,11 +38,8 @@ test(
 
     await page.getByTestId("div-generic-node").click();
 
-    await page.keyboard.press(`ControlOrMeta+Shift+A`);
-
-    await page.waitForTimeout(500);
-
-    // Wait for the modal inputs to be visible
+    // LE-1810: the advanced modal is gone — the same inputs live on the node
+    // Wait for the node inputs to be visible
     await expect(
       page.getByTestId(/^popover-anchor-input-base_url.*/).nth(0),
     ).toBeVisible({ timeout: 5000 });

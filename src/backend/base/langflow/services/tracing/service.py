@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 from collections import defaultdict
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
 
@@ -89,11 +89,8 @@ class TraceContext:
         self.run_id: UUID | None = run_id
         self.run_name: str | None = run_name
         self.project_name: str | None = project_name
-        # ``user_id`` is the authenticated Langflow user (e.g. API-key owner)
-        # and drives ``trace.userId`` for tracing providers. ``tracing_user_id``
-        # is an optional caller-supplied label that providers surface separately
-        # (e.g. LangFuseTracer stamps it into trace metadata as
-        # ``langflow.tracing_user_id``).
+        # ``user_id`` is the authenticated Langflow user and drives ``trace.userId``;
+        # ``tracing_user_id`` is an optional caller label providers surface separately.
         self.user_id: str | None = user_id
         self.tracing_user_id: str | None = tracing_user_id
         self.session_id: str | None = session_id
@@ -195,10 +192,8 @@ class TracingService(Service):
         if self.deactivated:
             return
         langfuse_tracer = _get_langfuse_tracer()
-        # ``user_id`` carries the authenticated Langflow user and drives
-        # ``trace.userId`` (unchanged from pre-#9505 behavior for backwards
-        # compatibility). ``tracing_user_id`` is the optional caller-supplied
-        # label that LangFuseTracer stamps into trace metadata.
+        # ``user_id`` carries the authenticated Langflow user and drives ``trace.userId``;
+        # ``tracing_user_id`` is the optional caller label LangFuseTracer stamps into metadata.
         trace_context.tracers["langfuse"] = langfuse_tracer(
             trace_name=trace_context.run_name,
             trace_type="chain",
@@ -324,12 +319,21 @@ class TracingService(Service):
     async def _stop(self, trace_context: TraceContext) -> None:
         try:
             trace_context.running = False
-            # check the qeue is empty
-            if not trace_context.traces_queue.empty():
-                await trace_context.traces_queue.join()
+            # Cancel the worker, then drain inline so a late end event (typically the terminal
+            # component's, enqueued as end_tracers runs) is flushed, not lost with the worker.
             if trace_context.worker_task:
                 trace_context.worker_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await trace_context.worker_task
                 trace_context.worker_task = None
+            while not trace_context.traces_queue.empty():
+                trace_func, args = trace_context.traces_queue.get_nowait()
+                try:
+                    trace_func(*args)
+                except Exception:  # noqa: BLE001
+                    await logger.aexception("Error draining trace_func")
+                finally:
+                    trace_context.traces_queue.task_done()
 
         except Exception:  # noqa: BLE001
             await logger.aexception("Error stopping tracing service")
@@ -410,6 +414,33 @@ class TracingService(Service):
                 )
             except Exception:  # noqa: BLE001
                 logger.exception(f"Error starting trace {component_trace_context.trace_name}")
+
+    def record_event_span(
+        self,
+        *,
+        span_id: str,
+        name: str,
+        outputs: dict[str, Any],
+        span_type: str = "chain",
+    ) -> None:
+        """Record a standalone, instantaneous span into the active trace.
+
+        Used for non-component steps such as the resolved HITL gate, which has no vertex of its own
+        but should be persisted in the trace so it survives a page refresh (not only in client state).
+        """
+        if self.deactivated:
+            return
+        trace_context = trace_context_var.get()
+        if trace_context is None:
+            return
+        for tracer in trace_context.tracers.values():
+            if not tracer.ready:
+                continue
+            try:
+                tracer.add_trace(span_id, name, span_type, {}, {}, None)
+                tracer.end_trace(trace_id=span_id, trace_name=name, outputs=outputs)
+            except Exception:  # noqa: BLE001
+                logger.exception(f"Error recording event span {name}")
 
     def _end_component_traces(
         self,

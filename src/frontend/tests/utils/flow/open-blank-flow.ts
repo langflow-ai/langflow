@@ -2,6 +2,7 @@ import { expect, type Page } from "@playwright/test";
 import { awaitBootstrapTest } from "../await-bootstrap-test";
 import { TID } from "../constants/testIds";
 import { TIMEOUTS } from "../constants/timeouts";
+import { openFlowCard } from "./open-flow-card";
 
 async function waitForFlowEditor(page: Page): Promise<void> {
   const sidebarSearchInput = page.getByTestId(TID.sidebarSearchInput);
@@ -17,7 +18,7 @@ async function waitForFlowEditor(page: Page): Promise<void> {
       .catch(() => false);
 
     if (createdFlowVisible) {
-      await createdFlow.click();
+      await openFlowCard(page, "New Flow");
     }
   }
 

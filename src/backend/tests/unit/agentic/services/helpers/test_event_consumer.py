@@ -240,6 +240,30 @@ class TestConsumeStreamingEvents:
         assert events[0] == ("token", "real")
 
     @pytest.mark.asyncio
+    async def test_should_skip_empty_content_block_list_chunk(self):
+        """A stringified empty content-block list (``"[]"``) must not surface.
+
+        The OpenAI Responses API streams message content as a list of content
+        blocks; before the first real block arrives the content is an empty
+        list, which upstream stringifies to ``"[]"``. That literal is truthy,
+        so it slips past the empty-chunk guard and flashes as a visible ``[]``
+        in the chat before the real answer replaces it. It must be dropped.
+        """
+        queue: asyncio.Queue[tuple[str, bytes, float] | None] = asyncio.Queue()
+
+        await queue.put(("id1", b'{"event": "token", "data": {"chunk": "[]"}}', 1.0))
+        await queue.put(("id2", b'{"event": "token", "data": {"chunk": "  []  "}}', 2.0))
+        await queue.put(("id3", b'{"event": "token", "data": {"chunk": "real answer"}}', 3.0))
+        await queue.put(None)
+
+        events = []
+        async for event_type, data in consume_streaming_events(queue):
+            events.append((event_type, data))
+
+        assert len(events) == 1
+        assert events[0] == ("token", "real answer")
+
+    @pytest.mark.asyncio
     async def test_should_handle_unicode_decode_errors(self):
         """Should skip events with Unicode decode errors."""
         queue: asyncio.Queue[tuple[str, bytes, float] | None] = asyncio.Queue()

@@ -1,4 +1,82 @@
+import type { TraceListItem } from "@/controllers/API/queries/traces/types";
+import type { PendingHumanRequest } from "@/controllers/API/queries/workflows/use-get-pending-workflows";
 import type { Span, SpanType, StatusIconProps } from "./types";
+
+/**
+ * Merge paused-run state into the activity rows.
+ *
+ * A run that paused for human input never flushed a TraceTable row, so it cannot be
+ * shown by the traces query alone. This overlays the awaiting-human status onto a
+ * matching finished row when one exists (by session_id) and synthesizes a standalone
+ * row for every still-pending request that has no trace yet. The "Paused" filter keeps
+ * only awaiting-human rows; Success/Error views exclude synthetic rows entirely.
+ */
+export function buildActivityRows({
+  baseRows,
+  pendingRequests,
+  statusFilter,
+  fallbackName,
+}: {
+  baseRows: TraceListItem[];
+  pendingRequests: PendingHumanRequest[];
+  statusFilter: string;
+  fallbackName: string;
+}): TraceListItem[] {
+  const pendingByJobId = new Map<string, PendingHumanRequest>();
+  pendingRequests.forEach((req) => pendingByJobId.set(req.job_id, req));
+  const pendingBySession = new Map<string, PendingHumanRequest>();
+  pendingRequests.forEach((req) => {
+    if (req.session_id) pendingBySession.set(req.session_id, req);
+  });
+
+  // Match a pending to its run's trace by id (durable HITL flushes the trace under an id equal to
+  // job_id, and a background job may have no session_id), then fall back to newest-trace-per-session.
+  const usedJobIds = new Set<string>();
+  const overlaid = baseRows.map((row) => {
+    let pending = pendingByJobId.get(row.id);
+    if (pending && usedJobIds.has(pending.job_id)) pending = undefined;
+    if (!pending && row.sessionId) {
+      const bySession = pendingBySession.get(row.sessionId);
+      if (bySession && !usedJobIds.has(bySession.job_id)) pending = bySession;
+    }
+    if (pending) {
+      usedJobIds.add(pending.job_id);
+      return {
+        ...row,
+        status: "awaiting_human" as const,
+        pendingRequest: pending,
+      };
+    }
+    return row;
+  });
+
+  const includeSynthetic =
+    statusFilter === "all" || statusFilter === "awaiting_human";
+  const syntheticRows: TraceListItem[] = includeSynthetic
+    ? pendingRequests
+        .filter((req) => !usedJobIds.has(req.job_id))
+        .map((req) => ({
+          id: req.job_id,
+          name: fallbackName,
+          status: "awaiting_human" as const,
+          startTime: req.created_at ?? "",
+          totalLatencyMs: 0,
+          totalTokens: 0,
+          totalCost: 0,
+          flowId: req.flow_id,
+          sessionId: req.session_id ?? undefined,
+          input: null,
+          output: null,
+          pendingRequest: req,
+          isPending: true,
+        }))
+    : [];
+
+  const combined = [...syntheticRows, ...overlaid];
+  return statusFilter === "awaiting_human"
+    ? combined.filter((row) => row.status === "awaiting_human")
+    : combined;
+}
 
 export const getSpanIcon = (type: SpanType): string => {
   const iconMap: Record<SpanType, string> = {
@@ -38,6 +116,8 @@ export const getSpanStatusLabel = (status: Span["status"]): string => {
       return "error";
     case "unset":
       return "running";
+    case "awaiting_human":
+      return "awaiting human action";
     default:
       return status;
   }
@@ -79,7 +159,8 @@ export const formatJsonData = (data: Record<string, unknown>): string => {
 };
 
 export const formatTotalLatency = (latencyMs: number | null): string => {
-  if (latencyMs === null) return "";
+  // The injected "Human In The Loop" span has no duration — render an em dash, matching the design.
+  if (latencyMs === null) return "—";
   if (!Number.isFinite(latencyMs)) return "";
   if (latencyMs < 1000) return `${Math.round(latencyMs)} ms`;
   return `${(latencyMs / 1000).toFixed(2)} s`;
@@ -145,6 +226,15 @@ export const getStatusIconProps = (
   const isOk = normalized === "ok";
   const isError = normalized === "error";
   const isUnset = normalized === "unset";
+  const isAwaitingHuman = normalized === "awaiting_human";
+
+  if (isAwaitingHuman) {
+    return {
+      colorClass: "text-accent-indigo-foreground",
+      iconName: "CirclePause",
+      shouldSpin: false,
+    };
+  }
 
   return {
     colorClass: isError

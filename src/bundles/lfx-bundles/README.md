@@ -36,7 +36,7 @@ manifest-less metapackage, a provider can graduate with **no lockstep release**.
 ## Installing
 
 ```bash
-pip install langflow                   # everything (langflow pins lfx-bundles[all])
+pip install langflow                   # full provider set, torch-free (langflow pins lfx-bundles[all-no-torch]; use [all] for cuga/codeagents)
 pip install lfx                        # engine only, no bundles
 pip install "lfx[bundles]"             # engine + this metapackage (deployment footnote)
 pip install "lfx-bundles[<provider>]"  # one provider's code + that provider's SDK deps

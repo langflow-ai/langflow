@@ -7,7 +7,11 @@ jest.mock("@/controllers/API/queries/permissions", () => ({
     mockUseGetEffectivePermissions(...args),
 }));
 
-import { PermissionsProvider, usePermissions } from "../permissionsContext";
+import {
+  PermissionsProvider,
+  useIsFlowReadOnly,
+  usePermissions,
+} from "../permissionsContext";
 
 function setMockedPermissions(
   permissions: Record<string, string[]> | undefined,
@@ -68,6 +72,41 @@ describe("PermissionsProvider gating", () => {
       wrapper: flowWrapper(["flow-1"]),
     });
     expect(result.current.can("flow-1", "delete")).toBe(true);
+  });
+});
+
+describe("useIsFlowReadOnly", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("fails closed while flow permissions are loading", () => {
+    setMockedPermissions(undefined, { isLoading: true });
+    const { result } = renderHook(() => useIsFlowReadOnly("flow-1"), {
+      wrapper: flowWrapper(["flow-1"]),
+    });
+    expect(result.current).toBe(true);
+  });
+
+  it("returns true when write permission is denied", () => {
+    setMockedPermissions({ "flow-1": ["read"] });
+    const { result } = renderHook(() => useIsFlowReadOnly("flow-1"), {
+      wrapper: flowWrapper(["flow-1"]),
+    });
+    expect(result.current).toBe(true);
+  });
+
+  it("returns false when write permission is allowed", () => {
+    setMockedPermissions({ "flow-1": ["read", "write"] });
+    const { result } = renderHook(() => useIsFlowReadOnly("flow-1"), {
+      wrapper: flowWrapper(["flow-1"]),
+    });
+    expect(result.current).toBe(false);
+  });
+
+  it("keeps the non-RBAC fallback writable without a provider", () => {
+    const { result } = renderHook(() => useIsFlowReadOnly("flow-1"));
+    expect(result.current).toBe(false);
   });
 });
 

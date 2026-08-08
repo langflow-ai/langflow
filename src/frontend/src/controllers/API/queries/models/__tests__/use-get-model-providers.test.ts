@@ -157,6 +157,7 @@ describe("useGetModelProviders", () => {
         "NVIDIA",
         "Cohere",
         "Azure OpenAI",
+        "Azure AI Foundry",
         "SambaNova",
         "Ollama",
       ];
@@ -174,6 +175,87 @@ describe("useGetModelProviders", () => {
           expect(result).toBeDefined();
         });
       }
+    });
+
+    it("should map Azure AI Foundry to the Azure icon", async () => {
+      mockApiGet.mockResolvedValue({
+        data: [
+          {
+            provider: "Azure AI Foundry",
+            models: [],
+            is_enabled: true,
+          },
+        ],
+      });
+
+      const { result } = renderHook(() => useGetModelProviders({}), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.data?.[0]?.icon).toBe("Azure");
+      });
+    });
+
+    it("should map Azure OpenAI to the Azure icon", async () => {
+      mockApiGet.mockResolvedValue({
+        data: [
+          {
+            provider: "Azure OpenAI",
+            models: [],
+            is_enabled: true,
+          },
+        ],
+      });
+
+      const { result } = renderHook(() => useGetModelProviders({}), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.data?.[0]?.icon).toBe("Azure");
+      });
+    });
+
+    it("should fall back to Bot for unknown providers", async () => {
+      mockApiGet.mockResolvedValue({
+        data: [
+          {
+            provider: "UnknownProvider",
+            models: [],
+            is_enabled: true,
+          },
+        ],
+      });
+
+      const { result } = renderHook(() => useGetModelProviders({}), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.data?.[0]?.icon).toBe("Bot");
+      });
+    });
+
+    it("should prefer the API-provided icon over the frontend map", async () => {
+      mockApiGet.mockResolvedValue({
+        data: [
+          {
+            provider: "Azure AI Foundry",
+            models: [],
+            is_enabled: true,
+            icon: "Azure",
+          },
+        ],
+      });
+
+      const { result } = renderHook(() => useGetModelProviders({}), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.data?.[0]?.icon).toBe("Azure");
+      });
     });
   });
 

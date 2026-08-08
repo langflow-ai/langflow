@@ -42,6 +42,7 @@ export default function TableOptions({
             <ShadTooltip content={t("table.addRow")}>
               <Button
                 data-testid="add-row-button"
+                aria-label={t("table.addRow")}
                 unstyled
                 onClick={addRow}
                 tabIndex={tabIndex}
@@ -67,6 +68,7 @@ export default function TableOptions({
             >
               <Button
                 data-testid="duplicate-row-button"
+                aria-label={t("table.duplicateSelected")}
                 unstyled
                 onClick={duplicateRow}
                 disabled={!hasSelection}
@@ -98,6 +100,7 @@ export default function TableOptions({
             >
               <Button
                 data-testid="delete-row-button"
+                aria-label={t("table.deleteSelected")}
                 unstyled
                 onClick={deleteRow}
                 disabled={!hasSelection}
@@ -120,6 +123,7 @@ export default function TableOptions({
           <ShadTooltip content={t("table.resetColumns")}>
             <Button
               data-testid="reset-columns-button"
+              aria-label={t("table.resetColumns")}
               unstyled
               onClick={() => {
                 resetGrid();

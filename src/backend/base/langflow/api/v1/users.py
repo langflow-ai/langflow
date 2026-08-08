@@ -2,13 +2,14 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from lfx.utils.util_strings import escape_like_pattern
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.api.v1.schemas import UsersResponse
+from langflow.api.v1.schemas import PasswordResetRequest, UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.auth.utils import get_current_active_superuser, get_current_user_optional
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
@@ -85,7 +86,7 @@ async def read_all_users(
     count_query = select(func.count()).select_from(User)
 
     if search:
-        search_filter = User.username.ilike(f"%{search}%")  # type: ignore[attr-defined]
+        search_filter = User.username.ilike(f"%{escape_like_pattern(search)}%", escape="\\")  # type: ignore[attr-defined]
         query = query.where(search_filter)
         count_query = count_query.where(search_filter)
 
@@ -133,25 +134,25 @@ async def patch_user(
 @router.patch("/{user_id}/reset-password", response_model=UserRead)
 async def reset_password(
     user_id: UUID,
-    user_update: UserUpdate,
+    password_reset: PasswordResetRequest,
     user: CurrentActiveUser,
     session: DbSession,
 ) -> User:
-    """Reset a user's password."""
+    """Change the current user's password after verifying the existing password."""
     if user_id != user.id:
         raise HTTPException(status_code=404, detail="You can't change another user's password")
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if user_update.password is None:
-        raise HTTPException(status_code=400, detail="Password is required for password reset")
-
     auth = get_auth_service()
-    if auth.verify_password(user_update.password, user.password):
+    if not auth.verify_password(password_reset.current_password, user.password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    if auth.verify_password(password_reset.password, user.password):
         raise HTTPException(status_code=400, detail="You can't use your current password")
 
-    new_password = auth.get_password_hash(user_update.password)
+    new_password = auth.get_password_hash(password_reset.password)
     user.password = new_password
 
     await session.flush()

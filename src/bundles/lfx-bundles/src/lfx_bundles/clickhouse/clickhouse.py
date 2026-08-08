@@ -11,6 +11,7 @@ from lfx.io import (
     StrInput,
 )
 from lfx.schema.data import Data
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 
 class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
@@ -73,6 +74,9 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
             )
             raise ImportError(msg) from e
 
+        # host is tenant-controlled: block SSRF to internal/cloud-metadata hosts.
+        scheme = "https" if getattr(self, "secure", False) else "http"
+        validate_connector_url_for_ssrf(f"{scheme}://{self.host}:{self.port}")
         try:
             client = clickhouse_connect.get_client(
                 host=self.host, port=self.port, username=self.username, password=self.password

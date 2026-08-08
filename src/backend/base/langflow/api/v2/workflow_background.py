@@ -160,20 +160,23 @@ _WORKFLOW_CANCELLED_MESSAGE = "Workflow run cancelled."
 
 
 async def _finalize_job_status(job_uuid: UUID, terminal_status: JobStatus) -> None:
-    """Update job status to a terminal value, but never overwrite CANCELLED.
+    """Update job status to a terminal value, but never overwrite CANCELLED or SUSPENDED.
 
     ``stop_workflow`` sets the job to CANCELLED. The buffer task runs in
     parallel and reaches its ``finally`` block shortly after; if it
     unconditionally wrote COMPLETED/FAILED it would race with the cancellation
-    and silently overwrite the user's stop intent. Re-read the row first and
-    skip the update if a cancellation already landed.
+    and silently overwrite the user's stop intent. SUSPENDED is guarded for the
+    same reason plus defense-in-depth: HITL suspend runs on the durable substrate
+    (which skips finalization while ``paused``), so a suspended job should never
+    reach this AGUI path — but if one ever did, finalizing it would clobber the
+    resumable state. Re-read the row first and skip the update for either.
     """
     job_service = get_job_service()
     try:
         job = await job_service.get_job_by_job_id(job_id=job_uuid)
     except Exception:  # noqa: BLE001
         job = None
-    if job is not None and job.status == JobStatus.CANCELLED:
+    if job is not None and job.status in {JobStatus.CANCELLED, JobStatus.SUSPENDED}:
         return
     with contextlib.suppress(Exception):
         await job_service.update_job_status(

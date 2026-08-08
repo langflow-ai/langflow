@@ -1,5 +1,6 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TIMEOUTS } from "../../utils/constants/timeouts";
 import { openTemplatesModal } from "../../utils/flow/new-project-flow";
 
 // The starter-project templates are checked for outdated components in four
@@ -70,7 +71,12 @@ QUARTERS.forEach((label, quarter) => {
           await expect(page.getByTestId("mainpage_title")).toBeVisible({
             timeout: 30000,
           });
-          await openTemplatesModal(page);
+          // TIMEOUTS.long: two shard workers share one SQLite backend, and
+          // each iteration's placeholder-flow create/delete churn can queue
+          // the "New Flow" POST behind the 30s busy_timeout. A standard (30s)
+          // wait expires exactly when the lock clears — see nightly run
+          // 28833493062 ("database is locked" + welcome/modal race timeout).
+          await openTemplatesModal(page, { modalTimeout: TIMEOUTS.long });
           await page.waitForLoadState("domcontentloaded");
           await page.getByTestId("side_nav_options_all-templates").click();
           await expect(

@@ -1,5 +1,10 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { SidebarProvider, SidebarTrigger, useSidebar } from "../sidebar";
+import {
+  Sidebar,
+  SidebarProvider,
+  SidebarTrigger,
+  useSidebar,
+} from "../sidebar";
 
 // Mock component to test useSidebar hook
 const TestComponent = ({ onToggle }: { onToggle?: () => void }) => {
@@ -159,5 +164,27 @@ describe("Sidebar", () => {
     expect(
       screen.getByRole("button", { name: "Open workspace navigation" }),
     ).toBeInTheDocument();
+  });
+
+  it("should expose labeled sidebars as complementary landmarks", () => {
+    render(
+      <SidebarProvider>
+        <Sidebar aria-label="Project navigation">Project folders</Sidebar>
+      </SidebarProvider>,
+    );
+
+    expect(
+      screen.getByRole("complementary", { name: "Project navigation" }),
+    ).toBeInTheDocument();
+  });
+
+  it("should not expose unlabeled shared sidebars as landmarks", () => {
+    render(
+      <SidebarProvider>
+        <Sidebar>Template filters</Sidebar>
+      </SidebarProvider>,
+    );
+
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
   });
 });

@@ -15,6 +15,7 @@ separate "wrapper" shape; the wrapper *is* a ContentType.
 
 from __future__ import annotations
 
+import json
 from typing import Annotated, Any, Literal
 
 from fastapi.encoders import jsonable_encoder
@@ -86,6 +87,9 @@ class BaseContent(BaseModel):
     def serialize_model(self, nxt) -> dict[str, Any]:
         try:
             dump = nxt(self)
+            # Keep the discriminator through exclude_unset/defaults (else reload fails union_tag_not_found).
+            if isinstance(dump, dict):
+                dump.setdefault("type", self.type)
             return jsonable_encoder(dump, custom_encoder=CUSTOM_ENCODERS)
         except Exception:  # noqa: BLE001
             return nxt(self)
@@ -134,6 +138,25 @@ class CodeContent(BaseContent):
     title: str | None = None
 
 
+class HumanInputContent(BaseContent):
+    """Content type for a human-in-the-loop pause persisted in the chat history.
+
+    Carries the pending decision so the interactive card survives reload: the
+    request_id and job_id let the card resume the suspended run after an F5.
+    """
+
+    type: Literal["human_input"] = Field(default="human_input")
+    request_id: str
+    job_id: str | None = None
+    kind: str = "node_input"
+    prompt: str | None = None
+    options: list[dict[str, Any]] = Field(default_factory=list)
+    fields: list[dict[str, Any]] = Field(default_factory=list)
+    allowed_decisions: list[str] = Field(default_factory=list)
+    submitted_action: str | None = None
+    superseded: bool = False
+
+
 class ToolContent(BaseContent):
     """Content type for a tool invocation.
 
@@ -151,6 +174,24 @@ class ToolContent(BaseContent):
     output: Any | None = None
     error: Any | None = None
     duration: int | None = None
+
+    @field_validator("tool_input", mode="before")
+    @classmethod
+    def _coerce_tool_input(cls, v: Any) -> dict[str, Any]:
+        # LangChain ``AgentAction.tool_input`` is ``str | dict`` during
+        # streaming, and ``event["data"].get("input") or {}`` passes a
+        # non-empty string straight through. The dict-typed field used to
+        # raise ValidationError on it. Parse JSON objects; wrap any other
+        # string under an ``input`` key so the field always validates.
+        if isinstance(v, str):
+            try:
+                parsed = json.loads(v)
+            except (ValueError, TypeError):
+                return {"input": v}
+            return parsed if isinstance(parsed, dict) else {"input": parsed}
+        if v is None:
+            return {}
+        return v
 
 
 class _MediaContentMixin:
@@ -312,6 +353,7 @@ ContentType = Annotated[
     | Annotated[ReasoningContent, Tag("reasoning")]
     | Annotated[UsageContent, Tag("usage")]
     | Annotated[CitationContent, Tag("citation")]
+    | Annotated[HumanInputContent, Tag("human_input")]
     | Annotated[ContentBlock, Tag("group")],
     Discriminator(_get_content_type),
 ]

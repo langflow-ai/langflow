@@ -94,6 +94,35 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
         return v
 
 
+class DataDisplayInput(BaseInputMixin):
+    """A read-only display field: a node button that opens a modal showing structured, dynamic data.
+
+    The component supplies a structured payload as ``value`` (refresh it via ``real_time_refresh``).
+    All keys are optional; the modal renders whatever is present::
+
+        {"title": str,                                   # header title
+         "version": str,                                 # small pill next to the title
+         "subtitle": str,                                # muted line under the title
+         "accent": int,                                  # hue 0-360; else derived from the title
+         "chips": [{"label": str, "tone": str, "icon": str}],   # quick-facts pills under the header
+         "sections": [{"heading": str,                   # section label
+                       "text": str,                      # paragraph
+                       "rows": [{"label": str, "value": str}],          # key/value grid
+                       "fields": [{"name": str, "type": str, "required": bool, "description": str}],
+                       "tags": [str],                    # chips
+                       "cards": [{"title": str, "description": str}],    # bordered cards
+                       "items": [str],                   # bullet list
+                       "badges": [str | {"label": str, "icon": str, "tone": str}]}]}
+
+    ``tone`` is one of ``accent | muted | success | warning``. Reusable by any component that wants
+    to surface fetched/dynamic data without a bespoke modal.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.DATA_DISPLAY
+    button_text: str = "View"
+    button_icon: str = "Eye"
+
+
 class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
     """Represents an Input that has a Handle to a specific type (e.g. BaseLanguageModel, BaseRetriever, etc.).
 
@@ -391,11 +420,8 @@ class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin, ToolModeMi
         Raises:
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
-        # SecretStr-rejection is handled by `_reject_credential_in_non_password`
-        # (model_validator below) instead of the field-level helper. Subclasses
-        # such as MultilineInput declare `password` after `value` in field
-        # order, so `info.data["password"]` is not yet populated when this
-        # validator runs — checking it here would always reject.
+        # SecretStr-rejection happens in the model_validator below, not here: `password`
+        # is declared after `value` so `info.data["password"]` isn't populated yet.
         if isinstance(v, SecretStr):
             return v
         value: str | AsyncIterator | Iterator | None = None
@@ -477,9 +503,8 @@ class MultilineSecretInput(MessageTextInput, MultilineMixin, InputTraceMixin):
 
     @staticmethod
     def _validate_value(v: Any, info):
-        # Password-typed input: accept SecretStr from credential variable resolution.
-        # The base MessageTextInput validator can't see ``password`` via info.data
-        # because of field-validation order, so short-circuit here.
+        # Password input: accept SecretStr (credential resolution); the base validator
+        # can't see ``password`` via info.data due to field-validation order.
         if isinstance(v, SecretStr):
             return v
         return MessageTextInput._validate_value(v, info)  # noqa: SLF001
@@ -519,9 +544,8 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
         """
         value: str | SecretStr | AsyncIterator | Iterator | None = None
         if isinstance(v, SecretStr):
-            # Credential-typed global variables arrive pre-wrapped from VariableService.
-            # Preserve the wrapper here; consumers unwrap with .get_secret_value() at the
-            # provider boundary.
+            # Credential globals arrive pre-wrapped from VariableService; consumers
+            # unwrap with .get_secret_value() at the provider boundary.
             value = v
         elif isinstance(v, str):
             value = v
@@ -679,9 +703,8 @@ class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, ToolMode
     @field_validator("value", mode="before")
     @classmethod
     def coerce_message_or_data(cls, v: Any):
-        # Allow BoolInput to receive Message/Data connections (e.g. from MCP tool
-        # schema-generated inputs) by extracting a comparable text value before
-        # CoalesceBool runs. See https://github.com/langflow-ai/langflow/issues/9424
+        # Allow BoolInput to receive Message/Data (e.g. MCP tool inputs): extract text
+        # before CoalesceBool runs. See https://github.com/langflow-ai/langflow/issues/9424
         if isinstance(v, Message):
             return v.text
         if isinstance(v, Data):
@@ -757,9 +780,8 @@ class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMix
     @field_validator("value", mode="before")
     @classmethod
     def validate_value(cls, v: Any, info):
-        # Allow DictInput to receive Data/Message connections (e.g. from MCP tool
-        # schema-generated inputs) and coerce JSON strings to dicts.
-        # See https://github.com/langflow-ai/langflow/issues/9424
+        # Allow DictInput to receive Data/Message (e.g. MCP tool inputs) + coerce JSON
+        # strings to dicts. See https://github.com/langflow-ai/langflow/issues/9424
         if isinstance(v, dict):
             return v
         if isinstance(v, Message):
@@ -940,6 +962,53 @@ class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, Metada
         return v
 
 
+class ActionPickerInput(BaseInputMixin, ListableInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):
+    """A multi-select rendered as a '+' add button with removable badges below.
+
+    Same value shape as ``MultiselectInput`` (a list of selected option strings); only the
+    rendering differs (the dedicated frontend picker). ``combobox`` allows custom entries.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.ACTION_PICKER
+    options: list[str] = Field(default_factory=list)
+    is_list: bool = Field(default=True, alias="list")
+    combobox: CoalesceBool = True
+
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, v: Any, _info):
+        if not isinstance(v, list):
+            msg = f"ActionPickerInput value must be a list. Value: '{v}'"
+            raise ValueError(msg)  # noqa: TRY004
+        for item in v:
+            if not isinstance(item, str):
+                msg = f"ActionPickerInput value must be a list of strings. Item: '{item}' is not a string"
+                raise ValueError(msg)  # noqa: TRY004
+        return v
+
+
+class DurationInput(BaseInputMixin, MetadataTraceMixin, ToolModeMixin):
+    """A duration field rendered as a number + a unit segmented toggle on one row.
+
+    The value is a composite ``{"value": <int>, "unit": <str>}``; ``options`` are the
+    selectable units (e.g. Minutes/Hours/Days).
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.DURATION
+    options: list[str] = Field(default_factory=lambda: ["Minutes", "Hours", "Days"])
+    value: dict[str, Any] = Field(default_factory=lambda: {"value": 0, "unit": "Days"})
+
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, v: Any):
+        if isinstance(v, int):
+            return {"value": v, "unit": "Days"}
+        if not isinstance(v, dict):
+            msg = f"DurationInput value must be a dict with 'value' and 'unit'. Got: '{v}'"
+            raise ValueError(msg)  # noqa: TRY004
+        return {"value": int(v.get("value", 0) or 0), "unit": v.get("unit", "Days")}
+
+
 class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a file field.
 
@@ -1027,6 +1096,9 @@ InputTypes: TypeAlias = (
     | SliderInput
     | DataFrameInput
     | TabInput
+    | ActionPickerInput
+    | DurationInput
+    | DataDisplayInput
 )
 
 InputTypesMap: dict[str, type[InputTypes]] = {t.__name__: t for t in get_args(InputTypes)}

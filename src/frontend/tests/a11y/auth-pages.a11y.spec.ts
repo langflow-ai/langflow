@@ -1,4 +1,5 @@
-import { expect, type LangflowPage, test } from "../fixtures";
+import { expect, test } from "../fixtures";
+import type { LangflowPage } from "../utils/types";
 
 async function disableAutoLogin(page: LangflowPage) {
   await page.route("**/api/v1/auto_login", (route) => {

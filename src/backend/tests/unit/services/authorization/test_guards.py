@@ -41,14 +41,15 @@ from ._common import (
 
 @pytest.mark.anyio
 async def test_ensure_permission_noop_when_disabled(monkeypatch, fake_user):
-    """When AUTHZ_ENABLED=False, the helper returns without consulting the service."""
-    install_settings(monkeypatch, authz_enabled=False)
+    """Disabled enforcement allows without consulting the service but still audits."""
+    install_settings(monkeypatch, authz_enabled=False, audit_enabled=True)
     service = _StubAuthorizationService(allow=False)
     install_authz(monkeypatch, service)
-    install_audit_recorder(monkeypatch)
+    audit_calls = install_audit_recorder(monkeypatch)
 
     await authz_guards.ensure_permission(fake_user, domain="*", obj="flow:abc", act="read")
     assert service.calls == []
+    assert audit_calls[0]["result"] == "allow"
 
 
 @pytest.mark.anyio
@@ -633,20 +634,23 @@ async def test_kb_permission_denied_raises_403(monkeypatch, fake_user):
 
 
 @pytest.mark.anyio
-async def test_kb_permission_create_uses_wildcard_slug(monkeypatch, fake_user):
-    """Without a kb_id (create flow) the owner override fires; no enforce call."""
+async def test_kb_create_permission_ignores_prospective_owner(monkeypatch, fake_user):
+    """CREATE has no existing owner, so a prospective owner cannot bypass policy."""
     install_settings(monkeypatch, authz_enabled=True)
-    service = _StubAuthorizationService(allow=True)
+    service = _StubAuthorizationService(allow=False)
     install_authz(monkeypatch, service)
     install_audit_recorder(monkeypatch)
 
-    await authz_guards.ensure_knowledge_base_permission(
-        fake_user,
-        KnowledgeBaseAction.CREATE,
-        kb_user_id=fake_user.id,
-    )
+    with pytest.raises(HTTPException) as exc:
+        await authz_guards.ensure_knowledge_base_permission(
+            fake_user,
+            KnowledgeBaseAction.CREATE,
+            kb_user_id=fake_user.id,
+        )
 
-    assert service.calls == []
+    assert exc.value.status_code == 403
+    assert service.calls[0]["obj"] == "knowledge_base:*"
+    assert service.calls[0]["act"] == "create"
 
 
 # ----------------------------------------------------------------------------- #
@@ -690,6 +694,46 @@ async def test_variable_permission_owner_override(monkeypatch, fake_user):
     assert audit_calls[0]["result"] == "owner_override"
 
 
+@pytest.mark.anyio
+async def test_variable_create_permission_ignores_prospective_owner(monkeypatch, fake_user):
+    """The shared CREATE rule also closes the adjacent variable-owner bypass."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    with pytest.raises(HTTPException) as exc:
+        await authz_guards.ensure_variable_permission(
+            fake_user,
+            VariableAction.CREATE,
+            variable_user_id=fake_user.id,
+        )
+
+    assert exc.value.status_code == 403
+    assert service.calls[0]["obj"] == "variable:*"
+    assert service.calls[0]["act"] == "create"
+
+
+@pytest.mark.anyio
+async def test_create_audits_allow_when_enforcement_is_disabled(monkeypatch, fake_user):
+    """Prospective ownership must not suppress audit-only CREATE visibility."""
+    install_settings(monkeypatch, authz_enabled=False, audit_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+
+    await authz_guards.ensure_file_permission(
+        fake_user,
+        FileAction.CREATE,
+        file_user_id=fake_user.id,
+    )
+
+    assert service.calls == []
+    assert len(audit_calls) == 1
+    assert audit_calls[0]["result"] == "allow"
+    assert audit_calls[0]["action"] == "file:create"
+
+
 # ----------------------------------------------------------------------------- #
 # ensure_file_permission
 # ----------------------------------------------------------------------------- #
@@ -731,6 +775,26 @@ async def test_file_permission_owner_override(monkeypatch, fake_user):
     assert audit_calls[0]["result"] == "owner_override"
 
 
+@pytest.mark.anyio
+async def test_file_create_permission_ignores_prospective_owner(monkeypatch, fake_user):
+    """CREATE has no existing owner, so a prospective owner cannot bypass policy."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    with pytest.raises(HTTPException) as exc:
+        await authz_guards.ensure_file_permission(
+            fake_user,
+            FileAction.CREATE,
+            file_user_id=fake_user.id,
+        )
+
+    assert exc.value.status_code == 403
+    assert service.calls[0]["obj"] == "file:*"
+    assert service.calls[0]["act"] == "create"
+
+
 # ----------------------------------------------------------------------------- #
 # ensure_share_permission
 # ----------------------------------------------------------------------------- #
@@ -753,3 +817,21 @@ async def test_share_permission_uses_share_object_slug(monkeypatch, fake_user):
 
     assert service.calls[0]["obj"] == f"share:{share_id}"
     assert service.calls[0]["act"] == "create"
+
+
+@pytest.mark.anyio
+async def test_share_create_permission_uses_existing_resource_owner_override(monkeypatch, fake_user):
+    """Share CREATE is the exception: its owner is the existing target's owner."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+
+    await authz_guards.ensure_share_permission(
+        fake_user,
+        ShareAction.CREATE,
+        share_user_id=fake_user.id,
+    )
+
+    assert service.calls == []
+    assert audit_calls[0]["result"] == "owner_override"

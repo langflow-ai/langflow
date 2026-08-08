@@ -1,6 +1,7 @@
 import asyncio
 import json
 from collections.abc import Sequence
+from contextlib import suppress
 from uuid import UUID
 
 from langchain_core.chat_history import BaseChatMessageHistory
@@ -12,7 +13,11 @@ from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.schema.message import Message
-from langflow.services.database.models.message.model import MessageRead, MessageTable
+from langflow.services.database.models.message.model import (
+    ALLOWED_MESSAGE_ORDER_FIELDS,
+    MessageRead,
+    MessageTable,
+)
 from langflow.services.deps import session_scope
 
 
@@ -25,6 +30,7 @@ def _get_variable_query(
     order: str | None = "DESC",
     flow_id: UUID | None = None,
     limit: int | None = None,
+    user_id: str | UUID | None = None,
 ):
     stmt = select(MessageTable).where(MessageTable.error == False)  # noqa: E712
     if sender:
@@ -37,7 +43,23 @@ def _get_variable_query(
         stmt = stmt.where(MessageTable.context_id == context_id)
     if flow_id:
         stmt = stmt.where(MessageTable.flow_id == flow_id)
+    if user_id:
+        # Runtime callers (e.g. _safe_graph_user_id -> graph.user_id) supply user_id as a str,
+        # but MessageTable.user_id is UUID-typed: on SQLite the Uuid bind processor calls
+        # ``value.hex`` and raises ``'str' object has no attribute 'hex'`` for a raw string.
+        # Coerce to UUID so the owner predicate is built consistently with the write path
+        # (MessageTable.from_message), rather than crashing authenticated retrieval.
+        if isinstance(user_id, str):
+            try:
+                user_id = UUID(user_id)
+            except ValueError as exc:
+                msg = f"User ID {user_id} is not a valid UUID"
+                raise ValueError(msg) from exc
+        stmt = stmt.where(MessageTable.user_id == user_id)
     if order_by:
+        if order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
+            msg = f"Invalid order_by field: {order_by}"
+            raise ValueError(msg)
         col = getattr(MessageTable, order_by).desc() if order == "DESC" else getattr(MessageTable, order_by).asc()
         stmt = stmt.order_by(col)
     if limit:
@@ -54,6 +76,7 @@ def get_messages(
     order: str | None = "DESC",
     flow_id: UUID | None = None,
     limit: int | None = None,
+    user_id: str | UUID | None = None,
 ) -> list[Message]:
     """DEPRECATED - Retrieves messages from the monitor service based on the provided filters.
 
@@ -68,6 +91,7 @@ def get_messages(
         order (Optional[str]): The order in which to retrieve the messages. Defaults to "DESC".
         flow_id (Optional[UUID]): The flow ID associated with the messages.
         limit (Optional[int]): The maximum number of messages to retrieve.
+        user_id (Optional[str | UUID]): When provided, scope retrieval to this owning user.
 
     Returns:
         List[Data]: A list of Data objects representing the retrieved messages.
@@ -82,6 +106,7 @@ def get_messages(
             order,
             flow_id,
             limit,
+            user_id=user_id,
         )
     )
 
@@ -95,6 +120,7 @@ async def aget_messages(
     order: str | None = "DESC",
     flow_id: UUID | None = None,
     limit: int | None = None,
+    user_id: str | UUID | None = None,
 ) -> list[Message]:
     """Retrieves messages from the monitor service based on the provided filters.
 
@@ -107,12 +133,20 @@ async def aget_messages(
         order (Optional[str]): The order in which to retrieve the messages. Defaults to "DESC".
         flow_id (Optional[UUID]): The flow ID associated with the messages.
         limit (Optional[int]): The maximum number of messages to retrieve.
+        user_id (Optional[str | UUID]): When provided, scope retrieval to this owning user.
 
     Returns:
         List[Data]: A list of Data objects representing the retrieved messages.
     """
+    if flow_id is None:
+        # Default to the executing graph's flow_id so old saved flows (frozen code calls this without one) cannot surface another flow's history on a colliding session_id (issue #13059).  # noqa: E501
+        from lfx.memory.flow_context import coerce_flow_id, get_current_flow_id
+
+        flow_id = coerce_flow_id(get_current_flow_id())
     async with session_scope() as session:
-        stmt = _get_variable_query(sender, sender_name, session_id, context_id, order_by, order, flow_id, limit)
+        stmt = _get_variable_query(
+            sender, sender_name, session_id, context_id, order_by, order, flow_id, limit, user_id=user_id
+        )
         messages = await session.exec(stmt)
         return [await Message.create(**d.model_dump()) for d in messages]
 
@@ -121,18 +155,20 @@ def add_messages(
     messages: Message | list[Message],
     flow_id: str | UUID | None = None,
     run_id: str | UUID | None = None,
+    user_id: str | UUID | None = None,
 ):
     """DEPRECATED - Add a message to the monitor service.
 
     DEPRECATED: Use `aadd_messages` instead.
     """
-    return run_until_complete(aadd_messages(messages, flow_id=flow_id, run_id=run_id))
+    return run_until_complete(aadd_messages(messages, flow_id=flow_id, run_id=run_id, user_id=user_id))
 
 
 async def aadd_messages(
     messages: Message | list[Message],
     flow_id: str | UUID | None = None,
     run_id: str | UUID | None = None,
+    user_id: str | UUID | None = None,
 ):
     """Add a message to the monitor service."""
     if not isinstance(messages, list):
@@ -150,7 +186,9 @@ async def aadd_messages(
             raise ValueError(msg)
 
     try:
-        messages_models = [MessageTable.from_message(msg, flow_id=flow_id, run_id=run_id) for msg in messages]
+        messages_models = [
+            MessageTable.from_message(msg, flow_id=flow_id, run_id=run_id, user_id=user_id) for msg in messages
+        ]
         async with session_scope() as session:
             messages_models = await aadd_messagetables(messages_models, session)
         return [await Message.create(**message.model_dump()) for message in messages_models]
@@ -184,44 +222,31 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
         return [MessageRead.model_validate(message, from_attributes=True) for message in updated_messages]
 
 
-async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession, retry_count: int = 0):
-    """Add messages to the database with retry logic for CancelledError.
+async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession):
+    """Add messages to the database.
 
     Args:
         messages: List of MessageTable objects to add
         session: Database session
-        retry_count: Internal retry counter (max 3 retries to prevent infinite loops)
-
-    This function includes a workaround for CancelledError that can occur during
-    session.commit() when called from build_public_tmp but not from build_flow.
-    The retry mechanism has a limit to prevent infinite recursion.
     """
-    max_retries = 3
     try:
-        try:
-            for message in messages:
-                result = session.add(message)
-                if asyncio.iscoroutine(result):
-                    await result
-            await session.commit()
-            # This is a hack.
-            # We are doing this because build_public_tmp causes the CancelledError to be raised
-            # while build_flow does not.
-        except asyncio.CancelledError:
-            await session.rollback()
-            if retry_count >= max_retries:
-                await logger.awarning(
-                    f"Max retries ({max_retries}) reached for aadd_messagetables due to CancelledError"
-                )
-                error_msg = "Add Message operation cancelled after multiple retries"
-                raise ValueError(error_msg) from None
-            return await aadd_messagetables(messages, session, retry_count + 1)
+        for message in messages:
+            result = session.add(message)
+            if asyncio.iscoroutine(result):
+                await result
+        await session.commit()
         for message in messages:
             await session.refresh(message)
-    except asyncio.CancelledError as e:
-        await logger.aexception(e)
-        error_msg = "Operation cancelled"
-        raise ValueError(error_msg) from e
+    except asyncio.CancelledError:
+        try:
+            await session.rollback()
+        except Exception as rollback_error:  # noqa: BLE001
+            with suppress(Exception):
+                await logger.aexception(
+                    "Failed to roll back session after add-message cancellation",
+                    error=str(rollback_error),
+                )
+        raise
     except Exception as e:
         await logger.aexception(e)
         raise
@@ -288,6 +313,7 @@ def store_message(
     message: Message,
     flow_id: str | UUID | None = None,
     run_id: str | UUID | None = None,
+    user_id: str | UUID | None = None,
 ) -> list[Message]:
     """DEPRECATED: Stores a message in the memory.
 
@@ -298,6 +324,7 @@ def store_message(
         flow_id (Optional[str | UUID]): The flow ID associated with the message.
             When running from the CustomComponent you can access this using `self.graph.flow_id`.
         run_id (Optional[str | UUID]): The graph/native run ID associated with the message.
+        user_id (Optional[str | UUID]): The executing user's ID, stamped on the stored message.
 
     Returns:
         List[Message]: A list of data containing the stored message.
@@ -305,13 +332,14 @@ def store_message(
     Raises:
         ValueError: If any of the required parameters (session_id, sender, sender_name) is not provided.
     """
-    return run_until_complete(astore_message(message, flow_id=flow_id, run_id=run_id))
+    return run_until_complete(astore_message(message, flow_id=flow_id, run_id=run_id, user_id=user_id))
 
 
 async def astore_message(
     message: Message,
     flow_id: str | UUID | None = None,
     run_id: str | UUID | None = None,
+    user_id: str | UUID | None = None,
 ) -> list[Message]:
     """Stores a message in the memory.
 
@@ -320,6 +348,7 @@ async def astore_message(
         flow_id (Optional[str]): The flow ID associated with the message.
             When running from the CustomComponent you can access this using `self.graph.flow_id`.
         run_id (Optional[str | UUID]): The graph/native run ID associated with the message.
+        user_id (Optional[str | UUID]): The executing user's ID, stamped on the stored message.
 
     Returns:
         List[Message]: A list of data containing the stored message.
@@ -346,7 +375,7 @@ async def astore_message(
             await logger.aerror(e)
     if flow_id and not isinstance(flow_id, UUID):
         flow_id = UUID(flow_id)
-    return await aadd_messages([message], flow_id=flow_id, run_id=run_id)
+    return await aadd_messages([message], flow_id=flow_id, run_id=run_id, user_id=user_id)
 
 
 class LCBuiltinChatMemory(BaseChatMessageHistory):

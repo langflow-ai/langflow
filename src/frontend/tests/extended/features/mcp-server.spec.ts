@@ -3,12 +3,15 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { openFlowCard } from "../../utils/flow/open-flow-card";
 import { openAddMcpServerModal } from "../../utils/open-add-mcp-server-modal";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "user must be able to change mode of MCP tools without any issues",
-  { tag: ["@release", "@workspace", "@components"] },
+  {
+    tag: ["@release", "@workspace", "@components"],
+  },
   async ({ page }) => {
     await page.waitForTimeout(5000);
     await openBlankFlow(page);
@@ -53,7 +56,8 @@ test(
     const testName = `test_server_${randomSuffix}`;
     await page.getByTestId("stdio-name-input").fill(testName);
 
-    await page.getByTestId("stdio-command-input").fill("uvx mcp-server-fetch");
+    await page.getByTestId("stdio-command-input").fill("uvx");
+    await page.getByTestId("stdio-args_0").fill("mcp-server-fetch");
 
     await page.getByTestId("add-mcp-server-button").click();
 
@@ -151,7 +155,10 @@ test(
     });
 
     expect(await page.getByTestId("stdio-command-input").inputValue()).toBe(
-      "uvx mcp-server-fetch",
+      "uvx",
+    );
+    expect(await page.getByTestId("stdio-args_0").inputValue()).toBe(
+      "mcp-server-fetch",
     );
 
     await page.waitForTimeout(500);
@@ -192,7 +199,9 @@ test(
 
 test(
   "user must be able to add and delete MCP server from sidebar",
-  { tag: ["@release", "@workspace", "@components"] },
+  {
+    tag: ["@release", "@workspace", "@components"],
+  },
   async ({ page }) => {
     await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
@@ -225,7 +234,8 @@ test(
 
     await page.waitForTimeout(500);
 
-    await page.getByTestId("stdio-command-input").fill("uvx mcp-server-fetch");
+    await page.getByTestId("stdio-command-input").fill("uvx");
+    await page.getByTestId("stdio-args_0").fill("mcp-server-fetch");
 
     await page.getByTestId("add-mcp-server-button").click();
 
@@ -324,7 +334,9 @@ test(
 
 test(
   "STDIO MCP server fields should persist after saving and editing",
-  { tag: ["@release", "@workspace", "@components"] },
+  {
+    tag: ["@release", "@workspace", "@components"],
+  },
   async ({ page }) => {
     await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
@@ -350,10 +362,11 @@ test(
     // Test data with random suffix
     const randomSuffix = Math.floor(Math.random() * 90000) + 10000; // 5-digit random number
     const testName = `test_stdio_server_${randomSuffix}`;
-    const testCommand = "uvx mcp-server-test";
-    const testArg1 = "--verbose";
-    const testArg2 = "--port=8080";
-    const testArg3 = "--config=test.json";
+    const testCommand = "uvx";
+    const testArg1 = "mcp-server-test";
+    const testArg2 = "--verbose";
+    const testArg3 = "--port=8080";
+    const testArg4 = "--config=test.json";
     const testEnvKey1 = "NODE_ENV";
     const testEnvValue1 = "production";
     const testEnvKey2 = "DEBUG_MODE";
@@ -373,6 +386,10 @@ test(
     // Add third argument
     await page.getByTestId("input-list-plus-btn_-0").click();
     await page.getByTestId("stdio-args_2").fill(testArg3);
+
+    // Add fourth argument
+    await page.getByTestId("input-list-plus-btn_-0").click();
+    await page.getByTestId("stdio-args_3").fill(testArg4);
 
     // Add first environment variable
     await page.getByTestId("stdio-env-key-0").fill(testEnvKey1);
@@ -428,6 +445,7 @@ test(
     expect(await page.getByTestId("stdio-args_0").inputValue()).toBe(testArg1);
     expect(await page.getByTestId("stdio-args_1").inputValue()).toBe(testArg2);
     expect(await page.getByTestId("stdio-args_2").inputValue()).toBe(testArg3);
+    expect(await page.getByTestId("stdio-args_3").inputValue()).toBe(testArg4);
     expect(await page.getByTestId("stdio-env-key-0").last().inputValue()).toBe(
       testEnvKey1,
     );
@@ -469,7 +487,9 @@ test(
 
 test(
   "HTTP/SSE MCP server fields should persist after saving and editing",
-  { tag: ["@release", "@workspace", "@components"] },
+  {
+    tag: ["@release", "@workspace", "@components"],
+  },
   async ({ page }) => {
     await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
@@ -653,7 +673,9 @@ test(
 
 test(
   "mcp server tools should be refreshed when editing a server",
-  { tag: ["@release", "@workspace", "@components"] },
+  {
+    tag: ["@release", "@workspace", "@components"],
+  },
   async ({ page }) => {
     await page.waitForTimeout(5000);
     await openBlankFlow(page);
@@ -671,7 +693,6 @@ test(
     await page.getByTestId("fit_view").click();
 
     await zoomOut(page, 3);
-    await page.getByTestId("canvas_controls_dropdown").click({ force: true });
 
     await openAddMcpServerModal(page);
 
@@ -686,7 +707,8 @@ test(
     const testName = `test_server_${randomSuffix}`;
     await page.getByTestId("stdio-name-input").fill(testName);
 
-    await page.getByTestId("stdio-command-input").fill("uvx mcp-server-fetch");
+    await page.getByTestId("stdio-command-input").fill("uvx");
+    await page.getByTestId("stdio-args_0").fill("mcp-server-fetch");
 
     await page.getByTestId("add-mcp-server-button").click();
 
@@ -797,10 +819,13 @@ test(
     });
 
     expect(await page.getByTestId("stdio-command-input").inputValue()).toBe(
-      "uvx mcp-server-fetch",
+      "uvx",
+    );
+    expect(await page.getByTestId("stdio-args_0").inputValue()).toBe(
+      "mcp-server-fetch",
     );
 
-    await page.getByTestId("stdio-command-input").fill("uvx mcp-server-time");
+    await page.getByTestId("stdio-args_0").fill("mcp-server-time");
 
     await page.getByTestId("add-mcp-server-button").click();
 
@@ -817,7 +842,7 @@ test(
       .filter({ hasText: "New Flow" })
       .first();
     await newFlowDiv.waitFor({ state: "visible", timeout: 10000 });
-    await newFlowDiv.click();
+    await openFlowCard(page, "New Flow");
 
     // Wait for the MCP Tools component to be visible on canvas
     await page.waitForSelector('text="MCP Tools"', {
@@ -912,7 +937,8 @@ test(
 
     await page.getByTestId("stdio-name-input").fill(testName);
 
-    await page.getByTestId("stdio-command-input").fill("uvx mcp-server-fetch");
+    await page.getByTestId("stdio-command-input").fill("uvx");
+    await page.getByTestId("stdio-args_0").fill("mcp-server-fetch");
 
     await page.getByTestId("add-mcp-server-button").click();
 
@@ -927,7 +953,7 @@ test(
       .filter({ hasText: "New Flow" })
       .first();
     await newFlowDiv2.waitFor({ state: "visible", timeout: 10000 });
-    await newFlowDiv2.click();
+    await openFlowCard(page, "New Flow");
 
     // Wait for the MCP Tools component to be visible on canvas
     await page.waitForSelector('text="MCP Tools"', {
@@ -967,7 +993,9 @@ test(
 
 test(
   "Streamable HTTP MCP server with server-everything should load tools correctly",
-  { tag: ["@release", "@workspace", "@components"] },
+  {
+    tag: ["@release", "@workspace", "@components"],
+  },
   async ({ page }) => {
     // Start the MCP server with proper health checking
     const server = "https://mcp.deepwiki.com/mcp";

@@ -299,6 +299,12 @@ def _resolve_distribution_roots(
     ``(winning_root, list_of_all_manifest_paths)``.  When the list has more
     than one entry, the canonical name was claimed by multiple distributions
     and the caller may surface ``duplicate-distribution`` warnings.
+
+    Manifest paths that are merely different spellings of one physical file
+    collapse to a single entry: RHEL-family venvs symlink ``lib64 -> lib``
+    and put both spellings on ``sys.path``, so
+    ``importlib.metadata.distributions()`` yields every distribution twice.
+    Only physically distinct manifests count as duplicates.
     """
     if distributions is None:
         distributions = importlib_metadata.distributions()
@@ -315,10 +321,32 @@ def _resolve_distribution_roots(
 
     resolved: dict[str, tuple[Path, list[Path]]] = {}
     for canonical, manifests in intermediate.items():
-        sorted_manifests = sorted(manifests, key=str)
+        sorted_manifests = _dedupe_aliased_manifests(sorted(manifests, key=str))
         winner = sorted_manifests[0].parent
         resolved[canonical] = (winner, sorted_manifests)
     return resolved
+
+
+def _dedupe_aliased_manifests(sorted_manifests: list[Path]) -> list[Path]:
+    """Collapse manifest paths that resolve to the same physical file.
+
+    Input must be pre-sorted; the first spelling of each physical manifest
+    is kept, so winner selection and error messages keep using the
+    unresolved on-``sys.path`` spelling.  A path that fails to resolve
+    (``OSError``) falls back to its raw spelling and is compared as-is.
+    """
+    unique: list[Path] = []
+    seen: set[Path] = set()
+    for manifest in sorted_manifests:
+        try:
+            identity = manifest.resolve()
+        except OSError:
+            identity = manifest
+        if identity in seen:
+            continue
+        seen.add(identity)
+        unique.append(manifest)
+    return unique
 
 
 def manifest_owning_distributions(

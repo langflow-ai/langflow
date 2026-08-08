@@ -178,6 +178,9 @@ class TestWorkflowStatus:
         mock_job.status = JobStatus.FAILED
         mock_job.type = JobType.WORKFLOW
         mock_job.user_id = None
+        # The FAILED branch now surfaces the durable Job.error additively under
+        # ``error_detail``; give the mock a realistic serializable error blob.
+        mock_job.error = {"type": "build_error", "error": "boom"}
 
         with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
             mock_service = MagicMock()
@@ -191,6 +194,9 @@ class TestWorkflowStatus:
             result = response.json()
             assert result["detail"]["code"] == "JOB_FAILED"
             assert result["detail"]["job_id"] == str(job_id)
+            # Additive durable error blob; top-level error string unchanged.
+            assert result["detail"]["error"] == "Job failed"
+            assert result["detail"]["error_detail"] == {"type": "build_error", "error": "boom"}
 
     async def test_get_status_completed_reconstruction(
         self,
@@ -282,14 +288,21 @@ class TestWorkflowStop:
 
         with (
             patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service,
-            patch("langflow.api.v2.workflow._cancel_workflow_queue_job") as mock_cancel_workflow_queue_job,
+            patch("langflow.api.v2.workflow.get_task_service") as mock_get_task_service,
+            patch("langflow.api.v2.workflow.get_background_execution_service") as mock_get_bg_service,
         ):
             mock_job_service = MagicMock()
             mock_job_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
             mock_job_service.update_job_status = AsyncMock()
             mock_get_job_service.return_value = mock_job_service
 
-            mock_cancel_workflow_queue_job.return_value = True
+            # Durable stop: revoke the in-flight task, write the STOP signal, flip CANCELLED.
+            mock_task_service = MagicMock()
+            mock_task_service.revoke_task = AsyncMock(return_value=True)
+            mock_get_task_service.return_value = mock_task_service
+            mock_bg_service = MagicMock()
+            mock_bg_service.stop_job = AsyncMock()
+            mock_get_bg_service.return_value = mock_bg_service
 
             headers = {"x-api-key": created_api_key.api_key}
             response = await client.post("api/v2/workflows/stop", json={"job_id": job_id}, headers=headers)
@@ -298,47 +311,9 @@ class TestWorkflowStop:
             result = response.json()
             assert result["job_id"] == job_id
             assert "cancelled successfully" in result["message"]
-            mock_cancel_workflow_queue_job.assert_awaited_once_with(job_id)
-            mock_job_service.update_job_status.assert_called_once_with(UUID(job_id), JobStatus.CANCELLED)
-
-    async def test_stop_workflow_returns_503_when_queue_cancel_cannot_be_confirmed(
-        self,
-        client: AsyncClient,
-        created_api_key,
-    ):
-        """Do not mark persisted jobs cancelled when no queue owner can be reached."""
-        from langflow.services.job_queue.service import JobQueueNotFoundError
-
-        job_id = str(uuid4())
-
-        mock_job = MagicMock()
-        mock_job.job_id = job_id
-        mock_job.status = JobStatus.IN_PROGRESS
-        mock_job.type = JobType.WORKFLOW
-        mock_job.user_id = None
-
-        class MissingQueueService:
-            def get_queue_data(self, seen_job_id):
-                raise JobQueueNotFoundError(seen_job_id)
-
-        with (
-            patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service,
-            patch("langflow.api.v2.workflow_background.get_queue_service", return_value=MissingQueueService()),
-        ):
-            mock_job_service = MagicMock()
-            mock_job_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
-            mock_job_service.update_job_status = AsyncMock()
-            mock_get_job_service.return_value = mock_job_service
-
-            response = await client.post(
-                "api/v2/workflows/stop",
-                json={"job_id": job_id},
-                headers={"x-api-key": created_api_key.api_key},
-            )
-
-            assert response.status_code == 503
-            assert response.json()["detail"]["code"] == "WORKFLOW_CANCEL_UNAVAILABLE"
-            mock_job_service.update_job_status.assert_not_awaited()
+            mock_task_service.revoke_task.assert_awaited_once_with(UUID(job_id))
+            mock_bg_service.stop_job.assert_awaited_once()
+            mock_job_service.update_job_status.assert_awaited_once_with(UUID(job_id), JobStatus.CANCELLED)
 
     async def test_stop_workflow_not_found(
         self,
@@ -612,8 +587,18 @@ class TestWorkflowIDORProtection:
 
         try:
             headers = {"x-api-key": created_api_key.api_key}
-            with patch("langflow.api.v2.workflow._cancel_workflow_queue_job") as mock_cancel_workflow_queue_job:
-                mock_cancel_workflow_queue_job.return_value = True
+            # Patch the durable stop's side effects so the test exercises only the
+            # ownership path against the real legacy row (user_id=None).
+            with (
+                patch("langflow.api.v2.workflow.get_task_service") as mock_get_task_service,
+                patch("langflow.api.v2.workflow.get_background_execution_service") as mock_get_bg_service,
+            ):
+                mock_task_service = MagicMock()
+                mock_task_service.revoke_task = AsyncMock(return_value=True)
+                mock_get_task_service.return_value = mock_task_service
+                mock_bg_service = MagicMock()
+                mock_bg_service.stop_job = AsyncMock()
+                mock_get_bg_service.return_value = mock_bg_service
                 response = await client.post(
                     "api/v2/workflows/stop",
                     json={"job_id": str(job_id)},
@@ -623,7 +608,8 @@ class TestWorkflowIDORProtection:
             assert response.status_code == 200, (
                 "Legacy jobs with user_id=None must not be blocked by the ownership check"
             )
-            mock_cancel_workflow_queue_job.assert_awaited_once_with(str(job_id))
+            # The stop proceeded against the real legacy row (ownership did not block).
+            mock_task_service.revoke_task.assert_awaited_once_with(job_id)
         finally:
             async with session_scope() as session:
                 db_job = await session.get(Job, job_id)

@@ -16,19 +16,27 @@ import {
 } from "@/components/core/playgroundComponent/chat-view/utils/message-utils";
 import { BuildStatus } from "@/constants/enums";
 import { persistMessageProperties } from "@/controllers/API/helpers/persist-message-properties";
+import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
+import i18n from "@/i18n";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
+import { useHitlStore } from "@/stores/hitlStore";
 import { useMessagesStore } from "@/stores/messagesStore";
 import type {
-  ChatInputType,
-  ChatOutputType,
   LogsLogType,
   VertexBuildTypeAPI,
   VertexDataTypeAPI,
 } from "@/types/api";
+import type { ChatInputType, ChatOutputType } from "@/types/chat";
+import { api } from "../api";
+import {
+  injectHumanInputCard,
+  isHumanInputCardAnswered,
+} from "./human-input-card";
 import {
   buildWorkflowRunRequest,
   createWorkflowAgent,
+  WORKFLOWS_ENDPOINT,
   WORKFLOWS_PUBLIC_ENDPOINT,
   type WorkflowRunOptions,
 } from "./run-agent";
@@ -68,6 +76,7 @@ export interface BridgeContext {
   setRunId: (runId: string) => void;
   applyDelta: (ops: JsonPatchOp[]) => void;
   handleCustomEvent: (eventType: string, data: unknown) => void;
+  onHumanInput: (payload: unknown) => void;
   handleEndEvent: (data: unknown) => void;
   handleLogEvent: (data: unknown) => void;
   onFinished: () => void;
@@ -104,6 +113,9 @@ export function handleAGUIEvent(event: BaseEvent, ctx: BridgeContext): boolean {
       } else {
         ctx.handleCustomEvent(custom.value.event_type, custom.value.data);
       }
+    } else if (custom.name === "langflow.human_input_required") {
+      // Non-terminal: surface the card; the SSE ends at suspend and reattaches on resume.
+      ctx.onHumanInput(custom.value);
     } else if (custom.name === "langflow.log") {
       ctx.handleLogEvent(custom.value);
     }
@@ -387,6 +399,11 @@ export async function runFlowAGUI(
         originalBuildStatuses,
       ),
     handleCustomEvent: (eventType, data) => handleMessageEvent(eventType, data),
+    onHumanInput: () => {
+      // Stream mode can't durably suspend; HITL runs go through the background
+      // path (runFlowHITL). Mark awaiting-input so the UI reflects the pause.
+      flowStore.setAwaitingInput(true);
+    },
     handleEndEvent: persistBuildDuration,
     handleLogEvent: appendLogEvent,
     onFinished: () => {
@@ -399,7 +416,7 @@ export async function runFlowAGUI(
       terminalEventSeen = true;
       markRunningAsError = true;
       flowStore.setBuildInfo({ error: [message], success: false });
-      setErrorData({ title: "Workflow run failed", list: [message] });
+      setErrorData({ title: i18n.t("humanInput.runFailed"), list: [message] });
     },
   };
 
@@ -460,7 +477,10 @@ export async function runFlowAGUI(
       error: (err: Error) => {
         markRunningAsError = true;
         flowStore.setBuildInfo({ error: [err.message], success: false });
-        setErrorData({ title: "Workflow run failed", list: [err.message] });
+        setErrorData({
+          title: i18n.t("humanInput.runFailed"),
+          list: [err.message],
+        });
         subscription.unsubscribe();
         finish();
       },
@@ -481,4 +501,185 @@ export async function runFlowAGUI(
       },
     });
   });
+}
+
+/** Background-run body (mode="background"); HITL needs the durable substrate. */
+function buildBackgroundRunRequest(opts: WorkflowRunOptions) {
+  const body: Record<string, unknown> = {
+    flow_id: opts.flowId,
+    input_value: opts.message ?? "",
+    mode: "background",
+    stream_protocol: "agui",
+  };
+  if (opts.threadId) body.session_id = opts.threadId;
+  if (opts.tweaks) body.tweaks = opts.tweaks;
+  if (opts.startComponentId) body.start_component_id = opts.startComponentId;
+  if (opts.stopComponentId) body.stop_component_id = opts.stopComponentId;
+  if (opts.flowData) body.data = opts.flowData;
+  if (opts.files && opts.files.length > 0) body.files = opts.files;
+  return body;
+}
+
+/**
+ * Consume a background run's durable event stream (`GET /{job_id}/events`) and fold
+ * events into the flow store. Resolves when the run ends, suspends for human input,
+ * or the request errors. Reused for the initial run and for resume reattach.
+ *
+ * Uses a direct fetch + SSE parser rather than the AG-UI ``HttpAgent``: a paused run
+ * closes the stream WITHOUT a terminal ``RUN_FINISHED``, which the agent's protocol
+ * verifier treats as a violation and can swallow the pause event we depend on.
+ */
+export async function consumeBackgroundEvents(
+  jobId: string,
+  opts: WorkflowRunOptions & { signal?: AbortSignal },
+  lastEventId?: string,
+  { skipCardInjection = false }: { skipCardInjection?: boolean } = {},
+): Promise<void> {
+  const flowStore = useFlowStore.getState();
+  const setErrorData = useAlertStore.getState().setErrorData;
+  const touchedNodeIds = new Set<string>();
+  let runId = jobId;
+  let suspended = false;
+  let terminalSeen = false;
+
+  const ctx: BridgeContext = {
+    setRunId: (r) => {
+      runId = r;
+    },
+    applyDelta: (ops) => applyStateDelta(ops, runId, touchedNodeIds),
+    handleCustomEvent: (eventType, data) => handleMessageEvent(eventType, data),
+    // The background replay routes 'end' through the same message handler (as before the
+    // end/log split); logs aren't surfaced separately on the reattach path.
+    handleEndEvent: (data) => handleMessageEvent("end", data),
+    handleLogEvent: () => {},
+    onHumanInput: (payload) => {
+      // Skip only the already-answered pause the reattach replays; a genuinely-new later pause
+      // in the same run is unanswered and must still surface its card.
+      if (
+        skipCardInjection &&
+        isHumanInputCardAnswered(payload as Record<string, unknown>, jobId)
+      ) {
+        return;
+      }
+      suspended = true;
+      injectHumanInputCard(payload as Record<string, unknown>, jobId, opts);
+    },
+    onFinished: () => {
+      // A HITL resume continuation is not a user-initiated build, so the caller can pass
+      // silent to suppress the "Flow built successfully" toast on the canvas.
+      if (!opts.silent) flowStore.setBuildInfo({ success: true });
+    },
+    onError: (message) => {
+      flowStore.setBuildInfo({ error: [message], success: false });
+      setErrorData({ title: i18n.t("humanInput.runFailed"), list: [message] });
+    },
+  };
+
+  const finish = () => {
+    flowStore.updateEdgesRunningByNodes([...touchedNodeIds], false);
+    // The spinner reads isBuilding, so it clears whether the run parked or ended.
+    flowStore.setIsBuilding(false);
+    // Only a definitive terminal (RUN_FINISHED/RUN_ERROR) or an observed pause may change the
+    // awaiting/badge state. A stream that ends having seen NEITHER — e.g. a reattach whose replay
+    // started past the pause, or the live tail that never gets the pause frame — must leave the
+    // parked state intact; clearing on mere absence drops the badge of a still-SUSPENDED run.
+    if (suspended) {
+      flowStore.setAwaitingInput(true);
+    } else if (terminalSeen) {
+      flowStore.setAwaitingInput(false);
+      useHitlStore.getState().clear();
+    }
+    flowStore.revertBuiltStatusFromBuilding();
+  };
+
+  const headers: Record<string, string> = { Accept: "text/event-stream" };
+  if (lastEventId) headers["Last-Event-ID"] = lastEventId;
+  const url = `${WORKFLOWS_ENDPOINT}/${encodeURIComponent(jobId)}/events`;
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers,
+      credentials: getFetchCredentials(),
+      signal: opts.signal,
+    });
+    if (!response.ok || !response.body) {
+      ctx.onError(`Events stream failed with status ${response.status}`);
+      finish();
+      return;
+    }
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let terminal = false;
+
+    const dispatch = (frame: string): boolean => {
+      const dataLine = frame
+        .split("\n")
+        .find((line) => line.startsWith("data:"));
+      if (!dataLine) return false;
+      let event: BaseEvent;
+      try {
+        event = JSON.parse(dataLine.slice(5).trim()) as BaseEvent;
+      } catch {
+        return false;
+      }
+      if (handleAGUIEvent(event, ctx)) {
+        // A terminal event supersedes a replayed pause (resume reattach re-emits it).
+        suspended = false;
+        terminalSeen = true;
+        return true;
+      }
+      return false;
+    };
+
+    while (!terminal) {
+      const { value, done } = await reader.read();
+      if (done) {
+        // The stream can close right after the pause event without a trailing
+        // blank line; flush whatever is buffered so that last frame isn't lost.
+        if (buffer.trim()) dispatch(buffer);
+        break;
+      }
+      buffer += decoder.decode(value, { stream: true });
+      let boundary = buffer.indexOf("\n\n");
+      while (boundary !== -1) {
+        const frame = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+        boundary = buffer.indexOf("\n\n");
+        if (dispatch(frame)) {
+          terminal = true;
+          break;
+        }
+      }
+    }
+    finish();
+  } catch (err) {
+    if ((err as Error)?.name !== "AbortError") {
+      ctx.onError((err as Error)?.message ?? "Events stream error");
+    }
+    finish();
+  }
+}
+
+/**
+ * Run a flow that contains a Human Input node through the durable background path:
+ * submit in background mode, then consume the run's event stream. The pause renders
+ * an interactive card; resume reattaches via {@link consumeBackgroundEvents}.
+ */
+export async function runFlowHITL(
+  opts: WorkflowRunOptions & { signal?: AbortSignal },
+): Promise<void> {
+  const body = buildBackgroundRunRequest(opts);
+  const { data } = await api.post(WORKFLOWS_ENDPOINT, body);
+  const jobId: string | undefined = data?.job_id;
+  if (!jobId) {
+    useFlowStore.getState().setBuildInfo({
+      error: ["Background run did not return a job id"],
+      success: false,
+    });
+    useFlowStore.getState().setIsBuilding(false);
+    return;
+  }
+  await consumeBackgroundEvents(jobId, opts);
 }
