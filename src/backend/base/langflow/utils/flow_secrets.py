@@ -16,6 +16,28 @@ _ASCII_CONTROL_CUTOFF = 0x20
 _ASCII_DELETE = 0x7F
 _VARIABLE_REFERENCE_MAX_LENGTH = 256
 
+# Per-row override of a table column's ``load_from_db`` flag, written by the
+# table cell editor and read by ``lfx.interface.initialize.loading``. Duplicated
+# rather than imported to keep this module free of runtime dependencies.
+_TABLE_LOAD_FROM_DB_FIELDS = "__load_from_db_fields"
+
+# Tokens issued by widely used credential providers, matched in the casing and
+# length each provider issues. Global-variable names are conventionally upper
+# snake case, so names such as ``HF_TOKEN`` or ``ASIA_REGION_KEY`` stay clear of
+# these patterns while the credentials themselves do not.
+_CREDENTIAL_VALUE_PATTERN = re.compile(
+    r"""^(?:
+        sk-[A-Za-z0-9_-]{8,}
+        | (?:ghp|gho|ghs|ghu)_[A-Za-z0-9]{8,}
+        | github_pat_[A-Za-z0-9_]{8,}
+        | glpat-[A-Za-z0-9_-]{8,}
+        | hf_[A-Za-z0-9]{8,}
+        | xox[abps]-[A-Za-z0-9-]{8,}
+        | (?:AKIA|ASIA)[0-9A-Z]{16}
+    )$""",
+    re.VERBOSE,
+)
+
 _SECRET_NAME_PARTS = frozenset({"credential", "credentials", "passwd", "password", "secret"})
 _SECRET_COMPOUND_NAMES = frozenset(
     {
@@ -99,16 +121,23 @@ def _is_variable_reference(value: object) -> bool:
     """Return whether a ``load_from_db`` value looks like a global-variable name.
 
     A bound field stores the referenced variable's *name* in ``value``, not the
-    secret itself. Anything that does not look like a name — empty, oversized,
-    control characters, a non-string, or a URL carrying credentials — is treated
-    as a raw secret, so a mislabelled field cannot smuggle its value through a
-    scrub that preserves references.
+    secret itself. Values that cannot be a name — empty, oversized, control
+    characters, a non-string, a URL carrying credentials, or a token issued
+    under a well-known credential prefix — are treated as raw secrets instead.
+
+    Variable names are freeform, so this check narrows the blast radius of a
+    mislabelled field rather than eliminating it: a secret whose text is shaped
+    like an ordinary name is indistinguishable from a real reference here. The
+    authoritative signal is the ``load_from_db`` metadata itself, which the
+    editor keeps in step with whether a value is a name or a literal.
     """
     if not isinstance(value, str) or not value.strip():
         return False
     if len(value) > _VARIABLE_REFERENCE_MAX_LENGTH:
         return False
     if any(ord(character) < _ASCII_CONTROL_CUTOFF or ord(character) == _ASCII_DELETE for character in value):
+        return False
+    if _CREDENTIAL_VALUE_PATTERN.match(value.strip()):
         return False
     return not _contains_url_credentials(value)
 
@@ -173,6 +202,21 @@ def _strip_structured_secret_values_in_place(value: object) -> object:
     return value
 
 
+def _cell_loads_from_db(row_metadata: object, column: str) -> bool | None:
+    """Return one row's explicit ``load_from_db`` choice for a column.
+
+    Mirrors ``cell_load_from_db`` in ``lfx.interface.initialize.loading``: a row
+    may override its schema column per cell, so the two must agree on which
+    cells resolve to a variable and which hold a literal. ``None`` means the row
+    records no choice, which the runtime resolves from the database.
+    """
+    if isinstance(row_metadata, dict):
+        return bool(row_metadata[column]) if column in row_metadata else None
+    if isinstance(row_metadata, list):
+        return column in row_metadata
+    return None
+
+
 def _table_reference_columns(field: dict) -> frozenset[str]:
     """Return table columns whose cells hold global-variable name references."""
     schema = field.get("table_schema")
@@ -195,16 +239,26 @@ def _strip_table_rows_in_place(field: dict, reference_columns: frozenset[str], v
         if not isinstance(row, dict):
             rows[index] = _strip_structured_secret_values_in_place(row)
             continue
+        # Detach the per-cell metadata so the generic scrub cannot null an entry
+        # keyed by a secret-named column and silently turn a reference cell into
+        # a literal one for the deployment target.
+        row_metadata = row.pop(_TABLE_LOAD_FROM_DB_FIELDS, None)
         preserved: dict[str, str | None] = {}
         for column in reference_columns & row.keys():
             cell = row[column]
-            if _is_variable_reference(cell):
-                variable_references.add(cell)
-                preserved[column] = cell
-            else:
+            # Only a cell the runtime resolves from the database holds a
+            # variable *name*. A cell the row marks as not loading from the
+            # database holds the literal value itself, so it is scrubbed like
+            # any other secret rather than published as a required variable.
+            if _cell_loads_from_db(row_metadata, column) is False or not _is_variable_reference(cell):
                 preserved[column] = None
+                continue
+            variable_references.add(cell)
+            preserved[column] = cell
         _strip_structured_secret_values_in_place(row)
         row.update(preserved)
+        if row_metadata is not None:
+            row[_TABLE_LOAD_FROM_DB_FIELDS] = row_metadata
 
 
 def _strip_template_field_value(field: dict, variable_references: set[str] | None = None) -> None:
@@ -287,12 +341,17 @@ def strip_secret_field_values_in_place(
     By default every secret-bearing value is nulled, including the names of
     global variables bound via ``load_from_db`` — the right contract for
     anonymous consumers such as the public-flow endpoint. Deployment packaging
-    passes ``variable_references``: fields (and table columns) marked
-    ``load_from_db`` then keep their variable-*name* values, and every
-    preserved name is added to the set so the caller can emit a
-    required-variables manifest. Names are references, not secrets; values
-    that do not look like variable names are still nulled, so a mislabelled
-    field cannot leak a raw secret through the preserving path.
+    passes ``variable_references``: fields (and table cells) that the runtime
+    resolves from the database then keep their variable-*name* values, and
+    every preserved name is added to the set so the caller can emit a
+    required-variables manifest.
+
+    Only values the runtime would look up are preserved — a table cell the row
+    marks as not loading from the database holds the literal secret, so it is
+    nulled like any other. Values that cannot be a variable name are nulled
+    too, but that shape check narrows rather than closes the gap: a flow whose
+    ``load_from_db`` metadata is wrong can still carry a raw secret shaped like
+    an ordinary name.
     """
     if not flow_data:
         return flow_data

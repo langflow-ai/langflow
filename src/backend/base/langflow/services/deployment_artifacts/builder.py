@@ -48,7 +48,9 @@ _UTF8_TWO_BYTE_MAX = 0x7FF
 _UTF8_THREE_BYTE_MAX = 0xFFFF
 _UNICODE_SURROGATE_MIN = 0xD800
 _UNICODE_SURROGATE_MAX = 0xDFFF
-_VOLATILE_TOP_LEVEL_FIELDS = frozenset({"updated_at", "created_at", "user_id", "folder_id", "access_type", "gradient"})
+_VOLATILE_TOP_LEVEL_FIELDS = frozenset(
+    {"updated_at", "created_at", "user_id", "folder_id", "workspace_id", "access_type", "gradient"}
+)
 _VOLATILE_NODE_FIELDS = frozenset({"positionAbsolute", "dragging", "selected"})
 
 _T = TypeVar("_T")

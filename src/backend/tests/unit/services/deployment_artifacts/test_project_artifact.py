@@ -93,7 +93,7 @@ def test_deployment_artifact_service_does_not_depend_on_api_or_fastapi() -> None
         node.module for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.module is not None
     )
 
-    assert not any(module == "fastapi" or module.startswith("langflow.api") for module in imported_modules)
+    assert not any(module.startswith(("fastapi", "langflow.api")) for module in imported_modules)
 
 
 @pytest.mark.asyncio
@@ -158,6 +158,29 @@ async def test_build_project_artifact_is_deterministic_and_manifest_binds_exact_
             assert entry["sha256"] == hashlib.sha256(payload).hexdigest()
             assert entry["size"] == len(payload)
             assert entry["required_variables"] == []
+
+
+@pytest.mark.asyncio
+async def test_build_project_artifact_omits_environment_specific_flow_fields() -> None:
+    """Packaged flows must not carry identifiers of the deployment they came from."""
+    actor_id = uuid4()
+    project_id = uuid4()
+    workspace_id = uuid4()
+    project = Folder(id=project_id, name="Portable Project", user_id=actor_id)
+    flow = _flow(owner_id=actor_id, project_id=project_id, name="Portable")
+    flow.workspace_id = workspace_id
+    session = _session_with_flows([flow])
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    artifact, *_ = await _build_authorized(session=session, user=user, project=project)
+
+    with zipfile.ZipFile(io.BytesIO(artifact.content)) as archive:
+        payload = archive.read(f"flows/{flow.id}.json")
+        packaged = json.loads(payload)
+
+    assert str(workspace_id) not in payload.decode()
+    for field in ("workspace_id", "user_id", "folder_id", "updated_at"):
+        assert field not in packaged
 
 
 @pytest.mark.asyncio
@@ -306,7 +329,7 @@ async def test_build_project_artifact_fails_whole_package_when_any_flow_is_unrea
             new_callable=AsyncMock,
             side_effect=HTTPException(status_code=403, detail="denied"),
         ),
-        patch(f"{MODULE}._build_archive", create=True) as build_archive,
+        patch(f"{MODULE}._build_archive") as build_archive,
         pytest.raises(HTTPException, match="denied"),
     ):
         await build_project_artifact(session, user, project_id)
