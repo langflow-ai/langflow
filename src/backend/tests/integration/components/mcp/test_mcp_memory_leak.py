@@ -376,7 +376,7 @@ async def test_session_manager_cleanup_all(process_tracker):
                     "session": "mock_session",
                     "task": asyncio.create_task(asyncio.sleep(10)),
                     "type": "stdio",
-                    "last_used": asyncio.get_event_loop().time(),
+                    "last_used": asyncio.get_running_loop().time(),
                 }
             }
         },
@@ -386,7 +386,7 @@ async def test_session_manager_cleanup_all(process_tracker):
                     "session": "mock_session",
                     "task": asyncio.create_task(asyncio.sleep(10)),
                     "type": "sse",
-                    "last_used": asyncio.get_event_loop().time(),
+                    "last_used": asyncio.get_running_loop().time(),
                 }
             }
         },
