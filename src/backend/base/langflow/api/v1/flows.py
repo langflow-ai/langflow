@@ -8,10 +8,11 @@ from typing import Annotated
 from uuid import UUID
 
 import orjson
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
+from lfx.log.logger import logger
 from lfx.services.cache.utils import CACHE_MISS
 from pydantic import ValidationError
 from sqlmodel import and_, col, select
@@ -56,6 +57,10 @@ from langflow.services.authorization import (
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.authorization.utils import _resolve_authz_domain
 from langflow.services.cache.service import ThreadingInMemoryCache
+from langflow.services.database.lock_retry import (
+    is_database_lock_error,
+    run_with_lock_retry,
+)
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
 )
@@ -74,6 +79,7 @@ from langflow.services.database.models.flow.model import (
 # and FlowVersionError from the flow_version modules.
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
 from langflow.utils.compression import compress_response
@@ -102,6 +108,9 @@ def _handle_unique_constraint_error(exc: Exception, *, status_code: int = 400) -
 
 # build router
 router = APIRouter(prefix="/flows", tags=["Flows"])
+
+FLOW_UPDATE_FAILED = "Could not update the flow."
+FLOW_UPDATE_BUSY = "The database is busy. Please retry the request."
 
 
 @router.post("/", response_model=FlowRead, status_code=201)
@@ -328,6 +337,7 @@ async def update_flow(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     """Update a flow."""
+    actor = UserRead.model_validate(current_user, from_attributes=True)
     try:
         # Destination check: if the payload moves the flow into a new
         # workspace/folder, the caller must also be authorized to write at the
@@ -339,7 +349,7 @@ async def update_flow(
         if target_workspace_id != db_flow.workspace_id or target_folder_id != db_flow.folder_id:
             try:
                 await ensure_flow_permission(
-                    current_user,
+                    actor,
                     FlowAction.WRITE,
                     flow_id=flow_id,
                     flow_user_id=db_flow.user_id,
@@ -357,7 +367,7 @@ async def update_flow(
 
         async def operation() -> FlowRead:
             # Re-load inside each attempt so retry after nested rollback never uses an expired ORM instance.
-            db_flow_for_attempt = await _read_flow(session=session, flow_id=flow_id, user_id=current_user.id)
+            db_flow_for_attempt = await _read_flow(session=session, flow_id=flow_id, user_id=actor.id)
             if not db_flow_for_attempt:
                 raise HTTPException(status_code=404, detail="Flow not found")
             # TOCTOU: a concurrent PATCH could have moved this flow to a
@@ -367,7 +377,7 @@ async def update_flow(
             # stale check across a race.
             try:
                 await ensure_flow_permission(
-                    current_user,
+                    actor,
                     FlowAction.WRITE,
                     flow_id=flow_id,
                     flow_user_id=db_flow_for_attempt.user_id,
@@ -386,7 +396,7 @@ async def update_flow(
             ):
                 try:
                     await ensure_flow_permission(
-                        current_user,
+                        actor,
                         FlowAction.WRITE,
                         flow_id=flow_id,
                         flow_user_id=db_flow_for_attempt.user_id,
@@ -399,18 +409,25 @@ async def update_flow(
                 session=session,
                 db_flow=db_flow_for_attempt,
                 flow=flow,
-                user_id=current_user.id,
+                user_id=actor.id,
                 storage_service=storage_service,
             )
 
-        if folder_id_will_change:
-            return await retry_flow_operation_on_deployment_guard(
-                db=session,
-                user_id=current_user.id,
-                flow_ids=[flow_id],
-                operation=operation,
-            )
-        return await operation()
+        async def update_attempt(_attempt: int) -> FlowRead:
+            if folder_id_will_change:
+                return await retry_flow_operation_on_deployment_guard(
+                    db=session,
+                    user_id=actor.id,
+                    flow_ids=[flow_id],
+                    operation=operation,
+                )
+            return await operation()
+
+        return await run_with_lock_retry(
+            update_attempt,
+            session=session,
+            description=f"update_flow {flow_id}",
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -418,7 +435,21 @@ async def update_flow(
             e,
             log_message=f"op=update_flow flow_id={flow_id}",
         )
-        raise _handle_unique_constraint_error(e) from e
+        if is_database_lock_error(e):
+            await logger.awarning("op=update_flow flow_id=%s exhausted lock retries", flow_id)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=FLOW_UPDATE_BUSY,
+                headers={"Retry-After": "1"},
+            ) from e
+        handled_error = _handle_unique_constraint_error(e)
+        if handled_error.status_code != status.HTTP_500_INTERNAL_SERVER_ERROR:
+            raise handled_error from e
+        await logger.aerror("op=update_flow flow_id=%s failed with %s", flow_id, type(e).__name__)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=FLOW_UPDATE_FAILED,
+        ) from e
 
 
 @router.put("/{flow_id}", response_model=FlowRead)
