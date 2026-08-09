@@ -2228,5 +2228,7 @@
   "inspectionPanel.close": "Close",
   "nodeToolbar.parameters": "Parameters",
   "canvasControls.minimizeAll": "Minimize all",
-  "canvasControls.expandAll": "Expand all"
+  "canvasControls.expandAll": "Expand all",
+  "canvasControls.autoArrange": "Auto arrange",
+  "canvasControls.arranging": "Arranging…"
 }
