@@ -21,6 +21,8 @@ class TestWebSearchComponent(ComponentTestBaseWithoutClient):
         return {
             "search_mode": "Web",
             "query": "OpenAI GPT-4",
+            "max_results": 5,
+            "max_content_length": 4000,
             "timeout": 5,
         }
 
@@ -123,6 +125,15 @@ class TestWebSearchComponent(ComponentTestBaseWithoutClient):
         expected = "Title Paragraph"
         assert component.clean_html(html) == expected
 
+    def test_web_search_limit_inputs(self):
+        """Web search should expose conservative advanced limits."""
+        inputs = {input_.name: input_ for input_ in WebSearchComponent.inputs}
+
+        assert inputs["max_results"].value == 5
+        assert inputs["max_results"].advanced is True
+        assert inputs["max_content_length"].value == 4000
+        assert inputs["max_content_length"].advanced is True
+
     def test_update_build_config_web_mode(self):
         """Test build config update for Web mode."""
         component = WebSearchComponent()
@@ -186,6 +197,98 @@ class TestWebSearchComponent(ComponentTestBaseWithoutClient):
         assert result.iloc[0]["title"] == "Test Title"
         assert result.iloc[0]["snippet"] == "Test snippet content"
         assert "Page content" in result.iloc[0]["content"]
+
+    @patch.object(WebSearchComponent, "_safe_get_url")
+    @patch("lfx.components.data_source.web_search.requests.get")
+    def test_perform_web_search_limits_results_and_content(self, mock_get, mock_safe_get):
+        """Web search should bound both fetched result count and returned page text."""
+        component = WebSearchComponent()
+        component.query = "test query"
+        component.max_results = 2
+        component.max_content_length = 12
+        component.timeout = 5
+
+        mock_response = Mock()
+        mock_response.text = """
+        <html>
+            <div class="result">
+                <a class="result__a" href="?uddg=https%3A%2F%2Fexample.com%2F1">First</a>
+            </div>
+            <div class="result">
+                <a class="result__a" href="?uddg=https%3A%2F%2Fexample.com%2F2">Second</a>
+            </div>
+            <div class="result">
+                <a class="result__a" href="?uddg=https%3A%2F%2Fexample.com%2F3">Third</a>
+            </div>
+        </html>
+        """
+        mock_response.headers = {"content-type": "text/html"}
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+
+        mock_page_response = Mock()
+        mock_page_response.text = "<html><body>abcdefghijklmnopqrstuvwxyz</body></html>"
+        mock_page_response.raise_for_status.return_value = None
+        mock_safe_get.return_value = mock_page_response
+
+        with patch("lfx.components.data_source.web_search.get_user_agent", return_value="test-agent"):
+            result = component.perform_web_search()
+
+        assert len(result) == 2
+        assert mock_safe_get.call_count == 2
+        assert result["content"].tolist() == ["abcdefghijkl", "abcdefghijkl"]
+
+    @pytest.mark.parametrize(
+        ("max_results", "max_content_length", "expected_result_count", "expected_content"),
+        [
+            (0, 12, 0, None),
+            (-1, 12, 0, None),
+            (1, 0, 1, ""),
+            (1, -1, 1, ""),
+        ],
+    )
+    @patch.object(WebSearchComponent, "_safe_get_url")
+    @patch("lfx.components.data_source.web_search.requests.get")
+    def test_perform_web_search_clamps_nonpositive_limits(
+        self,
+        mock_get,
+        mock_safe_get,
+        max_results,
+        max_content_length,
+        expected_result_count,
+        expected_content,
+    ):
+        """Web search should clamp zero and negative limits to zero."""
+        component = WebSearchComponent()
+        component.query = "test query"
+        component.max_results = max_results
+        component.max_content_length = max_content_length
+        component.timeout = 5
+
+        mock_response = Mock()
+        mock_response.text = """
+        <html>
+            <div class="result">
+                <a class="result__a" href="?uddg=https%3A%2F%2Fexample.com%2F1">First</a>
+            </div>
+        </html>
+        """
+        mock_response.headers = {"content-type": "text/html"}
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+
+        mock_page_response = Mock()
+        mock_page_response.text = "<html><body>abcdefghijklmnopqrstuvwxyz</body></html>"
+        mock_page_response.raise_for_status.return_value = None
+        mock_safe_get.return_value = mock_page_response
+
+        with patch("lfx.components.data_source.web_search.get_user_agent", return_value="test-agent"):
+            result = component.perform_web_search()
+
+        assert len(result) == expected_result_count
+        assert mock_safe_get.call_count == expected_result_count
+        if expected_content is not None:
+            assert result["content"].tolist() == [expected_content]
 
     @patch("lfx.components.data_source.web_search.requests.get")
     def test_perform_web_search_no_results(self, mock_get):
