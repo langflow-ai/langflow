@@ -12,12 +12,18 @@ import { cn } from "@/utils/utils";
 import type { InputProps } from "../../types";
 import HelperTextComponent from "../helperTextComponent";
 
+export type ConnectionOptionType = {
+  name: string;
+  icon?: string;
+  link?: string;
+};
+
 export type ConnectionComponentProps = {
   tooltip?: string;
   name: string;
   helperText?: string;
-  helperMetadata?: any;
-  options?: any[];
+  helperMetadata?: { icon: string | undefined; variant: string };
+  options?: ConnectionOptionType[];
   searchCategory?: string[];
   buttonMetadata?: { variant?: string; icon?: string };
   connectionLink?: string;
@@ -35,7 +41,7 @@ const ConnectionComponent = ({
   buttonMetadata = { variant: "destructive", icon: "unplug" },
   connectionLink = "",
   ...baseInputProps
-}: InputProps<any, ConnectionComponentProps>) => {
+}: InputProps<string, ConnectionComponentProps>) => {
   const {
     value,
     handleOnNewValue,
@@ -55,7 +61,7 @@ const ConnectionComponent = ({
   const [link, setLink] = useState("");
   const [isPolling, setIsPolling] = useState(false);
   const [open, setOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<any[]>([]);
+  const [selectedItem, setSelectedItem] = useState<ConnectionOptionType[]>([]);
 
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
   const pollingTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -157,7 +163,7 @@ const ConnectionComponent = ({
   };
 
   // Updates selected item and triggers parent component update
-  const handleSelection = (item: any) => {
+  const handleSelection = (item: ConnectionOptionType) => {
     setIsAuthenticated(false);
     setSelectedItem([{ name: item.name }]);
     setLink(item.link === "validated" ? "validated" : "loading");
