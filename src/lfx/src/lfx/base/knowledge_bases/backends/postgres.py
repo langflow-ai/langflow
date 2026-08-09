@@ -5,6 +5,15 @@ The backend is configured by one deployment-level
 Memory Base maps to a stable, owner-qualified collection so users may safely use
 the same display name.
 
+Storage layout
+--------------
+Every collection gets its **own** physical table, named after its
+owner-qualified ``collection_name`` (``lf_<sha256[:24]>``). The embedding column
+is typed to the collection's embedding dimension (``vector(N)``) so pgvector can
+build an HNSW index on it — a dimensionless ``vector`` column cannot be indexed
+and forces a sequential scan on every search. Because each table carries its own
+dimension, different KBs may use different embedding models side by side.
+
 The small async adapter below deliberately uses SQLAlchemy + ``pgvector``
 directly. This keeps the published ``pgvector`` extra satisfiable while
 preserving Langflow's security floor on the Python pgvector client; released
@@ -15,6 +24,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import uuid
 from typing import TYPE_CHECKING, Any
 
@@ -32,38 +42,81 @@ from lfx.log.logger import logger
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Sequence
 
+    from sqlalchemy.ext.asyncio import AsyncConnection
+
 
 # Single env var that configures pgVector for the whole deployment.
 DEFAULT_CONNECTION_STRING_VARIABLE = "PGVECTOR_CONNECTION_STRING"
-# Tables Langflow persists to using the conventional LangChain PGVector schema.
-# These are fixed schema identifiers (never user input) and
-# are written as literals in the SQL below so every user value stays a bound
-# parameter.
-_EMBEDDING_TABLE = "langchain_pg_embedding"
-_COLLECTION_TABLE = "langchain_pg_collection"
 
-# Prebuilt SQL for the native metric/lifecycle reads. Interpolating only the
-# fixed table-name constants above keeps the queries static (no S608 vector);
-# ``:name`` / ``:where`` are always passed as bound parameters.
-_COUNT_SQL = (
-    f"SELECT count(*) FROM {_EMBEDDING_TABLE} e "  # noqa: S608 — fixed table names, bound params
-    f"JOIN {_COLLECTION_TABLE} c ON e.collection_id = c.uuid WHERE c.name = :name"
+# Process-wide advisory-lock key serializing per-collection DDL (table + index
+# creation) so concurrent ingests don't race the bootstrap.
+_ADVISORY_LOCK_KEY = 1573678846307946496
+
+# Collection tables are always ``lf_`` + 24 lowercase hex chars derived from a
+# sha256 of the owner id + KB name (see ``collection_name``). The value is never
+# user input, but every interpolation of it into SQL is still guarded against
+# this exact shape so the S608 posture holds even if the derivation changes.
+_COLLECTION_NAME_RE = re.compile(r"^lf_[0-9a-f]{24}$")
+
+# pgvector can build an HNSW index on a ``vector`` column only up to this many
+# dimensions. Larger models (e.g. 3072-dim embeddings) still store and search
+# correctly — they just fall back to an exact (sequential) scan until halfvec
+# indexing is wired up. See ``_ensure_embedding_table``.
+_HNSW_MAX_DIM = 2000
+
+# Static, table-name-free SQL (name is a bound param, missing table -> 0).
+_STORAGE_SIZE_SQL = "SELECT COALESCE(pg_total_relation_size(to_regclass(:name)), 0)"
+
+# Separation of duties: the ``vector`` extension is privileged DDL on the
+# database catalog, so *the operator* provisions it — Langflow only reads and
+# writes. Every site that detects the extension's absence (``test_connection``,
+# first-ingest table setup, and — once wired — the deployment pre-flight probe)
+# surfaces this one message so the resolution is always the same, clear step.
+MISSING_EXTENSION_MESSAGE = (
+    "The pgvector 'vector' extension is not installed on this database. Ask your "
+    "database operator to enable it by running `CREATE EXTENSION vector;` as a "
+    "superuser. Langflow does not install database extensions — it only reads from "
+    "and writes to the database."
 )
-_DELETE_BY_SQL = (
-    f"DELETE FROM {_EMBEDDING_TABLE} "  # noqa: S608 — fixed table names, bound params
-    f"WHERE collection_id = (SELECT uuid FROM {_COLLECTION_TABLE} WHERE name = :name) "
-    "AND cmetadata @> CAST(:where AS jsonb)"
-)
-_DELETE_COLLECTION_SQL = f"DELETE FROM {_COLLECTION_TABLE} WHERE name = :name"  # noqa: S608 — fixed table name
-_STORAGE_SIZE_SQL = f"SELECT pg_total_relation_size('{_EMBEDDING_TABLE}')"
+# ``details.type`` tag the frontend keys off to render extension-specific hints.
+MISSING_EXTENSION_DETAILS_TYPE = "MissingExtension"
 
 
-def _iter_documents_sql(*, include_embeddings: bool) -> str:
-    columns = "e.document, e.cmetadata" + (", e.embedding" if include_embeddings else "")
+def _validate_table_name(name: str) -> str:
+    """Return ``name`` iff it matches the fixed collection-table shape.
+
+    Guards every place a collection table name is interpolated into SQL text.
+    """
+    if not _COLLECTION_NAME_RE.match(name):
+        msg = f"Refusing to build SQL for an unexpected collection table name: {name!r}."
+        raise ValueError(msg)
+    return name
+
+
+def _count_sql(table: str) -> str:
+    return f"SELECT count(*) FROM {_validate_table_name(table)}"  # noqa: S608 — table name validated above
+
+
+def _delete_by_sql(table: str) -> str:
     return (
-        f"SELECT {columns} FROM {_EMBEDDING_TABLE} e "  # noqa: S608 — fixed table names, bound params
-        f"JOIN {_COLLECTION_TABLE} c ON e.collection_id = c.uuid WHERE c.name = :name"
+        f"DELETE FROM {_validate_table_name(table)} "  # noqa: S608 — table name validated; :where is bound
+        "WHERE cmetadata @> CAST(:where AS jsonb)"
     )
+
+
+def _drop_table_sql(table: str) -> str:
+    return f'DROP TABLE IF EXISTS "{_validate_table_name(table)}"'
+
+
+def _iter_documents_sql(table: str, *, include_embeddings: bool) -> str:
+    columns = "document, cmetadata" + (", embedding" if include_embeddings else "")
+    return f"SELECT {columns} FROM {_validate_table_name(table)}"  # noqa: S608 — table name validated above
+
+
+def _parse_vector_dim(type_str: str | None) -> int | None:
+    """Extract N from a ``vector(N)`` Postgres type string."""
+    match = re.search(r"vector\((\d+)\)", type_str or "")
+    return int(match.group(1)) if match else None
 
 
 def _normalize_driver(url: str) -> str:
@@ -185,6 +238,11 @@ class PostgresBackend(BaseVectorStoreBackend):
         payload = f"{len(owner)}:{owner}{len(self.kb_name)}:{self.kb_name}"
         return f"lf_{hashlib.sha256(payload.encode()).hexdigest()[:24]}"
 
+    @property
+    def table_name(self) -> str:
+        """Physical embedding table for this collection (validated for SQL use)."""
+        return _validate_table_name(self.collection_name)
+
     def _ensure_async_engine(self):
         """Lazily build the sidecar async engine used for count/scan/delete/ping."""
         engine = getattr(self, "_pg_engine", None)
@@ -203,15 +261,10 @@ class PostgresBackend(BaseVectorStoreBackend):
         self._pg_engine = engine
         return engine
 
-    def _database_tables(self):
-        """Build the conventional PGVector SQLAlchemy table definitions lazily."""
-        tables = getattr(self, "_pg_tables", None)
-        if tables is not None:
-            return tables
+    def _require_pgvector(self) -> None:
+        """Raise a friendly RuntimeError when the optional pgvector extra is absent."""
         try:
-            from pgvector.sqlalchemy import Vector
-            from sqlalchemy import Column, ForeignKey, Index, MetaData, String, Table
-            from sqlalchemy.dialects.postgresql import JSON, JSONB, UUID
+            from pgvector.sqlalchemy import Vector  # noqa: F401
         except (ImportError, RuntimeError) as exc:
             msg = (
                 "PostgresBackend requires the 'pgvector' package. "
@@ -219,54 +272,121 @@ class PostgresBackend(BaseVectorStoreBackend):
             )
             raise RuntimeError(msg) from exc
 
+    def _embedding_table(self, dim: int | None = None):
+        """Build the per-collection embedding table definition.
+
+        ``dim`` types the vector column for DDL; read/write query construction
+        does not depend on it, so callers that only reference the column may
+        leave it ``None``.
+        """
+        self._require_pgvector()
+        from pgvector.sqlalchemy import Vector
+        from sqlalchemy import Column, MetaData, String, Table
+        from sqlalchemy.dialects.postgresql import JSONB
+
         metadata = MetaData()
-        collection = Table(
-            _COLLECTION_TABLE,
-            metadata,
-            Column("uuid", UUID(as_uuid=True), primary_key=True),
-            Column("name", String, nullable=False, unique=True),
-            Column("cmetadata", JSON),
-        )
-        embedding = Table(
-            _EMBEDDING_TABLE,
+        return Table(
+            self.table_name,
             metadata,
             Column("id", String, primary_key=True),
-            Column(
-                "collection_id",
-                UUID(as_uuid=True),
-                ForeignKey(f"{_COLLECTION_TABLE}.uuid", ondelete="CASCADE"),
-            ),
-            Column("embedding", Vector()),
+            Column("embedding", Vector(dim) if dim else Vector()),
             Column("document", String, nullable=True),
             Column("cmetadata", JSONB, nullable=True),
         )
-        Index(
-            "ix_cmetadata_gin",
-            embedding.c.cmetadata,
-            postgresql_using="gin",
-            postgresql_ops={"cmetadata": "jsonb_path_ops"},
-        )
-        self._pg_tables = (metadata, collection, embedding)
-        return self._pg_tables
 
-    async def _ensure_store_ready(self) -> None:
-        """Create the extension, shared tables, and this owner's collection."""
-        await self.ensure_ready()
-        metadata, collection, _embedding = self._database_tables()
+    async def _existing_embedding_dim(self, conn: AsyncConnection) -> int | None:
+        """Return the dimension of an existing collection table, or None if absent."""
         from sqlalchemy import text
-        from sqlalchemy.dialects.postgresql import insert
+
+        type_str = await conn.scalar(
+            text(
+                "SELECT format_type(a.atttypid, a.atttypmod) "
+                "FROM pg_attribute a JOIN pg_class c ON a.attrelid = c.oid "
+                "WHERE c.relname = :name AND a.attname = 'embedding' "
+                "AND a.attnum > 0 AND NOT a.attisdropped"
+            ),
+            {"name": self.table_name},
+        )
+        return _parse_vector_dim(type_str)
+
+    async def _ensure_embedding_table(self, dim: int) -> None:
+        """Create this collection's typed, indexed table (idempotent).
+
+        Runs under a process-wide advisory lock so concurrent first-ingests of
+        the same (or different) collections don't race the DDL. The HNSW and GIN
+        indexes are built at creation time while the table is empty, which is
+        cheap and avoids ``CREATE INDEX CONCURRENTLY``'s no-transaction rule.
+
+        The ``vector`` extension is **not** created here: provisioning it is the
+        database operator's responsibility (see ``MISSING_EXTENSION_MESSAGE``).
+        Its absence is checked up front and surfaced with a clear, actionable
+        message rather than failing obscurely on the ``vector(N)`` column type.
+        """
+        dim = int(dim)
+        if dim <= 0:
+            msg = f"Embedding dimension must be a positive integer, got {dim!r}."
+            raise ValueError(msg)
+        table = self.table_name
+        self._require_pgvector()
+        from sqlalchemy import text
 
         engine = self._ensure_async_engine()
         async with engine.begin() as conn:
-            await conn.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": 1573678846307946496})
-            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-            await conn.run_sync(metadata.create_all)
-            statement = (
-                insert(collection)
-                .values(uuid=uuid.uuid4(), name=self.collection_name, cmetadata={})
-                .on_conflict_do_nothing(index_elements=[collection.c.name])
+            await conn.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": _ADVISORY_LOCK_KEY})
+            # Operator owns the extension; Langflow verifies, never creates it.
+            if not await self._vector_extension_installed(conn):
+                raise ValueError(MISSING_EXTENSION_MESSAGE)
+            await conn.execute(
+                text(
+                    f'CREATE TABLE IF NOT EXISTS "{table}" ('
+                    "id VARCHAR PRIMARY KEY, "
+                    f"embedding vector({dim}), "
+                    "document VARCHAR, "
+                    "cmetadata JSONB)"
+                )
             )
-            await conn.execute(statement)
+            # ``CREATE TABLE IF NOT EXISTS`` never alters an existing table, so a
+            # model whose dimension differs from the one this KB was created with
+            # would fail obscurely on INSERT. Surface it clearly instead.
+            existing_dim = await self._existing_embedding_dim(conn)
+            if existing_dim is not None and existing_dim != dim:
+                msg = (
+                    f"Knowledge base '{self.kb_name}' was created with {existing_dim}-dimensional embeddings, "
+                    f"but the current embedding model produces {dim}. Recreate the knowledge base or restore the "
+                    "original embedding model."
+                )
+                raise ValueError(msg)
+            await conn.execute(
+                text(
+                    f'CREATE INDEX IF NOT EXISTS "{table}_cmeta_gin" ON "{table}" USING gin (cmetadata jsonb_path_ops)'
+                )
+            )
+            if dim <= _HNSW_MAX_DIM:
+                await conn.execute(
+                    text(
+                        f'CREATE INDEX IF NOT EXISTS "{table}_hnsw" ON "{table}" '
+                        "USING hnsw (embedding vector_cosine_ops)"
+                    )
+                )
+            else:
+                await logger.awarning(
+                    "pgvector cannot HNSW-index %d-dimensional embeddings (max %d) for %s; "
+                    "similarity search will use an exact scan.",
+                    dim,
+                    _HNSW_MAX_DIM,
+                    self.kb_name,
+                )
+
+    async def _table_exists(self, conn: AsyncConnection) -> bool:
+        from sqlalchemy import text
+
+        return (await conn.scalar(text("SELECT to_regclass(:name)"), {"name": self.table_name})) is not None
+
+    async def _vector_extension_installed(self, conn: AsyncConnection) -> bool:
+        """Return True iff the pgvector ``vector`` extension exists on this database."""
+        from sqlalchemy import text
+
+        return bool(await conn.scalar(text("SELECT extversion FROM pg_extension WHERE extname = 'vector'")))
 
     # ---- the one required method ----------------------------------------
 
@@ -274,7 +394,7 @@ class PostgresBackend(BaseVectorStoreBackend):
         return _PostgresVectorStore(self)
 
     async def _add_documents(self, documents: list[Document], *, ids: Sequence[str] | None = None) -> list[str]:
-        await self._ensure_store_ready()
+        await self.ensure_ready()
         if self.embedding_function is None:
             msg = "PostgresBackend requires an embedding function to add documents."
             raise ValueError(msg)
@@ -282,9 +402,14 @@ class PostgresBackend(BaseVectorStoreBackend):
         if len(vectors) != len(documents):
             msg = "Embedding provider returned a different number of vectors than documents."
             raise ValueError(msg)
+        if not vectors:
+            return []
 
-        _metadata, collection, embedding = self._database_tables()
-        from sqlalchemy import select
+        # The embedding dimension is only knowable once we have real vectors, so
+        # the typed, indexed table is provisioned lazily on first write.
+        await self._ensure_embedding_table(len(vectors[0]))
+
+        embedding = self._embedding_table()
         from sqlalchemy.dialects.postgresql import insert
 
         document_ids = (
@@ -298,13 +423,9 @@ class PostgresBackend(BaseVectorStoreBackend):
 
         engine = self._ensure_async_engine()
         async with engine.begin() as conn:
-            collection_id = await conn.scalar(
-                select(collection.c.uuid).where(collection.c.name == self.collection_name)
-            )
             rows = [
                 {
                     "id": document_id,
-                    "collection_id": collection_id,
                     "embedding": vector,
                     "document": document.page_content,
                     "cmetadata": document.metadata,
@@ -315,7 +436,6 @@ class PostgresBackend(BaseVectorStoreBackend):
             statement = statement.on_conflict_do_update(
                 index_elements=[embedding.c.id],
                 set_={
-                    "collection_id": statement.excluded.collection_id,
                     "embedding": statement.excluded.embedding,
                     "document": statement.excluded.document,
                     "cmetadata": statement.excluded.cmetadata,
@@ -331,28 +451,26 @@ class PostgresBackend(BaseVectorStoreBackend):
         k: int,
         filter: dict[str, Any] | None = None,  # noqa: A002
     ) -> list[tuple[Document, float]]:
-        await self._ensure_store_ready()
+        await self.ensure_ready()
         if self.embedding_function is None:
             msg = "PostgresBackend requires an embedding function to search documents."
             raise ValueError(msg)
         query_vector = await self.embedding_function.aembed_query(query)
 
-        _metadata, collection, embedding = self._database_tables()
+        embedding = self._embedding_table(len(query_vector))
         from sqlalchemy import select
 
         distance = embedding.c.embedding.cosine_distance(query_vector).label("distance")
         statement = (
-            select(embedding.c.id, embedding.c.document, embedding.c.cmetadata, distance)
-            .join(collection, embedding.c.collection_id == collection.c.uuid)
-            .where(collection.c.name == self.collection_name)
-            .order_by(distance)
-            .limit(k)
+            select(embedding.c.id, embedding.c.document, embedding.c.cmetadata, distance).order_by(distance).limit(k)
         )
         if filter:
             statement = statement.where(embedding.c.cmetadata.contains(filter))
 
         engine = self._ensure_async_engine()
         async with engine.connect() as conn:
+            if not await self._table_exists(conn):
+                return []  # nothing ingested yet — no table to scan
             rows = (await conn.execute(statement)).all()
         return [
             (
@@ -375,9 +493,11 @@ class PostgresBackend(BaseVectorStoreBackend):
         engine = self._ensure_async_engine()
         try:
             async with engine.connect() as conn:
-                value = await conn.scalar(text(_COUNT_SQL), {"name": self.collection_name})
+                if not await self._table_exists(conn):
+                    return 0
+                value = await conn.scalar(text(_count_sql(self.table_name)))
             return int(value or 0)
-        except Exception as exc:  # noqa: BLE001 — fresh KB: tables may not exist yet
+        except Exception as exc:  # noqa: BLE001 — fresh KB: table may not exist yet
             await logger.awarning("Postgres count() failed for %s: %s", self.kb_name, exc)
             return 0
 
@@ -397,10 +517,12 @@ class PostgresBackend(BaseVectorStoreBackend):
         from sqlalchemy import text
 
         engine = self._ensure_async_engine()
-        query = _iter_documents_sql(include_embeddings=include_embeddings)
+        query = _iter_documents_sql(self.table_name, include_embeddings=include_embeddings)
         try:
             async with engine.connect() as conn:
-                result = await conn.stream(text(query), {"name": self.collection_name})
+                if not await self._table_exists(conn):
+                    return
+                result = await conn.stream(text(query))
                 batch: list[IngestedDocument] = []
                 async for row in result:
                     batch.append(
@@ -415,7 +537,7 @@ class PostgresBackend(BaseVectorStoreBackend):
                         batch = []
                 if batch:
                     yield batch
-        except Exception as exc:  # noqa: BLE001 — fresh KB: tables may not exist yet
+        except Exception as exc:  # noqa: BLE001 — fresh KB: table may not exist yet
             await logger.awarning("Postgres iter_documents failed for %s: %s", self.kb_name, exc)
 
     async def delete_by(self, where: dict[str, Any]) -> None:
@@ -428,10 +550,9 @@ class PostgresBackend(BaseVectorStoreBackend):
         engine = self._ensure_async_engine()
         try:
             async with engine.begin() as conn:
-                await conn.execute(
-                    text(_DELETE_BY_SQL),
-                    {"name": self.collection_name, "where": json.dumps(where)},
-                )
+                if not await self._table_exists(conn):
+                    return
+                await conn.execute(text(_delete_by_sql(self.table_name)), {"where": json.dumps(where)})
         except Exception as exc:
             await logger.awarning("Postgres delete_by failed for %s: %s", self.kb_name, exc)
             raise
@@ -443,7 +564,7 @@ class PostgresBackend(BaseVectorStoreBackend):
         engine = self._ensure_async_engine()
         try:
             async with engine.connect() as conn:  # whole-table approximation
-                value = await conn.scalar(text(_STORAGE_SIZE_SQL))
+                value = await conn.scalar(text(_STORAGE_SIZE_SQL), {"name": self.table_name})
             return int(value or 0)
         except Exception as exc:  # noqa: BLE001 — table may not exist before first write
             await logger.awarning("Postgres storage_size_bytes failed for %s: %s", self.kb_name, exc)
@@ -455,8 +576,8 @@ class PostgresBackend(BaseVectorStoreBackend):
 
         engine = self._ensure_async_engine()
         try:
-            async with engine.begin() as conn:  # FK cascade removes the embeddings
-                await conn.execute(text(_DELETE_COLLECTION_SQL), {"name": self.collection_name})
+            async with engine.begin() as conn:  # drops the table + its indexes
+                await conn.execute(text(_drop_table_sql(self.table_name)))
         except Exception as exc:
             await logger.awarning("Postgres delete_collection failed for %s: %s", self.kb_name, exc)
             raise
@@ -468,7 +589,7 @@ class PostgresBackend(BaseVectorStoreBackend):
         except ValueError as exc:
             return TestConnectionResult(ok=False, message=str(exc), details={"type": "ConfigError"})
         try:
-            self._database_tables()
+            self._require_pgvector()
             engine = self._ensure_async_engine()
         except Exception as exc:  # noqa: BLE001 — normalize optional dependency and engine setup failures
             message = str(exc) if isinstance(exc, RuntimeError) else "Postgres backend setup failed."
@@ -495,8 +616,8 @@ class PostgresBackend(BaseVectorStoreBackend):
         if not ext_version:
             return TestConnectionResult(
                 ok=False,
-                message="Connected, but the 'vector' (pgvector) extension is not installed on this database.",
-                details={"type": "MissingExtension"},
+                message=MISSING_EXTENSION_MESSAGE,
+                details={"type": MISSING_EXTENSION_DETAILS_TYPE},
             )
         return TestConnectionResult(
             ok=True,
@@ -513,4 +634,3 @@ class PostgresBackend(BaseVectorStoreBackend):
                 await logger.awarning("Postgres engine.dispose failed for %s: %s", self.kb_name, exc)
         self._pg_engine = None
         self._vector_store = None
-        self._pg_tables = None
