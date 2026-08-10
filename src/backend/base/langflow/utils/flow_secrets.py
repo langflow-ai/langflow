@@ -1,7 +1,10 @@
-"""Secret-scrubbing helpers for serialized flow data.
+"""Metadata-driven secret-scrubbing helpers for serialized flow data.
 
 This module is deliberately independent of the API and service layers so flow
 payloads can be scrubbed at any export boundary without importing FastAPI.
+The scrubber removes values identified by field metadata, secret-shaped names,
+and credential-bearing URL structure. It cannot prove that an arbitrary value
+stored in an otherwise ordinary field is not a secret.
 """
 
 from __future__ import annotations
@@ -21,10 +24,10 @@ _VARIABLE_REFERENCE_MAX_LENGTH = 256
 # rather than imported to keep this module free of runtime dependencies.
 _TABLE_LOAD_FROM_DB_FIELDS = "__load_from_db_fields"
 
-# Tokens issued by widely used credential providers, matched in the casing and
-# length each provider issues. Global-variable names are conventionally upper
-# snake case, so names such as ``HF_TOKEN`` or ``ASIA_REGION_KEY`` stay clear of
-# these patterns while the credentials themselves do not.
+# Defense-in-depth for several widely used credential formats, not an exhaustive
+# provider catalog. ``load_from_db`` is the required reference marker, while
+# this additional check rejects a matching free-form variable name rather than
+# risk packaging a raw credential from inconsistent metadata.
 _CREDENTIAL_VALUE_PATTERN = re.compile(
     r"""^(?:
         sk-[A-Za-z0-9_-]{8,}
@@ -127,9 +130,11 @@ def _is_variable_reference(value: object) -> bool:
 
     Variable names are freeform, so this check narrows the blast radius of a
     mislabelled field rather than eliminating it: a secret whose text is shaped
-    like an ordinary name is indistinguishable from a real reference here. The
-    authoritative signal is the ``load_from_db`` metadata itself, which the
-    editor keeps in step with whether a value is a name or a literal.
+    like an ordinary name is indistinguishable from a real reference here, and
+    a legitimate name shaped like a known credential is rejected fail-closed.
+    The primary signal is the ``load_from_db`` metadata, which the editor keeps
+    in step with whether a value is a name or a literal; these additional shape
+    checks deliberately fail closed when that metadata and the value disagree.
     """
     if not isinstance(value, str) or not value.strip():
         return False

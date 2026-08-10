@@ -50,14 +50,14 @@ def _session_with_flows(flows: list[Flow], *, repeats: int = 1) -> AsyncMock:
     results: list[MagicMock] = []
     for _ in range(repeats):
         revision_result = MagicMock()
-        revision_result.all.return_value = [(flow.id, flow.updated_at) for flow in ordered]
+        revision_result.all.return_value = [(flow.id, flow.user_id, flow.updated_at) for flow in ordered]
         results.append(revision_result)
         for page in pages:
             result = MagicMock()
             result.all.return_value = page
             results.append(result)
         final_revision_result = MagicMock()
-        final_revision_result.all.return_value = [(flow.id, flow.updated_at) for flow in ordered]
+        final_revision_result.all.return_value = [(flow.id, flow.user_id, flow.updated_at) for flow in ordered]
         results.append(final_revision_result)
     session = AsyncMock()
     session.exec.side_effect = results
@@ -239,9 +239,10 @@ async def test_build_project_artifact_rejects_missing_or_duplicate_flow_selectio
 
 
 @pytest.mark.asyncio
-async def test_build_project_artifact_uses_share_aware_project_fetch_and_owner_scoped_flows() -> None:
+async def test_build_project_artifact_includes_cross_author_flows_with_safe_permission_batches() -> None:
     actor_id = uuid4()
     owner_id = uuid4()
+    collaborator_id = uuid4()
     project_id = uuid4()
     workspace_id = uuid4()
     project = Folder(
@@ -250,16 +251,34 @@ async def test_build_project_artifact_uses_share_aware_project_fetch_and_owner_s
         user_id=owner_id,
         workspace_id=workspace_id,
     )
-    flow = _flow(owner_id=owner_id, project_id=project_id)
-    session = _session_with_flows([flow])
+    actor_flow = _flow(
+        flow_id=UUID("00000000-0000-0000-0000-000000000001"),
+        owner_id=actor_id,
+        project_id=project_id,
+        name="Actor flow",
+    )
+    owner_flow = _flow(
+        flow_id=UUID("00000000-0000-0000-0000-000000000002"),
+        owner_id=owner_id,
+        project_id=project_id,
+        name="Project owner flow",
+    )
+    collaborator_flow = _flow(
+        flow_id=UUID("00000000-0000-0000-0000-000000000003"),
+        owner_id=collaborator_id,
+        project_id=project_id,
+        name="Collaborator flow",
+    )
+    session = _session_with_flows([actor_flow, owner_flow, collaborator_flow])
     user = SimpleNamespace(id=actor_id, is_superuser=False)
 
-    _, load_project, ensure_project, ensure_flows = await _build_authorized(
+    artifact, load_project, ensure_project, ensure_flows = await _build_authorized(
         session=session,
         user=user,
         project=project,
     )
 
+    assert [flow.flow_id for flow in artifact.flows] == [actor_flow.id, owner_flow.id, collaborator_flow.id]
     assert load_project.await_args.kwargs["owner_id"] == actor_id
     ensure_project.assert_awaited_once()
     assert ensure_project.await_args.args[1].value == "read"
@@ -268,20 +287,30 @@ async def test_build_project_artifact_uses_share_aware_project_fetch_and_owner_s
         "project_user_id": owner_id,
         "workspace_id": workspace_id,
     }
-    ensure_flows.assert_awaited_once()
-    assert ensure_flows.await_args.args[1].value == "read"
-    assert ensure_flows.await_args.kwargs == {
-        "flow_ids": [flow.id],
-        "flow_user_id": owner_id,
+    assert ensure_flows.await_count == 2
+    actor_batch, non_owned_batch = ensure_flows.await_args_list
+    assert actor_batch.args[1].value == "read"
+    assert actor_batch.kwargs == {
+        "flow_ids": [actor_flow.id],
+        "flow_user_id": actor_id,
+        "workspace_id": workspace_id,
+        "folder_id": project_id,
+    }
+    assert non_owned_batch.args[1].value == "read"
+    assert non_owned_batch.kwargs == {
+        "flow_ids": [owner_flow.id, collaborator_flow.id],
+        "flow_user_id": None,
         "workspace_id": workspace_id,
         "folder_id": project_id,
     }
 
-    flow_query = session.exec.await_args_list[0].args[0]
-    compiled = str(flow_query.compile(compile_kwargs={"literal_binds": True}))
-    assert project_id.hex in compiled
-    assert owner_id.hex in compiled
-    assert actor_id.hex not in compiled
+    assert session.exec.await_count == 3
+    for flow_query_call in session.exec.await_args_list:
+        compiled = str(flow_query_call.args[0].compile(compile_kwargs={"literal_binds": True}))
+        assert project_id.hex in compiled
+        assert owner_id.hex not in compiled
+        assert collaborator_id.hex not in compiled
+        assert actor_id.hex not in compiled
 
 
 @pytest.mark.asyncio
@@ -767,11 +796,31 @@ async def test_build_project_artifact_fails_if_selected_flow_changes_before_page
     project = Folder(id=project_id, name="Changing", user_id=actor_id)
     flow = _flow(owner_id=actor_id, project_id=project_id)
     id_result = MagicMock()
-    id_result.all.return_value = [(flow.id, flow.updated_at)]
+    id_result.all.return_value = [(flow.id, flow.user_id, flow.updated_at)]
     missing_page = MagicMock()
     missing_page.all.return_value = []
     session = AsyncMock()
     session.exec.side_effect = [id_result, missing_page]
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    with pytest.raises(ProjectArtifactError, match="changed during packaging"):
+        await _build_authorized(session=session, user=user, project=project)
+
+
+@pytest.mark.asyncio
+async def test_build_project_artifact_fails_if_flow_owner_changes_before_page_snapshot() -> None:
+    actor_id = uuid4()
+    new_owner_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Changing owner", user_id=actor_id)
+    flow = _flow(owner_id=new_owner_id, project_id=project_id)
+
+    initial_revisions = MagicMock()
+    initial_revisions.all.return_value = [(flow.id, actor_id, flow.updated_at)]
+    page = MagicMock()
+    page.all.return_value = [flow]
+    session = AsyncMock()
+    session.exec.side_effect = [initial_revisions, page]
     user = SimpleNamespace(id=actor_id, is_superuser=False)
 
     with pytest.raises(ProjectArtifactError, match="changed during packaging"):
@@ -788,11 +837,33 @@ async def test_build_project_artifact_fails_if_loaded_flow_changes_before_final_
     assert initial_updated_at is not None
 
     initial_revisions = MagicMock()
-    initial_revisions.all.return_value = [(flow.id, initial_updated_at)]
+    initial_revisions.all.return_value = [(flow.id, flow.user_id, initial_updated_at)]
     page = MagicMock()
     page.all.return_value = [flow]
     final_revisions = MagicMock()
-    final_revisions.all.return_value = [(flow.id, initial_updated_at + timedelta(microseconds=1))]
+    final_revisions.all.return_value = [(flow.id, flow.user_id, initial_updated_at + timedelta(microseconds=1))]
+    session = AsyncMock()
+    session.exec.side_effect = [initial_revisions, page, final_revisions]
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    with pytest.raises(ProjectArtifactError, match="changed during packaging"):
+        await _build_authorized(session=session, user=user, project=project)
+
+
+@pytest.mark.asyncio
+async def test_build_project_artifact_fails_if_flow_owner_changes_before_final_revision_check() -> None:
+    actor_id = uuid4()
+    new_owner_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Changing owner", user_id=actor_id)
+    flow = _flow(owner_id=actor_id, project_id=project_id)
+
+    initial_revisions = MagicMock()
+    initial_revisions.all.return_value = [(flow.id, actor_id, flow.updated_at)]
+    page = MagicMock()
+    page.all.return_value = [flow]
+    final_revisions = MagicMock()
+    final_revisions.all.return_value = [(flow.id, new_owner_id, flow.updated_at)]
     session = AsyncMock()
     session.exec.side_effect = [initial_revisions, page, final_revisions]
     user = SimpleNamespace(id=actor_id, is_superuser=False)

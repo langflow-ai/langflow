@@ -419,12 +419,15 @@ async def build_project_artifact(
     flow_ids: Sequence[UUID] | None = None,
     limits: ProjectArtifactLimits | None = None,
 ) -> ProjectArtifact:
-    """Package selected readable flows, or every current flow by default.
+    """Package selected readable flows, or every flow assigned to the project.
 
     The project lookup widens beyond the caller's owner namespace only when the
     registered authorization service explicitly supports cross-user fetch. Flow
-    rows are always loaded from the resolved project's owner namespace, and the
-    batched read guard must allow every flow before any archive is constructed.
+    membership is determined by project folder regardless of author. Read checks
+    are split into an actor-owned batch and a non-owned batch so the owner override
+    is never applied to another author's flow, and every check must pass before
+    any archive is constructed. Flow authorship and revision are revalidated
+    while packaging so either kind of concurrent change fails consistently.
     """
     selected_flow_ids: tuple[UUID, ...] | None = None
     if flow_ids is not None:
@@ -460,8 +463,7 @@ async def build_project_artifact(
     if selected_flow_ids is not None and len(selected_flow_ids) > effective_limits.max_flow_count:
         msg = f"selected flow count {len(selected_flow_ids)} exceeds the {effective_limits.max_flow_count}-flow limit"
         raise ProjectArtifactLimitError(msg)
-    owner_filter = Flow.user_id.is_(None) if project.user_id is None else Flow.user_id == project.user_id
-    revision_statement = select(Flow.id, Flow.updated_at).where(Flow.folder_id == project_id, owner_filter)
+    revision_statement = select(Flow.id, Flow.user_id, Flow.updated_at).where(Flow.folder_id == project_id)
     if selected_flow_ids is not None:
         revision_statement = revision_statement.where(col(Flow.id).in_(selected_flow_ids))
     revision_rows = list(
@@ -478,16 +480,27 @@ async def build_project_artifact(
         raise ProjectArtifactLimitError(msg)
 
     ordered_revisions = tuple(sorted(revision_rows, key=lambda revision: str(revision[0])))
-    ordered_flow_ids = tuple(flow_id for flow_id, _updated_at in ordered_revisions)
-    initial_revisions = dict(ordered_revisions)
-    await ensure_flows_permission(
-        user,
-        FlowAction.READ,
-        flow_ids=list(ordered_flow_ids),
-        flow_user_id=project.user_id,
-        workspace_id=project.workspace_id,
-        folder_id=project_id,
-    )
+    ordered_flow_ids = tuple(flow_id for flow_id, _flow_user_id, _updated_at in ordered_revisions)
+    initial_revisions = {flow_id: (flow_user_id, updated_at) for flow_id, flow_user_id, updated_at in ordered_revisions}
+    actor_owned_flow_ids = [
+        flow_id for flow_id, flow_user_id, _updated_at in ordered_revisions if flow_user_id == user.id
+    ]
+    non_owned_flow_ids = [
+        flow_id for flow_id, flow_user_id, _updated_at in ordered_revisions if flow_user_id != user.id
+    ]
+    for permission_flow_ids, flow_user_id in (
+        (actor_owned_flow_ids, user.id),
+        (non_owned_flow_ids, None),
+    ):
+        if permission_flow_ids:
+            await ensure_flows_permission(
+                user,
+                FlowAction.READ,
+                flow_ids=permission_flow_ids,
+                flow_user_id=flow_user_id,
+                workspace_id=project.workspace_id,
+                folder_id=project_id,
+            )
 
     snapshots: list[_FlowSnapshot] = []
     estimated_bytes = 0
@@ -501,15 +514,14 @@ async def build_project_artifact(
                     .where(
                         col(Flow.id).in_(page_ids),
                         Flow.folder_id == project_id,
-                        owner_filter,
                     )
                     .order_by(col(Flow.id))
                 )
             ).all()
         )
         ordered_rows = tuple(sorted(rows, key=lambda flow: str(flow.id)))
-        expected_page_revisions = tuple((flow_id, initial_revisions[flow_id]) for flow_id in page_ids)
-        if tuple((flow.id, flow.updated_at) for flow in ordered_rows) != expected_page_revisions:
+        expected_page_revisions = tuple((flow_id, *initial_revisions[flow_id]) for flow_id in page_ids)
+        if tuple((flow.id, flow.user_id, flow.updated_at) for flow in ordered_rows) != expected_page_revisions:
             msg = "project flows changed during packaging"
             raise ProjectArtifactError(msg)
 
@@ -534,7 +546,7 @@ async def build_project_artifact(
         estimated_bytes += batch.estimated_bytes
         item_count += batch.item_count
 
-    final_revision_statement = select(Flow.id, Flow.updated_at).where(Flow.folder_id == project_id, owner_filter)
+    final_revision_statement = select(Flow.id, Flow.user_id, Flow.updated_at).where(Flow.folder_id == project_id)
     if selected_flow_ids is not None:
         final_revision_statement = final_revision_statement.where(col(Flow.id).in_(selected_flow_ids))
     final_revisions = tuple(
