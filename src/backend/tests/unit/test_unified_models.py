@@ -1251,6 +1251,32 @@ def test_policy_refresh_clears_hidden_provider_fields_before_applying_allowed_de
     mock_apply.assert_called_once_with(build_config, "OpenAI")
 
 
+def test_initial_provider_default_preserves_directly_edited_provider_field():
+    component = _make_mock_component()
+    openai = [{"name": "gpt-test", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(value=""),
+        "api_key": {
+            "show": True,
+            "required": True,
+            "value": "sk-new",  # pragma: allowlist secret
+            "load_from_db": False,
+        },
+    }
+
+    result = handle_model_input_update(
+        component,
+        build_config,
+        field_value="sk-new",  # pragma: allowlist secret
+        field_name="api_key",
+        get_options_func=lambda user_id=None: openai,  # noqa: ARG005
+    )
+
+    assert result["model"]["value"] == openai
+    assert result["api_key"]["value"] == "sk-new"  # pragma: allowlist secret
+    assert result["api_key"]["load_from_db"] is False
+
+
 def test_api_key_refresh_preserves_edit_when_default_provider_is_auto_selected():
     component = _make_mock_component()
     openai = [{"name": "gpt-test", "provider": "OpenAI", "metadata": {}}]
@@ -1260,8 +1286,8 @@ def test_api_key_refresh_preserves_edit_when_default_provider_is_auto_selected()
             "show": True,
             "required": True,
             "value": "sk-direct-edit",
-            # configure_component currently leaves SecretStrInput's default
-            # database-loading state in place when assigning a literal.
+            # Callers outside the MCP path may leave SecretStrInput's default
+            # database-loading state in place while assigning a literal.
             "load_from_db": True,
         },
         "project_id": {
