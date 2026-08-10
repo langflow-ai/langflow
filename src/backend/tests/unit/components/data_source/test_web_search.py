@@ -425,6 +425,165 @@ class TestWebSearchComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, DataFrame)
         assert "Blocked by SSRF protection" in result.iloc[0]["content"]
 
+    @staticmethod
+    def _serp_html(result_count: int) -> str:
+        blocks = "".join(
+            f'<div class="result">'
+            f'<a class="result__a" href="?uddg=https%3A%2F%2Fexample.com%2F{i}">Title {i}</a>'
+            f'<a class="result__snippet">Snippet {i}</a>'
+            f"</div>"
+            for i in range(result_count)
+        )
+        return f"<html>{blocks}</html>"
+
+    @staticmethod
+    def _serp_response(result_count: int) -> Mock:
+        response = Mock()
+        response.text = TestWebSearchComponent._serp_html(result_count)
+        response.headers = {"content-type": "text/html"}
+        response.raise_for_status.return_value = None
+        return response
+
+    @staticmethod
+    def _page_response(body_length: int) -> Mock:
+        response = Mock()
+        response.text = f"<html><body>{'a' * body_length}</body></html>"
+        response.raise_for_status.return_value = None
+        return response
+
+    @patch.object(WebSearchComponent, "_safe_get_url")
+    @patch("lfx.components.data_source.web_search.requests.get")
+    def test_should_cap_web_results_when_max_results_is_set(self, mock_get, mock_safe_get):
+        """Regression (LE-2164): the scrape loop must stop at max_results."""
+        component = WebSearchComponent()
+        component.query = "test query"
+        component.timeout = 5
+        component.max_results = 3
+
+        mock_get.return_value = self._serp_response(result_count=12)
+        mock_safe_get.return_value = self._page_response(body_length=50)
+
+        result = component.perform_web_search()
+
+        assert len(result) == 3
+        assert mock_safe_get.call_count == 3
+
+    @patch.object(WebSearchComponent, "_safe_get_url")
+    @patch("lfx.components.data_source.web_search.requests.get")
+    def test_should_truncate_content_when_max_content_length_is_set(self, mock_get, mock_safe_get):
+        """Regression (LE-2164): scraped page text must never exceed max_content_length."""
+        component = WebSearchComponent()
+        component.query = "test query"
+        component.timeout = 5
+        component.max_content_length = 500
+
+        mock_get.return_value = self._serp_response(result_count=1)
+        mock_safe_get.return_value = self._page_response(body_length=40_000)
+
+        result = component.perform_web_search()
+
+        content = result.iloc[0]["content"]
+        assert len(content) <= 500
+        assert content.endswith("... [truncated]")
+
+    @patch.object(WebSearchComponent, "_safe_get_url")
+    @patch("lfx.components.data_source.web_search.requests.get")
+    def test_should_bound_payload_when_limits_are_absent(self, mock_get, mock_safe_get):
+        """Saved flows frozen before LE-2164 carry no limit fields; defaults must still bound them."""
+        component = WebSearchComponent()
+        component.query = "Sample Slide Show"
+        component.timeout = 5
+
+        mock_get.return_value = self._serp_response(result_count=10)
+        mock_safe_get.return_value = self._page_response(body_length=40_755)
+
+        result = component.perform_web_search()
+
+        total_chars = sum(len(str(value)) for row in result.to_dict(orient="records") for value in row.values())
+        assert len(result) == 5
+        assert all(len(row["content"]) <= 2000 for row in result.to_dict(orient="records"))
+        assert total_chars < 20_000
+
+    @patch.object(WebSearchComponent, "_safe_get_url")
+    @patch("lfx.components.data_source.web_search.requests.get")
+    def test_should_keep_full_payload_when_limits_are_disabled(self, mock_get, mock_safe_get):
+        """Zero is the documented opt-out for both limits."""
+        component = WebSearchComponent()
+        component.query = "test query"
+        component.timeout = 5
+        component.max_results = 0
+        component.max_content_length = 0
+
+        mock_get.return_value = self._serp_response(result_count=12)
+        mock_safe_get.return_value = self._page_response(body_length=10_000)
+
+        result = component.perform_web_search()
+
+        assert len(result) == 12
+        assert len(result.iloc[0]["content"]) == 10_000
+
+    @patch("lfx.components.data_source.web_search.requests.get")
+    def test_should_cap_news_results_when_max_results_is_set(self, mock_get):
+        """Regression (LE-2164): News mode also feeds the agent context and must be bounded."""
+        component = WebSearchComponent()
+        component.query = "test news"
+        component.timeout = 5
+        component.max_results = 4
+
+        items = "".join(
+            f"<item><title>News {i}</title><link>https://news.example.com/{i}</link>"
+            f"<pubDate>Mon, 01 Jan 2024 00:00:00 GMT</pubDate><description>Body {i}</description></item>"
+            for i in range(30)
+        )
+        mock_response = Mock()
+        mock_response.content = f'<?xml version="1.0" encoding="UTF-8"?><rss><channel>{items}</channel></rss>'.encode()
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+
+        result = component.perform_news_search()
+
+        assert len(result) == 4
+
+    @patch.object(WebSearchComponent, "_safe_get_url")
+    def test_should_cap_rss_items_when_max_results_is_set(self, mock_get):
+        """Regression (LE-2164): RSS mode must honour the same cap."""
+        component = WebSearchComponent()
+        component.query = "https://example.com/feed.rss"
+        component.timeout = 5
+        component.max_results = 2
+
+        items = "".join(
+            f"<item><title>Item {i}</title><link>https://example.com/{i}</link>"
+            f"<pubDate>Mon, 01 Jan 2024 00:00:00 GMT</pubDate><description>Body {i}</description></item>"
+            for i in range(10)
+        )
+        mock_response = Mock()
+        mock_response.content = f'<?xml version="1.0" encoding="UTF-8"?><rss><channel>{items}</channel></rss>'.encode()
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+
+        result = component.perform_rss_read()
+
+        assert len(result) == 2
+
+    @patch.object(WebSearchComponent, "_safe_get_url")
+    @patch("lfx.components.data_source.web_search.requests.get")
+    def test_should_fall_back_to_defaults_when_limits_are_invalid(self, mock_get, mock_safe_get):
+        """Tool-mode callers can pass strings/None; invalid limits must not crash the search."""
+        component = WebSearchComponent()
+        component.query = "test query"
+        component.timeout = 5
+        component.max_results = "not-a-number"
+        component.max_content_length = None
+
+        mock_get.return_value = self._serp_response(result_count=12)
+        mock_safe_get.return_value = self._page_response(body_length=40_000)
+
+        result = component.perform_web_search()
+
+        assert len(result) == 5
+        assert len(result.iloc[0]["content"]) <= 2000
+
     @patch.object(WebSearchComponent, "perform_web_search")
     def test_perform_search_web_mode(self, mock_web_search):
         """Test perform_search routes to web search in Web mode."""

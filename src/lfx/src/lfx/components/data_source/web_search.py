@@ -20,6 +20,10 @@ from lfx.utils.request_utils import get_user_agent
 from lfx.utils.ssrf_protection import SSRFProtectionError, is_ssrf_protection_enabled, validate_and_resolve_url
 from lfx.utils.ssrf_transport import create_ssrf_protected_sync_client
 
+DEFAULT_MAX_RESULTS = 5
+DEFAULT_MAX_CONTENT_LENGTH = 2000
+TRUNCATION_SUFFIX = "... [truncated]"
+
 
 class WebSearchComponent(Component):
     display_name = "Web Search"
@@ -99,6 +103,25 @@ class WebSearchComponent(Component):
             required=False,
             advanced=True,
         ),
+        IntInput(
+            name="max_results",
+            display_name="Max Results",
+            info="Maximum number of results to return. Set to 0 to return every result.",
+            value=DEFAULT_MAX_RESULTS,
+            required=False,
+            advanced=True,
+        ),
+        IntInput(
+            name="max_content_length",
+            display_name="Max Content Length",
+            info=(
+                "Maximum number of characters kept from each scraped page (Web mode). "
+                "Set to 0 to keep the full page text."
+            ),
+            value=DEFAULT_MAX_CONTENT_LENGTH,
+            required=False,
+            advanced=True,
+        ),
     ]
 
     outputs = [Output(name="results", display_name="Results", method="perform_search")]
@@ -174,6 +197,28 @@ class WebSearchComponent(Component):
         """Remove HTML tags from text."""
         return BeautifulSoup(html_string, "html.parser").get_text(separator=" ", strip=True)
 
+    def _get_limit(self, name: str, default: int) -> int | None:
+        """Resolve a size limit, returning None when the user opted out with a non-positive value.
+
+        Flows saved before these inputs existed carry no value at all, so the default has to apply.
+        """
+        raw = getattr(self, name, None)
+        if raw is None or raw == "":
+            raw = default
+        try:
+            limit = int(raw)
+        except (TypeError, ValueError):
+            limit = default
+        return limit if limit > 0 else None
+
+    def _truncate_content(self, content: str, limit: int | None) -> str:
+        """Bound a scraped page so a single result cannot flood the caller's context window."""
+        if limit is None or len(content) <= limit:
+            return content
+        if limit <= len(TRUNCATION_SUFFIX):
+            return content[:limit]
+        return content[: limit - len(TRUNCATION_SUFFIX)] + TRUNCATION_SUFFIX
+
     def perform_web_search(self) -> DataFrame:
         """Perform DuckDuckGo web search."""
         query = self._sanitize_query(self.query)
@@ -200,8 +245,12 @@ class WebSearchComponent(Component):
 
         soup = BeautifulSoup(response.text, "html.parser")
         results = []
+        max_results = self._get_limit("max_results", DEFAULT_MAX_RESULTS)
+        max_content_length = self._get_limit("max_content_length", DEFAULT_MAX_CONTENT_LENGTH)
 
         for result in soup.select("div.result"):
+            if max_results is not None and len(results) >= max_results:
+                break
             title_tag = result.select_one("a.result__a")
             snippet_tag = result.select_one("a.result__snippet")
             if title_tag:
@@ -227,7 +276,7 @@ class WebSearchComponent(Component):
                         "title": title_tag.get_text(strip=True),
                         "link": final_url,
                         "snippet": snippet_tag.get_text(strip=True) if snippet_tag else "",
-                        "content": content,
+                        "content": self._truncate_content(content, max_content_length),
                     }
                 )
 
@@ -282,7 +331,10 @@ class WebSearchComponent(Component):
             return DataFrame(pd.DataFrame([{"title": "No articles found", "link": "", "published": "", "summary": ""}]))
 
         articles = []
+        max_results = self._get_limit("max_results", DEFAULT_MAX_RESULTS)
         for item in items:
+            if max_results is not None and len(articles) >= max_results:
+                break
             try:
                 title = self.clean_html(item.title.text if item.title else "")
                 link = item.link.text if item.link else ""
@@ -323,6 +375,7 @@ class WebSearchComponent(Component):
             self.status = f"Failed to fetch RSS: {e}"
             return DataFrame(pd.DataFrame([{"title": "Error", "link": "", "published": "", "summary": str(e)}]))
 
+        max_results = self._get_limit("max_results", DEFAULT_MAX_RESULTS)
         articles = [
             {
                 "title": item.title.text if item.title else "",
@@ -330,7 +383,7 @@ class WebSearchComponent(Component):
                 "published": item.pubDate.text if item.pubDate else "",
                 "summary": item.description.text if item.description else "",
             }
-            for item in items
+            for item in (items if max_results is None else items[:max_results])
         ]
 
         # Ensure DataFrame has correct columns even if empty
