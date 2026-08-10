@@ -54,7 +54,13 @@
     "node": "22.22.0"
   },
   "overrides": {
-    "brace-expansion": "^5.0.5",
+    "brace-expansion": "^5.0.9",
+    "ip-address": "^10.3.1",
+    "undici": "^7.29.0",
+    "serialize-javascript": "^7.0.5",
+    "nanoid": "^3.3.17",
+    "dompurify": "^3.4.13",
+    "js-yaml": "^4.3.1",
     "picomatch": "^4.0.4",
     "lodash": "4.17.21",
     "fast-xml-parser": "4.5.4",
@@ -69,6 +75,9 @@
     },
     "json-refs": {
       "lodash": "4.17.21"
+    },
+    "gray-matter": {
+      "js-yaml": "^3.15.1"
     }
   }
 }
