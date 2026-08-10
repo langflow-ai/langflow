@@ -1232,13 +1232,18 @@ async def test_jsonrpc_flag_off_returns_404(client: AsyncClient, active_user, ec
 
 @pytest.mark.usefixtures("a2a_flag_on")
 async def test_jsonrpc_non_agent_or_disabled_returns_404(client: AsyncClient, active_user, echo_flow_data):
-    """Workflow-typed and a2a-disabled flows 404 on the JSON-RPC route, like the card route."""
+    """Unknown and existing private flows have an identical JSON-RPC transport-level 404."""
     workflow_id = await _create_flow(active_user.id, data=echo_flow_data, flow_type=FlowType.WORKFLOW)
     disabled_id = await _create_flow(active_user.id, data=echo_flow_data, a2a_enabled=False)
 
-    assert (await _jsonrpc(client, workflow_id, "message/send", _text_message("hi"))).status_code == 404
-    assert (await _jsonrpc(client, disabled_id, "message/send", _text_message("hi"))).status_code == 404
-    assert (await _jsonrpc(client, uuid.uuid4(), "message/send", _text_message("hi"))).status_code == 404
+    responses = [
+        await _jsonrpc(client, workflow_id, "message/send", _text_message("hi")),
+        await _jsonrpc(client, disabled_id, "message/send", _text_message("hi")),
+        await _jsonrpc(client, uuid.uuid4(), "message/send", _text_message("hi")),
+    ]
+
+    assert [response.status_code for response in responses] == [404, 404, 404]
+    assert [response.json() for response in responses] == [{"detail": "Not Found"}] * 3
 
 
 # --- multi-turn / contextId ------------------------------------------------

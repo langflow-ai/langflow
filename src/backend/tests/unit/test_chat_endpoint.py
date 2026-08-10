@@ -2,6 +2,8 @@ import asyncio
 import contextlib
 import json
 import uuid
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from uuid import UUID
 
 import pytest
@@ -1655,6 +1657,83 @@ async def test_job_queue_service_cleanup_removes_public_registration():
 
     # Why: if cleanup_job ever drops the discard call, is_public_job still returns True here
     assert svc.is_public_job(job_id) is False
+
+
+@pytest.mark.security
+async def test_public_events_failure_has_fixed_wire_detail_and_logs_original(client, monkeypatch):
+    """An internal public-events failure is logged server-side but never reflected to an anonymous caller."""
+    import langflow.api.v1.chat as chat_module
+    from fastapi import HTTPException
+    from langflow.services.deps import get_queue_service
+
+    job_id = str(uuid.uuid4())
+    secret_detail = "redis backend failed with credential=owner-secret"  # noqa: S105  # pragma: allowlist secret
+    queue_service = get_queue_service()
+    await queue_service.register_public_job(job_id)
+    log_error = AsyncMock()
+
+    async def fail_events(**_kwargs):
+        raise HTTPException(status_code=500, detail=secret_detail)
+
+    monkeypatch.setattr(chat_module, "get_flow_events_response", fail_events)
+    monkeypatch.setattr(chat_module, "logger", SimpleNamespace(aerror=log_error))
+    try:
+        response = await client.get(f"api/v1/build_public_tmp/{job_id}/events?event_delivery=polling")
+    finally:
+        queue_service._public_jobs.discard(job_id)
+
+    assert response.status_code == codes.INTERNAL_SERVER_ERROR
+    assert response.json() == {"detail": "Public flow events are unavailable."}
+    assert secret_detail not in response.text
+    assert secret_detail in str(log_error.await_args)
+
+
+@pytest.mark.security
+@pytest.mark.parametrize(
+    ("failure", "expected_status", "expected_detail", "log_method"),
+    [
+        (ValueError("owner queue id leaked"), codes.NOT_FOUND, "Job not found", "awarning"),
+        (
+            RuntimeError("redis credential owner-secret"),  # pragma: allowlist secret
+            codes.INTERNAL_SERVER_ERROR,
+            "Public flow cancellation failed.",
+            "aexception",
+        ),
+    ],
+)
+async def test_public_cancel_failure_has_fixed_wire_detail_and_logs_original(
+    client,
+    monkeypatch,
+    failure,
+    expected_status,
+    expected_detail,
+    log_method,
+):
+    """Public cancellation maps internal failures to fixed details while retaining diagnostics in logs."""
+    import langflow.api.v1.chat as chat_module
+    from langflow.services.deps import get_queue_service
+
+    job_id = str(uuid.uuid4())
+    queue_service = get_queue_service()
+    await queue_service.register_public_job(job_id)
+    log = AsyncMock()
+    logger = SimpleNamespace(awarning=AsyncMock(), aexception=AsyncMock())
+    setattr(logger, log_method, log)
+
+    async def fail_cancel(**_kwargs):
+        raise failure
+
+    monkeypatch.setattr(chat_module, "cancel_flow_build", fail_cancel)
+    monkeypatch.setattr(chat_module, "logger", logger)
+    try:
+        response = await client.post(f"api/v1/build_public_tmp/{job_id}/cancel")
+    finally:
+        queue_service._public_jobs.discard(job_id)
+
+    assert response.status_code == expected_status
+    assert response.json() == {"detail": expected_detail}
+    assert str(failure) not in response.text
+    assert str(failure) in str(log.await_args)
 
 
 @pytest.mark.benchmark
