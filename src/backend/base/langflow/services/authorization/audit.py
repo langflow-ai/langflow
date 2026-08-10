@@ -184,6 +184,7 @@ _audit_queue_loop: asyncio.AbstractEventLoop | None = None
 _audit_writer_task: asyncio.Task[None] | None = None
 _audit_inflight: tuple[_AuditEnvelope, ...] = ()
 _audit_accepting: bool = True
+_audit_capacity_waiters: set[asyncio.Future[None]] = set()
 _audit_dropped_count: int = 0
 _audit_last_drop_warn: float = 0.0
 _audit_submitted_count: int = 0
@@ -221,14 +222,62 @@ def _complete_failed(batch: list[_AuditEnvelope] | tuple[_AuditEnvelope, ...], c
     global _audit_failed_count, _audit_last_failure_code  # noqa: PLW0603
 
     safe_code = code[:64]
+    failed_any = False
     for envelope in batch:
         if envelope.terminal:
             continue
         envelope.terminal = True
+        failed_any = True
         _audit_failed_count += 1
         if envelope.ack is not None and not envelope.ack.done():
             envelope.ack.set_exception(AuditPersistenceError())
-    _audit_last_failure_code = safe_code
+    if failed_any:
+        _audit_last_failure_code = safe_code
+
+
+def _release_capacity_waiters() -> None:
+    """Wake blocked durable producers after the writer frees queue capacity."""
+    for waiter in tuple(_audit_capacity_waiters):
+        if not waiter.done():
+            waiter.set_result(None)
+
+
+def _fail_capacity_waiters(code: str) -> None:
+    """Give every producer blocked before admission a sanitized terminal error."""
+    global _audit_last_failure_code  # noqa: PLW0603
+
+    failed_any = False
+    for waiter in tuple(_audit_capacity_waiters):
+        if not waiter.done():
+            failed_any = True
+            waiter.set_exception(AuditPersistenceError())
+    if failed_any:
+        _audit_last_failure_code = code[:64]
+
+
+def _discard_closed_loop_pipeline() -> None:
+    """Drop unreachable state after its owning event loop has closed.
+
+    Futures owned by a closed loop cannot be completed safely. No caller can
+    still make progress on that loop, so account for accepted work as failed,
+    discard references, and let the next live loop build a fresh pipeline.
+    """
+    global _audit_accepting, _audit_failed_count, _audit_inflight  # noqa: PLW0603
+    global _audit_last_failure_code, _audit_queue, _audit_queue_loop, _audit_writer_task  # noqa: PLW0603
+
+    abandoned = sum(not envelope.terminal for envelope in _audit_inflight)
+    if _audit_queue is not None:
+        abandoned += _audit_queue.qsize()
+    if abandoned:
+        _audit_failed_count += abandoned
+        _audit_last_failure_code = "loop_replaced"
+    _audit_queue = None
+    _audit_queue_loop = None
+    _audit_writer_task = None
+    _audit_inflight = ()
+    _audit_accepting = False
+    _audit_capacity_waiters.clear()
+    _pending_audit_tasks.clear()
 
 
 def _fail_queued_entries(queue: asyncio.Queue[_AuditEnvelope], code: str) -> None:
@@ -256,6 +305,34 @@ def _audit_writer_finished(task: asyncio.Task[None]) -> None:
     _complete_failed(_audit_inflight, code)
     if _audit_queue is not None:
         _fail_queued_entries(_audit_queue, code)
+    _fail_capacity_waiters(code)
+
+
+async def _admit_durable(queue: asyncio.Queue[_AuditEnvelope], envelope: _AuditEnvelope) -> None:
+    """Atomically admit one durable entry or reject it when shutdown closes admission."""
+    global _audit_last_failure_code, _audit_submitted_count  # noqa: PLW0603
+
+    loop = asyncio.get_running_loop()
+    while True:
+        writer = _audit_writer_task
+        if not _audit_accepting or writer is None or writer.done():
+            _audit_last_failure_code = "writer_stopped"
+            raise AuditPersistenceError
+        try:
+            # There is no await between the admission check and put_nowait, so
+            # shutdown cannot interleave on this event loop and sweep too soon.
+            queue.put_nowait(envelope)
+        except asyncio.QueueFull:
+            waiter: asyncio.Future[None] = loop.create_future()
+            waiter.add_done_callback(_consume_ack_exception)
+            _audit_capacity_waiters.add(waiter)
+            try:
+                await waiter
+            finally:
+                _audit_capacity_waiters.discard(waiter)
+            continue
+        _audit_submitted_count += 1
+        return
 
 
 def _ensure_audit_writer_started() -> asyncio.Queue[_AuditEnvelope] | None:
@@ -271,6 +348,16 @@ def _ensure_audit_writer_started() -> asyncio.Queue[_AuditEnvelope] | None:
     except RuntimeError:
         return None
 
+    if _audit_queue_loop is not None and _audit_queue_loop is not loop:
+        if not _audit_queue_loop.is_closed():
+            # The module-level producer is intentionally single-loop. Refuse a
+            # concurrent second loop without mutating the live owner's state.
+            global _audit_last_failure_code  # noqa: PLW0603
+
+            _audit_last_failure_code = "loop_mismatch"
+            return None
+        _discard_closed_loop_pipeline()
+
     # A fresh event loop replaces the previous queue+writer. Without this,
     # a subsequent ``audit_decision`` call (e.g. in a new pytest test) would
     # ``put_nowait`` into a queue that no live task is consuming.
@@ -280,6 +367,7 @@ def _ensure_audit_writer_started() -> asyncio.Queue[_AuditEnvelope] | None:
         _audit_writer_task = None
         _audit_inflight = ()
         _audit_accepting = True
+        _audit_capacity_waiters.clear()
         _pending_audit_tasks.clear()
 
     if _audit_writer_task is None or _audit_writer_task.done():
@@ -316,6 +404,7 @@ async def _audit_writer_loop() -> None:
                 batch.append(queue.get_nowait())
         except asyncio.QueueEmpty:
             pass
+        _release_capacity_waiters()
 
         try:
             _audit_inflight = tuple(batch)
@@ -385,7 +474,21 @@ async def drain_pending_audit_writes(timeout: float = 5.0) -> None:
     """
     global _audit_accepting, _audit_writer_task  # noqa: PLW0603
 
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+    if _audit_queue_loop is not None and _audit_queue_loop is not loop:
+        if _audit_queue_loop.is_closed():
+            _discard_closed_loop_pipeline()
+        else:
+            global _audit_last_failure_code  # noqa: PLW0603
+
+            _audit_last_failure_code = "loop_mismatch"
+        return
+
     _audit_accepting = False
+    _fail_capacity_waiters("writer_stopped")
 
     queue = _audit_queue
     writer = _audit_writer_task
@@ -416,6 +519,7 @@ async def drain_pending_audit_writes(timeout: float = 5.0) -> None:
 
     _complete_failed(_audit_inflight, "writer_stopped")
     _fail_queued_entries(queue, "writer_stopped")
+    _fail_capacity_waiters("writer_stopped")
 
     _pending_audit_tasks.discard(writer)
     _audit_writer_task = None
@@ -474,8 +578,7 @@ async def audit_decision(
         # eventual failure to avoid an unhandled-future warning. ``shield``
         # below ensures cancellation does not cancel the persistence itself.
         ack.add_done_callback(_consume_ack_exception)
-        await queue.put(_AuditEnvelope(entry, ack))
-        _audit_submitted_count += 1
+        await _admit_durable(queue, _AuditEnvelope(entry, ack))
         await asyncio.shield(ack)
         return
 

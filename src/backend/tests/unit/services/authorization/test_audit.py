@@ -52,6 +52,7 @@ async def _reset_audit_pipeline() -> None:
     authz_audit._audit_writer_task = None
     authz_audit._audit_inflight = ()
     authz_audit._audit_accepting = True
+    authz_audit._audit_capacity_waiters.clear()
     authz_audit._audit_dropped_count = 0
     authz_audit._audit_last_drop_warn = 0.0
     authz_audit._audit_submitted_count = 0
