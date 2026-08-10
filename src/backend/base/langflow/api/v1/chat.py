@@ -41,6 +41,7 @@ from langflow.api.utils import (
     validate_public_files,
     verify_public_flow_and_get_user,
 )
+from langflow.api.utils.core import strip_secret_field_values
 from langflow.api.v1.schemas import (
     CancelFlowResponse,
     FlowDataRequest,
@@ -958,9 +959,13 @@ async def build_public_tmp(
                 validate_public_flow_no_code_execution(flow.data)
                 # Substitute the server's trusted code into every known component and
                 # reject unrecognized custom components, so anonymous visitors only ever
-                # run server code (opt out with allow_public_custom_components, which
-                # restores the prior DB-loaded build that honors allow_custom_components).
-                sanitized_public_data = await prepare_public_flow_build(flow.data)
+                # run server code. The explicit allow_public_custom_components opt-in
+                # preserves approved stored code, but the detached graph is still
+                # secret-scrubbed below before it reaches the executor.
+                prepared_public_data = await prepare_public_flow_build(flow.data)
+                sanitized_public_data = strip_secret_field_values(
+                    prepared_public_data if prepared_public_data is not None else flow.data
+                )
 
         # flow_id=new_flow_id for tracking/sessions/messages (virtual, per-user isolation).
         # source_flow_id=flow_id to load the actual flow data from the database.
@@ -969,10 +974,9 @@ async def build_public_tmp(
             source_flow_id=flow_id,
             background_tasks=background_tasks,
             inputs=inputs,
-            # Default path: build from server-sanitized data (trusted code substituted in,
-            # unknown custom components already rejected above). When None (opt-in mode or no
-            # flow data) the build falls back to loading the flow from the DB by source_flow_id.
-            # Either way the caller never supplies the data — it is derived from the stored flow.
+            # Build from a detached server-sanitized graph. The default path also
+            # substitutes trusted code; the explicit custom-component opt-in keeps
+            # approved code but still strips every persisted secret-bearing field.
             data=(
                 FlowDataRequest(
                     nodes=sanitized_public_data.get("nodes", []),

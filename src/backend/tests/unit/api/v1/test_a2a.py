@@ -1130,10 +1130,10 @@ async def test_resubscribe_to_working_task_without_local_producer_does_not_hang(
     from a2a.server.context import ServerCallContext
     from a2a.types import a2a_pb2 as pb
     from a2a.utils.errors import UnsupportedOperationError
-    from langflow.api.v1.a2a import _HANDLER, _TASK_STORE
+    from langflow.api.v1.a2a import _HANDLER, _TASK_STORE, PUBLIC_ANONYMOUS_ACTOR_ID
 
     task_id = uuid.uuid4().hex
-    ctx = ServerCallContext(state={"flow_id": str(uuid.uuid4())})
+    ctx = ServerCallContext(state={"flow_id": str(uuid.uuid4()), "admitted_user_id": str(PUBLIC_ANONYMOUS_ACTOR_ID)})
     await _TASK_STORE.save(
         pb.Task(id=task_id, context_id="c", status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_WORKING)), ctx
     )
@@ -1254,10 +1254,10 @@ async def _session_texts(session_id) -> set[str]:
     return {row.text for row in rows}
 
 
-def _derive_session(owner_id, flow_id, context_id) -> str | None:
+def _derive_session(principal_id, flow_id, context_id) -> str | None:
     """The internal chat session_id the A2A run derives from a client contextId.
 
-    Mirrors ``_run_flow`` exactly: the contextId is namespaced under a per-(owner, flow)
+    Mirrors ``_run_flow`` exactly: the contextId is namespaced under a per-(principal, flow)
     virtual id, and an over-bound composed key is hashed (never collapsed to the shared
     per-flow default), so stored messages never sit under the bare, client-controlled
     contextId.
@@ -1269,11 +1269,18 @@ def _derive_session(owner_id, flow_id, context_id) -> str | None:
 
     if not context_id:
         return None
-    namespace = str(compute_virtual_flow_id(owner_id, flow_id))
+    namespace = str(compute_virtual_flow_id(principal_id, flow_id))
     scoped = scope_session_to_namespace(context_id, namespace)
     if scoped and len(scoped) <= GLOBAL_KEY_MAX_LEN:
         return scoped
     return f"{namespace}:{hashlib.sha256(context_id.encode()).hexdigest()}"
+
+
+def _derive_public_session(flow_id, context_id) -> str | None:
+    """Derive the session used by an anonymous, direct-link A2A execution."""
+    from langflow.api.v1.a2a import PUBLIC_ANONYMOUS_ACTOR_ID
+
+    return _derive_session(PUBLIC_ANONYMOUS_ACTOR_ID, flow_id, context_id)
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
@@ -1296,7 +1303,7 @@ async def test_context_id_threads_into_flow_session(client: AsyncClient, active_
 
     # The run persists its output under the namespaced session, not the bare contextId
     # (and not the default str(flow.id) fallback).
-    scoped_texts = await _session_texts(_derive_session(active_user.id, flow_id, context_id))
+    scoped_texts = await _session_texts(_derive_public_session(flow_id, context_id))
     assert "hello a2a" in scoped_texts, "the run's messages were not stored under the namespaced session"
     assert await _session_texts(context_id) == set(), "messages must not be addressable by the bare client contextId"
 
@@ -1311,8 +1318,8 @@ async def test_distinct_context_ids_get_distinct_sessions(client: AsyncClient, a
     await _jsonrpc(client, flow_id, "message/send", _text_message("from a", context_id=ctx_a))
     await _jsonrpc(client, flow_id, "message/send", _text_message("from b", context_id=ctx_b))
 
-    a_texts = await _session_texts(_derive_session(active_user.id, flow_id, ctx_a))
-    b_texts = await _session_texts(_derive_session(active_user.id, flow_id, ctx_b))
+    a_texts = await _session_texts(_derive_public_session(flow_id, ctx_a))
+    b_texts = await _session_texts(_derive_public_session(flow_id, ctx_b))
 
     assert "from a" in a_texts
     assert "from b" in b_texts
@@ -1323,7 +1330,7 @@ async def test_distinct_context_ids_get_distinct_sessions(client: AsyncClient, a
 async def test_same_context_id_across_flows_does_not_share_session(client: AsyncClient, active_user, echo_flow_data):
     """The same contextId on two different flows does NOT share chat memory (cross-flow hijack fix).
 
-    The contextId is namespaced under a per-(owner, flow) virtual id, so an identical client
+    The contextId is namespaced under a per-(principal, flow) virtual id, so an identical client
     contextId resolves to a different session per flow. Multi-turn on the same flow with the same
     contextId still shares one session.
     """
@@ -1337,8 +1344,8 @@ async def test_same_context_id_across_flows_does_not_share_session(client: Async
     # One turn on flow_b reusing the same contextId must not bleed into flow_a's session.
     await _jsonrpc(client, flow_b, "message/send", _text_message("b turn 1", context_id=shared_ctx))
 
-    session_a = _derive_session(active_user.id, flow_a, shared_ctx)
-    session_b = _derive_session(active_user.id, flow_b, shared_ctx)
+    session_a = _derive_public_session(flow_a, shared_ctx)
+    session_b = _derive_public_session(flow_b, shared_ctx)
     assert session_a != session_b
 
     a_texts = await _session_texts(session_a)
@@ -1376,8 +1383,8 @@ async def test_oversized_context_ids_get_distinct_hashed_sessions(client: AsyncC
     assert result_a["result"]["status"]["state"] == "completed"
     assert result_a["result"]["contextId"] == huge_a  # protocol value preserved, just not used verbatim as session_id
 
-    session_a = _derive_session(active_user.id, flow_id, huge_a)
-    session_b = _derive_session(active_user.id, flow_id, huge_b)
+    session_a = _derive_public_session(flow_id, huge_a)
+    session_b = _derive_public_session(flow_id, huge_b)
 
     # Two different long contextIds get two different (bounded, hashed) sessions.
     assert session_a != session_b
@@ -2456,7 +2463,7 @@ async def test_task_scope_key_is_postgres_safe():
     from langflow.api.v1.a2a import _task_scope
 
     flow_id = uuid.uuid4().hex
-    key = _task_scope(ServerCallContext(state={"flow_id": flow_id}))
+    key = _task_scope(ServerCallContext(state={"flow_id": flow_id, "admitted_user_id": str(uuid.uuid4())}))
     assert "\x00" not in key
     assert flow_id in key
 

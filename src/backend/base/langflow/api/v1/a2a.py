@@ -67,6 +67,7 @@ from sqlalchemy import case, delete, false
 from sqlmodel import col, select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils.core import strip_secret_field_values
 from langflow.api.utils.flow_utils import compute_virtual_flow_id, scope_session_to_namespace
 from langflow.api.v1.a2a_executor import FlowAgentExecutor, ResumeConflictError
 from langflow.api.v1.a2a_utils import (
@@ -208,9 +209,8 @@ async def _prepare_a2a_execution_flow(flow: Flow, request_host: str | None = Non
         compatibility_grant=PublicGrantSource.A2A_AUTH_NONE,
     )
     validate_public_flow_no_code_execution(flow.data)
-    sanitized_data = await prepare_public_flow_build(flow.data)
-    if sanitized_data is None:
-        return flow
+    prepared_data = await prepare_public_flow_build(flow.data)
+    sanitized_data = strip_secret_field_values(prepared_data if prepared_data is not None else flow.data)
     return flow.model_copy(update={"data": sanitized_data}, deep=True)
 
 
@@ -253,9 +253,8 @@ async def _prepare_a2a_resume_checkpoint(
         compatibility_grant=PublicGrantSource.A2A_AUTH_NONE,
     )
     validate_public_flow_no_code_execution(checkpoint.flow_payload)
-    sanitized_data = await prepare_public_flow_build(checkpoint.flow_payload)
-    if sanitized_data is None:
-        return checkpoint
+    prepared_data = await prepare_public_flow_build(checkpoint.flow_payload)
+    sanitized_data = strip_secret_field_values(prepared_data if prepared_data is not None else checkpoint.flow_payload)
     return checkpoint.model_copy(update={"flow_payload": sanitized_data}, deep=True)
 
 
@@ -463,16 +462,28 @@ async def _resume_flow(
     )
 
 
-def _push_config_scope(context: ServerCallContext) -> str:
-    """Key push configs by (owner, flow) so flow B can't read/overwrite/delete flow A's.
+def _admitted_principal_scope(context: ServerCallContext) -> str:
+    """Return the immutable server-admitted principal for a mounted A2A request."""
+    state = getattr(context, "state", None) or {}
+    admitted_user_id = state.get("admitted_user_id")
+    if admitted_user_id is not None:
+        return str(admitted_user_id)
+    if state.get("flow_id"):
+        msg = "A2A request context is missing its admitted principal"
+        raise RuntimeError(msg)
+    # Protocol-store unit uses without a mounted flow retain the SDK's native
+    # owner resolver; real per-flow HTTP requests always take the branch above.
+    return resolve_user_scope(context)
 
-    The endpoint is anonymous, so ``resolve_user_scope`` is the same '' for every flow;
-    the per-request flow_id (carried in call-context state by ``_FlowContextBuilder``) is
-    the real discriminator. Mirrors the flow-ownership defense in ``_resume_flow``. Only
-    the user-callable set/get/list/delete paths are scoped; dispatch fans out by task_id
-    via ``get_info_for_dispatch`` and is unaffected.
+
+def _push_config_scope(context: ServerCallContext) -> str:
+    """Key push configs by (admitted principal, flow) across auth-mode transitions.
+
+    Both values come from server-authenticated call-context state. Only the
+    user-callable set/get/list/delete paths are scoped; dispatch fans out by
+    task_id via ``get_info_for_dispatch`` and is unaffected.
     """
-    return f"{resolve_user_scope(context)}:{context.state.get('flow_id', '')}"
+    return f"{_admitted_principal_scope(context)}:{context.state.get('flow_id', '')}"
 
 
 class _SafePushConfigStore(InMemoryPushNotificationConfigStore):
@@ -591,28 +602,26 @@ def _task_state(blob: dict[str, Any] | None) -> str | None:
 
 
 def _task_scope(context: ServerCallContext) -> str:
-    """Owner key for the durable task store, scoped to the flow.
+    """Principal key for the durable task store, scoped to the flow.
 
-    ``resolve_user_scope`` returns '' for every anonymous public caller, so without the flow it
-    keys all public flows' tasks together and a caller could read or cancel another flow's task by
-    id through a different flow's endpoint. Folding the path ``flow_id`` into the key makes such a
-    cross-flow lookup miss. Falls back to the plain owner scope when no flow_id is on the context.
+    Folding both the canonical path ``flow_id`` and immutable HTTP-gate principal
+    into the key prevents cross-flow and protected/public transition access. Falls
+    back to the SDK owner scope only for protocol-store use without a mounted flow.
 
     Delimited by ':' like ``_push_config_scope``: the flow_id prefix is a UUID (no ':'), so the key
     is unambiguous, and it avoids a NUL byte that Postgres text columns reject at write time.
     """
-    owner = resolve_user_scope(context)
+    owner = _admitted_principal_scope(context)
     flow_id = (getattr(context, "state", None) or {}).get("flow_id")
     return f"{flow_id}:{owner}" if flow_id else owner
 
 
 class DurableTaskStore(TaskStore):
-    """DB-backed A2A task store keyed by ``(task_id, owner)``.
+    """DB-backed A2A task store keyed by ``(task_id, admitted principal + flow)``.
 
     One short session per op, so tasks survive a restart and are shared across workers
-    (unlike the SDK in-memory store). Owner-scoped to match the SDK contract; ``owner``
-    is '' on the anonymous public endpoint. The whole proto Task is stored as one JSON
-    blob since the mounted surface only does point lookups by id.
+    (unlike the SDK in-memory store). The whole proto Task is stored as one JSON blob
+    since the mounted surface only does point lookups by id.
     """
 
     async def save(self, task: pb.Task, context: ServerCallContext) -> None:
