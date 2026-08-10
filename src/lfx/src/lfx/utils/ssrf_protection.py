@@ -22,7 +22,7 @@ import functools
 import ipaddress
 import re
 import socket
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlparse
 
 from lfx.logging import logger
 from lfx.services.deps import get_settings_service
@@ -368,6 +368,17 @@ def _validate_hostname_resolution(hostname: str) -> None:
         raise SSRFProtectionError(msg)
 
 
+def _validate_raw_url_authority(url: str) -> None:
+    """Reject authority forms that urllib.parse and HTTP clients interpret differently."""
+    # Requests/urllib3 treats a backslash in the authority as a path separator,
+    # while urllib.parse can treat the suffix as the hostname. Reject only the
+    # ambiguous authority form; Requests safely quotes backslashes after it.
+    raw_authority = re.split(r"[/#?]", url.partition("://")[2], maxsplit=1)[0]
+    if "\\" in raw_authority:
+        msg = "URL contains a backslash, which is not permitted"
+        raise SSRFProtectionError(msg)
+
+
 def validate_url_for_ssrf(url: str, *, warn_only: bool = False) -> None:
     """Validate a URL to prevent SSRF attacks.
 
@@ -398,6 +409,8 @@ def validate_url_for_ssrf(url: str, *, warn_only: bool = False) -> None:
         raise ValueError(msg) from e
 
     try:
+        _validate_raw_url_authority(url)
+
         # Validate scheme (raises SSRFProtectionError for any non-http/https scheme)
         _validate_url_scheme(parsed.scheme)
 
@@ -491,6 +504,7 @@ def _connector_url_has_loopback_exemption(url: str) -> bool:
     if not is_ssrf_protection_enabled():
         return False
 
+    _validate_raw_url_authority(url)
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https") or not parsed.hostname:
         msg = (
@@ -565,6 +579,103 @@ def validate_and_resolve_connector_url(url: str) -> tuple[str, list[str]]:
 # (e.g. sqlite:////etc/passwd, or ATTACH to read/write arbitrary server files).
 _LOCAL_FILE_DB_DIALECTS = frozenset({"sqlite", "duckdb", "access", "shell"})
 
+# SQLAlchemy merges URL query parameters into DBAPI connection arguments after
+# parsing the authority. These keys can replace the validated network target or
+# select a local transport, so tenant-controlled URLs must not supply them.
+_DATABASE_CONNECTION_TARGET_QUERY_KEYS = frozenset(
+    {
+        "addr",
+        "address",
+        "data source",
+        "dsn",
+        "failover_partner",
+        "filedsn",
+        "host",
+        "hostaddr",
+        "network address",
+        "odbc_connect",
+        "port",
+        "server",
+        "unix_socket",
+    }
+)
+
+_DATABASE_LOCAL_FILE_QUERY_KEYS = frozenset(
+    {
+        "clientcertificate",
+        "clientkey",
+        "dsn",
+        "filedsn",
+        "odbc_connect",
+        "querylogfile",
+        "savefile",
+        "servercertificate",
+        "statslogfile",
+    }
+)
+
+# ODBC drivers accept extensible connection-string attributes. Once either SSRF
+# or local-file policy is active, pass through only documented non-target,
+# non-file options; unknown attributes may be aliases defined by another driver.
+_SAFE_ODBC_QUERY_KEYS = frozenset(
+    {
+        "ansi",
+        "ansinpw",
+        "app",
+        "application name",
+        "applicationintent",
+        "authentication",
+        "autocommit",
+        "autotranslate",
+        "charset",
+        "clientcertificate",
+        "columnencryption",
+        "concatnullyieldsnull",
+        "connectretrycount",
+        "connectretryinterval",
+        "database",
+        "description",
+        "driver",
+        "encrypt",
+        "failoverpartnerspn",
+        "getdataextensions",
+        "hostnameincertificate",
+        "ipaddresspreference",
+        "keepalive",
+        "keepaliveinterval",
+        "keystoreauthentication",
+        "keystoreprincipalid",
+        "keystoresecret",
+        "language",
+        "longasmax",
+        "mars_connection",
+        "multisubnetfailover",
+        "net",
+        "network",
+        "odbc_autotranslate",
+        "pwd",
+        "querylog_on",
+        "querylogtime",
+        "quotedid",
+        "readonly",
+        "regional",
+        "replication",
+        "retryexec",
+        "serverspn",
+        "sslmode",
+        "statslog_on",
+        "timeout",
+        "transparentnetworkipresolution",
+        "trusted_connection",
+        "trustservercertificate",
+        "uid",
+        "unicode_results",
+        "usefmtonly",
+        "user",
+        "wsid",
+    }
+)
+
 
 def validate_database_url_for_ssrf(url: str, *, validate_network_host: bool = True) -> None:
     """Validate a SQLAlchemy database URL against SSRF and local-file access.
@@ -601,8 +712,8 @@ def validate_database_url_for_ssrf(url: str, *, validate_network_host: bool = Tr
         msg = f"Invalid database URL format: {e}"
         raise ValueError(msg) from e
 
-    # SQLAlchemy schemes look like "postgresql+psycopg2"; reduce to the dialect.
-    dialect = (parsed.scheme or "").lower().split("+", 1)[0]
+    # SQLAlchemy schemes look like "postgresql+psycopg2"; separate dialect and driver.
+    dialect, _separator, driver = (parsed.scheme or "").lower().partition("+")
     if dialect in _LOCAL_FILE_DB_DIALECTS:
         if file_restricted:
             msg = (
@@ -613,15 +724,53 @@ def validate_database_url_for_ssrf(url: str, *, validate_network_host: bool = Tr
         # Not restricted: local-file DBs are allowed (single-tenant default).
         return
 
+    query_items = parse_qsl(parsed.query, keep_blank_values=True)
+    query_keys = {key.casefold() for key, _value in query_items}
+
+    # SQLAlchemy's ODBC connector serializes arbitrary query keys directly into
+    # the connection string, and ODBC drivers may define their own aliases.
+    is_odbc = "odbc" in driver or dialect.endswith("odbc") or (dialect == "mssql" and not driver)
+
+    local_file_options = sorted(
+        {
+            key.casefold()
+            for key, value in query_items
+            if key.casefold() in _DATABASE_LOCAL_FILE_QUERY_KEYS
+            and (key.casefold() != "clientcertificate" or value.casefold().startswith("file:"))
+        }
+    )
+    if file_restricted and local_file_options:
+        keys = ", ".join(local_file_options)
+        msg = f"Database URL query key(s) {keys} can access the local filesystem and are not permitted."
+        raise SSRFProtectionError(msg)
+
+    if ssrf_on:
+        hostname = parsed.hostname
+        if not hostname:
+            # A network dialect with no host cannot be validated -> fail closed.
+            msg = "Database URL must contain a network host."
+            raise SSRFProtectionError(msg)
+
+        target_overrides = sorted(query_keys & _DATABASE_CONNECTION_TARGET_QUERY_KEYS)
+        if target_overrides:
+            keys = ", ".join(target_overrides)
+            msg = f"Database URL query key(s) {keys} cannot override the validated connection target."
+            raise SSRFProtectionError(msg)
+
+    if is_odbc and (ssrf_on or file_restricted):
+        allowed_odbc_keys = set(_SAFE_ODBC_QUERY_KEYS)
+        if not ssrf_on:
+            allowed_odbc_keys.update(_DATABASE_CONNECTION_TARGET_QUERY_KEYS)
+        if not file_restricted:
+            allowed_odbc_keys.update(_DATABASE_LOCAL_FILE_QUERY_KEYS)
+        unsupported_keys = query_keys - allowed_odbc_keys
+        if unsupported_keys:
+            msg = "Database URL contains an unsupported ODBC query key."
+            raise SSRFProtectionError(msg)
+
     # Network dialect: host SSRF validation only applies when SSRF protection is enabled.
     if not ssrf_on:
         return
-
-    hostname = parsed.hostname
-    if not hostname:
-        # A network dialect with no host cannot be validated -> fail closed.
-        msg = "Database URL must contain a network host."
-        raise SSRFProtectionError(msg)
 
     # Reuse the same allowlist + blocked-range checks as HTTP SSRF validation.
     if _validate_direct_ip_address(hostname):
@@ -787,6 +936,8 @@ def validate_and_resolve_url(url: str) -> tuple[str, list[str]]:
         raise ValueError(msg) from e
 
     try:
+        _validate_raw_url_authority(url)
+
         # ============================================================================
         # Step 3: Validate URL scheme (raises SSRFProtectionError for any non-http/https scheme)
         # ============================================================================

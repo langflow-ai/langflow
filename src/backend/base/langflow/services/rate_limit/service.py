@@ -104,6 +104,27 @@ def check_rate_limit(
         raise RateLimitExceeded(limit_wrapper)
 
 
+def get_last_forwarded_for_hop(request: Request) -> str | None:
+    """Return the rightmost ``X-Forwarded-For`` entry, or None when the header is absent.
+
+    The header may legitimately arrive as several separate lines: some proxies
+    (HAProxy's ``option forwardfor``, for one) append their own line instead of
+    extending the client's. ``Headers.get`` returns only the first line, so
+    reading it alone would yield the rightmost entry of the *client-supplied*
+    line and hand an attacker control of a value the caller assumes is
+    unspoofable. Join every line in order, per RFC 9110 field-order semantics,
+    before taking the last hop.
+
+    Callers must gate this on an explicit trusted-proxy opt-in; the header is
+    attacker-controlled otherwise.
+    """
+    # X-Forwarded-For format: "client, proxy1, proxy2", possibly split across lines.
+    chain = [ip.strip() for line in request.headers.getlist("x-forwarded-for") for ip in line.split(",")]
+    entries = [ip for ip in chain if ip]
+    # Rightmost entry = last hop added by the trusted proxy; the leftmost is client-supplied.
+    return entries[-1] if entries else None
+
+
 def get_client_ip(request: Request) -> str:
     """Extract client IP address from request, using rightmost X-Forwarded-For entry.
 
@@ -118,12 +139,9 @@ def get_client_ip(request: Request) -> str:
         str: Client IP address
     """
     # Check X-Forwarded-For header first (for proxied requests)
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        # X-Forwarded-For format: "client, proxy1, proxy2"
-        # Take the rightmost IP (last proxy before us)
-        ips = [ip.strip() for ip in forwarded_for.split(",")]
-        return ips[-1]
+    last_hop = get_last_forwarded_for_hop(request)
+    if last_hop:
+        return last_hop
 
     # Fall back to direct client IP
     if request.client:
