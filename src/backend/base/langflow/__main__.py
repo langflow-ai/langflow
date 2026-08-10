@@ -40,6 +40,7 @@ from dotenv import load_dotenv
 from fastapi import HTTPException
 from httpx import HTTPError
 from jwt import InvalidTokenError
+from lfx.cli.command_plugins import register_cli_command_plugins
 from lfx.log.logger import configure, logger
 from lfx.services.settings.constants import DEFAULT_SUPERUSER
 from multiprocess import cpu_count
@@ -1135,6 +1136,9 @@ def version_option(
     ),
 ):
     pass
+
+
+register_cli_command_plugins(app)
 
 
 def api_key_banner(unmasked_api_key) -> None:
