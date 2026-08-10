@@ -211,6 +211,7 @@ export const MenuBar = memo((): JSX.Element => {
                     }
                     className={cn("h-7 w-7 border-border")}
                     onClick={handleSave}
+                    aria-label={t("flow.saveFlow")}
                     data-testid="save-flow-button"
                   >
                     <IconComponent

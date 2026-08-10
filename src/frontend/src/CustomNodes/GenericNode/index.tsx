@@ -53,18 +53,26 @@ const _HiddenOutputsButton = memo(
   }: {
     showHiddenOutputs: boolean;
     onClick: () => void;
-  }) => (
-    <Button
-      unstyled
-      className="group flex h-[1.25rem] w-[1.25rem] items-center justify-center rounded-full border bg-muted hover:text-foreground"
-      onClick={onClick}
-    >
-      <ForwardedIconComponent
-        name={showHiddenOutputs ? "ChevronsDownUp" : "ChevronsUpDown"}
-        className="h-3 w-3 text-placeholder-foreground group-hover:text-foreground"
-      />
-    </Button>
-  ),
+  }) => {
+    const { t } = useTranslation();
+    return (
+      <Button
+        unstyled
+        className="group flex h-[1.25rem] w-[1.25rem] items-center justify-center rounded-full border bg-muted hover:text-foreground"
+        onClick={onClick}
+        aria-label={
+          showHiddenOutputs
+            ? t("flow.tooltipHiddenOutputsCollapse")
+            : t("flow.tooltipHiddenOutputsExpand")
+        }
+      >
+        <ForwardedIconComponent
+          name={showHiddenOutputs ? "ChevronsDownUp" : "ChevronsUpDown"}
+          className="h-3 w-3 text-placeholder-foreground group-hover:text-foreground"
+        />
+      </Button>
+    );
+  },
 );
 
 function GenericNode({

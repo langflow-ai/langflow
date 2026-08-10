@@ -310,5 +310,22 @@ describe("FlowBuilderWelcome", () => {
       await userEvent.keyboard("{Escape}");
       expect(props.onClose).toHaveBeenCalledTimes(1);
     });
+
+    it("should_ignore_Escape_already_consumed_by_a_dialog_layer", () => {
+      // Radix's DismissableLayer preventDefaults the Escape it uses to close
+      // a dialog stacked above the welcome (e.g. the TemplatesModal) but the
+      // event still bubbles to window; the welcome must not treat it as its
+      // own dismissal, or one keypress closes both layers (LE-2041 QA).
+      const props = makeProps();
+      render(<FlowBuilderWelcome {...props} />);
+      const event = new KeyboardEvent("keydown", {
+        key: "Escape",
+        cancelable: true,
+        bubbles: true,
+      });
+      event.preventDefault();
+      window.dispatchEvent(event);
+      expect(props.onClose).not.toHaveBeenCalled();
+    });
   });
 });
