@@ -23,12 +23,12 @@
       "authz_family": "flow_build_and_hitl",
       "source": "src/backend/base/langflow/api/v1/chat.py",
       "actor": "public_visitor",
-      "execution_principal": "flow_owner",
-      "dependency_principal": "flow_owner",
+      "execution_principal": "anonymous_public",
+      "dependency_principal": "anonymous_public",
       "tweaks": "forbidden",
       "revoke": "new_only",
       "error_policy": "sanitized",
-      "exception": "legacy public owner execution with a visitor-virtual flow and session namespace",
+      "exception": "Flow.access_type=PUBLIC remains a compatibility-derived direct-link grant; execution uses an isolated non-user principal and visitor-virtual flow/session namespace",
       "test_references": [
         "src/backend/tests/unit/api/test_build_source_flow_provenance.py::test_generate_flow_events_sets_source_flow_provenance_for_public_graph"
       ]
@@ -116,15 +116,16 @@
       "family": "a2a",
       "authz_family": "a2a",
       "source": "src/backend/base/langflow/api/v1/a2a.py",
-      "actor": "flow_owner",
-      "execution_principal": "flow_owner",
-      "dependency_principal": "flow_owner",
+      "actor": "public_visitor",
+      "execution_principal": "anonymous_public",
+      "dependency_principal": "anonymous_public",
       "tweaks": "forbidden",
       "revoke": "new_and_resume",
       "error_policy": "sanitized",
-      "exception": "legacy A2A invokes the published flow as its owner after endpoint authentication",
+      "exception": "auth_type=none is a compatibility-derived PUBLIC grant under the anonymous principal; API-key and OAuth A2A admission remains owner-only and executes as the authenticated owner",
       "test_references": [
-        "src/backend/tests/unit/api/v1/test_a2a.py::test_public_a2a_run_uses_server_sanitized_flow_data"
+        "src/backend/tests/unit/api/v1/test_a2a.py::test_public_a2a_run_uses_server_sanitized_flow_data",
+        "src/backend/tests/unit/api/v1/test_a2a.py::test_public_a2a_resume_rechecks_compatibility_grant"
       ]
     },
     {
@@ -193,14 +194,14 @@
       "authz_family": "workflow_public_v2",
       "source": "src/backend/base/langflow/api/v2/workflow_public.py",
       "actor": "public_visitor",
-      "execution_principal": "flow_owner",
-      "dependency_principal": "flow_owner",
+      "execution_principal": "anonymous_public",
+      "dependency_principal": "anonymous_public",
       "tweaks": "forbidden",
       "revoke": "new_only",
       "error_policy": "sanitized",
-      "exception": "legacy public owner execution with visitor-virtual flow and session namespaces",
+      "exception": "Flow.access_type=PUBLIC remains a compatibility-derived direct-link grant; execution uses an isolated non-user principal and visitor-virtual flow/session namespaces",
       "test_references": [
-        "src/backend/tests/unit/api/v2/test_workflow_public.py::test_public_endpoint_runs_as_flow_owner",
+        "src/backend/tests/unit/api/v2/test_workflow_public.py::test_public_endpoint_runs_as_stable_non_owner_principal",
         "src/backend/tests/unit/api/v2/test_workflow_public.py::test_public_endpoint_rejects_tweaks_field"
       ]
     }

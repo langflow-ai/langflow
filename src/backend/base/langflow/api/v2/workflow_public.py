@@ -8,7 +8,7 @@ The body is intentionally narrower than ``/api/v2/workflows`` (no
 ``data``, no ``tweaks``): visitors must never override the stored flow
 definition. The handler also enforces the public-access mitigations:
 
-- ``access_type == PUBLIC`` (others 403, checked before any policy
+- A canonical PUBLIC share or compatibility grant (others 404, checked before any policy
   validation so private flows leak nothing about themselves).
 - Per-visitor ``virtual_flow_id = uuid5(identifier, flow_id)`` used as
   the storage flow_id, mirroring v1's build_public_tmp.
@@ -19,8 +19,8 @@ definition. The handler also enforces the public-access mitigations:
   ``authenticated_user.id`` and uses ``client_id`` for the UUID v5
   derivation, matching the frontend's ``useGetFlowId`` so the popup's
   chat-view filter actually matches what the backend stores.
-- Owner impersonation: the run executes under the flow owner's
-  permissions, never the visitor's.
+- Anonymous principal isolation: the run never inherits the flow owner's
+  variables, credentials, files, or knowledge bases.
 """
 
 from __future__ import annotations
@@ -61,7 +61,7 @@ from langflow.api.utils.flow_utils import (
 )
 from langflow.services.auth.utils import get_current_user_optional
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.user.model import User, UserRead
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
 
 router = APIRouter(prefix="/workflows/public", tags=["Workflow (public)"])
@@ -70,7 +70,7 @@ router = APIRouter(prefix="/workflows/public", tags=["Workflow (public)"])
 def _enforce_public_rate_limit(http_request: Request) -> None:
     """Throttle anonymous public-flow runs per client IP.
 
-    Each run executes as the flow owner (real CPU/DB/LLM-credit cost), so an
+    Each run consumes real CPU/DB/provider capacity, so an
     unauthenticated caller must not be able to spin up unbounded concurrent
     executions. Mirrors the manual limiter check the login endpoint uses, but
     keyed to its own configurable per-minute limit under a dedicated namespace so
@@ -143,11 +143,12 @@ async def execute_public_workflow(
         auth_settings = get_settings_service().auth_settings
         authenticated_user_id = authenticated_user.id if authenticated_user and not auth_settings.AUTO_LOGIN else None
 
-        # access_type == PUBLIC + virtual_flow_id, run as the flow owner.
-        owner_user, virtual_flow_id = await verify_public_flow_and_get_user(
+        # Direct-link grant + virtual flow id + stable anonymous runtime principal.
+        public_user, virtual_flow_id = await verify_public_flow_and_get_user(
             flow_id=real_flow_id,
             client_id=client_id,
             authenticated_user_id=authenticated_user_id,
+            request_host=http_request.url.hostname,
         )
 
         # Defends CVE-2026-33017: scope caller's session into the (identifier, flow_id) namespace.
@@ -186,7 +187,8 @@ async def execute_public_workflow(
         # not leak it to an anonymous visitor.
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This flow cannot be executed.") from exc
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        await logger.awarning("Public workflow validation failed: %s", exc)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This flow cannot be executed.") from exc
 
     if request.stream_protocol not in STREAM_ADAPTERS:
         raise _unknown_protocol_http_exception(
@@ -219,8 +221,6 @@ async def execute_public_workflow(
         files=request.files,
     )
 
-    owner_user_read = UserRead.model_validate(owner_user, from_attributes=True)
-
     async def _frames_only() -> AsyncIterator[bytes]:
         async for frame, _event_type in _stream_event_frames(
             adapter=adapter,
@@ -228,7 +228,7 @@ async def execute_public_workflow(
             flow_name=flow_name,
             background_tasks=background_tasks,
             parsed=parsed,
-            current_user=owner_user_read,
+            current_user=public_user,
             source_flow_id=real_flow_id,
             expose_error_details=False,
         ):

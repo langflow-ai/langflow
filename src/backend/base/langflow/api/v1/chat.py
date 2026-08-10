@@ -877,7 +877,7 @@ async def build_public_tmp(
     The endpoint:
     1. Verifies the requested flow is marked as public in the database
     2. Creates a deterministic UUID based on client_id and flow_id
-    3. Uses the flow owner's permissions to build the flow
+    3. Uses a stable anonymous principal to build the flow
     4. Always loads the flow definition from the database
 
     Requirements:
@@ -915,17 +915,18 @@ async def build_public_tmp(
         # malformed requests fail fast and don't touch the DB.
         validate_public_files(files, flow_id)
 
-        # Verify this is a public flow and get the associated user
+        # Verify the direct-link grant and derive the anonymous runtime principal.
         client_id = request.cookies.get("client_id")
         # Only use authenticated user_id when auto-login is disabled.
         # When AUTO_LOGIN=TRUE, the frontend uses client_id for UUID v5,
         # so the backend must match to avoid flow_id mismatch.
         auth_settings = get_settings_service().auth_settings
         authenticated_user_id = authenticated_user.id if authenticated_user and not auth_settings.AUTO_LOGIN else None
-        owner_user, new_flow_id = await verify_public_flow_and_get_user(
+        public_user, new_flow_id = await verify_public_flow_and_get_user(
             flow_id=flow_id,
             client_id=client_id,
             authenticated_user_id=authenticated_user_id,
+            request_host=request.url.hostname,
         )
 
         # Defends CVE-2026-33017: scope caller session into the (client_id, flow_id) namespace.
@@ -985,7 +986,7 @@ async def build_public_tmp(
             stop_component_id=stop_component_id,
             start_component_id=start_component_id,
             log_builds=log_builds or False,
-            current_user=owner_user,
+            current_user=public_user,
             queue_service=queue_service,
             flow_name=flow_name or f"{authenticated_user_id or client_id}_{flow_id}",
             expose_error_details=False,
@@ -1012,14 +1013,15 @@ async def build_public_tmp(
             await logger.awarning(
                 f"Failed to cancel public job {job_id} after marker persistence failed: {cancel_exc!r}"
             )
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise HTTPException(status_code=503, detail="Public flow service is temporarily unavailable.") from exc
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        await logger.awarning(f"Public flow validation failed: {exc}")
+        raise HTTPException(status_code=400, detail="This flow cannot be executed.") from exc
     except Exception as exc:
         await logger.aexception("Error building public flow")
         if isinstance(exc, HTTPException):
             raise
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(status_code=500, detail="Flow execution failed.") from exc
     if event_delivery != EventDeliveryType.DIRECT:
         return {"job_id": job_id}
     return await get_flow_events_response(

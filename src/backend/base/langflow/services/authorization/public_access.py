@@ -1,0 +1,191 @@
+"""Fail-closed authorization for anonymous direct-link flow access.
+
+Anonymous visitors are not users and never enter the authenticated OSS
+allow-all authorization path. A request must first match a canonical PUBLIC
+``AuthzShare`` or one of the two release-compatibility grants, then (when
+authorization is enabled) pass an opt-in plugin tenant and policy decision.
+These grants are direct-link only and must never be used by list endpoints.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from enum import Enum
+from typing import TYPE_CHECKING
+
+from fastapi import HTTPException, status
+from lfx.log.logger import logger
+from lfx.services.authorization import (
+    PUBLIC_ANONYMOUS_ACTOR_ID,
+    AuthorizationPrincipal,
+    PublicAuthorizationRequest,
+    PublicResourceAction,
+)
+from lfx.services.deps import session_scope_readonly
+from sqlmodel import select
+
+from langflow.services.authorization.audit import AUDIT_ALLOW, AUDIT_DENY, audit_decision
+from langflow.services.authorization.guards import _resolve_authz_domain
+from langflow.services.database.models.auth import AuthzShare, ShareScope
+from langflow.services.database.models.flow.model import AccessTypeEnum
+from langflow.services.database.models.user.model import UserRead
+from langflow.services.deps import get_authorization_service, get_settings_service
+
+if TYPE_CHECKING:
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    from langflow.services.database.models.flow.model import Flow
+
+
+class PublicGrantSource(str, Enum):
+    """Durable or compatibility source of an anonymous direct-link grant."""
+
+    AUTHZ_SHARE = "authz_share"
+    LEGACY_ACCESS_TYPE = "legacy_access_type"
+    A2A_AUTH_NONE = "a2a_auth_none"
+
+
+_READ_PERMISSIONS = frozenset({"read", "execute", "write", "admin"})
+_EXECUTE_PERMISSIONS = frozenset({"execute", "write", "admin"})
+_PUBLIC_NOT_FOUND = "Flow not found"
+
+
+def public_grant_allows(permission_level: str, action: PublicResourceAction) -> bool:
+    """Apply the OSS anonymous action floor to a share permission level.
+
+    Higher share levels retain their read/execute implication, but anonymous
+    callers can never mutate, create, delete, deploy, or administer resources.
+    """
+    if action is PublicResourceAction.READ:
+        return permission_level in _READ_PERMISSIONS
+    if action is PublicResourceAction.EXECUTE:
+        return permission_level in _EXECUTE_PERMISSIONS
+    return False
+
+
+def public_execution_user() -> UserRead:
+    """Return the stable non-persisted runtime identity for public execution."""
+    epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+    return UserRead(
+        id=PUBLIC_ANONYMOUS_ACTOR_ID,
+        username="anonymous-public",
+        profile_image=None,
+        store_api_key=None,
+        is_active=True,
+        is_superuser=False,
+        create_at=epoch,
+        updated_at=epoch,
+        last_login_at=None,
+        optins=None,
+    )
+
+
+async def _public_share_permission(session: AsyncSession, flow_id) -> str | None:
+    statement = select(AuthzShare.permission_level).where(
+        AuthzShare.resource_type == "flow",
+        AuthzShare.resource_id == flow_id,
+        AuthzShare.scope == ShareScope.PUBLIC.value,
+    )
+    return (await session.exec(statement)).first()
+
+
+async def _resolve_grant(
+    *,
+    flow: Flow,
+    action: PublicResourceAction,
+    session: AsyncSession | None,
+    compatibility_grant: PublicGrantSource | None,
+) -> PublicGrantSource | None:
+    if action not in {PublicResourceAction.READ, PublicResourceAction.EXECUTE}:
+        return None
+
+    if session is None:
+        async with session_scope_readonly() as read_session:
+            permission = await _public_share_permission(read_session, flow.id)
+    else:
+        permission = await _public_share_permission(session, flow.id)
+
+    if permission is not None and public_grant_allows(permission, action):
+        return PublicGrantSource.AUTHZ_SHARE
+    if flow.access_type is AccessTypeEnum.PUBLIC:
+        return PublicGrantSource.LEGACY_ACCESS_TYPE
+    if compatibility_grant is PublicGrantSource.A2A_AUTH_NONE:
+        return PublicGrantSource.A2A_AUTH_NONE
+    return None
+
+
+async def authorize_public_flow_access(
+    *,
+    flow: Flow,
+    action: PublicResourceAction,
+    request_host: str | None = None,
+    compatibility_grant: PublicGrantSource | None = None,
+    session: AsyncSession | None = None,
+) -> AuthorizationPrincipal:
+    """Authorize a direct-link flow action and return its anonymous principal.
+
+    The caller must load the exact flow by its direct-link identifier. This
+    function never performs tenant discovery and never grants list visibility.
+    Changing ``Flow.access_type``/A2A ``auth_type`` removes a compatibility
+    grant; deleting the PUBLIC share removes the canonical grant. New starts
+    and resumes call this function again, while already-running work is not
+    interrupted.
+    """
+    principal = AuthorizationPrincipal.public_anonymous()
+    source = await _resolve_grant(
+        flow=flow,
+        action=action,
+        session=session,
+        compatibility_grant=compatibility_grant,
+    )
+    domain = _resolve_authz_domain(flow.workspace_id, flow.folder_id)
+    request = PublicAuthorizationRequest(
+        principal=principal,
+        resource_type="flow",
+        resource_id=flow.id,
+        action=action,
+        domain_hint=domain,
+        request_host=request_host,
+        grant_source=source.value if source is not None else "none",
+    )
+
+    allowed = source is not None
+    tenant: str | None = None
+    auth_settings = get_settings_service().auth_settings
+    if allowed and auth_settings.AUTHZ_ENABLED:
+        authorization_service = get_authorization_service()
+        try:
+            if not await authorization_service.supports_public_principals():
+                allowed = False
+            else:
+                tenant = await authorization_service.resolve_public_tenant(request)
+                allowed = bool(tenant) and await authorization_service.enforce_public(request, tenant=tenant)
+        except Exception:  # noqa: BLE001 - an anonymous policy failure must fail closed
+            allowed = False
+            await logger.aexception("Anonymous public authorization failed closed for flow %s", flow.id)
+
+    await audit_decision(
+        user_id=None,
+        principal=principal,
+        action=f"flow:{action.value}",
+        obj=f"flow:{flow.id}",
+        result=AUDIT_ALLOW if allowed else AUDIT_DENY,
+        details={
+            "domain": domain,
+            "grant_source": request.grant_source,
+            **({"tenant": tenant} if tenant is not None else {}),
+        },
+    )
+    if not allowed:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_PUBLIC_NOT_FOUND)
+    return principal
+
+
+__all__ = [
+    "PUBLIC_ANONYMOUS_ACTOR_ID",
+    "PublicGrantSource",
+    "PublicResourceAction",
+    "authorize_public_flow_access",
+    "public_execution_user",
+    "public_grant_allows",
+]

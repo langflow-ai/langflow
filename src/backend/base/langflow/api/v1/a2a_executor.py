@@ -38,12 +38,12 @@ class ResumeConflictError(RuntimeError):
     """
 
 
-# (flow_id, task_id, input_text, context_id) -> the v2 sync run result.
+# (flow_id, task_id, input_text, context_id, request_host) -> the v2 sync run result.
 # context_id scopes the run's chat memory (the A2A conversation = the flow session).
-RunFlow = Callable[[UUID, str, str, str | None], Awaitable[WorkflowExecutionResponse]]
+RunFlow = Callable[[UUID, str, str, str | None, str | None], Awaitable[WorkflowExecutionResponse]]
 # (flow_id, task_id, decision_text) -> the run result after applying a human decision to a
 # paused (input-required) task. The text carries the chosen action for the HumanInput node.
-ResumeFlow = Callable[[UUID, str, str], Awaitable[WorkflowExecutionResponse]]
+ResumeFlow = Callable[[UUID, str, str, str | None], Awaitable[WorkflowExecutionResponse]]
 
 
 def _json_safe(content: object) -> object:
@@ -126,9 +126,17 @@ class FlowAgentExecutor(AgentExecutor):
                 text = json.dumps(data[0] if len(data) == 1 else data)
         try:
             if resuming:
-                response = await self._resume_flow(UUID(flow_id), context.task_id, text)
+                response = await self._resume_flow(
+                    UUID(flow_id), context.task_id, text, context.call_context.state.get("request_host")
+                )
             else:
-                response = await self._run_flow(UUID(flow_id), context.task_id, text, context.context_id)
+                response = await self._run_flow(
+                    UUID(flow_id),
+                    context.task_id,
+                    text,
+                    context.context_id,
+                    context.call_context.state.get("request_host"),
+                )
         except asyncio.CancelledError:
             # tasks/cancel preempted this live run (the SDK cancels the producer task). Emit a
             # terminal CANCELED on this producer's OWN queue before it closes, so the original
