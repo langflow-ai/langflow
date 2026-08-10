@@ -79,14 +79,14 @@ def _reject_sync_only_fields(parsed: ParsedWorkflowRun) -> None:
 
 
 def _enforce_flow_data_override_owner(parsed: ParsedWorkflowRun, flow: FlowRead, current_user: UserRead) -> None:
-    """Only the flow owner may execute caller-supplied graph data."""
-    if parsed.data is None or flow.user_id == current_user.id:
+    """Only the flow owner may execute caller-supplied graph data or tweaks."""
+    if (parsed.data is None and not parsed.tweaks) or flow.user_id == current_user.id:
         return
 
     raise _flow_not_found_privacy_exception(
         HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the flow owner can override flow data during execution",
+            detail="Only the flow owner can override flow data or component parameters during execution",
         ),
         parsed.flow_id,
     )

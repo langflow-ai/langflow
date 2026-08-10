@@ -448,6 +448,7 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 background_tasks=fresh_background_tasks,
                 parsed=parsed,
                 current_user=user,
+                expose_error_details=flow.user_id == user.id,
                 job_id=job_id,
                 resume=resume,
                 # Key the persisted vertex builds by the durable job_id so a completed run's GET

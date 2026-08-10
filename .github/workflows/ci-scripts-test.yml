@@ -4,6 +4,23 @@ on:
   pull_request:
     paths:
       - "scripts/ci/**"
+      - ".github/workflows/ci-scripts-test.yml"
+      - "src/backend/base/langflow/api/build.py"
+      - "src/backend/base/langflow/api/v1/a2a.py"
+      - "src/backend/base/langflow/api/v1/chat.py"
+      - "src/backend/base/langflow/api/v1/deployments.py"
+      - "src/backend/base/langflow/api/v1/endpoints.py"
+      - "src/backend/base/langflow/api/v1/mcp.py"
+      - "src/backend/base/langflow/api/v1/mcp_projects.py"
+      - "src/backend/base/langflow/api/v1/openai_responses.py"
+      - "src/backend/base/langflow/api/v1/voice_mode.py"
+      - "src/backend/base/langflow/api/v2/workflow*.py"
+      - "src/backend/base/langflow/api/utils/execution_errors.py"
+      - "src/backend/tests/unit/api/test_execution_error_policy.py"
+      - "src/backend/tests/unit/api/v1/test_chat_build_flow_authz.py"
+      - "src/backend/tests/unit/api/v2/test_resume_route.py"
+      - "src/backend/tests/unit/api/v2/test_workflow*.py"
+      - "src/lfx/src/lfx/workflow/**"
   workflow_dispatch:
 
 jobs:

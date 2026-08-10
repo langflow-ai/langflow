@@ -773,6 +773,48 @@ class TestAGUIStreaming:
         assert payload_types[-1] == terminal_type
         assert "early boom" in json.dumps(payloads[-1])
 
+    @pytest.mark.parametrize("expose_error_details", [False, True])
+    async def test_stream_fallback_error_detail_depends_on_execution_policy(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        *,
+        expose_error_details: bool,
+    ):
+        """Delegated streams hide runtime detail while owner streams retain it."""
+        from langflow.api.v2 import workflow_execution as wf_exec
+        from lfx.workflow.adapters import StreamAdapterContext, get_stream_adapter
+        from lfx.workflow.converters import ParsedWorkflowRun
+
+        sensitive_detail = "sensitive-stream-provider-detail"
+
+        async def fake_generate_flow_events(**_kwargs):
+            raise RuntimeError(sensitive_detail)
+
+        monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
+        adapter = get_stream_adapter(
+            "langflow",
+            StreamAdapterContext(run_id="run-1", thread_id="thread-1"),
+        )
+        frames = [
+            frame
+            async for frame, _event_type in wf_exec._stream_event_frames(
+                adapter=adapter,
+                flow_id=uuid4(),
+                flow_name="flow",
+                background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
+                parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
+                current_user=SimpleNamespace(id=uuid4()),
+                expose_error_details=expose_error_details,
+            )
+        ]
+
+        body = json.dumps(_sse_payloads(frames))
+        if expose_error_details:
+            assert sensitive_detail in body
+        else:
+            assert sensitive_detail not in body
+            assert "Workflow execution failed." in body
+
     async def test_agui_stream_emits_end_side_channel_for_build_duration(self, monkeypatch: pytest.MonkeyPatch):
         """The AG-UI stream must preserve v1 end payloads for chat build-duration persistence."""
         from langflow.api.v2 import workflow_execution as wf_exec

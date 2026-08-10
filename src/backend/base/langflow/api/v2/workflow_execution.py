@@ -41,6 +41,7 @@ from lfx.workflow.adapters.langflow import WORKFLOW_OUTPUT_CAPTURE_EVENT, build_
 from lfx.workflow.converters import ParsedWorkflowRun, create_error_response, run_response_to_workflow_response
 
 from langflow.api.utils import extract_global_variables_from_headers
+from langflow.api.utils.execution_errors import error_for_client
 from langflow.api.v1.schemas import FlowDataRequest, RunResponse
 from langflow.api.v2.workflow_validation import _validate_output_ids
 from langflow.exceptions.api import WorkflowTimeoutError, WorkflowValidationError
@@ -187,6 +188,7 @@ async def _stream_event_frames(
     resume: dict | None = None,
     track_job_status: bool = True,
     emit_output_capture: bool = False,
+    expose_error_details: bool = True,
 ) -> AsyncIterator[tuple[bytes, str]]:
     """Run a flow via the v1 build-vertex loop, dispatch its events through ``adapter``.
 
@@ -231,7 +233,7 @@ async def _stream_event_frames(
     #   3. The buffer task's ``terminal_error_type`` check fires on either
     #      RUN_ERROR source, so a single drive() failure cannot result in a
     #      job marked COMPLETED.
-    drive_error: BaseException | None = None
+    drive_error: Exception | None = None
 
     async def drive() -> None:
         nonlocal drive_error
@@ -261,6 +263,7 @@ async def _stream_event_frames(
                     # builds from the DB (or request data), so without this the streaming
                     # and background paths silently drop request tweaks.
                     tweaks=parsed.tweaks,
+                    expose_error_details=expose_error_details,
                 ),
                 timeout=execution_timeout,
             )
@@ -361,7 +364,8 @@ async def _stream_event_frames(
         # captured an exception and no cooperative terminal error reached the
         # stream, emit the adapter's terminal error event(s) here.
         if drive_error is not None and not terminal_error_seen:
-            for event in adapter.error_events(drive_error):
+            client_error = error_for_client(drive_error, expose_details=expose_error_details)
+            for event in adapter.error_events(client_error):
                 if terminal_error_type is not None and event.type == terminal_error_type:
                     terminal_error_seen = True
                 yield _frame(event, seq)
@@ -398,6 +402,7 @@ def _execute_streaming_workflow(
             background_tasks=background_tasks,
             parsed=parsed,
             current_user=current_user,
+            expose_error_details=flow.user_id == current_user.id,
         ):
             yield frame
 
@@ -415,6 +420,8 @@ async def execute_sync_workflow_with_timeout(
     background_tasks: BackgroundTasks,
     http_request: Request,
     checkpoint_store: CheckpointStore | None = None,
+    *,
+    expose_error_details: bool | None = None,
 ) -> WorkflowExecutionResponse:
     """Execute workflow with timeout protection.
 
@@ -427,6 +434,7 @@ async def execute_sync_workflow_with_timeout(
         http_request: The HTTP request object for extracting headers
         checkpoint_store: When provided, enables HITL checkpointing so a flow that
             pauses for human input returns a ``suspended`` response instead of failing.
+        expose_error_details: Override the owner-derived client error policy.
 
     Returns:
         WorkflowExecutionResponse with complete results
@@ -445,6 +453,7 @@ async def execute_sync_workflow_with_timeout(
                 background_tasks=background_tasks,
                 http_request=http_request,
                 checkpoint_store=checkpoint_store,
+                expose_error_details=expose_error_details,
             ),
             timeout=_resolve_execution_timeout(),
         )
@@ -487,6 +496,8 @@ async def execute_sync_workflow(
     background_tasks: BackgroundTasks,  # noqa: ARG001
     http_request: Request,
     checkpoint_store: CheckpointStore | None = None,
+    *,
+    expose_error_details: bool | None = None,
 ) -> WorkflowExecutionResponse:
     """Execute workflow synchronously and return complete results.
 
@@ -516,6 +527,7 @@ async def execute_sync_workflow(
         checkpoint_store: When provided, enables HITL checkpointing so a pausing flow
             returns a ``suspended`` response (carrying the human-input request) instead of
             running through. Off by default, so non-HITL callers are unchanged.
+        expose_error_details: Override the owner-derived client error policy.
 
     Returns:
         WorkflowExecutionResponse: Complete execution results with outputs and metadata
@@ -523,6 +535,9 @@ async def execute_sync_workflow(
     Raises:
         WorkflowValidationError: If flow data is None or graph build fails
     """
+    if expose_error_details is None:
+        expose_error_details = flow.user_id == current_user.id
+
     # Tweaks and chat input come straight from the parsed AG-UI request
     tweaks = parsed.tweaks
     session_id = parsed.session_id
@@ -562,7 +577,8 @@ async def execute_sync_workflow(
             graph.checkpointing_enabled = True
             graph.checkpoint_store = checkpoint_store
     except Exception as e:
-        msg = f"Failed to build graph from flow data: {e!s}"
+        client_error = error_for_client(e, expose_details=expose_error_details)
+        msg = f"Failed to build graph from flow data: {client_error!s}"
         raise WorkflowValidationError(msg) from e
 
     # Get terminal nodes - these are the outputs we want
@@ -649,6 +665,6 @@ async def execute_sync_workflow(
             flow_id=parsed.flow_id,
             job_id=job_id,
             inputs=parsed.tweaks,
-            error=exc,
+            error=error_for_client(exc, expose_details=expose_error_details),
             effective_globals=request_variables,
         )
