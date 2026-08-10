@@ -540,6 +540,42 @@ class TestDeterministicPlanApproval:
             mock_execute.assert_not_called()
 
 
+class TestDeterministicWhitespaceOnly:
+    """Whitespace-only input carries no intent in ANY language — no LLM call.
+
+    Whitespace is language-independent (never a keyword heuristic), so this
+    short-circuit is 100% deterministic: it extends the existing empty-string
+    fast path and keeps the same safe ``question`` default.
+    """
+
+    @pytest.mark.asyncio
+    async def test_whitespace_only_input_short_circuits_without_llm(self):
+        with patch(
+            "langflow.agentic.services.helpers.intent_classification.execute_flow_file",
+            new_callable=AsyncMock,
+        ) as mock_execute:
+            for text in ("   ", "\n", "\t \n  ", "\u00a0"):
+                result = await classify_intent(text=text, global_variables={})
+                assert result.intent == "question", f"{text!r} → {result.intent}"
+                assert result.translation == text
+                assert result.tokens is None
+            mock_execute.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_single_visible_character_still_goes_through_the_llm(self):
+        mock_result = {"result": '{"translation": "?", "intent": "question"}'}
+
+        with patch(
+            "langflow.agentic.services.helpers.intent_classification.execute_flow_file",
+            new_callable=AsyncMock,
+            return_value=mock_result,
+        ) as mock_execute:
+            result = await classify_intent(text="?", global_variables={})
+
+            assert result.intent == "question"
+            mock_execute.assert_called_once()
+
+
 class TestClassifyIntentWithContext:
     """WS-1 / RC-1: classify_intent forwards a disambiguation context block.
 

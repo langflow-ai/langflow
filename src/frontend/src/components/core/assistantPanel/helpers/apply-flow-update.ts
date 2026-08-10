@@ -1,16 +1,8 @@
 /**
- * Reducer-style applier that maps a single SSE ``flow_update`` event onto
- * the live canvas state. Extracted from `use-assistant-chat.ts` so the hook
- * stays focused on streaming + message state, and so each switch case can
- * be diffed independently when the event protocol evolves.
- *
- * Coupling notes:
- *   - Reads/writes via `useFlowStore.getState()` directly. This bypasses
- *     React's reactive subscription on purpose: applying many events in
- *     quick succession (e.g. during a build_flow drain) is faster when each
- *     case grabs the freshest state at call time.
- *   - Takes `updateNodeInternals` as an argument because it is a React hook
- *     return value and cannot be called outside a component.
+ * Maps a single SSE `flow_update` event onto the live canvas. Reads/writes
+ * `useFlowStore.getState()` directly (bypassing React subscription) so a rapid
+ * event drain grabs the freshest state per call. `updateNodeInternals` is
+ * passed in because it is a hook return value.
  */
 
 import type { useUpdateNodeInternals } from "@xyflow/react";
@@ -19,9 +11,8 @@ import useFlowStore from "@/stores/flowStore";
 
 type UpdateNodeInternals = ReturnType<typeof useUpdateNodeInternals>;
 
-// I6: SSE flow_update events come from the assistant stream (LLM-driven) and
-// are untrusted. Cast-and-write lets a malformed payload corrupt the canvas
-// with no signal — these predicates reject the event before any store mutation.
+// SSE flow_update payloads are LLM-driven (untrusted); validate before any
+// store mutation so a malformed event can't silently corrupt the canvas.
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 const isNonEmptyString = (v: unknown): v is string =>
@@ -30,10 +21,26 @@ const isNodeShape = (v: unknown): v is Record<string, unknown> =>
   isPlainObject(v) && isNonEmptyString((v as Record<string, unknown>).id);
 
 const warnDrop = (action: string, reason: string): void => {
-  // Visible at the dev console; lets protocol drift surface instead of
-  // silently corrupting the canvas.
   console.warn(`[applyFlowUpdate] dropped ${action}: ${reason}`);
 };
+
+/**
+ * Notify each new node once mounted so their handles register. Kept minimal —
+ * the loop-edge redraw is handled by applying nodes+edges atomically (see the
+ * `set_flow` case); this just nudges React Flow for dynamic handles.
+ */
+export function notifyNodesUntilMounted(
+  nodeIds: string[],
+  updateNodeInternals: UpdateNodeInternals,
+  onFinalPass?: () => void,
+): void {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      for (const id of nodeIds) updateNodeInternals(id);
+      onFinalPass?.();
+    });
+  });
+}
 
 export function applyFlowUpdate(
   event: AgenticFlowUpdateEvent,
@@ -55,26 +62,22 @@ export function applyFlowUpdate(
         break;
       }
       {
-        const setNodes = useFlowStore.getState().setNodes;
-        const setEdges = useFlowStore.getState().setEdges;
-        setNodes(nodes as never[]);
-        setEdges((edges ?? []) as never[]);
-        // A whole-canvas replace lands the new flow wherever the old
-        // viewport happened to be (often off-screen). Frame it like the
-        // app's own flow-load path (PageComponent): a SINGLE deferred
-        // frame fires before React Flow has measured the new nodes, which
-        // produces the wrong/"weird" zoom — wait two frames so layout has
-        // settled, and bound the zoom so a tiny flow isn't over-zoomed.
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            useFlowStore.getState().reactFlowInstance?.fitView({
-              padding: { left: "20px", right: "20px", top: "80px" },
-              minZoom: 0.25,
-              maxZoom: 2,
-              duration: 250,
-            });
-          });
-        });
+        // Atomic nodes+edges in one render so React Flow resolves edges to
+        // loop/dynamic handles immediately (a split set draws them only on refresh).
+        useFlowStore
+          .getState()
+          .setNodesAndEdges(nodes as never[], (edges ?? []) as never[]);
+        const newNodeIds = nodes
+          .map((n) => (isPlainObject(n) ? n.id : undefined))
+          .filter(isNonEmptyString);
+        notifyNodesUntilMounted(newNodeIds, updateNodeInternals, () =>
+          useFlowStore.getState().reactFlowInstance?.fitView({
+            padding: { left: "20px", right: "20px", top: "80px" },
+            minZoom: 0.25,
+            maxZoom: 2,
+            duration: 250,
+          }),
+        );
       }
       break;
     }
@@ -102,8 +105,7 @@ export function applyFlowUpdate(
       }
       const setEdges = useFlowStore.getState().setEdges;
       setEdges((prev) => [...prev, edge as never]);
-      // Refresh both endpoints so ReactFlow reconciles handle positions
-      // and renders the new edge between them.
+      // Refresh both endpoints so ReactFlow reconciles handle positions.
       updateNodeInternals(src);
       updateNodeInternals(tgt);
       break;
@@ -164,11 +166,8 @@ export function applyFlowUpdate(
       break;
     }
     case "select_output": {
-      // The frontend's GenericNode reads `data.selected_output` (top-level
-      // on the ReactFlow node data, NOT inside data.node) to decide which
-      // output's handle to render and which label to show in the
-      // dropdown. Patch at the same level so OpenAIModel switches from
-      // "Model Response" to "Language Model" when wired via model_output.
+      // `data.selected_output` (top-level, not inside data.node) switches which
+      // output handle renders; notify so the moved handle is reconciled.
       const compId = event.component_id as string;
       const outputName = event.output_name as string;
       if (compId && outputName) {
@@ -187,18 +186,13 @@ export function applyFlowUpdate(
             } as never;
           }),
         );
-        // The selected output's handle is the only one rendered for nodes
-        // with multiple outputs, so the handle position changes when we
-        // switch which output is "active" — refresh ReactFlow's cache.
         updateNodeInternals(compId);
       }
       break;
     }
     case "set_connection_mode": {
-      // ModelInput dropdown reads `data._connectionMode` to switch from
-      // its inline model picker to "Connect other models" mode (which
-      // exposes the left handle for an external model edge). Mirror the
-      // backend flip so the connected edge actually renders.
+      // `data._connectionMode` flips ModelInput to a left handle for an external
+      // model edge; notify so the new handle position is reconciled.
       const compId = event.component_id as string;
       const enabled = event.enabled as boolean;
       if (compId !== undefined) {
@@ -217,21 +211,13 @@ export function applyFlowUpdate(
             } as never;
           }),
         );
-        // Toggling _connectionMode swaps the model field's UI between an
-        // inline dropdown and a connection handle. The handle's DOM
-        // position changes — without this notification ReactFlow keeps
-        // the cached position and the edge can't find its target.
         updateNodeInternals(compId);
       }
       break;
     }
     case "enable_tool_mode": {
-      // The backend flipped the source component into Tool Mode when wiring
-      // `X.component_as_tool -> Agent.tools` (its outputs collapsed to the
-      // single synthesized `component_as_tool`/Toolset output). Mirror that on
-      // the canvas BEFORE the `connect` edge is applied — otherwise the node
-      // still renders its old output handle, the edge's `component_as_tool`
-      // source handle has no match, and the edge silently never renders.
+      // Mirror the backend Tool Mode flip (outputs collapse to one Toolset
+      // handle) BEFORE the connect edge, else its source handle has no match.
       const compId = event.component_id as string;
       const outputs = event.outputs;
       if (compId && Array.isArray(outputs)) {
@@ -255,9 +241,6 @@ export function applyFlowUpdate(
             } as never;
           }),
         );
-        // The node's output handles changed (collapsed to one Toolset handle),
-        // so ReactFlow must recompute handle positions or the edge to
-        // component_as_tool can't find its source.
         updateNodeInternals(compId);
       }
       break;
