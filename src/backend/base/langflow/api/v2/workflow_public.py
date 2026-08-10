@@ -54,6 +54,7 @@ from lfx.workflow.adapters import (
 from lfx.workflow.converters import ParsedWorkflowRun
 from limits import parse
 
+from langflow.api.utils.core import strip_secret_field_values
 from langflow.api.utils.flow_utils import (
     scope_session_to_namespace,
     validate_public_files,
@@ -172,9 +173,12 @@ async def execute_public_workflow(
                 validate_public_flow_no_code_execution(flow.data)
                 # Mirror v1's public build: substitute trusted server component
                 # source and reject unknown custom components before the graph is
-                # built. Without this, the v2 path falls back to the database copy
-                # and can execute altered stored component code as the flow owner.
-                sanitized_public_data = await prepare_public_flow_build(flow.data)
+                # built. The explicit custom-code opt-in may preserve approved code,
+                # but the detached graph is always secret-scrubbed below.
+                prepared_public_data = await prepare_public_flow_build(flow.data)
+                sanitized_public_data = strip_secret_field_values(
+                    prepared_public_data if prepared_public_data is not None else flow.data
+                )
             flow_name = flow.name if flow else None
     except CatalogPolicyIdentityUnavailableError as exc:
         await logger.awarning("Public workflow component identities are temporarily unavailable: %s", exc)
@@ -214,9 +218,9 @@ async def execute_public_workflow(
         mode="stream",
         start_component_id=request.start_component_id,
         stop_component_id=request.stop_component_id,
-        # The default public policy builds from the server-sanitized graph. The
-        # explicit allow_public_custom_components opt-in returns None and keeps
-        # the historical database-loaded behavior.
+        # Always build from a detached secret-scrubbed graph. The default policy
+        # additionally substitutes trusted server code; the explicit custom-code
+        # opt-in preserves approved code without restoring owner credentials.
         data=sanitized_public_data,
         files=request.files,
     )
