@@ -83,11 +83,6 @@ const TableModal = forwardRef<AgGridReact, TableModalProps>(
           <TableComponent
             className="h-full w-full"
             ref={ref}
-            // Without this, the grid's own accessible name (announced via
-            // setGridAriaProperty and the focus-boundary text) falls back
-            // to the generic "Data table" translation instead of the
-            // title already shown in the modal header — callers that want
-            // something else can still override via tableLabel in props.
             tableLabel={tableTitle}
             {...props}
           ></TableComponent>
