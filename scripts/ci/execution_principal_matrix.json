@@ -45,7 +45,9 @@
       "error_policy": "owner_debug_delegated_sanitized",
       "exception": "none",
       "test_references": [
-        "src/backend/tests/unit/api/v1/test_endpoints.py::test_get_config_basic"
+        "src/backend/tests/unit/api/v1/test_execution_principal_contract.py::test_v1_run_non_owner_tweaks_are_hidden_as_not_found",
+        "src/backend/tests/unit/api/v1/test_execution_principal_contract.py::test_v1_advanced_shared_flow_executes_as_caller_without_owner_requery",
+        "src/backend/tests/unit/api/v1/test_execution_principal_contract.py::test_v1_run_stream_error_depends_on_flow_ownership"
       ]
     },
     {
@@ -53,14 +55,14 @@
       "authz_family": "flow_run_advanced_webhook",
       "source": "src/backend/base/langflow/api/v1/endpoints.py",
       "actor": "webhook_user",
-      "execution_principal": "actor",
-      "dependency_principal": "actor_or_explicit_share",
+      "execution_principal": "flow_owner",
+      "dependency_principal": "flow_owner",
       "tweaks": "server_generated",
       "revoke": "new_only",
       "error_policy": "owner_debug_delegated_sanitized",
-      "exception": "the webhook body is mapped server-side to the published Webhook component input",
+      "exception": "webhook authentication resolves the published flow owner; the request body is mapped server-side to that owner's Webhook component input",
       "test_references": [
-        "src/backend/tests/unit/api/v1/test_endpoints.py::test_get_version"
+        "src/backend/tests/unit/api/v1/test_execution_principal_contract.py::test_webhook_server_generated_tweaks_remain_trusted"
       ]
     },
     {
@@ -75,7 +77,9 @@
       "error_policy": "owner_debug_delegated_sanitized",
       "exception": "request variables use runtime context instead of component tweaks",
       "test_references": [
-        "src/backend/tests/integration/test_openai_responses_integration.py::test_openai_responses_non_streaming"
+        "src/backend/tests/unit/api/v1/test_openai_responses_execution_policy.py::test_openai_execute_denial_matches_missing_flow_response",
+        "src/backend/tests/unit/api/v1/test_openai_responses_execution_policy.py::test_openai_sync_error_depends_on_flow_ownership",
+        "src/backend/tests/unit/api/v1/test_openai_responses_execution_policy.py::test_openai_stream_fallback_error_depends_on_flow_ownership"
       ]
     },
     {
@@ -84,11 +88,11 @@
       "source": "src/backend/base/langflow/api/v1/mcp.py",
       "actor": "authenticated_user",
       "execution_principal": "actor",
-      "dependency_principal": "actor_or_explicit_share",
+      "dependency_principal": "actor",
       "tweaks": "forbidden",
       "revoke": "new_only",
       "error_policy": "owner_debug_delegated_sanitized",
-      "exception": "none",
+      "exception": "legacy MCP only exposes flows owned by the authenticated transport actor; shared-flow delegation is not admitted",
       "test_references": [
         "src/backend/tests/unit/api/v1/test_mcp.py::test_mcp_sse_get_binds_authenticated_user_to_transport"
       ]
@@ -99,11 +103,11 @@
       "source": "src/backend/base/langflow/api/v1/mcp_projects.py",
       "actor": "project_auth_user",
       "execution_principal": "actor",
-      "dependency_principal": "actor_or_explicit_share",
+      "dependency_principal": "actor",
       "tweaks": "forbidden",
       "revoke": "new_only",
       "error_policy": "owner_debug_delegated_sanitized",
-      "exception": "a project configured with auth type none resolves the project owner as its transport actor",
+      "exception": "project admission is owner-scoped; auth type none resolves the project owner as its transport actor",
       "test_references": [
         "src/backend/tests/unit/api/v1/test_mcp_projects.py::test_streamable_none_auth_project_runs_as_project_owner"
       ]

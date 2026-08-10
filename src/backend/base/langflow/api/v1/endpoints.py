@@ -34,7 +34,6 @@ from lfx.services.model_provider_policy import (
 from lfx.services.settings.service import SettingsService
 from lfx.utils.component_aliases import ComponentIdentityIndex, build_component_identity_index
 from lfx.utils.flow_validation import CustomComponentValidationError
-from sqlmodel import select
 
 from langflow.api.utils import (
     CurrentActiveUser,
@@ -43,6 +42,7 @@ from langflow.api.utils import (
     parse_value,
     release_db_transaction,
 )
+from langflow.api.utils.execution_errors import error_for_client
 from langflow.api.v1.custom_component_policy import (
     CatalogPolicyHTTPException,
     enforce_catalog_policy_for_component_type,
@@ -106,6 +106,46 @@ router = APIRouter(tags=["Base"])
 
 # SSE Constants
 SSE_HEARTBEAT_TIMEOUT_SECONDS = 30.0
+
+
+def _caller_owns_flow(flow: Flow | FlowRead, user: User | UserRead) -> bool:
+    """Return whether request actor and stored flow owner are the same principal."""
+    return flow.user_id is not None and str(flow.user_id) == str(user.id)
+
+
+def _has_nonempty_tweaks(tweaks: Tweaks | dict | None) -> bool:
+    """Handle both the Tweaks RootModel and ordinary mappings."""
+    return bool(getattr(tweaks, "root", tweaks))
+
+
+def _enforce_owner_only_tweaks(
+    flow: Flow | FlowRead,
+    user: User | UserRead,
+    tweaks: Tweaks | dict | None,
+) -> None:
+    """Reject caller-controlled graph mutation without revealing a shared flow."""
+    if _has_nonempty_tweaks(tweaks) and not _caller_owns_flow(flow, user):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
+
+
+def _graph_executes_as_actor(
+    graph: Graph,
+    user: User | UserRead,
+    *,
+    flow_id: UUID | str,
+) -> bool:
+    """Reject cached graphs whose instantiated components retain another principal."""
+    actor_id = str(user.id)
+    if str(getattr(graph, "flow_id", None)) != str(flow_id):
+        return False
+    if str(getattr(graph, "user_id", None)) != actor_id:
+        return False
+    for vertex in getattr(graph, "vertices", []):
+        component = getattr(vertex, "custom_component", None)
+        component_user_id = getattr(component, "_user_id", None)
+        if component_user_id is not None and str(component_user_id) != actor_id:
+            return False
+    return True
 
 
 _SIMPLIFIED_API_FORM_FIELDS = (
@@ -327,6 +367,7 @@ async def simple_run_flow(
     event_manager: EventManager | None = None,
     context: dict | None = None,
     run_id: str | None = None,
+    expose_error_details: bool = True,
 ):
     validate_input_and_tweaks(input_request)
     policy_context_token = set_current_model_provider_policy_context(
@@ -416,10 +457,11 @@ async def simple_run_flow(
                 str(exc),
                 exc_info=True,
             )
+            client_error = error_for_client(exc, expose_details=expose_error_details)
             raise APIException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                exception=exc,
-                flow=flow,
+                exception=client_error,
+                flow=flow if expose_error_details else None,
             ) from exc
 
         # Fire memory-base auto-capture hook — non-blocking background effect.
@@ -610,6 +652,8 @@ async def run_flow_generator(
     event_manager: EventManager,
     client_consumed_queue: asyncio.Queue,
     context: dict | None = None,
+    *,
+    expose_error_details: bool = True,
 ) -> None:
     """Executes a flow asynchronously and manages event streaming to the client.
 
@@ -623,6 +667,7 @@ async def run_flow_generator(
         event_manager (EventManager): Manages the streaming of events to the client
         client_consumed_queue (asyncio.Queue): Tracks client consumption of events
         context (dict | None): Optional context to pass to the flow
+        expose_error_details: Whether client events may contain owner debugging details.
 
     Events Generated:
         - "add_message": Sent when new messages are added during flow execution
@@ -644,12 +689,14 @@ async def run_flow_generator(
             api_key_user=api_key_user,
             event_manager=event_manager,
             context=context,
+            expose_error_details=expose_error_details,
         )
         event_manager.on_end(data={"result": result.model_dump()})
         await client_consumed_queue.get()
     except Exception as e:  # noqa: BLE001 - Catch ALL exceptions to ensure errors are propagated in streaming
         await logger.aerror(f"Error running flow: {e}")
-        event_manager.on_error(data={"error": str(e)})
+        client_error = error_for_client(e, expose_details=expose_error_details)
+        event_manager.on_error(data={"error": str(client_error)})
     finally:
         await event_manager.queue.put((None, None, time.time))
 
@@ -762,12 +809,8 @@ async def _run_flow_internal(
         HTTPException: For flow not found (404) or invalid input (400)
         APIException: For internal execution errors (500)
     """
-    # Authorization happens upstream: every caller of _run_flow_internal must
-    # have called ensure_flow_permission(FlowAction.EXECUTE, ...) before
-    # invoking us. The owner-only check that used to live here would reject any
-    # plugin execute-grant on a shared flow, defeating the plugin's
-    # purpose. Adding a defense-in-depth check here would re-introduce the
-    # same regression.
+    # Authorization happens upstream. A granted share may execute the stored
+    # graph, but only the owner may mutate it through request tweaks.
     telemetry_service = get_telemetry_service()
 
     # If input_request is None, manually parse the request body
@@ -777,6 +820,9 @@ async def _run_flow_internal(
 
     if flow is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
+
+    expose_error_details = _caller_owns_flow(flow, api_key_user)
+    _enforce_owner_only_tweaks(flow, api_key_user, input_request.tweaks)
 
     # Extract request-level variables from headers with prefix X-LANGFLOW-GLOBAL-VAR-*
     request_variables = extract_global_variables_from_headers(http_request.headers)
@@ -803,6 +849,7 @@ async def _run_flow_internal(
                 event_manager=event_manager,
                 client_consumed_queue=asyncio_queue_client_consumed,
                 context=context,
+                expose_error_details=expose_error_details,
             )
         )
 
@@ -825,6 +872,7 @@ async def _run_flow_internal(
             api_key_user=api_key_user,
             context=context,
             run_id=run_id,
+            expose_error_details=expose_error_details,
         )
         end_time = time.perf_counter()
         background_tasks.add_task(
@@ -849,18 +897,30 @@ async def _run_flow_internal(
                 run_id=run_id,
             ),
         )
-        if "badly formed hexadecimal UUID string" in str(exc):
+        if expose_error_details and "badly formed hexadecimal UUID string" in str(exc):
             # This means the Flow ID is not a valid UUID which means it can't find the flow
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-        if isinstance(exc, CustomComponentValidationError):
+        if expose_error_details and isinstance(exc, CustomComponentValidationError):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-        if "not found" in str(exc):
+        if expose_error_details and "not found" in str(exc):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-        raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
+        client_error = error_for_client(exc, expose_details=expose_error_details)
+        raise APIException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            exception=client_error,
+            flow=flow if expose_error_details else None,
+        ) from exc
     except InvalidChatInputError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    except HTTPException:
-        raise
+    except HTTPException as exc:
+        if expose_error_details:
+            raise
+        client_error = error_for_client(exc, expose_details=False)
+        raise APIException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            exception=client_error,
+            flow=None,
+        ) from exc
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_run,
@@ -872,7 +932,12 @@ async def _run_flow_internal(
                 run_id=run_id,
             ),
         )
-        raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
+        client_error = error_for_client(exc, expose_details=expose_error_details)
+        raise APIException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            exception=client_error,
+            flow=flow if expose_error_details else None,
+        ) from exc
 
     return _v1_run_response(result)
 
@@ -1271,61 +1336,81 @@ async def experimental_run_flow(
         folder_id=flow.folder_id,
     )
 
-    session_service = get_session_service()
+    expose_error_details = _caller_owns_flow(flow, api_key_user)
+    _enforce_owner_only_tweaks(flow, api_key_user, tweaks)
+
     flow_id_str = str(flow.id)
     if outputs is None:
         outputs = []
     if inputs is None:
         inputs = [InputValueRequest(components=[], input_value="")]
 
+    graph: Graph | None = None
     if session_id:
+        session_service = get_session_service()
         try:
             session_data = await session_service.load_session(session_id, flow_id=flow_id_str)
         except Exception as exc:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+            await logger.aexception("Failed to load advanced-run session for flow %s", flow.id)
+            client_error = error_for_client(exc, expose_details=expose_error_details)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(client_error)) from exc
         graph, _artifacts = session_data or (None, None)
         if graph is None:
             msg = f"Session {session_id} not found"
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
-    else:
-        try:
-            # Get the flow that matches the flow_id and belongs to the user
-            # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
-            stmt = select(Flow).where(Flow.id == flow.id).where(Flow.user_id == api_key_user.id)
-            flow = (await session.exec(stmt)).first()
-        except sa.exc.StatementError as exc:
-            # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
-            if "badly formed hexadecimal UUID string" in str(exc):
-                await logger.aerror(f"Flow ID {flow_id_str} is not a valid UUID")
-                # This means the Flow ID is not a valid UUID which means it can't find the flow
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
-        except Exception as exc:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        if not _graph_executes_as_actor(graph, api_key_user, flow_id=flow.id):
+            # Cache keys are legacy and not actor-scoped. Reusing an instantiated
+            # graph across principals would retain the first actor's component
+            # credentials, variables, files, and tweaks. Rebuild the immutable
+            # stored flow under the current actor instead.
+            await logger.awarning(
+                "Ignoring advanced-run graph cached under another execution principal for flow %s",
+                flow.id,
+            )
+            graph = None
 
-        if flow is None:
-            msg = f"Flow {flow_id_str} not found"
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
-
+    if graph is None:
         if flow.data is None:
             msg = f"Flow {flow_id_str} has no data"
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
+            if expose_error_details:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
+            client_error = error_for_client(ValueError(msg), expose_details=False)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=str(client_error),
+            )
         try:
             graph_data = flow.data
             graph_data = process_tweaks(graph_data, tweaks or {})
             raise_if_hitl_unsupported(graph_data)
-            graph = Graph.from_payload(graph_data, flow_id=flow_id_str)
+            graph = Graph.from_payload(
+                graph_data,
+                flow_id=flow_id_str,
+                user_id=str(api_key_user.id),
+                flow_name=flow.name,
+            )
         except CustomComponentValidationError as exc:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-        except HTTPException:
-            raise
+            await logger.aexception("Advanced-run flow validation failed for flow %s", flow.id)
+            client_error = error_for_client(exc, expose_details=expose_error_details)
+            status_code = status.HTTP_400_BAD_REQUEST if expose_error_details else status.HTTP_500_INTERNAL_SERVER_ERROR
+            raise HTTPException(status_code=status_code, detail=str(client_error)) from exc
+        except HTTPException as exc:
+            if expose_error_details:
+                raise
+            await logger.aexception("Advanced-run flow validation failed for flow %s", flow.id)
+            client_error = error_for_client(exc, expose_details=False)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=str(client_error),
+            ) from exc
         except Exception as exc:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+            await logger.aexception("Failed to build advanced-run graph for flow %s", flow.id)
+            client_error = error_for_client(exc, expose_details=expose_error_details)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(client_error)) from exc
 
-    # Graph execution below can run for minutes; end the request transaction
-    # opened by the flow re-query above so it doesn't pin a pooled connection
-    # (Postgres: idle-in-transaction) for the whole run (#14445). In the
-    # session_id branch the session was never used, so this is a no-op.
+    # Graph execution below can run for minutes; end any request transaction
+    # opened by dependency resolution so it does not pin a pooled connection
+    # (Postgres: idle-in-transaction) for the whole run (#14445).
     await release_db_transaction(session)
 
     try:
@@ -1338,7 +1423,9 @@ async def experimental_run_flow(
             stream=stream,
         )
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        await logger.aexception("Advanced-run execution failed for flow %s", flow.id)
+        client_error = error_for_client(exc, expose_details=expose_error_details)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(client_error)) from exc
 
     # Fire memory-base auto-capture hook — non-blocking background effect.
     try:

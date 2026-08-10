@@ -870,9 +870,12 @@ async def generate_flow_events(
             flow_id=flow_id,
             exception=client_error,
             session_id=inputs.session,
+            include_traceback=expose_error_details,
         )
         event_manager.on_error(data=error_message.data)
-        raise
+        if expose_error_details:
+            raise
+        raise client_error from e
 
     # Create a WORKFLOW job record so memory-base on_flow_output can track this run.
     # Best-effort: failures here must never break the build path.
@@ -937,9 +940,12 @@ async def generate_flow_events(
                 exception=client_error,
                 session_id=graph.session_id,
                 trace_name=trace_name,
+                include_traceback=expose_error_details,
             )
             event_manager.on_error(data=error_message.data)
-            raise
+            if expose_error_details:
+                raise
+            raise client_error from e
 
     try:
         runner_owns_status = job_id is not None  # background path: JobRunner already wraps execute_with_status

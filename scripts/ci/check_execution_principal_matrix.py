@@ -56,10 +56,15 @@ VALID_DIMENSION_VALUES = {
         "public_visitor",
     },
     "execution_principal": {"actor", "flow_owner", "deployment_owner", "job_owner"},
-    "dependency_principal": {"actor_or_explicit_share", "flow_owner", "deployment_owner", "job_owner"},
+    "dependency_principal": {"actor", "actor_or_explicit_share", "flow_owner", "deployment_owner", "job_owner"},
     "tweaks": {"owner_only", "forbidden", "server_generated"},
     "revoke": {"new_and_resume", "new_only", "resume_rechecks_actor", "provider_controlled"},
     "error_policy": {"owner_debug_delegated_sanitized", "sanitized", "provider_sanitized"},
+}
+
+BEHAVIOR_SPECIFIC_REFERENCE_TERMS = {
+    "v1_run": ("v1_run",),
+    "webhook": ("webhook", "tweak"),
 }
 
 
@@ -131,6 +136,14 @@ def validate_matrix(matrix_path: Path = DEFAULT_MATRIX) -> list[str]:
             for reference in entrypoint["test_references"]
             if (error := _validate_test_reference(reference))
         )
+        required_terms = BEHAVIOR_SPECIFIC_REFERENCE_TERMS.get(family)
+        if required_terms and not any(
+            all(term in reference.rsplit("::", 1)[-1].lower() for term in required_terms)
+            for reference in entrypoint["test_references"]
+        ):
+            errors.append(
+                f"entrypoint {family!r} needs a behavior-specific test reference containing {required_terms!r}"
+            )
 
     missing_families = REQUIRED_FAMILIES - seen
     unexpected_families = seen - REQUIRED_FAMILIES

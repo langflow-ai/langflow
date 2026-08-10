@@ -66,6 +66,7 @@ Revoking a share prevents new runs and rechecked continuations, including HITL r
 
 - Public V1/V2 and A2A entry points continue to execute with the published flow owner's identity, under their existing visitor-isolated session and storage namespaces. Public requests cannot submit graph data or tweaks.
 - Deployment authorization and audit use the requesting actor, while the external deployment data plane continues to use the deployment owner's provider namespace. Provider controls govern already-running work.
+- Webhooks, legacy MCP, and project MCP remain owner-scoped admission surfaces in this release; they do not widen execution to shared flows. Webhook request data is the one trusted server-generated tweak and is mapped only to the published Webhook component.
 
 Owner-only execution retains detailed component errors for debugging. Delegated and public execution returns a stable generic workflow error without a component traceback or provider detail. Server logs and telemetry keep the original exception.
 
