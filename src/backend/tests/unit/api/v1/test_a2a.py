@@ -593,7 +593,13 @@ async def test_public_a2a_run_uses_server_sanitized_flow_data(active_user, echo_
     monkeypatch.setattr(a2a_module, "prepare_public_flow_build", fake_prepare)
     monkeypatch.setattr(workflow_module, "execute_sync_workflow_with_timeout", fake_execute)
 
-    response = await a2a_module._run_flow(flow_id, str(uuid.uuid4()), "hello", "context")
+    response = await a2a_module._run_flow(
+        flow_id,
+        str(uuid.uuid4()),
+        "hello",
+        "context",
+        admitted_user_id=str(a2a_module.PUBLIC_ANONYMOUS_ACTOR_ID),
+    )
 
     assert response is expected_response
     assert captured["validated"] == echo_flow_data
@@ -645,7 +651,12 @@ async def test_public_a2a_resume_sanitizes_checkpoint_payload(active_user, echo_
     monkeypatch.setattr(a2a_module, "resume_graph_with_decision", fake_resume)
 
     with pytest.raises(StopAfterPolicyCheckError):
-        await a2a_module._resume_flow(flow_id, task_id, "Approve")
+        await a2a_module._resume_flow(
+            flow_id,
+            task_id,
+            "Approve",
+            admitted_user_id=str(a2a_module.PUBLIC_ANONYMOUS_ACTOR_ID),
+        )
 
     assert captured["validated"] == echo_flow_data
     assert captured["prepared"] == echo_flow_data
@@ -675,7 +686,11 @@ async def test_public_a2a_resume_rechecks_compatibility_grant(active_user, echo_
     monkeypatch.setattr(a2a_module, "authorize_public_flow_access", deny_revoked, raising=False)
 
     with pytest.raises(HTTPException) as excinfo:
-        await a2a_module._prepare_a2a_resume_checkpoint(flow_id, checkpoint)
+        await a2a_module._prepare_a2a_resume_checkpoint(
+            flow_id,
+            checkpoint,
+            admitted_user_id=str(a2a_module.PUBLIC_ANONYMOUS_ACTOR_ID),
+        )
 
     assert excinfo.value.status_code == 404
     assert calls
@@ -698,7 +713,11 @@ async def test_public_a2a_resume_rejects_owner_checkpoint_after_auth_transition(
     )
 
     with pytest.raises(HTTPException) as excinfo:
-        await a2a_module._prepare_a2a_resume_checkpoint(flow_id, checkpoint)
+        await a2a_module._prepare_a2a_resume_checkpoint(
+            flow_id,
+            checkpoint,
+            admitted_user_id=str(a2a_module.PUBLIC_ANONYMOUS_ACTOR_ID),
+        )
 
     assert excinfo.value.status_code == 404
 
@@ -719,9 +738,168 @@ async def test_protected_a2a_resume_rejects_anonymous_checkpoint_after_auth_tran
     )
 
     with pytest.raises(HTTPException) as excinfo:
-        await a2a_module._prepare_a2a_resume_checkpoint(flow_id, checkpoint)
+        await a2a_module._prepare_a2a_resume_checkpoint(
+            flow_id,
+            checkpoint,
+            admitted_user_id=str(active_user.id),
+        )
 
     assert excinfo.value.status_code == 404
+
+
+async def test_a2a_run_rejects_public_gate_principal_after_folder_becomes_protected(active_user, echo_flow_data):
+    """A public request cannot switch to owner execution if auth changes before SDK dispatch."""
+    from fastapi import HTTPException
+    from langflow.api.v1 import a2a as a2a_module
+
+    folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "apikey"})
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
+
+    with pytest.raises(HTTPException) as excinfo:
+        await a2a_module._run_flow(
+            flow_id,
+            str(uuid.uuid4()),
+            "hello",
+            "context",
+            admitted_user_id=str(a2a_module.PUBLIC_ANONYMOUS_ACTOR_ID),
+        )
+
+    assert excinfo.value.status_code == 404
+
+
+async def test_a2a_run_rejects_owner_gate_principal_after_folder_becomes_public(active_user, echo_flow_data):
+    """A protected request cannot silently switch to anonymous execution after admission."""
+    from fastapi import HTTPException
+    from langflow.api.v1 import a2a as a2a_module
+
+    folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "none"})
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
+
+    with pytest.raises(HTTPException) as excinfo:
+        await a2a_module._run_flow(
+            flow_id,
+            str(uuid.uuid4()),
+            "hello",
+            "context",
+            admitted_user_id=str(active_user.id),
+        )
+
+    assert excinfo.value.status_code == 404
+
+
+async def test_a2a_jsonrpc_records_the_server_admitted_principal_before_dispatch(active_user, monkeypatch):
+    """The SDK context must inherit the gate result, never re-derive identity from mutable folder state."""
+    from types import SimpleNamespace
+
+    from langflow.api.v1 import a2a as a2a_module
+    from starlette.requests import Request
+    from starlette.responses import Response
+
+    flow_id = uuid.uuid4()
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "scheme": "https",
+            "server": ("tenant.example", 443),
+            "client": ("127.0.0.1", 12345),
+            "root_path": "",
+            "path": f"/api/v1/a2a/{flow_id}/jsonrpc",
+            "raw_path": f"/api/v1/a2a/{flow_id}/jsonrpc".encode(),
+            "query_string": b"",
+            "headers": [],
+            "path_params": {"flow_id": str(flow_id)},
+            "state": {},
+        }
+    )
+    flow = SimpleNamespace(flow_type=FlowType.AGENT, a2a_enabled=True)
+    captured = {}
+
+    async def fake_get_flow(_identifier):
+        return flow
+
+    async def fake_enforce(_flow, _request):
+        return active_user
+
+    class FakeDispatcher:
+        async def handle_requests(self, dispatched_request):
+            captured["admitted_user_id"] = dispatched_request.state.a2a_admitted_user_id
+            return Response(status_code=204)
+
+    monkeypatch.setattr(a2a_module, "_require_a2a_enabled", lambda: None)
+    monkeypatch.setattr(a2a_module, "get_flow_by_id_or_endpoint_name", fake_get_flow)
+    monkeypatch.setattr(a2a_module, "_enforce_a2a_auth", fake_enforce)
+    monkeypatch.setattr(a2a_module, "_DISPATCHER", FakeDispatcher())
+
+    response = await a2a_module.a2a_jsonrpc(flow_id, request)
+
+    assert response.status_code == 204
+    assert captured["admitted_user_id"] == str(active_user.id)
+
+
+def test_a2a_context_builder_carries_only_the_server_admitted_principal():
+    """The dispatcher receives the server-side gate identity through its call context."""
+    from langflow.api.v1 import a2a as a2a_module
+    from starlette.requests import Request
+
+    flow_id = uuid.uuid4()
+    admitted_user_id = str(uuid.uuid4())
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "scheme": "https",
+            "server": ("tenant.example", 443),
+            "client": ("127.0.0.1", 12345),
+            "root_path": "",
+            "path": f"/api/v1/a2a/{flow_id}/jsonrpc",
+            "raw_path": f"/api/v1/a2a/{flow_id}/jsonrpc".encode(),
+            "query_string": b"",
+            "headers": [],
+            "path_params": {"flow_id": str(flow_id)},
+            "state": {"a2a_admitted_user_id": admitted_user_id},
+        }
+    )
+
+    context = a2a_module._FlowContextBuilder().build(request)
+
+    assert context.state["admitted_user_id"] == admitted_user_id
+
+
+async def test_a2a_executor_forwards_admitted_principal_to_run():
+    """The SDK producer cannot lose the principal captured by the HTTP gate."""
+    from a2a.server.agent_execution import RequestContext
+    from a2a.server.context import ServerCallContext
+    from a2a.server.events import EventQueue
+    from langflow.api.v1.a2a_executor import FlowAgentExecutor
+
+    admitted_user_id = str(uuid.uuid4())
+    captured = {}
+
+    async def capture_run(_flow_id, _task_id, _text, _context_id, _request_host, admitted_principal):
+        captured["admitted_user_id"] = admitted_principal
+        message = "stop after argument capture"
+        raise RuntimeError(message)
+
+    async def no_resume(*_args):
+        pytest.fail("resume must not be called")
+
+    executor = FlowAgentExecutor(capture_run, no_resume)
+    context = RequestContext(
+        call_context=ServerCallContext(
+            state={
+                "flow_id": str(uuid.uuid4()),
+                "request_host": "tenant.example",
+                "admitted_user_id": admitted_user_id,
+            }
+        ),
+        task_id=uuid.uuid4().hex,
+        context_id="context",
+    )
+
+    await executor.execute(context, EventQueue())
+
+    assert captured["admitted_user_id"] == admitted_user_id
 
 
 # --- DataPart (structured application/json I/O) ----------------------------
