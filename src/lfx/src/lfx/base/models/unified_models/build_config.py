@@ -153,7 +153,7 @@ def apply_provider_variable_config_to_build_config(
         if mapping_field:
             vars_by_field[mapping_field] = v
 
-    # Apply the current provider's variable metadata to show/configure the right fields and pre-populate credentials.
+    # Apply the current provider's metadata without changing explicit field values.
     for field_name, var_info in vars_by_field.items():
         if field_name not in build_config:
             continue
@@ -175,56 +175,6 @@ def apply_provider_variable_config_to_build_config(
             field_config["info"] = info
 
         field_config["show"] = True
-
-        # Pre-populate with the variable name (never the raw secret) when a
-        # credential is available in the database or environment.  Setting
-        # load_from_db=True tells the runtime to resolve the actual value.
-        var_key = var_info.get("variable_key")
-        if var_key:
-            # DropdownInput fields don't support load_from_db because the
-            # variable key name (e.g. "WATSONX_URL") isn't a valid dropdown
-            # option.  These fields are resolved separately by
-            # _resolve_dropdown_provider_values in handle_model_input_update.
-            input_type = field_config.get("_input_type", "")
-            if input_type == "DropdownInput":
-                logger.debug(
-                    "Skipping load_from_db for DropdownInput field %s (will resolve separately)",
-                    field_name,
-                )
-            else:
-                # Decide whether to install this provider's variable key on
-                # the field.  Cases:
-                #
-                # 1. Empty field — auto-populate.
-                # 2. ``load_from_db=True`` with a value that doesn't match
-                #    this provider's ``var_key`` — stale cross-provider
-                #    credential (e.g. ``ANTHROPIC_API_KEY`` left over after
-                #    switching to OpenAI).  Replace with the current
-                #    provider's var_key.
-                # 3. ``load_from_db=True`` with a value that matches
-                #    ``var_key`` — already correct, preserve.
-                # 4. ``load_from_db=False`` with a value — user-typed raw
-                #    credential.  Preserve so it survives refresh cycles.
-                #    We cannot tell from the backend whether a raw value is
-                #    stale after a provider switch, so we err on the side
-                #    of preservation; the user can overwrite it manually.
-                current_value = field_config.get("value")
-                current_load_from_db = field_config.get("load_from_db", False)
-                is_empty = not current_value
-                is_stale_cross_provider_var = current_load_from_db and current_value != var_key
-                if is_empty or is_stale_cross_provider_var:
-                    field_config["value"] = var_key
-                    field_config["load_from_db"] = True
-                    logger.debug(
-                        "Set field %s to var name %s (value resolved at runtime)",
-                        field_name,
-                        var_key,
-                    )
-                else:
-                    logger.debug(
-                        "Skipping auto-set for field %s - user has already supplied a value",
-                        field_name,
-                    )
 
     return build_config
 
@@ -409,8 +359,13 @@ def update_model_options_in_build_config(
     # of whatever field triggered the update — e.g. api_key text).  Using
     # field_value here would incorrectly reset the model selection whenever a
     # non-model field (like api_key) is cleared or set to a global variable.
+    # An explicit model-field update carrying an empty value must NOT be
+    # auto-filled: ``options`` spans every enabled provider, so ``options[0]``
+    # would silently substitute a model from whichever provider iterates
+    # first — one the node was never configured for.
+    explicit_model_clear = field_name == model_field_name and not field_value
     current_model_value = build_config.get(model_field_name, {}).get("value")
-    if not current_model_value:
+    if not current_model_value and not explicit_model_clear:
         options = visible_options
         if options:
             # Determine model type based on cache_key_prefix
@@ -576,10 +531,25 @@ def handle_model_input_update(
     )
     selected_provider_after_refresh = _selected_provider()
     provider_changed_during_refresh = selected_provider_before_refresh != selected_provider_after_refresh
+    provider_auto_selected_during_refresh = (
+        selected_provider_before_refresh is None and selected_provider_after_refresh is not None
+    )
 
     # When the user directly edits a provider-specific field (e.g. api_key),
     # skip the provider reset/re-population so their value is preserved.
     provider_mapped_fields = _get_all_provider_mapped_fields()
+    edited_provider_field_state: tuple[str, dict[str, Any]] | None = None
+    if (
+        provider_auto_selected_during_refresh
+        and field_name is not None
+        and field_name in provider_mapped_fields
+        and field_name in build_config
+    ):
+        field_config = build_config[field_name]
+        edited_provider_field_state = (
+            field_name,
+            {key: field_config[key] for key in ("value", "load_from_db") if key in field_config},
+        )
     if field_name in provider_mapped_fields and not provider_changed_during_refresh:
         return build_config
 
@@ -603,19 +573,23 @@ def handle_model_input_update(
                 for option in options
             )
 
-            # If the value is invalid, reset to the first option if available, otherwise empty.
-            build_config[model_field_name]["value"] = field_value if value_is_valid else [options[0]] if options else ""
+            if value_is_valid:
+                build_config[model_field_name]["value"] = field_value
+            elif not field_value:
+                # Explicitly cleared: stay empty. ``options`` is one flat list
+                # across every enabled provider, so ``options[0]`` would pick a
+                # model from an arbitrary provider the node never selected.
+                build_config[model_field_name]["value"] = []
+            else:
+                # A non-empty invalid value resets to the first option so the
+                # user can pick a valid one (e.g. the Agent filters flow that
+                # drops a tool-incompatible model for a compatible default).
+                build_config[model_field_name]["value"] = [options[0]] if options else ""
             field_value = build_config[model_field_name]["value"]
 
-    # Step 2: Hide all provider-specific fields.  We do NOT clear values
-    # here — the frontend has already mutated ``template[model]["value"]``
-    # to the new selection before POSTing, so the backend can't distinguish
-    # a real provider switch from a same-provider refresh based on the
-    # incoming build_config alone.  Instead,
-    # ``apply_provider_variable_config_to_build_config`` (Step 3) handles
-    # the credential swap by detecting stale cross-provider variable keys
-    # in provider-mapped fields and replacing them with the current
-    # provider's var key.  Raw user-typed values are preserved in all cases.
+    # Step 2: Reset provider-specific visibility without changing values.
+    # Step 3 shows and configures the fields for the selected provider while
+    # preserving every explicit raw value or global-variable assignment.
     for field in provider_mapped_fields:
         if field in build_config:
             field_config = build_config[field]
@@ -652,6 +626,15 @@ def handle_model_input_update(
                 build_config["truncate_input_tokens"]["show"] = is_watsonx
             if "input_text" in build_config:
                 build_config["input_text"]["show"] = is_watsonx
+
+    # A cache refresh can auto-select a default provider while processing the
+    # provider field the user just edited. Restore that field only when the
+    # selected provider actually uses it; unrelated fields stay cleared.
+    if edited_provider_field_state is not None:
+        edited_field_name, edited_field_state = edited_provider_field_state
+        edited_field_config = build_config[edited_field_name]
+        if edited_field_config.get("show", False):
+            edited_field_config.update(edited_field_state)
 
     # Hide and clear the API key field when the selected provider doesn't use one
     # (e.g. Ollama). ``apply_provider_variable_config_to_build_config`` already

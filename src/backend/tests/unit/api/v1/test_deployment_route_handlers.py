@@ -872,16 +872,93 @@ class TestListDeploymentsMetadataSync:
 
 
 class TestListDeploymentsSharedPrefilter:
-    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.ensure_deployment_permission", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.has_visible_deployment_for_provider", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.get_shared_listing_provider_account_or_404", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.visible_scope_prefilter", new_callable=AsyncMock)
+    async def test_cross_user_provider_permission_deny_is_masked_as_not_found(
+        self,
+        mock_prefilter,
+        mock_get_owned_pa,
+        mock_get_shared_pa,
+        mock_has_visible_deployment,
+        mock_ensure_permission,
+        mock_resolve_adapter,
+    ):
+        """A relaxed provider lookup must not reveal whether a foreign UUID exists."""
+        from langflow.api.v1.deployments import list_deployments
+
+        provider_account = _fake_provider_account()
+        mock_prefilter.return_value = ResourceVisibilityScope(include_unassigned_workspace=True)
+        mock_has_visible_deployment.return_value = True
+        mock_get_shared_pa.return_value = provider_account
+        mock_ensure_permission.side_effect = HTTPException(status_code=403, detail="Not authorized")
+
+        with pytest.raises(HTTPException) as exc_info:
+            await list_deployments(
+                provider_id=provider_account.id,
+                session=MagicMock(),
+                current_user=_fake_user(),
+                params=SimpleNamespace(page=1, size=20),
+                deployment_type=None,
+            )
+
+        assert exc_info.value.status_code == 404
+        assert exc_info.value.detail == "Deployment provider account not found."
+        mock_get_owned_pa.assert_not_awaited()
+        mock_get_shared_pa.assert_awaited_once()
+        mock_resolve_adapter.assert_not_called()
+
+    @patch(f"{ROUTES_MODULE}.has_visible_deployment_for_provider", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.get_shared_listing_provider_account_or_404", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.visible_scope_prefilter", new_callable=AsyncMock)
+    async def test_unrelated_foreign_provider_never_reaches_unscoped_lookup(
+        self,
+        mock_prefilter,
+        mock_get_owned_pa,
+        mock_get_shared_pa,
+        mock_has_visible_deployment,
+    ):
+        """A coarse scope cannot reveal a provider with no deployment visible in that scope."""
+        from langflow.api.v1.deployments import list_deployments
+
+        provider_id = uuid4()
+        mock_prefilter.return_value = ResourceVisibilityScope(workspace_ids=(uuid4(),))
+        mock_has_visible_deployment.return_value = False
+        mock_get_owned_pa.side_effect = HTTPException(
+            status_code=404,
+            detail="Deployment provider account not found.",
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await list_deployments(
+                provider_id=provider_id,
+                session=MagicMock(),
+                current_user=_fake_user(),
+                params=SimpleNamespace(page=1, size=20),
+                deployment_type=None,
+            )
+
+        assert exc_info.value.status_code == 404
+        assert exc_info.value.detail == "Deployment provider account not found."
+        mock_has_visible_deployment.assert_awaited_once()
+        mock_get_owned_pa.assert_awaited_once()
+        mock_get_shared_pa.assert_not_awaited()
+
     @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
     @patch(f"{ROUTES_MODULE}.get_shared_listing_provider_account_or_404", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.has_visible_deployment_for_provider", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.visible_scope_prefilter", new_callable=AsyncMock)
     async def test_concrete_prefilter_relaxes_provider_gate_and_threads_visibility_scope(
         self,
         mock_prefilter,
+        mock_has_visible_deployment,
         mock_get_owned_pa,
         mock_get_shared_pa,
         mock_get_mapper,
@@ -906,6 +983,7 @@ class TestListDeploymentsSharedPrefilter:
 
         scope = ResourceVisibilityScope(resource_ids=(shared_id,))
         mock_prefilter.return_value = scope
+        mock_has_visible_deployment.return_value = True
         mock_get_shared_pa.return_value = pa
         mock_resolve_adapter.return_value = AsyncMock()
         mapper = MagicMock()
@@ -4070,10 +4148,12 @@ class TestListDeploymentsScopedKeyPrefilter:
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
     @patch(f"{ROUTES_MODULE}.get_shared_listing_provider_account_or_404", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.has_visible_deployment_for_provider", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.visible_scope_prefilter", new_callable=AsyncMock)
     async def test_concrete_prefilter_threads_visibility_scope_without_owner_union_assumption(
         self,
         mock_prefilter,
+        mock_has_visible_deployment,
         mock_get_owned_pa,
         mock_get_shared_pa,
         mock_get_mapper,
@@ -4093,6 +4173,7 @@ class TestListDeploymentsScopedKeyPrefilter:
         visibility_scope = ResourceVisibilityScope(resource_ids=(visible_only,))
         pa = _fake_provider_account()
         mock_prefilter.return_value = visibility_scope
+        mock_has_visible_deployment.return_value = True
         mock_get_shared_pa.return_value = pa
         mock_resolve_adapter.return_value = AsyncMock()
         mapper = MagicMock()

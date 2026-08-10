@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from fastapi import HTTPException, status
 from lfx.interface.components import component_cache
 from lfx.utils.flow_validation import (
+    CatalogPolicyIdentityUnavailableError,
     CatalogPolicyValidationError,
     code_hash_matches_any_template,
     get_component_hash_lookups_for_validation,
@@ -47,7 +48,7 @@ def resolve_component_code_for_action(
         validate_catalog_policy_for_component_code(code, snapshot=snapshot)
     except CatalogPolicyValidationError as exc:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
-    except RuntimeError as exc:
+    except CatalogPolicyIdentityUnavailableError as exc:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
 
     admin_only = getattr(settings, "custom_component_admin_only", False) is True and not user.is_superuser
@@ -78,8 +79,10 @@ def enforce_catalog_policy_for_component_type(
     *,
     snapshot: CatalogPolicySnapshot,
 ) -> None:
-    """Deny a materialized custom component whose exact runtime type is blocked."""
+    """Deny a materialized custom component whose canonical identity is blocked."""
     try:
         validate_catalog_policy_for_component_type(component_type, snapshot=snapshot)
     except CatalogPolicyValidationError as exc:
         raise CatalogPolicyHTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    except CatalogPolicyIdentityUnavailableError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc

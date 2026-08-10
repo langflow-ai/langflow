@@ -39,6 +39,11 @@ export type InputComponentType = {
   placeholder?: string;
   className?: string;
   id?: string;
+  /**
+   * Scopes the rendered DOM id to a flow node so two nodes exposing the same
+   * field name do not collide (LE-2037). `data-testid` keeps using `id`.
+   */
+  nodeId?: string;
   inputProps?: InputHTMLAttributes<HTMLInputElement>;
   blurOnEnter?: boolean;
   optionsIcon?: string;
@@ -309,6 +314,14 @@ export type ShadToolTipType = {
   delayDuration?: number;
   styleClasses?: string;
   avoidCollisions?: boolean;
+  /**
+   * Overrides Radix's automatic aria-describedby on the trigger. Pass a
+   * string to point at a specific description element, or `undefined` to
+   * suppress the description entirely (e.g. when the tooltip text just
+   * repeats the trigger's own aria-label and would otherwise be announced
+   * twice). Omit this prop to keep Radix's default behavior.
+   */
+  ariaDescribedBy?: string;
 };
 
 export type TextHighlightType = {

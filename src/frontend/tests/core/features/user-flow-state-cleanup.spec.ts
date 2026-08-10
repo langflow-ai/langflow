@@ -1,4 +1,5 @@
 import { expect, test } from "../../fixtures";
+import { createActiveUserViaApi } from "../../utils/auth/manage-users-via-api";
 import { TEXTS } from "../../utils/constants/texts";
 import {
   openTemplatesModal,
@@ -48,7 +49,7 @@ test(
 
     // Log in as admin and create test user
     await page.goto("/");
-    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+    await expect(page.getByRole("button", { name: TEXTS.signIn })).toBeVisible({
       timeout: 30000,
     });
     await page
@@ -74,23 +75,14 @@ test(
     await page.waitForSelector('[data-testid="mainpage_title"]', {
       timeout: 90000,
     });
-    await page.getByTestId("user-profile-settings").click();
-    await page.getByText("Admin Page", { exact: true }).click();
-    await page.getByText("New User", { exact: true }).click();
-    await page
-      .getByPlaceholder(TEXTS.placeholderUsername)
-      .last()
-      .fill(userAName);
-    await page.locator('input[name="password"]').fill(userAPassword);
-    await page.locator('input[name="confirmpassword"]').fill(userAPassword);
-    await page.waitForSelector("#is_active", { timeout: 1500 });
-    await page.locator("#is_active").click();
-    await expect(page.locator("#is_active")).toBeChecked();
-    await page.getByText(TEXTS.save, { exact: true }).click();
-    await page.waitForSelector("text=new user added", { timeout: 30000 });
+
+    // OSS Admin Page UI was removed; create the test user via admin APIs.
+    await createActiveUserViaApi(page, {
+      username: userAName,
+      password: userAPassword,
+    });
 
     // Log out from admin
-    await page.getByTestId("icon-ChevronLeft").first().click();
     await page.waitForSelector("[data-testid='user-profile-settings']", {
       timeout: 1500,
     });
@@ -103,7 +95,7 @@ test(
     // ---- USER A SESSION ----
 
     // Log in as User A
-    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+    await expect(page.getByRole("button", { name: TEXTS.signIn })).toBeVisible({
       timeout: 30000,
     });
     await page.getByPlaceholder(TEXTS.placeholderUsername).fill(userAName);
@@ -178,7 +170,7 @@ test(
     // ---- ADMIN SESSION AGAIN ----
 
     // Log in as admin again
-    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+    await expect(page.getByRole("button", { name: TEXTS.signIn })).toBeVisible({
       timeout: 30000,
     });
     await page

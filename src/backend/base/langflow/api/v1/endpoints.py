@@ -32,10 +32,17 @@ from lfx.services.model_provider_policy import (
     set_current_model_provider_policy_context,
 )
 from lfx.services.settings.service import SettingsService
+from lfx.utils.component_aliases import ComponentIdentityIndex, build_component_identity_index
 from lfx.utils.flow_validation import CustomComponentValidationError
 from sqlmodel import select
 
-from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
+from langflow.api.utils import (
+    CurrentActiveUser,
+    DbSession,
+    extract_global_variables_from_headers,
+    parse_value,
+    release_db_transaction,
+)
 from langflow.api.v1.custom_component_policy import (
     CatalogPolicyHTTPException,
     enforce_catalog_policy_for_component_type,
@@ -184,12 +191,13 @@ async def get_all(request: Request, current_user: CurrentActiveUser, *, include_
             detail="Only superusers can include blocked catalog components.",
         )
 
-    from langflow.interface.components import get_and_cache_all_types_dict
+    from langflow.interface.components import get_and_cache_all_types_dict, get_component_identity_index
     from langflow.utils.i18n import build_component_display_names, translate_component_dict
 
     try:
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
         all_types_en = await get_and_cache_all_types_dict(settings_service=get_settings_service())
+        component_identity_index = get_component_identity_index(all_types_en)
         visible_types_en = _filter_component_palette_by_provider_policy(
             all_types_en,
             user_id=current_user.id,
@@ -199,6 +207,7 @@ async def get_all(request: Request, current_user: CurrentActiveUser, *, include_
             visible_types_en = _filter_component_palette_by_catalog_policy(
                 visible_types_en,
                 blocked_component_keys=catalog_policy_snapshot.blocked_component_keys,
+                component_identity_index=component_identity_index,
             )
 
         locale = getattr(request.state, "locale", "en")
@@ -256,19 +265,22 @@ def _filter_component_palette_by_catalog_policy(
     all_types: dict[str, dict[str, dict]],
     *,
     blocked_component_keys: Collection[str],
+    component_identity_index: ComponentIdentityIndex | None = None,
 ) -> dict[str, dict[str, dict]]:
-    """Return shallow category copies with exact blocked component keys removed.
+    """Return shallow category copies with canonically blocked components removed.
 
-    Catalog policy keys match the inner component-registry keys exactly and
-    case-sensitively across every category. Category order, component order,
-    and empty categories are preserved. Component payloads remain shared with
-    the process-wide cache and are never mutated or deep-copied.
+    Policy keys and component-registry keys use the same collision-aware
+    identity resolver as flow/runtime validation. Category order, component
+    order, and empty categories are preserved. Component payloads remain
+    shared with the process-wide cache and are never mutated or deep-copied.
     """
+    identity_index = component_identity_index or build_component_identity_index(all_types)
+    blocked_identities = identity_index.resolve_many(blocked_component_keys)
     return {
         category: {
             component_key: component
             for component_key, component in components.items()
-            if component_key not in blocked_component_keys
+            if identity_index.resolve(component_key).isdisjoint(blocked_identities)
         }
         for category, components in all_types.items()
     }
@@ -941,6 +953,7 @@ async def simplified_run_flow_session(
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
     api_key_user: CurrentActiveUser,
+    session: DbSession,
     context: dict | None = None,
     http_request: Request,
 ):
@@ -956,6 +969,8 @@ async def simplified_run_flow_session(
         input_request (SimplifiedAPIRequest | None): Input parameters for the flow
         stream (bool): Whether to stream the response
         api_key_user (User): Authenticated user from session
+        session (AsyncSession): Request-scoped DB session (shared with the auth
+            dependency); its transaction is released before the flow runs
         context (dict | None): Optional context to pass to the flow
         http_request (Request): The incoming HTTP request for extracting global variables
 
@@ -996,6 +1011,15 @@ async def simplified_run_flow_session(
         workspace_id=flow.workspace_id,
         folder_id=flow.folder_id,
     )
+
+    # ``session`` is the same cached dependency the auth chain used, so this
+    # ends the transaction opened by the auth reads before the flow runs —
+    # the run can take minutes and would otherwise hold the request
+    # transaction (and its pooled connection) open the whole time (#14445).
+    # The API-key ``/run`` variant is not affected: ``api_key_security``
+    # scopes its own short-lived session.
+    await release_db_transaction(session)
+
     return await _run_flow_internal(
         background_tasks=background_tasks,
         flow=flow,
@@ -1011,6 +1035,7 @@ async def simplified_run_flow_session(
 async def webhook_events_stream(
     auth: Annotated[SseAuth, Depends(get_flow_for_sse_user)],
     request: Request,
+    session: DbSession,
 ):
     """Server-Sent Events (SSE) endpoint for real-time webhook build updates.
 
@@ -1033,6 +1058,12 @@ async def webhook_events_stream(
         workspace_id=getattr(flow, "workspace_id", None),
         folder_id=getattr(flow, "folder_id", None),
     )
+
+    # ``session`` is the same cached dependency the SSE auth chain used. The
+    # EventSource stream below is indefinite and the session dependency is
+    # only torn down when it ends, so without this commit every open tab
+    # would hold a pooled connection in an idle transaction (#14445).
+    await release_db_transaction(session)
 
     async def event_generator() -> AsyncGenerator[str, None]:
         """Generate SSE events from the webhook event manager."""
@@ -1290,6 +1321,12 @@ async def experimental_run_flow(
             raise
         except Exception as exc:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+    # Graph execution below can run for minutes; end the request transaction
+    # opened by the flow re-query above so it doesn't pin a pooled connection
+    # (Postgres: idle-in-transaction) for the whole run (#14445). In the
+    # session_id branch the session was never used, so this is a no-op.
+    await release_db_transaction(session)
 
     try:
         task_result, session_id = await run_graph_internal(

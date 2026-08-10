@@ -32,6 +32,7 @@ if TYPE_CHECKING:
         TransactionServiceProtocol,
         VariableServiceProtocol,
     )
+    from lfx.services.policy_bundle.base import BasePolicyBundleService
 
 
 def get_service(service_type: ServiceType, default=None):
@@ -77,6 +78,17 @@ def get_model_provider_policy_service():
     service = get_service(ServiceType.MODEL_PROVIDER_POLICY_SERVICE)
     if not isinstance(service, BaseModelProviderPolicyService) or not service.ready:
         msg = "A valid, ready model_provider_policy_service is required"
+        raise TypeError(msg)
+    return service
+
+
+def get_policy_bundle_service() -> BasePolicyBundleService:
+    """Return the ready process-local shared policy bundle coordinator."""
+    from lfx.services.policy_bundle import BasePolicyBundleService, PolicyBundleService  # noqa: F401
+
+    service = get_service(ServiceType.POLICY_BUNDLE_SERVICE)
+    if not isinstance(service, BasePolicyBundleService) or not service.ready:
+        msg = "A valid, ready policy_bundle_service is required"
         raise TypeError(msg)
     return service
 

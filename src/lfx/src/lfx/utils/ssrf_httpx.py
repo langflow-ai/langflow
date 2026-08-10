@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import urljoin
 
 import httpx
 
@@ -19,6 +19,10 @@ from lfx.utils.ssrf_transport import (
     create_ssrf_protected_client,
     create_ssrf_protected_sync_client,
 )
+
+# HTTP redirect responses carrying a Location header (RFC 9110).
+REDIRECT_STATUS_CODES = frozenset({301, 302, 303, 307, 308})
+DEFAULT_MAX_REDIRECTS = 20
 
 
 def validate_url_for_ssrf_or_raise(url: str) -> None:
@@ -36,9 +40,14 @@ def _raise_if_following_redirects(request_kwargs: dict[str, Any]) -> None:
         raise SSRFProtectionError(msg)
 
 
+def _transport_host(url: str) -> str:
+    """Return the IDNA-normalized host httpx/httpcore uses for connections."""
+    return httpx.URL(url).raw_host.decode("ascii")
+
+
 def _async_client_for_url(url: str, validated_ips: list[str]) -> httpx.AsyncClient:
     if is_ssrf_protection_enabled() and validated_ips:
-        hostname = urlparse(url).hostname
+        hostname = _transport_host(url)
         if hostname:
             return create_ssrf_protected_client(hostname=hostname, validated_ips=validated_ips)
     return httpx.AsyncClient()
@@ -46,7 +55,7 @@ def _async_client_for_url(url: str, validated_ips: list[str]) -> httpx.AsyncClie
 
 def _sync_client_for_url(url: str, validated_ips: list[str]) -> httpx.Client:
     if is_ssrf_protection_enabled() and validated_ips:
-        hostname = urlparse(url).hostname
+        hostname = _transport_host(url)
         if hostname:
             return create_ssrf_protected_sync_client(hostname=hostname, validated_ips=validated_ips)
     return httpx.Client()
@@ -66,7 +75,7 @@ def ssrf_protected_httpx_client_kwargs_for_url(url: str) -> tuple[dict[str, Any]
     sync_kwargs: dict[str, Any] = {"follow_redirects": False}
     async_kwargs: dict[str, Any] = {"follow_redirects": False}
 
-    hostname = urlparse(validated_url).hostname
+    hostname = _transport_host(validated_url)
     if hostname and validated_ips:
         ip_list = list(validated_ips)
         sync_kwargs["transport"] = SSRFProtectedSyncTransport(pinned_ips={hostname: ip_list})
@@ -102,12 +111,97 @@ async def ssrf_safe_async_post(url: str, **request_kwargs: Any) -> httpx.Respons
         return await client.post(url=validated_url, **request_kwargs)
 
 
-def ssrf_safe_httpx_get(url: str, **request_kwargs: Any) -> httpx.Response:
-    """Perform a synchronous GET with connector SSRF validation and DNS pinning."""
-    _raise_if_following_redirects(request_kwargs)
-    validated_url, validated_ips = validate_and_resolve_connector_url(url)
-    with _sync_client_for_url(validated_url, validated_ips) as client:
-        return client.get(url=validated_url, **request_kwargs)
+def _same_origin(first_url: str, second_url: str) -> bool:
+    first = httpx.URL(first_url)
+    second = httpx.URL(second_url)
+    return (first.scheme, first.raw_host, first.port) == (second.scheme, second.raw_host, second.port)
+
+
+def _is_safe_https_upgrade(previous_url: str, next_url: str) -> bool:
+    """Match httpx's authorization-preserving HTTP-to-HTTPS redirect exception."""
+    previous = httpx.URL(previous_url)
+    next_ = httpx.URL(next_url)
+    return (
+        previous.scheme == "http"
+        and previous.raw_host == next_.raw_host
+        and previous.port is None
+        and next_.scheme == "https"
+        and next_.port is None
+    )
+
+
+def _headers_for_redirect(headers: Any, previous_url: str, next_url: str) -> httpx.Headers | None:
+    if headers is None:
+        return None
+
+    redirect_headers = httpx.Headers(headers)
+    if _same_origin(previous_url, next_url):
+        return redirect_headers
+
+    # Match httpx's safe HTTP-to-HTTPS authorization exception, while never
+    # replaying caller-supplied cookies or proxy credentials across origins.
+    if not _is_safe_https_upgrade(previous_url, next_url):
+        redirect_headers.pop("Authorization", None)
+    redirect_headers.pop("Cookie", None)
+    redirect_headers.pop("Proxy-Authorization", None)
+    return redirect_headers
+
+
+def _request_kwargs_for_redirect(request_kwargs: dict[str, Any], previous_url: str, next_url: str) -> dict[str, Any]:
+    if _same_origin(previous_url, next_url):
+        return request_kwargs
+
+    redirect_kwargs = request_kwargs.copy()
+    redirect_kwargs.pop("cookies", None)
+    if not _is_safe_https_upgrade(previous_url, next_url):
+        redirect_kwargs.pop("auth", None)
+    return redirect_kwargs
+
+
+def ssrf_safe_httpx_get(
+    url: str,
+    *,
+    follow_redirects: bool = False,
+    max_redirects: int = DEFAULT_MAX_REDIRECTS,
+    **request_kwargs: Any,
+) -> httpx.Response:
+    """Perform a synchronous GET with connector SSRF validation and DNS pinning.
+
+    When redirects are requested, they are followed manually so each target is
+    independently validated and connected through a transport pinned to the IPs
+    returned by that validation. Credentials are not forwarded across origins,
+    except authorization on a same-host, standard-port HTTP-to-HTTPS upgrade.
+    """
+    current_url = url
+    supplied_headers = request_kwargs.pop("headers", None)
+    current_headers = httpx.Headers(supplied_headers) if supplied_headers is not None else None
+    current_params = request_kwargs.pop("params", None)
+    current_request_kwargs = request_kwargs
+
+    for _ in range(max_redirects + 1):
+        validated_url, validated_ips = validate_and_resolve_connector_url(current_url)
+        with _sync_client_for_url(validated_url, validated_ips) as client:
+            response = client.get(
+                url=validated_url,
+                headers=current_headers,
+                params=current_params,
+                follow_redirects=False,
+                **current_request_kwargs,
+            )
+
+        location = response.headers.get("location")
+        if not follow_redirects or response.status_code not in REDIRECT_STATUS_CODES or not location:
+            return response
+
+        next_url = urljoin(validated_url, location)
+        current_headers = _headers_for_redirect(current_headers, validated_url, next_url)
+        current_request_kwargs = _request_kwargs_for_redirect(current_request_kwargs, validated_url, next_url)
+        current_url = next_url
+        # Redirect locations carry their own query string; initial params apply once.
+        current_params = None
+
+    msg = f"Exceeded the maximum of {max_redirects} redirects while requesting {url}"
+    raise SSRFProtectionError(msg)
 
 
 def ssrf_safe_httpx_post(url: str, **request_kwargs: Any) -> httpx.Response:

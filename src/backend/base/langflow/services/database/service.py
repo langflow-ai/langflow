@@ -542,7 +542,7 @@ class DatabaseService(Service):
                 .join(models.Folder)
                 .where(
                     models.Flow.user_id == None,  # noqa: E711
-                    models.Folder.name != STARTER_FOLDER_NAME,
+                    sa.or_(models.Folder.name != STARTER_FOLDER_NAME, models.Folder.user_id.is_not(None)),
                 )
             )
             orphaned_flows = (await session.exec(stmt)).all()
@@ -741,6 +741,46 @@ class DatabaseService(Service):
                 await logger.adebug("Alembic not initialized")
                 should_initialize_alembic = True
         await asyncio.to_thread(self._run_migrations, should_initialize_alembic, fix)
+
+    def _current_alembic_revisions(self) -> set[str]:
+        """Read current revisions from the configured database, never alembic.ini."""
+        engine = sa.create_engine(_normalize_sync_postgres_url(self.database_url))
+        try:
+            with engine.connect() as connection:
+                return set(connection.execute(sa.text("SELECT version_num FROM alembic_version")).scalars())
+        finally:
+            engine.dispose()
+
+    def _run_migration_downgrade(self, *, expected_current_revision: str, target_revision: str) -> None:
+        """Downgrade the configured database only from one explicitly expected revision."""
+        buffer_context = self._open_alembic_log_buffer()
+        with _postgres_migration_lock(self.database_url), buffer_context as buffer:
+            current_revisions = self._current_alembic_revisions()
+            if current_revisions != {expected_current_revision}:
+                found = ", ".join(sorted(current_revisions)) or "none"
+                msg = (
+                    "Refusing migration downgrade: expected current revision "
+                    f"{expected_current_revision}, found {found}"
+                )
+                raise RuntimeError(msg)
+
+            alembic_cfg = Config(stdout=buffer)
+            alembic_cfg.set_main_option("script_location", str(self.script_location))
+            alembic_cfg.set_main_option("sqlalchemy.url", self.database_url.replace("%", "%%"))
+            command.downgrade(alembic_cfg, target_revision)
+
+    async def run_migration_downgrade(
+        self,
+        *,
+        expected_current_revision: str,
+        target_revision: str,
+    ) -> None:
+        """Safely downgrade the configured database in a worker thread."""
+        await asyncio.to_thread(
+            self._run_migration_downgrade,
+            expected_current_revision=expected_current_revision,
+            target_revision=target_revision,
+        )
 
     @staticmethod
     def try_downgrade_upgrade_until_success(alembic_cfg, retries=5) -> None:

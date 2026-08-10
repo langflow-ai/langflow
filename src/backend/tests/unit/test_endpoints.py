@@ -230,6 +230,33 @@ def test_catalog_policy_filter_is_case_sensitive_and_does_not_mutate_shared_cach
     assert cached["models"]["BlockedAgent"] is blocked_component
 
 
+def test_catalog_policy_filter_resolves_legacy_extension_alias_without_mutating_cache():
+    from langflow.api.v1 import endpoints
+
+    canonical_key = "ext:datastax:AstraDBVectorStoreComponent@official"
+    astra_component = {
+        "name": "AstraDB",
+        "display_name": "Astra DB",
+        "metadata": {"module": "lfx_datastax.components.datastax.astradb_vectorstore.AstraDBVectorStoreComponent"},
+        "template": {"_type": "Component"},
+    }
+    cached = {
+        "datastax": {canonical_key: astra_component},
+        "input_output": {"ChatInput": {"display_name": "Chat Input"}},
+    }
+
+    filtered = endpoints._filter_component_palette_by_catalog_policy(
+        cached,
+        blocked_component_keys=frozenset({"AstraDB"}),
+    )
+
+    assert filtered["datastax"] == {}
+    assert "ChatInput" in filtered["input_output"]
+    assert cached["datastax"][canonical_key] is astra_component
+    assert filtered is not cached
+    assert filtered["datastax"] is not cached["datastax"]
+
+
 async def test_get_all_filters_catalog_policy_and_uses_current_snapshot(
     client: AsyncClient,
     logged_in_headers,
@@ -669,10 +696,82 @@ async def test_build_vertex_returns_404_for_other_users_private_flow(
     assert response.status_code == 404, response.text
 
 
+async def test_build_vertex_stream_returns_404_for_other_users_private_flow(
+    client, added_flow_webhook_test, second_user_headers
+):
+    """The deprecated stream route must authorize before reading the shared graph cache."""
+    flow_id = added_flow_webhook_test["id"]
+    response = await client.get(
+        f"/api/v1/build/{flow_id}/ChatInput-some-id/stream",
+        headers=second_user_headers,
+    )
+    assert response.status_code == 404, response.text
+
+
 async def test_build_vertex_invalid_vertex_id(client, added_flow_webhook_test, logged_in_headers):
     flow_id = added_flow_webhook_test["id"]
     response = await client.post(f"/api/v1/build/{flow_id}/vertices/invalid_vertex_id", headers=logged_in_headers)
     assert response.status_code == 500
+
+
+async def test_build_vertex_revalidates_cached_graph_after_catalog_policy_change(
+    client,
+    added_flow_webhook_test,
+    logged_in_headers,
+    monkeypatch,
+):
+    """The deprecated per-vertex route must not execute a stale, newly blocked cached graph."""
+    from langflow.api.v1 import chat as chat_module
+    from lfx.utils.flow_validation import CatalogPolicyValidationError
+
+    flow_id = added_flow_webhook_test["id"]
+    order_response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+    assert order_response.status_code == 200
+    vertex_id = order_response.json()["ids"][0]
+    blocked_message = "Flow build blocked: catalog policy blocks components: ChatInput"
+
+    def reject_cached_graph(_graph):
+        raise CatalogPolicyValidationError(blocked_message)
+
+    monkeypatch.setattr(chat_module, "validate_flow_for_current_settings", reject_cached_graph)
+
+    response = await client.post(
+        f"/api/v1/build/{flow_id}/vertices/{vertex_id}",
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 400
+    assert "ChatInput" in response.json()["detail"]
+
+
+async def test_build_vertex_stream_revalidates_cached_graph_after_catalog_policy_change(
+    client,
+    added_flow_webhook_test,
+    logged_in_headers,
+    monkeypatch,
+):
+    """The deprecated stream route rejects a stale graph before response streaming begins."""
+    from langflow.api.v1 import chat as chat_module
+    from lfx.utils.flow_validation import CatalogPolicyValidationError
+
+    flow_id = added_flow_webhook_test["id"]
+    order_response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+    assert order_response.status_code == 200
+    vertex_id = order_response.json()["ids"][0]
+    blocked_message = "Flow build blocked: catalog policy blocks components: ChatInput"
+
+    def reject_cached_graph(_graph):
+        raise CatalogPolicyValidationError(blocked_message)
+
+    monkeypatch.setattr(chat_module, "validate_flow_for_current_settings", reject_cached_graph)
+
+    response = await client.get(
+        f"/api/v1/build/{flow_id}/{vertex_id}/stream",
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 400
+    assert "ChatInput" in response.json()["detail"]
 
 
 async def test_successful_run_no_payload(client, simple_api_test, created_api_key):

@@ -2,15 +2,20 @@
 
 import hashlib
 import json
+import re
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from lfx.services.catalog_policy import CatalogPolicySnapshot
+from lfx.utils.component_aliases import build_component_identity_index
 from lfx.utils.flow_validation import (
     CODE_EXECUTION_COMPONENT_TYPES,
+    CODE_EXECUTION_FIELD_NAMES,
     FLOW_REFERENCE_COMPONENT_TYPES,
+    PROTECTED_TWEAK_FIELDS_BY_COMPONENT,
+    CatalogPolicyIdentityUnavailableError,
     CatalogPolicyValidationError,
     CustomComponentValidationError,
     PublicFlowValidationError,
@@ -64,6 +69,8 @@ async def test_ensure_component_hash_lookups_loaded_surfaces_loader_failures(mon
         settings=SimpleNamespace(allow_custom_components=False),
     )
     monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    monkeypatch.setattr(component_cache, "all_types_dict", None)
+    monkeypatch.setattr(component_cache, "all_types_ready", False)
     monkeypatch.setattr(component_cache, "type_to_current_hash", None)
 
     with (
@@ -74,6 +81,240 @@ async def test_ensure_component_hash_lookups_loaded_surfaces_loader_failures(mon
         pytest.raises(RuntimeError, match="component import failed"),
     ):
         await ensure_component_hash_lookups_loaded()
+
+
+@pytest.mark.asyncio
+async def test_ensure_component_hash_lookups_loaded_force_loads_in_permissive_mode(monkeypatch):
+    """Caller-specific policy can require hashes even when custom components are globally enabled."""
+    from lfx.interface.components import component_cache
+    from lfx.utils import flow_validation as fv
+
+    trusted_code = "# trusted component"
+    trusted_hash = fv._compute_code_hash(trusted_code)
+    all_types_dict = {
+        "inputs": {
+            "ChatInput": {
+                "metadata": {"code_hash": trusted_hash},
+                "template": {"code": {"value": trusted_code}},
+            }
+        }
+    }
+    settings_service = SimpleNamespace(settings=SimpleNamespace(allow_custom_components=True))
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    monkeypatch.setattr(component_cache, "all_types_dict", None)
+    monkeypatch.setattr(component_cache, "all_types_ready", False)
+    monkeypatch.setattr(component_cache, "type_to_current_hash", None)
+    monkeypatch.setattr(component_cache, "all_known_hashes", None)
+    monkeypatch.setattr(component_cache, "code_by_hash", None)
+
+    async def load_components(_settings_service):
+        with component_cache.state_lock:
+            component_cache.all_types_dict = all_types_dict
+            component_cache.all_types_ready = True
+        return all_types_dict
+
+    monkeypatch.setattr("lfx.interface.components.get_and_cache_all_types_dict", load_components)
+
+    lookups = await ensure_component_hash_lookups_loaded(force=True)
+
+    assert lookups == {"ChatInput": {trusted_hash}}
+    assert component_cache.code_by_hash == {trusted_hash: trusted_code}
+
+
+@pytest.mark.asyncio
+async def test_prepare_admin_only_flow_build_blocks_modified_known_component(monkeypatch):
+    """A regular user cannot relabel modified code as a built-in component in admin-only mode."""
+    from lfx.utils import flow_validation as fv
+
+    trusted_code = "# trusted ChatInput code"
+    trusted_hash = fv._compute_code_hash(trusted_code)
+    monkeypatch.setattr(
+        fv,
+        "ensure_component_hash_lookups_loaded",
+        AsyncMock(return_value={"ChatInput": {trusted_hash}}),
+    )
+
+    flow = {"nodes": [_node("custom", "ChatInput", "# modified code")], "edges": []}
+    with pytest.raises(CustomComponentValidationError, match="outdated components"):
+        await fv.prepare_admin_only_flow_build(flow)
+
+
+@pytest.mark.asyncio
+async def test_prepare_admin_only_flow_build_substitutes_server_source(monkeypatch):
+    """Even a matching request hash is replaced with the server's source before build."""
+    from lfx.utils import flow_validation as fv
+
+    submitted_code = "# request bytes with a matching truncated hash"
+    trusted_code = "# server-trusted component source"
+    monkeypatch.setattr(fv, "_compute_code_hash", lambda _code: "same-hash")
+    monkeypatch.setattr(
+        fv,
+        "ensure_component_hash_lookups_loaded",
+        AsyncMock(return_value={"ChatInput": {"same-hash"}}),
+    )
+    monkeypatch.setattr(fv, "get_trusted_code_for_validation", lambda _code: trusted_code)
+
+    flow = {"nodes": [_node("known", "ChatInput", submitted_code)], "edges": []}
+    sanitized = await fv.prepare_admin_only_flow_build(flow)
+
+    assert sanitized is not None
+    assert sanitized["nodes"][0]["data"]["node"]["template"]["code"]["value"] == trusted_code
+    assert flow["nodes"][0]["data"]["node"]["template"]["code"]["value"] == submitted_code
+
+
+@pytest.mark.asyncio
+async def test_prepare_admin_only_flow_build_fails_closed_without_trusted_source(monkeypatch):
+    """A matching hash is insufficient when the server cannot recover trusted source bytes."""
+    from lfx.utils import flow_validation as fv
+
+    code = "# known hash"
+    code_hash = fv._compute_code_hash(code)
+    monkeypatch.setattr(
+        fv,
+        "ensure_component_hash_lookups_loaded",
+        AsyncMock(return_value={"ChatInput": {code_hash}}),
+    )
+    monkeypatch.setattr(fv, "get_trusted_code_for_validation", lambda _code: None)
+
+    flow = {"nodes": [_node("known", "ChatInput", code)], "edges": []}
+    with pytest.raises(CustomComponentValidationError, match="no trusted server component"):
+        await fv.prepare_admin_only_flow_build(flow)
+
+
+@pytest.mark.asyncio
+async def test_prepare_flow_build_for_user_keeps_code_interpreter_policy_cumulative(monkeypatch):
+    """Admin-only sanitization must not disable the separate code-interpreter gate."""
+    from lfx.utils import flow_validation as fv
+
+    code = "print('builtin component')"
+    code_hash = fv._compute_code_hash(code)
+    settings_service = SimpleNamespace(
+        settings=SimpleNamespace(
+            allow_custom_components=True,
+            block_code_interpreter_components=True,
+            custom_component_admin_only=True,
+        )
+    )
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    monkeypatch.setattr(
+        fv,
+        "ensure_component_hash_lookups_loaded",
+        AsyncMock(return_value={"PythonREPLComponent": {code_hash}}),
+    )
+
+    with pytest.raises(CustomComponentValidationError, match="code-execution components are not allowed"):
+        await fv.prepare_flow_build_for_user(_code_interpreter_raw_graph(), is_superuser=False)
+
+
+def _malformed_inline_graphs() -> list[dict]:
+    return [
+        {"nodes": [["not-a-node"]], "edges": []},
+        {"nodes": {}, "edges": []},
+        {"nodes": None, "edges": []},
+        {
+            "nodes": [
+                {
+                    "id": "wrapper",
+                    "data": {
+                        "type": "GroupNode",
+                        "node": {"flow": {"data": "not-flow-data"}},
+                    },
+                }
+            ],
+            "edges": [],
+        },
+        {
+            "nodes": [
+                {
+                    "id": "wrapper",
+                    "data": {
+                        "type": "GroupNode",
+                        "node": {"flow": {"data": {"nodes": {}}}},
+                    },
+                }
+            ],
+            "edges": [],
+        },
+        {
+            "nodes": [
+                {
+                    "id": "bad-template",
+                    "data": {
+                        "type": "ChatInput",
+                        "node": {"template": "not-a-template"},
+                    },
+                }
+            ],
+            "edges": [],
+        },
+    ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("flow", _malformed_inline_graphs())
+async def test_prepare_flow_build_for_user_maps_malformed_shapes_to_policy_error(monkeypatch, flow):
+    """The cumulative async gate fails closed for malformed top-level and nested request shapes."""
+    from lfx.utils import flow_validation as fv
+
+    settings_service = SimpleNamespace(
+        settings=SimpleNamespace(
+            allow_custom_components=True,
+            block_code_interpreter_components=True,
+            custom_component_admin_only=True,
+        )
+    )
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    monkeypatch.setattr(fv, "ensure_component_hash_lookups_loaded", AsyncMock(return_value={}))
+
+    with pytest.raises(CustomComponentValidationError):
+        await fv.prepare_flow_build_for_user(flow, is_superuser=False)
+
+
+@pytest.mark.parametrize("flow", _malformed_inline_graphs())
+def test_prepare_flow_build_for_user_from_cache_maps_malformed_shapes_to_policy_error(monkeypatch, flow):
+    """The synchronous V2 gate maps malformed payloads to the normal policy error type."""
+    from lfx.utils import flow_validation as fv
+
+    settings_service = SimpleNamespace(
+        settings=SimpleNamespace(
+            allow_custom_components=True,
+            block_code_interpreter_components=True,
+            custom_component_admin_only=True,
+        )
+    )
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", dict)
+
+    with pytest.raises(CustomComponentValidationError):
+        fv.prepare_flow_build_for_user_from_cache(flow, is_superuser=False)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "nodes",
+    [
+        [["not-a-node"]],
+        [{"id": "bad", "data": "not-node-data"}],
+        [
+            {
+                "id": "wrapper",
+                "data": {
+                    "id": "wrapper",
+                    "type": "GroupNode",
+                    "node": {"flow": {"data": {"nodes": [["not-a-nested-node"]]}}},
+                },
+            }
+        ],
+    ],
+)
+async def test_prepare_admin_only_flow_build_maps_malformed_nodes_to_policy_error(monkeypatch, nodes):
+    """Malformed top-level and nested shapes fail closed without leaking TypeError/AttributeError."""
+    from lfx.utils import flow_validation as fv
+
+    monkeypatch.setattr(fv, "ensure_component_hash_lookups_loaded", AsyncMock(return_value={}))
+
+    with pytest.raises(CustomComponentValidationError, match="custom components are not allowed"):
+        await fv.prepare_admin_only_flow_build({"nodes": nodes, "edges": []})
 
 
 def test_validate_flow_for_current_settings_requires_settings_service(monkeypatch):
@@ -102,6 +343,106 @@ def _catalog_flow(*component_types: str) -> dict:
     }
 
 
+ASTRADB_KEY = "ext:datastax:AstraDBVectorStoreComponent@official"  # pragma: allowlist secret
+
+
+def _catalog_registry() -> dict:
+    return {
+        "models_and_agents": {
+            "Prompt Template": {
+                "name": "Prompt Template",
+                "display_name": "Prompt Template",
+                "metadata": {"module": "lfx.components.models_and_agents.prompt.PromptComponent"},
+                "template": {"_type": "Component"},
+            }
+        },
+        "input_output": {
+            "ChatInput": {
+                "display_name": "Chat Input",
+                "metadata": {"module": "lfx.components.input_output.chat.ChatInput"},
+                "template": {"_type": "Component"},
+            }
+        },
+        "datastax": {
+            ASTRADB_KEY: {
+                "name": "AstraDB",
+                "display_name": "Astra DB",
+                "metadata": {
+                    "module": "lfx_datastax.components.datastax.astradb_vectorstore.AstraDBVectorStoreComponent"
+                },
+                "template": {"_type": "Component"},
+            }
+        },
+    }
+
+
+def _catalog_identity_index():
+    return build_component_identity_index(_catalog_registry())
+
+
+@pytest.mark.asyncio
+async def test_standalone_warmup_loads_catalog_identities_when_custom_components_are_allowed(monkeypatch):
+    """An active catalog rule must warm aliases even in permissive custom-code mode."""
+    from lfx.interface.components import component_cache
+
+    snapshot = CatalogPolicySnapshot(blocked_component_keys={"Prompt Template"})
+    settings_service = SimpleNamespace(settings=SimpleNamespace(allow_custom_components=True))
+    catalog_service = SimpleNamespace(snapshot=snapshot)
+
+    async def populate_component_cache(_settings_service):
+        with component_cache.state_lock:
+            component_cache.all_types_dict = _catalog_registry()
+            component_cache.all_types_ready = True
+        return component_cache.all_types_dict
+
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    monkeypatch.setattr("lfx.services.deps.get_catalog_policy_service", lambda: catalog_service)
+    monkeypatch.setattr(component_cache, "all_types_dict", None)
+    monkeypatch.setattr(component_cache, "all_types_ready", False)
+    monkeypatch.setattr(component_cache, "type_to_current_hash", None)
+    monkeypatch.setattr(component_cache, "all_known_hashes", None)
+    monkeypatch.setattr(component_cache, "code_by_hash", None)
+    monkeypatch.setattr(component_cache, "component_identity_index", None)
+
+    with patch(
+        "lfx.interface.components.get_and_cache_all_types_dict",
+        new=AsyncMock(side_effect=populate_component_cache),
+    ) as loader:
+        assert await ensure_component_hash_lookups_loaded() == {}
+
+    loader.assert_awaited_once_with(settings_service)
+    validate_catalog_policy_for_flow(_catalog_flow("Chat Input"), snapshot=snapshot)
+    with pytest.raises(CatalogPolicyValidationError, match="Prompt Template"):
+        validate_catalog_policy_for_flow(_catalog_flow("PromptComponent"), snapshot=snapshot)
+
+
+@pytest.mark.asyncio
+async def test_standalone_warmup_fails_closed_when_published_registry_is_empty(monkeypatch):
+    """An empty published registry cannot satisfy active alias-aware catalog policy."""
+    from lfx.interface.components import component_cache
+
+    snapshot = CatalogPolicySnapshot(blocked_component_keys={"Prompt Template"})
+    settings_service = SimpleNamespace(settings=SimpleNamespace(allow_custom_components=True))
+    catalog_service = SimpleNamespace(snapshot=snapshot)
+
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    monkeypatch.setattr("lfx.services.deps.get_catalog_policy_service", lambda: catalog_service)
+    monkeypatch.setattr(component_cache, "all_types_dict", {})
+    monkeypatch.setattr(component_cache, "all_types_ready", True)
+    monkeypatch.setattr(component_cache, "type_to_current_hash", {})
+    monkeypatch.setattr(component_cache, "all_known_hashes", set())
+    monkeypatch.setattr(component_cache, "code_by_hash", {})
+    monkeypatch.setattr(component_cache, "component_identity_index", None)
+
+    with (
+        patch("lfx.interface.components.get_and_cache_all_types_dict", new=AsyncMock()) as loader,
+        pytest.raises(CatalogPolicyIdentityUnavailableError, match="identities are still initializing"),
+    ):
+        await ensure_component_hash_lookups_loaded()
+
+    loader.assert_not_awaited()
+
+
 def test_catalog_policy_validation_blocks_top_level_components_deterministically():
     snapshot = CatalogPolicySnapshot(blocked_component_keys=frozenset({"Zed", "Agent"}))
 
@@ -118,12 +459,97 @@ def test_catalog_policy_validation_blocks_nested_components():
         validate_catalog_policy_for_flow(flow, snapshot=snapshot)
 
 
-def test_catalog_policy_validation_is_exact_case_sensitive_and_empty_snapshot_allows():
+def test_catalog_policy_validation_is_exact_case_sensitive_and_empty_snapshot_allows(monkeypatch):
+    monkeypatch.setattr(
+        "lfx.utils.flow_validation.get_component_identity_index_for_validation",
+        lambda: _catalog_identity_index(),
+    )
     validate_catalog_policy_for_flow(
         _catalog_flow("agent"),
         snapshot=CatalogPolicySnapshot(blocked_component_keys=frozenset({"Agent"})),
     )
     validate_catalog_policy_for_flow(_catalog_flow("Agent"), snapshot=CatalogPolicySnapshot())
+
+
+@pytest.mark.parametrize(
+    ("blocked_identity", "flow_identity", "canonical"),
+    [
+        ("Prompt Template", "Prompt", "Prompt Template"),
+        ("Prompt", "PromptComponent", "Prompt Template"),
+        ("PromptComponent", "Prompt Template", "Prompt Template"),
+        (ASTRADB_KEY, "AstraDB", ASTRADB_KEY),
+        ("AstraDB", ASTRADB_KEY, ASTRADB_KEY),
+        ("Chat Input", "ChatInput", "ChatInput"),
+    ],
+)
+def test_catalog_policy_flow_validation_resolves_canonical_and_legacy_identities(
+    monkeypatch,
+    blocked_identity,
+    flow_identity,
+    canonical,
+):
+    monkeypatch.setattr(
+        "lfx.utils.flow_validation.get_component_identity_index_for_validation",
+        lambda: _catalog_identity_index(),
+    )
+
+    with pytest.raises(CatalogPolicyValidationError, match=canonical):
+        validate_catalog_policy_for_flow(
+            _catalog_flow(flow_identity),
+            snapshot=CatalogPolicySnapshot(blocked_component_keys={blocked_identity}),
+        )
+
+
+def test_catalog_policy_alias_validation_fails_closed_without_component_identity_cache(monkeypatch):
+    monkeypatch.setattr(
+        "lfx.utils.flow_validation.get_component_identity_index_for_validation",
+        lambda: None,
+    )
+
+    # Exact identities remain enforceable without the registry cache.
+    with pytest.raises(CatalogPolicyValidationError, match="ExactBlocked"):
+        validate_catalog_policy_for_flow(
+            _catalog_flow("ExactBlocked"),
+            snapshot=CatalogPolicySnapshot(blocked_component_keys={"ExactBlocked"}),
+        )
+
+    # A non-exact decision needs the canonical alias index and fails closed
+    # under the same initialization contract as component-code validation.
+    with pytest.raises(CatalogPolicyIdentityUnavailableError, match="identities are still initializing"):
+        validate_catalog_policy_for_flow(
+            _catalog_flow("Prompt"),
+            snapshot=CatalogPolicySnapshot(blocked_component_keys={"Prompt Template"}),
+        )
+
+
+def test_catalog_policy_alias_validation_fails_closed_with_empty_published_registry(monkeypatch):
+    """A ready-but-empty registry cannot satisfy alias-aware catalog policy."""
+    from lfx.interface.components import component_cache
+
+    monkeypatch.setattr(component_cache, "all_types_dict", {})
+    monkeypatch.setattr(component_cache, "all_types_ready", True)
+    monkeypatch.setattr(component_cache, "component_identity_index", None)
+
+    with pytest.raises(CatalogPolicyIdentityUnavailableError, match="identities are still initializing"):
+        validate_catalog_policy_for_flow(
+            _catalog_flow("Prompt"),
+            snapshot=CatalogPolicySnapshot(blocked_component_keys={"Prompt Template"}),
+        )
+
+
+def test_catalog_policy_validation_blocks_nested_legacy_alias(monkeypatch):
+    monkeypatch.setattr(
+        "lfx.utils.flow_validation.get_component_identity_index_for_validation",
+        lambda: _catalog_identity_index(),
+    )
+    flow = _catalog_flow("Group")
+    flow["nodes"][0]["data"]["node"]["flow"] = {"data": _catalog_flow("PromptComponent")}
+
+    with pytest.raises(CatalogPolicyValidationError, match="Prompt Template"):
+        validate_catalog_policy_for_flow(
+            flow,
+            snapshot=CatalogPolicySnapshot(blocked_component_keys={"Prompt"}),
+        )
 
 
 def test_catalog_policy_component_code_blocks_known_alias_before_execution(monkeypatch):
@@ -160,7 +586,7 @@ def test_catalog_policy_component_code_fails_closed_while_identities_initialize(
         lambda: None,
     )
 
-    with pytest.raises(RuntimeError, match="identities are still initializing"):
+    with pytest.raises(CatalogPolicyIdentityUnavailableError, match="identities are still initializing"):
         validate_catalog_policy_for_component_code(
             "arbitrary code",
             snapshot=CatalogPolicySnapshot(blocked_component_keys={"Agent"}),
@@ -176,7 +602,7 @@ def test_catalog_policy_component_code_does_not_build_from_transient_component_c
     monkeypatch.setattr(component_cache, "all_known_hashes", None)
     monkeypatch.setattr(component_cache, "code_by_hash", None)
 
-    with pytest.raises(RuntimeError, match="identities are still initializing"):
+    with pytest.raises(CatalogPolicyIdentityUnavailableError, match="identities are still initializing"):
         validate_catalog_policy_for_component_code(
             "arbitrary code",
             snapshot=CatalogPolicySnapshot(blocked_component_keys={"Agent"}),
@@ -187,13 +613,45 @@ def test_catalog_policy_component_code_does_not_build_from_transient_component_c
     assert component_cache.code_by_hash is None
 
 
-def test_catalog_policy_component_type_is_exact_and_empty_snapshot_allows():
+def test_catalog_policy_component_type_is_exact_and_empty_snapshot_allows(monkeypatch):
+    monkeypatch.setattr(
+        "lfx.utils.flow_validation.get_component_identity_index_for_validation",
+        lambda: _catalog_identity_index(),
+    )
     snapshot = CatalogPolicySnapshot(blocked_component_keys={"Agent"})
 
     validate_catalog_policy_for_component_type("agent", snapshot=snapshot)
     validate_catalog_policy_for_component_type("Agent", snapshot=CatalogPolicySnapshot())
     with pytest.raises(CatalogPolicyValidationError, match="Agent"):
         validate_catalog_policy_for_component_type("Agent", snapshot=snapshot)
+
+
+@pytest.mark.parametrize(
+    ("blocked_identity", "runtime_identity", "canonical"),
+    [
+        ("Prompt Template", "PromptComponent", "Prompt Template"),
+        ("PromptComponent", "Prompt Template", "Prompt Template"),
+        (ASTRADB_KEY, "AstraDB", ASTRADB_KEY),
+        ("AstraDB", "AstraDBVectorStoreComponent", ASTRADB_KEY),
+        ("Chat Input", "ChatInput", "ChatInput"),
+    ],
+)
+def test_catalog_policy_materialized_component_resolves_canonical_identity(
+    monkeypatch,
+    blocked_identity,
+    runtime_identity,
+    canonical,
+):
+    monkeypatch.setattr(
+        "lfx.utils.flow_validation.get_component_identity_index_for_validation",
+        lambda: _catalog_identity_index(),
+    )
+
+    with pytest.raises(CatalogPolicyValidationError, match=canonical):
+        validate_catalog_policy_for_component_type(
+            runtime_identity,
+            snapshot=CatalogPolicySnapshot(blocked_component_keys={blocked_identity}),
+        )
 
 
 def test_validate_flow_for_current_settings_captures_one_catalog_snapshot(monkeypatch):
@@ -772,3 +1230,54 @@ def test_block_code_interpreter_components_detects_nested_flow(monkeypatch):
 
     with pytest.raises(CustomComponentValidationError, match="code-execution components are not allowed"):
         validate_flow_for_current_settings(graph)
+
+
+# --- Frontend mirror parity -------------------------------------------------
+# The parameters panel must not offer an "API" toggle on a field that
+# apply_tweaks would refuse, so the refusal rules are mirrored in
+# src/frontend/src/modals/apiModal/utils/api-exposure-rules.ts. The mirror is
+# UX only — the backend stays the enforcement point — but a mirror that drifts
+# silently brings the bug back, so parity is asserted here.
+
+_FRONTEND_MIRROR = Path(__file__).parents[4] / "frontend/src/modals/apiModal/utils/api-exposure-rules.ts"
+
+
+def _strip_line_comments(source: str) -> str:
+    return "\n".join(line.split("//")[0] for line in source.splitlines())
+
+
+def _parse_ts_string_set(source: str, const_name: str) -> set[str]:
+    """Extract the string literals of `export const <const_name> ... new Set([...])`."""
+    marker = f"export const {const_name}"
+    start = source.index(marker)
+    open_bracket = source.index("[", start)
+    close_bracket = source.index("]", open_bracket)
+    return set(re.findall(r'"([^"]+)"', source[open_bracket:close_bracket]))
+
+
+def _parse_ts_protected_fields(source: str) -> dict[str, set[str]]:
+    """Extract `{ Component: new Set([...]) }` from the protected-fields record."""
+    start = source.index("export const PROTECTED_TWEAK_FIELDS_BY_COMPONENT")
+    body = source[source.index("{", source.index("=", start)) : source.index("};", start)]
+    return {
+        component: set(re.findall(r'"([^"]+)"', fields))
+        for component, fields in re.findall(r"(\w+):\s*new Set\(\[([^\]]*)\]\)", body)
+    }
+
+
+@pytest.mark.skipif(not _FRONTEND_MIRROR.exists(), reason="frontend package not present (standalone lfx checkout)")
+def test_frontend_mirrors_tweak_refusal_rules():
+    """The frontend mirror of the tweak-refusal rules must match this module exactly.
+
+    Failing here means the UI and the backend disagree about which fields can be
+    exposed as API inputs: either the UI is about to offer a field apply_tweaks
+    refuses, or it hides one that is legitimately tweakable. Update
+    api-exposure-rules.ts (and this test's expectations stay automatic).
+    """
+    source = _strip_line_comments(_FRONTEND_MIRROR.read_text(encoding="utf-8"))
+
+    assert _parse_ts_string_set(source, "CODE_EXECUTION_COMPONENT_TYPES") == set(CODE_EXECUTION_COMPONENT_TYPES)
+    assert _parse_ts_string_set(source, "CODE_EXECUTION_FIELD_NAMES") == set(CODE_EXECUTION_FIELD_NAMES)
+    assert _parse_ts_protected_fields(source) == {
+        component: set(fields) for component, fields in PROTECTED_TWEAK_FIELDS_BY_COMPONENT.items()
+    }

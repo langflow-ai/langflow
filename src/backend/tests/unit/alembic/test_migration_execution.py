@@ -11,8 +11,10 @@ from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
+from alembic.operations import ops
+from langflow.alembic.expand_compat import filter_expand_revision_directives, filter_sso_expand_diffs
 from langflow.services.database.service import SQLModel
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import Column, String, Text, create_engine, inspect, text
 
 _WORKSPACE_ROOT = Path(__file__).resolve().parents[5]
 _SCRIPT_LOCATION = _WORKSPACE_ROOT / "src/backend/base/langflow/alembic"
@@ -334,6 +336,122 @@ class TestFilterSqliteNoise:
         assert result == diffs
 
 
+class TestFilterSsoExpandContractDiffs:
+    """Keep the temporary SSO autogenerate exception narrow and directional."""
+
+    def test_exact_legacy_remove_and_nullable_diffs_are_suppressed(self):
+        legacy_column = _FakeColumn("provider", "sso_config")
+        nullable_diff = (
+            "modify_nullable",
+            None,
+            "sso_config",
+            "provider_settings",
+            {"existing_type": "JSON"},
+            True,
+            False,
+        )
+
+        assert filter_sso_expand_diffs([("remove_column", None, "sso_config", legacy_column), [nullable_diff]]) == []
+
+    def test_other_tables_columns_and_nullable_directions_are_preserved(self):
+        unrelated_column = _FakeColumn("provider", "another_table")
+        inverse_nullable_diff = (
+            "modify_nullable",
+            None,
+            "sso_config",
+            "provider_settings",
+            {"existing_type": "JSON"},
+            False,
+            True,
+        )
+        diffs = [
+            ("remove_column", None, "another_table", unrelated_column),
+            inverse_nullable_diff,
+            ("modify_type", None, "sso_config", "provider_settings"),
+        ]
+
+        assert filter_sso_expand_diffs(diffs) == diffs
+
+    def test_revision_hook_preserves_unrelated_and_grouped_changes(self):
+        nullable_only = ops.AlterColumnOp(
+            "sso_config",
+            "slug",
+            existing_type=String(),
+            existing_nullable=True,
+            modify_nullable=False,
+        )
+        nullable_and_type = ops.AlterColumnOp(
+            "sso_config",
+            "provider_settings",
+            existing_type=String(),
+            existing_nullable=True,
+            modify_nullable=False,
+            modify_type=Text(),
+        )
+        unrelated_nullable = ops.AlterColumnOp(
+            "another_table",
+            "slug",
+            existing_type=String(),
+            existing_nullable=True,
+            modify_nullable=False,
+        )
+        unlisted_nullable = ops.AlterColumnOp(
+            "sso_config",
+            "enabled",
+            existing_type=String(),
+            existing_nullable=True,
+            modify_nullable=False,
+        )
+        inverse_nullable = ops.AlterColumnOp(
+            "sso_config",
+            "slug",
+            existing_type=String(),
+            existing_nullable=False,
+            modify_nullable=True,
+        )
+        unlisted_drop = ops.DropColumnOp.from_column_and_tablename(
+            None,
+            "sso_config",
+            Column("unexpected", String()),
+        )
+        upgrade_ops = ops.UpgradeOps(
+            [
+                ops.ModifyTableOps(
+                    "sso_config",
+                    [
+                        ops.DropColumnOp("sso_config", "provider"),
+                        nullable_only,
+                        nullable_and_type,
+                        unlisted_drop,
+                        unlisted_nullable,
+                        inverse_nullable,
+                    ],
+                ),
+                ops.ModifyTableOps("another_table", [unrelated_nullable]),
+            ]
+        )
+        migration_script = ops.MigrationScript("test", upgrade_ops, ops.DowngradeOps([]))
+
+        filter_expand_revision_directives(None, None, [migration_script])
+
+        diffs = migration_script.upgrade_ops.as_diffs()
+        flat_diffs = [diff for group in diffs for diff in (group if isinstance(group, list) else [group])]
+        assert [diff[0] for diff in flat_diffs] == [
+            "modify_type",
+            "remove_column",
+            "modify_nullable",
+            "modify_nullable",
+            "modify_nullable",
+        ]
+        assert flat_diffs[0][2:4] == ("sso_config", "provider_settings")
+        assert flat_diffs[1][2] == "sso_config"
+        assert flat_diffs[1][3].name == "unexpected"
+        assert flat_diffs[2][2:4] == ("sso_config", "enabled")
+        assert flat_diffs[3][2:4] == ("sso_config", "slug")
+        assert flat_diffs[4][2:4] == ("another_table", "slug")
+        assert migration_script.downgrade_ops.as_diffs() == migration_script.upgrade_ops.reverse().as_diffs()
+
+
 def _engine_url(db_url: str) -> str:
     """Convert an async DB URL to a sync one for SQLAlchemy create_engine."""
     if db_url.startswith("sqlite+aiosqlite"):
@@ -342,8 +460,8 @@ def _engine_url(db_url: str) -> str:
 
 
 def _filter_diffs(diffs: list, db_url: str) -> list:
-    """Apply only SQLite-specific diff filtering."""
-    filtered_diffs = list(diffs)
+    """Apply documented compatibility and SQLite-specific diff filtering."""
+    filtered_diffs = filter_sso_expand_diffs(diffs)
     if "sqlite" in db_url:
         filtered_diffs = _filter_sqlite_noise(filtered_diffs)
     return filtered_diffs
@@ -359,6 +477,9 @@ def test_no_phantom_migrations(db_url):
     """
     alembic_cfg = _make_alembic_cfg(db_url)
     command.upgrade(alembic_cfg, "head")
+    # Exercise the same Alembic autogenerate path used by DatabaseService at
+    # application startup, including the active EXPAND compatibility hook.
+    command.check(alembic_cfg)
 
     engine = create_engine(_engine_url(db_url))
     try:

@@ -17,6 +17,7 @@ from lfx.services.model_provider_policy import (
     reset_current_model_provider_policy_context,
     set_current_model_provider_policy_context,
 )
+from lfx.services.policy_bundle import PolicyBundleService, PolicyBundleSnapshot, policy_bundle_content_hash
 
 _DENIED_RUNTIME_CATALOG_CALLS: list[None] = []
 
@@ -110,6 +111,30 @@ def test_empty_approved_provider_ceiling_preserves_allow_all_default():
 
     assert snapshot.allowed_provider_ids == frozenset({"openai", "anthropic"})
     assert not service.approved_provider_ids
+
+
+def test_shared_bundle_rejects_provider_only_mutation_without_poisoning_revision_or_hash():
+    bundle_service = PolicyBundleService()
+    initial = PolicyBundleSnapshot(
+        revision=3,
+        initialized=True,
+        source="api",
+        approved_provider_ids=frozenset({"openai"}),
+        blocked_component_keys=frozenset({"PythonREPL"}),
+        blocked_template_keys=frozenset({"Starter"}),
+        content_hash=policy_bundle_content_hash(
+            approved_provider_ids={"openai"},
+            blocked_component_keys={"PythonREPL"},
+            blocked_template_keys={"Starter"},
+        ),
+    )
+    bundle_service.publish(initial)
+    service = ModelProviderPolicyService(bundle_service)
+
+    with pytest.raises(RuntimeError, match="Provider-only mutation is not allowed"):
+        service.set_approved_provider_ids({"anthropic"}, version=4)
+
+    assert bundle_service.snapshot is initial
 
 
 def test_default_service_rejects_a_stale_persisted_policy_version():
@@ -790,6 +815,8 @@ def test_delegating_model_component_skips_outer_provider_gate(monkeypatch):
 
 
 def test_known_llm_provider_ignores_spoofed_runtime_metadata(monkeypatch):
+    from lfx.base.models.unified_models import instantiation
+
     requested_classes = []
     captured = {}
 
@@ -804,6 +831,11 @@ def test_known_llm_provider_ignores_spoofed_runtime_metadata(monkeypatch):
     monkeypatch.setattr("lfx.base.models.unified_models.get_model_class", _get_model_class)
     monkeypatch.setattr("lfx.base.models.unified_models.get_api_key_for_provider", lambda *_args, **_kwargs: None)
     monkeypatch.setattr("lfx.base.models.unified_models.get_all_variables_for_provider", lambda *_args: {})
+    # ollama.test (RFC 6761 reserved TLD) never resolves, so the DNS-pinning
+    # SSRF transport for ChatOllama fails in every environment. The URL value
+    # is irrelevant to this test's subject (spoofed metadata being ignored),
+    # so stub the transport factory (same seam test_provider_registry stubs).
+    monkeypatch.setattr(instantiation, "ssrf_protected_httpx_client_kwargs_for_url", lambda _url: ({}, {}))
 
     result = get_llm(
         [
@@ -851,6 +883,9 @@ def test_known_embedding_provider_ignores_spoofed_runtime_metadata(monkeypatch):
     monkeypatch.setattr("lfx.base.models.unified_models.get_api_key_for_provider", lambda *_args, **_kwargs: None)
     monkeypatch.setattr("lfx.base.models.unified_models.get_all_variables_for_provider", lambda *_args: {})
     monkeypatch.setattr(instantiation, "_get_configured_embedding_providers", lambda *_args: [])
+    # See the LLM variant above: ollama.test never resolves, and DNS is not
+    # what this test is about.
+    monkeypatch.setattr(instantiation, "ssrf_protected_httpx_client_kwargs_for_url", lambda _url: ({}, {}))
 
     result = get_embeddings(
         [
