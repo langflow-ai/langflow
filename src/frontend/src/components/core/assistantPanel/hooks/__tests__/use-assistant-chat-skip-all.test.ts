@@ -49,10 +49,12 @@ jest.mock("@/stores/flowsManagerStore", () => {
 
 const mockSetNodes = jest.fn();
 const mockSetEdges = jest.fn();
+const mockSetNodesAndEdges = jest.fn();
 jest.mock("@/stores/flowStore", () => {
   const state = {
     setNodes: (...args: unknown[]) => mockSetNodes(...args),
     setEdges: (...args: unknown[]) => mockSetEdges(...args),
+    setNodesAndEdges: (...args: unknown[]) => mockSetNodesAndEdges(...args),
     paste: jest.fn(),
   };
   const fn = (selector?: (s: typeof state) => unknown) =>
@@ -607,8 +609,7 @@ describe("useAssistantChat — skip-all", () => {
 
       // Canvas was mutated without the user clicking Continue on the
       // flow-proposal card.
-      expect(mockSetNodes).toHaveBeenCalled();
-      expect(mockSetEdges).toHaveBeenCalled();
+      expect(mockSetNodesAndEdges).toHaveBeenCalled();
     });
 
     it("should_not_mount_pendingFlowProposal_when_skipAll_is_on", async () => {
@@ -669,8 +670,7 @@ describe("useAssistantChat — skip-all", () => {
       await flushTimers();
 
       // Default behavior: canvas untouched until the user clicks Continue.
-      expect(mockSetNodes).not.toHaveBeenCalled();
-      expect(mockSetEdges).not.toHaveBeenCalled();
+      expect(mockSetNodesAndEdges).not.toHaveBeenCalled();
     });
 
     it("should_auto_apply_set_flow_when_auto_apply_flag_is_set_even_with_skipAll_off", async () => {
@@ -701,8 +701,7 @@ describe("useAssistantChat — skip-all", () => {
       });
       await flushTimers();
 
-      expect(mockSetNodes).toHaveBeenCalled();
-      expect(mockSetEdges).toHaveBeenCalled();
+      expect(mockSetNodesAndEdges).toHaveBeenCalled();
       expect(
         result.current.messages.filter((m) => m.pendingFlowProposal),
       ).toEqual([]);

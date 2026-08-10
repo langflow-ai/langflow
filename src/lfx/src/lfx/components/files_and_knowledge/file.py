@@ -771,7 +771,14 @@ class FileComponent(BaseFileComponent):
 
         temp_path = Path(temp_file_path)
         data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(temp_path)})
-        return [BaseFileComponent.BaseFile(data_obj, temp_path, delete_after_processing=True)]
+        return [
+            BaseFileComponent.BaseFile(
+                data_obj,
+                temp_path,
+                delete_after_processing=True,
+                cleanup_local_file=True,
+            )
+        ]
 
     def _read_from_google_drive(self) -> list[BaseFileComponent.BaseFile]:
         """Read file from Google Drive."""
@@ -829,7 +836,14 @@ class FileComponent(BaseFileComponent):
 
         temp_path = Path(temp_file_path)
         data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(temp_path)})
-        return [BaseFileComponent.BaseFile(data_obj, temp_path, delete_after_processing=True)]
+        return [
+            BaseFileComponent.BaseFile(
+                data_obj,
+                temp_path,
+                delete_after_processing=True,
+                cleanup_local_file=True,
+            )
+        ]
 
     def _is_docling_compatible(self, file_path: str) -> bool:
         """Lightweight extension gate for Docling-compatible types."""
@@ -867,16 +881,26 @@ class FileComponent(BaseFileComponent):
         )
         return file_path.lower().endswith(docling_exts)
 
-    async def _get_local_file_for_docling(self, file_path: str) -> tuple[str, bool]:
+    async def _get_local_file_for_docling(
+        self, file_path: str, *, is_local_temp_file: bool = False
+    ) -> tuple[str, bool]:
         """Get a local file path for Docling processing, downloading from S3 if needed.
 
         Args:
             file_path: Either a local path or S3 key (format "flow_id/filename")
+            is_local_temp_file: Whether file_path is an internally created local temporary file.
 
         Returns:
             tuple[str, bool]: (local_path, should_delete) where should_delete indicates
                               if this is a temporary file that should be cleaned up
         """
+        if is_local_temp_file:
+            local_temp_path = Path(file_path)
+            if not local_temp_path.is_absolute() or not local_temp_path.is_file():
+                msg = f"Invalid local temporary path: {file_path}"
+                raise ValueError(msg)
+            return file_path, False
+
         settings = get_settings_service().settings
         if settings.storage_type == "local":
             return file_path, False
@@ -900,7 +924,7 @@ class FileComponent(BaseFileComponent):
 
         return temp_path, True
 
-    def _process_docling_in_subprocess(self, file_path: str) -> Data | None:
+    def _process_docling_in_subprocess(self, file_path: str, *, is_local_temp_file: bool = False) -> Data | None:
         """Run Docling in a separate OS process and map the result to a Data object.
 
         We avoid multiprocessing pickling by launching `python -c "<script>"` and
@@ -915,7 +939,9 @@ class FileComponent(BaseFileComponent):
         _raise_if_file_tool_cancelled(cancel_event)
         settings = get_settings_service().settings
         if settings.storage_type == "s3":
-            local_path, should_delete = run_until_complete(self._get_local_file_for_docling(file_path))
+            local_path, should_delete = run_until_complete(
+                self._get_local_file_for_docling(file_path, is_local_temp_file=is_local_temp_file)
+            )
         else:
             local_path = file_path
             should_delete = False
@@ -1320,7 +1346,9 @@ class FileComponent(BaseFileComponent):
             for file in file_list:
                 _raise_if_file_tool_cancelled(cancel_event)
                 file_path = str(file.path)
-                advanced_data: Data | None = self._process_docling_in_subprocess(file_path)
+                advanced_data: Data | None = self._process_docling_in_subprocess(
+                    file_path, is_local_temp_file=file.cleanup_local_file
+                )
                 _raise_if_file_tool_cancelled(cancel_event)
 
                 # Handle None case - Docling processing failed or returned None
