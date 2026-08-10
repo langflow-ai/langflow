@@ -223,6 +223,7 @@ async def authorize_flow_action(
 
 def _apply_execution_gates(parsed, flow, current_user: UserRead):
     """Run request gates and return any server-sanitized execution payload."""
+    expose_error_details = flow.user_id == current_user.id
     _reject_unsupported_sync_fields(parsed)
     _reject_sync_only_fields(parsed)
     try:
@@ -234,7 +235,12 @@ def _apply_execution_gates(parsed, flow, current_user: UserRead):
         if exc.status_code == status.HTTP_404_NOT_FOUND:
             raise _flow_not_found_http_exception(str(parsed.flow_id)) from exc
         raise
-    return _validate_flow_data_for_execution(parsed, flow, current_user)
+    return _validate_flow_data_for_execution(
+        parsed,
+        flow,
+        current_user,
+        expose_error_details=expose_error_details,
+    )
 
 
 async def run_sync_with_mapping(

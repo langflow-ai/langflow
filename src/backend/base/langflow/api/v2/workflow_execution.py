@@ -545,7 +545,11 @@ async def execute_sync_workflow(
     # Validate flow data - this is a system error, not execution error
     if flow.data is None:
         msg = f"Flow {flow.id} has no data. The flow may be corrupted."
-        raise WorkflowValidationError(msg)
+        validation_error = WorkflowValidationError(msg)
+        if expose_error_details:
+            raise validation_error
+        client_error = error_for_client(validation_error, expose_details=False)
+        raise WorkflowValidationError(str(client_error)) from validation_error
 
     # Resolve request-level variables: body ``globals`` plus the legacy
     # X-LANGFLOW-GLOBAL-VAR-* headers (still used by the Responses API).
