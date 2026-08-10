@@ -1,16 +1,11 @@
-import type {
-  CellKeyDownEvent,
-  RowClickedEvent,
-  SelectionChangedEvent,
-} from "ag-grid-community";
+import type { CellKeyDownEvent, RowClickedEvent } from "ag-grid-community";
 import type { AgGridReact } from "ag-grid-react";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
+import DataTableTab from "@/components/core/dataTableTabComponent";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import Loading from "@/components/ui/loading";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
@@ -31,7 +26,6 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { updateIds } from "@/utils/reactflowUtils";
-import { cn } from "@/utils/utils";
 import { createKnowledgeBaseColumns } from "../config/knowledgeBaseColumns";
 import { isBusyStatus } from "../config/statusConfig";
 import { useKnowledgeBaseActions } from "../hooks/useKnowledgeBaseActions";
@@ -226,18 +220,6 @@ const KnowledgeBasesTab = ({
 
   // --- Event handlers ---
 
-  const handleSelectionChange = (event: SelectionChangedEvent) => {
-    const selectedRows = event.api.getSelectedRows();
-    setSelectedFiles(selectedRows);
-    if (selectedRows.length > 0) {
-      setQuantitySelected(selectedRows.length);
-    } else {
-      setTimeout(() => {
-        setQuantitySelected(0);
-      }, 300);
-    }
-  };
-
   const handleCreateKnowledge = async () => {
     const knowledgeBasesExample = examples.find(
       (example) => example.name === "Knowledge Ingestion",
@@ -378,39 +360,31 @@ const KnowledgeBasesTab = ({
 
   // --- Render ---
 
-  if (isLoading || !knowledgeBases || !Array.isArray(knowledgeBases)) {
-    return (
-      <div className="flex flex-1 w-full flex-col items-center justify-center gap-3">
-        <Loading size={36} />
-        <span className="text-sm text-muted-foreground pt-3">
-          {t("knowledge.loadingKnowledgeBases")}
-        </span>
-      </div>
-    );
-  }
-
-  if (knowledgeBases.length === 0) {
-    return (
-      <KnowledgeBaseEmptyState handleCreateKnowledge={handleCreateKnowledge} />
-    );
-  }
-
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex justify-between">
-        <div className="flex w-full xl:w-5/12">
-          <Input
-            icon="Search"
-            data-testid="search-kb-input"
-            type="text"
-            placeholder={t("knowledge.searchPlaceholder")}
-            aria-label={t("knowledge.searchKnowledgeBases")}
-            className="w-full"
-            value={quickFilterText || ""}
-            onChange={(event) => setQuickFilterText(event.target.value)}
-          />
+    <DataTableTab<KnowledgeBaseInfo>
+      columnDefs={columnDefs}
+      rowData={sortedKnowledgeBases}
+      isLoading={isLoading || !knowledgeBases || !Array.isArray(knowledgeBases)}
+      loadingState={
+        <div className="flex flex-1 w-full flex-col items-center justify-center gap-3">
+          <Loading size={36} />
+          <span className="text-sm text-muted-foreground pt-3">
+            {t("knowledge.loadingKnowledgeBases")}
+          </span>
         </div>
-        {quantitySelected > 0 ? (
+      }
+      emptyState={
+        <KnowledgeBaseEmptyState
+          handleCreateKnowledge={handleCreateKnowledge}
+        />
+      }
+      searchPlaceholder={t("knowledge.searchPlaceholder")}
+      searchInputTestId="search-kb-input"
+      searchInputAriaLabel={t("knowledge.searchKnowledgeBases")}
+      quickFilterText={quickFilterText}
+      setQuickFilterText={setQuickFilterText}
+      toolbarActions={
+        quantitySelected > 0 ? (
           <Button
             variant="destructive"
             className="flex items-center gap-2 font-semibold ml-4"
@@ -427,42 +401,22 @@ const KnowledgeBasesTab = ({
             <ForwardedIconComponent name="Plus" className="h-4 w-4" />
             {t("knowledge.addKnowledge")}
           </Button>
-        )}
-      </div>
-
-      <div className="flex h-full flex-col py-4">
-        <div className="relative h-full">
-          <TableComponent
-            rowHeight={45}
-            headerHeight={45}
-            cellSelection={false}
-            tableOptions={{ hide_options: true }}
-            suppressRowClickSelection={!isShiftPressed}
-            rowSelection="multiple"
-            onSelectionChanged={handleSelectionChange}
-            onRowClicked={handleRowClick}
-            onCellKeyDown={handleCellKeyDown}
-            columnDefs={columnDefs}
-            rowData={sortedKnowledgeBases}
-            className={cn(
-              "ag-no-border ag-knowledge-table group w-full",
-              isShiftPressed && quantitySelected > 0 && "no-select-cells",
-            )}
-            pagination
-            ref={tableRef}
-            quickFilterText={quickFilterText}
-            getRowId={(params) => params.data.dir_name}
-            gridOptions={{
-              stopEditingWhenCellsLoseFocus: true,
-              ensureDomOrder: true,
-              colResizeDefault: "shift",
-              paginationAutoPageSize: true,
-              isRowSelectable: (rowNode) => !isBusyStatus(rowNode.data?.status),
-            }}
-          />
-        </div>
-      </div>
-
+        )
+      }
+      setSelectedRows={setSelectedFiles}
+      setQuantitySelected={setQuantitySelected}
+      quantitySelected={quantitySelected}
+      isShiftPressed={isShiftPressed}
+      tableRef={tableRef}
+      tableClassName="ag-knowledge-table"
+      onRowClicked={handleRowClick}
+      onCellKeyDown={handleCellKeyDown}
+      getRowId={(params) => params.data.dir_name}
+      gridOptions={{
+        paginationAutoPageSize: true,
+        isRowSelectable: (rowNode) => !isBusyStatus(rowNode.data?.status),
+      }}
+    >
       <DeleteConfirmationModal
         open={actions.isDeleteModalOpen}
         setOpen={actions.setIsDeleteModalOpen}
@@ -526,7 +480,7 @@ const KnowledgeBasesTab = ({
           knowledgeBases?.map((kb) => kb.dir_name) ?? []
         }
       />
-    </div>
+    </DataTableTab>
   );
 };
 
