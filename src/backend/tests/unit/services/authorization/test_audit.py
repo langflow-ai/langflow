@@ -289,6 +289,104 @@ async def test_durable_shutdown_gives_inflight_and_queued_entries_terminal_failu
 
 
 @pytest.mark.anyio
+async def test_durable_shutdown_rejects_a_producer_blocked_on_full_capacity(monkeypatch):
+    """Closing admission must wake a producer that has not reached the queue yet."""
+    monkeypatch.setattr(authz_audit, "_AUDIT_QUEUE_MAX", 1)
+    await _reset_audit_pipeline()
+    install_settings(
+        monkeypatch,
+        authz_enabled=True,
+        audit_enabled=True,
+        audit_durable=True,
+    )
+    flush_started = asyncio.Event()
+
+    async def never_finishes(_batch):
+        flush_started.set()
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(authz_audit, "_flush_audit_batch", never_finishes)
+
+    def submit(index: int) -> asyncio.Task[None]:
+        return asyncio.create_task(
+            authz_audit.audit_decision(
+                user_id=uuid4(),
+                action=f"flow:read:{index}",
+                obj="flow:*",
+                result="allow",
+            )
+        )
+
+    inflight = submit(1)
+    await asyncio.wait_for(flush_started.wait(), timeout=1.0)
+    queued = submit(2)
+    await asyncio.sleep(0)
+    blocked = submit(3)
+    await asyncio.sleep(0)
+    assert authz_audit.get_audit_producer_health()["queue_depth"] == 1
+    assert not blocked.done()
+
+    await authz_audit.drain_pending_audit_writes(timeout=0.2)
+    results = await asyncio.wait_for(
+        asyncio.gather(inflight, queued, blocked, return_exceptions=True),
+        timeout=1.0,
+    )
+
+    assert all(isinstance(result, authz_audit.AuditPersistenceError) for result in results)
+    assert authz_audit._audit_writer_task is None
+    assert authz_audit.get_audit_producer_health()["queue_depth"] == 0
+
+
+@pytest.mark.anyio
+async def test_cancelled_capacity_waiter_is_never_admitted(monkeypatch):
+    """Cancellation before queue admission remains a normal caller cancellation."""
+    monkeypatch.setattr(authz_audit, "_AUDIT_QUEUE_MAX", 1)
+    await _reset_audit_pipeline()
+    install_settings(
+        monkeypatch,
+        authz_enabled=True,
+        audit_enabled=True,
+        audit_durable=True,
+    )
+    flush_started = asyncio.Event()
+    release_flush = asyncio.Event()
+
+    async def delayed_flush(_batch):
+        flush_started.set()
+        await release_flush.wait()
+
+    monkeypatch.setattr(authz_audit, "_flush_audit_batch", delayed_flush)
+
+    def submit(index: int) -> asyncio.Task[None]:
+        return asyncio.create_task(
+            authz_audit.audit_decision(
+                user_id=uuid4(),
+                action=f"flow:read:{index}",
+                obj="flow:*",
+                result="allow",
+            )
+        )
+
+    inflight = submit(1)
+    await asyncio.wait_for(flush_started.wait(), timeout=1.0)
+    queued = submit(2)
+    await asyncio.sleep(0)
+    blocked = submit(3)
+    await asyncio.sleep(0)
+    blocked.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await blocked
+
+    release_flush.set()
+    await asyncio.gather(inflight, queued)
+    await authz_audit.drain_pending_audit_writes(timeout=1.0)
+    health = authz_audit.get_audit_producer_health()
+    assert health["submitted_count"] == 2
+    assert health["persisted_count"] == 2
+    assert health["queue_depth"] == 0
+
+
+@pytest.mark.anyio
 async def test_audit_decision_runs_when_authz_disabled_but_audit_on(monkeypatch, patched_audit_flush):
     """Audit is independent of enforcement.
 
