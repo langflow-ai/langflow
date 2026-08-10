@@ -33,6 +33,7 @@ aiml = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
 altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
 apify = ["apify-client>=1.8.1", "langchain-community>=0.4.1,<1.0.0"]
 assemblyai = ["assemblyai>=0.33.0,<1.0.0"]
+avian = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"]
 azure = ["langchain-openai>=1.1.6", "langchain-azure-ai>=1.1.0,<2"]
 baidu = ["qianfan==0.3.5", "langchain-community>=0.4.1,<1.0.0"]
 bing = ["langchain-community>=0.4.1,<1.0.0"]
@@ -104,6 +105,7 @@ all = [
     "lfx-bundles[altk]",
     "lfx-bundles[apify]",
     "lfx-bundles[assemblyai]",
+    "lfx-bundles[avian]",
     "lfx-bundles[azure]",
     "lfx-bundles[baidu]",
     "lfx-bundles[bing]",
@@ -176,6 +178,7 @@ all-no-torch = [
     "lfx-bundles[altk]",
     "lfx-bundles[apify]",
     "lfx-bundles[assemblyai]",
+    "lfx-bundles[avian]",
     "lfx-bundles[azure]",
     "lfx-bundles[baidu]",
     "lfx-bundles[bing]",
