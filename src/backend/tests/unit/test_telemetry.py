@@ -5,7 +5,11 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pytest
-from langflow.services.telemetry.opentelemetry import MetricType, OpenTelemetry
+from langflow.services.telemetry.opentelemetry import (
+    MetricType,
+    OpenTelemetry,
+    ThreadSafeSingletonMetaUsingWeakref,
+)
 from langflow.services.telemetry.schema import DeploymentPayload
 from langflow.services.telemetry.service import TelemetryService
 
@@ -89,6 +93,13 @@ fixed_labels = {"flow_id": "this_flow_id", "service": "this", "user": "that"}
 
 @pytest.fixture
 def opentelemetry_instance():
+    # Force a fresh, fully initialized singleton. pytest-split can schedule this module
+    # without the sibling tests that would otherwise build it, and TelemetryService
+    # teardowns elsewhere in the same worker call OpenTelemetry().shutdown(), which empties
+    # the instrument dict while the metric definitions survive. Grabbing the singleton
+    # as-is in that state fails with "Metric '...' is not a counter".
+    ThreadSafeSingletonMetaUsingWeakref._instances.pop(OpenTelemetry, None)
+    OpenTelemetry._initialized = False
     return OpenTelemetry()
 
 
@@ -188,19 +199,33 @@ def test_opentelementry_singleton(opentelemetry_instance):
     assert opentelemetry_instance.prometheus_enabled == opentelemetry_instance_3.prometheus_enabled
 
 
-def test_shutdown_then_reinit_restores_counters(opentelemetry_instance):
-    """A shut-down singleton must not poison later OpenTelemetry() callers.
+def test_recovers_when_instruments_are_missing():
+    """Rebuild instruments when definitions survive but instruments are gone.
 
-    TelemetryService.teardown() calls shutdown(), which clears the instrument map.
-    While the old instance is still strongly referenced (the torn-down service holds
-    it), the next OpenTelemetry() call must still return a working instance instead
-    of the cleared one, or every metric call in the process fails with
-    "Metric '...' is not a counter".
+    Nightly CI regression: a TelemetryService teardown reached shutdown() while the
+    instance stayed referenced, and the next construction had to rebuild the instruments
+    instead of raising "Metric 'num_files_uploaded' is not a counter".
+    """
+    stale = OpenTelemetry()
+    stale._metrics.clear()
+    OpenTelemetry._initialized = True
+    ThreadSafeSingletonMetaUsingWeakref._instances.pop(OpenTelemetry, None)
+
+    healed = OpenTelemetry()
+    healed.increment_counter(metric_name="num_files_uploaded", value=1, labels=fixed_labels)
+
+
+def test_new_instance_after_shutdown_recovers(opentelemetry_instance):
+    """shutdown() must not leave a live-but-gutted singleton behind.
+
+    The next OpenTelemetry() call builds a fresh instance with working instruments even
+    while a reference to the shut-down one is still alive.
     """
     opentelemetry_instance.shutdown()
 
-    fresh = OpenTelemetry()
-    fresh.increment_counter(metric_name="num_files_uploaded", value=1, labels=fixed_labels)
+    replacement = OpenTelemetry()
+    assert replacement is not opentelemetry_instance
+    replacement.increment_counter(metric_name="num_files_uploaded", value=1, labels=fixed_labels)
 
 
 def test_missing_labels(opentelemetry_instance):

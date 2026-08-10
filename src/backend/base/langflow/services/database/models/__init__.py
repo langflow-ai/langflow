@@ -35,6 +35,7 @@ from .mcp_server import MCPServer
 from .memory_base import MemoryBase, MemoryBaseSession, MemoryBaseWorkflowRun, MessageIngestionRecord
 from .message import MessageTable
 from .model_provider_policy import ModelProviderPolicy
+from .policy_bundle import PolicyBundleActive, PolicyBundleRevision
 from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
 from .user import User
@@ -78,6 +79,8 @@ __all__ = [
     "MessageIngestionRecord",
     "MessageTable",
     "ModelProviderPolicy",
+    "PolicyBundleActive",
+    "PolicyBundleRevision",
     "SSOConfig",
     "SSOConfigCreate",
     "SSOConfigRead",

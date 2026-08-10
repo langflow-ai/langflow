@@ -26,7 +26,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
+from fastapi import HTTPException
 from lfx.base.mcp.security import AGENTIC_USER_ID_ENV_VAR
+from lfx.services.catalog_policy import CatalogPolicySnapshot
 
 RUNNER_MODULE = "langflow.agentic.utils.assistant_runner"
 
@@ -231,7 +233,10 @@ class TestRunAssistantAndPersist:
             )
 
         session.refresh.assert_awaited_once_with(flow, with_for_update=True)
-        session.commit.assert_not_awaited()
+        # Exactly one commit: the pre-run transaction release (#14445). The
+        # locked write itself must not be committed.
+        assert session.commit.await_count == 1
+        session.add.assert_not_called()
         save_flow.assert_not_awaited()
 
     @pytest.mark.asyncio
@@ -382,6 +387,148 @@ class TestRunAssistantAndPersist:
         assert captured_kwargs.get("apply_edits_immediately") is True, (
             f"headless runner must request immediate edit apply; got {captured_kwargs!r}"
         )
+
+    @pytest.mark.asyncio
+    async def test_should_reject_catalog_blocked_canvas_changes_before_persisting(self):
+        from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
+
+        user_id = uuid4()
+        original_data = {"nodes": [], "edges": []}
+        flow = SimpleNamespace(id=uuid4(), name="My Flow", data=original_data, user_id=user_id)
+        session = AsyncMock()
+        session.get = AsyncMock(return_value=flow)
+        blocked_data = {
+            "nodes": [{"id": "Blocked-1", "data": {"id": "Blocked-1", "type": "BlockedComponent"}}],
+            "edges": [],
+        }
+        blocked_events = [
+            {"event": "flow_update", "action": "set_flow", "flow": {"name": "Blocked", "data": blocked_data}},
+            {"event": "complete", "data": {"result": "Built it."}},
+        ]
+        service = SimpleNamespace(snapshot=CatalogPolicySnapshot(blocked_component_keys={"BlockedComponent"}))
+
+        with (
+            patch(f"{RUNNER_MODULE}._resolve_assistant_context", new_callable=AsyncMock, return_value=_context_stub()),
+            patch(
+                f"{RUNNER_MODULE}.execute_flow_with_validation_streaming",
+                side_effect=_stream_of(blocked_events),
+            ),
+            patch(f"{RUNNER_MODULE}.get_catalog_policy_service", return_value=service),
+            patch(f"{RUNNER_MODULE}._save_flow_to_fs", new_callable=AsyncMock) as save_flow,
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            await run_assistant_and_persist(
+                session=session,
+                user_id=user_id,
+                instruction="Add the blocked component",
+                flow_id=str(flow.id),
+            )
+
+        assert exc_info.value.status_code == 400
+        assert "BlockedComponent" in exc_info.value.detail
+        assert flow.data is original_data
+        # Exactly one commit: the pre-run transaction release (#14445). The
+        # blocked write itself must not be committed.
+        assert session.commit.await_count == 1
+        save_flow.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_should_delete_provisional_flow_when_catalog_rejects_new_canvas(self):
+        from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
+
+        user_id = uuid4()
+        created_flow = SimpleNamespace(id=uuid4(), name="Assistant Flow", data=None, user_id=user_id)
+        session = AsyncMock()
+        session.get = AsyncMock(return_value=created_flow)
+        blocked_data = {
+            "nodes": [{"id": "Blocked-1", "data": {"id": "Blocked-1", "type": "BlockedComponent"}}],
+            "edges": [],
+        }
+        blocked_events = [
+            {"event": "flow_update", "action": "set_flow", "flow": {"name": "Blocked", "data": blocked_data}},
+            {"event": "complete", "data": {"result": "Built it."}},
+        ]
+        policy_service = SimpleNamespace(snapshot=CatalogPolicySnapshot(blocked_component_keys={"BlockedComponent"}))
+
+        with (
+            patch(f"{RUNNER_MODULE}._new_flow", new_callable=AsyncMock, return_value=created_flow),
+            patch(
+                f"{RUNNER_MODULE}.get_or_create_default_folder",
+                new_callable=AsyncMock,
+                return_value=SimpleNamespace(id=uuid4()),
+            ),
+            patch(f"{RUNNER_MODULE}.get_storage_service", MagicMock()),
+            patch(f"{RUNNER_MODULE}._resolve_assistant_context", new_callable=AsyncMock, return_value=_context_stub()),
+            patch(
+                f"{RUNNER_MODULE}.execute_flow_with_validation_streaming",
+                side_effect=_stream_of(blocked_events),
+            ),
+            patch(f"{RUNNER_MODULE}.get_catalog_policy_service", return_value=policy_service),
+            patch(f"{RUNNER_MODULE}._save_flow_to_fs", new_callable=AsyncMock) as save_flow,
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            await run_assistant_and_persist(
+                session=session,
+                user_id=user_id,
+                instruction="Build a blocked flow",
+            )
+
+        assert exc_info.value.status_code == 400
+        session.delete.assert_awaited_once_with(created_flow)
+        # Three commits: the provisional-flow create, the pre-run transaction
+        # release (#14445), and the delete that cleans the provisional row up.
+        assert session.commit.await_count == 3
+        save_flow.assert_not_awaited()
+
+
+class TestRunAssistantReleasesTransactionBeforeRun:
+    """Issue #14445: the caller's DB transaction must not span the assistant run.
+
+    The MCP ``run_assistant`` tool hands the runner one session for flow
+    loading, the agent loop, and persistence. The runner must commit the read
+    transaction before the (potentially minutes-long) stream starts; the
+    persistence write then re-reads under a fresh short FOR UPDATE transaction.
+    """
+
+    @pytest.mark.asyncio
+    async def test_should_commit_the_read_transaction_before_the_stream_starts(self):
+        from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
+
+        user_id = uuid4()
+        flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
+        session = AsyncMock()
+        session.get = AsyncMock(return_value=flow)
+
+        commits_when_stream_created: list[int] = []
+
+        def _tracking_stream(*_args, **_kwargs):
+            commits_when_stream_created.append(session.commit.await_count)
+            return _stream_of(EVENTS_WITH_FLOW)()
+
+        with (
+            patch(
+                f"{RUNNER_MODULE}._resolve_assistant_context",
+                new_callable=AsyncMock,
+                return_value=_context_stub(),
+            ),
+            patch(f"{RUNNER_MODULE}.execute_flow_with_validation_streaming", side_effect=_tracking_stream),
+            patch(f"{RUNNER_MODULE}._save_flow_to_fs", new_callable=AsyncMock),
+            patch(f"{RUNNER_MODULE}.get_storage_service", MagicMock()),
+        ):
+            result = await run_assistant_and_persist(
+                session=session,
+                user_id=user_id,
+                instruction="Build a chat flow",
+                flow_id=str(flow.id),
+            )
+
+        assert commits_when_stream_created == [1], (
+            "the read transaction must be committed before the assistant stream is created"
+        )
+        # Second commit is the persistence write, after the FOR UPDATE re-read.
+        assert session.commit.await_count == 2
+        session.refresh.assert_awaited_once_with(flow, with_for_update=True)
+        assert result["flow_changed"] is True
 
 
 class TestRunAssistantProgressForwarding:
@@ -791,6 +938,56 @@ class TestRunAssistantPersistsAuthoritativeWorkingFlow:
         assert [n["id"] for n in flow.data["nodes"]] == ["Agent-1"]
         agent = flow.data["nodes"][0]
         assert agent["data"]["node"]["template"]["system_prompt"]["value"] == "baker"
+
+    @pytest.mark.asyncio
+    async def test_should_persist_empty_working_flow_after_removing_last_blocked_component(self):
+        from langflow.agentic.utils import assistant_runner
+
+        user_id = uuid4()
+        blocked_node = {
+            "id": "Blocked-1",
+            "data": {"id": "Blocked-1", "type": "BlockedComponent"},
+        }
+        flow = SimpleNamespace(
+            id=uuid4(),
+            name="My Flow",
+            data={"nodes": [blocked_node], "edges": []},
+            user_id=user_id,
+        )
+        session = AsyncMock()
+        session.get = AsyncMock(return_value=flow)
+        events = [
+            {"event": "flow_update", "action": "remove_component", "component_id": "Blocked-1"},
+            {"event": "complete", "data": {"result": "Removed the blocked component."}},
+        ]
+        policy_service = SimpleNamespace(snapshot=CatalogPolicySnapshot(blocked_component_keys={"BlockedComponent"}))
+
+        with (
+            patch.object(
+                assistant_runner, "_resolve_assistant_context", new_callable=AsyncMock, return_value=_context_stub()
+            ),
+            patch.object(assistant_runner, "execute_flow_with_validation_streaming", side_effect=_stream_of(events)),
+            patch.object(
+                assistant_runner,
+                "get_working_flow",
+                return_value={"data": {"nodes": [], "edges": []}},
+            ),
+            patch.object(assistant_runner, "get_catalog_policy_service", return_value=policy_service),
+            patch.object(assistant_runner, "_save_flow_to_fs", new_callable=AsyncMock),
+            patch.object(assistant_runner, "get_storage_service", MagicMock()),
+        ):
+            result = await assistant_runner.run_assistant_and_persist(
+                session=session,
+                user_id=user_id,
+                instruction="remove the blocked component",
+                flow_id=str(flow.id),
+            )
+
+        assert result["flow_changed"] is True
+        assert flow.data == {"nodes": [], "edges": []}
+        # Two commits: the pre-run transaction release (#14445) and the
+        # persistence write after the FOR UPDATE re-read.
+        assert session.commit.await_count == 2
 
     @pytest.mark.asyncio
     async def test_should_fall_back_to_event_replay_when_working_flow_is_empty(self):

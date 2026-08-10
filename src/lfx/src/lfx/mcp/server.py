@@ -760,6 +760,11 @@ async def configure_component(
                 # Set value in template before sending
                 if key in template and isinstance(template[key], dict):
                     template[key]["value"] = value
+                    # A value explicitly supplied to this tool is a literal.
+                    # Preserve component defaults, but do not let the refresh
+                    # endpoint resolve this value as a global-variable name.
+                    if "load_from_db" in template[key]:
+                        template[key]["load_from_db"] = False
                 else:
                     template[key] = {"value": value}
                 code = template.get("code", {}).get("value", "")

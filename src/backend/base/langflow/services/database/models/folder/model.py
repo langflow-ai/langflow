@@ -51,6 +51,11 @@ class FolderRead(FolderBase):
     parent_id: UUID | None = Field()
 
 
+class FolderListRead(FolderRead):
+    owner_username: str | None = None
+    is_owner: bool
+
+
 class FolderReadWithFlows(FolderBase):
     id: UUID
     parent_id: UUID | None = Field()

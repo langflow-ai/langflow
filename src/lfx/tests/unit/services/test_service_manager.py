@@ -176,6 +176,17 @@ model_provider_policy_service = "{service_path}"
         with pytest.raises(RuntimeError, match=error):
             service_manager.discover_plugins(temp_config_dir)
 
+    def test_missing_explicit_policy_bundle_fails_startup(self, service_manager, temp_config_dir):
+        (temp_config_dir / "lfx.toml").write_text(
+            """
+[services]
+policy_bundle_service = "nonexistent.module:MissingPolicyBundleService"
+"""
+        )
+
+        with pytest.raises(RuntimeError, match="Configured policy bundle service could not be loaded"):
+            service_manager.discover_plugins(temp_config_dir)
+
     def test_discover_multiple_services_from_config(self, service_manager, temp_config_dir):
         """Test discovering multiple real services from config."""
         config_file = temp_config_dir / "lfx.toml"

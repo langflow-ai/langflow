@@ -84,6 +84,7 @@ from langflow.services.database.models.deployment.crud import (
     count_deployments_by_provider,
     delete_deployment_by_id,
     get_deployment_by_resource_key,
+    has_visible_deployment_for_provider,
 )
 from langflow.services.database.models.deployment.crud import (
     create_deployment_from_model as create_deployment_db,
@@ -792,25 +793,42 @@ async def list_deployments(
         )
     )
 
-    # OSS / no-plugin path keeps the strict owner gate (byte-for-byte the prior
-    # behavior). Relax it only when the prefilter actually lists ids to surface:
-    # an empty list means "no extra visibility", so there's nothing a cross-user
-    # reader could see under a provider they don't own — keep the strict 404 there
-    # rather than degrade it to an empty 200. A non-empty list resolves the
-    # provider account by id alone so a shared deployment under another user's
-    # provider account can be listed; the (owner ⊕ visible) union below still
-    # governs which rows actually surface.
-    if visibility_scope is not None and visibility_scope.has_cross_user_access:
+    # OSS / no-plugin path keeps the strict owner gate. A structured prefilter
+    # may relax it only after the same SQL visibility predicate used by the page
+    # proves that this specific provider owns at least one row visible to the
+    # caller. A coarse workspace/project/global grant alone is not enough:
+    # loading arbitrary foreign provider UUIDs would expose an existence oracle.
+    use_shared_provider_lookup = bool(
+        visibility_scope is not None
+        and visibility_scope.has_cross_user_access
+        and await has_visible_deployment_for_provider(
+            session,
+            user_id=current_user.id,
+            deployment_provider_account_id=provider_id,
+            visibility_scope=visibility_scope,
+        )
+    )
+    if use_shared_provider_lookup:
         provider_account = await get_shared_listing_provider_account_or_404(provider_id=provider_id, db=session)
     else:
         provider_account = await get_owned_provider_account_or_404(
             provider_id=provider_id, user_id=current_user.id, db=session
         )
-    await ensure_deployment_permission(
-        current_user,
-        DeploymentAction.READ,
-        project_id=project_id,
-    )
+    try:
+        await ensure_deployment_permission(
+            current_user,
+            DeploymentAction.READ,
+            project_id=project_id,
+        )
+    except HTTPException as exc:
+        if use_shared_provider_lookup:
+            # The relaxed provider-account lookup above loads by UUID alone so
+            # shared deployments can be listed. Once that path is active, mask
+            # a policy deny exactly like a missing account; otherwise callers
+            # could distinguish an existing foreign provider UUID (403) from a
+            # nonexistent UUID (404).
+            raise deny_to_404(exc, detail="Deployment provider account not found.") from exc
+        raise
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
     if load_from_provider:

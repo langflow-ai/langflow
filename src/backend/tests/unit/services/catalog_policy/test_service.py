@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 import pytest
@@ -18,6 +18,7 @@ from langflow.services.database.models.catalog_policy import (
 )
 from langflow.services.schema import ServiceType
 from lfx.services.catalog_policy import BaseCatalogPolicyService
+from lfx.services.policy_bundle import PolicyBundleService, PolicyBundleSnapshot
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -145,6 +146,157 @@ async def test_replace_rejects_empty_keys_before_opening_a_transaction(catalog_d
 
     assert service.snapshot.blocked_template_keys == frozenset()
     assert service.hydrated is False
+
+
+def test_snapshot_projection_is_reused_until_bundle_identity_changes():
+    bundle_service = PolicyBundleService()
+    service = LangflowCatalogPolicyService(None, bundle_service)
+    first_bundle = PolicyBundleSnapshot(
+        revision=1,
+        initialized=True,
+        blocked_component_keys={"PythonREPL"},
+    )
+    bundle_service.publish(first_bundle)
+
+    first_projection = service.snapshot
+
+    assert service.snapshot is first_projection
+    replacement_bundle = PolicyBundleSnapshot(
+        revision=1,
+        initialized=True,
+        blocked_component_keys={"PythonREPL"},
+    )
+    bundle_service.publish(replacement_bundle)
+    replacement_projection = service.snapshot
+    assert replacement_projection is service.snapshot
+    assert replacement_projection is not first_projection
+    assert replacement_projection == first_projection
+
+
+@pytest.mark.asyncio
+async def test_component_replace_retries_conflicts_with_each_newest_complete_bundle(monkeypatch):
+    bundle_service = PolicyBundleService()
+    service = LangflowCatalogPolicyService(None, bundle_service)
+    current_bundles = [
+        PolicyBundleSnapshot(
+            revision=revision,
+            initialized=True,
+            approved_provider_ids={provider},
+            blocked_component_keys={f"old-component-{revision}"},
+            blocked_template_keys={template},
+        )
+        for revision, provider, template in (
+            (1, "openai", "template-one"),
+            (2, "anthropic", "template-two"),
+            (3, "google_generative_ai", "template-three"),
+        )
+    ]
+    committed = PolicyBundleSnapshot(
+        revision=4,
+        initialized=True,
+        approved_provider_ids=current_bundles[-1].approved_provider_ids,
+        blocked_component_keys={"PythonREPL"},
+        blocked_template_keys=current_bundles[-1].blocked_template_keys,
+    )
+
+    @asynccontextmanager
+    async def session_scope():
+        yield object()
+
+    read_bundle = AsyncMock(side_effect=current_bundles)
+    replace_bundle = AsyncMock(
+        side_effect=[
+            catalog_policy_service_module.PolicyBundleRevisionConflictError(
+                expected_revision=1,
+                active_revision=2,
+            ),
+            catalog_policy_service_module.PolicyBundleRevisionConflictError(
+                expected_revision=2,
+                active_revision=3,
+            ),
+            committed,
+        ]
+    )
+    publish_bundle = Mock(side_effect=bundle_service.publish)
+    monkeypatch.setattr(catalog_policy_service_module, "session_scope", session_scope)
+    monkeypatch.setattr(catalog_policy_service_module, "get_policy_bundle_state", read_bundle)
+    monkeypatch.setattr(catalog_policy_service_module, "replace_policy_bundle_state", replace_bundle)
+    monkeypatch.setattr(catalog_policy_service_module, "apply_policy_bundle_state", publish_bundle)
+
+    update = await service.replace_blocked_component_keys(["PythonREPL"], actor_user_id=None)
+
+    assert read_bundle.await_count == 3
+    assert replace_bundle.await_count == 3
+    for replace_call, current in zip(replace_bundle.await_args_list, current_bundles, strict=True):
+        assert replace_call.kwargs["expected_revision"] == current.revision
+        assert replace_call.kwargs["approved_provider_ids"] == current.approved_provider_ids
+        assert replace_call.kwargs["blocked_component_keys"] == frozenset({"PythonREPL"})
+        assert replace_call.kwargs["blocked_template_keys"] == current.blocked_template_keys
+    publish_bundle.assert_called_once_with(committed)
+    assert update.added == frozenset({"PythonREPL"})
+    assert update.removed == current_bundles[-1].blocked_component_keys
+    assert service.snapshot.blocked_component_keys == frozenset({"PythonREPL"})
+
+
+@pytest.mark.asyncio
+async def test_template_replace_propagates_third_conflict_without_publishing(monkeypatch):
+    bundle_service = PolicyBundleService()
+    published = PolicyBundleSnapshot(
+        revision=3,
+        initialized=True,
+        approved_provider_ids={"openai"},
+        blocked_component_keys={"PythonREPL"},
+        blocked_template_keys={"published-template"},
+    )
+    bundle_service.publish(published)
+    service = LangflowCatalogPolicyService(None, bundle_service)
+    current_bundles = [
+        PolicyBundleSnapshot(
+            revision=revision,
+            initialized=True,
+            approved_provider_ids={provider},
+            blocked_component_keys={component},
+            blocked_template_keys={f"old-template-{revision}"},
+        )
+        for revision, provider, component in (
+            (4, "openai", "component-four"),
+            (5, "anthropic", "component-five"),
+            (6, "google_generative_ai", "component-six"),
+        )
+    ]
+
+    @asynccontextmanager
+    async def session_scope():
+        yield object()
+
+    read_bundle = AsyncMock(side_effect=current_bundles)
+    conflicts = [
+        catalog_policy_service_module.PolicyBundleRevisionConflictError(
+            expected_revision=current.revision,
+            active_revision=current.revision + 1,
+        )
+        for current in current_bundles
+    ]
+    replace_bundle = AsyncMock(side_effect=conflicts)
+    publish_bundle = Mock()
+    monkeypatch.setattr(catalog_policy_service_module, "session_scope", session_scope)
+    monkeypatch.setattr(catalog_policy_service_module, "get_policy_bundle_state", read_bundle)
+    monkeypatch.setattr(catalog_policy_service_module, "replace_policy_bundle_state", replace_bundle)
+    monkeypatch.setattr(catalog_policy_service_module, "apply_policy_bundle_state", publish_bundle)
+
+    with pytest.raises(catalog_policy_service_module.PolicyBundleRevisionConflictError) as exc_info:
+        await service.replace_blocked_template_keys(["new-template"], actor_user_id=None)
+
+    assert exc_info.value is conflicts[-1]
+    assert read_bundle.await_count == 3
+    assert replace_bundle.await_count == 3
+    for replace_call, current in zip(replace_bundle.await_args_list, current_bundles, strict=True):
+        assert replace_call.kwargs["expected_revision"] == current.revision
+        assert replace_call.kwargs["approved_provider_ids"] == current.approved_provider_ids
+        assert replace_call.kwargs["blocked_component_keys"] == current.blocked_component_keys
+        assert replace_call.kwargs["blocked_template_keys"] == frozenset({"new-template"})
+    publish_bundle.assert_not_called()
+    assert bundle_service.snapshot is published
 
 
 class _Result:

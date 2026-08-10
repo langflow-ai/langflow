@@ -132,17 +132,21 @@ class ThreadSafeSingletonMetaUsingWeakref(type):
     _lock: threading.Lock = threading.Lock()
 
     def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
+        # Hold a strong reference from lookup to return: with a WeakValueDictionary the
+        # entry can be garbage-collected between a membership check and the lookup, which
+        # would turn this into a KeyError under concurrent access.
+        instance = cls._instances.get(cls)
+        if instance is None:
             with cls._lock:
-                if cls not in cls._instances:
+                instance = cls._instances.get(cls)
+                if instance is None:
                     instance = super().__call__(*args, **kwargs)
                     cls._instances[cls] = instance
-        return cls._instances[cls]
+        return instance
 
-    def evict_instance(cls) -> None:
-        """Drop the cached instance so the next call constructs a fresh one."""
-        with cls._lock:
-            cls._instances.pop(cls, None)
+    def discard_singleton_instance(cls) -> None:
+        """Forget the cached singleton so the next constructor call builds a fresh instance."""
+        cls._instances.pop(cls, None)
 
 
 class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
@@ -152,6 +156,9 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
     _tracer_provider: TracerProvider | None = None
     _logger_provider: LoggerProvider | None = None
     _initialized: bool = False  # Add initialization flag
+    # Class-level default so shutdown() is safe on an instance whose __init__ early-returned
+    # (such an instance never runs the bootstrap and so never sets the instance attribute).
+    _owns_meter_provider: bool = False
     prometheus_enabled: bool = True
 
     def _add_metric(
@@ -203,9 +210,12 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
         )
 
     def __init__(self, *, prometheus_enabled: bool = True):
-        # Only initialize once
+        # Only initialize once. The _metrics check is a self-heal: shutdown() (or a service
+        # teardown that reached it) empties the instrument dict while the metric definitions
+        # in _metrics_registry survive, and returning early in that state would leave every
+        # instrument lookup failing with "Metric '...' is not a counter".
         self.prometheus_enabled = prometheus_enabled
-        if OpenTelemetry._initialized:
+        if OpenTelemetry._initialized and self._metrics:
             return
 
         if not self._metrics_registry:
@@ -331,8 +341,12 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             self._logger_provider.shutdown()
         self._metrics.clear()
         OpenTelemetry._initialized = False
-        # Evict from the singleton cache: __init__ never re-runs on a cached instance.
-        OpenTelemetry.evict_instance()
+        # Drop the cached singleton so the next OpenTelemetry() call constructs and fully
+        # re-initializes a fresh instance. Without this, any still-alive reference to this
+        # torn-down instance (a TelemetryService, a fixture, a traceback) keeps it in the
+        # weak dict, and every subsequent OpenTelemetry() call returns it with an empty
+        # _metrics dict — the state behind "Metric '...' is not a counter" failures.
+        OpenTelemetry.discard_singleton_instance()
 
 
 # Connection-pool saturation, read from SQLAlchemy at collection time rather than tracked.

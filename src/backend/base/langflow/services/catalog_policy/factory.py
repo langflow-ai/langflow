@@ -28,4 +28,6 @@ class CatalogPolicyServiceFactory(ServiceFactory):
 
     def create(self, database_service: DatabaseService) -> BaseCatalogPolicyService:
         """Build a catalog-policy service using the injected database service."""
-        return self.service_class(database_service)
+        from lfx.services.deps import get_policy_bundle_service
+
+        return self.service_class(database_service, get_policy_bundle_service())
