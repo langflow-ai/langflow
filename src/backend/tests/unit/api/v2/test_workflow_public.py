@@ -399,18 +399,34 @@ async def test_public_endpoint_runs_as_stable_non_owner_principal(client: AsyncC
 @pytest.mark.benchmark
 @pytest.mark.security
 async def test_public_endpoint_builds_from_server_sanitized_flow_data(client: AsyncClient, public_flow_id, monkeypatch):
-    """Stored component code is replaced before the anonymous v2 run starts."""
+    """Stored component code is replaced and persisted secrets are stripped before an anonymous v2 run."""
     import langflow.api.v2.workflow_public as workflow_public_module
 
     captured: dict = {}
     _stub_generate_flow_events(monkeypatch, captured)
-    sanitized = {
-        "nodes": [{"id": "trusted-node", "data": {"type": "TrustedComponent"}}],
+    prepared = {
+        "nodes": [
+            {
+                "id": "trusted-node",
+                "data": {
+                    "type": "TrustedComponent",
+                    "node": {
+                        "template": {
+                            "api_key": {
+                                "name": "api_key",
+                                "password": True,
+                                "value": "sk-owner-secret",  # pragma: allowlist secret
+                            }
+                        }
+                    },
+                },
+            }
+        ],
         "edges": [],
     }
 
     async def _prepare(_flow_data):
-        return sanitized
+        return prepared
 
     monkeypatch.setattr(workflow_public_module, "prepare_public_flow_build", _prepare)
 
@@ -425,8 +441,10 @@ async def test_public_endpoint_builds_from_server_sanitized_flow_data(client: As
         await _read_stream(response)
 
     assert captured["data"] is not None
-    assert captured["data"].nodes == sanitized["nodes"]
-    assert captured["data"].edges == sanitized["edges"]
+    assert captured["data"].nodes[0]["id"] == "trusted-node"
+    assert captured["data"].nodes[0]["data"]["node"]["template"]["api_key"]["value"] is None
+    assert captured["data"].edges == prepared["edges"]
+    assert prepared["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] == "sk-owner-secret"
 
 
 @pytest.mark.benchmark
