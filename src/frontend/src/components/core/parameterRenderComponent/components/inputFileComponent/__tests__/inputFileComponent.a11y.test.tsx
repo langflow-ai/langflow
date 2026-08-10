@@ -1,10 +1,35 @@
 import { render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
 import { axe } from "@/utils/a11y-test";
 import { mockZustandStore } from "../../__tests__/a11y-mock-helpers";
 import InputFileComponent from "..";
 
 jest.mock("@/controllers/API/queries/file-management", () => ({
-  useGetFilesV2: () => ({ data: undefined }),
+  useGetFilesV2: jest.fn(() => ({ data: undefined })),
+}));
+
+jest.mock("@/modals/fileManagerModal", () => ({
+  __esModule: true,
+  default: ({ children }: { children: ReactNode }) => <>{children}</>,
+}));
+
+jest.mock(
+  "@/modals/fileManagerModal/components/filesRendererComponent",
+  () => ({
+    __esModule: true,
+    default: () => null,
+  }),
+);
+
+jest.mock("@/components/common/genericIconComponent", () => ({
+  __esModule: true,
+  ForwardedIconComponent: (props: { name?: string }) => (
+    <svg data-testid={`icon-${props.name}`} />
+  ),
+  default: (props: { name?: string }) => (
+    <svg data-testid={`icon-${props.name}`} />
+  ),
 }));
 jest.mock("@/controllers/API/queries/files/use-post-upload-file", () => ({
   usePostUploadFile: () => ({ mutateAsync: jest.fn(), isPending: false }),
@@ -65,5 +90,31 @@ describe("InputFileComponent", () => {
     expect(screen.getByTestId("input-file-component")).not.toHaveAttribute(
       "aria-labelledby",
     );
+  });
+
+  it("keeps fileManager.selectFiles instead of the field label on the icon-only add-another-file trigger", () => {
+    jest.mocked(useGetFilesV2).mockReturnValueOnce({
+      data: [{ name: "a.txt", path: "path/a.txt" }],
+    } as unknown as ReturnType<typeof useGetFilesV2>);
+
+    render(
+      <>
+        <span id="field-label">Upload attachment</span>
+        <InputFileComponent
+          {...baseProps}
+          tempFile={false}
+          isList
+          file_path={["path/a.txt"]}
+          ariaLabelledBy="field-label"
+        />
+      </>,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Select files" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Upload attachment" }),
+    ).not.toBeInTheDocument();
   });
 });

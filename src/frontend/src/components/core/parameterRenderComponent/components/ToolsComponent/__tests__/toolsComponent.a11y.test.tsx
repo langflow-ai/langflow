@@ -57,7 +57,7 @@ describe("ToolsComponent", () => {
     expect(button).not.toHaveAttribute("aria-labelledby");
   });
 
-  it("uses the field's real label on the empty-state add-actions button", () => {
+  it("keeps the empty-state add-actions button's own name instead of the field label", () => {
     render(
       <>
         <span id="field-label">Available tools</span>
@@ -70,10 +70,11 @@ describe("ToolsComponent", () => {
       </>,
     );
 
-    // Both the top-corner "open actions" button and the empty-state CTA
-    // render together in this state — both should carry the field's label.
     expect(
-      screen.getAllByRole("button", { name: "Available tools" }),
-    ).toHaveLength(2);
+      screen.getByRole("button", { name: "Available tools" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Add actions" }),
+    ).toBeInTheDocument();
   });
 });

@@ -280,13 +280,10 @@ export default function InputFileComponent({
                           "font-semibold",
                         )}
                         data-testid="button_open_file_management"
-                        aria-labelledby={ariaLabelledBy}
                         aria-label={
-                          ariaLabelledBy
-                            ? undefined
-                            : isList
-                              ? t("fileManager.selectFiles")
-                              : t("fileManager.selectFile")
+                          isList
+                            ? t("fileManager.selectFiles")
+                            : t("fileManager.selectFile")
                         }
                       >
                         {disabled ? (

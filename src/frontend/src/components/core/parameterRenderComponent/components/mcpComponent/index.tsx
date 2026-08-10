@@ -253,7 +253,9 @@ export default function McpComponent({
             )}
             data-testid="mcp-server-dropdown"
             disabled={disabled || !options}
-            aria-labelledby={ariaLabelledBy}
+            aria-labelledby={
+              showSaveButton || !options ? undefined : ariaLabelledBy
+            }
           >
             <div
               className={cn(
@@ -318,7 +320,6 @@ export default function McpComponent({
           size="sm"
           onClick={handleAddButtonClick}
           data-testid="add-mcp-server-simple-button"
-          aria-labelledby={ariaLabelledBy}
         >
           <span>{t("input.addMcpServer")}</span>
         </Button>

@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
 import { axe } from "@/utils/a11y-test";
 import {
   mockGenericIconComponent,
@@ -98,5 +99,45 @@ describe("McpComponent", () => {
     expect(screen.getByTestId("mcp-server-dropdown")).not.toHaveAttribute(
       "aria-labelledby",
     );
+  });
+
+  it("keeps the destructive clear-server label instead of the field label", () => {
+    render(
+      <>
+        <span id="field-label">MCP server</span>
+        <McpComponent
+          {...baseProps}
+          value={{ name: "not-in-list", config: { some: "config" } }}
+          ariaLabelledBy="field-label"
+        />
+      </>,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Clear selected server" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "MCP server" }),
+    ).not.toBeInTheDocument();
+  });
+
+
+  it("keeps the add-server button's own name instead of the field label", () => {
+    jest.mocked(useGetMCPServers).mockReturnValue({
+      data: [],
+      refetch: jest.fn(),
+      isFetching: false,
+    } as unknown as ReturnType<typeof useGetMCPServers>);
+
+    render(
+      <>
+        <span id="field-label">MCP server</span>
+        <McpComponent {...baseProps} ariaLabelledBy="field-label" />
+      </>,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Add MCP Server" }),
+    ).toBeInTheDocument();
   });
 });
