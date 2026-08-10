@@ -20,7 +20,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from fastapi import HTTPException
+from fastapi import BackgroundTasks, HTTPException, Request
 from httpx import AsyncClient
 from langflow.services.database.models.flow.model import Flow
 from lfx.services.deps import session_scope
@@ -397,6 +397,90 @@ class TestV2WorkflowAdmission:
 
 class TestV2WorkflowDelegatedErrorPolicy:
     """Delegated execution hides internals while owner debugging stays intact."""
+
+    @pytest.mark.parametrize("caller_kind", ["delegate", "owner"])
+    def test_stored_flow_validation_detail_depends_on_flow_ownership(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        caller_kind: str,
+    ):
+        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_validation
+        from lfx.schema.workflow import WorkflowRunRequest
+        from lfx.utils.flow_validation import CustomComponentValidationError
+        from lfx.workflow.converters import parse_workflow_run_request
+
+        sensitive_detail = "blocked owner component SecretProviderNode-1"
+        owner_id = uuid4()
+        caller_id = owner_id if caller_kind == "owner" else uuid4()
+        flow = SimpleNamespace(
+            id=uuid4(),
+            user_id=owner_id,
+            data={"nodes": [{"id": "SecretProviderNode-1"}], "edges": []},
+            name="shared",
+        )
+        parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=str(flow.id), input_value="hi", mode="sync"))
+        monkeypatch.setattr(
+            workflow_validation,
+            "validate_flow_for_current_settings",
+            MagicMock(side_effect=CustomComponentValidationError(sensitive_detail)),
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            workflow_module._apply_execution_gates(
+                parsed,
+                flow,
+                SimpleNamespace(id=caller_id, is_superuser=False),
+            )
+
+        assert exc_info.value.status_code == 400
+        if caller_kind == "owner":
+            assert sensitive_detail in str(exc_info.value.detail)
+        else:
+            assert exc_info.value.detail == "Workflow execution failed."
+            assert sensitive_detail not in str(exc_info.value.detail)
+
+    @pytest.mark.parametrize("caller_kind", ["delegate", "owner"])
+    async def test_sync_missing_data_detail_depends_on_flow_ownership(
+        self,
+        caller_kind: str,
+    ):
+        from langflow.api.v2 import workflow as workflow_module
+        from lfx.workflow.converters import ParsedWorkflowRun
+
+        owner_id = uuid4()
+        caller_id = owner_id if caller_kind == "owner" else uuid4()
+        private_flow_id = uuid4()
+        requested_endpoint_name = "shared-flow-endpoint"
+        flow = SimpleNamespace(
+            id=private_flow_id,
+            user_id=owner_id,
+            data=None,
+            name="shared",
+        )
+        parsed = ParsedWorkflowRun(
+            flow_id=requested_endpoint_name,
+            input_value="hi",
+            mode="sync",
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await workflow_module.run_sync_with_mapping(
+                parsed,
+                flow,
+                SimpleNamespace(id=caller_id, is_superuser=False),
+                http_request=Request({"type": "http", "headers": []}),
+                background_tasks=BackgroundTasks(),
+            )
+
+        assert exc_info.value.status_code == 400
+        assert exc_info.value.detail["flow_id"] == requested_endpoint_name
+        message = exc_info.value.detail["message"]
+        if caller_kind == "owner":
+            assert str(private_flow_id) in message
+        else:
+            assert message == "Workflow execution failed."
+            assert str(private_flow_id) not in str(exc_info.value.detail)
 
     @pytest.mark.parametrize("caller_kind", ["delegate", "owner"])
     async def test_sync_error_detail_depends_on_flow_ownership(
