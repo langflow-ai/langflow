@@ -1021,7 +1021,7 @@
   "components.filterdata.inputs.filter_criteria.display_name.68e59922": "Filter Criteria",
   "components.filterdata.inputs.filter_criteria.info.227528c3": "List of keys to filter by.",
   "components.filterdata.outputs.filtered_data.display_name.8acf8a3c": "Filtered Data",
-  "components.filterdatavalues.description.ea91d650": "Filter a list of data items based on a specified key, filter value, and comparison operator. Check advanced options to select match comparision.",
+  "components.filterdatavalues.description.2f861dd6": "Filter a list of data items based on a specified key, filter value, and comparison operator. Check advanced options to select match comparison.",
   "components.filterdatavalues.display_name.c54f709f": "Filter Values",
   "components.filterdatavalues.inputs.filter_key.display_name.a6c0aca5": "Filter Key",
   "components.filterdatavalues.inputs.filter_key.info.aaa06018": "The key to filter on (e.g., 'route').",
