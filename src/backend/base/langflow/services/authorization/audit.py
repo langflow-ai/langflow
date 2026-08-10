@@ -551,6 +551,13 @@ async def audit_decision(
         return
 
     durable = bool(getattr(auth_settings, "AUTHZ_AUDIT_DURABLE", False))
+    # A completed same-loop drain is terminal. Reject before the lazy starter
+    # can create an idle replacement writer; a genuinely new event loop still
+    # flows through ``_ensure_audit_writer_started`` and replaces the closed
+    # loop's pipeline below.
+    if durable and _audit_queue_loop is asyncio.get_running_loop() and not _audit_accepting:
+        _audit_last_failure_code = "writer_stopped"
+        raise AuditPersistenceError
     queue = _ensure_audit_writer_started()
     if queue is None:
         if durable:
