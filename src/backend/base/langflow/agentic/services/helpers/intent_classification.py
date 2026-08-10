@@ -17,9 +17,8 @@ from langflow.agentic.services.flow_types import (
     IntentResult,
 )
 
-# An intent call is a network round-trip to a slow, unreliable LLM. Without an
-# explicit bound a hung provider stalls the whole SSE request indefinitely.
-# Generous enough for a small classification call + cold starts, but finite.
+# Bound on the classifier's LLM round-trip (generous for cold starts) — a hung
+# provider must never stall the whole SSE request indefinitely.
 INTENT_CLASSIFICATION_TIMEOUT_SECONDS = 30.0
 
 # Pattern to extract JSON from markdown code blocks (```json ... ``` or ``` ... ```)
@@ -27,13 +26,8 @@ _MARKDOWN_JSON_RE = re.compile(r"```(?:json)?\s*\n?(.*?)\n?```", re.DOTALL)
 # Pattern to find JSON object in surrounding text
 _EMBEDDED_JSON_RE = re.compile(r"\{[^{}]*\"intent\"[^{}]*\}", re.DOTALL)
 
-# Deterministic run-flow detector. "run/execute/test the flow" is a
-# high-confidence request — a flaky LLM occasionally mislabels
-# "rode o flow e me diga o resultado" as a question (it also asks for the
-# result), which then plan-gates and trips the no-action build guard. A
-# tight "<run-verb> … flow/fluxo" pattern forces run_flow and skips the
-# classifier LLM call entirely. Kept tight so "build a chat flow" / "what
-# does this flow do" / "test input" are NOT captured.
+# Deterministic run-flow rescue: a flaky classifier mislabels "rode o flow…" as
+# question. Kept tight so "build a chat flow" / "test input" are NOT captured.
 _RUN_FLOW_RE = re.compile(
     r"\b(run|execute|rode|roda|rodar|executa|executar|test|testa|testar|teste)\b"
     r"[^.\n]{0,40}\b(flow|fluxo)\b",
@@ -125,23 +119,19 @@ async def classify_intent(
     stateless and must use an isolated session to avoid polluting the conversation
     memory with JSON classification output.
     """
-    if not text:
+    # Whitespace-only input carries no intent in any language — skip the LLM.
+    if not text or not text.strip():
+        logger.info("intent.question.deterministic: empty or whitespace-only input")
         return IntentResult(translation=text, intent="question")
 
-    # Deterministic: the edit-approval continuation is a backend protocol
-    # string, not a user question. It must reach the flow-builder assistant
-    # (a flow request) so the agent can finish the deferred steps — never
-    # the flaky LLM, never off_topic/question.
+    # The edit-approval continuation is a backend protocol string — it must reach
+    # the flow-builder assistant deterministically, never the flaky LLM.
     if text.strip() == EDIT_CONTINUATION_INPUT:
         logger.info("intent.build_flow.deterministic: edit-approval continuation signal")
         return IntentResult(translation=text, intent="build_flow")
 
-    # Deterministic: the plan-approval continuation is also a backend protocol
-    # string (sent verbatim by the frontend when the user clicks Continue on a
-    # proposed plan or via skip-all auto-approve). It MUST route to build_flow
-    # so the agent proceeds to execute the plan. Skipping TranslationFlow here
-    # avoids one full LLM round-trip per approval click — pure cost win, byte-
-    # identical UX (the classifier would route this to build_flow anyway).
+    # Plan-approval Continue click (frontend protocol string): route straight to
+    # build_flow — the classifier would anyway, so skipping it is a pure cost win.
     if text.strip() == PLAN_APPROVAL_INPUT:
         logger.info("intent.build_flow.deterministic: plan-approval continuation signal")
         return IntentResult(translation=text, intent="build_flow")
@@ -164,11 +154,8 @@ async def classify_intent(
             timeout=INTENT_CLASSIFICATION_TIMEOUT_SECONDS,
         )
 
-        # Consume the executor's per-run metrics BEFORE handing the dict to
-        # extract_response_text — leaving ``_metrics`` in place would either
-        # be silently ignored by extract_response_text (today) or, if the dict
-        # falls through to ``str(result)``, leak the cost dict into the
-        # user-facing text.
+        # Pop ``_metrics`` BEFORE extract_response_text: if the dict fell through
+        # to ``str(result)`` the cost dict would leak into user-facing text.
         translation_tokens: dict[str, int] | None = None
         if isinstance(result, dict):
             popped = result.pop("_metrics", None)
@@ -223,8 +210,7 @@ async def classify_intent(
                     except json.JSONDecodeError:
                         pass
 
-                # Fallback 3: look for intent as a quoted JSON value
-                # Use strict patterns to avoid matching prompt-echoes
+                # Fallback 3: quoted intent value (strict, avoids prompt-echoes)
                 intent_match = re.search(
                     r'["\']intent["\']\s*:\s*["\']'
                     r"(generate_component|build_flow|run_flow|component_then_flow|off_topic)[\"']",
