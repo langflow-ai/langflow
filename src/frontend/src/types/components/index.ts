@@ -335,6 +335,10 @@ export type TextHighlightType = {
 export interface IVarHighlightType {
   name: string;
   addCurlyBraces?: boolean;
+  /** Bare identifier used to decide whether the name is reserved, when it differs from `name`. */
+  variableName?: string;
+  /** Tooltip shown when the name is reserved. Must come from i18n, never from user input. */
+  invalidTitle?: string;
 }
 
 export type IconComponentProps = {

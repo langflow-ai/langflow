@@ -26,9 +26,13 @@ class TestValidatePromptMustache:
         assert sorted(result) == ["first_name", "last_name"]
 
     def test_underscore_variables_accepted(self):
-        """Test that variables with underscores are accepted."""
-        result = validate_prompt("{{user_name}} - {{_private}}", is_mustache=True)
-        assert sorted(result) == ["_private", "user_name"]
+        """Test that variables with underscores are accepted.
+
+        A leading underscore is rejected -- see TestValidatePromptReservedPrefix in
+        test_validate_prompt_reserved_prefix.py. Underscores anywhere else are fine.
+        """
+        result = validate_prompt("{{user_name}} - {{private_}}", is_mustache=True)
+        assert sorted(result) == ["private_", "user_name"]
 
     def test_numeric_suffix_variables_accepted(self):
         """Test that variables with numeric suffixes are accepted."""

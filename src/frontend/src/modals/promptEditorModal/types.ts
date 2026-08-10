@@ -18,8 +18,16 @@ export interface PromptSyntaxStrategy {
   kind: PromptSyntaxKind;
   /** Extracts the variable badges shown in the footer (original checkVariables). */
   extractVariables(valueToCheck: string): Set<string>;
-  /** Builds the highlighted preview HTML (original coloredContent transform). */
-  renderColoredContent(inputValue: string): string;
+  /**
+   * Builds the highlighted preview HTML (original coloredContent transform).
+   *
+   * `translate` resolves the i18n key of an invalid-variable message. The strategies run
+   * outside React, so the modal hands its own `t` down instead of reaching for i18next.
+   */
+  renderColoredContent(
+    inputValue: string,
+    translate: (key: string) => string,
+  ): string;
   /** Builds the validate-prompt mutation payload (mustache adds `mustache: true`). */
   buildValidatePayload(
     fieldName: string,

@@ -11,18 +11,11 @@ import { Textarea } from "../../components/ui/textarea";
 import { MAX_WORDS_HIGHLIGHT } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import type { PromptModalType } from "../../types/components";
+import { invalidVariableMessageKey } from "../../utils/promptVariables";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import type { PromptSyntaxStrategy } from "./types";
-
-// Type for non-standard caretPositionFromPoint API (not supported in Safari)
-interface CaretPosition {
-  offset: number;
-}
-interface DocumentWithCaretPosition extends Document {
-  caretPositionFromPoint(x: number, y: number): CaretPosition | null;
-}
 
 export type PromptEditorModalProps = PromptModalType & {
   strategy: PromptSyntaxStrategy;
@@ -62,6 +55,7 @@ export default function PromptEditorModal({
 
   const coloredContent = strategy.renderColoredContent(
     typeof inputValue === "string" ? inputValue : "",
+    (key: string) => t(key),
   );
 
   useEffect(() => {
@@ -154,10 +148,10 @@ export default function PromptEditorModal({
       const textArea = textareaRef.current;
       const { x, y } = clickPosition;
 
-      // Use caretPositionFromPoint to get the closest text position. Does not work on Safari.
+      // Use caretPositionFromPoint to get the closest text position. Guarded because
+      // Safari does not implement it; the DOM lib types the call itself.
       if ("caretPositionFromPoint" in document) {
-        const docWithCaret = document as DocumentWithCaretPosition;
-        const range = docWithCaret.caretPositionFromPoint(x, y)?.offset ?? 0;
+        const range = document.caretPositionFromPoint(x, y)?.offset ?? 0;
         if (range) {
           const position = range;
           textArea.setSelectionRange(position, position);
@@ -249,28 +243,37 @@ export default function PromptEditorModal({
                     {t("modal.prompt.promptVariables")}
                   </span>
 
-                  {Array.from(wordsHighlight).map((word, index) => (
-                    <ShadTooltip
-                      key={index}
-                      content={word.replace(/[{}]/g, "")}
-                      asChild={false}
-                    >
-                      <Badge
+                  {Array.from(wordsHighlight).map((word, index) => {
+                    const variableName = word.replace(/[{}]/g, "");
+                    const invalidKey = invalidVariableMessageKey(variableName);
+                    return (
+                      <ShadTooltip
                         key={index}
-                        variant="gray"
-                        size="md"
-                        className="max-w-[40vw] cursor-default truncate p-1 text-sm"
+                        content={invalidKey ? t(invalidKey) : variableName}
+                        asChild={false}
                       >
-                        <div className="relative bottom-[1px]">
-                          <span id={"badge" + index.toString()}>
-                            {word.replace(/[{}]/g, "").length > 59
-                              ? word.replace(/[{}]/g, "").slice(0, 56) + "..."
-                              : word.replace(/[{}]/g, "")}
-                          </span>
-                        </div>
-                      </Badge>
-                    </ShadTooltip>
-                  ))}
+                        <Badge
+                          key={index}
+                          variant={invalidKey ? "errorStatic" : "gray"}
+                          size="md"
+                          className="max-w-[40vw] cursor-default truncate p-1 text-sm"
+                          data-testid={
+                            invalidKey
+                              ? "prompt-variable-badge-invalid"
+                              : "prompt-variable-badge"
+                          }
+                        >
+                          <div className="relative bottom-[1px]">
+                            <span id={"badge" + index.toString()}>
+                              {variableName.length > 59
+                                ? variableName.slice(0, 56) + "..."
+                                : variableName}
+                            </span>
+                          </div>
+                        </Badge>
+                      </ShadTooltip>
+                    );
+                  })}
                 </div>
               </div>
               <span className="mt-2 text-xs text-muted-foreground">
