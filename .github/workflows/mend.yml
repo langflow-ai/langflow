@@ -39,6 +39,20 @@ jobs:
           distribution: "semeru"
           java-version: "21"
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Export Python deps for Mend
+        run: |
+          uv export --no-hashes --format requirements-txt -o requirements-mend.txt
+
       - name: Download Mend Unified Agent
         run: |
           curl --fail --show-error --retry 3 --location -o wss-unified-agent.jar https://unified-agent.s3.amazonaws.com/wss-unified-agent.jar
@@ -53,4 +67,4 @@ jobs:
           WS_PRODUCTNAME: ${{ secrets.WS_PRODUCTNAME }}
           WS_PROJECTNAME: ${{ secrets.WS_PROJECTNAME }}
         run: |
-          java -jar wss-unified-agent.jar -d src -logLevel info
+          java -jar wss-unified-agent.jar -d . -c wss-generated.config -logLevel info

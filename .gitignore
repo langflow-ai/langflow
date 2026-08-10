@@ -304,3 +304,6 @@ whitesource/
 
 #ai folders
 .bob/
+
+# Mend
+requirements-mend.txt
