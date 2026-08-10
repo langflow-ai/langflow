@@ -7,7 +7,6 @@ from uuid import UUID
 
 from alembic.util.exc import CommandError
 from lfx.log.logger import logger
-from sqlmodel import text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 if TYPE_CHECKING:
@@ -47,21 +46,8 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
         raise RuntimeError(msg) from exc
     try:
         await database_service.run_migrations(fix=fix_migration)
-    except CommandError as exc:
-        error_message = str(exc)
-        if (
-            "overlaps with other requested revisions" in error_message
-            or "Can't locate revision identified by" in error_message
-        ):
-            # Wrong revision in the DB: delete alembic_version and re-run migrations
-            logger.warning("Wrong revision in DB, deleting alembic_version table and running migrations again")
-            from langflow.services.deps import session_scope
-
-            async with session_scope() as session:
-                await session.exec(text("DROP TABLE alembic_version"))
-            await database_service.run_migrations(fix=fix_migration)
-        else:
-            raise
+    except CommandError:
+        raise
     except Exception as exc:
         error_message = str(exc)
         # if the exception involves tables already existing

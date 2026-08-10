@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from contextlib import nullcontext
+from contextlib import contextmanager, nullcontext
 from io import StringIO
 from pathlib import Path
 from unittest.mock import Mock
@@ -20,6 +20,7 @@ def _service(monkeypatch, *, current_revisions: set[str]) -> DatabaseService:
     service.database_url = "sqlite+aiosqlite:////configured/production.db"
     service.script_location = Path("/installed/langflow/alembic")
     service._open_alembic_log_buffer = lambda: nullcontext(StringIO())
+    monkeypatch.setattr(database_service_module, "_sqlite_migration_lock", lambda _url: nullcontext())
     monkeypatch.setattr(service, "_current_alembic_revisions", lambda: current_revisions)
     return service
 
@@ -38,6 +39,36 @@ def test_explicit_downgrade_uses_configured_database_and_script_location(monkeyp
     assert target == TARGET_REVISION
     assert alembic_cfg.get_main_option("script_location") == "/installed/langflow/alembic"
     assert alembic_cfg.get_main_option("sqlalchemy.url") == "sqlite+aiosqlite:////configured/production.db"
+
+
+def test_explicit_sqlite_downgrade_holds_file_lock_around_revision_check(monkeypatch):
+    service = _service(monkeypatch, current_revisions={CURRENT_REVISION})
+    events = []
+
+    @contextmanager
+    def sqlite_lock(database_url):
+        assert database_url == service.database_url
+        events.append("lock-enter")
+        try:
+            yield
+        finally:
+            events.append("lock-exit")
+
+    monkeypatch.setattr(database_service_module, "_sqlite_migration_lock", sqlite_lock)
+    monkeypatch.setattr(
+        service,
+        "_current_alembic_revisions",
+        lambda: events.append("revision-check") or {CURRENT_REVISION},
+    )
+    downgrade = Mock(side_effect=lambda *_args: events.append("downgrade"))
+    monkeypatch.setattr(database_service_module.command, "downgrade", downgrade)
+
+    service._run_migration_downgrade(
+        expected_current_revision=CURRENT_REVISION,
+        target_revision=TARGET_REVISION,
+    )
+
+    assert events == ["lock-enter", "revision-check", "downgrade", "lock-exit"]
 
 
 def test_current_alembic_revisions_reads_a_sanitized_file_backed_sqlite_database(tmp_path):

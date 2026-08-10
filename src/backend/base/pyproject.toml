@@ -79,7 +79,7 @@ dependencies = [
     "pip>=26.0.0,<27.0.0",
     "setuptools>=83.0.0,<84.0.0",
     "nanoid>=2.0.0,<3.0.0",
-    "filelock>=3.20.1,<4.0.0",
+    "filelock>=3.20.3,<4.0.0",
     "grandalf>=0.8.0,<1.0.0",
     "spider-client>=0.0.27,<1.0.0",
     "clickhouse-connect==0.7.19",

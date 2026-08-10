@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import math
 import os
 import re
 import sqlite3
@@ -10,6 +11,7 @@ from contextlib import asynccontextmanager, contextmanager, nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import unquote
 
 import anyio
 import sqlalchemy as sa
@@ -26,7 +28,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel, select, text
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
-from tenacity import retry, stop_after_attempt, wait_fixed
+from tenacity import retry, retry_if_exception_type, retry_if_not_exception_type, stop_after_attempt, wait_fixed
 
 from langflow.helpers.windows_postgres_helper import configure_windows_postgres_event_loop
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
@@ -50,6 +52,10 @@ class UnsupportedPostgreSQLVersionError(Exception):
     """Raised when the PostgreSQL version is below the minimum required."""
 
 
+class MigrationLockTimeoutError(RuntimeError):
+    """Raised when another worker holds the migration lock past its timeout."""
+
+
 _PG_VERSION_QUERY = sa.text("SELECT current_setting('server_version_num'), current_setting('server_version')")
 
 # Stable namespace for the schema-migration advisory lock. The lock serializes
@@ -61,6 +67,18 @@ _PG_VERSION_QUERY = sa.text("SELECT current_setting('server_version_num'), curre
 _MIGRATION_ADVISORY_LOCK_ID = 0x4C616E67666C6F77  # ASCII "Langflow"
 _MIGRATION_LOCK_DEFAULT_TIMEOUT_S = 300.0
 _MIGRATION_LOCK_POLL_INTERVAL_S = 2.0
+_POSTGRES_BACKEND_NAMES = frozenset({"postgres", "postgresql"})
+_AIOSQLITE_ONLY_CONNECT_ARGS = frozenset({"iter_chunk_size", "loop"})
+_SQLITE_DBAPI_QUERY_ARGS = frozenset(
+    {"cached_statements", "check_same_thread", "detect_types", "isolation_level", "timeout", "uri"}
+)
+
+
+def _database_backend_name(database_url: str) -> str | None:
+    try:
+        return make_url(database_url).get_backend_name()
+    except sa.exc.ArgumentError:
+        return None
 
 
 def _migration_lock_timeout_s() -> float:
@@ -68,14 +86,18 @@ def _migration_lock_timeout_s() -> float:
     if raw is None:
         return _MIGRATION_LOCK_DEFAULT_TIMEOUT_S
     try:
-        return float(raw)
+        timeout = float(raw)
     except ValueError:
+        timeout = None
+
+    if timeout is None or not math.isfinite(timeout) or timeout < 0:
         logger.warning(
             "Ignoring invalid LANGFLOW_MIGRATION_LOCK_TIMEOUT_S=%r; falling back to %.0fs.",
             raw,
             _MIGRATION_LOCK_DEFAULT_TIMEOUT_S,
         )
         return _MIGRATION_LOCK_DEFAULT_TIMEOUT_S
+    return timeout
 
 
 def _acquire_migration_lock_or_raise(conn, lock_id: int) -> None:
@@ -111,23 +133,31 @@ def _acquire_migration_lock_or_raise(conn, lock_id: int) -> None:
         "wait via LANGFLOW_MIGRATION_LOCK_TIMEOUT_S (seconds) if your migration "
         "legitimately needs longer."
     )
-    raise RuntimeError(msg)
+    raise MigrationLockTimeoutError(msg)
 
 
 def _normalize_sync_postgres_url(database_url: str) -> str:
-    """Return a sync-driver Postgres URL from a possibly async one.
+    """Return a sync-driver database URL from a possibly async one.
 
     Strips the ``+asyncpg`` / ``+aiosqlite`` suffix and upgrades the legacy
     ``postgres://`` scheme to ``postgresql://`` so :func:`sa.create_engine`
     picks the default sync driver. Centralised so the advisory-lock helper and
     the table-creation lock path stay in sync with :func:`check_postgresql_version_sync`.
     """
-    sync_url = database_url
-    if sync_url.startswith("postgres://"):
-        sync_url = "postgresql://" + sync_url.split("://", 1)[1]
-    for async_driver in ("+asyncpg", "+aiosqlite"):
-        sync_url = sync_url.replace(async_driver, "")
-    return sync_url
+    driver, separator, remainder = database_url.partition("://")
+    if not separator:
+        return database_url
+    if driver == "sqlite+aiosqlite":
+        url = make_url(database_url)
+        uri_options = {key: value for key, value in url.query.items() if key not in _SQLITE_DBAPI_QUERY_ARGS}
+        if url.database is None and sa.util.asbool(url.query.get("uri", False)) and not uri_options:
+            return url.set(drivername="sqlite", database="None").render_as_string(hide_password=False)
+    sync_driver = {
+        "postgres": "postgresql",
+        "postgresql+asyncpg": "postgresql",
+        "sqlite+aiosqlite": "sqlite",
+    }.get(driver, driver)
+    return f"{sync_driver}://{remainder}"
 
 
 @contextmanager
@@ -175,7 +205,7 @@ def _sqlite_migration_lock(database_url: str):
             "Investigate the worker holding the lock or restart the deployment. "
             "Override the wait via LANGFLOW_MIGRATION_LOCK_TIMEOUT_S (seconds)."
         )
-        raise RuntimeError(msg) from None
+        raise MigrationLockTimeoutError(msg) from None
     try:
         yield
     finally:
@@ -197,7 +227,7 @@ def _postgres_migration_lock(database_url: str):
 
     No-op for non-PostgreSQL URLs.
     """
-    if not database_url.startswith(("postgresql", "postgres")):
+    if _database_backend_name(database_url) not in _POSTGRES_BACKEND_NAMES:
         yield
         return
 
@@ -233,7 +263,7 @@ def check_postgresql_version_sync(database_url: str) -> None:
     results in a clean ``sys.exit(1)`` rather than a messy lifespan failure.
     Silently returns when the URL is not PostgreSQL.
     """
-    if not database_url.startswith(("postgresql", "postgres")):
+    if _database_backend_name(database_url) not in _POSTGRES_BACKEND_NAMES:
         return
 
     from sqlalchemy import create_engine
@@ -247,20 +277,96 @@ def check_postgresql_version_sync(database_url: str) -> None:
         engine.dispose()
 
 
+def _sqlite_uri_component(value: str) -> str:
+    """Decode one SQLite URI component using its C-string semantics."""
+    return unquote(value).partition("\x00")[0]
+
+
+def _sqlite_uri_path(value: str) -> str:
+    """Decode a SQLite URI path before applying platform path rules."""
+    decoded = _sqlite_uri_component(value)
+    if sys.platform != "win32":
+        return decoded
+
+    drive_path = decoded.lstrip("/")
+    drive = drive_path[:1]
+    separator = drive_path[1:2]
+    if drive.isascii() and drive.isalpha() and separator in {":", "|"}:
+        return f"{drive.upper()}:{drive_path[2:]}".replace("/", "\\")
+    return decoded.replace("/", "\\")
+
+
+def _split_sqlite_file_uri(filename: str) -> tuple[str, str, str]:
+    """Split an exact SQLite ``file:`` URI without normalizing control characters."""
+    target = filename.removeprefix("file:").partition("#")[0]
+    authority_and_path, _, query = target.partition("?")
+    if not authority_and_path.startswith("//"):
+        return "", authority_and_path, query
+
+    authority, has_path, path = authority_and_path[2:].partition("/")
+    return authority, f"/{path}" if has_path else "", query
+
+
+def _sqlite_uri_is_memory(filename: str) -> bool:
+    """Return whether SQLite interprets an exact ``file:`` URI as memory-only."""
+    _, path, query = _split_sqlite_file_uri(filename)
+    if _sqlite_uri_component(path) == ":memory:":
+        return True
+
+    # SQLAlchemy rebuilds the URI query in sorted raw-key order. SQLite then
+    # splits that exact string before percent-decoding each component, and a
+    # later duplicate option wins. Parsing the rebuilt filename also accounts
+    # for delimiters/fragments introduced by SQLAlchemy's first decoding pass.
+    uri_options: dict[str, str] = {}
+    for option in query.split("&"):
+        key, _, value = option.partition("=")
+        uri_options[_sqlite_uri_component(key)] = _sqlite_uri_component(value)
+    return uri_options.get("mode") == "memory" or uri_options.get("vfs") == "memdb"
+
+
 def get_sqlite_database_file_path(database_url: str) -> Path | None:
     """Return the on-disk file path for a SQLite URL, or ``None`` when there is none.
 
     Returns ``None`` for non-SQLite URLs and for in-memory SQLite databases
-    (``sqlite://`` and ``sqlite:///:memory:``), which have no file on disk. The
-    returned path is kept exactly as written in the URL (relative paths are *not*
-    resolved) so callers can report it back to the user verbatim.
+    (including SQLite URI-memory forms), which have no file on disk. The returned
+    ordinary path is kept exactly as written in the URL (relative paths are *not*
+    resolved); ``file:`` URI paths are decoded to the filesystem path SQLite uses.
     """
-    if not database_url.startswith("sqlite"):
-        return None
     try:
-        database = make_url(database_url).database
+        url = make_url(database_url)
     except Exception:  # noqa: BLE001 - defensive: malformed URLs are handled elsewhere
         return None
+    if url.get_backend_name() != "sqlite":
+        return None
+
+    uri_enabled = sa.util.asbool(url.query.get("uri", False))
+    database = url.database
+    if not uri_enabled:
+        if not database or database == ":memory:":
+            return None
+        return Path(database)
+
+    uri_options = {key: value for key, value in url.query.items() if key not in _SQLITE_DBAPI_QUERY_ARGS}
+    if database is None:
+        return Path("None") if url.drivername == "sqlite+aiosqlite" and not uri_options else None
+
+    filename = database
+    if uri_options:
+        filename += "?" + "&".join(f"{key}={uri_options[key]}" for key in sorted(uri_options))
+
+    is_file_uri = filename.startswith("file:")
+    if is_file_uri and _sqlite_uri_is_memory(filename):
+        return None
+    if is_file_uri:
+        raw_authority, path, _ = _split_sqlite_file_uri(filename)
+        if not raw_authority or raw_authority == "localhost":
+            database = _sqlite_uri_path(path)
+            if not database:
+                return None
+        else:
+            database = _sqlite_uri_path(f"//{raw_authority}{path}")
+    else:
+        database = filename
     if not database or database == ":memory:":
         return None
     return Path(database)
@@ -464,15 +570,21 @@ class DatabaseService(Service):
         if settings.db_driver_connection_settings is not None:
             return settings.db_driver_connection_settings
 
-        if settings.database_url and settings.database_url.startswith("sqlite"):
+        backend_name = _database_backend_name(settings.database_url) if settings.database_url else None
+        if backend_name == "sqlite":
             return {
                 "check_same_thread": False,
                 "timeout": settings.db_connect_timeout,
             }
         # For PostgreSQL, set the timezone to UTC
-        if settings.database_url and settings.database_url.startswith(("postgresql", "postgres")):
+        if backend_name in _POSTGRES_BACKEND_NAMES:
             return {"options": "-c timezone=utc"}
         return {}
+
+    def _get_sync_sqlite_connect_args(self):
+        return {
+            key: value for key, value in self._get_connect_args().items() if key not in _AIOSQLITE_ONLY_CONNECT_ARGS
+        }
 
     def on_connection(self, dbapi_connection, _connection_record) -> None:
         if isinstance(dbapi_connection, sqlite3.Connection | dialect_sqlite.aiosqlite.AsyncAdapt_aiosqlite_connection):
@@ -517,7 +629,7 @@ class DatabaseService(Service):
         Langflow's schema uses UNIQUE NULLS DISTINCT, which is only supported in PostgreSQL 15+.
         Logs the message and raises UnsupportedPostgreSQLVersionError if the version is too old.
         """
-        if not self.database_url.startswith(("postgresql", "postgres")):
+        if _database_backend_name(self.database_url) not in _POSTGRES_BACKEND_NAMES:
             return
         if self.settings_service.settings.use_noop_database:
             return
@@ -699,36 +811,55 @@ class DatabaseService(Service):
             alembic_cfg.set_main_option("script_location", str(self.script_location))
             alembic_cfg.set_main_option("sqlalchemy.url", self.database_url.replace("%", "%%"))
 
-            if should_initialize_alembic:
+            recovered_invalid_revision = False
+            while True:
                 try:
-                    self.init_alembic(alembic_cfg)
-                except Exception as exc:
-                    msg = f"Error initializing alembic: {exc}"
-                    logger.exception(msg)
-                    raise RuntimeError(msg) from exc
-            else:
-                logger.debug("Alembic initialized")
+                    if should_initialize_alembic:
+                        try:
+                            self.init_alembic(alembic_cfg)
+                        except Exception as exc:
+                            msg = f"Error initializing alembic: {exc}"
+                            logger.exception(msg)
+                            raise RuntimeError(msg) from exc
+                    else:
+                        logger.debug("Alembic initialized")
 
-            try:
-                buffer.write(f"{datetime.now(tz=timezone.utc).astimezone().isoformat()}: Checking migrations\n")
-                command.check(alembic_cfg)
-            except Exception as exc:  # noqa: BLE001
-                logger.debug(f"Error checking migrations: {exc}")
-                if isinstance(exc, util.exc.CommandError | util.exc.AutogenerateDiffsDetected):
-                    command.upgrade(alembic_cfg, "head")
-                    time.sleep(3)
+                    try:
+                        buffer.write(f"{datetime.now(tz=timezone.utc).astimezone().isoformat()}: Checking migrations\n")
+                        command.check(alembic_cfg)
+                    except Exception as exc:  # noqa: BLE001
+                        logger.debug(f"Error checking migrations: {exc}")
+                        if isinstance(exc, util.exc.CommandError | util.exc.AutogenerateDiffsDetected):
+                            command.upgrade(alembic_cfg, "head")
+                            time.sleep(3)
 
-            try:
-                buffer.write(f"{datetime.now(tz=timezone.utc).astimezone()}: Checking migrations\n")
-                command.check(alembic_cfg)
-            except util.exc.AutogenerateDiffsDetected as exc:
-                logger.exception("Error checking migrations")
-                if not fix:
-                    msg = f"There's a mismatch between the models and the database.\n{exc}"
-                    raise RuntimeError(msg) from exc
+                    try:
+                        buffer.write(f"{datetime.now(tz=timezone.utc).astimezone()}: Checking migrations\n")
+                        command.check(alembic_cfg)
+                    except util.exc.AutogenerateDiffsDetected as exc:
+                        logger.exception("Error checking migrations")
+                        if not fix:
+                            msg = f"There's a mismatch between the models and the database.\n{exc}"
+                            raise RuntimeError(msg) from exc
 
-            if fix:
-                self.try_downgrade_upgrade_until_success(alembic_cfg)
+                    if fix:
+                        self.try_downgrade_upgrade_until_success(alembic_cfg)
+                    break
+                except util.exc.CommandError as exc:
+                    error_message = str(exc)
+                    recoverable_revision_error = (
+                        "overlaps with other requested revisions" in error_message
+                        or "Can't locate revision identified by" in error_message
+                    )
+                    if recovered_invalid_revision or not recoverable_revision_error:
+                        raise
+
+                    logger.warning(
+                        "Wrong revision in DB; resetting alembic_version and retrying migrations under the lock"
+                    )
+                    command.stamp(alembic_cfg, "base", purge=True)
+                    should_initialize_alembic = False
+                    recovered_invalid_revision = True
 
     async def run_migrations(self, *, fix=False) -> None:
         should_initialize_alembic = False
@@ -754,7 +885,11 @@ class DatabaseService(Service):
     def _run_migration_downgrade(self, *, expected_current_revision: str, target_revision: str) -> None:
         """Downgrade the configured database only from one explicitly expected revision."""
         buffer_context = self._open_alembic_log_buffer()
-        with _postgres_migration_lock(self.database_url), buffer_context as buffer:
+        with (
+            _sqlite_migration_lock(self.database_url),
+            _postgres_migration_lock(self.database_url),
+            buffer_context as buffer,
+        ):
             current_revisions = self._current_alembic_revisions()
             if current_revisions != {expected_current_revision}:
                 found = ", ".join(sorted(current_revisions)) or "none"
@@ -881,11 +1016,28 @@ class DatabaseService(Service):
 
         logger.debug("Database and tables created successfully")
 
-    @retry(wait=wait_fixed(2), stop=stop_after_attempt(10))
+    @retry(
+        retry=retry_if_exception_type(Exception) & retry_if_not_exception_type(MigrationLockTimeoutError),
+        wait=wait_fixed(2),
+        stop=stop_after_attempt(10),
+    )
     async def create_db_and_tables_with_retry(self) -> None:
         await self.create_db_and_tables()
 
     async def create_db_and_tables(self) -> None:
+        backend_name = _database_backend_name(self.database_url)
+        is_postgres = backend_name in _POSTGRES_BACKEND_NAMES
+        is_file_backed_sqlite = (
+            backend_name == "sqlite" and get_sqlite_database_file_path(self.database_url) is not None
+        )
+
+        # Keep the existing async-engine path for dialects without a migration
+        # lock and for fileless SQLite, whose database belongs to this engine.
+        if not is_postgres and not is_file_backed_sqlite:
+            async with self.engine.begin() as conn:
+                await conn.run_sync(self._create_db_and_tables)
+            return
+
         # Serialise CREATE TYPE / CREATE TABLE across workers under the same
         # lock that protects run_migrations. Without this, concurrent workers
         # booting against a fresh database race on ``table.create(checkfirst=True)``:
@@ -898,11 +1050,15 @@ class DatabaseService(Service):
     def _create_db_and_tables_with_lock(self) -> None:
         """Hold the migration file/advisory lock for the DDL.
 
-        Opens its own sync engine so the DDL runs on the same driver the lock
-        uses; the application's async engine is unaffected.
+        File-backed databases use their own sync engine so the lock and DDL run
+        together without blocking the application's async engine.
         """
         with _sqlite_migration_lock(self.database_url), _postgres_migration_lock(self.database_url):
-            sync_engine = sa.create_engine(_normalize_sync_postgres_url(self.database_url))
+            sync_url = _normalize_sync_postgres_url(self.database_url)
+            if _database_backend_name(self.database_url) == "sqlite":
+                sync_engine = sa.create_engine(sync_url, connect_args=self._get_sync_sqlite_connect_args())
+            else:
+                sync_engine = sa.create_engine(sync_url)
             try:
                 with sync_engine.begin() as conn:
                     self._create_db_and_tables(conn)
