@@ -75,9 +75,11 @@ describe("McpComponent", () => {
   });
 
   // Regression guard: label only, not composed with the selected server
-  // name — role="combobox" gets special handling from screen readers, same
-  // reasoning as connectionComponent.
-  it("uses the field's real label as the combobox trigger's accessible name", () => {
+  // name. Note this trigger is a plain button with aria-haspopup="dialog"
+  // (it opens ListSelectionComponent's dialog), not role="combobox" like
+  // connectionComponent/dropdownComponent — querying by the wrong role
+  // silently passed before because RTL's error surfaced the real name.
+  it("uses the field's real label as the trigger's accessible name", () => {
     render(
       <>
         <span id="field-label">MCP server</span>
@@ -86,13 +88,15 @@ describe("McpComponent", () => {
     );
 
     expect(
-      screen.getByRole("combobox", { name: "MCP server" }),
+      screen.getByRole("button", { name: "MCP server" }),
     ).toBeInTheDocument();
   });
 
-  it("does not set aria-labelledby on the combobox trigger when absent", () => {
+  it("does not set aria-labelledby on the trigger when absent", () => {
     render(<McpComponent {...baseProps} />);
 
-    expect(screen.getByRole("combobox")).not.toHaveAttribute("aria-labelledby");
+    expect(screen.getByTestId("mcp-server-dropdown")).not.toHaveAttribute(
+      "aria-labelledby",
+    );
   });
 });
