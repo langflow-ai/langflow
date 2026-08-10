@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
@@ -15,6 +16,7 @@ from langflow.services.auth.context import (
     set_current_auth_context,
 )
 from langflow.services.authorization import audit as authz_audit
+from lfx.services.settings.auth import AuthSettings
 
 from ._common import (
     install_audit_recorder,
@@ -50,7 +52,150 @@ async def _reset_audit_pipeline() -> None:
     authz_audit._audit_writer_task = None
     authz_audit._audit_dropped_count = 0
     authz_audit._audit_last_drop_warn = 0.0
+    authz_audit._audit_submitted_count = 0
+    authz_audit._audit_persisted_count = 0
+    authz_audit._audit_failed_count = 0
+    authz_audit._audit_last_failure_code = None
     authz_audit._pending_audit_tasks.clear()
+
+
+def test_durable_audit_mode_is_explicitly_disabled_by_default(tmp_path) -> None:
+    assert AuthSettings(CONFIG_DIR=str(tmp_path)).AUTHZ_AUDIT_DURABLE is False
+
+
+@pytest.mark.anyio
+async def test_durable_audit_call_returns_only_after_its_batch_is_persisted(monkeypatch):
+    await _reset_audit_pipeline()
+    install_settings(
+        monkeypatch,
+        authz_enabled=True,
+        audit_enabled=True,
+        audit_durable=True,
+    )
+    flush_started = asyncio.Event()
+    release_flush = asyncio.Event()
+    flushed: list[object] = []
+
+    async def controlled_flush(batch):
+        flush_started.set()
+        await release_flush.wait()
+        flushed.extend(batch)
+
+    monkeypatch.setattr(authz_audit, "_flush_audit_batch", controlled_flush)
+    call = asyncio.create_task(
+        authz_audit.audit_decision(
+            user_id=uuid4(),
+            action="flow:read",
+            obj="flow:*",
+            result="allow",
+        )
+    )
+    await asyncio.wait_for(flush_started.wait(), timeout=1.0)
+    try:
+        assert not call.done(), "durable audit returned before its database batch completed"
+    finally:
+        release_flush.set()
+        await call
+
+    health = authz_audit.get_audit_producer_health()
+    assert len(flushed) == 1
+    assert health == {
+        "enabled": True,
+        "durable": True,
+        "active": True,
+        "healthy": True,
+        "queue_depth": 0,
+        "queue_capacity": authz_audit._AUDIT_QUEUE_MAX,
+        "submitted_count": 1,
+        "persisted_count": 1,
+        "failed_count": 0,
+        "dropped_count": 0,
+        "last_failure_code": None,
+    }
+
+
+@pytest.mark.anyio
+async def test_durable_audit_backpressures_at_capacity_instead_of_dropping(monkeypatch):
+    monkeypatch.setattr(authz_audit, "_AUDIT_QUEUE_MAX", 1)
+    await _reset_audit_pipeline()
+    install_settings(
+        monkeypatch,
+        authz_enabled=True,
+        audit_enabled=True,
+        audit_durable=True,
+    )
+    flush_started = asyncio.Event()
+    release_flush = asyncio.Event()
+    persisted: list[object] = []
+
+    async def blocked_first_flush(batch):
+        flush_started.set()
+        await release_flush.wait()
+        persisted.extend(batch)
+
+    monkeypatch.setattr(authz_audit, "_flush_audit_batch", blocked_first_flush)
+
+    def submit(index: int) -> asyncio.Task[None]:
+        return asyncio.create_task(
+            authz_audit.audit_decision(
+                user_id=uuid4(),
+                action=f"flow:read:{index}",
+                obj="flow:*",
+                result="allow",
+            )
+        )
+
+    first = submit(1)
+    await asyncio.wait_for(flush_started.wait(), timeout=1.0)
+    second = submit(2)
+    await asyncio.sleep(0)
+    third = submit(3)
+    await asyncio.sleep(0)
+    try:
+        assert not third.done(), "a full durable queue must backpressure the caller"
+        assert authz_audit.get_audit_producer_health()["dropped_count"] == 0
+    finally:
+        release_flush.set()
+        await asyncio.gather(first, second, third)
+
+    health = authz_audit.get_audit_producer_health()
+    assert len(persisted) == 3
+    assert health["submitted_count"] == 3
+    assert health["persisted_count"] == 3
+    assert health["dropped_count"] == 0
+
+
+@pytest.mark.anyio
+async def test_durable_audit_failure_is_sanitized_and_propagated_to_the_caller(monkeypatch):
+    await _reset_audit_pipeline()
+    install_settings(
+        monkeypatch,
+        authz_enabled=True,
+        audit_enabled=True,
+        audit_durable=True,
+    )
+
+    sensitive_error = "postgres://user:secret@db/audit"  # pragma: allowlist secret
+
+    async def failed_flush(_batch):
+        raise RuntimeError(sensitive_error)
+
+    monkeypatch.setattr(authz_audit, "_flush_audit_batch", failed_flush)
+    with pytest.raises(authz_audit.AuditPersistenceError, match="Durable authorization audit persistence failed"):
+        await authz_audit.audit_decision(
+            user_id=uuid4(),
+            action="flow:read",
+            obj="flow:*",
+            result="allow",
+        )
+
+    health = authz_audit.get_audit_producer_health()
+    assert health["healthy"] is False
+    assert health["submitted_count"] == 1
+    assert health["persisted_count"] == 0
+    assert health["failed_count"] == 1
+    assert health["last_failure_code"] == "RuntimeError"
+    assert "secret" not in str(health)
 
 
 @pytest.mark.anyio

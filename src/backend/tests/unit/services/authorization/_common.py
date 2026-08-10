@@ -64,12 +64,19 @@ class _StubAuthorizationService:
         return self._supports_api_key_scopes
 
 
-def install_settings(monkeypatch, *, authz_enabled: bool, audit_enabled: bool = False) -> None:
+def install_settings(
+    monkeypatch,
+    *,
+    authz_enabled: bool,
+    audit_enabled: bool = False,
+    audit_durable: bool = False,
+) -> None:
     """Patch settings on every module that calls ``get_settings_service``."""
     settings = SimpleNamespace(
         auth_settings=SimpleNamespace(
             AUTHZ_ENABLED=authz_enabled,
             AUTHZ_AUDIT_ENABLED=audit_enabled,
+            AUTHZ_AUDIT_DURABLE=audit_durable,
         ),
     )
     for module in (authz_audit, authz_guards, authz_listing):
