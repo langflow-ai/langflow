@@ -401,6 +401,85 @@ describe("useAssistantChat — progress field propagation", () => {
   });
 });
 
+describe("useAssistantChat — restore point from complete event", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockPostAssistStream.mockResolvedValue(undefined);
+  });
+
+  it("should persist restore_version_id from the complete event onto the message", async () => {
+    mockPostAssistStream.mockImplementation(
+      async (_request: unknown, callbacks: Record<string, Function>) => {
+        callbacks.onComplete({
+          event: "complete",
+          data: {
+            result: "Added a component.",
+            validated: false,
+            restore_version_id: "ver-123",
+          },
+        });
+      },
+    );
+
+    const { result } = renderHook(() => useAssistantChat());
+
+    await act(async () => {
+      await result.current.handleSend("add a component", TEST_MODEL);
+    });
+
+    const assistantMsg = result.current.messages[1];
+    expect(assistantMsg.status).toBe("complete");
+    expect(assistantMsg.restoreVersionId).toBe("ver-123");
+  });
+
+  it("should leave restoreVersionId undefined when the complete event has none", async () => {
+    mockPostAssistStream.mockImplementation(
+      async (_request: unknown, callbacks: Record<string, Function>) => {
+        callbacks.onComplete({
+          event: "complete",
+          data: { result: "Just an answer.", validated: false },
+        });
+      },
+    );
+
+    const { result } = renderHook(() => useAssistantChat());
+
+    await act(async () => {
+      await result.current.handleSend("what is langflow?", TEST_MODEL);
+    });
+
+    expect(result.current.messages[1].restoreVersionId).toBeUndefined();
+  });
+
+  it("should mark a message as reverted via handleMarkReverted", async () => {
+    mockPostAssistStream.mockImplementation(
+      async (_request: unknown, callbacks: Record<string, Function>) => {
+        callbacks.onComplete({
+          event: "complete",
+          data: {
+            result: "Added a component.",
+            validated: false,
+            restore_version_id: "ver-123",
+          },
+        });
+      },
+    );
+
+    const { result } = renderHook(() => useAssistantChat());
+
+    await act(async () => {
+      await result.current.handleSend("add a component", TEST_MODEL);
+    });
+    const messageId = result.current.messages[1].id;
+
+    act(() => {
+      result.current.handleMarkReverted(messageId);
+    });
+
+    expect(result.current.messages[1].reverted).toBe(true);
+  });
+});
+
 describe("useAssistantChat — retrying clears stale partial output", () => {
   beforeEach(() => {
     jest.clearAllMocks();
