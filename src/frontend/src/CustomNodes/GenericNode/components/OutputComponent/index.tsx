@@ -15,6 +15,10 @@ import {
 import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import useFlowStore from "@/stores/flowStore";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
+import {
+  focusCommandListOnOpen,
+  refocusSelectedCommandItemOnNavigate,
+} from "../../../../components/core/parameterRenderComponent/utils/focus-command-list-on-open";
 import type { outputComponentType } from "../../../../types/components";
 import { cn } from "../../../../utils/utils";
 
@@ -95,9 +99,10 @@ export default function OutputComponent({
           <PopoverContentWithoutPortal
             side="bottom"
             align="end"
+            onOpenAutoFocus={focusCommandListOnOpen}
             className="noflow nowheel nopan nodelete nodrag w-full min-w-[200px] max-w-[250px] p-0"
           >
-            <Command>
+            <Command onKeyDown={refocusSelectedCommandItemOnNavigate}>
               <CommandList>
                 <CommandGroup defaultChecked={false} className="p-0">
                   {outputs.map((output) => (
