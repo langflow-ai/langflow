@@ -614,6 +614,7 @@ async def test_public_a2a_resume_sanitizes_checkpoint_payload(active_user, echo_
     checkpoint = GraphCheckpoint(
         run_id=task_id,
         flow_id=str(flow_id),
+        user_id=str(a2a_module.PUBLIC_ANONYMOUS_ACTOR_ID),
         flow_payload=echo_flow_data,
         pause_context={"data": {"request_id": "node:run"}},
     )
@@ -662,6 +663,7 @@ async def test_public_a2a_resume_rechecks_compatibility_grant(active_user, echo_
     checkpoint = GraphCheckpoint(
         run_id=str(uuid.uuid4()),
         flow_id=str(flow_id),
+        user_id=str(a2a_module.PUBLIC_ANONYMOUS_ACTOR_ID),
         flow_payload=echo_flow_data,
     )
     calls = []
