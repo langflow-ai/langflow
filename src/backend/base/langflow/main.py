@@ -154,9 +154,8 @@ def cors_origins_contain_wildcard(origins) -> bool:
 
 def warn_about_future_cors_changes(settings):
     """Warn users about upcoming CORS security changes in version 1.7."""
-    # Check if using permissive (backward compatible) settings: a wildcard origin
-    # combined with credentials. Share the wildcard predicate with the middleware
-    # configuration so both fire for the same set of origins (string or list form).
+    # Shares the wildcard predicate with the middleware configuration so the
+    # warning and the permissive CORS setup fire for the same set of origins.
     using_permissive = cors_origins_contain_wildcard(settings.cors_origins) and settings.cors_allow_credentials is True
 
     if using_permissive:
@@ -220,12 +219,8 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await logger.awarning(f"Failed to initialize Sentry SDK (check LANGFLOW_SENTRY_DSN): {e}")
 
             await logger.adebug("Initializing services")
-            # When the master already ran preload, the service_manager (and the
-            # DB service object) are inherited via fork. We still call
-            # initialize_services() here so each worker rebuilds its own fresh
-            # connection pool on first use (the master disposed its engine
-            # before fork). The call is idempotent: factory registration and
-            # migration application both no-op when already done.
+            # Even when preload state is inherited via fork, initialize_services() must run
+            # so each worker rebuilds its own connection pool (idempotent otherwise).
             await initialize_services(fix_migration=fix_migration)
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
 
@@ -250,19 +245,15 @@ def get_lifespan(*, fix_migration=False, version=None):
                 if telemetry_writer is not None and telemetry_writer.is_enabled():
                     await telemetry_writer.start()
             except Exception as exc:  # noqa: BLE001
-                # If the user explicitly opted in (telemetry_writer_enabled=True)
-                # but startup failed, this is an error not a warning — every
-                # subsequent write will silently fall back to the legacy direct-
-                # write path that this feature was built to replace.
+                # Explicit opt-in + failed startup is an error, not a warning: writes would
+                # silently fall back to the legacy direct-write path.
                 await logger.aerror(
                     f"Failed to start telemetry writer; transactions and vertex_build "
                     f"writes will use the legacy direct-write path: {exc}"
                 )
 
-            # Start the periodic authz audit-log retention sweep. No-op unless
-            # AUTHZ_AUDIT_ENABLED and AUTHZ_AUDIT_RETENTION_DAYS > 0. The startup
-            # sweep in initialize_services() already pruned at boot; this keeps a
-            # long-running instance bounded between restarts.
+            # Periodic authz audit-log retention sweep (no-op unless enabled); the boot
+            # sweep already pruned, this keeps long-running instances bounded.
             try:
                 from langflow.services.task.audit_cleanup import audit_log_cleanup_worker
 
@@ -347,10 +338,8 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             # Gate: Load bundles
             if is_step_complete(PreloadStep.BUNDLES):
-                # Inherit bundle paths from master via COW.
-                # get_owned_temp_dirs() returns the preloaded dirs if this is
-                # the master, or an empty list if this is a worker (workers
-                # must NOT clean up the master's temp_dirs).
+                # get_owned_temp_dirs() is empty for workers — they inherit bundle paths
+                # via COW and must NOT clean up the master's temp_dirs.
                 temp_dirs = get_owned_temp_dirs()
                 await logger.adebug("Skipping bundle load: inherited from master")
             else:
@@ -360,16 +349,11 @@ def get_lifespan(*, fix_migration=False, version=None):
                 get_settings_service().settings.components_path.extend(bundles_components_paths)
                 await logger.adebug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
-            # Locally-registered dev extensions (``lfx extension dev``) are
-            # loaded later via :func:`import_extension_components` through the
-            # @official-slot pathway alongside installed extensions, so they
-            # share the BundleRegistry, palette decoration, and reload
-            # endpoint with pip-installed bundles.  Nothing to wire here.
+            # Dev extensions load later via import_extension_components alongside
+            # installed ones (shared BundleRegistry/palette/reload); nothing to wire here.
 
-            # Gate: Cache component types
-            # When types_cached is True, workers inherited the populated cache via COW; we still need a
-            # local handle for create_or_update_starter_projects. starter_projects_created can remain False
-            # if the master failed after caching types but before finishing starter projects.
+            # Gate: cache component types. Workers inherit the cache via COW but still need a
+            # local handle for create_or_update_starter_projects (master may have failed mid-way).
             if is_step_complete(PreloadStep.TYPES_CACHED):
                 await logger.adebug("Skipping types cache: inherited from master")
                 all_types_dict = component_cache.all_types_dict
@@ -391,10 +375,8 @@ def get_lifespan(*, fix_migration=False, version=None):
             if is_step_complete(PreloadStep.STARTER_PROJECTS):
                 await logger.adebug("Skipping starter projects: inherited from master")
             else:
-                # Use file-based lock to prevent multiple workers from creating duplicate starter projects
-                # concurrently. Note that it's still possible that one worker may complete this task, release
-                # the lock, then another worker pick it up, but the operation is idempotent so worst case it
-                # duplicates the initialization work.
+                # File-based lock keeps workers from creating starter projects concurrently;
+                # the operation is idempotent so a lock handoff only duplicates work.
                 current_time = asyncio.get_event_loop().time()
                 await logger.adebug("Creating/updating starter projects")
 
@@ -456,25 +438,6 @@ def get_lifespan(*, fix_migration=False, version=None):
             await logger.adebug(
                 f"started MCP Composer service in {asyncio.get_event_loop().time() - current_time:.2f}s"
             )
-
-            # Gate: Auto-configure agentic MCP server (when agentic_experience enabled)
-            if get_settings_service().settings.agentic_experience:
-                if is_step_complete(PreloadStep.AGENTIC_MCP):
-                    await logger.adebug(
-                        "Skipping agentic MCP server config: master already completed it during preload"
-                    )
-                else:
-                    from langflow.api.utils.mcp.agentic_mcp import auto_configure_agentic_mcp_server
-
-                    current_time = asyncio.get_event_loop().time()
-                    await logger.ainfo("Configuring Agentic MCP server...")
-                    try:
-                        async with session_scope() as session:
-                            await auto_configure_agentic_mcp_server(session)
-                        elapsed = asyncio.get_event_loop().time() - current_time
-                        await logger.adebug(f"Agentic MCP server configured in {elapsed:.2f}s")
-                    except Exception as e:  # noqa: BLE001
-                        await logger.awarning(f"Failed to configure agentic MCP server: {e}")
 
             # Backfill MCP servers from the legacy per-user JSON file into the
             # mcp_server table (idempotent + multi-replica-safe; existing file-based
@@ -585,10 +548,8 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                     await asyncio.sleep(refresh_interval_seconds)
 
-            # LANGFLOW_MODELS_DEV_REFRESH=false disables the live models.dev
-            # fetch. Tests set this: the startup fetch otherwise fires from a
-            # background task during whatever test is running, hitting the
-            # network and tripping event-loop-block detectors (pyleak).
+            # LANGFLOW_MODELS_DEV_REFRESH=false disables the live models.dev fetch; tests set
+            # it because the background fetch hits the network and trips pyleak detectors.
             if os.getenv("LANGFLOW_MODELS_DEV_REFRESH", "true").lower() not in ("false", "0", "no"):
                 models_dev_refresh_task = asyncio.create_task(refresh_models_dev_periodically())
             else:
@@ -621,10 +582,8 @@ def get_lifespan(*, fix_migration=False, version=None):
         except asyncio.CancelledError:
             await logger.adebug("Lifespan received cancellation signal")
         except UnsupportedPostgreSQLVersionError:
-            # Normally caught by the pre-flight check in __main__.py
-            # before the server starts.  If we get here anyway (e.g.
-            # direct uvicorn invocation via ``make backend``), exit
-            # immediately and tell the parent (reloader) to stop.
+            # Normally caught by the pre-flight check in __main__.py; on direct uvicorn
+            # invocation exit immediately and tell the parent (reloader) to stop.
             import signal
 
             sys.stdout.flush()
@@ -681,6 +640,12 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await stop_streamable_http_manager()
                     except Exception as e:  # noqa: BLE001
                         await logger.aerror(f"Failed to stop MCP server streamable-http session manager: {e}")
+                    try:
+                        from langflow.api.v1.agentic_mcp import stop_agentic_streamable_http_manager
+
+                        await stop_agentic_streamable_http_manager()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop agentic MCP streamable-http session manager: {e}")
                     # Close the shared A2A push-notification webhook client.
                     try:
                         from langflow.api.v1.a2a import close_push_client
@@ -726,10 +691,8 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                 # Step 2: Cleaning Up Services
                 with shutdown_progress.step(2):
-                    # Drain pending audit writes before services tear down so
-                    # rows scheduled mid-request still land in the DB. We do
-                    # this here (not in teardown_services) because the DB
-                    # session factory must still be alive.
+                    # Drain pending audit writes here (not teardown_services) because the
+                    # DB session factory must still be alive.
                     try:
                         from langflow.services.authorization.utils import drain_pending_audit_writes
 
@@ -748,6 +711,19 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await asyncio.wait_for(teardown_services(), timeout=30)
                     except asyncio.TimeoutError:
                         await logger.awarning("Teardown services timed out after 30s.")
+                    finally:
+                        # Shut down the code-execution sandbox VMs even when
+                        # teardown_services fails, and in addition to the
+                        # module's atexit hook: QEMU only reaps guests on
+                        # parent death from 10.2+, so an uvicorn worker
+                        # recycling without a full interpreter exit could
+                        # otherwise leave microVMs running (issue #12029).
+                        try:
+                            from lfx.utils.sandbox import shutdown_sandbox
+
+                            await asyncio.to_thread(shutdown_sandbox)
+                        except Exception as sandbox_exc:  # noqa: BLE001 — never block shutdown on sandbox teardown
+                            await logger.awarning(f"Sandbox teardown failed: {sandbox_exc}")
 
                 # Step 3: Clearing Temporary Files
                 with shutdown_progress.step(3):
@@ -805,16 +781,12 @@ def create_app():
     # Configure CORS using settings (with backward compatible defaults)
     origins = settings.cors_origins
     allow_credentials = settings.cors_allow_credentials
-    # Security: a wildcard origin combined with credentials is unsafe (and invalid
-    # per the CORS spec). Starlette would reflect the caller's Origin and return
-    # Access-Control-Allow-Credentials: true, letting any site make credentialed
-    # cross-origin requests (CSRF / token theft). Force credentials off whenever
-    # the origin list is a wildcard; specific origins keep credentials.
+    # Security: wildcard origin + credentials lets any site make credentialed
+    # cross-origin requests (CSRF / token theft), so force credentials off.
     if cors_origins_contain_wildcard(origins):
         if allow_credentials:
-            # Surface the override so an operator who set credentials on purpose can
-            # see why credentialed requests stopped working and points them at the
-            # wildcard origin as the cause.
+            # Surface the override so operators see why credentialed requests
+            # stopped working (wildcard origin is the cause).
             logger.warning(
                 "CORS: wildcard origin ('*') is configured together with "
                 "LANGFLOW_CORS_ALLOW_CREDENTIALS=true; disabling credentials because a "

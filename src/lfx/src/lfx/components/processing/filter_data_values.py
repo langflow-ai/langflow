@@ -9,7 +9,7 @@ class DataFilterComponent(Component):
     display_name = "Filter Values"
     description = (
         "Filter a list of data items based on a specified key, filter value,"
-        " and comparison operator. Check advanced options to select match comparision."
+        " and comparison operator. Check advanced options to select match comparison."
     )
     icon = "filter"
     beta = True
