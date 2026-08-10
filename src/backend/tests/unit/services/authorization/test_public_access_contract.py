@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import importlib
 
+import pytest
+
 
 def _contract_module():
     return importlib.import_module("langflow.services.authorization.public_access")
@@ -40,3 +42,19 @@ def test_anonymous_execution_user_is_stable_and_non_privileged():
     assert first.username == "anonymous-public"
     assert first.is_superuser is False
     assert first.store_api_key is None
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("action_name", ["WRITE", "CREATE", "DELETE", "DEPLOY", "ADMIN"])
+async def test_compatibility_grants_cannot_bypass_action_floor(action_name):
+    """Legacy flags never become an alternate path to anonymous mutations."""
+    module = _contract_module()
+
+    source = await module._resolve_grant(
+        flow=object(),
+        action=getattr(module.PublicResourceAction, action_name),
+        session=None,
+        compatibility_grant=module.PublicGrantSource.A2A_AUTH_NONE,
+    )
+
+    assert source is None

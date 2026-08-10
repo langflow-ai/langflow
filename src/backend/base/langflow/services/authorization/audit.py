@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from lfx.log.logger import logger
@@ -28,6 +28,9 @@ from langflow.services.auth.context import (
     get_current_auth_context,
 )
 from langflow.services.deps import get_settings_service
+
+if TYPE_CHECKING:
+    from lfx.services.authorization import AuthorizationPrincipal
 
 # Shared audit result vocabulary.
 AUDIT_ALLOW = "allow"
@@ -75,8 +78,13 @@ def _coerce_uuid(value: Any) -> UUID | None:
         return None
 
 
-def _resolve_actor(user_id: UUID | None) -> tuple[UUID | None, str, UUID | None]:
+def _resolve_actor(
+    user_id: UUID | None,
+    principal: AuthorizationPrincipal | None = None,
+) -> tuple[UUID | None, str, UUID | None]:
     """Derive durable actor identity from the request credential and owner user."""
+    if principal is not None:
+        return _coerce_uuid(principal.user_id), principal.actor_type, _coerce_uuid(principal.actor_id)
     resolved_user_id = _coerce_uuid(user_id)
     auth_context = get_current_auth_context()
     if resolved_user_id is not None and auth_context is not None and auth_context.method == AUTH_METHOD_API_KEY:
@@ -279,6 +287,7 @@ async def drain_pending_audit_writes(timeout: float = 5.0) -> None:
 async def audit_decision(
     *,
     user_id: UUID | None,
+    principal: AuthorizationPrincipal | None = None,
     action: str,
     obj: str,
     result: str,
@@ -307,7 +316,7 @@ async def audit_decision(
         # likely outside an async context (e.g. a sync test); silently skip.
         return
 
-    resolved_user_id, actor_type, actor_id = _resolve_actor(user_id)
+    resolved_user_id, actor_type, actor_id = _resolve_actor(user_id, principal)
     entry = _AuditEntry(
         user_id=resolved_user_id,
         actor_type=actor_type,
