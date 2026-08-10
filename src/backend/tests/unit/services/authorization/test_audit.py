@@ -339,6 +339,39 @@ async def test_durable_shutdown_rejects_a_producer_blocked_on_full_capacity(monk
 
 
 @pytest.mark.anyio
+async def test_durable_post_drain_rejection_does_not_restart_writer(monkeypatch, patched_audit_flush):
+    """A stopped same-loop durable pipeline stays stopped until a new loop owns it."""
+    await _reset_audit_pipeline()
+    install_settings(
+        monkeypatch,
+        authz_enabled=True,
+        audit_enabled=True,
+        audit_durable=True,
+    )
+
+    await authz_audit.audit_decision(
+        user_id=uuid4(),
+        action="flow:read",
+        obj="flow:*",
+        result="allow",
+    )
+    await authz_audit.drain_pending_audit_writes(timeout=1.0)
+    assert len(patched_audit_flush) == 1
+    assert authz_audit._audit_writer_task is None
+
+    with pytest.raises(authz_audit.AuditPersistenceError):
+        await authz_audit.audit_decision(
+            user_id=uuid4(),
+            action="flow:read",
+            obj="flow:*",
+            result="allow",
+        )
+
+    assert authz_audit._audit_writer_task is None
+    assert authz_audit.get_audit_producer_health()["active"] is False
+
+
+@pytest.mark.anyio
 async def test_cancelled_capacity_waiter_is_never_admitted(monkeypatch):
     """Cancellation before queue admission remains a normal caller cancellation."""
     monkeypatch.setattr(authz_audit, "_AUDIT_QUEUE_MAX", 1)
