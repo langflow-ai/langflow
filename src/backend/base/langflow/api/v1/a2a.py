@@ -221,11 +221,11 @@ async def _prepare_a2a_resume_checkpoint(
     """Reauthorize and re-apply public policy before restoring a HITL graph."""
     flow = await get_flow_by_id_or_endpoint_name(str(flow_id))
     is_public_now = await _is_public_a2a_flow(flow)
-    was_public = checkpoint.user_id == str(PUBLIC_ANONYMOUS_ACTOR_ID) or is_public_now
-    if not was_public:
-        return checkpoint
-    if not is_public_now:
+    admitted_user_id = PUBLIC_ANONYMOUS_ACTOR_ID if is_public_now else flow.user_id
+    if admitted_user_id is None or checkpoint.user_id != str(admitted_user_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+    if not is_public_now:
+        return checkpoint
 
     await authorize_public_flow_access(
         flow=flow,
