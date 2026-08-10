@@ -151,10 +151,15 @@ class TestGetComponentInfo:
         assert info["type"] == "ChatInput"
         assert "params" in info
 
-    async def test_get_component_info_redacts_secrets(self):
+    async def test_get_component_info_redacts_secrets(
+        self, mcp_client: LangflowClient, monkeypatch: pytest.MonkeyPatch
+    ):
         # LanguageModelComponent: in-tree model type with a SecretStr api_key.
         # Provider components are registered under their namespaced extension
         # ids (ext:openai:OpenAIModelComponent@official), not bare names.
+        # Exercise the CI configuration where provider discovery selects an
+        # initial OpenAI model during the api_key refresh.
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-ci-provider-discovery")  # pragma: allowlist secret
         created = await mcp_server_module.create_flow("RedactTest")
         comp = await mcp_server_module.add_component(created["id"], "LanguageModelComponent")
         # Configure an API key
@@ -165,6 +170,10 @@ class TestGetComponentInfo:
         )
         info = await mcp_server_module.get_component_info(created["id"], comp["id"])
         assert info["params"]["api_key"] == "***REDACTED***"
+
+        flow = await mcp_client.get(f"/flows/{created['id']}")
+        node = next(node for node in flow["data"]["nodes"] if node["data"]["id"] == comp["id"])
+        assert node["data"]["node"]["template"]["api_key"]["load_from_db"] is False
 
     async def test_get_single_field(self):
         created = await mcp_server_module.create_flow("FieldTest")
