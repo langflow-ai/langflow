@@ -28,3 +28,20 @@ def test_checker_rejects_a_missing_error_policy(tmp_path: Path) -> None:
     incomplete.write_text(json.dumps(source), encoding="utf-8")
 
     assert any("error_policy" in error and "missing" in error for error in validate_matrix(incomplete))
+
+
+def test_checker_rejects_generic_non_behavioral_test_references(tmp_path: Path) -> None:
+    source = json.loads(DEFAULT_MATRIX.read_text(encoding="utf-8"))
+    generic_references = {
+        "v1_run": "src/backend/tests/unit/api/v1/test_endpoints.py::test_get_config_basic",
+        "webhook": "src/backend/tests/unit/api/v1/test_endpoints.py::test_get_version",
+    }
+    for entrypoint in source["entrypoints"]:
+        if entrypoint["family"] in generic_references:
+            entrypoint["test_references"] = [generic_references[entrypoint["family"]]]
+    incomplete = tmp_path / "execution-principal-matrix.json"
+    incomplete.write_text(json.dumps(source), encoding="utf-8")
+
+    errors = validate_matrix(incomplete)
+    assert any("v1_run" in error and "behavior-specific" in error for error in errors)
+    assert any("webhook" in error and "behavior-specific" in error for error in errors)

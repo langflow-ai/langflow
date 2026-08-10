@@ -1314,18 +1314,20 @@ class TestAGUIBackgroundJobStatus:
         monkeypatch.setattr(wf_bg, "_stream_event_frames", fake_stream_event_frames)
         monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
 
+        owner_id = uuid4()
         bg_run = wf_bg._BackgroundRun(user_id=str(uuid4()))
         await wf_bg._buffer_background_run(
             bg_run=bg_run,
-            flow=SimpleNamespace(id=uuid4(), name="flow"),
+            flow=SimpleNamespace(id=uuid4(), user_id=owner_id, name="flow"),
             parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="background"),
             job_id=str(job_id),
-            current_user=SimpleNamespace(id=uuid4()),
+            current_user=SimpleNamespace(id=owner_id),
             stream_protocol="agui",
         )
 
         assert captured["run_id"] == str(job_id)
         assert captured["track_job_status"] is False
+        assert captured["expose_error_details"] is True
 
     async def test_background_buffer_marks_job_in_progress(self, monkeypatch: pytest.MonkeyPatch):
         """A background job should leave QUEUED once its buffer task starts executing."""
@@ -1347,7 +1349,10 @@ class TestAGUIBackgroundJobStatus:
             async def update_job_status(self, seen_job_id, status, *, finished_timestamp=False):
                 updates.append((seen_job_id, status, finished_timestamp))
 
-        async def fake_stream_event_frames(**_kwargs):
+        captured: dict = {}
+
+        async def fake_stream_event_frames(**kwargs):
+            captured.update(kwargs)
             yield b"data: {}\n\n", "RUN_FINISHED"
 
         monkeypatch.setattr(wf_bg, "get_stream_adapter", lambda *_args, **_kwargs: FakeAdapter())
@@ -1355,10 +1360,11 @@ class TestAGUIBackgroundJobStatus:
         monkeypatch.setattr(wf_bg, "_stream_event_frames", fake_stream_event_frames)
         monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
 
+        owner_id = uuid4()
         bg_run = wf_bg._BackgroundRun(user_id=str(uuid4()))
         await wf_bg._buffer_background_run(
             bg_run=bg_run,
-            flow=SimpleNamespace(id=uuid4(), name="flow"),
+            flow=SimpleNamespace(id=uuid4(), user_id=owner_id, name="flow"),
             parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="background"),
             job_id=str(job_id),
             current_user=SimpleNamespace(id=uuid4()),
@@ -1366,6 +1372,7 @@ class TestAGUIBackgroundJobStatus:
         )
 
         assert (job_id, workflow_module.JobStatus.IN_PROGRESS, False) in updates
+        assert captured["expose_error_details"] is False
 
     async def test_cancelled_agui_buffer_wakes_tail_reader_with_closed_text_and_run_finished(
         self, monkeypatch: pytest.MonkeyPatch
@@ -1376,12 +1383,14 @@ class TestAGUIBackgroundJobStatus:
         from lfx.workflow.converters import ParsedWorkflowRun
 
         started = asyncio.Event()
+        captured: dict = {}
 
         class FakeJobService:
             async def update_job_status(self, *_args, **_kwargs):
                 return None
 
         async def fake_generate_flow_events(**kwargs):
+            captured.update(kwargs)
             kwargs["event_manager"].on_token(data={"id": "m1", "chunk": "partial"})
             started.set()
             await asyncio.Event().wait()
@@ -1394,14 +1403,15 @@ class TestAGUIBackgroundJobStatus:
         monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
         monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
 
+        owner_id = uuid4()
         bg_run = wf_bg._BackgroundRun(user_id=str(uuid4()), stream_protocol="agui")
         buffer_task = asyncio.create_task(
             wf_bg._buffer_background_run(
                 bg_run=bg_run,
-                flow=SimpleNamespace(id=uuid4(), name="flow"),
+                flow=SimpleNamespace(id=uuid4(), user_id=owner_id, name="flow"),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="background"),
                 job_id=str(uuid4()),
-                current_user=SimpleNamespace(id=uuid4()),
+                current_user=SimpleNamespace(id=owner_id),
                 stream_protocol="agui",
             )
         )
@@ -1431,6 +1441,7 @@ class TestAGUIBackgroundJobStatus:
         assert tail_payloads[0]["messageId"] == "m1"
         assert tail_payloads[1]["name"] == "langflow.run.cancelled"
         assert tail_payloads[1]["value"]["reason"] == "Workflow run cancelled."
+        assert captured["expose_error_details"] is True
 
     async def test_cancelled_langflow_buffer_wakes_tail_reader_with_langflow_cancelled(
         self, monkeypatch: pytest.MonkeyPatch
@@ -1441,12 +1452,14 @@ class TestAGUIBackgroundJobStatus:
         from lfx.workflow.converters import ParsedWorkflowRun
 
         started = asyncio.Event()
+        captured: dict = {}
 
         class FakeJobService:
             async def update_job_status(self, *_args, **_kwargs):
                 return None
 
         async def fake_generate_flow_events(**kwargs):
+            captured.update(kwargs)
             kwargs["event_manager"].on_token(data={"id": "m1", "chunk": "partial"})
             started.set()
             await asyncio.Event().wait()
@@ -1459,11 +1472,12 @@ class TestAGUIBackgroundJobStatus:
         monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
         monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
 
+        owner_id = uuid4()
         bg_run = wf_bg._BackgroundRun(user_id=str(uuid4()), stream_protocol="langflow")
         buffer_task = asyncio.create_task(
             wf_bg._buffer_background_run(
                 bg_run=bg_run,
-                flow=SimpleNamespace(id=uuid4(), name="flow"),
+                flow=SimpleNamespace(id=uuid4(), user_id=owner_id, name="flow"),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="background"),
                 job_id=str(uuid4()),
                 current_user=SimpleNamespace(id=uuid4()),
@@ -1489,6 +1503,7 @@ class TestAGUIBackgroundJobStatus:
 
         [payload] = _sse_payloads(tail_frames)
         assert payload == {"event": "cancelled", "data": {"reason": "Workflow run cancelled."}}
+        assert captured["expose_error_details"] is False
 
     async def test_finish_cancelled_background_run_appends_terminal_before_waking_replay(
         self, monkeypatch: pytest.MonkeyPatch
@@ -1500,12 +1515,14 @@ class TestAGUIBackgroundJobStatus:
 
         job_id = str(uuid4())
         started = asyncio.Event()
+        captured: dict = {}
 
         class FakeJobService:
             async def update_job_status(self, *_args, **_kwargs):
                 return None
 
         async def fake_generate_flow_events(**kwargs):
+            captured.update(kwargs)
             kwargs["event_manager"].on_token(data={"id": "m1", "chunk": "partial"})
             started.set()
             await asyncio.Event().wait()
@@ -1519,12 +1536,13 @@ class TestAGUIBackgroundJobStatus:
         monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
         monkeypatch.setattr(wf_bg, "_BACKGROUND_RUNS", {})
 
+        owner_id = uuid4()
         bg_run = wf_bg._BackgroundRun(user_id=str(uuid4()), stream_protocol="agui")
         wf_bg._BACKGROUND_RUNS[job_id] = bg_run
         buffer_task = asyncio.create_task(
             wf_bg._buffer_background_run(
                 bg_run=bg_run,
-                flow=SimpleNamespace(id=uuid4(), name="flow"),
+                flow=SimpleNamespace(id=uuid4(), user_id=owner_id, name="flow"),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="background"),
                 job_id=job_id,
                 current_user=SimpleNamespace(id=uuid4()),
@@ -1556,6 +1574,7 @@ class TestAGUIBackgroundJobStatus:
             assert tail_payloads[0]["messageId"] == "m1"
             assert tail_payloads[1]["name"] == "langflow.run.cancelled"
             assert tail_payloads[1]["value"]["reason"] == "Workflow run cancelled."
+            assert captured["expose_error_details"] is False
 
             frames_after_fallback = list(bg_run.frames)
             buffer_task.cancel()
