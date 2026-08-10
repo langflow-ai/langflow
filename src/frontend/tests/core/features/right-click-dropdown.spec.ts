@@ -128,13 +128,30 @@ test(
 
     await adjustScreenView(page);
 
-    // Open the model providers modal from the node's model field. With no
-    // provider configured the field opens the modal directly, so the footer
-    // button of the model list may never render.
-    await page.getByTestId("model_model").first().click();
-    const manageProviders = page.getByTestId("manage-model-providers");
-    if (await manageProviders.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await manageProviders.click();
+    // Open the model providers modal from the node's model field. On a
+    // backend with no configured provider, ModelInput renders a "Setup
+    // Provider" call-to-action that does not carry the model_model test id
+    // and opens the provider manager directly (#14478). With a provider
+    // configured, the model_model dropdown mounts instead and the modal
+    // opens through its "Manage providers" footer button.
+    const modelTrigger = page.getByTestId("model_model").first();
+    const setupProviderTrigger = page
+      .locator(".react-flow__node")
+      .getByText("Setup Provider", { exact: true })
+      .first();
+    await expect(modelTrigger.or(setupProviderTrigger).first()).toBeVisible({
+      timeout: 30000,
+    });
+    if (await setupProviderTrigger.isVisible()) {
+      await setupProviderTrigger.click();
+    } else {
+      await modelTrigger.click();
+      const manageProviders = page.getByTestId("manage-model-providers");
+      if (
+        await manageProviders.isVisible({ timeout: 3000 }).catch(() => false)
+      ) {
+        await manageProviders.click();
+      }
     }
 
     const searchProviders = page.getByTestId("provider-search-input");
