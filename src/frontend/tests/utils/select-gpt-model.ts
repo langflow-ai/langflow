@@ -59,10 +59,7 @@ const clickModelDropdownFooter = async (page: Page, testId: string) => {
   await button.dispatchEvent("click");
 };
 
-const enablePreferredOpenAiModel = async (page: Page) => {
-  await clickModelDropdownFooter(page, "manage-model-providers");
-  await page.waitForSelector("text=Model providers", { timeout: 30000 });
-
+const configureOpenAiInProviderModal = async (page: Page) => {
   await page.getByTestId("provider-item-OpenAI").click();
   await page.waitForTimeout(500);
 
@@ -95,6 +92,12 @@ const enablePreferredOpenAiModel = async (page: Page) => {
   return modelName;
 };
 
+const enablePreferredOpenAiModel = async (page: Page) => {
+  await clickModelDropdownFooter(page, "manage-model-providers");
+  await page.waitForSelector("text=Model providers", { timeout: 30000 });
+  return configureOpenAiInProviderModal(page);
+};
+
 const languageModelNodes = (page: Page) =>
   page.locator(".react-flow__node", {
     has: page.locator(
@@ -107,7 +110,42 @@ const languageModelNodes = (page: Page) =>
     ),
   });
 
+// On a backend with no configured provider, ModelInput renders a "Setup
+// Provider" call-to-action instead of the model dropdown, so the
+// `model_model` trigger doesn't exist and the selection loop below would
+// silently skip every node — leaving the model empty and the run failing
+// with "A model selection is required". Configure OpenAI through the
+// provider manager (the CTA opens the same modal) so the dropdown mounts.
+const setupProviderIfNeeded = async (page: Page) => {
+  const modelNodes = languageModelNodes(page);
+  if ((await modelNodes.count()) === 0) return;
+  if (
+    (await modelNodes
+      .filter({ has: page.getByTestId("model_model") })
+      .count()) > 0
+  ) {
+    return;
+  }
+
+  const setupTrigger = modelNodes
+    .getByText("Setup Provider", { exact: true })
+    .first();
+  if ((await setupTrigger.count()) === 0) return;
+
+  await setupTrigger.click();
+  await page.waitForSelector("text=Model providers", { timeout: 30000 });
+  await configureOpenAiInProviderModal(page);
+
+  // Closing the modal refetches providers/enabled models; the dropdown
+  // replaces the CTA once the refresh settles.
+  await expect(page.getByTestId("model_model").first()).toBeVisible({
+    timeout: 30000,
+  });
+};
+
 export const selectGptModel = async (page: Page) => {
+  await setupProviderIfNeeded(page);
+
   const nodes = languageModelNodes(page).filter({
     has: page.getByTestId("model_model"),
   });
