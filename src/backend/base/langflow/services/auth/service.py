@@ -199,7 +199,36 @@ class AuthService(BaseAuthService):
         """
         clear_current_auth_context()
         clear_current_external_access_context()
+        try:
+            return await self._authenticate_with_credentials_impl(token, api_key, db, external_token=external_token)
+        except Exception:
+            # Exceptional-exit invariant: a failed credential attempt may have
+            # flushed JIT user/profile rows and populated the identity contexts
+            # before a later step (for example an authorization-policy
+            # rejection) raised. Callers that swallow authentication errors and
+            # let the request complete (``get_optional_user``) share this
+            # session, and the request-scoped session auto-commits on clean
+            # completion — so no staged state may survive the raise.
+            await self._discard_failed_credential_state(db)
+            raise
 
+    async def _discard_failed_credential_state(self, db: AsyncSession) -> None:
+        """Roll back staged session state and clear the identity contexts."""
+        try:
+            await db.rollback()
+        except Exception as exc:  # noqa: BLE001 - the original credential error must surface
+            logger.warning(f"Rollback after a failed credential attempt failed: {exc}")
+        finally:
+            clear_current_auth_context()
+            clear_current_external_access_context()
+
+    async def _authenticate_with_credentials_impl(
+        self,
+        token: str | None,
+        api_key: str | None,
+        db: AsyncSession,
+        external_token: str | None = None,
+    ) -> User | UserRead:
         # Try token authentication first (if token provided)
         if token:
             try:
@@ -951,7 +980,21 @@ class AuthService(BaseAuthService):
         """
         clear_current_auth_context()
         clear_current_external_access_context()
+        try:
+            return await self._get_current_user_from_access_token_impl(token, db, external_token=external_token)
+        except Exception:
+            # Same exceptional-exit invariant as authenticate_with_credentials:
+            # no staged session state or populated identity context may survive
+            # the raise (see _discard_failed_credential_state).
+            await self._discard_failed_credential_state(db)
+            raise
 
+    async def _get_current_user_from_access_token_impl(
+        self,
+        token: str | Coroutine | None,
+        db: AsyncSession,
+        external_token: str | None = None,
+    ) -> User:
         # Handle coroutine token (FastAPI dependency injection)
         resolved_token: str | None
         if token is None:

@@ -1927,6 +1927,126 @@ async def test_distinct_external_fallback_rolls_back_and_replaces_failed_native_
         set_current_external_access_context(None)
 
 
+def _foreign_external_jwt(claims: dict) -> str:
+    """Encode an IdP-style JWT the native decoder cannot verify.
+
+    Signed with a key that is not the service secret so native JWT decoding
+    fails and ``_authenticate_with_token`` falls through to the external
+    resolver, while the trusted external decode path
+    (EXTERNAL_AUTH_TRUSTED_JWT_DECODE) accepts it without signature checks.
+    """
+    payload = {"exp": datetime.now(timezone.utc) + timedelta(minutes=5), **claims}
+    return jwt.encode(payload, "not-the-service-secret", algorithm="HS256")
+
+
+@pytest.mark.parametrize("entrypoint", ["credentials", "access-token"])
+@pytest.mark.anyio
+async def test_single_credential_policy_rejection_exits_with_clean_session_and_context(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+    async_session,
+    entrypoint: str,
+):
+    """A policy-rejected identity must not survive an exceptional auth exit (LE-2109).
+
+    With ``token == external_token`` the distinct-credential fallback never
+    runs, so the exceptional exit itself must roll back the staged JIT rows and
+    clear the identity contexts: callers that swallow auth errors
+    (``get_optional_user``) let the request complete, and the request-scoped
+    session auto-commits at teardown.
+    """
+    from langflow.services.auth.external import get_current_external_access_context
+    from langflow.services.database.models.auth import SSOUserProfile
+    from lfx.services.authorization import AuthorizationMutationRejected
+    from sqlmodel import select
+
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_TRUSTED_JWT_DECODE = True
+    auth_settings.EXTERNAL_AUTH_PROVIDER = "external"
+
+    token = _foreign_external_jwt(
+        {"sub": "rejected-subject", "preferred_username": "rejected-user", "groups": ["blocked-group"]}
+    )
+    authz = _DirectoryAuthorizationStub(result=None)
+    authz.ingest_directory_membership_snapshot = AsyncMock(
+        side_effect=AuthorizationMutationRejected("Group membership rejected")
+    )
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        patch.object(auth_service, "_initialize_jit_user_defaults", new=AsyncMock()),
+    ):
+        if entrypoint == "credentials":
+            attempt = auth_service.authenticate_with_credentials(
+                token=token,
+                api_key=None,
+                db=async_session,
+                external_token=token,
+            )
+        else:
+            attempt = auth_service.get_current_user_from_access_token(token, async_session, external_token=token)
+        with pytest.raises(InvalidTokenError, match="Group membership rejected"):
+            await attempt
+
+    # What the request-scoped session_scope teardown does when a caller
+    # swallowed the auth error and the request completed cleanly.
+    await async_session.commit()
+
+    persisted_profile = (
+        await async_session.exec(select(SSOUserProfile).where(SSOUserProfile.sso_user_id == "rejected-subject"))
+    ).first()
+    assert persisted_profile is None
+    assert get_current_auth_context() is None
+    assert get_current_external_access_context() is None
+
+
+@pytest.mark.anyio
+async def test_get_optional_user_swallowed_policy_rejection_stages_nothing_for_commit(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+    async_session,
+):
+    """A swallowed policy rejection must leave nothing for the teardown auto-commit."""
+    from langflow.services.auth.external import get_current_external_access_context
+    from langflow.services.auth.utils import get_optional_user
+    from langflow.services.database.models.auth import SSOUserProfile
+    from lfx.services.authorization import AuthorizationMutationRejected
+    from sqlmodel import select
+
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_TRUSTED_JWT_DECODE = True
+    auth_settings.EXTERNAL_AUTH_PROVIDER = "external"
+
+    token = _foreign_external_jwt(
+        {"sub": "optional-rejected-subject", "preferred_username": "optional-rejected-user", "groups": ["g"]}
+    )
+    authz = _DirectoryAuthorizationStub(result=None)
+    authz.ingest_directory_membership_snapshot = AsyncMock(
+        side_effect=AuthorizationMutationRejected("Group membership rejected")
+    )
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        patch.object(auth_service, "_initialize_jit_user_defaults", new=AsyncMock()),
+        patch("langflow.services.auth.utils._auth_service", return_value=auth_service),
+    ):
+        user = await get_optional_user(token, None, None, db=async_session)
+
+    assert user is None
+    # The request completed cleanly as anonymous, so the request-scoped
+    # session_scope teardown auto-commits.
+    await async_session.commit()
+
+    persisted_profile = (
+        await async_session.exec(
+            select(SSOUserProfile).where(SSOUserProfile.sso_user_id == "optional-rejected-subject")
+        )
+    ).first()
+    assert persisted_profile is None
+    assert get_current_auth_context() is None
+    assert get_current_external_access_context() is None
+
+
 @pytest.mark.anyio
 async def test_no_external_token_keeps_native_error(
     auth_service: AuthService,
