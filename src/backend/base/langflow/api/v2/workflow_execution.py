@@ -608,17 +608,23 @@ async def execute_sync_workflow(
             stream=False,
         )
 
-        # Fire memory-base auto-capture hook — non-blocking background effect.
-        try:
-            _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only; same run_id set on graph
-            await get_task_service().fire_and_forget_task(
-                get_memory_base_service().on_flow_output,
-                flow_id=flow.id,
-                session_id=execution_session_id,
-                job_id=_run_id_uuid,
-            )
-        except (RuntimeError, ValueError, OSError):
-            await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
+        # MemoryBase auto-capture resolves the watching owner's embedding and
+        # preprocessing credentials by ``flow_id``. Only an owner-equivalent
+        # execution principal may trigger that owner-scoped side effect. This
+        # shared executor is also used by PUBLIC/A2A and delegated-share runs;
+        # letting either caller schedule this hook would spend another user's
+        # credentials and persist into their private knowledge base.
+        if flow.user_id is not None and str(flow.user_id) == str(current_user.id):
+            try:
+                _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only; same run_id set on graph
+                await get_task_service().fire_and_forget_task(
+                    get_memory_base_service().on_flow_output,
+                    flow_id=flow.id,
+                    session_id=execution_session_id,
+                    job_id=_run_id_uuid,
+                )
+            except (RuntimeError, ValueError, OSError):
+                await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
         # Build RunResponse
         run_response = RunResponse(outputs=task_result, session_id=execution_session_id)

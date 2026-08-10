@@ -1049,6 +1049,11 @@ async def _assert_public_job(job_id: str, queue_service: JobQueueService) -> Non
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
 
 
+_PUBLIC_JOB_NOT_FOUND_DETAIL = "Job not found"
+_PUBLIC_EVENTS_UNAVAILABLE_DETAIL = "Public flow events are unavailable."
+_PUBLIC_CANCEL_FAILED_DETAIL = "Public flow cancellation failed."
+
+
 @router.get("/build_public_tmp/{job_id}/events")
 async def get_build_events_public(
     job_id: str,
@@ -1062,11 +1067,31 @@ async def get_build_events_public(
     It is used by the shareable playground to consume build events.
     """
     await _assert_public_job(job_id, queue_service)
-    return await get_flow_events_response(
-        job_id=job_id,
-        queue_service=queue_service,
-        event_delivery=event_delivery,
-    )
+    try:
+        return await get_flow_events_response(
+            job_id=job_id,
+            queue_service=queue_service,
+            event_delivery=event_delivery,
+        )
+    except HTTPException as exc:
+        # The shared authenticated helper carries backend exception text in
+        # ``detail``. Preserve it in server logs, but public callers get only a
+        # fixed response. A 404 stays indistinguishable from the registry gate.
+        await logger.aerror(
+            f"Public flow events failed for job_id {job_id}: status={exc.status_code} detail={exc.detail!r}"
+        )
+        detail = (
+            _PUBLIC_JOB_NOT_FOUND_DETAIL
+            if exc.status_code == status.HTTP_404_NOT_FOUND
+            else _PUBLIC_EVENTS_UNAVAILABLE_DETAIL
+        )
+        raise HTTPException(status_code=exc.status_code, detail=detail) from exc
+    except Exception as exc:
+        await logger.aexception(f"Public flow events failed for job_id {job_id}: {exc!r}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=_PUBLIC_EVENTS_UNAVAILABLE_DETAIL,
+        ) from exc
 
 
 @router.post(
@@ -1089,14 +1114,18 @@ async def cancel_build_public(
         if cancellation_success:
             return CancelFlowResponse(success=True, message="Flow build cancelled successfully")
         return CancelFlowResponse(success=False, message="Failed to cancel flow build")
-    except asyncio.CancelledError:
-        await logger.aerror(f"Failed to cancel public flow build for job_id {job_id} (CancelledError caught)")
+    except asyncio.CancelledError as exc:
+        await logger.aerror(f"Failed to cancel public flow build for job_id {job_id}: {exc!r}")
         return CancelFlowResponse(success=False, message="Failed to cancel flow build")
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        await logger.awarning(f"Public flow cancellation could not find job_id {job_id}: {exc!r}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_PUBLIC_JOB_NOT_FOUND_DETAIL) from exc
     except JobQueueNotFoundError as exc:
         await logger.aerror(f"Public job not found: {job_id}. Error: {exc!s}")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job not found: {exc!s}") from exc
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_PUBLIC_JOB_NOT_FOUND_DETAIL) from exc
     except Exception as exc:
-        await logger.aexception(f"Error cancelling public flow build for job_id {job_id}: {exc}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        await logger.aexception(f"Error cancelling public flow build for job_id {job_id}: {exc!r}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=_PUBLIC_CANCEL_FAILED_DETAIL,
+        ) from exc

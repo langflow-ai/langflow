@@ -895,15 +895,23 @@ async def a2a_jsonrpc(flow_id: UUID, request: Request) -> Response:
     """
     _require_a2a_enabled()
 
-    # Gate on the flow itself (resolve by PK, owner-agnostic), like the card route.
-    # _run_flow resolves the owner for the actual run.
-    flow = await get_flow_by_id_or_endpoint_name(str(flow_id))
-    if flow.flow_type != FlowType.AGENT or not flow.a2a_enabled:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+    try:
+        # Gate on the flow itself (resolve by PK, owner-agnostic), like the card
+        # route. _run_flow resolves the principal for the actual run.
+        flow = await get_flow_by_id_or_endpoint_name(str(flow_id))
+        if flow.flow_type != FlowType.AGENT or not flow.a2a_enabled:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
 
-    # apikey-folder flows require a valid owner key here (401); "none" stays public.
-    # Runs after the 404 gate, so disabled/non-agent/unknown flows never reach a 401.
-    admitted_user = await _enforce_a2a_auth(flow, request)
+        # apikey-folder flows require a valid owner key here (401); "none" stays
+        # public. Runs after the 404 gate, so disabled/non-agent/unknown flows
+        # never reach a 401.
+        admitted_user = await _enforce_a2a_auth(flow, request)
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_404_NOT_FOUND:
+            # Unknown, unpublished, revoked, plugin-denied, and existing but
+            # non-agent flows must have the exact same transport response.
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found") from exc
+        raise
     request.state.a2a_admitted_user_id = str(
         admitted_user.id if admitted_user is not None else PUBLIC_ANONYMOUS_ACTOR_ID
     )
