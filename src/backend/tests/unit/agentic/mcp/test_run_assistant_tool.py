@@ -427,6 +427,7 @@ class TestRunAssistantAndPersist:
         assert exc_info.value.status_code == 400
         assert "BlockedComponent" in exc_info.value.detail
         assert flow.data is original_data
+        session.add.assert_not_called()
         # Exactly one commit: the pre-run transaction release (#14445). The
         # blocked write itself must not be committed.
         assert session.commit.await_count == 1
