@@ -867,6 +867,7 @@
   "flow.exclusiveComponentsNotPasted": "Certains composants n'ont pas été ajoutés, car ils ne peuvent pas être utilisés avec ceux qui se trouvent déjà dans le flux.",
   "flow.exitAnyway": "Sortir quand même",
   "flow.flowSettings": "Paramètres de flux",
+  "flow.outputSelector": "Sortie",
   "flow.lastSaved": "Dernière mise à jour : {{time}}",
   "flow.lastSavedNever": "Jamais",
   "flow.lockFlow": "Débit de verrouillage",

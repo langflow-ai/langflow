@@ -867,6 +867,7 @@
   "flow.exclusiveComponentsNotPasted": "一部のコンポーネントは、フロー内にすでに存在するコンポーネントと併用できないため、貼り付けられませんでした。",
   "flow.exitAnyway": "とにかく出る",
   "flow.flowSettings": "フロー設定",
+  "flow.outputSelector": "出力",
   "flow.lastSaved": "最終更新日： {{time}}",
   "flow.lastSavedNever": "なし",
   "flow.lockFlow": "フローのロック",

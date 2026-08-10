@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,6 +36,7 @@ export default function OutputComponent({
   handleSelectOutput,
   outputName,
 }: outputComponentType) {
+  const { t } = useTranslation();
   const nodeType = useFlowStore(
     (state) => state.nodes.find((node) => node.id === nodeId)?.data?.type,
   );
@@ -86,6 +88,7 @@ export default function OutputComponent({
               className="focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 group flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
               data-testid={`dropdown-output-${outputName?.toLowerCase()}`}
               disabled={isReadOnly}
+              aria-label={t("flow.outputSelector")}
             >
               <div className="flex items-center gap-1 truncate rounded-md px-2 py-1 text-sm font-medium group-hover:bg-primary/10">
                 {name}

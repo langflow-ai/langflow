@@ -867,6 +867,7 @@
   "flow.exclusiveComponentsNotPasted": "Algunos componentes no se han pegado porque no se pueden utilizar junto con los componentes que ya se encuentran en el flujo.",
   "flow.exitAnyway": "Salir de todos modos",
   "flow.flowSettings": "Valores de flujo",
+  "flow.outputSelector": "Salida",
   "flow.lastSaved": "Última actualización: {{time}}",
   "flow.lastSavedNever": "Nunca",
   "flow.lockFlow": "Bloqueo de flujo",

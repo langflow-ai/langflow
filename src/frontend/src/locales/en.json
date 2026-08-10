@@ -65,6 +65,7 @@
   "stepper.back": "Back",
   "stepper.needHelp": "Need Help?",
   "flow.flowSettings": "Flow settings",
+  "flow.outputSelector": "Output",
   "flow.menu.editDetails": "Edit details",
   "flow.menu.export": "Export",
   "flow.menu.duplicate": "Duplicate",

@@ -867,6 +867,7 @@
   "flow.exclusiveComponentsNotPasted": "某些组件未被粘贴，因为它们无法与流程中已有的组件同时使用。",
   "flow.exitAnyway": "不管怎样，退出",
   "flow.flowSettings": "流设置",
+  "flow.outputSelector": "输出",
   "flow.lastSaved": "最后保存时间： {{time}}",
   "flow.lastSavedNever": "从不",
   "flow.lockFlow": "锁定流量",

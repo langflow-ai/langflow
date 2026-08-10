@@ -867,6 +867,7 @@
   "flow.exclusiveComponentsNotPasted": "Einige Komponenten wurden nicht eingefügt, da sie nicht zusammen mit den bereits im Ablauf vorhandenen Komponenten verwendet werden können.",
   "flow.exitAnyway": "Trotzdem beenden",
   "flow.flowSettings": "Einstellungen für Ablauf",
+  "flow.outputSelector": "Ausgabe",
   "flow.lastSaved": "Zuletzt gespeichert: {{time}}",
   "flow.lastSavedNever": "Niemals",
   "flow.lockFlow": "Durchfluss sperren",
