@@ -733,8 +733,8 @@ async def test_build_public_tmp_checks_public_access_before_validation(
         headers={"Content-Type": "application/json"},
     )
 
-    assert response.status_code == codes.FORBIDDEN
-    assert response.json()["detail"] == "Flow is not public"
+    assert response.status_code == codes.NOT_FOUND
+    assert response.json()["detail"] == "Flow not found"
 
 
 async def test_build_public_tmp_enforces_current_catalog_policy_with_generic_error(
@@ -807,6 +807,40 @@ async def test_build_public_tmp_sanitizes_catalog_identity_unavailable_response(
 
     assert response.status_code == codes.SERVICE_UNAVAILABLE
     assert response.json()["detail"] == PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE
+    assert raw_message not in response.text
+
+
+@pytest.mark.security
+async def test_build_public_tmp_sanitizes_unexpected_gate_value_error(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """Anonymous validation failures never disclose stored flow internals."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+    client.cookies.set("client_id", "test-sanitized-value-error-client")
+    raw_message = "invalid node SecretProvider-1 with credential super-secret"
+
+    def invalid_stored_flow(_target):
+        raise ValueError(raw_message)
+
+    monkeypatch.setattr(
+        "langflow.api.v1.chat.validate_catalog_policy_for_flow",
+        invalid_stored_flow,
+    )
+
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert response.json()["detail"] == "This flow cannot be executed."
     assert raw_message not in response.text
 
 

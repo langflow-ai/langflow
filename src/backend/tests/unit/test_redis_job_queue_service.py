@@ -2606,6 +2606,9 @@ async def test_build_public_tmp_returns_503_when_public_marker_persist_fails(mon
         class _FakeRequest:
             cookies: dict[str, str] = {"client_id": "test-client"}
 
+            class url:  # noqa: N801
+                hostname = "public.example.test"
+
         with pytest.raises(HTTPException) as exc_info:
             await chat_module.build_public_tmp(
                 background_tasks=None,
@@ -2622,6 +2625,7 @@ async def test_build_public_tmp_returns_503_when_public_marker_persist_fails(mon
                 event_delivery=EventDeliveryType.POLLING,
             )
         assert exc_info.value.status_code == 503
+        assert exc_info.value.detail == "Public flow service is temporarily unavailable."
         # The just-started build must have been cancelled, not left running unreachable.
         await asyncio.wait_for(cancelled.wait(), timeout=5)
     finally:
