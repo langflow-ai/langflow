@@ -282,9 +282,17 @@ class AuthSettings(BaseSettings):
         description=(
             "Write an AuthzAuditLog row for every authorization decision and share-administration "
             "action. Independent of AUTHZ_ENABLED — set this to True while enforcement is off to "
-            "observe traffic before flipping the AUTHZ_ENABLED flag. Defaults to False because the "
-            "fire-and-forget audit task opens its own DB session per row; on SQLite this can "
-            "contend with concurrent write transactions ('database is locked')."
+            "observe traffic before flipping the AUTHZ_ENABLED flag. The default pipeline is "
+            "best effort and may drop rows under sustained database failure or queue saturation."
+        ),
+    )
+    AUTHZ_AUDIT_DURABLE: bool = Field(
+        default=False,
+        description=(
+            "Require every accepted authorization audit call to wait for its database commit. "
+            "A full queue applies backpressure and persistence failures fail the triggering request "
+            "with a sanitized error. Disabled by default to preserve the non-blocking OSS behavior; "
+            "enable it before using authz_audit_log as a compliance or external-delivery source."
         ),
     )
     AUTHZ_AUDIT_RETENTION_DAYS: int = Field(

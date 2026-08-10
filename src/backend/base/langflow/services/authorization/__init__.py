@@ -12,8 +12,10 @@ from langflow.services.authorization.actions import (
     VoiceAction,
 )
 from langflow.services.authorization.audit import (
+    AuditPersistenceError,
     audit_decision,
     drain_pending_audit_writes,
+    get_audit_producer_health,
 )
 from langflow.services.authorization.decorators import requires_flow_permission, requires_resource_permission
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
@@ -44,6 +46,7 @@ from langflow.services.authorization.listing import (
 from langflow.services.authorization.service import LangflowAuthorizationService
 
 __all__ = [
+    "AuditPersistenceError",
     "DeploymentAction",
     "FileAction",
     "FlowAction",
@@ -72,6 +75,7 @@ __all__ = [
     "ensure_variable_permission",
     "ensure_voice_permission",
     "filter_visible_resources",
+    "get_audit_producer_health",
     "requires_flow_permission",
     "requires_resource_permission",
     "resource_visible_in_scope",
