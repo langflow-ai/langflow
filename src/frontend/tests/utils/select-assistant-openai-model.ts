@@ -41,10 +41,14 @@ const enablePreferredOpenAiModel = async (page: Page) => {
   const checkExistingKey = await page.getByTestId("input-end-icon").count();
   if (checkExistingKey === 0) {
     await page
-      .getByPlaceholder("Add API key")
+      .getByTestId("provider-variable-input-OPENAI_API_KEY")
       .fill(process.env.OPENAI_API_KEY!);
-    await page.waitForSelector("text=OpenAI Api Key Saved", {
-      timeout: 30000,
+    // The provider modal saves only on the explicit Save click (live key
+    // validation + persist); the success toast fires after the post-save
+    // model refetch settles, so the toggles below are ready once it shows.
+    await page.getByTestId("provider-save-button").click();
+    await page.waitForSelector("text=OpenAI Configuration Saved", {
+      timeout: 60000,
     });
   }
 
