@@ -57,6 +57,21 @@ DbSession = Annotated[AsyncSession, Depends(injectable_session_scope)]
 DbSessionReadOnly = Annotated[AsyncSession, Depends(injectable_session_scope_readonly)]
 
 
+async def release_db_transaction(session: AsyncSession) -> None:
+    """End the session's current transaction before long-running work.
+
+    A handler that awaits a model, tool, or workflow after its DB reads must
+    not keep the transaction from those reads open for the wait: the session
+    would pin a pooled connection for the whole run (on Postgres as
+    ``idle in transaction``, which a nonzero
+    ``idle_in_transaction_session_timeout`` kills mid-run). Committing ends
+    the transaction and returns the connection to the pool; any later DB work
+    on the same session begins a fresh short transaction, and the dependency
+    teardown's final commit becomes a no-op.
+    """
+    await session.commit()
+
+
 def _get_validated_path_segment(value: str, *, label: str = "name") -> str:
     """Validate a path segment to prevent path traversal attacks."""
     if ".." in value or "/" in value or "\\" in value:
