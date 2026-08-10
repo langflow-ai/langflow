@@ -48,9 +48,17 @@ def format_complete_event(data: dict) -> str:
     return f"data: {json.dumps({'event': 'complete', 'data': data})}\n\n"
 
 
-def format_error_event(message: str) -> str:
-    """Format SSE error event."""
-    return f"data: {json.dumps({'event': 'error', 'message': message})}\n\n"
+def format_error_event(message: str, *, detail: dict | None = None) -> str:
+    """Format SSE error event.
+
+    ``detail`` is an additive structured-failure object (step / component_id /
+    tool / raw_cause / recommendation); when omitted the payload is
+    byte-identical to the historical ``{event, message}`` shape.
+    """
+    payload: dict[str, object] = {"event": "error", "message": message}
+    if detail:
+        payload["detail"] = detail
+    return f"data: {json.dumps(payload)}\n\n"
 
 
 def format_token_event(chunk: str) -> str:
@@ -61,6 +69,40 @@ def format_token_event(chunk: str) -> str:
 def format_flow_update_event(update: dict) -> str:
     """Format SSE flow_update event for real-time canvas changes."""
     return f"data: {json.dumps({'event': 'flow_update', **update})}\n\n"
+
+
+def _tool_start_label(tool: str, data: dict) -> str:
+    """English fallback label for a tool_start event; the frontend prefers its own i18n."""
+    if tool == "add_component":
+        return f"Adding {data.get('component_type') or 'component'}"
+    if tool == "remove_component":
+        return f"Removing {data.get('component_id') or 'component'}"
+    if tool == "connect_components":
+        return "Wiring components"
+    if tool == "configure_component":
+        return f"Configuring {data.get('component_id') or 'component'}"
+    if tool == "build_flow":
+        return "Building the flow"
+    if tool == "propose_field_edit":
+        return "Proposing an edit"
+    if tool == "use_template":
+        template_name = data.get("template_name")
+        return f"Applying template {template_name}" if template_name else "Applying a template"
+    return "Working"
+
+
+def format_tool_start_event(data: dict) -> str:
+    """Format SSE tool_start event — a canvas-mutating tool began executing.
+
+    Additive: emitted only while a mutating tool runs, so consumers unaware of
+    the event type are unaffected. Payload carries the tool name, a human
+    ``label`` fallback, and the tool's identifying fields (component_type /
+    component_id / source_id / target_id / field) for frontend i18n labels.
+    """
+    tool = str(data.get("tool", ""))
+    payload: dict[str, object] = {"event": "tool_start", **data}
+    payload.setdefault("label", _tool_start_label(tool, data))
+    return f"data: {json.dumps(payload)}\n\n"
 
 
 def format_cancelled_event() -> str:
