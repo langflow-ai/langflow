@@ -259,6 +259,12 @@ def configure_component(
             template[key]["value"] = coerced
         else:
             template[key]["value"] = value
+        # Values supplied through the configure API are explicit literals, just
+        # like values set through Component.set_input_value(). Do not reinterpret
+        # them as global-variable names merely because the field defaults to
+        # load_from_db=True (notably SecretStrInput credentials).
+        if "load_from_db" in template[key]:
+            template[key]["load_from_db"] = False
 
 
 def get_component(flow: dict, component_id: str) -> dict:

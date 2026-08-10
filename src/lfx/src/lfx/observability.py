@@ -23,6 +23,7 @@ import os
 import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
+from urllib.parse import urlsplit, urlunsplit
 
 from lfx.log.logger import logger
 from lfx.observability_fastapi import patch_otel_fastapi_route_details
@@ -183,6 +184,7 @@ if _OTEL_AVAILABLE:
         def on_end(self, span) -> None:
             scope = span.instrumentation_scope.name if span.instrumentation_scope else ""
             if scope in APPLICATION_INSTRUMENTATION_SCOPES:
+                _redact_url_attributes(span)
                 super().on_end(span)
                 return
             if scope not in self._dropped_scopes:
@@ -493,6 +495,89 @@ class ApplicationTelemetry:
             self.tracer_provider.shutdown()
         if self.logger_provider is not None:
             self.logger_provider.shutdown()
+
+
+# URL attributes an HTTP instrumentor may set. Every one of them can carry a full URL, and a
+# full URL can carry a credential: providers put API keys in the query string (Gemini's
+# ?key=, several others), and a URL may also carry userinfo before the host.
+_URL_SPAN_ATTRIBUTES = ("http.url", "url.full", "http.target", "url.query")
+
+
+def _redact_url_attributes(span) -> None:
+    """Strip query strings and userinfo from a span's URL attributes, in place.
+
+    A live leak, not a hypothetical, and on a scope that is already allowlisted: the FastAPI
+    server span records ``url.query`` verbatim, and ``lfx serve`` accepts its API key as a
+    query parameter (``APIKeyQuery``). A probe against the real instrumented app exports
+    ``url.query = "x-api-key=<the key>"``, so any deployment whose callers pass the key that
+    way has been sending it to the operator's APM.
+
+    Done at the export boundary rather than through an instrumentor hook because this is the
+    same place that already decides what leaves: one chokepoint, and it covers instrumentors
+    the runtime does not install itself.
+
+    Scheme, host, port, path and every non-URL attribute survive, so "POST api.openai.com
+    /v1/chat/completions took 3s" still reads exactly as an operator needs it to.
+    """
+    attributes = span.attributes
+    if not attributes or not any(key in attributes for key in _URL_SPAN_ATTRIBUTES):
+        return
+
+    original_attributes = span._attributes  # noqa: SLF001
+    redacted = dict(attributes)
+
+    for key in _URL_SPAN_ATTRIBUTES:
+        if key not in attributes:
+            continue
+        if key == "url.query":
+            # The whole point of this attribute is the query string, so there is nothing to keep.
+            redacted[key] = ""
+        else:
+            value = attributes[key]
+            if not isinstance(value, str) or (
+                original_attributes.max_value_len is not None and len(value) >= original_attributes.max_value_len
+            ):
+                # A sequence is not a valid semantic URL value. A value at the SDK's length cap
+                # may have lost its query or userinfo delimiter, so neither can be redacted safely.
+                redacted[key] = ""
+                continue
+            try:
+                parts = urlsplit(value)
+                # Accessing port validates the authority. Keep using the raw netloc below so
+                # bracketed IPv6 and port zero retain their exact valid representation.
+                _ = parts.port
+            except ValueError:
+                # Telemetry must never break request handling. A malformed authority is not useful
+                # operational data, so fail closed rather than exporting it or raising from Span.end().
+                redacted[key] = ""
+            else:
+                # Strip userinfo from the raw authority instead of rebuilding it from hostname/port:
+                # the raw form preserves IPv6 brackets and port zero.
+                netloc = parts.netloc.rsplit("@", maxsplit=1)[-1]
+                missing_authority = not netloc and (
+                    key in ("http.url", "url.full") or parts.scheme.lower() in ("http", "https", "ws", "wss")
+                )
+                if missing_authority:
+                    # Absolute URL attributes and hierarchical HTTP-style values require an
+                    # authority. Otherwise credential-looking bytes may be hiding in the path.
+                    redacted[key] = ""
+                else:
+                    redacted[key] = urlunsplit((parts.scheme, netloc, parts.path, "", ""))
+
+    # Imported here, not at module scope: opentelemetry is an optional lfx extra and this
+    # module must stay importable without it.
+    from opentelemetry.attributes import BoundedAttributes
+
+    # Span.end() freezes the SDK's BoundedAttributes before processors run, and ReadableSpan
+    # exposes no public setter. Rebuild the immutable mapping with its original limits and
+    # carry the prior drop count forward so exporters receive the same span metadata.
+    redacted_attributes = BoundedAttributes(
+        maxlen=original_attributes.maxlen,
+        attributes=redacted,
+        max_value_len=original_attributes.max_value_len,
+    )
+    redacted_attributes.dropped = original_attributes.dropped
+    span._attributes = redacted_attributes  # noqa: SLF001
 
 
 def bootstrap_application_telemetry(*, prometheus_enabled: bool = False) -> ApplicationTelemetry:
