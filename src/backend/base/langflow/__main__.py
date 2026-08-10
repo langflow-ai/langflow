@@ -403,6 +403,13 @@ def run(
         None, help="Defines the SSL certificate file path.", show_default=False
     ),
     ssl_key_file_path: str | None = typer.Option(None, help="Defines the SSL key file path.", show_default=False),
+    deployment_profile: str | None = typer.Option(  # noqa: ARG001 — applied to settings via the CLI-arg loop below
+        None,
+        help="Deployment profile: 'dev' (default) or 'prod'. 'prod' runs fail-loud "
+        "production infrastructure checks before starting and aborts boot if a required "
+        "service is missing. Can also be set via LANGFLOW_DEPLOYMENT_PROFILE.",
+        show_default=False,
+    ),
 ) -> None:
     """Run Langflow."""
     if env_file:
@@ -470,6 +477,24 @@ def run(
 
         # create path object if frontend_path is provided
         static_files_dir: Path | None = Path(frontend_path) if frontend_path else None
+
+    # Propagate the resolved profile to the environment so forked Gunicorn workers
+    # and factory-based entrypoints (which rebuild settings from env) observe it —
+    # this carries a --deployment-profile CLI flag through to the app factory.
+    resolved_profile = get_settings_service().settings.deployment_profile
+    os.environ["LANGFLOW_DEPLOYMENT_PROFILE"] = resolved_profile
+
+    # Production preflight: fail-loud infrastructure checks. Runs once here in the
+    # parent process, before any worker is spawned, so a misconfigured prod
+    # deployment aborts cleanly instead of coming up half-working. The FastAPI
+    # lifespan runs the same check as a safety net for entrypoints that bypass this
+    # CLI (e.g. `make backend`); a sentinel env var keeps it from running twice.
+    # No-op in dev.
+    if resolved_profile == "prod":
+        from langflow.cli.preflight import run_production_preflight
+
+        if not run_production_preflight(get_settings_service(), verbose=verbose):
+            raise typer.Exit(code=1)
 
     # Step 2: Starting Core Services
     app = None
