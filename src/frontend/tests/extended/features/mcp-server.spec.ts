@@ -125,7 +125,7 @@ test(
       timeout: 3000,
     });
 
-    await expect(page.getByText(testName)).toBeVisible({
+    await expect(page.getByText(testName, { exact: true })).toBeVisible({
       timeout: 3000,
     });
 
@@ -196,7 +196,7 @@ test(
       timeout: 3000,
     });
 
-    await expect(page.getByText(testName)).not.toBeVisible({
+    await expect(page.getByText(testName, { exact: true })).not.toBeVisible({
       timeout: 10000,
     });
   },
@@ -421,7 +421,7 @@ test(
     });
 
     // Find and edit the server
-    await expect(page.getByText(testName)).toBeVisible({
+    await expect(page.getByText(testName, { exact: true })).toBeVisible({
       timeout: 3000,
     });
 
@@ -785,7 +785,7 @@ test(
       timeout: 30000,
     });
 
-    await expect(page.getByText(testName)).toBeVisible({
+    await expect(page.getByText(testName, { exact: true })).toBeVisible({
       timeout: 10000,
     });
 
@@ -925,7 +925,7 @@ test(
       timeout: 10000,
     });
 
-    await expect(page.getByText(testName)).not.toBeVisible({
+    await expect(page.getByText(testName, { exact: true })).not.toBeVisible({
       timeout: 10000,
     });
 
@@ -949,7 +949,7 @@ test(
 
     await page.getByTestId("add-mcp-server-button").click();
 
-    await expect(page.getByText(testName)).toBeVisible({
+    await expect(page.getByText(testName, { exact: true })).toBeVisible({
       timeout: 10000,
     });
 
