@@ -4,8 +4,9 @@
 # Variables
 FRONTEND_DIR = src/frontend
 NPM = npm
+A11Y_WORKERS ?= 5
 
-.PHONY: install_frontend install_frontendci install_frontendc frontend_deps_check build_frontend run_frontend frontend frontendc format_frontend tests_frontend test_frontend_a11y_scan test_frontend_a11y_scan_blocking test_frontend_a11y_scan_update test_frontend test_frontend_watch test_frontend_coverage test_frontend_verbose test_frontend_ci test_frontend_a11y_unit_ci test_frontend_clean test_frontend_file test_frontend_pattern test_frontend_snapshots test_frontend_config test_frontend_bail test_frontend_silent test_frontend_coverage_open help_frontend storybook storybook_build storybook_network
+.PHONY: install_frontend install_frontendci install_frontendc frontend_deps_check build_frontend run_frontend frontend frontendc format_frontend tests_frontend test_frontend_a11y_scan test_frontend_a11y_scan_blocking test_frontend_a11y_scan_update test_frontend_a11y_suite test_frontend test_frontend_watch test_frontend_coverage test_frontend_verbose test_frontend_ci test_frontend_a11y_unit_ci test_frontend_clean test_frontend_file test_frontend_pattern test_frontend_snapshots test_frontend_config test_frontend_bail test_frontend_silent test_frontend_coverage_open help_frontend storybook storybook_build storybook_network
 
 ######################
 # FRONTEND DEPENDENCIES
@@ -87,6 +88,18 @@ test_frontend_a11y_scan_update: frontend_deps_check ## refresh IBM a11y scan bas
 	@cd $(FRONTEND_DIR) && rm -rf coverage/accessibility-reports && SCAN_SPECS="$$(grep -rl "runA11yScan(" tests --include="*.spec.ts" | sort)" && echo "Specs with a11y scans:" && echo "$$SCAN_SPECS" && test -n "$$SCAN_SPECS" && RUN_A11Y=true RUN_A11Y_ASSERT=false npx playwright test $$SCAN_SPECS --project=chromium --workers=1
 	@mkdir -p $(FRONTEND_DIR)/tests/baselines
 	@cp $(FRONTEND_DIR)/coverage/accessibility-reports/chromium__*.json $(FRONTEND_DIR)/tests/baselines/
+
+# Run the tests/a11y Playwright suite, then build the HTML report and job
+# summary. Reports are built even when the suite fails - a failing run is
+# exactly when the report is worth reading - but the suite's exit code wins.
+# Override worker count with: make test_frontend_a11y_suite A11Y_WORKERS=1
+test_frontend_a11y_suite: frontend_deps_check ## run tests/a11y suite and build HTML + job summary reports
+	@cd $(FRONTEND_DIR) && \
+		RUN_A11Y=true npx playwright test tests/a11y --project=chromium --workers=$(A11Y_WORKERS); \
+		status=$$?; \
+		$(NPM) run a11y:html-report --silent; \
+		$(NPM) run a11y:job-summary --silent; \
+		exit $$status
 
 ######################
 # FRONTEND UNIT TESTS (JEST)
@@ -262,6 +275,7 @@ help_frontend: ## show frontend help
 	@echo "$(GREEN)E2E Testing (Playwright):$(NC)"
 	@echo "  $(GREEN)make tests_frontend$(NC)       - Run Playwright e2e tests"
 	@echo "  $(GREEN)make tests_frontend UI=true$(NC) - Run Playwright e2e tests with UI"
+	@echo "  $(GREEN)make test_frontend_a11y_suite$(NC) - Run tests/a11y suite + build HTML/job-summary reports"
 	@echo ''
 	@echo "$(GREEN)Unit Testing (Jest):$(NC)"
 	@echo "  $(GREEN)make test_frontend$(NC)        - Run Jest unit tests"
