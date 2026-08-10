@@ -16,7 +16,7 @@ import contextlib
 import json
 import time
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -332,6 +332,115 @@ class TestV2WorkflowAdmission:
 
         assert exc_info.value.status_code == 404
         assert exc_info.value.detail["code"] == "FLOW_NOT_FOUND"
+
+    @pytest.mark.parametrize("mode", ["sync", "stream"])
+    def test_non_owner_tweaks_are_hidden_as_404(self, mode: str):
+        """Execute-only sharees must not override stored component parameters."""
+        from langflow.api.v2 import workflow as workflow_module
+        from lfx.schema.workflow import WorkflowRunRequest
+        from lfx.workflow.converters import parse_workflow_run_request
+
+        flow_id = uuid4()
+        flow = SimpleNamespace(
+            id=flow_id,
+            user_id=uuid4(),
+            workspace_id=None,
+            folder_id=None,
+            data={"nodes": [], "edges": []},
+            name="shared",
+        )
+        parsed = parse_workflow_run_request(
+            WorkflowRunRequest(
+                flow_id=str(flow_id),
+                input_value="hi",
+                mode=mode,
+                tweaks={"component-id": {"model_name": "owner-only-model"}},
+            )
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            workflow_module._apply_execution_gates(parsed, flow, SimpleNamespace(id=uuid4()))
+
+        assert exc_info.value.status_code == 404
+        assert exc_info.value.detail["code"] == "FLOW_NOT_FOUND"
+
+    @pytest.mark.parametrize("mode", ["sync", "stream"])
+    def test_owner_tweaks_remain_supported(self, mode: str):
+        """The owner keeps the existing debugging and parameter-override workflow."""
+        from langflow.api.v2 import workflow as workflow_module
+        from lfx.schema.workflow import WorkflowRunRequest
+        from lfx.workflow.converters import parse_workflow_run_request
+
+        owner_id = uuid4()
+        flow_id = uuid4()
+        flow = SimpleNamespace(
+            id=flow_id,
+            user_id=owner_id,
+            workspace_id=None,
+            folder_id=None,
+            data={"nodes": [], "edges": []},
+            name="owned",
+        )
+        parsed = parse_workflow_run_request(
+            WorkflowRunRequest(
+                flow_id=str(flow_id),
+                input_value="hi",
+                mode=mode,
+                tweaks={"component-id": {"input_value": "owner override"}},
+            )
+        )
+
+        gated = workflow_module._apply_execution_gates(parsed, flow, SimpleNamespace(id=owner_id))
+
+        assert gated.tweaks == parsed.tweaks
+
+
+class TestV2WorkflowDelegatedErrorPolicy:
+    """Delegated execution hides internals while owner debugging stays intact."""
+
+    @pytest.mark.parametrize("caller_kind", ["delegate", "owner"])
+    async def test_sync_error_detail_depends_on_flow_ownership(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        caller_kind: str,
+    ):
+        from langflow.api.v2 import workflow_execution as wf_exec
+        from lfx.workflow.converters import ParsedWorkflowRun
+
+        sensitive_detail = "sensitive-owner-runtime-detail"
+        owner_id = uuid4()
+        is_owner = caller_kind == "owner"
+        caller_id = owner_id if is_owner else uuid4()
+        flow = SimpleNamespace(
+            id=uuid4(),
+            user_id=owner_id,
+            data={"nodes": [], "edges": []},
+            name="shared",
+        )
+        graph = MagicMock()
+        graph.get_terminal_nodes.return_value = []
+        monkeypatch.setattr(wf_exec.Graph, "from_payload", MagicMock(return_value=graph))
+        job_service = SimpleNamespace(
+            create_job=AsyncMock(),
+            execute_with_status=AsyncMock(side_effect=RuntimeError(sensitive_detail)),
+        )
+        monkeypatch.setattr(wf_exec, "get_job_service", lambda: job_service)
+
+        response = await wf_exec.execute_sync_workflow(
+            parsed=ParsedWorkflowRun(flow_id=str(flow.id), input_value="hi", mode="sync"),
+            flow=flow,
+            job_id=uuid4(),
+            current_user=SimpleNamespace(id=caller_id),
+            background_tasks=SimpleNamespace(),
+            http_request=None,
+        )
+
+        error_text = response.errors[0].error
+        if is_owner:
+            assert sensitive_detail in error_text
+        else:
+            assert sensitive_detail not in error_text
+            assert error_text == "Workflow execution failed."
 
     async def test_execute_permission_denial_is_hidden_as_404(self, monkeypatch: pytest.MonkeyPatch):
         """A denied share-aware fetch must not leak flow existence as a raw 403."""
