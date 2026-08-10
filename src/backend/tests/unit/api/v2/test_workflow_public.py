@@ -3,7 +3,7 @@
 Mirrors the v1 ``build_public_tmp`` security suite. Each test pins one of
 the mitigations the v2 public endpoint is supposed to inherit from v1:
 
-- access_type == PUBLIC gate (403 for private flows).
+- access_type == PUBLIC compatibility grant (private flows are hidden as 404).
 - per-visitor virtual_flow_id propagated to the graph builder.
 - session id namespaced under the visitor's virtual flow id
   (CVE-2026-33017).
@@ -12,8 +12,7 @@ the mitigations the v2 public endpoint is supposed to inherit from v1:
   override the stored flow definition).
 - AUTO_LOGIN parity: authenticated_user_id is ignored when AUTO_LOGIN is
   on so the backend's virtual_flow_id matches the frontend's.
-- Owner impersonation: the flow runs under the flow owner's user, not
-  the visitor's.
+- Anonymous principal isolation: the flow never runs under the owner's user.
 """
 
 from __future__ import annotations
@@ -23,6 +22,7 @@ from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient, codes
+from langflow.services.database.models.auth import AuthzShare, SharePermissionLevel, ShareScope
 from langflow.services.database.models.flow.model import Flow
 from lfx.services.deps import session_scope
 from sqlmodel import select
@@ -92,7 +92,7 @@ async def public_flow_id(client: AsyncClient, json_memory_chatbot_no_llm, logged
 async def test_public_endpoint_rejects_non_public_flow(
     client: AsyncClient, json_memory_chatbot_no_llm, logged_in_headers
 ):
-    """Private flows return 403 before any policy validation runs (info-leak guard)."""
+    """Private and missing flows share the same privacy-preserving 404 contract."""
     from tests.unit.build_utils import create_flow
 
     flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
@@ -104,7 +104,60 @@ async def test_public_endpoint_rejects_non_public_flow(
         json={"flow_id": str(flow_id), "input_value": "Hi"},
         headers={"Content-Type": "application/json"},
     )
-    assert response.status_code == codes.FORBIDDEN
+    assert response.status_code == codes.NOT_FOUND
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_public_execute_share_grants_direct_link_and_revoke_blocks_next_start(
+    client: AsyncClient,
+    json_memory_chatbot_no_llm,
+    logged_in_headers,
+    monkeypatch,
+):
+    """Canonical PUBLIC shares admit direct execution; deleting the row blocks the next run."""
+    from tests.unit.build_utils import create_flow
+
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    async with session_scope() as session:
+        flow = await session.get(Flow, flow_id)
+        assert flow is not None
+        share = AuthzShare(
+            resource_type="flow",
+            resource_id=flow_id,
+            scope=ShareScope.PUBLIC.value,
+            permission_level=SharePermissionLevel.EXECUTE.value,
+            created_by=flow.user_id,
+        )
+        session.add(share)
+        await session.commit()
+        await session.refresh(share)
+        share_id = share.id
+
+    captured: dict = {}
+    _stub_generate_flow_events(monkeypatch, captured)
+    _send_unauthenticated(client, "public-share-client")
+    async with client.stream(
+        "POST",
+        "api/v2/workflows/public",
+        json={"flow_id": str(flow_id), "input_value": "Hi"},
+        headers={"Content-Type": "application/json"},
+    ) as response:
+        assert response.status_code == codes.OK
+        await _read_stream(response)
+
+    async with session_scope() as session:
+        stored_share = await session.get(AuthzShare, share_id)
+        assert stored_share is not None
+        await session.delete(stored_share)
+        await session.commit()
+
+    response = await client.post(
+        "api/v2/workflows/public",
+        json={"flow_id": str(flow_id), "input_value": "Hi"},
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == codes.NOT_FOUND
 
 
 @pytest.mark.benchmark
@@ -316,8 +369,8 @@ async def test_public_endpoint_isolates_disjoint_clients(client: AsyncClient, pu
 
 @pytest.mark.benchmark
 @pytest.mark.security
-async def test_public_endpoint_runs_as_flow_owner(client: AsyncClient, public_flow_id, monkeypatch):
-    """Owner impersonation: ``current_user`` passed to the build is the flow's owner."""
+async def test_public_endpoint_runs_as_stable_non_owner_principal(client: AsyncClient, public_flow_id, monkeypatch):
+    """Anonymous execution never inherits the owner's dependency principal."""
     captured: dict = {}
     _stub_generate_flow_events(monkeypatch, captured)
 
@@ -337,7 +390,10 @@ async def test_public_endpoint_runs_as_flow_owner(client: AsyncClient, public_fl
         assert flow is not None
         owner_id = flow.user_id
 
-    assert captured["current_user"].id == owner_id
+    execution_principal = captured["current_user"]
+    assert execution_principal.id != owner_id
+    assert execution_principal.username == "anonymous-public"
+    assert execution_principal.is_superuser is False
 
 
 @pytest.mark.benchmark
