@@ -553,11 +553,7 @@ async def test_public_endpoint_rejects_code_execution_components(
 @pytest.mark.benchmark
 @pytest.mark.security
 async def test_public_endpoint_surfaces_value_error_as_400(client: AsyncClient, public_flow_id, monkeypatch):
-    """Other ``ValueError``s from the gate sequence become 400 with the message preserved.
-
-    Mirrors v1 ``build_public_tmp``'s ``except ValueError -> HTTP 400``.
-    Without the wrapper the same path returns a 500 with a stack trace.
-    """
+    """Other gate ``ValueError``s become a sanitized 400."""
     import langflow.api.v2.workflow_public as workflow_public_module
 
     gate_error_message = "custom gate failure"
@@ -575,7 +571,8 @@ async def test_public_endpoint_surfaces_value_error_as_400(client: AsyncClient, 
     )
 
     assert response.status_code == codes.BAD_REQUEST
-    assert response.json().get("detail") == "custom gate failure"
+    assert response.json().get("detail") == "This flow cannot be executed."
+    assert gate_error_message not in response.text
 
 
 @pytest.fixture
@@ -594,7 +591,7 @@ def _fresh_limiter():
 def test_public_endpoint_throttles_per_ip(monkeypatch):
     """The unauthenticated public endpoint throttles per client IP.
 
-    Each run executes as the flow owner (real cost), so an anonymous caller must
+    Each run has real cost, so an anonymous caller must
     not be able to spin up unbounded runs. With the limit set to 2/min, the third
     request from the same IP is rejected at the throttle (429) before any flow work.
     """
