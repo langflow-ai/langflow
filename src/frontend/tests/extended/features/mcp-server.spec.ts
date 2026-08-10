@@ -581,7 +581,7 @@ test(
     });
 
     // Find and edit the server
-    await expect(page.getByText(testName)).toBeVisible({
+    await expect(page.getByText(testName, { exact: true })).toBeVisible({
       timeout: 10000,
     });
 
