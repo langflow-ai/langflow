@@ -680,6 +680,48 @@ async def test_public_a2a_resume_rechecks_compatibility_grant(active_user, echo_
     assert str(calls[0]["flow"].id) == str(flow_id)
 
 
+async def test_public_a2a_resume_rejects_owner_checkpoint_after_auth_transition(active_user, echo_flow_data):
+    """Changing a protected folder to public must not make its owner checkpoint anonymous-resumable."""
+    from fastapi import HTTPException
+    from langflow.api.v1 import a2a as a2a_module
+    from lfx.graph.checkpoint.schema import GraphCheckpoint
+
+    folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "none"})
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
+    checkpoint = GraphCheckpoint(
+        run_id=str(uuid.uuid4()),
+        flow_id=str(flow_id),
+        user_id=str(active_user.id),
+        flow_payload=echo_flow_data,
+    )
+
+    with pytest.raises(HTTPException) as excinfo:
+        await a2a_module._prepare_a2a_resume_checkpoint(flow_id, checkpoint)
+
+    assert excinfo.value.status_code == 404
+
+
+async def test_protected_a2a_resume_rejects_anonymous_checkpoint_after_auth_transition(active_user, echo_flow_data):
+    """Changing a public folder to protected must not restore an anonymous checkpoint as its owner."""
+    from fastapi import HTTPException
+    from langflow.api.v1 import a2a as a2a_module
+    from lfx.graph.checkpoint.schema import GraphCheckpoint
+
+    folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "apikey"})
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
+    checkpoint = GraphCheckpoint(
+        run_id=str(uuid.uuid4()),
+        flow_id=str(flow_id),
+        user_id=str(a2a_module.PUBLIC_ANONYMOUS_ACTOR_ID),
+        flow_payload=echo_flow_data,
+    )
+
+    with pytest.raises(HTTPException) as excinfo:
+        await a2a_module._prepare_a2a_resume_checkpoint(flow_id, checkpoint)
+
+    assert excinfo.value.status_code == 404
+
+
 # --- DataPart (structured application/json I/O) ----------------------------
 
 
