@@ -9,6 +9,11 @@ from typing import Any, Literal
 COMPONENTS_TO_IGNORE_UPDATE: frozenset[str] = frozenset({"CustomComponent"})
 TRANSIENT_TEMPLATE_KEYS: frozenset[str] = frozenset({"is_refresh", "tools_metadata"})
 
+# Synthetic output name a component receives when it is switched to tool mode. Must match
+# lfx.base.tools.constants.TOOL_OUTPUT_NAME, duplicated as a literal for the same reason
+# lfx.graph.flow_builder.connect does it: to keep this module free of lfx.base imports.
+TOOL_OUTPUT_NAME = "component_as_tool"
+
 NodeStatusLiteral = Literal["ok", "outdated_safe", "outdated_breaking", "blocked"]
 
 
@@ -116,10 +121,49 @@ def _input_types_contained(registry_template: dict, flow_template: dict) -> bool
     return True
 
 
+def _node_is_in_tool_mode(flow_outputs: list[dict]) -> bool:
+    """Return True when the saved node's outputs are the synthesized toolset output.
+
+    Switching a component to tool mode replaces its authored outputs with a single
+    ``component_as_tool`` entry, so those outputs describe a runtime projection rather than
+    anything the registry declares.
+
+    Requires *exactly* one output. A malformed node carrying the name more than once is not
+    something tool mode produces, so it keeps going through the authored-output comparison.
+    """
+    return len(flow_outputs) == 1 and flow_outputs[0].get("name") == TOOL_OUTPUT_NAME
+
+
+def _registry_supports_tool_mode(registry_entry: Mapping[str, Any]) -> bool:
+    """Return True when the current component can still be switched to tool mode.
+
+    Mirrors the input side of ``Component._handle_tool_mode``, which is what actually creates
+    the ``component_as_tool`` output: a component supports tool mode when at least one input
+    declares ``tool_mode``.
+
+    Two signals are deliberately not used. The ``tool_mode`` flag on *outputs* marks which
+    outputs a toolset exposes rather than the component's capability (124 of the 127 bundled
+    components set it, ``ChatInput`` included). And ``add_tool_output``, the other half of the
+    runtime rule, is not serialized into the component index, so components that rely on it
+    alone keep being reported ``outdated_breaking``. Both omissions err the same way: a node is
+    only called safe when re-stamping is known to preserve its toolset output.
+    """
+    template = registry_entry.get("template") or {}
+    return any(isinstance(field_data, Mapping) and field_data.get("tool_mode") for field_data in template.values())
+
+
 def _has_breaking_change(registry_entry: dict, node_info: dict) -> bool:
     registry_outputs = registry_entry.get("outputs") or []
     flow_outputs = node_info.get("outputs") or []
-    if registry_outputs and not _outputs_are_compatible(registry_outputs, flow_outputs):
+    if _node_is_in_tool_mode(flow_outputs):
+        # A tool-mode node's saved outputs are the toolset projection, so they never match the
+        # registry's declared outputs and comparing the two always reports a breaking change.
+        # What matters for such a node is whether the component still supports tool mode. A
+        # removed or renamed output cannot disconnect its edges, because its only output is
+        # the toolset.
+        if not _registry_supports_tool_mode(registry_entry):
+            return True
+    elif registry_outputs and not _outputs_are_compatible(registry_outputs, flow_outputs):
         return True
     registry_template = registry_entry.get("template") or {}
     flow_template = node_info.get("template") or {}

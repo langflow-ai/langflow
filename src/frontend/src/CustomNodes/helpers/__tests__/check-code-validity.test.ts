@@ -123,4 +123,140 @@ describe("checkCodeValidity", () => {
       userEdited: false,
     });
   });
+
+  // Switching a component to tool mode replaces its outputs with a single
+  // component_as_tool entry, which no component declares, so comparing the two output
+  // sets always reported a breaking change.
+  const toolModeNode = (template: Record<string, unknown>) =>
+    ({
+      type: "URLComponent",
+      node: {
+        edited: false,
+        outputs: [
+          {
+            name: "component_as_tool",
+            display_name: "Toolset",
+            types: ["Tool"],
+            method: "to_toolkit",
+          },
+        ],
+        template,
+      },
+    }) as Parameters<typeof checkCodeValidity>[0];
+
+  const urlTemplates = (template: Record<string, unknown>) =>
+    ({
+      URLComponent: {
+        template,
+        outputs: [
+          {
+            name: "page_results",
+            display_name: "Table",
+            types: ["Table"],
+            method: "fetch_content",
+          },
+        ],
+      },
+    }) as Parameters<typeof checkCodeValidity>[1];
+
+  it("does not treat a tool-mode node as breaking while the component supports tool mode", () => {
+    const data = toolModeNode({
+      code: { value: "old component code" },
+      urls: { value: "", tool_mode: true },
+      tools_metadata: {},
+    });
+    const templates = urlTemplates({
+      code: { value: "current component code" },
+      urls: { value: "", tool_mode: true },
+    });
+
+    expect(checkCodeValidity(data, templates)).toMatchObject({
+      outdated: true,
+      blocked: false,
+      breakingChange: false,
+      userEdited: false,
+    });
+  });
+
+  // Without a tool_mode input the component is not known to still produce the toolset
+  // output, so the node stays breaking. Treating "no inputs at all" as tool-capable would
+  // call an unfixable node safe: MockDataGenerator has no inputs and produces no toolset
+  // output at runtime.
+  it("treats a tool-mode node as breaking when the component declares no tool input", () => {
+    const data = toolModeNode({
+      code: { value: "old component code" },
+      tools_metadata: {},
+    });
+    const templates = urlTemplates({
+      code: { value: "current component code" },
+    });
+
+    expect(checkCodeValidity(data, templates)).toMatchObject({
+      outdated: true,
+      blocked: false,
+      breakingChange: true,
+      userEdited: false,
+    });
+  });
+
+  it("treats a tool-mode node as breaking once the component drops tool mode", () => {
+    const data = toolModeNode({
+      code: { value: "old component code" },
+      urls: { value: "", tool_mode: true },
+      tools_metadata: {},
+    });
+    const templates = urlTemplates({
+      code: { value: "current component code" },
+      urls: { value: "" },
+    });
+
+    expect(checkCodeValidity(data, templates)).toMatchObject({
+      outdated: true,
+      blocked: false,
+      breakingChange: true,
+      userEdited: false,
+    });
+  });
+
+  // Tool mode synthesizes exactly one output, so a duplicated name is a malformed node and
+  // must keep going through the authored-output comparison.
+  it("treats a node with a duplicated tool output as breaking", () => {
+    const data = toolModeNode({
+      code: { value: "old component code" },
+      urls: { value: "", tool_mode: true },
+      tools_metadata: {},
+    });
+    const outputs = data.node!.outputs!;
+    data.node!.outputs = [outputs[0], { ...outputs[0] }];
+    const templates = urlTemplates({
+      code: { value: "current component code" },
+      urls: { value: "", tool_mode: true },
+    });
+
+    expect(checkCodeValidity(data, templates)).toMatchObject({
+      outdated: true,
+      blocked: false,
+      breakingChange: true,
+      userEdited: false,
+    });
+  });
+
+  it("still applies the remaining checks to a tool-mode node", () => {
+    const data = toolModeNode({
+      code: { value: "old component code" },
+      urls: { value: "", tool_mode: true, input_types: ["Message"] },
+      tools_metadata: {},
+    });
+    const templates = urlTemplates({
+      code: { value: "current component code" },
+      urls: { value: "", tool_mode: true, input_types: ["Data"] },
+    });
+
+    expect(checkCodeValidity(data, templates)).toMatchObject({
+      outdated: true,
+      blocked: false,
+      breakingChange: true,
+      userEdited: false,
+    });
+  });
 });
