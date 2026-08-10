@@ -40,18 +40,21 @@ jobs:
           java-version: "21"
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.13"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v6
         with:
-          version: "latest"
+          version: "0.12.3"
 
       - name: Export Python deps for Mend
         run: |
-          uv export --no-hashes --format requirements-txt -o requirements-mend.txt
+          uv export --quiet --locked --all-packages --all-extras --all-groups --no-emit-workspace \
+            --no-hashes --format requirements.txt -o requirements-mend.txt
+          uv pip compile --quiet --python-version 3.13 --generate-hashes \
+            --constraint requirements-mend.txt scripts/gp/requirements.txt -o requirements-gp-mend.txt
 
       - name: Download Mend Unified Agent
         run: |
