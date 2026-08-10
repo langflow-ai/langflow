@@ -9,11 +9,14 @@ REGISTRY_CODE = "class MyComp:\n    pass  # v2"
 NODE_CODE = "class MyComp:\n    pass  # v1"
 
 
-def _registry(code=REGISTRY_CODE):
+def _registry(code=REGISTRY_CODE, template_extra=None):
+    template = {"code": {"value": code}}
+    if template_extra:
+        template.update(template_extra)
     return {
         "Cat": {
             "MyComp": {
-                "template": {"code": {"value": code}},
+                "template": template,
                 "outputs": [{"name": "o", "display_name": "O", "types": ["M"], "method": "m", "allows_loop": False}],
                 "metadata": {},
             }
@@ -21,7 +24,10 @@ def _registry(code=REGISTRY_CODE):
     }
 
 
-def _node(code=NODE_CODE, type_="MyComp"):
+def _node(code=NODE_CODE, type_="MyComp", template_extra=None):
+    template = {"code": {"value": code}}
+    if template_extra:
+        template.update(template_extra)
     return {
         "id": "n1",
         "data": {
@@ -30,7 +36,7 @@ def _node(code=NODE_CODE, type_="MyComp"):
             "node": {
                 "display_name": "My Component",
                 "edited": False,
-                "template": {"code": {"value": code}},
+                "template": template,
                 "outputs": [{"name": "o", "display_name": "O", "types": ["M"], "method": "m", "allows_loop": False}],
             },
         },
@@ -116,6 +122,66 @@ def test_apply_returns_count_of_updated_nodes():
     assert count == 1
 
 
+def test_apply_merges_new_registry_fields_with_defaults():
+    """Fields the saved flow predates are introduced exactly as the registry declares them.
+
+    Counterpart to test_outdated_safe_when_registry_added_optional_field in test_checker.py:
+    the checker calls the node safe because the applier fills the field, so the applier
+    must actually fill it — otherwise the re-stamped code runs without a field it expects.
+    """
+    new_field = {"value": False, "required": False, "type": "bool"}
+    flow = _flow(_node(code=NODE_CODE))
+    registry = _registry(code=REGISTRY_CODE, template_extra={"new_flag": new_field})
+    report = check_flow_compatibility(flow, registry)
+    assert report.nodes[0].status == "outdated_safe"
+
+    updated = apply_safe_upgrades(flow, registry, report)
+    template = updated["nodes"][0]["data"]["node"]["template"]
+    assert template["code"]["value"] == REGISTRY_CODE
+    assert template["new_flag"] == new_field
+
+    # The merged field must be a copy: editing the upgraded flow later must not reach
+    # back into the shared registry lookup.
+    template["new_flag"]["value"] = True
+    assert registry["Cat"]["MyComp"]["template"]["new_flag"]["value"] is False
+
+
+def test_apply_preserves_fields_registry_dropped():
+    """A field only the flow has is left in place; its value is simply no longer read."""
+    flow = _flow(_node(code=NODE_CODE, template_extra={"legacy": {"value": "keep me"}}))
+    registry = _registry(code=REGISTRY_CODE)
+    report = check_flow_compatibility(flow, registry)
+    assert report.nodes[0].status == "outdated_safe"
+
+    updated = apply_safe_upgrades(flow, registry, report)
+    template = updated["nodes"][0]["data"]["node"]["template"]
+    assert template["code"]["value"] == REGISTRY_CODE
+    assert template["legacy"] == {"value": "keep me"}
+
+
+def test_apply_does_not_overwrite_existing_field_values():
+    """Only fields the flow lacks are merged; the user's saved values always win."""
+    flow = _flow(_node(code=NODE_CODE, template_extra={"opt": {"value": "user-set"}}))
+    registry = _registry(code=REGISTRY_CODE, template_extra={"opt": {"value": "default"}})
+    report = check_flow_compatibility(flow, registry)
+    assert report.nodes[0].status == "outdated_safe"
+
+    updated = apply_safe_upgrades(flow, registry, report)
+    assert updated["nodes"][0]["data"]["node"]["template"]["opt"]["value"] == "user-set"
+
+
+def test_apply_then_recheck_reports_ok_after_field_merge():
+    """A safe upgrade over a grown template converges: the re-checked node is ok."""
+    flow = _flow(_node(code=NODE_CODE))
+    registry = _registry(code=REGISTRY_CODE, template_extra={"new_flag": {"value": False}})
+    report = check_flow_compatibility(flow, registry)
+    assert report.nodes[0].status == "outdated_safe"
+
+    updated = apply_safe_upgrades(flow, registry, report)
+    recheck = check_flow_compatibility(updated, registry)
+    assert recheck.nodes[0].status == "ok"
+
+
 def test_apply_updates_nested_flow_safe_node_code():
     """Safe upgrades inside a grouped component's nested flow must be written, not skipped.
 
@@ -140,7 +206,7 @@ def test_apply_updates_nested_flow_safe_node_code():
         },
     }
     flow = _flow(outer)
-    registry = _registry(code=REGISTRY_CODE)
+    registry = _registry(code=REGISTRY_CODE, template_extra={"new_flag": {"value": False}})
     report = check_flow_compatibility(flow, registry)
     assert any(n.node_id == "nested-1" and n.status == "outdated_safe" for n in report.nodes)
 
@@ -148,3 +214,5 @@ def test_apply_updates_nested_flow_safe_node_code():
     assert count == 1
     written = updated["nodes"][0]["data"]["node"]["flow"]["data"]["nodes"][0]
     assert written["data"]["node"]["template"]["code"]["value"] == REGISTRY_CODE
+    # New registry fields must be merged on the nested path too, not only at top level.
+    assert written["data"]["node"]["template"]["new_flag"] == {"value": False}
