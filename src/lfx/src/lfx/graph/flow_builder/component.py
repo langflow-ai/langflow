@@ -113,6 +113,70 @@ def _make_node(
     }
 
 
+def sync_dropdown_selected_outputs(flow: dict) -> None:
+    """Pin dropdown-style source nodes to the output their edges actually use.
+
+    A component whose outputs are a single-active dropdown (multiple outputs,
+    none ``group_outputs``) renders one handle at a time. When a built node
+    carries no ``selected_output``, the canvas auto-selects its FIRST output on
+    mount, which clears the other outputs' ``selected`` flag and makes
+    ``cleanEdges`` drop any edge wired from a non-first output (e.g. a loop
+    feedback edge from ``TypeConverter.data_output``). Recording
+    ``selected_output`` = the wired output stops that auto-flip so the edge
+    survives and the node renders the correct handle. Only applied when every
+    outgoing edge of the node uses the same output (no ambiguity). Idempotent.
+    """
+    edges = flow.get("data", {}).get("edges", [])
+    used_outputs: dict[str, set[str]] = {}
+    for edge in edges:
+        source_id = edge.get("source")
+        name = (edge.get("data") or {}).get("sourceHandle", {}).get("name")
+        if source_id and name:
+            used_outputs.setdefault(source_id, set()).add(name)
+
+    for node in flow.get("data", {}).get("nodes", []):
+        wired = used_outputs.get(_node_id(node))
+        if not wired or len(wired) != 1:
+            continue
+        node_config = node.get("data", {}).get("node", {})
+        outputs = node_config.get("outputs")
+        if not isinstance(outputs, list):
+            continue
+        non_group = [o for o in outputs if isinstance(o, dict) and not o.get("group_outputs")]
+        if len(non_group) <= 1:
+            continue
+        wired_name = next(iter(wired))
+        if any(o.get("name") == wired_name for o in non_group):
+            node["data"]["selected_output"] = wired_name
+            _sync_output_type_tab(node_config, non_group, wired_name)
+
+
+def _sync_output_type_tab(node_config: dict, outputs: list[dict], wired_name: str) -> None:
+    """Align a node's ``output_type`` tab with its wired output.
+
+    Components like TypeConverter rebuild ``outputs`` from the tab value on
+    hydration (``update_outputs``), so a tab left on another type deletes the
+    wired output and dangles its edges as soon as the flow reloads. Only
+    overwrites when the current value clearly selects a different output;
+    unknown values (e.g. spec-configured aliases) are left untouched.
+    """
+    tab = node_config.get("template", {}).get("output_type")
+    if not isinstance(tab, dict) or tab.get("type") != "tab":
+        return
+    options = tab.get("options") or []
+    wired = next((o for o in outputs if o.get("name") == wired_name), None)
+    if wired is None:
+        return
+    match = next((opt for opt in options if opt in (wired.get("types") or [])), None)
+    if match is None or tab.get("value") == match:
+        return
+    selects_other_output = any(
+        tab.get("value") in (o.get("types") or []) for o in outputs if o.get("name") != wired_name
+    )
+    if selects_other_output:
+        tab["value"] = match
+
+
 def add_component(
     flow: dict,
     component_type: str,
