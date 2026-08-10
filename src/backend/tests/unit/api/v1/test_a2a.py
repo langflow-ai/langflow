@@ -568,12 +568,30 @@ async def test_message_send_runs_flow_and_returns_completed_task(client: AsyncCl
 
 
 async def test_public_a2a_run_uses_server_sanitized_flow_data(active_user, echo_flow_data, monkeypatch):
-    """Anonymous A2A runs build from trusted server code, not stored component code."""
+    """Anonymous A2A runs build from trusted server code without stored secrets."""
     from langflow.api.v1 import a2a as a2a_module
     from langflow.api.v2 import workflow as workflow_module
 
     flow_id = await _create_flow(active_user.id, data=echo_flow_data)
-    sanitized_data = {"nodes": [{"id": "server-sanitized"}], "edges": []}
+    prepared_data = {
+        "nodes": [
+            {
+                "id": "server-sanitized",
+                "data": {
+                    "node": {
+                        "template": {
+                            "api_key": {
+                                "name": "api_key",
+                                "password": True,
+                                "value": "sk-owner-secret",  # pragma: allowlist secret
+                            }
+                        }
+                    }
+                },
+            }
+        ],
+        "edges": [],
+    }
     captured = {}
     expected_response = object()
 
@@ -582,7 +600,7 @@ async def test_public_a2a_run_uses_server_sanitized_flow_data(active_user, echo_
 
     async def fake_prepare(data):
         captured["prepared"] = data
-        return sanitized_data
+        return prepared_data
 
     async def fake_execute(**kwargs):
         captured["executed_flow_data"] = kwargs["flow"].data
@@ -604,19 +622,39 @@ async def test_public_a2a_run_uses_server_sanitized_flow_data(active_user, echo_
     assert response is expected_response
     assert captured["validated"] == echo_flow_data
     assert captured["prepared"] == echo_flow_data
-    assert captured["executed_flow_data"] == sanitized_data
+    executed_secret = captured["executed_flow_data"]["nodes"][0]["data"]["node"]["template"]["api_key"]
+    assert executed_secret["value"] is None
+    assert prepared_data["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] == "sk-owner-secret"
     assert captured["execution_principal"].id != active_user.id
     assert captured["execution_principal"].username == "anonymous-public"
 
 
 async def test_public_a2a_resume_sanitizes_checkpoint_payload(active_user, echo_flow_data, monkeypatch):
-    """A public HITL continuation cannot restore stored component code around the initial-run gate."""
+    """A public HITL continuation cannot restore stored component code or secrets around the gate."""
     from langflow.api.v1 import a2a as a2a_module
     from lfx.graph.checkpoint.schema import GraphCheckpoint
 
     flow_id = await _create_flow(active_user.id, data=echo_flow_data)
     task_id = str(uuid.uuid4())
-    sanitized_data = {"nodes": [{"id": "server-sanitized"}], "edges": []}
+    prepared_data = {
+        "nodes": [
+            {
+                "id": "server-sanitized",
+                "data": {
+                    "node": {
+                        "template": {
+                            "api_key": {
+                                "name": "api_key",
+                                "password": True,
+                                "value": "sk-owner-secret",  # pragma: allowlist secret
+                            }
+                        }
+                    }
+                },
+            }
+        ],
+        "edges": [],
+    }
     checkpoint = GraphCheckpoint(
         run_id=task_id,
         flow_id=str(flow_id),
@@ -639,7 +677,7 @@ async def test_public_a2a_resume_sanitizes_checkpoint_payload(active_user, echo_
 
     async def fake_prepare(data):
         captured["prepared"] = data
-        return sanitized_data
+        return prepared_data
 
     def fake_resume(sanitized_checkpoint, *_args):
         captured["resumed_payload"] = sanitized_checkpoint.flow_payload
@@ -660,7 +698,9 @@ async def test_public_a2a_resume_sanitizes_checkpoint_payload(active_user, echo_
 
     assert captured["validated"] == echo_flow_data
     assert captured["prepared"] == echo_flow_data
-    assert captured["resumed_payload"] == sanitized_data
+    resumed_secret = captured["resumed_payload"]["nodes"][0]["data"]["node"]["template"]["api_key"]
+    assert resumed_secret["value"] is None
+    assert prepared_data["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] == "sk-owner-secret"
 
 
 async def test_public_a2a_resume_rechecks_compatibility_grant(active_user, echo_flow_data, monkeypatch):
@@ -2419,6 +2459,42 @@ async def test_task_scope_key_is_postgres_safe():
     key = _task_scope(ServerCallContext(state={"flow_id": flow_id}))
     assert "\x00" not in key
     assert flow_id in key
+
+
+async def test_task_and_push_scopes_bind_the_server_admitted_principal():
+    """Changing a folder's auth mode cannot cross-read tasks or push configs for the prior principal."""
+    from a2a.server.context import ServerCallContext
+    from langflow.api.v1.a2a import PUBLIC_ANONYMOUS_ACTOR_ID, _push_config_scope, _task_scope
+
+    flow_id = str(uuid.uuid4())
+    owner_id = str(uuid.uuid4())
+    owner_context = ServerCallContext(state={"flow_id": flow_id, "admitted_user_id": owner_id})
+    public_context = ServerCallContext(state={"flow_id": flow_id, "admitted_user_id": str(PUBLIC_ANONYMOUS_ACTOR_ID)})
+
+    assert _task_scope(owner_context) != _task_scope(public_context)
+    assert _push_config_scope(owner_context) != _push_config_scope(public_context)
+    assert owner_id in _task_scope(owner_context)
+    assert str(PUBLIC_ANONYMOUS_ACTOR_ID) in _push_config_scope(public_context)
+
+
+@pytest.mark.usefixtures("client")
+async def test_durable_task_store_isolates_public_and_protected_admission_principals():
+    """A task admitted while protected is not readable after the same flow becomes public, or vice versa."""
+    from a2a.server.context import ServerCallContext
+    from a2a.types import a2a_pb2 as pb
+    from langflow.api.v1.a2a import PUBLIC_ANONYMOUS_ACTOR_ID, DurableTaskStore
+
+    flow_id = str(uuid.uuid4())
+    owner_context = ServerCallContext(state={"flow_id": flow_id, "admitted_user_id": str(uuid.uuid4())})
+    public_context = ServerCallContext(state={"flow_id": flow_id, "admitted_user_id": str(PUBLIC_ANONYMOUS_ACTOR_ID)})
+    task_id = uuid.uuid4().hex
+    task = pb.Task(id=task_id, status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_COMPLETED))
+    store = DurableTaskStore()
+
+    await store.save(task, owner_context)
+
+    assert await store.get(task_id, owner_context) is not None
+    assert await store.get(task_id, public_context) is None
 
 
 @pytest.mark.usefixtures("a2a_flag_on")

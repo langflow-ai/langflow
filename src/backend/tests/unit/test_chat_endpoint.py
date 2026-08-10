@@ -1274,6 +1274,50 @@ def _send_unauthenticated(client, client_id: str) -> None:
 
 @pytest.mark.benchmark
 @pytest.mark.security
+async def test_build_public_tmp_strips_persisted_owner_secrets_before_dispatch(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """The public V1 build may execute trusted code, but never a secret embedded in the owner's graph."""
+    import langflow.api.v1.chat as chat_module
+
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    prepared = json.loads(json_memory_chatbot_no_llm)["data"]
+    prepared["nodes"][0]["data"]["node"]["template"]["owner_api_key"] = {
+        "name": "owner_api_key",
+        "password": True,
+        "value": "sk-owner-secret",  # pragma: allowlist secret
+    }
+
+    async def _prepare(_flow_data):
+        return prepared
+
+    captured: dict = {}
+    monkeypatch.setattr(chat_module, "prepare_public_flow_build", _prepare)
+    _stub_start_flow_build(monkeypatch, captured)
+    _send_unauthenticated(client, "secret-isolation-client")
+
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": "secret-isolation-session"}},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.OK
+    dispatched = captured["data"]
+    assert dispatched is not None
+    assert dispatched.nodes[0]["data"]["node"]["template"]["owner_api_key"]["value"] is None
+    assert prepared["nodes"][0]["data"]["node"]["template"]["owner_api_key"]["value"] == "sk-owner-secret"
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
 async def test_build_public_tmp_namespaces_caller_session(
     client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
 ):
