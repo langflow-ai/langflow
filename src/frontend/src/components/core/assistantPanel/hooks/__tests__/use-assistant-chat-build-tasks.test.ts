@@ -286,6 +286,143 @@ describe("useAssistantChat — build task list", () => {
     });
   });
 
+  describe("in-progress task lifecycle (tool_start SSE)", () => {
+    const TOOL_START = {
+      event: "tool_start",
+      tool: "add_component",
+      component_type: "ChatInput",
+      label: "Adding ChatInput",
+    };
+
+    it("should_set_in_progress_task_when_tool_start_arrives", async () => {
+      mockPostAssistStream.mockImplementation(
+        async (_req: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onToolStart(TOOL_START);
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+      await act(async () => {
+        await result.current.handleSend("add chatinput", TEST_MODEL);
+      });
+
+      const msg = result.current.messages.find((m) => m.role === "assistant");
+      expect(msg?.inProgressTask).toMatchObject({
+        tool: "add_component",
+        componentType: "ChatInput",
+        label: "Adding ChatInput",
+      });
+    });
+
+    it("should_clear_in_progress_task_when_the_completed_flow_update_arrives", async () => {
+      mockPostAssistStream.mockImplementation(
+        async (_req: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onToolStart(TOOL_START);
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "add_component",
+            node: { id: "ChatInput-abc" },
+            component_type: "ChatInput",
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+      await act(async () => {
+        await result.current.handleSend("add chatinput", TEST_MODEL);
+      });
+
+      const msg = result.current.messages.find((m) => m.role === "assistant");
+      expect(msg?.inProgressTask).toBeUndefined();
+      expect(msg?.buildTasks).toHaveLength(1);
+    });
+
+    it("should_clear_in_progress_task_when_the_run_completes", async () => {
+      mockPostAssistStream.mockImplementation(
+        async (_req: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onToolStart(TOOL_START);
+          callbacks.onComplete({
+            event: "complete",
+            data: { result: "done", validated: true },
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+      await act(async () => {
+        await result.current.handleSend("add chatinput", TEST_MODEL);
+      });
+
+      const msg = result.current.messages.find((m) => m.role === "assistant");
+      expect(msg?.status).toBe("complete");
+      expect(msg?.inProgressTask).toBeUndefined();
+    });
+
+    it("should_keep_in_progress_task_visible_when_the_run_errors", async () => {
+      // The user must see WHERE the agent stopped — the last in-progress
+      // label pairs with the "Error details" expander.
+      mockPostAssistStream.mockImplementation(
+        async (_req: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onToolStart(TOOL_START);
+          callbacks.onError({ event: "error", message: "boom" });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+      await act(async () => {
+        await result.current.handleSend("add chatinput", TEST_MODEL);
+      });
+
+      const msg = result.current.messages.find((m) => m.role === "assistant");
+      expect(msg?.status).toBe("error");
+      expect(msg?.inProgressTask).toMatchObject({ tool: "add_component" });
+    });
+
+    it("should_clear_in_progress_task_when_the_run_is_cancelled", async () => {
+      mockPostAssistStream.mockImplementation(
+        async (_req: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onToolStart(TOOL_START);
+          callbacks.onCancelled({ event: "cancelled", message: "stopped" });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+      await act(async () => {
+        await result.current.handleSend("add chatinput", TEST_MODEL);
+      });
+
+      const msg = result.current.messages.find((m) => m.role === "assistant");
+      expect(msg?.status).toBe("cancelled");
+      expect(msg?.inProgressTask).toBeUndefined();
+    });
+
+    it("should_replace_the_previous_in_progress_task_with_the_latest_tool_start", async () => {
+      mockPostAssistStream.mockImplementation(
+        async (_req: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onToolStart(TOOL_START);
+          callbacks.onToolStart({
+            event: "tool_start",
+            tool: "connect_components",
+            source_id: "ChatInput-abc",
+            target_id: "Agent-xyz",
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+      await act(async () => {
+        await result.current.handleSend("wire it", TEST_MODEL);
+      });
+
+      const msg = result.current.messages.find((m) => m.role === "assistant");
+      expect(msg?.inProgressTask).toMatchObject({
+        tool: "connect_components",
+        sourceId: "ChatInput-abc",
+        targetId: "Agent-xyz",
+      });
+    });
+  });
+
   describe("regression — flow proposal path does NOT add tasks", () => {
     it("should_not_emit_build_task_for_set_flow_event_since_that_is_a_destructive_proposal", async () => {
       // set_flow goes through the Continue/Dismiss gate, not the live
