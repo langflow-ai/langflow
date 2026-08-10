@@ -746,9 +746,14 @@ def test_share_visible_owner_and_creator_always_see():
     assert shares_module._share_visible(row=row, user_id=creator, resource_owner_id=owner, is_team_member=False)
 
 
-def test_share_visible_public_is_visible_to_anyone():
+def test_share_visible_public_is_direct_link_only():
     row = _share(scope=ShareScope.PUBLIC.value, target_id=None, created_by=uuid4())
-    assert shares_module._share_visible(row=row, user_id=uuid4(), resource_owner_id=uuid4(), is_team_member=False)
+    assert not shares_module._share_visible(
+        row=row,
+        user_id=uuid4(),
+        resource_owner_id=uuid4(),
+        is_team_member=False,
+    )
 
 
 def test_share_visible_user_scope_matches_target_only():

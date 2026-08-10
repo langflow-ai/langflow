@@ -7,10 +7,14 @@ the flow is returned to anonymous callers.
 """
 
 import json
+from uuid import UUID
 
 from fastapi import status
 from httpx import AsyncClient
 from langflow.api.utils.core import strip_secret_field_values
+from langflow.services.database.models.auth import AuthzShare, SharePermissionLevel, ShareScope
+from langflow.services.database.models.flow.model import Flow
+from lfx.services.deps import session_scope
 
 
 def _flow_payload() -> dict:
@@ -238,6 +242,43 @@ async def test_public_flow_read_strips_secrets(client: AsyncClient, logged_in_he
     assert template["base_url"]["value"] == "https://api.openai.com/v1", "non-secret field should be preserved"
     assert template["max_tokens"]["value"] == 512, "non-secret token-count field should be preserved"
     assert template["token_count"]["value"] == 42, "non-secret token-count field should be preserved"
+
+
+async def test_public_flow_read_accepts_execute_share_and_revoke_hides_link(client: AsyncClient, logged_in_headers):
+    """An execute-level PUBLIC share includes read, but its deletion immediately hides the direct link."""
+    create_resp = await client.post(
+        "api/v1/flows/", json=json.loads(json.dumps(_flow_payload())), headers=logged_in_headers
+    )
+    assert create_resp.status_code == status.HTTP_201_CREATED
+    flow_id = UUID(create_resp.json()["id"])
+
+    async with session_scope() as session:
+        flow = await session.get(Flow, flow_id)
+        assert flow is not None
+        share = AuthzShare(
+            resource_type="flow",
+            resource_id=flow_id,
+            scope=ShareScope.PUBLIC.value,
+            permission_level=SharePermissionLevel.EXECUTE.value,
+            created_by=flow.user_id,
+        )
+        session.add(share)
+        await session.commit()
+        await session.refresh(share)
+        share_id = share.id
+
+    client.cookies.clear()
+    response = await client.get(f"api/v1/flows/public_flow/{flow_id}")
+    assert response.status_code == status.HTTP_200_OK
+
+    async with session_scope() as session:
+        share = await session.get(AuthzShare, share_id)
+        assert share is not None
+        await session.delete(share)
+        await session.commit()
+
+    response = await client.get(f"api/v1/flows/public_flow/{flow_id}")
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 # ---------------------------------------------------------------------------

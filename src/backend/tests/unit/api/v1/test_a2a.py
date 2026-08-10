@@ -586,6 +586,7 @@ async def test_public_a2a_run_uses_server_sanitized_flow_data(active_user, echo_
 
     async def fake_execute(**kwargs):
         captured["executed_flow_data"] = kwargs["flow"].data
+        captured["execution_principal"] = kwargs["current_user"]
         return expected_response
 
     monkeypatch.setattr(a2a_module, "validate_public_flow_no_code_execution", fake_validate)
@@ -598,6 +599,8 @@ async def test_public_a2a_run_uses_server_sanitized_flow_data(active_user, echo_
     assert captured["validated"] == echo_flow_data
     assert captured["prepared"] == echo_flow_data
     assert captured["executed_flow_data"] == sanitized_data
+    assert captured["execution_principal"].id != active_user.id
+    assert captured["execution_principal"].username == "anonymous-public"
 
 
 async def test_public_a2a_resume_sanitizes_checkpoint_payload(active_user, echo_flow_data, monkeypatch):
@@ -646,6 +649,35 @@ async def test_public_a2a_resume_sanitizes_checkpoint_payload(active_user, echo_
     assert captured["validated"] == echo_flow_data
     assert captured["prepared"] == echo_flow_data
     assert captured["resumed_payload"] == sanitized_data
+
+
+async def test_public_a2a_resume_rechecks_compatibility_grant(active_user, echo_flow_data, monkeypatch):
+    """A resumed anonymous run re-evaluates the current auth_type=none grant before restoring the graph."""
+    from fastapi import HTTPException
+    from langflow.api.v1 import a2a as a2a_module
+    from lfx.graph.checkpoint.schema import GraphCheckpoint
+
+    folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "none"})
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
+    checkpoint = GraphCheckpoint(
+        run_id=str(uuid.uuid4()),
+        flow_id=str(flow_id),
+        flow_payload=echo_flow_data,
+    )
+    calls = []
+
+    async def deny_revoked(*_args, **kwargs):
+        calls.append(kwargs)
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    monkeypatch.setattr(a2a_module, "authorize_public_flow_access", deny_revoked, raising=False)
+
+    with pytest.raises(HTTPException) as excinfo:
+        await a2a_module._prepare_a2a_resume_checkpoint(flow_id, checkpoint)
+
+    assert excinfo.value.status_code == 404
+    assert calls
+    assert str(calls[0]["flow"].id) == str(flow_id)
 
 
 # --- DataPart (structured application/json I/O) ----------------------------
