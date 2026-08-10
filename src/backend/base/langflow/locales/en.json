@@ -6194,7 +6194,7 @@
   "components.unifiedwebsearch.inputs.location.display_name.947e1096": "Location (Geo)",
   "components.unifiedwebsearch.inputs.location.info.a080dc65": "City, state, or country for location-based news. Leave blank for keyword search.",
   "components.unifiedwebsearch.inputs.max_content_length.display_name.f51b36f3": "Max Content Length",
-  "components.unifiedwebsearch.inputs.max_content_length.info.3e1b1c73": "Maximum number of characters kept from each scraped page (Web mode). Set to 0 to keep the full page text.",
+  "components.unifiedwebsearch.inputs.max_content_length.info.3a20d392": "Maximum number of characters kept from each scraped page or feed field. Set to 0 to keep the full text.",
   "components.unifiedwebsearch.inputs.max_results.display_name.32040fb9": "Max Results",
   "components.unifiedwebsearch.inputs.max_results.info.39c677d4": "Maximum number of results to return. Set to 0 to return every result.",
   "components.unifiedwebsearch.inputs.query.display_name.3ad6e0f4": "Search Query",
