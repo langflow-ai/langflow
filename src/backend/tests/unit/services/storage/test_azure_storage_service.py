@@ -209,6 +209,4 @@ async def test_get_file_stream_pins_download_to_blob_etag(mock_session_service, 
     chunks = [chunk async for chunk in service.get_file_stream("legit_flow", "file.txt")]
 
     assert chunks == [b"hello ", b"world"]
-    blob_client.download_blob.assert_called_once_with(
-        etag='"fake-etag"', match_condition=MatchConditions.IfNotModified
-    )
+    blob_client.download_blob.assert_called_once_with(etag='"fake-etag"', match_condition=MatchConditions.IfNotModified)
