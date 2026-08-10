@@ -307,4 +307,5 @@ whitesource/
 
 # Mend
 requirements-mend.txt
+requirements-workspace-mend.txt
 requirements-gp-mend.txt
