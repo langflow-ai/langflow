@@ -121,7 +121,6 @@ describe("McpComponent", () => {
     ).not.toBeInTheDocument();
   });
 
-
   it("keeps the add-server button's own name instead of the field label", () => {
     jest.mocked(useGetMCPServers).mockReturnValue({
       data: [],
