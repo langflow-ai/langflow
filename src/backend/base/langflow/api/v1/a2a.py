@@ -186,6 +186,10 @@ class _FlowContextBuilder(DefaultServerCallContextBuilder):
         # converter). Without this, the same task addressed via two encodings lands in two scopes.
         context.state["flow_id"] = str(UUID(request.path_params["flow_id"]))
         context.state["request_host"] = request.url.hostname
+        # Written only by ``a2a_jsonrpc`` after its auth gate. Never derive this
+        # from headers inside the SDK producer: folder policy can change after
+        # the HTTP handler returns while a background run is still starting.
+        context.state["admitted_user_id"] = getattr(request.state, "a2a_admitted_user_id", None)
         return context
 
 
@@ -196,10 +200,7 @@ async def _is_public_a2a_flow(flow: Flow) -> bool:
 
 
 async def _prepare_a2a_execution_flow(flow: Flow, request_host: str | None = None) -> Flow:
-    """Reauthorize and apply public code policy before an anonymous A2A run."""
-    if not await _is_public_a2a_flow(flow):
-        return flow
-
+    """Reauthorize and apply public code policy after the caller binds the public principal."""
     await authorize_public_flow_access(
         flow=flow,
         action=PublicResourceAction.EXECUTE,
@@ -213,16 +214,34 @@ async def _prepare_a2a_execution_flow(flow: Flow, request_host: str | None = Non
     return flow.model_copy(update={"data": sanitized_data}, deep=True)
 
 
+def _require_admitted_a2a_principal(
+    flow: Flow,
+    *,
+    is_public_now: bool,
+    admitted_user_id: str | None,
+) -> str:
+    """Require mutable folder policy to match the immutable HTTP-gate principal."""
+    current_principal_id = PUBLIC_ANONYMOUS_ACTOR_ID if is_public_now else flow.user_id
+    if current_principal_id is None or admitted_user_id != str(current_principal_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+    return str(current_principal_id)
+
+
 async def _prepare_a2a_resume_checkpoint(
     flow_id: UUID,
     checkpoint: GraphCheckpoint,
     request_host: str | None = None,
+    admitted_user_id: str | None = None,
 ) -> GraphCheckpoint:
     """Reauthorize and re-apply public policy before restoring a HITL graph."""
     flow = await get_flow_by_id_or_endpoint_name(str(flow_id))
     is_public_now = await _is_public_a2a_flow(flow)
-    admitted_user_id = PUBLIC_ANONYMOUS_ACTOR_ID if is_public_now else flow.user_id
-    if admitted_user_id is None or checkpoint.user_id != str(admitted_user_id):
+    current_principal_id = _require_admitted_a2a_principal(
+        flow,
+        is_public_now=is_public_now,
+        admitted_user_id=admitted_user_id,
+    )
+    if checkpoint.user_id != current_principal_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
     if not is_public_now:
         return checkpoint
@@ -246,6 +265,7 @@ async def _run_flow(
     text: str,
     context_id: str | None,
     request_host: str | None = None,
+    admitted_user_id: str | None = None,
 ) -> WorkflowExecutionResponse:
     """Run a flow synchronously through the v2 surface under its admitted principal.
 
@@ -266,7 +286,13 @@ async def _run_flow(
     from langflow.api.v2.workflow import execute_sync_workflow_with_timeout
 
     flow = await get_flow_by_id_or_endpoint_name(str(flow_id))
-    if await _is_public_a2a_flow(flow):
+    is_public_now = await _is_public_a2a_flow(flow)
+    _require_admitted_a2a_principal(
+        flow,
+        is_public_now=is_public_now,
+        admitted_user_id=admitted_user_id,
+    )
+    if is_public_now:
         user = public_execution_user()
         flow = await _prepare_a2a_execution_flow(flow, request_host)
     else:
@@ -343,6 +369,7 @@ async def _resume_flow(
     task_id: str,
     text: str,
     request_host: str | None = None,
+    admitted_user_id: str | None = None,
 ) -> WorkflowExecutionResponse:
     """Resume a HITL run that paused for human input, advancing to the next pause or completion.
 
@@ -366,7 +393,12 @@ async def _resume_flow(
     if checkpoint.flow_id != str(flow_id):
         msg = f"A2A task {task_id} does not belong to flow {flow_id}"
         raise RuntimeError(msg)
-    checkpoint = await _prepare_a2a_resume_checkpoint(flow_id, checkpoint, request_host)
+    checkpoint = await _prepare_a2a_resume_checkpoint(
+        flow_id,
+        checkpoint,
+        request_host,
+        admitted_user_id,
+    )
 
     pending = (checkpoint.pause_context or {}).get("data") or {}
     allowed = pending.get("allowed_decisions") or []
@@ -862,6 +894,9 @@ async def a2a_jsonrpc(flow_id: UUID, request: Request) -> Response:
 
     # apikey-folder flows require a valid owner key here (401); "none" stays public.
     # Runs after the 404 gate, so disabled/non-agent/unknown flows never reach a 401.
-    await _enforce_a2a_auth(flow, request)
+    admitted_user = await _enforce_a2a_auth(flow, request)
+    request.state.a2a_admitted_user_id = str(
+        admitted_user.id if admitted_user is not None else PUBLIC_ANONYMOUS_ACTOR_ID
+    )
 
     return await _DISPATCHER.handle_requests(request)
