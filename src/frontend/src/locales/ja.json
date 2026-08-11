@@ -1969,6 +1969,7 @@
   "sidebar.nav.versionHistory": "バージョン履歴",
   "sidebar.nav.versions": "バージョン",
   "sidebar.newCustomComponent": "新しいカスタムコンポーネント",
+  "sidebar.permissionsPending": "権限を確認しています...",
   "sidebar.noComponentsFound": "コンポーネントが見つかりませんでした。",
   "sidebar.projectCreateError": "プロジェクトを作成できませんでした。",
   "sidebar.projectUploadError": "プロジェクトのアップロード中にエラーが発生しました。既存のプロジェクトにドラッグして追加してみてください。",

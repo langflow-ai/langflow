@@ -1969,6 +1969,7 @@
   "sidebar.nav.versionHistory": "Histórico de versões",
   "sidebar.nav.versions": "Versões",
   "sidebar.newCustomComponent": "Novo componente personalizado",
+  "sidebar.permissionsPending": "Verificando permissões...",
   "sidebar.noComponentsFound": "Não foram encontrados componentes.",
   "sidebar.projectCreateError": "Não foi possível criar o projeto.",
   "sidebar.projectUploadError": "Ocorreu um erro ao enviar seu projeto. Tente arrastá-lo para dentro de um projeto existente.",
