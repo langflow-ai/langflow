@@ -676,7 +676,7 @@ def test_request_azure_ai_foundry_model_entries_returns_catalog_data():
     """Credential validation still probes /models for connectivity."""
     from lfx.base.models import model_utils
 
-    response = MagicMock()
+    response = MagicMock(status_code=200)
     response.json.return_value = {"data": [{"id": "gpt-5-mini-2025-08-07"}]}
 
     with patch.object(model_utils.requests, "get", return_value=response) as mock_get:
@@ -686,7 +686,7 @@ def test_request_azure_ai_foundry_model_entries_returns_catalog_data():
         )
 
     mock_get.assert_called_once_with(
-        "https://example.services.ai.azure.com/openai/v1/models",
+        "https://example.services.ai.azure.com/openai/v1/models?api-version=2025-04-01",
         headers={"api-key": "test-key"},
         timeout=model_utils.AZURE_AI_FOUNDRY_FETCH_TIMEOUT,
         allow_redirects=False,
@@ -694,15 +694,101 @@ def test_request_azure_ai_foundry_model_entries_returns_catalog_data():
     assert entries == [{"id": "gpt-5-mini-2025-08-07"}]
 
 
-def test_request_azure_ai_foundry_model_entries_rejects_malformed_payload():
+@pytest.mark.parametrize(
+    ("endpoint", "expected_url"),
+    [
+        (
+            "https://example.services.ai.azure.com/openai/v1",
+            "https://example.services.ai.azure.com/openai/v1/models?api-version=2025-04-01",
+        ),
+        (
+            "https://example.services.ai.azure.com/api/projects/proj-default",
+            "https://example.services.ai.azure.com/api/projects/proj-default/models?api-version=2025-04-01",
+        ),
+        (
+            "https://example.services.ai.azure.com/models",
+            "https://example.services.ai.azure.com/models?api-version=2025-04-01",
+        ),
+        (
+            "https://example.services.ai.azure.com/models?api-version=2024-05-01-preview",
+            "https://example.services.ai.azure.com/models?api-version=2024-05-01-preview",
+        ),
+    ],
+    ids=["openai-compatible", "project-endpoint", "generic-models-deduped", "existing-api-version-preserved"],
+)
+def test_request_azure_ai_foundry_model_entries_builds_probe_url_for_any_endpoint_form(endpoint, expected_url):
+    """Foundry endpoints are generic: every portal form probes cleanly with an api-version."""
     from lfx.base.models import model_utils
 
-    response = MagicMock()
-    response.json.return_value = {"data": "not-a-list"}
+    response = MagicMock(status_code=200)
+    response.json.return_value = {"data": []}
+
+    with patch.object(model_utils.requests, "get", return_value=response) as mock_get:
+        model_utils.request_azure_ai_foundry_model_entries(endpoint, "test-key")  # pragma: allowlist secret
+
+    assert mock_get.call_args.args[0] == expected_url
+
+
+def test_request_azure_ai_foundry_model_entries_honors_api_version_argument():
+    """AZURE_AI_FOUNDRY_API_VERSION flows through credential validation to the probe."""
+    from lfx.base.models import model_utils
+
+    response = MagicMock(status_code=200)
+    response.json.return_value = {"data": []}
+
+    with patch.object(model_utils.requests, "get", return_value=response) as mock_get:
+        model_utils.request_azure_ai_foundry_model_entries(
+            "https://example.services.ai.azure.com/openai/v1",
+            "test-key",  # pragma: allowlist secret
+            "2024-10-21",
+        )
+
+    assert mock_get.call_args.args[0] == (
+        "https://example.services.ai.azure.com/openai/v1/models?api-version=2024-10-21"
+    )
+
+
+@pytest.mark.parametrize(
+    "failure",
+    ["bad-request", "service-unavailable", "malformed-payload", "invalid-json"],
+    ids=str,
+)
+def test_request_azure_ai_foundry_model_entries_tolerates_non_auth_failures(failure):
+    """No reliable catalog route exists across Foundry shapes: only 401/403 may block a save."""
+    from lfx.base.models import model_utils
+
+    response = MagicMock(status_code=200)
+    response.json.return_value = {"data": []}
+    if failure == "bad-request":
+        response.status_code = 400
+        response.ok = False
+    elif failure == "service-unavailable":
+        response.status_code = 503
+        response.ok = False
+    elif failure == "malformed-payload":
+        response.json.return_value = {"data": "not-a-list"}
+    else:
+        response.json.side_effect = ValueError("No JSON object could be decoded")
+
+    with patch.object(model_utils.requests, "get", return_value=response):
+        entries = model_utils.request_azure_ai_foundry_model_entries(
+            "https://example.services.ai.azure.com/api/projects/proj-default",
+            "test-key",  # pragma: allowlist secret
+        )
+
+    assert entries == []
+
+
+@pytest.mark.parametrize("status_code", [401, 403], ids=["unauthorized", "forbidden"])
+def test_request_azure_ai_foundry_model_entries_raises_on_auth_failure(status_code):
+    from lfx.base.models import model_utils
+
+    response = MagicMock(status_code=status_code, ok=False)
+    response.raise_for_status.side_effect = requests.HTTPError(f"{status_code} auth error", response=response)
 
     with (
         patch.object(model_utils.requests, "get", return_value=response),
-        pytest.raises(TypeError, match="Unexpected Azure AI Foundry /models payload"),
+        pytest.raises(requests.HTTPError),
     ):
         model_utils.request_azure_ai_foundry_model_entries(
             "https://example.services.ai.azure.com/openai/v1",
@@ -756,14 +842,14 @@ def test_validate_model_provider_key_azure_ai_foundry_success():
         )
 
     mock_get.assert_called_once_with(
-        "https://example.services.ai.azure.com/openai/v1/models",
+        "https://example.services.ai.azure.com/openai/v1/models?api-version=2025-04-01",
         headers={"api-key": "test-key"},
         timeout=model_utils.AZURE_AI_FOUNDRY_FETCH_TIMEOUT,
         allow_redirects=False,
     )
 
 
-@pytest.mark.parametrize("failure", ["connection", "timeout", "http", "malformed"], ids=str)
+@pytest.mark.parametrize("failure", ["connection", "timeout", "unauthorized", "forbidden"], ids=str)
 def test_validate_model_provider_key_azure_ai_foundry_rejects_failed_model_listing(failure):
     from types import SimpleNamespace
 
@@ -777,11 +863,14 @@ def test_validate_model_provider_key_azure_ai_foundry_rejects_failed_model_listi
         side_effect = requests.ConnectionError("connection refused")
     elif failure == "timeout":
         side_effect = requests.Timeout("request timed out")
-    elif failure == "http":
-        response.status_code = 503
-        response.raise_for_status.side_effect = requests.HTTPError("503 Service Unavailable", response=response)
+    elif failure == "unauthorized":
+        response.status_code = 401
+        response.ok = False
+        response.raise_for_status.side_effect = requests.HTTPError("401 Unauthorized", response=response)
     else:
-        response.json.return_value = {"data": "not-a-list"}
+        response.status_code = 403
+        response.ok = False
+        response.raise_for_status.side_effect = requests.HTTPError("403 Forbidden", response=response)
 
     fake_chat_models = SimpleNamespace(AzureAIOpenAIApiChatModel=object)
     with (
@@ -803,6 +892,84 @@ def test_validate_model_provider_key_azure_ai_foundry_rejects_failed_model_listi
                 "AZURE_AI_FOUNDRY_ENDPOINT": "https://example.services.ai.azure.com/openai/v1",
             },
         )
+
+
+@pytest.mark.parametrize("failure", ["bad-request", "service-unavailable", "malformed-payload"], ids=str)
+def test_validate_model_provider_key_azure_ai_foundry_tolerates_catalog_less_resources(failure):
+    """Project-scoped resources can 400 the /models probe with valid credentials.
+
+    Only 401/403 may block the credential save; every other listing failure means
+    "no catalog available" and the save proceeds (deployment names are user-typed).
+    """
+    from types import SimpleNamespace
+
+    from lfx.base.models import model_utils
+    from lfx.base.models.unified_models import validate_model_provider_key
+
+    response = MagicMock(status_code=200)
+    response.json.return_value = {"data": []}
+    if failure == "bad-request":
+        response.status_code = 400
+        response.ok = False
+    elif failure == "service-unavailable":
+        response.status_code = 503
+        response.ok = False
+    else:
+        response.json.return_value = {"data": "not-a-list"}
+
+    fake_chat_models = SimpleNamespace(AzureAIOpenAIApiChatModel=object)
+    with (
+        patch.dict(
+            "sys.modules",
+            {
+                "langchain_azure_ai": SimpleNamespace(chat_models=fake_chat_models),
+                "langchain_azure_ai.chat_models": fake_chat_models,
+            },
+        ),
+        patch("lfx.base.models.unified_models.model_catalog.get_unified_models_detailed", return_value=[]),
+        patch.object(model_utils.requests, "get", return_value=response),
+    ):
+        validate_model_provider_key(
+            "Azure AI Foundry",
+            {
+                "AZURE_AI_FOUNDRY_API_KEY": "test-key",  # pragma: allowlist secret
+                "AZURE_AI_FOUNDRY_ENDPOINT": "https://example.services.ai.azure.com/api/projects/proj-default",
+            },
+        )
+
+
+def test_validate_model_provider_key_azure_ai_foundry_passes_api_version_variable():
+    from types import SimpleNamespace
+
+    from lfx.base.models import model_utils
+    from lfx.base.models.unified_models import validate_model_provider_key
+
+    response = MagicMock(status_code=200)
+    response.json.return_value = {"data": []}
+    fake_chat_models = SimpleNamespace(AzureAIOpenAIApiChatModel=object)
+    with (
+        patch.dict(
+            "sys.modules",
+            {
+                "langchain_azure_ai": SimpleNamespace(chat_models=fake_chat_models),
+                "langchain_azure_ai.chat_models": fake_chat_models,
+            },
+        ),
+        patch("lfx.base.models.unified_models.model_catalog.get_unified_models_detailed", return_value=[]),
+        patch.object(model_utils.requests, "get", return_value=response) as mock_get,
+    ):
+        validate_model_provider_key(
+            "Azure AI Foundry",
+            {
+                "AZURE_AI_FOUNDRY_API_KEY": "test-key",  # pragma: allowlist secret
+                "AZURE_AI_FOUNDRY_ENDPOINT": "https://example.services.ai.azure.com/openai/v1",
+                "AZURE_AI_FOUNDRY_API_VERSION": "2024-10-21",
+            },
+        )
+
+    assert mock_get.call_args.args[0] == (
+        "https://example.services.ai.azure.com/openai/v1/models?api-version=2024-10-21"
+    )
 
 
 def _build_azure_ai_foundry_model_selection() -> list[dict]:

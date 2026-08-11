@@ -3,7 +3,7 @@ import hashlib
 import re
 import time
 from typing import Any
-from urllib.parse import urljoin, urlparse
+from urllib.parse import parse_qs, urlencode, urljoin, urlparse, urlunparse
 from uuid import UUID
 
 import httpx
@@ -34,6 +34,8 @@ from lfx.utils.ssrf_protection import SSRFProtectionError, validate_connector_ur
 from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
+HTTP_STATUS_UNAUTHORIZED = 401
+HTTP_STATUS_FORBIDDEN = 403
 MIN_DEFAULT_MODELS = 5
 
 # Ollama model lists are cached in-process for a short window so that:
@@ -511,21 +513,65 @@ AZURE_AI_FOUNDRY_FETCH_TIMEOUT = 10.0
 AZURE_AI_FOUNDRY_REQUEST_TIMEOUT = AZURE_AI_FOUNDRY_FETCH_TIMEOUT
 
 
-def request_azure_ai_foundry_model_entries(endpoint: str, api_key: str) -> list[dict]:
-    """Probe Foundry /models for credential validation (catalog, not deployments)."""
+# Default api-version for the /models credential-validation probe. Per Microsoft's
+# Azure AI Model Inference REST API reference, which uses this value in every example:
+# https://learn.microsoft.com/en-us/rest/api/aifoundry/modelinference/
+# Overridable per user via the AZURE_AI_FOUNDRY_API_VERSION variable.
+AZURE_AI_FOUNDRY_MODELS_PROBE_API_VERSION = "2025-04-01"
+
+
+def _azure_ai_foundry_models_probe_url(endpoint: str, api_version: str | None = None) -> str:
+    """Build the Foundry ``/models`` probe URL from any configured endpoint form.
+
+    Foundry hands out several endpoint shapes (OpenAI-compatible ``…/openai/v1``,
+    generic inference ``…/models``, project ``…/api/projects/<name>``), so this
+    merges the ``/models`` segment with proper URL parsing — deduping when the
+    endpoint already ends in one — instead of naive string concatenation, and
+    ensures an ``api-version`` query parameter (Azure requires one on most
+    shapes), preserving any already present in the endpoint, else applying
+    *api_version* (the AZURE_AI_FOUNDRY_API_VERSION variable) or the probe
+    default.
+    """
+    parsed = urlparse(endpoint.strip())
+    segments = [segment for segment in parsed.path.split("/") if segment]
+    if not segments or segments[-1] != "models":
+        segments = [*segments, "models"]
+    new_path = "/" + "/".join(segments)
+    query = parse_qs(parsed.query, keep_blank_values=True)
+    if "api-version" not in query:
+        query["api-version"] = [api_version or AZURE_AI_FOUNDRY_MODELS_PROBE_API_VERSION]
+    return urlunparse((parsed.scheme, parsed.netloc, new_path, parsed.params, urlencode(query, doseq=True), ""))
+
+
+def request_azure_ai_foundry_model_entries(endpoint: str, api_key: str, api_version: str | None = None) -> list[dict]:
+    """Probe Foundry /models for credential validation (catalog, not deployments).
+
+    Only 401/403 — genuinely bad credentials — raise. Azure has no reliable
+    catalog route across Foundry resource shapes (project-scoped endpoints can
+    return 400 BadRequest with valid credentials and a correct api-version), so
+    any other non-2xx response or unexpected payload degrades to an empty
+    catalog instead of blocking the credential save. Connection errors and
+    timeouts still propagate: an unreachable endpoint is a real
+    misconfiguration the save should surface.
+    """
+    probe_url = _azure_ai_foundry_models_probe_url(endpoint, api_version)
     response = requests.get(
-        f"{endpoint.rstrip('/')}/models",
+        probe_url,
         headers={"api-key": api_key},
         timeout=AZURE_AI_FOUNDRY_FETCH_TIMEOUT,
         allow_redirects=False,
     )
-    response.raise_for_status()
-    payload = response.json()
+    if response.status_code in (HTTP_STATUS_UNAUTHORIZED, HTTP_STATUS_FORBIDDEN):
+        response.raise_for_status()
+    if not response.ok:
+        logger.debug(f"Azure AI Foundry /models probe returned {response.status_code}; treating catalog as empty")
+        return []
+    try:
+        payload = response.json()
+    except ValueError:
+        return []
     raw_models = payload.get("data") if isinstance(payload, dict) else None
-    if not isinstance(raw_models, list):
-        msg = f"Unexpected Azure AI Foundry /models payload (data is {type(raw_models).__name__})"
-        raise TypeError(msg)
-    return raw_models
+    return raw_models if isinstance(raw_models, list) else []
 
 
 def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:

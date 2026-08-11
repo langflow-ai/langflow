@@ -629,11 +629,12 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
 
             api_key = variables.get("AZURE_AI_FOUNDRY_API_KEY")
             endpoint = variables.get("AZURE_AI_FOUNDRY_ENDPOINT")
+            api_version = variables.get("AZURE_AI_FOUNDRY_API_VERSION")
             if not api_key or not endpoint:
                 return
             try:
                 # Validate connection without requiring a seed catalog model name.
-                request_azure_ai_foundry_model_entries(endpoint, api_key)
+                request_azure_ai_foundry_model_entries(endpoint, api_key, api_version)
             except Exception as e:
                 msg = f"Could not validate Azure AI Foundry credentials: {e!s}"
                 logger.warning(msg)
