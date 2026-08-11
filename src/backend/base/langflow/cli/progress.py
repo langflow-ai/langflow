@@ -24,28 +24,43 @@ class ProgressIndicator:
         self.running = False
         self._stop_animation = False
         self._animation_thread: threading.Thread | None = None
+        # Only animate on an interactive terminal. Under captured stdout
+        # (container logs, CI, pipes) the spinner's carriage-return frames turn
+        # into noise, so there we print a single clean line per step instead.
+        self._interactive = bool(getattr(sys.stdout, "isatty", lambda: False)())
 
         # Use Windows-safe characters on Windows to prevent encoding issues
         if platform.system() == "Windows":
             self._animation_chars = ["-", "\\", "|", "/"]  # ASCII spinner
             self._success_icon = "+"  # ASCII plus sign
             self._failure_icon = "x"  # ASCII x
+            self._warning_icon = "!"  # ASCII bang
             self._farewell_emoji = ":)"  # ASCII smiley
         else:
             self._animation_chars = ["□", "▢", "▣", "■"]  # Unicode squares
             self._success_icon = "✓"  # Unicode checkmark
             self._failure_icon = "✗"  # Unicode cross
+            self._warning_icon = "⚠"  # Unicode warning sign
             self._farewell_emoji = "👋"  # Unicode wave
 
         self._animation_index = 0
 
-    def add_step(self, title: str, description: str = "") -> None:
-        """Add a step to the progress indicator."""
+    def add_step(self, title: str, description: str = "", *, indent: str = "") -> None:
+        """Add a step to the progress indicator.
+
+        Args:
+            title: The step label shown while animating and after completion.
+            description: Optional longer description (shown in verbose summaries).
+            indent: Optional leading whitespace prefix, used to render grouped/
+                nested step lists (e.g. the production preflight checks).
+        """
         self.steps.append(
             {
                 "title": title,
                 "description": description,
-                "status": "pending",  # pending, running, completed, failed
+                "indent": indent,
+                "detail": "",
+                "status": "pending",  # pending, running, completed, failed, warning
                 "start_time": None,
                 "end_time": None,
             }
@@ -66,7 +81,7 @@ class ProgressIndicator:
             animation_char = self._animation_chars[self._animation_index]
 
             # Print the step with animation
-            line = f"{animation_char} {step['title']}..."
+            line = f"{step.get('indent', '')}{animation_char} {step['title']}..."
             sys.stdout.write(line)
             sys.stdout.flush()
 
@@ -88,18 +103,41 @@ class ProgressIndicator:
         self.running = True
         self._stop_animation = False
 
-        # Start animation in a separate thread
-        self._animation_thread = threading.Thread(target=self._animate_step, args=(step_index,))
-        self._animation_thread.daemon = True
-        self._animation_thread.start()
+        # Start animation in a separate thread (interactive terminals only).
+        if self._interactive:
+            self._animation_thread = threading.Thread(target=self._animate_step, args=(step_index,))
+            self._animation_thread.daemon = True
+            self._animation_thread.start()
+        else:
+            self._animation_thread = None
 
-    def complete_step(self, step_index: int, *, success: bool = True) -> None:
-        """Complete a step and stop its animation."""
+    def complete_step(
+        self,
+        step_index: int,
+        *,
+        success: bool = True,
+        status: str | None = None,
+        detail: str = "",
+    ) -> None:
+        """Complete a step and stop its animation.
+
+        Args:
+            step_index: Index of the step to complete.
+            success: Legacy flag; maps to "completed"/"failed" when ``status`` is None.
+            status: Explicit terminal status, one of "completed", "failed", "warning".
+                Takes precedence over ``success`` when provided.
+            detail: Optional trailing detail (e.g. "reachable (db:5432)") shown dimmed
+                after the title.
+        """
         if step_index >= len(self.steps):
             return
 
+        if status is None:
+            status = "completed" if success else "failed"
+
         step = self.steps[step_index]
-        step["status"] = "completed" if success else "failed"
+        step["status"] = status
+        step["detail"] = detail
         step["end_time"] = time.time()
 
         # Stop animation
@@ -109,15 +147,25 @@ class ProgressIndicator:
 
         self.running = False
 
-        # Clear the current line and print final result
-        sys.stdout.write("\r")
+        # On an interactive terminal, return to line start and clear to
+        # end-of-line so a shorter final line never leaves trailing characters
+        # from the longer "title..." animation. Under captured stdout there is
+        # no animation line to clear, so emit nothing (avoids literal escape
+        # codes in logs).
+        if self._interactive:
+            sys.stdout.write("\r\033[K")
 
-        if success:
-            icon = click.style(self._success_icon, fg="green", bold=True)
-            title = click.style(step["title"], fg="green")
-        else:
+        if status == "warning":
+            icon = click.style(self._warning_icon, fg="yellow", bold=True)
+            title = click.style(step["title"], fg="yellow")
+        elif status == "failed":
             icon = click.style(self._failure_icon, fg="red", bold=True)
             title = click.style(step["title"], fg="red")
+        else:
+            icon = click.style(self._success_icon, fg="green", bold=True)
+            title = click.style(step["title"], fg="green")
+
+        detail_str = click.style(f"  {detail}", fg="bright_black") if detail else ""
 
         duration = ""
         if step["start_time"] and step["end_time"]:
@@ -125,7 +173,7 @@ class ProgressIndicator:
             if self.verbose and elapsed > MIN_DURATION_THRESHOLD:  # Only show duration if verbose and > 100ms
                 duration = click.style(f" ({elapsed:.2f}s)", fg="bright_black")
 
-        line = f"{icon} {title}{duration}"
+        line = f"{step.get('indent', '')}{icon} {title}{detail_str}{duration}"
         click.echo(line)
 
     def fail_step(self, step_index: int, error_msg: str = "") -> None:

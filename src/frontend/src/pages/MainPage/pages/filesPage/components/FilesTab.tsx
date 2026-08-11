@@ -2,7 +2,6 @@ import type {
   CellKeyDownEvent,
   ColDef,
   NewValueParams,
-  SelectionChangedEvent,
 } from "ag-grid-community";
 import type { AgGridReact } from "ag-grid-react";
 import { useEffect, useMemo, useRef } from "react";
@@ -10,9 +9,8 @@ import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
-import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
+import DataTableTab from "@/components/core/dataTableTabComponent";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import Loading from "@/components/ui/loading";
 import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
 import { useDeleteFilesV2 } from "@/controllers/API/queries/file-management/use-delete-files";
@@ -122,18 +120,6 @@ const FilesTab = ({
       setSelectedFiles([]);
     }
   }, [files, setQuantitySelected, setSelectedFiles]);
-
-  const handleSelectionChanged = (event: SelectionChangedEvent) => {
-    const selectedRows = event.api.getSelectedRows();
-    setSelectedFiles(selectedRows);
-    if (selectedRows.length > 0) {
-      setQuantitySelected(selectedRows.length);
-    } else {
-      setTimeout(() => {
-        setQuantitySelected(0);
-      }, 300);
-    }
-  };
 
   // AG Grid navigates cell-by-cell and never focuses the action button inside a
   // cell, so keyboard users can't open the row actions menu. Open it when
@@ -379,122 +365,104 @@ const FilesTab = ({
     );
   }, []);
 
+  const isLoadingFiles = !files || !Array.isArray(files);
+  const sortedFiles = isLoadingFiles
+    ? []
+    : files.sort((a, b) => {
+        return sortByDate(
+          a.updated_at ?? a.created_at,
+          b.updated_at ?? b.created_at,
+        );
+      });
+
   return (
-    <div className="flex h-full flex-col">
-      {files && files.length !== 0 ? (
-        <div className="flex justify-between">
-          <div className="flex w-full xl:w-5/12">
-            <Input
-              icon="Search"
-              data-testid="search-store-input"
-              type="text"
-              placeholder={t("files.searchFiles")}
-              className="mr-2 w-full"
-              value={quickFilterText || ""}
-              onChange={(event) => {
-                setQuickFilterText(event.target.value);
-              }}
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            {quantitySelected > 0 ? (
-              <DeleteConfirmationModal
-                asChild
-                onConfirm={handleDelete}
-                description={"file" + (quantitySelected > 1 ? "s" : "")}
-              >
-                <Button
-                  variant="destructive"
-                  className="flex items-center gap-2 !px-3 font-semibold md:!px-4 md:!pl-3.5"
-                  loading={isDeleting}
-                  data-testid="bulk-delete-btn"
-                  aria-label={t("files.deleteSelected", {
-                    count: quantitySelected,
-                  })}
-                >
-                  <ForwardedIconComponent name="Trash2" className="h-4 w-4" />
-                  <span className="hidden whitespace-nowrap md:inline">
-                    {t("files.deleteSelected", { count: quantitySelected })}
-                  </span>
-                </Button>
-              </DeleteConfirmationModal>
-            ) : (
-              UploadButtonComponent
-            )}
+    <DataTableTab<FileType>
+      columnDefs={colDefs}
+      rowData={sortedFiles}
+      isLoading={isLoadingFiles}
+      loadingState={
+        <div className="flex h-full flex-col">
+          <div className="flex h-full flex-col py-4">
+            <div className="flex h-full w-full items-center justify-center">
+              <Loading />
+            </div>
           </div>
         </div>
-      ) : (
-        <></>
-      )}
-
-      <div className="flex h-full flex-col py-4">
-        {!files || !Array.isArray(files) ? (
-          <div className="flex h-full w-full items-center justify-center">
-            <Loading />
+      }
+      emptyState={
+        <div className="flex h-full flex-col">
+          <div className="flex h-full flex-col py-4">
+            <CardsWrapComponent
+              onFileDrop={onFileDrop}
+              dragMessage={t("files.dropToUpload")}
+            >
+              <div className="flex h-full w-full flex-col items-center justify-center gap-8 pb-8">
+                <div className="flex flex-col items-center gap-2">
+                  <h3 className="text-2xl font-semibold">
+                    {t("files.noFiles")}
+                  </h3>
+                  <p className="text-lg text-secondary-foreground">
+                    {t("files.emptyDescription")}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {UploadButtonComponent}
+                </div>
+              </div>
+            </CardsWrapComponent>
           </div>
-        ) : files.length > 0 ? (
-          <DragWrapComponent onFileDrop={onFileDrop}>
-            <div className="relative h-full">
-              <TableComponent
-                rowHeight={45}
-                headerHeight={45}
-                cellSelection={false}
-                tableOptions={{
-                  hide_options: true,
-                }}
-                suppressRowClickSelection={!isShiftPressed}
-                editable={[
-                  {
-                    field: "name",
-                    onUpdate: handleRename,
-                    editableCell: true,
-                  },
-                ]}
-                rowSelection="multiple"
-                onSelectionChanged={handleSelectionChanged}
-                onCellKeyDown={handleCellKeyDown}
-                columnDefs={colDefs}
-                rowData={files.sort((a, b) => {
-                  return sortByDate(
-                    a.updated_at ?? a.created_at,
-                    b.updated_at ?? b.created_at,
-                  );
+        </div>
+      }
+      searchPlaceholder={t("files.searchFiles")}
+      searchInputTestId="search-store-input"
+      searchInputClassName="mr-2"
+      quickFilterText={quickFilterText}
+      setQuickFilterText={setQuickFilterText}
+      toolbarActions={
+        <div className="flex items-center gap-2">
+          {quantitySelected > 0 ? (
+            <DeleteConfirmationModal
+              asChild
+              onConfirm={handleDelete}
+              description={"file" + (quantitySelected > 1 ? "s" : "")}
+            >
+              <Button
+                variant="destructive"
+                className="flex items-center gap-2 !px-3 font-semibold md:!px-4 md:!pl-3.5"
+                loading={isDeleting}
+                data-testid="bulk-delete-btn"
+                aria-label={t("files.deleteSelected", {
+                  count: quantitySelected,
                 })}
-                className={cn(
-                  "ag-no-border group w-full",
-                  isShiftPressed && quantitySelected > 0 && "no-select-cells",
-                )}
-                pagination
-                ref={tableRef}
-                quickFilterText={quickFilterText}
-                gridOptions={{
-                  stopEditingWhenCellsLoseFocus: true,
-                  ensureDomOrder: true,
-                  colResizeDefault: "shift",
-                }}
-              />
-            </div>
-          </DragWrapComponent>
-        ) : (
-          <CardsWrapComponent
-            onFileDrop={onFileDrop}
-            dragMessage={t("files.dropToUpload")}
-          >
-            <div className="flex h-full w-full flex-col items-center justify-center gap-8 pb-8">
-              <div className="flex flex-col items-center gap-2">
-                <h3 className="text-2xl font-semibold">{t("files.noFiles")}</h3>
-                <p className="text-lg text-secondary-foreground">
-                  {t("files.emptyDescription")}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                {UploadButtonComponent}
-              </div>
-            </div>
-          </CardsWrapComponent>
-        )}
-      </div>
-    </div>
+              >
+                <ForwardedIconComponent name="Trash2" className="h-4 w-4" />
+                <span className="hidden whitespace-nowrap md:inline">
+                  {t("files.deleteSelected", { count: quantitySelected })}
+                </span>
+              </Button>
+            </DeleteConfirmationModal>
+          ) : (
+            UploadButtonComponent
+          )}
+        </div>
+      }
+      setSelectedRows={setSelectedFiles}
+      setQuantitySelected={setQuantitySelected}
+      quantitySelected={quantitySelected}
+      isShiftPressed={isShiftPressed}
+      tableRef={tableRef}
+      editable={[
+        {
+          field: "name",
+          onUpdate: handleRename,
+          editableCell: true,
+        },
+      ]}
+      onCellKeyDown={handleCellKeyDown}
+      renderTableWrapper={(table) => (
+        <DragWrapComponent onFileDrop={onFileDrop}>{table}</DragWrapComponent>
+      )}
+    />
   );
 };
 
