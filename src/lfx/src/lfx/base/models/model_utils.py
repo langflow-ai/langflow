@@ -1,11 +1,14 @@
 import asyncio
+import hashlib
+import re
 import time
 from typing import Any
-from urllib.parse import urljoin, urlparse
+from urllib.parse import parse_qs, urlencode, urljoin, urlparse, urlunparse
 from uuid import UUID
 
 import httpx
 import requests
+from cachetools import TTLCache
 
 from lfx.base.models.model_metadata import (
     CONDITIONAL_LIVE_MODEL_PROVIDERS,
@@ -31,6 +34,9 @@ from lfx.utils.ssrf_protection import SSRFProtectionError, validate_connector_ur
 from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
+HTTP_STATUS_MULTIPLE_CHOICES = 300
+HTTP_STATUS_UNAUTHORIZED = 401
+HTTP_STATUS_FORBIDDEN = 403
 MIN_DEFAULT_MODELS = 5
 
 # Ollama model lists are cached in-process for a short window so that:
@@ -508,6 +514,14 @@ AZURE_AI_FOUNDRY_FETCH_TIMEOUT = 10.0
 AZURE_AI_FOUNDRY_REQUEST_TIMEOUT = AZURE_AI_FOUNDRY_FETCH_TIMEOUT
 
 
+# Default api-version for the /models credential-validation probe. Per Microsoft's
+# Azure AI Model Inference REST API reference, which uses this value in every example:
+# https://learn.microsoft.com/en-us/rest/api/aifoundry/modelinference/
+# Overridable per user via the AZURE_AI_FOUNDRY_API_VERSION variable.
+AZURE_AI_FOUNDRY_MODELS_PROBE_API_VERSION = "2025-04-01"
+_AZURE_AI_FOUNDRY_OPENAI_MODELS_API_VERSIONS = frozenset({"v1", "preview"})
+
+
 def normalize_azure_ai_foundry_endpoint(endpoint: str) -> str:
     """Map a pasted Foundry *project* endpoint to the OpenAI-compatible endpoint.
 
@@ -532,22 +546,73 @@ def normalize_azure_ai_foundry_endpoint(endpoint: str) -> str:
     return normalized
 
 
-def request_azure_ai_foundry_model_entries(endpoint: str, api_key: str) -> list[dict]:
-    """Probe Foundry /models for credential validation (catalog, not deployments)."""
+def _azure_ai_foundry_models_probe_url(endpoint: str, api_version: str | None = None) -> str:
+    """Build the Foundry ``/models`` probe URL from any configured endpoint form.
+
+    Foundry hands out several endpoint shapes (OpenAI-compatible ``…/openai/v1``,
+    generic inference ``…/models``, project ``…/api/projects/<name>``), so this
+    merges the ``/models`` segment with proper URL parsing — deduping when the
+    endpoint already ends in one — instead of naive string concatenation.
+
+    Generic Model Inference routes receive the configured dated API version (or
+    the probe default). The OpenAI v1 route is already path-versioned and accepts
+    only ``v1`` or ``preview`` query values, so dated versions are omitted there.
+    """
+    parsed = urlparse(endpoint.strip())
+    segments = [segment for segment in parsed.path.split("/") if segment]
+    if not segments or segments[-1] != "models":
+        segments = [*segments, "models"]
+    new_path = "/" + "/".join(segments)
+    query = parse_qs(parsed.query, keep_blank_values=True)
+    existing_versions = [value for value in query.get("api-version", []) if value]
+    is_openai_v1 = [segment.lower() for segment in segments[-3:]] == ["openai", "v1", "models"]
+    if is_openai_v1:
+        compatible_versions = [
+            value for value in existing_versions if value in _AZURE_AI_FOUNDRY_OPENAI_MODELS_API_VERSIONS
+        ]
+        if compatible_versions:
+            query["api-version"] = compatible_versions
+        elif api_version in _AZURE_AI_FOUNDRY_OPENAI_MODELS_API_VERSIONS:
+            query["api-version"] = [api_version]
+        else:
+            query.pop("api-version", None)
+    elif not existing_versions:
+        query["api-version"] = [api_version or AZURE_AI_FOUNDRY_MODELS_PROBE_API_VERSION]
+    else:
+        query["api-version"] = existing_versions
+    return urlunparse((parsed.scheme, parsed.netloc, new_path, parsed.params, urlencode(query, doseq=True), ""))
+
+
+def request_azure_ai_foundry_model_entries(endpoint: str, api_key: str, api_version: str | None = None) -> list[dict]:
+    """Probe Foundry /models for credential validation (catalog, not deployments).
+
+    Pasted project endpoints are first normalized to the OpenAI-compatible form
+    (``normalize_azure_ai_foundry_endpoint``). Only 401/403 — genuinely bad
+    credentials — raise. Azure has no reliable catalog route across Foundry
+    resource shapes (project-scoped endpoints can return 400 BadRequest with
+    valid credentials and a correct api-version), so any other non-2xx response
+    or unexpected payload degrades to an empty catalog instead of blocking the
+    credential save. Connection errors and timeouts still propagate: an
+    unreachable endpoint is a real misconfiguration the save should surface.
+    """
     endpoint = normalize_azure_ai_foundry_endpoint(endpoint)
-    response = requests.get(
-        f"{endpoint.rstrip('/')}/models",
+    probe_url = _azure_ai_foundry_models_probe_url(endpoint, api_version)
+    response = ssrf_safe_httpx_get(
+        probe_url,
         headers={"api-key": api_key},
         timeout=AZURE_AI_FOUNDRY_FETCH_TIMEOUT,
-        allow_redirects=False,
     )
-    response.raise_for_status()
-    payload = response.json()
+    if response.status_code in (HTTP_STATUS_UNAUTHORIZED, HTTP_STATUS_FORBIDDEN):
+        response.raise_for_status()
+    if not HTTP_STATUS_OK <= response.status_code < HTTP_STATUS_MULTIPLE_CHOICES:
+        logger.debug(f"Azure AI Foundry /models probe returned {response.status_code}; treating catalog as empty")
+        return []
+    try:
+        payload = response.json()
+    except ValueError:
+        return []
     raw_models = payload.get("data") if isinstance(payload, dict) else None
-    if not isinstance(raw_models, list):
-        msg = f"Unexpected Azure AI Foundry /models payload (data is {type(raw_models).__name__})"
-        raise TypeError(msg)
-    return raw_models
+    return raw_models if isinstance(raw_models, list) else []
 
 
 def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
@@ -602,10 +667,254 @@ def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: 
     ]
 
 
+# Default api-version for the resource-level deployments listing, overridable per user
+# via the AZURE_AI_FOUNDRY_API_VERSION variable (see _azure_ai_foundry_api_version).
+# The route is data-plane; Microsoft docs steer new integrations to the ARM management
+# plane (which needs Entra auth plus subscription/resource-group context this provider
+# doesn't collect), but this api-version still answers with data[].{id,model,status} —
+# verified live against a real Foundry resource (2026-08-11). If Azure ever retires it,
+# the fetch degrades to the static seed catalog like every other failure mode here.
+AZURE_AI_FOUNDRY_DEPLOYMENTS_API_VERSION = "2023-03-15-preview"
+
+# api-version values are URL query components; anything outside this shape is ignored
+# in favor of the default so a variable value can't smuggle extra query parameters.
+_AZURE_AI_FOUNDRY_API_VERSION_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9.\-]*")
+
+
+def _azure_ai_foundry_api_version(user_id: UUID | str | None) -> str:
+    """Deployments-listing api-version: the user's AZURE_AI_FOUNDRY_API_VERSION, else the default."""
+    configured = get_provider_variable_value(user_id, "AZURE_AI_FOUNDRY_API_VERSION")
+    configured = configured.strip() if configured else ""
+    if not configured:
+        return AZURE_AI_FOUNDRY_DEPLOYMENTS_API_VERSION
+    if not _AZURE_AI_FOUNDRY_API_VERSION_PATTERN.fullmatch(configured):
+        logger.warning(
+            f"Ignoring invalid AZURE_AI_FOUNDRY_API_VERSION; using {AZURE_AI_FOUNDRY_DEPLOYMENTS_API_VERSION}"
+        )
+        return AZURE_AI_FOUNDRY_DEPLOYMENTS_API_VERSION
+    return configured
+
+
+# Live discovery sends the api-key header to the derived URL, so destinations are pinned
+# to Azure AI Foundry / Azure OpenAI hosts (public, US Government, and China clouds): a
+# rewritten endpoint variable must not be able to redirect the key to an arbitrary
+# collector. Custom gateway domains (e.g. APIM fronting) simply keep the static seed
+# catalog + free-text enables.
+_AZURE_AI_FOUNDRY_HOST_SUFFIXES = (
+    ".services.ai.azure.com",
+    ".openai.azure.com",
+    ".cognitiveservices.azure.com",
+    ".services.ai.azure.us",
+    ".openai.azure.us",
+    ".cognitiveservices.azure.us",
+    ".services.ai.azure.cn",
+    ".openai.azure.cn",
+    ".cognitiveservices.azure.cn",
+)
+
+# Reasoning-capable families, matched against the deployment's underlying model id:
+# the o-series (o1 / o3-mini / o4-mini / …) and gpt-5 family prefixes, plus
+# DeepSeek-R1 variants and explicitly reasoning-suffixed models (e.g.
+# Phi-4-reasoning) anywhere in the id.
+_AZURE_AI_FOUNDRY_REASONING_PATTERN = re.compile(r"^o\d|^gpt-5|deepseek-r1|reasoning")
+
+# Chat families Microsoft's Foundry capability table documents WITHOUT tool calling
+# (e.g. DeepSeek-R1, the Phi family, Codestral): they stay in the LLM picker but must
+# not surface in tool-filtered (Agent) pickers. Unknown models keep tool_calling=True
+# — matching free-text enables and the other live providers — so new tool-capable
+# catalog additions aren't silently banned from Agents.
+_AZURE_AI_FOUNDRY_NO_TOOL_CHAT_MODEL_MARKERS = (
+    "deepseek-r1",
+    "phi-",
+    "codestral",
+)
+
+# Deployments the unified chat/embedding classes cannot drive: image, audio, and video
+# models plus the legacy completions-only families (chat_completion=false in Azure's
+# /models capability metadata — e.g. curie). Matched as substrings of the underlying
+# model id AFTER the embeddings check, so text-embedding-ada-002 classifies as
+# embeddings before "ada" reads as legacy. Deliberately no bare "instruct" marker:
+# Foundry-hosted open chat models are routinely named *-Instruct (Llama, Phi, Mistral).
+_AZURE_AI_FOUNDRY_NON_CHAT_MODEL_MARKERS = (
+    "dall-e",
+    "dalle",
+    "gpt-image",
+    "whisper",
+    "tts",
+    "sora",
+    "babbage",
+    "curie",
+    "cushman",
+    "davinci",
+    "ada",
+    "gpt-35-turbo-instruct",
+    "gpt-3.5-turbo-instruct",
+)
+
+# The llm and embeddings picker reads land back-to-back on the same resource, so raw
+# deployment entries are memoized briefly: one upstream round-trip per pair — and one
+# timeout, not two sequential ones, when the resource is unreachable (failures cache
+# as None for the same TTL). TTLCache evicts expired and overflow entries (a plain
+# dict would retain every key ever seen for the process lifetime), and the key
+# carries a SHA-256 fingerprint of the credential — the plaintext api-key must never
+# be retained in the cache.
+_AZURE_AI_FOUNDRY_DEPLOYMENTS_TTL_SECONDS = 30.0
+_AZURE_AI_FOUNDRY_DEPLOYMENTS_CACHE_MAXSIZE = 128
+_azure_ai_foundry_deployments_cache: TTLCache = TTLCache(
+    maxsize=_AZURE_AI_FOUNDRY_DEPLOYMENTS_CACHE_MAXSIZE,
+    ttl=_AZURE_AI_FOUNDRY_DEPLOYMENTS_TTL_SECONDS,
+)
+
+
+def _azure_ai_foundry_cache_key(deployments_url: str, api_key: str) -> tuple[str, str]:
+    """Cache identity without credential retention: URL plus a non-reversible key fingerprint."""
+    return (deployments_url, hashlib.sha256(api_key.encode()).hexdigest())
+
+
+def _fetch_azure_ai_foundry_deployment_entries(deployments_url: str, api_key: str) -> list[dict] | None:
+    """Return the raw deployment entries (briefly memoized), or None when the listing failed."""
+    key = _azure_ai_foundry_cache_key(deployments_url, api_key)
+    try:
+        cached = _azure_ai_foundry_deployments_cache[key]
+    except KeyError:
+        pass
+    else:
+        return list(cached) if cached is not None else None
+
+    entries: list[dict] | None
+    try:
+        response = ssrf_safe_httpx_get(
+            deployments_url,
+            headers={"api-key": api_key},
+            timeout=AZURE_AI_FOUNDRY_FETCH_TIMEOUT,
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except (SSRFProtectionError, httpx.HTTPError, httpx.InvalidURL, ValueError) as exc:
+        logger.debug(f"Could not fetch live Azure AI Foundry deployments from {deployments_url}: {exc}")
+        entries = None
+    else:
+        data = payload.get("data") if isinstance(payload, dict) else None
+        if isinstance(data, list):
+            entries = data
+        else:
+            logger.debug(
+                f"Unexpected Azure AI Foundry deployments payload from {deployments_url}; keeping static catalog"
+            )
+            entries = None
+
+    _azure_ai_foundry_deployments_cache[key] = entries
+    return list(entries) if entries is not None else None
+
+
+def _azure_ai_foundry_deployments_url(endpoint: str, api_version: str) -> str | None:
+    """Derive the resource-level deployments listing URL from the configured endpoint.
+
+    ``AZURE_AI_FOUNDRY_ENDPOINT`` may hold any endpoint form the Foundry portal
+    hands out — the OpenAI-compatible endpoint
+    (``https://<resource>.services.ai.azure.com/openai/v1``), the generic Azure AI
+    inference endpoint (``…/models``), or a pasted *project* endpoint
+    (``…/api/projects/<name>``). Only the host matters here: the deployments
+    listing hangs off the resource base as
+    ``{resource}/openai/deployments?api-version=…``, where ``/openai/`` is the
+    resource data-plane's route prefix (legacy Azure OpenAI naming), not a filter
+    to OpenAI-family models — the listing covers the resource's deployments.
+    Returns ``None`` — and the caller keeps the static catalog — unless the
+    endpoint is a plain HTTPS URL (no userinfo, no explicit port) on a known
+    Azure Foundry host (``_AZURE_AI_FOUNDRY_HOST_SUFFIXES``).
+    """
+    parsed = urlparse(endpoint)
+    try:
+        port = parsed.port
+    except ValueError:
+        return None
+    hostname = (parsed.hostname or "").lower()
+    if (
+        parsed.scheme != "https"
+        or parsed.username is not None
+        or parsed.password is not None
+        or port is not None
+        or not hostname.endswith(_AZURE_AI_FOUNDRY_HOST_SUFFIXES)
+    ):
+        return None
+    return f"https://{hostname}/openai/deployments?api-version={api_version}"
+
+
 def fetch_live_azure_ai_foundry_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
-    """Foundry /models is a catalog, not deployments; return [] and use free-text enables."""
-    _ = (user_id, model_type)
-    return []
+    """List the Foundry resource's actual deployments for the model picker.
+
+    Foundry ``/models`` is Azure's full model *catalog* (deprecated models
+    included), not this resource's deployments — never use it here; it is only
+    probed for credential validation (``request_azure_ai_foundry_model_entries``).
+    The real deployments come from the resource-level listing
+    ``GET {resource}/openai/deployments?api-version=…`` with the same ``api-key``
+    header (SSRF-validated and DNS-pinned via ``ssrf_safe_httpx_get``, memoized
+    briefly so the llm and embeddings picker reads share one round-trip). Only
+    ``status == "succeeded"`` deployments are offered, named by deployment id
+    (what inference accepts) and classified llm/embeddings from the underlying
+    ``model`` field; image/audio/legacy-completions deployments the unified chat
+    class cannot drive are excluded. Returns ``[]`` on any failure — missing
+    endpoint/key, endpoint not on a pinned Azure Foundry host, blocked host,
+    HTTP error, malformed payload — so the static seed catalog remains the
+    fallback.
+    """
+    if model_type not in {"llm", "embeddings"}:
+        return []
+
+    endpoint = get_provider_variable_value(user_id, "AZURE_AI_FOUNDRY_ENDPOINT")
+    api_key = get_provider_variable_value(user_id, "AZURE_AI_FOUNDRY_API_KEY")
+    if not endpoint or not api_key:
+        return []
+
+    deployments_url = _azure_ai_foundry_deployments_url(endpoint, _azure_ai_foundry_api_version(user_id))
+    if deployments_url is None:
+        # Reason only, never the raw endpoint: it may embed userinfo or query tokens.
+        logger.debug(
+            "AZURE_AI_FOUNDRY_ENDPOINT is not a plain HTTPS URL on a known Azure Foundry host; skipping live discovery"
+        )
+        return []
+
+    entries = _fetch_azure_ai_foundry_deployment_entries(deployments_url, api_key)
+    if entries is None:
+        return []
+
+    models: list[dict] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        deployment_id = entry.get("id")
+        if not isinstance(deployment_id, str) or not deployment_id:
+            continue
+        if str(entry.get("status", "")).lower() != "succeeded":
+            continue
+        underlying_model = entry.get("model")
+        if not isinstance(underlying_model, str) or not underlying_model:
+            underlying_model = deployment_id
+        lowered = underlying_model.lower()
+        if "embed" in lowered:
+            entry_type = "embeddings"
+        elif any(marker in lowered for marker in _AZURE_AI_FOUNDRY_NON_CHAT_MODEL_MARKERS):
+            continue
+        else:
+            entry_type = "llm"
+        if entry_type != model_type:
+            continue
+        supports_tools = model_type == "llm" and not any(
+            marker in lowered for marker in _AZURE_AI_FOUNDRY_NO_TOOL_CHAT_MODEL_MARKERS
+        )
+        models.append(
+            create_model_metadata(
+                provider="Azure AI Foundry",
+                name=deployment_id,
+                icon="Azure",
+                model_type=model_type,
+                tool_calling=supports_tools,
+                reasoning=bool(_AZURE_AI_FOUNDRY_REASONING_PATTERN.search(lowered)),
+                # Foundry is explicit-enable-only: live rows must never auto-enable.
+                default=False,
+            )
+        )
+    return models
 
 
 def fetch_live_openrouter_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
@@ -815,6 +1124,43 @@ def _live_models_to_catalog_shape(live_models: list[dict]) -> list[dict]:
     ]
 
 
+def apply_metadata_filters(
+    provider_models: list[dict],
+    metadata_filters: dict | None,
+) -> dict[str, set[tuple[str, str]]]:
+    """Drop models whose metadata fails *metadata_filters*; return what was dropped.
+
+    ``get_unified_models_detailed`` applies metadata filters to the static catalog
+    only, and ``replace_with_live_models`` then swaps in live rows wholesale — so
+    tool-filtered pickers (e.g. the Agent picker's ``tool_calling=True``) must
+    re-filter after live replacement or live models bypass the filter entirely.
+    The returned ``provider -> {(name, model_type)}`` map records the dropped rows
+    so ``inject_custom_enabled_models`` does not resurrect an explicitly enabled
+    deployment the live catalog just filtered out (its synthetic free-text
+    metadata would otherwise pass the filter).
+    """
+    suppressed: dict[str, set[tuple[str, str]]] = {}
+    if not metadata_filters:
+        return suppressed
+    for provider_dict in provider_models:
+        provider = provider_dict.get("provider")
+        models = provider_dict.get("models", [])
+        kept: list[dict] = []
+        for model in models:
+            metadata = model.get("metadata") or {}
+            if any(metadata.get(k) != v for k, v in metadata_filters.items()):
+                if isinstance(provider, str) and isinstance(model.get("model_name"), str):
+                    suppressed.setdefault(provider, set()).add(
+                        (model["model_name"], metadata.get("model_type") or "llm")
+                    )
+                continue
+            kept.append(model)
+        if len(kept) != len(models):
+            provider_dict["models"] = kept
+            provider_dict["num_models"] = len(kept)
+    return suppressed
+
+
 def inject_custom_enabled_models(
     provider_models: list[dict],
     explicitly_enabled_models: set[str],
@@ -822,6 +1168,7 @@ def inject_custom_enabled_models(
     model_name: str | None = None,
     model_type: str | None = None,
     metadata_filters: dict | None = None,
+    suppressed: dict[str, set[tuple[str, str]]] | None = None,
 ) -> None:
     """Append free-text enabled deployments missing from the catalog (e.g. Foundry)."""
     if not explicitly_enabled_models:
@@ -861,6 +1208,10 @@ def inject_custom_enabled_models(
         if model_type is not None and resolved_type != model_type:
             continue
         if model_name is not None and custom_name != model_name:
+            continue
+        # The live catalog deliberately filtered this row out (see
+        # apply_metadata_filters); a synthetic free-text row must not revive it.
+        if suppressed and (custom_name, resolved_type) in suppressed.get(provider, set()):
             continue
 
         icon = provider_meta.get(provider, {}).get("icon", "Bot")
