@@ -171,17 +171,9 @@ async def retrieve_vertices_order(
     Raises:
         HTTPException: If there is an error checking the build status.
     """
-    # Owner-or-public ownership check + ensure_flow_permission(EXECUTE) — same
-    # pattern as build_flow below. ``build_graph_from_db`` reaches into the DB
-    # with a bare ``session.get(Flow, flow_id)`` that has no owner filter, so
-    # without this gate any authenticated user could build any other user's
-    # flow by guessing a UUID. Even though the route is deprecated and hidden
-    # from the schema, it remains routed and reachable.
-    stmt = (
-        select(Flow)
-        .where(Flow.id == flow_id)
-        .where((Flow.user_id == current_user.id) | (Flow.access_type == AccessTypeEnum.PUBLIC))
-    )
+    # This deprecated editor route is owner-only. Supported full-flow routes
+    # provide public execution without exposing the flow-keyed graph cache.
+    stmt = select(Flow).where(Flow.id == flow_id).where(Flow.user_id == current_user.id)
     flow = (await session.exec(stmt)).first()
     if not flow:
         raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
@@ -477,17 +469,10 @@ async def build_vertex(
         HTTPException: If there is an error building the vertex.
 
     """
-    # Owner-or-public ownership check + ensure_flow_permission(EXECUTE) — same
-    # pattern as retrieve_vertices_order above. The route is deprecated and
-    # hidden from the schema but still routed, and ``build_graph_from_db``
-    # loads the flow with no owner filter, so without this gate any
-    # authenticated user could build a vertex on someone else's flow.
+    # This deprecated editor route is owner-only because its graph cache is
+    # keyed by flow UUID rather than execution principal.
     async with session_scope() as authz_session:
-        stmt = (
-            select(Flow)
-            .where(Flow.id == flow_id)
-            .where((Flow.user_id == current_user.id) | (Flow.access_type == AccessTypeEnum.PUBLIC))
-        )
+        stmt = select(Flow).where(Flow.id == flow_id).where(Flow.user_id == current_user.id)
         flow = (await authz_session.exec(stmt)).first()
     if not flow:
         raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
@@ -780,16 +765,10 @@ async def build_vertex_stream(
     Raises:
         HTTPException: If an error occurs while building the vertex.
     """
-    # The cache is keyed only by flow UUID and may contain another user's
-    # in-memory graph. Authorize before constructing the streaming response so
-    # an authenticated non-owner cannot read a built result or invoke
-    # ``vertex.stream()`` on that cached graph.
+    # This deprecated editor route is owner-only. Authorize before constructing
+    # the streaming response because the cache is keyed only by flow UUID.
     async with session_scope() as session:
-        stmt = (
-            select(Flow)
-            .where(Flow.id == flow_id)
-            .where((Flow.user_id == current_user.id) | (Flow.access_type == AccessTypeEnum.PUBLIC))
-        )
+        stmt = select(Flow).where(Flow.id == flow_id).where(Flow.user_id == current_user.id)
         flow = (await session.exec(stmt)).first()
     if not flow:
         raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
