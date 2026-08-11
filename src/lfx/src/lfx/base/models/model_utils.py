@@ -523,10 +523,11 @@ def normalize_azure_ai_foundry_endpoint(endpoint: str) -> str:
     if not parsed.netloc or not (path.startswith("/api/projects/") or path.rstrip("/") == "/api/projects"):
         return endpoint
     normalized = f"{parsed.scheme}://{parsed.netloc}/openai/v1"
+    # Log neither URL: a pasted endpoint can carry user-info or query credentials.
     logger.info(
-        f"AZURE_AI_FOUNDRY_ENDPOINT {endpoint!r} looks like a Foundry project endpoint; "
-        f"using the OpenAI-compatible endpoint {normalized!r} instead. "
-        f"Update the saved endpoint to that value to silence this message."
+        "AZURE_AI_FOUNDRY_ENDPOINT looks like a Foundry project endpoint; "
+        "replacing '/api/projects/...' with '/openai/v1' (the OpenAI-compatible form). "
+        "Update the saved endpoint to silence this message."
     )
     return normalized
 
