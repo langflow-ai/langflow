@@ -19,6 +19,7 @@ from lfx.utils.flow_validation import (
     CatalogPolicyValidationError,
     CustomComponentValidationError,
     PublicFlowValidationError,
+    collect_catalog_component_keys,
     collect_component_code_lookups,
     ensure_component_hash_lookups_loaded,
     prepare_public_flow_build,
@@ -1281,3 +1282,37 @@ def test_frontend_mirrors_tweak_refusal_rules():
     assert _parse_ts_protected_fields(source) == {
         component: set(fields) for component, fields in PROTECTED_TWEAK_FIELDS_BY_COMPONENT.items()
     }
+
+
+def test_collect_catalog_component_keys_includes_nested_flows():
+    """The public collector reports exact keys from the graph and inlined sub-flows."""
+    graph = {
+        "nodes": [
+            {"id": "node-1", "data": {"type": "ChatInput", "node": {}}},
+            {
+                "id": "node-2",
+                "data": {
+                    "type": "RunFlow",
+                    "node": {
+                        "flow": {
+                            "data": {
+                                "nodes": [
+                                    {"id": "nested-1", "data": {"type": "NestedComponent", "node": {}}},
+                                ],
+                            },
+                        },
+                    },
+                },
+            },
+        ],
+        "edges": [],
+    }
+
+    assert collect_catalog_component_keys(graph) == frozenset({"ChatInput", "RunFlow", "NestedComponent"})
+    # Wrapped flow payloads normalize the same way validation does.
+    assert collect_catalog_component_keys({"data": graph}) == frozenset({"ChatInput", "RunFlow", "NestedComponent"})
+
+
+@pytest.mark.parametrize("target", [None, {}, {"nodes": "not-a-list"}, {"data": {"nodes": []}}])
+def test_collect_catalog_component_keys_returns_empty_for_unusable_targets(target):
+    assert collect_catalog_component_keys(target) == frozenset()
