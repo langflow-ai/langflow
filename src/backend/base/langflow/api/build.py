@@ -6,6 +6,7 @@ import uuid
 from collections.abc import AsyncIterator
 
 from fastapi import BackgroundTasks, HTTPException, Response
+from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
@@ -561,6 +562,12 @@ async def generate_flow_events(
             await chat_service.set_cache(flow_id_str, graph)
             await log_telemetry(start_time, components_count, run_id=build_run_id, success=True)
 
+        except TweakRefusedError:
+            # A refused tweak is a caller error, not a build failure. The generic
+            # handler below turns everything into a 500, which would hide the
+            # structured 422 naming the refused keys. Re-raise so the app-level
+            # TweakRefusedError handler answers instead.
+            raise
         except Exception as exc:
             await log_telemetry(
                 start_time,

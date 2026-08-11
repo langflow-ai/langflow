@@ -547,9 +547,15 @@ class RunFlowBaseComponent(Component):
             )
 
         except Exception as exc:
+            from lfx.exceptions.tweaks import TweakRefusedError
             from lfx.run.hitl import NestedHITLUnsupportedError
 
             if isinstance(exc, NestedHITLUnsupportedError):
+                raise
+            # A refused tweak is a caller error, not a flow failure. Collapsing it
+            # into a generic RuntimeError would discard the refused field names and
+            # the reason, and the caller would never learn which key was rejected.
+            if isinstance(exc, TweakRefusedError):
                 raise
             msg = f"Error running flow: {self.flow_name_selected}"
             raise RuntimeError(msg) from None
