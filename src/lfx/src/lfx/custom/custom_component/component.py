@@ -1954,11 +1954,17 @@ class Component(CustomComponent):
         # because we're updating an existing message, not creating a new one
         if skip_db_update:
             if not message.has_id():
-                msg = (
-                    "skip_db_update=True requires the message to already have an ID. "
-                    "The message must have been stored in the database previously."
-                )
-                raise ValueError(msg)
+                from lfx.memory.flow_context import should_persist_messages
+
+                if should_persist_messages():
+                    msg = (
+                        "skip_db_update=True requires the message to already have an ID. "
+                        "The message must have been stored in the database previously."
+                    )
+                    raise ValueError(msg)
+                # Ephemeral (anonymous serving) run: messages are never stored, so
+                # no ID can exist. There is no DB row to protect — fall through and
+                # emit the in-memory event only, keeping agent streaming working.
 
             # Create a fresh Message instance for consistency with normal flow
             stored_message = await Message.create(**message.model_dump())
@@ -2069,10 +2075,15 @@ class Component(CustomComponent):
             await asyncio.to_thread(_send_event)
 
     def _should_stream_message(self, stored_message: Message, original_message: Message) -> bool:
+        from lfx.memory.flow_context import should_persist_messages
+
+        # An ephemeral (anonymous serving) run never stores messages, so the
+        # stored message has no ID by design — that must not silently downgrade
+        # the caller from token streaming to a single final message.
         return bool(
             hasattr(self, "_event_manager")
             and self._event_manager
-            and stored_message.has_id()
+            and (stored_message.has_id() or not should_persist_messages())
             and original_message.text_stream is not None
         )
 
@@ -2086,6 +2097,13 @@ class Component(CustomComponent):
             )
 
             message.flow_id = flow_id
+
+        from lfx.memory.flow_context import should_persist_messages
+
+        if not should_persist_messages():
+            # Ephemeral (anonymous serving) run: nothing was stored, so there is
+            # no row to update — return the in-memory message unchanged.
+            return message
 
         message_tables = await aupdate_messages(message)
         if not message_tables:
