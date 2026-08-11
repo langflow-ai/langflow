@@ -42,6 +42,13 @@ def echo(text: str) -> str:
     return f"echoed: {text}"
 
 
+@mcp.tool()
+def boom(text: str) -> str:
+    """Fail, echoing the argument back in the error the way a real server does."""
+    msg = f"tool blew up on {text}"
+    raise RuntimeError(msg)
+
+
 mcp.run(transport="stdio")
 '''
 
@@ -59,6 +66,7 @@ provider.add_span_processor(SimpleSpanProcessor(exporter))
 trace.set_tracer_provider(provider)
 
 from lfx.base.mcp.util import MCPStdioClient
+from lfx.graph.graph.base import Graph
 from lfx.observability import APPLICATION_TRACER_NAME
 
 SERVER_PATH = sys.argv[1]
@@ -69,11 +77,14 @@ async def main():
     client = MCPStdioClient()
     await client.connect_to_server(f"{{sys.executable}} {{SERVER_PATH}}")
 
-    tracer = trace.get_tracer(APPLICATION_TRACER_NAME)
-    # A flow span stands in for a real run, so the parenting assertion is meaningful.
-    with tracer.start_as_current_span("flow.execute") as flow_span:
-        flow_span_id = flow_span.get_span_context().span_id
+    # The real helper, not a stand-in span: async_start opens it with make_current=False, and
+    # that is the path where parenting was silently wrong.
+    graph = Graph()
+    make_current = sys.argv[2] == "true"
+    with graph.flow_execution_span(make_current=make_current):
+        flow_span_id = trace.get_current_span().get_span_context().span_id
         result = await client.run_tool("echo", arguments={{"text": SENTINEL}})
+        failed = await client.run_tool("boom", arguments={{"text": SENTINEL}})
 
     await client.disconnect()
     provider.force_flush()
@@ -83,18 +94,26 @@ async def main():
             "name": s.name,
             "scope": s.instrumentation_scope.name,
             "attrs": dict(s.attributes or {{}}),
+            "status": s.status.status_code.name,
+            # Events are a separate carrier from attributes: record_exception writes the
+            # exception message into one. The leak assertion is worthless without them.
+            "events": [(e.name, dict(e.attributes or {{}})) for e in s.events],
             "parent_span_id": s.parent.span_id if s.parent else None,
         }}
         for s in exporter.get_finished_spans()
     ]
-    print("PROBE_RESULT " + json.dumps({{"spans": spans, "flow_span_id": flow_span_id}}))
+    print("PROBE_RESULT " + json.dumps({{
+        "spans": spans,
+        "flow_span_id": flow_span_id,
+        "failed_is_error": bool(getattr(failed, "isError", False)),
+    }}))
 
 
 asyncio.run(main())
 """
 
 
-def run_probe() -> dict:
+def run_probe(*, make_current: bool = True) -> dict:
     env = {k: v for k, v in os.environ.items() if not k.startswith("OTEL_")}
     with tempfile.TemporaryDirectory() as tmp:
         server_path = Path(tmp) / "server.py"
@@ -102,7 +121,7 @@ def run_probe() -> dict:
         probe_path = Path(tmp) / "probe.py"
         probe_path.write_text(PROBE, encoding="utf-8")
         completed = subprocess.run(  # noqa: S603
-            [sys.executable, str(probe_path), str(server_path)],
+            [sys.executable, str(probe_path), str(server_path), "true" if make_current else "false"],
             env=env,
             capture_output=True,
             text=True,
@@ -119,14 +138,19 @@ def probe_result() -> dict:
     return run_probe()
 
 
+@pytest.fixture(scope="module")
+def detached_probe_result() -> dict:
+    """The async_start path: the flow span exists but is not attached to the OTel context."""
+    return run_probe(make_current=False)
+
+
 def test_an_mcp_tool_call_over_stdio_produces_a_span(probe_result):
     """The transport httpx instrumentation could never have seen."""
     tool_spans = [s for s in probe_result["spans"] if s["name"] == "mcp.tool.call"]
+    echo_spans = [s for s in tool_spans if s["attrs"]["mcp.tool.name"] == "echo"]
 
-    assert len(tool_spans) == 1, f"expected one tool span, got {[s['name'] for s in probe_result['spans']]}"
-    span = tool_spans[0]
-    assert span["attrs"]["mcp.tool.name"] == "echo"
-    assert span["attrs"]["mcp.transport"] == "stdio"
+    assert len(echo_spans) == 1, f"expected one span for the echo call, got {[s['attrs'] for s in tool_spans]}"
+    assert echo_spans[0]["attrs"]["mcp.transport"] == "stdio"
 
 
 def test_the_span_is_emitted_under_the_application_tracer(probe_result):
@@ -144,7 +168,49 @@ def test_the_tool_span_nests_under_the_flow_span(probe_result):
 
 
 def test_tool_arguments_never_reach_the_span(probe_result):
-    """Tool arguments carry flow data, so only identifiers may be recorded."""
+    """Tool arguments carry flow data, so only identifiers may be recorded.
+
+    The serialized span carries events as well as attributes. A failing tool echoes the argument
+    back inside its error text, so without events in the blob this asserts against a shape that
+    structurally cannot hold the leak it is guarding.
+    """
     blob = json.dumps(probe_result["spans"])
 
     assert SENTINEL not in blob, f"tool argument reached the APM: {blob}"
+
+
+def test_a_failed_tool_call_is_not_exported_as_a_success(probe_result):
+    """MCP reports failure in the result, not by raising, so nothing raises through the span."""
+    assert probe_result["failed_is_error"], "the boom tool was supposed to fail"
+
+    spans = [s for s in probe_result["spans"] if s["name"] == "mcp.tool.call"]
+    failed = [s for s in spans if s["status"] == "ERROR"]
+    assert len(failed) == 1, f"expected one failed tool span, got {[(s['attrs'], s['status']) for s in spans]}"
+    assert failed[0]["attrs"]["mcp.tool.name"] == "boom"
+    assert failed[0]["attrs"]["error.type"] == "ToolError"
+
+
+def test_the_server_is_identified_on_the_span(probe_result):
+    """Two servers can expose the same tool name, so the tool name alone attributes nothing."""
+    tool_span = next(s for s in probe_result["spans"] if s["name"] == "mcp.tool.call")
+
+    assert tool_span["attrs"]["mcp.server"]
+
+
+@pytest.mark.xfail(
+    reason=(
+        "async_start opens the flow span with make_current=False, so nothing downstream can see "
+        "it: the tool span starts a fresh trace instead of nesting. Not a flip of that flag, "
+        "which is False on purpose (attaching a context token across an async generator's "
+        "suspension points leaks it into whatever task resumes the generator). Carrying the span "
+        "context out of band, so a call site can parent to it without attaching, is a design "
+        "decision this test is here to hold open rather than pre-empt. The probe cannot even read "
+        "the flow span id on that path, which is the same gap seen from the other side."
+    ),
+    strict=True,
+)
+def test_the_tool_span_nests_under_the_flow_span_when_it_is_not_current(detached_probe_result):
+    """The acceptance criterion says 'parented to the flow span', and on this path it is not."""
+    tool_span = next(s for s in detached_probe_result["spans"] if s["name"] == "mcp.tool.call")
+
+    assert tool_span["parent_span_id"] == detached_probe_result["flow_span_id"]

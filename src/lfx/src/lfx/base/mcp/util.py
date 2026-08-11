@@ -8,6 +8,7 @@ import shlex
 import shutil
 import unicodedata
 from collections.abc import AsyncIterator, Awaitable, Callable
+from pathlib import Path
 from types import UnionType
 from typing import Annotated, Any, TypedDict, Union, get_args, get_origin
 from urllib.parse import urlparse
@@ -1832,15 +1833,35 @@ class MCPStdioClient:
         session_manager = self._get_session_manager()
         return await session_manager.get_session(self._session_context, self._connection_params, "stdio")
 
+    def _tool_span_attributes(self, tool_name: str) -> dict[str, str]:
+        """Identifiers for the span: which tool, on which server, over which transport.
+
+        The server is the command and its first argument, basenames only. That is the part that
+        says which server this is (``uvx some-mcp-server``, ``python server.py``); later flags
+        are left out because they can carry tokens, and the span boundary is identifiers only.
+        """
+        attributes = {"mcp.tool.name": tool_name, "mcp.transport": "stdio"}
+        command = getattr(self._connection_params, "command", None)
+        if command:
+            args = getattr(self._connection_params, "args", None) or []
+            server = Path(command).name
+            if args:
+                server = f"{server} {Path(args[0]).name}"
+            attributes["mcp.server"] = server
+        return attributes
+
     async def run_tool(self, tool_name: str, arguments: dict[str, Any], timeout: float | None = None) -> Any:  # noqa: ASYNC109
         """Run the tool, with one application span covering the call and any retries."""
-        with outbound_call_span(
-            MCP_TOOL_SPAN_NAME,
-            **{"mcp.tool.name": tool_name, "mcp.transport": "stdio"},
-        ):
-            return await self._run_tool_uninstrumented(tool_name, arguments, timeout)
+        with outbound_call_span(MCP_TOOL_SPAN_NAME, self._tool_span_attributes(tool_name)) as span:
+            result = await self._run_tool(tool_name, arguments, timeout)
+            # MCP reports a failed tool as isError on the result rather than by raising, and the
+            # caller only converts that to an exception after this span has closed. Without this
+            # a failed call exports as a success and the outbound error rate is always zero.
+            if getattr(result, "isError", False):
+                span.record_error("ToolError")
+            return result
 
-    async def _run_tool_uninstrumented(
+    async def _run_tool(
         self,
         tool_name: str,
         arguments: dict[str, Any],
@@ -2130,15 +2151,37 @@ class MCPStreamableHttpClient:
             # DELETE is advisory—log and continue
             logger.debug(f"Unable to send session DELETE to '{url}': {e}")
 
+    def _tool_span_attributes(self, tool_name: str) -> dict[str, str]:
+        """Identifiers for the span: which tool, on which server, over which transport.
+
+        The transport is read from the session manager rather than hardcoded, because this class
+        also serves SSE: ``MCPSseClient`` is an alias for it, and a streamable-http server can
+        fall back to SSE at runtime. A literal would label those calls streamable_http.
+
+        The server is the host, never the full URL: a URL can carry credentials in its query
+        string, which is the leak the export boundary exists to strip.
+        """
+        attributes = {"mcp.tool.name": tool_name, "mcp.transport": "streamable_http"}
+        params = self._connection_params
+        if isinstance(params, dict) and params.get("url"):
+            session_manager = self._get_session_manager()
+            server_key = session_manager._get_server_key(params, "streamable_http")
+            attributes["mcp.transport"] = session_manager._transport_preference.get(server_key, "streamable_http")
+            host = urlparse(params["url"]).netloc
+            if host:
+                attributes["mcp.server"] = host
+        return attributes
+
     async def run_tool(self, tool_name: str, arguments: dict[str, Any], timeout: float | None = None) -> Any:  # noqa: ASYNC109
         """Run the tool, with one application span covering the call and any retries."""
-        with outbound_call_span(
-            MCP_TOOL_SPAN_NAME,
-            **{"mcp.tool.name": tool_name, "mcp.transport": "streamable_http"},
-        ):
-            return await self._run_tool_uninstrumented(tool_name, arguments, timeout)
+        with outbound_call_span(MCP_TOOL_SPAN_NAME, self._tool_span_attributes(tool_name)) as span:
+            result = await self._run_tool(tool_name, arguments, timeout)
+            # See the stdio client: MCP reports tool failure in the result, not by raising.
+            if getattr(result, "isError", False):
+                span.record_error("ToolError")
+            return result
 
-    async def _run_tool_uninstrumented(
+    async def _run_tool(
         self,
         tool_name: str,
         arguments: dict[str, Any],
