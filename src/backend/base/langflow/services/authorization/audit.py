@@ -443,10 +443,13 @@ async def _flush_audit_batch(batch: list[_AuditEntry]) -> None:
         return
     # Imported lazily so the request path doesn't pull DB modules until the
     # writer first runs (matches the lazy import in the old per-row path).
+    from lfx.services.authorization import AuthorizationAuditEvent
+
     from langflow.services.database.models.auth import AuthzAuditLog
-    from langflow.services.deps import session_scope
+    from langflow.services.deps import get_authorization_service, session_scope
 
     async with session_scope() as session:
+        events: list[AuthorizationAuditEvent] = []
         for entry in batch:
             resource_type, resource_id = _split_obj(entry.obj)
             session.add(
@@ -463,6 +466,13 @@ async def _flush_audit_batch(batch: list[_AuditEntry]) -> None:
                     details=entry.details,
                 )
             )
+            events.append(
+                AuthorizationAuditEvent(
+                    event_id=entry.event_id,
+                    occurred_at=entry.occurred_at,
+                )
+            )
+        get_authorization_service().stage_audit_events(session=session, events=tuple(events))
 
 
 async def drain_pending_audit_writes(timeout: float = 5.0) -> None:
