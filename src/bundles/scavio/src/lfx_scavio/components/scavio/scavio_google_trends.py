@@ -1,9 +1,7 @@
-from lfx.custom.custom_component.component import Component
-from lfx.template.field.base import Output
+from lfx_scavio._component import Output, ScavioBaseComponent
 from lfx_scavio.components.scavio._base import (
     DOCUMENTATION,
     Endpoint,
-    ScavioAPIMixin,
     api_key_input,
     choice_input,
     default_visibility,
@@ -34,7 +32,7 @@ ENDPOINTS = {
 MANAGED = managed_fields(ENDPOINTS)
 
 
-class ScavioGoogleTrendsComponent(ScavioAPIMixin, Component):
+class ScavioGoogleTrendsComponent(ScavioBaseComponent):
     display_name = "Scavio Google Trends"
     description = (
         "Google Trends through Scavio: interest over time and by region for a term, plus the Trending Now "

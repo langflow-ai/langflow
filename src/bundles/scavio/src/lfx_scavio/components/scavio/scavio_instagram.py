@@ -1,9 +1,7 @@
-from lfx.custom.custom_component.component import Component
-from lfx.template.field.base import Output
+from lfx_scavio._component import Output, ScavioBaseComponent
 from lfx_scavio.components.scavio._base import (
     DOCUMENTATION,
     Endpoint,
-    ScavioAPIMixin,
     api_key_input,
     choice_input,
     cursor_input,
@@ -21,43 +19,50 @@ ENDPOINTS = {
     "User Profile": Endpoint(
         path="/api/v1/instagram/profile",
         credits=10,
-        fields=("username", "user_id"),
+        fields=("username", "target_user_id"),
+        wire={"target_user_id": "user_id"},
     ),
     "User Posts": Endpoint(
         path="/api/v1/instagram/user/posts",
         credits=2,
-        fields=("username", "user_id", "count", "cursor"),
+        fields=("username", "target_user_id", "count", "cursor"),
         result_keys=("items", "data"),
+        wire={"target_user_id": "user_id"},
     ),
     "User Reels": Endpoint(
         path="/api/v1/instagram/user/reels",
         credits=10,
-        fields=("username", "user_id", "count", "cursor"),
+        fields=("username", "target_user_id", "count", "cursor"),
         result_keys=("items", "data"),
+        wire={"target_user_id": "user_id"},
     ),
     "User Tagged": Endpoint(
         path="/api/v1/instagram/user/tagged",
         credits=10,
-        fields=("username", "user_id", "count", "cursor"),
+        fields=("username", "target_user_id", "count", "cursor"),
         result_keys=("items",),
+        wire={"target_user_id": "user_id"},
     ),
     "User Stories": Endpoint(
         path="/api/v1/instagram/user/stories",
         credits=10,
-        fields=("username", "user_id"),
+        fields=("username", "target_user_id"),
         result_keys=("items",),
+        wire={"target_user_id": "user_id"},
     ),
     "User Followers": Endpoint(
         path="/api/v1/instagram/user/followers",
         credits=10,
-        fields=("username", "user_id", "count", "cursor"),
+        fields=("username", "target_user_id", "count", "cursor"),
         result_keys=("users",),
+        wire={"target_user_id": "user_id"},
     ),
     "User Followings": Endpoint(
         path="/api/v1/instagram/user/followings",
         credits=10,
-        fields=("username", "user_id", "count", "cursor"),
+        fields=("username", "target_user_id", "count", "cursor"),
         result_keys=("users",),
+        wire={"target_user_id": "user_id"},
     ),
     "Post Details": Endpoint(
         path="/api/v1/instagram/post",
@@ -96,7 +101,7 @@ ENDPOINTS = {
 MANAGED = managed_fields(ENDPOINTS)
 
 
-class ScavioInstagramComponent(ScavioAPIMixin, Component):
+class ScavioInstagramComponent(ScavioBaseComponent):
     display_name = "Scavio Instagram"
     description = (
         "The full Scavio Instagram surface: profiles, posts, reels, tagged posts, stories, followers and "
@@ -115,7 +120,11 @@ class ScavioInstagramComponent(ScavioAPIMixin, Component):
         api_key_input(),
         endpoint_input(ENDPOINTS, "User Profile"),
         text_input("username", "Username", "Instagram handle without the @.", tool_mode=True),
-        text_input("user_id", "User ID", "Numeric Instagram user id as a string. Takes precedence over Username."),
+        text_input(
+            "target_user_id",
+            "User ID",
+            "Numeric Instagram user id as a string. Takes precedence over Username.",
+        ),
         text_input("keyword", "Keyword", "Search term. Instagram search takes keyword, not query.", tool_mode=True),
         text_input(
             "shortcode",

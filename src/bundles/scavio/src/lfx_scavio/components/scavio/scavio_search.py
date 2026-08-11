@@ -1,9 +1,15 @@
-from lfx.custom.custom_component.component import Component
-from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput
-from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
-from lfx.template.field.base import Output
-from lfx_scavio.components.scavio._base import DOCUMENTATION, Endpoint, ScavioAPIMixin, api_key_input
+from lfx_scavio._component import Output, ScavioBaseComponent
+from lfx_scavio.components.scavio._base import (
+    DOCUMENTATION,
+    BoolInput,
+    Data,
+    DataFrame,
+    DropdownInput,
+    Endpoint,
+    IntInput,
+    MessageTextInput,
+    api_key_input,
+)
 
 ENDPOINTS = {
     "Google Search": Endpoint(
@@ -12,7 +18,7 @@ ENDPOINTS = {
         fields=(
             "query",
             "device",
-            "start",
+            "start_offset",
             "hl",
             "gl",
             "google_domain",
@@ -27,6 +33,7 @@ ENDPOINTS = {
             "include_html",
             "resolve_ai_overview",
         ),
+        wire={"start_offset": "start"},
         required=("query",),
         result_keys=("organic_results",),
         send_false=("resolve_ai_overview",),
@@ -34,7 +41,7 @@ ENDPOINTS = {
 }
 
 
-class ScavioSearchComponent(ScavioAPIMixin, Component):
+class ScavioSearchComponent(ScavioBaseComponent):
     display_name = "Scavio Search API"
     description = (
         "**Scavio** is a real-time search API for AI agents - a unified API over Google, "
@@ -84,7 +91,7 @@ class ScavioSearchComponent(ScavioAPIMixin, Component):
             advanced=True,
         ),
         IntInput(
-            name="start",
+            name="start_offset",
             display_name="Start Offset",
             info="Result offset, not a page number: 0 is page 1, 10 is page 2, and so on. Max 990.",
             value=0,

@@ -1,9 +1,7 @@
-from lfx.custom.custom_component.component import Component
-from lfx.template.field.base import Output
+from lfx_scavio._component import Output, ScavioBaseComponent
 from lfx_scavio.components.scavio._base import (
     DOCUMENTATION,
     Endpoint,
-    ScavioAPIMixin,
     api_key_input,
     default_visibility,
     endpoint_input,
@@ -38,7 +36,7 @@ ENDPOINTS = {
 MANAGED = managed_fields(ENDPOINTS)
 
 
-class ScavioAmazonComponent(ScavioAPIMixin, Component):
+class ScavioAmazonComponent(ScavioBaseComponent):
     display_name = "Scavio Amazon"
     description = (
         "Amazon through Scavio: keyword search, product details and the offer listing that carries the "

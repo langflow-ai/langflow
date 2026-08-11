@@ -17,7 +17,15 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
-from lfx.inputs.inputs import DropdownInput, IntInput, MessageTextInput, SecretStrInput
+from lfx.inputs.inputs import (
+    BoolInput,
+    DropdownInput,
+    FloatInput,
+    IntInput,
+    MessageTextInput,
+    MultiselectInput,
+    SecretStrInput,
+)
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
@@ -34,6 +42,34 @@ FLAT_ENVELOPE_PREFIX = "/api/v2/google"
 
 # Keys tried, in order, when picking the human-readable text for a result row.
 TEXT_KEYS = ("title", "text", "snippet", "name", "full_name", "query", "description")
+
+# Re-exported so the component modules never import ``lfx`` directly. See the note in
+# ``lfx_scavio._component``: reaching into ``lfx.inputs`` or ``lfx.template`` before
+# ``lfx.custom.custom_component.component`` trips a circular import inside lfx itself.
+__all__ = [
+    "BASE_URL",
+    "DOCUMENTATION",
+    "BoolInput",
+    "Data",
+    "DataFrame",
+    "DropdownInput",
+    "Endpoint",
+    "IntInput",
+    "MessageTextInput",
+    "MultiselectInput",
+    "ScavioAPIMixin",
+    "api_key_input",
+    "choice_input",
+    "cursor_input",
+    "decimal_input",
+    "default_visibility",
+    "endpoint_input",
+    "flag_input",
+    "managed_fields",
+    "max_results_input",
+    "number_input",
+    "text_input",
+]
 
 
 @dataclass(frozen=True)
@@ -53,6 +89,12 @@ class Endpoint:
             component reuse one wire name with different types.
         send_false: Boolean inputs whose ``False`` is meaningful and must be
             transmitted instead of omitted.
+        csv_fields: Text inputs the API wants as a JSON array of strings. The
+            user types a comma-separated list; the payload builder splits it.
+        csv_int_fields: The same, for arrays of integers.
+        credit_note: Set only where the credit cost is a function of the request
+            body rather than of the path, in which case it replaces ``credits``
+            everywhere a cost is shown. ``credits`` then carries the floor.
     """
 
     path: str
@@ -62,6 +104,15 @@ class Endpoint:
     result_keys: tuple[str, ...] = ()
     wire: dict[str, str] = field(default_factory=dict)
     send_false: tuple[str, ...] = ()
+    csv_fields: tuple[str, ...] = ()
+    csv_int_fields: tuple[str, ...] = ()
+    credit_note: str = ""
+
+    def cost_text(self) -> str:
+        """Return the human-readable cost of one call to this endpoint."""
+        if self.credit_note:
+            return self.credit_note
+        return f"{self.credits} credit" if self.credits == 1 else f"{self.credits} credits"
 
 
 def managed_fields(endpoints: dict[str, Endpoint]) -> tuple[str, ...]:
@@ -189,6 +240,49 @@ def number_input(
     )
 
 
+def decimal_input(
+    name: str,
+    display_name: str,
+    info: str,
+    *,
+    advanced: bool = True,
+) -> FloatInput:
+    """Return a dynamic float input. Zero always means "not set"."""
+    return FloatInput(
+        name=name,
+        display_name=display_name,
+        info=info,
+        value=0.0,
+        advanced=advanced,
+        dynamic=True,
+        show=False,
+    )
+
+
+def flag_input(
+    name: str,
+    display_name: str,
+    info: str,
+    *,
+    advanced: bool = True,
+) -> BoolInput:
+    """Return a dynamic boolean input.
+
+    These are filters, so ``False`` means "do not filter" and is omitted from the
+    payload rather than sent. An endpoint that needs a literal ``false`` on the
+    wire lists the input in :attr:`Endpoint.send_false`.
+    """
+    return BoolInput(
+        name=name,
+        display_name=display_name,
+        info=info,
+        value=False,
+        advanced=advanced,
+        dynamic=True,
+        show=False,
+    )
+
+
 class ScavioAPIMixin:
     """Call one Scavio endpoint and shape the answer into ``Data`` / ``DataFrame``."""
 
@@ -218,6 +312,24 @@ class ScavioAPIMixin:
             return items or None
         return value or None
 
+    @staticmethod
+    def _split_csv(value: Any, *, as_int: bool) -> list | None:
+        """Turn a comma-separated string into the JSON array these endpoints expect."""
+        if isinstance(value, list | tuple):
+            items: list[Any] = list(value)
+        else:
+            items = [part.strip() for part in str(value).split(",")]
+        items = [item for item in items if item not in (None, "")]
+        if as_int:
+            numbers = []
+            for item in items:
+                try:
+                    numbers.append(int(item))
+                except (TypeError, ValueError):
+                    continue
+            items = numbers
+        return items or None
+
     def _payload(self, endpoint: Endpoint) -> dict[str, Any]:
         payload: dict[str, Any] = {}
         missing: list[str] = []
@@ -232,6 +344,10 @@ class ScavioAPIMixin:
                 if name in endpoint.required:
                     missing.append(name)
                 continue
+            if name in endpoint.csv_fields or name in endpoint.csv_int_fields:
+                cleaned = self._split_csv(cleaned, as_int=name in endpoint.csv_int_fields)
+                if cleaned is None:
+                    continue
             payload[wire_name] = cleaned
         if missing:
             verb = "is" if len(missing) == 1 else "are"

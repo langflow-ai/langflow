@@ -1,10 +1,10 @@
-from lfx.custom.custom_component.component import Component
-from lfx.inputs.inputs import BoolInput, DropdownInput, MessageTextInput
-from lfx.template.field.base import Output
+from lfx_scavio._component import Output, ScavioBaseComponent
 from lfx_scavio.components.scavio._base import (
     DOCUMENTATION,
+    BoolInput,
+    DropdownInput,
     Endpoint,
-    ScavioAPIMixin,
+    MessageTextInput,
     api_key_input,
     max_results_input,
 )
@@ -20,7 +20,7 @@ ENDPOINTS = {
 }
 
 
-class ScavioGoogleAIModeComponent(ScavioAPIMixin, Component):
+class ScavioGoogleAIModeComponent(ScavioBaseComponent):
     display_name = "Scavio Google AI Mode"
     description = (
         "Run a Google AI Mode query through Scavio (`POST /api/v2/google/ai-mode`, 1 credit) and get the "

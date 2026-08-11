@@ -1,9 +1,7 @@
-from lfx.custom.custom_component.component import Component
-from lfx.template.field.base import Output
+from lfx_scavio._component import Output, ScavioBaseComponent
 from lfx_scavio.components.scavio._base import (
     DOCUMENTATION,
     Endpoint,
-    ScavioAPIMixin,
     api_key_input,
     choice_input,
     default_visibility,
@@ -18,7 +16,8 @@ ENDPOINTS = {
     "Maps Search": Endpoint(
         path="/api/v2/google/maps/search",
         credits=1,
-        fields=("query", "start", "ll", "hl", "gl", "google_domain"),
+        fields=("query", "start_offset", "ll", "hl", "gl", "google_domain"),
+        wire={"start_offset": "start"},
         required=("query",),
         result_keys=("local_results",),
     ),
@@ -39,7 +38,7 @@ ENDPOINTS = {
 MANAGED = managed_fields(ENDPOINTS)
 
 
-class ScavioGoogleMapsComponent(ScavioAPIMixin, Component):
+class ScavioGoogleMapsComponent(ScavioBaseComponent):
     display_name = "Scavio Google Maps"
     description = (
         "Google Maps through Scavio: local search, place details and place reviews "
@@ -72,7 +71,11 @@ class ScavioGoogleMapsComponent(ScavioAPIMixin, Component):
             "city-level center from gl when this is empty.",
             advanced=True,
         ),
-        number_input("start", "Start Offset", "Result offset. Must be a multiple of 20, max 100. 0 is page 1."),
+        number_input(
+            "start_offset",
+            "Start Offset",
+            "Result offset. Must be a multiple of 20, max 100. 0 is page 1.",
+        ),
         number_input("num", "Number of Reviews", "Reviews per call, 1 to 20."),
         text_input("next_page_token", "Next Page Token", "Reviews cursor from a previous response.", advanced=True),
         choice_input(

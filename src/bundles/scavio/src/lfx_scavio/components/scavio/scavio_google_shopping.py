@@ -1,10 +1,8 @@
-from lfx.custom.custom_component.component import Component
-from lfx.inputs.inputs import BoolInput
-from lfx.template.field.base import Output
+from lfx_scavio._component import Output, ScavioBaseComponent
 from lfx_scavio.components.scavio._base import (
     DOCUMENTATION,
+    BoolInput,
     Endpoint,
-    ScavioAPIMixin,
     api_key_input,
     choice_input,
     default_visibility,
@@ -22,7 +20,7 @@ ENDPOINTS = {
         fields=(
             "query",
             "device",
-            "start",
+            "start_offset",
             "min_price",
             "max_price",
             "sort_by",
@@ -35,6 +33,7 @@ ENDPOINTS = {
             "location",
             "uule",
         ),
+        wire={"start_offset": "start"},
         required=("query",),
         result_keys=("shopping_results",),
     ),
@@ -71,7 +70,7 @@ ENDPOINTS = {
 MANAGED = managed_fields(ENDPOINTS)
 
 
-class ScavioGoogleShoppingComponent(ScavioAPIMixin, Component):
+class ScavioGoogleShoppingComponent(ScavioBaseComponent):
     display_name = "Scavio Google Shopping"
     description = (
         "Google Shopping through Scavio: product search, product details and the full store list for a "
@@ -115,7 +114,11 @@ class ScavioGoogleShoppingComponent(ScavioAPIMixin, Component):
             ["", "desktop", "mobile", "tablet"],
             advanced=True,
         ),
-        number_input("start", "Start Offset", "Shopping result offset. Follow pagination.next."),
+        number_input(
+            "start_offset",
+            "Start Offset",
+            "Shopping result offset. Follow pagination.next.",
+        ),
         number_input("min_price", "Min Price", "Lower price bound. 0 means no bound."),
         number_input("max_price", "Max Price", "Upper price bound. 0 means no bound."),
         number_input(

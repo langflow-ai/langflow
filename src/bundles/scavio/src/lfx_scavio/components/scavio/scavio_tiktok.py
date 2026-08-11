@@ -1,9 +1,7 @@
-from lfx.custom.custom_component.component import Component
-from lfx.template.field.base import Output
+from lfx_scavio._component import Output, ScavioBaseComponent
 from lfx_scavio.components.scavio._base import (
     DOCUMENTATION,
     Endpoint,
-    ScavioAPIMixin,
     api_key_input,
     choice_input,
     cursor_input,
@@ -95,7 +93,7 @@ ENDPOINTS = {
 MANAGED = managed_fields(ENDPOINTS)
 
 
-class ScavioTikTokComponent(ScavioAPIMixin, Component):
+class ScavioTikTokComponent(ScavioBaseComponent):
     display_name = "Scavio TikTok"
     description = (
         "The full Scavio TikTok surface: profiles, user posts, followers and followings, video detail, "

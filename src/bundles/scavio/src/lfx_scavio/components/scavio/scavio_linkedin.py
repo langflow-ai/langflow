@@ -1,9 +1,7 @@
-from lfx.custom.custom_component.component import Component
-from lfx.template.field.base import Output
+from lfx_scavio._component import Output, ScavioBaseComponent
 from lfx_scavio.components.scavio._base import (
     DOCUMENTATION,
     Endpoint,
-    ScavioAPIMixin,
     api_key_input,
     choice_input,
     cursor_input,
@@ -73,7 +71,7 @@ ENDPOINTS = {
 MANAGED = managed_fields(ENDPOINTS)
 
 
-class ScavioLinkedInComponent(ScavioAPIMixin, Component):
+class ScavioLinkedInComponent(ScavioBaseComponent):
     display_name = "Scavio LinkedIn"
     description = (
         "The nine live Scavio LinkedIn endpoints: person profile, about and posts, company profile and "

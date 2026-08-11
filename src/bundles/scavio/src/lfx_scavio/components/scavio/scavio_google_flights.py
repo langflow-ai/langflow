@@ -1,10 +1,9 @@
-from lfx.custom.custom_component.component import Component
-from lfx.inputs.inputs import IntInput, MessageTextInput
-from lfx.template.field.base import Output
+from lfx_scavio._component import Output, ScavioBaseComponent
 from lfx_scavio.components.scavio._base import (
     DOCUMENTATION,
     Endpoint,
-    ScavioAPIMixin,
+    IntInput,
+    MessageTextInput,
     api_key_input,
     max_results_input,
 )
@@ -38,7 +37,7 @@ ENDPOINTS = {
 }
 
 
-class ScavioGoogleFlightsComponent(ScavioAPIMixin, Component):
+class ScavioGoogleFlightsComponent(ScavioBaseComponent):
     display_name = "Scavio Google Flights"
     description = (
         "Google Flights through Scavio (`POST /api/v2/google/flights`, 1 credit). Returns the best and "

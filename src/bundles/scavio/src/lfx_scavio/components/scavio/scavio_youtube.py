@@ -1,10 +1,8 @@
-from lfx.custom.custom_component.component import Component
-from lfx.inputs.inputs import MultiselectInput
-from lfx.template.field.base import Output
+from lfx_scavio._component import Output, ScavioBaseComponent
 from lfx_scavio.components.scavio._base import (
     DOCUMENTATION,
     Endpoint,
-    ScavioAPIMixin,
+    MultiselectInput,
     api_key_input,
     choice_input,
     cursor_input,
@@ -123,7 +121,7 @@ ENDPOINTS = {
 MANAGED = managed_fields(ENDPOINTS)
 
 
-class ScavioYouTubeComponent(ScavioAPIMixin, Component):
+class ScavioYouTubeComponent(ScavioBaseComponent):
     display_name = "Scavio YouTube"
     description = (
         "The full Scavio YouTube surface: search, shorts, suggestions, video details, comments, replies, "
