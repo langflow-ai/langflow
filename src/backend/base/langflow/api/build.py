@@ -449,6 +449,7 @@ async def generate_flow_events(
     track_job_status: bool = True,
     tweaks: dict | None = None,
     expose_error_details: bool = False,
+    persist_messages: bool = True,
 ) -> None:
     """Generate events for flow building process.
 
@@ -719,8 +720,10 @@ async def generate_flow_events(
             # ``run_id``) persist every vertex, including streaming terminal outputs,
             # so GET-status reconstruction by job_id is complete. The live build
             # path (``run_id is None``) keeps the original "skip streaming vertices"
-            # behavior unchanged.
-            if log_builds and (run_id is not None or not vertex.will_stream):
+            # behavior unchanged. Ephemeral (anonymous serving) runs skip the
+            # persisted record entirely — vertex-build rows retain params/outputs,
+            # so the no-persist contract covers them too.
+            if log_builds and graph.persist_messages and (run_id is not None or not vertex.will_stream):
                 background_tasks.add_task(
                     log_vertex_build,
                     flow_id=flow_id_str,
@@ -864,6 +867,10 @@ async def generate_flow_events(
 
     try:
         ids, vertices_to_run, graph = await build_graph_and_get_order()
+        # Serving-plane end-user scoping: an anonymous run is ephemeral, so mark the
+        # graph non-persisting (astore_message honors this per component). Defaults
+        # True, so the Playground and every other caller are unaffected.
+        graph.persist_messages = persist_messages
     except Exception as e:
         client_error = error_for_client(e, expose_details=expose_error_details)
         error_message = ErrorMessage(
