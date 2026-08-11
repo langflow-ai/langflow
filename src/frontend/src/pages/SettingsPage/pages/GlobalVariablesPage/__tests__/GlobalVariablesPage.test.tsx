@@ -27,6 +27,7 @@ jest.mock("@/controllers/API/queries/variables", () => ({
         type: "Generic",
         default_fields: [],
         is_owner: true,
+        can_manage_shares: false,
       },
     ],
   }),
@@ -42,7 +43,26 @@ jest.mock(
   "@/components/core/parameterRenderComponent/components/tableComponent",
   () => ({
     __esModule: true,
-    default: () => <div data-testid="global-variables-table" />,
+    default: ({
+      columnDefs,
+      rowData,
+    }: {
+      columnDefs: Array<{
+        colId?: string;
+        cellRenderer?: (props: { data?: GlobalVariable }) => ReactNode;
+      }>;
+      rowData: GlobalVariable[];
+    }) => {
+      const actionsColumn = columnDefs.find(
+        (column) => column.colId === "actions",
+      );
+
+      return (
+        <div data-testid="global-variables-table">
+          {actionsColumn?.cellRenderer?.({ data: rowData[0] })}
+        </div>
+      );
+    },
   }),
 );
 
@@ -53,7 +73,17 @@ jest.mock("@/components/core/GlobalVariableModal/GlobalVariableModal", () => ({
 
 jest.mock("@/customization/components/custom-variable-share-action", () => ({
   __esModule: true,
-  default: () => null,
+  default: ({
+    resourceId,
+    resourceName,
+  }: {
+    resourceId: string;
+    resourceName: string;
+  }) => (
+    <div data-resource-id={resourceId} data-testid="variable-share-seam">
+      {resourceName}
+    </div>
+  ),
 }));
 
 jest.mock("@/components/common/genericIconComponent", () => ({
@@ -96,6 +126,14 @@ describe("GlobalVariablesPage - permissions loading", () => {
 
     expect(screen.queryByTestId("loading-icon")).toBeNull();
     expect(screen.getByTestId("global-variables-table")).toBeInTheDocument();
+  });
+
+  it("mounts the variable share seam without trusting row share capability", () => {
+    render(<GlobalVariablesPage />);
+
+    const shareSeam = screen.getByTestId("variable-share-seam");
+    expect(shareSeam).toHaveAttribute("data-resource-id", "variable-1");
+    expect(shareSeam).toHaveTextContent("TEST_VARIABLE");
   });
 });
 

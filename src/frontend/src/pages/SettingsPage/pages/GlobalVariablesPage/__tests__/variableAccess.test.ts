@@ -2,7 +2,6 @@ import type { GlobalVariable } from "@/types/global_variables";
 import {
   authorizedVariableIds,
   canMutateVariable,
-  canShareVariable,
   consumeVariableSelectionSpace,
   formatVariableValue,
 } from "../variableAccess";
@@ -65,7 +64,7 @@ describe("shared variable UI policy", () => {
     ).toBe("Hidden");
   });
 
-  it("fails closed while permissions load and hides re-share from recipients", () => {
+  it("fails closed while permissions load", () => {
     const allow = jest.fn(() => true);
     expect(
       canMutateVariable(
@@ -75,7 +74,6 @@ describe("shared variable UI policy", () => {
         allow,
       ),
     ).toBe(false);
-    expect(canShareVariable(variable())).toBe(false);
     expect(allow).not.toHaveBeenCalled();
   });
 
@@ -100,10 +98,9 @@ describe("shared variable UI policy", () => {
     expect(allow).not.toHaveBeenCalled();
   });
 
-  it("lets an authorized owner mutate and manage shares", () => {
-    const owned = variable({ is_owner: true, can_manage_shares: true });
+  it("lets an authorized owner mutate", () => {
+    const owned = variable({ is_owner: true });
     expect(canMutateVariable(owned, "delete", loaded, () => true)).toBe(true);
-    expect(canShareVariable(owned)).toBe(true);
   });
 
   it("revalidates retained selections and drops missing or revoked rows", () => {
