@@ -138,9 +138,18 @@ router_v2.include_router(files_router_v2)
 router_v2.include_router(mcp_router_v2)
 router_v2.include_router(registration_router_v2)
 
-# Shared lfx router bound to the langflow host; job-status routes stay with the
-# durable router below, and no developer-api guard (it would 403 authed requests).
-_workflow_host = LangflowWorkflowHost()
+# POST /api/v2/workflows runs through the shared lfx router bound to the
+# langflow host. ``supports_background=True`` lets the background-submit branch
+# dispatch to the host; ``auto_register_job_routes=False`` suppresses the lfx
+# generic GET-status/POST-stop routes so the langflow durable router below owns
+# them (one handler per method+path). ``developer_api_guard=False`` because the
+# authenticated langflow v2 router has never carried a developer-api gate; the
+# default-off setting would otherwise 403 every authenticated request.
+# One host serves every profile. Warming is selected at request/build time from
+# ``settings.warm_registry_enabled`` while authentication and per-flow authorization
+# remain identical whether the cache is enabled or not. This module is imported before
+# ``load_dotenv`` runs, so keeping the decision out of this path preserves ``--env-file``.
+_workflow_host: WorkflowHost = LangflowWorkflowHost()
 assert isinstance(_workflow_host, WorkflowHost)  # noqa: S101
 router_v2.include_router(
     create_workflow_router(

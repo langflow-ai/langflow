@@ -1627,11 +1627,23 @@ async def sync_flows_from_fs():
                                 if new_mtime > mtime:
                                     update_data = orjson.loads(await path.read_text(encoding="utf-8"))
                                     try:
+                                        flow_changed = False
                                         for field_name in ("name", "description", "data", "locked"):
-                                            if new_value := update_data.get(field_name):
+                                            if (new_value := update_data.get(field_name)) and getattr(
+                                                flow, field_name
+                                            ) != new_value:
                                                 setattr(flow, field_name, new_value)
+                                                flow_changed = True
                                         if folder_id := update_data.get("folder_id"):
-                                            flow.folder_id = UUID(folder_id)
+                                            new_folder_id = UUID(folder_id)
+                                            if flow.folder_id != new_folder_id:
+                                                flow.folder_id = new_folder_id
+                                                flow_changed = True
+                                        if flow_changed:
+                                            # The warm registry reconciles executable data by
+                                            # updated_at, so filesystem writers must advance it in
+                                            # the same transaction as the Flow fields they replace.
+                                            flow.updated_at = datetime.now(timezone.utc)
                                         await session.flush()
                                         await session.refresh(flow)
                                     except Exception:  # noqa: BLE001
