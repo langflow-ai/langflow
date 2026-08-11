@@ -5,6 +5,7 @@ import re
 import sys
 import tempfile
 import warnings
+from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager, suppress
 from http import HTTPStatus
 from pathlib import Path
@@ -69,6 +70,26 @@ warnings.filterwarnings("ignore", category=ResourceWarning, message=".*MemoryObj
 _tasks: list[asyncio.Task] = []
 
 MAX_PORT = 65535
+
+# Enterprise lifespan hook registry. Enterprise plugins append async callables
+# at app-construction time (plugin registration runs before the lifespan
+# starts); the lifespan awaits "startup" hooks after all services are
+# initialized, right before it yields, and "shutdown" hooks first on teardown.
+# Hooks are best-effort: a failing hook is logged and never blocks OSS startup
+# or shutdown.
+_enterprise_lifespan_hooks: dict[str, list[Callable[[], Awaitable[None]]]] = {
+    "startup": [],
+    "shutdown": [],
+}
+
+
+async def _run_enterprise_lifespan_hooks(phase: str) -> None:
+    for hook in list(_enterprise_lifespan_hooks.get(phase, [])):
+        try:
+            await hook()
+        except Exception as e:  # noqa: BLE001
+            hook_name = getattr(hook, "__qualname__", repr(hook))
+            await logger.awarning(f"Enterprise lifespan {phase} hook {hook_name} failed: {e}")
 
 
 async def log_exception_to_telemetry(exc: Exception, context: str) -> None:
@@ -607,6 +628,10 @@ def get_lifespan(*, fix_migration=False, version=None):
             except Exception as e:  # noqa: BLE001
                 await logger.awarning(f"DB pool metrics failed to register: {e}")
 
+            # Enterprise startup hooks run last: every service they may touch
+            # is initialized by this point.
+            await _run_enterprise_lifespan_hooks("startup")
+
             yield
         except asyncio.CancelledError:
             await logger.adebug("Lifespan received cancellation signal")
@@ -644,6 +669,12 @@ def get_lifespan(*, fix_migration=False, version=None):
             # CRITICAL: Cleanup MCP sessions FIRST, before any other shutdown logic.
             # This ensures MCP subprocesses are killed even if shutdown is interrupted.
             await cleanup_mcp_sessions()
+
+            # Enterprise shutdown hooks run before service teardown so they can
+            # still flush through live services. Also reached when startup
+            # failed before the hooks ran — enterprise stop() paths must (and
+            # do) tolerate never having started.
+            await _run_enterprise_lifespan_hooks("shutdown")
 
             # After the MCP cleanup above, deliberately: stopping the sampler awaits a
             # cancellation, and parking there first would both delay that guarantee and give
