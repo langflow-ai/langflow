@@ -99,6 +99,7 @@ export default function ImageViewer({ image }: { image: string }) {
         <div className="shadow-round-btn-shadow hover:shadow-round-btn-shadow flex w-[50%] items-center justify-center rounded-sm border bg-muted shadow-md transition-all">
           <button
             id="zoom-in-button"
+            aria-label={t("imageViewer.zoomIn")}
             className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover"
           >
             <ForwardedIconComponent
@@ -111,6 +112,7 @@ export default function ImageViewer({ image }: { image: string }) {
           </div>
           <button
             id="zoom-out-button"
+            aria-label={t("imageViewer.zoomOut")}
             className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover"
           >
             <ForwardedIconComponent
@@ -123,6 +125,7 @@ export default function ImageViewer({ image }: { image: string }) {
           </div>
           <button
             id="home-button"
+            aria-label={t("imageViewer.resetView")}
             className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover"
           >
             <ForwardedIconComponent
@@ -135,6 +138,7 @@ export default function ImageViewer({ image }: { image: string }) {
           </div>
           <button
             id="full-page-button"
+            aria-label={t("imageViewer.fullScreen")}
             className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover"
           >
             <ForwardedIconComponent
@@ -148,6 +152,7 @@ export default function ImageViewer({ image }: { image: string }) {
 
           <button
             onClick={download}
+            aria-label={t("imageViewer.download")}
             className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover"
           >
             <ForwardedIconComponent
