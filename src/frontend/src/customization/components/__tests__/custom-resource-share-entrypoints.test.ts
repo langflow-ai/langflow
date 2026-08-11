@@ -37,4 +37,29 @@ describe("non-flow share entry-point wiring", () => {
     expect(source).toContain("resourceId=");
     expect(source).toContain("resourceName=");
   });
+
+  it("identifies Memory Bases separately from knowledge bases", () => {
+    const source = readFrontendSource(
+      "pages/FlowPage/components/MemoriesMainContent/components/MemoryDetailsHeader.tsx",
+    );
+
+    expect(source).toContain('resourceSubtype="memory"');
+  });
+
+  it("reserves the complete two-action project row width", () => {
+    const source = readFrontendSource(
+      "components/core/folderSidebarComponent/components/sideBarFolderButtons/index.tsx",
+    );
+
+    expect(source).toContain('"flex-grow pr-16"');
+    expect(source).not.toContain('"flex-grow pr-8"');
+  });
+
+  it("keeps resource subtype in the generic customization seam contract", () => {
+    const source = readFrontendSource(
+      "customization/components/custom-resource-share-action.tsx",
+    );
+
+    expect(source).toContain("resourceSubtype?:");
+  });
 });
