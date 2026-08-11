@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import runpy
 import sys
 from pathlib import Path
 
@@ -71,3 +72,6 @@ def test_published_extras_enforce_patched_gitpython_floor() -> None:
 
     bundle_extras = _load_pyproject("src/bundles/lfx-bundles/pyproject.toml")["project"]["optional-dependencies"]
     _assert_specifier(_requirement(bundle_extras["git"], "GitPython"), ">=", "3.1.58")
+
+    generator = runpy.run_path(REPO_ROOT / "scripts/migrate/consolidate_bundles.py")
+    assert generator["PROVIDER_DEPS"]["git"] == bundle_extras["git"]
