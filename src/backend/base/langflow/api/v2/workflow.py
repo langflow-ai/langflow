@@ -221,8 +221,8 @@ async def authorize_flow_action(
         ) from err
 
 
-def _apply_execution_gates(parsed, flow, current_user: UserRead) -> None:
-    """The langflow request gates that run before a flow executes."""
+def _apply_execution_gates(parsed, flow, current_user: UserRead):
+    """Run request gates and return any server-sanitized execution payload."""
     _reject_unsupported_sync_fields(parsed)
     _reject_sync_only_fields(parsed)
     try:
@@ -234,7 +234,7 @@ def _apply_execution_gates(parsed, flow, current_user: UserRead) -> None:
         if exc.status_code == status.HTTP_404_NOT_FOUND:
             raise _flow_not_found_http_exception(str(parsed.flow_id)) from exc
         raise
-    _validate_flow_data_for_execution(parsed, flow)
+    return _validate_flow_data_for_execution(parsed, flow, current_user)
 
 
 async def run_sync_with_mapping(
@@ -246,7 +246,7 @@ async def run_sync_with_mapping(
     background_tasks: BackgroundTasks,
 ) -> WorkflowExecutionResponse:
     """Inline sync run with the langflow timeout/validation error mapping."""
-    _apply_execution_gates(parsed, flow, current_user)
+    parsed = _apply_execution_gates(parsed, flow, current_user)
     job_id = uuid4()
     try:
         return await execute_sync_workflow_with_timeout(
@@ -321,7 +321,7 @@ def build_stream_response(
     side-channel, and vertex-build persistence all survive. Validation gates run
     before the response is constructed so a bad request fails before streaming.
     """
-    _apply_execution_gates(parsed, flow, current_user)
+    parsed = _apply_execution_gates(parsed, flow, current_user)
     adapter = get_stream_adapter(
         stream_protocol,
         StreamAdapterContext(
@@ -346,7 +346,7 @@ async def submit_background_with_mapping(
     stream_protocol: str,
 ) -> WorkflowJobResponse:
     """Queue a durable background run with the langflow service error mapping."""
-    _apply_execution_gates(parsed, flow, current_user)
+    parsed = _apply_execution_gates(parsed, flow, current_user)
     try:
         return await execute_workflow_background(
             parsed=parsed,
