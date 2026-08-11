@@ -61,7 +61,11 @@ from langflow.api.utils.flow_utils import (
     verify_public_flow_and_get_user,
 )
 from langflow.services.auth.utils import get_current_user_optional
-from langflow.services.authorization.public_access import PublicResourceAction, authorize_public_flow_access
+from langflow.services.authorization.public_access import (
+    PUBLIC_FLOW_NOT_FOUND_DETAIL,
+    PublicResourceAction,
+    authorize_public_flow_access,
+)
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
@@ -166,7 +170,7 @@ async def execute_public_workflow(
         async with session_scope() as session:
             flow = await session.get(Flow, real_flow_id)
             if flow is None:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=PUBLIC_FLOW_NOT_FOUND_DETAIL)
             # Authorize the same snapshot that is validated, scrubbed, detached,
             # and streamed below; the admission helper used a separate session and
             # its earlier snapshot may have been revoked in the meantime.
@@ -195,6 +199,7 @@ async def execute_public_workflow(
                 prepared_public_data if prepared_public_data is not None else flow.data
             )
             flow_name = flow.name
+            source_flow_owner_id = flow.user_id
     except CatalogPolicyIdentityUnavailableError as exc:
         await logger.awarning("Public workflow component identities are temporarily unavailable: %s", exc)
         raise HTTPException(
@@ -249,6 +254,7 @@ async def execute_public_workflow(
             parsed=parsed,
             current_user=public_user,
             source_flow_id=real_flow_id,
+            source_flow_owner_id=source_flow_owner_id,
             expose_error_details=False,
         ):
             yield frame

@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import inspect
 
-from langflow.api.utils.execution_errors import error_details_for_client
+from fastapi import HTTPException
+from langflow.api.utils.execution_errors import (
+    SAFE_WORKFLOW_ERROR_MESSAGE,
+    error_details_for_client,
+    error_for_client,
+)
 
 
 def test_delegated_error_details_hide_message_and_traceback() -> None:
@@ -48,3 +53,13 @@ def test_execution_helpers_fail_closed_by_default() -> None:
 
     for helper in helpers:
         assert inspect.signature(helper).parameters["expose_error_details"].default is False
+
+
+def test_delegated_http_error_preserves_status_while_redacting_detail() -> None:
+    error = HTTPException(status_code=422, detail="sensitive validation detail")
+
+    sanitized = error_for_client(error, expose_details=False)
+
+    assert isinstance(sanitized, HTTPException)
+    assert sanitized.status_code == 422
+    assert sanitized.detail == SAFE_WORKFLOW_ERROR_MESSAGE

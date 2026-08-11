@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+from functools import cache
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -75,13 +76,14 @@ BEHAVIOR_SPECIFIC_REFERENCE_TERMS = {
 }
 
 
-def _test_functions(path: Path) -> set[str]:
+@cache
+def _test_functions(path: Path) -> frozenset[str]:
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-    return {
+    return frozenset(
         node.name
         for node in ast.walk(tree)
         if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)) and node.name.startswith("test_")
-    }
+    )
 
 
 def _validate_test_reference(raw: str) -> str | None:
@@ -104,12 +106,22 @@ def _authz_families() -> set[str]:
 
 def validate_matrix(matrix_path: Path = DEFAULT_MATRIX) -> list[str]:
     """Return reader-friendly contract errors; an empty list means complete."""
-    matrix = json.loads(matrix_path.read_text(encoding="utf-8"))
+    try:
+        matrix = json.loads(matrix_path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        return [f"could not read execution-principal matrix {matrix_path}: {exc}"]
+    except json.JSONDecodeError as exc:
+        return [f"execution-principal matrix {matrix_path} is not valid JSON: {exc}"]
     errors: list[str] = []
     if matrix.get("schema_version") != 1:
         errors.append("schema_version must be 1")
 
-    authz_families = _authz_families()
+    try:
+        authz_families = _authz_families()
+    except OSError as exc:
+        return [f"could not read authorization matrix {AUTHZ_MATRIX}: {exc}"]
+    except json.JSONDecodeError as exc:
+        return [f"authorization matrix {AUTHZ_MATRIX} is not valid JSON: {exc}"]
     seen: set[str] = set()
     for entrypoint in matrix.get("entrypoints", []):
         family = entrypoint.get("family", "<unnamed>")

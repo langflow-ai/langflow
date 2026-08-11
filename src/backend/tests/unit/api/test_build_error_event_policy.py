@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
-from fastapi import BackgroundTasks
+from fastapi import BackgroundTasks, HTTPException
 from langflow.api.v1.schemas import FlowDataRequest
 from langflow.events.event_manager import create_default_event_manager
 from langflow.services.job_queue.service import JobQueueService
@@ -57,8 +57,9 @@ async def test_generate_flow_events_sanitizes_cooperative_and_queue_fallback_err
         expose_error_details=False,
     )
 
-    with pytest.raises(RuntimeError, match="Workflow execution failed"):
+    with pytest.raises(HTTPException, match="Workflow execution failed") as exc_info:
         await JobQueueService._guarded_task("job-id", producer, event_manager, queue)
+    assert exc_info.value.status_code == 500
 
     payloads: list[dict] = []
     saw_sentinel = False

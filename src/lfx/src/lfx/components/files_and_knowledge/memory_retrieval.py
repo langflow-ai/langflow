@@ -248,8 +248,8 @@ class MemoryBaseComponent(Component):
         await backend.ensure_ready()
         return backend
 
-    def _format_results(self, results: list[tuple]) -> DataFrame:
-        """Convert Chroma (doc, score) tuples into the component's DataFrame output.
+    def _format_results(self, results: list[tuple], backend: BaseVectorStoreBackend) -> DataFrame:
+        """Convert backend ``(doc, score)`` tuples into the component's DataFrame output.
 
         Metadata values are coerced from numpy scalars to Python primitives so the
         resulting DataFrame is JSON-serializable when the component is invoked as
@@ -259,7 +259,7 @@ class MemoryBaseComponent(Component):
         for doc, score in results:
             kwargs: dict = {"content": doc.page_content}
             if self.search_query:
-                kwargs["_score"] = _to_python_scalar(_distance_to_similarity(score))
+                kwargs["_score"] = _to_python_scalar(backend.normalize_score(score))
             if self.include_metadata:
                 for key, value in (doc.metadata or {}).items():
                     kwargs[key] = _to_python_scalar(value)
@@ -333,4 +333,4 @@ class MemoryBaseComponent(Component):
             )
         finally:
             await backend.teardown()
-        return self._format_results(results)
+        return self._format_results(results, backend)

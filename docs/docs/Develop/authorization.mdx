@@ -64,7 +64,7 @@ Only the flow owner can submit graph data or component-parameter tweaks. A non-o
 
 Revoking a share prevents new runs and rechecked continuations, including HITL resume. It does not change the principal of work that is already running or terminate that work. Deployments and legacy public entry points are explicit exceptions:
 
-- Public V1/V2 and A2A entry points continue to execute with the published flow owner's identity, under their existing visitor-isolated session and storage namespaces. Public requests cannot submit graph data or tweaks.
+- Public V1/V2 and unauthenticated A2A (`auth_type=none`) entry points execute with a stable, non-persisted anonymous principal under visitor-isolated session and storage namespaces. They never inherit the published flow owner's credentials, variables, files, or Memory Bases, and public requests cannot submit graph data or tweaks. Protected A2A (`apikey` or `oauth`) continues to require and execute as the flow owner.
 - Deployment authorization and audit use the requesting actor, while the external deployment data plane continues to use the deployment owner's provider namespace. Provider controls govern already-running work.
 - Webhooks, legacy MCP, and project MCP remain owner-scoped admission surfaces in this release; they do not widen execution to shared flows. Webhook request data is the one trusted server-generated tweak and is mapped only to the published Webhook Component.
 

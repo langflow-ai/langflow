@@ -828,11 +828,13 @@ class TestAGUIStreaming:
         assert event_types == ["token", "token", "error"]
 
     @pytest.mark.parametrize(("stream_protocol", "terminal_type"), [("agui", "RUN_ERROR"), ("langflow", "error")])
+    @pytest.mark.parametrize("expose_error_details", [False, True])
     async def test_stream_enforces_execution_timeout(
         self,
         monkeypatch: pytest.MonkeyPatch,
         stream_protocol: str,
         terminal_type: str,
+        expose_error_details,
     ):
         """A run that exceeds the wall-clock ceiling ends in a sanitized terminal error, not a hang."""
         from langflow.api.v2 import workflow_execution as wf_exec
@@ -857,7 +859,7 @@ class TestAGUIStreaming:
                 background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
-                expose_error_details=True,
+                expose_error_details=expose_error_details,
             )
         ]
 

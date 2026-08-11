@@ -18,7 +18,6 @@ from sqlmodel import select
 
 from langflow.api.disconnect import DisconnectHandlerStreamingResponse
 from langflow.api.utils import (
-    CurrentActiveUser,
     EventDeliveryType,
     build_graph_from_data,
     build_graph_from_db,
@@ -39,6 +38,7 @@ from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.jobs.model import JobType
+from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import (
     get_chat_service,
     get_job_service,
@@ -189,10 +189,11 @@ async def start_flow_build(
     stop_component_id: str | None,
     start_component_id: str | None,
     log_builds: bool,
-    current_user: CurrentActiveUser,
+    current_user: User | UserRead,
     queue_service: JobQueueService,
     flow_name: str | None = None,
     source_flow_id: uuid.UUID | None = None,
+    source_flow_owner_id: uuid.UUID | None = None,
     expose_error_details: bool = False,
 ) -> str:
     """Start the flow build process by setting up the queue and starting the build task.
@@ -212,6 +213,7 @@ async def start_flow_build(
         source_flow_id: If provided, the actual flow ID to load from DB.
             Used by public flows where flow_id is a virtual UUID for session isolation
             but the flow data must be loaded from the original flow in the database.
+        source_flow_owner_id: Stored owner of the source flow, used to gate owner-scoped side effects.
         expose_error_details: Whether client events may include component errors and tracebacks.
 
     Returns:
@@ -233,12 +235,17 @@ async def start_flow_build(
             current_user=current_user,
             flow_name=flow_name,
             source_flow_id=source_flow_id,
+            source_flow_owner_id=source_flow_owner_id,
             expose_error_details=expose_error_details,
         )
         queue_service.start_job(job_id, task_coro)
     except Exception as e:
         await logger.aexception("Failed to create queue and start task")
         client_error = error_for_client(e, expose_details=expose_error_details)
+        if isinstance(client_error, HTTPException):
+            if client_error is e:
+                raise
+            raise client_error from e
         raise HTTPException(status_code=500, detail=str(client_error)) from e
     return job_id
 
@@ -440,9 +447,10 @@ async def generate_flow_events(
     stop_component_id: str | None,
     start_component_id: str | None,
     log_builds: bool,
-    current_user: CurrentActiveUser,
+    current_user: User | UserRead,
     flow_name: str | None = None,
     source_flow_id: uuid.UUID | None = None,
+    source_flow_owner_id: uuid.UUID | None = None,
     job_id: uuid.UUID | str | None = None,
     resume: dict | None = None,
     run_id: str | None = None,
@@ -987,7 +995,7 @@ async def generate_flow_events(
     # when a caller owns the run's lifecycle (the v2 durable background path
     # passes ``track_job_status=False`` and fires this hook itself with the
     # durable job_id), firing here too would double-capture the flow output.
-    if track_job_status:
+    if track_job_status and source_flow_owner_id is not None and str(source_flow_owner_id) == str(current_user.id):
         try:
             _run_id_uuid = uuid.UUID(graph.run_id) if graph.run_id else None  # type-cast only; same run_id set on graph
             await get_task_service().fire_and_forget_task(

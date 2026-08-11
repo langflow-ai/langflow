@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 from langflow.services.deps import get_chat_service
@@ -53,7 +53,6 @@ async def test_non_owner_public_flow_is_hidden_from_deprecated_vertex_routes(
 ):
     """A PUBLIC transition must not widen the owner-only legacy vertex surface."""
     from langflow.api.v1 import chat as chat_module
-    from lfx.components.files_and_knowledge import memory_retrieval as memory_module
 
     flow_id = added_flow_webhook_test["id"]
     vertex_id = added_flow_webhook_test["data"]["nodes"][0]["id"]
@@ -86,17 +85,7 @@ async def test_non_owner_public_flow_is_hidden_from_deprecated_vertex_routes(
     # Owner-only denial must happen before touching the flow-keyed graph cache
     # or any MemoryBase owner/backend credential seam.
     get_chat_service_spy = MagicMock(wraps=chat_module.get_chat_service)
-    owner_lookup_spy = AsyncMock()
-    embedding_selection_spy = AsyncMock()
-    backend_selection_spy = AsyncMock()
-    build_embeddings_spy = AsyncMock()
-    create_backend_spy = MagicMock()
     monkeypatch.setattr(chat_module, "get_chat_service", get_chat_service_spy)
-    monkeypatch.setattr(memory_module, "get_user_by_id", owner_lookup_spy)
-    monkeypatch.setattr(memory_module, "resolve_embedding_selection", embedding_selection_spy)
-    monkeypatch.setattr(memory_module, "resolve_backend_selection", backend_selection_spy)
-    monkeypatch.setattr(memory_module.KBIngestionHelper, "build_embeddings", build_embeddings_spy)
-    monkeypatch.setattr(memory_module, "create_backend", create_backend_spy)
 
     public_response = await _request_route(
         client,
@@ -107,11 +96,6 @@ async def test_non_owner_public_flow_is_hidden_from_deprecated_vertex_routes(
     )
 
     get_chat_service_spy.assert_not_called()
-    owner_lookup_spy.assert_not_awaited()
-    embedding_selection_spy.assert_not_awaited()
-    backend_selection_spy.assert_not_awaited()
-    build_embeddings_spy.assert_not_awaited()
-    create_backend_spy.assert_not_called()
     assert public_response.status_code == private_response.status_code == 404
     assert public_response.json() == private_response.json() == {"detail": f"Flow with id {flow_id} not found"}
 

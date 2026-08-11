@@ -41,8 +41,8 @@ class ResumeConflictError(RuntimeError):
 # (flow_id, task_id, input_text, context_id, request_host, admitted_user_id) -> the v2 sync run result.
 # context_id scopes the run's chat memory (the A2A conversation = the flow session).
 RunFlow = Callable[[UUID, str, str, str | None, str | None, str | None], Awaitable[WorkflowExecutionResponse]]
-# (flow_id, task_id, decision_text) -> the run result after applying a human decision to a
-# paused (input-required) task. The text carries the chosen action for the HumanInput node.
+# (flow_id, task_id, decision_text, request_host, admitted_user_id) -> the run result after
+# applying a human decision to a paused task. The final fields preserve the original HTTP gate.
 ResumeFlow = Callable[[UUID, str, str, str | None, str | None], Awaitable[WorkflowExecutionResponse]]
 
 

@@ -53,6 +53,10 @@ def _make_backend(
 class TestOpenSearchBackendVectorFieldDefault:
     """Default field names must match LangChain's write field (``vector_field``)."""
 
+    def test_relevance_score_remains_higher_is_better(self, tmp_path: Path) -> None:
+        backend = _make_backend(tmp_path)
+        assert backend.normalize_score(0.75) == 0.75
+
     def test_default_vector_field_is_vector_field(self) -> None:
         # LangChain's OpenSearchVectorSearch writes embeddings under
         # ``vector_field`` (its per-call default, which the constructor arg

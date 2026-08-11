@@ -502,6 +502,18 @@ async def test_cancel_build_with_cancelled_error(client, json_memory_chatbot_no_
         monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", original_cancel_flow_build)
 
 
+async def test_cancel_build_public_propagates_task_cancellation(monkeypatch):
+    """The public cancellation route must not translate server task cancellation into HTTP 500."""
+    from langflow.api.v1 import chat
+
+    queue_service = SimpleNamespace()
+    monkeypatch.setattr(chat, "_assert_public_job", AsyncMock())
+    monkeypatch.setattr(chat, "cancel_flow_build", AsyncMock(side_effect=asyncio.CancelledError))
+
+    with pytest.raises(asyncio.CancelledError):
+        await chat.cancel_build_public("public-job", queue_service)
+
+
 @pytest.mark.benchmark
 @pytest.mark.usefixtures("logged_in_headers")
 async def test_should_have_public_events_endpoint_accessible_without_auth(client):

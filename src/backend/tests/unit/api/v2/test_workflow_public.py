@@ -105,6 +105,15 @@ async def test_public_endpoint_rejects_non_public_flow(
         headers={"Content-Type": "application/json"},
     )
     assert response.status_code == codes.NOT_FOUND
+    denied_body = response.content
+
+    missing_response = await client.post(
+        "api/v2/workflows/public",
+        json={"flow_id": str(uuid4()), "input_value": "Hi"},
+        headers={"Content-Type": "application/json"},
+    )
+    assert missing_response.status_code == codes.NOT_FOUND
+    assert missing_response.content == denied_body
 
 
 @pytest.mark.benchmark

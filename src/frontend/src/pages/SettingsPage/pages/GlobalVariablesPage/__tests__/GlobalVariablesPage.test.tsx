@@ -39,32 +39,35 @@ jest.mock("@/components/core/dropdownComponent", () => ({
   default: ({ children }: { children?: ReactNode }) => children ?? null,
 }));
 
-jest.mock(
-  "@/components/core/parameterRenderComponent/components/tableComponent",
-  () => ({
-    __esModule: true,
-    default: ({
-      columnDefs,
-      rowData,
-    }: {
-      columnDefs: Array<{
-        colId?: string;
-        cellRenderer?: (props: { data?: GlobalVariable }) => ReactNode;
-      }>;
-      rowData: GlobalVariable[];
-    }) => {
-      const actionsColumn = columnDefs.find(
-        (column) => column.colId === "actions",
-      );
-
-      return (
-        <div data-testid="global-variables-table">
-          {actionsColumn?.cellRenderer?.({ data: rowData[0] })}
-        </div>
-      );
-    },
-  }),
-);
+jest.mock("ag-grid-react", () => {
+  const React = jest.requireActual("react");
+  return {
+    AgGridReact: React.forwardRef(
+      (
+        {
+          columnDefs,
+          rowData,
+        }: {
+          columnDefs: Array<{
+            colId?: string;
+            cellRenderer?: (props: { data?: GlobalVariable }) => ReactNode;
+          }>;
+          rowData: GlobalVariable[];
+        },
+        _ref: unknown,
+      ) => {
+        const actionsColumn = columnDefs.find(
+          (column) => column.colId === "actions",
+        );
+        return (
+          <div data-testid="global-variables-table">
+            {actionsColumn?.cellRenderer?.({ data: rowData[0] })}
+          </div>
+        );
+      },
+    ),
+  };
+});
 
 jest.mock("@/components/core/GlobalVariableModal/GlobalVariableModal", () => ({
   __esModule: true,

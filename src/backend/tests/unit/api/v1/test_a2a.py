@@ -747,7 +747,7 @@ async def test_public_a2a_resume_rechecks_compatibility_grant(active_user, echo_
         calls.append(kwargs)
         raise HTTPException(status_code=404, detail="Not Found")
 
-    monkeypatch.setattr(a2a_module, "authorize_public_flow_access", deny_revoked, raising=False)
+    monkeypatch.setattr(a2a_module, "authorize_public_flow_access", deny_revoked)
 
     with pytest.raises(HTTPException) as excinfo:
         await a2a_module._prepare_a2a_resume_checkpoint(
@@ -928,6 +928,24 @@ def test_a2a_context_builder_carries_only_the_server_admitted_principal():
     context = a2a_module._FlowContextBuilder().build(request)
 
     assert context.state["admitted_user_id"] == admitted_user_id
+
+
+@pytest.mark.parametrize("is_public_now", [False, True])
+def test_a2a_execution_rejects_missing_admitted_principal(is_public_now):
+    """The SDK execution seam must never infer a principal when the HTTP gate did not record one."""
+    from fastapi import HTTPException
+    from langflow.api.v1 import a2a as a2a_module
+
+    flow = Flow(id=uuid.uuid4(), user_id=uuid.uuid4(), name="agent", data={"nodes": [], "edges": []})
+
+    with pytest.raises(HTTPException) as exc_info:
+        a2a_module._require_admitted_a2a_principal(
+            flow,
+            is_public_now=is_public_now,
+            admitted_user_id=None,
+        )
+
+    assert exc_info.value.status_code == 404
 
 
 async def test_a2a_executor_forwards_admitted_principal_to_run():
@@ -2495,6 +2513,14 @@ async def test_task_scope_key_is_postgres_safe():
     key = _task_scope(ServerCallContext(state={"flow_id": flow_id, "admitted_user_id": str(uuid.uuid4())}))
     assert "\x00" not in key
     assert flow_id in key
+
+
+def test_task_scope_requires_server_admitted_principal():
+    from a2a.server.context import ServerCallContext
+    from langflow.api.v1.a2a import _task_scope
+
+    with pytest.raises(RuntimeError, match="admitted principal"):
+        _task_scope(ServerCallContext(state={"flow_id": str(uuid.uuid4())}))
 
 
 async def test_task_and_push_scopes_bind_the_server_admitted_principal():

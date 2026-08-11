@@ -120,8 +120,8 @@ def _require_a2a_enabled() -> None:
 async def _enforce_a2a_auth(flow: Flow, request: Request) -> User | None:
     """Enforce the folder's auth scheme before any dispatch, failing closed on the rest.
 
-    The flow always runs as its owner (see ``_run_flow``), so an unauthenticated run is a
-    run under the owner's identity. Gate by the folder's ``auth_type``:
+    Public agents run as the isolated anonymous principal; protected agents run
+    as the authenticated flow owner. Gate by the folder's ``auth_type``:
 
     - ``"none"`` / missing / no-folder -> public agent (the intended public A2A model).
     - ``"apikey"`` / ``"oauth"`` -> require a valid langflow API key in ``x-api-key`` whose
@@ -129,9 +129,9 @@ async def _enforce_a2a_auth(flow: Flow, request: Request) -> User | None:
       happens in front); the langflow transport itself still takes an owner-scoped api key,
       exactly as the MCP transport does (``mcp_projects.verify_project_auth``), since credential
       forwarding from the broker isn't available yet. Accepting another user's valid key would
-      let them trigger a run under the owner's identity, so scope to ``flow.user_id``.
+      let them trigger an owner-authenticated run, so scope to ``flow.user_id``.
     - anything else (an auth type A2A doesn't understand) -> fail closed with 403: treating a
-      *protected* folder as public would expose an owner-identity run anonymously.
+      *protected* folder as public would bypass its admission policy.
 
     Uses ``authenticate_api_key`` directly, NOT ``api_key_security``: under AUTO_LOGIN the latter
     returns the superuser for a *missing* key, which would silently bypass this gate.

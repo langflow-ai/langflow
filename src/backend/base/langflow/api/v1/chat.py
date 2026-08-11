@@ -54,7 +54,11 @@ from langflow.exceptions.component import ComponentBuildError
 from langflow.services.auth.utils import get_current_user_optional
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.fetch import deny_to_404
-from langflow.services.authorization.public_access import PublicResourceAction, authorize_public_flow_access
+from langflow.services.authorization.public_access import (
+    PUBLIC_FLOW_NOT_FOUND_DETAIL,
+    PublicResourceAction,
+    authorize_public_flow_access,
+)
 from langflow.services.chat.service import ChatService
 from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 from langflow.services.database.models.user.model import User
@@ -362,6 +366,7 @@ async def build_flow(
         current_user=current_user,
         queue_service=queue_service,
         flow_name=flow_name,
+        source_flow_owner_id=flow.user_id,
         expose_error_details=flow.user_id == current_user.id,
     )
     await _register_job_owner_or_cancel(queue_service, job_id, current_user.id)
@@ -923,7 +928,7 @@ async def build_public_tmp(
         async with session_scope() as session:
             flow = await session.get(Flow, flow_id)
             if flow is None:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=PUBLIC_FLOW_NOT_FOUND_DETAIL)
             # The admission helper authorizes its own DB snapshot. Reauthorize the
             # exact snapshot detached below so a concurrent revoke/private transition
             # cannot leave us executing a later, unchecked definition.
@@ -987,6 +992,7 @@ async def build_public_tmp(
             current_user=public_user,
             queue_service=queue_service,
             flow_name=flow_name or f"{authenticated_user_id or client_id}_{flow_id}",
+            source_flow_owner_id=flow.user_id,
             expose_error_details=False,
         )
         # Gate the public events/cancel endpoints to jobs that were actually
@@ -1110,7 +1116,7 @@ async def cancel_build_public(
         return CancelFlowResponse(success=False, message="Failed to cancel flow build")
     except asyncio.CancelledError as exc:
         await logger.aerror(f"Failed to cancel public flow build for job_id {job_id}: {exc!r}")
-        return CancelFlowResponse(success=False, message="Failed to cancel flow build")
+        raise
     except ValueError as exc:
         await logger.awarning(f"Public flow cancellation could not find job_id {job_id}: {exc!r}")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_PUBLIC_JOB_NOT_FOUND_DETAIL) from exc

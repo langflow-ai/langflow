@@ -1,49 +1,95 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import ts from "typescript";
 
 const readFrontendSource = (path: string) =>
   readFileSync(join(process.cwd(), "src", path), "utf8");
+
+const jsxProps = (path: string, tagName: string) => {
+  const source = readFrontendSource(path);
+  const sourceFile = ts.createSourceFile(
+    path,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
+  const matches: Array<Record<string, string | undefined>> = [];
+
+  const visit = (node: ts.Node) => {
+    const opening = ts.isJsxSelfClosingElement(node)
+      ? node
+      : ts.isJsxElement(node)
+        ? node.openingElement
+        : undefined;
+    if (opening?.tagName.getText(sourceFile) === tagName) {
+      matches.push(
+        Object.fromEntries(
+          opening.attributes.properties
+            .filter(ts.isJsxAttribute)
+            .map((attribute) => [
+              attribute.name.getText(sourceFile),
+              attribute.initializer?.getText(sourceFile),
+            ]),
+        ),
+      );
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return matches;
+};
 
 describe("non-flow share entry-point wiring", () => {
   it.each([
     [
       "pages/MainPage/pages/deploymentsPage/components/deployments-table.tsx",
-      'resourceType="deployment"',
+      '"deployment"',
+      "{deployment.id}",
+      "{resolvedDisplayName}",
     ],
     [
       "components/core/folderSidebarComponent/components/sideBarFolderButtons/components/select-options.tsx",
-      'resourceType="project"',
+      '"project"',
+      "{item.id!}",
+      "{displayName}",
     ],
     [
       "pages/MainPage/pages/knowledgePage/config/knowledgeBaseColumns.tsx",
-      'resourceType="knowledge_base"',
+      '"knowledge_base"',
+      "{knowledgeBase.id}",
+      "{knowledgeBase.name}",
     ],
     [
       "pages/FlowPage/components/MemoriesMainContent/components/MemoryDetailsHeader.tsx",
-      'resourceType="knowledge_base"',
+      '"knowledge_base"',
+      "{memory.id}",
+      "{memory.name}",
     ],
     [
       "modals/fileManagerModal/components/filesContextMenuComponent/index.tsx",
-      'resourceType="file"',
+      '"file"',
+      "{file.id}",
+      "{file.name}",
     ],
-  ])("keeps the Enterprise seam mounted in %s", (path, resourceType) => {
-    const source = readFrontendSource(path);
-
-    expect(source).toContain(
-      'import CustomResourceShareAction from "@/customization/components/custom-resource-share-action";',
-    );
-    expect(source).toContain("<CustomResourceShareAction");
-    expect(source).toContain(resourceType);
-    expect(source).toContain("resourceId=");
-    expect(source).toContain("resourceName=");
-  });
+  ])(
+    "keeps the Enterprise seam mounted in %s",
+    (path, resourceType, resourceId, resourceName) => {
+      expect(jsxProps(path, "CustomResourceShareAction")).toContainEqual(
+        expect.objectContaining({ resourceType, resourceId, resourceName }),
+      );
+    },
+  );
 
   it("identifies Memory Bases separately from knowledge bases", () => {
-    const source = readFrontendSource(
+    const [shareAction] = jsxProps(
       "pages/FlowPage/components/MemoriesMainContent/components/MemoryDetailsHeader.tsx",
+      "CustomResourceShareAction",
     );
 
-    expect(source).toContain('resourceSubtype="memory"');
+    expect(shareAction).toEqual(
+      expect.objectContaining({ resourceSubtype: '"memory"' }),
+    );
   });
 
   it("reserves the complete two-action project row width", () => {
@@ -61,21 +107,5 @@ describe("non-flow share entry-point wiring", () => {
     );
 
     expect(source).toContain("resourceSubtype?:");
-  });
-
-  it("mounts the inert variable seam without trusting row share capability", () => {
-    const pageSource = readFrontendSource(
-      "pages/SettingsPage/pages/GlobalVariablesPage/index.tsx",
-    );
-    const seamSource = readFrontendSource(
-      "customization/components/custom-variable-share-action.tsx",
-    );
-
-    expect(pageSource).toContain(
-      'import CustomVariableShareAction from "@/customization/components/custom-variable-share-action";',
-    );
-    expect(pageSource).toContain("<CustomVariableShareAction");
-    expect(pageSource).not.toContain("canShareVariable");
-    expect(seamSource).toContain("return null;");
   });
 });

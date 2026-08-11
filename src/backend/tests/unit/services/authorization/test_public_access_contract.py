@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import importlib
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
+from fastapi import HTTPException
 
 
 def _contract_module():
@@ -58,3 +62,57 @@ async def test_compatibility_grants_cannot_bypass_action_floor(action_name):
     )
 
     assert source is None
+
+
+@pytest.mark.anyio
+async def test_a2a_compatibility_grant_allows_execute_when_no_public_share():
+    module = _contract_module()
+    result = SimpleNamespace(first=lambda: None)
+    session = SimpleNamespace(exec=AsyncMock(return_value=result))
+    flow = SimpleNamespace(id=uuid4(), access_type=object())
+
+    source = await module._resolve_grant(
+        flow=flow,
+        action=module.PublicResourceAction.EXECUTE,
+        session=session,
+        compatibility_grant=module.PublicGrantSource.A2A_AUTH_NONE,
+    )
+
+    assert source is module.PublicGrantSource.A2A_AUTH_NONE
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("plugin_result", ["allow", "unsupported", "missing_tenant", "deny", "error"])
+async def test_enabled_authorization_plugin_controls_public_execution(monkeypatch, plugin_result):
+    module = _contract_module()
+    flow = SimpleNamespace(id=uuid4(), workspace_id=None, folder_id=None)
+    service = SimpleNamespace(
+        supports_public_principals=AsyncMock(return_value=plugin_result != "unsupported"),
+        resolve_public_tenant=AsyncMock(return_value=None if plugin_result == "missing_tenant" else "tenant-a"),
+        enforce_public=AsyncMock(return_value=plugin_result == "allow"),
+    )
+    if plugin_result == "error":
+        service.supports_public_principals.side_effect = RuntimeError("plugin detail")
+
+    monkeypatch.setattr(module, "_resolve_grant", AsyncMock(return_value=module.PublicGrantSource.AUTHZ_SHARE))
+    settings = SimpleNamespace(auth_settings=SimpleNamespace(AUTHZ_ENABLED=True))
+    monkeypatch.setattr(module, "get_settings_service", lambda: settings)
+    monkeypatch.setattr(module, "get_authorization_service", lambda: service)
+    audit = AsyncMock()
+    monkeypatch.setattr(module, "audit_decision", audit)
+
+    if plugin_result == "allow":
+        principal = await module.authorize_public_flow_access(
+            flow=flow,
+            action=module.PublicResourceAction.EXECUTE,
+        )
+        assert principal.actor_type == "anonymous_public"
+    else:
+        with pytest.raises(HTTPException) as exc_info:
+            await module.authorize_public_flow_access(
+                flow=flow,
+                action=module.PublicResourceAction.EXECUTE,
+            )
+        assert exc_info.value.status_code == 404
+
+    audit.assert_awaited_once()

@@ -10,6 +10,7 @@ import contextlib
 import time
 import uuid
 from typing import Any
+from unittest.mock import AsyncMock
 
 import fakeredis.aioredis as fakeredis_aio
 import pytest
@@ -2579,7 +2580,8 @@ async def test_build_public_tmp_returns_503_when_public_marker_persist_fails(mon
             return job_id
 
         class _FakeFlow:
-            data = None
+            data = {"nodes": [], "edges": []}
+            user_id = uuid.uuid4()
 
         class _FakeSession:
             async def get(self, *_args, **_kwargs):
@@ -2592,11 +2594,13 @@ async def test_build_public_tmp_returns_503_when_public_marker_persist_fails(mon
         class _FakeSettingsService:
             class settings:  # noqa: N801
                 rate_limit_enabled = False
+                allow_public_custom_components = False
 
             class auth_settings:  # noqa: N801
                 AUTO_LOGIN = True
 
         monkeypatch.setattr(chat_module, "verify_public_flow_and_get_user", _fake_verify_public_flow_and_get_user)
+        monkeypatch.setattr(chat_module, "authorize_public_flow_access", AsyncMock())
         monkeypatch.setattr(chat_module, "start_flow_build", _fake_start_flow_build)
         monkeypatch.setattr(chat_module, "session_scope", _fake_session_scope)
         monkeypatch.setattr(chat_module, "get_settings_service", lambda: _FakeSettingsService())

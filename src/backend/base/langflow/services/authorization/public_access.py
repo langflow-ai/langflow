@@ -32,6 +32,8 @@ from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_authorization_service, get_settings_service
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.models.flow.model import Flow
@@ -47,7 +49,7 @@ class PublicGrantSource(str, Enum):
 
 _READ_PERMISSIONS = frozenset({"read", "execute", "write", "admin"})
 _EXECUTE_PERMISSIONS = frozenset({"execute", "write", "admin"})
-_PUBLIC_NOT_FOUND = "Flow not found"
+PUBLIC_FLOW_NOT_FOUND_DETAIL = "Flow not found"
 
 
 def public_grant_allows(permission_level: str, action: PublicResourceAction) -> bool:
@@ -80,7 +82,7 @@ def public_execution_user() -> UserRead:
     )
 
 
-async def _public_share_permission(session: AsyncSession, flow_id) -> str | None:
+async def _public_share_permission(session: AsyncSession, flow_id: UUID) -> str | None:
     statement = select(AuthzShare.permission_level).where(
         AuthzShare.resource_type == "flow",
         AuthzShare.resource_id == flow_id,
@@ -177,12 +179,13 @@ async def authorize_public_flow_access(
         },
     )
     if not allowed:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_PUBLIC_NOT_FOUND)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=PUBLIC_FLOW_NOT_FOUND_DETAIL)
     return principal
 
 
 __all__ = [
     "PUBLIC_ANONYMOUS_ACTOR_ID",
+    "PUBLIC_FLOW_NOT_FOUND_DETAIL",
     "PublicGrantSource",
     "PublicResourceAction",
     "authorize_public_flow_access",

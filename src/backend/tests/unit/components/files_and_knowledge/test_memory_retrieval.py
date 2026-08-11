@@ -151,6 +151,18 @@ class TestDistanceToSimilarity:
         assert _distance_to_similarity(-0.1) == 0.1
 
 
+def test_result_formatting_uses_backend_score_contract():
+    component = _make_component(flow_id=uuid.uuid4(), session_id="s1")
+    backend = MagicMock()
+    backend.normalize_score.return_value = 0.91
+    doc = SimpleNamespace(page_content="match", metadata={})
+
+    result = component._format_results([(doc, 7.0)], backend)
+
+    assert result.to_dict(orient="records")[0]["_score"] == 0.91
+    backend.normalize_score.assert_called_once_with(7.0)
+
+
 class TestToPythonScalar:
     """Numpy scalars must be coerced or the Agent tool path fails serialization."""
 
@@ -504,6 +516,7 @@ class TestMemoryBaseRetrievalBehavior:
         # the source of the provider/model the resolver returns.
         provider = metadata.get("embedding_provider", "OpenAI")
         model = metadata.get("embedding_model", "x")
+        fake_backend.normalize_score = MagicMock(side_effect=_distance_to_similarity)
         for cm in (
             _patched_session_scope(db),
             patch(
