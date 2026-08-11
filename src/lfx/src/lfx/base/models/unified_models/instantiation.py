@@ -174,6 +174,8 @@ def get_llm(
             purpose=ModelProviderPolicyPurpose.USE,
         )
     provider_policy.require(provider)
+    if isinstance(model_name, str) and model_name:
+        provider_policy.require_model(provider, model_name, model_type="llm")
 
     # Resolve helpers through the package namespace only after policy passes so
     # tests can patch lfx.base.models.unified_models.<name> and denied requests
@@ -872,6 +874,8 @@ def _build_available_embedding_models(
         for model_name in _get_provider_embedding_model_names(provider, user_id):
             if model_name in available_models:
                 continue
+            if not provider_policy.allows_model(provider, model_name, model_type="embeddings"):
+                continue
 
             composed = _compose_embedding_kwargs(
                 provider,
@@ -977,6 +981,8 @@ def get_embeddings(
             purpose=ModelProviderPolicyPurpose.USE,
         )
     provider_policy.require(provider)
+    if isinstance(model_name, str) and model_name:
+        provider_policy.require_model(provider, model_name, model_type="embeddings")
 
     # Resolve helpers through the patchable package namespace only after the
     # provider has been authorized for runtime use.
