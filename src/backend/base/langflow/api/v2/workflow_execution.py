@@ -297,6 +297,7 @@ async def _stream_event_frames(
     side_channel_events = frozenset({"add_message", "token", "remove_message", "error", "end"})
     terminal_error_type = getattr(adapter, "terminal_error_type", None)
     terminal_error_seen = False
+    stream_paused = False
     _stream_completed = False
 
     seq = 0
@@ -351,6 +352,7 @@ async def _stream_event_frames(
                 frame_bytes, frame_type = _frame(event, seq)
                 # Runner detects a pause by the langflow-side type; agui maps it to CUSTOM.
                 if event_type == "human_input_required":
+                    stream_paused = True
                     frame_type = "human_input_required"
                 yield (frame_bytes, frame_type)
                 seq += 1
@@ -379,22 +381,23 @@ async def _stream_event_frames(
         # Emit a RunPayload so Enterprise metering (run_event_store) and the
         # Scarf telemetry pipeline both see every v2 workflow run.
         # Mirrors the v1 endpoints.py instrumentation for the streaming path.
-        with contextlib.suppress(Exception):
-            from langflow.services.deps import get_telemetry_service
-            from langflow.services.telemetry.schema import RunPayload
+        if not stream_paused:
+            with contextlib.suppress(Exception):
+                from langflow.services.deps import get_telemetry_service
+                from langflow.services.telemetry.schema import RunPayload
 
-            _telemetry = get_telemetry_service()
-            if _telemetry is not None:
-                _run_success = _stream_completed and not terminal_error_seen
-                await _telemetry.log_package_run(
-                    RunPayload(
-                        run_is_webhook=False,
-                        run_seconds=int(time.perf_counter() - _run_start),
-                        run_success=_run_success,
-                        run_error_message="" if _run_success else "workflow error",
-                        run_id=run_id or "",
+                _telemetry = get_telemetry_service()
+                if _telemetry is not None:
+                    _run_success = _stream_completed and not terminal_error_seen
+                    await _telemetry.log_package_run(
+                        RunPayload(
+                            run_is_webhook=False,
+                            run_seconds=int(time.perf_counter() - _run_start),
+                            run_success=_run_success,
+                            run_error_message="" if _run_success else "workflow error",
+                            run_id=run_id or "",
+                        )
                     )
-                )
 
 
 def _execute_streaming_workflow(
@@ -599,6 +602,7 @@ async def execute_sync_workflow(
     # Execute graph - component errors are caught and returned in response body
     job_service = get_job_service()
     await job_service.create_job(job_id=job_id, flow_id=flow_id_str, user_id=current_user.id)
+    _sync_run_paused = False
     _sync_run_success = False
     _run_start = time.perf_counter()
     try:
@@ -625,7 +629,6 @@ async def execute_sync_workflow(
         except (RuntimeError, ValueError, OSError):
             await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
-        _sync_run_success = True
         # Build RunResponse
         run_response = RunResponse(outputs=task_result, session_id=execution_session_id)
         # Convert to WorkflowExecutionResponse
@@ -642,6 +645,7 @@ async def execute_sync_workflow(
         # sync job_id returns the same outputs the background path stores (same
         # list-of-OutputEvent shape, so the status read is protocol-uniform).
         await _persist_sync_result(job_service, job_id, workflow_response, flow.id)
+        _sync_run_success = True
         return workflow_response  # noqa: TRY300 — keep response-building under the broad except below
 
     except GraphPausedException as exc:
@@ -653,13 +657,15 @@ async def execute_sync_workflow(
         # reaps this parked run to FAILED (worker_lost) once its heartbeat goes stale, and resume
         # (WHERE status=SUSPENDED) could never re-claim it.
         await job_service.update_job_status(job_id, JobStatus.SUSPENDED)
-        return WorkflowExecutionResponse(
+        suspended_response = WorkflowExecutionResponse(
             flow_id=parsed.flow_id,
             session_id=session_id,
             job_id=str(job_id),
             status=JobStatus.SUSPENDED,
             human_request=exc.data or {},
         )
+        _sync_run_paused = True
+        return suspended_response
     except asyncio.CancelledError:
         # Re-raise CancelledError to allow timeout mechanism to work properly
         # This ensures asyncio.wait_for() can properly cancel and raise TimeoutError
@@ -684,18 +690,19 @@ async def execute_sync_workflow(
         # Mirrors the _stream_event_frames instrumentation for the SSE path.
         import contextlib as _cl
 
-        with _cl.suppress(Exception):
-            from langflow.services.deps import get_telemetry_service
-            from langflow.services.telemetry.schema import RunPayload
+        if not _sync_run_paused:
+            with _cl.suppress(Exception):
+                from langflow.services.deps import get_telemetry_service
+                from langflow.services.telemetry.schema import RunPayload
 
-            _telemetry = get_telemetry_service()
-            if _telemetry is not None:
-                await _telemetry.log_package_run(
-                    RunPayload(
-                        run_is_webhook=False,
-                        run_seconds=int(time.perf_counter() - _run_start),
-                        run_success=_sync_run_success,
-                        run_error_message="" if _sync_run_success else "workflow error",
-                        run_id=str(job_id),
+                _telemetry = get_telemetry_service()
+                if _telemetry is not None:
+                    await _telemetry.log_package_run(
+                        RunPayload(
+                            run_is_webhook=False,
+                            run_seconds=int(time.perf_counter() - _run_start),
+                            run_success=_sync_run_success,
+                            run_error_message="" if _sync_run_success else "workflow error",
+                            run_id=str(job_id),
+                        )
                     )
-                )

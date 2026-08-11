@@ -68,12 +68,6 @@ warnings.filterwarnings("ignore", category=ResourceWarning, message=".*MemoryObj
 
 _tasks: list[asyncio.Task] = []
 
-# Enterprise plugin hook registry.
-# Plugins that need to run code inside the lifespan (where on_event / router.on_startup
-# are bypassed) append async callables here during register().
-# Shape: {"startup": [async_fn, ...], "shutdown": [async_fn, ...]}
-_enterprise_lifespan_hooks: dict[str, list] = {"startup": [], "shutdown": []}
-
 MAX_PORT = 65535
 
 # Enterprise lifespan hook registry. Enterprise plugins append async callables
