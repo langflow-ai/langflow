@@ -49,6 +49,7 @@ jest.mock("@/stores/flowStore", () => {
     edges: [],
     setNodes: jest.fn(),
     setEdges: jest.fn(),
+    setNodesAndEdges: jest.fn(),
     paste: jest.fn(),
   };
   const fn = (selector?: (s: typeof state) => unknown) =>

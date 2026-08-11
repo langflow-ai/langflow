@@ -233,9 +233,8 @@ async def _check_key_from_db_with_context(
         api_key_obj = matches[0]
         if _is_expired(api_key_obj.expires_at):
             return None
-        # Resolve + authorize the user BEFORE mutating usage counters so a denied
-        # authentication (missing user or blocked external user) does not bump
-        # total_uses / last_used_at.
+        # Resolve + authorize the user BEFORE the usage counters, so a denied authentication
+        # (missing user, blocked external user) does not bump total_uses / last_used_at.
         user = await session.get(User, api_key_obj.user_id)
         if user is None or not user.is_active:
             return None
@@ -278,9 +277,8 @@ async def _check_key_from_db_with_context(
         if matched:
             if _is_expired(api_key_obj.expires_at):
                 return None
-            # Resolve + authorize the user BEFORE mutating usage counters / hash
-            # backfill so a denied authentication (missing user or blocked
-            # external user) does not bump total_uses / last_used_at.
+            # Resolve + authorize the user BEFORE the usage counters / hash backfill, so a denied
+            # authentication (missing user, blocked external user) does not bump total_uses.
             user = await session.get(User, api_key_obj.user_id)
             if user is None or not user.is_active:
                 return None
