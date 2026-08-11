@@ -14,6 +14,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
@@ -62,7 +63,12 @@ def patch_build_flow(monkeypatch):
     """Install fakes for session_scope, _read_flow, ensure_flow_permission, start_flow_build."""
     from langflow.api.v1 import chat as chat_module
 
-    state: dict[str, Any] = {"session_exec": [], "read_flow": None, "ensure_raises": None}
+    state: dict[str, Any] = {
+        "session_exec": [],
+        "read_flow": None,
+        "ensure_raises": None,
+        "start_kwargs": None,
+    }
 
     @asynccontextmanager
     async def fake_session_scope():
@@ -75,7 +81,8 @@ def patch_build_flow(monkeypatch):
         if state["ensure_raises"] is not None:
             raise state["ensure_raises"]
 
-    async def fake_start_build(**_kwargs):
+    async def fake_start_build(**kwargs):
+        state["start_kwargs"] = kwargs
         return "fake-job-id"
 
     monkeypatch.setattr(chat_module, "session_scope", fake_session_scope)
@@ -171,7 +178,10 @@ async def test_build_flow_owner_can_override_flow_data(patch_build_flow, monkeyp
     from langflow.api.v1 import chat as chat_module
     from langflow.api.v1.schemas import FlowDataRequest
 
-    monkeypatch.setattr(chat_module, "validate_flow_for_current_settings", lambda _data: None)
+    async def allow_inline(_data, *, is_superuser):
+        assert is_superuser is False
+
+    monkeypatch.setattr(chat_module, "prepare_flow_build_for_user", allow_inline)
 
     owner = _make_user()
     flow = _make_flow(owner_id=owner.id, public=False)
@@ -186,6 +196,152 @@ async def test_build_flow_owner_can_override_flow_data(patch_build_flow, monkeyp
         data=override,
     )
     assert result == {"job_id": "fake-job-id"}
+
+
+@pytest.mark.asyncio
+async def test_build_flow_admin_only_blocks_non_superuser_inline_custom_code(patch_build_flow, monkeypatch):
+    """Admin-only policy is applied before owner-supplied inline graph data reaches the build worker."""
+    from langflow.api.v1 import chat as chat_module
+    from langflow.api.v1.schemas import FlowDataRequest
+    from lfx.utils.flow_validation import CustomComponentValidationError
+
+    owner = _make_user()
+    flow = _make_flow(owner_id=owner.id, public=False)
+    patch_build_flow["read_flow"] = flow
+    override = FlowDataRequest(nodes=[{"id": "custom"}], edges=[])
+
+    async def reject_custom_code(_data, *, is_superuser):
+        assert is_superuser is False
+        message = "custom components are restricted to administrators"
+        raise CustomComponentValidationError(message)
+
+    monkeypatch.setattr(chat_module, "prepare_flow_build_for_user", reject_custom_code)
+
+    with pytest.raises(HTTPException) as excinfo:
+        await chat_module.build_flow(
+            flow_id=flow.id,
+            background_tasks=None,
+            current_user=owner,
+            queue_service=_make_queue_service(),
+            data=override,
+        )
+
+    assert excinfo.value.status_code == 400
+    assert "restricted to administrators" in excinfo.value.detail
+    assert patch_build_flow["start_kwargs"] is None
+
+
+@pytest.mark.asyncio
+async def test_build_flow_admin_only_passes_sanitized_template_to_worker(patch_build_flow, monkeypatch):
+    """A known template remains usable, but the worker receives the server-trusted payload."""
+    from langflow.api.v1 import chat as chat_module
+    from langflow.api.v1.schemas import FlowDataRequest
+
+    owner = _make_user()
+    flow = _make_flow(owner_id=owner.id, public=False)
+    patch_build_flow["read_flow"] = flow
+    override = FlowDataRequest(nodes=[{"id": "known", "data": {"source": "request"}}], edges=[])
+    sanitized = {"nodes": [{"id": "known", "data": {"source": "server"}}], "edges": [], "viewport": None}
+
+    async def sanitize(_data, *, is_superuser):
+        assert is_superuser is False
+        return sanitized
+
+    monkeypatch.setattr(chat_module, "prepare_flow_build_for_user", sanitize)
+
+    result = await chat_module.build_flow(
+        flow_id=flow.id,
+        background_tasks=None,
+        current_user=owner,
+        queue_service=_make_queue_service(),
+        data=override,
+    )
+
+    assert result == {"job_id": "fake-job-id"}
+    assert patch_build_flow["start_kwargs"]["data"].model_dump() == sanitized
+    assert override.nodes[0]["data"]["source"] == "request"
+
+
+@pytest.mark.asyncio
+async def test_build_flow_admin_only_keeps_superuser_inline_custom_code(patch_build_flow, monkeypatch):
+    """The operator's admin-only setting preserves the documented superuser exception."""
+    from langflow.api.v1 import chat as chat_module
+    from langflow.api.v1.schemas import FlowDataRequest
+
+    owner = _make_user(is_superuser=True)
+    flow = _make_flow(owner_id=owner.id, public=False)
+    patch_build_flow["read_flow"] = flow
+    override = FlowDataRequest(nodes=[{"id": "custom"}], edges=[])
+    seen: dict[str, Any] = {}
+
+    async def preserve_superuser_data(data, *, is_superuser):
+        assert is_superuser is True
+        seen["validated"] = data
+
+    monkeypatch.setattr(chat_module, "prepare_flow_build_for_user", preserve_superuser_data)
+
+    result = await chat_module.build_flow(
+        flow_id=flow.id,
+        background_tasks=None,
+        current_user=owner,
+        queue_service=_make_queue_service(),
+        data=override,
+    )
+
+    assert result == {"job_id": "fake-job-id"}
+    assert seen["validated"] == override.model_dump()
+    assert patch_build_flow["start_kwargs"]["data"] is override
+
+
+@pytest.mark.asyncio
+async def test_legacy_vertices_route_passes_only_sanitized_inline_data(monkeypatch):
+    """The still-routed legacy graph cache cannot bypass the inline-data policy."""
+    from langflow.api.v1 import chat as chat_module
+    from langflow.api.v1.schemas import FlowDataRequest
+
+    owner = _make_user()
+    flow = _make_flow(owner_id=owner.id)
+    original = FlowDataRequest(nodes=[{"id": "known", "data": {"source": "request"}}], edges=[])
+    sanitized = {"nodes": [{"id": "known", "data": {"source": "server"}}], "edges": [], "viewport": None}
+    seen: dict[str, Any] = {}
+
+    async def ensure_allowed(*_args, **_kwargs):
+        return None
+
+    async def sanitize(_data, *, is_superuser):
+        assert is_superuser is False
+        return sanitized
+
+    graph = MagicMock()
+    graph.prepare.return_value = graph
+    graph.vertices = []
+    graph.vertices_to_run = set()
+    graph.first_layer = []
+    graph.run_id = None
+    graph.set_run_id.side_effect = lambda value: setattr(graph, "run_id", value)
+
+    async def build_from_data(*, graph_data, **_kwargs):
+        seen["graph_data"] = graph_data
+        return graph
+
+    chat_service = SimpleNamespace(set_cache=AsyncMock())
+    monkeypatch.setattr(chat_module, "ensure_flow_permission", ensure_allowed)
+    monkeypatch.setattr(chat_module, "prepare_flow_build_for_user", sanitize)
+    monkeypatch.setattr(chat_module, "build_and_cache_graph_from_data", build_from_data)
+    monkeypatch.setattr(chat_module, "get_chat_service", lambda: chat_service)
+    monkeypatch.setattr(chat_module, "get_telemetry_service", MagicMock)
+    monkeypatch.setattr(chat_module, "get_top_level_vertices", lambda *_args: [])
+
+    await chat_module.retrieve_vertices_order(
+        flow_id=flow.id,
+        background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
+        data=original,
+        session=_FakeSession([[flow]]),
+        current_user=owner,
+    )
+
+    assert seen["graph_data"] == sanitized
+    assert original.nodes[0]["data"]["source"] == "request"
 
 
 @pytest.mark.asyncio

@@ -1352,6 +1352,189 @@ async def test_patch_flow_folder_move_with_deployed_versions_returns_409(
     assert "cannot be moved to another project" in patch_resp.json()["detail"].lower()
 
 
+async def test_patch_flow_folder_move_recovers_from_concurrent_write_lock(
+    client: AsyncClient, logged_in_headers, monkeypatch
+):
+    """A competing SQLite commit must not turn a flow move into a 500."""
+    from langflow.api.v1 import flows as flows_module
+    from langflow.services.database.models.folder.model import Folder
+    from langflow.services.deps import session_scope
+
+    project_payload = {"description": "", "flows_list": [], "components_list": []}
+    source_response = await client.post(
+        "api/v1/projects/",
+        json={**project_payload, "name": f"lock-source-{uuid.uuid4()}"},
+        headers=logged_in_headers,
+    )
+    destination_response = await client.post(
+        "api/v1/projects/",
+        json={**project_payload, "name": f"lock-destination-{uuid.uuid4()}"},
+        headers=logged_in_headers,
+    )
+    assert source_response.status_code == status.HTTP_201_CREATED
+    assert destination_response.status_code == status.HTTP_201_CREATED
+    source_project_id = source_response.json()["id"]
+    destination_project_id = destination_response.json()["id"]
+
+    flow_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"contended-move-{uuid.uuid4()}", "data": {}, "folder_id": source_project_id},
+        headers=logged_in_headers,
+    )
+    assert flow_response.status_code == status.HTTP_201_CREATED
+    flow_id = flow_response.json()["id"]
+
+    original_read_flow = flows_module._read_flow
+    attempts = {"count": 0}
+
+    async def read_flow_with_competing_commit(*args, **kwargs):
+        db_flow = await original_read_flow(*args, **kwargs)
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            async with session_scope() as competing_session:
+                competing_session.add(Folder(name=f"competing-write-{uuid.uuid4()}", user_id=None))
+        return db_flow
+
+    monkeypatch.setattr(flows_module, "_read_flow", read_flow_with_competing_commit)
+
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"folder_id": destination_project_id},
+        headers=logged_in_headers,
+    )
+
+    assert patch_response.status_code == status.HTTP_200_OK, patch_response.text
+    assert attempts["count"] >= 2, "the PATCH did not retry after its first stale-snapshot write failed"
+    assert patch_response.json()["folder_id"] == destination_project_id
+
+    persisted_response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert persisted_response.status_code == status.HTTP_200_OK
+    assert persisted_response.json()["folder_id"] == destination_project_id
+
+
+async def test_patch_flow_exhausted_lock_retries_do_not_leak_sql(client: AsyncClient, logged_in_headers, monkeypatch):
+    """An exhausted SQLite lock retry returns a safe, retryable response."""
+    import sqlite3
+
+    from langflow.api.v1 import flows as flows_module
+    from langflow.services.database.lock_retry import DEFAULT_LOCK_RETRY_ATTEMPTS
+    from sqlalchemy.exc import OperationalError
+
+    flow_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"locked-patch-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert flow_response.status_code == status.HTTP_201_CREATED
+    flow_id = flow_response.json()["id"]
+
+    leaked_statement = "UPDATE flow SET description = ? WHERE flow.id = ?"
+    leaked_value = "bound-description-value"
+    attempts = {"count": 0}
+
+    async def always_locked(**_kwargs):
+        attempts["count"] += 1
+        raise OperationalError(
+            leaked_statement,
+            {"description": leaked_value, "id": flow_id},
+            sqlite3.OperationalError("database is locked"),
+        )
+
+    monkeypatch.setattr(flows_module, "_patch_flow", always_locked)
+    original_retry = flows_module.run_with_lock_retry
+
+    async def run_without_delay(operation, *, session, description):
+        return await original_retry(operation, session=session, description=description, base_delay=0)
+
+    monkeypatch.setattr(flows_module, "run_with_lock_retry", run_without_delay)
+
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"description": leaked_value},
+        headers=logged_in_headers,
+    )
+
+    assert attempts["count"] == DEFAULT_LOCK_RETRY_ATTEMPTS
+    assert patch_response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert patch_response.headers["Retry-After"] == "1"
+    detail = patch_response.json()["detail"]
+    assert detail == flows_module.FLOW_UPDATE_BUSY
+    assert "UPDATE flow" not in detail
+    assert "sqlalche.me" not in detail
+    assert flow_id not in detail
+    assert leaked_value not in detail
+
+
+async def test_patch_flow_lock_retry_supports_api_key_user(
+    client: AsyncClient, logged_in_headers, created_api_key, monkeypatch
+):
+    """Retrying must work when authentication returns a detached UserRead."""
+    import sqlite3
+
+    from langflow.api.v1 import flows as flows_module
+    from sqlalchemy.exc import OperationalError
+
+    flow_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"api-key-lock-retry-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert flow_response.status_code == status.HTTP_201_CREATED
+    flow_id = flow_response.json()["id"]
+
+    original_patch_flow = flows_module._patch_flow
+    attempts = {"count": 0}
+    statement = "UPDATE flow SET description = ? WHERE flow.id = ?"
+
+    async def patch_after_one_lock(**kwargs):
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            raise OperationalError(
+                statement,
+                {"description": "updated", "id": flow_id},
+                sqlite3.OperationalError("database is locked"),
+            )
+        return await original_patch_flow(**kwargs)
+
+    monkeypatch.setattr(flows_module, "_patch_flow", patch_after_one_lock)
+
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"description": "updated"},
+        headers={"x-api-key": created_api_key.api_key},
+    )
+
+    assert attempts["count"] == 2
+    assert patch_response.status_code == status.HTTP_200_OK, patch_response.text
+    assert patch_response.json()["description"] == "updated"
+
+
+async def test_patch_flow_unique_value_with_lock_text_is_not_retried(client: AsyncClient, logged_in_headers):
+    """Bound values that mention lock text must remain ordinary constraint errors."""
+    marker = f"database is locked {uuid.uuid4()}"
+    existing_response = await client.post(
+        "api/v1/flows/",
+        json={"name": marker, "data": {}},
+        headers=logged_in_headers,
+    )
+    victim_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"unique-lock-marker-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert existing_response.status_code == status.HTTP_201_CREATED
+    assert victim_response.status_code == status.HTTP_201_CREATED
+
+    patch_response = await client.patch(
+        f"api/v1/flows/{victim_response.json()['id']}",
+        json={"name": marker},
+        headers=logged_in_headers,
+    )
+
+    assert patch_response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "must be unique" in patch_response.json()["detail"].lower()
+
+
 async def test_upsert_flow_folder_move_with_deployed_versions_returns_409(
     client: AsyncClient, logged_in_headers, active_user
 ):

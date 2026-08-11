@@ -285,20 +285,39 @@ def _get_invalid_components(
     blocked: list[str] = []
     outdated: list[str] = []
 
-    for node in nodes:
-        node_data = node.get("data", {})
-        node_info = node_data.get("node", {})
+    for index, node in enumerate(nodes):
+        if not isinstance(node, dict):
+            blocked.append(f"malformed component (index {index})")
+            continue
+
+        node_data = node.get("data")
+        node_id = node.get("id", f"index {index}")
+        if not isinstance(node_data, dict):
+            blocked.append(f"malformed component ({node_id})")
+            continue
+
+        node_info = node_data.get("node")
+        if not isinstance(node_info, dict):
+            blocked.append(f"malformed component ({node_id})")
+            continue
 
         component_type = node_data.get("type")
 
         node_template = node_info.get("template", {})
+        if not isinstance(node_template, dict):
+            blocked.append(f"malformed component ({node_id})")
+            continue
         node_code_field = node_template.get("code", {})
         node_code = node_code_field.get("value") if isinstance(node_code_field, dict) else None
 
         if node_code:
             display_name = node_info.get("display_name") or component_type or "unknown"
-            node_id = node_data.get("id") or node.get("id", "unknown")
+            node_id = node_data.get("id") or node_id
             label = f"{display_name} ({node_id})"
+
+            if not isinstance(node_code, str):
+                blocked.append(label)
+                continue
 
             # A node carrying executable code must resolve to a known component
             # type so its code hash can be checked against the trusted set. If the
@@ -311,7 +330,7 @@ def _get_invalid_components(
             # allow_custom_components gate while its stored code still executed at
             # build time (instantiate_class runs the node's stored code, which
             # does not consult the type).
-            expected_hashes = type_to_current_hash.get(component_type) if component_type else None
+            expected_hashes = type_to_current_hash.get(component_type) if isinstance(component_type, str) else None
             if expected_hashes is None:
                 blocked.append(label)
             else:
@@ -322,7 +341,13 @@ def _get_invalid_components(
         flow_data = node_info.get("flow", {})
         if isinstance(flow_data, dict):
             nested_data = flow_data.get("data", {})
+            if not isinstance(nested_data, dict):
+                blocked.append(f"malformed nested flow ({node_id})")
+                continue
             nested_nodes = nested_data.get("nodes", [])
+            if not isinstance(nested_nodes, list):
+                blocked.append(f"malformed nested flow ({node_id})")
+                continue
             if nested_nodes:
                 nested_blocked, nested_outdated = _get_invalid_components(
                     nested_nodes,
@@ -330,6 +355,8 @@ def _get_invalid_components(
                 )
                 blocked.extend(nested_blocked)
                 outdated.extend(nested_outdated)
+        elif flow_data is not None:
+            blocked.append(f"malformed nested flow ({node_id})")
 
     return blocked, outdated
 
@@ -342,22 +369,45 @@ def _find_code_execution_components(nodes: list[dict]) -> list[str]:
     """
     found: list[str] = []
 
-    for node in nodes:
-        node_data = node.get("data", {})
-        node_info = node_data.get("node", {})
-        display_name = node_info.get("display_name") if isinstance(node_info, dict) else None
+    for index, node in enumerate(nodes):
+        if not isinstance(node, dict):
+            msg = f"Flow validation failed: malformed component at index {index}."
+            raise CustomComponentValidationError(msg)
+
+        node_data = node.get("data")
+        node_id = node.get("id", f"index {index}")
+        if not isinstance(node_data, dict):
+            msg = f"Flow validation failed: malformed component ({node_id})."
+            raise CustomComponentValidationError(msg)
+
+        node_info = node_data.get("node")
+        if not isinstance(node_info, dict):
+            msg = f"Flow validation failed: malformed component ({node_id})."
+            raise CustomComponentValidationError(msg)
+
+        display_name = node_info.get("display_name")
 
         component_type = node_data.get("type")
         if is_code_execution_component(component_type, display_name):
             display_name = display_name or component_type
-            node_id = node_data.get("id") or node.get("id", "unknown")
+            node_id = node_data.get("id") or node_id
             found.append(f"{display_name} ({node_id})")
 
         flow_data = node_info.get("flow", {})
         if isinstance(flow_data, dict):
-            nested_nodes = flow_data.get("data", {}).get("nodes", [])
+            nested_data = flow_data.get("data", {})
+            if not isinstance(nested_data, dict):
+                msg = f"Flow validation failed: malformed nested flow ({node_id})."
+                raise CustomComponentValidationError(msg)
+            nested_nodes = nested_data.get("nodes", [])
+            if not isinstance(nested_nodes, list):
+                msg = f"Flow validation failed: malformed nested flow ({node_id})."
+                raise CustomComponentValidationError(msg)
             if nested_nodes:
                 found.extend(_find_code_execution_components(nested_nodes))
+        elif flow_data is not None:
+            msg = f"Flow validation failed: malformed nested flow ({node_id})."
+            raise CustomComponentValidationError(msg)
 
     return found
 
@@ -372,6 +422,9 @@ def check_code_execution_components_and_raise(flow_data: dict | None) -> None:
         return
 
     nodes = flow_data.get("nodes", [])
+    if not isinstance(nodes, list):
+        msg = "Flow validation failed: nodes must be a list."
+        raise CustomComponentValidationError(msg)
     if not nodes:
         return
 
@@ -413,6 +466,51 @@ def get_trusted_code_for_validation(code: str) -> str | None:
         return None
 
     return code_by_hash.get(_compute_code_hash(code))
+
+
+def _substitute_trusted_code_by_hash(nodes: list[dict]) -> list[str]:
+    """Replace code-bearing nodes with the matching server-trusted source.
+
+    The caller must first validate each node's declared type and code hash with
+    :func:`check_flow_and_raise`. This second pass ensures the build executes
+    the server's copy for that exact hash instead of request bytes, and fails
+    closed if the trusted-source lookup is incomplete. Nested flow payloads are
+    handled recursively.
+    """
+    blocked: list[str] = []
+
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+
+        node_data = node.get("data")
+        if not isinstance(node_data, dict):
+            continue
+
+        node_info = node_data.get("node")
+        if not isinstance(node_info, dict):
+            continue
+
+        template = node_info.get("template")
+        code_field = template.get("code") if isinstance(template, dict) else None
+        code = code_field.get("value") if isinstance(code_field, dict) else None
+        if isinstance(code, str) and code:
+            trusted = get_trusted_code_for_validation(code)
+            if trusted is None:
+                display_name = node_info.get("display_name") or node_data.get("type") or "unknown"
+                node_id = node_data.get("id") or node.get("id", "unknown")
+                blocked.append(f"{display_name} ({node_id})")
+            else:
+                code_field["value"] = trusted
+
+        nested_flow = node_info.get("flow")
+        if isinstance(nested_flow, dict):
+            nested_data = nested_flow.get("data")
+            nested_nodes = nested_data.get("nodes") if isinstance(nested_data, dict) else None
+            if isinstance(nested_nodes, list) and nested_nodes:
+                blocked.extend(_substitute_trusted_code_by_hash(nested_nodes))
+
+    return blocked
 
 
 def resolve_trusted_code_for_build(code: str) -> str:
@@ -458,9 +556,11 @@ def check_flow_and_raise(
         return
 
     nodes = flow_data.get("nodes", [])
+    if not isinstance(nodes, list):
+        msg = "Flow validation failed: nodes must be a list."
+        raise CustomComponentValidationError(msg)
     if not nodes:
         return
-
     if type_to_current_hash is None:
         logger.error(
             "Flow validation requested but component hash lookups are not yet loaded. "
@@ -861,8 +961,13 @@ def validate_public_flow_no_code_execution(target: Mapping[str, Any] | Any | Non
         raise PublicFlowValidationError(message)
 
 
-async def ensure_component_hash_lookups_loaded() -> dict[str, str] | None:
-    """Ensure component hash lookups are available for CLI/runtime validation."""
+async def ensure_component_hash_lookups_loaded(*, force: bool = False) -> dict[str, set[str]] | None:
+    """Ensure component hash lookups are available for runtime validation.
+
+    Normally the lookup is required only when custom components are disabled.
+    ``force=True`` also loads it for caller-specific policy, such as the
+    admin-only gate for a non-superuser build request.
+    """
     from lfx.interface.components import component_cache, get_and_cache_all_types_dict
     from lfx.services.deps import get_settings_service
 
@@ -870,11 +975,126 @@ async def ensure_component_hash_lookups_loaded() -> dict[str, str] | None:
     if settings_service is None:
         raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
 
-    if not settings_service.settings.allow_custom_components and component_cache.type_to_current_hash is None:
+    lookups_required = force or not settings_service.settings.allow_custom_components
+    if lookups_required and component_cache.type_to_current_hash is None:
         try:
-            await get_and_cache_all_types_dict(settings_service)
+            if component_cache.all_types_dict is None:
+                await get_and_cache_all_types_dict(settings_service)
+            if component_cache.type_to_current_hash is None:
+                get_component_hash_lookups_for_validation()
         except Exception as exc:
             logger.warning("Failed to populate component template hash lookups", exc_info=exc)
             raise
 
     return component_cache.type_to_current_hash
+
+
+def _sanitize_admin_only_flow_build(
+    target: Mapping[str, Any] | Any | None,
+    *,
+    type_to_current_hash: dict[str, set[str]] | None,
+) -> dict[str, Any] | None:
+    """Return trusted build data after component hashes have been loaded.
+
+    Admin-only mode permits regular users to refresh and run known server
+    component templates, but not to submit new or modified component code.
+    Validate every code-bearing node against the server registry, then replace
+    the request bytes with the trusted source for the matching hash before the
+    graph is handed to the build worker.
+    """
+    import copy
+
+    normalized_flow_data = _extract_flow_data(target)
+    if normalized_flow_data is None:
+        if target is not None:
+            msg = (
+                "Flow validation failed: could not extract graph data from the provided target. "
+                "Ensure the flow payload or Graph object contains valid graph data."
+            )
+            raise CustomComponentValidationError(msg)
+        return None
+
+    check_flow_and_raise(
+        normalized_flow_data,
+        allow_custom_components=False,
+        type_to_current_hash=type_to_current_hash,
+    )
+
+    sanitized = copy.deepcopy(normalized_flow_data)
+    nodes = sanitized.get("nodes", [])
+    blocked = _substitute_trusted_code_by_hash(nodes) if isinstance(nodes, list) else []
+    if blocked:
+        blocked_names = ", ".join(blocked)
+        logger.warning(f"Flow build blocked: trusted component source unavailable: {blocked_names}")
+        message = f"Flow build blocked: no trusted server component matches: {blocked_names}"
+        raise CustomComponentValidationError(message)
+
+    return sanitized
+
+
+def _admin_only_build_required(settings: Any, *, is_superuser: bool) -> bool:
+    return getattr(settings, "custom_component_admin_only", False) is True and not is_superuser
+
+
+async def prepare_admin_only_flow_build(target: Mapping[str, Any] | Any | None) -> dict[str, Any] | None:
+    """Backward-compatible admin-only sanitizer for callers that already selected this policy."""
+    return _sanitize_admin_only_flow_build(
+        target,
+        type_to_current_hash=await ensure_component_hash_lookups_loaded(force=True),
+    )
+
+
+async def prepare_flow_build_for_user(
+    target: Mapping[str, Any] | Any | None,
+    *,
+    is_superuser: bool,
+) -> dict[str, Any] | None:
+    """Apply cumulative build policies and sanitize inline data when required.
+
+    This async form can populate a cold component registry and is used by V1
+    endpoints before caller-supplied graph data reaches a graph constructor or
+    worker. ``None`` means the original payload is safe to preserve unchanged.
+    """
+    from lfx.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    if settings_service is None:
+        raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
+
+    admin_only = _admin_only_build_required(settings_service.settings, is_superuser=is_superuser)
+    type_to_current_hash = await ensure_component_hash_lookups_loaded(force=True) if admin_only else None
+
+    # Policies are cumulative: the admin-only hash gate must not disable the
+    # code-interpreter or global custom-component restrictions.
+    validate_flow_for_current_settings(target)
+    if not admin_only:
+        return None
+
+    return _sanitize_admin_only_flow_build(target, type_to_current_hash=type_to_current_hash)
+
+
+def prepare_flow_build_for_user_from_cache(
+    target: Mapping[str, Any] | Any | None,
+    *,
+    is_superuser: bool,
+) -> dict[str, Any] | None:
+    """Synchronous policy gate for execution seams that construct responses.
+
+    The V2 streaming host must validate before returning ``StreamingResponse``
+    and cannot await registry loading at that seam. Startup normally warms the
+    registry; if it is unavailable, the hash gate fails closed.
+    """
+    from lfx.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    if settings_service is None:
+        raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
+
+    validate_flow_for_current_settings(target)
+    if not _admin_only_build_required(settings_service.settings, is_superuser=is_superuser):
+        return None
+
+    return _sanitize_admin_only_flow_build(
+        target,
+        type_to_current_hash=get_component_hash_lookups_for_validation(),
+    )
