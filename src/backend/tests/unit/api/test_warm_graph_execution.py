@@ -413,7 +413,13 @@ async def test_v2_sync_run_requests_a_non_streaming_warm_copy(monkeypatch: pytes
     updated_at = datetime(2026, 8, 5, 12, tzinfo=timezone.utc)
     result = await workflow_execution.execute_sync_workflow(
         parsed=ParsedWorkflowRun(flow_id=str(flow_id), session_id="v2-session", mode="sync"),
-        flow=SimpleNamespace(id=flow_id, name="warm", data={"nodes": [], "edges": []}, updated_at=updated_at),
+        flow=SimpleNamespace(
+            id=flow_id,
+            user_id=user_id,
+            name="warm",
+            data={"nodes": [], "edges": []},
+            updated_at=updated_at,
+        ),
         job_id=uuid4(),
         current_user=SimpleNamespace(id=user_id),
         background_tasks=SimpleNamespace(),
