@@ -1,7 +1,7 @@
 import asyncio
 import time
 from typing import Any
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 from uuid import UUID
 
 import httpx
@@ -508,8 +508,32 @@ AZURE_AI_FOUNDRY_FETCH_TIMEOUT = 10.0
 AZURE_AI_FOUNDRY_REQUEST_TIMEOUT = AZURE_AI_FOUNDRY_FETCH_TIMEOUT
 
 
+def normalize_azure_ai_foundry_endpoint(endpoint: str) -> str:
+    """Map a pasted Foundry *project* endpoint to the OpenAI-compatible endpoint.
+
+    The Foundry portal most prominently shows the project endpoint
+    (``https://<resource>.services.ai.azure.com/api/projects/<project>``), but this
+    provider needs the OpenAI-compatible form
+    (``https://<resource>.services.ai.azure.com/openai/v1``) — the project form
+    returns HTTP 400 on ``/models``. Rewrite the former to the latter; every other
+    endpoint passes through unchanged.
+    """
+    parsed = urlparse(endpoint)
+    path = parsed.path.lower()
+    if not parsed.netloc or not (path.startswith("/api/projects/") or path.rstrip("/") == "/api/projects"):
+        return endpoint
+    normalized = f"{parsed.scheme}://{parsed.netloc}/openai/v1"
+    logger.info(
+        f"AZURE_AI_FOUNDRY_ENDPOINT {endpoint!r} looks like a Foundry project endpoint; "
+        f"using the OpenAI-compatible endpoint {normalized!r} instead. "
+        f"Update the saved endpoint to that value to silence this message."
+    )
+    return normalized
+
+
 def request_azure_ai_foundry_model_entries(endpoint: str, api_key: str) -> list[dict]:
     """Probe Foundry /models for credential validation (catalog, not deployments)."""
+    endpoint = normalize_azure_ai_foundry_endpoint(endpoint)
     response = requests.get(
         f"{endpoint.rstrip('/')}/models",
         headers={"api-key": api_key},
