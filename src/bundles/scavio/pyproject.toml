@@ -1,14 +1,14 @@
 [project]
 name = "lfx-scavio"
-version = "0.1.0"
-description = "Scavio search API components (Google, YouTube, Amazon, Walmart, Reddit, TikTok, TikTok Shop, Instagram, X, LinkedIn) as a standalone Langflow Extension Bundle."
+version = "0.2.0"
+description = "Scavio search API components - search, retail, real estate, travel, jobs, app stores, company filings, software reviews, ad libraries, social and URL extraction - as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
 license = { text = "MIT" }
 authors = [
     { name = "Scavio", email = "support@scavio.dev" },
 ]
-keywords = ["langflow", "lfx", "extension", "bundle", "scavio", "search", "serp"]
+keywords = ["langflow", "lfx", "extension", "bundle", "scavio", "search", "serp", "scraping", "ecommerce", "real-estate", "jobs", "reviews", "ads"]
 
 # Runtime deps: lfx (the BUNDLE_API surface) plus httpx, which the components use
 # directly to call https://api.scavio.dev. There is no vendor SDK - every endpoint
@@ -41,7 +41,7 @@ build-backend = "hatchling.build"
 # ``importlib.metadata.files(dist)`` finds them and the loader resolves
 # bundles[].path relative to the manifest's directory.
 packages = ["src/lfx_scavio"]
-include = ["src/lfx_scavio/extension.json", "src/lfx_scavio/components/**/*.py"]
+include = ["src/lfx_scavio/extension.json", "src/lfx_scavio/*.py", "src/lfx_scavio/components/**/*.py"]
 
 [tool.hatch.build.targets.sdist]
 include = [
