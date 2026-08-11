@@ -8,11 +8,18 @@ from lfx.io import (
     MultilineInput,
     Output,
 )
+from lfx.schema.image import get_file_paths
 from lfx.schema.message import Message
+from lfx.services.deps import get_settings_service
 from lfx.utils.constants import (
     MESSAGE_SENDER_AI,
     MESSAGE_SENDER_NAME_USER,
     MESSAGE_SENDER_USER,
+)
+from lfx.utils.file_path_security import (
+    component_file_access_scopes,
+    enforce_local_file_access,
+    is_local_file_access_restricted,
 )
 
 
@@ -88,6 +95,26 @@ class ChatInput(ChatComponent):
             files = [files]
         # Filter out None/empty values
         files = [f for f in files if f is not None and f != ""]
+
+        # Build endpoints inject caller-controlled file references directly into
+        # ChatInput. Resolve and validate local references before the Message can
+        # later read them while constructing model attachment content.
+        if files:
+            settings_service = get_settings_service()
+            storage_type = getattr(getattr(settings_service, "settings", None), "storage_type", "local")
+            # The storage factory falls back to local storage for unsupported
+            # values, so only the explicitly configured S3 backend may bypass
+            # filesystem containment.
+            if str(storage_type).lower() != "s3" and is_local_file_access_restricted():
+                scope_ids = list(component_file_access_scopes(self))
+                # Public executions replace graph.flow_id with a per-visitor
+                # virtual ID. Only the server-populated source provenance may
+                # restore the already-validated public attachment namespace.
+                source_flow_id = getattr(self.graph, "source_flow_id", None)
+                if source_flow_id:
+                    scope_ids.append(source_flow_id)
+                for file_path in get_file_paths(files):
+                    enforce_local_file_access(file_path, scope_ids=scope_ids)
 
         session_id = self.session_id or self.graph.session_id or ""
         message = await Message.create(

@@ -1,7 +1,8 @@
 """Apply safe upgrades to a flow dict.
 
-Returns a deep copy of the flow with safe-upgradeable node codes replaced
-by the current registry code. Breaking and blocked nodes are left unchanged.
+Returns a deep copy of the flow with safe-upgradeable node codes replaced by the
+current registry code and any template fields the saved flow predates introduced
+with their registry defaults. Breaking and blocked nodes are left unchanged.
 """
 
 from __future__ import annotations
@@ -12,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-from lfx.upgrade.checker import CompatibilityReport, build_registry_lookup
+from lfx.upgrade.checker import CompatibilityReport, build_registry_lookup, new_template_field_keys
 
 
 def apply_safe_upgrades(
@@ -63,10 +64,19 @@ def _apply_to_nodes(nodes: list[dict], safe_ids: set[str], registry: dict[str, d
             component_type = node.get("data", {}).get("type", "")
             entry = registry.get(component_type)
             if entry:
-                registry_code_field = entry.get("template", {}).get("code")
+                registry_template = entry.get("template", {})
+                registry_code_field = registry_template.get("code")
                 new_code = registry_code_field.get("value") if isinstance(registry_code_field, dict) else None
                 if new_code is not None:
-                    node["data"]["node"]["template"]["code"]["value"] = new_code
+                    flow_template = node["data"]["node"]["template"]
+                    flow_template["code"]["value"] = new_code
+                    # The checker calls a node safe when the registry grew fields the saved
+                    # flow predates; the re-stamped code reads those fields, so introduce
+                    # each one exactly as the registry declares it — the state a freshly
+                    # added component would carry. Deep-copied so later edits to the
+                    # upgraded flow cannot reach back into the shared registry lookup.
+                    for key in new_template_field_keys(registry_template, flow_template):
+                        flow_template[key] = copy.deepcopy(registry_template[key])
                     count += 1
         nested = node.get("data", {}).get("node", {}).get("flow", {}).get("data", {}).get("nodes")
         if nested:

@@ -16,10 +16,11 @@ from __future__ import annotations
 
 import asyncio
 import random
+import sqlite3
 from typing import TYPE_CHECKING, TypeVar
 
 from lfx.log.logger import logger
-from sqlalchemy.exc import DBAPIError, SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -55,7 +56,10 @@ def is_database_lock_error(exc: BaseException | None) -> bool:
         error_name = getattr(exc, "sqlite_errorname", None)
         if error_name in _SQLITE_LOCK_ERROR_NAMES:
             return True
-        if isinstance(exc, DBAPIError | SQLAlchemyError) or error_name is not None:
+        # SQLAlchemy's wrapper text contains the SQL statement and bound
+        # parameters. Inspect only the underlying SQLite operational error so
+        # user data containing "database is locked" cannot trigger retries.
+        if isinstance(exc, sqlite3.OperationalError):
             message = str(exc).lower()
             if any(marker in message for marker in _SQLITE_LOCK_MESSAGES):
                 return True
