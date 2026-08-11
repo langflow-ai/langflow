@@ -297,8 +297,10 @@ async def _stream_event_frames(
     side_channel_events = frozenset({"add_message", "token", "remove_message", "error", "end"})
     terminal_error_type = getattr(adapter, "terminal_error_type", None)
     terminal_error_seen = False
+    _stream_completed = False
 
     seq = 0
+    _run_start = time.perf_counter()
     run_task = asyncio.create_task(drive())
     try:
         for event in adapter.initial_events():
@@ -366,6 +368,8 @@ async def _stream_event_frames(
                     terminal_error_seen = True
                 yield _frame(event, seq)
                 seq += 1
+        # Reached only when the try body exits normally (no cancellation or exception).
+        _stream_completed = True
     finally:
         if not run_task.done():
             run_task.cancel()
@@ -381,12 +385,13 @@ async def _stream_event_frames(
 
             _telemetry = get_telemetry_service()
             if _telemetry is not None:
+                _run_success = _stream_completed and not terminal_error_seen
                 await _telemetry.log_package_run(
                     RunPayload(
                         run_is_webhook=False,
-                        run_seconds=0,
-                        run_success=not terminal_error_seen,
-                        run_error_message="" if not terminal_error_seen else "workflow error",
+                        run_seconds=int(time.perf_counter() - _run_start),
+                        run_success=_run_success,
+                        run_error_message="" if _run_success else "workflow error",
                         run_id=run_id or "",
                     )
                 )
@@ -595,6 +600,7 @@ async def execute_sync_workflow(
     job_service = get_job_service()
     await job_service.create_job(job_id=job_id, flow_id=flow_id_str, user_id=current_user.id)
     _sync_run_success = False
+    _run_start = time.perf_counter()
     try:
         task_result, execution_session_id = await job_service.execute_with_status(
             job_id=job_id,
@@ -687,7 +693,7 @@ async def execute_sync_workflow(
                 await _telemetry.log_package_run(
                     RunPayload(
                         run_is_webhook=False,
-                        run_seconds=0,
+                        run_seconds=int(time.perf_counter() - _run_start),
                         run_success=_sync_run_success,
                         run_error_message="" if _sync_run_success else "workflow error",
                         run_id=str(job_id),

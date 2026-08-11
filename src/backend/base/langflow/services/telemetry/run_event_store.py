@@ -1,59 +1,44 @@
-"""Global in-memory store for RunPayload events emitted by log_package_run.
+"""In-process store of completed-run events for enterprise metering.
 
-All RunPayload objects queued through TelemetryService.log_package_run are
-appended here in addition to the normal Scarf telemetry queue.  Enterprise
-code (and any other internal consumer) can import RUN_EVENT_STORE directly
-and drain it at whatever cadence they need.
-
-Thread / asyncio safety:
-  - list.append() is atomic in CPython (GIL), safe for concurrent appends.
-  - Callers draining the list should use pop_all() which swaps the underlying
-    list atomically to avoid races between drain and append.
+TelemetryService.log_package_run appends every RunPayload here before the
+do-not-track gate: metering consumers must see every run even when outbound
+telemetry is disabled. Nothing in OSS reads the store — enterprise builds
+drain it periodically via pop_all() — and events never leave the process
+unless such a consumer is installed. The store is bounded so a deployment
+without a consumer holds at most _MAX_EVENTS payloads.
 """
 
 from __future__ import annotations
 
-from threading import Lock
+import threading
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from langflow.services.telemetry.schema import RunPayload
 
-_lock = Lock()
+_MAX_EVENTS = 10_000
 
-# The global list that accumulates every RunPayload seen during this process
-# lifetime.  Enterprise consumers read from this; the OSS telemetry pipeline
-# is completely unaffected.
-RUN_EVENT_STORE: list[RunPayload] = []
+_lock = threading.Lock()
+_events: list[RunPayload] = []
 
 
 def append_run_event(payload: RunPayload) -> None:
-    """Append a RunPayload to the global store.
-
-    Called by TelemetryService.log_package_run before queueing to Scarf.
-    """
+    """Append a run event, discarding the oldest events beyond the bound."""
     with _lock:
-        RUN_EVENT_STORE.append(payload)
+        _events.append(payload)
+        if len(_events) > _MAX_EVENTS:
+            del _events[: len(_events) - _MAX_EVENTS]
 
 
 def pop_all() -> list[RunPayload]:
-    """Atomically drain and return all accumulated RunPayload events.
-
-    The store is reset to an empty list so subsequent appends start fresh.
-    Callers (e.g. the UMS telemetry bridge) should call this on each flush
-    cycle to avoid double-reporting.
-    """
+    """Atomically drain and return all pending events."""
     with _lock:
-        global RUN_EVENT_STORE
-        events, RUN_EVENT_STORE = RUN_EVENT_STORE, []
-    return events
+        drained = list(_events)
+        _events.clear()
+        return drained
 
 
 def peek_all() -> list[RunPayload]:
-    """Return a snapshot of all events without draining the store.
-
-    Useful for read-only inspection (dashboards, debug endpoints).
-    Does not affect subsequent pop_all() calls.
-    """
+    """Return a snapshot of pending events without draining."""
     with _lock:
-        return list(RUN_EVENT_STORE)
+        return list(_events)

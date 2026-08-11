@@ -5,6 +5,7 @@ import re
 import sys
 import tempfile
 import warnings
+from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager, suppress
 from http import HTTPStatus
 from pathlib import Path
@@ -29,6 +30,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from langflow.api import health_check_router, log_router
 from langflow.api.router import router
 from langflow.api.v1.mcp_projects import init_mcp_servers
+from langflow.cli.preflight import PreflightAbortError, ensure_production_preflight
 from langflow.initial_setup.setup import (
     copy_profile_pictures,
     create_or_update_starter_projects,
@@ -73,6 +75,26 @@ _tasks: list[asyncio.Task] = []
 _enterprise_lifespan_hooks: dict[str, list] = {"startup": [], "shutdown": []}
 
 MAX_PORT = 65535
+
+# Enterprise lifespan hook registry. Enterprise plugins append async callables
+# at app-construction time (plugin registration runs before the lifespan
+# starts); the lifespan awaits "startup" hooks after all services are
+# initialized, right before it yields, and "shutdown" hooks first on teardown.
+# Hooks are best-effort: a failing hook is logged and never blocks OSS startup
+# or shutdown.
+_enterprise_lifespan_hooks: dict[str, list[Callable[[], Awaitable[None]]]] = {
+    "startup": [],
+    "shutdown": [],
+}
+
+
+async def _run_enterprise_lifespan_hooks(phase: str) -> None:
+    for hook in list(_enterprise_lifespan_hooks.get(phase, [])):
+        try:
+            await hook()
+        except Exception as e:  # noqa: BLE001
+            hook_name = getattr(hook, "__qualname__", repr(hook))
+            await logger.awarning(f"Enterprise lifespan {phase} hook {hook_name} failed: {e}")
 
 
 async def log_exception_to_telemetry(exc: Exception, context: str) -> None:
@@ -217,6 +239,18 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await logger.adebug("Sentry SDK initialized in worker")
                     except Exception as e:  # noqa: BLE001
                         await logger.awarning(f"Failed to initialize Sentry SDK (check LANGFLOW_SENTRY_DSN): {e}")
+
+            # Production preflight safety net and universal enforcement point.
+            # On the `langflow run` route the CLI parent already ran this before
+            # forking (the LANGFLOW_PREFLIGHT_COMPLETED sentinel makes it a no-op
+            # here); for entrypoints that bypass the CLI (make backend, uvicorn
+            # --factory, raw gunicorn) this is where the checks actually execute.
+            # Placed before initialize_services so a missing required dependency
+            # aborts before we open the database or apply migrations. No-op in dev.
+            await ensure_production_preflight(
+                get_settings_service(),
+                verbose=os.getenv("LANGFLOW_LOG_LEVEL", "info").lower() == "debug",
+            )
 
             await logger.adebug("Initializing services")
             # Even when preload state is inherited via fork, initialize_services() must run
@@ -423,14 +457,6 @@ def get_lifespan(*, fix_migration=False, version=None):
             telemetry_service.start()
             await logger.adebug(f"started telemetry service in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
-            # Run enterprise startup hooks (populated by the Enterprise plugin during register()).
-            # Runs after services are up so hooks can safely call service dependencies.
-            for _hook in _enterprise_lifespan_hooks["startup"]:
-                try:
-                    await _hook()
-                except Exception as _exc:  # noqa: BLE001
-                    await logger.aerror(f"Enterprise startup hook {_hook.__name__!r} failed: {_exc}")
-
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Starting MCP Composer service")
             mcp_composer_service = cast("MCPComposerService", get_service(ServiceType.MCP_COMPOSER_SERVICE))
@@ -578,12 +604,30 @@ def get_lifespan(*, fix_migration=False, version=None):
             except Exception as e:  # noqa: BLE001
                 await logger.awarning(f"DB pool metrics failed to register: {e}")
 
+            # Enterprise startup hooks run last: every service they may touch
+            # is initialized by this point.
+            await _run_enterprise_lifespan_hooks("startup")
+
             yield
         except asyncio.CancelledError:
             await logger.adebug("Lifespan received cancellation signal")
         except UnsupportedPostgreSQLVersionError:
             # Normally caught by the pre-flight check in __main__.py; on direct uvicorn
             # invocation exit immediately and tell the parent (reloader) to stop.
+            import signal
+
+            sys.stdout.flush()
+            sys.stderr.flush()
+            with suppress(ProcessLookupError, PermissionError):
+                os.kill(os.getppid(), signal.SIGTERM)
+            os._exit(3)
+        except PreflightAbortError:
+            # Same rationale as UnsupportedPostgreSQLVersionError above: on the
+            # `langflow run` route this is caught before the server starts. If we
+            # reach here, boot came via a CLI-bypassing entrypoint (make backend,
+            # uvicorn --factory) with deployment_profile=prod and a required
+            # dependency missing. The summary has already been printed — exit
+            # immediately and tell the parent (reloader) to stop.
             import signal
 
             sys.stdout.flush()
@@ -601,6 +645,12 @@ def get_lifespan(*, fix_migration=False, version=None):
             # CRITICAL: Cleanup MCP sessions FIRST, before any other shutdown logic.
             # This ensures MCP subprocesses are killed even if shutdown is interrupted.
             await cleanup_mcp_sessions()
+
+            # Enterprise shutdown hooks run before service teardown so they can
+            # still flush through live services. Also reached when startup
+            # failed before the hooks ran — enterprise stop() paths must (and
+            # do) tolerate never having started.
+            await _run_enterprise_lifespan_hooks("shutdown")
 
             # After the MCP cleanup above, deliberately: stopping the sampler awaits a
             # cancellation, and parking there first would both delay that guarantee and give
@@ -699,14 +749,6 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await drain_pending_audit_writes(timeout=5.0)
                     except Exception as drain_exc:  # noqa: BLE001 — never block shutdown on audit
                         await logger.awarning(f"drain_pending_audit_writes failed: {drain_exc}")
-                    # Run enterprise shutdown hooks before services tear down so
-                    # hooks can still reach the DB / queue / cache.
-                    for _hook in reversed(_enterprise_lifespan_hooks["shutdown"]):
-                        try:
-                            await _hook()
-                        except Exception as _exc:  # noqa: BLE001
-                            await logger.aerror(f"Enterprise shutdown hook {_hook.__name__!r} failed: {_exc}")
-
                     try:
                         await asyncio.wait_for(teardown_services(), timeout=30)
                     except asyncio.TimeoutError:

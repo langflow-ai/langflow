@@ -52,6 +52,7 @@ EXPECTED_FIELDS = {
     "config_dir",
     "knowledge_bases_dir",
     # ServerSettings
+    "deployment_profile",
     "host",
     "port",
     "runtime_port",

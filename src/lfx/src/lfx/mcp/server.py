@@ -736,6 +736,11 @@ async def configure_component(
         field_def = template.get(key) if isinstance(template.get(key), dict) else None
         field_type = field_def.get("type") if field_def else None
         value = _coerce_param_value(raw_value, field_type)
+        # Values supplied through this tool are literals. Do not leave a field
+        # in global-variable mode, where the runtime would interpret a literal
+        # secret (for example ``sk-...``) as the name of a stored variable.
+        if field_def is not None and "load_from_db" in field_def:
+            field_def["load_from_db"] = False
         if needs_server_update(template, key):
             # Handle tool_mode specially
             if key == "tool_mode":

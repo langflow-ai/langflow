@@ -13,6 +13,7 @@ from lfx.log.logger import logger
 
 from langflow.services.base import Service
 from langflow.services.telemetry.opentelemetry import OpenTelemetry
+from langflow.services.telemetry.run_event_store import append_run_event
 from langflow.services.telemetry.schema import (
     MAX_TELEMETRY_URL_SIZE,
     ComponentIndexPayload,
@@ -109,14 +110,10 @@ class TelemetryService(Service):
             await logger.aerror(f"Unexpected error occurred: {err}.")
 
     async def log_package_run(self, payload: RunPayload) -> None:
-        # Append to global store so Enterprise (and other internal consumers)
-        # can read run events without touching the Scarf telemetry pipeline.
-        try:
-            from langflow.services.telemetry.run_event_store import append_run_event
-
-            append_run_event(payload)
-        except Exception:  # noqa: BLE001
-            logger.debug("run_event_store bookkeeping failed; telemetry unaffected", exc_info=True)
+        # Recorded before the do-not-track gate in _queue_event: enterprise
+        # metering must see every run even when outbound telemetry is off.
+        # The store is process-local and bounded; see run_event_store.
+        append_run_event(payload)
         await self._queue_event((self.send_telemetry_data, payload, "run"))
 
     async def log_package_deployment(self, payload: DeploymentPayload) -> None:
