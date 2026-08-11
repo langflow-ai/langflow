@@ -169,7 +169,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 bundles = [
-    "lfx-bundles[all-no-torch]>=1.1.6,<2.0",
+    "lfx-bundles[all-no-torch]>=1.1.7,<2.0",
     "lfx-arxiv>=0.1.0,<1.0.0",
     "lfx-duckduckgo>=0.1.0,<1.0.0",
     "lfx-empiriolabs>=0.1.0,<1.0.0",
