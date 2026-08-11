@@ -868,6 +868,27 @@ def create_app():
             content={"detail": exc.detail},
         )
 
+    from lfx.exceptions.tweaks import TweakRefusedError
+
+    @app.exception_handler(TweakRefusedError)
+    async def tweak_refused_exception_handler(_request: Request, exc: TweakRefusedError):
+        """Refused tweaks are a 422 naming the keys, not a silent drop.
+
+        Mirrors the detail shape of the existing output-selection validator so a
+        caller parses one error format across the run API.
+        """
+        return JSONResponse(
+            status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
+            content={
+                "detail": {
+                    "error": "Refused tweaks",
+                    "code": "TWEAKS_REFUSED",
+                    "message": exc.reason,
+                    "fields": exc.refused,
+                }
+            },
+        )
+
     # Add rate limit exception handler
     from slowapi.errors import RateLimitExceeded
 

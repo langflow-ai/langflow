@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, field_validator
 
 
@@ -154,6 +156,30 @@ class SecuritySettings(BaseModel):
     host/another-container namespaces and non-default networks are rejected; and
     ``--security-opt`` is rejected only when it disables the sandbox. Benign forms (no flags,
     ``--user``, ``--network none``/``bridge``, ``--security-opt no-new-privileges``) stay allowed."""
+
+    # Runtime tweak policy
+    tweaks_policy: Literal["permissive", "declared", "off"] = "permissive"
+    """Which fields a run request may set through ``tweaks``.
+
+    ``permissive`` (default) preserves existing behavior: the protected-field floor
+    refuses code fields and privileged sinks, and every other field accepts a tweak.
+
+    ``declared`` honors the per-flow allowlist the flow author sets in the parameters
+    panel. On a flow where at least one field is marked editable via API, only those
+    fields accept a tweak. A flow where the author has marked nothing keeps permissive
+    behavior, so enabling this does not break flows nobody has prepared.
+
+    ``off`` refuses every tweak, and also refuses component-targeted ``inputs``. A
+    caller can still send ``input_value`` and ``session_id``, so chat flows keep
+    running.
+
+    The protected-field floor applies in all three modes and no setting relaxes it.
+    ``declared`` cannot expose a code field, because the flow author's allowlist is
+    consulted only after the floor has already refused.
+
+    Refused tweaks return 422 naming the refused keys in every mode. They previously
+    logged a warning and returned 200, which left a caller unable to tell a refused
+    tweak from an applied one."""
 
     # Rate Limiting
     rate_limit_enabled: bool = True
