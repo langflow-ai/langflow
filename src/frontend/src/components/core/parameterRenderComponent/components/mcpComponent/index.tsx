@@ -36,6 +36,7 @@ export default function McpComponent({
   nodeId = "",
   nodeClass,
   handleNodeClass,
+  ariaLabelledBy,
 }: InputProps<McpServerValue>): JSX.Element | null {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -252,6 +253,9 @@ export default function McpComponent({
             )}
             data-testid="mcp-server-dropdown"
             disabled={disabled || !options}
+            aria-labelledby={
+              showSaveButton || !options ? undefined : ariaLabelledBy
+            }
           >
             <div
               className={cn(

@@ -26,7 +26,10 @@ import {
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import type { GlobalVariable } from "@/types/global_variables";
 import { cn } from "@/utils/utils";
-import { focusCommandListOnOpen } from "../../utils/focus-command-list-on-open";
+import {
+  focusCommandListOnOpen,
+  refocusSelectedCommandItemOnNavigate,
+} from "../../utils/focus-command-list-on-open";
 
 export type DBProviderSelection = {
   // Wire keys stay snake_case to match the backend payload format.
@@ -41,6 +44,7 @@ interface DBProviderInputProps {
   disabled?: boolean;
   /** Accessible name for the combobox trigger (WCAG 4.1.2). */
   "aria-label"?: string;
+  ariaLabelledBy?: string;
   onValueChange: (
     backendType: AvailableDBProviderId,
     backendConfig: Record<string, DBProviderConfigValue>,
@@ -52,6 +56,7 @@ export default function DBProviderInputComponent({
   value,
   disabled,
   handleOnNewValue,
+  ariaLabelledBy,
 }: BaseInputProps<DBProviderSelection | AvailableDBProviderId>) {
   const {
     data: globalVariables = [],
@@ -81,6 +86,7 @@ export default function DBProviderInputComponent({
       value={currentValue.backend_type}
       globalVariables={globalVariables}
       disabled={disabled}
+      ariaLabelledBy={ariaLabelledBy}
       onValueChange={(backendType, backendConfig) => {
         handleOnNewValue({
           value: {
@@ -99,6 +105,7 @@ export function DBProviderInput({
   globalVariables,
   disabled,
   "aria-label": ariaLabel,
+  ariaLabelledBy,
   onValueChange,
 }: DBProviderInputProps) {
   const { t } = useTranslation();
@@ -153,7 +160,8 @@ export function DBProviderInput({
           role="combobox"
           ref={refButton}
           aria-expanded={open}
-          aria-label={ariaLabel}
+          aria-labelledby={ariaLabelledBy}
+          aria-label={ariaLabelledBy ? undefined : ariaLabel}
           data-testid={id}
           className={cn(
             "dropdown-component-false-outline py-2",
@@ -204,6 +212,8 @@ export function DBProviderInput({
         <Command
           label={t("knowledge.dbProviderLabel")}
           className="flex flex-col"
+          defaultValue={selectedProvider.label}
+          onKeyDown={refocusSelectedCommandItemOnNavigate}
         >
           <CommandList className="max-h-[300px] overflow-y-auto">
             {selectableOptions.map(({ provider, configured }) => (

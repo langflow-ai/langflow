@@ -19,6 +19,7 @@ const KeypairListComponent = ({
   isList = true,
   id,
   showParameter = true,
+  ariaLabelledBy,
 }) => {
   const { t } = useTranslation();
   const getTestId = (prefix, index) =>
@@ -100,6 +101,13 @@ const KeypairListComponent = ({
             ? getTestId("plusbtn", index)
             : getTestId("minusbtn", index)
         }
+        // Icon-only button, no visible text — found missing a discernible
+        // name by axe while adding an unrelated a11y test to this widget.
+        aria-label={
+          isFirstItem
+            ? t("input.addKeyValuePair")
+            : t("input.removeKeyValuePair")
+        }
         data-testid={id}
         className={cn(
           "hit-area-icon group flex items-center justify-center",
@@ -136,6 +144,10 @@ const KeypairListComponent = ({
           className={getInputClassName(editNode, duplicateKey)}
           placeholder={t("input.typeKey")}
           onChange={(event) => handleChangeKey(event, index)}
+          // Only the first row's key input stands in for the field itself —
+          // the rest are additional entries the user added, same reasoning
+          // as inputListComponent.
+          aria-labelledby={index === 0 ? ariaLabelledBy : undefined}
         />
         <Input
           data-testid={getTestId("keypair", index + 100)}
