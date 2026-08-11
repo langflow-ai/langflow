@@ -98,6 +98,28 @@ def _exec_returning(value):
     return db
 
 
+def _exec_owner_scoped(mb_row):
+    """Model the DB result for an exact ``name + flow + execution user`` lookup.
+
+    The legacy vulnerable query omitted ``user_id`` and therefore resolved the
+    owner's row for every execution principal.  Keeping that behavior when the
+    predicate is absent makes the non-owner tests below fail for the actual
+    security reason instead of depending on SQL string assertions alone.
+    """
+    db = MagicMock()
+
+    async def _exec(stmt):
+        params = stmt.compile().params
+        requested_user_id = params.get("user_id_1")
+        matched = requested_user_id is None or requested_user_id == mb_row.user_id
+        result = MagicMock()
+        result.first.return_value = mb_row if matched else None
+        return result
+
+    db.exec = AsyncMock(side_effect=_exec)
+    return db
+
+
 # ---------------------------------------------------------------------------
 # Pure helpers
 # ---------------------------------------------------------------------------
@@ -359,6 +381,36 @@ class TestMemoryBaseRetrievalInvariants:
         with pytest.raises(ValueError, match="flow_id"):
             await component.retrieve_memory()
 
+    @pytest.mark.parametrize("runtime_user_id", [None, "not-a-uuid"])
+    async def test_missing_or_invalid_runtime_user_fails_before_owner_resolution(self, runtime_user_id):
+        """A malformed graph principal must never fall back to the Memory Base owner."""
+        flow_id = uuid.uuid4()
+        owner_id = uuid.uuid4()
+        component = _make_component(
+            flow_id=flow_id,
+            session_id=None,
+            filter_by_session=False,
+            invoker_user_id=owner_id,
+        )
+        component.graph.user_id = runtime_user_id
+        mb_row = _make_mb_row(flow_id=flow_id, owner_id=owner_id)
+        fake_backend = AsyncMock()
+        fake_backend.similarity_search.return_value = []
+
+        with contextlib.ExitStack() as stack:
+            TestMemoryBaseRetrievalBehavior._enter_full_chain(
+                stack,
+                db=_exec_owner_scoped(mb_row),
+                fake_backend=fake_backend,
+                owner=SimpleNamespace(id=owner_id, username="owner"),
+                metadata={"embedding_provider": "OpenAI", "embedding_model": "x"},
+            )
+            with pytest.raises(ValueError, match="user_id"):
+                await component.retrieve_memory()
+
+        fake_backend.ensure_ready.assert_not_awaited()
+        fake_backend.similarity_search.assert_not_awaited()
+
     async def test_no_memory_base_selected_raises(self):
         component = _make_component(flow_id=uuid.uuid4(), session_id="s1", selected=None)
         with pytest.raises(ValueError, match="No Memory Base"):
@@ -531,6 +583,71 @@ class TestMemoryBaseRetrievalBehavior:
 
         kwargs = fake_backend.similarity_search.call_args.kwargs
         assert kwargs["filter"] is None
+
+    async def test_owner_can_retrieve_across_sessions_under_owner_principal(self):
+        """The owner-equivalent execution principal keeps the cross-session feature working."""
+        flow_id = uuid.uuid4()
+        owner_id = uuid.uuid4()
+        component = _make_component(
+            flow_id=flow_id,
+            session_id=None,
+            filter_by_session=False,
+            invoker_user_id=owner_id,
+        )
+        mb_row = _make_mb_row(flow_id=flow_id, owner_id=owner_id)
+        owner = SimpleNamespace(id=owner_id, username="owner")
+        fake_backend = AsyncMock()
+        fake_backend.similarity_search.return_value = []
+
+        with contextlib.ExitStack() as stack:
+            self._enter_full_chain(
+                stack,
+                db=_exec_owner_scoped(mb_row),
+                fake_backend=fake_backend,
+                owner=owner,
+                metadata={"embedding_provider": "OpenAI", "embedding_model": "x"},
+            )
+            result = await component.retrieve_memory()
+
+        assert len(result) == 0
+        fake_backend.ensure_ready.assert_awaited_once()
+        fake_backend.similarity_search.assert_awaited_once()
+
+    @pytest.mark.parametrize(
+        "caller_kind",
+        ["delegate", "public_v1", "public_v2", "public_a2a_initial", "public_a2a_hitl_resume"],
+    )
+    async def test_non_owner_principal_cannot_open_owner_backend_when_session_filter_is_off(self, caller_kind):
+        """Every non-owner route principal fails before owner lookup/backend construction."""
+        from langflow.services.authorization.public_access import PUBLIC_ANONYMOUS_ACTOR_ID
+
+        flow_id = uuid.uuid4()
+        owner_id = uuid.uuid4()
+        caller_id = uuid.uuid4() if caller_kind == "delegate" else PUBLIC_ANONYMOUS_ACTOR_ID
+        component = _make_component(
+            flow_id=flow_id,
+            session_id=None,
+            filter_by_session=False,
+            invoker_user_id=caller_id,
+        )
+        mb_row = _make_mb_row(flow_id=flow_id, owner_id=owner_id)
+        owner = SimpleNamespace(id=owner_id, username="owner")
+        fake_backend = AsyncMock()
+        fake_backend.similarity_search.return_value = []
+
+        with contextlib.ExitStack() as stack:
+            self._enter_full_chain(
+                stack,
+                db=_exec_owner_scoped(mb_row),
+                fake_backend=fake_backend,
+                owner=owner,
+                metadata={"embedding_provider": "OpenAI", "embedding_model": "x"},
+            )
+            with pytest.raises(ValueError, match="not attached to this flow"):
+                await component.retrieve_memory()
+
+        fake_backend.ensure_ready.assert_not_awaited()
+        fake_backend.similarity_search.assert_not_awaited()
 
     async def test_empty_search_query_returns_empty_dataframe_without_embedding(self):
         flow_id = uuid.uuid4()

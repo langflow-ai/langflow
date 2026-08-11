@@ -391,9 +391,56 @@ async def test_public_endpoint_runs_as_stable_non_owner_principal(client: AsyncC
         owner_id = flow.user_id
 
     execution_principal = captured["current_user"]
+    from langflow.services.authorization.public_access import PUBLIC_ANONYMOUS_ACTOR_ID
+
+    assert execution_principal.id == PUBLIC_ANONYMOUS_ACTOR_ID
     assert execution_principal.id != owner_id
     assert execution_principal.username == "anonymous-public"
     assert execution_principal.is_superuser is False
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_public_endpoint_reauthorizes_reloaded_flow_after_grant_transition(
+    client: AsyncClient,
+    public_flow_id,
+    monkeypatch,
+):
+    """The exact DB snapshot detached for streaming must still hold a public grant."""
+    import langflow.api.v2.workflow_public as workflow_public_module
+    from langflow.api.utils.flow_utils import compute_virtual_flow_id
+    from langflow.services.authorization.public_access import public_execution_user
+    from langflow.services.database.models.flow.model import AccessTypeEnum
+
+    client_id = "v2-reload-revocation-client"
+
+    async def _admit_first_snapshot_then_revoke(**_kwargs):
+        async with session_scope() as session:
+            flow = await session.get(Flow, public_flow_id)
+            assert flow is not None
+            flow.access_type = AccessTypeEnum.PRIVATE
+            session.add(flow)
+            await session.commit()
+        return public_execution_user(), compute_virtual_flow_id(client_id, public_flow_id, principal_type="client")
+
+    captured: dict = {}
+    monkeypatch.setattr(
+        workflow_public_module,
+        "verify_public_flow_and_get_user",
+        _admit_first_snapshot_then_revoke,
+    )
+    _stub_generate_flow_events(monkeypatch, captured)
+    _send_unauthenticated(client, client_id)
+
+    response = await client.post(
+        "api/v2/workflows/public",
+        json={"flow_id": str(public_flow_id), "input_value": "Hi"},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.NOT_FOUND
+    assert response.json() == {"detail": "Not Found"}
+    assert captured == {}
 
 
 @pytest.mark.benchmark

@@ -1316,6 +1316,56 @@ async def test_build_public_tmp_strips_persisted_owner_secrets_before_dispatch(
     assert dispatched is not None
     assert dispatched.nodes[0]["data"]["node"]["template"]["owner_api_key"]["value"] is None
     assert prepared["nodes"][0]["data"]["node"]["template"]["owner_api_key"]["value"] == "sk-owner-secret"
+    from langflow.services.authorization.public_access import PUBLIC_ANONYMOUS_ACTOR_ID
+
+    assert captured["current_user"].id == PUBLIC_ANONYMOUS_ACTOR_ID
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_reauthorizes_reloaded_flow_after_grant_transition(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """A grant revoked between admission and reload cannot execute the later snapshot."""
+    import langflow.api.v1.chat as chat_module
+    from langflow.api.utils.flow_utils import compute_virtual_flow_id
+    from langflow.services.authorization.public_access import public_execution_user
+    from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
+    from langflow.services.deps import session_scope
+
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    client_id = "v1-reload-revocation-client"
+
+    async def _admit_first_snapshot_then_revoke(**_kwargs):
+        async with session_scope() as session:
+            flow = await session.get(Flow, flow_id)
+            assert flow is not None
+            flow.access_type = AccessTypeEnum.PRIVATE
+            session.add(flow)
+            await session.commit()
+        return public_execution_user(), compute_virtual_flow_id(client_id, flow_id, principal_type="client")
+
+    captured: dict = {}
+    monkeypatch.setattr(chat_module, "verify_public_flow_and_get_user", _admit_first_snapshot_then_revoke)
+    _stub_start_flow_build(monkeypatch, captured)
+    _send_unauthenticated(client, client_id)
+
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": "transition"}},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.NOT_FOUND
+    assert response.json() == {"detail": "Not Found"}
+    assert captured == {}
 
 
 @pytest.mark.benchmark

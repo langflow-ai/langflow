@@ -170,6 +170,27 @@ async def test_missing_flow_returns_404(client: AsyncClient):
     assert response.status_code == 404
 
 
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_agent_card_plugin_denial_matches_unknown_flow_exactly(
+    client: AsyncClient, active_user, flow_data, monkeypatch
+):
+    """A plugin-denied/revoked card must not expose a distinct 404 detail oracle."""
+    from fastapi import HTTPException
+    from langflow.api.v1 import a2a as a2a_module
+
+    flow_id = await _create_flow(active_user.id, data=flow_data)
+    unknown = await client.get(_card_url(uuid.uuid4()))
+
+    async def _deny_with_sensitive_detail(**_kwargs):
+        raise HTTPException(status_code=404, detail=f"tenant policy revoked flow {flow_id}")
+
+    monkeypatch.setattr(a2a_module, "authorize_public_flow_access", _deny_with_sensitive_detail)
+    denied = await client.get(_card_url(flow_id))
+
+    assert unknown.status_code == denied.status_code == 404
+    assert unknown.json() == denied.json() == {"detail": "Not Found"}
+
+
 async def test_flag_off_returns_404(client: AsyncClient, active_user, flow_data):
     """A valid agent+enabled flow 404s when the server flag is off (no a2a_flag_on)."""
     flow_id = await _create_flow(active_user.id, data=flow_data)
@@ -625,6 +646,7 @@ async def test_public_a2a_run_uses_server_sanitized_flow_data(active_user, echo_
     executed_secret = captured["executed_flow_data"]["nodes"][0]["data"]["node"]["template"]["api_key"]
     assert executed_secret["value"] is None
     assert prepared_data["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] == "sk-owner-secret"
+    assert captured["execution_principal"].id == a2a_module.PUBLIC_ANONYMOUS_ACTOR_ID
     assert captured["execution_principal"].id != active_user.id
     assert captured["execution_principal"].username == "anonymous-public"
 
@@ -681,6 +703,7 @@ async def test_public_a2a_resume_sanitizes_checkpoint_payload(active_user, echo_
 
     def fake_resume(sanitized_checkpoint, *_args):
         captured["resumed_payload"] = sanitized_checkpoint.flow_payload
+        captured["resumed_user_id"] = sanitized_checkpoint.user_id
         raise StopAfterPolicyCheckError
 
     monkeypatch.setattr(a2a_module, "A2ACheckpointStore", FakeStore)
@@ -700,6 +723,7 @@ async def test_public_a2a_resume_sanitizes_checkpoint_payload(active_user, echo_
     assert captured["prepared"] == echo_flow_data
     resumed_secret = captured["resumed_payload"]["nodes"][0]["data"]["node"]["template"]["api_key"]
     assert resumed_secret["value"] is None
+    assert captured["resumed_user_id"] == str(a2a_module.PUBLIC_ANONYMOUS_ACTOR_ID)
     assert prepared_data["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] == "sk-owner-secret"
 
 
