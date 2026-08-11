@@ -1,9 +1,14 @@
 """Router-level contract for serving-plane end-user session scoping.
 
 No mocks of the router: a real ``WorkflowHostBase`` records the ``session_id`` the
-router hands it, mounted on a bare ``FastAPI()`` with ``TestClient``. The lfx
-serving settings are driven through the real settings service, so these assert the
-exact wire behavior both hosts inherit from ``execute_workflow``.
+router hands it, mounted on a bare ``FastAPI()`` with ``TestClient``, so these
+assert the exact wire behavior both hosts inherit from ``execute_workflow``.
+
+The settings service is STUBBED (``get_settings_service`` is monkeypatched to a
+``SimpleNamespace``) for the per-flag matrix; one case
+(``test_real_settings_env_binding_scopes_session``) drives a real env-built
+``Settings`` object through the router to cover the operator-facing contract
+end to end.
 """
 
 from copy import deepcopy
@@ -115,14 +120,41 @@ def test_two_users_same_session_id_are_isolated(client_with_settings):
     assert host_b.seen_session_id == "bob::shared"
 
 
-def test_anonymous_request_keeps_session_unchanged(client_with_settings):
+def test_anonymous_request_gets_reserved_ephemeral_scope(client_with_settings):
     host = _CaptureHost(_echo_graph())
     client = client_with_settings(host, _settings(serving_end_user_header=HEADER, serving_trust_proxy_headers=True))
     resp = _run(client, session_id="chat-1")  # no header
     assert resp.status_code == 200, resp.text
-    assert host.seen_session_id == "chat-1"
+    # The client-supplied session id is a read-scope key; an anonymous request
+    # must not run under it (it could name an identified user's session). It is
+    # moved into the reserved anon:: namespace instead.
+    assert host.seen_session_id is not None
+    assert host.seen_session_id.startswith("anon::")
+    assert "chat-1" not in host.seen_session_id
     # An anonymous run is ephemeral: it must not persist memory.
     assert host.seen_persist is False
+
+
+def test_anonymous_request_cannot_target_identified_scope(client_with_settings):
+    # An anonymous caller posting an identified user's merged key must not land in
+    # that user's namespace — this is the read-path half of the isolation contract.
+    host = _CaptureHost(_echo_graph())
+    client = client_with_settings(host, _settings(serving_end_user_header=HEADER, serving_trust_proxy_headers=True))
+    resp = _run(client, session_id="alice::chat-1")  # no header
+    assert resp.status_code == 200, resp.text
+    assert host.seen_session_id != "alice::chat-1"
+    assert "alice::chat-1" not in (host.seen_session_id or "")
+
+
+def test_identified_echoed_session_id_is_not_rescoped(client_with_settings):
+    # Turn 2 of the normal client contract: reuse the session_id from turn 1's
+    # response. The merge must be idempotent or memory silently resets each turn.
+    host = _CaptureHost(_echo_graph())
+    client = client_with_settings(host, _settings(serving_end_user_header=HEADER, serving_trust_proxy_headers=True))
+    resp = _run(client, session_id="alice::chat-1", headers={HEADER: "alice"})
+    assert resp.status_code == 200, resp.text
+    assert host.seen_session_id == "alice::chat-1"
+    assert host.seen_persist is True
 
 
 def test_feature_off_leaves_persist_default(client_with_settings):
@@ -136,12 +168,15 @@ def test_feature_off_leaves_persist_default(client_with_settings):
 
 def test_spoofed_header_ignored_when_trust_disabled(client_with_settings):
     # Feature on, but trust off: the client-supplied header must not scope memory.
+    # The request runs as anonymous — reserved namespace, no persistence.
     host = _CaptureHost(_echo_graph())
     client = client_with_settings(host, _settings(serving_end_user_header=HEADER, serving_trust_proxy_headers=False))
     resp = _run(client, session_id="chat-1", headers={HEADER: "victim"})
     assert resp.status_code == 200, resp.text
-    assert host.seen_session_id == "chat-1"
     assert "victim" not in (host.seen_session_id or "")
+    assert host.seen_session_id is not None
+    assert host.seen_session_id.startswith("anon::")
+    assert host.seen_persist is False
 
 
 def test_feature_off_is_noop(client_with_settings):
@@ -172,6 +207,28 @@ def test_identified_without_session_falls_back_to_flow_id(client_with_settings):
     resp = _run(client, headers={HEADER: "alice"})  # no session_id in body
     assert resp.status_code == 200, resp.text
     assert host.seen_session_id == f"alice::{_FLOW_ID}"
+
+
+def test_real_settings_env_binding_scopes_session(client_with_settings, monkeypatch):
+    """Operator contract end to end: the three env vars drive a real ``Settings``.
+
+    The rest of this module stubs the settings namespace; this case builds the
+    actual env-bound ``Settings`` object so a typo in a field name or the
+    LANGFLOW_ prefix cannot silently disable the feature with every other test
+    still green.
+    """
+    from lfx.services.settings.base import Settings
+
+    monkeypatch.setenv("LANGFLOW_SERVING_END_USER_HEADER", HEADER)
+    monkeypatch.setenv("LANGFLOW_SERVING_TRUST_PROXY_HEADERS", "true")
+    monkeypatch.setenv("LANGFLOW_SERVING_END_USER_REQUIRED", "false")
+
+    host = _CaptureHost(_echo_graph())
+    client = client_with_settings(host, Settings())
+    resp = _run(client, session_id="chat-1", headers={HEADER: "alice"})
+    assert resp.status_code == 200, resp.text
+    assert host.seen_session_id == "alice::chat-1"
+    assert host.seen_persist is True
 
 
 if __name__ == "__main__":

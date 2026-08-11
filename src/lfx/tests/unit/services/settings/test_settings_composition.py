@@ -253,6 +253,11 @@ EXPECTED_FIELDS = {
     "sandbox_allow_network",
     "sandbox_allowed_domains",
     "sandbox_allow_software_emulation",
+    # ---- Serving-plane end-user identity ----
+    # SecuritySettings
+    "serving_end_user_header",
+    "serving_trust_proxy_headers",
+    "serving_end_user_required",
 }
 
 

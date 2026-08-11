@@ -24,14 +24,23 @@ trust is an explicit opt-in that assumes the deployment guarantees:
 Scoping (see :func:`scope_session_for_identity`) follows the decision that memory
 is keyed by ``(end-user id, session_id)`` so one user can run several parallel
 conversations: for an identified request the end-user id is merged into the
-effective ``session_id``; an anonymous request keeps its requested session but is
-marked non-persisting so nothing accumulates.
+effective ``session_id`` (idempotently, so a client echoing the returned key does
+not get re-scoped); an anonymous request is moved into a reserved, per-request
+random namespace and marked non-persisting, so it can neither accumulate memory
+nor address an identified user's existing session key.
+
+"No persisted per-user memory" covers what Langflow itself writes for a run: chat
+messages, transaction rows, and vertex-build rows. It cannot cover stores outside
+Langflow's own database — external tracing backends or memory services a flow
+author explicitly wires in (e.g. an external chat-memory component) are the flow
+author's responsibility.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
+from uuid import uuid4
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -49,6 +58,12 @@ if TYPE_CHECKING:
 # opaque token). If a gateway can mint ids containing "::", switch to a length-prefixed or
 # percent-encoded join here. See the serving-plane end-user header contract.
 SCOPE_SEPARATOR = "::"
+
+# Reserved namespace for anonymous requests. The random per-request component makes
+# the scope unguessable and collision-free even against a gateway that mints the
+# literal end-user id "anon", so an anonymous caller can never address — and thus
+# never read — any pre-existing session's memory.
+ANONYMOUS_SESSION_PREFIX = f"anon{SCOPE_SEPARATOR}"
 
 
 @dataclass(frozen=True)
@@ -159,8 +174,16 @@ def scope_session_for_identity(
     Memory is keyed by ``(end-user id, session_id)``. For an identified request
     the end-user id is prepended to the caller's session id (or the flow default
     when none was supplied), so two end-users sharing a session id — or both
-    omitting it and falling back to the flow id — never collide. For an anonymous
-    request the session is left as requested but marked non-persisting.
+    omitting it and falling back to the flow id — never collide. The merge is
+    idempotent: a caller echoing back the effective key from a previous response
+    (the normal Langflow contract) is not re-scoped into a fresh namespace.
+
+    An anonymous request is moved into the reserved ``anon::<random>`` namespace
+    and marked non-persisting. Its requested session id is deliberately ignored:
+    session ids are read-scope keys, and honoring a client-supplied value would
+    let an unauthenticated caller execute in — and read memory from — any
+    identified user's session it can guess. An anonymous run persists nothing, so
+    it has no legitimate use for a pre-existing session key.
 
     Args:
         identity: The resolved end-user identity.
@@ -172,7 +195,12 @@ def scope_session_for_identity(
         A :class:`ScopedSession` with the effective session id and whether the
         run may persist per-user memory.
     """
-    base = requested_session_id or default_session_id
     if identity.is_anonymous:
-        return ScopedSession(session_id=base, persist=False)
-    return ScopedSession(session_id=f"{identity.id}{SCOPE_SEPARATOR}{base}", persist=True)
+        return ScopedSession(session_id=f"{ANONYMOUS_SESSION_PREFIX}{uuid4()}", persist=False)
+    prefix = f"{identity.id}{SCOPE_SEPARATOR}"
+    base = requested_session_id or default_session_id
+    # A key echoed from a previous response already carries this user's own prefix;
+    # strip it once so the merge is idempotent. Another user's prefix never matches
+    # (the gateway authenticated *this* id), so cross-user keys cannot be unwrapped.
+    base = base.removeprefix(prefix)
+    return ScopedSession(session_id=f"{prefix}{base}", persist=True)

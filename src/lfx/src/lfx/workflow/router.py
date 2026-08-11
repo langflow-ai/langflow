@@ -146,8 +146,10 @@ def _scope_parsed_to_end_user(parsed, flow, http_request: Request):
     Reads the trusted end-user header (per lfx serving settings), merges an
     identified user's id into the effective ``session_id`` so ``(end-user id,
     session_id)`` keys per-user memory, and returns the updated parsed run. A
-    request with no identity is left unchanged (anonymous); enforcement of the
-    anonymous no-persist contract is applied where the run executes.
+    request with no identity runs anonymously: it is moved into the reserved
+    ``anon::`` namespace (so it cannot address an identified session's memory)
+    and marked non-persisting; enforcement of the no-persist contract is applied
+    where the run executes.
 
     Feature-off (no header configured) and the fail-closed trust gate are handled
     by :func:`resolve_end_user_identity`, so with the default settings this is a
@@ -157,17 +159,20 @@ def _scope_parsed_to_end_user(parsed, flow, http_request: Request):
         HTTPException: 401 when identity is required but absent.
     """
     settings_service = get_settings_service()
+    # The None guard covers runtimes where the lfx service manager genuinely has no
+    # settings service. The serving fields themselves are accessed directly — they
+    # are statically declared on SecuritySettings, and a silent getattr fallback
+    # would turn a future rename into "security feature off" with no signal.
     settings = settings_service.settings if settings_service is not None else None
-    # Feature off when settings are unavailable or no header is configured.
-    header_name = getattr(settings, "serving_end_user_header", None) if settings is not None else None
+    header_name = settings.serving_end_user_header if settings is not None else None
     if not header_name:
         return parsed
 
     try:
         identity = resolve_end_user_identity(
             header_name=header_name,
-            trust_proxy_headers=bool(getattr(settings, "serving_trust_proxy_headers", False)),
-            require_identity=bool(getattr(settings, "serving_end_user_required", False)),
+            trust_proxy_headers=bool(settings.serving_trust_proxy_headers),
+            require_identity=bool(settings.serving_end_user_required),
             get_header=http_request.headers.get,
         )
     except EndUserIdentityRequiredError as exc:

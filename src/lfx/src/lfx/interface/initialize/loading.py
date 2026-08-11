@@ -81,6 +81,7 @@ async def get_instance_results(
         reset_messages_persist,
         set_current_flow_id,
         set_messages_persist,
+        should_persist_messages,
     )
 
     graph = getattr(vertex, "graph", None)
@@ -91,8 +92,12 @@ async def get_instance_results(
     # Bind the run's message-persistence flag here too (defaults True) so
     # astore_message can skip the DB write for an anonymous serving run. Reading it
     # off the graph and binding in the component's own task sidesteps any
-    # cross-task ContextVar propagation concern.
-    persist_token = set_messages_persist(bool(getattr(graph, "persist_messages", True)))
+    # cross-task ContextVar propagation concern. The binding is monotonically
+    # restrictive: an ephemeral outer run can never be re-enabled from inside —
+    # nested graphs built with Graph.from_payload (Run Flow, Sub Flow, Flow as
+    # Tool, A2A) default persist_messages=True and would otherwise overwrite the
+    # outer run's no-persist decision.
+    persist_token = set_messages_persist(should_persist_messages() and bool(getattr(graph, "persist_messages", True)))
     try:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)

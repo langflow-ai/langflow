@@ -73,6 +73,104 @@ async def test_anonymous_graph_run_persists_nothing_end_to_end(client):  # noqa:
     assert await aget_messages(session_id=session_id) == []
 
 
+async def test_nested_default_graph_cannot_reenable_persistence(client):  # noqa: ARG001
+    """The binding is monotonically restrictive (review B3).
+
+    Nested graphs built with ``Graph.from_payload`` (Run Flow, Sub Flow, Flow as
+    Tool, A2A) default ``persist_messages = True``. Under an ephemeral outer run
+    that default must not overwrite the ambient no-persist decision — modeled here
+    by running a default-persisting graph inside an outer ephemeral binding.
+    """
+    session_id = f"nested-anon-{uuid4()}"
+    chat_input = ChatInput(_id="chat_input")
+    chat_input.set(input_value="hi there")
+    chat_output = ChatOutput(_id="chat_output")
+    chat_output.set(input_value=chat_input.message_response)
+
+    graph = Graph(chat_input, chat_output, flow_id=str(uuid4()))
+    graph.session_id = session_id
+    # NOTE: graph.persist_messages stays at its True default, like a nested
+    # Graph.from_payload graph inside an anonymous outer run.
+
+    token = set_messages_persist(persist=False)  # the outer run's decision
+    try:
+        async for _ in graph.async_start():
+            pass
+    finally:
+        reset_messages_persist(token)
+
+    assert await aget_messages(session_id=session_id) == []
+
+
+async def test_memory_component_store_does_not_crash_on_ephemeral_run(client):  # noqa: ARG001
+    """Memory component (store mode) must degrade gracefully, not crash.
+
+    Its store path does a write-then-read-back and raises when the read-back is
+    empty — which is exactly what an ephemeral run produces. The component must
+    return the in-run message instead of crashing the flow.
+    """
+    from lfx.components.models_and_agents.memory import MemoryComponent
+
+    session_id = f"memcomp-anon-{uuid4()}"
+    component = MemoryComponent(_id="memory")
+    component.set(
+        mode="Store",
+        message="remember me",
+        session_id=session_id,
+        sender="User",
+        sender_name="User",
+    )
+
+    token = set_messages_persist(persist=False)
+    try:
+        stored = await component.store_message()
+    finally:
+        reset_messages_persist(token)
+
+    assert stored.text == "remember me"
+    assert await aget_messages(session_id=session_id) == []
+
+
+async def test_update_stored_message_is_noop_on_ephemeral_run(client):  # noqa: ARG001
+    """Streaming finalization must not require a DB row on ephemeral runs.
+
+    ``_update_stored_message`` is called at the end of token streaming; on an
+    ephemeral run the message was never stored (no id), so the update must be a
+    no-op instead of raising "Message with id None not found".
+    """
+    component = ChatOutput(_id="chat_output")
+    message = _msg(f"ephemeral-update-{uuid4()}")
+
+    token = set_messages_persist(persist=False)
+    try:
+        result = await component._update_stored_message(message)
+    finally:
+        reset_messages_persist(token)
+
+    assert result.text == "remember me"
+
+
+async def test_send_message_skip_db_update_allows_ephemeral_unstored(client, monkeypatch):  # noqa: ARG001
+    """Agent token streaming uses send_message(skip_db_update=True) per chunk.
+
+    Ephemeral messages never have an id, so the "must already have an ID" guard
+    must not fire when persistence is off — otherwise any anonymous run with an
+    Agent component crashes mid-stream.
+    """
+    component = ChatOutput(_id="chat_output")
+    monkeypatch.setattr(component, "_should_skip_message", lambda _msg: False)
+    message = _msg(f"ephemeral-skipdb-{uuid4()}")
+
+    token = set_messages_persist(persist=False)
+    try:
+        result = await component.send_message(message, skip_db_update=True)
+    finally:
+        reset_messages_persist(token)
+
+    assert result.text == "remember me"
+    assert not result.has_id()
+
+
 # --- background / resume round-trip -------------------------------------------
 # The background and HITL-resume paths persist the request and re-parse it on the
 # worker. persist_messages is an internal decision, not a client wire field, so it

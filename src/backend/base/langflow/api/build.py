@@ -706,8 +706,10 @@ async def generate_flow_events(
             # ``run_id``) persist every vertex, including streaming terminal outputs,
             # so GET-status reconstruction by job_id is complete. The live build
             # path (``run_id is None``) keeps the original "skip streaming vertices"
-            # behavior unchanged.
-            if log_builds and (run_id is not None or not vertex.will_stream):
+            # behavior unchanged. Ephemeral (anonymous serving) runs skip the
+            # persisted record entirely — vertex-build rows retain params/outputs,
+            # so the no-persist contract covers them too.
+            if log_builds and graph.persist_messages and (run_id is not None or not vertex.will_stream):
                 background_tasks.add_task(
                     log_vertex_build,
                     flow_id=flow_id_str,

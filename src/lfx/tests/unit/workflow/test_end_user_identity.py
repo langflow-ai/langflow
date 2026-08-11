@@ -8,6 +8,7 @@ header is ignored unless trust is explicitly opted into.
 import pytest
 from lfx.workflow.end_user_identity import (
     ANONYMOUS,
+    ANONYMOUS_SESSION_PREFIX,
     EndUserIdentity,
     EndUserIdentityRequiredError,
     resolve_end_user_identity,
@@ -178,13 +179,52 @@ def test_one_user_can_run_parallel_sessions():
     assert b.session_id.startswith("alice::")
 
 
-def test_anonymous_keeps_session_but_does_not_persist():
+def test_identified_merge_is_idempotent_on_echoed_key():
+    # The router echoes the effective session id; a well-behaved client reuses it.
+    # Re-scoping the echoed key must return the same key, not nest another prefix.
+    first = scope_session_for_identity(
+        EndUserIdentity(id="alice"), requested_session_id="chat-1", default_session_id=FLOW_ID
+    )
+    second = scope_session_for_identity(
+        EndUserIdentity(id="alice"), requested_session_id=first.session_id, default_session_id=FLOW_ID
+    )
+    assert first.session_id == "alice::chat-1"
+    assert second.session_id == first.session_id
+
+
+def test_identified_cannot_unwrap_another_users_prefix():
+    # Only the caller's own authenticated prefix is stripped; bob sending alice's
+    # merged key lands in bob's namespace, not alice's.
+    scoped = scope_session_for_identity(
+        EndUserIdentity(id="bob"), requested_session_id="alice::chat-1", default_session_id=FLOW_ID
+    )
+    assert scoped.session_id == "bob::alice::chat-1"
+
+
+def test_anonymous_gets_reserved_namespace_and_does_not_persist():
     scoped = scope_session_for_identity(ANONYMOUS, requested_session_id="chat-1", default_session_id=FLOW_ID)
-    assert scoped.session_id == "chat-1"
+    assert scoped.persist is False
+    assert scoped.session_id.startswith(ANONYMOUS_SESSION_PREFIX)
+    # The client-supplied session id must not survive into the scope key: it is a
+    # read-scope key, and honoring it would let an anonymous caller execute in an
+    # identified user's session.
+    assert "chat-1" not in scoped.session_id
+
+
+def test_anonymous_cannot_target_an_identified_scope():
+    scoped = scope_session_for_identity(ANONYMOUS, requested_session_id="alice::chat-1", default_session_id=FLOW_ID)
+    assert scoped.session_id != "alice::chat-1"
+    assert "alice::chat-1" not in scoped.session_id
     assert scoped.persist is False
 
 
-def test_anonymous_without_session_uses_flow_default_and_no_persist():
+def test_two_anonymous_requests_never_share_a_scope():
+    a = scope_session_for_identity(ANONYMOUS, requested_session_id="shared", default_session_id=FLOW_ID)
+    b = scope_session_for_identity(ANONYMOUS, requested_session_id="shared", default_session_id=FLOW_ID)
+    assert a.session_id != b.session_id
+
+
+def test_anonymous_without_session_still_gets_reserved_namespace():
     scoped = scope_session_for_identity(ANONYMOUS, requested_session_id=None, default_session_id=FLOW_ID)
-    assert scoped.session_id == FLOW_ID
+    assert scoped.session_id.startswith(ANONYMOUS_SESSION_PREFIX)
     assert scoped.persist is False

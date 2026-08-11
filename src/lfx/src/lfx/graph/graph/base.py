@@ -2157,6 +2157,10 @@ class Graph:
         Formats the exception message and stack trace, constructs an error output,
         and records the failure using the vertex build logging system.
         """
+        if not self.persist_messages:
+            # Ephemeral (anonymous serving) run: vertex-build rows retain component
+            # params and outputs, so the no-persist contract covers them too.
+            return
         if isinstance(result, ComponentBuildError):
             params = result.message
             tb = result.formatted_traceback
@@ -2225,15 +2229,19 @@ class Graph:
                 raise result
             if isinstance(result, VertexBuildResult):
                 if self.flow_id is not None:
-                    await log_vertex_build(
-                        flow_id=self.flow_id,
-                        vertex_id=result.vertex.id,
-                        valid=result.valid,
-                        params=result.params,
-                        data=result.result_dict,
-                        artifacts=result.artifacts,
-                        job_id=self._run_id if self._run_id else None,
-                    )
+                    # Ephemeral (anonymous serving) runs skip the persisted build
+                    # record — vertex-build rows retain params/outputs — but still
+                    # register the result so live SSE emission is unaffected.
+                    if self.persist_messages:
+                        await log_vertex_build(
+                            flow_id=self.flow_id,
+                            vertex_id=result.vertex.id,
+                            valid=result.valid,
+                            params=result.params,
+                            data=result.result_dict,
+                            artifacts=result.artifacts,
+                            job_id=self._run_id if self._run_id else None,
+                        )
                     # Store for SSE emission later
                     build_results[result.vertex.id] = result
 
@@ -2809,6 +2817,9 @@ class Graph:
         subgraph._tracing_service_initialized = True
         subgraph._run_id = self._run_id
         subgraph.session_id = self.session_id
+        # A subgraph extends the parent's run, so it inherits the ephemeral
+        # (no-persist) decision too.
+        subgraph.persist_messages = self.persist_messages
         subgraph.source_flow_id = self.source_flow_id
         subgraph._is_subgraph = True
 
