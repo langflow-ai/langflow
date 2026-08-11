@@ -394,7 +394,7 @@ async def _stream_event_frames(
                             run_is_webhook=False,
                             run_seconds=int(time.perf_counter() - _run_start),
                             run_success=_run_success,
-                            run_error_message="" if _run_success else "workflow error",
+                            run_error_message="" if _run_success else str(drive_error or "workflow error"),
                             run_id=run_id or "",
                         )
                     )
@@ -604,6 +604,7 @@ async def execute_sync_workflow(
     await job_service.create_job(job_id=job_id, flow_id=flow_id_str, user_id=current_user.id)
     _sync_run_paused = False
     _sync_run_success = False
+    _sync_run_error: str = ""
     _run_start = time.perf_counter()
     try:
         task_result, execution_session_id = await job_service.execute_with_status(
@@ -677,6 +678,7 @@ async def execute_sync_workflow(
     except Exception as exc:  # noqa: BLE001
         # Component execution errors - return in response body with HTTP 200
         # This allows partial results and detailed error information per component
+        _sync_run_error = str(exc)
         return create_error_response(
             flow_id=parsed.flow_id,
             job_id=job_id,
@@ -702,7 +704,7 @@ async def execute_sync_workflow(
                             run_is_webhook=False,
                             run_seconds=int(time.perf_counter() - _run_start),
                             run_success=_sync_run_success,
-                            run_error_message="" if _sync_run_success else "workflow error",
+                            run_error_message="" if _sync_run_success else (_sync_run_error or "workflow error"),
                             run_id=str(job_id),
                         )
                     )
