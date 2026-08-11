@@ -871,13 +871,18 @@ async def get_agent_card(flow_id: UUID, request: Request, session: DbSession) ->
     if flow is None or flow.flow_type != FlowType.AGENT or not flow.a2a_enabled:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
     if await folder_auth_type(flow, session) == "none":
-        await authorize_public_flow_access(
-            flow=flow,
-            action=PublicResourceAction.READ,
-            request_host=request.url.hostname,
-            compatibility_grant=PublicGrantSource.A2A_AUTH_NONE,
-            session=session,
-        )
+        try:
+            await authorize_public_flow_access(
+                flow=flow,
+                action=PublicResourceAction.READ,
+                request_host=request.url.hostname,
+                compatibility_grant=PublicGrantSource.A2A_AUTH_NONE,
+                session=session,
+            )
+        except HTTPException as exc:
+            if exc.status_code == status.HTTP_404_NOT_FOUND:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found") from exc
+            raise
 
     rpc_url = str(request.base_url).rstrip("/") + f"/api/v1/a2a/{flow_id}/jsonrpc"
     return await build_agent_card(flow, rpc_url=rpc_url, session=session)

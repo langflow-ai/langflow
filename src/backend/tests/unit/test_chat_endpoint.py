@@ -1364,7 +1364,7 @@ async def test_build_public_tmp_reauthorizes_reloaded_flow_after_grant_transitio
     )
 
     assert response.status_code == codes.NOT_FOUND
-    assert response.json() == {"detail": "Not Found"}
+    assert response.json() == {"detail": "Flow not found"}
     assert captured == {}
 
 

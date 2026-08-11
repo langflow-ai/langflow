@@ -61,6 +61,7 @@ from langflow.api.utils.flow_utils import (
     verify_public_flow_and_get_user,
 )
 from langflow.services.auth.utils import get_current_user_optional
+from langflow.services.authorization.public_access import PublicResourceAction, authorize_public_flow_access
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
@@ -164,22 +165,36 @@ async def execute_public_workflow(
         sanitized_public_data: dict | None = None
         async with session_scope() as session:
             flow = await session.get(Flow, real_flow_id)
-            if flow and flow.data:
-                validate_flow_for_current_settings(flow.data)
-                # Block unauthenticated execution of flows that run arbitrary code
-                # (Python interpreter/REPL, legacy Python Code Structured tool,
-                # Smart Transform lambda). Without this, any public flow containing
-                # such a component is an unauthenticated code-execution primitive.
-                validate_public_flow_no_code_execution(flow.data)
-                # Mirror v1's public build: substitute trusted server component
-                # source and reject unknown custom components before the graph is
-                # built. The explicit custom-code opt-in may preserve approved code,
-                # but the detached graph is always secret-scrubbed below.
-                prepared_public_data = await prepare_public_flow_build(flow.data)
-                sanitized_public_data = strip_secret_field_values(
-                    prepared_public_data if prepared_public_data is not None else flow.data
-                )
-            flow_name = flow.name if flow else None
+            if flow is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+            # Authorize the same snapshot that is validated, scrubbed, detached,
+            # and streamed below; the admission helper used a separate session and
+            # its earlier snapshot may have been revoked in the meantime.
+            await authorize_public_flow_access(
+                flow=flow,
+                action=PublicResourceAction.EXECUTE,
+                request_host=http_request.url.hostname,
+                session=session,
+            )
+            if flow.data is None:
+                msg = "Public flow has no executable data"
+                raise ValueError(msg)
+
+            validate_flow_for_current_settings(flow.data)
+            # Block unauthenticated execution of flows that run arbitrary code
+            # (Python interpreter/REPL, legacy Python Code Structured tool,
+            # Smart Transform lambda). Without this, any public flow containing
+            # such a component is an unauthenticated code-execution primitive.
+            validate_public_flow_no_code_execution(flow.data)
+            # Mirror v1's public build: substitute trusted server component
+            # source and reject unknown custom components before the graph is
+            # built. The explicit custom-code opt-in may preserve approved code,
+            # but the detached graph is always secret-scrubbed below.
+            prepared_public_data = await prepare_public_flow_build(flow.data)
+            sanitized_public_data = strip_secret_field_values(
+                prepared_public_data if prepared_public_data is not None else flow.data
+            )
+            flow_name = flow.name
     except CatalogPolicyIdentityUnavailableError as exc:
         await logger.awarning("Public workflow component identities are temporarily unavailable: %s", exc)
         raise HTTPException(
