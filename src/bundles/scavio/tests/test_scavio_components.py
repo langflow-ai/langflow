@@ -16,46 +16,90 @@ from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
+from lfx.custom.custom_component.component import Component
 from lfx.schema.dataframe import DataFrame
-
 from lfx_scavio import (
+    ScavioAirbnbComponent,
     ScavioAmazonComponent,
+    ScavioAppStoreComponent,
+    ScavioBookingComponent,
+    ScavioCapterraComponent,
+    ScavioCompaniesHouseComponent,
+    ScavioEbayComponent,
+    ScavioExtractComponent,
+    ScavioG2Component,
+    ScavioGlassdoorComponent,
+    ScavioGoogleAdsComponent,
     ScavioGoogleAIModeComponent,
     ScavioGoogleFlightsComponent,
     ScavioGoogleHotelsComponent,
     ScavioGoogleMapsComponent,
     ScavioGoogleNewsComponent,
+    ScavioGooglePlayComponent,
     ScavioGoogleShoppingComponent,
     ScavioGoogleTrendsComponent,
+    ScavioHomeDepotComponent,
+    ScavioIndeedComponent,
     ScavioInstagramComponent,
+    ScavioKuaishouComponent,
     ScavioLinkedInComponent,
+    ScavioMetaAdsComponent,
     ScavioRedditComponent,
+    ScavioRedfinComponent,
     ScavioSearchComponent,
+    ScavioSecComponent,
+    ScavioTargetComponent,
+    ScavioThreadsComponent,
     ScavioTikTokComponent,
     ScavioTikTokShopComponent,
+    ScavioTripAdvisorComponent,
     ScavioWalmartComponent,
     ScavioXComponent,
+    ScavioYelpComponent,
     ScavioYouTubeComponent,
+    ScavioZillowComponent,
 )
 
 ALL_COMPONENTS = (
-    ScavioSearchComponent,
+    ScavioAirbnbComponent,
+    ScavioAmazonComponent,
+    ScavioAppStoreComponent,
+    ScavioBookingComponent,
+    ScavioCapterraComponent,
+    ScavioCompaniesHouseComponent,
+    ScavioEbayComponent,
+    ScavioExtractComponent,
+    ScavioG2Component,
+    ScavioGlassdoorComponent,
     ScavioGoogleAIModeComponent,
-    ScavioGoogleMapsComponent,
-    ScavioGoogleShoppingComponent,
-    ScavioGoogleNewsComponent,
-    ScavioGoogleTrendsComponent,
+    ScavioGoogleAdsComponent,
     ScavioGoogleFlightsComponent,
     ScavioGoogleHotelsComponent,
-    ScavioYouTubeComponent,
-    ScavioAmazonComponent,
-    ScavioWalmartComponent,
+    ScavioGoogleMapsComponent,
+    ScavioGoogleNewsComponent,
+    ScavioGooglePlayComponent,
+    ScavioGoogleShoppingComponent,
+    ScavioGoogleTrendsComponent,
+    ScavioHomeDepotComponent,
+    ScavioIndeedComponent,
+    ScavioInstagramComponent,
+    ScavioKuaishouComponent,
+    ScavioLinkedInComponent,
+    ScavioMetaAdsComponent,
     ScavioRedditComponent,
+    ScavioRedfinComponent,
+    ScavioSearchComponent,
+    ScavioSecComponent,
+    ScavioTargetComponent,
+    ScavioThreadsComponent,
     ScavioTikTokComponent,
     ScavioTikTokShopComponent,
-    ScavioInstagramComponent,
+    ScavioTripAdvisorComponent,
+    ScavioWalmartComponent,
     ScavioXComponent,
-    ScavioLinkedInComponent,
+    ScavioYelpComponent,
+    ScavioYouTubeComponent,
+    ScavioZillowComponent,
 )
 
 # The live billable surface, taken from the Scavio route definitions.
@@ -63,6 +107,122 @@ ALL_COMPONENTS = (
 # LinkedIn paths answer 410 and are never billed; /api/v1/youtube/metadata is a
 # deprecated alias of /api/v1/youtube/video. None of them belong here.
 LIVE_ENDPOINTS = {
+    # Walmart - 7
+    "/api/v1/walmart/search": 1,  # floor; cost is a function of the body
+    "/api/v1/walmart/product": 1,
+    "/api/v1/walmart/reviews": 1,
+    "/api/v1/walmart/category": 1,  # floor; cost is a function of the body
+    "/api/v1/walmart/offers": 1,
+    "/api/v1/walmart/seller": 1,
+    "/api/v1/walmart/seller-products": 1,
+    # Threads - 6
+    "/api/v1/threads/profile": 2,  # floor; cost is a function of the body
+    "/api/v1/threads/user/posts": 2,  # floor; cost is a function of the body
+    "/api/v1/threads/user/replies": 2,  # floor; cost is a function of the body
+    "/api/v1/threads/post": 2,
+    "/api/v1/threads/post/comments": 2,
+    "/api/v1/threads/search/users": 2,
+    # Kuaishou (China) - 14
+    "/api/v1/kuaishou/profile": 10,
+    "/api/v1/kuaishou/user/posts": 1,
+    "/api/v1/kuaishou/user/live": 1,
+    "/api/v1/kuaishou/user/resolve": 1,
+    "/api/v1/kuaishou/video": 2,
+    "/api/v1/kuaishou/video/comments": 1,
+    "/api/v1/kuaishou/video/sub-comments": 1,
+    "/api/v1/kuaishou/videos/batch": 40,
+    "/api/v1/kuaishou/search": 10,
+    "/api/v1/kuaishou/search/videos": 10,
+    "/api/v1/kuaishou/search/users": 10,
+    "/api/v1/kuaishou/search/live": 10,
+    "/api/v1/kuaishou/tag/feed": 1,
+    "/api/v1/kuaishou/trending": 1,
+    # eBay - 3
+    "/api/v1/ebay/search": 1,
+    "/api/v1/ebay/product": 1,
+    "/api/v1/ebay/seller": 1,
+    # Target - 4
+    "/api/v1/target/search": 1,
+    "/api/v1/target/category": 1,
+    "/api/v1/target/product": 1,
+    "/api/v1/target/reviews": 1,
+    # Home Depot - 3
+    "/api/v1/homedepot/search": 2,
+    "/api/v1/homedepot/product": 2,
+    "/api/v1/homedepot/reviews": 2,
+    # Zillow - 3
+    "/api/v1/zillow/search": 1,
+    "/api/v1/zillow/property": 1,
+    "/api/v1/zillow/reviews": 1,
+    # Booking.com - 3
+    "/api/v1/booking/search": 1,
+    "/api/v1/booking/hotel": 1,
+    "/api/v1/booking/reviews": 1,
+    # TripAdvisor - 4
+    "/api/v1/tripadvisor/locations": 2,
+    "/api/v1/tripadvisor/search": 2,
+    "/api/v1/tripadvisor/location": 2,
+    "/api/v1/tripadvisor/reviews": 2,
+    # Indeed - 4
+    "/api/v1/indeed/search": 2,
+    "/api/v1/indeed/job": 2,
+    "/api/v1/indeed/company": 2,
+    "/api/v1/indeed/company/reviews": 2,
+    # Airbnb - 3
+    "/api/v1/airbnb/search": 1,
+    "/api/v1/airbnb/listing": 1,
+    "/api/v1/airbnb/reviews": 1,
+    # Glassdoor - 4
+    "/api/v1/glassdoor/companies": 1,
+    "/api/v1/glassdoor/company": 1,
+    "/api/v1/glassdoor/reviews": 1,
+    "/api/v1/glassdoor/salaries": 1,
+    # Yelp - 3
+    "/api/v1/yelp/search": 2,
+    "/api/v1/yelp/business": 2,
+    "/api/v1/yelp/reviews": 2,
+    # Apple App Store - 3
+    "/api/v1/appstore/search": 1,
+    "/api/v1/appstore/app": 1,
+    "/api/v1/appstore/reviews": 1,
+    # Google Play - 3
+    "/api/v1/googleplay/search": 2,
+    "/api/v1/googleplay/app": 2,
+    "/api/v1/googleplay/reviews": 2,
+    # SEC EDGAR - 6
+    "/api/v1/sec/lookup": 1,
+    "/api/v1/sec/company": 1,
+    "/api/v1/sec/filings": 1,
+    "/api/v1/sec/concept": 1,
+    "/api/v1/sec/facts": 1,
+    "/api/v1/sec/search": 1,
+    # Redfin - 3
+    "/api/v1/redfin/search": 1,
+    "/api/v1/redfin/property": 1,
+    "/api/v1/redfin/market": 1,
+    # Companies House - 4
+    "/api/v1/companieshouse/search": 1,
+    "/api/v1/companieshouse/company": 1,
+    "/api/v1/companieshouse/officers": 1,
+    "/api/v1/companieshouse/filing-history": 1,
+    # G2 - 3
+    "/api/v1/g2/search": 5,
+    "/api/v1/g2/product": 5,
+    "/api/v1/g2/reviews": 5,
+    # Capterra - 3
+    "/api/v1/capterra/search": 2,
+    "/api/v1/capterra/product": 2,
+    "/api/v1/capterra/reviews": 2,
+    # Google Ads Transparency - 3
+    "/api/v1/googleads/search": 1,
+    "/api/v1/googleads/advertisers": 1,
+    "/api/v1/googleads/creative": 1,
+    # Meta Ad Library - 3
+    "/api/v1/meta-ads/search": 1,
+    "/api/v1/meta-ads/advertiser": 1,
+    "/api/v1/meta-ads/ad": 1,
+    # Extract - 1
+    "/api/v1/extract": 1,  # floor; cost is a function of the body
     # Google v2 - 14 endpoints, 1 credit each
     "/api/v2/google": 1,
     "/api/v2/google/ai-mode": 1,
@@ -98,9 +258,6 @@ LIVE_ENDPOINTS = {
     "/api/v1/amazon/search": 1,
     "/api/v1/amazon/product": 1,
     "/api/v1/amazon/offers": 1,
-    # Walmart - 2
-    "/api/v1/walmart/search": 1,
-    "/api/v1/walmart/product": 1,
     # Reddit - 12, 1 credit each (it was 2 before Reddit moved providers)
     "/api/v1/reddit/search": 1,
     "/api/v1/reddit/search/suggestions": 1,
@@ -218,6 +375,24 @@ def run(component, json_data=None, status_code=200, text=""):
     return results, url, payload
 
 
+BODY_PRICED_PATHS = {
+    # Cost is a function of the request body, not of the path: Walmart bills by
+    # storefront domain, Threads by whether the caller passed user_id or username,
+    # and extract by fetch mode.
+    "/api/v1/walmart/search",
+    "/api/v1/walmart/category",
+    "/api/v1/threads/profile",
+    "/api/v1/threads/user/posts",
+    "/api/v1/threads/user/replies",
+    "/api/v1/extract",
+}
+
+
+def endpoint_by_path():
+    """Return {path: Endpoint} across every component."""
+    return {ep.path: ep for component in ALL_COMPONENTS for ep in component.ENDPOINTS.values()}
+
+
 def endpoint_map():
     """Return {path: credits} for every endpoint the bundle offers, asserting no path repeats."""
     seen: dict[str, int] = {}
@@ -233,7 +408,7 @@ class TestEndpointCoverage:
         assert set(endpoint_map()) == set(LIVE_ENDPOINTS)
 
     def test_endpoint_count_is_the_full_live_surface(self):
-        assert len(endpoint_map()) == 97
+        assert len(endpoint_map()) == 188
 
     def test_credit_costs_match_the_api(self):
         assert endpoint_map() == LIVE_ENDPOINTS
@@ -254,6 +429,28 @@ class TestEndpointCoverage:
             "/api/v1/instagram/",
             "/api/v1/x/",
             "/api/v1/linkedin/",
+            "/api/v1/threads/",
+            "/api/v1/kuaishou/",
+            "/api/v1/ebay/",
+            "/api/v1/target/",
+            "/api/v1/homedepot/",
+            "/api/v1/zillow/",
+            "/api/v1/booking/",
+            "/api/v1/tripadvisor/",
+            "/api/v1/indeed/",
+            "/api/v1/airbnb/",
+            "/api/v1/glassdoor/",
+            "/api/v1/yelp/",
+            "/api/v1/appstore/",
+            "/api/v1/googleplay/",
+            "/api/v1/sec/",
+            "/api/v1/redfin/",
+            "/api/v1/companieshouse/",
+            "/api/v1/g2/",
+            "/api/v1/capterra/",
+            "/api/v1/googleads/",
+            "/api/v1/meta-ads/",
+            "/api/v1/extract",
         ):
             assert any(path.startswith(prefix) for path in paths), prefix
 
@@ -269,6 +466,101 @@ class TestEndpointCoverage:
         for component in ALL_COMPONENTS:
             assert component.DEFAULT_ENDPOINT in component.ENDPOINTS, component.name
 
+    def test_no_input_is_shadowed_by_a_component_attribute(self):
+        """An input named after a Component attribute never receives the user's value.
+
+        ``Component`` owns ``start`` (a method) and ``user_id``, so an input of either
+        name silently sends the base-class value instead. Both are exposed under a
+        different input name and mapped back with ``Endpoint.wire``.
+        """
+        reserved = set(dir(Component))
+        for component in ALL_COMPONENTS:
+            shadowed = {field.name for field in component.inputs} & reserved
+            assert not shadowed, f"{component.name} declares shadowed inputs {shadowed}"
+
+    def test_wire_targets_are_real_api_fields(self):
+        for component in ALL_COMPONENTS:
+            for label, endpoint in component.ENDPOINTS.items():
+                assert set(endpoint.wire) <= set(endpoint.fields), f"{component.name}/{label}"
+
+    def test_body_priced_endpoints_never_quote_a_flat_cost(self):
+        """Walmart bills by domain, Threads by user_id-vs-username, extract by mode."""
+        for path in BODY_PRICED_PATHS:
+            endpoint = endpoint_by_path()[path]
+            assert endpoint.credit_note, f"{path} must carry a credit_note"
+            assert endpoint.cost_text() == endpoint.credit_note
+        for component in ALL_COMPONENTS:
+            for endpoint in component.ENDPOINTS.values():
+                if endpoint.path not in BODY_PRICED_PATHS:
+                    assert not endpoint.credit_note, endpoint.path
+                    assert endpoint.cost_text().endswith("credit") or endpoint.cost_text().endswith("credits")
+
+    def test_meta_ad_library_paths_are_hyphenated(self):
+        """The route key is metaads; the public URL segment is meta-ads."""
+        paths = set(endpoint_map())
+        assert {"/api/v1/meta-ads/search", "/api/v1/meta-ads/advertiser", "/api/v1/meta-ads/ad"} <= paths
+        assert not any(path.startswith("/api/v1/metaads") for path in paths)
+
+
+class TestNewPlatformWires:
+    def test_ebay_sold_search_sends_the_flag(self):
+        component = ScavioEbayComponent(api_key="k", query="airpods", sold=True)  # pragma: allowlist secret
+        _results, url, payload = run(component, {"data": {"products": []}})
+        assert url == "https://api.scavio.dev/api/v1/ebay/search"
+        assert payload["sold"] is True
+
+    def test_ebay_seller_only_search_needs_no_query(self):
+        component = ScavioEbayComponent(api_key="k", seller="some_seller")  # pragma: allowlist secret
+        _results, _url, payload = run(component, {"data": {"products": []}})
+        assert payload == {"seller": "some_seller"}
+
+    def test_threads_user_id_reaches_the_wire(self):
+        component = ScavioThreadsComponent(
+            api_key="k",  # pragma: allowlist secret
+            endpoint="Profile Details",
+            target_user_id="314216",
+        )
+        _results, url, payload = run(component, {"data": {"username": "a"}})
+        assert url == "https://api.scavio.dev/api/v1/threads/profile"
+        assert payload == {"user_id": "314216"}
+
+    def test_extract_defaults_to_a_single_credit_tier(self):
+        component = ScavioExtractComponent(
+            api_key="k",  # pragma: allowlist secret
+            url="https://example.com",
+            format="text",
+        )
+        _results, endpoint_url, payload = run(component, {"data": {"content": "hi"}})
+        assert endpoint_url == "https://api.scavio.dev/api/v1/extract"
+        assert payload == {"url": "https://example.com", "format": "text"}
+
+    def test_comma_separated_inputs_become_json_arrays(self):
+        """Booking wants children_ages as an array of integers, Yelp attributes as strings."""
+        component = ScavioBookingComponent(
+            api_key="k",  # pragma: allowlist secret
+            destination="Paris",
+            children_ages="4, 7",
+        )
+        _results, _url, payload = run(component, {"data": {"properties": []}})
+        assert payload["children_ages"] == [4, 7]
+
+        component = ScavioYelpComponent(
+            api_key="k",  # pragma: allowlist secret
+            term="coffee",
+            location="Austin, TX",
+            attributes="dogs_allowed,outdoor_seating",
+        )
+        _results, _url, payload = run(component, {"data": {"businesses": []}})
+        assert payload["attributes"] == ["dogs_allowed", "outdoor_seating"]
+
+    def test_table_output_uses_the_observed_row_key(self):
+        component = ScavioG2Component(api_key="k", endpoint="Reviews", product_id="1")  # pragma: allowlist secret
+        body = {"data": {"reviews": [{"title": "Good"}, {"title": "Bad"}], "rating_distribution": [1, 2, 3, 4, 5]}}
+        results, _url, _payload = run(component, body)
+        # rating_distribution is the longer list; reviews is the one that holds the rows.
+        assert len(results) == 2
+        assert results[0].data["title"] == "Good"
+
 
 class TestGoogleSearch:
     def test_targets_v2_and_sends_v2_params_only(self):
@@ -279,7 +571,7 @@ class TestGoogleSearch:
             hl="en",
             google_domain="google.com",
             device="desktop",
-            start=10,
+            start_offset=10,
         )
         _results, url, payload = run(component, {"organic_results": []})
 
@@ -288,7 +580,10 @@ class TestGoogleSearch:
         assert payload["gl"] == "us"
         assert payload["hl"] == "en"
         assert payload["google_domain"] == "google.com"
+        # `start` is the wire name; the input is called start_offset because Component
+        # already owns a `start` attribute.
         assert payload["start"] == 10
+        assert "start_offset" not in payload
         # Google v1 is gone; none of its params may leak onto the v2 call.
         assert GOOGLE_V1_ONLY_PARAMS.isdisjoint(payload)
 
@@ -594,7 +889,9 @@ class TestEnvelopes:
         component = ScavioXComponent(api_key="k", endpoint="User Profile", screen_name="a")  # pragma: allowlist secret
         body = {"data": {"screen_name": "a", "followers_count": 5}, "response_time": 1, "credits_used": 1}
         results, _url, _payload = run(component, body)
-        assert results[0].data == {"screen_name": "a", "followers_count": 5}
+        # Data folds its text kwarg into .data, so compare the payload keys we set.
+        assert results[0].data["screen_name"] == "a"
+        assert results[0].data["followers_count"] == 5
 
     def test_raw_output_keeps_the_credit_counters(self):
         component = ScavioXComponent(api_key="k", endpoint="Trending")  # pragma: allowlist secret
