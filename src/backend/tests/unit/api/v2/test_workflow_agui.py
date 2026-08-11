@@ -553,7 +553,8 @@ class TestV2WorkflowDelegatedErrorPolicy:
         job_id = uuid4()
         graph = MagicMock(run_id=str(job_id))
         graph.get_terminal_nodes.return_value = []
-        monkeypatch.setattr(wf_exec.Graph, "from_payload", MagicMock(return_value=graph))
+        graph_factory = MagicMock(return_value=graph)
+        monkeypatch.setattr(wf_exec.Graph, "from_payload", graph_factory)
 
         expected_response = SimpleNamespace(outputs={})
         monkeypatch.setattr(wf_exec, "run_response_to_workflow_response", MagicMock(return_value=expected_response))
@@ -578,6 +579,7 @@ class TestV2WorkflowDelegatedErrorPolicy:
         )
 
         assert response is expected_response
+        assert graph_factory.call_args.kwargs["user_id"] == str(caller_id)
         if caller_kind == "owner":
             task_service.fire_and_forget_task.assert_awaited_once_with(
                 hook,
