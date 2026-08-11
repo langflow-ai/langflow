@@ -11,7 +11,7 @@ from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable.model import VariableUpdate
 from langflow.services.deps import get_settings_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
-from langflow.services.variable.service import DatabaseVariableService
+from langflow.services.variable.service import DatabaseVariableService, has_variable_value
 from lfx.services.authorization.base import ResourceVisibilityScope
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyContext,
@@ -707,6 +707,16 @@ async def test_get_all_reports_whether_masked_credentials_have_a_value(service, 
     assert variables["CONFIGURED_CREDENTIAL"].has_value is True
     assert variables["EMPTY_CREDENTIAL"].value is None
     assert variables["EMPTY_CREDENTIAL"].has_value is False
+
+
+def test_has_variable_value_returns_false_when_decrypt_yields_nothing():
+    """An unreadable credential must report has_value=False, not crash listing."""
+    from langflow.services.database.models.variable.model import Variable
+
+    variable = Variable(name="BROKEN_CREDENTIAL", value="ciphertext", type=CREDENTIAL_TYPE, user_id=uuid4())
+    for unreadable in (None, ""):
+        with patch("langflow.services.auth.utils.decrypt_api_key", return_value=unreadable):
+            assert has_variable_value(variable) is False
 
 
 async def test_get_all__decrypt_failure_warns_and_skips(service, session: AsyncSession):

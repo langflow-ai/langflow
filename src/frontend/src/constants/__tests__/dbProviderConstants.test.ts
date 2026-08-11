@@ -146,6 +146,19 @@ describe("dbProviderConstants", () => {
     );
   });
 
+  it("fails closed for credential variables that omit has_value", () => {
+    // A response lacking `has_value` can't distinguish a stored secret from a
+    // stale empty row, so the credential must not count as configured.
+    const legacyCredential = variable(
+      CHROMA_CLOUD_VARIABLES.API_KEY,
+      undefined,
+      "Credential",
+    );
+    expect(isDBProviderConfigured("chroma_cloud", [legacyCredential])).toBe(
+      false,
+    );
+  });
+
   it("falls back to Chroma Local when the active remote provider is no longer configured", () => {
     const variables = [
       variable(ACTIVE_DB_PROVIDER_VARIABLE, "chroma_cloud"),

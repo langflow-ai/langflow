@@ -33,7 +33,7 @@ def has_variable_value(variable: Variable) -> bool:
         decrypted_value = auth_utils.decrypt_api_key(variable.value)
     except Exception:  # noqa: BLE001
         return False
-    return bool(decrypted_value.strip())
+    return bool(decrypted_value and decrypted_value.strip())
 
 
 class DatabaseVariableService(VariableService, Service):

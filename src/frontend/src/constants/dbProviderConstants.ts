@@ -260,9 +260,9 @@ export function hasGlobalVariableValue(
   const variable = variables.find((entry) => entry.name === name);
   if (!variable) return false;
   if (variable.has_value !== undefined) return variable.has_value;
-  // Compatibility with servers that predate `has_value`: credential values
-  // are masked, so existence is the only signal those responses provide.
-  if (variable.type === "Credential") return true;
+  // Credential values are masked in API responses, so without an explicit
+  // `has_value` signal we fail closed rather than assume a secret is stored —
+  // a stale empty row must never enable a remote provider.
   return Boolean(getGlobalVariableValue(variables, name));
 }
 
