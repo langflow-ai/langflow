@@ -290,6 +290,110 @@ def test_fetch_live_azure_ai_foundry_models_excludes_non_chat_deployments():
     assert [m["name"] for m in embeddings] == ["text-embedding-ada-002"]
 
 
+def test_fetch_live_azure_ai_foundry_models_flags_no_tool_chat_models():
+    """Chat families documented without tool calling stay listed but tool_calling=False."""
+    from lfx.base.models import model_utils
+
+    response = _deployments_response(
+        [
+            {"id": "DeepSeek-R1", "model": "DeepSeek-R1", "status": "succeeded"},
+            {"id": "Phi-4-mini-instruct", "model": "Phi-4-mini-instruct", "status": "succeeded"},
+            {"id": "Codestral-2501", "model": "Codestral-2501", "status": "succeeded"},
+            {"id": "gpt-4o", "model": "gpt-4o", "status": "succeeded"},
+        ]
+    )
+
+    with (
+        patch.object(model_utils, "get_provider_variable_value", side_effect=_foundry_variable_lookup),
+        patch.object(model_utils, "ssrf_safe_httpx_get", return_value=response),
+    ):
+        llms = model_utils.fetch_live_azure_ai_foundry_models("user-1", model_type="llm")
+
+    by_name = {m["name"]: m for m in llms}
+    assert set(by_name) == {"DeepSeek-R1", "Phi-4-mini-instruct", "Codestral-2501", "gpt-4o"}
+    assert by_name["DeepSeek-R1"]["tool_calling"] is False
+    assert by_name["Phi-4-mini-instruct"]["tool_calling"] is False
+    assert by_name["Codestral-2501"]["tool_calling"] is False
+    assert by_name["gpt-4o"]["tool_calling"] is True
+    assert by_name["DeepSeek-R1"]["reasoning"] is True
+
+
+def test_foundry_deployments_cache_never_stores_plaintext_api_key():
+    from lfx.base.models import model_utils
+
+    response = _deployments_response([{"id": "gpt-4o", "model": "gpt-4o", "status": "succeeded"}])
+
+    with (
+        patch.object(model_utils, "get_provider_variable_value", side_effect=_foundry_variable_lookup),
+        patch.object(model_utils, "ssrf_safe_httpx_get", return_value=response),
+    ):
+        model_utils.fetch_live_azure_ai_foundry_models("user-1", model_type="llm")
+
+    keys = list(model_utils._azure_ai_foundry_deployments_cache.keys())
+    assert keys, "expected the successful fetch to be cached"
+    assert all("test-key" not in part for key in keys for part in key)
+
+
+def test_foundry_deployments_cache_is_bounded():
+    from lfx.base.models import model_utils
+
+    response = _deployments_response([])
+    maxsize = model_utils._AZURE_AI_FOUNDRY_DEPLOYMENTS_CACHE_MAXSIZE
+
+    with patch.object(model_utils, "ssrf_safe_httpx_get", return_value=response):
+        for i in range(maxsize + 10):
+            model_utils._fetch_azure_ai_foundry_deployment_entries(
+                f"https://r{i}.services.ai.azure.com/openai/deployments?api-version=2023-03-15-preview",
+                "test-key",  # pragma: allowlist secret
+            )
+
+    assert len(model_utils._azure_ai_foundry_deployments_cache) <= maxsize
+
+
+def test_language_model_options_filters_live_foundry_no_tool_models():
+    """Live rows must respect tool_calling filters end-to-end (Agent picker path).
+
+    Static-catalog filtering happens before ``replace_with_live_models``, so the
+    catalog re-filters after replacement — and the free-text enable injector must
+    not resurrect a deployment the filter just dropped.
+    """
+    from lfx.base.models import model_utils
+    from lfx.base.models.unified_models import model_catalog
+    from lfx.base.models.unified_models.credentials import model_status_key
+
+    response = _deployments_response(
+        [
+            {"id": "gpt-4o", "model": "gpt-4o", "status": "succeeded"},
+            {"id": "Phi-4-mini-instruct", "model": "Phi-4-mini-instruct", "status": "succeeded"},
+        ]
+    )
+    enables = {
+        model_status_key("Azure AI Foundry", "gpt-4o", "llm"),
+        model_status_key("Azure AI Foundry", "Phi-4-mini-instruct", "llm"),
+    }
+
+    async def fake_model_status(_user_id):
+        return set(), enables
+
+    async def fake_enabled_providers(_user_id):
+        return {"Azure AI Foundry"}
+
+    with (
+        patch.object(model_catalog, "_get_model_status", fake_model_status),
+        patch.object(model_catalog, "_fetch_enabled_providers_for_user", fake_enabled_providers),
+        patch.object(model_utils, "get_provider_variable_value", side_effect=_foundry_variable_lookup),
+        patch.object(model_utils, "ssrf_safe_httpx_get", return_value=response),
+    ):
+        all_options = model_catalog.get_language_model_options(user_id="user-1")
+        tool_options = model_catalog.get_language_model_options(user_id="user-1", tool_calling=True)
+
+    def foundry_names(options):
+        return [o["name"] for o in options if o["provider"] == "Azure AI Foundry"]
+
+    assert foundry_names(all_options) == ["gpt-4o", "Phi-4-mini-instruct"]
+    assert foundry_names(tool_options) == ["gpt-4o"]
+
+
 def test_fetch_live_azure_ai_foundry_models_memoizes_failures():
     """An outage costs one upstream timeout, not one per picker read."""
     from lfx.base.models import model_utils

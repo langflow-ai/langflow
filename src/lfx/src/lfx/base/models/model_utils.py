@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import re
 import time
 from typing import Any
@@ -7,6 +8,7 @@ from uuid import UUID
 
 import httpx
 import requests
+from cachetools import TTLCache
 
 from lfx.base.models.model_metadata import (
     CONDITIONAL_LIVE_MODEL_PROVIDERS,
@@ -604,8 +606,21 @@ _AZURE_AI_FOUNDRY_HOST_SUFFIXES = (
 )
 
 # Reasoning-capable families, matched against the deployment's underlying model id:
-# the o-series (o1 / o3-mini / o4-mini / …) and the gpt-5 family.
-_AZURE_AI_FOUNDRY_REASONING_PATTERN = re.compile(r"^(o\d|gpt-5)")
+# the o-series (o1 / o3-mini / o4-mini / …) and gpt-5 family prefixes, plus
+# DeepSeek-R1 variants and explicitly reasoning-suffixed models (e.g.
+# Phi-4-reasoning) anywhere in the id.
+_AZURE_AI_FOUNDRY_REASONING_PATTERN = re.compile(r"^o\d|^gpt-5|deepseek-r1|reasoning")
+
+# Chat families Microsoft's Foundry capability table documents WITHOUT tool calling
+# (e.g. DeepSeek-R1, the Phi family, Codestral): they stay in the LLM picker but must
+# not surface in tool-filtered (Agent) pickers. Unknown models keep tool_calling=True
+# — matching free-text enables and the other live providers — so new tool-capable
+# catalog additions aren't silently banned from Agents.
+_AZURE_AI_FOUNDRY_NO_TOOL_CHAT_MODEL_MARKERS = (
+    "deepseek-r1",
+    "phi-",
+    "codestral",
+)
 
 # Deployments the unified chat/embedding classes cannot drive: image, audio, and video
 # models plus the legacy completions-only families (chat_completion=false in Azure's
@@ -632,18 +647,32 @@ _AZURE_AI_FOUNDRY_NON_CHAT_MODEL_MARKERS = (
 # The llm and embeddings picker reads land back-to-back on the same resource, so raw
 # deployment entries are memoized briefly: one upstream round-trip per pair — and one
 # timeout, not two sequential ones, when the resource is unreachable (failures cache
-# as None for the same TTL).
+# as None for the same TTL). TTLCache evicts expired and overflow entries (a plain
+# dict would retain every key ever seen for the process lifetime), and the key
+# carries a SHA-256 fingerprint of the credential — the plaintext api-key must never
+# be retained in the cache.
 _AZURE_AI_FOUNDRY_DEPLOYMENTS_TTL_SECONDS = 30.0
-_azure_ai_foundry_deployments_cache: dict[tuple[str, str], tuple[float, list[dict] | None]] = {}
+_AZURE_AI_FOUNDRY_DEPLOYMENTS_CACHE_MAXSIZE = 128
+_azure_ai_foundry_deployments_cache: TTLCache = TTLCache(
+    maxsize=_AZURE_AI_FOUNDRY_DEPLOYMENTS_CACHE_MAXSIZE,
+    ttl=_AZURE_AI_FOUNDRY_DEPLOYMENTS_TTL_SECONDS,
+)
+
+
+def _azure_ai_foundry_cache_key(deployments_url: str, api_key: str) -> tuple[str, str]:
+    """Cache identity without credential retention: URL plus a non-reversible key fingerprint."""
+    return (deployments_url, hashlib.sha256(api_key.encode()).hexdigest())
 
 
 def _fetch_azure_ai_foundry_deployment_entries(deployments_url: str, api_key: str) -> list[dict] | None:
     """Return the raw deployment entries (briefly memoized), or None when the listing failed."""
-    key = (deployments_url, api_key)
-    now = time.monotonic()
-    cached = _azure_ai_foundry_deployments_cache.get(key)
-    if cached is not None and (now - cached[0]) < _AZURE_AI_FOUNDRY_DEPLOYMENTS_TTL_SECONDS:
-        return list(cached[1]) if cached[1] is not None else None
+    key = _azure_ai_foundry_cache_key(deployments_url, api_key)
+    try:
+        cached = _azure_ai_foundry_deployments_cache[key]
+    except KeyError:
+        pass
+    else:
+        return list(cached) if cached is not None else None
 
     entries: list[dict] | None
     try:
@@ -667,7 +696,7 @@ def _fetch_azure_ai_foundry_deployment_entries(deployments_url: str, api_key: st
             )
             entries = None
 
-    _azure_ai_foundry_deployments_cache[key] = (now, entries)
+    _azure_ai_foundry_deployments_cache[key] = entries
     return list(entries) if entries is not None else None
 
 
@@ -760,14 +789,17 @@ def fetch_live_azure_ai_foundry_models(user_id: UUID | str | None, model_type: s
             entry_type = "llm"
         if entry_type != model_type:
             continue
+        supports_tools = model_type == "llm" and not any(
+            marker in lowered for marker in _AZURE_AI_FOUNDRY_NO_TOOL_CHAT_MODEL_MARKERS
+        )
         models.append(
             create_model_metadata(
                 provider="Azure AI Foundry",
                 name=deployment_id,
                 icon="Azure",
                 model_type=model_type,
-                tool_calling=model_type == "llm",
-                reasoning=bool(_AZURE_AI_FOUNDRY_REASONING_PATTERN.match(lowered)),
+                tool_calling=supports_tools,
+                reasoning=bool(_AZURE_AI_FOUNDRY_REASONING_PATTERN.search(lowered)),
                 # Foundry is explicit-enable-only: live rows must never auto-enable.
                 default=False,
             )
@@ -982,6 +1014,43 @@ def _live_models_to_catalog_shape(live_models: list[dict]) -> list[dict]:
     ]
 
 
+def apply_metadata_filters(
+    provider_models: list[dict],
+    metadata_filters: dict | None,
+) -> dict[str, set[tuple[str, str]]]:
+    """Drop models whose metadata fails *metadata_filters*; return what was dropped.
+
+    ``get_unified_models_detailed`` applies metadata filters to the static catalog
+    only, and ``replace_with_live_models`` then swaps in live rows wholesale — so
+    tool-filtered pickers (e.g. the Agent picker's ``tool_calling=True``) must
+    re-filter after live replacement or live models bypass the filter entirely.
+    The returned ``provider -> {(name, model_type)}`` map records the dropped rows
+    so ``inject_custom_enabled_models`` does not resurrect an explicitly enabled
+    deployment the live catalog just filtered out (its synthetic free-text
+    metadata would otherwise pass the filter).
+    """
+    suppressed: dict[str, set[tuple[str, str]]] = {}
+    if not metadata_filters:
+        return suppressed
+    for provider_dict in provider_models:
+        provider = provider_dict.get("provider")
+        models = provider_dict.get("models", [])
+        kept: list[dict] = []
+        for model in models:
+            metadata = model.get("metadata") or {}
+            if any(metadata.get(k) != v for k, v in metadata_filters.items()):
+                if isinstance(provider, str) and isinstance(model.get("model_name"), str):
+                    suppressed.setdefault(provider, set()).add(
+                        (model["model_name"], metadata.get("model_type") or "llm")
+                    )
+                continue
+            kept.append(model)
+        if len(kept) != len(models):
+            provider_dict["models"] = kept
+            provider_dict["num_models"] = len(kept)
+    return suppressed
+
+
 def inject_custom_enabled_models(
     provider_models: list[dict],
     explicitly_enabled_models: set[str],
@@ -989,6 +1058,7 @@ def inject_custom_enabled_models(
     model_name: str | None = None,
     model_type: str | None = None,
     metadata_filters: dict | None = None,
+    suppressed: dict[str, set[tuple[str, str]]] | None = None,
 ) -> None:
     """Append free-text enabled deployments missing from the catalog (e.g. Foundry)."""
     if not explicitly_enabled_models:
@@ -1028,6 +1098,10 @@ def inject_custom_enabled_models(
         if model_type is not None and resolved_type != model_type:
             continue
         if model_name is not None and custom_name != model_name:
+            continue
+        # The live catalog deliberately filtered this row out (see
+        # apply_metadata_filters); a synthetic free-text row must not revive it.
+        if suppressed and (custom_name, resolved_type) in suppressed.get(provider, set()):
             continue
 
         icon = provider_meta.get(provider, {}).get("icon", "Bot")
