@@ -58,7 +58,7 @@ dependencies = [
     "jq>=1.7.0,<2.0.0; sys_platform != 'win32'",
     "nest-asyncio>=1.6.0,<2.0.0",
     "emoji>=2.12.0,<3.0.0",
-    "cryptography>=48.0.1",
+    "cryptography>=50.0.0",
     "asyncer>=0.0.5,<1.0.0",
     "pyperclip>=1.8.2,<2.0.0",
     "uncurl>=0.0.11,<1.0.0",
@@ -280,6 +280,8 @@ pytube = ["pytube==15.0.0"]
 smolagents = ["smolagents>=1.8.0"]
 opendsstar = [
     "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
+    # Temporary compatibility valve: newer langchain-litellm releases require cryptography<49.
+    "langchain-litellm==0.5.1; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
 ]
 
 # Individual tools
@@ -406,6 +408,9 @@ vlmrun = ["vlmrun[all]>=0.2.0"]
 cuga = [
     "cuga>=0.2.20,<0.3.0; sys_platform != 'darwin' and python_version < '3.14'",
     "cuga>=0.2.20,<0.3.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
+    # Temporary compatibility valve: newer langchain-litellm releases require cryptography<49.
+    "langchain-litellm==0.5.1; sys_platform != 'darwin' and python_version < '3.14'",
+    "langchain-litellm==0.5.1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
 ]
 mlx = [
     "mlx>=0.29.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
