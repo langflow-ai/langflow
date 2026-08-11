@@ -365,6 +365,7 @@ async def handle_call_tool(
                         stream=False,
                         api_key_user=current_user,
                         context=exec_context,
+                        expose_error_details=flow.user_id == current_user.id,
                     )
                     # Process all outputs and messages, ensuring no duplicates
                     processed_texts = set()

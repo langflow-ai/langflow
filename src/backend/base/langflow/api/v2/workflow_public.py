@@ -230,6 +230,7 @@ async def execute_public_workflow(
             parsed=parsed,
             current_user=owner_user_read,
             source_flow_id=real_flow_id,
+            expose_error_details=False,
         ):
             yield frame
 

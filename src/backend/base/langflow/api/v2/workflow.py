@@ -95,6 +95,7 @@ from langflow.services.deps import (
     get_task_service,
 )
 from langflow.services.jobs.exceptions import DuplicateJobError
+from langflow.services.warm_registry.resolver import resolve_warm_flow_for_execution
 
 # Finished states a late /stop must not rewrite (CANCELLED is handled separately
 # with its own idempotent early return).
@@ -132,6 +133,13 @@ async def resolve_flow_for_execution(flow_id: str, current_user: UserRead):
     unexpected a sanitized 500.
     """
     try:
+        warm_flow = await resolve_warm_flow_for_execution(
+            str(flow_id),
+            current_user.id,
+            widen_for_shares=True,
+        )
+        if warm_flow is not None:
+            return warm_flow
         return await get_flow_by_id_or_endpoint_name(
             str(flow_id),
             current_user.id,
@@ -224,6 +232,7 @@ async def authorize_flow_action(
 
 def _apply_execution_gates(parsed, flow, current_user: UserRead):
     """Run request gates and return any server-sanitized execution payload."""
+    expose_error_details = flow.user_id == current_user.id
     _reject_unsupported_sync_fields(parsed)
     _reject_sync_only_fields(parsed)
     try:
@@ -235,7 +244,12 @@ def _apply_execution_gates(parsed, flow, current_user: UserRead):
         if exc.status_code == status.HTTP_404_NOT_FOUND:
             raise _flow_not_found_http_exception(str(parsed.flow_id)) from exc
         raise
-    return _validate_flow_data_for_execution(parsed, flow, current_user)
+    return _validate_flow_data_for_execution(
+        parsed,
+        flow,
+        current_user,
+        expose_error_details=expose_error_details,
+    )
 
 
 async def run_sync_with_mapping(
@@ -456,7 +470,7 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
     terminal_error_type = adapter.terminal_error_type
 
     async def _source(*, job_id=None, resume=None, **_kwargs):
-        flow = await get_flow_by_id_or_endpoint_name(str(flow_id), user.id, widen_for_shares=True)
+        flow = await resolve_flow_for_execution(str(flow_id), user)
         fresh_background_tasks = BackgroundTasks()
         errored = False
         try:
@@ -467,6 +481,7 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 background_tasks=fresh_background_tasks,
                 parsed=parsed,
                 current_user=user,
+                expose_error_details=flow.user_id == user.id,
                 job_id=job_id,
                 resume=resume,
                 # Key the persisted vertex builds by the durable job_id so a completed run's GET
