@@ -138,6 +138,7 @@ async def replace_model_provider_policy_state(
         approved_provider_ids=provider_ids,
         blocked_component_keys=bundle.blocked_component_keys,
         blocked_template_keys=bundle.blocked_template_keys,
+        blocked_model_keys=bundle.blocked_model_keys,
         actor_user_id=actor_user_id,
         reason=reason,
     )
