@@ -634,11 +634,61 @@ async def test_audit_decision_batches_multiple_entries(monkeypatch, patched_audi
 
 
 @pytest.mark.anyio
-async def test_drain_pending_audit_writes_is_safe_when_idle():
-    """``drain_pending_audit_writes`` is a no-op when no audit traffic has run."""
+async def test_idle_drain_keeps_durable_admission_terminal(monkeypatch, patched_audit_flush):
+    """A same-loop durable submit cannot reopen a never-started drained pipeline."""
     await _reset_audit_pipeline()
-    # Must not raise.
+    install_settings(
+        monkeypatch,
+        authz_enabled=True,
+        audit_enabled=True,
+        audit_durable=True,
+    )
+
     await authz_audit.drain_pending_audit_writes(timeout=0.1)
+
+    try:
+        with pytest.raises(authz_audit.AuditPersistenceError):
+            await authz_audit.audit_decision(
+                user_id=uuid4(),
+                action="flow:read",
+                obj="flow:*",
+                result="allow",
+            )
+
+        assert authz_audit._audit_accepting is False
+        assert authz_audit._audit_queue is None
+        assert authz_audit._audit_writer_task is None
+        assert patched_audit_flush == []
+    finally:
+        await authz_audit.drain_pending_audit_writes(timeout=0.1)
+
+
+def test_new_loop_replaces_idle_drained_pipeline(monkeypatch, patched_audit_flush):
+    """A closed owner loop does not make durable shutdown process-global."""
+    install_settings(
+        monkeypatch,
+        authz_enabled=True,
+        audit_enabled=True,
+        audit_durable=True,
+    )
+
+    async def stop_idle_pipeline() -> None:
+        await _reset_audit_pipeline()
+        await authz_audit.drain_pending_audit_writes(timeout=0.1)
+
+    async def submit_on_replacement_loop() -> None:
+        await authz_audit.audit_decision(
+            user_id=uuid4(),
+            action="flow:read",
+            obj="flow:*",
+            result="allow",
+        )
+        await authz_audit.drain_pending_audit_writes(timeout=0.1)
+
+    asyncio.run(stop_idle_pipeline())
+    asyncio.run(submit_on_replacement_loop())
+
+    assert sum(len(batch) for batch in patched_audit_flush) == 1
 
 
 @pytest.mark.anyio
