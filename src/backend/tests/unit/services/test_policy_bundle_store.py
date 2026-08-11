@@ -511,3 +511,130 @@ async def test_second_worker_poll_refreshes_all_facets_from_one_committed_revisi
     assert second_provider_service.policy_version == committed.revision
     assert second_catalog_service.snapshot.blocked_component_keys == committed.blocked_component_keys
     assert second_catalog_service.snapshot.blocked_template_keys == committed.blocked_template_keys
+
+
+async def test_replace_persists_and_canonicalizes_blocked_model_keys(bundle_session_maker):
+    actor_id = uuid4()
+    async with bundle_session_maker() as session:
+        committed = await policy_store.replace_policy_bundle_state(
+            session,
+            expected_revision=1,
+            approved_provider_ids=_INITIAL_PROVIDERS,
+            blocked_component_keys=_INITIAL_COMPONENTS,
+            blocked_template_keys=_INITIAL_TEMPLATES,
+            blocked_model_keys={"OpenAI::gpt-blocked", "openai::gpt-blocked", "bare-blocked"},
+            actor_user_id=actor_id,
+            reason="block models",
+        )
+
+    assert committed.blocked_model_keys == frozenset({"openai::gpt-blocked", "bare-blocked"})
+    assert committed.content_hash == policy_store.policy_bundle_content_hash(
+        approved_provider_ids=_INITIAL_PROVIDERS,
+        blocked_component_keys=_INITIAL_COMPONENTS,
+        blocked_template_keys=_INITIAL_TEMPLATES,
+        blocked_model_keys={"openai::gpt-blocked", "bare-blocked"},
+    )
+    durable = await _read_active(bundle_session_maker)
+    assert durable.blocked_model_keys == committed.blocked_model_keys
+    assert durable.content_hash == committed.content_hash
+
+
+async def test_replace_without_model_keys_keeps_legacy_content_hash_shape(bundle_session_maker):
+    async with bundle_session_maker() as session:
+        committed = await policy_store.replace_policy_bundle_state(
+            session,
+            expected_revision=1,
+            approved_provider_ids=_INITIAL_PROVIDERS,
+            blocked_component_keys=_INITIAL_COMPONENTS,
+            blocked_template_keys=_INITIAL_TEMPLATES,
+            actor_user_id=uuid4(),
+        )
+
+    assert committed.blocked_model_keys == frozenset()
+    assert committed.content_hash == policy_store.policy_bundle_content_hash(
+        approved_provider_ids=_INITIAL_PROVIDERS,
+        blocked_component_keys=_INITIAL_COMPONENTS,
+        blocked_template_keys=_INITIAL_TEMPLATES,
+    )
+
+
+async def test_malformed_blocked_model_key_rejected_before_any_write(bundle_session_maker):
+    async with bundle_session_maker() as session:
+        with pytest.raises(ValueError, match="Blocked-model key"):
+            await policy_store.replace_policy_bundle_state(
+                session,
+                expected_revision=1,
+                approved_provider_ids=_INITIAL_PROVIDERS,
+                blocked_component_keys=_INITIAL_COMPONENTS,
+                blocked_template_keys=_INITIAL_TEMPLATES,
+                blocked_model_keys={"::claude-blocked"},
+                actor_user_id=uuid4(),
+            )
+
+    active = await _read_active(bundle_session_maker)
+    assert active.revision == 1
+    assert active.blocked_model_keys == frozenset()
+
+
+async def test_rollback_restores_blocked_model_keys(bundle_session_maker):
+    async with bundle_session_maker() as session:
+        revision_two = await policy_store.replace_policy_bundle_state(
+            session,
+            expected_revision=1,
+            approved_provider_ids=_INITIAL_PROVIDERS,
+            blocked_component_keys=_INITIAL_COMPONENTS,
+            blocked_template_keys=_INITIAL_TEMPLATES,
+            blocked_model_keys={"openai::gpt-blocked"},
+            actor_user_id=uuid4(),
+            reason="block models",
+        )
+    async with bundle_session_maker() as session:
+        revision_three = await policy_store.replace_policy_bundle_state(
+            session,
+            expected_revision=revision_two.revision,
+            approved_provider_ids=_INITIAL_PROVIDERS,
+            blocked_component_keys=_INITIAL_COMPONENTS,
+            blocked_template_keys=_INITIAL_TEMPLATES,
+            actor_user_id=uuid4(),
+            reason="unblock models",
+        )
+    assert revision_three.blocked_model_keys == frozenset()
+
+    async with bundle_session_maker() as session:
+        rolled_back = await policy_store.rollback_policy_bundle_state(
+            session,
+            expected_revision=revision_three.revision,
+            target_revision=revision_two.revision,
+            actor_user_id=uuid4(),
+            reason="restore model blocks",
+        )
+
+    assert rolled_back.blocked_model_keys == frozenset({"openai::gpt-blocked"})
+    assert rolled_back.rollback_of_revision == revision_two.revision
+    assert rolled_back.content_hash == revision_two.content_hash
+
+
+async def test_legacy_provider_ceiling_write_preserves_blocked_model_keys(bundle_session_maker):
+    from langflow.services import model_provider_policy as legacy_provider_store
+
+    async with bundle_session_maker() as session:
+        await policy_store.replace_policy_bundle_state(
+            session,
+            expected_revision=1,
+            approved_provider_ids=_INITIAL_PROVIDERS,
+            blocked_component_keys=_INITIAL_COMPONENTS,
+            blocked_template_keys=_INITIAL_TEMPLATES,
+            blocked_model_keys={"openai::gpt-blocked"},
+            actor_user_id=uuid4(),
+        )
+
+    async with bundle_session_maker() as session:
+        persisted = await legacy_provider_store.replace_model_provider_policy_state(
+            session,
+            {"openai", "anthropic"},
+            actor_user_id=uuid4(),
+        )
+
+    assert persisted.bundle_snapshot is not None
+    assert persisted.bundle_snapshot.blocked_model_keys == frozenset({"openai::gpt-blocked"})
+    assert persisted.approved_provider_ids == frozenset({"openai", "anthropic"})
