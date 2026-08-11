@@ -520,6 +520,30 @@ AZURE_AI_FOUNDRY_REQUEST_TIMEOUT = AZURE_AI_FOUNDRY_FETCH_TIMEOUT
 AZURE_AI_FOUNDRY_MODELS_PROBE_API_VERSION = "2025-04-01"
 
 
+def normalize_azure_ai_foundry_endpoint(endpoint: str) -> str:
+    """Map a pasted Foundry *project* endpoint to the OpenAI-compatible endpoint.
+
+    The Foundry portal most prominently shows the project endpoint
+    (``https://<resource>.services.ai.azure.com/api/projects/<project>``), but this
+    provider needs the OpenAI-compatible form
+    (``https://<resource>.services.ai.azure.com/openai/v1``) — the project form
+    returns HTTP 400 on ``/models``. Rewrite the former to the latter; every other
+    endpoint passes through unchanged.
+    """
+    parsed = urlparse(endpoint)
+    path = parsed.path.lower()
+    if not parsed.netloc or not (path.startswith("/api/projects/") or path.rstrip("/") == "/api/projects"):
+        return endpoint
+    normalized = f"{parsed.scheme}://{parsed.netloc}/openai/v1"
+    # Log neither URL: a pasted endpoint can carry user-info or query credentials.
+    logger.info(
+        "AZURE_AI_FOUNDRY_ENDPOINT looks like a Foundry project endpoint; "
+        "replacing '/api/projects/...' with '/openai/v1' (the OpenAI-compatible form). "
+        "Update the saved endpoint to silence this message."
+    )
+    return normalized
+
+
 def _azure_ai_foundry_models_probe_url(endpoint: str, api_version: str | None = None) -> str:
     """Build the Foundry ``/models`` probe URL from any configured endpoint form.
 
@@ -546,14 +570,16 @@ def _azure_ai_foundry_models_probe_url(endpoint: str, api_version: str | None = 
 def request_azure_ai_foundry_model_entries(endpoint: str, api_key: str, api_version: str | None = None) -> list[dict]:
     """Probe Foundry /models for credential validation (catalog, not deployments).
 
-    Only 401/403 — genuinely bad credentials — raise. Azure has no reliable
-    catalog route across Foundry resource shapes (project-scoped endpoints can
-    return 400 BadRequest with valid credentials and a correct api-version), so
-    any other non-2xx response or unexpected payload degrades to an empty
-    catalog instead of blocking the credential save. Connection errors and
-    timeouts still propagate: an unreachable endpoint is a real
-    misconfiguration the save should surface.
+    Pasted project endpoints are first normalized to the OpenAI-compatible form
+    (``normalize_azure_ai_foundry_endpoint``). Only 401/403 — genuinely bad
+    credentials — raise. Azure has no reliable catalog route across Foundry
+    resource shapes (project-scoped endpoints can return 400 BadRequest with
+    valid credentials and a correct api-version), so any other non-2xx response
+    or unexpected payload degrades to an empty catalog instead of blocking the
+    credential save. Connection errors and timeouts still propagate: an
+    unreachable endpoint is a real misconfiguration the save should surface.
     """
+    endpoint = normalize_azure_ai_foundry_endpoint(endpoint)
     probe_url = _azure_ai_foundry_models_probe_url(endpoint, api_version)
     response = requests.get(
         probe_url,
