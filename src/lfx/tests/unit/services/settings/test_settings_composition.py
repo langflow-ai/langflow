@@ -52,6 +52,7 @@ EXPECTED_FIELDS = {
     "config_dir",
     "knowledge_bases_dir",
     # ServerSettings
+    "deployment_profile",
     "host",
     "port",
     "runtime_port",
@@ -244,11 +245,14 @@ EXPECTED_FIELDS = {
     "mcp_server_docker_hardening",
     "mcp_server_allowed_packages",
     "mcp_server_interpreter_hardening",
-    # ---- Serving-plane end-user identity ----
-    # SecuritySettings
-    "serving_end_user_header",
-    "serving_trust_proxy_headers",
-    "serving_end_user_required",
+    # ---- Added in 1.12.0 ----
+    # SecuritySettings: opt-in microVM sandbox backend (issue #12029)
+    "sandbox_backend",
+    "sandbox_timeout_seconds",
+    "sandbox_memory_mb",
+    "sandbox_allow_network",
+    "sandbox_allowed_domains",
+    "sandbox_allow_software_emulation",
 }
 
 

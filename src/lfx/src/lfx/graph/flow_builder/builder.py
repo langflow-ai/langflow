@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from lfx.graph.flow_builder.component import add_component, configure_component
+from lfx.graph.flow_builder.component import add_component, configure_component, sync_dropdown_selected_outputs
 from lfx.graph.flow_builder.connect import add_connection
 from lfx.graph.flow_builder.flow import empty_flow
 from lfx.graph.flow_builder.layout import layout_flow
@@ -135,6 +135,7 @@ def build_flow_from_spec(
         except (ValueError, KeyError) as e:
             return {"error": f"Failed to connect {src_out} -> {tgt_in}", "details": str(e)}
 
+    sync_dropdown_selected_outputs(flow)
     layout_flow(flow)
 
     flow["name"] = parsed.get("name", "Untitled Flow")

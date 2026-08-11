@@ -17,6 +17,7 @@ from lfx.utils.flow_validation import (
     PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE,
     CatalogPolicyIdentityUnavailableError,
     CustomComponentValidationError,
+    prepare_flow_build_for_user,
     prepare_public_flow_build,
     validate_catalog_policy_for_flow,
     validate_flow_for_current_settings,
@@ -200,6 +201,12 @@ async def retrieve_vertices_order(
         if not data:
             graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
         else:
+            sanitized_data = await prepare_flow_build_for_user(
+                data.model_dump(),
+                is_superuser=current_user.is_superuser,
+            )
+            if sanitized_data is not None:
+                data = FlowDataRequest.model_validate(sanitized_data)
             graph = await build_and_cache_graph_from_data(
                 flow_id=flow_id, graph_data=data.model_dump(), chat_service=chat_service
             )
@@ -237,6 +244,8 @@ async def retrieve_vertices_order(
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         if isinstance(exc, CustomComponentValidationError):
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if isinstance(exc, RuntimeError):
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
         await logger.aexception("Error checking build status")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -331,7 +340,13 @@ async def build_flow(
 
     try:
         if data:
-            validate_flow_for_current_settings(data.model_dump())
+            raw_data = data.model_dump()
+            sanitized_data = await prepare_flow_build_for_user(
+                raw_data,
+                is_superuser=current_user.is_superuser,
+            )
+            if sanitized_data is not None:
+                data = FlowDataRequest.model_validate(sanitized_data)
         elif flow and flow.data:
             validate_flow_for_current_settings(flow.data)
     except CatalogPolicyIdentityUnavailableError as exc:

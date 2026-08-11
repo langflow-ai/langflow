@@ -58,6 +58,10 @@ export interface AgenticCompleteData {
   /** Wall-clock duration of the turn, measured server-side around the whole
    * pipeline. Rendered as the duration half of the cost badge. */
   duration_seconds?: number;
+  /** Flow version snapshotted BEFORE a canvas-mutating turn — a rollback
+   * point restorable via the flow versions API/UI. Absent for question
+   * turns, empty canvases, or when snapshotting failed. */
+  restore_version_id?: string;
   /** Non-fatal model errors this turn recovered from (the chosen model failed
    * silently in the background and the assistant fell back / retried). Rendered
    * as an (i) next to the message so the swap is not hidden. Absent when the
@@ -92,6 +96,24 @@ export interface AgenticFlowUpdateEvent {
    * no Continue/Dismiss proposal card. */
   auto_apply?: boolean;
   [key: string]: unknown;
+}
+
+/**
+ * Emitted the moment a canvas-mutating agent tool STARTS executing, so the
+ * UI can show a live "currently doing X" row. Additive — the matching
+ * flow_update (or the run ending) retires it.
+ */
+export interface AgenticToolStartEvent {
+  event: "tool_start";
+  /** Backend tool name, e.g. "add_component", "build_flow". */
+  tool: string;
+  /** English fallback label; the UI prefers its own i18n by tool name. */
+  label?: string;
+  component_type?: string;
+  component_id?: string;
+  source_id?: string;
+  target_id?: string;
+  field?: string;
 }
 
 /** Emitted by the agent's sandboxed write_file / edit_file tools. */
@@ -141,9 +163,25 @@ export interface AgenticCompleteEvent {
   data: AgenticCompleteData;
 }
 
+/** Additive structured-failure context on the SSE error event. All fields
+ * optional — older backends simply omit ``detail`` and only ``message`` renders. */
+export interface AgenticErrorDetail {
+  /** Last progress step the backend emitted before failing. */
+  step?: string;
+  /** Component the backend was building/running when it failed. */
+  component_id?: string;
+  /** Tool involved in the failure, when extractable. */
+  tool?: string;
+  /** Pre-truncation error string (capped server-side at 2000 chars). */
+  raw_cause?: string;
+  /** Recommended next step mapped from the known error categories. */
+  recommendation?: string;
+}
+
 export interface AgenticErrorEvent {
   event: "error";
   message: string;
+  detail?: AgenticErrorDetail;
 }
 
 export interface AgenticCancelledEvent {
@@ -157,6 +195,7 @@ export type AgenticSSEEvent =
   | AgenticCompleteEvent
   | AgenticFlowPreviewEvent
   | AgenticFlowUpdateEvent
+  | AgenticToolStartEvent
   | AgenticFileWrittenEvent
   | AgenticErrorEvent
   | AgenticCancelledEvent;
@@ -168,6 +207,7 @@ export interface AgenticAssistRequest {
   provider?: string;
   max_retries?: number;
   session_id?: string;
+  history_limit?: number;
   /** Agent step budget for this turn (`/iterations N`); the backend clamps to
    * 1–200 and falls back to the flow default when absent. */
   iterations_limit?: number;

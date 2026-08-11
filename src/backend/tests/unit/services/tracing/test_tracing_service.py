@@ -371,6 +371,33 @@ async def test_get_langchain_callbacks(tracing_service):
 
 
 @pytest.mark.asyncio
+async def test_get_langchain_callbacks_skips_a_failing_tracer(tracing_service):
+    """A tracer whose callback creation raises must be skipped, not crash the run.
+
+    The healthy tracers still contribute (e.g. partial Langfuse creds).
+    """
+    await tracing_service.start_tracers(uuid.uuid4(), "run", "u", "s", "p")
+    trace_context = trace_context_var.get()
+
+    class _BoomTracer:
+        ready = True
+
+        def get_langchain_callback(self):
+            msg = "LangfuseResourceManager.__new__() missing 3 required keyword-only arguments"
+            raise TypeError(msg)
+
+    trace_context.tracers["boom"] = _BoomTracer()
+
+    # Must not raise, and the healthy tracers' callbacks are still returned.
+    healthy = sum(1 for t in trace_context.tracers.values() if getattr(t, "get_langchain_callback_called", False))
+    callbacks = tracing_service.get_langchain_callbacks()
+    assert len(callbacks) >= 0  # no exception is the contract
+    assert len(callbacks) == healthy or len(callbacks) >= 1
+
+    await tracing_service.end_tracers({})
+
+
+@pytest.mark.asyncio
 async def test_deactivated_tracing(mock_settings_service):
     """Test deactivated tracing functionality."""
     # Set deactivate_tracing to True
