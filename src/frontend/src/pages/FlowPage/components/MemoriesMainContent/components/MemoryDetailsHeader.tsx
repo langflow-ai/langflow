@@ -203,6 +203,7 @@ export function MemoryDetailsHeader({
         <CustomResourceShareAction
           resourceId={memory.id}
           resourceType="knowledge_base"
+          resourceSubtype="memory"
           resourceName={memory.name}
         />
 

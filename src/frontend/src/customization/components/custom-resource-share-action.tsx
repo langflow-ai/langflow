@@ -4,9 +4,12 @@ export type CustomShareResourceType =
   | "knowledge_base"
   | "file";
 
+export type CustomShareResourceSubtype = "knowledge_base" | "memory";
+
 export interface CustomResourceShareActionProps {
   resourceId: string;
   resourceType: CustomShareResourceType;
+  resourceSubtype?: CustomShareResourceSubtype;
   resourceName?: string;
   /** Compact actions use only an icon; headers may request a text label. */
   display?: "icon" | "label" | "menu";
