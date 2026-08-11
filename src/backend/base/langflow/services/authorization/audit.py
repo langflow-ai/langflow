@@ -472,7 +472,7 @@ async def drain_pending_audit_writes(timeout: float = 5.0) -> None:
     Splits the timeout between draining the queue and awaiting writer
     cancellation so neither side can hang shutdown indefinitely.
     """
-    global _audit_accepting, _audit_writer_task  # noqa: PLW0603
+    global _audit_accepting, _audit_queue_loop, _audit_writer_task  # noqa: PLW0603
 
     try:
         loop = asyncio.get_running_loop()
@@ -493,6 +493,10 @@ async def drain_pending_audit_writes(timeout: float = 5.0) -> None:
     queue = _audit_queue
     writer = _audit_writer_task
     if queue is None:
+        # Closing admission must be owned by this loop even when lazy startup
+        # never created a queue. The same-loop durable guard can then keep the
+        # idle pipeline terminal while a later, genuinely new loop replaces it.
+        _audit_queue_loop = loop
         return
     if writer is None:
         _fail_queued_entries(queue, "writer_stopped")
