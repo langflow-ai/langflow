@@ -303,6 +303,7 @@ async def _buffer_background_run(
             background_tasks=fresh_background_tasks,
             parsed=parsed,
             current_user=current_user,
+            expose_error_details=flow.user_id == current_user.id,
             # Build under the job id so the run's vertex builds are persisted
             # keyed by job_id and GET-status reconstruction can find them.
             run_id=job_id,

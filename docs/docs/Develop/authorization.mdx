@@ -54,6 +54,24 @@ All authorization endpoints are under `/api/v1/authz/`. Write operations require
 
 These endpoints manage the RBAC data model. An enforcement plugin consumes roles, assignments, and shares when evaluating requests. Without a plugin, API responses succeed but access is not restricted.
 
+## Shared-flow execution identity
+
+A share delegates an action on a resource; it does not delegate the owner's identity or credentials.
+
+For an authenticated shared-flow run, the authenticated caller is the execution principal. Variables, files, nested flows, messages, jobs, and other dependencies resolve in that caller's namespace. A dependency must therefore be owned by the caller or shared with the caller separately. Langflow never falls back to the flow owner's credentials when a caller-owned or explicitly shared dependency is unavailable.
+
+Only the flow owner can submit graph data or component-parameter tweaks. A non-owner receives the same not-found response as a caller without access so the rejection does not confirm that the flow exists.
+
+Revoking a share prevents new runs and rechecked continuations, including HITL resume. It does not change the principal of work that is already running or terminate that work. Deployments and legacy public entry points are explicit exceptions:
+
+- Public V1/V2 and A2A entry points continue to execute with the published flow owner's identity, under their existing visitor-isolated session and storage namespaces. Public requests cannot submit graph data or tweaks.
+- Deployment authorization and audit use the requesting actor, while the external deployment data plane continues to use the deployment owner's provider namespace. Provider controls govern already-running work.
+- Webhooks, legacy MCP, and project MCP remain owner-scoped admission surfaces in this release; they do not widen execution to shared flows. Webhook request data is the one trusted server-generated tweak and is mapped only to the published Webhook Component.
+
+Owner-only execution retains detailed component errors for debugging. Delegated and public execution returns a stable generic workflow error without a component traceback or provider detail. Server logs and telemetry keep the original exception.
+
+The machine-validated endpoint-family contract is maintained in `scripts/ci/execution_principal_matrix.json`. Changes to a listed runtime surface must update that matrix and its referenced tests.
+
 ### Effective permissions
 
 `POST /api/v1/authz/me/permissions`

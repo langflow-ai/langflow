@@ -251,6 +251,8 @@ def get_language_model_options(
                 continue
             if model_status_contains(disabled_models, provider, model_name, model_type=row_model_type):
                 continue
+            if not provider_policy.allows_model(provider, model_name, model_type=row_model_type):
+                continue
 
             # Get parameter mapping for this provider
             param_mapping = get_provider_param_mapping(provider)
@@ -398,6 +400,8 @@ def get_embedding_model_options(
             ):
                 continue
             if model_status_contains(disabled_models, provider, model_name, model_type=row_model_type):
+                continue
+            if not provider_policy.allows_model(provider, model_name, model_type=row_model_type):
                 continue
 
             # Build the option dict
