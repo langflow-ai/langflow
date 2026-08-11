@@ -119,6 +119,64 @@ def test_request_azure_ai_foundry_model_entries_returns_catalog_data():
     assert entries == [{"id": "gpt-5-mini-2025-08-07"}]
 
 
+@pytest.mark.parametrize(
+    "project_endpoint",
+    [
+        "https://example.services.ai.azure.com/api/projects/my-project",
+        "https://example.services.ai.azure.com/api/projects/my-project/",
+        "https://example.services.ai.azure.com/API/Projects/My-Project",
+        "https://example.services.ai.azure.com/api/projects",
+    ],
+    ids=["plain", "trailing-slash", "mixed-case", "no-project-segment"],
+)
+def test_normalize_azure_ai_foundry_endpoint_rewrites_project_endpoint(project_endpoint):
+    """The Foundry portal's prominent *project* endpoint must map to the OpenAI-compatible form."""
+    from lfx.base.models import model_utils
+
+    normalized = model_utils.normalize_azure_ai_foundry_endpoint(project_endpoint)
+
+    assert normalized == "https://example.services.ai.azure.com/openai/v1"
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "https://example.services.ai.azure.com/openai/v1",
+        "https://example.services.ai.azure.com/openai/v1/",
+        "https://example.services.ai.azure.com",
+        "https://example.openai.azure.com/openai",
+        "not-a-url/api/projects/my-project",
+    ],
+    ids=["openai-v1", "openai-v1-trailing-slash", "bare-resource", "azure-openai", "unparseable"],
+)
+def test_normalize_azure_ai_foundry_endpoint_keeps_other_endpoints(endpoint):
+    from lfx.base.models import model_utils
+
+    assert model_utils.normalize_azure_ai_foundry_endpoint(endpoint) == endpoint
+
+
+def test_request_azure_ai_foundry_model_entries_normalizes_project_endpoint():
+    """A pasted project endpoint must probe the OpenAI-compatible /models, not the 400ing project path."""
+    from lfx.base.models import model_utils
+
+    response = MagicMock()
+    response.json.return_value = {"data": [{"id": "gpt-5-mini-2025-08-07"}]}
+
+    with patch.object(model_utils.requests, "get", return_value=response) as mock_get:
+        entries = model_utils.request_azure_ai_foundry_model_entries(
+            "https://example.services.ai.azure.com/api/projects/my-project",
+            "test-key",  # pragma: allowlist secret
+        )
+
+    mock_get.assert_called_once_with(
+        "https://example.services.ai.azure.com/openai/v1/models",
+        headers={"api-key": "test-key"},
+        timeout=model_utils.AZURE_AI_FOUNDRY_FETCH_TIMEOUT,
+        allow_redirects=False,
+    )
+    assert entries == [{"id": "gpt-5-mini-2025-08-07"}]
+
+
 def test_request_azure_ai_foundry_model_entries_rejects_malformed_payload():
     from lfx.base.models import model_utils
 
@@ -177,6 +235,43 @@ def test_validate_model_provider_key_azure_ai_foundry_success():
             {
                 "AZURE_AI_FOUNDRY_API_KEY": "test-key",  # pragma: allowlist secret
                 "AZURE_AI_FOUNDRY_ENDPOINT": "https://example.services.ai.azure.com/openai/v1",
+            },
+        )
+
+    mock_get.assert_called_once_with(
+        "https://example.services.ai.azure.com/openai/v1/models",
+        headers={"api-key": "test-key"},
+        timeout=model_utils.AZURE_AI_FOUNDRY_FETCH_TIMEOUT,
+        allow_redirects=False,
+    )
+
+
+def test_validate_model_provider_key_azure_ai_foundry_accepts_project_endpoint():
+    """Credential validation with a pasted project endpoint probes the OpenAI-compatible /models."""
+    from types import SimpleNamespace
+
+    from lfx.base.models import model_utils
+    from lfx.base.models.unified_models import validate_model_provider_key
+
+    response = MagicMock(status_code=200)
+    response.json.return_value = {"data": []}
+    fake_chat_models = SimpleNamespace(AzureAIOpenAIApiChatModel=object)
+    with (
+        patch.dict(
+            "sys.modules",
+            {
+                "langchain_azure_ai": SimpleNamespace(chat_models=fake_chat_models),
+                "langchain_azure_ai.chat_models": fake_chat_models,
+            },
+        ),
+        patch("lfx.base.models.unified_models.model_catalog.get_unified_models_detailed", return_value=[]),
+        patch.object(model_utils.requests, "get", return_value=response) as mock_get,
+    ):
+        validate_model_provider_key(
+            "Azure AI Foundry",
+            {
+                "AZURE_AI_FOUNDRY_API_KEY": "test-key",  # pragma: allowlist secret
+                "AZURE_AI_FOUNDRY_ENDPOINT": "https://example.services.ai.azure.com/api/projects/my-project",
             },
         )
 
@@ -271,6 +366,37 @@ def test_get_llm_wires_azure_ai_foundry_endpoint_and_credential():
     assert captured_kwargs["credential"] == "test-key"
     assert captured_kwargs["endpoint"] == "https://example.services.ai.azure.com/openai/v1"
     assert captured_kwargs["request_timeout"] == 10.0
+
+
+def test_get_llm_normalizes_stored_project_endpoint():
+    """A project endpoint stored as the provider variable is normalized at instantiation too."""
+    from lfx.base.models import unified_models as unified_models_module
+    from lfx.base.models.unified_models import instantiation
+    from lfx.base.models.unified_models.instantiation import get_llm
+
+    captured_kwargs: dict = {}
+
+    class FakeFoundryChatModel:
+        def __init__(self, **kwargs):
+            captured_kwargs.update(kwargs)
+
+    with (
+        patch.object(
+            unified_models_module,
+            "get_api_key_for_provider",
+            return_value="test-key",
+        ),
+        patch.object(unified_models_module, "get_model_class", return_value=FakeFoundryChatModel),
+        patch.object(
+            unified_models_module,
+            "get_all_variables_for_provider",
+            return_value={"AZURE_AI_FOUNDRY_ENDPOINT": "https://example.services.ai.azure.com/api/projects/my-project"},
+        ),
+        patch.object(instantiation, "validate_url_for_ssrf_or_raise"),
+    ):
+        get_llm(_build_azure_ai_foundry_model_selection(), user_id="user-1", stream=False)
+
+    assert captured_kwargs["endpoint"] == "https://example.services.ai.azure.com/openai/v1"
 
 
 def test_get_llm_azure_ai_foundry_requires_endpoint():
