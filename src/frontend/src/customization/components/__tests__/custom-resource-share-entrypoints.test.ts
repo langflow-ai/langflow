@@ -62,4 +62,20 @@ describe("non-flow share entry-point wiring", () => {
 
     expect(source).toContain("resourceSubtype?:");
   });
+
+  it("mounts the inert variable seam without trusting row share capability", () => {
+    const pageSource = readFrontendSource(
+      "pages/SettingsPage/pages/GlobalVariablesPage/index.tsx",
+    );
+    const seamSource = readFrontendSource(
+      "customization/components/custom-variable-share-action.tsx",
+    );
+
+    expect(pageSource).toContain(
+      'import CustomVariableShareAction from "@/customization/components/custom-variable-share-action";',
+    );
+    expect(pageSource).toContain("<CustomVariableShareAction");
+    expect(pageSource).not.toContain("canShareVariable");
+    expect(seamSource).toContain("return null;");
+  });
 });
