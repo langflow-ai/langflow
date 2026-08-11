@@ -314,6 +314,14 @@ export type ShadToolTipType = {
   delayDuration?: number;
   styleClasses?: string;
   avoidCollisions?: boolean;
+  /**
+   * Overrides Radix's automatic aria-describedby on the trigger. Pass a
+   * string to point at a specific description element, or `undefined` to
+   * suppress the description entirely (e.g. when the tooltip text just
+   * repeats the trigger's own aria-label and would otherwise be announced
+   * twice). Omit this prop to keep Radix's default behavior.
+   */
+  ariaDescribedBy?: string;
 };
 
 export type TextHighlightType = {
@@ -327,6 +335,10 @@ export type TextHighlightType = {
 export interface IVarHighlightType {
   name: string;
   addCurlyBraces?: boolean;
+  /** Bare identifier used to decide whether the name is reserved, when it differs from `name`. */
+  variableName?: string;
+  /** Tooltip shown when the name is reserved. Must come from i18n, never from user input. */
+  invalidTitle?: string;
 }
 
 export type IconComponentProps = {

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class SecuritySettings(BaseModel):
@@ -122,6 +122,65 @@ class SecuritySettings(BaseModel):
 
     Defaults to False to preserve existing single-tenant behavior."""
 
+    sandbox_backend: str = "none"
+    """Execution backend for user-authored code in the code-execution components
+    (Python Interpreter and the legacy Python REPL tool).
+
+    - "none" (default): code runs in-process via ``exec`` with the best-effort
+      Python-level hardening (restricted builtins + AST checks). Preserves existing
+      behavior; nothing extra to install.
+    - "exec-sandbox": each execution runs in a dedicated QEMU microVM via the
+      optional ``exec-sandbox`` package (``pip install 'langflow[sandbox]'``;
+      requires Python >= 3.12 and QEMU 8+ with KVM/HVF hardware acceleration —
+      hosts without a hardware hypervisor are refused unless
+      ``sandbox_allow_software_emulation`` is enabled). The VM has a read-only
+      rootfs, no host filesystem access, and no network unless
+      ``sandbox_allow_network`` is enabled. In this mode the Python-level import
+      allow-list and AST escape-gadget restrictions are not applied — the VM
+      boundary replaces them — so sandboxed code may import any module available
+      in the guest image. If the backend is configured but unusable, execution
+      fails closed with an error instead of silently running in-process.
+
+    See https://github.com/langflow-ai/langflow/issues/12029."""
+
+    sandbox_timeout_seconds: int = Field(default=30, ge=1, le=300)
+    """Wall-clock limit for one sandboxed execution, in seconds (1-300).
+    Only used when sandbox_backend is not "none"."""
+
+    sandbox_memory_mb: int = Field(default=192, ge=128)
+    """Guest VM memory for sandboxed executions, in MB (minimum 128).
+    Only used when sandbox_backend is not "none"."""
+
+    sandbox_allow_network: bool = False
+    """Whether sandboxed code may access the network. Default False: the microVM
+    runs fully offline, which is the strongest isolation. Note the in-process
+    backend has full server-side network access, so enabling the sandbox with the
+    default here is a behavior change for code that fetches URLs.
+
+    When enabled WITHOUT ``sandbox_allowed_domains``, exec-sandbox's DNS filter
+    still only permits its package-registry defaults (PyPI /
+    files.pythonhosted.org) — ordinary APIs stay unreachable until their domains
+    are listed explicitly. Only used when sandbox_backend is not "none"."""
+
+    sandbox_allowed_domains: list[str] = []
+    """Comma-separated list of domains sandboxed code may reach when
+    ``sandbox_allow_network`` is enabled (forwarded to exec-sandbox's DNS
+    filter). Empty (default) keeps exec-sandbox's package-registry-only
+    default. Listing a domain here permits guest egress to it, so treat this
+    like an SSRF allow-list: prefer narrow, fully-qualified domains.
+    Only used when sandbox_backend is not "none"."""
+
+    sandbox_allow_software_emulation: bool = False
+    """Permit the sandbox to run without a hardware hypervisor (KVM on Linux,
+    HVF on macOS), letting QEMU fall back to TCG software emulation.
+
+    Default False and strongly recommended to keep it that way: upstream
+    exec-sandbox documents TCG as NOT security-supported (and ~5-8x slower),
+    while sandbox mode disables the in-process Python defenses on the
+    assumption of a hardware boundary. Enable only for trusted/development
+    workloads, e.g. CI smoke tests or containers without /dev/kvm passthrough.
+    Only used when sandbox_backend is not "none"."""
+
     restrict_local_file_access: bool = False
     """If set to True, the built-in file-reading components (File, Directory, JSON/CSV-to-Data)
     may only read paths that resolve inside the authenticated user's or executing flow's storage
@@ -168,6 +227,29 @@ class SecuritySettings(BaseModel):
     """Public-flow runs allowed per minute per IP on the unauthenticated v1 build and v2 workflow endpoints.
     V1 uses one bucket per flow; v2 uses its public-workflow bucket. Each run executes as the flow owner, so
     anonymous callers are throttled separately from and more generously than login. Gated by rate_limit_enabled."""
+
+    @field_validator("sandbox_allowed_domains", mode="after")
+    @classmethod
+    def normalize_sandbox_allowed_domains(cls, value: list[str]) -> list[str]:
+        """Strip whitespace and drop empty entries.
+
+        The env parser splits ``LANGFLOW_SANDBOX_ALLOWED_DOMAINS=a.com, b.com``
+        on commas without trimming, and exec-sandbox's DNS filter rejects
+        entries with leading/trailing whitespace — normalize here so the
+        natural comma-and-space spelling works.
+        """
+        return [domain.strip() for domain in value if domain and domain.strip()]
+
+    @field_validator("sandbox_backend", mode="before")
+    @classmethod
+    def validate_sandbox_backend(cls, value):
+        """Reject unknown backends at startup so a typo cannot silently disable sandboxing."""
+        normalized = str(value).strip().lower() if value is not None else "none"
+        allowed = {"none", "exec-sandbox"}
+        if normalized not in allowed:
+            msg = f"sandbox_backend must be one of {sorted(allowed)}, got {value!r}"
+            raise ValueError(msg)
+        return normalized
 
     @field_validator("cors_origins", mode="before")
     @classmethod

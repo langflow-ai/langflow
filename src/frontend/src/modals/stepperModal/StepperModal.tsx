@@ -125,11 +125,17 @@ export function StepperModal({
 // Re-exports for public API
 export { StepperModalFooter } from "./components/StepperModalFooter";
 export { useStepperContext } from "./hooks/useStepperContext";
+export { useStepperState } from "./hooks/useStepperState";
+export { StepperProvider, useStepper } from "./StepperProvider";
 export type {
   StepperContextValue,
   StepperModalFooterProps,
   StepperModalProps,
   StepperModalSize,
+  StepperProviderProps,
+  StepperState,
+  StepperStepConfig,
+  UseStepperStateOptions,
 } from "./types";
 
 export default StepperModal;

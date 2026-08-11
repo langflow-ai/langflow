@@ -207,6 +207,9 @@ local = [
     "ctransformers>=0.2"
 ]
 
+# Opt-in microVM sandbox backend for code-execution components (issue #12029).
+sandbox = ["lfx[sandbox]~=1.12.0"]
+
 # Individual database providers
 couchbase = ["couchbase>=4.2.1"]
 cassandra = ["lfx[cassandra]~=1.12.0"]  # Compatibility spelling for the lfx-datastax extension.

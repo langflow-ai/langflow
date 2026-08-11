@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import SearchBarComponent from "@/components/core/parameterRenderComponent/components/searchBarComponent";
 import type { InputProps } from "@/components/core/parameterRenderComponent/types";
@@ -8,6 +9,7 @@ import {
   DialogContentPlain as DialogContent,
   DialogFooter,
   DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { testIdCase } from "@/utils/utils";
@@ -47,6 +49,7 @@ const ListSelectionComponent = ({
   ...baseInputProps
   // biome-ignore lint/suspicious/noExplicitAny: legacy
 }: InputProps<any, ListSelectionComponentProps>) => {
+  const { t } = useTranslation();
   const { nodeClass } = baseInputProps;
   const [search, setSearch] = useState("");
   // biome-ignore lint/suspicious/noExplicitAny: legacy
@@ -193,17 +196,21 @@ const ListSelectionComponent = ({
                 name={nodeClass?.icon || "unknown"}
                 className="h-[18px] w-[18px] text-muted-foreground"
               />
-              <div className="text-[13px] font-semibold">
+              <DialogTitle className="text-[13px] font-semibold">
                 {nodeClass?.display_name}
-              </div>
+              </DialogTitle>
             </div>
           ) : (
             <div className="relative text-[13px] font-normal">
+              <DialogTitle className="sr-only">
+                {t("listSelection.dialogTitle")}
+              </DialogTitle>
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="border-none focus:ring-0"
                 placeholder={headerSearchPlaceholder}
+                aria-label={t("listSelection.searchAriaLabel")}
                 data-testid="search_bar_input"
               />
             </div>

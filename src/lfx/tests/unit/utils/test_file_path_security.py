@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from lfx.utils.file_path_security import (
     LocalFileAccessError,
+    component_file_access_scopes,
     enforce_local_file_access,
     is_local_file_access_restricted,
 )
@@ -30,6 +31,21 @@ def test_disabled_is_noop(tmp_path):
         assert is_local_file_access_restricted() is False
         # An obviously-outside path is returned unchanged.
         assert enforce_local_file_access("/etc/passwd") == Path("/etc/passwd")
+
+
+def test_component_scopes_include_trusted_public_source_flow():
+    """Bundle consumers can re-check public attachments after flow_id becomes visitor-virtual."""
+    component = MagicMock()
+    component._user_id = None
+    component._vertex.graph.user_id = "public-owner-id"
+    component._vertex.graph.flow_id = "visitor-virtual-flow-id"
+    component._vertex.graph.source_flow_id = "public-source-flow-id"
+
+    assert component_file_access_scopes(component) == (
+        "public-owner-id",
+        "visitor-virtual-flow-id",
+        "public-source-flow-id",
+    )
 
 
 def test_path_inside_storage_allowed(tmp_path):

@@ -1,4 +1,5 @@
 import { regexHighlight } from "@/constants/constants";
+import { variableHighlightClass } from "@/utils/promptVariables";
 
 /** Apply variable highlighting to the prompt text. */
 export const getHighlightedHTML = (text: string, isDoubleBrackets: boolean) => {
@@ -6,8 +7,8 @@ export const getHighlightedHTML = (text: string, isDoubleBrackets: boolean) => {
     return text
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
-      .replace(/\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g, (match) => {
-        return `<span class="chat-message-highlight">${match}</span>`;
+      .replace(/\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g, (match, varName) => {
+        return `<span class="${variableHighlightClass(varName)}">${match}</span>`;
       });
   }
   return text
@@ -28,7 +29,7 @@ export const getHighlightedHTML = (text: string, isDoubleBrackets: boolean) => {
 
       return (
         `${outerLeft}` +
-        `<span class="chat-message-highlight">{${varName}}</span>` +
+        `<span class="${variableHighlightClass(varName)}">{${varName}}</span>` +
         `${outerRight}`
       );
     });
