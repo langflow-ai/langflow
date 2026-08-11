@@ -26,6 +26,7 @@ from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.secrets import unwrap_secret_value
+from lfx.utils.ssrf_httpx import ssrf_safe_httpx_get
 from lfx.utils.ssrf_protection import SSRFProtectionError, validate_connector_url_for_ssrf
 from lfx.utils.util import transform_localhost_url
 
@@ -544,14 +545,15 @@ def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: 
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
 
     try:
-        response = requests.get(
+        response = ssrf_safe_httpx_get(
             f"{base_url.rstrip('/')}/models",
             headers=headers,
             timeout=OPENAI_COMPATIBLE_FETCH_TIMEOUT,
+            follow_redirects=True,
         )
         response.raise_for_status()
         payload = response.json()
-    except (requests.RequestException, ValueError) as exc:
+    except (httpx.HTTPError, httpx.InvalidURL, ValueError) as exc:
         logger.debug(f"Could not fetch live OpenAI-compatible models from {base_url}: {exc}")
         return []
 

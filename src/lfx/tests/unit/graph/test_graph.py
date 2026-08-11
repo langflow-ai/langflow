@@ -1,5 +1,6 @@
 import copy
 import json
+import pickle
 from types import SimpleNamespace
 
 import pytest
@@ -114,6 +115,14 @@ def test_invalid_node_types():
     g = Graph()
     with pytest.raises(KeyError):
         g.add_nodes_and_edges(graph_data["nodes"], graph_data["edges"])
+
+
+def test_graph_copy_and_pickle_preserve_source_flow_id():
+    graph = Graph()
+    graph.source_flow_id = "source-flow"
+
+    assert copy.deepcopy(graph).source_flow_id == "source-flow"
+    assert pickle.loads(pickle.dumps(graph)).source_flow_id == "source-flow"  # noqa: S301
 
 
 def test_from_payload_blocks_custom_components_when_disabled(monkeypatch):

@@ -69,7 +69,8 @@ export async function addComponentFromSidebar(
     // `page.getByTestId(...)` then trips Playwright's strict-mode check.
     const row = page.getByTestId(testId);
     await row.hover();
-    await row.getByTestId(`add-component-button-${slug}`).click();
+    const rowContainer = row.locator("xpath=..");
+    await rowContainer.getByTestId(`add-component-button-${slug}`).click();
     return;
   }
 
