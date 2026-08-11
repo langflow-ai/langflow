@@ -684,6 +684,31 @@ async def test_get_all__empty_value_warns_and_skips(service, session: AsyncSessi
     assert any("no stored value" in c for c in warning_calls)
 
 
+async def test_get_all_reports_whether_masked_credentials_have_a_value(service, session: AsyncSession):
+    user_id = uuid4()
+    await service.create_variable(
+        user_id,
+        "CONFIGURED_CREDENTIAL",
+        "secret-value",
+        type_=CREDENTIAL_TYPE,
+        session=session,
+    )
+    await service.create_variable(
+        user_id,
+        "EMPTY_CREDENTIAL",
+        "",
+        type_=CREDENTIAL_TYPE,
+        session=session,
+    )
+
+    variables = {variable.name: variable for variable in await service.get_all(user_id, session=session)}
+
+    assert variables["CONFIGURED_CREDENTIAL"].value is None
+    assert variables["CONFIGURED_CREDENTIAL"].has_value is True
+    assert variables["EMPTY_CREDENTIAL"].value is None
+    assert variables["EMPTY_CREDENTIAL"].has_value is False
+
+
 async def test_get_all__decrypt_failure_warns_and_skips(service, session: AsyncSession):
     """get_all warns with a key-mismatch message when decrypt returns empty for a non-empty value."""
     user_id = uuid4()

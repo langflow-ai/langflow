@@ -23,6 +23,19 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
+def has_variable_value(variable: Variable) -> bool:
+    """Return whether a variable has a usable value without exposing credentials."""
+    if not variable.value:
+        return False
+    if variable.type != CREDENTIAL_TYPE:
+        return bool(variable.value.strip())
+    try:
+        decrypted_value = auth_utils.decrypt_api_key(variable.value)
+    except Exception:  # noqa: BLE001
+        return False
+    return bool(decrypted_value.strip())
+
+
 class DatabaseVariableService(VariableService, Service):
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
@@ -288,6 +301,7 @@ class DatabaseVariableService(VariableService, Service):
 
             # Model validate will set value to None if credential type
             variable_read = VariableRead.model_validate(variable, from_attributes=True)
+            variable_read.has_value = has_variable_value(variable)
             variable_read.is_owner = is_owner
             # Deliberately conservative: resource owners can manage shares.
             # Enterprise may authorize additional administrators server-side,

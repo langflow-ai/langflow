@@ -253,6 +253,19 @@ export function getGlobalVariableValue(
   return typeof value === "string" && value.trim() ? value : undefined;
 }
 
+export function hasGlobalVariableValue(
+  variables: GlobalVariable[],
+  name: string,
+): boolean {
+  const variable = variables.find((entry) => entry.name === name);
+  if (!variable) return false;
+  if (variable.has_value !== undefined) return variable.has_value;
+  // Compatibility with servers that predate `has_value`: credential values
+  // are masked, so existence is the only signal those responses provide.
+  if (variable.type === "Credential") return true;
+  return Boolean(getGlobalVariableValue(variables, name));
+}
+
 /**
  * Parse a global-variable value as a boolean. Accepts "true"/"false"
  * (case-insensitive) and the numeric "1"/"0" forms; falls back to
@@ -283,9 +296,13 @@ export function getActiveDBProvider(
     variables,
     ACTIVE_DB_PROVIDER_VARIABLE,
   );
-  if (configuredProvider === "opensearch") return "opensearch";
-  if (configuredProvider === "chroma_cloud") return "chroma_cloud";
-  if (configuredProvider === "postgres") return "postgres";
+  if (
+    (configuredProvider === "opensearch" ||
+      configuredProvider === "chroma_cloud" ||
+      configuredProvider === "postgres") &&
+    isDBProviderConfigured(configuredProvider, variables)
+  )
+    return configuredProvider;
   return "chroma";
 }
 
@@ -410,10 +427,7 @@ export function isDBProviderConfigured(
     )
     .every((field) => {
       if (field.isSecret) {
-        // Credential-type variables have their values masked (empty) in the
-        // global-variables API response, so checking the value would always
-        // return false even when the secret is saved. Check existence instead.
-        return variables.some((v) => v.name === field.variableKey);
+        return hasGlobalVariableValue(variables, field.variableKey);
       }
       return Boolean(getGlobalVariableValue(variables, field.variableKey));
     });
