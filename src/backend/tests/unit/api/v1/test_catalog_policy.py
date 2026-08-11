@@ -408,18 +408,16 @@ def _usage_client(monkeypatch, *, flows, flows_scanned, index):
         catalog_policy._FlowUsage(flow_id=flow_id, name=name, component_keys=frozenset(keys))
         for flow_id, name, keys in flows
     ]
-    monkeypatch.setattr(
-        catalog_policy,
-        "_load_flow_component_usage",
-        AsyncMock(return_value=(usage, flows_scanned)),
-    )
+    loader = AsyncMock(return_value=(usage, flows_scanned))
+    monkeypatch.setattr(catalog_policy, "_usage_scan_cache", None)
+    monkeypatch.setattr(catalog_policy, "_load_flow_component_usage", loader)
     monkeypatch.setattr(catalog_policy, "_usage_identity_index", AsyncMock(return_value=index))
-    return client
+    return client, loader
 
 
 def test_usage_counts_each_flow_once_per_component(monkeypatch):
     flow_a, flow_b = uuid4(), uuid4()
-    client = _usage_client(
+    client, _loader = _usage_client(
         monkeypatch,
         flows=[
             (flow_a, "Flow A", {"ChatInput", "Agent"}),
@@ -440,7 +438,7 @@ def test_usage_counts_each_flow_once_per_component(monkeypatch):
 
 def test_usage_resolves_legacy_aliases_to_canonical_identity(monkeypatch):
     flow_a, flow_b = uuid4(), uuid4()
-    client = _usage_client(
+    client, _loader = _usage_client(
         monkeypatch,
         flows=[
             # A legacy alias and its canonical key are the same component and
@@ -463,7 +461,7 @@ def test_usage_resolves_legacy_aliases_to_canonical_identity(monkeypatch):
 
 def test_usage_flows_drilldown_matches_aliases_and_sorts_by_name(monkeypatch):
     flow_a, flow_b, flow_c = uuid4(), uuid4(), uuid4()
-    client = _usage_client(
+    client, _loader = _usage_client(
         monkeypatch,
         flows=[
             (flow_a, "zeta", {"Prompt"}),
@@ -494,7 +492,7 @@ def test_usage_flows_drilldown_matches_aliases_and_sorts_by_name(monkeypatch):
 
 def test_usage_flows_drilldown_truncates_to_limit_but_reports_total(monkeypatch):
     flows = [(uuid4(), f"flow-{index:02d}", {"ChatInput"}) for index in range(5)]
-    client = _usage_client(
+    client, _loader = _usage_client(
         monkeypatch,
         flows=flows,
         flows_scanned=5,
@@ -514,7 +512,7 @@ def test_usage_flows_drilldown_truncates_to_limit_but_reports_total(monkeypatch)
 
 def test_usage_flows_drilldown_unknown_key_matches_exact_only(monkeypatch):
     flow_a = uuid4()
-    client = _usage_client(
+    client, _loader = _usage_client(
         monkeypatch,
         flows=[(flow_a, "Custom", {"MyCustomComponent"})],
         flows_scanned=1,
@@ -531,7 +529,7 @@ def test_usage_flows_drilldown_unknown_key_matches_exact_only(monkeypatch):
 
 
 def test_usage_flows_drilldown_rejects_blank_component(monkeypatch):
-    client = _usage_client(monkeypatch, flows=[], flows_scanned=0, index=_usage_index(set()))
+    client, _loader = _usage_client(monkeypatch, flows=[], flows_scanned=0, index=_usage_index(set()))
 
     missing = client.get("/api/v1/catalog-policy/usage/flows")
     blank = client.get("/api/v1/catalog-policy/usage/flows", params={"component": "   "})
@@ -540,9 +538,47 @@ def test_usage_flows_drilldown_rejects_blank_component(monkeypatch):
     assert blank.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
+def test_usage_endpoints_share_one_flow_scan_within_the_ttl(monkeypatch):
+    client, loader = _usage_client(
+        monkeypatch,
+        flows=[(uuid4(), "Flow A", {"ChatInput"})],
+        flows_scanned=1,
+        index=_usage_index({"ChatInput"}),
+    )
+
+    first = client.get("/api/v1/catalog-policy/usage")
+    second = client.get("/api/v1/catalog-policy/usage")
+    drilldown = client.get("/api/v1/catalog-policy/usage/flows", params={"component": "ChatInput"})
+
+    assert first.status_code == second.status_code == drilldown.status_code == 200
+    assert first.json() == second.json()
+    assert drilldown.json()["total"] == 1
+    loader.assert_awaited_once()
+
+
+def test_usage_scan_cache_expires_after_the_ttl(monkeypatch):
+    client, loader = _usage_client(
+        monkeypatch,
+        flows=[(uuid4(), "Flow A", {"ChatInput"})],
+        flows_scanned=1,
+        index=_usage_index({"ChatInput"}),
+    )
+    monkeypatch.setattr(catalog_policy, "USAGE_SCAN_CACHE_TTL_SECONDS", 0.0)
+
+    first = client.get("/api/v1/catalog-policy/usage")
+    second = client.get("/api/v1/catalog-policy/usage")
+
+    assert first.status_code == second.status_code == 200
+    assert loader.await_count == 2
+
+
 @pytest.mark.anyio
-async def test_usage_scans_persisted_flows_and_excludes_saved_components(client, logged_in_headers_super_user):
+async def test_usage_scans_persisted_flows_and_excludes_saved_components(
+    client, logged_in_headers_super_user, monkeypatch
+):
     """End-to-end: flow rows written through the API are visible to usage reads."""
+    # Discard any scan cached by an earlier test against a different database.
+    monkeypatch.setattr(catalog_policy, "_usage_scan_cache", None)
     custom_key = f"UsageProbeComponent{uuid4().hex}"
 
     def _graph(*component_types: str) -> dict:

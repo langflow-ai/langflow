@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from typing import TYPE_CHECKING, Annotated, Literal, NamedTuple
 from uuid import UUID
 
@@ -29,12 +30,18 @@ from langflow.services.deps import get_catalog_policy_service
 from langflow.services.policy_bundle import PolicyBundleRevisionConflictError
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from lfx.utils.component_aliases import ComponentIdentityIndex
 
 router = APIRouter(prefix="/catalog-policy", tags=["Catalog Policy"])
 
 USAGE_FLOWS_DEFAULT_LIMIT = 100
 USAGE_FLOWS_MAX_LIMIT = 500
+# How long one flow-table scan is reused by the usage endpoints. Governance
+# counts may lag flow writes by up to this window; policy writes never change
+# usage data, so a refetch after saving a policy is served from cache exactly.
+USAGE_SCAN_CACHE_TTL_SECONDS = 30.0
 
 
 def _active_snapshot(service: BaseCatalogPolicyService) -> tuple[CatalogPolicySnapshot, bool]:
@@ -201,6 +208,40 @@ async def _load_flow_component_usage() -> tuple[list[_FlowUsage], int]:
     return usage, len(rows)
 
 
+class _UsageScan(NamedTuple):
+    """An immutable flow-table scan plus the monotonic instant it was taken."""
+
+    usage: tuple[_FlowUsage, ...]
+    flows_scanned: int
+    loaded_at: float
+
+
+_usage_scan_cache: _UsageScan | None = None
+
+
+async def _cached_flow_component_usage() -> tuple[Sequence[_FlowUsage], int]:
+    """Serve the flow scan from a short process-local cache.
+
+    Both usage endpoints share one scan per TTL window, so an admin page that
+    fetches counts on mount and refetches after every policy save costs one
+    flow-table read per window instead of one per request. There is
+    deliberately no lock: concurrent cache misses each scan and the last
+    writer wins, which only duplicates work an uncached implementation would
+    do anyway. The cache is per-process; workers converge within one TTL.
+    """
+    global _usage_scan_cache  # noqa: PLW0603 - module-level TTL cache
+    cached = _usage_scan_cache
+    if cached is not None and time.monotonic() - cached.loaded_at < USAGE_SCAN_CACHE_TTL_SECONDS:
+        return cached.usage, cached.flows_scanned
+    usage, flows_scanned = await _load_flow_component_usage()
+    _usage_scan_cache = _UsageScan(
+        usage=tuple(usage),
+        flows_scanned=flows_scanned,
+        loaded_at=time.monotonic(),
+    )
+    return usage, flows_scanned
+
+
 async def _usage_identity_index() -> ComponentIdentityIndex:
     """Return the collision-aware identity index for the current registry.
 
@@ -228,9 +269,10 @@ async def get_component_usage(
     a legacy alias is counted under the component it resolves to today, the
     same resolution catalog enforcement applies. Keys not present in the
     registry (custom or synthetic components) are counted under their exact
-    stored key. Each flow is counted at most once per component.
+    stored key. Each flow is counted at most once per component. Counts may
+    lag flow writes by up to ``USAGE_SCAN_CACHE_TTL_SECONDS``.
     """
-    usage, flows_scanned = await _load_flow_component_usage()
+    usage, flows_scanned = await _cached_flow_component_usage()
     identity_index = await _usage_identity_index()
 
     counts: dict[str, int] = {}
@@ -261,7 +303,8 @@ async def get_component_usage_flows(
     A flow matches when the queried key and any of the flow's stored keys
     resolve to a shared canonical identity — the same matching rule flow
     writes and runs enforce. Flows are sorted by name, then id, and truncated
-    to ``limit``; ``total`` always reports the full match count.
+    to ``limit``; ``total`` always reports the full match count. Results may
+    lag flow writes by up to ``USAGE_SCAN_CACHE_TTL_SECONDS``.
     """
     component = component.strip()
     if not component:
@@ -269,7 +312,7 @@ async def get_component_usage_flows(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="component must not be blank",
         )
-    usage, _flows_scanned = await _load_flow_component_usage()
+    usage, _flows_scanned = await _cached_flow_component_usage()
     identity_index = await _usage_identity_index()
 
     target_identities = identity_index.resolve(component)
