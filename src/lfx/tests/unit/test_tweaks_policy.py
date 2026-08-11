@@ -183,3 +183,73 @@ def test_process_tweaks_permissive_leaves_a_normal_flow_working():
     with patch("lfx.processing.process._resolve_tweak_policy", return_value="permissive"):
         result = process_tweaks(graph, {"n1": {"a": "new"}})
     assert result["data"]["nodes"][0]["data"]["node"]["template"]["a"]["value"] == "new"
+
+
+# --- the graph-level path (streaming and background run modes) -------------
+# These modes build the graph first, so they land in process_tweaks_on_graph
+# rather than process_tweaks. Before the policy existed this path filtered only
+# the literal key "code", so it accepted tweaks the sync mode refused.
+
+
+class _FakeVertex:
+    """Minimal stand-in for a built Vertex.
+
+    A real Graph is not needed to prove which tweaks the graph-level path
+    refuses, and constructing one drags in component loading.
+    """
+
+    def __init__(self, vertex_id: str, template: dict, node_type: str | None = None) -> None:
+        self.id = vertex_id
+        self.data = {"node": {"template": template}}
+        if node_type is not None:
+            self.data["type"] = node_type
+        self.params: dict = {}
+        self.load_from_db_fields: list[str] = []
+        self.raw_params: dict = {}
+
+    def update_raw_params(self, params: dict, *, overwrite: bool = False) -> None:
+        if overwrite:
+            self.raw_params.update(params)
+
+
+def test_graph_path_refuses_a_sandbox_field_the_old_filter_allowed():
+    """`global_imports` is sandbox-widening and was previously applied here.
+
+    The old code removed only the key "code", so every other entry in
+    CODE_EXECUTION_FIELD_NAMES reached the built component.
+    """
+    from lfx.processing.process import apply_tweaks_on_vertex
+
+    vertex = _FakeVertex(
+        "v1",
+        {"global_imports": {"value": "math", "type": "str"}},
+        node_type="PythonREPLComponent",
+    )
+    refused = apply_tweaks_on_vertex(vertex, {"global_imports": "os,subprocess,socket"}, policy="permissive")
+    assert refused == ["global_imports"]
+    assert vertex.raw_params == {}
+
+
+def test_graph_path_honors_the_policy():
+    from lfx.processing.process import apply_tweaks_on_vertex
+
+    vertex = _FakeVertex("v1", {"a": {"value": "old", "type": "str"}})
+    refused = apply_tweaks_on_vertex(vertex, {"a": "new"}, policy="off")
+    assert refused == ["a"]
+    assert vertex.raw_params == {}
+
+
+def test_graph_path_applies_and_persists_an_allowed_tweak():
+    """The accepted value must reach raw_params, not only vertex.params.
+
+    Setting params alone does not reach the built component at runtime, which is
+    the bug the two former private copies of this function worked around.
+    """
+    from lfx.processing.process import apply_tweaks_on_vertex
+
+    vertex = _FakeVertex("v1", {"a": {"value": "old", "type": "str"}})
+    vertex.params = {"a": "old"}
+    refused = apply_tweaks_on_vertex(vertex, {"a": "new"}, policy="permissive")
+    assert refused == []
+    assert vertex.raw_params == {"a": "new"}
+    assert vertex.params["a"] == "new"

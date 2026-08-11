@@ -20,7 +20,6 @@ from lfx.schema.dotdict import dotdict
 from lfx.services.cache.utils import CacheMiss
 from lfx.services.deps import get_shared_component_cache_service
 from lfx.template.field.base import Output
-from lfx.utils.flow_validation import is_protected_tweak_field
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -533,7 +532,9 @@ class RunFlowBaseComponent(Component):
             )  # may or may not want to create a deepcopy of the graph here
 
             if tweaks := self._build_flow_tweak_data():
-                graph = self._process_tweaks_on_graph(graph, tweaks)
+                from lfx.processing.process import process_tweaks_on_graph
+
+                graph = process_tweaks_on_graph(graph, tweaks)
 
             result = await run_flow(
                 inputs=self._build_inputs(tweaks),
@@ -757,30 +758,3 @@ class RunFlowBaseComponent(Component):
             self._attributes["flow_name_selected_updated_at"] = self._cached_flow_updated_at
         # remove stale data from previous toolmode run
         self._attributes.pop("flow_tweak_data", None)
-
-    def _process_tweaks_on_graph(self, graph: Graph, tweaks: dict[str, dict[str, Any]]):
-        # there is a bug with the lfx process_tweaks_on_graph function
-        # that causes it to not persist the tweaks to the graph at runtime.
-        # so we implement a custom version here that fixes the bug.
-        # TODO: make a fast follow-up PR to fix this bug in the existing helper.
-        for vertex in graph.vertices:
-            if not (isinstance(vertex, Vertex) and isinstance(vertex.id, str)):
-                continue
-            if not (node_tweaks := tweaks.get(vertex.id)):
-                continue
-            template_data = vertex.data.get("node", {}).get("template", {})
-            component_type = vertex.data.get("type")
-            if not isinstance(template_data, dict):
-                continue
-            safe_tweaks = {}
-            for tweak_name, tweak_value in node_tweaks.items():
-                field = template_data.get(tweak_name)
-                if not isinstance(field, dict):
-                    continue
-                if is_protected_tweak_field(component_type, tweak_name, field.get("type", "")):
-                    logger.warning(f"Security: refusing to override protected field {tweak_name!r} via tweaks.")
-                    continue
-                safe_tweaks[tweak_name] = tweak_value
-            if safe_tweaks:
-                vertex.update_raw_params(safe_tweaks, overwrite=True)
-        return graph

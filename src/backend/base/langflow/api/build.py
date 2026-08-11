@@ -9,8 +9,8 @@ from fastapi import BackgroundTasks, HTTPException, Response
 from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
-from lfx.graph.vertex.base import Vertex
 from lfx.log.logger import logger
+from lfx.processing.process import process_tweaks_on_graph
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
 from lfx.utils.file_path_security import LocalFileAccessError
@@ -529,18 +529,16 @@ async def generate_flow_events(
             # Apply request tweaks to the built graph. The sync path applies
             # tweaks before Graph construction; the streaming/background path
             # builds from the DB (or request data), so tweaks must be applied
-            # to the built graph here or they are silently dropped. We use
-            # ``update_raw_params`` rather than the lfx ``process_tweaks_on_graph``
-            # helper because that helper only sets ``vertex.params`` and does not
-            # persist the override to runtime (mirrors the workaround in
-            # ``lfx.base.tools.run_flow._process_tweaks_on_graph``).
+            # to the built graph here or they are silently dropped.
+            #
+            # This used to filter only the literal key "code" and write straight
+            # through ``update_raw_params``, which meant the streaming and
+            # background modes accepted tweaks the sync mode refused: the
+            # protected-field floor and the deployment tweak policy were never
+            # consulted. ``process_tweaks_on_graph`` now enforces both and
+            # persists the override correctly, so this path uses it.
             if tweaks:
-                for vertex in graph.vertices:
-                    if not (isinstance(vertex, Vertex) and isinstance(vertex.id, str)):
-                        continue
-                    if node_tweaks := tweaks.get(vertex.id):
-                        node_tweaks = {k: v for k, v in node_tweaks.items() if k != "code"}
-                        vertex.update_raw_params(node_tweaks, overwrite=True)
+                process_tweaks_on_graph(graph, tweaks)
 
             graph.set_run_id(build_run_id)
             if job_id is not None:
