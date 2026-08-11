@@ -118,7 +118,10 @@ class JobRunner:
                 with contextlib.suppress(Exception):
                     await self._jobs.update_job_status(job_id, JobStatus.FAILED, finished_timestamp=True)
                 with contextlib.suppress(Exception):
-                    await self._jobs.set_error(job_id, {"type": "suspend_failed", "detail": str(suspend_exc)})
+                    await self._jobs.set_error(
+                        job_id,
+                        {"type": "suspend_failed", "detail": "Workflow suspension failed."},
+                    )
             else:
                 paused = True
                 await logger.adebug(f"Background job {job_id} suspended for human input")
