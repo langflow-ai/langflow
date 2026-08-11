@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 from lfx.base.models.provider_registry import resolve_provider_id
-from lfx.services.model_provider_policy import ModelProviderPolicyService
+from lfx.services.model_provider_policy import ModelProviderPolicyService, normalize_blocked_model_key
 from lfx.services.policy_bundle import PolicyBundleSnapshot, policy_bundle_content_hash
 from sqlalchemy import update
 from sqlmodel import col, select
@@ -95,6 +95,10 @@ def _normalize_catalog_keys(keys: Collection[str]) -> frozenset[str]:
     return frozenset(normalized)
 
 
+def _normalize_model_keys(keys: Collection[str]) -> frozenset[str]:
+    return frozenset(normalize_blocked_model_key(raw_key) for raw_key in keys)
+
+
 def _normalize_reason(reason: str | None) -> str | None:
     if reason is None:
         return None
@@ -123,6 +127,7 @@ def _snapshot_from_row(row: PolicyBundleRevision, *, initialized: bool | None = 
         approved_provider_ids=frozenset(row.approved_provider_ids),
         blocked_component_keys=frozenset(row.blocked_component_keys),
         blocked_template_keys=frozenset(row.blocked_template_keys),
+        blocked_model_keys=frozenset(row.blocked_model_keys or []),
         content_hash=row.content_hash,
         created_at=row.created_at,
         created_by=row.created_by,
@@ -252,6 +257,7 @@ async def replace_policy_bundle_state(
     approved_provider_ids: Collection[str],
     blocked_component_keys: Collection[str],
     blocked_template_keys: Collection[str],
+    blocked_model_keys: Collection[str] = (),
     actor_user_id: UUID | None,
     reason: str | None = None,
     rollback_of_revision: int | None = None,
@@ -262,6 +268,7 @@ async def replace_policy_bundle_state(
     providers = _normalize_provider_ids(approved_provider_ids)
     components = _normalize_catalog_keys(blocked_component_keys)
     templates = _normalize_catalog_keys(blocked_template_keys)
+    models = _normalize_model_keys(blocked_model_keys)
     normalized_reason = _normalize_reason(reason)
     normalized_source = _normalize_source(source)
     new_revision = expected_revision + 1
@@ -296,10 +303,12 @@ async def replace_policy_bundle_state(
         approved_provider_ids=providers,
         blocked_component_keys=components,
         blocked_template_keys=templates,
+        blocked_model_keys=models,
         content_hash=policy_bundle_content_hash(
             approved_provider_ids=providers,
             blocked_component_keys=components,
             blocked_template_keys=templates,
+            blocked_model_keys=models,
         ),
         created_at=created_at,
         created_by=actor_user_id,
@@ -313,6 +322,7 @@ async def replace_policy_bundle_state(
             approved_provider_ids=sorted(snapshot.approved_provider_ids),
             blocked_component_keys=sorted(snapshot.blocked_component_keys),
             blocked_template_keys=sorted(snapshot.blocked_template_keys),
+            blocked_model_keys=sorted(snapshot.blocked_model_keys),
             content_hash=snapshot.content_hash,
             source=normalized_source,
             created_at=created_at,
@@ -342,6 +352,7 @@ async def rollback_policy_bundle_state(
         approved_provider_ids=target.approved_provider_ids,
         blocked_component_keys=target.blocked_component_keys,
         blocked_template_keys=target.blocked_template_keys,
+        blocked_model_keys=target.blocked_model_keys,
         actor_user_id=actor_user_id,
         reason=reason or f"Rollback to policy bundle revision {target_revision}",
         rollback_of_revision=target_revision,
@@ -355,6 +366,7 @@ async def bootstrap_policy_bundle_if_pristine(
     approved_provider_ids: Collection[str],
     blocked_component_keys: Collection[str],
     blocked_template_keys: Collection[str],
+    blocked_model_keys: Collection[str] = (),
     reason: str | None = None,
 ) -> tuple[PolicyBundleSnapshot, bool]:
     """Initialize a migration-created pristine bundle exactly once.
@@ -372,6 +384,7 @@ async def bootstrap_policy_bundle_if_pristine(
             approved_provider_ids=approved_provider_ids,
             blocked_component_keys=blocked_component_keys,
             blocked_template_keys=blocked_template_keys,
+            blocked_model_keys=blocked_model_keys,
             actor_user_id=None,
             reason=reason or "Bootstrap policy bundle from deployment environment",
             source="environment",
