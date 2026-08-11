@@ -1,7 +1,10 @@
 import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { SafariScrollFix } from "@/components/common/safari-scroll-fix";
+import { ResponseCompleteStatus } from "@/shared/components/response-complete-status";
+import { useResponseCompleteCue } from "@/shared/hooks/use-response-complete-cue";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import type { ChatMessageType } from "@/types/chat";
@@ -183,12 +186,15 @@ export const Messages = ({
   updateChat,
   closeChat,
 }: MessagesProps) => {
+  const { t } = useTranslation();
   const { chatHistory, loadMore, hasMore, isLoadingMore } =
     useChatHistory(visibleSession);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const isPlaygroundOpen = usePlaygroundStore((state) => state.isOpen);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  const responseCue = useResponseCompleteCue(isBuilding, chatHistory);
 
   // Show thinking placeholder when building and last message is from user (no bot response yet)
   // Only show if the flow has a ChatOutput, otherwise there's nothing to produce a response
@@ -215,7 +221,17 @@ export const Messages = ({
   );
 
   const messagesContent = (
-    <div className="flex flex-col flex-grow place-self-center w-full relative overflow-x-hidden">
+    // aria-live="off" neutralizes role="log"'s implicit politeness: React
+    // remounts earlier messages on send (lastMessage flips), which a live
+    // list region re-announces as additions — Safari/VoiceOver read the whole
+    // history on every send (LE-2041 QA). The completion cue is announced
+    // solely by ResponseCompleteStatus below.
+    <div
+      className="flex flex-col flex-grow place-self-center w-full relative overflow-x-hidden"
+      role="log"
+      aria-live="off"
+      aria-label={t("chat.messagesRegionLabel")}
+    >
       {chatHistory && (isBuilding || chatHistory.length > 0) && (
         <>
           <LoadMoreTrigger
@@ -226,7 +242,7 @@ export const Messages = ({
           {chatHistory.map((chat: ChatMessageType, index) => {
             return (
               <ChatMessage
-                key={`${chat.id}-${index}`}
+                key={chat.id}
                 chat={chat}
                 lastMessage={
                   !showThinkingPlaceholder && chatHistory.length - 1 === index
@@ -270,6 +286,11 @@ export const Messages = ({
       <StickToBottom.Content className="flex flex-col min-h-full ">
         {messagesContent}
       </StickToBottom.Content>
+      <ResponseCompleteStatus
+        completedCount={responseCue.completedCount}
+        completedText={responseCue.completedText}
+        isAnnouncing={responseCue.isAnnouncing}
+      />
       <SafariScrollFix />
     </StickToBottom>
   );

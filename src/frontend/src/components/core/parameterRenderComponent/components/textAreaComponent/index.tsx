@@ -250,11 +250,19 @@ export default function TextAreaComponent({
           </Button>
         </ComponentTextModal>
       </div>
-      {password && !isFocused && (
-        <div
+      {password && (
+        <button
+          type="button"
+          aria-label={
+            passwordVisible ? t("input.hidePassword") : t("input.showPassword")
+          }
           onClick={() => {
             setPasswordVisible(!passwordVisible);
           }}
+          // Hidden visually while the input is being edited, but kept mounted
+          // so forward Tab from the input still reaches it; once it receives
+          // focus the input blurs and the toggle becomes visible again.
+          className={cn(isFocused && "pointer-events-none opacity-0")}
         >
           <IconComponent
             name={passwordVisible ? "eye" : "eye-off"}
@@ -267,7 +275,7 @@ export default function TextAreaComponent({
               "right-10",
             )}
           />
-        </div>
+        </button>
       )}
     </div>
   );

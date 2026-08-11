@@ -94,8 +94,35 @@ def _structural_template_keys(template: Mapping[str, Any]) -> set[str]:
     return {key for key in template if not key.startswith("_") and key not in TRANSIENT_TEMPLATE_KEYS}
 
 
-def _template_keys_equal(original: dict, user: dict) -> bool:
-    return _structural_template_keys(original) == _structural_template_keys(user)
+def new_template_field_keys(registry_template: Mapping[str, Any], flow_template: Mapping[str, Any]) -> set[str]:
+    """Return registry template fields the saved flow predates.
+
+    These are the fields ``apply_safe_upgrades`` introduces (with their registry-declared
+    state) when it re-stamps a safe node's code, so the checker's definition of a safe
+    upgrade and the applier's write stay in lockstep.
+    """
+    return _structural_template_keys(registry_template) - _structural_template_keys(flow_template)
+
+
+def _template_keys_compatible(registry_template: dict, flow_template: dict) -> bool:
+    """Return True unless the registry grew a field a safe upgrade cannot fill.
+
+    Template key sets are compared directionally, not for equality:
+
+    - A field only the *flow* has is one the registry dropped. Its stale value is not read
+      once the code is re-stamped, and ``apply_safe_upgrades`` leaves it in place, so an
+      edge into it keeps its target handle.
+    - A field only the *registry* has is one the saved flow predates — the evolution the
+      contributing docs recommend as non-breaking. ``apply_safe_upgrades`` introduces it
+      exactly as the registry declares it, so it only breaks when that declared state is
+      unusable: a *required* field with nothing to fill it, which would turn a flow that
+      ran into one that fails asking for input.
+    """
+    for key in new_template_field_keys(registry_template, flow_template):
+        field = registry_template.get(key)
+        if isinstance(field, Mapping) and field.get("required") and field.get("value") in (None, ""):
+            return False
+    return True
 
 
 def _input_types_contained(registry_template: dict, flow_template: dict) -> bool:
@@ -113,7 +140,10 @@ def _input_types_contained(registry_template: dict, flow_template: dict) -> bool
             continue
         flow_field = flow_template.get(key)
         if not flow_field:
-            return False
+            # A field the saved flow predates has no saved edges feeding it, and
+            # apply_safe_upgrades introduces it with the registry's declared input_types,
+            # so there is nothing to narrow.
+            continue
         flow_types = flow_field.get("input_types") or []
         # Every type the saved flow relied on must still be accepted by the registry.
         if not all(t in registry_types for t in flow_types):
@@ -167,7 +197,7 @@ def _has_breaking_change(registry_entry: dict, node_info: dict) -> bool:
         return True
     registry_template = registry_entry.get("template") or {}
     flow_template = node_info.get("template") or {}
-    if registry_template and not _template_keys_equal(registry_template, flow_template):
+    if registry_template and not _template_keys_compatible(registry_template, flow_template):
         return True
     return bool(registry_template) and not _input_types_contained(registry_template, flow_template)
 

@@ -117,12 +117,13 @@ def test_outdated_breaking_when_output_removed():
     assert report.nodes[0].status == "outdated_breaking"
 
 
-def test_outdated_breaking_when_template_key_removed():
+def test_outdated_safe_when_registry_dropped_template_field():
+    """A field only the flow has (the registry dropped it) holds a value nothing reads."""
     old_template_extra = {"prompt": {"value": "hello"}}
     node = _node(code=REGISTRY_CODE_V1, template_extra=old_template_extra)
     registry = _registry(code=REGISTRY_CODE_V2)
     report = check_flow_compatibility(_flow(node), registry)
-    assert report.nodes[0].status == "outdated_breaking"
+    assert report.nodes[0].status == "outdated_safe"
 
 
 def test_outdated_breaking_when_input_types_narrowed():
@@ -256,6 +257,76 @@ def test_outdated_safe_when_input_types_widened():
     """The registry accepting an additional input type (widening) is safe, not breaking."""
     node = _node(code=REGISTRY_CODE_V1, template_extra={"inp": {"input_types": ["Message"]}})
     registry = _registry(code=REGISTRY_CODE_V2, template_extra={"inp": {"input_types": ["Message", "Data"]}})
+    report = check_flow_compatibility(_flow(node), registry)
+    assert report.nodes[0].status == "outdated_safe"
+
+
+# --- template key differences are directional, not an equality check -------------------
+
+
+def test_outdated_safe_when_registry_added_optional_field():
+    """The registry growing an optional field — the docs-recommended evolution — is safe.
+
+    apply_safe_upgrades introduces the field with its registry default, so the re-stamped
+    code never runs without a field it expects.
+    """
+    node = _node(code=REGISTRY_CODE_V1)
+    registry = _registry(code=REGISTRY_CODE_V2, template_extra={"new_flag": {"value": False, "required": False}})
+    report = check_flow_compatibility(_flow(node), registry)
+    assert report.nodes[0].status == "outdated_safe"
+
+
+def test_outdated_safe_when_registry_added_required_field_with_default():
+    """A new required field whose registry default is usable leaves the node runnable."""
+    node = _node(code=REGISTRY_CODE_V1)
+    registry = _registry(code=REGISTRY_CODE_V2, template_extra={"retries": {"value": 3, "required": True}})
+    report = check_flow_compatibility(_flow(node), registry)
+    assert report.nodes[0].status == "outdated_safe"
+
+
+def test_outdated_safe_when_registry_added_required_field_with_falsy_default():
+    """0, False, and [] are usable defaults; only None and "" mean there is nothing to fill.
+
+    Pins the guard to ``value in (None, "")`` — a truthiness rewrite would wrongly start
+    marking these as breaking.
+    """
+    for falsy_default in (0, False, []):
+        node = _node(code=REGISTRY_CODE_V1)
+        registry = _registry(
+            code=REGISTRY_CODE_V2, template_extra={"max_retries": {"value": falsy_default, "required": True}}
+        )
+        report = check_flow_compatibility(_flow(node), registry)
+        assert report.nodes[0].status == "outdated_safe"
+
+
+def test_outdated_breaking_when_registry_added_required_field_without_default():
+    """A new required field with nothing to fill it turns a flow that ran into one that fails."""
+    for empty_default in ("", None):
+        node = _node(code=REGISTRY_CODE_V1)
+        registry = _registry(
+            code=REGISTRY_CODE_V2, template_extra={"api_key": {"value": empty_default, "required": True}}
+        )
+        report = check_flow_compatibility(_flow(node), registry)
+        assert report.nodes[0].status == "outdated_breaking"
+
+
+def test_outdated_safe_when_registry_added_handle_input_field():
+    """A new field with input_types has no saved edges feeding it, so nothing narrows."""
+    node = _node(code=REGISTRY_CODE_V1)
+    registry = _registry(code=REGISTRY_CODE_V2, template_extra={"tools": {"input_types": ["Tool"], "value": ""}})
+    report = check_flow_compatibility(_flow(node), registry)
+    assert report.nodes[0].status == "outdated_safe"
+
+
+def test_outdated_safe_when_optional_field_renamed():
+    """A rename is a drop plus an add; with an optional replacement neither direction breaks.
+
+    The saved value of the old field is not carried over — the new field starts at its
+    registry default, the same state the frontend's update endpoint produces when it
+    rebuilds the template.
+    """
+    node = _node(code=REGISTRY_CODE_V1, template_extra={"legacy_input": {"value": "user set"}})
+    registry = _registry(code=REGISTRY_CODE_V2, template_extra={"current_input": {"value": ""}})
     report = check_flow_compatibility(_flow(node), registry)
     assert report.nodes[0].status == "outdated_safe"
 
