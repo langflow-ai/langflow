@@ -35,13 +35,19 @@ def test_azure_ai_foundry_metadata_shape():
     assert meta["mapping"]["model_param"] == "model"
 
     var_keys = {v["variable_key"] for v in meta["variables"]}
-    assert var_keys == {"AZURE_AI_FOUNDRY_API_KEY", "AZURE_AI_FOUNDRY_ENDPOINT"}
+    assert var_keys == {"AZURE_AI_FOUNDRY_API_KEY", "AZURE_AI_FOUNDRY_ENDPOINT", "AZURE_AI_FOUNDRY_API_VERSION"}
 
     by_key = {v["variable_key"]: v for v in meta["variables"]}
     assert by_key["AZURE_AI_FOUNDRY_API_KEY"]["required"] is True
     assert by_key["AZURE_AI_FOUNDRY_API_KEY"]["is_secret"] is True
     assert by_key["AZURE_AI_FOUNDRY_API_KEY"]["langchain_param"] == "credential"
     assert by_key["AZURE_AI_FOUNDRY_ENDPOINT"]["required"] is True
+    assert by_key["AZURE_AI_FOUNDRY_API_VERSION"]["required"] is False
+    assert by_key["AZURE_AI_FOUNDRY_API_VERSION"]["is_secret"] is False
+    # Discovery-only knob: must never be wired into the chat/embedding constructors
+    # or mapped onto a component field.
+    assert "langchain_param" not in by_key["AZURE_AI_FOUNDRY_API_VERSION"]
+    assert "component_metadata" not in by_key["AZURE_AI_FOUNDRY_API_VERSION"]
 
 
 def test_azure_ai_foundry_appears_in_get_model_providers():
@@ -64,6 +70,7 @@ def test_azure_ai_foundry_env_vars_registered_for_auto_import():
 
     assert "AZURE_AI_FOUNDRY_API_KEY" in VARIABLES_TO_GET_FROM_ENVIRONMENT
     assert "AZURE_AI_FOUNDRY_ENDPOINT" in VARIABLES_TO_GET_FROM_ENVIRONMENT
+    assert "AZURE_AI_FOUNDRY_API_VERSION" in VARIABLES_TO_GET_FROM_ENVIRONMENT
 
 
 def test_azure_ai_foundry_resolves_to_langchain_azure_ai():
@@ -288,6 +295,59 @@ def test_fetch_live_azure_ai_foundry_models_excludes_non_chat_deployments():
 
     assert [m["name"] for m in llms] == ["gpt-4o", "Meta-Llama-3.1-8B-Instruct"]
     assert [m["name"] for m in embeddings] == ["text-embedding-ada-002"]
+
+
+def test_fetch_live_azure_ai_foundry_models_honors_configured_api_version():
+    """AZURE_AI_FOUNDRY_API_VERSION overrides the default deployments api-version."""
+    from lfx.base.models import model_utils
+
+    def lookup(_user_id, variable_key):
+        return {
+            "AZURE_AI_FOUNDRY_ENDPOINT": _FOUNDRY_ENDPOINT,
+            "AZURE_AI_FOUNDRY_API_KEY": "test-key",  # pragma: allowlist secret
+            "AZURE_AI_FOUNDRY_API_VERSION": "2024-10-21",
+        }.get(variable_key)
+
+    response = _deployments_response([{"id": "gpt-4o", "model": "gpt-4o", "status": "succeeded"}])
+
+    with (
+        patch.object(model_utils, "get_provider_variable_value", side_effect=lookup),
+        patch.object(model_utils, "ssrf_safe_httpx_get", return_value=response) as mock_get,
+    ):
+        models = model_utils.fetch_live_azure_ai_foundry_models("user-1", model_type="llm")
+
+    assert mock_get.call_args.args[0] == (
+        "https://example.services.ai.azure.com/openai/deployments?api-version=2024-10-21"
+    )
+    assert [m["name"] for m in models] == ["gpt-4o"]
+
+
+@pytest.mark.parametrize(
+    "bad_version",
+    ["2023&injected=1", "2023-03-15-preview?x=1", "a b", "-leading-dash", ""],
+    ids=["ampersand", "question-mark", "space", "leading-dash", "empty"],
+)
+def test_fetch_live_azure_ai_foundry_models_rejects_unsafe_api_version(bad_version):
+    """Unsafe api-version values fall back to the default instead of reaching the URL."""
+    from lfx.base.models import model_utils
+
+    def lookup(_user_id, variable_key):
+        return {
+            "AZURE_AI_FOUNDRY_ENDPOINT": _FOUNDRY_ENDPOINT,
+            "AZURE_AI_FOUNDRY_API_KEY": "test-key",  # pragma: allowlist secret
+            "AZURE_AI_FOUNDRY_API_VERSION": bad_version,
+        }.get(variable_key)
+
+    response = _deployments_response([{"id": "gpt-4o", "model": "gpt-4o", "status": "succeeded"}])
+
+    with (
+        patch.object(model_utils, "get_provider_variable_value", side_effect=lookup),
+        patch.object(model_utils, "ssrf_safe_httpx_get", return_value=response) as mock_get,
+    ):
+        models = model_utils.fetch_live_azure_ai_foundry_models("user-1", model_type="llm")
+
+    assert mock_get.call_args.args[0] == _FOUNDRY_DEPLOYMENTS_URL
+    assert [m["name"] for m in models] == ["gpt-4o"]
 
 
 def test_fetch_live_azure_ai_foundry_models_flags_no_tool_chat_models():

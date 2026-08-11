@@ -580,13 +580,34 @@ def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: 
     ]
 
 
-# The deployments listing is a resource-level Azure OpenAI data-plane route. Microsoft
-# docs steer new integrations to the ARM management plane (which needs Entra auth plus
-# subscription/resource-group context this provider doesn't collect), but this
-# api-version still answers with data[].{id,model,status} — verified live against a
-# real Foundry resource (2026-08-11). If Azure ever retires it, the fetch degrades to
-# the static seed catalog like every other failure mode here.
+# Default api-version for the resource-level deployments listing, overridable per user
+# via the AZURE_AI_FOUNDRY_API_VERSION variable (see _azure_ai_foundry_api_version).
+# The route is data-plane; Microsoft docs steer new integrations to the ARM management
+# plane (which needs Entra auth plus subscription/resource-group context this provider
+# doesn't collect), but this api-version still answers with data[].{id,model,status} —
+# verified live against a real Foundry resource (2026-08-11). If Azure ever retires it,
+# the fetch degrades to the static seed catalog like every other failure mode here.
 AZURE_AI_FOUNDRY_DEPLOYMENTS_API_VERSION = "2023-03-15-preview"
+
+# api-version values are URL query components; anything outside this shape is ignored
+# in favor of the default so a variable value can't smuggle extra query parameters.
+_AZURE_AI_FOUNDRY_API_VERSION_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9.\-]*")
+
+
+def _azure_ai_foundry_api_version(user_id: UUID | str | None) -> str:
+    """Deployments-listing api-version: the user's AZURE_AI_FOUNDRY_API_VERSION, else the default."""
+    configured = get_provider_variable_value(user_id, "AZURE_AI_FOUNDRY_API_VERSION")
+    configured = configured.strip() if configured else ""
+    if not configured:
+        return AZURE_AI_FOUNDRY_DEPLOYMENTS_API_VERSION
+    if not _AZURE_AI_FOUNDRY_API_VERSION_PATTERN.fullmatch(configured):
+        logger.warning(
+            f"Ignoring invalid AZURE_AI_FOUNDRY_API_VERSION {configured!r}; "
+            f"using {AZURE_AI_FOUNDRY_DEPLOYMENTS_API_VERSION}"
+        )
+        return AZURE_AI_FOUNDRY_DEPLOYMENTS_API_VERSION
+    return configured
+
 
 # Live discovery sends the api-key header to the derived URL, so destinations are pinned
 # to Azure AI Foundry / Azure OpenAI hosts (public, US Government, and China clouds): a
@@ -700,18 +721,21 @@ def _fetch_azure_ai_foundry_deployment_entries(deployments_url: str, api_key: st
     return list(entries) if entries is not None else None
 
 
-def _azure_ai_foundry_deployments_url(endpoint: str) -> str | None:
+def _azure_ai_foundry_deployments_url(endpoint: str, api_version: str) -> str | None:
     """Derive the resource-level deployments listing URL from the configured endpoint.
 
-    ``AZURE_AI_FOUNDRY_ENDPOINT`` holds the OpenAI-compatible endpoint
-    (``https://<resource>.services.ai.azure.com/openai/v1``), but the deployments
-    listing hangs off the resource base, not the OpenAI path:
-    ``{resource}/openai/deployments?api-version=…``. Dropping the path entirely
-    also tolerates the Foundry *project* endpoint form
-    (``…/api/projects/<name>``) that users commonly paste. Returns ``None`` —
-    and the caller keeps the static catalog — unless the endpoint is a plain
-    HTTPS URL (no userinfo, no explicit port) on a known Azure Foundry host
-    (``_AZURE_AI_FOUNDRY_HOST_SUFFIXES``).
+    ``AZURE_AI_FOUNDRY_ENDPOINT`` may hold any endpoint form the Foundry portal
+    hands out — the OpenAI-compatible endpoint
+    (``https://<resource>.services.ai.azure.com/openai/v1``), the generic Azure AI
+    inference endpoint (``…/models``), or a pasted *project* endpoint
+    (``…/api/projects/<name>``). Only the host matters here: the deployments
+    listing hangs off the resource base as
+    ``{resource}/openai/deployments?api-version=…``, where ``/openai/`` is the
+    resource data-plane's route prefix (legacy Azure OpenAI naming), not a filter
+    to OpenAI-family models — the listing covers the resource's deployments.
+    Returns ``None`` — and the caller keeps the static catalog — unless the
+    endpoint is a plain HTTPS URL (no userinfo, no explicit port) on a known
+    Azure Foundry host (``_AZURE_AI_FOUNDRY_HOST_SUFFIXES``).
     """
     parsed = urlparse(endpoint)
     try:
@@ -727,7 +751,7 @@ def _azure_ai_foundry_deployments_url(endpoint: str) -> str | None:
         or not hostname.endswith(_AZURE_AI_FOUNDRY_HOST_SUFFIXES)
     ):
         return None
-    return f"https://{hostname}/openai/deployments?api-version={AZURE_AI_FOUNDRY_DEPLOYMENTS_API_VERSION}"
+    return f"https://{hostname}/openai/deployments?api-version={api_version}"
 
 
 def fetch_live_azure_ai_foundry_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
@@ -756,7 +780,7 @@ def fetch_live_azure_ai_foundry_models(user_id: UUID | str | None, model_type: s
     if not endpoint or not api_key:
         return []
 
-    deployments_url = _azure_ai_foundry_deployments_url(endpoint)
+    deployments_url = _azure_ai_foundry_deployments_url(endpoint, _azure_ai_foundry_api_version(user_id))
     if deployments_url is None:
         # Reason only, never the raw endpoint: it may embed userinfo or query tokens.
         logger.debug(
