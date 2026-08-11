@@ -159,6 +159,8 @@
   "assistant.modelNotice.remediation": "模型 {{failed}} 需要调整才能运行（{{reason}}）。",
   "assistant.newConversation": "新建对话",
   "assistant.newPill": "新",
+  "assistant.dismissOnboardingTooltip": "关闭助手引导提示",
+  "assistant.openAssistant": "打开 Langflow 助手",
   "assistant.newSession": "新建会话",
   "assistant.noModels": "未配置任何模型",
   "assistant.noModelsConfigured": "未配置模型提供程序",

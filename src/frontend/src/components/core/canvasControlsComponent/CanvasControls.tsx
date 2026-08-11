@@ -186,7 +186,7 @@ const CanvasControls = ({
                 disabled={locked}
                 title={locked ? t("version.readOnly") : undefined}
                 aria-label={
-                  locked ? t("version.readOnly") : "Langflow Assistant"
+                  locked ? t("version.readOnly") : t("assistant.title")
                 }
               >
                 {/* Idle state — uses the design-tuned
@@ -242,7 +242,7 @@ const CanvasControls = ({
               <button
                 type="button"
                 data-testid="assistant-onboarding-dismiss"
-                aria-label="Dismiss assistant onboarding tooltip"
+                aria-label={t("assistant.dismissOnboardingTooltip")}
                 className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted-foreground/10 hover:text-foreground"
                 onClick={handleDismissTooltip}
               >
@@ -252,7 +252,7 @@ const CanvasControls = ({
               <button
                 type="button"
                 data-testid="assistant-onboarding-open"
-                aria-label="Open Langflow Assistant"
+                aria-label={t("assistant.openAssistant")}
                 className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-foreground transition-colors hover:bg-muted-foreground/10"
                 onClick={handleAssistantClick}
               >

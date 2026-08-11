@@ -159,6 +159,8 @@
   "assistant.modelNotice.remediation": "El modelo {{failed}} necesitó un ajuste para ejecutarse ({{reason}}).",
   "assistant.newConversation": "Nueva conversación",
   "assistant.newPill": "Nuevo",
+  "assistant.dismissOnboardingTooltip": "Cerrar el aviso de introducción del asistente",
+  "assistant.openAssistant": "Abrir el asistente de Langflow",
   "assistant.newSession": "Sesión nueva",
   "assistant.noModels": "No hay modelos configurados",
   "assistant.noModelsConfigured": "No hay ningún proveedor de modelos configurado",

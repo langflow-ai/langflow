@@ -159,6 +159,8 @@
   "assistant.modelNotice.remediation": "モデル {{failed}} は実行のために調整が必要でした（{{reason}}）。",
   "assistant.newConversation": "新規会話",
   "assistant.newPill": "新規",
+  "assistant.dismissOnboardingTooltip": "アシスタントのオンボーディングツールチップを閉じる",
+  "assistant.openAssistant": "Langflow アシスタントを開く",
   "assistant.newSession": "新規セッション",
   "assistant.noModels": "設定済みのモデルはありません",
   "assistant.noModelsConfigured": "モデルプロバイダーが設定されていません",

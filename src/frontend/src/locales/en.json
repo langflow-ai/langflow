@@ -1731,6 +1731,8 @@
   "assistant.welcomeText": "Here's how I can help",
   "assistant.tryAssistant": "Try the new Langflow Assistant!",
   "assistant.newPill": "New",
+  "assistant.dismissOnboardingTooltip": "Dismiss assistant onboarding tooltip",
+  "assistant.openAssistant": "Open Langflow Assistant",
   "assistant.suggestion.build-agents": "Build agents and other components",
   "assistant.suggestion.answer-questions": "Answer questions about Langflow",
   "apiModal.uploadFilesStep": "Upload files to the server",
