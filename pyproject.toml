@@ -1,6 +1,6 @@
 [project]
 name = "langflow"
-version = "1.12.0"
+version = "1.12.0.dev23"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.15"
 license = "MIT"
@@ -17,7 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base~=1.12.0",
+    "langflow-base==1.12.0.dev23",
     # langflow-extensions:bundle-deps-start
     # Release coordination: langflow declares BOUNDED ranges (>=A,<B) for every
     # curated lfx-* package, never exact pins -- exact pins in reusable library
@@ -193,7 +193,7 @@ docling-image-description = [
 ]
 
 audio = [
-    "langflow-base[audio]~=1.12.0",
+    "langflow-base[audio]==1.12.0.dev23",
 ]
 
 # Opt-in microVM sandbox backend for code-execution components
@@ -201,7 +201,7 @@ audio = [
 # and QEMU 8+ on the host; on older Pythons the extra installs nothing and the
 # backend fails closed at use time.
 sandbox = [
-    "langflow-base[sandbox]~=1.12.0",
+    "langflow-base[sandbox]==1.12.0.dev23",
 ]
 
 
@@ -225,15 +225,15 @@ nv-ingest = [
 ]
 
 postgresql = [
-    "langflow-base[postgresql]~=1.12.0",
+    "langflow-base[postgresql]==1.12.0.dev23",
 ]
 
 pgvector = [
-    "langflow-base[pgvector]~=1.12.0",
+    "langflow-base[pgvector]==1.12.0.dev23",
 ]
 
 opensearch = [
-    "langflow-base[opensearch]~=1.12.0",
+    "langflow-base[opensearch]==1.12.0.dev23",
 ]
 
 [tool.uv]
