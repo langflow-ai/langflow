@@ -299,12 +299,36 @@ def test_fetch_live_azure_ai_foundry_models_requires_endpoint_and_key(missing_ke
     assert models == []
 
 
-def test_fetch_live_azure_ai_foundry_models_rejects_unusable_endpoint():
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "not-a-url",
+        "https://collector.example.com/openai/v1",
+        "http://example.services.ai.azure.com/openai/v1",
+        "https://user:pass@example.services.ai.azure.com/openai/v1",  # pragma: allowlist secret
+        "https://example.services.ai.azure.com:8443/openai/v1",
+        "https://example.services.ai.azure.com:443/openai/v1",
+        "https://evil.services.ai.azure.com.attacker.net/openai/v1",
+        "https://services.ai.azure.com/openai/v1",
+    ],
+    ids=[
+        "malformed",
+        "non-azure-host",
+        "plain-http",
+        "userinfo",
+        "non-default-port",
+        "explicit-default-port",
+        "suffix-spoof",
+        "bare-suffix-no-resource",
+    ],
+)
+def test_fetch_live_azure_ai_foundry_models_rejects_untrusted_endpoints(endpoint):
+    """The api-key header must never be sent anywhere but an HTTPS Azure Foundry host."""
     from lfx.base.models import model_utils
 
     def lookup(_user_id, variable_key):
         return {
-            "AZURE_AI_FOUNDRY_ENDPOINT": "not-a-url",
+            "AZURE_AI_FOUNDRY_ENDPOINT": endpoint,
             "AZURE_AI_FOUNDRY_API_KEY": "test-key",  # pragma: allowlist secret
         }.get(variable_key)
 
@@ -316,6 +340,38 @@ def test_fetch_live_azure_ai_foundry_models_rejects_unusable_endpoint():
 
     mock_get.assert_not_called()
     assert models == []
+
+
+@pytest.mark.parametrize(
+    "host",
+    [
+        "example.openai.azure.com",
+        "example.cognitiveservices.azure.com",
+        "example.services.ai.azure.us",
+        "example.openai.azure.cn",
+    ],
+    ids=["azure-openai", "cognitive-services", "us-gov", "china"],
+)
+def test_fetch_live_azure_ai_foundry_models_accepts_sibling_azure_clouds(host):
+    from lfx.base.models import model_utils
+
+    def lookup(_user_id, variable_key):
+        return {
+            "AZURE_AI_FOUNDRY_ENDPOINT": f"https://{host}/openai/v1",
+            "AZURE_AI_FOUNDRY_API_KEY": "test-key",  # pragma: allowlist secret
+        }.get(variable_key)
+
+    response = _deployments_response([{"id": "gpt-4o", "model": "gpt-4o", "status": "succeeded"}])
+
+    with (
+        patch.object(model_utils, "get_provider_variable_value", side_effect=lookup),
+        patch.object(model_utils, "validate_connector_url_for_ssrf"),
+        patch.object(model_utils.requests, "get", return_value=response) as mock_get,
+    ):
+        models = model_utils.fetch_live_azure_ai_foundry_models("user-1", model_type="llm")
+
+    assert mock_get.call_args.args[0] == f"https://{host}/openai/deployments?api-version=2023-03-15-preview"
+    assert [m["name"] for m in models] == ["gpt-4o"]
 
 
 @pytest.mark.parametrize(

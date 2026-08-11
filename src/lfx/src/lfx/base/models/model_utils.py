@@ -578,9 +578,30 @@ def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: 
     ]
 
 
-# The deployments listing is a resource-level Azure OpenAI control route; this preview
-# api-version is the long-stable one the Azure SDKs themselves use for it.
+# The deployments listing is a resource-level Azure OpenAI data-plane route. Microsoft
+# docs steer new integrations to the ARM management plane (which needs Entra auth plus
+# subscription/resource-group context this provider doesn't collect), but this
+# api-version still answers with data[].{id,model,status} — verified live against a
+# real Foundry resource (2026-08-11). If Azure ever retires it, the fetch degrades to
+# the static seed catalog like every other failure mode here.
 AZURE_AI_FOUNDRY_DEPLOYMENTS_API_VERSION = "2023-03-15-preview"
+
+# Live discovery sends the api-key header to the derived URL, so destinations are pinned
+# to Azure AI Foundry / Azure OpenAI hosts (public, US Government, and China clouds): a
+# rewritten endpoint variable must not be able to redirect the key to an arbitrary
+# collector. Custom gateway domains (e.g. APIM fronting) simply keep the static seed
+# catalog + free-text enables.
+_AZURE_AI_FOUNDRY_HOST_SUFFIXES = (
+    ".services.ai.azure.com",
+    ".openai.azure.com",
+    ".cognitiveservices.azure.com",
+    ".services.ai.azure.us",
+    ".openai.azure.us",
+    ".cognitiveservices.azure.us",
+    ".services.ai.azure.cn",
+    ".openai.azure.cn",
+    ".cognitiveservices.azure.cn",
+)
 
 # Reasoning-capable families, matched against the deployment's underlying model id:
 # the o-series (o1 / o3-mini / o4-mini / …) and the gpt-5 family.
@@ -595,15 +616,26 @@ def _azure_ai_foundry_deployments_url(endpoint: str) -> str | None:
     listing hangs off the resource base, not the OpenAI path:
     ``{resource}/openai/deployments?api-version=…``. Dropping the path entirely
     also tolerates the Foundry *project* endpoint form
-    (``…/api/projects/<name>``) that users commonly paste. Returns ``None`` when
-    the endpoint is not an absolute http(s) URL.
+    (``…/api/projects/<name>``) that users commonly paste. Returns ``None`` —
+    and the caller keeps the static catalog — unless the endpoint is a plain
+    HTTPS URL (no userinfo, no explicit port) on a known Azure Foundry host
+    (``_AZURE_AI_FOUNDRY_HOST_SUFFIXES``).
     """
     parsed = urlparse(endpoint)
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+    try:
+        port = parsed.port
+    except ValueError:
         return None
-    return (
-        f"{parsed.scheme}://{parsed.netloc}/openai/deployments?api-version={AZURE_AI_FOUNDRY_DEPLOYMENTS_API_VERSION}"
-    )
+    hostname = (parsed.hostname or "").lower()
+    if (
+        parsed.scheme != "https"
+        or parsed.username is not None
+        or parsed.password is not None
+        or port is not None
+        or not hostname.endswith(_AZURE_AI_FOUNDRY_HOST_SUFFIXES)
+    ):
+        return None
+    return f"https://{hostname}/openai/deployments?api-version={AZURE_AI_FOUNDRY_DEPLOYMENTS_API_VERSION}"
 
 
 def fetch_live_azure_ai_foundry_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
@@ -617,8 +649,9 @@ def fetch_live_azure_ai_foundry_models(user_id: UUID | str | None, model_type: s
     header. Only ``status == "succeeded"`` deployments are offered, named by
     deployment id (what inference accepts) and classified llm/embeddings from the
     underlying ``model`` field. Returns ``[]`` on any failure — missing
-    endpoint/key, blocked host, HTTP error, malformed payload — so the static
-    seed catalog remains the fallback.
+    endpoint/key, endpoint not on a pinned Azure Foundry host, blocked host,
+    HTTP error, malformed payload — so the static seed catalog remains the
+    fallback.
     """
     if model_type not in {"llm", "embeddings"}:
         return []
@@ -630,7 +663,10 @@ def fetch_live_azure_ai_foundry_models(user_id: UUID | str | None, model_type: s
 
     deployments_url = _azure_ai_foundry_deployments_url(endpoint)
     if deployments_url is None:
-        logger.debug(f"AZURE_AI_FOUNDRY_ENDPOINT {endpoint!r} is not an absolute http(s) URL; skipping live discovery")
+        logger.debug(
+            f"AZURE_AI_FOUNDRY_ENDPOINT {endpoint!r} is not a plain HTTPS URL on a known "
+            f"Azure Foundry host; skipping live discovery"
+        )
         return []
 
     try:
