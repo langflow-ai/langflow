@@ -1,7 +1,8 @@
 import asyncio
+import re
 import time
 from typing import Any
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 from uuid import UUID
 
 import httpx
@@ -577,10 +578,110 @@ def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: 
     ]
 
 
+# The deployments listing is a resource-level Azure OpenAI control route; this preview
+# api-version is the long-stable one the Azure SDKs themselves use for it.
+AZURE_AI_FOUNDRY_DEPLOYMENTS_API_VERSION = "2023-03-15-preview"
+
+# Reasoning-capable families, matched against the deployment's underlying model id:
+# the o-series (o1 / o3-mini / o4-mini / …) and the gpt-5 family.
+_AZURE_AI_FOUNDRY_REASONING_PATTERN = re.compile(r"^(o\d|gpt-5)")
+
+
+def _azure_ai_foundry_deployments_url(endpoint: str) -> str | None:
+    """Derive the resource-level deployments listing URL from the configured endpoint.
+
+    ``AZURE_AI_FOUNDRY_ENDPOINT`` holds the OpenAI-compatible endpoint
+    (``https://<resource>.services.ai.azure.com/openai/v1``), but the deployments
+    listing hangs off the resource base, not the OpenAI path:
+    ``{resource}/openai/deployments?api-version=…``. Dropping the path entirely
+    also tolerates the Foundry *project* endpoint form
+    (``…/api/projects/<name>``) that users commonly paste. Returns ``None`` when
+    the endpoint is not an absolute http(s) URL.
+    """
+    parsed = urlparse(endpoint)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return None
+    return (
+        f"{parsed.scheme}://{parsed.netloc}/openai/deployments?api-version={AZURE_AI_FOUNDRY_DEPLOYMENTS_API_VERSION}"
+    )
+
+
 def fetch_live_azure_ai_foundry_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
-    """Foundry /models is a catalog, not deployments; return [] and use free-text enables."""
-    _ = (user_id, model_type)
-    return []
+    """List the Foundry resource's actual deployments for the model picker.
+
+    Foundry ``/models`` is Azure's full model *catalog* (deprecated models
+    included), not this resource's deployments — never use it here; it is only
+    probed for credential validation (``request_azure_ai_foundry_model_entries``).
+    The real deployments come from the resource-level listing
+    ``GET {resource}/openai/deployments?api-version=…`` with the same ``api-key``
+    header. Only ``status == "succeeded"`` deployments are offered, named by
+    deployment id (what inference accepts) and classified llm/embeddings from the
+    underlying ``model`` field. Returns ``[]`` on any failure — missing
+    endpoint/key, blocked host, HTTP error, malformed payload — so the static
+    seed catalog remains the fallback.
+    """
+    if model_type not in {"llm", "embeddings"}:
+        return []
+
+    endpoint = get_provider_variable_value(user_id, "AZURE_AI_FOUNDRY_ENDPOINT")
+    api_key = get_provider_variable_value(user_id, "AZURE_AI_FOUNDRY_API_KEY")
+    if not endpoint or not api_key:
+        return []
+
+    deployments_url = _azure_ai_foundry_deployments_url(endpoint)
+    if deployments_url is None:
+        logger.debug(f"AZURE_AI_FOUNDRY_ENDPOINT {endpoint!r} is not an absolute http(s) URL; skipping live discovery")
+        return []
+
+    try:
+        # Endpoint is tenant-controlled: block SSRF to internal/cloud-metadata hosts
+        # (the except below falls back to the static catalog if blocked).
+        validate_connector_url_for_ssrf(deployments_url)
+        response = requests.get(
+            deployments_url,
+            headers={"api-key": api_key},
+            timeout=AZURE_AI_FOUNDRY_FETCH_TIMEOUT,
+            allow_redirects=False,
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except (SSRFProtectionError, requests.RequestException, ValueError) as exc:
+        logger.debug(f"Could not fetch live Azure AI Foundry deployments from {deployments_url}: {exc}")
+        return []
+
+    entries = payload.get("data") if isinstance(payload, dict) else None
+    if not isinstance(entries, list):
+        logger.debug(f"Unexpected Azure AI Foundry deployments payload from {deployments_url}; keeping static catalog")
+        return []
+
+    models: list[dict] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        deployment_id = entry.get("id")
+        if not isinstance(deployment_id, str) or not deployment_id:
+            continue
+        if str(entry.get("status", "")).lower() != "succeeded":
+            continue
+        underlying_model = entry.get("model")
+        if not isinstance(underlying_model, str) or not underlying_model:
+            underlying_model = deployment_id
+        entry_type = "embeddings" if "embed" in underlying_model.lower() else "llm"
+        if entry_type != model_type:
+            continue
+        models.append(
+            create_model_metadata(
+                provider="Azure AI Foundry",
+                name=deployment_id,
+                icon="Azure",
+                model_type=model_type,
+                tool_calling=model_type == "llm",
+                reasoning=bool(_AZURE_AI_FOUNDRY_REASONING_PATTERN.match(underlying_model.lower())),
+                # Foundry is explicit-enable-only: live rows must never auto-enable.
+                default=False,
+            )
+        )
+    return models
 
 
 def fetch_live_openrouter_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
