@@ -455,24 +455,34 @@ async def execute_sync_workflow_with_timeout(
         raise WorkflowTimeoutError from e
 
 
-async def _persist_sync_result(job_service, job_id: UUID, workflow_response, flow_id) -> None:
-    """Best-effort cache of a completed sync run's outputs into ``Job.result``.
+async def _persist_sync_result(job_service, job_id: UUID, workflow_response, request_blob: dict, flow_id) -> None:
+    """Best-effort cache of a completed sync run's outputs + request for GET status.
 
-    Stores the same ``{component_id, ...ComponentOutput}`` list shape the background
-    runner writes, so a later GET status on this sync job_id rebuilds an identical
-    response via ``workflow_response_from_output_events``. The caller already holds
-    the response inline, so a persistence failure must never fail the run — it is
-    logged and swallowed.
+    Writes two things so a later GET status on this sync job_id rebuilds the SAME
+    response the caller received inline:
 
-    The run has already executed and succeeded upstream; this helper only caches
-    the finished result, so EVERY exception it can raise (serialization or the
-    ``set_result`` DB write — e.g. a SQLite ``OperationalError`` under lock
-    contention) is a persistence failure, never a workflow failure. Catch broadly
-    so such an error cannot escape to the caller's terminal ``except Exception`` and
-    be misreported as a failed run. ``asyncio.CancelledError`` is a ``BaseException``
-    and still propagates, so timeouts/disconnects are unaffected.
+    * ``job_metadata["request"]`` — the submit request (mirrors what the background
+      service persists). The GET completed-status path resolves the session from it
+      (``persisted_request.get("session_id")``); only the background service writes
+      this blob, so without it a sync GET would degrade ``session_id`` to the flow id.
+    * ``Job.result`` — the ``{component_id, ...ComponentOutput}`` list shape the
+      background runner stores, rebuilt by ``workflow_response_from_output_events``.
+
+    The request blob is written FIRST so the GET completed-status invariant holds: a
+    persisted ``Job.result`` always has its session alongside it. If the result write
+    then fails, GET falls back to vertex-build reconstruction (which resolves the
+    session independently) instead of serving a result with a flow-id session.
+
+    The caller gates this on ``sync_result_storage_enabled``. The run has already
+    executed and succeeded upstream, so EVERY exception this can raise (serialization
+    or a DB write — e.g. a SQLite ``OperationalError`` under lock contention) is a
+    persistence failure, never a workflow failure. Catch broadly so such an error
+    cannot escape to the caller's terminal ``except Exception`` and be misreported as
+    a failed run. ``asyncio.CancelledError`` is a ``BaseException`` and still
+    propagates, so timeouts/disconnects are unaffected.
     """
     try:
+        await job_service.update_job_metadata(job_id, {"request": request_blob})
         output_events = [
             {"component_id": component_id, **output.model_dump(mode="json")}
             for component_id, output in (workflow_response.outputs or {}).items()
@@ -619,10 +629,21 @@ async def execute_sync_workflow(
             effective_globals=request_variables,
             selected_ids=parsed.output_ids,
         )
-        # Persist the terminal outputs to Job.result so a later GET status on this
-        # sync job_id returns the same outputs the background path stores (same
-        # list-of-OutputEvent shape, so the status read is protocol-uniform).
-        await _persist_sync_result(job_service, job_id, workflow_response, flow.id)
+        # Optionally cache the completed run's outputs + request to the job row so a
+        # later GET status returns the same response. Off by default: sync callers
+        # already hold the full response inline, so this is an opt-in per-request
+        # write for consumers that poll GET status for a sync job. The request blob
+        # mirrors the background service's shape (identifying fields only, no tweaks/
+        # globals — those may carry secrets); GET resolves the session from it.
+        if get_settings_service().settings.sync_result_storage_enabled:
+            request_blob = {
+                "flow_id": str(flow.id),
+                "mode": "sync",
+                "session_id": execution_session_id,
+                "input_value": parsed.input_value,
+                "output_ids": parsed.output_ids,
+            }
+            await _persist_sync_result(job_service, job_id, workflow_response, request_blob, flow.id)
         return workflow_response  # noqa: TRY300 — keep response-building under the broad except below
 
     except GraphPausedException as exc:
