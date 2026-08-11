@@ -609,6 +609,52 @@ async def test_flush_batch_maps_actor_fields_to_model(monkeypatch):
 
 
 @pytest.mark.anyio
+async def test_flush_batch_stages_plugin_events_in_same_transaction(monkeypatch):
+    """Plugins receive stable event identity on the audit row's open session."""
+    from langflow.services import deps
+
+    rows = []
+    staged = []
+
+    class _Session:
+        def add(self, row):
+            rows.append(row)
+
+    class _AuthorizationService:
+        def stage_audit_events(self, *, session, events):
+            staged.append((session, tuple(events)))
+
+    session = _Session()
+
+    @asynccontextmanager
+    async def _scope():
+        yield session
+
+    monkeypatch.setattr(deps, "session_scope", _scope)
+    monkeypatch.setattr(deps, "get_authorization_service", lambda: _AuthorizationService())
+    entry = authz_audit._AuditEntry(
+        user_id=uuid4(),
+        actor_type="user",
+        actor_id=uuid4(),
+        action="flow:read",
+        obj=f"flow:{uuid4()}",
+        result="allow",
+        details={"secret": "must-not-cross-plugin-seam"},  # pragma: allowlist secret
+    )
+
+    await authz_audit._flush_audit_batch([entry])
+
+    assert len(rows) == 1
+    assert len(staged) == 1
+    staged_session, events = staged[0]
+    assert staged_session is session
+    assert len(events) == 1
+    assert events[0].event_id == entry.event_id
+    assert events[0].occurred_at == entry.occurred_at
+    assert not hasattr(events[0], "details")
+
+
+@pytest.mark.anyio
 async def test_audit_decision_batches_multiple_entries(monkeypatch, patched_audit_flush):
     """Multiple concurrent ``audit_decision`` calls coalesce into a single DB batch.
 
