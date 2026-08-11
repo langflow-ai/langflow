@@ -34,6 +34,7 @@ from lfx.utils.ssrf_protection import SSRFProtectionError, validate_connector_ur
 from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
+HTTP_STATUS_MULTIPLE_CHOICES = 300
 HTTP_STATUS_UNAUTHORIZED = 401
 HTTP_STATUS_FORBIDDEN = 403
 MIN_DEFAULT_MODELS = 5
@@ -518,6 +519,7 @@ AZURE_AI_FOUNDRY_REQUEST_TIMEOUT = AZURE_AI_FOUNDRY_FETCH_TIMEOUT
 # https://learn.microsoft.com/en-us/rest/api/aifoundry/modelinference/
 # Overridable per user via the AZURE_AI_FOUNDRY_API_VERSION variable.
 AZURE_AI_FOUNDRY_MODELS_PROBE_API_VERSION = "2025-04-01"
+_AZURE_AI_FOUNDRY_OPENAI_MODELS_API_VERSIONS = frozenset({"v1", "preview"})
 
 
 def normalize_azure_ai_foundry_endpoint(endpoint: str) -> str:
@@ -550,11 +552,11 @@ def _azure_ai_foundry_models_probe_url(endpoint: str, api_version: str | None = 
     Foundry hands out several endpoint shapes (OpenAI-compatible ``…/openai/v1``,
     generic inference ``…/models``, project ``…/api/projects/<name>``), so this
     merges the ``/models`` segment with proper URL parsing — deduping when the
-    endpoint already ends in one — instead of naive string concatenation, and
-    ensures an ``api-version`` query parameter (Azure requires one on most
-    shapes), preserving any already present in the endpoint, else applying
-    *api_version* (the AZURE_AI_FOUNDRY_API_VERSION variable) or the probe
-    default.
+    endpoint already ends in one — instead of naive string concatenation.
+
+    Generic Model Inference routes receive the configured dated API version (or
+    the probe default). The OpenAI v1 route is already path-versioned and accepts
+    only ``v1`` or ``preview`` query values, so dated versions are omitted there.
     """
     parsed = urlparse(endpoint.strip())
     segments = [segment for segment in parsed.path.split("/") if segment]
@@ -562,8 +564,22 @@ def _azure_ai_foundry_models_probe_url(endpoint: str, api_version: str | None = 
         segments = [*segments, "models"]
     new_path = "/" + "/".join(segments)
     query = parse_qs(parsed.query, keep_blank_values=True)
-    if "api-version" not in query:
+    existing_versions = [value for value in query.get("api-version", []) if value]
+    is_openai_v1 = [segment.lower() for segment in segments[-3:]] == ["openai", "v1", "models"]
+    if is_openai_v1:
+        compatible_versions = [
+            value for value in existing_versions if value in _AZURE_AI_FOUNDRY_OPENAI_MODELS_API_VERSIONS
+        ]
+        if compatible_versions:
+            query["api-version"] = compatible_versions
+        elif api_version in _AZURE_AI_FOUNDRY_OPENAI_MODELS_API_VERSIONS:
+            query["api-version"] = [api_version]
+        else:
+            query.pop("api-version", None)
+    elif not existing_versions:
         query["api-version"] = [api_version or AZURE_AI_FOUNDRY_MODELS_PROBE_API_VERSION]
+    else:
+        query["api-version"] = existing_versions
     return urlunparse((parsed.scheme, parsed.netloc, new_path, parsed.params, urlencode(query, doseq=True), ""))
 
 
@@ -581,15 +597,14 @@ def request_azure_ai_foundry_model_entries(endpoint: str, api_key: str, api_vers
     """
     endpoint = normalize_azure_ai_foundry_endpoint(endpoint)
     probe_url = _azure_ai_foundry_models_probe_url(endpoint, api_version)
-    response = requests.get(
+    response = ssrf_safe_httpx_get(
         probe_url,
         headers={"api-key": api_key},
         timeout=AZURE_AI_FOUNDRY_FETCH_TIMEOUT,
-        allow_redirects=False,
     )
     if response.status_code in (HTTP_STATUS_UNAUTHORIZED, HTTP_STATUS_FORBIDDEN):
         response.raise_for_status()
-    if not response.ok:
+    if not HTTP_STATUS_OK <= response.status_code < HTTP_STATUS_MULTIPLE_CHOICES:
         logger.debug(f"Azure AI Foundry /models probe returned {response.status_code}; treating catalog as empty")
         return []
     try:
@@ -674,8 +689,7 @@ def _azure_ai_foundry_api_version(user_id: UUID | str | None) -> str:
         return AZURE_AI_FOUNDRY_DEPLOYMENTS_API_VERSION
     if not _AZURE_AI_FOUNDRY_API_VERSION_PATTERN.fullmatch(configured):
         logger.warning(
-            f"Ignoring invalid AZURE_AI_FOUNDRY_API_VERSION {configured!r}; "
-            f"using {AZURE_AI_FOUNDRY_DEPLOYMENTS_API_VERSION}"
+            f"Ignoring invalid AZURE_AI_FOUNDRY_API_VERSION; using {AZURE_AI_FOUNDRY_DEPLOYMENTS_API_VERSION}"
         )
         return AZURE_AI_FOUNDRY_DEPLOYMENTS_API_VERSION
     return configured

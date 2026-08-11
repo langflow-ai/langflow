@@ -635,10 +635,10 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             try:
                 # Validate connection without requiring a seed catalog model name.
                 request_azure_ai_foundry_model_entries(endpoint, api_key, api_version)
-            except Exception as e:
-                msg = f"Could not validate Azure AI Foundry credentials: {e!s}"
-                logger.warning(msg)
-                raise ValueError(msg) from e
+            except Exception as e:  # noqa: BLE001 - normalize provider/network failures for the UI
+                msg = "Could not validate Azure AI Foundry credentials. Check the endpoint, API key, and network."
+                logger.warning(f"{msg} Error type: {type(e).__name__}")
+                raise ValueError(msg) from None
 
         elif provider == "Ollama":
             import requests
