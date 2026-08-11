@@ -1311,8 +1311,21 @@ def test_collect_catalog_component_keys_includes_nested_flows():
     assert collect_catalog_component_keys(graph) == frozenset({"ChatInput", "RunFlow", "NestedComponent"})
     # Wrapped flow payloads normalize the same way validation does.
     assert collect_catalog_component_keys({"data": graph}) == frozenset({"ChatInput", "RunFlow", "NestedComponent"})
+    # Graph-like objects resolve through their authoritative raw_graph_data payload.
+    graph_like = SimpleNamespace(raw_graph_data=graph)
+    assert collect_catalog_component_keys(graph_like) == frozenset({"ChatInput", "RunFlow", "NestedComponent"})
 
 
-@pytest.mark.parametrize("target", [None, {}, {"nodes": "not-a-list"}, {"data": {"nodes": []}}])
+@pytest.mark.parametrize(
+    "target",
+    [
+        None,
+        {},
+        {"nodes": "not-a-list"},
+        {"data": {"nodes": []}},
+        SimpleNamespace(),
+        SimpleNamespace(raw_graph_data="not-a-mapping"),
+    ],
+)
 def test_collect_catalog_component_keys_returns_empty_for_unusable_targets(target):
     assert collect_catalog_component_keys(target) == frozenset()
