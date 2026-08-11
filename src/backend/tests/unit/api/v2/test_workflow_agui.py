@@ -547,6 +547,7 @@ class TestV2WorkflowDelegatedErrorPolicy:
         flow = SimpleNamespace(
             id=uuid4(),
             user_id=owner_id,
+            updated_at=None,
             data={"nodes": [], "edges": []},
             name="shared",
         )
