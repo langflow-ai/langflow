@@ -54,7 +54,7 @@ dependencies = [
     "validators>=0.34.0,<1.0.0",
     "filelock>=3.20.1,<4.0.0",
     "pypdf>=6.10.0,<7.0.0",
-    "cryptography>=48.0.1",
+    "cryptography>=50.0.0",
     "pyjwt>=2.10.0,<3.0.0",
     "ag-ui-protocol>=0.1.10",
     "langflow-sdk>=0.4.0",
@@ -81,6 +81,8 @@ sandbox = [
 ]
 opendsstar = [
     "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
+    # Temporary compatibility valve: newer langchain-litellm releases require cryptography<49.
+    "langchain-litellm==0.5.1; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
 ]
 # Optional deps for built-in LFX components that import them lazily (a missing
 # install degrades to a clear "pip install ..." error, not an import-time crash).
