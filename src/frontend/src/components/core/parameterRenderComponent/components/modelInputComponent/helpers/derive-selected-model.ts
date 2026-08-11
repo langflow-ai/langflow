@@ -49,9 +49,8 @@ export function deriveSelectedModel({
   const saved = recoverModelOption(savedValue);
   const currentName = saved?.name;
   if (!currentName) {
-    if (flatOptions.length > 0 && !hasProcessedEmpty) {
-      return flatOptions[0];
-    }
+    // Showing flatOptions[0] here would advertise a provider the field is not
+    // actually set to, which is how the pre-selection surfaced (LE-2168).
     return null;
   }
 

@@ -60,16 +60,11 @@ export function useAutoSelectModel({
       }
     }
 
-    // The ref debounces the empty-value auto-select only; a value that goes
-    // stale mid-session (provider disconnected) must still be replaced.
     if (hasProcessedEmptyRef.current && !isSavedValueStale) return;
 
-    // Sticky-default: if the component has a saved value, keep it as-is. The
-    // backend injects any selection that isn't in the user's enabled list
-    // back into `options` tagged with `not_enabled_locally`, so the saved
-    // value remains visible and runnable. Only auto-select the first option
-    // when there's no saved value at all OR when the saved value is stale.
-    if (!isEmpty && !isSavedValueStale) return;
+    // Only a stale selection is replaced: an unvalidated env-harvested credential
+    // already marks a provider enabled, so filling an empty field pre-selected one (LE-2168).
+    if (!isSavedValueStale) return;
 
     const firstOption = flatOptions[0];
     const newValue = [
