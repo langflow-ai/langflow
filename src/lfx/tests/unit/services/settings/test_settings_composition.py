@@ -118,6 +118,7 @@ EXPECTED_FIELDS = {
     "telemetry_base_url",
     "transactions_storage_enabled",
     "vertex_builds_storage_enabled",
+    "sync_result_storage_enabled",
     "deactivate_tracing",
     # ObservabilitySettings
     "prometheus_enabled",
