@@ -54,6 +54,7 @@ from langflow.exceptions.component import ComponentBuildError
 from langflow.services.auth.utils import get_current_user_optional
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.fetch import deny_to_404
+from langflow.services.authorization.public_access import PublicResourceAction, authorize_public_flow_access
 from langflow.services.chat.service import ChatService
 from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 from langflow.services.database.models.user.model import User
@@ -942,30 +943,44 @@ async def build_public_tmp(
         sanitized_public_data: dict | None = None
         async with session_scope() as session:
             flow = await session.get(Flow, flow_id)
-            if flow and flow.data:
-                # The default anonymous build path sanitizes component code directly
-                # and therefore does not call validate_flow_for_current_settings.
-                # Enforce the exact catalog snapshot after the public-access check
-                # and before any graph is queued or built. The explicit public-custom
-                # opt-in already runs the unified validator inside prepare_public_flow_build.
-                if not settings.allow_public_custom_components:
-                    validate_catalog_policy_for_flow(flow.data)
-                # Block unauthenticated builds of flows that run arbitrary code
-                # (Python interpreter/REPL, legacy Python Code Structured tool,
-                # Smart Transform lambda) or invoke another saved flow (Run Flow,
-                # Sub Flow, Flow as Tool — the transitive case). Without this, any
-                # public flow containing such a component is an unauthenticated
-                # server-side code-execution primitive (report H1-3754930).
-                validate_public_flow_no_code_execution(flow.data)
-                # Substitute the server's trusted code into every known component and
-                # reject unrecognized custom components, so anonymous visitors only ever
-                # run server code. The explicit allow_public_custom_components opt-in
-                # preserves approved stored code, but the detached graph is still
-                # secret-scrubbed below before it reaches the executor.
-                prepared_public_data = await prepare_public_flow_build(flow.data)
-                sanitized_public_data = strip_secret_field_values(
-                    prepared_public_data if prepared_public_data is not None else flow.data
-                )
+            if flow is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+            # The admission helper authorizes its own DB snapshot. Reauthorize the
+            # exact snapshot detached below so a concurrent revoke/private transition
+            # cannot leave us executing a later, unchecked definition.
+            await authorize_public_flow_access(
+                flow=flow,
+                action=PublicResourceAction.EXECUTE,
+                request_host=request.url.hostname,
+                session=session,
+            )
+            if flow.data is None:
+                msg = "Public flow has no executable data"
+                raise ValueError(msg)
+
+            # The default anonymous build path sanitizes component code directly
+            # and therefore does not call validate_flow_for_current_settings.
+            # Enforce the exact catalog snapshot after the public-access check
+            # and before any graph is queued or built. The explicit public-custom
+            # opt-in already runs the unified validator inside prepare_public_flow_build.
+            if not settings.allow_public_custom_components:
+                validate_catalog_policy_for_flow(flow.data)
+            # Block unauthenticated builds of flows that run arbitrary code
+            # (Python interpreter/REPL, legacy Python Code Structured tool,
+            # Smart Transform lambda) or invoke another saved flow (Run Flow,
+            # Sub Flow, Flow as Tool — the transitive case). Without this, any
+            # public flow containing such a component is an unauthenticated
+            # server-side code-execution primitive (report H1-3754930).
+            validate_public_flow_no_code_execution(flow.data)
+            # Substitute the server's trusted code into every known component and
+            # reject unrecognized custom components, so anonymous visitors only ever
+            # run server code. The explicit allow_public_custom_components opt-in
+            # preserves approved stored code, but the detached graph is still
+            # secret-scrubbed below before it reaches the executor.
+            prepared_public_data = await prepare_public_flow_build(flow.data)
+            sanitized_public_data = strip_secret_field_values(
+                prepared_public_data if prepared_public_data is not None else flow.data
+            )
 
         # flow_id=new_flow_id for tracking/sessions/messages (virtual, per-user isolation).
         # source_flow_id=flow_id to load the actual flow data from the database.

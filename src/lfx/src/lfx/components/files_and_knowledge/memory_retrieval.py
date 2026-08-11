@@ -182,13 +182,15 @@ class MemoryBaseComponent(Component):
         db: AsyncSession,
         selected: str,
         flow_id: uuid.UUID,
+        execution_user_id: uuid.UUID,
     ) -> tuple[MemoryBase, User]:
-        """Look up the MB row scoped to the current flow and resolve its owner."""
+        """Look up the MB row scoped to the exact flow execution principal."""
         mb = (
             await db.exec(
                 select(MemoryBase).where(
                     MemoryBase.name == selected,
                     MemoryBase.flow_id == flow_id,
+                    MemoryBase.user_id == execution_user_id,
                 )
             )
         ).first()
@@ -285,13 +287,18 @@ class MemoryBaseComponent(Component):
             msg = "flow_id is not available on the graph context; Memory Base retrieval is unavailable."
             raise ValueError(msg)
 
+        execution_user_id = _coerce_uuid(getattr(self.graph, "user_id", None))
+        if execution_user_id is None:
+            msg = "user_id is not available on the graph context; Memory Base retrieval is unavailable."
+            raise ValueError(msg)
+
         selected = self.memory_base
         if not selected:
             msg = "No Memory Base is selected."
             raise ValueError(msg)
 
         async with session_scope() as db:
-            mb, owner = await self._resolve_attached_mb(db, selected, flow_id)
+            mb, owner = await self._resolve_attached_mb(db, selected, flow_id, execution_user_id)
             owner_username = owner.username
             kb_name = mb.kb_name
 
