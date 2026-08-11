@@ -74,6 +74,20 @@ async function driveLoginEmpty(page: LangflowPage) {
   await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
 }
 
+async function expectPageToReflow(page: LangflowPage) {
+  const dimensions = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
+}
+
+async function driveLoginMobile(page: LangflowPage) {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await driveLoginEmpty(page);
+  await expectPageToReflow(page);
+}
+
 async function driveLoginValidation(page: LangflowPage) {
   await disableAutoLogin(page);
   await page.goto("/login");
@@ -105,6 +119,12 @@ async function driveSignupEmpty(page: LangflowPage) {
   await page.goto("/signup");
   await disableAnimations(page);
   await expect(page.getByRole("button", { name: /sign up/i })).toBeVisible();
+}
+
+async function driveSignupMobile(page: LangflowPage) {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await driveSignupEmpty(page);
+  await expectPageToReflow(page);
 }
 
 async function driveSignupMismatch(page: LangflowPage) {
@@ -163,9 +183,11 @@ const AUTH_STATES: Array<{
   drive: (page: LangflowPage) => Promise<void>;
 }> = [
   { label: "auth-login-empty", drive: driveLoginEmpty },
+  { label: "auth-login-mobile", drive: driveLoginMobile },
   { label: "auth-login-validation", drive: driveLoginValidation },
   { label: "auth-login-error-toast", drive: driveLoginErrorToast },
   { label: "auth-signup-empty", drive: driveSignupEmpty },
+  { label: "auth-signup-mobile", drive: driveSignupMobile },
   { label: "auth-signup-mismatch", drive: driveSignupMismatch },
   { label: "auth-signup-error-toast", drive: driveSignupErrorToast },
   { label: "auth-admin-login-empty", drive: driveAdminLoginEmpty },
@@ -192,7 +214,7 @@ test.describe("auth page accessibility", () => {
     for (const state of AUTH_STATES) {
       test(
         `scans ${state.label} (${theme.name})`,
-        { tag: ["@release"] },
+        { tag: ["@release", "@workspace"] },
         async ({ page }) => {
           await theme.force(page);
           await state.drive(page);

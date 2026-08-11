@@ -126,7 +126,13 @@ export default function TemplatesModal({
   ];
 
   return (
-    <BaseModal size="templates" open={open} setOpen={setOpen} className="p-0">
+    <BaseModal
+      size="templates"
+      open={open}
+      setOpen={setOpen}
+      className="p-0"
+      ariaLabel={t("templatesModal.title")}
+    >
       <BaseModal.Content className="flex flex-col p-0">
         <div className="flex h-full">
           <SidebarProvider width="15rem" defaultOpen={false}>

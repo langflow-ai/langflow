@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from lfx.services.authorization.base import ResourceVisibilityScope
-from sqlalchemy import Select, false
+from sqlalchemy import Select, and_, false
 from sqlmodel import col, or_
 
 from langflow.services.authorization.actions import FlowAction
@@ -259,7 +259,20 @@ def restrict_to_owned_or_visible_scope(
 ) -> StatementT:
     """Apply owner, concrete-ID, workspace, and project visibility before pagination."""
     if visibility.all_resources:
-        return stmt
+        if project_column is None or not visibility.excluded_global_project_ids:
+            return stmt
+        # Global role access can exclude reserved projects without enumerating
+        # every visible resource. Ownership and concrete grants remain additive,
+        # so users retain their own resources and directly shared resources in
+        # an otherwise excluded project. Folderless resources remain global.
+        global_clauses: list[ColumnElement[bool]] = [
+            owner_clause,
+            col(project_column).is_(None),
+            col(project_column).not_in(visibility.excluded_global_project_ids),
+        ]
+        if visibility.resource_ids:
+            global_clauses.append(col(id_column).in_(visibility.resource_ids))
+        return stmt.where(or_(*global_clauses))
 
     clauses: list[ColumnElement[bool]] = [owner_clause]
     if visibility.resource_ids:
@@ -267,8 +280,35 @@ def restrict_to_owned_or_visible_scope(
     resolved_workspace = workspace_expression
     if resolved_workspace is None and workspace_column is not None:
         resolved_workspace = col(workspace_column)
+    workspace_project_allowed: ColumnElement[bool] | None = None
+    if project_column is not None and visibility.excluded_workspace_project_ids:
+        # A workspace-only resource has no project to exclude. Keep it visible
+        # for an explicit workspace grant while excluding resources attached to
+        # reserved projects. The explicit ``IS NULL`` branch also keeps SQL's
+        # three-valued NULL semantics aligned with ``resource_visible_in_scope``.
+        workspace_project_allowed = or_(
+            col(project_column).is_(None),
+            col(project_column).not_in(visibility.excluded_workspace_project_ids),
+        )
     if resolved_workspace is not None and visibility.workspace_ids:
-        clauses.append(resolved_workspace.in_(visibility.workspace_ids))
+        workspace_clause = resolved_workspace.in_(visibility.workspace_ids)
+        if workspace_project_allowed is not None:
+            workspace_clause = and_(workspace_clause, workspace_project_allowed)
+        clauses.append(workspace_clause)
+    if resolved_workspace is not None and project_column is not None and visibility.include_unassigned_workspace:
+        # The logical unassigned workspace contains projects whose stored
+        # workspace is NULL; it does not contain folderless/workspace-less
+        # resources. Requiring a concrete project keeps list filtering aligned
+        # with direct authorization, which resolves this scope through the
+        # resource's project relation.
+        unassigned_project_allowed = col(project_column).is_not(None)
+        if visibility.excluded_workspace_project_ids:
+            unassigned_project_allowed = and_(
+                unassigned_project_allowed,
+                col(project_column).not_in(visibility.excluded_workspace_project_ids),
+            )
+        workspace_clause = and_(resolved_workspace.is_(None), unassigned_project_allowed)
+        clauses.append(workspace_clause)
     if project_column is not None and visibility.project_ids:
         clauses.append(col(project_column).in_(visibility.project_ids))
     return stmt.where(or_(*clauses))
@@ -305,9 +345,15 @@ def resource_visible_in_scope(
     project_id: UUID | None = None,
 ) -> bool:
     """Evaluate a compact visibility scope for an already-loaded resource."""
+    globally_visible = visibility.all_resources and (
+        project_id is None or project_id not in visibility.excluded_global_project_ids
+    )
+    workspace_project_allowed = project_id is None or project_id not in visibility.excluded_workspace_project_ids
+    unassigned_project_allowed = project_id is not None and project_id not in visibility.excluded_workspace_project_ids
     return bool(
-        visibility.all_resources
+        globally_visible
         or resource_id in visibility.resource_ids
-        or (workspace_id is not None and workspace_id in visibility.workspace_ids)
+        or (workspace_project_allowed and workspace_id is not None and workspace_id in visibility.workspace_ids)
+        or (unassigned_project_allowed and workspace_id is None and visibility.include_unassigned_workspace)
         or (project_id is not None and project_id in visibility.project_ids)
     )

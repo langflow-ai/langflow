@@ -125,11 +125,6 @@
   ],
   "gated": [
     {
-      "path": "/admin",
-      "surface": "Admin page",
-      "currentBehavior": "Redirects to /flows for current user/session. Scan with an admin user."
-    },
-    {
       "path": "/login",
       "surface": "Login page",
       "currentBehavior": "Redirects to /flows while authenticated. Scan in logged-out/no-auto-login mode."

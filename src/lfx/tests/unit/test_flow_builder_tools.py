@@ -17,6 +17,7 @@ from lfx.mcp.flow_builder_tools import (
     init_working_flow,
     reset_working_flow,
 )
+from lfx.services.catalog_policy import CatalogPolicySnapshot
 
 _DENIED_CONFIGURE_CATALOG_CALLS: list[None] = []
 
@@ -50,6 +51,38 @@ class TestSearchComponentTypes:
         expected = len(search_registry(load_local_registry()))
         assert result.data["count"] == expected
         assert result.data["count"] > 0
+
+
+def test_flow_builder_registry_hides_catalog_blocked_aliases(monkeypatch):
+    from types import SimpleNamespace
+
+    from lfx.mcp.flow_builder_tools import _state
+
+    registry = {
+        "PromptComponent": {"display_name": "Prompt Template", "template": {}},
+        "ChatInput": {"display_name": "Chat Input", "template": {}},
+    }
+    service = SimpleNamespace(
+        snapshot=CatalogPolicySnapshot(blocked_component_keys={"Prompt Template"}),
+    )
+    monkeypatch.setattr(_state, "get_catalog_policy_service", lambda: service)
+
+    visible = _state._filter_registry_by_catalog_policy(registry)
+
+    assert visible == {"ChatInput": registry["ChatInput"]}
+    assert registry.keys() == {"PromptComponent", "ChatInput"}
+
+
+def test_flow_builder_registry_returns_cached_registry_unchanged_without_policy(monkeypatch):
+    from types import SimpleNamespace
+
+    from lfx.mcp.flow_builder_tools import _state
+
+    registry = {"ChatInput": {"template": {}}}
+    service = SimpleNamespace(snapshot=CatalogPolicySnapshot())
+    monkeypatch.setattr(_state, "get_catalog_policy_service", lambda: service)
+
+    assert _state._filter_registry_by_catalog_policy(registry) is registry
 
 
 def _node(nid, ntype, template=None):
@@ -397,6 +430,28 @@ class TestBuildFlowFromSpec:
         result = comp.build_flow()
         assert "failed" in result.data["text"].lower()
         assert "error" in result.data
+
+    def test_build_type_mismatch_error_carries_repair_guidance(self):
+        # loop_flow eval regression: `L.item -> A.input_value` (Data -> Message)
+        # failed with a bare error and the agent burned its whole recursion
+        # budget re-discovering components instead of fixing the spec.
+        reset_working_flow()
+        comp = BuildFlowFromSpec()
+        comp.set(
+            spec=(
+                "name: Loop Agent\n"
+                "nodes:\n  I: ChatInput\n  L: LoopComponent\n  A: Agent\n  O: ChatOutput\n"
+                "edges:\n  I.message -> L.data\n  L.item -> A.input_value\n"
+                "  A.response -> L.item\n  L.done -> O.input_value"
+            )
+        )
+        result = comp.build_flow()
+
+        assert "error" in result.data
+        text = result.data["text"]
+        assert "ParserComponent" in text
+        assert "call build_flow again" in text
+        assert "do NOT re-run search_components or describe_component" in text
 
     def test_build_pushes_set_flow_event(self):
         reset_working_flow()

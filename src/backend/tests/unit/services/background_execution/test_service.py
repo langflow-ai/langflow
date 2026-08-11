@@ -178,9 +178,13 @@ async def test_stop_cancels_job(active_user):
         await svc.stop_job(job_id, active_user)
         gate.set()
         st = None
+        # Why: a bare task cancel makes execute_with_status write FAILED before the
+        # runner's shielded finally reconciles the pending STOP to CANCELLED. That
+        # FAILED is a transient intermediate state, not the settled outcome — so
+        # poll for the reconciled terminal status instead of the first terminal one.
         for _ in range(50):
             st = await svc.status(job_id, active_user)
-            if st["status"] in {JobStatus.CANCELLED, JobStatus.FAILED, JobStatus.COMPLETED}:
+            if st["status"] == JobStatus.CANCELLED:
                 break
             await asyncio.sleep(0.05)
         assert st["status"] == JobStatus.CANCELLED

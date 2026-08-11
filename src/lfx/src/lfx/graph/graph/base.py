@@ -108,6 +108,9 @@ class Graph:
         self._runs = 0
         self._updates = 0
         self.flow_id = flow_id
+        # Server-set provenance for a public flow whose execution uses a virtual
+        # flow_id. Request data must never populate this storage scope.
+        self.source_flow_id: str | None = None
         self.flow_name = flow_name
         self.description = description
         self.user_id = user_id
@@ -1359,6 +1362,7 @@ class Graph:
             "vertices": self.vertices,
             "edges": self.edges,
             "flow_id": self.flow_id,
+            "source_flow_id": self.source_flow_id,
             "flow_name": self.flow_name,
             "description": self.description,
             "user_id": self.user_id,
@@ -1420,6 +1424,7 @@ class Graph:
             )
             if before_initialize is not None:
                 before_initialize(new_graph)
+            new_graph.source_flow_id = copy.deepcopy(self.source_flow_id, memo)
         else:
             # Create a new graph without start and end, binding the requested user
             # before add_nodes_and_edges instantiates request-local components.
@@ -1430,6 +1435,9 @@ class Graph:
                 user_id=user_id,
                 instantiate_components=instantiate_components,
             )
+            # add_nodes_and_edges synchronously builds FileInput parameters, so
+            # trusted public-flow provenance must exist before reconstruction.
+            new_graph.source_flow_id = copy.deepcopy(self.source_flow_id, memo)
             # Rebuild parsed graphs from their original frontend shape. ``_vertices``
             # and ``_edges`` have already been flattened by ``process_flow``; using
             # them here would turn grouped children into top-level vertices and
@@ -1500,6 +1508,9 @@ class Graph:
         # must retain the historical eager-instantiation behavior.
         state.setdefault("_instantiate_components_on_initialize", True)
         state.setdefault("requires_extension_event_replay", False)
+        # Graphs cached before source-flow provenance was introduced remain
+        # loadable and simply have no additional trusted storage namespace.
+        state.setdefault("source_flow_id", None)
         run_manager = state["run_manager"]
         if isinstance(run_manager, RunnableVerticesManager):
             state["run_manager"] = run_manager
@@ -2903,6 +2914,7 @@ class Graph:
         subgraph._tracing_service_initialized = True
         subgraph._run_id = self._run_id
         subgraph.session_id = self.session_id
+        subgraph.source_flow_id = self.source_flow_id
         subgraph._is_subgraph = True
 
         # Add the filtered nodes and edges

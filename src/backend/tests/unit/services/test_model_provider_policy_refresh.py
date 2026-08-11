@@ -6,7 +6,33 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
 from langflow.services.task import model_provider_policy_refresh as refresh_module
-from lfx.services.model_provider_policy import ModelProviderPolicyService
+from lfx.services.model_provider_policy import (
+    BaseModelProviderPolicyService,
+    ModelProviderPolicyContext,
+    ModelProviderPolicyPurpose,
+    ModelProviderPolicyService,
+)
+from lfx.services.policy_bundle import PolicyBundleService, PolicyBundleSnapshot
+
+
+class _DatabaseOwnedPluginPolicyService(BaseModelProviderPolicyService):
+    def __init__(self, policy_bundle_service: PolicyBundleService) -> None:
+        super().__init__()
+        self.policy_bundle_service = policy_bundle_service
+        self.set_ready()
+
+    def get_allowed_provider_ids(
+        self,
+        *,
+        context: ModelProviderPolicyContext,
+        candidate_provider_ids: frozenset[str],
+        purpose: ModelProviderPolicyPurpose,
+    ) -> frozenset[str]:
+        _ = context, purpose
+        if not self.policy_bundle_service.source_available:
+            return frozenset()
+        ceiling = self.policy_bundle_service.snapshot.approved_provider_ids
+        return candidate_provider_ids if not ceiling else candidate_provider_ids & ceiling
 
 
 class _ExternalBuiltinPolicyService(ModelProviderPolicyService):
@@ -165,17 +191,103 @@ async def test_start_uses_configured_interval_and_stop_clears_task(monkeypatch):
     assert worker._task is None
 
 
+async def test_start_refreshes_a_database_owned_provider_plugin(monkeypatch):
+    service = _DatabaseOwnedPluginPolicyService(PolicyBundleService())
+    worker = refresh_module.ModelProviderPolicyRefreshWorker(interval=5)
+    run_started = asyncio.Event()
+    keep_running = asyncio.Event()
+
+    async def run():
+        run_started.set()
+        await keep_running.wait()
+
+    monkeypatch.setattr(refresh_module, "get_model_provider_policy_service", lambda: service)
+    monkeypatch.setattr(worker, "_run", run)
+
+    await worker.start()
+    await run_started.wait()
+
+    assert worker._task is not None
+
+    await worker.stop()
+
+
+async def test_refresh_failure_marks_a_restrictive_database_owned_plugin_unavailable(monkeypatch):
+    bundle_service = PolicyBundleService()
+    bundle_service.publish(
+        PolicyBundleSnapshot(
+            revision=3,
+            initialized=True,
+            source="api",
+            approved_provider_ids=frozenset({"openai"}),
+        )
+    )
+    service = _DatabaseOwnedPluginPolicyService(bundle_service)
+    error_message = "policy store unavailable"
+
+    @asynccontextmanager
+    async def failing_session_scope():
+        raise ConnectionError(error_message)
+        yield
+
+    invalidate = Mock(wraps=service.invalidate)
+    monkeypatch.setattr(service, "invalidate", invalidate)
+    monkeypatch.setattr(refresh_module, "session_scope", failing_session_scope)
+    monkeypatch.setattr(refresh_module, "get_model_provider_policy_service", lambda: service)
+    monkeypatch.setattr(refresh_module, "get_policy_bundle_service", lambda: bundle_service)
+    monkeypatch.setattr(refresh_module.logger, "aerror", AsyncMock())
+
+    changed = await refresh_module.ModelProviderPolicyRefreshWorker()._run_once()
+
+    assert changed is True
+    assert bundle_service.source_available is False
+    invalidate.assert_called_once_with()
+
+
 async def test_start_skips_explicitly_external_builtin_subclass(monkeypatch):
     service = _ExternalBuiltinPolicyService()
     worker = refresh_module.ModelProviderPolicyRefreshWorker()
     debug = AsyncMock()
     monkeypatch.setattr(refresh_module, "get_model_provider_policy_service", lambda: service)
+    monkeypatch.setattr(
+        refresh_module,
+        "get_catalog_policy_service",
+        lambda: SimpleNamespace(external_policy_snapshot=object()),
+    )
     monkeypatch.setattr(refresh_module.logger, "adebug", debug)
 
     await worker.start()
 
     assert worker._task is None
-    debug.assert_awaited_once_with("Model-provider policy refresh worker not started: external policy service active")
+    debug.assert_awaited_once_with(
+        "Policy-bundle refresh worker not started: provider and catalog policies are externally managed"
+    )
+
+
+async def test_start_refreshes_database_catalog_when_provider_policy_is_external(monkeypatch):
+    service = _ExternalBuiltinPolicyService()
+    worker = refresh_module.ModelProviderPolicyRefreshWorker(interval=5)
+    run_started = asyncio.Event()
+    keep_running = asyncio.Event()
+
+    async def run():
+        run_started.set()
+        await keep_running.wait()
+
+    monkeypatch.setattr(refresh_module, "get_model_provider_policy_service", lambda: service)
+    monkeypatch.setattr(
+        refresh_module,
+        "get_catalog_policy_service",
+        lambda: SimpleNamespace(external_policy_snapshot=None),
+    )
+    monkeypatch.setattr(worker, "_run", run)
+
+    await worker.start()
+    await run_started.wait()
+
+    assert worker._task is not None
+
+    await worker.stop()
 
 
 async def test_refresh_failure_does_not_fail_close_explicitly_external_builtin_subclass(monkeypatch):

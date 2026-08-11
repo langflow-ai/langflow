@@ -845,7 +845,7 @@ async def delete_starter_projects(session, folder_id) -> None:
 
 
 async def folder_exists(session, folder_name):
-    stmt = select(Folder).where(Folder.name == folder_name)
+    stmt = select(Folder).where(Folder.name == folder_name, Folder.user_id.is_(None))
     folder = (await session.exec(stmt)).first()
     return folder is not None
 
@@ -858,7 +858,7 @@ async def get_or_create_starter_folder(session):
         await session.flush()
         await session.refresh(db_folder)
         return db_folder
-    stmt = select(Folder).where(Folder.name == STARTER_FOLDER_NAME)
+    stmt = select(Folder).where(Folder.name == STARTER_FOLDER_NAME, Folder.user_id.is_(None))
     return (await session.exec(stmt)).first()
 
 

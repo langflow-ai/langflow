@@ -23,6 +23,9 @@ from lfx.services.settings.utils import (
     write_secret_to_file,
 )
 
+ASCII_CONTROL_CHARACTER_LIMIT = 0x20
+ASCII_DELETE_CHARACTER = 0x7F
+
 
 def _warn_if_secret_key_is_short(value: str | SecretStr) -> None:
     secret_value = value.get_secret_value() if isinstance(value, SecretStr) else value
@@ -157,6 +160,11 @@ class AuthSettings(BaseSettings):
         description="Path to SSO configuration file (YAML format). Required when SSO_ENABLED=true.",
     )
     """Path to YAML configuration file for SSO settings. Contains provider-specific configuration."""
+
+    SSO_REDIRECT_URL: str | None = Field(
+        default=None,
+        description="Same-origin relative URL used after SSO authentication. Absolute URLs are rejected.",
+    )
 
     # External trusted-identity settings.
     # Used when an upstream identity layer (proxy, gateway, IdP) issues or
@@ -357,6 +365,35 @@ class AuthSettings(BaseSettings):
             return "external"
         normalized = str(value).strip()
         return normalized or "external"
+
+    @field_validator("SSO_REDIRECT_URL", mode="before")
+    @classmethod
+    def validate_sso_redirect_url(cls, value):
+        """Allow only same-origin relative URL references."""
+        if value is None:
+            return None
+
+        raw_url = str(value)
+        url = raw_url.strip()
+        if not url:
+            return None
+        if any(
+            ord(character) < ASCII_CONTROL_CHARACTER_LIMIT or ord(character) == ASCII_DELETE_CHARACTER
+            for character in raw_url
+        ):
+            msg = "SSO_REDIRECT_URL must not contain control characters."
+            raise ValueError(msg)
+
+        parsed = urlparse(url)
+        normalized_separators = url.replace("\\", "/")
+        if parsed.scheme or parsed.netloc or normalized_separators.startswith("//"):
+            msg = (
+                "SSO_REDIRECT_URL must be a same-origin relative path; "
+                "absolute and protocol-relative URLs are not allowed."
+            )
+            raise ValueError(msg)
+
+        return url
 
     @field_validator("EXTERNAL_AUTH_JWKS_URL", mode="before")
     @classmethod

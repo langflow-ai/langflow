@@ -11,6 +11,7 @@ This test suite covers all aspects of the logger module including:
 
 import builtins
 import contextlib
+import importlib
 import json
 import logging
 import os
@@ -33,6 +34,67 @@ from lfx.log.logger import (
     setup_uvicorn_logger,
 )
 from loguru import logger as loguru_logger
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _restore_process_logging_state():
+    """Restore every process-global logging object this module mutates.
+
+    The tests here call ``configure()`` dozens of times and edit
+    ``logging.root.handlers`` directly, which rewires *process-wide* state:
+    the structlog config, stdlib root handlers (InterceptHandler /
+    RotatingFileHandler pointed at since-deleted temp dirs), named-logger
+    levels (via LANGFLOW_LOG_LEVELS), and the ``lfx.log.logger`` module
+    globals. Under xdist that poisoned state leaks into whatever test the
+    worker picks up next -- observed on the release-1.11.3 CI run, where the
+    worker that had just finished this module hung indefinitely inside the
+    next test needing the full-app ``client`` fixture
+    (test_login.py::test_session_endpoint_rejects_expired_external_token),
+    freezing the whole Group 5 job to the 50-min step wall on py3.13. This
+    fixture snapshots the pre-module state and puts it back at module exit.
+    """
+    # ``import lfx.log.logger as ...`` would bind the *logger object* that
+    # ``lfx.log``'s ``__init__`` re-exports under the same name, not the module.
+    _lfx_log = importlib.import_module("lfx.log.logger")
+
+    orig_structlog_config = dict(structlog.get_config())
+    orig_root_handlers = logging.root.handlers[:]
+    orig_root_level = logging.root.level
+    orig_file_handler = _lfx_log._file_handler
+    orig_logger_levels = {
+        name: lg.level for name, lg in logging.Logger.manager.loggerDict.items() if isinstance(lg, logging.Logger)
+    }
+
+    yield
+
+    # structlog: reinstall the exact pre-module config (processor chain,
+    # wrapper_class -- which also carries configure()'s change fingerprint).
+    structlog.configure(**orig_structlog_config)
+
+    # stdlib root: drop handlers the module added (closing file handlers so
+    # they stop pointing into deleted temp dirs), then restore the original
+    # handler list and level. If the module's configure() calls replaced the
+    # lfx-managed file handler, the original one was already closed by
+    # setup_log_file(), so it must not be reinstalled.
+    current_file_handler = _lfx_log._file_handler
+    for handler in logging.root.handlers[:]:
+        if handler not in orig_root_handlers:
+            logging.root.removeHandler(handler)
+            if isinstance(handler, logging.handlers.RotatingFileHandler):
+                with contextlib.suppress(OSError, ValueError):
+                    handler.close()
+    restored_handlers = orig_root_handlers
+    if current_file_handler is not orig_file_handler:
+        restored_handlers = [h for h in orig_root_handlers if h is not orig_file_handler]
+        _lfx_log._file_handler = None
+    logging.root.handlers[:] = restored_handlers
+    logging.root.setLevel(orig_root_level)
+
+    # Named loggers whose levels configure() changed via LANGFLOW_LOG_LEVELS.
+    for name, level in orig_logger_levels.items():
+        lg = logging.Logger.manager.loggerDict.get(name)
+        if isinstance(lg, logging.Logger) and lg.level != level:
+            lg.setLevel(level)
 
 
 class TestConfigure:
