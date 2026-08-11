@@ -180,6 +180,34 @@ async def test_tool_emits_event(tool_name, call_fn, expected_event_type, mock_cl
     assert isinstance(call_args[0][2], str), f"{tool_name} summary should be a string"
 
 
+async def test_configure_component_marks_dynamic_explicit_value_as_literal(mock_client, mock_registry, mock_flow):
+    """Dynamic field refreshes must not reinterpret an explicit value as a global-variable name."""
+    from lfx.mcp.server import configure_component
+
+    node = _node("X-1")
+    node["data"]["node"]["template"]["api_key"] = {
+        "value": "",
+        "type": "str",
+        "load_from_db": True,
+    }
+    mock_flow["data"]["nodes"] = [node]
+    mock_client.post.return_value = {"template": node["data"]["node"]["template"]}
+
+    with (
+        _patch_server(mock_client, mock_registry, mock_flow),
+        patch("lfx.mcp.server.needs_server_update", return_value=True),
+    ):
+        await configure_component(
+            "flow-123",
+            "X-1",
+            {"api_key": "literal-value"},  # pragma: allowlist secret
+        )
+
+    request = mock_client.post.call_args.kwargs["json_data"]
+    assert request["template"]["api_key"]["value"] == "literal-value"
+    assert request["template"]["api_key"]["load_from_db"] is False
+
+
 # ---------------------------------------------------------------------------
 # Distinct behavior: create_flow_from_spec emits flow_settled (not just a
 # mutation event) because it signals the end of a batch operation.

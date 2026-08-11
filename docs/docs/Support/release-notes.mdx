@@ -46,10 +46,80 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
     If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
 
+## 1.12.x
+
+Langflow 1.12 consolidates the runnable application on `langflow-base`.
+`pip install langflow-base` now provides the UI, API, platform services, built-in
+components, and the `langflow` command without provider extension
+distributions. `pip install langflow` installs that same base version and adds
+the curated standalone `lfx-*` extensions.
+
+### Breaking changes
+
+- `langflow-base` version alignment
+
+    The runnable package starts at `langflow-base==1.12.0` and remains
+    version-aligned with `langflow` through stable, release-candidate, patch,
+    and nightly releases. A dependency such as `langflow-base~=0.12` remains on
+    the old package line and must be updated explicitly to select 1.12.
+    Before upgrading an existing environment, remove the retired package with
+    `pip uninstall langflow-core`; leaving an older `langflow-core` installed
+    can create conflicting dependency requirements.
+
+- Base command and image tags
+
+    The base package provides the `langflow` executable, not a
+    `langflow-base` executable. The canonical bundle-free container is
+    `langflowai/langflow:base-VERSION`; normal `langflowai/langflow:VERSION`
+    tags contain the curated distribution. The previous `core-*` image profile
+    is no longer published.
+
+- Cassandra and Policies components are extensions
+
+    Cassandra components now ship in `lfx-datastax`, and the
+    `PoliciesComponent` ships in `lfx-toolguard`. The full `langflow` package
+    includes both. Existing component class names and legacy Python import
+    paths remain compatible. For a base-only environment, add the extensions
+    with `pip install "lfx[cassandra,toolguard]"`.
+    Policies guard caches are now isolated under
+    `tmp_toolguard/{user}/{flow}/{component}/{project}`. Existing project-only
+    caches are not reused after upgrading; run **Generate** once before using
+    **Guard** in an upgraded flow.
+
+- The default `langflow` provider set is smaller
+
+    arXiv, DuckDuckGo, EmpirioLabs, Exa, Firecrawl, NextPlaid, Paddle, and
+    Valkey are no longer installed by plain `pip install langflow`. Use
+    `pip install "langflow[bundles]"` to add those standalone extensions
+    together with every no-Torch long-tail bundle.
+
+- PyTorch remains opt-in
+
+    The default base and curated Langflow installations do not install PyTorch
+    or TorchVision. Components that require them must be installed through an
+    explicit opt-in profile.
+
+- IBM watsonx Orchestrate clients move to the IBM extension
+
+    The base deployment adapter remains feature-flagged, but its client
+    dependencies now ship with `lfx-ibm`. Install `lfx-ibm` or use the
+    compatibility extra `langflow-base[ibm-watsonx-clients]` before enabling
+    the adapter in a base-only environment.
+
+- LiteLLM remains optional in base-only environments
+
+    `langflow-base` no longer imports LiteLLM by default. Install
+    `langflow-base[litellm]` when custom components or IDE tooling depend on
+    the LiteLLM compatibility surface.
+
 ## 1.11.x
 
 Highlights of this release include the following changes.
 For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
+
+:::tip
+If Langflow fails to start with a `get_body_field` error after installing version 1.11.0, see [`get_body_field` error after installing Langflow](/troubleshoot#get_body_field-error-after-installing-langflow).
+:::
 
 ### Breaking changes
 
@@ -66,24 +136,47 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     Langflow no longer creates or accepts the legacy `langflow`/`langflow` default superuser credentials.
     If `LANGFLOW_AUTO_LOGIN=False`, set `LANGFLOW_SUPERUSER_PASSWORD` to a strong password before startup.
-
-- Docker images enable component hardening by default
-
-    Official Langflow Docker images now include stricter defaults and include the following environment variables:
+    The legacy value `langflow` is not allowed, even if `LANGFLOW_AUTO_LOGIN=True`.
 
     ```bash
-    LANGFLOW_AUTO_LOGIN=false
-    LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false
-    LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true
-    LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true
-    LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true
+    export LANGFLOW_SUPERUSER_PASSWORD=SUPERUSER_PASSWORD
     ```
 
-    Existing Langflow containers that rely on custom components, code interpreters, or absolute local file paths must override these variables.
-    Keep the image defaults when users who can build flows on the server are not fully trusted.
-    For more information, see [Docker image security defaults](/deployment-docker#docker-image-security-defaults).
+    Replace `SUPERUSER_PASSWORD` with a strong password for the Langflow superuser.
 
-- Long-tail component bundles are now opt-in
+    If `LANGFLOW_AUTO_LOGIN=true`, setting `LANGFLOW_SUPERUSER_PASSWORD` is optional. If you omit it, Langflow generates a random bootstrap password for the auto-login account.
+
+    If you're running Langflow with Docker and `LANGFLOW_AUTO_LOGIN=false`, pass the password at startup:
+
+    ```bash
+    docker run -d \
+      --name ${CONTAINER_NAME} \
+      --restart unless-stopped \
+      -p 7860:7860 \
+      -e LANGFLOW_HOST=0.0.0.0 \
+      -e LANGFLOW_PORT=7860 \
+      -e LANGFLOW_AUTO_LOGIN=false \
+      -e LANGFLOW_SUPERUSER_PASSWORD=SUPERUSER_PASSWORD \
+      -v langflow-data:/app/langflow \
+      ${IMAGE}
+    ```
+
+    Replace `SUPERUSER_PASSWORD` with a strong password for the Langflow superuser.
+
+- Docker images disable auto-login by default
+
+    Official Langflow Docker images set `LANGFLOW_AUTO_LOGIN=false`.
+    You must set `LANGFLOW_SUPERUSER_PASSWORD` (and optionally `LANGFLOW_SUPERUSER`) before the container can start, unless you explicitly set `LANGFLOW_AUTO_LOGIN=true`.
+
+    For more information, see [Docker image defaults](/deployment-docker#docker-image-security-defaults).
+
+ - Docker runtime home moved to `/app/data`
+
+    Patched 1.11 Docker images set `HOME=/app/data` so the non-root runtime user has a writable home directory.
+    When `LANGFLOW_CONFIG_DIR` isn't set, the default config directory therefore changes from `/opt/app-root/src/.cache/langflow` to `/app/data/.cache/langflow`; SQLite follows that directory when `LANGFLOW_SAVE_DB_IN_CONFIG_DIR=true`.
+    Persist `/app/data` or set `LANGFLOW_CONFIG_DIR` to your existing writable data directory before upgrading to preserve existing data.
+
+ - Long-tail component bundles are now opt-in
 
     Starting in Langflow 1.11.x, `pip install langflow` no longer installs the long-tail providers in the `lfx-bundles` metapackage.
     If an existing flow uses components such as Chroma, Ollama, Qdrant, Redis, PGVector, Tavily, Wikipedia, MongoDB, Weaviate, or Milvus, install the metapackage in the same environment after upgrading:
@@ -140,13 +233,15 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     For more information, see [Workflow API (Beta)](/workflow-api).
 
+- Input Schema pane replaced by in-component Parameters
+
+    The **Input Schema** pane under **Share** > **API access** is removed, but the fields can still be exposed to requests.
+    The `tweaks` object in API requests is unchanged.
+    **Endpoint Name** remains available from the **API access** pane.
+
+    For details, see [Tweaks (API inputs)](/concepts-publish#input-schema).
+
 ### New features and enhancements
-
-- Agent2Agent (A2A) protocol support
-
-    Publish a flow as an A2A agent so other agents can discover and call it, and call remote A2A agents from inside a flow with the **A2A Agent** component.
-
-    For more information, see [Use Langflow as an A2A server](./a2a-server) and the [**A2A Agent** component](./a2a-agent-component).
 
 - Human-in-the-Loop (HITL)
 
@@ -154,6 +249,18 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     After a human responds by approving, rejecting, or editing the request, the agent resumes from the checkpoint.
 
     For more information, see [Human-in-the-Loop](./human-in-the-loop).
+
+- Agent2Agent (A2A) protocol support
+
+    Publish a flow as an A2A agent so other agents can discover and call it, and call remote A2A agents from inside a flow with the **A2A Agent** component.
+
+    For more information, see [Use Langflow as an A2A server](./a2a-server) and the [**A2A Agent** component](./a2a-agent-component).
+
+- AG-UI compatible streaming for the Workflow API
+
+    The v2 [Workflow API](/workflow-api) now supports streaming with the [AG-UI (Agent–User Interaction) protocol](https://docs.ag-ui.com/introduction) streaming format.
+
+    For more information, see [Workflow API (Beta)](/workflow-api#stream-with-ag-ui).
 
 - OpenAI Compatible model provider
 
@@ -167,12 +274,6 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     **Text Operations**, **JSON Operations**, and **Table Operations** are consolidated into a single [**Data Operations** component](./operations).
     Saved flows that use the separate components continue to work.
     For more information, see the [**Data Operations** component](./operations).
-
-- AG-UI compatible streaming for the Workflow API
-
-    The v2 [Workflow API](/workflow-api) now supports streaming with the [AG-UI (Agent–User Interaction) protocol](https://docs.ag-ui.com/introduction) streaming format.
-
-    For more information, see [Workflow API (Beta)](/workflow-api#stream-with-ag-ui).
 
 - IBM watsonx Orchestrate: Python 3.14 compatibility
 

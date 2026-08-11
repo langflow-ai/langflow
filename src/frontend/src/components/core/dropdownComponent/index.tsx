@@ -1,37 +1,25 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
-import Fuse from "fuse.js";
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
-import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { BUILD_PANEL_COLLISION_PADDING_PX } from "@/constants/constants";
-import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
-import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
-import {
-  convertStringToHTML,
-  getStatusColor,
-} from "@/utils/stringManipulation";
 import type { DropDownComponent } from "../../../types/components";
 import { cn, filterNullOptions, formatName } from "../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../common/genericIconComponent";
-import ShadTooltip from "../../common/shadTooltipComponent";
 import { Button } from "../../ui/button";
-import {
-  Command,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "../../ui/command";
+import { Command, CommandItem } from "../../ui/command";
 import {
   Popover,
   PopoverContent,
   PopoverContentWithoutPortal,
-  PopoverTrigger,
 } from "../../ui/popover";
 import type { BaseInputProps } from "../parameterRenderComponent/types";
+import { DropdownOptionsList } from "./components/DropdownOptionsList";
+import { DropdownSearchInput } from "./components/DropdownSearchInput";
+import { DropdownTrigger } from "./components/DropdownTrigger";
+import { useDropdownMutations } from "./hooks/useDropdownMutations";
+import { useDropdownOptions } from "./hooks/useDropdownOptions";
 
 export default function Dropdown({
   disabled,
@@ -62,259 +50,61 @@ export default function Dropdown({
     [options, value],
   );
 
-  // Initialize state and refs
-  const [open, setOpen] = useState(children ? true : false);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [_waitingForResponse, setWaitingForResponse] = useState(false);
-  const [customValue, setCustomValue] = useState("");
+  // Options / filtering state and its sync effects
+  const {
+    open,
+    setOpen,
+    openDialog,
+    setOpenDialog,
+    setWaitingForResponse,
+    customValue,
+    filteredOptions,
+    setFilteredOptions,
+    filteredMetadata,
+    refreshOptions,
+    setRefreshOptions,
+    setPendingSelect,
+    searchRoleByTerm,
+  } = useDropdownOptions({
+    value,
+    options,
+    validOptions,
+    optionsMetaData,
+    combobox,
+    disabled,
+    hasChildren: Boolean(children),
+    onSelect,
+  });
   const _nodes = useFlowStore((state) => state.nodes);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const buildInfo = useFlowStore((state) => state.buildInfo);
   const showingBuildPanel =
     isBuilding || !!buildInfo?.error || !!buildInfo?.success;
 
-  const [filteredOptions, setFilteredOptions] = useState(() => {
-    // Include the current value in filteredOptions if it's a custom value not in validOptions
-    if (value && !validOptions.includes(value) && combobox) {
-      return [...validOptions, value];
-    }
-    return validOptions;
-  });
-  const [filteredMetadata, setFilteredMetadata] = useState(optionsMetaData);
-  const [refreshOptions, setRefreshOptions] = useState(false);
-  const [pendingSelect, setPendingSelect] = useState<string | null>(null);
   const refButton = useRef<HTMLButtonElement>(null);
-
-  // Reset the value when options are loaded and the current value is not among them.
-  // This is in a useEffect (not useMemo) to avoid calling setState during render.
-  // When options is empty, it means options are still loading, so we preserve the saved value.
-  useEffect(() => {
-    if (
-      options.length > 0 &&
-      !options.includes(value) &&
-      !filteredOptions.includes(value)
-    ) {
-      if (value) onSelect("", undefined, true);
-    }
-  }, [value, options, filteredOptions]);
 
   // Initialize utilities and constants
 
   const sourceOptions = dialogInputs?.fields ? dialogInputs : externalOptions;
   const { firstWord } = formatName(name);
-  const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
   const PopoverContentDropdown =
     children || editNode || inspectionPanel
       ? PopoverContent
       : PopoverContentWithoutPortal;
   const { helperText, hasRefreshButton } = baseInputProps;
 
-  // API and store hooks
-  const postTemplateValue = usePostTemplateValue({
-    parameterId: name,
-    nodeId: nodeId,
-    node: nodeClass,
-  });
-  const setErrorData = useAlertStore((state) => state.setErrorData);
-
-  // Utility functions
-  const filterMetadataKeys = (
-    // biome-ignore lint/suspicious/noExplicitAny: legacy
-    metadata: Record<string, any> = {},
-    excludeKeys: string[] = [
-      "api_endpoint",
-      "icon",
-      "status",
-      "org_id",
-      "id",
-      "updated_at",
-    ],
-  ) => {
-    return Object.fromEntries(
-      Object.entries(metadata).filter(([key]) => !excludeKeys.includes(key)),
-    );
-  };
-
-  const searchRoleByTerm = async (event: ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    setCustomValue(value);
-
-    if (!value) {
-      // If search is cleared, show all options
-      // Preserve any custom values that were in filteredOptions
-      const customValuesInFiltered = filteredOptions.filter(
-        (option) => !validOptions.includes(option) && option === customValue,
-      );
-      setFilteredOptions([...validOptions, ...customValuesInFiltered]);
-      setFilteredMetadata(optionsMetaData);
-      return;
-    }
-
-    // Search existing options
-    const searchValues = fuse.search(value);
-    let filtered = searchValues.map((search) => search.item);
-
-    // If the search value exactly matches one of the custom options, include it
-    const customOptions = filteredOptions.filter(
-      (option) => !validOptions.includes(option),
-    );
-    const matchingCustomOption = customOptions.find(
-      (option) => option.toLowerCase() === value.toLowerCase(),
-    );
-
-    // Include matching custom options or allow adding the current search if combobox is true
-    if (matchingCustomOption && !filtered.includes(matchingCustomOption)) {
-      filtered.push(matchingCustomOption);
-    } else if (
-      combobox &&
-      value &&
-      !filtered.some((opt) => opt.toLowerCase() === value.toLowerCase())
-    ) {
-      // If combobox is enabled and we're typing a new value, include it in the filtered list
-      filtered = [value, ...filtered];
-    }
-
-    // Update filteredOptions with the search results
-    setFilteredOptions(filtered);
-
-    // Create a new metadata array that directly maps to filtered options
-    if (optionsMetaData) {
-      // Create a map of option -> metadata for quick lookup
-      // biome-ignore lint/suspicious/noExplicitAny: legacy
-      const metadataMap: Record<string, any> = {};
-      validOptions.forEach((option, index) => {
-        if (optionsMetaData[index]) {
-          metadataMap[option] = optionsMetaData[index];
-        }
-      });
-
-      // Map each filtered option to its metadata (or undefined for custom values)
-      const newMetadata = filtered.map((option) => metadataMap[option]);
-      setFilteredMetadata(newMetadata);
-    } else {
-      setFilteredMetadata(undefined);
-    }
-  };
-
-  const handleSourceOptions = async (value: string) => {
-    setWaitingForResponse(true);
-    setOpen(false);
-
-    await mutateTemplate(
+  // Template mutation flows (create-from-source, refresh list)
+  const { handleSourceOptions, handleRefreshButtonPress } =
+    useDropdownMutations({
       value,
-      nodeId,
-      nodeClass!,
-      handleNodeClass,
-      postTemplateValue,
-      setErrorData,
       name,
-    );
-
-    setWaitingForResponse(false);
-  };
-
-  const handleRefreshButtonPress = async () => {
-    setRefreshOptions(true);
-    setOpen(false);
-
-    await mutateTemplate(
-      value,
       nodeId,
-      nodeClass!,
+      nodeClass,
       handleNodeClass,
-      postTemplateValue,
-      setErrorData,
-      undefined, // parameterName
-      undefined, // callback
-      undefined, // toolMode
-      true, // isRefresh
-    )?.then(() => {
-      setTimeout(() => {
-        setRefreshOptions(false);
-      }, 2000);
+      setOpen,
+      setWaitingForResponse,
+      setRefreshOptions,
     });
-  };
-
-  const formatTooltipContent = (option: string, index: number) => {
-    if (!filteredMetadata?.[index]) return option;
-
-    const metadata = filteredMetadata[index];
-    const metadataEntries = Object.entries(metadata)
-      .filter(
-        ([key, value]) =>
-          value !== null &&
-          key !== "icon" &&
-          key !== "id" &&
-          key !== "updated_at",
-      )
-      .map(([key, value]) => {
-        const displayValue =
-          typeof value === "string" && value.length > 20
-            ? `${value.substring(0, 30)}...`
-            : String(value);
-        return `${key}: ${displayValue}`;
-      });
-
-    return metadataEntries.length > 0
-      ? `${firstWord}: ${option}\n${metadataEntries.join("\n")}`
-      : option;
-  };
-
-  // Auto-select a newly created option (e.g. knowledge base) once it appears in the options list
-  useEffect(() => {
-    if (pendingSelect && options.includes(pendingSelect)) {
-      onSelect(pendingSelect);
-      setPendingSelect(null);
-    }
-  }, [options, pendingSelect, onSelect]);
-
-  // Effects
-  useEffect(() => {
-    if (disabled && value !== "") {
-      onSelect("", undefined, true);
-    }
-  }, [disabled]);
-
-  useEffect(() => {
-    if (open) {
-      // Check if filteredOptions contains any custom values not in validOptions
-      const customValuesInFiltered = filteredOptions.filter(
-        (option) => !validOptions.includes(option) && option === customValue,
-      );
-
-      // If there are custom values, preserve them when resetting filtered options
-      if (customValuesInFiltered.length > 0 && combobox) {
-        setFilteredOptions([...validOptions, ...customValuesInFiltered]);
-
-        // Reset filteredMetadata to match the new filteredOptions
-        if (optionsMetaData) {
-          // biome-ignore lint/suspicious/noExplicitAny: legacy
-          const metadataMap: Record<string, any> = {};
-          validOptions.forEach((option, index) => {
-            if (optionsMetaData[index]) {
-              metadataMap[option] = optionsMetaData[index];
-            }
-          });
-
-          const newMetadata = [...validOptions, ...customValuesInFiltered].map(
-            (option) => metadataMap[option],
-          );
-          setFilteredMetadata(newMetadata);
-        }
-      } else {
-        setFilteredOptions(validOptions);
-        setFilteredMetadata(optionsMetaData);
-      }
-    }
-    if (
-      !combobox &&
-      value &&
-      validOptions.length > 0 &&
-      !validOptions.includes(value)
-    ) {
-      onSelect("", undefined, true);
-    }
-  }, [open, validOptions]);
 
   const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
@@ -343,302 +133,6 @@ export default function Dropdown({
     </Button>
   );
 
-  const renderSelectedIcon = () => {
-    const selectedIndex = filteredOptions.findIndex(
-      (option) => option === value,
-    );
-    const iconMetadata =
-      selectedIndex >= 0 ? filteredMetadata?.[selectedIndex]?.icon : undefined;
-
-    return iconMetadata ? (
-      <ForwardedIconComponent
-        name={iconMetadata}
-        className="h-4 w-4 flex-shrink-0"
-      />
-    ) : null;
-  };
-
-  const renderTriggerButton = () => (
-    <div className="flex w-full flex-col">
-      <PopoverTrigger asChild>
-        <Button
-          disabled={
-            disabled ||
-            (Object.keys(validOptions).length === 0 &&
-              !combobox &&
-              !sourceOptions?.fields?.data?.node?.template &&
-              !hasRefreshButton &&
-              !sourceOptions?.fields)
-          }
-          variant="primary"
-          size="xs"
-          role="combobox"
-          ref={refButton}
-          aria-expanded={open}
-          data-testid={id}
-          className={cn(
-            editNode
-              ? "dropdown-component-outline input-edit-node"
-              : "dropdown-component-false-outline py-2",
-            "focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground",
-          )}
-        >
-          <span
-            className="flex w-full items-center gap-2 overflow-hidden"
-            data-testid={`value-dropdown-${id}`}
-          >
-            {value && <>{renderSelectedIcon()}</>}
-            <span className="truncate">
-              {disabled ? (
-                t("component.receivingInput")
-              ) : (
-                <>
-                  {
-                    options?.includes(value) ? (
-                      value
-                    ) : // this logic is used for the agents component, if you update make sure to test the agent component
-                    sourceOptions?.fields?.data?.node?.name ===
-                      "connect_other_models" ? (
-                      <span className="text-muted-foreground">
-                        <LoadingTextComponent
-                          text={placeholder || t("component.selectOption")}
-                        />
-                      </span>
-                    ) : (
-                      placeholder || t("component.selectOption")
-                    )
-                    // ) : (
-                    //   <span className="text-muted-foreground">
-                    //     <LoadingTextComponent
-                    //       text={placeholder || t("component.selectOption")}
-                    //     />
-                    //   </span>
-                    // )}
-                  }
-                </>
-              )}
-            </span>
-          </span>
-
-          <ForwardedIconComponent
-            name={disabled ? "Lock" : "ChevronsUpDown"}
-            className={cn(
-              "ml-2 h-4 w-4 shrink-0 text-foreground",
-              disabled
-                ? "text-placeholder-foreground hover:text-placeholder-foreground"
-                : "hover:text-foreground",
-            )}
-          />
-        </Button>
-      </PopoverTrigger>
-      {helperText && (
-        <span className="pt-2 text-xs text-muted-foreground">
-          {convertStringToHTML(helperText)}
-        </span>
-      )}
-    </div>
-  );
-
-  const renderSearchInput = () => (
-    <div className="flex items-center border-b px-2.5">
-      <ForwardedIconComponent
-        name="search"
-        className="mr-2 h-4 w-4 shrink-0 opacity-50"
-      />
-      <input
-        onChange={searchRoleByTerm}
-        onKeyDown={handleInputKeyDown}
-        placeholder={t("input.searchOptions")}
-        className="flex h-9 w-full rounded-md bg-transparent py-3 text-[13px] outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-        autoComplete="off"
-        data-testid="dropdown_search_input"
-      />
-    </div>
-  );
-
-  const renderOptionsList = () => (
-    <CommandList className="max-h-[300px] overflow-y-auto">
-      <CommandGroup defaultChecked={false} className="p-0">
-        {filteredOptions?.length > 0 ? (
-          filteredOptions?.map((option, index) => (
-            <ShadTooltip
-              key={index}
-              delayDuration={700}
-              styleClasses="whitespace-pre-wrap"
-              content={formatTooltipContent(option, index)}
-            >
-              <div>
-                <CommandItem
-                  value={option}
-                  onSelect={(currentValue) => {
-                    onSelect(
-                      currentValue,
-                      undefined,
-                      undefined,
-                      filteredMetadata?.[index],
-                    );
-                    setOpen(false);
-                    setWaitingForResponse(false);
-                  }}
-                  className="w-full items-center rounded-none"
-                  data-testid={`${option}-${index}-option`}
-                >
-                  <div
-                    className="flex w-full items-center gap-2"
-                    data-testid={`dropdown-option-${index}-container`}
-                  >
-                    {filteredMetadata?.[index]?.icon && (
-                      <ForwardedIconComponent
-                        name={filteredMetadata?.[index]?.icon || "Unknown"}
-                        className="h-4 w-4 shrink-0 text-primary"
-                      />
-                    )}
-                    <div
-                      className={cn("flex w-full", {
-                        "pl-2": !filteredMetadata?.[index]?.icon,
-                      })}
-                    >
-                      <div className="text-[13px] mr-2 whitespace-nowrap flex-shrink-0">
-                        {option}
-                      </div>
-                      {filteredMetadata?.[index]?.status && (
-                        <span
-                          className={`flex items-center pl-2 text-xs ${getStatusColor(
-                            filteredMetadata?.[index]?.status,
-                          )}`}
-                        >
-                          <LoadingTextComponent
-                            text={filteredMetadata?.[
-                              index
-                            ]?.status?.toLowerCase()}
-                          />
-                        </span>
-                      )}
-
-                      {filteredMetadata && filteredMetadata?.length > 0 && (
-                        <div className="ml-auto flex items-center overflow-hidden pl-2 text-muted-foreground">
-                          {Object.entries(
-                            filterMetadataKeys(filteredMetadata?.[index] || {}),
-                          )
-                            .filter(
-                              ([key, value]) =>
-                                value !== null && key !== "icon",
-                            )
-                            .map(([key, value], i, arr) => (
-                              <div
-                                key={key}
-                                className={cn("flex items-center", {
-                                  "flex-1 overflow-hidden":
-                                    i === arr.length - 1,
-                                })}
-                              >
-                                {i > 0 && (
-                                  <ForwardedIconComponent
-                                    name="Circle"
-                                    className="mx-1 h-1 w-1 flex-shrink-0 overflow-visible fill-muted-foreground"
-                                  />
-                                )}
-                                <div className="text-xs truncate">
-                                  {`${String(value)} ${key}`}
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      )}
-                      <div
-                        className={cn("pl-2", {
-                          "ml-auto":
-                            !filteredMetadata || filteredMetadata.length === 0,
-                        })}
-                      >
-                        <ForwardedIconComponent
-                          name="Check"
-                          className={cn(
-                            "h-4 w-4 shrink-0 text-primary",
-                            value === option ? "opacity-100" : "opacity-0",
-                          )}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </CommandItem>
-              </div>
-            </ShadTooltip>
-          ))
-        ) : (
-          <CommandItem
-            disabled
-            className="w-full text-center text-sm text-muted-foreground px-2.5 py-1.5"
-          >
-            No options found
-          </CommandItem>
-        )}
-      </CommandGroup>
-      <CommandSeparator />
-      {sourceOptions && sourceOptions?.fields && (
-        <CommandGroup className="p-0">
-          <CommandItem
-            className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
-            onSelect={(value) => {
-              if (dialogInputs?.fields) {
-                setOpenDialog(true);
-              } else {
-                handleSourceOptions(
-                  sourceOptions?.fields?.data?.node?.name! || value,
-                );
-              }
-            }}
-          >
-            <div className="flex items-center gap-2 pl-1 text-[13px] font-semibold">
-              <ForwardedIconComponent name="Plus" className="h-3 w-3 " />
-              {sourceOptions?.fields?.data?.node?.display_name}
-            </div>
-            {sourceOptions?.fields?.data?.node?.icon && (
-              <div className="ml-auto">
-                <ForwardedIconComponent
-                  name={sourceOptions?.fields?.data?.node?.icon}
-                  className="h-3 w-3 "
-                />
-              </div>
-            )}
-          </CommandItem>
-
-          {hasRefreshButton && (
-            <CommandItem
-              className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
-              onSelect={() => {
-                handleRefreshButtonPress();
-              }}
-              data-testid={`refresh-dropdown-list-${name}`}
-            >
-              <div className="flex items-center gap-2 pl-1 text-[13px] font-semibold">
-                <ForwardedIconComponent
-                  name="RefreshCcw"
-                  className={cn("h-3 w-3")}
-                />
-                Refresh list
-              </div>
-            </CommandItem>
-          )}
-          <NodeDialog
-            open={openDialog}
-            dialogInputs={dialogInputs}
-            onClose={() => {
-              setOpenDialog(false);
-              setOpen(false);
-            }}
-            onCreated={(createdValue) => {
-              setPendingSelect(createdValue);
-            }}
-            nodeId={nodeId!}
-            name={name!}
-            nodeClass={nodeClass!}
-          />
-        </CommandGroup>
-      )}
-    </CommandList>
-  );
-
   const renderPopoverContent = () => (
     <PopoverContentDropdown
       side="bottom"
@@ -652,8 +146,32 @@ export default function Dropdown({
       }
     >
       <Command className="flex flex-col">
-        {options?.length > 0 && renderSearchInput()}
-        {renderOptionsList()}
+        {options?.length > 0 && (
+          <DropdownSearchInput
+            onSearch={searchRoleByTerm}
+            onKeyDown={handleInputKeyDown}
+          />
+        )}
+        <DropdownOptionsList
+          filteredOptions={filteredOptions}
+          filteredMetadata={filteredMetadata}
+          firstWord={firstWord}
+          value={value}
+          onSelect={onSelect}
+          setOpen={setOpen}
+          setWaitingForResponse={setWaitingForResponse}
+          sourceOptions={sourceOptions}
+          dialogInputs={dialogInputs}
+          handleSourceOptions={handleSourceOptions}
+          hasRefreshButton={hasRefreshButton}
+          handleRefreshButtonPress={handleRefreshButtonPress}
+          name={name}
+          openDialog={openDialog}
+          setOpenDialog={setOpenDialog}
+          setPendingSelect={setPendingSelect}
+          nodeId={nodeId}
+          nodeClass={nodeClass}
+        />
         {!sourceOptions?.fields && hasRefreshButton && (
           <div className="border-t bg-background">
             <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-b-md py-3 text-xs font-semibold text-muted-foreground">
@@ -710,7 +228,25 @@ export default function Dropdown({
           <span className="truncate text-sm">{value}</span>
         </div>
       ) : (
-        <div className="w-full truncate">{renderTriggerButton()}</div>
+        <div className="w-full truncate">
+          <DropdownTrigger
+            disabled={disabled}
+            validOptions={validOptions}
+            combobox={combobox}
+            sourceOptions={sourceOptions}
+            hasRefreshButton={hasRefreshButton}
+            editNode={editNode}
+            open={open}
+            refButton={refButton}
+            id={id}
+            value={value}
+            options={options}
+            placeholder={placeholder}
+            helperText={helperText}
+            filteredOptions={filteredOptions}
+            filteredMetadata={filteredMetadata}
+          />
+        </div>
       )}
       {renderPopoverContent()}
     </Popover>

@@ -2,8 +2,10 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "@/components/common/sanitizedHTMLWrapper";
 import { regexHighlight } from "@/constants/constants";
 import PromptModal from "@/modals/promptModal";
+import { variableHighlightClass } from "@/utils/promptVariables";
 import { cn } from "../../../../../utils/utils";
 import { Button } from "../../../../ui/button";
+import { getNodeScopedDomId } from "../../helpers/get-node-scoped-dom-id";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import type { InputProps, PromptAreaComponentType } from "../../types";
 
@@ -23,6 +25,7 @@ export default function PromptAreaComponent({
   disabled,
   editNode = false,
   id = "",
+  nodeId,
   readonly = false,
   showParameter = true,
 }: InputProps<string, PromptAreaComponentType>): JSX.Element | null {
@@ -49,7 +52,7 @@ export default function PromptAreaComponent({
 
       return (
         `${outerLeft}` +
-        `<span class="chat-message-highlight">{${varName}}</span>` +
+        `<span class="${variableHighlightClass(varName)}">{${varName}}</span>` +
         `${outerRight}`
       );
     })
@@ -58,7 +61,7 @@ export default function PromptAreaComponent({
 
   const renderPromptText = () => (
     <span
-      id={id}
+      id={getNodeScopedDomId(id, nodeId)}
       data-testid={id}
       className={cn(
         promptContentClasses.base,

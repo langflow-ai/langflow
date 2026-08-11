@@ -21,12 +21,14 @@ const asInternals = (v: unknown): UpdateNodeInternalsFn =>
 // Mock the canvas store BEFORE the helper imports it.
 const setNodes = jest.fn();
 const setEdges = jest.fn();
+const setNodesAndEdges = jest.fn();
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
   default: {
     getState: () => ({
       setNodes,
       setEdges,
+      setNodesAndEdges,
       reactFlowInstance: { fitView: jest.fn() },
     }),
   },
@@ -37,6 +39,7 @@ const noopUpdateNodeInternals = jest.fn();
 beforeEach(() => {
   setNodes.mockClear();
   setEdges.mockClear();
+  setNodesAndEdges.mockClear();
   noopUpdateNodeInternals.mockClear();
 });
 
@@ -53,26 +56,54 @@ describe("applyFlowUpdate — boundary validation", () => {
 
       applyFlowUpdate(asEvent(malformed), asInternals(noopUpdateNodeInternals));
 
+      expect(setNodesAndEdges).not.toHaveBeenCalled();
+    });
+
+    it("should_apply_canvas_replace_atomically_when_payload_is_well_formed", () => {
+      // Atomic setNodesAndEdges (one render) — a split setNodes+setEdges draws
+      // edges to loop/dynamic handles a frame late, so they need a refresh.
+      const nodes = [{ id: "ChatInput-1" }];
+      const edges = [{ id: "e1", source: "ChatInput-1", target: "Loop-2" }];
+      const valid = {
+        event: "flow_update",
+        action: "set_flow",
+        flow: { data: { nodes, edges } },
+      };
+
+      applyFlowUpdate(asEvent(valid), asInternals(noopUpdateNodeInternals));
+
+      expect(setNodesAndEdges).toHaveBeenCalledTimes(1);
+      expect(setNodesAndEdges).toHaveBeenCalledWith(nodes, edges);
       expect(setNodes).not.toHaveBeenCalled();
       expect(setEdges).not.toHaveBeenCalled();
     });
 
-    it("should_apply_canvas_replace_when_payload_is_well_formed", () => {
+    it("should_notify_node_internals_for_each_new_node_after_set_flow", () => {
+      // Bug C: without this, new nodes' handles never register, so edges to
+      // loop/dynamic handles don't draw until the user refreshes the page.
+      const rafSpy = jest
+        .spyOn(global, "requestAnimationFrame")
+        .mockImplementation((cb: FrameRequestCallback) => {
+          cb(0);
+          return 0;
+        });
       const valid = {
         event: "flow_update",
         action: "set_flow",
         flow: {
           data: {
-            nodes: [{ id: "ChatInput-1" }],
-            edges: [],
+            nodes: [{ id: "ChatInput-1" }, { id: "Loop-2" }],
+            edges: [{ id: "e1", source: "ChatInput-1", target: "Loop-2" }],
           },
         },
       };
 
       applyFlowUpdate(asEvent(valid), asInternals(noopUpdateNodeInternals));
 
-      expect(setNodes).toHaveBeenCalledTimes(1);
-      expect(setEdges).toHaveBeenCalledTimes(1);
+      expect(noopUpdateNodeInternals).toHaveBeenCalledWith("ChatInput-1");
+      expect(noopUpdateNodeInternals).toHaveBeenCalledWith("Loop-2");
+      expect(noopUpdateNodeInternals).toHaveBeenCalledTimes(2);
+      rafSpy.mockRestore();
     });
   });
 

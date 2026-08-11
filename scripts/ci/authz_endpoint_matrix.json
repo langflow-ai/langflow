@@ -1,0 +1,456 @@
+{
+  "schema_version": 1,
+  "description": "Canonical OSS route-to-authorization contract. Every decorated route in the listed modules must be classified here.",
+  "persona_presets": {
+    "canonical_v1": {
+      "viewer": "allow read and flow execute only when the role domain and object grant match",
+      "developer": "allow viewer actions plus create, write, execute, and ingest when the role domain and object grant match",
+      "admin": "allow all canonical resource actions when the role domain and object grant match",
+      "owner": "allow owned resources except when an API-key or external-identity ceiling is narrower",
+      "direct_share": "allow only the shared resource actions encoded by the direct grant",
+      "team_share": "allow only the shared resource actions encoded by active team membership",
+      "scoped_role": "allow only inside the assigned global, workspace, or project domain",
+      "revoked": "deny immediately after the canonical revocation transaction commits"
+    },
+    "public_or_conditional": {
+      "viewer": "not role-gated; apply the route's public, feature-flag, API-key, or external-auth contract",
+      "developer": "not role-gated; apply the route's public, feature-flag, API-key, or external-auth contract",
+      "admin": "not role-gated; apply the route's public, feature-flag, API-key, or external-auth contract",
+      "owner": "not role-gated; apply the route's public, feature-flag, API-key, or external-auth contract",
+      "direct_share": "no grant beyond the route's public or conditional contract",
+      "team_share": "no grant beyond the route's public or conditional contract",
+      "scoped_role": "no grant beyond the route's public or conditional contract",
+      "revoked": "deny authenticated/private access; public behavior remains public"
+    }
+  },
+  "contracts": [
+    {
+      "family": "flow_crud",
+      "source": "api/v1/flows.py",
+      "resource": "flow",
+      "domain": "project folder, then workspace, then global",
+      "privacy": "identifier denials are returned as 404; list results omit denied rows",
+      "side_effects": "authorize before database mutation, component expansion, or storage I/O",
+      "frontend": "flow create, edit, run, deploy, and delete controls use effective flow permissions; public/example reads remain visible",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_flows.py::test_create_flow",
+        "src/backend/tests/unit/api/v1/test_flows.py::test_read_flow"
+      ],
+      "routes": [
+        "POST|/|create_flow|create|authenticated",
+        "GET|/|read_flows|read|authenticated",
+        "GET|/{flow_id}|read_flow|read|authenticated",
+        "GET|/{flow_id}/note_translations|get_note_translations|read|authenticated",
+        "GET|/public_flow/{flow_id}|read_public_flow|read|conditional",
+        "PATCH|/{flow_id}|update_flow|write|authenticated",
+        "PUT|/{flow_id}|upsert_flow|write|authenticated",
+        "DELETE|/{flow_id}|delete_flow|delete|authenticated",
+        "POST|/batch/|create_flows|create|authenticated",
+        "POST|/upload/|upload_file|create|authenticated",
+        "DELETE|/|delete_multiple_flows|delete|authenticated",
+        "POST|/download/|download_multiple_file|read|authenticated",
+        "GET|/basic_examples/|read_basic_examples|read|public",
+        "POST|/expand/|expand_compact_flow_endpoint|read|authenticated"
+      ]
+    },
+    {
+      "family": "flow_run_advanced_webhook",
+      "source": "api/v1/endpoints.py",
+      "resource": "flow",
+      "domain": "project folder, then workspace, then global",
+      "privacy": "private flow identifiers deny as 404; public/configuration routes expose no private identifier",
+      "side_effects": "authorize before graph build, execution, file write, posted-code execution, or provider I/O",
+      "frontend": "run and advanced-run controls require flow execute; custom-component authoring requires write-class access",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_endpoints.py::test_get_config_basic",
+        "src/backend/tests/unit/api/v1/test_endpoints.py::test_custom_component_update_admin_only_blocks_unknown_custom_code"
+      ],
+      "routes": [
+        "GET|/all|get_all|read|authenticated",
+        "POST|/run/{flow_id_or_name}|simplified_run_flow|execute|conditional",
+        "POST|/run/session/{flow_id_or_name}|simplified_run_flow_session|execute|conditional",
+        "GET|/webhook-events/{flow_id_or_name}|webhook_events_stream|execute|conditional",
+        "POST|/webhook/{flow_id_or_name}|webhook_run_flow|execute|conditional",
+        "POST|/run/advanced/{flow_id_or_name}|experimental_run_flow|execute|conditional",
+        "POST|/predict/{_flow_id}|process|execute|deprecated",
+        "POST|/process/{_flow_id}|process|execute|deprecated",
+        "GET|/task/{_task_id}|get_task_status|read|deprecated",
+        "POST|/upload/{flow_id}|create_upload_file|write|authenticated",
+        "GET|/version|get_version|read|public",
+        "POST|/custom_component|custom_component|create|authenticated",
+        "POST|/custom_component/update|custom_component_update|write|authenticated",
+        "GET|/config|get_config|read|conditional"
+      ]
+    },
+    {
+      "family": "openai_responses",
+      "source": "api/v1/openai_responses.py",
+      "resource": "flow",
+      "domain": "project folder, then workspace, then global",
+      "privacy": "private flow identifiers deny without confirming existence",
+      "side_effects": "authorize before response execution or streaming begins",
+      "frontend": "Responses API has no dedicated OSS UI control; API clients must present the same flow execute grant",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/integration/test_openai_responses_integration.py::test_openai_responses_non_streaming"
+      ],
+      "routes": [
+        "POST|/responses|create_response|execute|conditional"
+      ]
+    },
+    {
+      "family": "mcp_legacy_transport",
+      "source": "api/v1/mcp.py",
+      "resource": "flow",
+      "domain": "project folder, then workspace, then global",
+      "privacy": "transport errors do not enumerate private flow identifiers",
+      "side_effects": "authenticate and authorize before tool execution",
+      "frontend": "legacy transport has no standalone control; published MCP controls inherit flow execute visibility",
+      "personas": "public_or_conditional",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_mcp.py::test_mcp_sse_get_binds_authenticated_user_to_transport"
+      ],
+      "routes": [
+        "GET|/sse|handle_sse|execute|conditional",
+        "POST|/|handle_messages|execute|conditional"
+      ]
+    },
+    {
+      "family": "mcp_projects",
+      "source": "api/v1/mcp_projects.py",
+      "resource": "project",
+      "domain": "workspace, then global",
+      "privacy": "project identifier denials are returned as 404",
+      "side_effects": "authorize before transport start, configuration mutation, install, or external lookup",
+      "frontend": "project MCP publish/configuration controls follow project read/write permissions and are hidden when unsupported",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_mcp_projects.py::test_user_can_only_access_own_projects",
+        "src/backend/tests/unit/api/v1/test_mcp_projects.py::test_update_project_mcp_settings_other_user_project"
+      ],
+      "routes": [
+        "GET|/{project_id}|list_project_tools|read|conditional",
+        "GET|/{project_id}/sse|handle_project_sse|read|conditional",
+        "POST|/{project_id}|handle_project_messages|read|conditional",
+        "POST|/{project_id}/|handle_project_messages|read|conditional",
+        "PATCH|/{project_id}|update_project_mcp_settings|write|authenticated",
+        "POST|/{project_id}/install|install_mcp_config|write|authenticated",
+        "GET|/{project_id}/composer-url|get_project_composer_url|read|authenticated",
+        "GET|/{project_id}/installed|check_installed_mcp_servers|read|authenticated"
+      ]
+    },
+    {
+      "family": "a2a",
+      "source": "api/v1/a2a.py",
+      "resource": "flow",
+      "domain": "project folder, then workspace, then global",
+      "privacy": "private and denied agent identifiers are returned as 404; public agent cards remain discoverable",
+      "side_effects": "authorize protected agents before JSON-RPC dispatch; list visibility is filtered before serialization",
+      "frontend": "the A2A catalog omits unreadable agents; publish/run controls inherit flow read/execute permissions",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_a2a.py::test_list_agents_includes_direct_team_and_scoped_grants",
+        "src/backend/tests/unit/api/v1/test_a2a.py::test_apikey_folder_enforces_scoped_execute_permission"
+      ],
+      "routes": [
+        "GET|/agents|list_a2a_agents|read|authenticated",
+        "GET|/{flow_id}/.well-known/agent-card.json|get_agent_card|read|public",
+        "POST|/{flow_id}/jsonrpc|a2a_jsonrpc|execute|conditional"
+      ]
+    },
+    {
+      "family": "flow_build_and_hitl",
+      "source": "api/v1/chat.py",
+      "resource": "flow",
+      "domain": "project folder, then workspace, then global",
+      "privacy": "private flow and job identifiers deny without confirming existence",
+      "side_effects": "authorize before build submission, cancellation, streaming, or vertex execution",
+      "frontend": "build, cancel, and HITL controls require flow execute and disappear when the effective permission is absent",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_chat_build_flow_authz.py::test_build_flow_plugin_deny_returns_404_not_403"
+      ],
+      "routes": [
+        "POST|/build/{flow_id}/vertices|retrieve_vertices_order|execute|authenticated",
+        "POST|/build/{flow_id}/flow|build_flow|execute|authenticated",
+        "GET|/build/{job_id}/events|get_build_events|read|authenticated",
+        "POST|/build/{job_id}/cancel|cancel_build|execute|authenticated",
+        "POST|/build/{flow_id}/vertices/{vertex_id}|build_vertex|execute|authenticated",
+        "GET|/build/{flow_id}/{vertex_id}/stream|build_vertex_stream|execute|authenticated",
+        "POST|/build_public_tmp/{flow_id}/flow|build_public_tmp|execute|conditional",
+        "GET|/build_public_tmp/{job_id}/events|get_build_events_public|read|conditional",
+        "POST|/build_public_tmp/{job_id}/cancel|cancel_build_public|execute|conditional"
+      ]
+    },
+    {
+      "family": "voice_flow_sessions",
+      "source": "api/v1/voice_mode.py",
+      "resource": "flow",
+      "domain": "project folder, then workspace, then global",
+      "privacy": "private flow identifiers deny as 404",
+      "side_effects": "authenticate the websocket caller, then authorize flow execute before OpenAI secret lookup, flow description access, voice config creation, provider connection, flow execution, or message persistence",
+      "frontend": "voice-session controls require flow:execute and are hidden when voice support or permission is absent; voice:execute is unsupported",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_voice_mode_flow_authz.py::test_denied_cross_user_websocket_reaches_no_secret_description_config_provider_or_sink",
+        "src/backend/tests/unit/api/v1/test_voice_mode_flow_authz.py::test_denied_tts_websocket_reaches_no_secret_config_provider_or_flow_sink"
+      ],
+      "routes": [
+        "WEBSOCKET|/ws/flow_as_tool/{flow_id}|flow_as_tool_websocket_no_session|execute|authenticated",
+        "WEBSOCKET|/ws/flow_as_tool/{flow_id}/{session_id}|flow_as_tool_websocket|execute|authenticated",
+        "WEBSOCKET|/ws/flow_tts/{flow_id}|flow_tts_websocket_no_session|execute|authenticated",
+        "WEBSOCKET|/ws/flow_tts/{flow_id}/{session_id}|flow_tts_websocket|execute|authenticated"
+      ]
+    },
+    {
+      "family": "voice_catalog",
+      "source": "api/v1/voice_mode.py",
+      "resource": "voice",
+      "domain": "caller-global",
+      "privacy": "credential metadata is not returned on denial",
+      "side_effects": "authorize before credential lookup or ElevenLabs API I/O",
+      "frontend": "voice-picker controls require voice:read and are hidden when the capability is denied or unavailable; voice:execute is unsupported",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/unit/test_voice_mode_client_scoping.py::test_voice_catalog_denial_precedes_credential_and_provider_lookup",
+        "src/backend/tests/unit/services/authorization/test_guards.py::test_voice_owner_and_scoped_api_key_personas"
+      ],
+      "routes": [
+        "GET|/elevenlabs/voice_ids|get_elevenlabs_voice_ids|read|authenticated"
+      ]
+    },
+    {
+      "family": "projects",
+      "source": "api/v1/projects.py",
+      "resource": "project",
+      "domain": "workspace, then global",
+      "privacy": "identifier denials are returned as 404; list results omit denied rows",
+      "side_effects": "authorize before database mutation or archive storage I/O",
+      "frontend": "project create, edit, export, import, and delete controls use effective project permissions",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_projects.py::test_shared_project_download_filters_flows_by_read_permission"
+      ],
+      "routes": [
+        "POST|/|create_project|create|authenticated",
+        "GET|/|read_projects|read|authenticated",
+        "GET|/{project_id}|read_project|read|authenticated",
+        "PATCH|/{project_id}|update_project|write|authenticated",
+        "DELETE|/{project_id}|delete_project|delete|authenticated",
+        "GET|/download/{project_id}|download_file|read|authenticated",
+        "POST|/upload/|upload_file|create|authenticated"
+      ]
+    },
+    {
+      "family": "provider_accounts",
+      "source": "api/v1/deployments.py",
+      "resource": "provider_account",
+      "domain": "caller-global",
+      "privacy": "collection create/list are personal and owner-scoped to the caller; provider-account identifier denials are returned as 404; lists expose no denied credential metadata",
+      "side_effects": "external-access and scoped API-key ceilings run before the canonical owner override; role/plugin enforcement applies when that override is unavailable; authorization precedes credential checks, provider API calls, database mutation, or reconciliation",
+      "frontend": "provider-account add, view, edit, and delete controls reflect the canonical personal-owner disposition and remain hidden when a scoped credential is denied",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_deployment_route_handlers.py::test_provider_account_guards_precede_all_route_side_effects",
+        "src/backend/tests/unit/services/authorization/test_guards.py::test_provider_account_owner_and_scoped_api_key_personas"
+      ],
+      "routes": [
+        "POST|/providers|create_provider_account|create|authenticated",
+        "GET|/providers|list_provider_accounts|read|authenticated",
+        "GET|/providers/{provider_id}|get_provider_account|read|authenticated",
+        "DELETE|/providers/{provider_id}|delete_provider_account|delete|authenticated",
+        "PATCH|/providers/{provider_id}|update_provider_account|write|authenticated"
+      ]
+    },
+    {
+      "family": "deployments",
+      "source": "api/v1/deployments.py",
+      "resource": "deployment",
+      "domain": "project, then workspace, then global",
+      "privacy": "deployment identifier denials are returned as 404; lists omit denied rows",
+      "side_effects": "authorize before provider API calls, deployment mutation, execution, or reconciliation",
+      "frontend": "deployment create, run, edit, rollback, and delete controls use effective deployment permissions",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_deployment_route_handlers.py::test_concrete_prefilter_relaxes_provider_gate_and_threads_visibility_scope"
+      ],
+      "routes": [
+        "POST||create_deployment|create|authenticated",
+        "GET||list_deployments|read|authenticated",
+        "GET|/types|list_deployment_types|read|authenticated",
+        "GET|/llms|list_deployment_llms|read|authenticated",
+        "POST|/{deployment_id}/runs|create_deployment_run|execute|authenticated",
+        "GET|/{deployment_id}/runs/{run_id}|get_deployment_run|read|authenticated",
+        "GET|/configs|list_deployment_configs|read|authenticated",
+        "GET|/snapshots|list_deployment_snapshots|read|authenticated",
+        "PATCH|/snapshots/{provider_snapshot_id}|update_snapshot|write|authenticated",
+        "GET|/{deployment_id}|get_deployment|read|authenticated",
+        "PATCH|/{deployment_id}|update_deployment|write|authenticated",
+        "DELETE|/{deployment_id}|delete_deployment|delete|authenticated",
+        "GET|/{deployment_id}/flows|list_deployment_flow_versions|read|authenticated"
+      ]
+    },
+    {
+      "family": "legacy_flow_files",
+      "source": "api/v1/files.py",
+      "resource": "flow",
+      "domain": "project folder, then workspace, then global",
+      "privacy": "private flow identifiers deny as 404; bundled profile pictures are public assets",
+      "side_effects": "authorize before storage read, write, or delete",
+      "frontend": "legacy flow-file controls inherit effective flow read/write permissions; public profile-picture assets remain visible",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_files.py::test_file_operations"
+      ],
+      "routes": [
+        "POST|/upload/{flow_id}|upload_file|write|authenticated",
+        "GET|/download/{flow_id}/{file_name}|download_file|read|authenticated",
+        "GET|/images/{flow_id}/{file_name}|download_image|read|authenticated",
+        "GET|/profile_pictures/{folder_name}/{file_name}|download_profile_picture|read|public",
+        "GET|/profile_pictures/list|list_profile_pictures|read|public",
+        "GET|/list/{flow_id}|list_files|read|authenticated",
+        "DELETE|/delete/{flow_id}/{file_name}|delete_file|write|authenticated"
+      ]
+    },
+    {
+      "family": "variables",
+      "source": "api/v1/variable.py",
+      "resource": "variable",
+      "domain": "workspace, then global",
+      "privacy": "identifier denials are returned as 404; list results omit denied rows and secret values",
+      "side_effects": "authorize before secret persistence, mutation, or environment detection",
+      "frontend": "variable create, reveal, edit, and delete controls use effective variable permissions",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_variable.py::test_create_variable"
+      ],
+      "routes": [
+        "POST|/|create_variable|create|authenticated",
+        "GET|/|read_variables|read|authenticated",
+        "PATCH|/{variable_id}|update_variable|write|authenticated",
+        "DELETE|/{variable_id}|delete_variable|delete|authenticated",
+        "POST|/detections|detect_env_vars|read|authenticated"
+      ]
+    },
+    {
+      "family": "knowledge_bases",
+      "source": "api/v1/knowledge_bases.py",
+      "resource": "knowledge_base",
+      "domain": "project, then workspace, then global",
+      "privacy": "knowledge-base identifier denials are returned as 404; list results omit denied rows",
+      "side_effects": "authorize before connector tests, ingestion, cancellation, deletion, or external provider I/O",
+      "frontend": "knowledge-base view, create, ingest, cancel, and delete controls use effective knowledge_base permissions",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/unit/base/knowledge_bases/test_ingestion_run_endpoints.py::test_other_users_run_returns_404",
+        "src/backend/tests/unit/base/knowledge_bases/test_connector_endpoints.py::test_returns_only_registered_connectors"
+      ],
+      "routes": [
+        "POST|/test-connection|test_backend_connection|create|authenticated",
+        "POST||create_knowledge_base|create|authenticated",
+        "POST|/|create_knowledge_base|create|authenticated",
+        "POST|/preview-chunks|preview_chunks|ingest|authenticated",
+        "POST|/{kb_name}/ingest|ingest_files_to_knowledge_base|ingest|authenticated",
+        "POST|/{kb_name}/ingest/folder|ingest_folder_to_knowledge_base|ingest|authenticated",
+        "GET||list_knowledge_bases|read|authenticated",
+        "GET|/|list_knowledge_bases|read|authenticated",
+        "GET|/connectors|list_connectors|read|authenticated",
+        "GET|/{kb_name}|get_knowledge_base|read|authenticated",
+        "GET|/{kb_name}/chunks|get_knowledge_base_chunks|read|authenticated",
+        "GET|/{kb_name}/metadata/keys|get_knowledge_base_metadata_keys|read|authenticated",
+        "POST|/{kb_name}/ingest/connector|ingest_via_connector|ingest|authenticated",
+        "GET|/{kb_name}/runs|list_ingestion_runs|read|authenticated",
+        "GET|/{kb_name}/runs/{run_id}|get_ingestion_run|read|authenticated",
+        "DELETE|/{kb_name}|delete_knowledge_base|delete|authenticated",
+        "DELETE||delete_knowledge_bases_bulk|delete|authenticated",
+        "DELETE|/|delete_knowledge_bases_bulk|delete|authenticated",
+        "POST|/{kb_name}/cancel|cancel_ingestion|write|authenticated"
+      ]
+    },
+    {
+      "family": "user_files_v2",
+      "source": "api/v2/files.py",
+      "resource": "file",
+      "domain": "workspace, then global",
+      "privacy": "file identifier denials are returned as 404; list results omit denied rows",
+      "side_effects": "authorize before storage read, write, rename, batch operation, or delete",
+      "frontend": "My Files upload, download, rename, batch, and delete controls use effective file permissions",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/unit/api/v2/test_files.py::test_upload_file",
+        "src/backend/tests/unit/api/v2/test_files.py::test_download_file_not_found"
+      ],
+      "routes": [
+        "POST||upload_user_file|create|authenticated",
+        "POST|/|upload_user_file|create|authenticated",
+        "GET||list_files|read|authenticated",
+        "GET|/|list_files|read|authenticated",
+        "DELETE|/batch/|delete_files_batch|delete|authenticated",
+        "POST|/batch/|download_files_batch|read|authenticated",
+        "GET|/{file_id}|download_file|read|authenticated",
+        "PUT|/{file_id}|edit_file_name|write|authenticated",
+        "DELETE|/{file_id}|delete_file|delete|authenticated",
+        "DELETE||delete_all_files|delete|authenticated",
+        "DELETE|/|delete_all_files|delete|authenticated"
+      ]
+    },
+    {
+      "family": "mcp_servers_v2",
+      "source": "api/v2/mcp.py",
+      "resource": "mcp_server (owner/admin compatibility surface; canonical RBAC unsupported)",
+      "domain": "caller-global owner scope",
+      "privacy": "owner-scoped storage exposes no other user's server names, credentials, or command configuration",
+      "side_effects": "owner/admin gate precedes process launch, validation, configuration mutation, or delete",
+      "frontend": "show only owner/admin MCP server controls; do not advertise direct/team/scoped RBAC support for this surface",
+      "personas": "public_or_conditional",
+      "test_references": [
+        "src/backend/tests/unit/api/v2/test_mcp_servers_file.py::test_mcp_servers_upload_blocked_when_locked_for_non_superuser"
+      ],
+      "routes": [
+        "GET|/servers|get_servers|read|authenticated",
+        "GET|/servers/{server_name}|get_server_endpoint|read|authenticated",
+        "POST|/servers/{server_name}|add_server|create|authenticated",
+        "PATCH|/servers/{server_name}|update_server_endpoint|write|authenticated",
+        "DELETE|/servers/{server_name}|delete_server|delete|authenticated"
+      ]
+    },
+    {
+      "family": "workflow_status_and_hitl_v2",
+      "source": "api/v2/workflow.py",
+      "resource": "flow",
+      "domain": "project folder, then workspace, then global",
+      "privacy": "job and flow identifier denials are returned as 404",
+      "side_effects": "authorize before stop, HITL resume claim, graph resume, or event attachment",
+      "frontend": "workflow status, stop, pending-HITL, resume, and reattach controls require effective flow read/execute",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/unit/api/v2/test_workflow.py::test_get_status_not_found"
+      ],
+      "routes": [
+        "GET||get_workflow_status|read|authenticated",
+        "POST|/stop|stop_workflow|execute|authenticated",
+        "GET|/pending|list_pending_workflows|read|authenticated",
+        "POST|/{job_id}/resume|resume_workflow|execute|authenticated",
+        "GET|/{job_id}/events|reattach_workflow_events|read|authenticated"
+      ]
+    },
+    {
+      "family": "workflow_public_v2",
+      "source": "api/v2/workflow_public.py",
+      "resource": "flow",
+      "domain": "public flow contract",
+      "privacy": "unknown or non-public flows are returned as 404",
+      "side_effects": "verify public eligibility and request limits before execution",
+      "frontend": "public workflow invocation is exposed only for flows explicitly published as public",
+      "personas": "public_or_conditional",
+      "test_references": [
+        "src/backend/tests/unit/api/v2/test_workflow_public.py::test_public_endpoint_rejects_non_public_flow"
+      ],
+      "routes": [
+        "POST||execute_public_workflow|execute|conditional"
+      ]
+    }
+  ]
+}

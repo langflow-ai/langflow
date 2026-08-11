@@ -7,23 +7,23 @@ import {
 import { customDefaultShortcuts } from "../customization/constants";
 import type { languageMap } from "../types/components";
 
+declare const __LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS__: string | number;
+declare const __LANGFLOW_AUTO_LOGIN__: string | boolean;
+
 export const DEFAULT_SESSION_NAME = "Default Session";
 export const NEW_SESSION_NAME = "New Session";
 export const SLIDING_TRANSITION_MS = 300;
 
 const getEnvVar = <T = string | undefined>(
   key: string,
+  viteValue: T | undefined,
   defaultValue?: T,
 ): T | undefined => {
-  if (typeof process !== "undefined" && process.env) {
-    return (process.env[key] as T) ?? defaultValue;
-  }
-  try {
-    const value = new Function(`return import.meta.env?.${key}`)() as T;
-    return value ?? defaultValue;
-  } catch {
-    return defaultValue;
-  }
+  const processValue =
+    typeof process !== "undefined" && process.env
+      ? (process.env[key] as T | undefined)
+      : undefined;
+  return processValue ?? viteValue ?? defaultValue;
 };
 
 /**
@@ -590,21 +590,6 @@ export const OPENRAG_FOLDER = "OpenRAG";
 
 export const MAX_MCP_SERVER_NAME_LENGTH = 30;
 
-/**
- * Header text for admin page
- * @constant
- *
- */
-export const ADMIN_HEADER_TITLE = "Admin Page";
-
-/**
- * Header description for admin page
- * @constant
- *
- */
-export const ADMIN_HEADER_DESCRIPTION =
-  "Navigate through this section to efficiently oversee all application users. From here, you can seamlessly manage user accounts.";
-
 export const BASE_URL_API = CUSTOM_BASE_URL_API || "/api/v1/";
 
 export const BASE_URL_API_V2 = CUSTOM_BASE_URL_API_V2 || "/api/v2/";
@@ -881,9 +866,19 @@ export const LANGFLOW_AUTO_LOGIN_OPTION = "auto_login_lf";
 export const LANGFLOW_REFRESH_TOKEN = "refresh_token_lf";
 
 export const LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS = 60 * 60 - 60 * 60 * 0.1;
+const viteAccessTokenExpireSeconds =
+  typeof __LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS__ === "undefined"
+    ? undefined
+    : __LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS__;
+const configuredAccessTokenExpireSeconds = Number(
+  getEnvVar<string | number>(
+    "ACCESS_TOKEN_EXPIRE_SECONDS",
+    viteAccessTokenExpireSeconds,
+    60 * 60,
+  ),
+);
 export const LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV =
-  Number(getEnvVar("ACCESS_TOKEN_EXPIRE_SECONDS", 60)) -
-  Number(getEnvVar("ACCESS_TOKEN_EXPIRE_SECONDS", 60)) * 0.1;
+  configuredAccessTokenExpireSeconds - configuredAccessTokenExpireSeconds * 0.1;
 export const TEXT_FIELD_TYPES: string[] = ["str", "SecretStr"];
 export const NODE_WIDTH = 384;
 export const NODE_HEIGHT = NODE_WIDTH * 3;
@@ -958,9 +953,16 @@ export const POLLING_MESSAGES = {
 
 export const BUILD_POLLING_INTERVAL = 25;
 
+const viteAutoLogin =
+  typeof __LANGFLOW_AUTO_LOGIN__ === "undefined"
+    ? undefined
+    : __LANGFLOW_AUTO_LOGIN__;
+const autoLoginEnv = getEnvVar<string | boolean>(
+  "LANGFLOW_AUTO_LOGIN",
+  viteAutoLogin,
+);
 export const IS_AUTO_LOGIN =
-  !getEnvVar("LANGFLOW_AUTO_LOGIN") ||
-  String(getEnvVar("LANGFLOW_AUTO_LOGIN"))?.toLowerCase() !== "false";
+  !autoLoginEnv || String(autoLoginEnv).toLowerCase() !== "false";
 
 export const AUTO_LOGIN_RETRY_DELAY = 2000;
 export const AUTO_LOGIN_MAX_RETRY_DELAY = 60000;

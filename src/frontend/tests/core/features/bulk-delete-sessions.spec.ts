@@ -364,21 +364,26 @@ test.describe("Bulk Delete Sessions", () => {
         timeout: 10000,
       });
 
+      // Assert against the transcript itself, not the whole page: replies are
+      // also mirrored into an sr-only live region that sits outside the
+      // role="log" region, and Playwright treats sr-only text as visible.
+      const transcript = page.getByRole("log");
+
       // Verify the default session message is still visible (it wasn't deleted)
       await expect(
-        page.getByText("First session", { exact: false }).first(),
+        transcript.getByText("First session", { exact: false }).first(),
       ).toBeVisible({ timeout: 5000 });
 
       // Verify the second session message is not visible (it was deleted)
       await expect(
-        page.getByText("Second session", { exact: false }).first(),
-      ).not.toBeVisible({ timeout: 5000 });
+        transcript.getByText("Second session", { exact: false }),
+      ).toHaveCount(0, { timeout: 5000 });
 
       // Verify we can send a new message in the new session
       await sendMessage(page, "New session message");
       await waitForBuildComplete(page, 1);
       await expect(
-        page.getByText("New session message", { exact: false }).first(),
+        transcript.getByText("New session message", { exact: false }).first(),
       ).toBeVisible({ timeout: 10000 });
     },
   );

@@ -368,12 +368,7 @@ class SimplifiedAPIRequest(BaseModel):
     )
 
 
-# (alias) type ReactFlowJsonObject<NodeData = any, EdgeData = any> = {
-#     nodes: Node<NodeData>[];
-#     edges: Edge<EdgeData>[];
-#     viewport: Viewport;
-# }
-# import ReactFlowJsonObject
+# Mirrors the frontend's ReactFlowJsonObject shape: { nodes, edges, viewport }.
 class FlowDataRequest(BaseModel):
     nodes: list[dict]
     edges: list[dict]
@@ -393,16 +388,15 @@ class BaseConfigResponse(BaseModel):
     voice_mode_available: bool
     frontend_timeout: int
     mcp_base_url: str
-    # Mode A only: gates the palette Bundle-header Reload action.  Surfaced
-    # at runtime so the packaged frontend (built once with the env var
-    # default) can still light up the button when an operator turns the
-    # backend reload route on -- the build-time Vite flag gates first-paint,
-    # but ``lfx extension dev`` and ``--env-file LANGFLOW_ENABLE_EXTENSION_RELOAD=true``
-    # opt in after the build is frozen, so the UI consults this field too.
+    # Runtime mirror of LANGFLOW_ENABLE_EXTENSION_RELOAD: the packaged frontend is built
+    # before an operator can opt in, so the palette Reload button consults this field too.
     enable_extension_reload: bool
     # Mirrors ``LANGFLOW_AUTHZ_ENABLED``. EE/custom frontends gate the Access
     # Control settings entry on this flag; OSS UI ignores it until wired.
     authz_enabled: bool = False
+    # Signals that at least one component or template is governed without
+    # exposing the policy contents through the public config response.
+    catalog_governance_enabled: bool = False
 
 
 class PublicConfigResponse(BaseConfigResponse):
@@ -416,12 +410,19 @@ class PublicConfigResponse(BaseConfigResponse):
     allow_custom_components: bool
 
     @classmethod
-    def from_settings(cls, settings: Settings, auth_settings) -> "PublicConfigResponse":
+    def from_settings(
+        cls,
+        settings: Settings,
+        auth_settings,
+        *,
+        catalog_governance_enabled: bool = False,
+    ) -> "PublicConfigResponse":
         """Create a PublicConfigResponse instance using values from a Settings object.
 
         Parameters:
             settings (Settings): The Settings object containing configuration values.
             auth_settings: Auth settings (for ``authz_enabled``).
+            catalog_governance_enabled: Whether any catalog policy currently restricts resources.
 
         Returns:
             PublicConfigResponse: An instance populated with public-safe configuration values.
@@ -436,6 +437,7 @@ class PublicConfigResponse(BaseConfigResponse):
             enable_extension_reload=settings.enable_extension_reload,
             allow_custom_components=settings.allow_custom_components,
             authz_enabled=bool(getattr(auth_settings, "AUTHZ_ENABLED", False)),
+            catalog_governance_enabled=catalog_governance_enabled,
         )
 
 
@@ -469,14 +471,24 @@ class ConfigResponse(BaseConfigResponse):
     # Whether the server serves the A2A surface at all (LANGFLOW_A2A_ENABLED, default off). The
     # publish-as-agent UI reads this to explain, rather than 404, when A2A is disabled server-side.
     a2a_enabled: bool = False
+    # Mirrors LANGFLOW_AGENTIC_EXPERIENCE (default on) so the Assistant panel
+    # can explain, rather than 404, when the experience is disabled server-side.
+    agentic_experience: bool = True
 
     @classmethod
-    def from_settings(cls, settings: Settings, auth_settings) -> "ConfigResponse":
+    def from_settings(
+        cls,
+        settings: Settings,
+        auth_settings,
+        *,
+        catalog_governance_enabled: bool = False,
+    ) -> "ConfigResponse":
         """Create a ConfigResponse instance using values from a Settings object and AuthSettings.
 
         Parameters:
             settings (Settings): The Settings object containing configuration values.
             auth_settings: The AuthSettings object containing authentication configuration values.
+            catalog_governance_enabled: Whether any catalog policy currently restricts resources.
 
         Returns:
             ConfigResponse: An instance populated with configuration and feature flag values.
@@ -504,6 +516,7 @@ class ConfigResponse(BaseConfigResponse):
             hide_getting_started_progress=settings.hide_getting_started_progress,
             allow_custom_components=settings.allow_custom_components,
             authz_enabled=bool(getattr(auth_settings, "AUTHZ_ENABLED", False)),
+            catalog_governance_enabled=catalog_governance_enabled,
             embedded_mode=settings.embedded_mode,
             hide_logout_button=settings.hide_logout_button or settings.embedded_mode,
             hide_new_project_button=settings.hide_new_project_button or settings.embedded_mode,
@@ -512,6 +525,7 @@ class ConfigResponse(BaseConfigResponse):
             mcp_servers_locked=settings.mcp_servers_locked,
             custom_component_admin_only=settings.custom_component_admin_only,
             a2a_enabled=settings.a2a_enabled,
+            agentic_experience=settings.agentic_experience,
         )
 
 

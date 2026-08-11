@@ -2,10 +2,18 @@
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
+from langflow.services.auth.context import (
+    AUTH_METHOD_API_KEY,
+    AUTH_METHOD_JWT,
+    AuthCredentialContext,
+    clear_current_auth_context,
+    set_current_auth_context,
+)
 from langflow.services.authorization import audit as authz_audit
 
 from ._common import (
@@ -24,6 +32,14 @@ def patched_audit_flush(monkeypatch):
 
     monkeypatch.setattr(authz_audit, "_flush_audit_batch", _record)
     return flushed
+
+
+@pytest.fixture(autouse=True)
+def reset_auth_context():
+    """Prevent request-local credential metadata from leaking between tests."""
+    clear_current_auth_context()
+    yield
+    clear_current_auth_context()
 
 
 async def _reset_audit_pipeline() -> None:
@@ -86,6 +102,141 @@ async def test_audit_decision_enqueues_when_enabled(monkeypatch, patched_audit_f
     assert entry.action == "flow:read"
     assert entry.obj == "flow:abc"
     assert entry.result == "allow"
+
+
+@pytest.mark.anyio
+async def test_api_key_actor_is_captured_centrally_and_preserves_owner(monkeypatch, patched_audit_flush):
+    """Audit attribution reads request-local credentials without relying on a guard caller."""
+    await _reset_audit_pipeline()
+    install_settings(monkeypatch, authz_enabled=True, audit_enabled=True)
+    owner_id = uuid4()
+    api_key_id = uuid4()
+    set_current_auth_context(
+        AuthCredentialContext(
+            method=AUTH_METHOD_API_KEY,
+            api_key_id=api_key_id,
+            api_key_source="db",  # pragma: allowlist secret
+        )
+    )
+
+    await authz_audit.audit_decision(
+        user_id=owner_id,
+        action="flow:read",
+        obj=f"flow:{uuid4()}",
+        result="allow",
+        details={"domain": "*", "actor_type": "user", "actor_id": str(uuid4())},
+    )
+    await authz_audit.drain_pending_audit_writes(timeout=1.0)
+
+    entry = patched_audit_flush[0][0]
+    assert entry.user_id == owner_id
+    assert entry.actor_type == "api_key"
+    assert entry.actor_id == api_key_id
+    assert entry.details == {
+        "domain": "*",
+        "auth_method": "api_key",
+        "api_key_id": str(api_key_id),
+        "api_key_source": "db",  # pragma: allowlist secret
+    }
+
+
+@pytest.mark.anyio
+async def test_jwt_and_system_actor_identity_are_derived_per_queued_entry(monkeypatch, patched_audit_flush):
+    """Actor fields are captured at enqueue time so a mixed batch cannot inherit later context."""
+    await _reset_audit_pipeline()
+    install_settings(monkeypatch, authz_enabled=True, audit_enabled=True)
+    user_id = uuid4()
+
+    set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_JWT))
+    await authz_audit.audit_decision(
+        user_id=user_id,
+        action="flow:read",
+        obj="flow:*",
+        result="allow",
+    )
+    lingering_api_key_id = uuid4()
+    set_current_auth_context(
+        AuthCredentialContext(
+            method=AUTH_METHOD_API_KEY,
+            api_key_id=lingering_api_key_id,
+            api_key_source="db",  # pragma: allowlist secret
+        )
+    )
+    await authz_audit.audit_decision(
+        user_id=None,
+        action="system:sync",
+        obj="system:*",
+        result="allow",
+        details={"job": "policy-sync"},
+    )
+    await authz_audit.drain_pending_audit_writes(timeout=1.0)
+
+    entries = [entry for batch in patched_audit_flush for entry in batch]
+    assert [(entry.actor_type, entry.actor_id) for entry in entries] == [
+        ("user", user_id),
+        ("unknown", None),
+    ]
+    assert entries[0].details == {"auth_method": "jwt"}
+    assert entries[1].details == {"job": "policy-sync"}
+
+
+@pytest.mark.anyio
+async def test_invalid_api_key_actor_uuid_is_safely_dropped(monkeypatch, patched_audit_flush):
+    """Malformed request metadata must not crash or poison the background DB batch."""
+    await _reset_audit_pipeline()
+    install_settings(monkeypatch, authz_enabled=True, audit_enabled=True)
+    set_current_auth_context(
+        AuthCredentialContext(
+            method=AUTH_METHOD_API_KEY,
+            api_key_id="not-a-uuid",  # type: ignore[arg-type]
+            api_key_source="plugin",  # pragma: allowlist secret
+        )
+    )
+
+    await authz_audit.audit_decision(user_id=uuid4(), action="flow:read", obj="flow:*", result="deny")
+    await authz_audit.drain_pending_audit_writes(timeout=1.0)
+
+    entry = patched_audit_flush[0][0]
+    assert entry.actor_type == "api_key"
+    assert entry.actor_id is None
+    assert entry.details["api_key_id"] == "not-a-uuid"
+
+
+@pytest.mark.anyio
+async def test_flush_batch_maps_actor_fields_to_model(monkeypatch):
+    """The batched DB projection must retain actor fields captured at enqueue time."""
+    from langflow.services import deps
+
+    rows = []
+
+    class _Session:
+        def add(self, row):
+            rows.append(row)
+
+    @asynccontextmanager
+    async def _scope():
+        yield _Session()
+
+    monkeypatch.setattr(deps, "session_scope", _scope)
+    actor_id = uuid4()
+    user_id = uuid4()
+    entry = authz_audit._AuditEntry(
+        user_id=user_id,
+        actor_type="api_key",
+        actor_id=actor_id,
+        action="flow:read",
+        obj=f"flow:{uuid4()}",
+        result="allow",
+        details={"api_key_source": "db"},  # pragma: allowlist secret
+    )
+
+    await authz_audit._flush_audit_batch([entry])
+
+    assert len(rows) == 1
+    assert rows[0].user_id == user_id
+    assert rows[0].actor_type == "api_key"
+    assert rows[0].actor_id == actor_id
+    assert rows[0].details == {"api_key_source": "db"}  # pragma: allowlist secret
 
 
 @pytest.mark.anyio

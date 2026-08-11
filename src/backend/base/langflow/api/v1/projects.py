@@ -8,7 +8,7 @@ from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
 from lfx.services.mcp_composer.service import MCPComposerService
 from lfx.utils.util_strings import escape_like_pattern
-from sqlalchemy import or_, update
+from sqlalchemy import literal, null, or_, update
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
@@ -44,6 +44,11 @@ from langflow.services.authorization import (
 )
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
 from langflow.services.authorization.utils import _resolve_authz_domain
+from langflow.services.database.lock_retry import (
+    is_database_lock_error,
+    run_with_lock_retry,
+    sanitize_database_error,
+)
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
     remap_flow_guard_for_project_delete,
@@ -55,15 +60,21 @@ from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NA
 from langflow.services.database.models.folder.model import (
     Folder,
     FolderCreate,
+    FolderListRead,
     FolderRead,
     FolderReadWithFlows,
     FolderUpdate,
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service, get_settings_service
 from langflow.services.schema import ServiceType
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
+
+PROJECT_READ_FAILED = "Could not read the project."
+PROJECT_DELETE_FAILED = "Could not delete the project."
+PROJECT_DELETE_BUSY = "The database is busy. Please retry the request."
 
 # Backwards-compatible local alias; the implementation now lives in lfx.utils.util_strings so the
 # same LIKE-escaping is shared across the API endpoints + the tracing repository.
@@ -140,6 +151,7 @@ async def create_project(
             await register_mcp_servers_for_project(new_project, mcp_auth, current_user, session)
 
         flow_ids_for_sync = list(dict.fromkeys((project.flows_list or []) + (project.components_list or [])))
+        authorized_flow_owner_ids: dict[UUID, UUID] = {}
 
         async def _move_flows_into_project() -> None:
             if project.components_list:
@@ -151,6 +163,7 @@ async def create_project(
                         )
                     )
                 ).all()
+                authorized_flow_owner_ids.update((flow_id, current_user.id) for flow_id, _folder_id in component_flows)
                 await ensure_flow_moves_allowed(
                     session,
                     flow_folder_pairs=list(component_flows),
@@ -159,7 +172,7 @@ async def create_project(
                 update_statement_components = (
                     update(Flow)
                     .where(Flow.id.in_(project.components_list), Flow.user_id == current_user.id)  # type: ignore[attr-defined]
-                    .values(folder_id=new_project.id)
+                    .values(folder_id=new_project.id, workspace_id=new_project.workspace_id)
                 )
                 await session.exec(update_statement_components)
 
@@ -172,6 +185,7 @@ async def create_project(
                         )
                     )
                 ).all()
+                authorized_flow_owner_ids.update((flow_id, current_user.id) for flow_id, _folder_id in project_flows)
                 await ensure_flow_moves_allowed(
                     session,
                     flow_folder_pairs=list(project_flows),
@@ -180,15 +194,14 @@ async def create_project(
                 update_statement_flows = (
                     update(Flow)
                     .where(Flow.id.in_(project.flows_list), Flow.user_id == current_user.id)  # type: ignore[attr-defined]
-                    .values(folder_id=new_project.id)
+                    .values(folder_id=new_project.id, workspace_id=new_project.workspace_id)
                 )
                 await session.exec(update_statement_flows)
 
         if flow_ids_for_sync:
             await retry_flow_operation_on_deployment_guard(
                 db=session,
-                user_id=current_user.id,
-                flow_ids=flow_ids_for_sync,
+                flow_owner_ids=authorized_flow_owner_ids,
                 operation=_move_flows_into_project,
             )
         else:
@@ -209,7 +222,7 @@ async def create_project(
     return folder_read
 
 
-@router.get("/", response_model=list[FolderRead], status_code=200)
+@router.get("/", response_model=list[FolderListRead], status_code=200)
 async def read_projects(
     *,
     session: DbSession,
@@ -243,26 +256,45 @@ async def read_projects(
         else:
             stmt = select(Folder).where(or_(owned_clause, Folder.user_id == None))  # noqa: E711
         projects = (await session.exec(stmt)).all()
-        projects = [project for project in projects if project.name != STARTER_FOLDER_NAME]
+        projects = [
+            project for project in projects if not (project.name == STARTER_FOLDER_NAME and project.user_id is None)
+        ]
         # When no DB prefilter is available (OSS pass-through), drop projects the
         # user can't read in memory. ``domain_extractor`` groups requests by
-        # workspace so each batch is evaluated against the right policy tuple
-        # (projects are the resource itself, so the domain falls back to
-        # workspace or ``*``). When the prefilter is active the SQL union is
-        # already authoritative — skip the per-row enforce to avoid an N+1.
+        # concrete project so each batch is evaluated against the same policy
+        # tuple as the single-resource guard. When the prefilter is active the
+        # SQL union is already authoritative — skip the per-row enforce to
+        # avoid an N+1.
         if visibility_scope is None:
             projects = await filter_visible_resources(
                 current_user,
                 resource_type="project",
                 candidates=list(projects),
-                domain_extractor=lambda project: _resolve_authz_domain(project.workspace_id, None),
+                domain_extractor=lambda project: _resolve_authz_domain(project.workspace_id, project.id),
                 owner_extractor=lambda project: project.user_id,
                 act=ProjectAction.READ,
             )
         sorted_projects = sorted(projects, key=lambda x: x.name != DEFAULT_FOLDER_NAME)
 
-        # Convert to FolderRead while session is still active to avoid detached instance errors
-        return [FolderRead.model_validate(project, from_attributes=True) for project in sorted_projects]
+        owner_ids = {project.user_id for project in sorted_projects if project.user_id is not None}
+        owners_by_id: dict[str, str] = {}
+        if owner_ids:
+            owner_rows = (await session.exec(select(User.id, User.username).where(User.id.in_(owner_ids)))).all()
+            owners_by_id = {str(owner_id): username for owner_id, username in owner_rows}
+
+        # Convert while the session is active so owner-qualified project lists
+        # do not trigger lazy loads after the request-scoped session closes.
+        return [
+            FolderListRead.model_validate(
+                project,
+                from_attributes=True,
+                update={
+                    "owner_username": owners_by_id.get(str(project.user_id)) if project.user_id is not None else None,
+                    "is_owner": str(project.user_id) == str(current_user.id),
+                },
+            )
+            for project in sorted_projects
+        ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -354,7 +386,7 @@ async def read_project(
                     stmt,
                     id_column=Flow.id,
                     owner_clause=Flow.user_id == current_user.id,
-                    workspace_column=Flow.workspace_id,
+                    workspace_expression=null() if project.workspace_id is None else literal(project.workspace_id),
                     project_column=Flow.folder_id,
                     visibility=visibility_scope,
                 )
@@ -390,7 +422,7 @@ async def read_project(
                     current_user,
                     resource_type="flow",
                     candidates=list(paginated_flows.items),
-                    domain_extractor=lambda flow: _resolve_authz_domain(flow.workspace_id, flow.folder_id),
+                    domain_extractor=lambda flow: _resolve_authz_domain(project.workspace_id, flow.folder_id),
                     owner_extractor=lambda flow: flow.user_id,
                     act=FlowAction.READ,
                 )
@@ -416,7 +448,7 @@ async def read_project(
                     if flow.user_id == current_user.id
                     or resource_visible_in_scope(
                         resource_id=flow.id,
-                        workspace_id=flow.workspace_id,
+                        workspace_id=project.workspace_id,
                         project_id=flow.folder_id,
                         visibility=visibility_scope,
                     )
@@ -426,16 +458,19 @@ async def read_project(
                     current_user,
                     resource_type="flow",
                     candidates=list(project.flows),
-                    domain_extractor=lambda flow: _resolve_authz_domain(flow.workspace_id, flow.folder_id),
+                    domain_extractor=lambda flow: _resolve_authz_domain(project.workspace_id, flow.folder_id),
                     owner_extractor=lambda flow: flow.user_id,
                     act=FlowAction.READ,
                 )
         else:
             visible_flows = [flow for flow in project.flows if flow.user_id == current_user.id]
-        project.flows = visible_flows
-
-        # Convert to FolderReadWithFlows while session is still active to avoid detached instance errors
-        return FolderReadWithFlows.model_validate(project, from_attributes=True)
+        # Convert without assigning the filtered list back to the ORM
+        # relationship. ``Folder.flows`` owns delete-orphan cascade; mutating it
+        # in this GET handler would delete every hidden flow when the request
+        # session commits.
+        project_read = FolderReadWithFlows.model_validate(project, from_attributes=True)
+        project_read.flows = [FlowRead.model_validate(flow, from_attributes=True) for flow in visible_flows]
+        return project_read  # noqa: TRY300 - conversion must happen while the ORM session is active
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -475,6 +510,17 @@ async def update_project(
         )
     except HTTPException as exc:
         raise deny_to_404(exc, detail="Project not found") from exc
+
+    if (
+        project.name is not None
+        and project.name != existing_project.name
+        and existing_project.name == STARTER_FOLDER_NAME
+        and existing_project.user_id is None
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"The system-managed '{STARTER_FOLDER_NAME}' project cannot be renamed.",
+        )
 
     # Flow rollup uses the project owner — a non-owner editing a shared
     # project must touch the owner's flows, not the actor's same-folder
@@ -584,6 +630,7 @@ async def update_project(
 
         my_collection_project = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
         flow_ids_for_sync = list(dict.fromkeys(excluded_flows + concat_project_components))
+        authorized_flow_owner_ids: dict[UUID, UUID] = {}
 
         async def _move_flows_for_project_update() -> None:
             # Both SELECT and UPDATE must scope to the project owner — a
@@ -602,6 +649,9 @@ async def update_project(
                         )
                     )
                 ).all()
+                authorized_flow_owner_ids.update(
+                    (flow_id, project_owner_id) for flow_id, _folder_id in excluded_flow_rows
+                )
                 await ensure_flow_moves_allowed(
                     session,
                     flow_folder_pairs=list(excluded_flow_rows),
@@ -613,7 +663,7 @@ async def update_project(
                         Flow.id.in_(excluded_flows),  # type: ignore[attr-defined]
                         Flow.user_id == project_owner_id,
                     )
-                    .values(folder_id=my_collection_project.id)
+                    .values(folder_id=my_collection_project.id, workspace_id=my_collection_project.workspace_id)
                 )
                 await session.exec(update_statement_my_collection)
 
@@ -626,6 +676,9 @@ async def update_project(
                         )
                     )
                 ).all()
+                authorized_flow_owner_ids.update(
+                    (flow_id, project_owner_id) for flow_id, _folder_id in component_flow_rows
+                )
                 await ensure_flow_moves_allowed(
                     session,
                     flow_folder_pairs=list(component_flow_rows),
@@ -637,15 +690,14 @@ async def update_project(
                         Flow.id.in_(concat_project_components),  # type: ignore[attr-defined]
                         Flow.user_id == project_owner_id,
                     )
-                    .values(folder_id=existing_project.id)
+                    .values(folder_id=existing_project.id, workspace_id=existing_project.workspace_id)
                 )
                 await session.exec(update_statement_components)
 
         if flow_ids_for_sync:
             await retry_flow_operation_on_deployment_guard(
                 db=session,
-                user_id=current_user.id,
-                flow_ids=flow_ids_for_sync,
+                flow_owner_ids=authorized_flow_owner_ids,
                 operation=_move_flows_for_project_update,
             )
         else:
@@ -674,8 +726,8 @@ async def delete_project(
     project_id: UUID,
     current_user: CurrentActiveUser,
 ):
-    try:
-        project = await authorized_or_owner_scoped(
+    async def _load_project() -> Folder | None:
+        return await authorized_or_owner_scoped(
             session,
             Folder,
             id_column=Folder.id,
@@ -683,8 +735,11 @@ async def delete_project(
             owner_column=Folder.user_id,
             owner_id=current_user.id,
         )
+
+    try:
+        project = await _load_project()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail=sanitize_database_error(e, PROJECT_READ_FAILED)) from e
 
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -700,42 +755,60 @@ async def delete_project(
     except HTTPException as exc:
         raise deny_to_404(exc, detail="Project not found") from exc
 
-    # Prevent deletion of the Langflow Assistant folder
-    if project.name == ASSISTANT_FOLDER_NAME:
-        msg = f"Cannot delete the '{ASSISTANT_FOLDER_NAME}' folder, that contains pre-built flows."
-        await logger.adebug("Cannot delete the '%s' folder, that contains pre-built flows.", ASSISTANT_FOLDER_NAME)
+    # Prevent deletion of projects managed by Langflow. The ownerless Starter
+    # Project is also a stable authorization boundary for bundled examples.
+    is_system_starter = project.name == STARTER_FOLDER_NAME and project.user_id is None
+    if project.name == ASSISTANT_FOLDER_NAME or is_system_starter:
+        msg = f"Cannot delete the '{project.name}' folder, which contains pre-built flows."
+        await logger.adebug("Cannot delete the '%s' folder, which contains pre-built flows.", project.name)
         raise HTTPException(
             status_code=403,
             detail=msg,
         )
-
-    await cleanup_mcp_on_delete(project, project_id, current_user, session)
 
     # Cascade and deployment guards operate over the project owner's flows —
     # a non-owner with a delete share must remove the owner's resources, not
     # only their own (which is the empty set for a non-owner).
     project_owner_id = project.user_id
 
-    async def _delete_project_operation() -> None:
-        flows = (
-            await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == project_owner_id))
-        ).all()
-        if len(flows) > 0:
-            for flow in flows:
-                await cascade_delete_flow(session, flow.id)
+    def _make_delete_operation(target: Folder):
+        async def _delete_project_operation() -> None:
+            flows = (
+                await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == project_owner_id))
+            ).all()
+            if len(flows) > 0:
+                for flow in flows:
+                    await cascade_delete_flow(session, flow.id)
 
-        await check_project_has_deployments(session, project_id=project_id)
-        await session.delete(project)
-        # Flush eagerly so guard/constraint errors surface in-request rather than at teardown commit.
-        await session.flush()
+            await check_project_has_deployments(session, project_id=project_id)
+            await session.delete(target)
+            # Flush eagerly so guard/constraint errors surface in-request rather than at teardown commit.
+            await session.flush()
 
-    try:
+        return _delete_project_operation
+
+    # LE-2020: a retry runs in a brand new transaction, and the rollback that
+    # precedes it expires every instance loaded so far. The user and the row are
+    # therefore re-read with awaits — a plain attribute read on expired state
+    # would lazy-load outside the greenlet context and raise MissingGreenlet.
+    async def _delete_attempt(attempt: int) -> None:
+        if attempt == 0:
+            target = project
+        else:
+            await session.refresh(current_user)
+            target = await _load_project()
+        if target is None:
+            return
+        await cleanup_mcp_on_delete(target, project_id, current_user, session)
         await retry_project_operation_on_deployment_guard(
             db=session,
             user_id=project_owner_id,
             project_id=project_id,
-            operation=_delete_project_operation,
+            operation=_make_delete_operation(target),
         )
+
+    try:
+        await run_with_lock_retry(_delete_attempt, session=session, description=f"delete_project {project_id}")
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except Exception as e:
         await araise_if_deployment_guard_error_or_skip(
@@ -743,7 +816,17 @@ async def delete_project(
             log_message=f"op=delete_project project_id={project_id}",
             remap=remap_flow_guard_for_project_delete,
         )
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        if is_database_lock_error(e):
+            # Contention that outlived the retry budget is transient, not a
+            # server fault: 503 + Retry-After lets a client retry correctly.
+            await logger.awarning("op=delete_project project_id=%s exhausted lock retries", project_id)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=PROJECT_DELETE_BUSY,
+                headers={"Retry-After": "1"},
+            ) from e
+        await logger.aexception("op=delete_project project_id=%s failed with %s", project_id, type(e).__name__)
+        raise HTTPException(status_code=500, detail=sanitize_database_error(e, PROJECT_DELETE_FAILED)) from e
 
 
 @router.get("/download/{project_id}", status_code=200)

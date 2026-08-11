@@ -9,4 +9,6 @@ export type GlobalVariable = {
   category?: string;
   is_valid?: boolean | null;
   validation_error?: string | null;
+  is_owner?: boolean;
+  can_manage_shares?: boolean;
 };

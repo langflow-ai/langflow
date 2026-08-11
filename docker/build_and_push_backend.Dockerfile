@@ -41,12 +41,9 @@ ENV BASH_ENV="" \
     PROMPT_COMMAND=""
 ENV VIRTUAL_ENV="/app/.venv"
 
-# Install langflow-base with all extras except dev (which includes Playwright).
-# This image ships the langflow-base core only.  Extension bundles
-# (lfx-duckduckgo, lfx-arxiv, lfx-ibm, lfx-docling, lfx-oracle, lfx-firecrawl) are intentionally NOT
-# installed here -- they belong to the full ``langflow`` distribution, not
-# the lean core.  Use the ``langflow`` image, or ``pip install`` the bundle
-# alongside this image, to add those components.
+# Install the runnable base with PostgreSQL. ``complete`` is retained as an
+# empty 1.12 compatibility alias. Provider extensions are intentionally absent;
+# use a Langflow application image or install the required extension packages.
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install \
         ./src/sdk \
@@ -89,6 +86,7 @@ RUN useradd --uid 1000 --gid 0 --no-create-home --home-dir /app/data user
 # Copy only the virtual environment
 COPY --from=builder --chown=1000:0 /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
+ENV HOME=/app/data
 ENV BASH_ENV="" \
     ENV="" \
     PROMPT_COMMAND=""
@@ -104,7 +102,7 @@ ENV BASH_ENV="" \
 # Note: .venv is already owned by 1000:0 via COPY --chown above, so no recursive chown needed
 RUN mkdir -p /app/data /app/langflow \
     && chown -R 1000:0 /app/data /app/langflow \
-    && chmod -R g+rwX /app/langflow \
+    && chmod -R g+rwX /app/data /app/langflow \
     && chown 1000:0 /app
 
 LABEL org.opencontainers.image.title=langflow-backend

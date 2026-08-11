@@ -1,5 +1,6 @@
 import copy
 import json
+import pickle
 from types import SimpleNamespace
 
 import pytest
@@ -15,7 +16,8 @@ from lfx.graph.graph.utils import (
 )
 from lfx.graph.vertex.base import Vertex
 from lfx.interface.components import component_cache
-from lfx.utils.flow_validation import CustomComponentValidationError
+from lfx.services.catalog_policy import CatalogPolicySnapshot
+from lfx.utils.flow_validation import CatalogPolicyValidationError, CustomComponentValidationError
 
 # Test cases for the graph module
 
@@ -115,6 +117,14 @@ def test_invalid_node_types():
         g.add_nodes_and_edges(graph_data["nodes"], graph_data["edges"])
 
 
+def test_graph_copy_and_pickle_preserve_source_flow_id():
+    graph = Graph()
+    graph.source_flow_id = "source-flow"
+
+    assert copy.deepcopy(graph).source_flow_id == "source-flow"
+    assert pickle.loads(pickle.dumps(graph)).source_flow_id == "source-flow"  # noqa: S301
+
+
 def test_from_payload_blocks_custom_components_when_disabled(monkeypatch):
     monkeypatch.setattr(
         "lfx.services.deps.get_settings_service",
@@ -125,6 +135,110 @@ def test_from_payload_blocks_custom_components_when_disabled(monkeypatch):
 
     with pytest.raises(CustomComponentValidationError, match="custom components are not allowed"):
         Graph.from_payload(_blocked_custom_flow())
+
+
+@pytest.mark.parametrize(
+    "blocked_key",
+    [
+        "DuckDuckGoSearchComponent",
+        "ext:duckduckgo:DuckDuckGoSearchComponent@official",
+    ],
+)
+def test_from_payload_checks_catalog_policy_before_and_after_extension_migration(monkeypatch, blocked_key):
+    class CountingCatalogPolicyService:
+        def __init__(self):
+            self.snapshot_calls = 0
+
+        @property
+        def snapshot(self):
+            self.snapshot_calls += 1
+            return CatalogPolicySnapshot(blocked_component_keys=frozenset({blocked_key}))
+
+    service = CountingCatalogPolicyService()
+    payload = {
+        "nodes": [
+            {
+                "id": "duck-search",
+                "type": "genericNode",
+                "data": {
+                    "id": "duck-search",
+                    "type": "DuckDuckGoSearchComponent",
+                    "node": {"template": {}},
+                },
+            }
+        ],
+        "edges": [],
+    }
+    monkeypatch.setattr(
+        "lfx.services.deps.get_settings_service",
+        lambda: _settings_service(allow_custom_components=True),
+    )
+    monkeypatch.setattr("lfx.services.deps.get_catalog_policy_service", lambda: service)
+
+    with pytest.raises(CatalogPolicyValidationError, match=blocked_key):
+        Graph.from_payload(payload)
+
+    assert service.snapshot_calls == 1
+
+
+def test_from_payload_checks_canonical_policy_for_nested_legacy_component(monkeypatch):
+    canonical_key = "ext:duckduckgo:DuckDuckGoSearchComponent@official"
+    service = SimpleNamespace(
+        snapshot=CatalogPolicySnapshot(blocked_component_keys=frozenset({canonical_key})),
+    )
+    nested_node = {
+        "id": "duck-search",
+        "type": "genericNode",
+        "data": {
+            "id": "duck-search",
+            "type": "DuckDuckGoSearchComponent",
+            "node": {"template": {}},
+        },
+    }
+    payload = {
+        "nodes": [
+            {
+                "id": "group-1",
+                "type": "genericNode",
+                "data": {
+                    "id": "group-1",
+                    "type": "Group",
+                    "node": {
+                        "template": {},
+                        "flow": {
+                            "data": {
+                                "nodes": [nested_node],
+                                "edges": [],
+                            }
+                        },
+                    },
+                },
+            }
+        ],
+        "edges": [],
+    }
+    monkeypatch.setattr(
+        "lfx.services.deps.get_settings_service",
+        lambda: _settings_service(allow_custom_components=True),
+    )
+    monkeypatch.setattr("lfx.services.deps.get_catalog_policy_service", lambda: service)
+
+    with pytest.raises(CatalogPolicyValidationError, match=canonical_key):
+        Graph.from_payload(payload)
+
+
+def test_from_payload_catalog_policy_preserves_invalid_payload_error_mapping(monkeypatch):
+    service = SimpleNamespace(
+        snapshot=CatalogPolicySnapshot(blocked_component_keys=frozenset({"Agent"})),
+    )
+    monkeypatch.setattr(
+        "lfx.services.deps.get_settings_service",
+        lambda: _settings_service(allow_custom_components=True),
+    )
+    monkeypatch.setattr("lfx.services.deps.get_catalog_policy_service", lambda: service)
+
+    with pytest.raises(ValueError, match="Error while creating graph from payload"):
+        Graph.from_payload({"edges": []})
 
 
 def test_find_last_node(grouped_chat_json_flow):

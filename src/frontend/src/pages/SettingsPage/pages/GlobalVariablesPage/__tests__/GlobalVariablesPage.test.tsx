@@ -1,5 +1,103 @@
+import { render, screen } from "@testing-library/react";
 import type { ColDef, ValueFormatterParams } from "ag-grid-community";
+import type { ReactNode } from "react";
 import type { GlobalVariable } from "@/types/global_variables";
+
+let mockPermissionsLoading = false;
+
+jest.mock("@/contexts/permissionsContext", () => ({
+  PermissionsProvider: ({ children }: { children: ReactNode }) => children,
+  usePermissions: () => ({
+    can: () => true,
+    isLoading: mockPermissionsLoading,
+    isError: false,
+    permissions: {
+      "variable-1": ["read", "write", "delete"],
+    },
+  }),
+}));
+
+jest.mock("@/controllers/API/queries/variables", () => ({
+  useGetGlobalVariables: () => ({
+    data: [
+      {
+        id: "variable-1",
+        name: "TEST_VARIABLE",
+        value: "value",
+        type: "Generic",
+        default_fields: [],
+        is_owner: true,
+      },
+    ],
+  }),
+  useDeleteGlobalVariables: () => ({ mutate: jest.fn() }),
+}));
+
+jest.mock("@/components/core/dropdownComponent", () => ({
+  __esModule: true,
+  default: ({ children }: { children?: ReactNode }) => children ?? null,
+}));
+
+jest.mock(
+  "@/components/core/parameterRenderComponent/components/tableComponent",
+  () => ({
+    __esModule: true,
+    default: () => <div data-testid="global-variables-table" />,
+  }),
+);
+
+jest.mock("@/components/core/GlobalVariableModal/GlobalVariableModal", () => ({
+  __esModule: true,
+  default: ({ children }: { children?: ReactNode }) => children ?? null,
+}));
+
+jest.mock("@/customization/components/custom-variable-share-action", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
+jest.mock("@/components/common/genericIconComponent", () => ({
+  __esModule: true,
+  default: () => null,
+  ForwardedIconComponent: () => null,
+}));
+
+jest.mock("@/stores/alertStore", () => ({
+  __esModule: true,
+  default: (selector: (state: Record<string, unknown>) => unknown) =>
+    selector({ setErrorData: jest.fn() }),
+}));
+
+jest.mock("react-i18next", () => ({
+  initReactI18next: { type: "3rdParty", init: () => {} },
+  useTranslation: () => ({
+    t: (_key: string, fallback?: string) => fallback ?? _key,
+  }),
+}));
+
+import GlobalVariablesPage from "../index";
+
+describe("GlobalVariablesPage - permissions loading", () => {
+  beforeEach(() => {
+    mockPermissionsLoading = false;
+  });
+
+  it("shows loading feedback instead of an inert table while permissions resolve", () => {
+    mockPermissionsLoading = true;
+
+    const { rerender } = render(<GlobalVariablesPage />);
+
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(screen.getByTestId("loading-icon")).toHaveAccessibleName("Loading");
+    expect(screen.queryByTestId("global-variables-table")).toBeNull();
+
+    mockPermissionsLoading = false;
+    rerender(<GlobalVariablesPage />);
+
+    expect(screen.queryByTestId("loading-icon")).toBeNull();
+    expect(screen.getByTestId("global-variables-table")).toBeInTheDocument();
+  });
+});
 
 describe("GlobalVariablesPage - valueFormatter Tests", () => {
   const valueFormatter = (

@@ -2,12 +2,17 @@ import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { cleanOldFolders } from "../../utils/clean-old-folders";
 import { TEXTS } from "../../utils/constants/texts";
-import { convertTestName } from "../../utils/convert-test-name";
 import { navigateSettingsPages } from "../../utils/go-to-settings";
+import {
+  getSidebarProjectButton,
+  getSidebarProjectOptionsButton,
+} from "../../utils/project-sidebar";
 
 test(
   "user must be able to see starter projects for mcp servers",
-  { tag: ["@release", "@workspace", "@components"] },
+  {
+    tag: ["@release", "@workspace", "@components"],
+  },
   async ({ page }) => {
     //starter mcp project
 
@@ -19,9 +24,9 @@ test(
 
     await navigateSettingsPages(page, "Settings", "MCP Servers");
 
-    expect(await page.getByTestId("mcp_server_name_0").textContent()).toContain(
-      "lf-starter_project",
-    );
+    await expect(
+      page.getByText("lf-starter_project", { exact: true }),
+    ).toBeVisible();
 
     await page.getByTestId("icon-ChevronLeft").first().click();
 
@@ -32,9 +37,9 @@ test(
 
     await navigateSettingsPages(page, "Settings", "MCP Servers");
 
-    expect(await page.getByTestId("mcp_server_name_0").textContent()).toContain(
-      "lf-starter_project",
-    );
+    await expect(
+      page.getByText("lf-starter_project", { exact: true }),
+    ).toBeVisible();
 
     expect(
       await page.getByText("lf-new_project", { exact: true }).count(),
@@ -47,20 +52,17 @@ test(
 
     //rename a folder
 
-    const getFirstFolderName = convertTestName(
-      (await page
-        .getByText(TEXTS.labelNewProject)
-        .first()
-        .textContent()) as string,
-    );
+    const getFirstFolderName = (await page
+      .getByText(TEXTS.labelNewProject)
+      .first()
+      .textContent()) as string;
 
     await page
       .getByText(TEXTS.labelNewProject)
       .first()
       .hover()
       .then(async () => {
-        await page
-          .getByTestId(`more-options-button_${getFirstFolderName}`)
+        await getSidebarProjectOptionsButton(page, getFirstFolderName)
           .last()
           .click();
         await page.getByText("Rename", { exact: true }).last().click();
@@ -71,9 +73,9 @@ test(
 
     await navigateSettingsPages(page, "Settings", "MCP Servers");
 
-    expect(await page.getByTestId("mcp_server_name_0").textContent()).toContain(
-      "lf-starter_project",
-    );
+    await expect(
+      page.getByText("lf-starter_project", { exact: true }),
+    ).toBeVisible();
 
     expect(
       await page.getByText("lf-renamed_project", { exact: true }).count(),
@@ -82,12 +84,10 @@ test(
     //delete a folder
 
     await page.getByTestId("icon-ChevronLeft").first().click();
-    await page
-      .getByTestId("sidebar-nav-renamed_project")
+    await getSidebarProjectButton(page, "renamed_project")
       .hover()
       .then(async () => {
-        await page
-          .getByTestId("more-options-button_renamed_project")
+        await getSidebarProjectOptionsButton(page, "renamed_project")
           .last()
           .click();
         await page.getByText(TEXTS.delete, { exact: true }).last().click();
@@ -97,9 +97,9 @@ test(
 
     await navigateSettingsPages(page, "Settings", "MCP Servers");
 
-    expect(await page.getByTestId("mcp_server_name_0").textContent()).toContain(
-      "lf-starter_project",
-    );
+    await expect(
+      page.getByText("lf-starter_project", { exact: true }),
+    ).toBeVisible();
     expect(
       await page.getByText("lf-renamed_project", { exact: true }).count(),
     ).toBe(0);
@@ -108,7 +108,9 @@ test(
 
 test(
   "user must not be able to add duplicate mcp servers from starter projects",
-  { tag: ["@release", "@workspace", "@components"] },
+  {
+    tag: ["@release", "@workspace", "@components"],
+  },
   async ({ page }) => {
     await awaitBootstrapTest(page);
 

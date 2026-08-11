@@ -12,6 +12,7 @@
  * graceful default.
  */
 
+import { keepPreviousData } from "@tanstack/react-query";
 import { createContext, type ReactNode, useContext, useMemo } from "react";
 import { useGetEffectivePermissions } from "@/controllers/API/queries/permissions";
 import type {
@@ -70,6 +71,8 @@ export interface PermissionsProviderProps {
   actions?: string[];
   /** Authorization domain — e.g. `project:{folderId}`. Defaults to `*`. */
   domain?: string;
+  /** Keep the prior permission map while a changed resource set resolves. */
+  preservePreviousPermissions?: boolean;
   children: ReactNode;
 }
 
@@ -78,14 +81,20 @@ export function PermissionsProvider({
   resourceIds,
   actions,
   domain,
+  preservePreviousPermissions = false,
   children,
 }: PermissionsProviderProps) {
-  const { data, isLoading, isError } = useGetEffectivePermissions({
-    resourceType,
-    resourceIds,
-    actions,
-    domain,
-  });
+  const { data, isLoading, isError } = useGetEffectivePermissions(
+    {
+      resourceType,
+      resourceIds,
+      actions,
+      domain,
+    },
+    preservePreviousPermissions
+      ? { placeholderData: keepPreviousData }
+      : undefined,
+  );
 
   const value = useMemo<PermissionsContextValue>(() => {
     const permissions = buildPermissionMap(data);

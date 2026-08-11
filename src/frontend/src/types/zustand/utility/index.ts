@@ -38,8 +38,12 @@ export type UtilityStoreType = {
   setHideGettingStartedProgress: (hideGettingStartedProgress: boolean) => void;
   allowCustomComponents: boolean;
   setAllowCustomComponents: (allowCustomComponents: boolean) => void;
+  catalogGovernanceEnabled: boolean;
+  setCatalogGovernanceEnabled: (catalogGovernanceEnabled: boolean) => void;
   a2aEnabled: boolean;
   setA2aEnabled: (a2aEnabled: boolean) => void;
+  agenticExperienceEnabled: boolean;
+  setAgenticExperienceEnabled: (agenticExperienceEnabled: boolean) => void;
   mcpBaseUrl: string;
   setMcpBaseUrl: (mcpBaseUrl: string) => void;
   /**

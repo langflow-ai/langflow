@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Collection
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from lfx.base.models.model_metadata import EXPLICIT_ENABLE_ONLY_PROVIDERS
 from lfx.base.models.model_utils import inject_custom_enabled_models, replace_with_live_models
-from lfx.base.models.provider_registry import is_api_key_optional, provider_id_for
+from lfx.base.models.provider_registry import (
+    get_provider_descriptor,
+    is_api_key_optional,
+    provider_id_for,
+    resolve_provider_id,
+)
 from lfx.base.models.unified_models import (
     get_live_only_providers,
     get_model_provider_metadata,
@@ -20,9 +26,12 @@ from lfx.base.models.unified_models.credentials import (
     model_status_key,
     parse_model_status_key,
 )
+from lfx.interface.components import get_and_cache_all_types_dict
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyError,
     ModelProviderPolicyPurpose,
+    ModelProviderPolicySnapshot,
+    aresolve_model_provider_policy,
     resolve_model_provider_policy,
 )
 from loguru import logger
@@ -30,7 +39,7 @@ from pydantic import BaseModel, field_validator
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.authorization import VariableAction, ensure_variable_permission
-from langflow.services.deps import get_variable_service
+from langflow.services.deps import get_settings_service, get_variable_service
 from langflow.services.variable.constants import GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
 
@@ -46,12 +55,61 @@ DEFAULT_EMBEDDING_MODEL_VAR = "__default_embedding_model__"
 MAX_STRING_LENGTH = 200  # Maximum length for model IDs and provider names
 MAX_BATCH_UPDATE_SIZE = 100  # Maximum number of models that can be updated at once
 
+ProviderReadPurpose = Literal["use", "configure"]
+
 
 def _resolve_policy(current_user: CurrentActiveUser, purpose: ModelProviderPolicyPurpose):
     return resolve_model_provider_policy(
         user_id=current_user.id,
         providers=get_model_providers(),
         purpose=purpose,
+        attributes={"is_superuser": bool(getattr(current_user, "is_superuser", False))},
+    )
+
+
+async def _aresolve_policy(
+    current_user: CurrentActiveUser,
+    purpose: ModelProviderPolicyPurpose,
+) -> ModelProviderPolicySnapshot:
+    return await _aresolve_policy_for_providers(current_user, get_model_providers(), purpose)
+
+
+async def _aresolve_policy_for_providers(
+    current_user: CurrentActiveUser,
+    providers: Collection[str],
+    purpose: ModelProviderPolicyPurpose,
+) -> ModelProviderPolicySnapshot:
+    return await aresolve_model_provider_policy(
+        user_id=current_user.id,
+        providers=providers,
+        purpose=purpose,
+        attributes={"is_superuser": bool(getattr(current_user, "is_superuser", False))},
+    )
+
+
+async def _aresolve_read_policy(
+    current_user: CurrentActiveUser,
+    purpose: ProviderReadPurpose | None,
+    *,
+    default: ModelProviderPolicyPurpose,
+    providers: Collection[str] | None = None,
+) -> ModelProviderPolicySnapshot:
+    """Resolve an endpoint baseline plus an optional narrowing purpose.
+
+    The query parameter selects an additional UI context; it must never let a
+    caller replace and widen the endpoint's own DISCOVER/CONFIGURE/USE check.
+    """
+    candidates = tuple(providers) if providers is not None else tuple(get_model_providers())
+    baseline = await _aresolve_policy_for_providers(current_user, candidates, default)
+    requested = ModelProviderPolicyPurpose(purpose) if purpose is not None else default
+    if requested is default:
+        return baseline
+    requested_snapshot = await _aresolve_policy_for_providers(current_user, candidates, requested)
+    return ModelProviderPolicySnapshot(
+        context=baseline.context,
+        purpose=requested,
+        candidate_provider_ids=baseline.candidate_provider_ids,
+        allowed_provider_ids=baseline.allowed_provider_ids & requested_snapshot.allowed_provider_ids,
     )
 
 
@@ -132,11 +190,85 @@ class ValidateProviderResponse(BaseModel):
     error: str | None = None
 
 
+class ModelProviderDescriptorRead(BaseModel):
+    """Stable provider identity for authorization and administrative pickers."""
+
+    provider_id: str
+    display_name: str
+    provider: str
+
+
 @router.get("/providers", status_code=200)
-async def list_model_providers(current_user: CurrentActiveUser) -> list[str]:
+async def list_model_providers(
+    current_user: CurrentActiveUser,
+    purpose: Annotated[ProviderReadPurpose | None, Query()] = None,
+) -> list[str]:
     """Return available model providers."""
-    policy = _resolve_policy(current_user, ModelProviderPolicyPurpose.DISCOVER)
+    policy = await _aresolve_read_policy(
+        current_user,
+        purpose,
+        default=ModelProviderPolicyPurpose.DISCOVER,
+    )
     return policy.filter(get_model_providers())
+
+
+@router.get("/provider-descriptors", status_code=200, response_model=list[ModelProviderDescriptorRead])
+async def list_model_provider_descriptors(
+    current_user: CurrentActiveUser,
+    purpose: Annotated[ProviderReadPurpose | None, Query()] = None,
+) -> list[ModelProviderDescriptorRead]:
+    """Return discovery-authorized providers with stable IDs and display names.
+
+    ``/providers`` intentionally retains its historical ``list[str]`` wire
+    contract; administrative clients can opt into this additive descriptor
+    route when compiling provider-specific component permissions.
+    """
+    # Build/cache extension templates first: extension loading can register new
+    # unified providers and stamps legacy standalone model/embedding components
+    # with provider identities not represented by ``get_model_providers()``.
+    all_types = await get_and_cache_all_types_dict(settings_service=get_settings_service())
+    descriptors_by_id: dict[str, ModelProviderDescriptorRead] = {}
+
+    for provider in get_model_providers():
+        provider_id = provider_id_for(provider)
+        if provider_id is None:
+            continue
+        descriptor = get_provider_descriptor(provider)
+        descriptors_by_id[provider_id] = ModelProviderDescriptorRead(
+            provider_id=provider_id,
+            display_name=(descriptor.display_name if descriptor and descriptor.display_name else provider),
+            provider=provider,
+        )
+
+    for components in all_types.values():
+        for component in components.values():
+            if not isinstance(component, dict) or not isinstance(component.get("metadata"), dict):
+                continue
+            metadata = component["metadata"]
+            provider_id = metadata.get("model_provider_id")
+            if not isinstance(provider_id, str) or not provider_id or provider_id in descriptors_by_id:
+                continue
+            display_name = metadata.get("model_provider_display_name")
+            descriptors_by_id[provider_id] = ModelProviderDescriptorRead(
+                provider_id=provider_id,
+                display_name=(
+                    display_name
+                    if isinstance(display_name, str) and display_name
+                    else provider_id.replace("_", " ").replace("-", " ").title()
+                ),
+                provider=provider_id,
+            )
+
+    policy = await _aresolve_read_policy(
+        current_user,
+        purpose,
+        default=ModelProviderPolicyPurpose.DISCOVER,
+        providers=descriptors_by_id,
+    )
+    return sorted(
+        (descriptor for provider_id, descriptor in descriptors_by_id.items() if policy.allows(provider_id)),
+        key=lambda descriptor: (descriptor.display_name.casefold(), descriptor.provider_id),
+    )
 
 
 @router.get("", status_code=200)
@@ -154,6 +286,7 @@ async def list_models(
     preview: bool | None = None,
     deprecated: bool | None = None,
     not_supported: bool | None = None,
+    purpose: Annotated[ProviderReadPurpose | None, Query()] = None,
     session: DbSession,
     current_user: CurrentActiveUser,
 ):
@@ -161,10 +294,19 @@ async def list_models(
 
     Pass providers as repeated query params, e.g. `?provider=OpenAI&provider=Anthropic`.
     """
-    provider_policy = _resolve_policy(current_user, ModelProviderPolicyPurpose.DISCOVER)
+    provider_policy = await _aresolve_read_policy(
+        current_user,
+        purpose,
+        default=ModelProviderPolicyPurpose.DISCOVER,
+    )
     selected_providers: list[str] | None = provider_policy.filter(provider) if provider is not None else None
     if provider is not None and not selected_providers:
         return []
+    configuration_policy = await _aresolve_read_policy(
+        current_user,
+        purpose,
+        default=ModelProviderPolicyPurpose.CONFIGURE,
+    )
     metadata_filters = {
         k: v
         for k, v in {
@@ -179,11 +321,19 @@ async def list_models(
     }
 
     # Get enabled providers status (now just checks if variables exist)
-    enabled_providers_result = await get_enabled_providers(session=session, current_user=current_user)
+    enabled_providers_result = await _get_enabled_providers_result(
+        session=session,
+        current_user=current_user,
+        provider_policy=configuration_policy,
+    )
     provider_configured_status = enabled_providers_result.get("provider_status", {})
 
     # Get enabled models map for current user to determine "active" providers
-    enabled_models_result = await get_enabled_models(session=session, current_user=current_user)
+    enabled_models_result = await _get_enabled_models_result(
+        session=session,
+        current_user=current_user,
+        provider_policy=configuration_policy,
+    )
     enabled_models_map = enabled_models_result.get("enabled_models", {})
 
     # Get default model if model_type is specified
@@ -265,7 +415,7 @@ async def list_models(
 
     for provider_dict in filtered_models:
         prov_name = provider_dict.get("provider")
-        provider_dict["provider_id"] = provider_id_for(prov_name) if isinstance(prov_name, str) else None
+        provider_dict["provider_id"] = resolve_provider_id(prov_name) if isinstance(prov_name, str) else None
         provider_dict["is_configured"] = provider_configured_status.get(prov_name, False)
         prov_models_status = enabled_models_map.get(prov_name, {})
         has_active_model = any(prov_models_status.values())
@@ -284,7 +434,10 @@ async def list_models(
 
 
 @router.get("/provider-variable-mapping", status_code=200)
-async def get_model_provider_mapping(current_user: CurrentActiveUser) -> dict[str, list[dict]]:
+async def get_model_provider_mapping(
+    current_user: CurrentActiveUser,
+    purpose: Annotated[ProviderReadPurpose | None, Query()] = None,
+) -> dict[str, list[dict]]:
     """Return provider variables mapping with full variable info.
 
     Each provider maps to a list of variable objects containing:
@@ -297,16 +450,20 @@ async def get_model_provider_mapping(current_user: CurrentActiveUser) -> dict[st
     - options: Predefined options for dropdowns
     """
     metadata = get_model_provider_metadata()
-    policy = _resolve_policy(current_user, ModelProviderPolicyPurpose.CONFIGURE)
+    policy = await _aresolve_read_policy(
+        current_user,
+        purpose,
+        default=ModelProviderPolicyPurpose.CONFIGURE,
+    )
     return {provider: meta.get("variables", []) for provider, meta in metadata.items() if policy.allows(provider)}
 
 
-@router.get("/enabled_providers", status_code=200)
-async def get_enabled_providers(
+async def _get_enabled_providers_result(
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
-    providers: Annotated[list[str] | None, Query()] = None,
+    provider_policy: ModelProviderPolicySnapshot,
+    providers: list[str] | None = None,
 ):
     """Get enabled providers for the current user.
 
@@ -314,7 +471,6 @@ async def get_enabled_providers(
     API key validation is performed when credentials are saved, not on every read,
     to avoid latency from external API calls.
     """
-    provider_policy = _resolve_policy(current_user, ModelProviderPolicyPurpose.CONFIGURE)
     variable_service = get_variable_service()
     try:
         if not isinstance(variable_service, DatabaseVariableService):
@@ -386,6 +542,28 @@ async def get_enabled_providers(
         ) from e
     else:
         return result
+
+
+@router.get("/enabled_providers", status_code=200)
+async def get_enabled_providers(
+    *,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+    providers: Annotated[list[str] | None, Query()] = None,
+    purpose: Annotated[ProviderReadPurpose | None, Query()] = None,
+):
+    """Get policy-visible providers configured for the current user."""
+    provider_policy = await _aresolve_read_policy(
+        current_user,
+        purpose,
+        default=ModelProviderPolicyPurpose.CONFIGURE,
+    )
+    return await _get_enabled_providers_result(
+        session=session,
+        current_user=current_user,
+        provider_policy=provider_policy,
+        providers=providers,
+    )
 
 
 @router.post("/validate-provider", status_code=200, response_model=ValidateProviderResponse)
@@ -729,21 +907,24 @@ async def _save_model_list_variable(
         ) from e
 
 
-@router.get("/enabled_models", status_code=200)
-async def get_enabled_models(
+async def _get_enabled_models_result(
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
-    model_names: Annotated[list[str] | None, Query()] = None,
+    provider_policy: ModelProviderPolicySnapshot,
+    model_names: list[str] | None = None,
 ):
     """Get enabled models for the current user."""
-    provider_policy = _resolve_policy(current_user, ModelProviderPolicyPurpose.CONFIGURE)
     all_models_by_provider = get_unified_models_detailed(
         include_unsupported=True,
         include_deprecated=True,
     )
 
-    enabled_providers_result = await get_enabled_providers(session=session, current_user=current_user)
+    enabled_providers_result = await _get_enabled_providers_result(
+        session=session,
+        current_user=current_user,
+        provider_policy=provider_policy,
+    )
     provider_status = enabled_providers_result.get("provider_status", {})
 
     all_models_by_provider = [
@@ -845,6 +1026,28 @@ async def get_enabled_models(
         }
 
     return result
+
+
+@router.get("/enabled_models", status_code=200)
+async def get_enabled_models(
+    *,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+    model_names: Annotated[list[str] | None, Query()] = None,
+    purpose: Annotated[ProviderReadPurpose | None, Query()] = None,
+):
+    """Get policy-visible enabled models for the current user."""
+    provider_policy = await _aresolve_read_policy(
+        current_user,
+        purpose,
+        default=ModelProviderPolicyPurpose.CONFIGURE,
+    )
+    return await _get_enabled_models_result(
+        session=session,
+        current_user=current_user,
+        provider_policy=provider_policy,
+        model_names=model_names,
+    )
 
 
 @router.post("/enabled_models", status_code=200)

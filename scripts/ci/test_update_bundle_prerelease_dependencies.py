@@ -23,7 +23,7 @@ def _write_inputs(tmp_path: Path) -> tuple[Path, Path]:
 name = "langflow"
 version = "1.11.0rc2"
 dependencies = [
-    "langflow-core>=1.11.0rc2,<1.12.dev0",
+    "langflow-base>=1.12.0rc2,<1.13.dev0",
     "lfx-new-provider>=0.1.0,<1.0.0",
     "lfx-bundles[all-no-torch]>=1.1,<2.0",
     "lfx-final-provider>=0.1.0,<1.0.0",

@@ -1,12 +1,15 @@
 """Security scanning for LLM-generated component code.
 
-Security: Analyzes generated Python code for dangerous patterns using AST.
-Never executes the code. Called AFTER code extraction, BEFORE returning to user.
+Security: Analyzes generated Python code for dangerous patterns using AST, and scans its text
+for abusive content. Never executes the code. Called AFTER code extraction, BEFORE returning
+to user.
 """
 
 import ast
 from collections.abc import Iterator
 from dataclasses import dataclass, field
+
+from langflow.agentic.helpers.content_safety import check_content
 
 # Dangerous function calls that should never appear in component code
 DANGEROUS_CALLS: dict[str, str] = {
@@ -982,7 +985,15 @@ def scan_code_security(code: str) -> SecurityScanResult:
     checker = _SecurityChecker(module_aliases=module_aliases, wildcard_modules=wildcard_modules)
     checker.visit(tree)
 
+    violations = list(checker.violations)
+
+    # The AST checks look at what the code DOES; a slur baked into a prompt or a string literal
+    # is invisible to them, and this code is about to be saved into the user's flow.
+    content = check_content(code)
+    if not content.is_safe:
+        violations.append(f"{content.violation} in generated code")
+
     return SecurityScanResult(
-        is_safe=len(checker.violations) == 0,
-        violations=tuple(checker.violations),
+        is_safe=len(violations) == 0,
+        violations=tuple(violations),
     )

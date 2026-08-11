@@ -31,7 +31,7 @@ from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.schema.legacy_render import render_v1_content_blocks
 from pydantic import BaseModel
 
-from langflow.api.utils import CurrentActiveUser
+from langflow.api.utils import CurrentActiveUser, knowledge_base_service
 from langflow.services.authorization import KnowledgeBaseAction, ensure_knowledge_base_permission
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.authorization.listing import visible_scope_prefilter
@@ -44,6 +44,7 @@ from langflow.services.database.models.memory_base.model import (
 )
 from langflow.services.deps import get_authorization_service, get_memory_base_service, session_scope
 from langflow.services.jobs import DuplicateJobError
+from langflow.services.memory_base.kb_path_helpers import BackendProvisioningError
 from langflow.services.memory_base.service import PreprocessingValidationError
 
 router = APIRouter(tags=["Memories"], prefix="/memories", include_in_schema=False)
@@ -151,9 +152,21 @@ async def create_memory_base(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PreprocessingValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except BackendProvisioningError as exc:
+        # Bad remote vector-store config (unreachable / wrong credentials) —
+        # rejected up front so we don't create a silently-dead Memory Base.
+        # Must precede the generic ValueError handler (it is a ValueError
+        # subclass, and 409 "already exists" would be the wrong signal).
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return MemoryBaseRead.model_validate(mb)
+    # ``backend_type``/``backend_config`` live on the knowledge_base row, not the
+    # memory_base table. Read back the effective server-resolved values so an
+    # omitted type correctly reports an env-defaulted pgvector backend.
+    read = MemoryBaseRead.model_validate(mb)
+    backends = await knowledge_base_service.get_backends_for_names([mb.kb_name])
+    read.backend_type, read.backend_config = backends.get(mb.kb_name, ("chroma", {}))
+    return read
 
 
 @router.get("", status_code=HTTPStatus.OK)
@@ -180,9 +193,19 @@ async def list_memory_bases(
             flow_id=flow_id,
             visibility=visibility,
         )
-        return await apaginate(
-            db, stmt, params=params, transformer=lambda items: [MemoryBaseRead.model_validate(m) for m in items]
-        )
+        raw_page = await apaginate(db, stmt, params=params)
+        # Convert to response models while the session is still open.
+        items = [MemoryBaseRead.model_validate(m) for m in raw_page.items]
+
+    # Eager-load the backing KB's backend (type + config) for the whole page in
+    # ONE batched query (an ``IN (...)`` over the page's kb_names) — the same
+    # shape SQLAlchemy's ``selectinload`` issues — so the config dropdown can
+    # surface the backend without an N+1 per-item lookup.
+    kb_names = [r.kb_name for r in items if r.kb_name]
+    backends = await knowledge_base_service.get_backends_for_names(kb_names)
+    for read in items:
+        read.backend_type, read.backend_config = backends.get(read.kb_name, ("chroma", {}))
+    return raw_page.model_copy(update={"items": items})
 
 
 @router.get("/{memory_base_id}", status_code=HTTPStatus.OK)
@@ -198,7 +221,13 @@ async def get_memory_base(
             current_user=current_user,
             action=KnowledgeBaseAction.READ,
         )
-    return MemoryBaseRead.model_validate(mb)
+    read = MemoryBaseRead.model_validate(mb)
+    # Resolve the backing KB's backend from the knowledge_base row so the
+    # Control Center config dropdown can surface it (config distinguishes
+    # Chroma Local vs Cloud).
+    backends = await knowledge_base_service.get_backends_for_names([mb.kb_name])
+    read.backend_type, read.backend_config = backends.get(mb.kb_name, ("chroma", {}))
+    return read
 
 
 @router.get("/{memory_base_id}/sessions", status_code=HTTPStatus.OK)

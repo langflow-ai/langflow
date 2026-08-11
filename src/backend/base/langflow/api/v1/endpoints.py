@@ -3,9 +3,9 @@ from __future__ import annotations
 import asyncio
 import json
 import time
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Collection
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID, uuid4
 
 import orjson
@@ -22,20 +22,32 @@ from lfx.custom.utils import (
 )
 from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
-from lfx.interface.components import component_cache
 from lfx.log.logger import logger
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
-from lfx.services.settings.service import SettingsService
-from lfx.utils.flow_validation import (
-    CustomComponentValidationError,
-    code_hash_matches_any_template,
-    get_component_hash_lookups_for_validation,
-    get_trusted_code_for_validation,
+from lfx.services.model_provider_policy import (
+    ModelProviderPolicyPurpose,
+    reset_current_model_provider_policy_context,
+    resolve_model_provider_policy,
+    set_current_model_provider_policy_context,
 )
+from lfx.services.settings.service import SettingsService
+from lfx.utils.component_aliases import ComponentIdentityIndex, build_component_identity_index
+from lfx.utils.flow_validation import CustomComponentValidationError
 from sqlmodel import select
 
-from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
+from langflow.api.utils import (
+    CurrentActiveUser,
+    DbSession,
+    extract_global_variables_from_headers,
+    parse_value,
+    release_db_transaction,
+)
+from langflow.api.v1.custom_component_policy import (
+    CatalogPolicyHTTPException,
+    enforce_catalog_policy_for_component_type,
+    resolve_component_code_for_action,
+)
 from langflow.api.v1.files import get_flow
 from langflow.api.v1.global_variable_defaults import apply_global_variable_defaults
 from langflow.api.v1.run_validation import raise_if_hitl_unsupported
@@ -59,7 +71,6 @@ from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
 from langflow.services.auth.utils import (
     api_key_security,
-    get_current_active_user,
     get_current_user_for_sse,
     get_optional_user,
 )
@@ -75,6 +86,7 @@ from langflow.services.database.models.jobs.model import JobType
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import (
     get_auth_service,
+    get_catalog_policy_service,
     get_job_service,
     get_memory_base_service,
     get_session_service,
@@ -86,14 +98,6 @@ from langflow.services.event_manager import create_webhook_event_manager, webhoo
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
 from langflow.utils.version import get_version_info
-
-
-def _requires_component_hash_lookups(settings: object, user: CurrentActiveUser) -> bool:
-    requires_admin_only_hashes = (
-        getattr(settings, "custom_component_admin_only", False) is True and not user.is_superuser
-    )
-    return requires_admin_only_hashes or not settings.allow_custom_components
-
 
 if TYPE_CHECKING:
     from langflow.events.event_manager import EventManager
@@ -174,27 +178,112 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
         return SimplifiedAPIRequest()
 
 
-@router.get("/all", dependencies=[Depends(get_current_active_user)])
-async def get_all(request: Request):
+@router.get("/all")
+async def get_all(request: Request, current_user: CurrentActiveUser, *, include_blocked: bool = False):
     """Retrieve all component types with compression for better performance.
 
     Returns a compressed response containing all available component types,
     with display_names translated to the locale indicated by Accept-Language.
     """
-    from langflow.interface.components import get_and_cache_all_types_dict
+    if include_blocked and not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only superusers can include blocked catalog components.",
+        )
+
+    from langflow.interface.components import get_and_cache_all_types_dict, get_component_identity_index
     from langflow.utils.i18n import build_component_display_names, translate_component_dict
 
     try:
+        catalog_policy_snapshot = get_catalog_policy_service().snapshot
         all_types_en = await get_and_cache_all_types_dict(settings_service=get_settings_service())
+        component_identity_index = get_component_identity_index(all_types_en)
+        visible_types_en = _filter_component_palette_by_provider_policy(
+            all_types_en,
+            user_id=current_user.id,
+            attributes={"is_superuser": bool(current_user.is_superuser)},
+        )
+        if not include_blocked:
+            visible_types_en = _filter_component_palette_by_catalog_policy(
+                visible_types_en,
+                blocked_component_keys=catalog_policy_snapshot.blocked_component_keys,
+                component_identity_index=component_identity_index,
+            )
 
         locale = getattr(request.state, "locale", "en")
-        all_types = translate_component_dict(all_types_en, locale) if locale != "en" else all_types_en
+        all_types = translate_component_dict(visible_types_en, locale) if locale != "en" else visible_types_en
 
-        component_display_names = build_component_display_names(all_types_en)
+        component_display_names = build_component_display_names(visible_types_en)
         return compress_response({**all_types, "component_display_names": component_display_names})
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+def _filter_component_palette_by_provider_policy(
+    all_types: dict[str, dict[str, dict]],
+    *,
+    user_id: UUID | str | None,
+    attributes: dict[str, Any] | None = None,
+) -> dict[str, dict[str, dict]]:
+    """Return a request-local palette with denied model providers removed.
+
+    The component registry is a process-wide cache. Copy category mappings and
+    never delete from the cached object, otherwise one user's policy decision
+    would leak into every later request. Unrelated components in mixed bundles
+    have no ``model_provider_id`` and always remain present.
+    """
+    provider_ids = {
+        provider_id
+        for components in all_types.values()
+        for component in components.values()
+        if isinstance(component, dict)
+        and isinstance((metadata := component.get("metadata")), dict)
+        and isinstance((provider_id := metadata.get("model_provider_id")), str)
+        and provider_id
+    }
+    policy = resolve_model_provider_policy(
+        user_id=user_id,
+        providers=provider_ids,
+        purpose=ModelProviderPolicyPurpose.DISCOVER,
+        attributes=attributes,
+    )
+    return {
+        category: {
+            name: component
+            for name, component in components.items()
+            if not isinstance(component, dict)
+            or not isinstance(component.get("metadata"), dict)
+            or not (provider_id := component["metadata"].get("model_provider_id"))
+            or policy.allows(provider_id)
+        }
+        for category, components in all_types.items()
+    }
+
+
+def _filter_component_palette_by_catalog_policy(
+    all_types: dict[str, dict[str, dict]],
+    *,
+    blocked_component_keys: Collection[str],
+    component_identity_index: ComponentIdentityIndex | None = None,
+) -> dict[str, dict[str, dict]]:
+    """Return shallow category copies with canonically blocked components removed.
+
+    Policy keys and component-registry keys use the same collision-aware
+    identity resolver as flow/runtime validation. Category order, component
+    order, and empty categories are preserved. Component payloads remain
+    shared with the process-wide cache and are never mutated or deep-copied.
+    """
+    identity_index = component_identity_index or build_component_identity_index(all_types)
+    blocked_identities = identity_index.resolve_many(blocked_component_keys)
+    return {
+        category: {
+            component_key: component
+            for component_key, component in components.items()
+            if identity_index.resolve(component_key).isdisjoint(blocked_identities)
+        }
+        for category, components in all_types.items()
+    }
 
 
 def validate_input_and_tweaks(input_request: SimplifiedAPIRequest) -> None:
@@ -240,6 +329,10 @@ async def simple_run_flow(
     run_id: str | None = None,
 ):
     validate_input_and_tweaks(input_request)
+    policy_context_token = set_current_model_provider_policy_context(
+        user_id=getattr(api_key_user, "id", None),
+        attributes={"is_superuser": bool(getattr(api_key_user, "is_superuser", False))},
+    )
     try:
         task_result: list[RunOutputs] = []
         user_id = api_key_user.id if api_key_user else None
@@ -345,6 +438,8 @@ async def simple_run_flow(
 
     except sa.exc.StatementError as exc:
         raise ValueError(str(exc)) from exc
+    finally:
+        reset_current_model_provider_policy_context(policy_context_token)
 
 
 def _get_vertex_ids_from_flow(flow: Flow) -> list[str]:
@@ -858,6 +953,7 @@ async def simplified_run_flow_session(
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
     api_key_user: CurrentActiveUser,
+    session: DbSession,
     context: dict | None = None,
     http_request: Request,
 ):
@@ -873,6 +969,8 @@ async def simplified_run_flow_session(
         input_request (SimplifiedAPIRequest | None): Input parameters for the flow
         stream (bool): Whether to stream the response
         api_key_user (User): Authenticated user from session
+        session (AsyncSession): Request-scoped DB session (shared with the auth
+            dependency); its transaction is released before the flow runs
         context (dict | None): Optional context to pass to the flow
         http_request (Request): The incoming HTTP request for extracting global variables
 
@@ -913,6 +1011,15 @@ async def simplified_run_flow_session(
         workspace_id=flow.workspace_id,
         folder_id=flow.folder_id,
     )
+
+    # ``session`` is the same cached dependency the auth chain used, so this
+    # ends the transaction opened by the auth reads before the flow runs —
+    # the run can take minutes and would otherwise hold the request
+    # transaction (and its pooled connection) open the whole time (#14445).
+    # The API-key ``/run`` variant is not affected: ``api_key_security``
+    # scopes its own short-lived session.
+    await release_db_transaction(session)
+
     return await _run_flow_internal(
         background_tasks=background_tasks,
         flow=flow,
@@ -928,6 +1035,7 @@ async def simplified_run_flow_session(
 async def webhook_events_stream(
     auth: Annotated[SseAuth, Depends(get_flow_for_sse_user)],
     request: Request,
+    session: DbSession,
 ):
     """Server-Sent Events (SSE) endpoint for real-time webhook build updates.
 
@@ -950,6 +1058,12 @@ async def webhook_events_stream(
         workspace_id=getattr(flow, "workspace_id", None),
         folder_id=getattr(flow, "folder_id", None),
     )
+
+    # ``session`` is the same cached dependency the SSE auth chain used. The
+    # EventSource stream below is indefinite and the session dependency is
+    # only torn down when it ends, so without this commit every open tab
+    # would hold a pooled connection in an idle transaction (#14445).
+    await release_db_transaction(session)
 
     async def event_generator() -> AsyncGenerator[str, None]:
         """Generate SSE events from the webhook event manager."""
@@ -1208,6 +1322,12 @@ async def experimental_run_flow(
         except Exception as exc:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
+    # Graph execution below can run for minutes; end the request transaction
+    # opened by the flow re-query above so it doesn't pin a pooled connection
+    # (Postgres: idle-in-transaction) for the whole run (#14445). In the
+    # session_id branch the session was never used, so this is a no-op.
+    await release_db_transaction(session)
+
     try:
         task_result, session_id = await run_graph_internal(
             graph=graph,
@@ -1352,55 +1472,21 @@ async def custom_component(
 
     settings_service = get_settings_service()
     settings = settings_service.settings
-    all_known = None
-    if _requires_component_hash_lookups(settings, user):
-        # Lazily compute hash lookups if they haven't been built yet
-        # (e.g. during startup before the cache is fully populated).
-        get_component_hash_lookups_for_validation()
-        all_known = component_cache.all_known_hashes
-        if all_known is None:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Component templates are still initializing. Please try again in a few seconds.",
-            )
-
-    # In admin-only mode, non-admin users may create/refresh only known server
-    # templates. Truly custom code creation remains restricted to administrators.
-    if (
-        getattr(settings, "custom_component_admin_only", False) is True
-        and not user.is_superuser
-        and not code_hash_matches_any_template(raw_code.code, all_known)
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Custom component creation is restricted to administrators",
-        )
-
-    if not settings.allow_custom_components and not code_hash_matches_any_template(raw_code.code, all_known):
-        # Allow updating to a known server template (core component update),
-        # but block truly custom code.
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Custom component creation is disabled",
-        )
-
-    # In restricted mode the request only reached here by matching a known
-    # template hash. That hash is a truncated digest, so a second-preimage
-    # collision could clear the gate with attacker-controlled bytes. Execute
-    # the server's trusted copy keyed by the same hash instead of the client
-    # bytes, and fail closed if no trusted source can be recovered.
-    effective_code = raw_code.code
-    if _requires_component_hash_lookups(settings, user):
-        effective_code = get_trusted_code_for_validation(raw_code.code)
-        if effective_code is None:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Custom component creation is disabled",
-            )
+    catalog_policy_snapshot = get_catalog_policy_service().snapshot
+    effective_code = resolve_component_code_for_action(
+        raw_code.code,
+        user=user,
+        settings=settings,
+        snapshot=catalog_policy_snapshot,
+        disabled_detail="Custom component creation is disabled",
+        admin_only_detail="Custom component creation is restricted to administrators",
+    )
 
     component = Component(_code=effective_code)
 
     built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
+    type_ = get_instance_name(component_instance)
+    enforce_catalog_policy_for_component_type(type_, snapshot=catalog_policy_snapshot)
     if raw_code.frontend_node is not None:
         built_frontend_node = await component_instance.update_frontend_node(built_frontend_node, raw_code.frontend_node)
 
@@ -1411,7 +1497,6 @@ async def custom_component(
             field_name="tool_mode",
             field_value=tool_mode,
         )
-    type_ = get_instance_name(component_instance)
     locale = getattr(request.state, "locale", "en")
     if locale != "en":
         from langflow.utils.i18n import translate_component_node
@@ -1451,55 +1536,34 @@ async def custom_component_update(
         )
 
     settings_service = get_settings_service()
-    all_known = None
-    if _requires_component_hash_lookups(settings_service.settings, user):
-        get_component_hash_lookups_for_validation()
-        all_known = component_cache.all_known_hashes
-        if all_known is None:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Component templates are still initializing. Please try again in a few seconds.",
-            )
+    catalog_policy_snapshot = get_catalog_policy_service().snapshot
+    effective_code = resolve_component_code_for_action(
+        code_request.code,
+        user=user,
+        settings=settings_service.settings,
+        snapshot=catalog_policy_snapshot,
+        disabled_detail="Custom component creation is disabled",
+        admin_only_detail="Custom component editing is restricted to administrators",
+    )
 
-    # In admin-only mode, non-admin users may refresh/update only known server
-    # templates. Truly custom code edits remain restricted to administrators.
-    if (
-        getattr(settings_service.settings, "custom_component_admin_only", False) is True
-        and not user.is_superuser
-        and not code_hash_matches_any_template(code_request.code, all_known)
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Custom component editing is restricted to administrators",
-        )
-
-    if not settings_service.settings.allow_custom_components and not code_hash_matches_any_template(
-        code_request.code, all_known
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Custom component creation is disabled",
-        )
-
-    # In restricted mode the request only reached here by matching a known
-    # template hash. Because that hash is a truncated digest, execute the
-    # server's trusted copy keyed by the same hash rather than the client
-    # bytes (defeats a hash collision), failing closed if it can't be found.
-    effective_code = code_request.code
-    if _requires_component_hash_lookups(settings_service.settings, user):
-        effective_code = get_trusted_code_for_validation(code_request.code)
-        if effective_code is None:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Custom component creation is disabled",
-            )
-
+    policy_context_token = set_current_model_provider_policy_context(
+        user_id=user.id,
+        attributes={"is_superuser": bool(user.is_superuser)},
+    )
     try:
         component = Component(_code=effective_code)
         component_node, cc_instance = build_custom_component_template(
             component,
             user_id=user.id,
         )
+        component_type = get_instance_name(cc_instance)
+        enforce_catalog_policy_for_component_type(component_type, snapshot=catalog_policy_snapshot)
+
+        if isinstance(cc_instance, Component):
+            # Dynamic configuration may resolve DB-backed credentials or call
+            # provider APIs. Apply the same standalone-component policy before
+            # either can happen.
+            cc_instance.require_model_provider_policy(ModelProviderPolicyPurpose.CONFIGURE)
 
         component_node["tool_mode"] = code_request.tool_mode
 
@@ -1562,15 +1626,19 @@ async def custom_component_update(
                 field_value=code_request.field_value,
             )
 
+    except CatalogPolicyHTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        reset_current_model_provider_policy_context(policy_context_token)
 
     locale = getattr(request.state, "locale", "en")
     if locale != "en":
         from langflow.utils.i18n import translate_component_node
 
         try:
-            component_node = translate_component_node(get_instance_name(cc_instance), component_node, locale)
+            component_node = translate_component_node(component_type, component_node, locale)
         except Exception:  # noqa: BLE001
             logger.exception("Failed to translate component node", extra={"locale": locale})
 
@@ -1601,14 +1669,27 @@ async def get_config(
     """
     try:
         settings_service: SettingsService = get_settings_service()
+        try:
+            catalog_governance_enabled = get_catalog_policy_service().enabled
+        except Exception as exc:  # noqa: BLE001
+            # Catalog governance is explicitly fail-open. A broken custom
+            # policy implementation must not break the public config endpoint
+            # or expose its internal exception text.
+            await logger.aexception("Catalog policy status unavailable; reporting governance disabled", exception=exc)
+            catalog_governance_enabled = False
 
         if user is None:
             return PublicConfigResponse.from_settings(
                 settings_service.settings,
                 settings_service.auth_settings,
+                catalog_governance_enabled=catalog_governance_enabled,
             )
 
-        return ConfigResponse.from_settings(settings_service.settings, settings_service.auth_settings)
+        return ConfigResponse.from_settings(
+            settings_service.settings,
+            settings_service.auth_settings,
+            catalog_governance_enabled=catalog_governance_enabled,
+        )
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc

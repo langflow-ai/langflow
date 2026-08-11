@@ -254,9 +254,31 @@ class TestEnsureCodeExecutionEnabled:
 
         monkeypatch.setattr(
             "lfx.services.deps.get_settings_service",
-            lambda: SimpleNamespace(settings=SimpleNamespace(allow_custom_components=True)),
+            lambda: SimpleNamespace(
+                settings=SimpleNamespace(
+                    allow_custom_components=True,
+                    block_code_interpreter_components=False,
+                )
+            ),
         )
         ensure_code_execution_enabled()  # must not raise
+
+    def test_blocks_when_code_interpreter_components_disabled(self, monkeypatch):
+        from types import SimpleNamespace
+
+        from lfx.utils.python_repl_security import CodeExecutionDisabledError, ensure_code_execution_enabled
+
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: SimpleNamespace(
+                settings=SimpleNamespace(
+                    allow_custom_components=True,
+                    block_code_interpreter_components=True,
+                )
+            ),
+        )
+        with pytest.raises(CodeExecutionDisabledError, match="block_code_interpreter_components"):
+            ensure_code_execution_enabled()
 
     def test_allows_when_services_layer_absent(self, monkeypatch):
         """An absent services layer (ImportError) is a local/trusted context -> allowed."""
@@ -287,4 +309,16 @@ class TestEnsureCodeExecutionEnabled:
 
         monkeypatch.setattr("lfx.services.deps.get_settings_service", _boom)
         with pytest.raises(RuntimeError, match="settings stack exploded"):
+            ensure_code_execution_enabled()
+
+    def test_import_error_from_settings_service_propagates(self, monkeypatch):
+        """An ImportError inside the registered settings stack must not fail open."""
+        from lfx.utils.python_repl_security import ensure_code_execution_enabled
+
+        def _boom():
+            error = "settings dependency failed to import"
+            raise ImportError(error)
+
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", _boom)
+        with pytest.raises(ImportError, match="settings dependency failed to import"):
             ensure_code_execution_enabled()

@@ -220,11 +220,24 @@ async def handle_read_resource(uri: str, project_id: UUID | str | None = None) -
             msg = "Authenticated user context is required to read MCP resources"
             raise ValueError(msg) from exc
 
+        parsed_project_id = None
+        if project_id is not None:
+            try:
+                parsed_project_id = UUID(str(project_id))
+            except ValueError as exc:
+                msg = "Resource not found or access denied"
+                raise ValueError(msg) from exc
+
         async with session_scope() as session:
-            flow_query = select(Flow).where(Flow.id == namespace_id, Flow.user_id == current_user.id)
-            if project_id is not None:
-                flow_query = flow_query.where(Flow.folder_id == project_id)
-            flow = (await session.exec(flow_query)).first()
+            try:
+                flow_id = UUID(namespace_id)
+            except ValueError:
+                flow = None
+            else:
+                flow_query = select(Flow).where(Flow.id == flow_id, Flow.user_id == current_user.id)
+                if parsed_project_id is not None:
+                    flow_query = flow_query.where(Flow.folder_id == parsed_project_id)
+                flow = (await session.exec(flow_query)).first()
 
             if flow is None:
                 # The namespace segment may refer to the user's own bucket (user-level

@@ -42,6 +42,7 @@ describe("useUtilityStore", () => {
       webhookAuthEnable: true,
       defaultFolderName: "Starter Project",
       hideGettingStartedProgress: false,
+      catalogGovernanceEnabled: false,
     });
   });
 
@@ -65,6 +66,19 @@ describe("useUtilityStore", () => {
       expect(result.current.webhookAuthEnable).toBe(true);
       expect(result.current.defaultFolderName).toBe("Starter Project");
       expect(result.current.hideGettingStartedProgress).toBe(false);
+      expect(result.current.catalogGovernanceEnabled).toBe(false);
+    });
+  });
+
+  describe("setCatalogGovernanceEnabled", () => {
+    it("should update catalog governance state", () => {
+      const { result } = renderHook(() => useUtilityStore());
+
+      act(() => {
+        result.current.setCatalogGovernanceEnabled(true);
+      });
+
+      expect(result.current.catalogGovernanceEnabled).toBe(true);
     });
   });
 

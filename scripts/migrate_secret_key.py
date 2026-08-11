@@ -11,6 +11,7 @@ Migrated database fields:
 - user.store_api_key: Langflow Store API keys
 - variable.value: All encrypted variable values
 - folder.auth_settings: MCP oauth_client_secret and api_key fields
+- sso_config.client_secret_encrypted: SSO/OIDC client secrets
 
 Usage:
     uv run python scripts/migrate_secret_key.py --help
@@ -20,6 +21,7 @@ Usage:
 
 import argparse
 import base64
+import binascii
 import json
 import os
 import platform
@@ -29,14 +31,27 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from cryptography.exceptions import InvalidTag
 from cryptography.fernet import Fernet, InvalidToken
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from platformdirs import user_cache_dir
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, inspect, text
 
 MINIMUM_KEY_LENGTH = 32
 SENSITIVE_AUTH_FIELDS = ["oauth_client_secret", "api_key"]
 # Must match langflow.services.variable.constants.CREDENTIAL_TYPE
 CREDENTIAL_TYPE = "Credential"
+SSO_ENVELOPE_HEADER = "lf-sso:v1:hkdf-sha256-v1:aes-256-gcm"
+SSO_AAD = SSO_ENVELOPE_HEADER.encode()
+SSO_HKDF_SALT = b"langflow/sso/client-secret/hkdf-salt/v1"
+SSO_HKDF_INFO = b"langflow/sso/client-secret/encryption"
+SSO_NONCE_BYTES = 12
+SSO_TAG_BYTES = 16
+SSO_ENVELOPE_PARTS = 6
+SSO_HEADER_PARTS = 4
+SSO_BASE64URL_ALPHABET = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
 
 
 def get_default_config_dir() -> Path:
@@ -62,7 +77,11 @@ def set_secure_permissions(file_path: Path) -> None:
             import win32con
             import win32security
 
-            user, _, _ = win32security.LookupAccountName("", win32api.GetUserName())
+            # The user SID must come from the process token: resolving by name
+            # (LookupAccountName + GetUserName) returns the machine-domain SID
+            # when the computer name equals the username, locking the user out.
+            token = win32security.OpenProcessToken(win32api.GetCurrentProcess(), win32con.TOKEN_QUERY)
+            user, _attributes = win32security.GetTokenInformation(token, win32security.TokenUser)
             sd = win32security.GetFileSecurity(str(file_path), win32security.DACL_SECURITY_INFORMATION)
             dacl = win32security.ACL()
             dacl.AddAccessAllowedAce(
@@ -136,6 +155,62 @@ def migrate_value(encrypted: str, old_key: str, new_key: str) -> str | None:
         return None
 
 
+def _derive_sso_key(master_key: str) -> bytes:
+    return HKDF(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=SSO_HKDF_SALT,
+        info=SSO_HKDF_INFO,
+    ).derive(master_key.encode())
+
+
+def _decode_sso_envelope(envelope: str) -> tuple[bytes, bytes]:
+    parts = envelope.split(":")
+    if len(parts) != SSO_ENVELOPE_PARTS or ":".join(parts[:SSO_HEADER_PARTS]) != SSO_ENVELOPE_HEADER:
+        msg = "Unsupported SSO client-secret envelope"
+        raise ValueError(msg)
+    decoded_payloads: list[bytes] = []
+    for value in parts[4:]:
+        if not value or any(character not in SSO_BASE64URL_ALPHABET for character in value):
+            msg = "Invalid base64url data in SSO client-secret envelope"
+            raise ValueError(msg)
+        try:
+            decoded_payloads.append(base64.b64decode(value + "=" * (-len(value) % 4), altchars=b"-_", validate=True))
+        except (binascii.Error, ValueError) as exc:
+            msg = "Invalid base64url data in SSO client-secret envelope"
+            raise ValueError(msg) from exc
+    nonce, ciphertext = decoded_payloads
+    if len(nonce) != SSO_NONCE_BYTES or len(ciphertext) < SSO_TAG_BYTES:
+        msg = "Invalid SSO client-secret envelope payload"
+        raise ValueError(msg)
+    return nonce, ciphertext
+
+
+def decrypt_sso_secret_with_key(envelope: str, key: str) -> str:
+    """Decrypt an SSO client-secret envelope with an explicit master key."""
+    nonce, ciphertext = _decode_sso_envelope(envelope)
+    plaintext = AESGCM(_derive_sso_key(key)).decrypt(nonce, ciphertext, SSO_AAD)
+    return plaintext.decode()
+
+
+def encrypt_sso_secret_with_key(plaintext: str, key: str) -> str:
+    """Encrypt an SSO client secret using the application's current envelope format."""
+    nonce = os.urandom(SSO_NONCE_BYTES)
+    ciphertext = AESGCM(_derive_sso_key(key)).encrypt(nonce, plaintext.encode(), SSO_AAD)
+    encoded_nonce = base64.urlsafe_b64encode(nonce).rstrip(b"=").decode()
+    encoded_ciphertext = base64.urlsafe_b64encode(ciphertext).rstrip(b"=").decode()
+    return f"{SSO_ENVELOPE_HEADER}:{encoded_nonce}:{encoded_ciphertext}"
+
+
+def migrate_sso_secret(envelope: str, old_key: str, new_key: str) -> str | None:
+    """Rewrap an SSO client-secret envelope under a replacement master key."""
+    try:
+        plaintext = decrypt_sso_secret_with_key(envelope, old_key)
+        return encrypt_sso_secret_with_key(plaintext, new_key)
+    except (InvalidTag, UnicodeDecodeError, ValueError):
+        return None
+
+
 def migrate_auth_settings(auth_settings: dict, old_key: str, new_key: str) -> tuple[dict, list[str]]:
     """Re-encrypt sensitive fields in auth_settings dict.
 
@@ -203,6 +278,17 @@ def verify_migration(conn, new_key: str) -> tuple[int, int]:
                     verified += 1
         except (InvalidToken, json.JSONDecodeError):
             failed += 1
+
+    if inspect(conn).has_table("sso_config"):
+        configs = conn.execute(
+            text("SELECT id, client_secret_encrypted FROM sso_config WHERE client_secret_encrypted IS NOT NULL LIMIT 3")
+        ).fetchall()
+        for _, encrypted_secret in configs:
+            try:
+                decrypt_sso_secret_with_key(encrypted_secret, new_key)
+                verified += 1
+            except (InvalidTag, UnicodeDecodeError, ValueError):
+                failed += 1
 
     return verified, failed
 
@@ -360,9 +446,38 @@ def migrate(
         total_migrated += migrated
         total_failed += failed
 
+        # Migrate sso_config.client_secret_encrypted when the optional SSO schema exists.
+        print("\n4. Migrating SSO client secrets...")
+        migrated, failed = 0, 0
+        if inspect(conn).has_table("sso_config"):
+            configs = conn.execute(
+                text("SELECT id, client_secret_encrypted FROM sso_config WHERE client_secret_encrypted IS NOT NULL")
+            ).fetchall()
+            for config_id, encrypted_secret in configs:
+                new_encrypted = migrate_sso_secret(encrypted_secret, old_key, new_key)
+                if new_encrypted:
+                    if not dry_run:
+                        conn.execute(
+                            text("UPDATE sso_config SET client_secret_encrypted = :secret WHERE id = :id"),
+                            {"secret": new_encrypted, "id": config_id},
+                        )
+                    migrated += 1
+                else:
+                    failed += 1
+                    print(f"   Warning: Could not decrypt SSO config {config_id}")
+        print(f"   {'Would migrate' if dry_run else 'Migrated'}: {migrated}, Failed: {failed}")
+        total_migrated += migrated
+        total_failed += failed
+
+        if total_failed > 0 and not dry_run:
+            print(f"\nERROR: {total_failed} values could not be migrated.")
+            print("Rolling back all database changes; the secret key was not changed.")
+            conn.rollback()
+            sys.exit(1)
+
         # Verify migrated data can be decrypted with new key
         if total_migrated > 0:
-            print("\n4. Verifying migration...")
+            print("\n5. Verifying migration...")
             verified, verify_failed = verify_migration(conn, new_key)
             if verify_failed > 0:
                 print(f"   ERROR: {verify_failed} records failed verification!")
@@ -382,12 +497,12 @@ def migrate(
     if not dry_run:
         backup_file = config_dir / f"secret_key.backup.{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
         write_secret_key_to_file(config_dir, old_key, backup_file.name)
-        print(f"\n5. Backed up old key to: {backup_file}")
+        print(f"\n6. Backed up old key to: {backup_file}")
         write_secret_key_to_file(config_dir, new_key)
-        print(f"6. Saved new secret key to: {config_dir / 'secret_key'}")
+        print(f"7. Saved new secret key to: {config_dir / 'secret_key'}")
     else:
-        print("\n5. [DRY RUN] Would backup old key")
-        print(f"6. [DRY RUN] Would save new key to: {config_dir / 'secret_key'}")
+        print("\n6. [DRY RUN] Would backup old key")
+        print(f"7. [DRY RUN] Would save new key to: {config_dir / 'secret_key'}")
 
     # Summary
     print("\n" + "=" * 50)

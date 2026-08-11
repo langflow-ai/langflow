@@ -5,6 +5,9 @@ import pytest
 from langflow.api.utils.core import extract_global_variables_from_headers
 from langflow.api.v1 import mcp_utils
 from langflow.helpers import flow as flow_helpers
+from langflow.services.database.models import Flow
+from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.user.model import User
 from lfx.interface.components import component_cache
 
 
@@ -321,6 +324,48 @@ async def test_handle_read_resource_denies_user_bucket_under_project_scope(monke
             await mcp_utils.handle_read_resource(uri, project_id="project-xyz")
     finally:
         mcp_utils.current_user_ctx.reset(token)
+
+
+@pytest.mark.asyncio
+async def test_handle_read_resource_project_scope_binds_flow_id_as_uuid(monkeypatch, async_session):
+    """A flow UUID parsed from an advertised resource URI must remain UUID-typed in the database query."""
+    user = User(username="mcp-resource-reader", password="test-password")  # noqa: S106
+    project = Folder(name="MCP Resource Project", user_id=user.id)
+    flow = Flow(name="MCP Resource Flow", user_id=user.id, folder_id=project.id)
+    other_project = Folder(name="Other MCP Resource Project", user_id=user.id)
+    other_flow = Flow(name="Other MCP Resource Flow", user_id=user.id, folder_id=other_project.id)
+    async_session.add_all([user, project, flow, other_project, other_flow])
+    await async_session.flush()
+
+    file_name = "project-resource.txt"
+    storage_service = FakeStorageService(
+        {},
+        {
+            f"{flow.id}/{file_name}": b"project file contents",
+            f"{other_flow.id}/{file_name}": b"other project file contents",
+        },
+    )
+
+    monkeypatch.setattr(mcp_utils, "session_scope", lambda: FakeSessionContext(async_session))
+    monkeypatch.setattr(mcp_utils, "get_storage_service", lambda: storage_service)
+
+    token = mcp_utils.current_user_ctx.set(user)
+    try:
+        uri = f"http://host/api/v1/files/download/{flow.id}/{file_name}"
+        result = await mcp_utils.handle_read_resource(uri, project_id=project.id)
+
+        other_uri = f"http://host/api/v1/files/download/{other_flow.id}/{file_name}"
+        with pytest.raises(ValueError, match="access denied"):
+            await mcp_utils.handle_read_resource(other_uri, project_id=project.id)
+
+        with pytest.raises(ValueError, match="access denied"):
+            await mcp_utils.handle_read_resource(uri, project_id="not-a-uuid")
+    finally:
+        mcp_utils.current_user_ctx.reset(token)
+
+    import base64
+
+    assert base64.b64decode(result) == b"project file contents"
 
 
 @pytest.mark.asyncio

@@ -1,6 +1,4 @@
-import os
-
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ValidationInfo, field_validator
 
 from lfx.services.settings.constants import AGENTIC_VARIABLES, VARIABLES_TO_GET_FROM_ENVIRONMENT
 
@@ -18,13 +16,23 @@ class VariablesSettings(BaseModel):
     store_environment_variables: bool = True
     """Whether to store environment variables as Global Variables in the database."""
 
+    # Agentic Experience
+    agentic_experience: bool = True
+    """Whether the Langflow Assistant is available. On by default: it is the primary way into
+    the product, so requiring opt-in would hide the main entry point behind an env var.
+
+    Set it to False to turn the Assistant off for a deployment -- an operator who does not want
+    LLM-authored component code running on their server. That withholds the assistant's
+    code-generating endpoints under ``/api/v1/agentic`` (404), the ``run_assistant`` MCP tool,
+    the seeding of the assistant's built-in flows, and the per-user agentic global variables.
+    It does NOT withhold the rest of the MCP toolkit at ``/api/v1/agentic/mcp``, whose tools are
+    REST calls the API already authorizes. Note this is not the control over in-process code
+    execution -- that is ``allow_custom_components``, which applies to the Assistant and to
+    hand-written custom components alike.
+    """
+
     variables_to_get_from_environment: list[str] = VARIABLES_TO_GET_FROM_ENVIRONMENT
     """List of environment variables to get from the environment and store in the database."""
-
-    # Agentic Experience
-    agentic_experience: bool = False
-    """If set to True, Langflow will start the agentic MCP server that provides tools for
-    flow/component operations, template search, and graph visualization."""
 
     # Developer API
     developer_api_enabled: bool = False
@@ -32,15 +40,13 @@ class VariablesSettings(BaseModel):
 
     @field_validator("variables_to_get_from_environment", mode="before")
     @classmethod
-    def set_variables_to_get_from_environment(cls, value):
+    def set_variables_to_get_from_environment(cls, value, info: ValidationInfo):
         if isinstance(value, str):
             value = value.split(",")
 
         result = list(set(VARIABLES_TO_GET_FROM_ENVIRONMENT + value))
 
-        # Add agentic variables if agentic_experience is enabled
-        # Check env var directly since we can't access instance attributes in validator
-        if os.getenv("LANGFLOW_AGENTIC_EXPERIENCE", "true").lower() == "true":
+        if info.data.get("agentic_experience", True):
             result.extend(AGENTIC_VARIABLES)
 
         return list(set(result))

@@ -216,5 +216,6 @@ async def upload_project_flows(
         flow.name = flow_name
         flow.user_id = current_user.id
         flow.folder_id = new_project.id
+        flow.workspace_id = new_project.workspace_id
 
     return await create_flows(session=session, flow_list=flow_list, current_user=current_user)

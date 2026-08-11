@@ -32,25 +32,29 @@ class DatabaseVariableService(VariableService, Service):
             await logger.adebug("Skipping environment variable storage.")
             return
 
-        # Import the provider mapping to set default_fields for known providers
+        # Import provider metadata to identify placeholder API-key values and
+        # enforce provider-governance policy for environment imports.
         try:
             from lfx.base.models.unified_models import get_model_provider_metadata
             from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
 
-            # Build var_to_provider from all variables in metadata (not just primary)
+            from langflow.services.database.models.user.model import User
+
             var_to_provider = {}
-            var_to_info = {}  # Maps variable_key to its full info (including is_secret)
+            provider_variables = {}
             metadata = get_model_provider_metadata()
+            principal = await session.get(User, UUID(str(user_id)))
             for provider, meta in metadata.items():
                 for var in meta.get("variables", []):
                     var_key = var.get("variable_key")
                     if var_key:
                         var_to_provider[var_key] = provider
-                        var_to_info[var_key] = var
+                        provider_variables[var_key] = var
             provider_policy = resolve_model_provider_policy(
                 user_id=user_id,
                 providers=metadata,
                 purpose=ModelProviderPolicyPurpose.CONFIGURE,
+                attributes={"is_superuser": bool(principal and principal.is_superuser)},
             )
         except Exception:  # noqa: BLE001
             await logger.aexception("Could not resolve model-provider metadata; skipping environment variable import")
@@ -74,8 +78,8 @@ class DatabaseVariableService(VariableService, Service):
 
                 # Skip placeholder/test values like "dummy" for API key variables only
                 # This prevents test environments from overwriting user-configured model provider keys
-                is_provider_variable = var_name in var_to_provider
-                var_info = var_to_info.get(var_name, {})
+                var_info = provider_variables.get(var_name, {})
+                is_provider_variable = bool(var_info)
                 is_secret_variable = var_info.get("is_secret", False)
 
                 if is_provider_variable and is_secret_variable and value.lower() == "dummy":
@@ -86,35 +90,7 @@ class DatabaseVariableService(VariableService, Service):
                     continue
 
                 query = select(Variable).where(Variable.user_id == user_id, Variable.name == var_name)
-                # Set default_fields if this is a known provider variable
-                default_fields = []
                 try:
-                    if is_provider_variable:
-                        provider_name = var_to_provider[var_name]
-                        # Get the variable type from metadata
-                        var_display_name = var_info.get("variable_name", "api_key")
-
-                        # Validate secret variables (API keys) before setting default_fields
-                        # This prevents invalid keys from enabling providers during migration
-                        if is_secret_variable:
-                            try:
-                                from lfx.base.models.unified_models import validate_model_provider_key
-
-                                validate_model_provider_key(provider_name, {var_name: value})
-                                # Only set default_fields if validation passes
-                                default_fields = [provider_name, var_display_name]
-                                await logger.adebug(f"Validated {var_name} - provider will be enabled")
-                            except (ValueError, Exception) as validation_error:  # noqa: BLE001
-                                # Validation failed - don't set default_fields
-                                # This prevents the provider from appearing as "Enabled"
-                                default_fields = []
-                                await logger.adebug(
-                                    f"Skipping default_fields for {var_name} - validation failed: {validation_error!s}"
-                                )
-                        else:
-                            # Non-secret variables (like project_id, url) don't need validation
-                            default_fields = [provider_name, var_display_name]
-                            await logger.adebug(f"Set default_fields for non-secret variable {var_name}")
                     existing = (await session.exec(query)).first()
                 except Exception as e:  # noqa: BLE001
                     await logger.aexception(f"Error querying {var_name} variable: {e!s}")
@@ -137,35 +113,8 @@ class DatabaseVariableService(VariableService, Service):
                         )
 
                         if is_user_modified:
-                            # Variable was modified by user, don't overwrite with environment variable
-                            # Only update default_fields if they're not set
-                            if not existing.default_fields and default_fields:
-                                variable_update = VariableUpdate(
-                                    id=existing.id,
-                                    default_fields=default_fields,
-                                )
-                                await self.update_variable_fields(
-                                    user_id=user_id,
-                                    variable_id=existing.id,
-                                    variable=variable_update,
-                                    session=session,
-                                )
                             await logger.adebug(
                                 f"Skipping update of user-modified variable {var_name} with environment value"
-                            )
-                        # Variable was not user-modified, safe to update from environment
-                        elif not existing.default_fields and default_fields:
-                            # Update both value and default_fields
-                            variable_update = VariableUpdate(
-                                id=existing.id,
-                                value=value,
-                                default_fields=default_fields,
-                            )
-                            await self.update_variable_fields(
-                                user_id=user_id,
-                                variable_id=existing.id,
-                                variable=variable_update,
-                                session=session,
                             )
                         else:
                             await self.update_variable(user_id, var_name, value, session=session)
@@ -174,7 +123,8 @@ class DatabaseVariableService(VariableService, Service):
                             user_id=user_id,
                             name=var_name,
                             value=value,
-                            default_fields=default_fields,
+                            # Model Providers resolve these at runtime; Apply To Fields is user-owned.
+                            default_fields=[],
                             type_=CREDENTIAL_TYPE,
                             session=session,
                         )
@@ -338,6 +288,11 @@ class DatabaseVariableService(VariableService, Service):
 
             # Model validate will set value to None if credential type
             variable_read = VariableRead.model_validate(variable, from_attributes=True)
+            variable_read.is_owner = is_owner
+            # Deliberately conservative: resource owners can manage shares.
+            # Enterprise may authorize additional administrators server-side,
+            # but the list UI must not show a re-share control to recipients.
+            variable_read.can_manage_shares = is_owner
             # Shared values are usable only inside runtime variable resolution;
             # API list responses expose metadata but never plaintext values.
             if variable.type == GENERIC_TYPE and is_owner:

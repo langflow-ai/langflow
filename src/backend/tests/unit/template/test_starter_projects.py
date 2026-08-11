@@ -28,6 +28,14 @@ from langflow.utils.template_validation import (
 # build/execute tests skip it instead of failing. The check imports the live
 # distribution, so it turns back into a no-op whenever the bundle is installed.
 _OPTIONAL_BUNDLE_MODULES = {
+    "lfx_arxiv": "lfx_arxiv",
+    "lfx_duckduckgo": "lfx_duckduckgo",
+    "lfx_empiriolabs": "lfx_empiriolabs",
+    "lfx_exa": "lfx_exa",
+    "lfx_firecrawl": "lfx_firecrawl",
+    "lfx_nextplaid": "lfx_nextplaid",
+    "lfx_paddle": "lfx_paddle",
+    "lfx_valkey": "lfx_valkey",
     "lfx.components.datastax": "lfx_datastax",
     "lfx.components.openai": "lfx_openai",
     "lfx.components.oracle": "lfx_oracle",
@@ -88,6 +96,40 @@ def get_basic_template_files():
     path = get_starter_projects_path()
     basic_templates = ["Basic Prompting.json"]
     return [path / name for name in basic_templates if (path / name).exists()]
+
+
+@pytest.mark.parametrize(
+    "bundle_module",
+    [
+        "lfx_arxiv",
+        "lfx_duckduckgo",
+        "lfx_empiriolabs",
+        "lfx_exa",
+        "lfx_firecrawl",
+        "lfx_nextplaid",
+        "lfx_paddle",
+        "lfx_valkey",
+    ],
+)
+def test_direct_optional_bundle_detection(bundle_module):
+    """Detect standalone bundle module paths in starter project metadata."""
+    template_data = {
+        "data": {
+            "nodes": [
+                {
+                    "data": {
+                        "node": {
+                            "metadata": {
+                                "module": f"{bundle_module}.components.example.ExampleComponent",
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    }
+
+    assert _template_required_bundles(template_data) == {bundle_module}
 
 
 @pytest.fixture(autouse=True)

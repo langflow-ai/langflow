@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
 
-pytest.importorskip("lfx_bundles")
+pytest.importorskip("lfx_ollama")
 
 from lfx.components.ollama.ollama_embeddings import OllamaEmbeddingsComponent
 

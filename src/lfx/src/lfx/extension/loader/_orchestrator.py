@@ -9,7 +9,7 @@ two public entry points the rest of Langflow consumes:
       every immediate subfolder of every path is one Bundle at the
       ``extra`` slot, with first-wins resolution across paths.
 
-Path-safety, multi-bundle re-checks, duplicate-name detection, and the
+Path-safety, bundle-selection checks, duplicate-name detection, and the
 ``no-component-subclass`` / ``bundle-empty`` discriminants are all enforced
 here.  The lower-level layers stay agnostic of those rules so they remain
 easy to unit-test in isolation.
@@ -338,6 +338,8 @@ def load_extension(
     slot: Literal["official", "extra"] = SLOT_OFFICIAL,
     distribution: str | None = None,
     module_namespace: str = DEFAULT_MODULE_NAMESPACE,
+    bundle_name: str | None = None,
+    _register_providers: bool = True,
 ) -> LoadResult:
     """Load an Extension at ``root``.
 
@@ -357,6 +359,9 @@ def load_extension(
             loads.  The reload pipeline passes ``__reload_staging__.<id>``
             so Stage 1 lands in an isolated namespace; do not override
             this in normal application code.
+        bundle_name: Select one bundle from a multi-bundle manifest. Startup
+            discovery should use :func:`load_extension_bundles` to load all
+            declared bundles.
 
     Returns:
         A :class:`LoadResult`.  ``ok`` is False on any structural failure;
@@ -441,21 +446,19 @@ def load_extension(
     # Register any model providers this extension declares before touching the
     # component bundle: providers are independent of components, and a
     # provider-only extension ships providers with no bundle.
-    _register_manifest_providers(manifest, source, result)
+    if _register_providers:
+        _register_manifest_providers(manifest, source, result)
 
-    # Multi-bundle is rejected by the schema, but we re-check here because
-    # the loader is the runtime gate; a forged manifest that bypassed the
-    # schema layer would otherwise silently load only the first bundle.
-    if len(manifest.bundles) > 1:
+    if bundle_name is None and len(manifest.bundles) > 1:
         result.errors.append(
             ExtensionError(
                 code="multi-bundle-unsupported",
                 message=(
-                    f"Extension {manifest.id!r} declares {len(manifest.bundles)} bundles; v0 accepts at most one. "
-                    "Multi-bundle support is deferred to a future milestone."
+                    f"Extension {manifest.id!r} declares {len(manifest.bundles)} bundles; "
+                    "select bundle_name or use load_extension_bundles()."
                 ),
                 location=str(source.path),
-                hint=("Split each bundle into its own Extension distribution until multi-bundle support ships."),
+                hint="Pass one declared bundle name, or load all bundle results at startup.",
             )
         )
         return result
@@ -465,7 +468,21 @@ def load_extension(
     if not manifest.bundles:
         return result
 
-    bundle = manifest.bundles[0]
+    if bundle_name is None:
+        bundle = manifest.bundles[0]
+    else:
+        bundle = next((candidate for candidate in manifest.bundles if candidate.name == bundle_name), None)
+        if bundle is None:
+            result.errors.append(
+                ExtensionError(
+                    code="reload-bundle-name-mismatch",
+                    message=f"Extension {manifest.id!r} does not declare bundle {bundle_name!r}.",
+                    location=str(source.path),
+                    content=bundle_name,
+                    hint="Select one of the bundle names declared in extension.json.",
+                )
+            )
+            return result
     result.bundle = bundle.name
 
     bundle_root, path_error = _resolve_bundle_path(root_path, bundle)
@@ -485,6 +502,51 @@ def load_extension(
         module_namespace=module_namespace,
     )
     return result
+
+
+def load_extension_bundles(
+    root: Path | str,
+    *,
+    slot: Literal["official", "extra"] = SLOT_OFFICIAL,
+    distribution: str | None = None,
+    module_namespace: str = DEFAULT_MODULE_NAMESPACE,
+) -> list[LoadResult]:
+    """Load every component bundle declared by one extension manifest."""
+    root_path = Path(root).resolve()
+    try:
+        source = load_manifest(root_path)
+    except (FileNotFoundError, ValueError, TypeError):
+        return [
+            load_extension(
+                root_path,
+                slot=slot,
+                distribution=distribution,
+                module_namespace=module_namespace,
+            )
+        ]
+
+    bundle_names = [bundle.name for bundle in source.manifest.bundles]
+    if len(bundle_names) <= 1:
+        return [
+            load_extension(
+                root_path,
+                slot=slot,
+                distribution=distribution,
+                module_namespace=module_namespace,
+            )
+        ]
+
+    return [
+        load_extension(
+            root_path,
+            slot=slot,
+            distribution=distribution,
+            module_namespace=module_namespace,
+            bundle_name=name,
+            _register_providers=index == 0,
+        )
+        for index, name in enumerate(bundle_names)
+    ]
 
 
 # ---------------------------------------------------------------------------

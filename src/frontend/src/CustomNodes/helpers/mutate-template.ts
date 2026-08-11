@@ -1,12 +1,32 @@
 import type { UseMutationResult } from "@tanstack/react-query";
 import { cloneDeep, debounce } from "lodash";
 import { SAVE_DEBOUNCE_TIME } from "@/constants/constants";
-import i18n from "../../i18n";
+import useFlowStore from "@/stores/flowStore";
 import type { APIClassType, ResponseErrorDetailAPI } from "@/types/api";
+import i18n from "../../i18n";
 import { updateHiddenOutputs } from "./update-hidden-outputs";
 
-// Map to store debounced functions for each node ID + parameter combination
 const debouncedFunctions = new Map<string, ReturnType<typeof debounce>>();
+
+const getNodeCode = (nodeId: string): unknown => {
+  const currentNode = useFlowStore
+    .getState()
+    .nodes.find((flowNode) => flowNode.id === nodeId);
+  return currentNode?.data?.node?.template?.code?.value;
+};
+
+// A refresh answers for the code that was current when it left, and applying it
+// replaces the whole template — a code save landing meanwhile would be reverted.
+const isStaleForNode = (
+  nodeId: string,
+  requestedNode: APIClassType,
+): boolean => {
+  const requestedCode = requestedNode.template?.code?.value;
+  if (requestedCode === undefined) return false;
+  const currentCode = getNodeCode(nodeId);
+  if (currentCode === undefined) return false;
+  return currentCode !== requestedCode;
+};
 
 export const mutateTemplate = async (
   newValue,
@@ -16,6 +36,7 @@ export const mutateTemplate = async (
   postTemplateValue: UseMutationResult<
     APIClassType | undefined,
     ResponseErrorDetailAPI,
+    // biome-ignore lint/suspicious/noExplicitAny: legacy mutation payload
     any
   >,
   setErrorData,
@@ -24,8 +45,7 @@ export const mutateTemplate = async (
   toolMode?: boolean,
   isRefresh?: boolean,
 ) => {
-  // Different parameters must debounce independently to avoid one field's
-  // refresh cancelling another's during concurrent mount calls.
+  // Per-parameter keys keep one field's refresh from cancelling another's on mount.
   const debounceKey = parameterName ? `${nodeId}-${parameterName}` : nodeId;
   if (!debouncedFunctions.has(debounceKey)) {
     debouncedFunctions.set(
@@ -38,6 +58,7 @@ export const mutateTemplate = async (
           postTemplateValue: UseMutationResult<
             APIClassType | undefined,
             ResponseErrorDetailAPI,
+            // biome-ignore lint/suspicious/noExplicitAny: legacy mutation payload
             any
           >,
           setErrorData,
@@ -54,7 +75,7 @@ export const mutateTemplate = async (
               tool_mode: toolMode ?? node.tool_mode,
               is_refresh: isRefresh ?? false,
             });
-            if (newTemplate) {
+            if (newTemplate && !isStaleForNode(nodeId, node)) {
               newNode.template = newTemplate.template;
               newNode.outputs = updateHiddenOutputs(
                 newNode.outputs ?? [],
@@ -75,6 +96,12 @@ export const mutateTemplate = async (
             callback?.();
           } catch (e) {
             const error = e as ResponseErrorDetailAPI;
+            // LE-2045: the fallback below identifies nothing, so a client-side
+            // throw is otherwise indistinguishable from a failed request.
+            console.error(
+              `Failed to update template for node ${nodeId}, field ${parameterName}`,
+              e,
+            );
             setErrorData({
               title: i18n.t("input.titleErrorUpdatingComponent"),
               list: [
@@ -89,7 +116,14 @@ export const mutateTemplate = async (
     );
   }
 
-  debouncedFunctions.get(debounceKey)?.(
+  // A queued tools_metadata refresh still carries tool_mode=true and would restore
+  // the Toolset output after an off response, so the explicit toggle supersedes it.
+  if (parameterName === "tool_mode") {
+    debouncedFunctions.get(`${nodeId}-tools_metadata`)?.cancel();
+  }
+
+  const debouncedFunction = debouncedFunctions.get(debounceKey);
+  debouncedFunction?.(
     newValue,
     node,
     setNodeClass,
@@ -100,4 +134,10 @@ export const mutateTemplate = async (
     toolMode,
     isRefresh,
   );
+
+  // Debouncing a discrete toggle like a text input lets slower refresh responses
+  // repaint it with stale state, so Tool Mode is flushed immediately.
+  if (parameterName === "tool_mode") {
+    await debouncedFunction?.flush();
+  }
 };

@@ -81,6 +81,41 @@ sudo apt-get install gcc
 
 If you experience an error from the `webrtcvad` package, run `uv pip install webrtcvad-wheels` in your virtual environment, and then retry the Langflow installation.
 
+### `get_body_field` error after installing Langflow
+
+After installing Langflow OSS with `pip install langflow` or `uv pip install langflow`, Langflow fails to start with an error that mentions `get_body_field`, such as:
+
+```text
+ImportError: cannot import name 'get_body_field' from 'fastapi.dependencies.utils'
+```
+
+or:
+
+```text
+NameError: name 'get_body_field' is not defined
+```
+
+This happens when the resolver installs FastAPI `0.140.5` or later, which removed `get_body_field`.
+
+Langflow 1.11.0 allows FastAPI `>=0.139.0,<1.0.0`, so a fresh install can pull an incompatible FastAPI 0.140.x release.
+
+To work around this, pin FastAPI below 0.140.
+
+To pin FastAPI when installing Langflow:
+
+```bash
+uv pip install langflow "fastapi<0.140"
+```
+
+To pin FastAPI in an environment where Langflow is already installed:
+
+```bash
+uv pip install "fastapi<0.140"
+```
+
+Langflow version 1.11.1 resolves a compatible FastAPI 0.140.x and `fastapi-pagination` 0.15.16 pair on a new install, so it does not require this pin.
+If you constrain these dependencies yourself, use `fastapi-pagination>=0.15.16` with `fastapi>=0.140.5`.
+
 ## Langflow Desktop installation issues
 
 The following issues can occur when Langflow Desktop installs or updates its bundled Langflow OSS instance.
@@ -463,11 +498,18 @@ The following error can occur during Langflow upgrades when the database schema 
 There's a mismatch between the models and the database.
 ```
 
-To resolve this error, run the migration fix command:
+Back up your database first, and then run the migration fix command:
 
 ```bash
 uv run langflow migration --fix
 ```
+
+:::warning
+`langflow migration --fix` is destructive.
+Use a dedicated database for Langflow application data.
+Repair mode repeatedly downgrades and re-applies Langflow's schema revisions, which can delete Langflow data, and it might fail to converge when non-Langflow tables such as `langchain_pg_*` vector store tables share the same database.
+For more information, see [Database migrations](./database-migrations).
+:::
 
 If the migration fix doesn't resolve the issue, clear the cache by deleting the contents of your Langflow cache folder.
 The filepath depends on your operating system, installation type, and configuration options.

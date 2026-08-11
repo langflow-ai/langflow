@@ -5,12 +5,11 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 PUBLISHED_IMAGES = (
-    pytest.param("build_and_push.Dockerfile", "core", id="core"),
+    pytest.param("build_and_push.Dockerfile", "base", id="base"),
     pytest.param("build_and_push.Dockerfile", "full", id="full"),
+    pytest.param("build_and_push.Dockerfile", "full-bundles", id="full-bundles"),
     pytest.param("build_and_push_backend.Dockerfile", None, id="backend"),
-    pytest.param("build_and_push_base.Dockerfile", None, id="base"),
     pytest.param("build_and_push_ep.Dockerfile", None, id="ep"),
-    pytest.param("build_and_push_with_extras.Dockerfile", None, id="with-extras"),
 )
 RESTRICTIVE_RUNTIME_ENV_VARS = frozenset(
     {
@@ -89,6 +88,22 @@ def _target_env(dockerfile: Path, target: str | None = None) -> dict[str, str]:
 
 
 @pytest.mark.parametrize(("dockerfile", "target"), PUBLISHED_IMAGES)
+def test_published_images_use_writable_runtime_home(dockerfile: str, target: str | None) -> None:
+    assert _target_env(REPO_ROOT / "docker" / dockerfile, target).get("HOME") == "/app/data"
+
+
+def test_consolidated_and_lfx_images_create_writable_runtime_home() -> None:
+    sources = (
+        (REPO_ROOT / "docker" / "build_and_push.Dockerfile").read_text(encoding="utf-8"),
+        (REPO_ROOT / "src" / "lfx" / "docker" / "Dockerfile").read_text(encoding="utf-8"),
+    )
+    for source in sources:
+        assert "mkdir -p /app/data" in source
+        assert "chown -R 1000:0 /app/data" in source
+        assert "chmod -R g+rwX /app/data" in source
+
+
+@pytest.mark.parametrize(("dockerfile", "target"), PUBLISHED_IMAGES)
 def test_published_images_do_not_force_restrictive_runtime_defaults(dockerfile: str, target: str | None) -> None:
     runtime_env = _target_env(REPO_ROOT / "docker" / dockerfile, target)
 
@@ -104,8 +119,8 @@ ENV LANGFLOW_ALLOW_CUSTOM_COMPONENTS=builder
 FROM builder AS runtime
 env\tLANGFLOW_ALLOW_CUSTOM_COMPONENTS=false OTHER=first \\
     THIRD=three
-FROM runtime AS core
-ENV OTHER=core
+FROM runtime AS base
+ENV OTHER=base
 FROM runtime AS full
 ENV OTHER=second LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true
 ENV LEGACY value with spaces
@@ -113,9 +128,9 @@ ENV LEGACY value with spaces
         encoding="utf-8",
     )
 
-    assert _target_env(dockerfile, "core") == {
+    assert _target_env(dockerfile, "base") == {
         "LANGFLOW_ALLOW_CUSTOM_COMPONENTS": "false",
-        "OTHER": "core",
+        "OTHER": "base",
         "THIRD": "three",
     }
     assert _target_env(dockerfile) == {
@@ -126,17 +141,17 @@ ENV LEGACY value with spaces
     }
 
 
-def test_core_and_full_targets_share_one_runtime_defaults_contract() -> None:
+def test_base_and_full_targets_share_one_runtime_defaults_contract() -> None:
     dockerfile = REPO_ROOT / "docker" / "build_and_push.Dockerfile"
     stage_envs, stage_bases, final_stage = _dockerfile_stages(dockerfile)
 
     assert final_stage == "full"
-    assert stage_bases["core"] == "runtime"
+    assert stage_bases["base"] == "runtime"
     assert stage_bases["full"] == "runtime"
-    assert stage_bases["core-builder"] == "core-dependencies"
+    assert stage_bases["base-builder"] == "base-dependencies"
     assert stage_bases["full-builder"] == "full-dependencies"
 
-    for target in ("core", "full"):
+    for target in ("base", "full"):
         assert stage_envs[target]["LANGFLOW_AUTO_LOGIN"] == "false"
         assert RESTRICTIVE_RUNTIME_ENV_VARS.isdisjoint(stage_envs[target])
 
@@ -145,31 +160,33 @@ def test_core_and_full_targets_share_one_runtime_defaults_contract() -> None:
     for key in RESTRICTIVE_RUNTIME_ENV_VARS:
         assert f"{key}=" not in source
 
-    assert not (REPO_ROOT / "docker" / "build_and_push_core.Dockerfile").exists()
+    assert not (REPO_ROOT / "docker" / "build_and_push_base.Dockerfile").exists()
+    assert not (REPO_ROOT / "docker" / "build_and_push_with_extras.Dockerfile").exists()
 
 
 def test_public_docker_targets_apply_release_version_overrides() -> None:
     dockerfile = (REPO_ROOT / "docker" / "build_and_push.Dockerfile").read_text(encoding="utf-8")
     workflow = (REPO_ROOT / ".github" / "workflows" / "docker-build-v2.yml").read_text(encoding="utf-8")
 
-    assert 'ARG CORE_VERSION=""' in dockerfile
-    assert "/app/src/langflow-core/pyproject.toml" in dockerfile
+    assert 'ARG BASE_VERSION=""' in dockerfile
+    assert "/app/src/backend/base/pyproject.toml" in dockerfile
     assert 'ARG MAIN_VERSION=""' in dockerfile
     assert "/app/pyproject.toml" in dockerfile
     assert 'm.version("langflow")' in dockerfile
-    assert 'm.version("langflow-core")' in dockerfile
-    for variant in ("build_and_push_ep.Dockerfile", "build_and_push_with_extras.Dockerfile"):
-        source = (REPO_ROOT / "docker" / variant).read_text(encoding="utf-8")
-        assert 'ARG MAIN_VERSION=""' in source
-        assert 'ARG CORE_VERSION=""' in source
-        assert 'm.version("langflow")' in source
-        assert 'm.version("langflow-core")' in source
+    assert 'm.version("langflow-base")' in dockerfile
+    source = (REPO_ROOT / "docker" / "build_and_push_ep.Dockerfile").read_text(encoding="utf-8")
+    assert 'ARG MAIN_VERSION=""' in source
+    assert 'ARG BASE_VERSION=""' in source
+    assert 'm.version("langflow")' in source
+    assert 'm.version("langflow-base")' in source
 
     assert workflow.count("MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}") == 6
-    assert workflow.count("CORE_VERSION=${{ needs.determine-main-version.outputs.version }}") == 6
+    assert workflow.count("BASE_VERSION=${{ needs.determine-main-version.outputs.version }}") == 6
+    assert workflow.count("BASE_VERSION=${{ needs.determine-base-version.outputs.version }}") == 2
 
 
 def test_full_target_checks_only_default_workspace_distributions() -> None:
     dockerfile = (REPO_ROOT / "docker" / "build_and_push.Dockerfile").read_text(encoding="utf-8")
 
-    assert 'required = {"langflow", "langflow-core"}' in dockerfile
+    assert 'required = {"langflow", "langflow-base"}' in dockerfile
+    assert '{"torch", "torchvision"} & names' in dockerfile

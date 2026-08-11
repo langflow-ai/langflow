@@ -29,10 +29,7 @@ test.describe(
 
         await page.goto("/login");
         await openTemplatesModal(page);
-        await page.goto("/admin");
-        await openTemplatesModal(page);
-
-        await page.goto("/admin/login");
+        await page.goto("/login/admin");
         await openTemplatesModal(page);
       },
     );

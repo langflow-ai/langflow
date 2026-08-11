@@ -52,8 +52,10 @@ If all else fails, you can always create your own [custom components](/component
 
 ## Install bundle components {#bundle-install}
 
-`uv pip install langflow` includes the curated graduated provider set, but not the `lfx-bundles` long tail.
-Install the supported torch-free full profile with `uv pip install "langflow[bundles]"`.
+`uv pip install langflow` includes the default curated provider set, but not the
+`lfx-bundles` long tail or the opt-in arXiv, DuckDuckGo, EmpirioLabs, Exa,
+Firecrawl, NextPlaid, Paddle, and Valkey standalone packages. Install the
+supported torch-free full profile with `uv pip install "langflow[bundles]"`.
 
 If you install `lfx` directly or need to add bundles to an existing environment, see [Install LFX with bundle components](./lfx-install#install-with-bundle-components).
 

@@ -21,9 +21,24 @@ const useSaveFlow = () => {
   const saveFlow = async (flow?: FlowType): Promise<void> => {
     const currentFlow = useFlowStore.getState().currentFlow;
     const currentSavedFlow = useFlowsManagerStore.getState().currentFlow;
-    if (
-      customStringify(flow || currentFlow) !== customStringify(currentSavedFlow)
-    ) {
+    const requestedFlow = flow || currentFlow;
+    const isCurrentEditorFlowLocked =
+      currentFlow?.id === requestedFlow?.id && currentFlow?.locked === true;
+    const isPersistedFlowLocked =
+      isCurrentEditorFlowLocked ||
+      (currentSavedFlow?.id === requestedFlow?.id &&
+        currentSavedFlow?.locked === true);
+    const isUnlockingPersistedFlow =
+      isPersistedFlowLocked && requestedFlow?.locked === false;
+
+    // Hydrating a flow can change client-only node metadata and the viewport.
+    // Do not let those differences trigger saves while the persisted flow is
+    // locked. Unlocking is handled separately below.
+    if (isPersistedFlowLocked && !isUnlockingPersistedFlow) {
+      return;
+    }
+
+    if (customStringify(requestedFlow) !== customStringify(currentSavedFlow)) {
       setSaveLoading(true);
 
       const flowData = currentFlow?.data;
@@ -72,17 +87,28 @@ const useSaveFlow = () => {
             endpoint_name,
             locked,
           } = flow;
-          mutate(
-            {
-              id,
-              name,
-              data: data!,
-              description,
-              folder_id,
-              endpoint_name,
-              locked,
-            },
-            {
+          const updatePayload = {
+            id,
+            name,
+            data: data!,
+            description,
+            folder_id,
+            endpoint_name,
+            locked,
+          };
+          // biome-ignore lint/suspicious/noExplicitAny: legacy
+          const handleError = (e: any) => {
+            const detail =
+              e.response?.data?.detail || e.message || "Unknown error";
+            setErrorData({
+              title: t("errors.failedToSaveFlow"),
+              list: [detail],
+            });
+            setSaveLoading(false);
+            reject(e);
+          };
+          const persistFlow = () => {
+            mutate(updatePayload, {
               onSuccess: (updatedFlow) => {
                 const flows = useFlowsManagerStore.getState().flows;
                 setSaveLoading(false);
@@ -112,19 +138,23 @@ const useSaveFlow = () => {
                   reject(new Error("Flows variable undefined"));
                 }
               },
-              // biome-ignore lint/suspicious/noExplicitAny: legacy
-              onError: (e: any) => {
-                const detail =
-                  e.response?.data?.detail || e.message || "Unknown error";
-                setErrorData({
-                  title: t("errors.failedToSaveFlow"),
-                  list: [detail],
-                });
-                setSaveLoading(false);
-                reject(e);
+              onError: handleError,
+            });
+          };
+
+          if (isUnlockingPersistedFlow) {
+            mutate(
+              { id, locked: false },
+              {
+                // Preserve any settings edits by applying them only after the
+                // backend has committed the unlock-only request.
+                onSuccess: persistFlow,
+                onError: handleError,
               },
-            },
-          );
+            );
+          } else {
+            persistFlow();
+          }
         } else {
           setErrorData({
             title: t("errors.failedToSaveFlow"),

@@ -39,11 +39,21 @@ from lfx.graph.vertex.base import Vertex, VertexStates
 from lfx.graph.vertex.schema import NodeData, NodeTypeEnum
 from lfx.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
 from lfx.log.logger import LogConfig, configure, logger
+from lfx.observability import APPLICATION_TRACER_NAME
 from lfx.schema.dotdict import dotdict
 from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
 from lfx.services.cache.utils import CacheMiss
 from lfx.services.deps import get_chat_service, get_tracing_service
 from lfx.utils.async_helpers import run_until_complete
+
+try:
+    from opentelemetry import trace as otel_trace
+except ImportError:
+    # lfx does not depend on opentelemetry. Under langflow it is installed and the application
+    # span is emitted; under bare lfx this stays None and the span code path is a no-op.
+    otel_trace = None
+
+FLOW_EXECUTION_SPAN_NAME = "flow.execute"
 
 INPUT_TYPE_COMPONENT_TYPES = {
     "chat": {InterfaceComponentTypes.ChatInput.value},
@@ -96,6 +106,9 @@ class Graph:
         self._runs = 0
         self._updates = 0
         self.flow_id = flow_id
+        # Server-set provenance for a public flow whose execution uses a virtual
+        # flow_id. Request data must never populate this storage scope.
+        self.source_flow_id: str | None = None
         self.flow_name = flow_name
         self.description = description
         self.user_id = user_id
@@ -278,7 +291,8 @@ class Graph:
             graph_dict["description"] = description
         elif description is None and self.description:
             graph_dict["description"] = self.description
-        graph_dict["endpoint_name"] = str(endpoint_name)
+        if endpoint_name is not None:
+            graph_dict["endpoint_name"] = str(endpoint_name)
         return graph_dict
 
     def add_nodes_and_edges(self, nodes: list[NodeData], edges: list[EdgeData]) -> None:
@@ -394,48 +408,50 @@ class Graph:
         reset_output_values: bool = True,
         fallback_to_env_vars: bool = False,
     ):
-        # Preserve start_component_id from constructor if available
-        start_component_id = self._start.get_id() if self._start else None
-        self.prepare(start_component_id=start_component_id)
-        if reset_output_values:
-            self._reset_all_output_values()
+        # make_current=False: this is an async generator, see flow_execution_span.
+        with self.flow_execution_span(make_current=False):
+            # Preserve start_component_id from constructor if available
+            start_component_id = self._start.get_id() if self._start else None
+            self.prepare(start_component_id=start_component_id)
+            if reset_output_values:
+                self._reset_all_output_values()
 
-        await self.initialize_run()
+            await self.initialize_run()
 
-        # The idea is for this to return a generator that yields the result of
-        # each step call and raise StopIteration when the graph is done
-        if config is not None:
-            self.__apply_config(config)
-        # I want to keep a counter of how many tyimes result.vertex.id
-        # has been yielded
-        yielded_counts: dict[str, int] = defaultdict(int)
+            # The idea is for this to return a generator that yields the result of
+            # each step call and raise StopIteration when the graph is done
+            if config is not None:
+                self.__apply_config(config)
+            # I want to keep a counter of how many tyimes result.vertex.id
+            # has been yielded
+            yielded_counts: dict[str, int] = defaultdict(int)
 
-        while should_continue(yielded_counts, max_iterations):
-            result = await self.astep(
-                event_manager=event_manager, inputs=inputs, fallback_to_env_vars=fallback_to_env_vars
-            )
-            yield result
-            if isinstance(result, Finish):
-                return
-            if hasattr(result, "vertex"):
-                yielded_counts[result.vertex.id] += 1
-                # Emit on_end_vertex event for each completed vertex
-                if event_manager is not None:
-                    result_data_dict = None
-                    if hasattr(result, "result_dict") and result.result_dict:
-                        try:
-                            result_data_dict = result.result_dict.model_dump()
-                        except (AttributeError, TypeError):
-                            result_data_dict = result.result_dict
-                    build_data = {
-                        "id": result.vertex.id,
-                        "valid": result.valid if hasattr(result, "valid") else True,
-                        "data": result_data_dict,
-                    }
-                    event_manager.on_end_vertex(data={"build_data": build_data})
+            while should_continue(yielded_counts, max_iterations):
+                result = await self.astep(
+                    event_manager=event_manager, inputs=inputs, fallback_to_env_vars=fallback_to_env_vars
+                )
+                yield result
+                if isinstance(result, Finish):
+                    return
+                if hasattr(result, "vertex"):
+                    yielded_counts[result.vertex.id] += 1
+                    # Emit on_end_vertex event for each completed vertex
+                    if event_manager is not None:
+                        result_data_dict = None
+                        if hasattr(result, "result_dict") and result.result_dict:
+                            try:
+                                result_data_dict = result.result_dict.model_dump()
+                            except (AttributeError, TypeError):
+                                result_data_dict = result.result_dict
+                        build_data = {
+                            "id": result.vertex.id,
+                            "valid": result.valid if hasattr(result, "valid") else True,
+                            "data": result_data_dict,
+                        }
+                        event_manager.on_end_vertex(data={"build_data": build_data})
 
-        msg = "Max iterations reached"
-        raise ValueError(msg)
+            msg = "Max iterations reached"
+            raise ValueError(msg)
 
     def _snapshot(self):
         return {
@@ -793,6 +809,55 @@ class Graph:
                 tracing_user_id=self.tracing_user_id,
             )
 
+    @contextlib.contextmanager
+    def flow_execution_span(self, *, make_current: bool = True):
+        """One application span per flow execution, for the operator's APM.
+
+        Attributes are set on exit because run_id is assigned by initialize_run, inside this scope.
+        The span carries identifiers only: prompts, completions and component payloads belong to the
+        LLM tracer integrations and must never reach the operator's APM, which is also why the error
+        attribute is the exception type and not its message. Subgraphs (Loop iterations) are skipped
+        so a loop over N items stays one span instead of N.
+
+        make_current attaches the span to the OTel context so a flow run from inside another flow
+        (flow-as-tool, sub-flow components) nests under its caller instead of appearing as a sibling
+        of it. It must stay False when the scope wraps an async generator: the context token would be
+        attached and detached across the generator's suspension points, which leaks it into whatever
+        task resumes the generator.
+        """
+        if otel_trace is None or self._is_subgraph:
+            yield
+            return
+        span = otel_trace.get_tracer(APPLICATION_TRACER_NAME).start_span(FLOW_EXECUTION_SPAN_NAME)
+        try:
+            with contextlib.ExitStack() as stack:
+                if make_current:
+                    # Not end_on_exit: the finally below ends it after the attributes are set.
+                    # Neither recording nor status-setting is delegated, because the SDK's version
+                    # of both writes the exception message onto the span and that can carry flow data.
+                    stack.enter_context(
+                        otel_trace.use_span(
+                            span, end_on_exit=False, record_exception=False, set_status_on_exception=False
+                        )
+                    )
+                yield
+        except GraphPausedException:
+            # A HITL pause suspends the unit of work; it is not a failed request. The resume is
+            # driven through Graph.process by the durable runner, which opens its own span.
+            raise
+        except Exception as exc:
+            span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, type(exc).__name__))
+            span.set_attribute("error.type", type(exc).__name__)
+            raise
+        finally:
+            if self.flow_id:
+                span.set_attribute("flow_id", str(self.flow_id))
+            if self._run_id:
+                span.set_attribute("run_id", self._run_id)
+            if self.session_id:
+                span.set_attribute("session_id", str(self.session_id))
+            span.end()
+
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
         # Subgraphs don't end traces - the parent graph owns the trace lifecycle
         if self._is_subgraph:
@@ -991,9 +1056,10 @@ class Graph:
         event_manager: EventManager | None = None,
     ) -> list[RunOutputs]:
         """Runs the graph with the given inputs via the configured executor."""
-        from lfx.execution import get_default_coordinator
+        from lfx.execution import aget_default_coordinator
 
-        return await get_default_coordinator().run_to_completion(
+        coordinator = await aget_default_coordinator()
+        return await coordinator.run_to_completion(
             self,
             inputs=inputs,
             inputs_components=inputs_components,
@@ -1035,20 +1101,21 @@ class Graph:
             self.session_id = session_id
         for _ in range(len(inputs) - len(types)):
             types.append("chat")  # default to chat
-        for run_inputs, components, input_type in zip(inputs, inputs_components, types, strict=True):
-            run_outputs = await self._run(
-                inputs=run_inputs,
-                input_components=components,
-                input_type=input_type,
-                outputs=outputs or [],
-                stream=stream,
-                session_id=session_id or "",
-                fallback_to_env_vars=fallback_to_env_vars,
-                event_manager=event_manager,
-            )
-            run_output_object = RunOutputs(inputs=run_inputs, outputs=run_outputs)
-            await logger.adebug(f"Run outputs: {run_output_object}")
-            vertex_outputs.append(run_output_object)
+        with self.flow_execution_span():
+            for run_inputs, components, input_type in zip(inputs, inputs_components, types, strict=True):
+                run_outputs = await self._run(
+                    inputs=run_inputs,
+                    input_components=components,
+                    input_type=input_type,
+                    outputs=outputs or [],
+                    stream=stream,
+                    session_id=session_id or "",
+                    fallback_to_env_vars=fallback_to_env_vars,
+                    event_manager=event_manager,
+                )
+                run_output_object = RunOutputs(inputs=run_inputs, outputs=run_outputs)
+                await logger.adebug(f"Run outputs: {run_output_object}")
+                vertex_outputs.append(run_output_object)
         return vertex_outputs
 
     def next_vertex_to_build(self):
@@ -1285,6 +1352,7 @@ class Graph:
             "vertices": self.vertices,
             "edges": self.edges,
             "flow_id": self.flow_id,
+            "source_flow_id": self.source_flow_id,
             "flow_name": self.flow_name,
             "description": self.description,
             "user_id": self.user_id,
@@ -1327,6 +1395,7 @@ class Graph:
                 copy.deepcopy(self.flow_name, memo),
                 copy.deepcopy(self.user_id, memo),
             )
+            new_graph.source_flow_id = copy.deepcopy(self.source_flow_id, memo)
         else:
             # Create a new graph without start and end, but copy flow_id, flow_name, and user_id
             new_graph = type(self)(
@@ -1336,6 +1405,9 @@ class Graph:
                 copy.deepcopy(self.flow_name, memo),
                 copy.deepcopy(self.user_id, memo),
             )
+            # add_nodes_and_edges synchronously builds FileInput parameters, so
+            # trusted public-flow provenance must exist before reconstruction.
+            new_graph.source_flow_id = copy.deepcopy(self.source_flow_id, memo)
             # Deep copy vertices and edges
             new_graph.add_nodes_and_edges(copy.deepcopy(self._vertices, memo), copy.deepcopy(self._edges, memo))
 
@@ -1345,6 +1417,9 @@ class Graph:
         return new_graph
 
     def __setstate__(self, state):
+        # Graphs cached before source-flow provenance was introduced remain
+        # loadable and simply have no additional trusted storage namespace.
+        state.setdefault("source_flow_id", None)
         run_manager = state["run_manager"]
         if isinstance(run_manager, RunnableVerticesManager):
             state["run_manager"] = run_manager
@@ -1377,10 +1452,17 @@ class Graph:
             Graph: The created graph.
         """
         from lfx.extension.migration import migrate_flow_payload
-        from lfx.utils.flow_validation import validate_flow_for_current_settings
+        from lfx.services.deps import get_catalog_policy_service
+        from lfx.utils.flow_validation import validate_catalog_policy_for_flow, validate_flow_for_current_settings
 
         if "data" in payload:
             payload = payload["data"]
+        # Catalog identity is the exact, case-sensitive stored node.data.type.
+        # Validate it before extension migration rewrites legacy identifiers.
+        # Reuse this same immutable snapshot below so migrated executable types
+        # are checked against the identical policy view without a TOCTOU gap.
+        catalog_policy_snapshot = get_catalog_policy_service().snapshot
+        validate_catalog_policy_for_flow(payload, snapshot=catalog_policy_snapshot)
         # Rewrite legacy component references in place against the append-only
         # extension migration table.  Best-effort: a corrupt table or unmapped
         # reference produces typed errors on the report but never raises, so
@@ -1447,8 +1529,19 @@ class Graph:
         # boundary (middleware or endpoint dependency) so from_payload stays
         # pure deserialization, but a missed endpoint means arbitrary code
         # execution, so we keep this as a safety net.
-        validate_flow_for_current_settings(payload)
+        validate_flow_for_current_settings(payload, catalog_policy_snapshot=catalog_policy_snapshot)
         try:
+            # The extension migrator intentionally rewrites only the nodes at
+            # the payload level it receives, while process_flow later flattens
+            # inlined nested flows for execution. Build that executable view
+            # on a deep copy, migrate it, and enforce the same snapshot so a
+            # nested legacy alias cannot bypass a block on its canonical key.
+            # Migration errors on this policy-only copy remain best-effort and
+            # are not exposed. Skip the work for the default allow-all policy.
+            if catalog_policy_snapshot.blocked_component_keys:
+                effective_catalog_payload = process_flow(payload)
+                migrate_flow_payload(effective_catalog_payload)
+                validate_catalog_policy_for_flow(effective_catalog_payload, snapshot=catalog_policy_snapshot)
             vertices = payload["nodes"]
             edges = payload["edges"]
             graph = cls(flow_id=flow_id, flow_name=flow_name, user_id=user_id, context=context)
@@ -2712,6 +2805,7 @@ class Graph:
         subgraph._tracing_service_initialized = True
         subgraph._run_id = self._run_id
         subgraph.session_id = self.session_id
+        subgraph.source_flow_id = self.source_flow_id
         subgraph._is_subgraph = True
 
         # Add the filtered nodes and edges

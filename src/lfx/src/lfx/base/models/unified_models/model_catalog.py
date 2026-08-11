@@ -188,7 +188,9 @@ def get_language_model_options(
     enabled_providers = set()
     if user_id:
         with contextlib.suppress(Exception):
-            enabled_providers = run_until_complete(_fetch_enabled_providers_for_user(user_id))
+            enabled_providers = run_until_complete(
+                _fetch_enabled_providers_for_user(user_id, provider_policy=provider_policy)
+            )
     enabled_providers = {provider for provider in enabled_providers if provider_policy.allows(provider)}
 
     # Replace static defaults with actual available models from configured instances
@@ -327,7 +329,9 @@ def get_embedding_model_options(
     enabled_providers = set()
     if user_id:
         with contextlib.suppress(Exception):
-            enabled_providers = run_until_complete(_fetch_enabled_providers_for_user(user_id))
+            enabled_providers = run_until_complete(
+                _fetch_enabled_providers_for_user(user_id, provider_policy=provider_policy)
+            )
     enabled_providers = {provider for provider in enabled_providers if provider_policy.allows(provider)}
 
     # Replace static defaults with actual available models from configured instances

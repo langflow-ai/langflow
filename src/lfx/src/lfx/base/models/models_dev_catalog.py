@@ -39,7 +39,7 @@ from typing import Any
 import httpx
 from platformdirs import user_cache_dir
 
-from lfx.base.models.model_metadata import create_model_metadata
+from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA, create_model_metadata
 from lfx.log.logger import logger
 
 # models.dev exposes pinned-date snapshots (e.g. ``claude-opus-4-5-20251101``,
@@ -308,10 +308,16 @@ def _translate_model_entry(
     is_aged_out = _is_aged_out(model_dict, now)
     model_type = "embeddings" if _is_embedding_family(model_dict) else "llm"
 
+    # Resolve the provider's UI icon so models.dev-sourced rows render the same
+    # brand logo as the bundled static catalog. Without this the raw provider
+    # display name ("Google Generative AI") leaks through as the icon id, which
+    # matches no icon component and renders blank — the source of the
+    # inconsistent Gemini branding where models.dev-covered models lost the logo.
+    provider_icon = MODEL_PROVIDER_METADATA.get(provider_name, {}).get("icon", provider_name)
     metadata = create_model_metadata(
         provider=provider_name,
         name=model_id,
-        icon=provider_name,  # falls back to provider icon registry
+        icon=provider_icon,
         tool_calling=bool(model_dict.get("tool_call")),
         reasoning=bool(model_dict.get("reasoning")),
         created=_release_date_to_epoch(model_dict.get("release_date")),

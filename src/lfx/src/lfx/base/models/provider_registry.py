@@ -35,11 +35,13 @@ test seam.
 
 from __future__ import annotations
 
+import hashlib
 import importlib
 import re
 import threading
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
+from functools import lru_cache
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
@@ -64,6 +66,7 @@ if TYPE_CHECKING:
 _CORE_PROVIDER_NAMES: frozenset[str] = frozenset(MODEL_PROVIDER_METADATA)
 
 _PROVIDER_ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
+_MIN_COMPONENT_MODULE_PARTS = 3
 _RESERVED_PROVIDER_METADATA_KEYS = frozenset(
     {"provider", "name", "models", "num_models", "provider_id", "display_name", "aliases"}
 )
@@ -206,6 +209,7 @@ _undo = _Undo()
 # ---------------------------------------------------------------------------
 
 
+@lru_cache(maxsize=1)
 def _core_provider_ids() -> dict[str, str]:
     """Return stable-id -> legacy-name mappings for providers shipped in core."""
     return {
@@ -215,7 +219,9 @@ def _core_provider_ids() -> dict[str, str]:
     }
 
 
+@lru_cache(maxsize=1)
 def _core_aliases() -> dict[str, str]:
+    """Return normalized aliases for the process-static core provider catalog."""
     aliases: dict[str, str] = {}
     for provider_id, name in _core_provider_ids().items():
         metadata = MODEL_PROVIDER_METADATA[name]
@@ -601,6 +607,96 @@ def provider_id_for(provider: str) -> str | None:
     if registered_name is None:
         return None
     return _registered[registered_name].canonical_id()
+
+
+def resolve_provider_id(name_or_id_or_alias: str) -> str:
+    """Return a stable policy identity for any non-empty provider selector.
+
+    Registered names, display names, aliases, and IDs resolve through the
+    authoritative registry. Unknown legacy selectors receive the same
+    deterministic derived ID used by manifests that predate ``provider_id``.
+    A selector with no ASCII slug receives an opaque deterministic fallback;
+    this keeps old saved flows runnable under the OSS allow-all policy without
+    reflecting malformed input in policy errors or logs.
+    """
+    if not isinstance(name_or_id_or_alias, str) or not name_or_id_or_alias.strip():
+        msg = "Provider identity must be a non-empty string"
+        raise ValueError(msg)
+    if provider_id := provider_id_for(name_or_id_or_alias):
+        return provider_id
+    try:
+        return _derive_provider_id(name_or_id_or_alias)
+    except ValueError:
+        normalized = name_or_id_or_alias.strip().casefold().encode()
+        return f"legacy-{hashlib.sha256(normalized).hexdigest()}"
+
+
+def model_component_provider_id(component: object, *, module_name: str | None = None) -> str:
+    """Derive a stable policy identity for a standalone model component.
+
+    Unified-model selectors already carry provider names explicitly. Legacy
+    model and embedding components do not, so their package/module identity is
+    the most stable systemic signal (``lfx_openai`` -> ``openai`` and
+    ``lfx_bundles.mistral`` -> ``mistral``). Known display-name aliases are
+    resolved through the registry first, covering names whose package token is
+    intentionally shorter (for example IBM watsonx and Google Generative AI).
+
+    A component may explicitly declare ``model_provider_id``. Unknown custom
+    model subclasses still receive a deterministic display-name ID rather than
+    becoming an unclassified policy bypass; the OSS allow-all service preserves
+    compatibility while restrictive plugins can deny that ID.
+    """
+    explicit_id = getattr(component, "model_provider_id", None)
+    if isinstance(explicit_id, str) and explicit_id:
+        return resolve_provider_id(explicit_id)
+
+    display_name = getattr(component, "display_name", None)
+    if isinstance(display_name, str) and (resolved := provider_id_for(display_name)):
+        return resolved
+
+    module = module_name or getattr(component.__class__, "__module__", "")
+    parts = [part for part in module.split(".") if part]
+    candidate: str | None = None
+    if parts:
+        if parts[0] == "_lfx_ext" and len(parts) >= _MIN_COMPONENT_MODULE_PARTS:
+            # Extension modules are imported into
+            # ``_lfx_ext.<slot>.<bundle>.*``; the bundle is the stable provider
+            # identity even when the component display name adds "Chat" or
+            # "Embeddings".
+            candidate = parts[2]
+        elif parts[0] == "lfx_bundles" and len(parts) > 1:
+            candidate = parts[1]
+        elif parts[0].startswith("lfx_") and parts[0] not in {"lfx_bundles", "lfx_components"}:
+            candidate = parts[0].removeprefix("lfx_")
+        elif len(parts) >= _MIN_COMPONENT_MODULE_PARTS and parts[:2] == ["lfx", "components"]:
+            candidate = parts[2]
+
+    if candidate:
+        return resolve_provider_id(candidate)
+    if isinstance(display_name, str) and display_name.strip():
+        return resolve_provider_id(display_name)
+    return resolve_provider_id(component.__class__.__name__)
+
+
+def model_component_policy_mode(component: object) -> str:
+    """Return the normalized provider-policy mode declared by a model component.
+
+    The attribute may be inherited or type-annotated, so runtime attribute
+    lookup is the authoritative source. Unknown or malformed values fail
+    closed to ``standalone`` rather than creating an exemption.
+    """
+    mode = getattr(component, "model_provider_policy_mode", "standalone")
+    return mode if mode in ("delegate", "none") else "standalone"
+
+
+def uses_standalone_model_provider_policy(component: object) -> bool:
+    """Return whether the outer component boundary owns provider enforcement.
+
+    Unified selector components delegate to ``get_llm``/``get_embeddings`` so
+    the selected provider—not the wrapper's module—is enforced. Local utility
+    components can opt out because they do not invoke a model provider.
+    """
+    return model_component_policy_mode(component) == "standalone"
 
 
 def provider_name_for_id(provider_id: str) -> str | None:

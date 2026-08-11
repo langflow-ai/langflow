@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
 
-pytest.importorskip("lfx_bundles")
+pytest.importorskip("lfx_ollama")
 pytest.importorskip("langchain_ollama")
 
 from langchain_ollama import ChatOllama
@@ -14,9 +14,9 @@ from lfx.schema import Data, DataFrame
 
 from tests.base import ComponentTestBaseWithoutClient
 
-# The component moved into lfx-bundles, so ``ollama.py`` is reachable under several module
+# The component moved into lfx-ollama, so ``ollama.py`` is reachable under several module
 # identities (the ``lfx.components.ollama.ollama`` shim, the canonical
-# ``lfx_bundles.ollama.ollama``, and the runtime ``_lfx_ext.*`` ext-loader copy). Patch on
+# ``lfx_ollama.components.ollama.ollama``, and the runtime ``_lfx_ext.*`` ext-loader copy). Patch on
 # the module the imported class actually lives in: a fixed string target like
 # "lfx.components.ollama.ollama.ChatOllama" misses (mock "called 0 times") when an earlier
 # test in the suite causes the class to resolve to a different identity.

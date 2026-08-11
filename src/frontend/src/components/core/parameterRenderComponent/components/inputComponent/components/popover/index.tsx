@@ -1,6 +1,7 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import { X } from "lucide-react";
 import { type ReactNode, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +22,7 @@ import {
   PASSWORD_MANAGER_IGNORE_PROPS,
 } from "@/utils/inputAutofill";
 import { cn } from "@/utils/utils";
+import { getNodeScopedDomId } from "../../../../helpers/get-node-scoped-dom-id";
 import { useIMEInputForOnChange } from "../../../../hooks/use-ime-input";
 
 const OptionBadge = ({
@@ -43,34 +45,40 @@ const OptionBadge = ({
     | "errorStatic";
   className?: string;
   onRemove: (e: React.MouseEvent<HTMLButtonElement>) => void;
-}) => (
-  <Badge
-    variant={
-      variant as
-        | "default"
-        | "emerald"
-        | "gray"
-        | "secondary"
-        | "destructive"
-        | "outline"
-        | "secondaryStatic"
-        | "pinkStatic"
-        | "successStatic"
-        | "errorStatic"
-    }
-    className={cn("flex items-center gap-1 truncate", className)}
-  >
-    <div className="truncate">{option}</div>
-    <div
-      data-testid="remove-icon-badge"
-      onClick={(e) =>
-        onRemove(e as unknown as React.MouseEvent<HTMLButtonElement>)
+}) => {
+  const { t } = useTranslation();
+  return (
+    <Badge
+      variant={
+        variant as
+          | "default"
+          | "emerald"
+          | "gray"
+          | "secondary"
+          | "destructive"
+          | "outline"
+          | "secondaryStatic"
+          | "pinkStatic"
+          | "successStatic"
+          | "errorStatic"
       }
+      className={cn("flex items-center gap-1 truncate", className)}
     >
-      <X className="h-3 w-3 cursor-pointer bg-transparent hover:text-destructive" />
-    </div>
-  </Badge>
-);
+      <div className="truncate">{option}</div>
+      <button
+        type="button"
+        data-testid="remove-icon-badge"
+        aria-label={t("multiselect.removeOption", { option })}
+        onClick={onRemove}
+      >
+        <X
+          className="h-3 w-3 cursor-pointer bg-transparent hover:text-destructive"
+          aria-hidden="true"
+        />
+      </button>
+    </Badge>
+  );
+};
 
 const CommandItemContent = ({
   option,
@@ -200,6 +208,7 @@ const CustomInputPopover = ({
   hasRefreshButton,
   inspectionPanel,
   ariaLabelledBy,
+  nodeId = undefined,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
@@ -348,7 +357,7 @@ const CustomInputPopover = ({
               {...PASSWORD_MANAGER_IGNORE_PROPS}
               onFocus={() => setIsFocused(true)}
               autoFocus={autoFocus}
-              id={id}
+              id={getNodeScopedDomId(id, nodeId)}
               ref={refInput}
               type={!pwdVisible && password ? "password" : "text"}
               {...imeInputProps}

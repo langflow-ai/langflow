@@ -440,6 +440,25 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       get().autoSaveFlow!();
     }
   },
+  setNodesAndEdges: (nodes, edges) => {
+    // Atomic single-render replace mirroring resetFlow (the F5 load path); a
+    // split setNodes+setEdges draws loop/dynamic-handle edges only after refresh.
+    const { edges: newEdges } = cleanEdges(nodes, edges);
+    const { inputs, outputs } = getInputsAndOutputs(nodes);
+    get().updateComponentsToUpdate(nodes);
+    set({
+      nodes,
+      edges: newEdges,
+      flowState: undefined,
+      inputs,
+      outputs,
+      hasIO: inputs.length > 0 || outputs.length > 0,
+    });
+    get().updateCurrentFlow({ nodes, edges: newEdges });
+    if (get().autoSaveFlow) {
+      get().autoSaveFlow!();
+    }
+  },
   setNode: (
     id: string,
     change: AllNodeType | ((oldState: AllNodeType) => AllNodeType),
@@ -923,13 +942,17 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     let buildingFlowId = currentFlow!.id;
     if (get().playgroundPage) {
       const authState = useAuthStore.getState();
+      const authenticatedVisitorId =
+        authState.isAuthenticated && authState.autoLogin === false
+          ? authState.userData?.id
+          : undefined;
       const visitorId =
-        authState.isAuthenticated &&
-        authState.autoLogin === false &&
-        authState.userData?.id
-          ? authState.userData.id
-          : useUtilityStore.getState().clientId;
-      buildingFlowId = uuidv5(`${visitorId}_${currentFlow!.id}`, uuidv5.DNS);
+        authenticatedVisitorId ?? useUtilityStore.getState().clientId;
+      const principalType = authenticatedVisitorId ? "user" : "client";
+      buildingFlowId = uuidv5(
+        `${principalType}:${visitorId}_${currentFlow!.id}`,
+        uuidv5.DNS,
+      );
     }
     get().setBuildingSession(buildingFlowId, session ?? null);
 

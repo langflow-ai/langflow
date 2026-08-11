@@ -32,7 +32,12 @@ class GraphCheckpoint(BaseModel):
     checkpoint_id: str = Field(default_factory=lambda: uuid4().hex)
     run_id: str
     flow_id: str | None = None
+    # Server-set storage provenance for public flows whose execution uses a virtual flow_id.
+    source_flow_id: str | None = None
     session_id: str | None = None
+    # The identity the run started under; restored so a resumed run continues as the same
+    # user (e.g. self.user_id-reading components keep working after a HITL pause).
+    user_id: str | None = None
     job_id: str | None = None
     flow_payload: dict[str, Any] = Field(default_factory=dict)
     run_map: dict[str, list[str]] = Field(default_factory=dict)

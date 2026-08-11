@@ -111,6 +111,29 @@ async def test_should_apply_tool_retry_middleware_when_handle_parsing_errors_set
 
 
 @pytest.mark.asyncio
+async def test_should_apply_tool_call_id_middleware_when_tools_are_attached() -> None:
+    """Normalize missing IDs before LangGraph constructs error ToolMessages."""
+    from lfx.components.models_and_agents.agent_helpers.tool_call_id_middleware import ToolCallIDMiddleware
+
+    captured: dict = {}
+
+    def _capture_create_agent(**kwargs):
+        captured.update(kwargs)
+        return MagicMock(name="compiled_state_graph")
+
+    component = _build_component()
+    component.set_attributes({"tools": [MagicMock(name="some_tool")]})
+    with (
+        patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
+        patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_create_agent),
+    ):
+        component.create_agent_runnable()
+
+    middleware = captured.get("middleware") or []
+    assert any(isinstance(m, ToolCallIDMiddleware) for m in middleware)
+
+
+@pytest.mark.asyncio
 async def test_should_omit_tool_retry_middleware_when_handle_parsing_errors_is_false() -> None:
     """Regression guard: only attach ToolRetryMiddleware when the user opted in."""
     from langchain.agents.middleware import ToolRetryMiddleware

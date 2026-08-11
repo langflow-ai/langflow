@@ -17,14 +17,99 @@ class _AsyncNoopSavepoint:
         return False
 
 
+def _db() -> MagicMock:
+    db = MagicMock()
+    db.begin_nested.return_value = _AsyncNoopSavepoint()
+    db.exec = AsyncMock()
+    return db
+
+
+@pytest.mark.asyncio
+@patch("langflow.api.v1.mappers.deployments.sync.sync_flow_deployment_state", new_callable=AsyncMock)
+async def test_flows_retry_syncs_in_flow_owner_namespace_not_actor(mock_sync_flow_deployment_state):
+    """Shared actors must sync against the flow owner's deployment namespace."""
+    from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
+
+    owner_id = uuid4()
+    flow_id = uuid4()
+    db = _db()
+    operation = AsyncMock(
+        side_effect=[
+            DeploymentGuardError(
+                code="FLOW_HAS_DEPLOYED_VERSIONS",
+                technical_detail="Flow is deployed.",
+                detail="Flow is deployed.",
+            ),
+            "ok",
+        ]
+    )
+
+    result = await retry_flow_operation_on_deployment_guard(
+        db=db,
+        flow_owner_ids={flow_id: owner_id},
+        operation=operation,
+    )
+
+    assert result == "ok"
+    mock_sync_flow_deployment_state.assert_awaited_once_with(
+        db=db,
+        flow_ids=[flow_id],
+        user_id=owner_id,
+    )
+    db.exec.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@patch("langflow.api.v1.mappers.deployments.sync.sync_flow_deployment_state", new_callable=AsyncMock)
+async def test_flows_retry_uses_only_owner_mapping_populated_by_authorized_operation(mock_sync_flow_deployment_state):
+    """Raw request ids must not expand the owner namespaces touched by repair."""
+    from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
+
+    authorized_flow_id = uuid4()
+    authorized_owner_id = uuid4()
+    untrusted_foreign_flow_id = uuid4()
+    authorized_flow_owner_ids = {}
+    db = _db()
+    attempts = 0
+
+    async def operation():
+        nonlocal attempts
+        attempts += 1
+        # Mirrors bulk routes: only rows returned by their scoped query are
+        # copied into the mapping before a deployment guard can abort the try.
+        authorized_flow_owner_ids[authorized_flow_id] = authorized_owner_id
+        if attempts == 1:
+            raise DeploymentGuardError(
+                code="FLOW_HAS_DEPLOYED_VERSIONS",
+                technical_detail="Flow is deployed.",
+                detail="Flow is deployed.",
+            )
+        return "ok"
+
+    result = await retry_flow_operation_on_deployment_guard(
+        db=db,
+        flow_owner_ids=authorized_flow_owner_ids,
+        operation=operation,
+    )
+
+    assert result == "ok"
+    assert untrusted_foreign_flow_id not in authorized_flow_owner_ids
+    mock_sync_flow_deployment_state.assert_awaited_once_with(
+        db=db,
+        flow_ids=[authorized_flow_id],
+        user_id=authorized_owner_id,
+    )
+    db.exec.assert_not_awaited()
+
+
 @pytest.mark.asyncio
 @patch("langflow.api.v1.mappers.deployments.sync.sync_flow_deployment_state", new_callable=AsyncMock)
 async def test_flows_retry_on_deployment_guard_succeeds_after_sync(mock_sync_flow_deployment_state):
     from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
 
-    db = MagicMock()
-    db.begin_nested.return_value = _AsyncNoopSavepoint()
     flow_id = uuid4()
+    owner_id = uuid4()
+    db = _db()
     operation = AsyncMock(
         side_effect=[
             DeploymentGuardError(
@@ -38,15 +123,18 @@ async def test_flows_retry_on_deployment_guard_succeeds_after_sync(mock_sync_flo
 
     result = await retry_flow_operation_on_deployment_guard(
         db=db,
-        user_id=uuid4(),
-        flow_ids=[flow_id],
+        flow_owner_ids={flow_id: owner_id},
         operation=operation,
     )
 
     assert result == "ok"
     assert operation.await_count == 2
     assert db.begin_nested.call_count == 2
-    mock_sync_flow_deployment_state.assert_awaited_once()
+    mock_sync_flow_deployment_state.assert_awaited_once_with(
+        db=db,
+        flow_ids=[flow_id],
+        user_id=owner_id,
+    )
 
 
 @pytest.mark.asyncio
@@ -54,9 +142,9 @@ async def test_flows_retry_on_deployment_guard_succeeds_after_sync(mock_sync_flo
 async def test_flows_retry_on_deployment_guard_error_instance_succeeds_after_sync(mock_sync_flow_deployment_state):
     from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
 
-    db = MagicMock()
-    db.begin_nested.return_value = _AsyncNoopSavepoint()
     flow_id = uuid4()
+    owner_id = uuid4()
+    db = _db()
     operation = AsyncMock(
         side_effect=[
             DeploymentGuardError(
@@ -70,8 +158,7 @@ async def test_flows_retry_on_deployment_guard_error_instance_succeeds_after_syn
 
     result = await retry_flow_operation_on_deployment_guard(
         db=db,
-        user_id=uuid4(),
-        flow_ids=[flow_id],
+        flow_owner_ids={flow_id: owner_id},
         operation=operation,
     )
 
@@ -86,8 +173,8 @@ async def test_flows_retry_on_deployment_guard_error_instance_succeeds_after_syn
 async def test_flows_retry_on_deployment_guard_propagates_second_guard(mock_sync_flow_deployment_state):
     from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
 
-    db = MagicMock()
-    db.begin_nested.return_value = _AsyncNoopSavepoint()
+    flow_id = uuid4()
+    db = _db()
     operation = AsyncMock(
         side_effect=[
             DeploymentGuardError(
@@ -106,8 +193,7 @@ async def test_flows_retry_on_deployment_guard_propagates_second_guard(mock_sync
     with pytest.raises(DeploymentGuardError) as exc_info:
         await retry_flow_operation_on_deployment_guard(
             db=db,
-            user_id=uuid4(),
-            flow_ids=[uuid4()],
+            flow_owner_ids={flow_id: uuid4()},
             operation=operation,
         )
 
@@ -121,14 +207,13 @@ async def test_flows_retry_on_deployment_guard_propagates_second_guard(mock_sync
 async def test_flows_retry_success_on_first_attempt_skips_sync(mock_sync_flow_deployment_state):
     from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
 
-    db = MagicMock()
-    db.begin_nested.return_value = _AsyncNoopSavepoint()
+    db = _db()
+    flow_id = uuid4()
     operation = AsyncMock(return_value="ok")
 
     result = await retry_flow_operation_on_deployment_guard(
         db=db,
-        user_id=uuid4(),
-        flow_ids=[uuid4()],
+        flow_owner_ids={flow_id: uuid4()},
         operation=operation,
     )
 
@@ -143,15 +228,14 @@ async def test_flows_retry_success_on_first_attempt_skips_sync(mock_sync_flow_de
 async def test_flows_retry_non_guard_error_propagates_without_sync(mock_sync_flow_deployment_state):
     from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
 
-    db = MagicMock()
-    db.begin_nested.return_value = _AsyncNoopSavepoint()
+    db = _db()
+    flow_id = uuid4()
     operation = AsyncMock(side_effect=RuntimeError("boom"))
 
     with pytest.raises(RuntimeError, match="boom"):
         await retry_flow_operation_on_deployment_guard(
             db=db,
-            user_id=uuid4(),
-            flow_ids=[uuid4()],
+            flow_owner_ids={flow_id: uuid4()},
             operation=operation,
         )
 
@@ -162,11 +246,10 @@ async def test_flows_retry_non_guard_error_propagates_without_sync(mock_sync_flo
 
 @pytest.mark.asyncio
 @patch("langflow.api.v1.mappers.deployments.sync.sync_flow_deployment_state", new_callable=AsyncMock)
-async def test_flows_retry_guard_with_none_flow_ids_skips_sync(mock_sync_flow_deployment_state):
+async def test_flows_retry_guard_with_none_flow_owner_ids_skips_sync(mock_sync_flow_deployment_state):
     from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
 
-    db = MagicMock()
-    db.begin_nested.return_value = _AsyncNoopSavepoint()
+    db = _db()
     operation = AsyncMock(
         side_effect=[
             DeploymentGuardError(
@@ -180,8 +263,7 @@ async def test_flows_retry_guard_with_none_flow_ids_skips_sync(mock_sync_flow_de
 
     result = await retry_flow_operation_on_deployment_guard(
         db=db,
-        user_id=uuid4(),
-        flow_ids=None,
+        flow_owner_ids=None,
         operation=operation,
     )
 
@@ -192,11 +274,10 @@ async def test_flows_retry_guard_with_none_flow_ids_skips_sync(mock_sync_flow_de
 
 @pytest.mark.asyncio
 @patch("langflow.api.v1.mappers.deployments.sync.sync_flow_deployment_state", new_callable=AsyncMock)
-async def test_flows_retry_guard_with_empty_flow_ids_skips_sync(mock_sync_flow_deployment_state):
+async def test_flows_retry_guard_with_empty_flow_owner_ids_skips_sync(mock_sync_flow_deployment_state):
     from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
 
-    db = MagicMock()
-    db.begin_nested.return_value = _AsyncNoopSavepoint()
+    db = _db()
     operation = AsyncMock(
         side_effect=[
             DeploymentGuardError(
@@ -210,8 +291,7 @@ async def test_flows_retry_guard_with_empty_flow_ids_skips_sync(mock_sync_flow_d
 
     result = await retry_flow_operation_on_deployment_guard(
         db=db,
-        user_id=uuid4(),
-        flow_ids=[],
+        flow_owner_ids={},
         operation=operation,
     )
 
@@ -225,8 +305,9 @@ async def test_flows_retry_guard_with_empty_flow_ids_skips_sync(mock_sync_flow_d
 async def test_flows_retry_propagates_sync_failure(mock_sync_flow_deployment_state):
     from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
 
-    db = MagicMock()
-    db.begin_nested.return_value = _AsyncNoopSavepoint()
+    flow_id = uuid4()
+    owner_id = uuid4()
+    db = _db()
     mock_sync_flow_deployment_state.side_effect = RuntimeError("sync failed")
     operation = AsyncMock(
         side_effect=[
@@ -242,8 +323,7 @@ async def test_flows_retry_propagates_sync_failure(mock_sync_flow_deployment_sta
     with pytest.raises(RuntimeError, match="sync failed"):
         await retry_flow_operation_on_deployment_guard(
             db=db,
-            user_id=uuid4(),
-            flow_ids=[uuid4()],
+            flow_owner_ids={flow_id: owner_id},
             operation=operation,
         )
 

@@ -11,11 +11,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "../../components/ui/dialog";
-import {
   Dialog as Modal,
-  DialogContent as ModalContent,
-} from "../../components/ui/dialog-with-no-close";
+  DialogContentPlain as ModalContent,
+  VisuallyHidden,
+} from "../../components/ui/dialog";
 import type { modalHeaderType } from "../../types/components";
 import { cn } from "../../utils/utils";
 import { switchCaseModalSize } from "./helpers/switch-case-size";
@@ -101,19 +100,33 @@ const Header: React.FC<{
   children: ReactNode;
   description?: string | JSX.Element | null;
   clampDescription?: number;
+  className?: string;
+  titleClassName?: string;
+  descriptionClassName?: string;
 }> = ({
   children,
   description,
   clampDescription,
+  className,
+  titleClassName,
+  descriptionClassName,
 }: modalHeaderType): JSX.Element => {
   return (
-    <DialogHeader>
-      <DialogTitle className="line-clamp-1 flex items-center pb-0.5 text-base">
+    <DialogHeader className={className}>
+      <DialogTitle
+        className={cn(
+          "line-clamp-1 flex items-center pb-0.5 text-base",
+          titleClassName,
+        )}
+      >
         {children}
       </DialogTitle>
       {description && (
         <DialogDescription
-          className={`line-clamp-${clampDescription ?? 2} text-sm`}
+          className={cn(
+            `line-clamp-${clampDescription ?? 2} text-sm`,
+            descriptionClassName,
+          )}
         >
           {description}
         </DialogDescription>
@@ -228,11 +241,15 @@ interface BaseModalProps {
   onSubmit?: () => void;
   onEscapeKeyDown?: (e: KeyboardEvent) => void;
   onOpenAutoFocus?: (e: Event) => void;
+  onCloseAutoFocus?: (e: Event) => void;
   closeButtonClassName?: string;
   dialogContentWithouFixed?: boolean;
   height?: string;
   width?: string;
-  /** Accessible name for type="full-screen", which has no DialogTitle. */
+  /**
+   * Accessible name for modals that render no BaseModal.Header, and therefore
+   * no DialogTitle — required for type="full-screen", optional elsewhere.
+   */
   ariaLabel?: string;
 }
 function BaseModal({
@@ -246,6 +263,7 @@ function BaseModal({
   onSubmit,
   onEscapeKeyDown,
   onOpenAutoFocus,
+  onCloseAutoFocus,
   closeButtonClassName,
   dialogContentWithouFixed = false,
   height: customHeight,
@@ -267,11 +285,23 @@ function BaseModal({
 
   const { minWidth, height } = switchCaseModalSize(size);
 
+  // Modals with no BaseModal.Header render no DialogTitle, so Radix warns and
+  // DialogContent injects its "Dialog" fallback. Name those from `ariaLabel`
+  // with a real hidden title instead. type="full-screen" is a plain div rather
+  // than a Radix dialog, so it keeps naming itself with the aria-label
+  // attribute — a DialogTitle outside a Dialog root would throw.
+  const hiddenTitle =
+    ariaLabel && !headerChild && type !== "full-screen" ? (
+      <VisuallyHidden>
+        <DialogTitle>{ariaLabel}</DialogTitle>
+      </VisuallyHidden>
+    ) : null;
+
   // BaseModal.Header renders DialogTitle/Description inside its own component
   // body, so DialogContent's child-tree scan cannot see them and would inject a
   // VisuallyHidden "Dialog" title that steals aria-labelledby. Skip that
-  // fallback whenever a Header is present.
-  const hideTitleFallback = !!headerChild;
+  // fallback whenever this component supplies a title of its own.
+  const hideTitleFallback = !!headerChild || !!hiddenTitle;
   const hideDescriptionFallback =
     React.isValidElement(headerChild) &&
     !!(headerChild.props as { description?: unknown }).description;
@@ -284,6 +314,7 @@ function BaseModal({
 
   const modalContent = (
     <>
+      {hiddenTitle}
       {headerChild && headerChild}
       {ContentChild}
       {ContentFooter && ContentFooter}
@@ -334,6 +365,7 @@ function BaseModal({
               onClick={(e) => e.stopPropagation()}
               onEscapeKeyDown={onEscapeKeyDown}
               onOpenAutoFocus={onOpenAutoFocus}
+              onCloseAutoFocus={onCloseAutoFocus}
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
               style={customHeight || customWidth ? customStyle : undefined}
@@ -359,6 +391,7 @@ function BaseModal({
               onClick={(e) => e.stopPropagation()}
               onEscapeKeyDown={onEscapeKeyDown}
               onOpenAutoFocus={onOpenAutoFocus}
+              onCloseAutoFocus={onCloseAutoFocus}
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
               style={customHeight || customWidth ? customStyle : undefined}

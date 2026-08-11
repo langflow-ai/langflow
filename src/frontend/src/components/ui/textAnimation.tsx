@@ -197,7 +197,7 @@ export function TextEffect({
           initial="hidden"
           animate="visible"
           exit="exit"
-          aria-label={ariaLabel}
+          {...(ariaLabel ? { role: "img", "aria-label": ariaLabel } : {})}
           variants={delayedContainerVariants}
           className={cn("whitespace-pre-wrap", className)}
           onAnimationComplete={onAnimationComplete}

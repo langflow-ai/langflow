@@ -24,6 +24,7 @@ import exampleJavascriptWorkflowsApiExampleStreamAguiRequest from '!!raw-loader!
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import Icon from "@site/src/components/icon";
 import PartialAPISetup from '@site/docs/_partial-api-setup.mdx';
 
 :::warning Beta Feature
@@ -63,7 +64,7 @@ POST /api/v2/workflows
 | `stream_protocol` | `string` | No | `langflow` | Stream adapter name used for `stream` responses and background event re-attachment. Unknown values return a `422` code for any request mode because the API validates the field against the registered adapters before execution starts. |
 | `session_id` | `string` | No | - | Scopes message memory and chat history to this session. |
 | `tweaks` | `object` | No | `{}` | Per-component parameter overrides keyed by component id. See [Component tweaks](#component-tweaks). |
-| `globals` | `object` | No | `{}` | Request-level global variables (sync mode only). Keys are limited to 256 characters and values to 64 KB. See [Request-level global variables](#request-level-global-variables).
+| `globals` | `object` | No | `{}` | Request-level global variables. Available in sync mode only. Keys are limited to 256 characters and values to 64 KB. See [Pass request-level global variables](#request-level-global-variables).
 | `output_ids` | `array` | No | - | Output component ids to use when resolving sync-mode answers (sync mode only). |
 | `data` | `object` | No | - | Live-canvas override of nodes and edges (stream and background modes only). |
 | `files` | `array` | No | - | Pre-uploaded file paths to attach to the run (stream and background modes only). |
@@ -448,24 +449,42 @@ The `status` values are:
 }
 ```
 
-## Request-level global variables {#request-level-global-variables}
+## Pass request-level global variables {#request-level-global-variables}
 
-Pass request-scoped variables in the `globals` JSON field. They are available to workflow components for the duration of the run. Use this field when values may include Unicode or other characters that HTTP headers handle poorly.
+Pass request-scoped variables in the `globals` JSON field.
+They are available to workflow components for the duration of the run.
+
+Use `globals` when values are large, shared across runs, or would exceed HTTP header size limits.
+[Tweaks](#component-tweaks) are better suited for one-off component overrides.
+`globals` is keyed by variable name and not component ID, so it stays stable when the UI regenerates node IDs when importing flows.
 
 `globals` is honored in **sync mode only**; stream and background runs ignore it.
+The Workflow API is in **Beta**, and this transport may continue to evolve.
 
-```json
-{
-  "flow_id": "67ccd2be-17f0-8190-81ff-3bb2cf6508e6",
-  "input_value": "Summarize the attached file",
-  "globals": {
-    "FILENAME": "relatório—final.pdf",
-    "OWNER_NAME": "José"
-  }
-}
+### Use a stable name in the UI and then pass it in `globals`
+
+To avoid depending on changing component IDs, rename a component, create a matching global variable, bind the field, and pass the value in the request.
+
+1. To rename the component in the UI, click <Icon name="PencilLine" aria-hidden="true"/> **Edit**, and then rename the component. This example uses `CUSTOMER_PROMPT`.
+2. Save the flow.
+3. Create a new global variable with the same name as the component, such as `CUSTOMER_PROMPT`, and save it.
+   For more about creating global variables, see [Global variables](/configuration-global-variables).
+4. In the field you want to fill at runtime, click the <Icon name="Globe" aria-hidden="true"/> **Globe** icon, select `CUSTOMER_PROMPT`, and save the flow.
+5. Call the v2 Workflow API in sync mode and pass the value in `globals`.
+
+```bash
+curl -X POST "http://localhost:7860/api/v2/workflows" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: YOUR_API_KEY" \
+  -d '{
+    "flow_id": "YOUR_FLOW_ID",
+    "mode": "sync",
+    "input_value": "hello",
+    "globals": {
+      "CUSTOMER_PROMPT": "The prompt with many words..."
+    }
+  }'
 ```
-
-Keys may use the same characters supported by the global variables panel in the Langflow UI. Keys are bounded to 256 characters; values are bounded to 64 KB.
 
 <details>
 <summary>Legacy: `X-LANGFLOW-GLOBAL-VAR-*` headers (Workflow API, sync mode only)</summary>
@@ -478,9 +497,9 @@ This note applies to the **Workflow API only**. The v1 [`/run`](/api-flows-run) 
 
 </details>
 
-## Component tweaks
+## Component tweaks {#component-tweaks}
 
-Use the `tweaks` object to override component parameters. Keys are component ids; values are objects of field names and values to set on that component's template.
+Use the `tweaks` object for one-off component parameter overrides in a single run.
 
 ```json
 {
@@ -495,7 +514,7 @@ Use the `tweaks` object to override component parameters. Keys are component ids
 }
 ```
 
-To find a component id in the Langflow UI, open your flow, click the component, and then click **Controls**. The component id is at the top of the **Controls** pane.
+For more information, see [Tweaks (API inputs)](/concepts-publish#input-schema).
 
 ## Error handling
 

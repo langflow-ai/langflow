@@ -4,18 +4,23 @@ This module contains tests for verifying the functionality of the ParameterHandl
 which is responsible for processing and managing parameters in vertices.
 """
 
+import copy
 import pickle
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import pytest
 from ag_ui.core import StepFinishedEvent, StepStartedEvent
 from lfx.components.input_output import ChatInput
+from lfx.graph import Graph
 from lfx.graph.edge.base import Edge
 from lfx.graph.vertex import base as vertex_base_module
 from lfx.graph.vertex import vertex_types as vertex_types_module
 from lfx.graph.vertex.base import ParameterHandler, Vertex
+from lfx.interface.components import component_cache
+from lfx.services.storage.local import LocalStorageService
 from lfx.services.storage.service import StorageService
+from lfx.utils.file_path_security import LocalFileAccessError
 from lfx.utils.util import unescape_string
 
 
@@ -33,13 +38,51 @@ def test_vertex_getstate_drops_custom_component_runtime_state():
     vertex = object.__new__(Vertex)
     vertex._lock = Mock()
     vertex.custom_component = UnpickleableComponent()
+    vertex._upstream_secret_values = {"do-not-persist"}
     vertex.built_object = object()
     vertex.built_result = object()
 
     state = vertex.__getstate__()
 
     assert state["custom_component"] is None
+    assert state["_upstream_secret_values"] == set()
     pickle.dumps(state)
+
+
+def test_graph_source_flow_provenance_survives_pickle_and_legacy_state():
+    """Cached public graphs retain provenance while older cache entries remain readable."""
+    graph = Graph(flow_id="visitor-virtual-flow-id")
+    graph.source_flow_id = "public-source-flow-id"
+
+    restored = pickle.loads(pickle.dumps(graph))  # noqa: S301 - round-tripping trusted in-memory test data
+    assert restored.source_flow_id == "public-source-flow-id"
+
+    legacy_state = graph.__getstate__()
+    legacy_state.pop("source_flow_id")
+    legacy_graph = object.__new__(Graph)
+    legacy_graph.__setstate__(legacy_state)
+    assert legacy_graph.source_flow_id is None
+
+
+def test_graph_deepcopy_sets_source_flow_provenance_before_rebuild(monkeypatch):
+    """Deep-copy reconstruction exposes the trusted source scope before rebuilding FileInputs."""
+    graph = Graph(flow_id="visitor-virtual-flow-id")
+    graph.source_flow_id = "public-source-flow-id"
+    original_add_nodes_and_edges = Graph.add_nodes_and_edges
+    rebuild_observed = False
+
+    def checked_add_nodes_and_edges(copied_graph, nodes, edges):
+        nonlocal rebuild_observed
+        rebuild_observed = True
+        assert copied_graph.source_flow_id == "public-source-flow-id"
+        return original_add_nodes_and_edges(copied_graph, nodes, edges)
+
+    monkeypatch.setattr(Graph, "add_nodes_and_edges", checked_add_nodes_and_edges)
+
+    cloned = copy.deepcopy(graph)
+
+    assert rebuild_observed is True
+    assert cloned.source_flow_id == "public-source-flow-id"
 
 
 @pytest.fixture
@@ -58,6 +101,9 @@ def mock_vertex() -> Mock:
     # Create a mock graph
     mock_graph = Mock()
     mock_graph.get_vertex = Mock(return_value="source_vertex")
+    mock_graph.user_id = "test-user-id"
+    mock_graph.flow_id = "test-flow-id"
+    mock_graph.source_flow_id = None
 
     # Set the graph attribute on the vertex
     vertex.graph = mock_graph
@@ -133,6 +179,443 @@ def test_process_file_field(parameter_handler):
         {},
     )
     assert params["file_field"] == []
+
+
+@pytest.fixture
+def restricted_file_access(tmp_path):
+    """Enable local-file restriction with a temporary upload storage root."""
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    settings_service = Mock()
+    settings_service.settings.restrict_local_file_access = True
+    settings_service.settings.config_dir = config_dir
+    settings_service.settings.database_url = ""
+    with patch("lfx.utils.file_path_security.get_settings_service", return_value=settings_service):
+        yield config_dir
+
+
+TRUSTED_FILE_COMPONENT_CODE = """
+from lfx.io import FileInput
+
+class TrustedFileComponent:
+    inputs = [FileInput(name="file_field")]
+"""
+
+
+@pytest.fixture
+def trusted_file_component_registry(monkeypatch):
+    """Install minimal server-owned metadata for canonical FileInput classification."""
+    monkeypatch.setattr(
+        component_cache,
+        "all_types_dict",
+        {
+            "trusted_bundle": {
+                "TrustedFileComponent": {
+                    "template": {
+                        "code": {"type": "code", "value": TRUSTED_FILE_COMPONENT_CODE},
+                        "file_field": {
+                            "_input_type": "FileInput",
+                            "type": "file",
+                            "list": False,
+                            "required": False,
+                            "show": True,
+                        },
+                    }
+                }
+            }
+        },
+    )
+    monkeypatch.setattr(component_cache, "code_by_hash", None)
+
+
+def _relabel_file_input_as_string(vertex, *, include_field: bool = True) -> None:
+    template = {
+        "code": {"type": "code", "value": TRUSTED_FILE_COMPONENT_CODE, "show": True},
+        "text_field": {"type": "str", "value": "original", "show": True},
+    }
+    if include_field:
+        template["file_field"] = {
+            "type": "str",
+            "value": "test-flow-id/../../server-secret.txt",
+            "show": True,
+        }
+    vertex.data["node"]["template"] = template
+
+
+@pytest.mark.usefixtures("restricted_file_access")
+def test_process_file_field_rejects_path_outside_graph_scopes(
+    parameter_handler,
+    mock_storage_service,
+    tmp_path,
+):
+    """FileInput paths cannot escape user/flow storage before a bundle receives them."""
+    outside_path = tmp_path / "server-secret.txt"
+    mock_storage_service.resolve_component_path.return_value = str(outside_path)
+
+    with pytest.raises(LocalFileAccessError, match="outside the authenticated user's storage scope"):
+        parameter_handler.process_file_field(
+            "file_field",
+            {"type": "file", "file_path": "test-flow-id/../../server-secret.txt"},
+            {},
+        )
+
+
+@pytest.mark.usefixtures("restricted_file_access", "trusted_file_component_registry")
+def test_process_field_parameters_rejects_relabelled_canonical_file_input(
+    mock_vertex,
+    mock_storage_service,
+    tmp_path,
+):
+    """Request metadata cannot disguise a trusted bundle FileInput as a string."""
+    _relabel_file_input_as_string(mock_vertex)
+    outside_path = tmp_path / "server-secret.txt"
+    mock_storage_service.resolve_component_path.return_value = str(outside_path)
+
+    with pytest.raises(LocalFileAccessError, match="outside the authenticated user's storage scope"):
+        ParameterHandler(mock_vertex, mock_storage_service).process_field_parameters()
+
+
+@pytest.mark.usefixtures("restricted_file_access")
+def test_process_field_parameters_uses_ast_file_input_fallback_while_registry_is_unavailable(
+    monkeypatch,
+    mock_vertex,
+    mock_storage_service,
+    tmp_path,
+):
+    """Direct trusted FileInput declarations remain protected while metadata warms."""
+    monkeypatch.setattr(component_cache, "all_types_dict", None)
+    monkeypatch.setattr(component_cache, "code_by_hash", {})
+    _relabel_file_input_as_string(mock_vertex)
+    outside_path = tmp_path / "server-secret.txt"
+    mock_storage_service.resolve_component_path.return_value = str(outside_path)
+
+    with pytest.raises(LocalFileAccessError, match="outside the authenticated user's storage scope"):
+        ParameterHandler(mock_vertex, mock_storage_service).process_field_parameters()
+
+
+@pytest.mark.usefixtures("trusted_file_component_registry")
+def test_process_field_parameters_uses_canonical_file_list_semantics(
+    mock_vertex,
+    mock_storage_service,
+    restricted_file_access,
+    tmp_path,
+):
+    """Request list metadata cannot prevent containment from checking every canonical FileInput item."""
+    component_cache.all_types_dict["trusted_bundle"]["TrustedFileComponent"]["template"]["file_field"]["list"] = True
+    _relabel_file_input_as_string(mock_vertex)
+    mock_vertex.data["node"]["template"]["file_field"]["value"] = ["test-flow-id/safe.txt", "/etc/passwd"]
+    mock_vertex.data["node"]["template"]["file_field"]["list"] = False
+    safe_path = restricted_file_access / "test-flow-id" / "safe.txt"
+    safe_path.parent.mkdir()
+    safe_path.write_text("safe", encoding="utf-8")
+    outside_path = tmp_path / "server-secret.txt"
+    mock_storage_service.resolve_component_path.side_effect = [str(safe_path), str(outside_path)]
+
+    with pytest.raises(LocalFileAccessError, match="outside the authenticated user's storage scope"):
+        ParameterHandler(mock_vertex, mock_storage_service).process_field_parameters()
+
+
+@pytest.mark.usefixtures("restricted_file_access")
+def test_process_file_field_rejects_legacy_absolute_path_fallback(
+    parameter_handler,
+    mock_storage_service,
+    tmp_path,
+):
+    """The legacy path-parser compatibility fallback cannot bypass containment."""
+    outside_path = tmp_path / "server-secret.txt"
+    mock_storage_service.resolve_component_path.side_effect = ValueError("too many values to unpack")
+
+    with pytest.raises(LocalFileAccessError, match="outside the authenticated user's storage scope"):
+        parameter_handler.process_file_field(
+            "file_field",
+            {"type": "file", "file_path": str(outside_path)},
+            {},
+        )
+
+
+@pytest.mark.parametrize("namespace", ["test-user-id", "test-flow-id"])
+def test_process_file_field_allows_uploaded_files_in_graph_scopes(
+    parameter_handler,
+    mock_storage_service,
+    restricted_file_access,
+    namespace,
+):
+    """Regular and temporary uploads remain usable from user and flow namespaces."""
+    uploaded_path = restricted_file_access / namespace / "uploaded.txt"
+    uploaded_path.parent.mkdir()
+    uploaded_path.write_text("uploaded", encoding="utf-8")
+    mock_storage_service.resolve_component_path.return_value = str(uploaded_path)
+
+    params = parameter_handler.process_file_field(
+        "file_field",
+        {"type": "file", "file_path": f"{namespace}/uploaded.txt", "temp_file": True},
+        {},
+    )
+
+    assert params["file_field"] == str(uploaded_path.resolve())
+
+
+def test_process_file_field_checks_every_list_item(
+    parameter_handler,
+    mock_storage_service,
+    restricted_file_access,
+    tmp_path,
+):
+    """List-valued FileInputs reject the whole input when any path escapes."""
+    uploaded_path = restricted_file_access / "test-flow-id" / "uploaded.txt"
+    uploaded_path.parent.mkdir()
+    uploaded_path.write_text("uploaded", encoding="utf-8")
+    outside_path = tmp_path / "server-secret.txt"
+    mock_storage_service.resolve_component_path.side_effect = [str(uploaded_path), str(outside_path)]
+
+    with pytest.raises(LocalFileAccessError, match="outside the authenticated user's storage scope"):
+        parameter_handler.process_file_field(
+            "file_field",
+            {
+                "type": "file",
+                "file_path": ["test-flow-id/uploaded.txt", "test-flow-id/../../server-secret.txt"],
+                "list": True,
+            },
+            {},
+        )
+
+
+def test_process_file_field_preserves_unrestricted_local_path_compatibility(
+    parameter_handler,
+    mock_storage_service,
+    tmp_path,
+):
+    """Single-tenant installs retain arbitrary local FileInput support by default."""
+    settings_service = Mock()
+    settings_service.settings.restrict_local_file_access = False
+    outside_path = tmp_path / "local-file.txt"
+    mock_storage_service.resolve_component_path.return_value = str(outside_path)
+
+    with patch("lfx.utils.file_path_security.get_settings_service", return_value=settings_service):
+        params = parameter_handler.process_file_field(
+            "file_field",
+            {"type": "file", "file_path": str(outside_path)},
+            {},
+        )
+
+    assert params["file_field"] == str(outside_path)
+
+
+@pytest.mark.usefixtures("restricted_file_access")
+def test_process_file_field_preserves_s3_references(
+    parameter_handler,
+    mock_storage_service,
+):
+    """Non-local storage keys remain logical references for storage-aware consumers."""
+    mock_storage_service.settings_service = Mock()
+    mock_storage_service.settings_service.settings.storage_type = "s3"
+    mock_storage_service.resolve_component_path.return_value = "test-flow-id/uploaded.txt"
+
+    params = parameter_handler.process_file_field(
+        "file_field",
+        {"type": "file", "file_path": "test-flow-id/uploaded.txt"},
+        {},
+    )
+
+    assert params["file_field"] == "test-flow-id/uploaded.txt"
+
+
+@pytest.mark.parametrize(
+    "malicious_path",
+    [
+        "/etc/passwd",
+        "test-flow-id/../../etc/passwd",
+        "test-flow-id\\..\\..\\windows\\win.ini",
+        "test-flow-id/secret\x00.txt",
+        "other-flow-id/uploaded.txt",
+    ],
+)
+@pytest.mark.usefixtures("restricted_file_access")
+def test_process_file_field_rejects_unsafe_s3_keys_before_bundle_file_open(
+    parameter_handler,
+    mock_storage_service,
+    malicious_path,
+):
+    """JigsawStack-style Path.open consumers never receive an unsafe S3 logical key."""
+    mock_storage_service.settings_service = Mock()
+    mock_storage_service.settings_service.settings.storage_type = "s3"
+    mock_storage_service.resolve_component_path.side_effect = lambda path: path
+
+    with pytest.raises(LocalFileAccessError, match="must stay within"):
+        parameter_handler.process_file_field(
+            "file_field",
+            {"type": "file", "file_path": malicious_path},
+            {},
+        )
+
+
+def test_process_file_field_allows_server_provenanced_public_flow_namespace(
+    parameter_handler,
+    mock_storage_service,
+    restricted_file_access,
+):
+    """Public flows retain source-flow attachments after switching to a virtual flow ID."""
+    source_flow_id = "public-source-flow-id"
+    parameter_handler.vertex.graph.flow_id = "visitor-virtual-flow-id"
+    parameter_handler.vertex.graph.source_flow_id = source_flow_id
+    uploaded_path = restricted_file_access / source_flow_id / "uploaded.txt"
+    uploaded_path.parent.mkdir()
+    uploaded_path.write_text("uploaded", encoding="utf-8")
+    mock_storage_service.resolve_component_path.return_value = str(uploaded_path)
+
+    params = parameter_handler.process_file_field(
+        "file_field",
+        {"type": "file", "file_path": f"{source_flow_id}/uploaded.txt"},
+        {},
+    )
+
+    assert params["file_field"] == str(uploaded_path.resolve())
+
+
+def _runtime_file_vertex(*, source_flow_id: str | None = None) -> Vertex:
+    vertex = object.__new__(Vertex)
+    vertex.data = {
+        "node": {
+            "template": {
+                "file_field": {"type": "file", "file_path": "test-flow-id/original.txt", "show": True},
+                "text_field": {"type": "str", "value": "original", "show": True},
+            }
+        }
+    }
+    vertex.graph = Mock(
+        user_id="test-user-id",
+        flow_id="visitor-virtual-flow-id" if source_flow_id else "test-flow-id",
+        source_flow_id=source_flow_id,
+    )
+    vertex.raw_params = {"file_field": "original-file", "text_field": "original"}
+    vertex.params = vertex.raw_params.copy()
+    vertex.updated_raw_params = False
+    return vertex
+
+
+@pytest.mark.usefixtures("restricted_file_access")
+def test_update_raw_params_rejects_run_flow_file_tweak_escape(mock_storage_service, tmp_path):
+    """Run Flow node tweaks cannot bypass FileInput resolution and containment."""
+    vertex = _runtime_file_vertex()
+    outside_path = tmp_path / "server-secret.txt"
+    mock_storage_service.resolve_component_path.return_value = str(outside_path)
+
+    with (
+        patch("lfx.graph.vertex.param_handler.get_storage_service", return_value=mock_storage_service),
+        pytest.raises(LocalFileAccessError, match="outside the authenticated user's storage scope"),
+    ):
+        vertex.update_raw_params({"file_field": "test-flow-id/../../server-secret.txt"}, overwrite=True)
+
+    assert vertex.raw_params["file_field"] == "original-file"
+
+
+@pytest.mark.usefixtures("restricted_file_access", "trusted_file_component_registry")
+def test_update_raw_params_rejects_relabelled_canonical_file_input(
+    mock_storage_service,
+    tmp_path,
+):
+    """Run Flow tweaks cannot bypass containment by relabeling trusted FileInput metadata."""
+    vertex = _runtime_file_vertex()
+    _relabel_file_input_as_string(vertex)
+    outside_path = tmp_path / "server-secret.txt"
+    mock_storage_service.resolve_component_path.return_value = str(outside_path)
+
+    with (
+        patch("lfx.graph.vertex.param_handler.get_storage_service", return_value=mock_storage_service),
+        pytest.raises(LocalFileAccessError, match="outside the authenticated user's storage scope"),
+    ):
+        vertex.update_raw_params({"file_field": "/etc/passwd"}, overwrite=True)
+
+    assert vertex.raw_params["file_field"] == "original-file"
+
+
+@pytest.mark.usefixtures("restricted_file_access", "trusted_file_component_registry")
+def test_update_raw_params_rejects_canonical_file_input_omitted_from_request_template(
+    mock_storage_service,
+    tmp_path,
+):
+    """Canonical field identity survives removal of its request-side metadata."""
+    vertex = _runtime_file_vertex()
+    _relabel_file_input_as_string(vertex, include_field=False)
+    outside_path = tmp_path / "server-secret.txt"
+    mock_storage_service.resolve_component_path.return_value = str(outside_path)
+
+    with (
+        patch("lfx.graph.vertex.param_handler.get_storage_service", return_value=mock_storage_service),
+        pytest.raises(LocalFileAccessError, match="outside the authenticated user's storage scope"),
+    ):
+        vertex.update_raw_params({"file_field": "/etc/passwd"}, overwrite=True)
+
+    assert vertex.raw_params["file_field"] == "original-file"
+
+
+def test_update_raw_params_preserves_unrestricted_absolute_path_with_real_local_storage(tmp_path):
+    """Disabling containment retains the legacy pass-through behavior for runtime tweaks."""
+    vertex = _runtime_file_vertex()
+    settings_service = Mock()
+    settings_service.settings.config_dir = tmp_path / "config"
+    settings_service.settings.restrict_local_file_access = False
+    storage_service = LocalStorageService(Mock(), settings_service)
+    absolute_path = str(tmp_path / "example.txt")
+
+    with (
+        patch("lfx.utils.file_path_security.get_settings_service", return_value=settings_service),
+        patch("lfx.graph.vertex.param_handler.get_storage_service", return_value=storage_service),
+    ):
+        vertex.update_raw_params({"file_field": absolute_path}, overwrite=True)
+
+    assert vertex.raw_params["file_field"] == absolute_path
+
+
+@pytest.mark.usefixtures("restricted_file_access")
+def test_update_raw_params_rejects_s3_file_tweak_before_jigsawstack_file_open(mock_storage_service):
+    """Bundle consumers cannot receive absolute paths from Run Flow S3 tweaks."""
+    vertex = _runtime_file_vertex()
+    mock_storage_service.settings_service = Mock()
+    mock_storage_service.settings_service.settings.storage_type = "s3"
+    mock_storage_service.resolve_component_path.side_effect = lambda path: path
+
+    with (
+        patch("lfx.graph.vertex.param_handler.get_storage_service", return_value=mock_storage_service),
+        pytest.raises(LocalFileAccessError, match="must stay within"),
+    ):
+        vertex.update_raw_params({"file_field": "/etc/passwd"}, overwrite=True)
+
+    assert vertex.raw_params["file_field"] == "original-file"
+
+
+def test_update_raw_params_resolves_v2_public_flow_file_input(
+    mock_storage_service,
+    restricted_file_access,
+):
+    """V2/public execution inputs resolve against trusted source-flow provenance."""
+    source_flow_id = "public-source-flow-id"
+    vertex = _runtime_file_vertex(source_flow_id=source_flow_id)
+    uploaded_path = restricted_file_access / source_flow_id / "uploaded.txt"
+    uploaded_path.parent.mkdir()
+    uploaded_path.write_text("uploaded", encoding="utf-8")
+    mock_storage_service.resolve_component_path.return_value = str(uploaded_path)
+
+    with patch("lfx.graph.vertex.param_handler.get_storage_service", return_value=mock_storage_service):
+        vertex.update_raw_params({"file_field": f"{source_flow_id}/uploaded.txt"}, overwrite=True)
+
+    assert vertex.raw_params["file_field"] == str(uploaded_path.resolve())
+    assert vertex.params["file_field"] == str(uploaded_path.resolve())
+    assert vertex.updated_raw_params is True
+
+
+def test_update_raw_params_resolves_wrapped_v2_file_tweak(mock_storage_service, restricted_file_access):
+    """Template-shaped V2 FileInput tweaks use the same resolver as scalar tweaks."""
+    vertex = _runtime_file_vertex()
+    uploaded_path = restricted_file_access / "test-flow-id" / "uploaded.txt"
+    uploaded_path.parent.mkdir()
+    uploaded_path.write_text("uploaded", encoding="utf-8")
+    mock_storage_service.resolve_component_path.return_value = str(uploaded_path)
+
+    with patch("lfx.graph.vertex.param_handler.get_storage_service", return_value=mock_storage_service):
+        vertex.update_raw_params({"file_field": {"file_path": "test-flow-id/uploaded.txt"}}, overwrite=True)
+
+    assert vertex.raw_params["file_field"] == str(uploaded_path.resolve())
 
 
 def test_should_skip_field(parameter_handler):

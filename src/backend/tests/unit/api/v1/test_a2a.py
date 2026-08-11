@@ -19,9 +19,18 @@ from httpx import AsyncClient
 from langflow.api.v1 import a2a_utils
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.services.database.models import Folder
+from langflow.services.database.models.auth import (
+    AuthzRole,
+    AuthzRoleAssignment,
+    AuthzShare,
+    AuthzTeam,
+    AuthzTeamMember,
+)
 from langflow.services.database.models.flow.model import Flow, FlowType
 from langflow.services.deps import session_scope
 from lfx.services.deps import get_settings_service
+
+from tests.unit.services.authorization._policy_double import install_policy_authz
 
 _STARTERS = Path(langflow.__file__).parent / "initial_setup" / "starter_projects"
 
@@ -366,6 +375,117 @@ async def test_list_agents_is_owner_scoped(client: AsyncClient, active_user, log
     assert agents[0]["cardUrl"].endswith(f"/api/v1/a2a/{enabled}/.well-known/agent-card.json")
 
 
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_list_agents_includes_direct_team_and_scoped_grants(
+    client: AsyncClient,
+    active_user,
+    logged_in_headers,
+    flow_data,
+):
+    """The catalog widens before serialization for direct, team, and scoped-role grants."""
+    owner_id = await _create_other_user()
+    direct_flow = await _create_flow(owner_id, data=flow_data)
+    team_flow = await _create_flow(owner_id, data=flow_data)
+    scoped_folder_id = await _create_folder(owner_id, auth_settings={"auth_type": "none"})
+    scoped_flow = await _create_flow(owner_id, data=flow_data, folder_id=scoped_folder_id)
+    denied_flow = await _create_flow(owner_id, data=flow_data)
+
+    async with session_scope() as session:
+        team = AuthzTeam(
+            team_name=f"a2a-team-{uuid.uuid4().hex[:8]}",
+            adom_name=f"a2a-team-{uuid.uuid4().hex}",
+            is_active=True,
+        )
+        role = AuthzRole(
+            name=f"a2a-project-reader-{uuid.uuid4().hex}",
+            permissions=["flow:read"],
+            is_system=False,
+        )
+        session.add(team)
+        session.add(role)
+        await session.flush()
+        session.add(AuthzTeamMember(team_id=team.id, user_id=active_user.id, source="manual"))
+        session.add(
+            AuthzShare(
+                resource_type="flow",
+                resource_id=direct_flow,
+                scope="user",
+                target_id=active_user.id,
+                permission_level="read",
+                created_by=owner_id,
+            )
+        )
+        session.add(
+            AuthzShare(
+                resource_type="flow",
+                resource_id=team_flow,
+                scope="team",
+                target_id=team.id,
+                permission_level="read",
+                created_by=owner_id,
+            )
+        )
+        session.add(
+            AuthzRoleAssignment(
+                user_id=active_user.id,
+                role_id=role.id,
+                domain_type="project",
+                domain_id=scoped_folder_id,
+            )
+        )
+        await session.commit()
+
+    with install_policy_authz(get_settings_service()):
+        response = await client.get("api/v1/a2a/agents", headers=logged_in_headers)
+
+    assert response.status_code == 200
+    visible_ids = {agent["id"] for agent in response.json()}
+    assert {str(direct_flow), str(team_flow), str(scoped_flow)} <= visible_ids
+    assert str(denied_flow) not in visible_ids
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_list_agents_scoped_api_key_does_not_inherit_owner_override(
+    client: AsyncClient,
+    active_user,
+    created_api_key,
+    flow_data,
+):
+    """An API-key scope remains authoritative even for resources owned by the key's user."""
+    scoped_folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "none"})
+    scoped_flow = await _create_flow(active_user.id, data=flow_data, folder_id=scoped_folder_id)
+    unscoped_flow = await _create_flow(active_user.id, data=flow_data)
+
+    async with session_scope() as session:
+        role = AuthzRole(
+            name=f"a2a-scoped-key-reader-{uuid.uuid4().hex[:8]}",
+            permissions=["flow:read"],
+            is_system=False,
+        )
+        session.add(role)
+        await session.flush()
+        session.add(
+            AuthzRoleAssignment(
+                user_id=active_user.id,
+                role_id=role.id,
+                domain_type="project",
+                domain_id=scoped_folder_id,
+            )
+        )
+        await session.commit()
+
+    with install_policy_authz(get_settings_service()):
+        response = await client.get(
+            "api/v1/a2a/agents",
+            headers={"x-api-key": created_api_key.api_key},
+        )
+
+    assert response.status_code == 200
+    visible_ids = {agent["id"] for agent in response.json()}
+    assert str(scoped_flow) in visible_ids
+    assert str(unscoped_flow) not in visible_ids
+
+
 async def test_list_agents_flag_off_returns_404(client: AsyncClient):
     """The registry looks unmounted (404) when the flag is off, before auth runs (no 403 leak)."""
     response = await client.get("api/v1/a2a/agents")
@@ -445,6 +565,87 @@ async def test_message_send_runs_flow_and_returns_completed_task(client: AsyncCl
     assert result["kind"] == "task"
     assert result["status"]["state"] == "completed"
     assert result["artifacts"][0]["parts"][0]["text"] == "hello a2a"
+
+
+async def test_public_a2a_run_uses_server_sanitized_flow_data(active_user, echo_flow_data, monkeypatch):
+    """Anonymous A2A runs build from trusted server code, not stored component code."""
+    from langflow.api.v1 import a2a as a2a_module
+    from langflow.api.v2 import workflow as workflow_module
+
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+    sanitized_data = {"nodes": [{"id": "server-sanitized"}], "edges": []}
+    captured = {}
+    expected_response = object()
+
+    def fake_validate(data):
+        captured["validated"] = data
+
+    async def fake_prepare(data):
+        captured["prepared"] = data
+        return sanitized_data
+
+    async def fake_execute(**kwargs):
+        captured["executed_flow_data"] = kwargs["flow"].data
+        return expected_response
+
+    monkeypatch.setattr(a2a_module, "validate_public_flow_no_code_execution", fake_validate)
+    monkeypatch.setattr(a2a_module, "prepare_public_flow_build", fake_prepare)
+    monkeypatch.setattr(workflow_module, "execute_sync_workflow_with_timeout", fake_execute)
+
+    response = await a2a_module._run_flow(flow_id, str(uuid.uuid4()), "hello", "context")
+
+    assert response is expected_response
+    assert captured["validated"] == echo_flow_data
+    assert captured["prepared"] == echo_flow_data
+    assert captured["executed_flow_data"] == sanitized_data
+
+
+async def test_public_a2a_resume_sanitizes_checkpoint_payload(active_user, echo_flow_data, monkeypatch):
+    """A public HITL continuation cannot restore stored component code around the initial-run gate."""
+    from langflow.api.v1 import a2a as a2a_module
+    from lfx.graph.checkpoint.schema import GraphCheckpoint
+
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+    task_id = str(uuid.uuid4())
+    sanitized_data = {"nodes": [{"id": "server-sanitized"}], "edges": []}
+    checkpoint = GraphCheckpoint(
+        run_id=task_id,
+        flow_id=str(flow_id),
+        flow_payload=echo_flow_data,
+        pause_context={"data": {"request_id": "node:run"}},
+    )
+    captured = {}
+
+    class StopAfterPolicyCheckError(Exception):
+        pass
+
+    class FakeStore:
+        async def load_by_run_id(self, run_id):
+            assert run_id == task_id
+            return checkpoint
+
+    def fake_validate(data):
+        captured["validated"] = data
+
+    async def fake_prepare(data):
+        captured["prepared"] = data
+        return sanitized_data
+
+    def fake_resume(sanitized_checkpoint, *_args):
+        captured["resumed_payload"] = sanitized_checkpoint.flow_payload
+        raise StopAfterPolicyCheckError
+
+    monkeypatch.setattr(a2a_module, "A2ACheckpointStore", FakeStore)
+    monkeypatch.setattr(a2a_module, "validate_public_flow_no_code_execution", fake_validate)
+    monkeypatch.setattr(a2a_module, "prepare_public_flow_build", fake_prepare)
+    monkeypatch.setattr(a2a_module, "resume_graph_with_decision", fake_resume)
+
+    with pytest.raises(StopAfterPolicyCheckError):
+        await a2a_module._resume_flow(flow_id, task_id, "Approve")
+
+    assert captured["validated"] == echo_flow_data
+    assert captured["prepared"] == echo_flow_data
+    assert captured["resumed_payload"] == sanitized_data
 
 
 # --- DataPart (structured application/json I/O) ----------------------------
@@ -1081,6 +1282,58 @@ async def test_apikey_folder_accepts_owner_key(client: AsyncClient, active_user,
     result = resp.json()["result"]
     assert result["status"]["state"] == "completed"
     assert result["artifacts"][0]["parts"][0]["text"] == "hello a2a"
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_apikey_folder_enforces_scoped_execute_permission(
+    client: AsyncClient,
+    active_user,
+    echo_flow_data,
+):
+    """An owner key is still subject to plugin API-key scope policy before dispatch."""
+    folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "apikey"})
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
+    key = await _create_api_key(active_user.id)
+    settings_service = get_settings_service()
+
+    with install_policy_authz(settings_service):
+        denied = await _jsonrpc(
+            client,
+            flow_id,
+            "message/send",
+            _text_message("denied"),
+            headers={"x-api-key": key},
+        )
+    assert denied.status_code == 404
+
+    async with session_scope() as session:
+        role = AuthzRole(
+            name=f"a2a-executor-{uuid.uuid4().hex}",
+            permissions=["flow:execute"],
+            is_system=False,
+        )
+        session.add(role)
+        await session.flush()
+        session.add(
+            AuthzRoleAssignment(
+                user_id=active_user.id,
+                role_id=role.id,
+                domain_type="project",
+                domain_id=folder_id,
+            )
+        )
+        await session.commit()
+
+    with install_policy_authz(settings_service):
+        allowed = await _jsonrpc(
+            client,
+            flow_id,
+            "message/send",
+            _text_message("allowed"),
+            headers={"x-api-key": key},
+        )
+    assert allowed.status_code == 200
+    assert allowed.json()["result"]["status"]["state"] == "completed"
 
 
 @pytest.mark.usefixtures("a2a_flag_on")

@@ -50,7 +50,9 @@ def build_checkpoint(graph: Graph) -> GraphCheckpoint:
     return GraphCheckpoint(
         run_id=str(graph.run_id),
         flow_id=str(graph.flow_id) if graph.flow_id else None,
+        source_flow_id=graph.source_flow_id,
         session_id=graph.session_id or None,
+        user_id=str(graph.user_id) if graph.user_id else None,
         job_id=graph.job_id,
         flow_payload=flow_payload,
         run_map={k: list(v) for k, v in run_state["run_map"].items()},

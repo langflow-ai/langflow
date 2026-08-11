@@ -37,6 +37,7 @@ from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
 from lfx.schema.workflow import JobStatus, WorkflowExecutionResponse
 from lfx.workflow.adapters import StreamAdapter, StreamEvent
+from lfx.workflow.adapters.langflow import WORKFLOW_OUTPUT_CAPTURE_EVENT, build_terminal_output_event
 from lfx.workflow.converters import ParsedWorkflowRun, create_error_response, run_response_to_workflow_response
 
 from langflow.api.utils import extract_global_variables_from_headers
@@ -185,6 +186,7 @@ async def _stream_event_frames(
     job_id: UUID | None = None,
     resume: dict | None = None,
     track_job_status: bool = True,
+    emit_output_capture: bool = False,
 ) -> AsyncIterator[tuple[bytes, str]]:
     """Run a flow via the v1 build-vertex loop, dispatch its events through ``adapter``.
 
@@ -321,6 +323,26 @@ async def _stream_event_frames(
                     seq,
                 )
                 seq += 1
+            # Off-wire terminal-output capture for ``Job.result`` (background only).
+            # Synthesized from the RAW ``end_vertex`` here — before ``adapter.translate``
+            # — so it is protocol-neutral: the ``agui`` adapter emits no wire ``output``
+            # event, so without this its background GET-status would carry no outputs.
+            # The runner captures this frame in-memory only (never persisted to
+            # ``job_events``, never published), so the wire is unchanged for every
+            # protocol and the capture is independent of durable-event storage.
+            if emit_output_capture and event_type == "end_vertex":
+                output = build_terminal_output_event(event_data)
+                if output is not None:
+                    capture_payload = {"event": "output", "data": output.model_dump(mode="json")}
+                    yield _frame(
+                        StreamEvent(
+                            type=WORKFLOW_OUTPUT_CAPTURE_EVENT,
+                            data_json=json.dumps(capture_payload, default=str),
+                        ),
+                        seq,
+                    )
+                    seq += 1
+
             for event in adapter.translate(event_type, event_data):
                 if terminal_error_type is not None and event.type == terminal_error_type:
                     terminal_error_seen = True
@@ -428,6 +450,33 @@ async def execute_sync_workflow_with_timeout(
         )
     except asyncio.TimeoutError as e:
         raise WorkflowTimeoutError from e
+
+
+async def _persist_sync_result(job_service, job_id: UUID, workflow_response, flow_id) -> None:
+    """Best-effort cache of a completed sync run's outputs into ``Job.result``.
+
+    Stores the same ``{component_id, ...ComponentOutput}`` list shape the background
+    runner writes, so a later GET status on this sync job_id rebuilds an identical
+    response via ``workflow_response_from_output_events``. The caller already holds
+    the response inline, so a persistence failure must never fail the run — it is
+    logged and swallowed.
+
+    The run has already executed and succeeded upstream; this helper only caches
+    the finished result, so EVERY exception it can raise (serialization or the
+    ``set_result`` DB write — e.g. a SQLite ``OperationalError`` under lock
+    contention) is a persistence failure, never a workflow failure. Catch broadly
+    so such an error cannot escape to the caller's terminal ``except Exception`` and
+    be misreported as a failed run. ``asyncio.CancelledError`` is a ``BaseException``
+    and still propagates, so timeouts/disconnects are unaffected.
+    """
+    try:
+        output_events = [
+            {"component_id": component_id, **output.model_dump(mode="json")}
+            for component_id, output in (workflow_response.outputs or {}).items()
+        ]
+        await job_service.set_result(job_id, {"status": "completed", "outputs": output_events})
+    except Exception:  # noqa: BLE001 — best-effort cache; the response is already built inline
+        await logger.awarning("Sync result persistence failed for flow %s", flow_id, exc_info=True)
 
 
 async def execute_sync_workflow(
@@ -554,7 +603,7 @@ async def execute_sync_workflow(
         # Build RunResponse
         run_response = RunResponse(outputs=task_result, session_id=execution_session_id)
         # Convert to WorkflowExecutionResponse
-        return run_response_to_workflow_response(
+        workflow_response = run_response_to_workflow_response(
             run_response=run_response,
             flow_id=parsed.flow_id,
             job_id=str(job_id),
@@ -563,6 +612,11 @@ async def execute_sync_workflow(
             effective_globals=request_variables,
             selected_ids=parsed.output_ids,
         )
+        # Persist the terminal outputs to Job.result so a later GET status on this
+        # sync job_id returns the same outputs the background path stores (same
+        # list-of-OutputEvent shape, so the status read is protocol-uniform).
+        await _persist_sync_result(job_service, job_id, workflow_response, flow.id)
+        return workflow_response  # noqa: TRY300 — keep response-building under the broad except below
 
     except GraphPausedException as exc:
         # HITL: a pausing node suspended the run for human input. The checkpoint is already

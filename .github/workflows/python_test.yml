@@ -204,27 +204,27 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
           prune-cache: false
-          # This job intentionally exits before invoking uv when langflow-core
+          # This job intentionally exits before invoking uv when langflow-base
           # has not been published yet (including its first release).
           ignore-nothing-to-cache: true
 
       - name: Check Version
         id: check-version
-        # The main wheel resolves its direct langflow-core dependency from PyPI.
-        # Skip until the source core version (stable or canonical nightly) exists.
+        # The main wheel resolves its direct langflow-base dependency from PyPI.
+        # Skip until the source base version (stable or canonical nightly) exists.
         run: |
-          version=$(python -c "import pathlib, tomllib; print(tomllib.loads(pathlib.Path('src/langflow-core/pyproject.toml').read_text())['project']['version'])")
-          url="https://pypi.org/pypi/langflow-core/json"
+          version=$(python -c "import pathlib, tomllib; print(tomllib.loads(pathlib.Path('src/backend/base/pyproject.toml').read_text())['project']['version'])")
+          url="https://pypi.org/pypi/langflow-base/json"
 
-          status=$(curl -sS -o "$RUNNER_TEMP/langflow-core-pypi.json" -w "%{http_code}" "$url")
+          status=$(curl -sS -o "$RUNNER_TEMP/langflow-base-pypi.json" -w "%{http_code}" "$url")
           if [ "$status" = "404" ]; then
             last_released_version=""
           elif [ "$status" != "200" ]; then
-            echo "Failed to fetch langflow-core releases: HTTP $status"
-            cat "$RUNNER_TEMP/langflow-core-pypi.json"
+            echo "Failed to fetch langflow-base releases: HTTP $status"
+            cat "$RUNNER_TEMP/langflow-base-pypi.json"
             exit 1
           else
-            last_released_version=$(jq -r '.releases | keys[]' "$RUNNER_TEMP/langflow-core-pypi.json" | sort -V | tail -n 1)
+            last_released_version=$(jq -r '.releases | keys[]' "$RUNNER_TEMP/langflow-base-pypi.json" | sort -V | tail -n 1)
           fi
 
           if [ "$version" != "$last_released_version" ]; then

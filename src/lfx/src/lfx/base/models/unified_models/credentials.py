@@ -6,7 +6,7 @@ import contextlib
 import json
 import os
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from lfx.log.logger import logger
@@ -23,6 +23,9 @@ from .provider_queries import (
     get_provider_all_variables,
     get_provider_secret_variable_key,
 )
+
+if TYPE_CHECKING:
+    from lfx.services.model_provider_policy import ModelProviderPolicySnapshot
 
 MODEL_STATUS_KEY_SEPARATOR = "::"
 MODEL_STATUS_TYPES = ("llm", "embeddings")
@@ -410,47 +413,56 @@ async def _get_model_status(user_id: UUID | str) -> tuple[set[str], set[str]]:
         return disabled, enabled
 
 
-async def _fetch_enabled_providers_for_user(user_id: UUID | str) -> set[str]:
-    """Shared helper for get_language_model_options and get_embedding_model_options."""
+async def _fetch_enabled_providers_for_user(
+    user_id: UUID | str,
+    *,
+    provider_policy: ModelProviderPolicySnapshot | None = None,
+) -> set[str]:
+    """Return credential-enabled providers allowed for configuration and by the caller."""
+    variable_service = get_variable_service()
+    if variable_service is None:
+        return set()
+
+    from langflow.services.variable.service import DatabaseVariableService
+
+    if not isinstance(variable_service, DatabaseVariableService):
+        return set()
+
+    provider_variable_map = get_model_provider_variable_mapping()
+    providers = get_model_providers()
+    from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, aresolve_model_provider_policy
+
+    configuration_policy = await aresolve_model_provider_policy(
+        user_id=user_id,
+        providers=providers,
+        purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        attributes=provider_policy.context.attributes if provider_policy is not None else None,
+    )
+    from lfx.base.models.provider_registry import is_api_key_optional
+
+    provider_candidates = {
+        **provider_variable_map,
+        **{
+            provider: ""
+            for provider in providers
+            if provider not in provider_variable_map and is_api_key_optional(provider)
+        },
+    }
+    provider_candidates = {
+        provider: variable
+        for provider, variable in provider_candidates.items()
+        if configuration_policy.allows(provider) and (provider_policy is None or provider_policy.allows(provider))
+    }
+    if not provider_candidates:
+        return set()
+
     async with session_scope() as session:
-        variable_service = get_variable_service()
-        if variable_service is None:
-            return set()
-
-        from langflow.services.variable.service import DatabaseVariableService
-
-        if not isinstance(variable_service, DatabaseVariableService):
-            return set()
-
         # Get all variable names (VariableRead has value=None for credentials)
         all_vars = await variable_service.get_all(
             user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
             session=session,
         )
         all_var_names = {var.name for var in all_vars}
-
-        provider_variable_map = get_model_provider_variable_mapping()
-        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
-
-        providers = get_model_providers()
-        provider_policy = resolve_model_provider_policy(
-            user_id=user_id,
-            providers=providers,
-            purpose=ModelProviderPolicyPurpose.USE,
-        )
-        from lfx.base.models.provider_registry import is_api_key_optional
-
-        provider_candidates = {
-            **provider_variable_map,
-            **{
-                provider: ""
-                for provider in providers
-                if provider not in provider_variable_map and is_api_key_optional(provider)
-            },
-        }
-        provider_candidates = {
-            provider: variable for provider, variable in provider_candidates.items() if provider_policy.allows(provider)
-        }
 
         # Build dict with raw Variable values (encrypted for secrets, plaintext for others)
         # We need to fetch raw Variable objects because VariableRead has value=None for credentials
@@ -537,7 +549,6 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
         "OpenAI",
         "Anthropic",
         "Google Generative AI",
-        "IBM WatsonX",
     ]:
         return
 
@@ -580,14 +591,27 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             llm.invoke("test")
 
         elif provider == "IBM WatsonX":
-            from langchain_ibm import ChatWatsonx
-
             api_key = variables.get("WATSONX_APIKEY")
             project_id = variables.get("WATSONX_PROJECT_ID")
-            url = variables.get("WATSONX_URL", "https://us-south.ml.cloud.ibm.com")
+            url = variables.get("WATSONX_URL") or "https://us-south.ml.cloud.ibm.com"
             if not api_key or not project_id:
                 return
             validate_connector_url_for_ssrf(url)
+
+            if not validation_model:
+                from lfx.base.models.model_utils import get_watsonx_llm_models
+
+                # Static WatsonX seeds may all be deprecated and filtered out.
+                # Use a current regional chat model instead of skipping validation.
+                live_models = get_watsonx_llm_models(url, default_models=[])
+                if not live_models:
+                    msg = "No IBM WatsonX chat model is available to validate credentials"
+                    logger.warning(msg)
+                    raise ValueError(msg)
+                validation_model = live_models[0]
+
+            from langchain_ibm import ChatWatsonx
+
             llm = ChatWatsonx(
                 apikey=api_key,
                 url=url,
@@ -701,6 +725,11 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
     except ValueError:
         raise
     except Exception as e:
+        if provider == "IBM WatsonX":
+            msg = f"Could not validate IBM WatsonX credentials: {e}"
+            logger.warning(msg)
+            raise ValueError(msg) from e
+
         error_msg = str(e).lower()
         if any(word in error_msg for word in ["401", "authentication", "api key"]):
             msg = f"Invalid API key for {provider}"

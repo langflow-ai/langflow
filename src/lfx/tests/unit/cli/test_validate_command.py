@@ -62,8 +62,8 @@ def _make_result(issues=None) -> ValidationResult:
     return result
 
 
-def test_installed_version_prefers_core_distribution_over_base():
-    versions = {"langflow-core": "1.11.0", "langflow-base": "0.11.0"}
+def test_installed_version_falls_back_to_base_distribution():
+    versions = {"langflow-base": "1.12.0"}
 
     def get_version(package: str) -> str:
         if package not in versions:
@@ -71,9 +71,13 @@ def test_installed_version_prefers_core_distribution_over_base():
         return versions[package]
 
     with patch("importlib.metadata.version", side_effect=get_version) as version_mock:
-        assert _get_lf_version() == "1.11.0"
+        assert _get_lf_version() == "1.12.0"
 
-    assert version_mock.call_args_list == [call("langflow"), call("langflow-core")]
+    assert version_mock.call_args_list == [
+        call("langflow"),
+        call("langflow-nightly"),
+        call("langflow-base"),
+    ]
 
 
 # ---------------------------------------------------------------------------

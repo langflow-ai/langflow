@@ -117,16 +117,15 @@ describe("ProviderListItem", () => {
       expect(onSelect).toHaveBeenCalledWith(mockEnabledProvider);
     });
 
-    it("should call onSelect from keyboard activation", async () => {
+    it("should be keyboard focusable and activatable with Enter", async () => {
       const onSelect = jest.fn();
       const user = userEvent.setup();
 
       render(<ProviderListItem {...defaultProps} onSelect={onSelect} />);
 
       const item = screen.getByRole("button", { name: /OpenAI/i });
-      await user.tab();
+      item.focus();
       expect(item).toHaveFocus();
-
       await user.keyboard("{Enter}");
 
       expect(onSelect).toHaveBeenCalledWith(mockEnabledProvider);

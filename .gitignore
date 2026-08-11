@@ -268,6 +268,7 @@ src/backend/langflow/frontend/
 src/backend/base/langflow/frontend/
 .docker
 scratchpad*
+scratch/
 chroma*/*
 stuff/*
 src/frontend/playwright-report/index.html
