@@ -193,7 +193,7 @@ async def start_flow_build(
     queue_service: JobQueueService,
     flow_name: str | None = None,
     source_flow_id: uuid.UUID | None = None,
-    expose_error_details: bool = True,
+    expose_error_details: bool = False,
 ) -> str:
     """Start the flow build process by setting up the queue and starting the build task.
 
@@ -448,7 +448,7 @@ async def generate_flow_events(
     run_id: str | None = None,
     track_job_status: bool = True,
     tweaks: dict | None = None,
-    expose_error_details: bool = True,
+    expose_error_details: bool = False,
 ) -> None:
     """Generate events for flow building process.
 

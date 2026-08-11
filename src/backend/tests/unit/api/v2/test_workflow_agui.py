@@ -734,6 +734,7 @@ class TestAGUIStreaming:
                 background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
+                expose_error_details=True,
             )
         ]
 
@@ -770,6 +771,7 @@ class TestAGUIStreaming:
                 background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
+                expose_error_details=True,
             )
         ]
 
@@ -811,6 +813,7 @@ class TestAGUIStreaming:
                 background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
+                expose_error_details=True,
             )
         ]
 
@@ -848,6 +851,7 @@ class TestAGUIStreaming:
                 background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
+                expose_error_details=True,
             )
         ]
 
@@ -1411,7 +1415,6 @@ class TestAGUIBackgroundJobStatus:
 
         assert captured["run_id"] == str(job_id)
         assert captured["track_job_status"] is False
-        assert captured["expose_error_details"] is True
 
     async def test_background_buffer_marks_job_in_progress(self, monkeypatch: pytest.MonkeyPatch):
         """A background job should leave QUEUED once its buffer task starts executing."""
@@ -1433,10 +1436,7 @@ class TestAGUIBackgroundJobStatus:
             async def update_job_status(self, seen_job_id, status, *, finished_timestamp=False):
                 updates.append((seen_job_id, status, finished_timestamp))
 
-        captured: dict = {}
-
-        async def fake_stream_event_frames(**kwargs):
-            captured.update(kwargs)
+        async def fake_stream_event_frames(**_kwargs):
             yield b"data: {}\n\n", "RUN_FINISHED"
 
         monkeypatch.setattr(wf_bg, "get_stream_adapter", lambda *_args, **_kwargs: FakeAdapter())
@@ -1456,7 +1456,45 @@ class TestAGUIBackgroundJobStatus:
         )
 
         assert (job_id, workflow_module.JobStatus.IN_PROGRESS, False) in updates
-        assert captured["expose_error_details"] is False
+
+    @pytest.mark.parametrize("caller_kind", ["delegate", "owner"])
+    async def test_background_buffer_error_exposure_follows_flow_ownership(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        caller_kind: str,
+    ):
+        """Only the flow owner may see runtime error detail in a background run."""
+        from langflow.api.v2 import workflow_background as wf_bg
+        from lfx.workflow.converters import ParsedWorkflowRun
+
+        captured: dict = {}
+
+        class FakeAdapter:
+            terminal_error_type = "RUN_ERROR"
+
+            def cancel_events(self, _reason):
+                return []
+
+        async def fake_stream_event_frames(**kwargs):
+            captured.update(kwargs)
+            yield b"data: {}\n\n", "RUN_FINISHED"
+
+        monkeypatch.setattr(wf_bg, "get_stream_adapter", lambda *_args, **_kwargs: FakeAdapter())
+        monkeypatch.setattr(wf_bg, "_stream_event_frames", fake_stream_event_frames)
+        monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
+
+        owner_id = uuid4()
+        caller_id = owner_id if caller_kind == "owner" else uuid4()
+        await wf_bg._buffer_background_run(
+            bg_run=wf_bg._BackgroundRun(user_id=str(caller_id)),
+            flow=SimpleNamespace(id=uuid4(), user_id=owner_id, name="flow"),
+            parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="background"),
+            job_id=str(uuid4()),
+            current_user=SimpleNamespace(id=caller_id),
+            stream_protocol="agui",
+        )
+
+        assert captured["expose_error_details"] is (caller_kind == "owner")
 
     async def test_cancelled_agui_buffer_wakes_tail_reader_with_closed_text_and_run_finished(
         self, monkeypatch: pytest.MonkeyPatch

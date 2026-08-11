@@ -63,6 +63,7 @@ async def test_generate_flow_events_sets_source_flow_provenance_for_public_graph
         current_user=SimpleNamespace(id=user_id),
         flow_name="public-flow",
         track_job_status=False,
+        expose_error_details=False,
     )
 
     assert graph.source_flow_id == str(source_flow_id)
@@ -116,6 +117,7 @@ async def test_generate_flow_events_maps_rejected_file_tweaks_to_bad_request(mon
             current_user=SimpleNamespace(id=user_id),
             tweaks={"file-node": {"file": "other-flow/secret.txt"}},
             track_job_status=False,
+            expose_error_details=True,
         )
 
     assert exc_info.value.status_code == 400

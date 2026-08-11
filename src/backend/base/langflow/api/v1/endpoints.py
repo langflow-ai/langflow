@@ -4,6 +4,7 @@ import asyncio
 import json
 import time
 from collections.abc import AsyncGenerator, Collection
+from copy import deepcopy
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID, uuid4
@@ -367,7 +368,7 @@ async def simple_run_flow(
     event_manager: EventManager | None = None,
     context: dict | None = None,
     run_id: str | None = None,
-    expose_error_details: bool = True,
+    expose_error_details: bool = False,
 ):
     validate_input_and_tweaks(input_request)
     policy_context_token = set_current_model_provider_policy_context(
@@ -544,6 +545,7 @@ async def simple_run_flow_task(
             api_key_user=api_key_user,
             event_manager=effective_event_manager,
             run_id=run_id,
+            expose_error_details=api_key_user is not None and _caller_owns_flow(flow, api_key_user),
         )
 
         if should_emit and flow_id is not None:
@@ -653,7 +655,7 @@ async def run_flow_generator(
     client_consumed_queue: asyncio.Queue,
     context: dict | None = None,
     *,
-    expose_error_details: bool = True,
+    expose_error_details: bool = False,
 ) -> None:
     """Executes a flow asynchronously and manages event streaming to the client.
 
@@ -1380,7 +1382,7 @@ async def experimental_run_flow(
                 detail=str(client_error),
             )
         try:
-            graph_data = flow.data
+            graph_data = deepcopy(flow.data)
             graph_data = process_tweaks(graph_data, tweaks or {})
             raise_if_hitl_unsupported(graph_data)
             graph = Graph.from_payload(

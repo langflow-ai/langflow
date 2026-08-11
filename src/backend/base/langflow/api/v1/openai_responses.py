@@ -13,7 +13,7 @@ from lfx.utils.flow_validation import CustomComponentValidationError
 
 from langflow.api.utils import extract_global_variables_from_headers
 from langflow.api.utils.execution_errors import error_for_client
-from langflow.api.v1.endpoints import consume_and_yield, run_flow_generator, simple_run_flow
+from langflow.api.v1.endpoints import _caller_owns_flow, consume_and_yield, run_flow_generator, simple_run_flow
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
@@ -69,7 +69,7 @@ async def run_flow_for_openai_responses(
     variables: dict[str, str] | None = None,
 ) -> OpenAIResponsesResponse | StreamingResponse:
     """Run a flow for OpenAI Responses API compatibility."""
-    expose_error_details = flow.user_id is not None and str(flow.user_id) == str(api_key_user.id)
+    expose_error_details = _caller_owns_flow(flow, api_key_user)
     # Check if flow has chat input
     if not has_chat_input(flow.data):
         msg = "Flow must have a ChatInput component to be compatible with OpenAI Responses API"
@@ -671,7 +671,7 @@ async def create_response(
     if flow is None:
         return _flow_not_found_response(request.model)
 
-    expose_error_details = flow.user_id is not None and str(flow.user_id) == str(api_key_user.id)
+    expose_error_details = _caller_owns_flow(flow, api_key_user)
 
     try:
         await ensure_flow_permission(

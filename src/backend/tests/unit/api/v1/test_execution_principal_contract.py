@@ -74,7 +74,7 @@ async def test_v1_run_non_owner_tweaks_are_hidden_as_not_found(
 
 
 @pytest.mark.parametrize("expose_error_details", [False, True])
-async def test_v1_run_stream_error_depends_on_flow_ownership(
+async def test_run_flow_generator_error_depends_on_explicit_policy(
     monkeypatch: pytest.MonkeyPatch,
     expose_error_details: bool,  # noqa: FBT001
 ) -> None:
@@ -111,6 +111,44 @@ async def test_v1_run_stream_error_depends_on_flow_ownership(
     else:
         assert wire_error == "Workflow execution failed."
         assert sensitive_detail not in json.dumps(events)
+
+
+@pytest.mark.parametrize("caller_kind", ["delegate", "owner"])
+async def test_v1_run_stream_route_derives_error_policy_from_flow_ownership(
+    monkeypatch: pytest.MonkeyPatch,
+    caller_kind: str,
+) -> None:
+    from langflow.api.v1 import endpoints
+
+    owner_id = uuid4()
+    caller_id = owner_id if caller_kind == "owner" else uuid4()
+    captured: dict = {}
+
+    async def capture_run(**kwargs):
+        captured.update(kwargs)
+        await kwargs["event_manager"].queue.put((None, None, 0.0))
+
+    monkeypatch.setattr(endpoints, "run_flow_generator", capture_run)
+    monkeypatch.setattr(
+        endpoints,
+        "get_telemetry_service",
+        lambda: SimpleNamespace(log_package_run=AsyncMock()),
+    )
+
+    response = await endpoints._run_flow_internal(
+        background_tasks=BackgroundTasks(),
+        flow=_flow(owner_id=owner_id),
+        input_request=SimplifiedAPIRequest(input_value="hello"),
+        stream=True,
+        api_key_user=SimpleNamespace(id=caller_id),
+        context=None,
+        http_request=_request(),
+    )
+    _ = [chunk async for chunk in response.body_iterator]
+    if response.background is not None:
+        await response.background()
+
+    assert captured["expose_error_details"] is (caller_kind == "owner")
 
 
 @pytest.mark.parametrize("caller_kind", ["delegate", "owner"])
@@ -309,6 +347,48 @@ async def test_v1_advanced_non_owner_tweaks_are_hidden_as_not_found(monkeypatch:
     session.exec.assert_not_awaited()
 
 
+async def test_v1_advanced_owner_tweaks_do_not_mutate_loaded_flow_data(monkeypatch: pytest.MonkeyPatch) -> None:
+    from langflow.api.v1 import endpoints
+
+    owner_id = uuid4()
+    flow = _flow(
+        owner_id=owner_id,
+        data={"nodes": [{"id": "Component-1", "data": {"value": "stored"}}], "edges": []},
+    )
+    original_data = copy.deepcopy(flow.data)
+    captured: dict = {}
+
+    def mutating_process_tweaks(graph_data, _tweaks):
+        graph_data["nodes"][0]["data"]["value"] = "request override"
+        return graph_data
+
+    def fake_from_payload(graph_data, **_kwargs):
+        captured["graph_data"] = graph_data
+        return SimpleNamespace(run_id=None)
+
+    monkeypatch.setattr(endpoints, "process_tweaks", mutating_process_tweaks)
+    monkeypatch.setattr(endpoints.Graph, "from_payload", fake_from_payload)
+    monkeypatch.setattr(endpoints, "ensure_flow_permission", AsyncMock())
+    monkeypatch.setattr(endpoints, "run_graph_internal", AsyncMock(return_value=([], "owner-session")))
+    monkeypatch.setattr(endpoints, "get_task_service", lambda: SimpleNamespace(fire_and_forget_task=AsyncMock()))
+    monkeypatch.setattr(endpoints, "get_memory_base_service", lambda: SimpleNamespace(on_flow_output=MagicMock()))
+
+    response = await endpoints.experimental_run_flow(
+        session=SimpleNamespace(in_transaction=lambda: False, commit=AsyncMock()),
+        flow=flow,
+        inputs=None,
+        outputs=None,
+        tweaks={"Component-1": {"value": "request override"}},
+        stream=False,
+        session_id=None,
+        api_key_user=SimpleNamespace(id=owner_id),
+    )
+
+    assert response.status_code == 200
+    assert flow.data == original_data
+    assert captured["graph_data"]["nodes"][0]["data"]["value"] == "request override"
+
+
 @pytest.mark.parametrize("caller_kind", ["delegate", "owner"])
 async def test_v1_advanced_http_validation_error_depends_on_flow_ownership(
     monkeypatch: pytest.MonkeyPatch,
@@ -440,3 +520,4 @@ async def test_webhook_server_generated_tweaks_remain_trusted(monkeypatch: pytes
     )
 
     assert captured["input_request"].tweaks.root == generated_tweaks
+    assert captured["expose_error_details"] is True

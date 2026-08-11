@@ -15,15 +15,13 @@ from langflow.services.job_queue.service import JobQueueService
 from lfx.schema.schema import InputValueRequest
 
 
-@pytest.mark.parametrize("endpoint_family", ["chat_delegate", "public_chat", "voice_delegate"])
-async def test_delegated_and_public_build_error_sequences_never_emit_owner_details(
+async def test_generate_flow_events_sanitizes_cooperative_and_queue_fallback_errors(
     monkeypatch: pytest.MonkeyPatch,
-    endpoint_family: str,
 ) -> None:
-    """Both the cooperative error and JobQueue fallback obey the caller-visible policy."""
+    """Both generate-flow error paths obey the caller-visible policy."""
     from langflow.api import build
 
-    sensitive_detail = f"{endpoint_family}-owner-provider-secret"
+    sensitive_detail = "owner-provider-secret"
 
     @contextlib.asynccontextmanager
     async def fake_session_scope():

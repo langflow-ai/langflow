@@ -51,19 +51,19 @@ def test_every_entrypoint_declares_each_principal_and_safety_dimension() -> None
         assert entrypoint["test_references"]
 
 
-def test_ci_workflow_watches_every_canonical_test_reference() -> None:
+def test_ci_workflow_watches_every_canonical_source_and_test_reference() -> None:
     matrix = json.loads(DEFAULT_MATRIX.read_text(encoding="utf-8"))
     workflow_paths = _workflow_pull_request_paths()
-    referenced_paths = {
+    canonical_paths = {entrypoint["source"] for entrypoint in matrix["entrypoints"]} | {
         reference.split("::", 1)[0]
         for entrypoint in matrix["entrypoints"]
         for reference in entrypoint["test_references"]
     }
 
     uncovered = sorted(
-        path for path in referenced_paths if not any(_github_path_matches(path, pattern) for pattern in workflow_paths)
+        path for path in canonical_paths if not any(_github_path_matches(path, pattern) for pattern in workflow_paths)
     )
-    assert uncovered == [], f"CI scripts checker is not triggered by canonical matrix tests: {uncovered}"
+    assert uncovered == [], f"CI scripts checker is not triggered by canonical matrix paths: {uncovered}"
 
 
 def test_checker_rejects_a_missing_error_policy(tmp_path: Path) -> None:

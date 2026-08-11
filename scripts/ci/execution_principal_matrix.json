@@ -47,7 +47,7 @@
       "test_references": [
         "src/backend/tests/unit/api/v1/test_execution_principal_contract.py::test_v1_run_non_owner_tweaks_are_hidden_as_not_found",
         "src/backend/tests/unit/api/v1/test_execution_principal_contract.py::test_v1_advanced_shared_flow_executes_as_caller_without_owner_requery",
-        "src/backend/tests/unit/api/v1/test_execution_principal_contract.py::test_v1_run_stream_error_depends_on_flow_ownership"
+        "src/backend/tests/unit/api/v1/test_execution_principal_contract.py::test_v1_run_stream_route_derives_error_policy_from_flow_ownership"
       ]
     },
     {

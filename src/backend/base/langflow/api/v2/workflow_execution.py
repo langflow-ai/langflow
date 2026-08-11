@@ -188,7 +188,7 @@ async def _stream_event_frames(
     resume: dict | None = None,
     track_job_status: bool = True,
     emit_output_capture: bool = False,
-    expose_error_details: bool = True,
+    expose_error_details: bool = False,
 ) -> AsyncIterator[tuple[bytes, str]]:
     """Run a flow via the v1 build-vertex loop, dispatch its events through ``adapter``.
 
