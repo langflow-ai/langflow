@@ -6,7 +6,7 @@ Extension Bundle.
 ## What it ships
 
 Thirty-nine components, registered under the `scavio` bundle group, covering all
-188 live Scavio endpoints across 32 platforms.
+188 live Scavio endpoints across 31 platforms plus extract.
 
 ### Search
 
