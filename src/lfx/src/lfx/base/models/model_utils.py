@@ -607,6 +607,69 @@ _AZURE_AI_FOUNDRY_HOST_SUFFIXES = (
 # the o-series (o1 / o3-mini / o4-mini / …) and the gpt-5 family.
 _AZURE_AI_FOUNDRY_REASONING_PATTERN = re.compile(r"^(o\d|gpt-5)")
 
+# Deployments the unified chat/embedding classes cannot drive: image, audio, and video
+# models plus the legacy completions-only families (chat_completion=false in Azure's
+# /models capability metadata — e.g. curie). Matched as substrings of the underlying
+# model id AFTER the embeddings check, so text-embedding-ada-002 classifies as
+# embeddings before "ada" reads as legacy. Deliberately no bare "instruct" marker:
+# Foundry-hosted open chat models are routinely named *-Instruct (Llama, Phi, Mistral).
+_AZURE_AI_FOUNDRY_NON_CHAT_MODEL_MARKERS = (
+    "dall-e",
+    "dalle",
+    "gpt-image",
+    "whisper",
+    "tts",
+    "sora",
+    "babbage",
+    "curie",
+    "cushman",
+    "davinci",
+    "ada",
+    "gpt-35-turbo-instruct",
+    "gpt-3.5-turbo-instruct",
+)
+
+# The llm and embeddings picker reads land back-to-back on the same resource, so raw
+# deployment entries are memoized briefly: one upstream round-trip per pair — and one
+# timeout, not two sequential ones, when the resource is unreachable (failures cache
+# as None for the same TTL).
+_AZURE_AI_FOUNDRY_DEPLOYMENTS_TTL_SECONDS = 30.0
+_azure_ai_foundry_deployments_cache: dict[tuple[str, str], tuple[float, list[dict] | None]] = {}
+
+
+def _fetch_azure_ai_foundry_deployment_entries(deployments_url: str, api_key: str) -> list[dict] | None:
+    """Return the raw deployment entries (briefly memoized), or None when the listing failed."""
+    key = (deployments_url, api_key)
+    now = time.monotonic()
+    cached = _azure_ai_foundry_deployments_cache.get(key)
+    if cached is not None and (now - cached[0]) < _AZURE_AI_FOUNDRY_DEPLOYMENTS_TTL_SECONDS:
+        return list(cached[1]) if cached[1] is not None else None
+
+    entries: list[dict] | None
+    try:
+        response = ssrf_safe_httpx_get(
+            deployments_url,
+            headers={"api-key": api_key},
+            timeout=AZURE_AI_FOUNDRY_FETCH_TIMEOUT,
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except (SSRFProtectionError, httpx.HTTPError, httpx.InvalidURL, ValueError) as exc:
+        logger.debug(f"Could not fetch live Azure AI Foundry deployments from {deployments_url}: {exc}")
+        entries = None
+    else:
+        data = payload.get("data") if isinstance(payload, dict) else None
+        if isinstance(data, list):
+            entries = data
+        else:
+            logger.debug(
+                f"Unexpected Azure AI Foundry deployments payload from {deployments_url}; keeping static catalog"
+            )
+            entries = None
+
+    _azure_ai_foundry_deployments_cache[key] = (now, entries)
+    return list(entries) if entries is not None else None
+
 
 def _azure_ai_foundry_deployments_url(endpoint: str) -> str | None:
     """Derive the resource-level deployments listing URL from the configured endpoint.
@@ -646,9 +709,12 @@ def fetch_live_azure_ai_foundry_models(user_id: UUID | str | None, model_type: s
     probed for credential validation (``request_azure_ai_foundry_model_entries``).
     The real deployments come from the resource-level listing
     ``GET {resource}/openai/deployments?api-version=…`` with the same ``api-key``
-    header. Only ``status == "succeeded"`` deployments are offered, named by
-    deployment id (what inference accepts) and classified llm/embeddings from the
-    underlying ``model`` field. Returns ``[]`` on any failure — missing
+    header (SSRF-validated and DNS-pinned via ``ssrf_safe_httpx_get``, memoized
+    briefly so the llm and embeddings picker reads share one round-trip). Only
+    ``status == "succeeded"`` deployments are offered, named by deployment id
+    (what inference accepts) and classified llm/embeddings from the underlying
+    ``model`` field; image/audio/legacy-completions deployments the unified chat
+    class cannot drive are excluded. Returns ``[]`` on any failure — missing
     endpoint/key, endpoint not on a pinned Azure Foundry host, blocked host,
     HTTP error, malformed payload — so the static seed catalog remains the
     fallback.
@@ -663,31 +729,14 @@ def fetch_live_azure_ai_foundry_models(user_id: UUID | str | None, model_type: s
 
     deployments_url = _azure_ai_foundry_deployments_url(endpoint)
     if deployments_url is None:
+        # Reason only, never the raw endpoint: it may embed userinfo or query tokens.
         logger.debug(
-            f"AZURE_AI_FOUNDRY_ENDPOINT {endpoint!r} is not a plain HTTPS URL on a known "
-            f"Azure Foundry host; skipping live discovery"
+            "AZURE_AI_FOUNDRY_ENDPOINT is not a plain HTTPS URL on a known Azure Foundry host; skipping live discovery"
         )
         return []
 
-    try:
-        # Endpoint is tenant-controlled: block SSRF to internal/cloud-metadata hosts
-        # (the except below falls back to the static catalog if blocked).
-        validate_connector_url_for_ssrf(deployments_url)
-        response = requests.get(
-            deployments_url,
-            headers={"api-key": api_key},
-            timeout=AZURE_AI_FOUNDRY_FETCH_TIMEOUT,
-            allow_redirects=False,
-        )
-        response.raise_for_status()
-        payload = response.json()
-    except (SSRFProtectionError, requests.RequestException, ValueError) as exc:
-        logger.debug(f"Could not fetch live Azure AI Foundry deployments from {deployments_url}: {exc}")
-        return []
-
-    entries = payload.get("data") if isinstance(payload, dict) else None
-    if not isinstance(entries, list):
-        logger.debug(f"Unexpected Azure AI Foundry deployments payload from {deployments_url}; keeping static catalog")
+    entries = _fetch_azure_ai_foundry_deployment_entries(deployments_url, api_key)
+    if entries is None:
         return []
 
     models: list[dict] = []
@@ -702,7 +751,13 @@ def fetch_live_azure_ai_foundry_models(user_id: UUID | str | None, model_type: s
         underlying_model = entry.get("model")
         if not isinstance(underlying_model, str) or not underlying_model:
             underlying_model = deployment_id
-        entry_type = "embeddings" if "embed" in underlying_model.lower() else "llm"
+        lowered = underlying_model.lower()
+        if "embed" in lowered:
+            entry_type = "embeddings"
+        elif any(marker in lowered for marker in _AZURE_AI_FOUNDRY_NON_CHAT_MODEL_MARKERS):
+            continue
+        else:
+            entry_type = "llm"
         if entry_type != model_type:
             continue
         models.append(
@@ -712,7 +767,7 @@ def fetch_live_azure_ai_foundry_models(user_id: UUID | str | None, model_type: s
                 icon="Azure",
                 model_type=model_type,
                 tool_calling=model_type == "llm",
-                reasoning=bool(_AZURE_AI_FOUNDRY_REASONING_PATTERN.match(underlying_model.lower())),
+                reasoning=bool(_AZURE_AI_FOUNDRY_REASONING_PATTERN.match(lowered)),
                 # Foundry is explicit-enable-only: live rows must never auto-enable.
                 default=False,
             )

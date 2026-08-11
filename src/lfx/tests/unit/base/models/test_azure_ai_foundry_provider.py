@@ -4,8 +4,19 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 import requests
+
+
+@pytest.fixture(autouse=True)
+def _clear_foundry_deployments_cache():
+    """Live-discovery memoization must not leak between tests (shared endpoint/key)."""
+    from lfx.base.models import model_utils
+
+    model_utils._azure_ai_foundry_deployments_cache.clear()
+    yield
+    model_utils._azure_ai_foundry_deployments_cache.clear()
 
 
 def test_azure_ai_foundry_in_provider_registry():
@@ -127,8 +138,7 @@ def test_fetch_live_azure_ai_foundry_models_lists_succeeded_deployments():
 
     with (
         patch.object(model_utils, "get_provider_variable_value", side_effect=_foundry_variable_lookup),
-        patch.object(model_utils, "validate_connector_url_for_ssrf"),
-        patch.object(model_utils.requests, "get", return_value=response) as mock_get,
+        patch.object(model_utils, "ssrf_safe_httpx_get", return_value=response) as mock_get,
     ):
         models = model_utils.fetch_live_azure_ai_foundry_models("user-1", model_type="llm")
 
@@ -136,7 +146,6 @@ def test_fetch_live_azure_ai_foundry_models_lists_succeeded_deployments():
         _FOUNDRY_DEPLOYMENTS_URL,
         headers={"api-key": "test-key"},
         timeout=model_utils.AZURE_AI_FOUNDRY_FETCH_TIMEOUT,
-        allow_redirects=False,
     )
     assert [m["name"] for m in models] == ["gpt-5-nano"]
     entry = models[0]
@@ -160,8 +169,7 @@ def test_fetch_live_azure_ai_foundry_models_classifies_embeddings():
 
     with (
         patch.object(model_utils, "get_provider_variable_value", side_effect=_foundry_variable_lookup),
-        patch.object(model_utils, "validate_connector_url_for_ssrf"),
-        patch.object(model_utils.requests, "get", return_value=response),
+        patch.object(model_utils, "ssrf_safe_httpx_get", return_value=response),
     ):
         models = model_utils.fetch_live_azure_ai_foundry_models("user-1", model_type="embeddings")
 
@@ -183,8 +191,7 @@ def test_fetch_live_azure_ai_foundry_models_uses_deployment_id_not_underlying_mo
 
     with (
         patch.object(model_utils, "get_provider_variable_value", side_effect=_foundry_variable_lookup),
-        patch.object(model_utils, "validate_connector_url_for_ssrf"),
-        patch.object(model_utils.requests, "get", return_value=response),
+        patch.object(model_utils, "ssrf_safe_httpx_get", return_value=response) as mock_get,
     ):
         llms = model_utils.fetch_live_azure_ai_foundry_models("user-1", model_type="llm")
         embeddings = model_utils.fetch_live_azure_ai_foundry_models("user-1", model_type="embeddings")
@@ -192,6 +199,8 @@ def test_fetch_live_azure_ai_foundry_models_uses_deployment_id_not_underlying_mo
     assert [m["name"] for m in llms] == ["my-chat-deployment"]
     assert llms[0]["reasoning"] is False  # gpt-4o is not a reasoning family
     assert [m["name"] for m in embeddings] == ["my-embed-deployment"]
+    # The llm + embeddings picker pair shares one memoized upstream round-trip.
+    assert mock_get.call_count == 1
 
 
 def test_fetch_live_azure_ai_foundry_models_flags_o_series_reasoning():
@@ -201,8 +210,7 @@ def test_fetch_live_azure_ai_foundry_models_flags_o_series_reasoning():
 
     with (
         patch.object(model_utils, "get_provider_variable_value", side_effect=_foundry_variable_lookup),
-        patch.object(model_utils, "validate_connector_url_for_ssrf"),
-        patch.object(model_utils.requests, "get", return_value=response),
+        patch.object(model_utils, "ssrf_safe_httpx_get", return_value=response),
     ):
         models = model_utils.fetch_live_azure_ai_foundry_models("user-1", model_type="llm")
 
@@ -223,8 +231,7 @@ def test_fetch_live_azure_ai_foundry_models_excludes_non_succeeded_deployments()
 
     with (
         patch.object(model_utils, "get_provider_variable_value", side_effect=_foundry_variable_lookup),
-        patch.object(model_utils, "validate_connector_url_for_ssrf"),
-        patch.object(model_utils.requests, "get", return_value=response),
+        patch.object(model_utils, "ssrf_safe_httpx_get", return_value=response),
     ):
         models = model_utils.fetch_live_azure_ai_foundry_models("user-1", model_type="llm")
 
@@ -245,12 +252,60 @@ def test_fetch_live_azure_ai_foundry_models_skips_malformed_deployment_entries()
 
     with (
         patch.object(model_utils, "get_provider_variable_value", side_effect=_foundry_variable_lookup),
-        patch.object(model_utils, "validate_connector_url_for_ssrf"),
-        patch.object(model_utils.requests, "get", return_value=response),
+        patch.object(model_utils, "ssrf_safe_httpx_get", return_value=response),
     ):
         models = model_utils.fetch_live_azure_ai_foundry_models("user-1", model_type="llm")
 
     assert [m["name"] for m in models] == ["gpt-4o"]
+
+
+def test_fetch_live_azure_ai_foundry_models_excludes_non_chat_deployments():
+    """Image/audio/legacy-completions deployments can't be driven by the unified chat class."""
+    from lfx.base.models import model_utils
+
+    response = _deployments_response(
+        [
+            {"id": "dall-e-3", "model": "dall-e-3", "status": "succeeded"},
+            {"id": "whisper", "model": "whisper", "status": "succeeded"},
+            {"id": "tts-1", "model": "tts-1", "status": "succeeded"},
+            {"id": "curie", "model": "curie", "status": "succeeded"},
+            {"id": "text-davinci-003", "model": "text-davinci-003", "status": "succeeded"},
+            {"id": "gpt-35-turbo-instruct", "model": "gpt-35-turbo-instruct", "status": "succeeded"},
+            {"id": "gpt-4o", "model": "gpt-4o", "status": "succeeded"},
+            # "ada" marks legacy completions, but the embeddings check wins first.
+            {"id": "text-embedding-ada-002", "model": "text-embedding-ada-002", "status": "succeeded"},
+            # Foundry-hosted open chat models named *-Instruct must NOT be excluded.
+            {"id": "Meta-Llama-3.1-8B-Instruct", "model": "Meta-Llama-3.1-8B-Instruct", "status": "succeeded"},
+        ]
+    )
+
+    with (
+        patch.object(model_utils, "get_provider_variable_value", side_effect=_foundry_variable_lookup),
+        patch.object(model_utils, "ssrf_safe_httpx_get", return_value=response),
+    ):
+        llms = model_utils.fetch_live_azure_ai_foundry_models("user-1", model_type="llm")
+        embeddings = model_utils.fetch_live_azure_ai_foundry_models("user-1", model_type="embeddings")
+
+    assert [m["name"] for m in llms] == ["gpt-4o", "Meta-Llama-3.1-8B-Instruct"]
+    assert [m["name"] for m in embeddings] == ["text-embedding-ada-002"]
+
+
+def test_fetch_live_azure_ai_foundry_models_memoizes_failures():
+    """An outage costs one upstream timeout, not one per picker read."""
+    from lfx.base.models import model_utils
+
+    with (
+        patch.object(model_utils, "get_provider_variable_value", side_effect=_foundry_variable_lookup),
+        patch.object(
+            model_utils, "ssrf_safe_httpx_get", side_effect=httpx.ConnectTimeout("request timed out")
+        ) as mock_get,
+    ):
+        llms = model_utils.fetch_live_azure_ai_foundry_models("user-1", model_type="llm")
+        embeddings = model_utils.fetch_live_azure_ai_foundry_models("user-1", model_type="embeddings")
+
+    assert llms == []
+    assert embeddings == []
+    assert mock_get.call_count == 1
 
 
 def test_fetch_live_azure_ai_foundry_models_derives_resource_base_from_project_endpoint():
@@ -267,8 +322,7 @@ def test_fetch_live_azure_ai_foundry_models_derives_resource_base_from_project_e
 
     with (
         patch.object(model_utils, "get_provider_variable_value", side_effect=lookup),
-        patch.object(model_utils, "validate_connector_url_for_ssrf"),
-        patch.object(model_utils.requests, "get", return_value=response) as mock_get,
+        patch.object(model_utils, "ssrf_safe_httpx_get", return_value=response) as mock_get,
     ):
         models = model_utils.fetch_live_azure_ai_foundry_models("user-1", model_type="llm")
 
@@ -291,7 +345,7 @@ def test_fetch_live_azure_ai_foundry_models_requires_endpoint_and_key(missing_ke
 
     with (
         patch.object(model_utils, "get_provider_variable_value", side_effect=lookup),
-        patch.object(model_utils.requests, "get") as mock_get,
+        patch.object(model_utils, "ssrf_safe_httpx_get") as mock_get,
     ):
         models = model_utils.fetch_live_azure_ai_foundry_models("user-1", model_type="llm")
 
@@ -334,12 +388,15 @@ def test_fetch_live_azure_ai_foundry_models_rejects_untrusted_endpoints(endpoint
 
     with (
         patch.object(model_utils, "get_provider_variable_value", side_effect=lookup),
-        patch.object(model_utils.requests, "get") as mock_get,
+        patch.object(model_utils, "ssrf_safe_httpx_get") as mock_get,
+        patch.object(model_utils.logger, "debug") as mock_debug,
     ):
         models = model_utils.fetch_live_azure_ai_foundry_models("user-1", model_type="llm")
 
     mock_get.assert_not_called()
     assert models == []
+    # Rejection logs must never echo the raw endpoint: it may embed userinfo or tokens.
+    assert all(endpoint not in str(call) for call in mock_debug.call_args_list)
 
 
 @pytest.mark.parametrize(
@@ -365,8 +422,7 @@ def test_fetch_live_azure_ai_foundry_models_accepts_sibling_azure_clouds(host):
 
     with (
         patch.object(model_utils, "get_provider_variable_value", side_effect=lookup),
-        patch.object(model_utils, "validate_connector_url_for_ssrf"),
-        patch.object(model_utils.requests, "get", return_value=response) as mock_get,
+        patch.object(model_utils, "ssrf_safe_httpx_get", return_value=response) as mock_get,
     ):
         models = model_utils.fetch_live_azure_ai_foundry_models("user-1", model_type="llm")
 
@@ -387,14 +443,15 @@ def test_fetch_live_azure_ai_foundry_models_degrades_to_empty_on_failure(failure
     response = MagicMock(status_code=200)
     response.json.return_value = {"data": []}
     get_side_effect = None
-    ssrf_side_effect = None
     if failure == "connection":
-        get_side_effect = requests.ConnectionError("connection refused")
+        get_side_effect = httpx.ConnectError("connection refused")
     elif failure == "timeout":
-        get_side_effect = requests.Timeout("request timed out")
+        get_side_effect = httpx.ConnectTimeout("request timed out")
     elif failure == "http":
         response.status_code = 401
-        response.raise_for_status.side_effect = requests.HTTPError("401 Unauthorized", response=response)
+        response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "401 Unauthorized", request=MagicMock(), response=response
+        )
     elif failure == "malformed-data":
         response.json.return_value = {"data": "not-a-list"}
     elif failure == "non-dict-payload":
@@ -402,12 +459,11 @@ def test_fetch_live_azure_ai_foundry_models_degrades_to_empty_on_failure(failure
     elif failure == "invalid-json":
         response.json.side_effect = ValueError("No JSON object could be decoded")
     else:
-        ssrf_side_effect = SSRFProtectionError("blocked host")
+        get_side_effect = SSRFProtectionError("blocked host")
 
     with (
         patch.object(model_utils, "get_provider_variable_value", side_effect=_foundry_variable_lookup),
-        patch.object(model_utils, "validate_connector_url_for_ssrf", side_effect=ssrf_side_effect),
-        patch.object(model_utils.requests, "get", return_value=response, side_effect=get_side_effect),
+        patch.object(model_utils, "ssrf_safe_httpx_get", return_value=response, side_effect=get_side_effect),
     ):
         models = model_utils.fetch_live_azure_ai_foundry_models("user-1", model_type="llm")
 
@@ -417,7 +473,7 @@ def test_fetch_live_azure_ai_foundry_models_degrades_to_empty_on_failure(failure
 def test_fetch_live_azure_ai_foundry_models_rejects_unknown_model_type():
     from lfx.base.models import model_utils
 
-    with patch.object(model_utils.requests, "get") as mock_get:
+    with patch.object(model_utils, "ssrf_safe_httpx_get") as mock_get:
         models = model_utils.fetch_live_azure_ai_foundry_models("user-1", model_type="image")
 
     mock_get.assert_not_called()
