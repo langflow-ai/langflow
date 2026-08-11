@@ -4,7 +4,7 @@ This package is the distribution unit ``lfx-scavio``. At runtime Langflow's
 loader discovers ``extension.json`` shipped alongside this ``__init__.py`` and
 registers each component under ``ext:scavio:<Class>@official``.
 
-39 components cover the 188 live Scavio endpoints across 32 platforms - search,
+39 components cover the 188 live Scavio endpoints across 31 platforms - search,
 retail, real estate, travel, jobs, app stores, company filings, software
 reviews, ad libraries and social - plus the generic URL extraction endpoint.
 """
