@@ -34,7 +34,6 @@ import useAlertStore from "../../../../stores/alertStore";
 import {
   authorizedVariableIds,
   canMutateVariable,
-  canShareVariable,
   consumeVariableSelectionSpace,
   formatVariableValue,
 } from "./variableAccess";
@@ -166,7 +165,7 @@ function GlobalVariablesPageContent({
       headerName: t("globalVars.columnActions", "Actions"),
       colId: "actions",
       cellRenderer: ({ data }: { data?: GlobalVariable }) => {
-        if (!data || !canShareVariable(data)) return null;
+        if (!data) return null;
         return (
           <CustomVariableShareAction
             resourceId={data.id}
