@@ -3,7 +3,7 @@
   "id": "lfx-scavio",
   "version": "0.2.0",
   "name": "Scavio",
-  "description": "Scavio search API for AI agents: 32 platforms across search, retail, real estate, travel, jobs, app stores, company filings, software reviews, ad libraries and social, plus URL extraction, behind one key.",
+  "description": "Scavio search API for AI agents: 31 platforms across search, retail, real estate, travel, jobs, app stores, company filings, software reviews, ad libraries and social, plus URL extraction, behind one key.",
   "lfx": {
     "compat": ["1"]
   },
