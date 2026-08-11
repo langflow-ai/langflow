@@ -42,6 +42,17 @@ jest.mock("@/components/ui/button", () => ({
   ),
 }));
 
+jest.mock("@/stores/flowStore", () => ({
+  __esModule: true,
+  default: (selector: (state: { currentFlow: { id: string } }) => unknown) =>
+    selector({ currentFlow: { id: "flow1" } }),
+}));
+
+let mockPermissionPending = false;
+jest.mock("@/contexts/permissionsContext", () => ({
+  useIsFlowPermissionPending: () => mockPermissionPending,
+}));
+
 // Mock sidebar hook with default values
 const mockUseSidebar = jest.fn();
 
@@ -113,6 +124,7 @@ describe("SidebarMenuButtons", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockNavigate.mockClear();
+    mockPermissionPending = false;
     useUtilityStore.setState({ allowCustomComponents: true });
     // Reset to default sidebar state
     mockUseSidebar.mockReturnValue({
@@ -250,6 +262,57 @@ describe("SidebarMenuButtons", () => {
         "sidebar-custom-component-button",
       );
       expect(customButton).not.toBeDisabled();
+    });
+
+    // The add path refuses to run while the flow permission query resolves.
+    // Without gating the button too, the click is discarded with nothing
+    // reported and the control looks exactly like a working one (LE-2176).
+    it("should disable custom component button while the permission check is pending", () => {
+      mockPermissionPending = true;
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      expect(
+        screen.getByTestId("sidebar-custom-component-button"),
+      ).toBeDisabled();
+    });
+
+    it("should look unavailable while the permission check is pending", () => {
+      // `unstyled` opts out of the base class carrying `disabled:opacity-70`,
+      // so without an explicit class the button would block the click while
+      // still looking enabled — the exact defect being fixed.
+      mockPermissionPending = true;
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      expect(screen.getByTestId("sidebar-custom-component-button")).toHaveClass(
+        "cursor-not-allowed",
+        "opacity-70",
+      );
+    });
+
+    it("should not call addComponent while the permission check is pending", async () => {
+      const user = userEvent.setup();
+      mockPermissionPending = true;
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      await user.click(screen.getByTestId("sidebar-custom-component-button"));
+
+      expect(mockAddComponent).not.toHaveBeenCalled();
+    });
+
+    it("should add normally once the permission check resolves", async () => {
+      const user = userEvent.setup();
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      const customButton = screen.getByTestId(
+        "sidebar-custom-component-button",
+      );
+      await user.click(customButton);
+
+      expect(customButton).not.toHaveClass("cursor-not-allowed");
+      expect(mockAddComponent).toHaveBeenCalledWith(
+        mockCustomComponent,
+        "CustomComponent",
+      );
     });
 
     it("should not call addComponent when button is disabled and clicked", async () => {
