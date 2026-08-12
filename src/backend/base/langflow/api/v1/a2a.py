@@ -269,6 +269,7 @@ async def _run_flow(flow_id: UUID, task_id: str, text: str, context_id: str | No
             # HITL: a flow with a HumanInput node durably checkpoints and returns a suspended
             # response instead of running through. Resume happens in _resume_flow.
             checkpoint_store=A2ACheckpointStore(),
+            expose_error_details=False,
         )
 
 

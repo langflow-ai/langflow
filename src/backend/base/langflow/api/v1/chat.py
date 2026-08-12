@@ -378,6 +378,7 @@ async def build_flow(
             current_user=current_user,
             queue_service=queue_service,
             flow_name=flow_name,
+            expose_error_details=flow.user_id == current_user.id,
         )
     await _register_job_owner_or_cancel(queue_service, job_id, current_user.id)
 
@@ -1000,6 +1001,7 @@ async def build_public_tmp(
                 current_user=owner_user,
                 queue_service=queue_service,
                 flow_name=flow_name or f"{authenticated_user_id or client_id}_{flow_id}",
+                expose_error_details=False,
             )
         # Gate the public events/cancel endpoints to jobs that were actually
         # started through this public build path, preventing unauthenticated

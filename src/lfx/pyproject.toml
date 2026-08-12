@@ -31,6 +31,7 @@ dependencies = [
     "python-dotenv>=1.0.0,<2.0.0",
     "rich>=13.0.0,<14.0.0",
     "httpx[http2]>=0.24.0,<1.0.0",
+    "h2>=4.4.1",
     "aiofile>=3.8.0,<4.0.0",
     "json-repair>=0.30.3,<1.0.0",
     "docstring-parser>=0.16,<1.0.0",
@@ -53,8 +54,8 @@ dependencies = [
     "langchain-classic~=1.0.7",
     "validators>=0.34.0,<1.0.0",
     "filelock>=3.20.1,<4.0.0",
-    "pypdf>=6.10.0,<7.0.0",
-    "cryptography>=48.0.1",
+    "pypdf>=6.15.0,<7.0.0",
+    "cryptography>=50.0.0",
     "pyjwt>=2.10.0,<3.0.0",
     "ag-ui-protocol>=0.1.10",
     "langflow-sdk>=0.4.0",
@@ -81,6 +82,8 @@ sandbox = [
 ]
 opendsstar = [
     "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
+    # Temporary compatibility valve: newer langchain-litellm releases require cryptography<49.
+    "langchain-litellm==0.5.1; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
 ]
 # Optional deps for built-in LFX components that import them lazily (a missing
 # install degrades to a clear "pip install ..." error, not an import-time crash).
