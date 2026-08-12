@@ -273,9 +273,9 @@ async def _stream_event_frames(
                         # builds from the DB (or request data), so without this the streaming
                         # and background paths silently drop request tweaks.
                         tweaks=parsed.tweaks,
+                        expose_error_details=expose_error_details,
                     ),
                     timeout=execution_timeout,
-                    expose_error_details=expose_error_details,
                 )
         except asyncio.CancelledError:
             raise
