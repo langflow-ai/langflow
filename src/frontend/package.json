@@ -31,20 +31,25 @@
       "js-yaml": "^4.3.1"
     },
     "postcss": {
-      "nanoid": "^3.3.17"
+      "nanoid": "^3.3.18"
     },
     "hono": "^4.12.34",
     "@hono/node-server": "^2.0.5",
     "playwright": "1.60.0",
     "brace-expansion": "^5.0.9",
     "handlebars": "^4.7.9",
-    "minimatch": "^10.2.5",
+    "minimatch": "^10.2.6",
     "serialize-javascript": "^7.0.5",
     "undici": "^8.9.0",
-    "postcss-selector-parser": "^6.1.3",
+    "postcss-selector-parser": "^6.1.4",
     "form-data": "^4.0.6",
     "fast-uri": "^4.1.2",
-    "adm-zip": "^0.6.0"
+    "adm-zip": "^0.6.0",
+    "ws": "^8.21.3",
+    "browserslist": "^4.28.8",
+    "body-parser": "^2.3.0",
+    "file-type": "^21.3.4",
+    "path-to-regexp": "^8.4.2"
   },
   "dependencies": {
     "@ag-ui/client": "0.0.53",
@@ -82,7 +87,7 @@
     "ag-grid-community": "^32.3.9",
     "ag-grid-react": "^32.3.9",
     "ansi-to-html": "^0.7.2",
-    "axios": "^1.15.0",
+    "axios": "^1.19.0",
     "base64-js": "^1.5.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
@@ -212,7 +217,7 @@
     "jest-environment-jsdom": "^30.0.2",
     "jest-junit": "^16.0.0",
     "nyc": "^18.0.0",
-    "postcss": "^8.4.38",
+    "postcss": "^8.5.26",
     "storybook": "^10.1.0",
     "tailwindcss": "^3.4.4",
     "tailwindcss-dotted-background": "^1.1.0",
