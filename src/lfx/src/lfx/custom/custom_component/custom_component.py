@@ -639,9 +639,17 @@ class CustomComponent(BaseComponent):
         )
 
     def get_langchain_callbacks(self) -> list[BaseCallbackHandler]:
+        # Local import avoids any import-cycle risk with the observability module.
+        from lfx.observability_llm_metrics import get_llm_provider_metrics_handler
+
+        callbacks: list[BaseCallbackHandler] = []
         if self.tracing_service and hasattr(self.tracing_service, "get_langchain_callbacks"):
-            return self.tracing_service.get_langchain_callbacks()
-        return []
+            callbacks.extend(self.tracing_service.get_langchain_callbacks())
+        # None when the lfx[otel] extra is not installed: no meter to record on, so nothing to attach.
+        metrics_handler = get_llm_provider_metrics_handler()
+        if metrics_handler is not None:
+            callbacks.append(metrics_handler)
+        return callbacks
 
     def _get_runtime_or_frontend_node_attr(self, attr_name: str) -> Any:
         """Get attribute value from the attribute name.
