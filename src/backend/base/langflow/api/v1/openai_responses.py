@@ -449,7 +449,7 @@ async def run_flow_for_openai_responses(
                 )
 
             except Exception as e:  # noqa: BLE001
-                logger.exception("Error in OpenAI Responses stream generator")
+                await logger.aexception("Error in OpenAI Responses stream generator")
                 client_error = error_for_client(e, expose_details=expose_error_details)
                 # Send error as content chunk with finish_reason="error"
                 error_chunk = create_openai_error_chunk(
@@ -703,7 +703,7 @@ async def create_response(
         )
 
     except CustomComponentValidationError as exc:
-        logger.error("OpenAI Responses custom-component validation failed: %s", exc, exc_info=True)
+        await logger.aerror("OpenAI Responses custom-component validation failed: %s", exc, exc_info=True)
         client_error = error_for_client(exc, expose_details=expose_error_details)
         error_response = create_openai_error(
             message=str(client_error),
@@ -713,7 +713,7 @@ async def create_response(
         return OpenAIErrorResponse(error=error_response["error"])
 
     except ValueError as exc:
-        logger.error("OpenAI Responses flow validation failed: %s", exc, exc_info=True)
+        await logger.aerror("OpenAI Responses flow validation failed: %s", exc, exc_info=True)
         client_error = error_for_client(exc, expose_details=expose_error_details)
         error_response = create_openai_error(
             message=str(client_error),
@@ -723,7 +723,7 @@ async def create_response(
         return OpenAIErrorResponse(error=error_response["error"])
 
     except Exception as exc:  # noqa: BLE001
-        logger.exception("Error processing OpenAI Responses request")
+        await logger.aexception("Error processing OpenAI Responses request")
         client_error = error_for_client(exc, expose_details=expose_error_details)
 
         # Log telemetry for failed completion

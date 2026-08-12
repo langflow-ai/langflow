@@ -42,7 +42,7 @@ from lfx.workflow.adapters.langflow import WORKFLOW_OUTPUT_CAPTURE_EVENT, build_
 from lfx.workflow.converters import ParsedWorkflowRun, create_error_response, run_response_to_workflow_response
 
 from langflow.api.utils import extract_global_variables_from_headers
-from langflow.api.utils.execution_errors import error_for_client
+from langflow.api.utils.execution_errors import caller_owns_flow, error_for_client
 from langflow.api.v1.schemas import FlowDataRequest, RunResponse
 from langflow.api.v2.workflow_validation import _validate_output_ids
 from langflow.api.warm_graph import warm_deepcopy
@@ -186,6 +186,7 @@ async def _stream_event_frames(
     parsed: ParsedWorkflowRun,
     current_user: UserRead,
     source_flow_id: UUID | None = None,
+    source_flow_owner_id: UUID | None = None,
     run_id: str | None = None,
     job_id: UUID | None = None,
     resume: dict | None = None,
@@ -265,6 +266,7 @@ async def _stream_event_frames(
                         current_user=current_user,
                         flow_name=flow_name,
                         source_flow_id=source_flow_id,
+                        source_flow_owner_id=source_flow_owner_id,
                         run_id=run_id,
                         job_id=job_id,
                         resume=resume,
@@ -274,6 +276,9 @@ async def _stream_event_frames(
                         # and background paths silently drop request tweaks.
                         tweaks=parsed.tweaks,
                         expose_error_details=expose_error_details,
+                        # Anonymous serving runs are ephemeral: thread the no-persist
+                        # decision onto the graph so astore_message skips the DB write.
+                        persist_messages=parsed.persist_messages,
                     ),
                     timeout=execution_timeout,
                 )
@@ -374,7 +379,11 @@ async def _stream_event_frames(
         # captured an exception and no cooperative terminal error reached the
         # stream, emit the adapter's terminal error event(s) here.
         if drive_error is not None and not terminal_error_seen:
-            client_error = error_for_client(drive_error, expose_details=expose_error_details)
+            client_error = (
+                drive_error
+                if isinstance(drive_error, WorkflowTimeoutError)
+                else error_for_client(drive_error, expose_details=expose_error_details)
+            )
             for event in adapter.error_events(client_error):
                 if terminal_error_type is not None and event.type == terminal_error_type:
                     terminal_error_seen = True
@@ -412,10 +421,11 @@ def _execute_streaming_workflow(
             background_tasks=background_tasks,
             parsed=parsed,
             current_user=current_user,
+            source_flow_owner_id=flow.user_id,
             # The live v2 stream. Which client sent it is a separate attribute, read from the
             # X-Langflow-Client header, because the playground calls this same public endpoint.
             protocol="v2",
-            expose_error_details=flow.user_id == current_user.id,
+            expose_error_details=caller_owns_flow(flow, current_user),
         ):
             yield frame
 
@@ -559,7 +569,7 @@ async def execute_sync_workflow(
         WorkflowValidationError: If flow data is None or graph build fails
     """
     if expose_error_details is None:
-        expose_error_details = flow.user_id == current_user.id
+        expose_error_details = caller_owns_flow(flow, current_user)
 
     # Tweaks and chat input come straight from the parsed AG-UI request
     tweaks = parsed.tweaks
@@ -649,17 +659,23 @@ async def execute_sync_workflow(
                 stream=False,
             )
 
-        # Fire memory-base auto-capture hook — non-blocking background effect.
-        try:
-            _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only; same run_id set on graph
-            await get_task_service().fire_and_forget_task(
-                get_memory_base_service().on_flow_output,
-                flow_id=flow.id,
-                session_id=execution_session_id,
-                job_id=_run_id_uuid,
-            )
-        except (RuntimeError, ValueError, OSError):
-            await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
+        # MemoryBase auto-capture resolves the watching owner's embedding and
+        # preprocessing credentials by ``flow_id``. Only an owner-equivalent
+        # execution principal may trigger that owner-scoped side effect. This
+        # shared executor is also used by PUBLIC/A2A and delegated-share runs;
+        # letting either caller schedule this hook would spend another user's
+        # credentials and persist into their private knowledge base.
+        if caller_owns_flow(flow, current_user):
+            try:
+                _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only; same run_id set on graph
+                await get_task_service().fire_and_forget_task(
+                    get_memory_base_service().on_flow_output,
+                    flow_id=flow.id,
+                    session_id=execution_session_id,
+                    job_id=_run_id_uuid,
+                )
+            except (RuntimeError, ValueError, OSError):
+                await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
         # Build RunResponse
         run_response = RunResponse(outputs=task_result, session_id=execution_session_id)

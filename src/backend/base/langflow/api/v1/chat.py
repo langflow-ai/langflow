@@ -42,6 +42,7 @@ from langflow.api.utils import (
     validate_public_files,
     verify_public_flow_and_get_user,
 )
+from langflow.api.utils.core import strip_secret_field_values
 from langflow.api.v1.schemas import (
     CancelFlowResponse,
     FlowDataRequest,
@@ -54,6 +55,11 @@ from langflow.exceptions.component import ComponentBuildError
 from langflow.services.auth.utils import get_current_user_optional
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.fetch import deny_to_404
+from langflow.services.authorization.public_access import (
+    PUBLIC_FLOW_NOT_FOUND_DETAIL,
+    PublicResourceAction,
+    authorize_public_flow_access,
+)
 from langflow.services.chat.service import ChatService
 from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 from langflow.services.database.models.user.model import User
@@ -170,17 +176,9 @@ async def retrieve_vertices_order(
     Raises:
         HTTPException: If there is an error checking the build status.
     """
-    # Owner-or-public ownership check + ensure_flow_permission(EXECUTE) — same
-    # pattern as build_flow below. ``build_graph_from_db`` reaches into the DB
-    # with a bare ``session.get(Flow, flow_id)`` that has no owner filter, so
-    # without this gate any authenticated user could build any other user's
-    # flow by guessing a UUID. Even though the route is deprecated and hidden
-    # from the schema, it remains routed and reachable.
-    stmt = (
-        select(Flow)
-        .where(Flow.id == flow_id)
-        .where((Flow.user_id == current_user.id) | (Flow.access_type == AccessTypeEnum.PUBLIC))
-    )
+    # This deprecated editor route is owner-only. Supported full-flow routes
+    # provide public execution without exposing the flow-keyed graph cache.
+    stmt = select(Flow).where(Flow.id == flow_id).where(Flow.user_id == current_user.id)
     flow = (await session.exec(stmt)).first()
     if not flow:
         raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
@@ -378,6 +376,7 @@ async def build_flow(
             current_user=current_user,
             queue_service=queue_service,
             flow_name=flow_name,
+            source_flow_owner_id=flow.user_id,
             expose_error_details=flow.user_id == current_user.id,
         )
     await _register_job_owner_or_cancel(queue_service, job_id, current_user.id)
@@ -485,17 +484,10 @@ async def build_vertex(
         HTTPException: If there is an error building the vertex.
 
     """
-    # Owner-or-public ownership check + ensure_flow_permission(EXECUTE) — same
-    # pattern as retrieve_vertices_order above. The route is deprecated and
-    # hidden from the schema but still routed, and ``build_graph_from_db``
-    # loads the flow with no owner filter, so without this gate any
-    # authenticated user could build a vertex on someone else's flow.
+    # This deprecated editor route is owner-only because its graph cache is
+    # keyed by flow UUID rather than execution principal.
     async with session_scope() as authz_session:
-        stmt = (
-            select(Flow)
-            .where(Flow.id == flow_id)
-            .where((Flow.user_id == current_user.id) | (Flow.access_type == AccessTypeEnum.PUBLIC))
-        )
+        stmt = select(Flow).where(Flow.id == flow_id).where(Flow.user_id == current_user.id)
         flow = (await authz_session.exec(stmt)).first()
     if not flow:
         raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
@@ -788,16 +780,10 @@ async def build_vertex_stream(
     Raises:
         HTTPException: If an error occurs while building the vertex.
     """
-    # The cache is keyed only by flow UUID and may contain another user's
-    # in-memory graph. Authorize before constructing the streaming response so
-    # an authenticated non-owner cannot read a built result or invoke
-    # ``vertex.stream()`` on that cached graph.
+    # This deprecated editor route is owner-only. Authorize before constructing
+    # the streaming response because the cache is keyed only by flow UUID.
     async with session_scope() as session:
-        stmt = (
-            select(Flow)
-            .where(Flow.id == flow_id)
-            .where((Flow.user_id == current_user.id) | (Flow.access_type == AccessTypeEnum.PUBLIC))
-        )
+        stmt = select(Flow).where(Flow.id == flow_id).where(Flow.user_id == current_user.id)
         flow = (await session.exec(stmt)).first()
     if not flow:
         raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
@@ -887,7 +873,7 @@ async def build_public_tmp(
     The endpoint:
     1. Verifies the requested flow is marked as public in the database
     2. Creates a deterministic UUID based on client_id and flow_id
-    3. Uses the flow owner's permissions to build the flow
+    3. Uses a stable anonymous principal to build the flow
     4. Always loads the flow definition from the database
 
     Requirements:
@@ -925,17 +911,18 @@ async def build_public_tmp(
         # malformed requests fail fast and don't touch the DB.
         validate_public_files(files, flow_id)
 
-        # Verify this is a public flow and get the associated user
+        # Verify the direct-link grant and derive the anonymous runtime principal.
         client_id = request.cookies.get("client_id")
         # Only use authenticated user_id when auto-login is disabled.
         # When AUTO_LOGIN=TRUE, the frontend uses client_id for UUID v5,
         # so the backend must match to avoid flow_id mismatch.
         auth_settings = get_settings_service().auth_settings
         authenticated_user_id = authenticated_user.id if authenticated_user and not auth_settings.AUTO_LOGIN else None
-        owner_user, new_flow_id = await verify_public_flow_and_get_user(
+        public_user, new_flow_id = await verify_public_flow_and_get_user(
             flow_id=flow_id,
             client_id=client_id,
             authenticated_user_id=authenticated_user_id,
+            request_host=request.url.hostname,
         )
 
         # Defends CVE-2026-33017: scope caller session into the (client_id, flow_id) namespace.
@@ -950,26 +937,44 @@ async def build_public_tmp(
         sanitized_public_data: dict | None = None
         async with session_scope() as session:
             flow = await session.get(Flow, flow_id)
-            if flow and flow.data:
-                # The default anonymous build path sanitizes component code directly
-                # and therefore does not call validate_flow_for_current_settings.
-                # Enforce the exact catalog snapshot after the public-access check
-                # and before any graph is queued or built. The explicit public-custom
-                # opt-in already runs the unified validator inside prepare_public_flow_build.
-                if not settings.allow_public_custom_components:
-                    validate_catalog_policy_for_flow(flow.data)
-                # Block unauthenticated builds of flows that run arbitrary code
-                # (Python interpreter/REPL, legacy Python Code Structured tool,
-                # Smart Transform lambda) or invoke another saved flow (Run Flow,
-                # Sub Flow, Flow as Tool — the transitive case). Without this, any
-                # public flow containing such a component is an unauthenticated
-                # server-side code-execution primitive (report H1-3754930).
-                validate_public_flow_no_code_execution(flow.data)
-                # Substitute the server's trusted code into every known component and
-                # reject unrecognized custom components, so anonymous visitors only ever
-                # run server code (opt out with allow_public_custom_components, which
-                # restores the prior DB-loaded build that honors allow_custom_components).
-                sanitized_public_data = await prepare_public_flow_build(flow.data)
+            if flow is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=PUBLIC_FLOW_NOT_FOUND_DETAIL)
+            # The admission helper authorizes its own DB snapshot. Reauthorize the
+            # exact snapshot detached below so a concurrent revoke/private transition
+            # cannot leave us executing a later, unchecked definition.
+            await authorize_public_flow_access(
+                flow=flow,
+                action=PublicResourceAction.EXECUTE,
+                request_host=request.url.hostname,
+                session=session,
+            )
+            if flow.data is None:
+                msg = "Public flow has no executable data"
+                raise ValueError(msg)
+
+            # The default anonymous build path sanitizes component code directly
+            # and therefore does not call validate_flow_for_current_settings.
+            # Enforce the exact catalog snapshot after the public-access check
+            # and before any graph is queued or built. The explicit public-custom
+            # opt-in already runs the unified validator inside prepare_public_flow_build.
+            if not settings.allow_public_custom_components:
+                validate_catalog_policy_for_flow(flow.data)
+            # Block unauthenticated builds of flows that run arbitrary code
+            # (Python interpreter/REPL, legacy Python Code Structured tool,
+            # Smart Transform lambda) or invoke another saved flow (Run Flow,
+            # Sub Flow, Flow as Tool — the transitive case). Without this, any
+            # public flow containing such a component is an unauthenticated
+            # server-side code-execution primitive (report H1-3754930).
+            validate_public_flow_no_code_execution(flow.data)
+            # Substitute the server's trusted code into every known component and
+            # reject unrecognized custom components, so anonymous visitors only ever
+            # run server code. The explicit allow_public_custom_components opt-in
+            # preserves approved stored code, but the detached graph is still
+            # secret-scrubbed below before it reaches the executor.
+            prepared_public_data = await prepare_public_flow_build(flow.data)
+            sanitized_public_data = strip_secret_field_values(
+                prepared_public_data if prepared_public_data is not None else flow.data
+            )
 
         # flow_id=new_flow_id for tracking/sessions/messages (virtual, per-user isolation).
         # source_flow_id=flow_id to load the actual flow data from the database.
@@ -981,10 +986,9 @@ async def build_public_tmp(
                 source_flow_id=flow_id,
                 background_tasks=background_tasks,
                 inputs=inputs,
-                # Default path: build from server-sanitized data (trusted code substituted in,
-                # unknown custom components already rejected above). When None (opt-in mode or no
-                # flow data) the build falls back to loading the flow from the DB by source_flow_id.
-                # Either way the caller never supplies the data — it is derived from the stored flow.
+                # Build from a detached server-sanitized graph. The default path also
+                # substitutes trusted code; the explicit custom-component opt-in keeps
+                # approved code but still strips every persisted secret-bearing field.
                 data=(
                     FlowDataRequest(
                         nodes=sanitized_public_data.get("nodes", []),
@@ -998,9 +1002,10 @@ async def build_public_tmp(
                 stop_component_id=stop_component_id,
                 start_component_id=start_component_id,
                 log_builds=log_builds or False,
-                current_user=owner_user,
+                current_user=public_user,
                 queue_service=queue_service,
                 flow_name=flow_name or f"{authenticated_user_id or client_id}_{flow_id}",
+                source_flow_owner_id=flow.user_id,
                 expose_error_details=False,
             )
         # Gate the public events/cancel endpoints to jobs that were actually
@@ -1025,14 +1030,15 @@ async def build_public_tmp(
             await logger.awarning(
                 f"Failed to cancel public job {job_id} after marker persistence failed: {cancel_exc!r}"
             )
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise HTTPException(status_code=503, detail="Public flow service is temporarily unavailable.") from exc
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        await logger.awarning(f"Public flow validation failed: {exc}")
+        raise HTTPException(status_code=400, detail="This flow cannot be executed.") from exc
     except Exception as exc:
         await logger.aexception("Error building public flow")
         if isinstance(exc, HTTPException):
             raise
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(status_code=500, detail="Flow execution failed.") from exc
     if event_delivery != EventDeliveryType.DIRECT:
         return {"job_id": job_id}
     return await get_flow_events_response(
@@ -1056,6 +1062,11 @@ async def _assert_public_job(job_id: str, queue_service: JobQueueService) -> Non
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
 
 
+_PUBLIC_JOB_NOT_FOUND_DETAIL = "Job not found"
+_PUBLIC_EVENTS_UNAVAILABLE_DETAIL = "Public flow events are unavailable."
+_PUBLIC_CANCEL_FAILED_DETAIL = "Public flow cancellation failed."
+
+
 @router.get("/build_public_tmp/{job_id}/events")
 async def get_build_events_public(
     job_id: str,
@@ -1069,11 +1080,31 @@ async def get_build_events_public(
     It is used by the shareable playground to consume build events.
     """
     await _assert_public_job(job_id, queue_service)
-    return await get_flow_events_response(
-        job_id=job_id,
-        queue_service=queue_service,
-        event_delivery=event_delivery,
-    )
+    try:
+        return await get_flow_events_response(
+            job_id=job_id,
+            queue_service=queue_service,
+            event_delivery=event_delivery,
+        )
+    except HTTPException as exc:
+        # The shared authenticated helper carries backend exception text in
+        # ``detail``. Preserve it in server logs, but public callers get only a
+        # fixed response. A 404 stays indistinguishable from the registry gate.
+        await logger.aerror(
+            f"Public flow events failed for job_id {job_id}: status={exc.status_code} detail={exc.detail!r}"
+        )
+        detail = (
+            _PUBLIC_JOB_NOT_FOUND_DETAIL
+            if exc.status_code == status.HTTP_404_NOT_FOUND
+            else _PUBLIC_EVENTS_UNAVAILABLE_DETAIL
+        )
+        raise HTTPException(status_code=exc.status_code, detail=detail) from exc
+    except Exception as exc:
+        await logger.aexception(f"Public flow events failed for job_id {job_id}: {exc!r}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=_PUBLIC_EVENTS_UNAVAILABLE_DETAIL,
+        ) from exc
 
 
 @router.post(
@@ -1096,14 +1127,18 @@ async def cancel_build_public(
         if cancellation_success:
             return CancelFlowResponse(success=True, message="Flow build cancelled successfully")
         return CancelFlowResponse(success=False, message="Failed to cancel flow build")
-    except asyncio.CancelledError:
-        await logger.aerror(f"Failed to cancel public flow build for job_id {job_id} (CancelledError caught)")
-        return CancelFlowResponse(success=False, message="Failed to cancel flow build")
+    except asyncio.CancelledError as exc:
+        await logger.aerror(f"Failed to cancel public flow build for job_id {job_id}: {exc!r}")
+        raise
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        await logger.awarning(f"Public flow cancellation could not find job_id {job_id}: {exc!r}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_PUBLIC_JOB_NOT_FOUND_DETAIL) from exc
     except JobQueueNotFoundError as exc:
         await logger.aerror(f"Public job not found: {job_id}. Error: {exc!s}")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job not found: {exc!s}") from exc
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_PUBLIC_JOB_NOT_FOUND_DETAIL) from exc
     except Exception as exc:
-        await logger.aexception(f"Error cancelling public flow build for job_id {job_id}: {exc}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        await logger.aexception(f"Error cancelling public flow build for job_id {job_id}: {exc!r}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=_PUBLIC_CANCEL_FAILED_DETAIL,
+        ) from exc

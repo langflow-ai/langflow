@@ -527,6 +527,70 @@ class TestV2WorkflowDelegatedErrorPolicy:
             assert sensitive_detail not in error_text
             assert error_text == "Workflow execution failed."
 
+    @pytest.mark.parametrize("caller_kind", ["owner", "delegate", "public"])
+    async def test_sync_memory_auto_capture_requires_owner_execution_principal(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        caller_kind: str,
+    ):
+        """The shared executor must not spend an owner's MemoryBase credentials for another principal."""
+        from langflow.api.v2 import workflow_execution as wf_exec
+        from langflow.services.authorization.public_access import PUBLIC_ANONYMOUS_ACTOR_ID
+        from lfx.workflow.converters import ParsedWorkflowRun
+
+        owner_id = uuid4()
+        caller_id = {
+            "owner": owner_id,
+            "delegate": uuid4(),
+            "public": PUBLIC_ANONYMOUS_ACTOR_ID,
+        }[caller_kind]
+        flow = SimpleNamespace(
+            id=uuid4(),
+            user_id=owner_id,
+            updated_at=None,
+            data={"nodes": [], "edges": []},
+            name="shared",
+        )
+        job_id = uuid4()
+        graph = MagicMock(run_id=str(job_id))
+        graph.get_terminal_nodes.return_value = []
+        graph_factory = MagicMock(return_value=graph)
+        monkeypatch.setattr(wf_exec.Graph, "from_payload", graph_factory)
+
+        expected_response = SimpleNamespace(outputs={})
+        monkeypatch.setattr(wf_exec, "run_response_to_workflow_response", MagicMock(return_value=expected_response))
+        job_service = SimpleNamespace(
+            create_job=AsyncMock(),
+            execute_with_status=AsyncMock(return_value=([], "effective-session")),
+            set_result=AsyncMock(),
+        )
+        hook = AsyncMock()
+        task_service = SimpleNamespace(fire_and_forget_task=AsyncMock())
+        monkeypatch.setattr(wf_exec, "get_job_service", lambda: job_service)
+        monkeypatch.setattr(wf_exec, "get_memory_base_service", lambda: SimpleNamespace(on_flow_output=hook))
+        monkeypatch.setattr(wf_exec, "get_task_service", lambda: task_service)
+
+        response = await wf_exec.execute_sync_workflow(
+            parsed=ParsedWorkflowRun(flow_id=str(flow.id), input_value="hi", mode="sync"),
+            flow=flow,
+            job_id=job_id,
+            current_user=SimpleNamespace(id=caller_id),
+            background_tasks=SimpleNamespace(),
+            http_request=None,
+        )
+
+        assert response is expected_response
+        assert graph_factory.call_args.kwargs["user_id"] == str(caller_id)
+        if caller_kind == "owner":
+            task_service.fire_and_forget_task.assert_awaited_once_with(
+                hook,
+                flow_id=flow.id,
+                session_id="effective-session",
+                job_id=job_id,
+            )
+        else:
+            task_service.fire_and_forget_task.assert_not_awaited()
+
     async def test_execute_permission_denial_is_hidden_as_404(self, monkeypatch: pytest.MonkeyPatch):
         """A denied share-aware fetch must not leak flow existence as a raw 403."""
         from langflow.api.v2 import workflow as workflow_module
@@ -765,11 +829,13 @@ class TestAGUIStreaming:
         assert event_types == ["token", "token", "error"]
 
     @pytest.mark.parametrize(("stream_protocol", "terminal_type"), [("agui", "RUN_ERROR"), ("langflow", "error")])
+    @pytest.mark.parametrize("expose_error_details", [False, True])
     async def test_stream_enforces_execution_timeout(
         self,
         monkeypatch: pytest.MonkeyPatch,
         stream_protocol: str,
         terminal_type: str,
+        expose_error_details,
     ):
         """A run that exceeds the wall-clock ceiling ends in a sanitized terminal error, not a hang."""
         from langflow.api.v2 import workflow_execution as wf_exec
@@ -795,7 +861,7 @@ class TestAGUIStreaming:
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
                 protocol="v2",
-                expose_error_details=True,
+                expose_error_details=expose_error_details,
             )
         ]
 
