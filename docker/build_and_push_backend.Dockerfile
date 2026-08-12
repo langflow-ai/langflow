@@ -67,18 +67,23 @@ RUN microdnf update -y \
 RUN python3.14 -m pip install --upgrade pip
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
-# Install Node.js (required for npx-based MCP stdio servers)
+# Install Node.js (required for npx-based MCP stdio servers).
+# The version is scraped from the latest-v22.x directory listing; `sort -V | tail -1`
+# picks the genuine newest release instead of whatever the listing prints first.
+# npm is pinned to a major known to support the Node 22 line: `npm@latest` floats
+# across majors and raises its `engines` floor without warning (npm 12 requires
+# node ^22.22.2 || ^24.15.0 || >=26.0.0), which breaks the build with EBADENGINE.
 RUN ARCH=$(uname -m) \
     && if [ "$ARCH" = "x86_64" ]; then NODE_ARCH="x64"; \
        elif [ "$ARCH" = "aarch64" ]; then NODE_ARCH="arm64"; \
        else NODE_ARCH="$ARCH"; fi \
     && NODE_VERSION=$(curl -fsSL https://nodejs.org/dist/latest-v22.x/ \
                     | sed -nE "s/.*node-v([0-9]+\.[0-9]+\.[0-9]+)-linux-${NODE_ARCH}\.tar\.xz.*/\1/p" \
-                    | head -1) \
+                    | sort -V | tail -1) \
     && if [ -z "$NODE_VERSION" ]; then echo "ERROR: Could not determine Node.js version" && exit 1; fi \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
     | tar -xJ -C /usr/local --strip-components=1 \
-    && npm install -g npm@latest
+    && npm install -g npm@11
 
 # Create non-root user
 RUN useradd --uid 1000 --gid 0 --no-create-home --home-dir /app/data user
