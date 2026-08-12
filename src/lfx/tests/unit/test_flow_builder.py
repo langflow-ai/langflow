@@ -487,14 +487,25 @@ TOOL_REGISTRY = {
             },
         },
     ),
-    # Component without any tool_mode input — should NOT auto-flip.
+    # Component without any tool_mode input — should NOT auto-flip, even though
+    # its output carries tool_mode=True (the serialized default: 89 of the 127
+    # bundled components have it, ChatInput included).
     "PlainOutput": _make_template(
         "Plain Output",
-        outputs=[{"name": "data", "types": ["Data"]}],
+        outputs=[{"name": "data", "types": ["Data"], "tool_mode": True}],
         template_fields={
             "value": {"type": "str", "show": True, "input_types": ["Message"]},
         },
     ),
+    # Mirrors RunFlow: no tool_mode input, but the class opts into a synthesized
+    # toolset output via add_tool_output — the other half of _handle_tool_mode.
+    "ExplicitToolOutput": {
+        "display_name": "Explicit Tool Output",
+        "base_classes": [],
+        "outputs": [{"name": "data", "types": ["Data"]}],
+        "template": {"value": {"type": "str", "show": True}},
+        "add_tool_output": True,
+    },
     # Agent target with a `tools` input that accepts Tool type.
     "Agent": _make_template(
         "Agent",
@@ -593,14 +604,52 @@ class TestConnectComponentAsTool:
 
         PlainOutput has no tool_mode=True input — connecting via
         component_as_tool is meaningless and must surface as a domain error,
-        not be silently auto-enabled.
+        not be silently auto-enabled. Its OUTPUT carries tool_mode=True, which
+        marks what a toolset would expose rather than whether one exists.
         """
         flow = _fresh_flow()
         source = add_component(flow, "PlainOutput", TOOL_REGISTRY)["id"]
         target = add_component(flow, "Agent", TOOL_REGISTRY)["id"]
 
-        with pytest.raises(ValueError, match=r"component_as_tool|tool_mode"):
+        with pytest.raises(ValueError, match=r"component_as_tool|tool mode"):
             add_connection(flow, source, "component_as_tool", target, "tools")
+
+        # The refusal must leave the node untouched — no dead tool mode behind it.
+        src_node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == source)
+        assert src_node["data"]["node"].get("tool_mode", False) is False
+        assert {o["name"] for o in src_node["data"]["node"]["outputs"]} == {"data"}
+        assert flow["data"]["edges"] == []
+
+    def test_should_auto_flip_when_source_declares_add_tool_output(self):
+        """RunFlow-shaped source: no tool_mode input, explicit add_tool_output."""
+        flow = _fresh_flow()
+        source = add_component(flow, "ExplicitToolOutput", TOOL_REGISTRY)["id"]
+        target = add_component(flow, "Agent", TOOL_REGISTRY)["id"]
+
+        add_connection(flow, source, "component_as_tool", target, "tools")
+
+        src_node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == source)
+        assert src_node["data"]["node"]["tool_mode"] is True
+        assert [o["name"] for o in src_node["data"]["node"]["outputs"]] == ["component_as_tool"]
+
+    def test_should_reject_pre_flipped_node_without_tool_mode_capability(self):
+        """A node already carrying the toolset output is re-checked, not trusted.
+
+        Nodes in this shape exist because the guard used to accept output-side
+        tool_mode and flip anything. Trusting the flipped state would keep
+        building on a node whose component_as_tool output nothing can produce.
+        """
+        flow = _fresh_flow()
+        source = add_component(flow, "PlainOutput", TOOL_REGISTRY)["id"]
+        target = add_component(flow, "Agent", TOOL_REGISTRY)["id"]
+        src_node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == source)
+        src_node["data"]["node"]["tool_mode"] = True
+        src_node["data"]["node"]["outputs"] = [{"name": "component_as_tool", "types": ["Tool"]}]
+
+        with pytest.raises(ValueError, match=r"component_as_tool|tool mode"):
+            add_connection(flow, source, "component_as_tool", target, "tools")
+
+        assert flow["data"]["edges"] == []
 
     def test_should_not_touch_source_when_connecting_via_normal_output(self):
         """Non-tool edges must not flip tool_mode (regression guard)."""

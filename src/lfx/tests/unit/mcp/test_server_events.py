@@ -180,6 +180,31 @@ async def test_tool_emits_event(tool_name, call_fn, expected_event_type, mock_cl
     assert isinstance(call_args[0][2], str), f"{tool_name} summary should be a string"
 
 
+async def test_rejected_tool_mode_connection_leaves_the_remote_flow_untouched(mock_client, mock_flow):
+    """A refused component_as_tool wiring must not have flipped tool mode server-side.
+
+    connect_components used to PATCH tool_mode=True onto the source before
+    validating the edge, so a component that cannot produce a toolset output was
+    left in a dead tool mode after the connection failed. add_connection now
+    flips the local node and validates first, so nothing is persisted.
+    """
+    from lfx.mcp.server import connect_components
+
+    with (
+        patch("lfx.mcp.server._get_client", return_value=mock_client),
+        patch("lfx.mcp.server._get_flow", new_callable=AsyncMock, return_value=mock_flow),
+        patch("lfx.mcp.server.configure_component", new_callable=AsyncMock) as configure,
+        patch("lfx.mcp.server.fb_add_connection", side_effect=ValueError("does not support tool mode")),
+        patch("lfx.mcp.server._patch_flow", new_callable=AsyncMock) as patch_flow,
+        pytest.raises(ValueError, match="does not support tool mode"),
+    ):
+        await connect_components("flow-123", "ChatInput-1", "component_as_tool", "Agent-1", "tools")
+
+    configure.assert_not_awaited()
+    patch_flow.assert_not_awaited()
+    mock_client.post_event.assert_not_awaited()
+
+
 async def test_configure_component_marks_dynamic_explicit_value_as_literal(mock_client, mock_registry, mock_flow):
     """Dynamic field refreshes must not reinterpret an explicit value as a global-variable name."""
     from lfx.mcp.server import configure_component
