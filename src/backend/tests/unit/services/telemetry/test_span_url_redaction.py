@@ -102,6 +102,57 @@ def test_redaction_keeps_the_route_an_operator_needs():
     assert attrs["http.request.method"] == "GET"
 
 
+# The server span carries the credential in a query string, which is the leak that prompted the
+# redaction. It is not the only shape: ``http.url`` and ``url.full`` carry a whole URL, and the
+# vendors that document a collector endpoint with userinfo in the authority put the credential
+# there instead. The redaction handles both; only the query half was covered.
+USERINFO_SPAN_PROBE = f"""
+import json
+
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+from lfx.observability import APPLICATION_TRACER_NAME, ApplicationOnlySpanProcessor
+
+exporter = InMemorySpanExporter()
+provider = TracerProvider()
+provider.add_span_processor(ApplicationOnlySpanProcessor(exporter))
+trace.set_tracer_provider(provider)
+
+SECRET = {SECRET!r}
+
+tracer = trace.get_tracer(APPLICATION_TRACER_NAME)
+with tracer.start_as_current_span("probe.outbound") as span:
+    span.set_attribute("http.url", f"https://svc:{{SECRET}}@db.internal:5432/records?token={{SECRET}}")
+    span.set_attribute("url.full", f"https://svc:{{SECRET}}@db.internal:5432/records?token={{SECRET}}")
+    span.set_attribute("http.target", f"/records?token={{SECRET}}")
+    span.set_attribute("server.address", "db.internal")
+
+provider.force_flush()
+spans = [{{"name": s.name, "attrs": dict(s.attributes or {{}})}} for s in exporter.get_finished_spans()]
+print("PROBE_RESULT " + json.dumps({{"spans": spans}}))
+"""
+
+
+def test_a_credential_in_the_authority_never_reaches_the_apm():
+    """Userinfo is the other half of the same leak, and several vendors document it that way."""
+    result = run_probe(USERINFO_SPAN_PROBE)
+
+    assert result["spans"], "expected the probe span"
+    assert SECRET not in json.dumps(result["spans"]), f"a URL credential reached the APM: {result['spans']}"
+
+
+def test_redaction_keeps_the_host_and_path_an_operator_needs():
+    """Blanking the URL entirely would pass the test above and lose the point of the attribute."""
+    attrs = run_probe(USERINFO_SPAN_PROBE)["spans"][0]["attrs"]
+
+    for key in ("http.url", "url.full"):
+        assert attrs[key] == "https://db.internal:5432/records", attrs[key]
+    # Nothing outside the URL attributes is touched.
+    assert attrs["server.address"] == "db.internal"
+
+
 def test_outbound_http_scopes_stay_out_of_the_allowlist():
     """Redacting URLs does not make the LLM transports safe to export; that boundary stands."""
     for scope in (

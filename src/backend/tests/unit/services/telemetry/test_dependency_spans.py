@@ -8,6 +8,7 @@ Each case runs in a subprocess because the tracer provider is process-global.
 
 import gzip
 import http.server
+import json
 import os
 import subprocess
 import sys
@@ -54,8 +55,106 @@ def test_outbound_http_scopes_stay_out_of_the_allowlist():
 
 
 def test_database_spans_are_allowlisted():
-    """Verified separately to carry bound-parameter placeholders, never row values."""
+    """The scope is on the list. What it carries is the next test, which is the part that matters."""
     assert "opentelemetry.instrumentation.sqlalchemy" in APPLICATION_INSTRUMENTATION_SCOPES
+
+
+# Admitting the SQLAlchemy scope rests on one claim: db.statement keeps bound parameters as
+# placeholders, so row values stay in the database. That claim is why chat message text is
+# considered safe from this signal, and it was carried by a comment and a membership check
+# rather than by running a query. This runs the query.
+#
+# The membership check alone passes in every way this can actually break: the instrumentor not
+# installed, instrument() raising and being swallowed, or a future version rendering literals
+# into the statement.
+DB_SENTINEL = "SENTINEL-chat-row-value-QQQ"
+
+DB_SPAN_PROBE = f"""
+import json, sys
+
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+from sqlalchemy import create_engine, text
+
+from lfx.observability import ApplicationOnlySpanProcessor, instrument_database
+
+exporter = InMemorySpanExporter()
+provider = TracerProvider()
+provider.add_span_processor(ApplicationOnlySpanProcessor(exporter))
+trace.set_tracer_provider(provider)
+
+SENTINEL = {DB_SENTINEL!r}
+literal = len(sys.argv) > 1 and sys.argv[1] == "literal"
+
+engine = create_engine("sqlite+pysqlite:///:memory:")
+instrument_database(engine)
+
+with engine.connect() as connection:
+    connection.execute(text("CREATE TABLE messagetable (text VARCHAR)"))
+    if literal:
+        # What a regression to literal rendering would look like. Never how the runtime writes.
+        connection.execute(text("INSERT INTO messagetable (text) VALUES ('" + SENTINEL + "')"))
+    else:
+        # A bound parameter, the shape the runtime uses to store a chat message.
+        connection.execute(text("INSERT INTO messagetable (text) VALUES (:text)"), {{"text": SENTINEL}})
+    connection.commit()
+
+provider.force_flush()
+spans = [
+    {{
+        "name": s.name,
+        "scope": s.instrumentation_scope.name if s.instrumentation_scope else None,
+        "attrs": {{k: str(v) for k, v in (s.attributes or {{}}).items()}},
+    }}
+    for s in exporter.get_finished_spans()
+]
+print("PROBE_RESULT " + json.dumps({{"spans": spans}}))
+"""  # noqa: S608 - the interpolated INSERT is the control, not a query we run
+
+
+def _run_db_probe(*args: str) -> list[dict]:
+    env = {k: v for k, v in os.environ.items() if not k.startswith("OTEL_")}
+    completed = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", DB_SPAN_PROBE, *args],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=300,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    line = next(ln for ln in completed.stdout.splitlines() if ln.startswith("PROBE_RESULT "))
+    spans = json.loads(line.removeprefix("PROBE_RESULT "))["spans"]
+    return [s for s in spans if s["scope"] == "opentelemetry.instrumentation.sqlalchemy"]
+
+
+def test_a_database_span_carries_the_placeholder_and_not_the_row_value():
+    """The claim that admits this scope, run rather than asserted.
+
+    A chat message is stored through a bound parameter, so if the instrumentation rendered
+    values into ``db.statement`` the conversation would reach the operator's APM on a scope we
+    allowlisted on the strength of it not doing that.
+    """
+    db_spans = _run_db_probe()
+
+    # Not a formality: without it this passes when the instrumentor is missing entirely.
+    assert db_spans, "no sqlalchemy spans were exported"
+
+    statements = [s["attrs"].get("db.statement", "") for s in db_spans]
+    assert any("INSERT INTO messagetable" in statement for statement in statements), statements
+    assert DB_SENTINEL not in json.dumps(db_spans), f"a bound row value reached the APM: {db_spans}"
+
+
+def test_the_probe_would_have_seen_a_row_value_in_the_statement():
+    """The control, because every assertion above is an absence and an absence proves nothing.
+
+    Same probe, same exporter, the value interpolated into the SQL instead of bound.
+    """
+    db_spans = _run_db_probe("literal")
+
+    assert db_spans
+    assert DB_SENTINEL in json.dumps(db_spans), "the probe cannot see a value in db.statement at all"
 
 
 # The ticket's sampler criterion, run against the real bootstrap rather than a hand-built
