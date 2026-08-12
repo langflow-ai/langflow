@@ -9,9 +9,14 @@
 # 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
 # 2. do not add --platform=$BUILDPLATFORM because the pydantic binaries must be resolved for the final architecture
 # Use a Python image with uv pre-installed
+# Toolchain versions shared by every stage below. Keeping the Node version here
+# means the build and runtime stages cannot silently resolve different Nodes.
+ARG NODE_VERSION=22.23.2
+
 FROM ghcr.io/astral-sh/uv:latest AS uv_installer
 FROM registry.access.redhat.com/ubi10/python-314-minimal AS builder
 USER root
+ARG NODE_VERSION
 COPY --from=uv_installer /uv /usr/local/bin/uv
 COPY --from=uv_installer /uvx /usr/local/bin/uvx
 
@@ -38,7 +43,6 @@ RUN microdnf install -y tar xz python3.14-devel \
     && if [ "$ARCH" = "x86_64" ]; then NODE_ARCH="x64"; \
        elif [ "$ARCH" = "aarch64" ]; then NODE_ARCH="arm64"; \
        else NODE_ARCH="$ARCH"; fi \
-    && NODE_VERSION="22.14.0" \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
     | tar -xJ -C /usr/local --strip-components=1 \
     && microdnf clean all
@@ -108,17 +112,18 @@ RUN microdnf update -y \
 RUN python3.14 -m pip install --upgrade pip
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
+# NODE_VERSION and the npm major below are coupled: npm 12 requires Node
+# ^22.22.2 || ^24.15.0 || >=26.0.0. Pin the npm major rather than tracking
+# @latest, so the next npm major raising its engines floor cannot break this
+# layer unannounced against a pinned NODE_VERSION.
+ARG NODE_VERSION
 RUN ARCH=$(uname -m) \
     && if [ "$ARCH" = "x86_64" ]; then NODE_ARCH="x64"; \
        elif [ "$ARCH" = "aarch64" ]; then NODE_ARCH="arm64"; \
        else NODE_ARCH="$ARCH"; fi \
-    && NODE_VERSION=$(curl -fsSL https://nodejs.org/dist/latest-v22.x/ \
-                    | sed -nE "s/.*node-v([0-9]+\.[0-9]+\.[0-9]+)-linux-${NODE_ARCH}\.tar\.xz.*/\1/p" \
-                    | head -1) \
-    && if [ -z "$NODE_VERSION" ]; then echo "ERROR: Could not determine Node.js version" && exit 1; fi \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
     | tar -xJ -C /usr/local --strip-components=1 \
-    && npm install -g npm@latest
+    && npm install -g npm@12
 RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
