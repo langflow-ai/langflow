@@ -22,6 +22,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import numpy as np
 import pytest
+from langflow.services.memory_base.kb_path_helpers import hash_session_id
 from lfx.components.files_and_knowledge import _kb_paths
 from lfx.components.files_and_knowledge.memory_retrieval import (
     MemoryBaseComponent,
@@ -589,6 +590,31 @@ class TestMemoryBaseRetrievalBehavior:
         kwargs = fake_backend.similarity_search.call_args.kwargs
         assert kwargs["k"] == 5
         assert kwargs["filter"] == {"session_id": "s1"}
+
+    async def test_debug_log_redacts_raw_session_id(self):
+        flow_id = uuid.uuid4()
+        owner_id = uuid.uuid4()
+        session_id = "private-session-id"
+        component = _make_component(flow_id=flow_id, session_id=session_id, filter_by_session=True)
+        mb_row = _make_mb_row(flow_id=flow_id, owner_id=owner_id)
+        owner = SimpleNamespace(id=owner_id, username="alice")
+        fake_backend = AsyncMock()
+        fake_backend.similarity_search.return_value = []
+
+        with contextlib.ExitStack() as stack:
+            self._enter_full_chain(
+                stack,
+                db=_exec_returning(mb_row),
+                fake_backend=fake_backend,
+                owner=owner,
+                metadata={"embedding_provider": "OpenAI", "embedding_model": "x"},
+            )
+            debug_mock = stack.enter_context(patch("lfx.components.files_and_knowledge.memory_retrieval.logger.debug"))
+            await component.retrieve_memory()
+
+        logged = repr(debug_mock.call_args_list)
+        assert session_id not in logged
+        assert hash_session_id(session_id) in logged
 
     async def test_similarity_search_no_filter_when_disabled(self):
         flow_id = uuid.uuid4()

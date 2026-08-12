@@ -316,10 +316,10 @@ class MemoryBaseComponent(Component):
         where = self._build_where_clause(session_id=session_id)
 
         logger.debug(
-            "MemoryBase retrieval mb=%s session_hash=%s where=%s top_k=%s",
+            "MemoryBase retrieval mb=%s session_hash=%s session_filter=%s top_k=%s",
             selected,
             hash_session_id(session_id) if session_id else "<none>",
-            where,
+            where is not None,
             self.top_k,
         )
 
