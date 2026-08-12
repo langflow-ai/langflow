@@ -76,7 +76,9 @@ from langflow.services.schema import ServiceType
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
 PROJECT_READ_FAILED = "Could not read the project."
+PROJECT_CREATE_FAILED = "Could not create the project."
 PROJECT_UPDATE_FAILED = "Could not update the project."
+PROJECT_SAVE_FAILED = "Could not save the project."
 PROJECT_DELETE_FAILED = "Could not delete the project."
 PROJECT_DELETE_BUSY = "The database is busy. Please retry the request."
 
@@ -258,7 +260,7 @@ async def create_project(
             e,
             log_message="op=create_project",
         )
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail=sanitize_database_error(e, PROJECT_CREATE_FAILED)) from e
 
 
 @router.get("/", response_model=list[FolderListRead], status_code=200)
@@ -660,11 +662,23 @@ async def _apply_project_update(
 
     concat_project_components = project.components + project.flows
 
-    flows_ids = (await session.exec(select(Flow.id).where(Flow.folder_id == existing_project.id))).all()
+    # Both queries scope to the project owner. Every user gets their own folder named
+    # DEFAULT_FOLDER_NAME (see get_or_create_default_folder), so an unscoped ``.first()`` can
+    # return a *different* user's folder and this code would move the owner's excluded flows into
+    # it, copying that stranger's workspace_id. get_default_folder_id() scopes the same lookup by
+    # user_id; match it. If the owner has no default folder the move is skipped by the guard
+    # below, which is the safe outcome.
+    flows_ids = (
+        await session.exec(
+            select(Flow.id).where(Flow.folder_id == existing_project.id, Flow.user_id == project_owner_id)
+        )
+    ).all()
 
     excluded_flows = list(set(flows_ids) - set(project.flows))
 
-    my_collection_project = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
+    my_collection_project = (
+        await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME, Folder.user_id == project_owner_id))
+    ).first()
     flow_ids_for_sync = list(dict.fromkeys(excluded_flows + concat_project_components))
     authorized_flow_owner_ids: dict[UUID, UUID] = {}
 
@@ -772,7 +786,9 @@ async def update_project(
             owner_id=current_user.id,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        # authorized_or_owner_scoped runs SQL, so the raw str() would carry the statement and its
+        # bound parameters — sanitize like the rest of this module.
+        raise HTTPException(status_code=500, detail=sanitize_database_error(e, PROJECT_UPDATE_FAILED)) from e
 
     if not existing_project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -915,7 +931,13 @@ async def upsert_project(
             e,
             log_message=f"op=upsert_project project_id={project_id}",
         )
-        raise _handle_unique_constraint_error(e, status_code=409) from e
+        # Keep the helper's 409 mapping for a unique violation that arrives wrapped in some other
+        # exception type, but never let its non-409 fallback through: it details str(exc), which
+        # for a SQLAlchemy error is the statement plus the bound parameters.
+        mapped = _handle_unique_constraint_error(e, status_code=409)
+        if mapped.status_code == status.HTTP_409_CONFLICT:
+            raise mapped from e
+        raise HTTPException(status_code=500, detail=sanitize_database_error(e, PROJECT_SAVE_FAILED)) from e
 
 
 @router.delete("/{project_id}", status_code=204)
