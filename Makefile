@@ -581,7 +581,7 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0
 	python -c "import re; fname='pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"langflow-base(?:\[[^\]]*\])?(?:==|>=|~=)[^\"]*\"', '\"langflow-base[complete]>=$$LANGFLOW_BASE_VERSION\"', txt); open(fname, 'w').write(txt)"; \
 	\
 	echo "$(GREEN)Updating langflow-base pyproject.toml...$(NC)"; \
-	python -c "import re; fname='src/backend/base/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_BASE_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"lfx(?:~=|>=)[^\"]*\"', '\"lfx~=$$LANGFLOW_VERSION\"', txt); open(fname, 'w').write(txt)"; \
+	python -c "import re; fname='src/backend/base/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_BASE_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"lfx(?P<extra>\[[^\]]+\])?(?:~=|>=)[^\"]*\"', lambda m: f'\"lfx{m.group(\"extra\") or \"\"}~=$$LANGFLOW_VERSION\"', txt); open(fname, 'w').write(txt)"; \
 	\
 	echo "$(GREEN)Updating lfx pyproject.toml...$(NC)"; \
 	python -c "import re; fname='src/lfx/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); open(fname, 'w').write(txt)"; \

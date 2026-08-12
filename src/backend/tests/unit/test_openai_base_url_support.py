@@ -19,6 +19,7 @@ fetch — external servers CI cannot reproduce.
 
 from unittest.mock import MagicMock, patch
 
+import httpx
 from lfx.base.models.model_metadata import (
     CONDITIONAL_LIVE_MODEL_PROVIDERS,
     LIVE_MODEL_PROVIDERS,
@@ -161,13 +162,14 @@ class TestLiveOpenAICompatibleModels:
                 if key == "OPENAI_BASE_URL"
                 else "sk-test",  # pragma: allowlist secret
             ),
-            patch("requests.get", return_value=response) as http_get,
+            patch("lfx.base.models.model_utils.ssrf_safe_httpx_get", return_value=response) as http_get,
         ):
             models = fetch_live_openai_compatible_models(USER_ID, "llm")
 
         assert [m["name"] for m in models] == ["gpt-oss:20b", "llama3.2:latest"]
         assert all(m["tool_calling"] for m in models)
         assert http_get.call_args.args[0] == f"{CUSTOM_BASE_URL}/models"
+        assert http_get.call_args.kwargs["follow_redirects"] is True
 
     def test_should_list_embeddings_from_the_custom_server(self):
         response = MagicMock()
@@ -180,7 +182,7 @@ class TestLiveOpenAICompatibleModels:
                 if key == "OPENAI_BASE_URL"
                 else "sk-test",  # pragma: allowlist secret
             ),
-            patch("requests.get", return_value=response),
+            patch("lfx.base.models.model_utils.ssrf_safe_httpx_get", return_value=response),
         ):
             models = fetch_live_openai_compatible_models(USER_ID, "embeddings")
 
@@ -189,10 +191,25 @@ class TestLiveOpenAICompatibleModels:
         assert all(not model["tool_calling"] for model in models)
 
     def test_should_reject_unknown_model_type_without_fetching(self):
-        with patch("requests.get") as http_get:
+        with patch("lfx.base.models.model_utils.ssrf_safe_httpx_get") as http_get:
             assert fetch_live_openai_compatible_models(USER_ID, "image") == []
 
         http_get.assert_not_called()
+
+    def test_should_return_empty_for_malformed_custom_base_url(self):
+        with (
+            patch(
+                "lfx.base.models.model_utils.get_provider_variable_value",
+                side_effect=lambda _uid, key: "http://models.example:notaport/v1"
+                if key == "OPENAI_BASE_URL"
+                else "sk-test",  # pragma: allowlist secret
+            ),
+            patch(
+                "lfx.base.models.model_utils.ssrf_safe_httpx_get",
+                side_effect=httpx.InvalidURL("Invalid port: 'notaport'"),
+            ),
+        ):
+            assert fetch_live_openai_compatible_models(USER_ID, "llm") == []
 
 
 class TestConditionalLiveReplacement:
@@ -269,7 +286,7 @@ class TestMalformedModelsPayload:
                 if key == "OPENAI_BASE_URL"
                 else "sk-x",  # pragma: allowlist secret
             ),
-            patch("requests.get", return_value=FakeResp()),
+            patch("lfx.base.models.model_utils.ssrf_safe_httpx_get", return_value=FakeResp()),
         ):
             return fetch_live_openai_compatible_models(USER_ID, "llm")
 

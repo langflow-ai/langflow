@@ -156,6 +156,10 @@ def create_mcp_http_client_with_ssl_option(
     This is a custom factory that extends the standard MCP client factory
     to support disabling SSL verification for self-signed certificates.
 
+    Redirects are disabled: connector URLs are SSRF-checked once before
+    connect, and following 3xx without re-validation could reach private
+    or link-local hosts. Matches A2A agent client hardening.
+
     Args:
         headers: Optional headers to include with all requests.
         timeout: Request timeout as httpx.Timeout object.
@@ -166,7 +170,7 @@ def create_mcp_http_client_with_ssl_option(
         Configured httpx.AsyncClient instance.
     """
     kwargs: dict[str, Any] = {
-        "follow_redirects": True,
+        "follow_redirects": False,
         "verify": verify_ssl,
     }
 

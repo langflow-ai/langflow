@@ -6,6 +6,7 @@ from httpx import AsyncClient
 from langflow.api.utils.mcp.config_utils import (
     MCPServerValidationResult,
     auto_configure_starter_projects_mcp,
+    mcp_server_config_uses_current_uvx_constraint,
     validate_mcp_server_for_project,
 )
 from langflow.services.database.models.flow.model import Flow
@@ -25,6 +26,38 @@ def _build_server_config(base_url: str, project_id, transport: str):
     else:
         args = ["mcp-proxy", url]
     return url, {"command": "uvx", "args": args}
+
+
+@pytest.mark.parametrize(
+    ("constraint_args", "server_args", "expected"),
+    [
+        (["--with", "mcp~=1.28"], ["--with", "mcp~=1.28", "mcp-proxy"], True),
+        (["--with", "mcp~=1.28"], ["mcp-proxy"], False),
+        (["--with", "mcp~=1.30"], ["--with", "mcp~=1.28", "mcp-proxy"], False),
+        ([], ["mcp-proxy"], True),
+        ([], ["--with", "mcp~=1.28", "mcp-proxy"], False),
+    ],
+)
+def test_generated_uvx_config_matches_current_sdk_constraint(constraint_args, server_args, expected):
+    config = {"command": "uvx", "args": [*server_args, "--transport", "streamablehttp"]}
+
+    with patch(
+        "langflow.api.utils.mcp.config_utils.mcp_sdk_constraint_args",
+        return_value=constraint_args,
+    ):
+        assert mcp_server_config_uses_current_uvx_constraint(config, "mcp-proxy") is expected
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        {"command": "npx", "args": ["mcp-proxy"]},
+        {"command": "uvx", "args": "mcp-proxy"},
+        {"command": "uvx"},
+    ],
+)
+def test_generated_uvx_config_rejects_non_generated_shapes(config):
+    assert mcp_server_config_uses_current_uvx_constraint(config, "mcp-proxy") is False
 
 
 class TestMCPServerValidationResult:

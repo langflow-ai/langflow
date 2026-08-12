@@ -208,6 +208,16 @@ class TestSerializationHypothesis:
         result: str = serialize(instance)
         assert result == str(instance)
 
+    def test_recursive_string_serialization_returns_sentinel(self) -> None:
+        class RecursiveString:
+            def __str__(self) -> str:
+                return str(self)
+
+        obj = RecursiveString()
+
+        assert serialize(obj) == "[Unserializable Object]"
+        assert serialize_or_str(obj) == "[Unserializable Object]"
+
     def test_pydantic_class_serialization(self) -> None:
         result: str = serialize(ModernModel)
         assert result == repr(ModernModel)

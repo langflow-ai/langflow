@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Awaitable, Callable  # noqa: TC003
 from typing import TYPE_CHECKING
+
+from pydantic import Field
 
 from lfx.field_typing import Tool
 from lfx.log.logger import logger
@@ -33,6 +36,11 @@ class GuardedTool(Tool):
     _orig_tool: Tool
     _tool_invoker: ToolInvoker
     _toolguard: ToolguardRuntime
+
+    # These callables are bound to this instance, so including them in the model
+    # representation would recursively render the GuardedTool itself.
+    func: Callable[..., str] | None = Field(repr=False)
+    coroutine: Callable[..., Awaitable[str]] | None = Field(default=None, repr=False)
 
     def __init__(self, tool: Tool, all_tools: list[Tool], toolguard: ToolguardRuntime):
         from lfx.components.models_and_agents.policies.tool_invoker import ToolInvoker

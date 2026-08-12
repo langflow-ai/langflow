@@ -25,7 +25,11 @@ def _patch_main_pyproject(txt: str, langflow_version: str, base_version: str) ->
 
 def _patch_langflow_base_pyproject(txt: str, base_version: str, langflow_version: str) -> str:
     txt = re.sub(r'^version = ".*"', f'version = "{base_version}"', txt, flags=re.MULTILINE)
-    return re.sub(r'"lfx(?:~=|>=)[^"]*"', f'"lfx~={langflow_version}"', txt)
+    return re.sub(
+        r'"lfx(?P<extra>\[[^\]]+\])?(?:~=|>=)[^"]*"',
+        lambda match: f'"lfx{match.group("extra") or ""}~={langflow_version}"',
+        txt,
+    )
 
 
 def _patch_lfx_pyproject(txt: str, langflow_version: str) -> str:
@@ -101,6 +105,14 @@ class TestLfxPinSubstitution:
         # "lfx>=X.Y.Z,<X.(Y+1).dev0"
         txt = '    "lfx>=1.10.0,<1.11.dev0",'
         assert '"lfx~=1.11.0"' in _patch_langflow_base_pyproject(txt, self.B, self.V)
+
+    def test_replaces_tilde_form_with_extras(self):
+        txt = 'cassandra = ["lfx[cassandra]~=1.10.0"]'
+        assert '"lfx[cassandra]~=1.11.0"' in _patch_langflow_base_pyproject(txt, self.B, self.V)
+
+    def test_replaces_gte_range_form_with_extras(self):
+        txt = 'toolguard = ["lfx[toolguard]>=1.10.0,<1.11.dev0"]'
+        assert '"lfx[toolguard]~=1.11.0"' in _patch_langflow_base_pyproject(txt, self.B, self.V)
 
     def test_does_not_touch_workspace_line(self):
         txt = "lfx = { workspace = true }"

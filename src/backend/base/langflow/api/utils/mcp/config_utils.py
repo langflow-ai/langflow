@@ -7,6 +7,7 @@ from uuid import UUID
 from fastapi import HTTPException
 from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from lfx.base.mcp.util import sanitize_mcp_name
+from lfx.base.mcp.uvx import mcp_sdk_constraint_args
 from lfx.log import logger
 from lfx.services.deps import get_settings_service
 from sqlmodel import select
@@ -21,6 +22,19 @@ from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_storage_service
 
 ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
+
+
+def mcp_server_config_uses_current_uvx_constraint(server_config: dict, package: str) -> bool:
+    """Return whether a generated uvx config uses the current SDK constraint and package."""
+    if server_config.get("command") != "uvx":
+        return False
+
+    args = server_config.get("args")
+    if not isinstance(args, list):
+        return False
+
+    expected_prefix = [*mcp_sdk_constraint_args(), package]
+    return args[: len(expected_prefix)] == expected_prefix
 
 
 class MCPServerValidationResult:
@@ -355,15 +369,16 @@ async def auto_configure_starter_projects_mcp(session):
                     operation="create",
                 )
 
-                # Skip if server already exists for this starter projects folder
+                # Skip if the server already has the expected URL and uvx SDK constraint.
                 if validation_result.should_skip:
-                    # Check if the URL needs updating (e.g., server port changed at restart)
                     expected_url = await get_project_streamable_http_url(user_starter_folder.id)
                     existing_config = validation_result.existing_config or {}
                     existing_args = existing_config.get("args", [])
                     existing_urls = await extract_urls_from_strings(existing_args)
 
-                    if any(expected_url == url for url in existing_urls):
+                    if mcp_server_config_uses_current_uvx_constraint(existing_config, "mcp-proxy") and any(
+                        expected_url == url for url in existing_urls
+                    ):
                         await logger.adebug(
                             f"MCP server '{validation_result.server_name}' already exists and is correctly "
                             f"configured for user {user.username}'s starter projects (project ID: "
@@ -371,10 +386,10 @@ async def auto_configure_starter_projects_mcp(session):
                         )
                         continue  # Skip this user since server already exists for the same project
 
-                    # URL has changed (e.g., server restarted on a different port), fall through to update
                     await logger.adebug(
                         f"MCP server '{validation_result.server_name}' exists for user {user.username}'s "
-                        f"starter projects but URL has changed (was: {existing_urls}, now: {expected_url}), updating"
+                        f"starter projects but its generated configuration is stale "
+                        f"(URLs: {existing_urls}, expected URL: {expected_url}), updating"
                     )
 
                 server_name = validation_result.server_name
@@ -413,6 +428,7 @@ async def auto_configure_starter_projects_mcp(session):
                 if default_auth.get("auth_type", "none") == "apikey":
                     command = "uvx"
                     args = [
+                        *mcp_sdk_constraint_args(),
                         "mcp-proxy",
                         "--transport",
                         "streamablehttp",
@@ -429,6 +445,7 @@ async def auto_configure_starter_projects_mcp(session):
                     # No authentication - direct connection
                     command = "uvx"
                     args = [
+                        *mcp_sdk_constraint_args(),
                         "mcp-proxy",
                         "--transport",
                         "streamablehttp",

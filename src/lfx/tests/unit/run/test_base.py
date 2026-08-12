@@ -1653,7 +1653,15 @@ class TestUpgradeFlowOption:
         """
         from pathlib import Path
 
-        fixture = Path(__file__).parents[2] / "fixtures" / "starter_flows" / "v1.9.0" / "basic_prompting.json"
+        fixture = (
+            Path(__file__).parents[4]
+            / "backend"
+            / "base"
+            / "langflow"
+            / "initial_setup"
+            / "starter_projects"
+            / "Basic Prompting.json"
+        )
         flow_json = fixture.read_text(encoding="utf-8")
 
         mock_graph = MagicMock()

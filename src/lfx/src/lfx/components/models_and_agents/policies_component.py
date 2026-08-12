@@ -12,7 +12,7 @@ from lfx.base.models.unified_models import (
     get_llm,
     update_model_options_in_build_config,
 )
-from lfx.components.models_and_agents.policies.module_utils import unload_module
+from lfx.components.models_and_agents.policies.module_utils import ensure_toolguard_module_path_compat, unload_module
 from lfx.field_typing import LanguageModel, Tool
 from lfx.io import (
     BoolInput,
@@ -150,6 +150,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         module-level statements such as `try/except` import guards.
         """
         try:
+            import toolguard.runtime.runtime as toolguard_runtime
             from toolguard.buildtime import (
                 PolicySpecOptions,
                 ToolGuardsCodeGenerationResult,
@@ -157,7 +158,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
                 generate_guards_code,
             )
             from toolguard.extra.langchain_to_oas import langchain_tools_to_openapi
-            from toolguard.runtime import load_toolguards, load_toolguards_from_memory
+            from toolguard.runtime import load_toolguards_from_memory
             from toolguard.runtime.runtime import RESULTS_FILENAME
 
             from lfx.components.models_and_agents.policies.guard_sync_utils import sync_generated_guard_code_inputs
@@ -165,13 +166,13 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             from lfx.components.models_and_agents.policies.llm_wrapper import LangchainModelWrapper
         except ModuleNotFoundError as e:
             raise ImportError(_TOOLGUARD_INSTALL_HINT) from e
+        ensure_toolguard_module_path_compat(toolguard_runtime)
         return {
             "PolicySpecOptions": PolicySpecOptions,
             "ToolGuardsCodeGenerationResult": ToolGuardsCodeGenerationResult,
             "generate_guard_specs": generate_guard_specs,
             "generate_guards_code": generate_guards_code,
             "langchain_tools_to_openapi": langchain_tools_to_openapi,
-            "load_toolguards": load_toolguards,
             "load_toolguards_from_memory": load_toolguards_from_memory,
             "RESULTS_FILENAME": RESULTS_FILENAME,
             "sync_generated_guard_code_inputs": sync_generated_guard_code_inputs,
@@ -195,8 +196,18 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             raise ValueError(msg)
         return llm_model
 
+    @staticmethod
+    def _sync_model_requirement(build_config: dict, mode: str) -> None:
+        """Require a model only when the selected activity generates guard code."""
+        if mode not in (MODE_GENERATE, MODE_GUARD):
+            msg = f"Policies: unsupported activity mode: {mode!r}"
+            raise ValueError(msg)
+        model_config = build_config.get("model")
+        if isinstance(model_config, dict):
+            model_config["required"] = mode == MODE_GENERATE
+
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
-        """Dynamically update build config with user-filtered model options."""
+        """Dynamically update model options and the activity-specific requirement."""
         updated_build_config = update_model_options_in_build_config(
             component=self,
             build_config=build_config,
@@ -205,6 +216,10 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             field_name=field_name,
             field_value=field_value,
         )
+        selected_mode = (
+            field_value if field_name == "mode" else updated_build_config.get("mode", {}).get("value", MODE_GENERATE)
+        )
+        self._sync_model_requirement(updated_build_config, selected_mode)
         tg = self._import_toolguard()
         py_module = self._to_snake_case(self.project)
         return tg["sync_generated_guard_code_inputs"](
@@ -213,6 +228,30 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             step2_subdir=STEP2,
             project_name=py_module,
         )
+
+    @staticmethod
+    def _is_generated_guard_field(field: dict) -> bool:
+        """Return whether a template field contains generated ToolGuard code."""
+        return (
+            isinstance(field, dict)
+            and field.get("type") == "code"
+            and field.get("dynamic") is True
+            and isinstance(field.get("info"), str)
+            and field["info"].startswith(GENERATED_GUARD_INFO_PREFIX)
+        )
+
+    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict) -> dict:
+        """Update the static component template without dropping persisted guard code."""
+        updated_frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)
+        updated_template = updated_frontend_node.get("template")
+        current_template = current_frontend_node.get("template")
+        if isinstance(updated_template, dict) and isinstance(current_template, dict):
+            for field_name, field in current_template.items():
+                if self._is_generated_guard_field(field):
+                    updated_template[field_name] = field
+            selected_mode = updated_template.get("mode", {}).get("value", MODE_GENERATE)
+            self._sync_model_requirement(updated_template, selected_mode)
+        return updated_frontend_node
 
     async def _generate_guard_specs(self) -> list[ToolGuardSpec]:
         tg = self._import_toolguard()
@@ -286,41 +325,6 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
 
         # if there was a previous version of the guard, remove it from python cache
         unload_module(res.domain.app_name)
-
-    def _verify_cached_guards(self, code_dir: Path) -> None:
-        tg = self._import_toolguard()
-        # Validate cache exists before attempting to load
-        if not code_dir.exists():
-            msg = (
-                f"Policies: Cache directory not found at '{code_dir}'. "
-                f"Please run in 'Generate' mode first to create the guard code, "
-                f"or verify the project name is correct."
-            )
-            raise ValueError(msg)
-
-        try:
-            tg["load_toolguards"](code_dir)
-        except FileNotFoundError as exc:
-            msg = (
-                f"Policies: Required guard code files missing in '{code_dir}'. "
-                f"Please run in 'Generate' mode to create the guard code."
-            )
-            raise ValueError(msg) from exc
-        except Exception as exc:
-            msg = (
-                f"Policies: Failed to load guard code from '{code_dir}'. "
-                f"The cached code may be invalid or corrupted. "
-                f"Try running in 'Generate' mode to rebuild the guard code. "
-                f"Error: {exc!s}"
-            )
-            raise ValueError(msg) from exc
-
-    def _validate_before_using_cache(self, code_dir: Path) -> None:
-        if not self.in_tools:
-            msg = "Policies: in_tools cannot be empty!"
-            raise ValueError(msg)
-
-        self._verify_cached_guards(code_dir)
 
     @staticmethod
     def _template_field_key(file_name: str | Path) -> str:
@@ -401,19 +405,24 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         """
         try:
             from lfx.services.deps import get_settings_service
-        except ImportError:
-            # No settings layer at all (lfx used as a bare library) -> local/trusted.
+        except ModuleNotFoundError as exc:
+            if exc.name not in {"lfx.services", "lfx.services.deps"}:
+                raise
             return True
 
         settings_service = get_settings_service()
-        if settings_service is None:
-            # Settings layer present but service unavailable: fail closed, matching
-            # validate_flow_for_current_settings (which raises in this case).
+        settings = getattr(settings_service, "settings", None) if settings_service else None
+        if settings is None:
             return False
-        return bool(getattr(settings_service.settings, "allow_custom_components", True))
+        return bool(getattr(settings, "allow_custom_components", False))
 
     async def guard_tools(self) -> list[Tool]:
         if self.enabled:
+            mode = getattr(self, "mode", MODE_GENERATE)
+            if mode not in (MODE_GENERATE, MODE_GUARD):
+                msg = f"Policies: unsupported activity mode: {mode!r}"
+                raise ValueError(msg)
+
             # Refuse to execute guard code when allow_custom_components is disabled.
             # Checked before importing/loading any toolguard runtime so
             # the client-supplied CodeInput guard values are never exec'd.
@@ -425,7 +434,6 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
                 )
                 raise ValueError(msg)
             tg = self._import_toolguard()
-            mode = getattr(self, "mode", MODE_GENERATE)
             if mode == MODE_GENERATE:
                 self.log(f"Start generating guard code at {self.work_dir}", name="info")
                 self.validate_before_generate()
@@ -433,10 +441,11 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
                 self.log(f"Policies code generation saved to {self.work_dir}", name="info")
                 self.log("Review the generated files in the details panel on the right.", name="info")
 
-            else:  # mode == "guard"
-                self.log(f"using cache from {self.work_dir}", name="info")
-                code_dir = self.work_dir / STEP2
-                self._validate_before_using_cache(code_dir)
+            else:  # mode == MODE_GUARD
+                if not self.in_tools:
+                    msg = "Policies: in_tools cannot be empty!"
+                    raise ValueError(msg)
+                self.log("Using guard code stored in the component template", name="info")
                 try:
                     tg_result = self.make_toolguard_result()
                     tg_runtime = tg["load_toolguards_from_memory"](tg_result)

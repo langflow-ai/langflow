@@ -609,13 +609,16 @@ def test_get_embeddings_populates_available_models_from_all_configured_providers
 )
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 @patch("lfx.base.models.unified_models.get_embedding_class")
+@patch("lfx.base.models.unified_models.instantiation.ssrf_protected_openai_clients_for_url")
 def test_get_embeddings_openai_api_base_env_fallback(
+    mock_ssrf_protection,
     mock_get_class,
     mock_get_api_key,
     monkeypatch,
     env_values,
     expected_base_url,
 ):
+    mock_ssrf_protection.return_value = {}
     mock_get_api_key.return_value = "sk-test"
     mock_embedding_class = MagicMock()
     mock_get_class.return_value = mock_embedding_class
@@ -628,6 +631,7 @@ def test_get_embeddings_openai_api_base_env_fallback(
 
     kwargs = mock_embedding_class.call_args.kwargs
     assert kwargs["base_url"] == expected_base_url
+    mock_ssrf_protection.assert_called_once_with(expected_base_url)
 
 
 @pytest.mark.parametrize("variable_name", ["OPENAI_EMBEDDINGS_API_BASE", "OPENAI_API_BASE"])
@@ -652,7 +656,11 @@ def test_get_embeddings_openai_api_base_env_fallback_can_be_disabled(
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 @patch("lfx.base.models.unified_models.get_embedding_class")
-def test_get_embeddings_openai_explicit_api_base_overrides_env(mock_get_class, mock_get_api_key, monkeypatch):
+@patch("lfx.base.models.unified_models.instantiation.ssrf_protected_openai_clients_for_url")
+def test_get_embeddings_openai_explicit_api_base_overrides_env(
+    mock_ssrf_protection, mock_get_class, mock_get_api_key, monkeypatch
+):
+    mock_ssrf_protection.return_value = {}
     mock_get_api_key.return_value = "sk-test"
     mock_embedding_class = MagicMock()
     mock_get_class.return_value = mock_embedding_class
@@ -667,6 +675,7 @@ def test_get_embeddings_openai_explicit_api_base_overrides_env(mock_get_class, m
 
     kwargs = mock_embedding_class.call_args.kwargs
     assert kwargs["base_url"] == "http://component.example/v1"
+    mock_ssrf_protection.assert_called_once_with("http://component.example/v1")
 
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
@@ -752,7 +761,9 @@ def test_get_embeddings_ollama_defaults_to_localhost(mock_get_vars, mock_get_cla
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 @patch("lfx.base.models.unified_models.get_embedding_class")
 @patch("lfx.base.models.unified_models.get_all_variables_for_provider")
-def test_get_embeddings_ollama_custom_base_url(mock_get_vars, mock_get_class, mock_get_api_key):
+@patch("lfx.base.models.unified_models.instantiation.ssrf_protected_httpx_client_kwargs_for_url")
+def test_get_embeddings_ollama_custom_base_url(mock_ssrf_protection, mock_get_vars, mock_get_class, mock_get_api_key):
+    mock_ssrf_protection.return_value = ({}, {})
     mock_get_api_key.return_value = None
     mock_get_vars.return_value = {}
     mock_embedding_class = MagicMock()
@@ -771,12 +782,16 @@ def test_get_embeddings_ollama_custom_base_url(mock_get_vars, mock_get_class, mo
 
     kwargs = mock_embedding_class.call_args.kwargs
     assert kwargs.get("base_url") == "http://custom-host:11434"
+    mock_ssrf_protection.assert_called_once_with("http://custom-host:11434")
 
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 @patch("lfx.base.models.unified_models.get_embedding_class")
 @patch("lfx.base.models.unified_models.get_all_variables_for_provider")
-def test_get_embeddings_watsonx_url_and_project_id(mock_get_vars, mock_get_class, mock_get_api_key):
+@patch("lfx.base.models.unified_models.instantiation.validate_url_for_ssrf_or_raise")
+def test_get_embeddings_watsonx_url_and_project_id(
+    mock_ssrf_validation, mock_get_vars, mock_get_class, mock_get_api_key
+):
     mock_get_api_key.return_value = "ibm-key"
     mock_get_vars.return_value = {}
     mock_embedding_class = MagicMock()
@@ -806,12 +821,16 @@ def test_get_embeddings_watsonx_url_and_project_id(mock_get_vars, mock_get_class
     kwargs = mock_embedding_class.call_args.kwargs
     assert kwargs.get("url") == "https://us-south.ml.cloud.ibm.com"
     assert kwargs.get("project_id") == "proj-123"
+    mock_ssrf_validation.assert_called_once_with("https://us-south.ml.cloud.ibm.com")
 
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 @patch("lfx.base.models.unified_models.get_embedding_class")
 @patch("lfx.base.models.unified_models.get_all_variables_for_provider")
-def test_get_embeddings_watsonx_truncate_and_input_text(mock_get_vars, mock_get_class, mock_get_api_key):
+@patch("lfx.base.models.unified_models.instantiation.validate_url_for_ssrf_or_raise")
+def test_get_embeddings_watsonx_truncate_and_input_text(
+    mock_ssrf_validation, mock_get_vars, mock_get_class, mock_get_api_key
+):
     """truncate_input_tokens and input_text should be passed as WatsonX params dict."""
     mock_get_api_key.return_value = "ibm-key"
     mock_get_vars.return_value = {}
@@ -851,12 +870,16 @@ def test_get_embeddings_watsonx_truncate_and_input_text(mock_get_vars, mock_get_
     return_opts = [v for v in params.values() if isinstance(v, dict) and "input_text" in v]
     assert return_opts, "Expected return_options with input_text in params"
     assert return_opts[0]["input_text"] is True
+    mock_ssrf_validation.assert_called_once_with("https://us-south.ml.cloud.ibm.com")
 
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 @patch("lfx.base.models.unified_models.get_embedding_class")
 @patch("lfx.base.models.unified_models.get_all_variables_for_provider")
-def test_get_embeddings_watsonx_no_params_when_not_provided(mock_get_vars, mock_get_class, mock_get_api_key):
+@patch("lfx.base.models.unified_models.instantiation.validate_url_for_ssrf_or_raise")
+def test_get_embeddings_watsonx_no_params_when_not_provided(
+    mock_ssrf_validation, mock_get_vars, mock_get_class, mock_get_api_key
+):
     """When truncate_input_tokens and input_text are not provided, params should not be set."""
     mock_get_api_key.return_value = "ibm-key"
     mock_get_vars.return_value = {}
@@ -886,6 +909,7 @@ def test_get_embeddings_watsonx_no_params_when_not_provided(mock_get_vars, mock_
 
     kwargs = mock_embedding_class.call_args.kwargs
     assert "params" not in kwargs
+    mock_ssrf_validation.assert_called_once_with("https://us-south.ml.cloud.ibm.com")
 
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
@@ -980,7 +1004,7 @@ def test_handle_model_input_update_ollama_hides_and_clears_api_key():
 
 
 def test_handle_model_input_update_openai_keeps_api_key_visible():
-    """Providers that map a variable to api_key must keep it visible."""
+    """Providers that map a variable to api_key keep an empty field empty."""
     component = _make_mock_component()
     selected_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
     build_config = {
@@ -1003,6 +1027,8 @@ def test_handle_model_input_update_openai_keeps_api_key_visible():
     )
 
     assert result["api_key"]["show"] is True, "api_key must stay visible for OpenAI"
+    assert result["api_key"]["value"] == ""
+    assert result["api_key"]["load_from_db"] is False
 
 
 def test_handle_model_input_update_uses_language_model_options_by_default():
@@ -1240,8 +1266,8 @@ def test_handle_model_input_update_custom_field_name_reads_default_from_correct_
 # ---------------------------------------------------------------------------
 
 
-def test_apply_provider_config_skips_load_from_db_for_dropdown_input():
-    """DropdownInput fields should NOT get load_from_db=True or the variable key as value."""
+def test_apply_provider_config_does_not_populate_empty_fields():
+    """Provider metadata controls visibility without assigning global variables."""
     build_config = {
         "api_key": {
             "_input_type": "SecretStrInput",
@@ -1275,12 +1301,11 @@ def test_apply_provider_config_skips_load_from_db_for_dropdown_input():
 
     result = apply_provider_variable_config_to_build_config(build_config, "IBM WatsonX")
 
-    # api_key and project_id should use load_from_db
-    assert result["api_key"]["load_from_db"] is True
-    assert result["api_key"]["value"] == "WATSONX_APIKEY"
+    assert result["api_key"]["load_from_db"] is False
+    assert result["api_key"]["value"] == ""
 
-    assert result["project_id"]["load_from_db"] is True
-    assert result["project_id"]["value"] == "WATSONX_PROJECT_ID"
+    assert result["project_id"]["load_from_db"] is False
+    assert result["project_id"]["value"] == ""
 
     # DropdownInput should NOT have load_from_db set
     assert result["base_url_ibm_watsonx"]["load_from_db"] is False
@@ -1290,8 +1315,8 @@ def test_apply_provider_config_skips_load_from_db_for_dropdown_input():
     assert result["base_url_ibm_watsonx"]["show"] is True
 
 
-def test_apply_provider_config_replaces_stale_cross_provider_variable():
-    """Switching providers should replace stale load_from_db variable names."""
+def test_apply_provider_config_preserves_explicit_global_variable():
+    """Provider refreshes must honor an explicitly assigned global variable."""
     build_config = {
         "api_key": {
             "_input_type": "SecretStrInput",
@@ -1305,7 +1330,7 @@ def test_apply_provider_config_replaces_stale_cross_provider_variable():
 
     result = apply_provider_variable_config_to_build_config(build_config, "OpenAI")
 
-    assert result["api_key"]["value"] == "OPENAI_API_KEY"
+    assert result["api_key"]["value"] == "ANTHROPIC_API_KEY"
     assert result["api_key"]["load_from_db"] is True
     assert result["api_key"]["show"] is True
 
@@ -1330,8 +1355,7 @@ def test_apply_provider_config_preserves_user_typed_credential():
     assert result["api_key"]["show"] is True
 
 
-@patch("lfx.base.models.unified_models.build_config.logger.debug")
-def test_apply_provider_config_keeps_current_provider_variable_on_refresh(mock_debug):
+def test_apply_provider_config_keeps_current_provider_variable_on_refresh():
     """Refreshing the same provider should not rewrite an already-correct variable key."""
     build_config = {
         "api_key": {
@@ -1349,10 +1373,6 @@ def test_apply_provider_config_keeps_current_provider_variable_on_refresh(mock_d
     assert result["api_key"]["value"] == "OPENAI_API_KEY"
     assert result["api_key"]["load_from_db"] is True
     assert result["api_key"]["show"] is True
-    mock_debug.assert_called_once_with(
-        "Skipping auto-set for field %s - user has already supplied a value",
-        "api_key",
-    )
 
 
 @patch("lfx.base.models.unified_models.get_all_variables_for_provider")
@@ -1489,9 +1509,11 @@ def test_handle_model_input_update_resolves_watsonx_dropdown():
     assert result["base_url_ibm_watsonx"]["load_from_db"] is False
     assert result["base_url_ibm_watsonx"]["show"] is True
 
-    # Non-dropdown fields should use load_from_db as usual
-    assert result["api_key"]["value"] == "WATSONX_APIKEY"
-    assert result["api_key"]["load_from_db"] is True
+    # Non-dropdown fields stay empty and resolve from Model Providers at runtime.
+    assert result["api_key"]["value"] == ""
+    assert result["api_key"]["load_from_db"] is False
+    assert result["project_id"]["value"] == ""
+    assert result["project_id"]["load_from_db"] is False
 
 
 def test_get_provider_for_model_name_backwards_compat():

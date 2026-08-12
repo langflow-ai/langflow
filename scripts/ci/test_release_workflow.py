@@ -15,9 +15,19 @@ def _job_block(start_job: str, end_job: str) -> str:
     return workflow[start:end]
 
 
+def test_release_tag_must_match_project_version() -> None:
+    validation_job = _job_block("validate-tag-format", "validate-dependencies")
+
+    assert "Validate Tag Matches Project Version" in validation_job
+    assert 'git show "${RELEASE_TAG}:pyproject.toml"' in validation_job
+    assert "Release tag version does not match pyproject.toml" in validation_job
+
+
 def test_finalized_bundles_do_not_influence_shared_rc_number() -> None:
     rc_job = _job_block("determine-rc-number", "determine-base-version")
 
+    assert 'if grep -Fxq "$base_version" "$versions_file"; then' in rc_job
+    assert "refusing to derive another RC for a finalized release line" in rc_job
     assert 'if grep -Fxq "$version" "$output_file"; then' in rc_job
     assert "excluding its historical RCs" in rc_job
     assert 'consider_versions "PyPI ${package_name}"' in rc_job
@@ -48,6 +58,7 @@ def test_release_docker_builds_consume_built_wheels() -> None:
 
 
 if __name__ == "__main__":
+    test_release_tag_must_match_project_version()
     test_finalized_bundles_do_not_influence_shared_rc_number()
     test_bundle_build_only_restamps_unpublished_versions()
     test_release_docker_builds_consume_built_wheels()

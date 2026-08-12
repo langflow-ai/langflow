@@ -39,7 +39,8 @@ def sync_generated_guard_code_inputs(
 
     Scans the generated guard code directory and creates/updates CodeInput fields
     in the build config for each Python file found. Removes stale fields for files
-    that no longer exist.
+    that no longer exist when the directory is available; otherwise, preserves the
+    generated fields already stored in the build config.
 
     Args:
         build_config: The component's build configuration dictionary
@@ -58,8 +59,6 @@ def sync_generated_guard_code_inputs(
     logger.debug(f"step2_dir.exists() = {step2_dir.exists()}")
     logger.debug(f"step2_dir.is_dir() = {step2_dir.is_dir()}")
     if not step2_dir.exists() or not step2_dir.is_dir():
-        for field_name in generated_field_names:
-            build_config.pop(field_name, None)
         return build_config
 
     files = sorted(path for path in step2_dir.rglob("*") if path.is_file())

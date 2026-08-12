@@ -12,7 +12,7 @@ To block custom component creation on a Langflow server, set the following [envi
 LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false
 ```
 
-When set to `false`, Langflow blocks creating custom components and changing code in the visual editor.
+When set to `false`, Langflow blocks creating custom components, changing code in the visual editor, and running [registered built-in code-execution components](/api-keys-and-authentication#multi-tenant-component-hardening).
 
 When unset or `true`, Langflow allows custom code.
 Existing installations keep the default `true` behavior until you opt in to this restriction.

@@ -137,6 +137,7 @@ def restore_graph_from_checkpoint(checkpoint: GraphCheckpoint, *, store: Checkpo
     from lfx.graph.graph.base import Graph
 
     graph = Graph.from_payload(checkpoint.flow_payload, flow_id=checkpoint.flow_id)
+    graph.source_flow_id = checkpoint.source_flow_id
     if not graph._prepared:  # noqa: SLF001
         graph.prepare()
     graph.set_run_id(checkpoint.run_id)

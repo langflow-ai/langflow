@@ -21,6 +21,7 @@ import {
   PASSWORD_MANAGER_IGNORE_PROPS,
 } from "@/utils/inputAutofill";
 import { cn } from "@/utils/utils";
+import { getNodeScopedDomId } from "../../../../helpers/get-node-scoped-dom-id";
 import { useIMEInputForOnChange } from "../../../../hooks/use-ime-input";
 
 const OptionBadge = ({
@@ -200,6 +201,7 @@ const CustomInputPopover = ({
   hasRefreshButton,
   inspectionPanel,
   ariaLabelledBy,
+  nodeId = undefined,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
@@ -348,7 +350,7 @@ const CustomInputPopover = ({
               {...PASSWORD_MANAGER_IGNORE_PROPS}
               onFocus={() => setIsFocused(true)}
               autoFocus={autoFocus}
-              id={id}
+              id={getNodeScopedDomId(id, nodeId)}
               ref={refInput}
               type={!pwdVisible && password ? "password" : "text"}
               {...imeInputProps}

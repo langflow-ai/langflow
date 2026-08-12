@@ -106,6 +106,7 @@ EXPECTED_FIELDS = {
     "skip_mcp_auto_init",
     "mcp_composer_enabled",
     "mcp_composer_version",
+    "mcp_sdk_constraint",
     "a2a_enabled",
     "a2a_allow_private_webhooks",
     # TelemetrySettings
@@ -281,10 +282,11 @@ def test_critical_defaults_unchanged():
     assert settings.mcp_server_allowed_packages is None
     assert settings.mcp_server_enabled is True
     assert settings.mcp_composer_enabled is True
+    assert settings.mcp_sdk_constraint == "mcp~=1.28"
     assert settings.load_flows_preserve_variable_bindings is True
     assert settings.do_not_track is False
     assert settings.dev is False
-    assert settings.agentic_experience is False
+    assert settings.agentic_experience is True
     assert settings.developer_api_enabled is False
 
 
@@ -408,6 +410,7 @@ def test_yaml_round_trip():
         ("LANGFLOW_PROMETHEUS_ENABLED", "true", "prometheus_enabled", True),
         ("LANGFLOW_PROMETHEUS_PORT", "9999", "prometheus_port", 9999),
         ("LANGFLOW_MCP_SERVER_ENABLED", "false", "mcp_server_enabled", False),
+        ("LANGFLOW_MCP_SDK_CONSTRAINT", "mcp~=1.30", "mcp_sdk_constraint", "mcp~=1.30"),
         ("LANGFLOW_SKIP_MCP_AUTO_INIT", "true", "skip_mcp_auto_init", True),
         ("LANGFLOW_DO_NOT_TRACK", "true", "do_not_track", True),
         ("LANGFLOW_DEV", "true", "dev", True),
@@ -430,26 +433,40 @@ def test_env_var_round_trip(monkeypatch, env_var, env_value, field, expected):
     assert getattr(settings, field) == expected
 
 
-def test_agentic_variables_excluded_when_experience_off(monkeypatch):
-    """Agentic env vars must NOT be mirrored from the environment while the experience is off.
+def test_agentic_experience_on_by_default(monkeypatch):
+    """The Assistant is Langflow's entry-point experience and must work out of the box.
 
-    The ASTRA_TOKEN credential is among them, and the agentic experience is off by default.
-
-    Regression: the env-mirror list used to be extended with AGENTIC_VARIABLES
-    whenever LANGFLOW_AGENTIC_EXPERIENCE was unset, provisioning ASTRA_TOKEN into
-    the DB for a feature whose endpoints stay 404.
+    Regression: defaulting agentic_experience off left the frontend Assistant panel
+    mounted while every /agentic endpoint returned 404 unless the operator set
+    LANGFLOW_AGENTIC_EXPERIENCE=true. With the experience on, its variables are
+    mirrored from the environment so provider credentials resolve.
     """
     monkeypatch.delenv("LANGFLOW_AGENTIC_EXPERIENCE", raising=False)
-    settings = Settings()
-    assert settings.agentic_experience is False
-    for var in AGENTIC_VARIABLES:
-        assert var not in settings.variables_to_get_from_environment
-
-
-def test_agentic_variables_included_when_experience_on(monkeypatch):
-    """Enabling the agentic experience mirrors its variables from the environment."""
-    monkeypatch.setenv("LANGFLOW_AGENTIC_EXPERIENCE", "true")
     settings = Settings()
     assert settings.agentic_experience is True
     for var in AGENTIC_VARIABLES:
         assert var in settings.variables_to_get_from_environment
+
+
+@pytest.mark.parametrize("env_value", ["true", "1", "yes", "on"])
+def test_agentic_variables_included_when_experience_enabled(monkeypatch, env_value):
+    """All supported true values keep the feature and its environment mirror aligned."""
+    monkeypatch.setenv("LANGFLOW_AGENTIC_EXPERIENCE", env_value)
+    settings = Settings()
+    assert settings.agentic_experience is True
+    for var in AGENTIC_VARIABLES:
+        assert var in settings.variables_to_get_from_environment
+
+
+def test_agentic_variables_excluded_when_experience_disabled(monkeypatch):
+    """Opting out with LANGFLOW_AGENTIC_EXPERIENCE=false stops the env mirror.
+
+    The ASTRA_TOKEN credential is among the mirrored variables; a deployment that
+    disables the Assistant must not have it provisioned into the DB for endpoints
+    that stay 404.
+    """
+    monkeypatch.setenv("LANGFLOW_AGENTIC_EXPERIENCE", "false")
+    settings = Settings()
+    assert settings.agentic_experience is False
+    for var in AGENTIC_VARIABLES:
+        assert var not in settings.variables_to_get_from_environment

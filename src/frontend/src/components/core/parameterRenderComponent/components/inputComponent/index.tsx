@@ -163,6 +163,7 @@ export default function InputComponent({
   hasRefreshButton = false,
   inspectionPanel = false,
   ariaLabelledBy,
+  nodeId,
 }: InputComponentType & {
   disabledOptions?: Record<string, string>;
   ariaLabelledBy?: string;
@@ -217,6 +218,7 @@ export default function InputComponent({
               showOptions={showOptions}
               onChange={onChange}
               id={`object-${id}`}
+              nodeId={nodeId}
               onInputLostFocus={onInputLostFocus}
               selectedOption={selectedOption}
               setSelectedOption={setSelectedOption}
@@ -244,6 +246,7 @@ export default function InputComponent({
               showOptions={showOptions}
               onChange={onChange}
               id={`popover-anchor-${id}`}
+              nodeId={nodeId}
               onInputLostFocus={onInputLostFocus}
               selectedOption={selectedOption}
               setSelectedOption={setSelectedOption}

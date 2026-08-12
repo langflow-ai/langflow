@@ -73,6 +73,19 @@ class McpSettings(BaseModel):
     mcp_composer_version: str = "==0.1.0.8.10"
     """Version constraint for mcp-composer when using uvx. Uses PEP 440 syntax."""
 
+    mcp_sdk_constraint: str = "mcp~=1.28"
+    """Requirement injected as ``uvx --with`` when Langflow launches an MCP server through uvx.
+
+    ``uvx`` resolves each server into its own ephemeral environment, so Langflow's own
+    ``mcp`` pin does not apply there. ``mcp-proxy`` and ``mcp-composer`` still declare an
+    unbounded ``mcp>=1.x``, and the 2.0 SDK removed ``request_ctx`` and renamed ``McpError``,
+    so an unconstrained resolve installs a release those packages cannot import. Keep the
+    specifier free of ``<``/``>``, which the stdio command policy rejects as shell
+    metacharacters. The exact configured specifier is exempt from
+    ``mcp_server_allowed_packages``, so allowlisted deployments keep working without
+    adding ``mcp``. Set to an empty string to disable the injection once upstream
+    supports the 2.x SDK. Env var: LANGFLOW_MCP_SDK_CONSTRAINT."""
+
     # A2A protocol
     a2a_enabled: bool = False
     """If set to True, Langflow serves spec-valid A2A agent cards at a per-flow

@@ -7,6 +7,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
+import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { Category } from "@/types/templates/types";
 import { cn } from "@/utils/utils";
@@ -25,6 +26,9 @@ export default function TemplatesModal({
   const [loading, setLoading] = useState(false);
   const addFlow = useAddFlow();
   const navigate = useCustomNavigate();
+  const dismissWelcomeForNavigation = useFlowBuilderWelcomeStore(
+    (state) => state.dismissForNavigation,
+  );
   const { folderId } = useParams();
   const hideStarterProjects = useUtilityStore(
     (state) => state.hideStarterProjects,
@@ -48,6 +52,8 @@ export default function TemplatesModal({
 
     addFlow()
       .then((id) => {
+        // Same tick as the navigate — see ``dismissForNavigation``.
+        dismissWelcomeForNavigation();
         navigate(`/flow/${id}${folderId ? `/folder/${folderId}` : ""}`);
       })
       .finally(() => {
