@@ -253,6 +253,76 @@ def test_a_failing_agent_run_exports_an_error_type_and_not_the_completion():
     assert agent_records[0]["attributes"]["error.chain"] == "ExceptionWithMessageError<RateLimitError"
 
 
+def test_two_failures_that_share_a_class_are_still_told_apart():
+    """error.type stops at the class, and the pair that matters most shares one.
+
+    A context-length rejection and an invalid tool schema are both openai.BadRequestError with
+    the same 400, the same scope and the same callsite. One is the customer's conversation
+    growing too long and the other is a bug we shipped. Built from real SDK exceptions rather
+    than a stand-in, because the whole claim is that these particular attributes exist.
+    """
+    httpx = pytest.importorskip("httpx")
+    openai = pytest.importorskip("openai")
+
+    from lfx.log.logger import _error_transport_identity
+
+    def provider_error(code: str, status: int = 400, cls=None):
+        body = {"error": {"message": "maximum context length is 8192, you requested 9134", "code": code}}
+        request = httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
+        response = httpx.Response(status, request=request, json=body)
+        return (cls or openai.BadRequestError)("boom", response=response, body=body["error"])
+
+    too_long = _error_transport_identity(provider_error("context_length_exceeded"))
+    bad_schema = _error_transport_identity(provider_error("invalid_function_parameters"))
+
+    assert too_long["http.response.status_code"] == bad_schema["http.response.status_code"] == 400
+    assert too_long["error.code"] != bad_schema["error.code"]
+    assert too_long["error.code"] == "context_length_exceeded"
+
+
+def test_the_provider_error_message_is_not_exported_alongside_the_code():
+    """`code` and `message` are siblings in the same dict, and only one of them is safe."""
+    httpx = pytest.importorskip("httpx")
+    openai = pytest.importorskip("openai")
+
+    from lfx.log.logger import _error_transport_identity
+
+    body = {"error": {"message": "you requested 9134 tokens: SENTINELPROMPTQQQ", "code": "context_length_exceeded"}}
+    request = httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
+    error = openai.BadRequestError("boom", response=httpx.Response(400, request=request, json=body), body=body["error"])
+
+    assert PROMPT not in json.dumps(_error_transport_identity(error))
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        "a sentence with spaces, and the prompt SENTINELPROMPTQQQ",
+        "x" * 65,
+        "",
+        None,
+        12345,
+        {"nested": "object"},
+    ],
+)
+def test_a_provider_error_code_that_is_not_identifier_shaped_is_dropped(code):
+    """Nothing guarantees a field named `code` holds a code.
+
+    The value is provider-controlled and travels to the operator's APM, so its shape is checked
+    rather than the name trusted. Dropping it costs one attribute; exporting it on faith is how
+    a payload gets through a boundary that was supposed to only pass identifiers.
+    """
+    from lfx.log.logger import _error_transport_identity
+
+    class ProviderError(Exception):
+        pass
+
+    error = ProviderError("boom")
+    error.code = code
+
+    assert "error.code" not in _error_transport_identity(error)
+
+
 def test_naming_a_module_after_the_scope_does_not_export_its_bodies():
     """The boundary is a declared marker, not a name match.
 

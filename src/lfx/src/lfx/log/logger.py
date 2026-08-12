@@ -5,9 +5,11 @@ import json
 import logging
 import logging.handlers
 import os
+import re
 import sys
 import warnings
 from collections import deque
+from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
 from threading import Lock, Semaphore
@@ -452,6 +454,20 @@ _otel_body_policy_cache: str | None = None
 # An exception chain is a linked list an application controls, so treat its length as untrusted.
 _MAX_ERROR_CHAIN_DEPTH = 10
 
+# Yielded in place of a link when the walk hit the bound, so a partial chain is never reported
+# as a complete one. A sentinel exception instance rather than None, because None is a legal
+# thing to find on __cause__ and would read as "the walk finished".
+_CHAIN_TRUNCATED = BaseException()
+
+# What a provider error code is allowed to look like before it is exported. Vendors document
+# these as identifiers ("context_length_exceeded", "invalid_function_parameters"); nothing
+# guarantees one will not arrive holding a sentence, or an echo of the request, so the shape is
+# checked rather than the field trusted.
+_ERROR_CODE_PATTERN = re.compile(r"\A[A-Za-z0-9_.:-]{1,64}\Z")
+
+_HTTP_STATUS_MIN = 100
+_HTTP_STATUS_MAX = 599
+
 # A ``sys.exc_info()`` triple: (type, value, traceback).
 _EXC_INFO_TRIPLE_LEN = 3
 
@@ -554,6 +570,40 @@ def _exception_from(exc_info: Any) -> BaseException | None:
     return None
 
 
+def _exception_chain(exc: BaseException) -> Iterator[BaseException]:
+    """Walk an exception to its root cause, yielding each link outer to inner.
+
+    One traversal, two readers: the class names and the transport identity below both depend on
+    where the walk stops, and two copies of these rules would eventually disagree about it.
+
+    ``__cause__`` wins over ``__context__``, so an explicit ``raise ... from ...`` is followed in
+    preference to whatever happened to be in flight, and ``__suppress_context__`` ends the walk.
+    That last part is not a detail: every provider SDK built on httpx raises its own error with
+    ``from None`` inside an ``except httpx.HTTPStatusError`` block, so following a suppressed
+    context reports ``HTTPStatusError`` as the root of a rate limit, a bad request and an auth
+    failure alike. There are another 39 ``from None`` sites in lfx and langflow. ``traceback``
+    makes the same choice.
+
+    Bounded and cycle-guarded, because the chain is built by application code and a
+    self-referencing ``__context__`` is reachable. Yields ``_CHAIN_TRUNCATED`` last when it hit
+    the bound, so a caller can say so rather than presenting a partial answer as a complete one.
+    """
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        if len(seen) >= _MAX_ERROR_CHAIN_DEPTH:
+            yield _CHAIN_TRUNCATED
+            return
+        seen.add(id(current))
+        yield current
+        if current.__cause__ is not None:
+            current = current.__cause__
+        elif current.__suppress_context__:
+            return
+        else:
+            current = current.__context__
+
+
 def _error_identity(exc: BaseException) -> tuple[str, str]:
     """Reduce an exception to class names: the root cause, and the chain that wrapped it.
 
@@ -563,18 +613,8 @@ def _error_identity(exc: BaseException) -> tuple[str, str]:
     Reporting the chain outer-to-inner as well keeps the wrapping visible without costing
     anything, because a class name is an identifier and carries no message text.
 
-    ``__cause__`` wins over ``__context__`` so an explicit ``raise ... from ...`` is followed in
-    preference to whatever happened to be in flight, and ``__suppress_context__`` ends the walk.
-    That last part is not a detail: every provider SDK built on httpx raises its own error with
-    ``raise ... from None`` inside an ``except httpx.HTTPStatusError`` block, so following a
-    suppressed context reports ``HTTPStatusError`` as the root of a rate limit, a bad request and
-    an auth failure alike -- the exact distinction this function exists to preserve. There are
-    another 39 ``from None`` sites in lfx and langflow. ``traceback`` makes the same choice.
-
-    Traversal is bounded and cycle-guarded, because the chain is built by application code and a
-    self-referencing ``__context__`` is reachable. Hitting the bound appends an ellipsis rather
-    than reporting the deepest link seen as though it were the root, so a truncated answer is
-    never mistaken for a complete one.
+    Traversal rules, and why the walk stops where it does, are on :func:`_exception_chain`.
+    Hitting its bound appends an ellipsis so a truncated chain is never read as a complete one.
 
     The root is returned fully qualified, per OTel's ``error.type``: three unrelated
     ``TimeoutError`` classes (builtins, asyncio, sqlalchemy.exc) collapse to one string
@@ -587,28 +627,76 @@ def _error_identity(exc: BaseException) -> tuple[str, str]:
     component can define its own exception class, so the name is user-chosen even though it is not
     user *data*. Measured and accepted rather than assumed.
     """
-    seen: set[int] = set()
     chain: list[str] = []
-    current: BaseException | None = exc
     root = exc
-    truncated = False
-    while current is not None and id(current) not in seen:
-        if len(chain) >= _MAX_ERROR_CHAIN_DEPTH:
-            truncated = True
+    truncated = True
+    for link in _exception_chain(exc):
+        if link is _CHAIN_TRUNCATED:
             break
-        seen.add(id(current))
-        chain.append(type(current).__name__)
-        root = current
-        if current.__cause__ is not None:
-            current = current.__cause__
-        elif current.__suppress_context__:
-            break
-        else:
-            current = current.__context__
+        chain.append(type(link).__name__)
+        root = link
+    else:
+        truncated = False
 
     module = type(root).__module__
     qualified = type(root).__qualname__ if module == "builtins" else f"{module}.{type(root).__qualname__}"
     return qualified, "<".join([*chain, "..."]) if truncated else "<".join(chain)
+
+
+def _error_transport_identity(exc: BaseException) -> dict[str, str | int]:
+    """The HTTP status and provider error code, when something in the chain carries them.
+
+    ``error.type`` separates a rate limit from a timeout, and stops there. It cannot separate two
+    failures that share a class, and the pair that matters most does: a context-length rejection
+    and an invalid tool schema are both ``openai.BadRequestError`` with the same 400, the same
+    scope and the same callsite. One is the customer's conversation growing too long and the
+    other is a bug we shipped, so they route to different people, and with the message withheld
+    nothing else tells them apart.
+
+    The SDKs expose the discriminator structurally: ``status_code`` and ``code``
+    (``context_length_exceeded``, ``invalid_function_parameters``). Those are provider
+    vocabulary, not user text, which is what makes them exportable on the same terms as a class
+    name.
+
+    Read by attribute only. The same information also sits in ``exc.body["error"]["code"]``, but
+    that dict's sibling ``message`` is the prompt tail, and a boundary that reaches into a
+    payload to pull one key out is one refactor away from taking the payload.
+
+    The code's *shape* is validated rather than trusted. Nothing stops a provider putting a
+    sentence, or an echo of the request, in a field named ``code``; an identifier-shaped value
+    under 64 characters is a code, and anything else is dropped rather than exported on faith.
+    """
+    attributes: dict[str, str | int] = {}
+    for link in _exception_chain(exc):
+        if link is _CHAIN_TRUNCATED:
+            break
+        if "http.response.status_code" not in attributes:
+            status = _first_int(link, ("status_code",)) or _first_int(getattr(link, "response", None), ("status_code",))
+            if status is not None and _HTTP_STATUS_MIN <= status <= _HTTP_STATUS_MAX:
+                attributes["http.response.status_code"] = status
+        if "error.code" not in attributes:
+            code = getattr(link, "code", None)
+            if isinstance(code, str) and _ERROR_CODE_PATTERN.match(code):
+                attributes["error.code"] = code
+    return attributes
+
+
+def _first_int(source: Any, names: tuple[str, ...]) -> int | None:
+    """Read the first of *names* off *source* that is a plain int.
+
+    ``getattr`` on a third-party exception can run a property, so it is guarded: telemetry must
+    never be the thing that turns a handled provider error into an unhandled one. Suppressed
+    rather than logged, because this runs inside the log processor chain and reporting it would
+    re-enter here. ``bool`` is excluded because it is an ``int`` and a status of ``True`` is
+    nonsense.
+    """
+    for name in names:
+        value = None
+        with contextlib.suppress(Exception):
+            value = getattr(source, name, None)
+        if isinstance(value, int) and not isinstance(value, bool):
+            return value
+    return None
 
 
 def emit_to_otel_logs(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
@@ -666,6 +754,7 @@ def emit_to_otel_logs(_logger: Any, _method_name: str, event_dict: dict[str, Any
             attributes["error.type"] = root
             if chain != root:
                 attributes["error.chain"] = chain
+            attributes.update(_error_transport_identity(exception))
 
         otel_logger = _otel_logs.get_logger(scope)
         otel_logger.emit(
