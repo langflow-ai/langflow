@@ -531,7 +531,10 @@ async def _collect_tools(
                     tools.append(tool)
                     existing_names.add(name)
                 except Exception as e:  # noqa: BLE001
-                    excluded.append({"flow_id": str(flow.id), "tool_name": base_name, "error": str(e)})
+                    # Type only: the project endpoint answers end users on the serving plane, and a raw
+                    # exception string carries paths, SQL and component internals. The full
+                    # message stays in the error log below, where only the operator reads it.
+                    excluded.append({"flow_id": str(flow.id), "tool_name": base_name, "reason": type(e).__name__})
                     await logger.aerror(f"Flow excluded from MCP tool list -- {base_name} ({flow.id}): {e!s}")
                     continue
 
@@ -549,7 +552,7 @@ async def _collect_tools(
 
 
 def _format_excluded(excluded: list[dict[str, str]]) -> str:
-    details = "; ".join(f"{item['tool_name']} ({item['flow_id']}): {item['error']}" for item in excluded)
+    details = "; ".join(f"{item['tool_name']} ({item['flow_id']}): {item['reason']}" for item in excluded)
     return f"No MCP tools could be built. Excluded flows: {details}"
 
 

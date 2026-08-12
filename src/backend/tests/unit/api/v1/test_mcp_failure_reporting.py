@@ -206,7 +206,10 @@ async def test_should_report_excluded_flow_in_meta_when_only_some_flows_fail(mon
     assert len(excluded) == 1
     assert excluded[0]["tool_name"] == "bad_tool"
     assert excluded[0]["flow_id"] == str(bad.id)
-    assert "hash mismatch" in excluded[0]["error"]
+    # The exception type, not its message: the project endpoint answers end users on the
+    # serving plane, and the raw text carries paths, SQL and component internals.
+    assert excluded[0]["reason"] == "CustomComponentValidationError"
+    assert "hash mismatch" not in str(excluded[0])
 
 
 @pytest.mark.asyncio

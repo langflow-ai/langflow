@@ -831,7 +831,7 @@ def _inject_mcp_stdio_headers(args: list[str], headers: dict[str, str]) -> list[
 
 GLOBAL_VARIABLE_PLACEHOLDER_PATTERN = re.compile(r"\{\{\s*([A-Za-z_][A-Za-z0-9_\-]*)\s*\}\}")
 
-HTTP_STATUS_IN_MESSAGE_PATTERN = re.compile(r"\b([45]\d{2})\b")
+HTTP_STATUS_IN_MESSAGE_PATTERN = re.compile(r"(?:HTTP|status(?:\s+code)?)[\s:=]*([45]\d{2})\b", re.IGNORECASE)
 
 
 def _exception_group_types() -> tuple[type[BaseException], ...]:

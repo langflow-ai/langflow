@@ -10,6 +10,7 @@ Forward-only by design: flows written before this keep their embedded config and
 resolving through the same precedence, so no saved flow changes behavior.
 """
 
+import hashlib
 import re
 from typing import Any
 from uuid import UUID
@@ -27,12 +28,20 @@ SECRET_CONFIG_FIELDS = ("api_key", "apiKey", "authorization", "Authorization")
 
 HEADER_ARG_FLAG = "--headers"
 
-VARIABLE_REFERENCE_PATTERN = re.compile(r"^(?:[A-Z][A-Z0-9_]*|\{\{\s*[A-Za-z_][A-Za-z0-9_\-]*\s*\}\})$")
+VARIABLE_PREFIX = "MCP_"
+
+PLACEHOLDER_PATTERN = re.compile(r"^\{\{\s*[A-Za-z_][A-Za-z0-9_\-]*\s*\}\}$")
 
 
 def _is_variable_reference(value: str) -> bool:
-    """Whether a value is already a reference, so a re-save does not wrap it twice."""
-    return bool(VARIABLE_REFERENCE_PATTERN.match(value))
+    """Whether a value is already a reference, so a re-save does not wrap it twice.
+
+    Recognising any capitalised token failed open on the alphabet of the secret: an AWS
+    access key id, or any uppercase hex token, reads as a reference and was copied into
+    the flow verbatim. Only the two shapes this system can actually resolve count — the
+    names generated below, and the explicit ``{{NAME}}`` placeholder.
+    """
+    return bool(PLACEHOLDER_PATTERN.match(value)) or value.startswith(VARIABLE_PREFIX)
 
 
 def _strip_header_args(args: list[Any]) -> tuple[list[Any], bool]:
@@ -55,9 +64,15 @@ def variable_name_for(server_name: str, key: str) -> str:
 
     Deterministic so a re-save of the same server lands on the same variable instead of
     minting a new one on every write.
+
+    The digest is what makes the name injective. Slugifying alone collapsed
+    ``billing-mcp``, ``billing_mcp`` and ``billing.mcp`` onto one name, and because an
+    existing variable is never overwritten the second server would silently authenticate
+    to its own target using the first server's credential.
     """
     slug = re.sub(r"[^A-Za-z0-9]+", "_", f"{server_name}_{key}").strip("_").upper()
-    return f"MCP_{slug}"
+    digest = hashlib.sha256(f"{server_name}\0{key}".encode()).hexdigest()[:8].upper()
+    return f"{VARIABLE_PREFIX}{slug}_{digest}"
 
 
 def strip_config_secrets(config: dict[str, Any], server_name: str) -> tuple[dict[str, Any], dict[str, str], bool]:
@@ -170,63 +185,98 @@ def extract_and_strip_mcp_secrets(
     return carried, variables
 
 
+def _restore_unresolvable_references(
+    flow_data: dict[str, Any] | None, variables: dict[str, str], failed: set[str]
+) -> None:
+    """Put a literal back when its variable could not be created.
+
+    Stripping a credential the runtime can no longer resolve trades a leak for a broken
+    flow the caller was told was saved. Secrecy is not worth a silent outage, so an entry
+    whose variable failed goes back the way the caller sent it.
+    """
+    if not failed:
+        return
+    for field in _iter_mcp_server_fields(flow_data):
+        value = field.get("value")
+        if not isinstance(value, dict):
+            continue
+        config = value.get("config")
+        if not isinstance(config, dict):
+            continue
+        for key in MCP_SECRET_CONFIG_MAPS:
+            entries = config.get(key)
+            if not isinstance(entries, dict):
+                continue
+            for entry_key, entry_value in entries.items():
+                if entry_value in failed:
+                    entries[entry_key] = variables[entry_value]
+
+
 async def persist_and_strip_mcp_secrets(flow_data: dict[str, Any] | None, user_id: UUID, session) -> None:
     """Move any MCP credential in ``flow_data`` into the user's encrypted server rows.
 
     An existing row is never overwritten: it is the config the user maintains through the
-    server manager, and a flow copy is not authoritative over it. Failures are swallowed —
-    a flow save must not fail because a server row could not be written, and the flow is
-    strictly safer for having been stripped either way.
+    server manager, and a flow copy is not authoritative over it.
+
+    Nothing is committed here. The rows are staged on the caller's session so they land in
+    the same transaction as the flow itself — committing mid-request would break the
+    all-or-nothing contract of the batch write path and would survive a lock retry that
+    the caller expects to be re-runnable from a clean state.
+
+    A secret carried inside ``args`` (the ``--headers`` triple that auto-install bakes in)
+    is dropped rather than referenced, because variables are not resolved inside ``args``.
+    Under Langflow the ``mcp_server`` row still serves it; under ``lfx serve`` it is gone.
     """
     carried, variables = extract_and_strip_mcp_secrets(flow_data)
     if not carried and not variables:
         return
 
-    await _ensure_variables(variables, user_id, session)
+    failed = await _ensure_variables(variables, user_id, session)
+    _restore_unresolvable_references(flow_data, variables, failed)
 
-    pending = 0
     for name, config in carried:
         existing = (
             await session.exec(select(MCPServer).where(MCPServer.user_id == user_id, MCPServer.name == name))
         ).first()
         if existing is not None:
             continue
-        session.add(MCPServer(user_id=user_id, name=name, config=encrypt_mcp_config(config)))
-        pending += 1
-
-    if not pending:
-        return
-
-    try:
-        await session.commit()
-    except IntegrityError:
-        await session.rollback()
-    except Exception as exc:  # noqa: BLE001
-        await session.rollback()
-        await logger.awarning(f"Could not persist MCP server config carried by a flow: {exc}")
+        try:
+            async with session.begin_nested():
+                session.add(MCPServer(user_id=user_id, name=name, config=encrypt_mcp_config(config)))
+        except IntegrityError:
+            # Another writer created the same (user, name) first; its row is authoritative.
+            await logger.adebug(f"MCP server row '{name}' already exists; keeping the stored config.")
+        except Exception as exc:  # noqa: BLE001
+            await logger.aerror(f"Could not persist MCP server config carried by a flow: {exc}")
 
 
-async def _ensure_variables(variables: dict[str, str], user_id: UUID, session) -> None:
+async def _ensure_variables(variables: dict[str, str], user_id: UUID, session) -> set[str]:
     """Create the referenced global variables so the rewritten config resolves.
 
     Existing names are left alone: the value the user maintains outranks a copy that
-    happened to be sitting in a flow. Failures are logged, never raised — a flow save
-    must not fail here, and the flow is safer for having been rewritten either way.
+    happened to be sitting in a flow. Returns the names that could not be created, so the
+    caller can put those literals back instead of saving a flow that cannot authenticate.
     """
     if not variables:
-        return
+        return set()
 
     variable_service = get_variable_service()
+    existing_names = set()
+    try:
+        existing_names = set(await variable_service.list_variables(user_id, session))
+    except Exception as exc:  # noqa: BLE001
+        await logger.awarning(f"Could not list global variables while scrubbing an MCP credential: {exc}")
+
+    failed: set[str] = set()
     for name, value in variables.items():
-        try:
-            existing = await variable_service.get_variable(user_id=user_id, name=name, field="", session=session)
-        except Exception:  # noqa: BLE001
-            existing = None
-        if existing:
+        if name in existing_names:
             continue
         try:
-            await variable_service.create_variable(
-                user_id=user_id, name=name, value=value, type_=CREDENTIAL_TYPE, session=session
-            )
+            async with session.begin_nested():
+                await variable_service.create_variable(
+                    user_id=user_id, name=name, value=value, type_=CREDENTIAL_TYPE, session=session
+                )
         except Exception as exc:  # noqa: BLE001
-            await logger.awarning(f"Could not create global variable '{name}' for an MCP credential: {exc}")
+            failed.add(name)
+            await logger.aerror(f"Could not create global variable '{name}' for an MCP credential: {exc}")
+    return failed

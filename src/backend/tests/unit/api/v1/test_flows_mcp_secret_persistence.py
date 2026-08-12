@@ -14,6 +14,7 @@ import uuid
 
 from fastapi import status
 from httpx import AsyncClient
+from langflow.api.utils.mcp.flow_secrets import variable_name_for
 
 SECRET = "sk-mcp-should-never-persist"  # noqa: S105
 
@@ -69,7 +70,7 @@ async def test_should_not_persist_header_secret_on_create(client: AsyncClient, l
     flow, raw = await _saved_flow(client, logged_in_headers, server_name, config)
 
     assert SECRET not in raw
-    assert _stored_config(flow)["headers"] == {"x-api-key": "MCP_" + server_name.replace("-", "_").upper() + "_X_API_KEY"}
+    assert _stored_config(flow)["headers"] == {"x-api-key": variable_name_for(server_name, "x-api-key")}
 
 
 async def test_should_keep_non_secret_config_intact(client: AsyncClient, logged_in_headers):
@@ -110,7 +111,7 @@ async def test_should_scrub_env_secrets_on_a_stdio_config(client: AsyncClient, l
     flow, raw = await _saved_flow(client, logged_in_headers, server_name, config)
 
     assert SECRET not in raw
-    assert _stored_config(flow)["env"] == {"API_TOKEN": "MCP_" + server_name.replace("-", "_").upper() + "_API_TOKEN"}
+    assert _stored_config(flow)["env"] == {"API_TOKEN": variable_name_for(server_name, "API_TOKEN")}
 
 
 async def test_should_scrub_a_secret_hidden_in_proxy_args(client: AsyncClient, logged_in_headers):
