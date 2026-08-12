@@ -286,7 +286,9 @@ def test_a_log_emitted_during_a_request_carries_that_request_trace_id():
     # correlation this test exists for is carried by trace_id, which is not.
     match = [r for r in result["records"] if r["severity"] == "ERROR"]
     assert match, result["records"]
-    assert match[0]["trace_id"] == result["span_trace_id"]
+    # any(), not match[0]: nothing orders the exported records, and another ERROR arriving
+    # first would fail this while correlation itself works.
+    assert any(r["trace_id"] == result["span_trace_id"] for r in match), result["records"]
     assert "payment provider timed out" not in json.dumps(result["records"])
 
 

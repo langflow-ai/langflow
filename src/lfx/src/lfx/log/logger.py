@@ -400,9 +400,10 @@ def _otel_min_severity() -> int:
         elif severity < _INFO_SEVERITY:
             warnings.warn(
                 f"LANGFLOW_OTEL_LOG_LEVEL={raw!r} exports DEBUG log records to the configured OTLP "
-                "endpoint. Langflow logs flow inputs and outputs at DEBUG, and log redaction only "
-                "covers known sensitive keys, not free text inside a message, so prompt and "
-                "completion content will reach that backend. Use INFO unless that is intended.",
+                "endpoint. Langflow logs flow inputs and outputs at DEBUG. Their bodies are "
+                "withheld unless LANGFLOW_OTEL_LOG_BODIES=all is also set, so this alone raises "
+                "the volume rather than the content; with both set, prompt and completion "
+                "content will reach that backend. Use INFO unless that is intended.",
                 stacklevel=2,
             )
     return _otel_min_severity_cache
