@@ -383,7 +383,7 @@ jigsawstack = ["jigsawstack==0.2.7"]
 assemblyai = ["assemblyai==0.35.1"]
 
 # Data processing
-datasets = ["datasets>=5.0.1,<6.0.0"]
+datasets = ["datasets>2.14.7,<6.0.0"]
 fastparquet = ["fastparquet>=2024.11.0,<2025.0.0"]
 
 # Vision / ML
