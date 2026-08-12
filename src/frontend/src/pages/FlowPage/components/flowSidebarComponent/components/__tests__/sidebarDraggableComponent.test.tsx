@@ -231,8 +231,11 @@ jest.mock("@/stores/flowStore", () => ({
 }));
 
 let mockPermissionPending = false;
+let mockPermissionDenied = false;
 jest.mock("@/contexts/permissionsContext", () => ({
   useIsFlowPermissionPending: () => mockPermissionPending,
+  // Read-only is true for both halves of the gate, mirroring the real hook.
+  useIsFlowReadOnly: () => mockPermissionPending || mockPermissionDenied,
 }));
 
 jest.mock("@/utils/reactflowUtils", () => ({
@@ -278,6 +281,7 @@ describe("SidebarDraggableComponent", () => {
     mockOnValueChange = undefined;
     mockDeleteFlow.mockClear();
     mockPermissionPending = false;
+    mockPermissionDenied = false;
   });
 
   describe("Accessibility", () => {
@@ -1132,6 +1136,69 @@ describe("SidebarDraggableComponent", () => {
       expect(screen.getByTestId(/testsectiontest component/i)).toHaveAttribute(
         "draggable",
         "true",
+      );
+    });
+  });
+
+  describe("denied permission", () => {
+    // The denied half never resolves: a read-only collaborator would otherwise
+    // see a fully interactive sidebar whose every add is discarded, forever.
+    it("should disable the add button when write is denied", () => {
+      mockPermissionDenied = true;
+
+      render(<SidebarDraggableComponent {...defaultProps} />);
+
+      expect(
+        screen.getByTestId("add-component-button-test-component"),
+      ).toBeDisabled();
+    });
+
+    it("should stop the row from being dragged when write is denied", () => {
+      mockPermissionDenied = true;
+
+      render(<SidebarDraggableComponent {...defaultProps} />);
+
+      expect(screen.getByTestId(/testsectiontest component/i)).toHaveAttribute(
+        "draggable",
+        "false",
+      );
+    });
+
+    it("should not add on double click when write is denied", () => {
+      mockPermissionDenied = true;
+
+      render(<SidebarDraggableComponent {...defaultProps} />);
+      fireEvent.doubleClick(screen.getByTestId(/testsectiontest component/i));
+
+      expect(mockAddComponentFn).not.toHaveBeenCalled();
+    });
+
+    it("should say the access is read-only, not that it is still checking", () => {
+      // Naming it "checking" would be a lie: the query already answered.
+      mockPermissionDenied = true;
+
+      render(<SidebarDraggableComponent {...defaultProps} />);
+
+      expect(screen.getAllByTestId("tooltip")[0]).toHaveAttribute(
+        "data-content",
+        "Read-only access",
+      );
+    });
+
+    it("should keep the placement-constraint reason when both apply", () => {
+      mockPermissionDenied = true;
+
+      render(
+        <SidebarDraggableComponent
+          {...defaultProps}
+          disabled={true}
+          disabledTooltip="This component is disabled"
+        />,
+      );
+
+      expect(screen.getAllByTestId("tooltip")[0]).toHaveAttribute(
+        "data-content",
+        "This component is disabled",
       );
     });
   });

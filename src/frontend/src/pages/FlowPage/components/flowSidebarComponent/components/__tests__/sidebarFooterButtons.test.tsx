@@ -49,8 +49,11 @@ jest.mock("@/stores/flowStore", () => ({
 }));
 
 let mockPermissionPending = false;
+let mockPermissionDenied = false;
 jest.mock("@/contexts/permissionsContext", () => ({
   useIsFlowPermissionPending: () => mockPermissionPending,
+  // Read-only is true for both halves of the gate, mirroring the real hook.
+  useIsFlowReadOnly: () => mockPermissionPending || mockPermissionDenied,
 }));
 
 // Mock sidebar hook with default values
@@ -125,6 +128,7 @@ describe("SidebarMenuButtons", () => {
     jest.clearAllMocks();
     mockNavigate.mockClear();
     mockPermissionPending = false;
+    mockPermissionDenied = false;
     useUtilityStore.setState({ allowCustomComponents: true });
     // Reset to default sidebar state
     mockUseSidebar.mockReturnValue({
@@ -789,6 +793,37 @@ describe("SidebarMenuButtons", () => {
       expect(async () => {
         await user.click(customButton);
       }).not.toThrow();
+    });
+  });
+
+  describe("Denied Permission", () => {
+    it("should disable the custom component button when write is denied", () => {
+      mockPermissionDenied = true;
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      expect(
+        screen.getByTestId("sidebar-custom-component-button"),
+      ).toBeDisabled();
+    });
+
+    it("should look unavailable when write is denied", () => {
+      mockPermissionDenied = true;
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      expect(screen.getByTestId("sidebar-custom-component-button")).toHaveClass(
+        "cursor-not-allowed",
+        "opacity-70",
+      );
+    });
+
+    it("should not call addComponent when write is denied", async () => {
+      const user = userEvent.setup();
+      mockPermissionDenied = true;
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      await user.click(screen.getByTestId("sidebar-custom-component-button"));
+
+      expect(mockAddComponent).not.toHaveBeenCalled();
     });
   });
 });

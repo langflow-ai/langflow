@@ -1970,6 +1970,7 @@
   "sidebar.nav.versions": "Versionen",
   "sidebar.newCustomComponent": "Neue benutzerdefinierte Komponente",
   "sidebar.permissionsPending": "Berechtigungen werden geprüft...",
+  "sidebar.permissionDenied": "Schreibgeschützter Zugriff",
   "sidebar.noComponentsFound": "Es wurden keine Komponenten gefunden.",
   "sidebar.projectCreateError": "Das Projekt konnte nicht erstellt werden.",
   "sidebar.projectUploadError": "Beim Hochladen deines Projekts ist ein Fehler aufgetreten. Versuche, es in ein bestehendes Projekt zu ziehen.",

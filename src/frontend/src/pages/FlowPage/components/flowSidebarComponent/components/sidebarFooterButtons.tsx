@@ -4,7 +4,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
-import { useIsFlowPermissionPending } from "@/contexts/permissionsContext";
+import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
@@ -27,12 +27,13 @@ const SidebarMenuButtons = ({
   // Same flow id `useAddComponent` gates on, so the affordance and the gate
   // can never disagree about which flow is being evaluated.
   const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
-  const isPermissionPending = useIsFlowPermissionPending(currentFlowId);
+  const isReadOnly = useIsFlowReadOnly(currentFlowId);
 
-  // One flag for both reasons the add is refused. Dimming only one of them
-  // would leave the same control looking disabled for one cause and enabled
-  // for the other, which reads as a bug rather than a policy.
-  const isUnavailable = isLoading || isPermissionPending;
+  // One flag for every reason the add is refused: the component types are
+  // still loading, the permission answer is in flight, or it denies write.
+  // Dimming only some of them would leave the same control looking disabled
+  // for one cause and enabled for another, which reads as a bug not a policy.
+  const isUnavailable = isLoading || isReadOnly;
 
   const handleAddMcpServerClick = () => {
     setAddMcpOpen(true);

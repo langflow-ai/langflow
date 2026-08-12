@@ -13,7 +13,10 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
-import { useIsFlowPermissionPending } from "@/contexts/permissionsContext";
+import {
+  useIsFlowPermissionPending,
+  useIsFlowReadOnly,
+} from "@/contexts/permissionsContext";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
 import { useDarkStore } from "@/stores/darkStore";
@@ -70,16 +73,22 @@ export const SidebarDraggableComponent = forwardRef(
     // Same flow id `useAddComponent` gates on, so the affordance and the gate
     // can never disagree about which flow is being evaluated.
     const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
+    const isReadOnly = useIsFlowReadOnly(currentFlowId);
     const isPermissionPending = useIsFlowPermissionPending(currentFlowId);
 
-    // A placement constraint is a verdict: the item stays disabled until the
-    // canvas changes. A pending permission check is transient, so it only
-    // suspends the item — hence one flag for "cannot add right now" and the
-    // original `disabled` still deciding what is a permanent violation.
-    const isUnavailable = disabled || isPermissionPending;
+    // `isReadOnly` is the same predicate the add path refuses on, so the
+    // control is unavailable for exactly as long as the click would be
+    // discarded — while the answer is in flight and, permanently, when it
+    // denies write. Pending only picks which reason to show.
+    // A placement constraint is a separate verdict and keeps hiding the add
+    // button; the permission cases only disable it, so a read-only user still
+    // sees the same layout everyone else does.
+    const isUnavailable = disabled || isReadOnly;
     const unavailableTooltip = disabled
       ? disabledTooltip
-      : t("sidebar.permissionsPending");
+      : isPermissionPending
+        ? t("sidebar.permissionsPending")
+        : t("sidebar.permissionDenied");
 
     const version = useDarkStore((state) => state.version);
     const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
@@ -231,7 +240,7 @@ export const SidebarDraggableComponent = forwardRef(
                   variant="ghost"
                   size="icon"
                   tabIndex={-1}
-                  disabled={isPermissionPending}
+                  disabled={isReadOnly}
                   aria-label={t("sidebar.addComponentToCanvas", {
                     name: display_name,
                   })}
