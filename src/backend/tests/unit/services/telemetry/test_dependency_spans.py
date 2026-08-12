@@ -142,7 +142,9 @@ def test_a_database_span_carries_the_placeholder_and_not_the_row_value():
     assert db_spans, "no sqlalchemy spans were exported"
 
     statements = [s["attrs"].get("db.statement", "") for s in db_spans]
-    assert any("INSERT INTO messagetable" in statement for statement in statements), statements
+    # The placeholder, not just the verb: a statement truncated to "INSERT INTO messagetable"
+    # would satisfy a looser check and satisfy the sentinel check for the wrong reason.
+    assert any("INSERT INTO messagetable (text) VALUES (?)" in statement for statement in statements), statements
     assert DB_SENTINEL not in json.dumps(db_spans), f"a bound row value reached the APM: {db_spans}"
 
 

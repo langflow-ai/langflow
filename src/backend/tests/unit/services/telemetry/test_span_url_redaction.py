@@ -149,6 +149,9 @@ def test_redaction_keeps_the_host_and_path_an_operator_needs():
 
     for key in ("http.url", "url.full"):
         assert attrs[key] == "https://db.internal:5432/records", attrs[key]
+    # http.target too, and by value: the probe sets it, so blanking it would pass the
+    # secret-is-absent check above while losing the route the attribute exists to carry.
+    assert attrs["http.target"] == "/records", attrs["http.target"]
     # Nothing outside the URL attributes is touched.
     assert attrs["server.address"] == "db.internal"
 
