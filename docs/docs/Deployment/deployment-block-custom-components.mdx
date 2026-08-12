@@ -39,6 +39,8 @@ This matters when you upgrade. Langflow releases change built-in component code,
 
 Nothing new becomes runnable: the code that runs is always the server's own, chosen by component type. A node whose component type this server doesn't recognize is still refused. This is the same rule Langflow already applies by default to unauthenticated public flow builds.
 
+A node is also refused, rather than rebuilt, when more than one component claims its type — for example a component in `LANGFLOW_COMPONENTS_PATH` installed under a name a built-in already uses. Langflow can't tell which of the two the node meant, so it declines to guess and asks you to update the component instead.
+
 To require an exact match instead, so that any flow containing a component whose stored code has drifted is refused until you update that component, set:
 
 ```bash

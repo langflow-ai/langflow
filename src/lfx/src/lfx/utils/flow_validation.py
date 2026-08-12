@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Container, Mapping
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
@@ -891,7 +892,8 @@ def validate_flow_for_current_settings(
     # so the substitution itself happens later, in Graph.from_payload, on the payload that is
     # actually built. Here we only need to agree with it about which drifted built-ins are going
     # to be rebuilt with this server's code, so the pre-check does not refuse a build that will
-    # then succeed.
+    # then succeed. Both sides read the same SubstitutableComponentTypes rule, so an ambiguous
+    # type is neither substituted nor exempted here and stays blocked as outdated.
     substitution_lookups = get_outdated_code_substitution_lookups() if not allow_custom_components else None
 
     check_flow_and_raise(
@@ -1006,8 +1008,40 @@ def get_component_code_lookups_for_validation() -> dict[str, str] | None:
         return component_cache.type_to_code
 
 
-def get_outdated_code_substitution_lookups() -> tuple[dict[str, set[str]], dict[str, str]] | None:
-    """Return ``(type_to_current_hash, type_to_code)`` when drifted built-ins are substitutable.
+@dataclass(frozen=True, slots=True)
+class SubstitutableComponentTypes(Container[str]):
+    """The component types whose drifted code this server will rebuild with its own copy.
+
+    A type qualifies only when the registry resolves it to *exactly one* current code hash and
+    this server has trusted code for it. Two components can contribute the same type alias — a
+    built-in and a ``components_path`` component of the same name, or an ``XComponent``/``X``
+    pair across bundles. ``collect_component_hash_lookups`` keeps every such hash, but
+    ``collect_component_code_lookups`` is first-wins by registry iteration order, so for an
+    ambiguous type the trusted code is not necessarily the source the node meant. Stored code
+    that matches neither hash is indistinguishable from "this node is the other component", so
+    those types are excluded and :func:`check_flow_and_raise` blocks them as outdated, exactly
+    as it did before the substitution pass existed.
+
+    Membership is decided on demand rather than materialized, so the substitution pass and the
+    pre-check that must agree with it share one rule without copying the registry per build.
+    """
+
+    type_to_current_hash: Mapping[str, set[str]]
+    type_to_code: Mapping[str, str]
+
+    def __contains__(self, component_type: object) -> bool:
+        if not isinstance(component_type, str):
+            return False
+        current_hashes = self.type_to_current_hash.get(component_type)
+        return current_hashes is not None and len(current_hashes) == 1 and component_type in self.type_to_code
+
+    def current_hash(self, component_type: str) -> str:
+        """Return the single current code hash for a substitutable ``component_type``."""
+        return next(iter(self.type_to_current_hash[component_type]))
+
+
+def get_outdated_code_substitution_lookups() -> tuple[dict[str, str], SubstitutableComponentTypes] | None:
+    """Return ``(type_to_code, substitutable_types)`` when drifted built-ins are substitutable.
 
     ``None`` — meaning "keep the strict hash check" — is returned when custom components are
     allowed (nothing is gated, so the node's own code runs as authored), when the operator has
@@ -1031,21 +1065,22 @@ def get_outdated_code_substitution_lookups() -> tuple[dict[str, set[str]], dict[
     if not type_to_current_hash or not type_to_code:
         return None
 
-    return type_to_current_hash, type_to_code
+    return type_to_code, SubstitutableComponentTypes(type_to_current_hash, type_to_code)
 
 
 def _substitute_outdated_node_code(
     nodes: list,
-    type_to_current_hash: dict[str, set[str]],
-    type_to_code: dict[str, str],
+    type_to_code: Mapping[str, str],
+    substitutable_types: SubstitutableComponentTypes,
 ) -> list[str]:
     """Replace drifted built-in code with this server's copy for the node's component type.
 
-    Mutates the given node dicts in place. Only nodes that are already recognized — their
-    ``data.type`` is a known server component *and* has trusted code — and whose stored code
-    hash no longer matches that type are touched; every other node, including one whose type is
-    unknown, is left exactly as it was for :func:`check_flow_and_raise` to classify. Recurses
-    into inlined sub-flow definitions. Returns ``display_name (id)`` labels for swapped nodes.
+    Mutates the given node dicts in place. Only nodes whose ``data.type`` is substitutable (see
+    :class:`SubstitutableComponentTypes`) and whose stored code hash no longer matches that type
+    are touched; every other node — one whose type is unknown, and one whose type is ambiguous
+    across the registry — is left exactly as it was for :func:`check_flow_and_raise` to
+    classify. Recurses into inlined sub-flow definitions. Returns ``display_name (id)`` labels
+    for swapped nodes.
     """
     swapped: list[str] = []
 
@@ -1067,10 +1102,8 @@ def _substitute_outdated_node_code(
         if (
             isinstance(code, str)
             and code
-            and isinstance(component_type, str)
-            and component_type in type_to_current_hash
-            and component_type in type_to_code
-            and _compute_code_hash(code) not in type_to_current_hash[component_type]
+            and component_type in substitutable_types
+            and _compute_code_hash(code) != substitutable_types.current_hash(component_type)
         ):
             trusted = type_to_code[component_type]
             if trusted != code:
@@ -1084,7 +1117,7 @@ def _substitute_outdated_node_code(
             nested_data = nested_flow.get("data")
             nested_nodes = nested_data.get("nodes") if isinstance(nested_data, dict) else None
             if isinstance(nested_nodes, list) and nested_nodes:
-                swapped.extend(_substitute_outdated_node_code(nested_nodes, type_to_current_hash, type_to_code))
+                swapped.extend(_substitute_outdated_node_code(nested_nodes, type_to_code, substitutable_types))
 
     return swapped
 
@@ -1102,7 +1135,9 @@ def substitute_outdated_component_code_in_place(flow_data: dict | None) -> list[
     Swapping by component *type* is the same rule the unauthenticated public build path applies
     by default (:func:`prepare_public_flow_build`), and it does not widen what can execute: the
     code that runs is this server's own, and a node whose type is not a known server component
-    is left untouched for :func:`check_flow_and_raise` to block.
+    is left untouched for :func:`check_flow_and_raise` to block. A type that two components
+    claim is likewise left untouched, so drift is never resolved into the *wrong* component —
+    see :class:`SubstitutableComponentTypes`.
 
     Mutates ``flow_data`` in place, matching ``Graph.from_payload``'s existing contract with
     ``migrate_flow_payload``; callers that must preserve the stored flow (so the editor keeps

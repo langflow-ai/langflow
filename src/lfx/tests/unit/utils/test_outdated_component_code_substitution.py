@@ -18,6 +18,7 @@ from lfx.services.catalog_policy import CatalogPolicySnapshot
 from lfx.utils import flow_validation as fv
 from lfx.utils.flow_validation import (
     CustomComponentValidationError,
+    SubstitutableComponentTypes,
     check_flow_and_raise,
     substitute_outdated_component_code_in_place,
     validate_flow_for_current_settings,
@@ -25,6 +26,8 @@ from lfx.utils.flow_validation import (
 
 CURRENT_CHAT_INPUT = "# ChatInput v2 (this server)"
 STORED_CHAT_INPUT = "# ChatInput v1 (saved before the upgrade)"
+# A components_path component the operator installed under a name a built-in already uses.
+OVERRIDE_CHAT_INPUT = "# ChatInput (operator's components_path copy)"
 
 
 def _hash(code: str) -> str:
@@ -45,6 +48,24 @@ def _code_of(node: dict) -> str | None:
 
 def _lookups() -> tuple[dict[str, set[str]], dict[str, str]]:
     return {"ChatInput": {_hash(CURRENT_CHAT_INPUT)}}, {"ChatInput": CURRENT_CHAT_INPUT}
+
+
+def _ambiguous_lookups() -> tuple[dict[str, set[str]], dict[str, str]]:
+    """A registry where two components claim the type ``ChatInput``.
+
+    ``collect_component_hash_lookups`` keeps both hashes; ``collect_component_code_lookups`` is
+    first-wins, so its single code value may belong to either component.
+    """
+    return (
+        {"ChatInput": {_hash(CURRENT_CHAT_INPUT), _hash(OVERRIDE_CHAT_INPUT)}},
+        {"ChatInput": CURRENT_CHAT_INPUT},
+    )
+
+
+def _subst_args(lookups=_lookups) -> tuple[dict[str, str], SubstitutableComponentTypes]:
+    """Build ``_substitute_outdated_node_code``'s ``(type_to_code, substitutable_types)`` pair."""
+    type_to_hash, type_to_code = lookups()
+    return type_to_code, SubstitutableComponentTypes(type_to_hash, type_to_code)
 
 
 def _settings(*, allow_custom=False, substitute=True) -> SimpleNamespace:
@@ -73,7 +94,7 @@ def _enable(monkeypatch, *, allow_custom=False, substitute=True, lookups=_lookup
 def test_drifted_builtin_is_rebuilt_with_server_code():
     nodes = [_node("a", "ChatInput", STORED_CHAT_INPUT, display_name="Chat Input")]
 
-    swapped = fv._substitute_outdated_node_code(nodes, *_lookups())
+    swapped = fv._substitute_outdated_node_code(nodes, *_subst_args())
 
     assert swapped == ["Chat Input (a)"]
     assert _code_of(nodes[0]) == CURRENT_CHAT_INPUT
@@ -82,7 +103,7 @@ def test_drifted_builtin_is_rebuilt_with_server_code():
 def test_up_to_date_builtin_is_left_alone():
     nodes = [_node("a", "ChatInput", CURRENT_CHAT_INPUT)]
 
-    assert fv._substitute_outdated_node_code(nodes, *_lookups()) == []
+    assert fv._substitute_outdated_node_code(nodes, *_subst_args()) == []
     assert _code_of(nodes[0]) == CURRENT_CHAT_INPUT
 
 
@@ -98,7 +119,7 @@ def test_unrecognized_type_is_never_substituted(component_type):
     """
     nodes = [_node("x", component_type, "import os; os.system('id')", display_name="Sneaky")]
 
-    assert fv._substitute_outdated_node_code(nodes, *_lookups()) == []
+    assert fv._substitute_outdated_node_code(nodes, *_subst_args()) == []
     assert _code_of(nodes[0]) == "import os; os.system('id')"
 
 
@@ -106,7 +127,7 @@ def test_relabelled_custom_code_is_replaced_not_executed():
     """Arbitrary code wearing a known type gets this server's component, same as the public path."""
     nodes = [_node("a", "ChatInput", "import os; os.system('pwned')")]
 
-    assert fv._substitute_outdated_node_code(nodes, *_lookups()) == ["ChatInput (a)"]
+    assert fv._substitute_outdated_node_code(nodes, *_subst_args()) == ["ChatInput (a)"]
     assert _code_of(nodes[0]) == CURRENT_CHAT_INPUT
 
 
@@ -115,7 +136,7 @@ def test_recurses_into_inlined_subflows():
     wrapper = _node("wrap", "GroupNode", None)
     wrapper["data"]["node"]["flow"] = {"data": {"nodes": [inner]}}
 
-    swapped = fv._substitute_outdated_node_code([wrapper], *_lookups())
+    swapped = fv._substitute_outdated_node_code([wrapper], *_subst_args())
 
     assert swapped == ["Inner (inner)"]
     assert _code_of(inner) == CURRENT_CHAT_INPUT
@@ -124,7 +145,64 @@ def test_recurses_into_inlined_subflows():
 def test_codeless_and_malformed_nodes_are_skipped():
     nodes = ["not-a-node", {"data": "not-a-dict"}, {"data": {"node": "not-a-dict"}}, _node("n", "ChatInput", None)]
 
-    assert fv._substitute_outdated_node_code(nodes, *_lookups()) == []
+    assert fv._substitute_outdated_node_code(nodes, *_subst_args()) == []
+
+
+# --- ambiguous types: two components claiming one name -----------------------------
+
+
+def test_ambiguous_type_is_never_substituted():
+    """Drift on a contested type must not be resolved into the *wrong* component.
+
+    When a built-in and a ``components_path`` component share a name the hash lookup keeps both
+    hashes while the code lookup keeps only whichever the registry yielded first. Stored code
+    matching neither hash is then indistinguishable from "this node is the other component", so
+    the node is left for ``check_flow_and_raise`` to block, as it was before this pass existed.
+    """
+    nodes = [_node("a", "ChatInput", STORED_CHAT_INPUT, display_name="Chat Input")]
+
+    assert fv._substitute_outdated_node_code(nodes, *_subst_args(_ambiguous_lookups)) == []
+    assert _code_of(nodes[0]) == STORED_CHAT_INPUT
+
+
+@pytest.mark.parametrize("code", [CURRENT_CHAT_INPUT, OVERRIDE_CHAT_INPUT], ids=["builtin", "override"])
+def test_ambiguous_type_still_builds_when_its_code_matches_either_component(code):
+    """Only *drift* is refused on a contested type; both current versions still build."""
+    type_to_hash, _ = _ambiguous_lookups()
+    flow = {"nodes": [_node("a", "ChatInput", code)]}
+
+    check_flow_and_raise(
+        flow,
+        allow_custom_components=False,
+        type_to_current_hash=type_to_hash,
+        substitutable_types=_subst_args(_ambiguous_lookups)[1],
+    )
+
+
+def test_check_flow_and_raise_still_blocks_drift_on_an_ambiguous_type():
+    """The pre-check must agree with the substitution: not substituted means not exempted.
+
+    Otherwise the node would clear validation carrying code this server cannot resolve, and
+    ``resolve_trusted_code_for_build`` would fail it later with a far less actionable message.
+    """
+    type_to_hash, _ = _ambiguous_lookups()
+    flow = {"nodes": [_node("a", "ChatInput", STORED_CHAT_INPUT)]}
+
+    with pytest.raises(CustomComponentValidationError, match="outdated components must be updated"):
+        check_flow_and_raise(
+            flow,
+            allow_custom_components=False,
+            type_to_current_hash=type_to_hash,
+            substitutable_types=_subst_args(_ambiguous_lookups)[1],
+        )
+
+
+def test_in_place_substitution_skips_ambiguous_type(monkeypatch):
+    _enable(monkeypatch, lookups=_ambiguous_lookups)
+    flow = {"nodes": [_node("a", "ChatInput", STORED_CHAT_INPUT)], "edges": []}
+
+    assert substitute_outdated_component_code_in_place(flow) == []
+    assert _code_of(flow["nodes"][0]) == STORED_CHAT_INPUT
 
 
 # --- substitute_outdated_component_code_in_place (settings-aware) -------------------
@@ -205,19 +283,19 @@ def test_no_log_when_nothing_drifted(monkeypatch):
 
 
 def test_check_flow_and_raise_exempts_substitutable_drift():
-    type_to_hash, type_to_code = _lookups()
+    type_to_hash, _ = _lookups()
     flow = {"nodes": [_node("a", "ChatInput", STORED_CHAT_INPUT)]}
 
     check_flow_and_raise(
         flow,
         allow_custom_components=False,
         type_to_current_hash=type_to_hash,
-        substitutable_types=type_to_code,
+        substitutable_types=_subst_args()[1],
     )
 
 
 def test_check_flow_and_raise_still_blocks_unknown_type_when_substituting():
-    type_to_hash, type_to_code = _lookups()
+    type_to_hash, _ = _lookups()
     flow = {"nodes": [_node("x", "TotallyCustom", "import os", display_name="Custom")]}
 
     with pytest.raises(CustomComponentValidationError, match="custom components are not allowed"):
@@ -225,7 +303,7 @@ def test_check_flow_and_raise_still_blocks_unknown_type_when_substituting():
             flow,
             allow_custom_components=False,
             type_to_current_hash=type_to_hash,
-            substitutable_types=type_to_code,
+            substitutable_types=_subst_args()[1],
         )
 
 
