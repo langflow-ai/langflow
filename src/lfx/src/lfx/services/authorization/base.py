@@ -6,6 +6,7 @@ import abc
 from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any, ClassVar, TypedDict
+from uuid import NAMESPACE_URL, uuid5
 from uuid import UUID as _UUID
 
 from lfx.services.base import Service
@@ -36,6 +37,55 @@ class AuthzContext(TypedDict, total=False):
     api_key_id: _UUID | None
     api_key_source: str | None
     external_provider: str | None
+
+
+PUBLIC_ANONYMOUS_ACTOR_ID = uuid5(NAMESPACE_URL, "urn:langflow:principal:anonymous-public")
+
+
+class PublicResourceAction(str, Enum):
+    """Actions understood by the anonymous direct-link authorization seam."""
+
+    READ = "read"
+    EXECUTE = "execute"
+    WRITE = "write"
+    CREATE = "create"
+    DELETE = "delete"
+    DEPLOY = "deploy"
+    ADMIN = "admin"
+
+
+@dataclass(frozen=True, slots=True)
+class AuthorizationPrincipal:
+    """Framework-neutral actor identity for principals without a user row."""
+
+    actor_type: str
+    actor_id: UUID
+    user_id: UUID | None = None
+
+    @classmethod
+    def public_anonymous(cls) -> AuthorizationPrincipal:
+        """Return the stable, non-user identity used by anonymous direct links."""
+        return cls(actor_type="anonymous_public", actor_id=PUBLIC_ANONYMOUS_ACTOR_ID)
+
+
+@dataclass(frozen=True, slots=True)
+class PublicAuthorizationRequest:
+    """Plugin-neutral anonymous resource decision.
+
+    This request is evaluated only after Langflow's local grant floor confirms
+    a canonical PUBLIC share or a documented legacy compatibility grant. It
+    must never be used to widen general resource listings. ``request_host`` is
+    request metadata, not trusted tenant identity; a plugin must map it through
+    deployment-owned allowlists before using it for tenant selection.
+    """
+
+    principal: AuthorizationPrincipal
+    resource_type: str
+    resource_id: UUID
+    action: PublicResourceAction
+    domain_hint: str
+    request_host: str | None
+    grant_source: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -237,6 +287,9 @@ class BaseAuthorizationService(Service, abc.ABC):
     # receive complete snapshots so an empty tuple cannot be misread as a
     # destructive authoritative snapshot.
     SUPPORTS_INCOMPLETE_DIRECTORY_MEMBERSHIP_SNAPSHOTS: ClassVar[bool] = False
+    # Anonymous direct-link authorization is deliberately separate from the
+    # user allow-all seam. Plugins must opt in and provide tenant resolution.
+    SUPPORTS_PUBLIC_PRINCIPALS: ClassVar[bool] = False
 
     async def supports_cross_user_fetch(self) -> bool:
         """Return True when this service can authorize non-owner resource access."""
@@ -249,6 +302,29 @@ class BaseAuthorizationService(Service, abc.ABC):
     async def supports_incomplete_directory_membership_snapshots(self) -> bool:
         """Return whether this service accepts sanitized incomplete claim states."""
         return self.SUPPORTS_INCOMPLETE_DIRECTORY_MEMBERSHIP_SNAPSHOTS
+
+    async def supports_public_principals(self) -> bool:
+        """Return whether this service can safely authorize anonymous principals."""
+        return self.SUPPORTS_PUBLIC_PRINCIPALS
+
+    async def resolve_public_tenant(self, request: PublicAuthorizationRequest) -> str | None:
+        """Resolve the trusted tenant for an anonymous request, or deny by returning ``None``.
+
+        The default intentionally denies. A host/plugin may map an allowlisted
+        request host plus the server-derived domain hint, but must not trust the
+        raw Host header or discover tenants by scanning anonymous input.
+        """
+        _ = request
+        return None
+
+    async def enforce_public(self, request: PublicAuthorizationRequest, *, tenant: str) -> bool:
+        """Evaluate an anonymous direct-link request after tenant resolution.
+
+        The default intentionally denies even though the legacy authenticated
+        ``enforce`` contract is an OSS allow-all stub.
+        """
+        _ = (request, tenant)
+        return False
 
     @abc.abstractmethod
     async def is_enabled(self) -> bool:
