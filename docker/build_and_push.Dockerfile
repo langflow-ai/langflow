@@ -5,7 +5,7 @@
 # so the base and full targets cannot silently resolve different build tools.
 ARG UV_VERSION=0.10.4
 ARG PYTHON_IMAGE=registry.access.redhat.com/ubi10/python-314-minimal
-ARG NODE_VERSION=22.22.2
+ARG NODE_VERSION=22.23.2
 
 FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv-installer
 

@@ -7,7 +7,7 @@
 
 ARG UV_VERSION=0.10.4
 ARG PYTHON_IMAGE=registry.access.redhat.com/ubi10/python-314-minimal
-ARG NODE_VERSION=22.22.2
+ARG NODE_VERSION=22.23.2
 
 ################################
 # BUILDER
@@ -71,7 +71,11 @@ RUN microdnf update -y \
 RUN python3.14 -m pip install --upgrade "pip>=26.1.2"
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
-# Install Node.js (required for npx-based MCP stdio servers)
+# Install Node.js (required for npx-based MCP stdio servers).
+# NODE_VERSION and the npm major below are coupled: npm 12 requires Node
+# ^22.22.2 || ^24.15.0 || >=26.0.0. Pin the npm major rather than tracking
+# @latest, so the next npm major raising its engines floor cannot break this
+# layer unannounced against a pinned NODE_VERSION.
 ARG NODE_VERSION
 RUN ARCH=$(uname -m) \
     && if [ "$ARCH" = "x86_64" ]; then NODE_ARCH="x64"; \
@@ -79,7 +83,7 @@ RUN ARCH=$(uname -m) \
        else NODE_ARCH="$ARCH"; fi \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
     | tar -xJ -C /usr/local --strip-components=1 \
-    && npm install -g npm@latest
+    && npm install -g npm@12
 
 # Create non-root user
 RUN useradd --uid 1000 --gid 0 --no-create-home --home-dir /app/data user
