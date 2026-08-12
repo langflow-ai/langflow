@@ -849,9 +849,7 @@ class KnowledgeComponent(Component):
             return sorted(extensions)
         return merged
 
-    async def _update_backend_metadata_metrics(
-        self, kb_path: Path, backend: BaseVectorStoreBackend
-    ) -> dict[str, Any]:
+    async def _update_backend_metadata_metrics(self, kb_path: Path, backend: BaseVectorStoreBackend) -> dict[str, Any]:
         """Recompute metrics for non-Chroma backends.
 
         Returns the computed metrics so the caller can write them straight to

@@ -1205,9 +1205,7 @@ async def ingest_files_to_knowledge_base(
                     # when it exists so a local-Chroma KB's on-disk view stays
                     # consistent for legacy readers.
                     if _kb_guard.record is not None:
-                        await knowledge_base_service.update_column_config(
-                            _kb_guard.record.id, column_config_parsed
-                        )
+                        await knowledge_base_service.update_column_config(_kb_guard.record.id, column_config_parsed)
                     cc_metadata_path = kb_path / "embedding_metadata.json"
                     if cc_metadata_path.exists():
                         existing_meta = json.loads(cc_metadata_path.read_text())
