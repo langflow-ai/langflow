@@ -9999,7 +9999,7 @@ dependencies = [
 requires-dist = [
     { name = "langchain-plaid", specifier = ">=0.1.0,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
-    { name = "pillow", specifier = ">=12.3.0,<13.0.0" },
+    { name = "pillow", specifier = ">=10.0.0" },
 ]
 
 [[package]]
