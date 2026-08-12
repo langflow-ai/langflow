@@ -64,7 +64,7 @@ RUN microdnf update -y \
         gnupg \
         xz tar \
     && microdnf clean all
-RUN python3.14 -m pip install --upgrade pip
+RUN python3.14 -m pip install --upgrade "pip>=26.1.2"
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
 # Install Node.js (required for npx-based MCP stdio servers)
@@ -72,10 +72,7 @@ RUN ARCH=$(uname -m) \
     && if [ "$ARCH" = "x86_64" ]; then NODE_ARCH="x64"; \
        elif [ "$ARCH" = "aarch64" ]; then NODE_ARCH="arm64"; \
        else NODE_ARCH="$ARCH"; fi \
-    && NODE_VERSION=$(curl -fsSL https://nodejs.org/dist/latest-v22.x/ \
-                    | sed -nE "s/.*node-v([0-9]+\.[0-9]+\.[0-9]+)-linux-${NODE_ARCH}\.tar\.xz.*/\1/p" \
-                    | head -1) \
-    && if [ -z "$NODE_VERSION" ]; then echo "ERROR: Could not determine Node.js version" && exit 1; fi \
+    && NODE_VERSION="22.16.0" \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
     | tar -xJ -C /usr/local --strip-components=1 \
     && npm install -g npm@latest

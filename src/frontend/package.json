@@ -12,6 +12,8 @@
     "test-exclude": "^7.0.0",
     "picomatch": "^4.0.4",
     "ip-address": "^10.3.1",
+    "diff": "^8.0.3",
+    "sigstore": "^4.1.1",
     "jest-util": {
       "picomatch": "^4.0.4"
     },
