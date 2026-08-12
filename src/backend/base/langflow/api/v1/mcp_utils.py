@@ -40,6 +40,8 @@ MCP_SERVERS_FILE = "_mcp_servers"
 
 # Create context variables
 current_user_ctx: ContextVar[User] = ContextVar("current_user_ctx")
+
+EXCLUDED_FLOWS_META_KEY = "langflow.org/excluded-flows"
 # Carries per-request variables injected via HTTP headers (e.g., X-Langflow-Global-Var-*)
 current_request_variables_ctx: ContextVar[dict[str, str] | None] = ContextVar(
     "current_request_variables_ctx", default=None
@@ -433,14 +435,20 @@ async def handle_call_tool(
         raise
 
 
-async def handle_list_tools(project_id: UUID | None = None, *, mcp_enabled_only: bool = False):
-    """Handle listing tools for MCP.
+async def _collect_tools(
+    project_id: UUID | None = None, *, mcp_enabled_only: bool = False
+) -> tuple[list[types.Tool], list[dict[str, str]]]:
+    """Build the tool list for MCP, returning the flows that could not be built alongside it.
 
     Args:
         project_id: Optional project ID to filter tools by project
         mcp_enabled_only: Whether to filter for MCP-enabled flows only
+
+    Returns:
+        The tools that built successfully and one entry per flow dropped from the list.
     """
     tools = []
+    excluded: list[dict[str, str]] = []
     try:
         # SECURITY: tools returned from the global server previously included every
         # user's flows (PVR0754098). Always scope to the authenticated caller.
@@ -460,7 +468,7 @@ async def handle_list_tools(project_id: UUID | None = None, *, mcp_enabled_only:
                     await logger.awarning(
                         "handle_list_tools called with project_id but no current user; returning empty list"
                     )
-                    return tools
+                    return tools, excluded
                 flows_query = select(Flow).where(
                     Flow.folder_id == project_id,
                     Flow.user_id == current_user.id,
@@ -475,7 +483,7 @@ async def handle_list_tools(project_id: UUID | None = None, *, mcp_enabled_only:
                 await logger.awarning(
                     "handle_list_tools called without a current user and no project_id; returning empty list"
                 )
-                return tools
+                return tools, excluded
 
             flows = (await session.exec(flows_query)).all()
 
@@ -521,7 +529,7 @@ async def handle_list_tools(project_id: UUID | None = None, *, mcp_enabled_only:
                     tools.append(tool)
                     existing_names.add(name)
                 except Exception as e:  # noqa: BLE001
-                    excluded.append(f"{base_name} ({flow.id}): {e!s}")
+                    excluded.append({"flow_id": str(flow.id), "tool_name": base_name, "error": str(e)})
                     await logger.aerror(f"Flow excluded from MCP tool list -- {base_name} ({flow.id}): {e!s}")
                     continue
 
@@ -530,10 +538,43 @@ async def handle_list_tools(project_id: UUID | None = None, *, mcp_enabled_only:
             # Scoped to the project endpoint: the global server is the editor-plane surface,
             # where an empty list is a normal state and raising would be a UI regression.
             if project_id and excluded and not tools:
-                msg = "No MCP tools could be built. Excluded flows: " + "; ".join(excluded)
-                raise RuntimeError(msg)
+                raise RuntimeError(_format_excluded(excluded))
     except Exception as e:
         msg = f"Error in listing tools: {e!s}"
         await logger.aexception(msg)
         raise
+    return tools, excluded
+
+
+def _format_excluded(excluded: list[dict[str, str]]) -> str:
+    details = "; ".join(f"{item['tool_name']} ({item['flow_id']}): {item['error']}" for item in excluded)
+    return f"No MCP tools could be built. Excluded flows: {details}"
+
+
+async def handle_list_tools(project_id: UUID | None = None, *, mcp_enabled_only: bool = False) -> list[types.Tool]:
+    """Handle listing tools for MCP.
+
+    Args:
+        project_id: Optional project ID to filter tools by project
+        mcp_enabled_only: Whether to filter for MCP-enabled flows only
+    """
+    tools, _ = await _collect_tools(project_id, mcp_enabled_only=mcp_enabled_only)
     return tools
+
+
+async def handle_list_tools_result(
+    project_id: UUID | None = None, *, mcp_enabled_only: bool = False
+) -> types.ListToolsResult:
+    """Handle listing tools for a project, reporting any flow that had to be dropped.
+
+    Returning only the surviving tools reads as a complete list, so an operator cannot tell
+    that a tool went missing and the sole trace is a server-side log line. Partial failures
+    ride along in ``_meta`` because the tool array itself must stay callable-only.
+    """
+    tools, excluded = await _collect_tools(project_id, mcp_enabled_only=mcp_enabled_only)
+    result = types.ListToolsResult(tools=tools)
+    if excluded:
+        # Assigned rather than passed to the constructor: the field is aliased to `_meta`
+        # and the model has no populate_by_name, so `meta=` lands as an extra field.
+        result.meta = {EXCLUDED_FLOWS_META_KEY: excluded}
+    return result

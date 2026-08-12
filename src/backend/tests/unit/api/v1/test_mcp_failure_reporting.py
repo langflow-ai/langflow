@@ -165,6 +165,111 @@ async def test_should_return_valid_tools_when_only_some_flows_fail(monkeypatch):
     assert [tool.name for tool in tools] == ["good_tool"]
 
 
+def _partial_failure_flows(monkeypatch):
+    """Project with one buildable flow and one that fails schema generation."""
+    project_id = uuid4()
+    user_id = uuid4()
+    good = _fake_flow("good_tool", project_id)
+    bad = _fake_flow("bad_tool", project_id)
+    good.user_id = bad.user_id = user_id
+
+    def selective_schema(flow):
+        if flow.name == "bad_tool":
+            msg = "hash mismatch"
+            raise CustomComponentValidationError(msg)
+        return {"type": "object", "properties": {}}
+
+    monkeypatch.setattr(mcp_utils, "session_scope", lambda: _FakeSessionContext(_FakeSession([good, bad])))
+    monkeypatch.setattr(mcp_utils, "json_schema_from_flow", selective_schema)
+    return project_id, user_id, bad
+
+
+@pytest.mark.asyncio
+async def test_should_report_excluded_flow_in_meta_when_only_some_flows_fail(monkeypatch):
+    """A partially broken project must name what it dropped instead of hiding it.
+
+    Returning only the surviving tools reads as a complete list: the operator has no
+    way to tell a tool went missing, and the sole trace is a log line on the server.
+    """
+    project_id, user_id, bad = _partial_failure_flows(monkeypatch)
+
+    token = mcp_utils.current_user_ctx.set(SimpleNamespace(id=user_id))
+    try:
+        result = await mcp_utils.handle_list_tools_result(project_id=project_id, mcp_enabled_only=True)
+    finally:
+        mcp_utils.current_user_ctx.reset(token)
+
+    assert [tool.name for tool in result.tools] == ["good_tool"]
+
+    excluded = (result.meta or {}).get(mcp_utils.EXCLUDED_FLOWS_META_KEY)
+    assert excluded is not None, "a dropped flow must be reported to the client"
+    assert len(excluded) == 1
+    assert excluded[0]["tool_name"] == "bad_tool"
+    assert excluded[0]["flow_id"] == str(bad.id)
+    assert "hash mismatch" in excluded[0]["error"]
+
+
+@pytest.mark.asyncio
+async def test_should_not_attach_meta_when_every_flow_builds(monkeypatch):
+    """A healthy project must keep a clean response — no diagnostic noise."""
+    project_id = uuid4()
+    user_id = uuid4()
+    flow = _fake_flow("good_tool", project_id)
+    flow.user_id = user_id
+    monkeypatch.setattr(mcp_utils, "session_scope", lambda: _FakeSessionContext(_FakeSession([flow])))
+    monkeypatch.setattr(mcp_utils, "json_schema_from_flow", lambda _flow: {"type": "object", "properties": {}})
+
+    token = mcp_utils.current_user_ctx.set(SimpleNamespace(id=user_id))
+    try:
+        result = await mcp_utils.handle_list_tools_result(project_id=project_id, mcp_enabled_only=True)
+    finally:
+        mcp_utils.current_user_ctx.reset(token)
+
+    assert [tool.name for tool in result.tools] == ["good_tool"]
+    assert (result.meta or {}).get(mcp_utils.EXCLUDED_FLOWS_META_KEY) is None
+
+
+@pytest.mark.asyncio
+async def test_should_still_raise_from_result_handler_when_every_flow_fails(monkeypatch):
+    """The all-invalid project keeps raising: an empty list must never look healthy."""
+    project_id = uuid4()
+    flows = [_fake_flow("broken_one", project_id)]
+    _patch_list_tools(monkeypatch, flows, schema_error=CustomComponentValidationError("hash mismatch"))
+
+    token = mcp_utils.current_user_ctx.set(SimpleNamespace(id=flows[0].user_id))
+    try:
+        with pytest.raises(RuntimeError, match="broken_one"):
+            await mcp_utils.handle_list_tools_result(project_id=project_id, mcp_enabled_only=True)
+    finally:
+        mcp_utils.current_user_ctx.reset(token)
+
+
+@pytest.mark.asyncio
+async def test_should_keep_global_server_free_of_exclusion_meta(monkeypatch):
+    """The global server is the editor plane — its contract must not change."""
+    user_id = uuid4()
+    good = _fake_flow("good_tool", None)
+    bad = _fake_flow("bad_tool", None)
+    good.user_id = bad.user_id = user_id
+
+    def selective_schema(flow):
+        if flow.name == "bad_tool":
+            msg = "hash mismatch"
+            raise CustomComponentValidationError(msg)
+        return {"type": "object", "properties": {}}
+
+    monkeypatch.setattr(mcp_utils, "session_scope", lambda: _FakeSessionContext(_FakeSession([good, bad])))
+    monkeypatch.setattr(mcp_utils, "json_schema_from_flow", selective_schema)
+
+    token = mcp_utils.current_user_ctx.set(SimpleNamespace(id=user_id))
+    try:
+        tools = await mcp_utils.handle_list_tools()
+    finally:
+        mcp_utils.current_user_ctx.reset(token)
+
+    assert [tool.name for tool in tools] == ["good_tool"]
+
+
 @pytest.mark.asyncio
 async def test_should_not_raise_when_project_legitimately_has_no_flows(monkeypatch):
     """An empty project is not a failure and must keep returning an empty list."""

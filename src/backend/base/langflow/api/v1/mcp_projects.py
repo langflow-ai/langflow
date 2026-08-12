@@ -54,7 +54,7 @@ from langflow.api.v1.mcp_utils import (
     current_user_ctx,
     handle_call_tool,
     handle_list_resources,
-    handle_list_tools,
+    handle_list_tools_result,
     handle_mcp_errors,
     handle_read_resource,
     raise_if_sse_disabled,
@@ -1350,9 +1350,9 @@ class ProjectMCPServer:
         # Register handlers that filter by project
         @self.server.list_tools()
         @handle_mcp_errors
-        async def handle_list_project_tools():
+        async def handle_list_project_tools(_request: types.ListToolsRequest) -> types.ListToolsResult:
             """Handle listing tools for this specific project."""
-            return await handle_list_tools(project_id=self.project_id, mcp_enabled_only=True)
+            return await handle_list_tools_result(project_id=self.project_id, mcp_enabled_only=True)
 
         @self.server.list_prompts()
         async def handle_list_prompts():
