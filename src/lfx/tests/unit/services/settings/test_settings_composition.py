@@ -118,6 +118,7 @@ EXPECTED_FIELDS = {
     "telemetry_base_url",
     "transactions_storage_enabled",
     "vertex_builds_storage_enabled",
+    "sync_result_storage_enabled",
     "deactivate_tracing",
     # ObservabilitySettings
     "prometheus_enabled",
@@ -157,7 +158,13 @@ EXPECTED_FIELDS = {
     "download_webhook_url",
     "like_webhook_url",
     # RuntimeSettings
+    "warm_registry_enabled",
+    "warm_registry_preload_limit",
+    "warm_registry_max_entries",
+    "warm_registry_max_flow_bytes",
+    "warm_registry_max_total_bytes",
     "dev",
+    "warm_reconcile_interval",
     "event_delivery",
     "worker_timeout",
     "workflow_execution_timeout",
@@ -253,6 +260,11 @@ EXPECTED_FIELDS = {
     "sandbox_allow_network",
     "sandbox_allowed_domains",
     "sandbox_allow_software_emulation",
+    # ---- Serving-plane end-user identity ----
+    # SecuritySettings
+    "serving_end_user_header",
+    "serving_trust_proxy_headers",
+    "serving_end_user_required",
 }
 
 
@@ -296,6 +308,11 @@ def test_critical_defaults_unchanged():
     assert settings.mcp_sdk_constraint == "mcp~=1.28"
     assert settings.load_flows_preserve_variable_bindings is True
     assert settings.do_not_track is False
+    assert settings.warm_registry_enabled is False
+    assert settings.warm_registry_preload_limit == 0
+    assert settings.warm_registry_max_entries == 128
+    assert settings.warm_registry_max_flow_bytes == 2_000_000
+    assert settings.warm_registry_max_total_bytes == 32_000_000
     assert settings.dev is False
     assert settings.agentic_experience is True
     assert settings.developer_api_enabled is False
@@ -340,6 +357,22 @@ def test_single_worker_keeps_explicit_event_delivery(monkeypatch):
     monkeypatch.setenv("LANGFLOW_EVENT_DELIVERY", "polling")
     settings = Settings()
     assert settings.event_delivery == "polling"
+
+
+def test_warm_registry_reads_environment(monkeypatch):
+    """The warm execution plane must be independently activatable through settings."""
+    monkeypatch.setenv("LANGFLOW_WARM_REGISTRY_ENABLED", "true")
+    monkeypatch.setenv("LANGFLOW_WARM_REGISTRY_PRELOAD_LIMIT", "5")
+    monkeypatch.setenv("LANGFLOW_WARM_REGISTRY_MAX_ENTRIES", "16")
+    monkeypatch.setenv("LANGFLOW_WARM_REGISTRY_MAX_FLOW_BYTES", "100000")
+    monkeypatch.setenv("LANGFLOW_WARM_REGISTRY_MAX_TOTAL_BYTES", "1000000")
+
+    settings = Settings()
+    assert settings.warm_registry_enabled is True
+    assert settings.warm_registry_preload_limit == 5
+    assert settings.warm_registry_max_entries == 16
+    assert settings.warm_registry_max_flow_bytes == 100_000
+    assert settings.warm_registry_max_total_bytes == 1_000_000
 
 
 def test_database_url_sees_config_dir(monkeypatch, tmp_path):
@@ -487,3 +520,26 @@ def test_agentic_variables_excluded_when_experience_disabled(monkeypatch):
     assert settings.agentic_experience is False
     for var in AGENTIC_VARIABLES:
         assert var not in settings.variables_to_get_from_environment
+
+
+def test_serving_end_user_defaults_are_feature_off():
+    """The serving-plane end-user identity feature is off by default (backwards compatible)."""
+    settings = Settings()
+    assert settings.serving_end_user_header is None
+    assert settings.serving_trust_proxy_headers is False
+    assert settings.serving_end_user_required is False
+
+
+def test_serving_end_user_env_vars_bind_to_fields(monkeypatch):
+    """The three operator-facing env vars must bind to their settings fields.
+
+    This guards the operator contract: a typo in a field name or the LANGFLOW_
+    prefix would silently disable the feature with no other test catching it.
+    """
+    monkeypatch.setenv("LANGFLOW_SERVING_END_USER_HEADER", "X-End-User-Id")
+    monkeypatch.setenv("LANGFLOW_SERVING_TRUST_PROXY_HEADERS", "true")
+    monkeypatch.setenv("LANGFLOW_SERVING_END_USER_REQUIRED", "true")
+    settings = Settings()
+    assert settings.serving_end_user_header == "X-End-User-Id"
+    assert settings.serving_trust_proxy_headers is True
+    assert settings.serving_end_user_required is True
