@@ -230,7 +230,7 @@ async def test_durable_caller_timeout_does_not_cancel_an_accepted_persistence(mo
         )
     )
     await asyncio.wait_for(flush_started.wait(), timeout=1.0)
-    with pytest.raises(TimeoutError):
+    with pytest.raises(asyncio.TimeoutError):
         await call
 
     release_flush.set()
