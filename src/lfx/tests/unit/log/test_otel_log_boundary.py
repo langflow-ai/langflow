@@ -85,6 +85,24 @@ if os.environ.get("PROBE_SQUAT"):
 
     structlog.get_logger("langflow.observability").error("SQUATTEDBODYQQQ")
 
+# The real agent failure shape, since that is the record an on-call actually lands on.
+if os.environ.get("PROBE_AGENT"):
+    from lfx.base.agents.events import ExceptionWithMessageError
+    from lfx.schema.message import Message
+
+    class RateLimitError(Exception):
+        pass
+
+    partial = Message(text="SENTINELCOMPLETIONQQQ as far as the model had streamed")
+    try:
+        try:
+            raise RateLimitError("429 slow down")
+        except RateLimitError as provider_error:
+            raise ExceptionWithMessageError(partial, "agent step failed") from provider_error
+    except ExceptionWithMessageError:
+        # Mirrors base/agents/agent.py after the call sites stopped formatting the exception.
+        logger.exception("Agent run failed after a partial message was emitted")
+
 provider.force_flush()
 
 records = [
@@ -205,6 +223,28 @@ def test_a_truncated_chain_says_so():
     _, chain = _error_identity(current)
 
     assert chain.endswith("<...")
+
+
+def test_a_failing_agent_run_exports_an_error_type_and_not_the_completion():
+    """The real exception class an agent failure carries, put through the real boundary.
+
+    ExceptionWithMessageError.__str__ interpolates the model's partial completion, and it wraps
+    the provider's error, so it exercises both halves at once: the completion must not survive,
+    and the provider class must still surface as the root rather than the wrapper.
+
+    Scope note, because the assertion looks broader than it is: this reproduces the *shape* of
+    the agent catch sites, it does not drive them. It would still pass if a call site went back
+    to error(f"...{e}"). What guards that is the ruff G004 rule, which is currently inert here
+    because logger-objects is unset, and is being fixed separately.
+    """
+    records = run_probe(PROBE_AGENT="1")
+    payload = json.dumps(records)
+
+    assert "SENTINELCOMPLETIONQQQ" not in payload
+
+    agent_records = [r for r in records if "RateLimitError" in r["attributes"].get("error.type", "")]
+    assert agent_records, "the agent failure record must carry the provider error as its root"
+    assert agent_records[0]["attributes"]["error.chain"] == "ExceptionWithMessageError<RateLimitError"
 
 
 def test_naming_a_module_after_the_scope_does_not_export_its_bodies():
