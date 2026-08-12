@@ -29,6 +29,11 @@ const SidebarMenuButtons = ({
   const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
   const isPermissionPending = useIsFlowPermissionPending(currentFlowId);
 
+  // One flag for both reasons the add is refused. Dimming only one of them
+  // would leave the same control looking disabled for one cause and enabled
+  // for the other, which reads as a bug rather than a policy.
+  const isUnavailable = isLoading || isPermissionPending;
+
   const handleAddMcpServerClick = () => {
     setAddMcpOpen(true);
   };
@@ -89,7 +94,7 @@ const SidebarMenuButtons = ({
     <SidebarMenuButton asChild className="group">
       <Button
         unstyled
-        disabled={isLoading || isPermissionPending}
+        disabled={isUnavailable}
         onClick={() => {
           if (customComponent) {
             addComponent(customComponent, "CustomComponent");
@@ -102,7 +107,7 @@ const SidebarMenuButtons = ({
         // exactly like a working one, which is the defect being fixed.
         className={cn(
           "flex items-center w-full h-full gap-3 hover:bg-muted",
-          isPermissionPending && "cursor-not-allowed opacity-70",
+          isUnavailable && "cursor-not-allowed opacity-70",
         )}
       >
         <ForwardedIconComponent

@@ -264,6 +264,17 @@ describe("SidebarMenuButtons", () => {
       expect(customButton).not.toBeDisabled();
     });
 
+    it("should look unavailable while loading, like it does for a pending check", () => {
+      // Both reasons refuse the click, so both must look refused. Dimming one
+      // and not the other reads as a bug rather than a policy.
+      render(<SidebarMenuButtons {...defaultProps} isLoading={true} />);
+
+      expect(screen.getByTestId("sidebar-custom-component-button")).toHaveClass(
+        "cursor-not-allowed",
+        "opacity-70",
+      );
+    });
+
     // The add path refuses to run while the flow permission query resolves.
     // Without gating the button too, the click is discarded with nothing
     // reported and the control looks exactly like a working one (LE-2176).
