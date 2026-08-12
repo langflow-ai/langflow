@@ -16,6 +16,7 @@ from langflow.services.auth.context import (
     set_current_auth_context,
 )
 from langflow.services.authorization import audit as authz_audit
+from lfx.services.authorization import base as authz_base
 from lfx.services.settings.auth import AuthSettings
 
 from ._common import (
@@ -545,6 +546,30 @@ async def test_jwt_and_system_actor_identity_are_derived_per_queued_entry(monkey
     ]
     assert entries[0].details == {"auth_method": "jwt"}
     assert entries[1].details == {"job": "policy-sync"}
+
+
+@pytest.mark.anyio
+async def test_public_principal_uses_stable_non_user_audit_actor(monkeypatch, patched_audit_flush):
+    """Anonymous decisions populate actor columns without inventing a user foreign key."""
+    await _reset_audit_pipeline()
+    install_settings(monkeypatch, authz_enabled=False, audit_enabled=True)
+    principal_type = getattr(authz_base, "AuthorizationPrincipal", None)
+    assert principal_type is not None
+    principal = principal_type.public_anonymous()
+
+    await authz_audit.audit_decision(
+        user_id=None,
+        principal=principal,
+        action="flow:execute",
+        obj=f"flow:{uuid4()}",
+        result="allow",
+    )
+    await authz_audit.drain_pending_audit_writes(timeout=1.0)
+
+    entry = patched_audit_flush[0][0]
+    assert entry.user_id is None
+    assert entry.actor_type == "anonymous_public"
+    assert entry.actor_id == principal.actor_id
 
 
 @pytest.mark.anyio
