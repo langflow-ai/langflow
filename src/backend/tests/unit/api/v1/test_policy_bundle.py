@@ -69,6 +69,7 @@ def _snapshot(*, revision: int, actor_id=None, reason: str | None = None) -> Pol
         approved_provider_ids={"openai", "anthropic"},
         blocked_component_keys={"ZetaComponent", "AlphaComponent"},
         blocked_template_keys={"template-z", "template-a"},
+        blocked_model_keys={"openai::gpt-blocked", "anthropic::claude-blocked"},
         content_hash=f"{revision:064x}",
         created_at=datetime(2026, 8, 5, 12, 30, tzinfo=timezone.utc),
         created_by=actor_id,
@@ -137,6 +138,7 @@ def test_get_returns_the_complete_active_bundle_with_stable_sorted_lists(monkeyp
         "approved_provider_ids": ["anthropic", "openai"],
         "blocked_component_keys": ["AlphaComponent", "ZetaComponent"],
         "blocked_template_keys": ["template-a", "template-z"],
+        "blocked_model_keys": ["anthropic::claude-blocked", "openai::gpt-blocked"],
         "content_hash": f"{4:064x}",
         "created_by": str(admin.id),
         "created_at": "2026-08-05T12:30:00Z",
@@ -160,6 +162,7 @@ def test_put_forwards_one_complete_cas_replacement_and_publishes_committed_snaps
         "approved_provider_ids": ["anthropic", "openai"],
         "blocked_component_keys": ["AlphaComponent", "ZetaComponent"],
         "blocked_template_keys": ["template-a", "template-z"],
+        "blocked_model_keys": ["OpenAI::gpt-blocked", "openai::gpt-blocked", "claude-blocked"],
         "reason": "quarterly policy refresh",
     }
 
@@ -174,11 +177,71 @@ def test_put_forwards_one_complete_cas_replacement_and_publishes_committed_snaps
         approved_provider_ids=["anthropic", "openai"],
         blocked_component_keys=["AlphaComponent", "ZetaComponent"],
         blocked_template_keys=["template-a", "template-z"],
+        blocked_model_keys=["claude-blocked", "openai::gpt-blocked"],
         actor_user_id=admin.id,
         reason="quarterly policy refresh",
     )
     apply_state.assert_called_once_with(committed)
     read_state.assert_not_awaited()
+
+
+def test_put_without_model_keys_blocks_no_models_for_legacy_writers(monkeypatch):
+    client, admin, _read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
+    committed = _snapshot(revision=8, actor_id=admin.id)
+    replace_state.return_value = committed
+
+    response = client.put(
+        "/api/v1/policy-bundle",
+        json={
+            "expected_revision": 7,
+            "approved_provider_ids": ["openai"],
+            "blocked_component_keys": [],
+            "blocked_template_keys": [],
+        },
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    replace_state.assert_awaited_once_with(
+        ANY,
+        expected_revision=7,
+        approved_provider_ids=["openai"],
+        blocked_component_keys=[],
+        blocked_template_keys=[],
+        blocked_model_keys=[],
+        actor_user_id=admin.id,
+        reason=None,
+    )
+    apply_state.assert_called_once_with(committed)
+
+
+@pytest.mark.parametrize(
+    "invalid_keys",
+    [
+        ["::claude-blocked"],
+        ["OpenAI::"],
+        ["   "],
+        ["x" * 256],
+        [f"provider::model-{index}" for index in range(1001)],
+    ],
+    ids=["empty-provider", "empty-model", "blank", "key-too-long", "too-many-keys"],
+)
+def test_put_rejects_malformed_model_keys_without_writing(monkeypatch, invalid_keys):
+    client, _admin, _read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
+
+    response = client.put(
+        "/api/v1/policy-bundle",
+        json={
+            "expected_revision": 1,
+            "approved_provider_ids": [],
+            "blocked_component_keys": [],
+            "blocked_template_keys": [],
+            "blocked_model_keys": invalid_keys,
+        },
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    replace_state.assert_not_awaited()
+    apply_state.assert_not_called()
 
 
 def test_put_maps_stale_expected_revision_to_conflict_without_runtime_publication(monkeypatch):
