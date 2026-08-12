@@ -165,6 +165,6 @@ describe("NodeInputField", () => {
       </ReactFlowProvider>,
     );
 
-    expect(screen.getByText("*")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getAllByText("*")[0]).toHaveAttribute("aria-hidden", "true");
   });
 });
