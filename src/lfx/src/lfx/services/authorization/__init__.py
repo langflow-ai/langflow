@@ -2,6 +2,7 @@
 
 from lfx.services.authorization.base import (
     PUBLIC_ANONYMOUS_ACTOR_ID,
+    AuthorizationAuditEvent,
     AuthorizationMutation,
     AuthorizationMutationKind,
     AuthorizationMutationRejected,
@@ -20,6 +21,7 @@ from lfx.services.authorization.service import AuthorizationService
 
 __all__ = [
     "PUBLIC_ANONYMOUS_ACTOR_ID",
+    "AuthorizationAuditEvent",
     "AuthorizationMutation",
     "AuthorizationMutationKind",
     "AuthorizationMutationRejected",

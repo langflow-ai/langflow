@@ -151,6 +151,20 @@ class AuthorizationMutationRejected(Exception):  # noqa: N818 - public contract 
 
 
 @dataclass(frozen=True, slots=True)
+class AuthorizationAuditEvent:
+    """Minimal non-secret identity for an audit row staged in a transaction.
+
+    Plugins receive this value while the canonical audit transaction remains
+    open so they can add durable delivery state atomically. The contract omits
+    audit content deliberately: downstream export policy must read the
+    canonical row after commit rather than copy sensitive details here.
+    """
+
+    event_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
 class UserAuthorizationSnapshot:
     """Minimal, non-secret user state needed by lifecycle guards."""
 
@@ -477,6 +491,21 @@ class BaseAuthorizationService(Service, abc.ABC):
     async def remove_share_rules(self, snapshot: ShareRuleSnapshot) -> None:
         """Remove policy derived from a deleted share snapshot. Plugin override; OSS no-op."""
         _ = snapshot
+
+    def stage_audit_events(
+        self,
+        *,
+        session: Any,
+        events: Sequence[AuthorizationAuditEvent],
+    ) -> None:
+        """Stage plugin-owned state in the canonical audit transaction.
+
+        Implementations may add rows to ``session`` but must not commit, roll
+        back, or perform external I/O. The synchronous contract lets callers
+        that already stage audit rows without awaiting preserve the same
+        transaction boundary. OSS and existing plugins inherit this no-op.
+        """
+        _ = (session, events)
 
     async def acquire_identity_mutation_lock(
         self,
