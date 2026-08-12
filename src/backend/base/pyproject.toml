@@ -113,6 +113,9 @@ dependencies = [
     "dynaconf>=3.2.13,<4.0.0",
     "pyasn1>=0.6.3,<0.7.0",
     "langgraph-checkpoint>4.0.0,<5.0.0",
+    # 5.6.0 already clears every published transformers advisory (highest patched version is 5.5.0).
+    # Do not raise past 5.9.0: docling-ibm-models>=3.13.3 caps transformers<5.9.0 on macOS, and a
+    # higher floor silently backtracks the whole docling stack to older releases on darwin only.
     "transformers>=5.6.0,<6.0.0",
     # Service-complete runtime dependencies. Provider component SDKs remain
     # owned by lfx-* extension distributions.
