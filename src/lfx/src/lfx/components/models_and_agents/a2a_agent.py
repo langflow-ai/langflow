@@ -258,9 +258,15 @@ async def call_a2a_agent(
 
     parsed = httpx.URL(agent_url)
     host = _pin_host(parsed)
-    with outbound_call_span(
-        A2A_CALL_SPAN_NAME, {"a2a.agent.host": f"{host}:{parsed.port}" if parsed.port else host}
-    ) as span:
+    # httpx accepts a URL with no authority, and a user typing "agent.example.com/path" without
+    # a scheme produces exactly that, so raw_host comes back empty. Omit the attribute rather
+    # than export "" or a placeholder: the same rule protocol and client follow, where a missing
+    # attribute is an honest "nobody said" and an invented one is a lie an operator would filter
+    # a dashboard on.
+    attributes = {}
+    if host:
+        attributes["a2a.agent.host"] = f"{host}:{parsed.port}" if parsed.port else host
+    with outbound_call_span(A2A_CALL_SPAN_NAME, attributes) as span:
         # Resolve the card ourselves with a bounded read, then hand it to create_client so the SDK
         # skips its own unbounded fetch. create_client(url) delegates to A2ACardResolver, which
         # buffers the whole card body with no cap; a hostile server streaming an endless card would

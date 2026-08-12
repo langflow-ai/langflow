@@ -244,3 +244,71 @@ def test_the_sdk_own_spans_are_not_exported(probe_result):
 
     assert sdk_scopes, "the SDK emitted no spans, so this test proves nothing"
     assert not sdk_scopes & APPLICATION_INSTRUMENTATION_SCOPES, sdk_scopes
+
+
+# httpx accepts a URL with no authority, and "agent.example.com/path" typed without a scheme is
+# exactly that, so raw_host comes back empty. The span is opened before the call, so it is
+# emitted either way and the question is what it claims about where it went.
+HOSTLESS_PROBE = """
+import asyncio, json
+
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+exporter = InMemorySpanExporter()
+provider = TracerProvider()
+provider.add_span_processor(SimpleSpanProcessor(exporter))
+trace.set_tracer_provider(provider)
+
+import httpx
+
+from lfx.components.models_and_agents.a2a_agent import call_a2a_agent
+
+
+async def main():
+    async with httpx.AsyncClient() as client:
+        try:
+            await call_a2a_agent("agent.example.com/path", "hi", httpx_client=client)
+        except Exception:
+            pass
+    provider.force_flush()
+    spans = [
+        {"name": s.name, "attrs": {k: str(v) for k, v in (s.attributes or {}).items()}}
+        for s in exporter.get_finished_spans()
+    ]
+    print("PROBE_RESULT " + json.dumps({"spans": spans}))
+
+
+asyncio.run(main())
+"""
+
+
+def test_a_url_with_no_host_omits_the_attribute_rather_than_exporting_an_empty_one():
+    """An empty or invented host is worse than none: an operator filters a dashboard on it.
+
+    Same rule ``protocol`` and ``client`` follow, where a missing attribute is an honest
+    "nobody said" and a guessed one is a lie.
+    """
+    env = {k: v for k, v in os.environ.items() if not k.startswith("OTEL_")}
+    with tempfile.TemporaryDirectory() as tmp:
+        probe_path = Path(tmp) / "probe.py"
+        probe_path.write_text(HOSTLESS_PROBE, encoding="utf-8")
+        completed = subprocess.run(  # noqa: S603
+            [sys.executable, str(probe_path)],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=300,
+            check=False,
+        )
+    assert completed.returncode == 0, completed.stderr
+    lines = [ln for ln in completed.stdout.splitlines() if ln.startswith("PROBE_RESULT ")]
+    assert lines, f"probe printed no result.\nstdout:\n{completed.stdout}\nstderr:\n{completed.stderr}"
+
+    spans = [s for s in json.loads(lines[0].removeprefix("PROBE_RESULT "))["spans"] if s["name"] == "a2a.message.send"]
+
+    # The span still happens; the run was attempted and failed, and that is worth seeing.
+    assert spans, "the call span should be emitted even when the URL has no host"
+    assert "a2a.agent.host" not in spans[0]["attrs"], spans[0]["attrs"]
