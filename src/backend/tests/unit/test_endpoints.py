@@ -579,10 +579,31 @@ async def test_get_vertices(client, added_flow_webhook_test, logged_in_headers):
     assert set(ids) == {"ChatInput"}
 
 
-async def test_get_vertices_blocks_custom_components_when_disabled(
+async def test_get_vertices_rebuilds_outdated_components_when_custom_components_disabled(
     client, added_flow_webhook_test, logged_in_headers, monkeypatch
 ):
+    """A saved flow whose built-in code drifted across versions still builds (issue #14455).
+
+    With allow_custom_components=False the code stored in the node is never what executes —
+    ``resolve_trusted_code_for_build`` substitutes this server's copy — so refusing the flow over
+    a stale code hash only broke every saved flow on upgrade. This node's type is a known server
+    component, so the build runs the server's copy of it instead of being refused.
+    """
     monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", False)
+
+    flow_id = added_flow_webhook_test["id"]
+    response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+
+    assert response.status_code == 200
+
+
+async def test_get_vertices_blocks_outdated_components_when_substitution_disabled(
+    client, added_flow_webhook_test, logged_in_headers, monkeypatch
+):
+    """LANGFLOW_SUBSTITUTE_OUTDATED_COMPONENT_CODE=false keeps the strict hash gate."""
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "allow_custom_components", False)
+    monkeypatch.setattr(settings, "substitute_outdated_component_code", False)
 
     flow_id = added_flow_webhook_test["id"]
     response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)

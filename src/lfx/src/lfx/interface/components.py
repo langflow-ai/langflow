@@ -30,7 +30,11 @@ from lfx.extension.bundle_registry import BundleRecord, get_default_registry
 from lfx.extension.reload import register_post_swap_hook
 from lfx.log.logger import logger
 from lfx.utils.component_aliases import ComponentIdentityIndex, build_component_identity_index
-from lfx.utils.flow_validation import collect_code_by_hash, collect_component_hash_lookups
+from lfx.utils.flow_validation import (
+    collect_code_by_hash,
+    collect_component_code_lookups,
+    collect_component_hash_lookups,
+)
 from lfx.utils.validate_cloud import (
     filter_disabled_components_from_dict,
     is_component_disabled_in_astra_cloud,
@@ -70,6 +74,11 @@ class ComponentCache:
         # substitute the trusted copy for client bytes once the hash gate
         # passes, so a truncated-hash collision can't run attacker code.
         self.code_by_hash: dict[str, str] | None = None
+        # Maps each known component type (and its aliases) to this server's
+        # trusted source for that type. Keyed by type rather than by hash, so a
+        # node whose stored built-in code has merely drifted across versions can
+        # still be rebuilt with the server's current copy.
+        self.type_to_code: dict[str, str] | None = None
         # Collision-aware canonical registry identity lookup used by catalog
         # palette and runtime policy enforcement.
         self.component_identity_index: ComponentIdentityIndex | None = None
@@ -783,13 +792,14 @@ async def _determine_loading_strategy(settings_service: "SettingsService") -> di
 
 def _collect_component_cache_lookups(
     all_types_dict: dict[str, Any],
-) -> tuple[dict[str, set[str]], set[str], dict[str, str], ComponentIdentityIndex]:
+) -> tuple[dict[str, set[str]], set[str], dict[str, str], dict[str, str], ComponentIdentityIndex]:
     """Build every derived component lookup without mutating shared cache state."""
     type_to_hash, all_hashes = collect_component_hash_lookups(all_types_dict)
     return (
         type_to_hash,
         all_hashes,
         collect_code_by_hash(all_types_dict),
+        collect_component_code_lookups(all_types_dict),
         build_component_identity_index(all_types_dict),
     )
 
@@ -806,11 +816,14 @@ def _build_code_hash_lookups(cache: ComponentCache) -> None:
         if all_types_dict is None or (not all_types_dict and not cache.all_types_ready):
             return
 
-        type_to_hash, all_hashes, code_by_hash, identity_index = _collect_component_cache_lookups(all_types_dict)
+        type_to_hash, all_hashes, code_by_hash, type_to_code, identity_index = _collect_component_cache_lookups(
+            all_types_dict
+        )
 
         cache.type_to_current_hash = type_to_hash
         cache.all_known_hashes = all_hashes
         cache.code_by_hash = code_by_hash
+        cache.type_to_code = type_to_code
         cache.component_identity_index = identity_index
         logger.debug(f"Built code hash lookups: {len(type_to_hash)} types, {len(all_hashes)} unique hashes")
 
@@ -1266,6 +1279,7 @@ def _publish_bundle_cache(bundle: str, bundle_dict: dict[str, Any]) -> bool:
         component_cache.type_to_current_hash = None
         component_cache.all_known_hashes = None
         component_cache.code_by_hash = None
+        component_cache.type_to_code = None
         component_cache.component_identity_index = None
         return True
 
@@ -1438,12 +1452,13 @@ async def _initialize_component_cache(
                     pending_updates = dict(cache.pending_bundle_updates)
                     cache.pending_bundle_updates.clear()
                 else:
-                    type_to_hash, all_hashes, code_by_hash, identity_index = lookups
+                    type_to_hash, all_hashes, code_by_hash, type_to_code, identity_index = lookups
                     cache.all_types_dict = merged_types
                     cache.all_types_ready = True
                     cache.type_to_current_hash = type_to_hash
                     cache.all_known_hashes = all_hashes
                     cache.code_by_hash = code_by_hash
+                    cache.type_to_code = type_to_code
                     cache.component_identity_index = identity_index
                     cache.initialization_future = None
                     cache.initialization_task = None
