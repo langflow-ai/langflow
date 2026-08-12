@@ -21,18 +21,24 @@ import pytest
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding, Embeddings
 from lfx.base.knowledge_bases.backends import BackendType, PostgresBackend, create_backend
+from lfx.base.knowledge_bases.backends.base import BackendConfigurationError
 from lfx.base.knowledge_bases.backends.postgres import (
     _HNSW_MAX_DIM,
+    MISSING_CREATE_PRIVILEGE_DETAILS_TYPE,
+    MISSING_CREATE_PRIVILEGE_MESSAGE,
     MISSING_EXTENSION_DETAILS_TYPE,
     MISSING_EXTENSION_MESSAGE,
     _coerce_embedding,
     _count_sql,
     _delete_by_sql,
+    _dimension_mismatch_message,
     _drop_table_sql,
     _iter_documents_sql,
     _normalize_driver,
+    _parse_pgvector_version,
     _parse_vector_dim,
     _PostgresVectorStore,
+    _translate_dimension_error,
     _validate_table_name,
     postgres_env_configured,
     read_connection_string_from_env,
@@ -106,6 +112,7 @@ class _FakeConn:
         select_rows: tuple[Any, ...] = (),
         stream_rows: tuple[Any, ...] = (),
         storage_size: int = 0,
+        can_create: bool | None = True,
         raise_on: str | None = None,
     ) -> None:
         self._ext_version = ext_version
@@ -116,6 +123,7 @@ class _FakeConn:
         self._select_rows = select_rows
         self._stream_rows = stream_rows
         self._storage_size = storage_size
+        self._can_create = can_create
         self._raise_on = raise_on
         self.statements: list[str] = []
 
@@ -134,10 +142,15 @@ class _FakeConn:
         sql = self._record(statement)
         if "pg_total_relation_size" in sql:
             return self._storage_size
-        if "to_regclass" in sql:
-            return _VALID_TABLE if self._table_exists else None
+        # ``format_type`` before ``to_regclass``: the embedding-dim probe now
+        # resolves its relation via ``to_regclass`` too, so the more specific
+        # fragment must win.
         if "format_type" in sql:
             return None if self._existing_dim is None else f"vector({self._existing_dim})"
+        if "to_regclass" in sql:
+            return _VALID_TABLE if self._table_exists else None
+        if "has_schema_privilege" in sql:
+            return self._can_create
         if "extversion" in sql:
             return self._ext_version
         if "server_version" in sql:
@@ -566,6 +579,53 @@ class TestExtensionOwnership:
         assert "CREATE EXTENSION IF NOT EXISTS" not in inspect.getsource(pg_module)
 
 
+class TestPgvectorVersionParsing:
+    @pytest.mark.parametrize(
+        ("raw", "expected"),
+        [
+            ("0.8.0", (0, 8, 0)),
+            ("0.7.0", (0, 7, 0)),
+            ("0.8", (0, 8, 0)),
+            ("1", (1, 0, 0)),
+            ("0.8.4-dev", (0, 8, 4)),
+        ],
+    )
+    def test_parses_common_shapes(self, raw: str, expected: tuple[int, ...]) -> None:
+        assert _parse_pgvector_version(raw) == expected
+
+    @pytest.mark.parametrize("raw", [None, "", "garbage"])
+    def test_unparseable_is_none(self, raw: str | None) -> None:
+        assert _parse_pgvector_version(raw) is None
+
+    def test_iterative_scan_threshold(self) -> None:
+        # The gate the search path uses: 0.8.0 crossed, 0.7.x not.
+        assert _parse_pgvector_version("0.8.0") >= (0, 8, 0)
+        assert _parse_pgvector_version("0.7.9") < (0, 8, 0)
+
+
+class TestDimensionErrorTranslation:
+    def test_translates_the_raw_driver_message(self) -> None:
+        friendly = _translate_dimension_error(
+            RuntimeError("psycopg.errors: different vector dimensions 768 and 1536"),
+            kb_name="kb",
+            query_dim=768,
+        )
+        assert friendly == _dimension_mismatch_message("kb", existing_dim=1536, model_dim=768)
+
+    def test_order_independent(self) -> None:
+        # The existing dim is whichever number isn't the query dim, regardless of
+        # the order pgvector prints them.
+        friendly = _translate_dimension_error(
+            RuntimeError("different vector dimensions 1536 and 768"),
+            kb_name="kb",
+            query_dim=768,
+        )
+        assert "was created with 1536-dimensional" in friendly
+
+    def test_returns_none_for_unrelated_errors(self) -> None:
+        assert _translate_dimension_error(RuntimeError("connection refused"), kb_name="kb", query_dim=8) is None
+
+
 # --------------------------------------------------------------------------
 # Writes and reads
 # --------------------------------------------------------------------------
@@ -663,6 +723,56 @@ class TestSimilaritySearch:
 
         assert "cmetadata @>" in conn.statements[-1]
 
+    async def test_filtered_search_widens_the_hnsw_scan(self, make_backend, fake_embeddings) -> None:
+        # pgvector filters *after* the HNSW candidate window, so a selective
+        # filter can silently return < k rows. The filtered path widens
+        # ``hnsw.ef_search`` (k * 40, capped) before the query.
+        conn = _FakeConn()  # ext_version 0.7.0 -> no iterative scan available
+        backend = make_backend(conn, embeddings=fake_embeddings)
+
+        await backend._similarity_search("q", k=5, filter={"session_id": "s1"})
+
+        joined = "\n".join(conn.statements)
+        assert "SET LOCAL hnsw.ef_search = 200" in joined  # k(5) * 40
+        assert "iterative_scan" not in joined  # server predates 0.8.0
+        assert "cmetadata @>" in conn.statements[-1]  # filter is still executed in SQL
+
+    async def test_filtered_search_enables_iterative_scan_on_08(self, make_backend, fake_embeddings) -> None:
+        conn = _FakeConn(ext_version="0.8.0")
+        backend = make_backend(conn, embeddings=fake_embeddings)
+
+        await backend._similarity_search("q", k=1, filter={"session_id": "s1"})
+
+        assert "SET LOCAL hnsw.iterative_scan = relaxed_order" in "\n".join(conn.statements)
+
+    async def test_unfiltered_search_leaves_the_scan_gucs_alone(self, make_backend, fake_embeddings) -> None:
+        conn = _FakeConn()
+        backend = make_backend(conn, embeddings=fake_embeddings)
+
+        await backend._similarity_search("q", k=3)
+
+        joined = "\n".join(conn.statements)
+        assert "ef_search" not in joined
+        assert "iterative_scan" not in joined
+
+    async def test_dimension_mismatch_on_retrieval_is_translated(self, make_backend, fake_embeddings) -> None:
+        # ``fake_embeddings`` is 8-dim; the table reports a 1536-dim column, so
+        # the driver raises. Retrieval must surface the same clear message ingest
+        # does, as a non-retryable ``BackendConfigurationError``.
+        class _DimConn(_FakeConn):
+            async def execute(self, statement: Any, params: dict[str, Any] | None = None) -> _FakeResult:  # noqa: ARG002
+                sql = _render(statement)
+                self.statements.append(sql)
+                if "<=>" in sql:
+                    msg = "different vector dimensions 8 and 1536"
+                    raise RuntimeError(msg)
+                return _FakeResult(())
+
+        backend = make_backend(_DimConn(), embeddings=fake_embeddings)
+
+        with pytest.raises(BackendConfigurationError, match="was created with 1536-dimensional"):
+            await backend._similarity_search("q", k=1)
+
     async def test_vector_store_facade_delegates(self, make_backend, fake_embeddings) -> None:
         rows = (SimpleNamespace(id="a", document="hi", cmetadata={}, distance=0.5),)
         backend = make_backend(_FakeConn(select_rows=rows, existing_dim=8), embeddings=fake_embeddings)
@@ -696,8 +806,11 @@ class TestCount:
     async def test_missing_table_counts_zero(self, make_backend) -> None:
         assert await make_backend(_FakeConn(table_exists=False)).count() == 0
 
-    async def test_database_error_is_swallowed(self, make_backend) -> None:
-        assert await make_backend(_FakeConn(raise_on="count(*)")).count() == 0
+    async def test_database_error_propagates(self, make_backend) -> None:
+        # The "no table yet" case is handled by the explicit ``_table_exists``
+        # check, so a genuine failure must surface rather than read as "0 chunks".
+        with pytest.raises(_DatabaseError):
+            await make_backend(_FakeConn(raise_on="count(*)")).count()
 
 
 class TestIterDocuments:
@@ -730,9 +843,11 @@ class TestIterDocuments:
         assert batches[0][0].metadata == {}
         assert "embedding" in conn.statements[-1]
 
-    async def test_database_error_is_swallowed(self, make_backend) -> None:
+    async def test_database_error_propagates(self, make_backend) -> None:
+        # A streaming failure must not masquerade as an empty KB (data loss).
         backend = make_backend(_FakeConn(raise_on="SELECT document"))
-        assert await self._collect(backend) == []
+        with pytest.raises(_DatabaseError):
+            await self._collect(backend)
 
 
 class TestDeleteBy:
@@ -849,3 +964,22 @@ class TestTestConnection:
         assert result.ok is True
         assert "0.7.0" in result.message
         assert result.details == {"server_version": "16.1", "pgvector_version": "0.7.0"}
+
+    async def test_missing_create_privilege_is_reported(self, make_backend) -> None:
+        # Extension present but the role can't create tables -> ingest would fail
+        # on first write; report it here instead of "Configured and reachable".
+        backend = make_backend(_FakeConn(ext_version="0.8.0", server_version="16.1", can_create=False))
+
+        result = await backend.test_connection()
+
+        assert result.ok is False
+        assert result.message == MISSING_CREATE_PRIVILEGE_MESSAGE
+        assert result.details == {"type": MISSING_CREATE_PRIVILEGE_DETAILS_TYPE}
+
+    async def test_unknown_create_privilege_does_not_fail_the_check(self, make_backend) -> None:
+        # A ``None`` probe result (e.g. no current schema) must not false-alarm.
+        backend = make_backend(_FakeConn(ext_version="0.8.0", server_version="16.1", can_create=None))
+
+        result = await backend.test_connection()
+
+        assert result.ok is True

@@ -23,6 +23,11 @@ import sys
 import types
 from importlib.util import find_spec
 
+# Names this conftest actually inserted into ``sys.modules`` (i.e. that weren't
+# already present). Tracked so ``pytest_unconfigure`` can remove exactly those
+# at session end and the shims don't leak into unrelated suites in the same run.
+_INSTALLED_SHIMS: list[str] = []
+
 
 def _is_missing(module_name: str) -> bool:
     try:
@@ -32,8 +37,12 @@ def _is_missing(module_name: str) -> bool:
 
 
 def _register(modules: dict[str, types.ModuleType]) -> None:
+    # Equivalent to ``setdefault`` (a real install always wins) but records what
+    # we inserted so it can be torn down. See ``_INSTALLED_SHIMS``.
     for name, module in modules.items():
-        sys.modules.setdefault(name, module)
+        if name not in sys.modules:
+            sys.modules[name] = module
+            _INSTALLED_SHIMS.append(name)
 
 
 def _install_chromadb_shim() -> None:
@@ -136,3 +145,15 @@ if _is_missing("langchain_chroma"):
     _install_langchain_chroma_shim()
 if _is_missing("pgvector"):
     _install_pgvector_shim()
+
+
+def pytest_unconfigure(config: object) -> None:  # noqa: ARG001 — pytest hook signature
+    """Remove the stand-in modules this conftest installed at session end.
+
+    Only pops entries we actually inserted (never a real install), so the shims
+    don't outlive this package's session and leak into other suites.
+    """
+    for name in reversed(_INSTALLED_SHIMS):
+        if isinstance(sys.modules.get(name), types.ModuleType) and getattr(sys.modules[name], "__file__", None) is None:
+            sys.modules.pop(name, None)
+    _INSTALLED_SHIMS.clear()

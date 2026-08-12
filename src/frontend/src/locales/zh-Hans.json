@@ -1792,7 +1792,7 @@
   "settings.dbProviders.providers.chroma_cloud.description": "通过 api.trychroma.com 管理 Chroma Cloud 矢量存储。",
   "settings.dbProviders.providers.mongodb.description": "Atlas Vector Search 后端。",
   "settings.dbProviders.providers.opensearch.description": "适用于自托管或托管集群的外部 OpenSearch k-NN 索引。",
-  "settings.dbProviders.providers.postgres.description": "Postgres 基于向量的存储。",
+  "settings.dbProviders.providers.postgres.description": "Postgres pgVector 根据您的服务器环境进行配置。可用时，新的知识库会自动使用它。",
   "settings.dbProviders.postgresDescription": "Postgres pgVector 会根据服务器的环境配置自动设置——此处无需输入任何内容。可用时，您的知识库和记忆库将自动使用它。",
   "settings.dbProviders.postgresChecking": "正在检查连接…",
   "settings.dbProviders.postgresConfigured": "已配置且可访问",

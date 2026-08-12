@@ -1792,7 +1792,7 @@
   "settings.dbProviders.providers.chroma_cloud.description": "api.trychroma.com によるマネージド Chroma Cloud ベクターストレージ。",
   "settings.dbProviders.providers.mongodb.description": "Atlas Vector Searchのバックエンド。",
   "settings.dbProviders.providers.opensearch.description": "外部 OpenSearch のk-NNインデックス（セルフホスト型またはマネージドクラスター向け）。",
-  "settings.dbProviders.providers.postgres.description": "Postgres -ベースのベクトルストレージ。",
+  "settings.dbProviders.providers.postgres.description": "Postgres pgVector はサーバー環境から構成されます。利用可能になると、新しいナレッジベースが自動的に使用します。",
   "settings.dbProviders.postgresDescription": "Postgres pgVector はサーバーの環境設定から自動的にセットアップされます。ここで入力する項目はありません。利用可能になると、ナレッジベースとメモリベースで自動的に使用されます。",
   "settings.dbProviders.postgresChecking": "接続を確認しています…",
   "settings.dbProviders.postgresConfigured": "構成済みで接続可能です",

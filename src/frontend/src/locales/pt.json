@@ -1792,7 +1792,7 @@
   "settings.dbProviders.providers.chroma_cloud.description": "Armazenamento vetorial gerenciado na Chroma Cloud por meio de api.trychroma.com.",
   "settings.dbProviders.providers.mongodb.description": "Back-end do Atlas Vector Search.",
   "settings.dbProviders.providers.opensearch.description": "Índice k-NN externo OpenSearch para clusters auto-hospedados ou gerenciados.",
-  "settings.dbProviders.providers.postgres.description": "Postgres armazenamento vetorial baseado em",
+  "settings.dbProviders.providers.postgres.description": "O Postgres pgVector é configurado a partir do ambiente do seu servidor. Quando disponível, as novas bases de conhecimento o utilizam automaticamente.",
   "settings.dbProviders.postgresDescription": "O Postgres pgVector é configurado automaticamente a partir da configuração de ambiente do seu servidor — não há nada a inserir aqui. Quando estiver disponível, suas bases de conhecimento e bases de memória o utilizam automaticamente.",
   "settings.dbProviders.postgresChecking": "Verificando conexão…",
   "settings.dbProviders.postgresConfigured": "Configurado e acessível",
