@@ -8,6 +8,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from lfx.log.logger import logger
+from lfx.observability import execution_protocol
 from lfx.schema.openai_responses_schemas import create_openai_error, create_openai_error_chunk
 from lfx.utils.flow_validation import CustomComponentValidationError
 
@@ -115,17 +116,20 @@ async def run_flow_for_openai_responses(
 
         async def openai_stream_generator() -> AsyncGenerator[str, None]:
             """Convert Langflow events to OpenAI Responses API streaming format."""
-            main_task = asyncio.create_task(
-                run_flow_generator(
-                    flow=flow,
-                    input_request=simplified_request,
-                    api_key_user=api_key_user,
-                    event_manager=event_manager,
-                    client_consumed_queue=asyncio_queue_client_consumed,
-                    context=context,
-                    expose_error_details=expose_error_details,
+            # Around the create_task only: the task copies the context at creation, and there is
+            # no await inside the scope, so nothing straddles a suspension point of this generator.
+            with execution_protocol("openai_responses"):
+                main_task = asyncio.create_task(
+                    run_flow_generator(
+                        flow=flow,
+                        input_request=simplified_request,
+                        api_key_user=api_key_user,
+                        event_manager=event_manager,
+                        client_consumed_queue=asyncio_queue_client_consumed,
+                        context=context,
+                        expose_error_details=expose_error_details,
+                    )
                 )
-            )
 
             try:
                 await logger.adebug(
@@ -471,14 +475,15 @@ async def run_flow_for_openai_responses(
         )
 
     # Handle non-streaming response
-    result = await simple_run_flow(
-        flow=flow,
-        input_request=simplified_request,
-        stream=False,
-        api_key_user=api_key_user,
-        context=context,
-        expose_error_details=expose_error_details,
-    )
+    with execution_protocol("openai_responses"):
+        result = await simple_run_flow(
+            flow=flow,
+            input_request=simplified_request,
+            stream=False,
+            api_key_user=api_key_user,
+            context=context,
+            expose_error_details=expose_error_details,
+        )
 
     # Extract output text, tool calls, and usage from result
     output_text = ""

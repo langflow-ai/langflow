@@ -255,6 +255,9 @@ async def execute_public_workflow(
             current_user=public_user,
             source_flow_id=real_flow_id,
             source_flow_owner_id=source_flow_owner_id,
+            # Anonymous shared-link traffic, kept apart from signed-in v2 runs the same way
+            # playground.public is kept apart from playground.
+            protocol="v2.public",
             expose_error_details=False,
         ):
             yield frame

@@ -494,6 +494,9 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 # job_id) and fires the memory-base hook below with that id, so the build pipeline
                 # must not mint its own run_id-keyed WORKFLOW row + hook (it would double both).
                 track_job_status=False,
+                # This factory is the runner the v2 background route actually reaches, so the label
+                # belongs here; without it a background run is indistinguishable from a live stream.
+                protocol="v2.background",
                 # Emit the off-wire terminal-output capture the runner records into
                 # ``Job.result`` — protocol-neutral, so agui-protocol runs get a
                 # populated GET-status result too (not just langflow).
