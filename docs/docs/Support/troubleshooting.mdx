@@ -498,11 +498,18 @@ The following error can occur during Langflow upgrades when the database schema 
 There's a mismatch between the models and the database.
 ```
 
-To resolve this error, run the migration fix command:
+Back up your database first, and then run the migration fix command:
 
 ```bash
 uv run langflow migration --fix
 ```
+
+:::warning
+`langflow migration --fix` is destructive.
+Use a dedicated database for Langflow application data.
+Repair mode repeatedly downgrades and re-applies Langflow's schema revisions, which can delete Langflow data, and it might fail to converge when non-Langflow tables such as `langchain_pg_*` vector store tables share the same database.
+For more information, see [Database migrations](./database-migrations).
+:::
 
 If the migration fix doesn't resolve the issue, clear the cache by deleting the contents of your Langflow cache folder.
 The filepath depends on your operating system, installation type, and configuration options.

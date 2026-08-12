@@ -12,6 +12,10 @@ from langflow.api.v1 import model_provider_policy as policy_api
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.database.models.model_provider_policy import ModelProviderPolicy
 from langflow.services.model_provider_policy import ModelProviderPolicyNotInitializedError
+from langflow.services.policy_bundle import (
+    PolicyBundleApplicationNotSupportedError,
+    PolicyBundleRevisionConflictError,
+)
 from lfx.services.deps import injectable_session_scope, injectable_session_scope_readonly
 from lfx.services.model_provider_policy import BaseModelProviderPolicyService, ModelProviderPolicyService
 from pydantic import ValidationError
@@ -194,6 +198,68 @@ def test_external_policy_rejects_valid_writes_without_side_effects(monkeypatch, 
     audit.assert_not_awaited()
     apply.assert_not_called()
     invalidate.assert_not_called()
+
+
+def test_shared_write_rejects_legacy_catalog_plugin_without_side_effects(monkeypatch):
+    service = ModelProviderPolicyService()
+    replace_state = AsyncMock(
+        side_effect=PolicyBundleApplicationNotSupportedError(
+            "Configured catalog policy service does not support shared policy bundle updates"
+        )
+    )
+    audit = AsyncMock()
+    apply = Mock()
+    monkeypatch.setattr(policy_api, "get_model_provider_policy_service", lambda: service, raising=False)
+    monkeypatch.setattr(policy_api, "replace_model_provider_policy_state", replace_state)
+    monkeypatch.setattr(policy_api, "audit_decision", audit)
+    monkeypatch.setattr(policy_api, "apply_model_provider_policy_state", apply)
+    client = _client_with_superuser(policy_api.router)
+
+    response = client.put(
+        "/model-provider-policy",
+        json={"approved_provider_ids": ["openai"]},
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert "does not support shared policy bundle updates" in response.json()["detail"]
+    replace_state.assert_awaited_once()
+    audit.assert_not_awaited()
+    apply.assert_not_called()
+
+
+@pytest.mark.parametrize("method", ["post", "put"])
+def test_shared_write_returns_structured_revision_conflict_without_side_effects(monkeypatch, method):
+    service = ModelProviderPolicyService()
+    replace_state = AsyncMock(
+        side_effect=PolicyBundleRevisionConflictError(
+            expected_revision=7,
+            active_revision=8,
+        )
+    )
+    audit = AsyncMock()
+    apply = Mock()
+    monkeypatch.setattr(policy_api, "get_model_provider_policy_service", lambda: service, raising=False)
+    monkeypatch.setattr(policy_api, "replace_model_provider_policy_state", replace_state)
+    monkeypatch.setattr(policy_api, "audit_decision", audit)
+    monkeypatch.setattr(policy_api, "apply_model_provider_policy_state", apply)
+    client = _client_with_superuser(policy_api.router)
+
+    response = getattr(client, method)(
+        "/model-provider-policy",
+        json={"approved_provider_ids": ["openai"]},
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json() == {
+        "detail": {
+            "message": "Policy bundle revision conflict",
+            "expected_revision": 7,
+            "active_revision": 8,
+        }
+    }
+    replace_state.assert_awaited_once()
+    audit.assert_not_awaited()
+    apply.assert_not_called()
 
 
 async def test_replace_policy_commits_before_runtime_invalidation(monkeypatch):

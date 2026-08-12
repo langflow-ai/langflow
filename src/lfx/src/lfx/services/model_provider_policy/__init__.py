@@ -1,11 +1,14 @@
 """Pluggable policy contract for unified model providers."""
 
 from lfx.services.model_provider_policy.base import (
+    MODEL_POLICY_KEY_SEPARATOR,
+    MODEL_POLICY_KEY_TYPES,
     BaseModelProviderPolicyService,
     ModelProviderPolicyContext,
     ModelProviderPolicyError,
     ModelProviderPolicyPurpose,
     ModelProviderPolicySnapshot,
+    normalize_blocked_model_key,
 )
 from lfx.services.model_provider_policy.context import (
     current_model_provider_policy_context,
@@ -20,6 +23,8 @@ from lfx.services.model_provider_policy.utils import (
 )
 
 __all__ = [
+    "MODEL_POLICY_KEY_SEPARATOR",
+    "MODEL_POLICY_KEY_TYPES",
     "BaseModelProviderPolicyService",
     "ModelProviderPolicyContext",
     "ModelProviderPolicyError",
@@ -28,6 +33,7 @@ __all__ = [
     "ModelProviderPolicySnapshot",
     "aresolve_model_provider_policy",
     "current_model_provider_policy_context",
+    "normalize_blocked_model_key",
     "require_model_provider",
     "reset_current_model_provider_policy_context",
     "resolve_model_provider_policy",

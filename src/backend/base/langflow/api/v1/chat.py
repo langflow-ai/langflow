@@ -11,12 +11,14 @@ from fastapi.responses import StreamingResponse
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
 from lfx.log.logger import logger
+from lfx.observability import execution_protocol
 from lfx.schema.schema import InputValueRequest, OutputValue
 from lfx.services.cache.utils import CacheMiss
 from lfx.utils.flow_validation import (
     PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE,
     CatalogPolicyIdentityUnavailableError,
     CustomComponentValidationError,
+    prepare_flow_build_for_user,
     prepare_public_flow_build,
     validate_catalog_policy_for_flow,
     validate_flow_for_current_settings,
@@ -74,6 +76,26 @@ if TYPE_CHECKING:
     from lfx.graph.vertex.vertex_types import InterfaceVertex
 
 router = APIRouter(tags=["Chat"])
+
+
+def _validate_graph_for_execution(graph: Graph) -> None:
+    """Validate the effective cached graph against the current runtime policy."""
+    try:
+        validate_flow_for_current_settings(graph)
+    except CatalogPolicyIdentityUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except CustomComponentValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+async def _clear_invalid_graph_cache(chat_service: ChatService, flow_id: str) -> None:
+    """Best-effort eviction for a graph rejected by current runtime policy."""
+    try:
+        await chat_service.clear_cache(flow_id)
+    except Exception:  # noqa: BLE001
+        await logger.aexception("Failed to evict a graph rejected by runtime policy")
 
 
 async def _verify_job_ownership(job_id: str, current_user: CurrentActiveUser, queue_service: JobQueueService) -> None:
@@ -180,6 +202,12 @@ async def retrieve_vertices_order(
         if not data:
             graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
         else:
+            sanitized_data = await prepare_flow_build_for_user(
+                data.model_dump(),
+                is_superuser=current_user.is_superuser,
+            )
+            if sanitized_data is not None:
+                data = FlowDataRequest.model_validate(sanitized_data)
             graph = await build_and_cache_graph_from_data(
                 flow_id=flow_id, graph_data=data.model_dump(), chat_service=chat_service
             )
@@ -217,6 +245,8 @@ async def retrieve_vertices_order(
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         if isinstance(exc, CustomComponentValidationError):
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if isinstance(exc, RuntimeError):
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
         await logger.aexception("Error checking build status")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -311,7 +341,13 @@ async def build_flow(
 
     try:
         if data:
-            validate_flow_for_current_settings(data.model_dump())
+            raw_data = data.model_dump()
+            sanitized_data = await prepare_flow_build_for_user(
+                raw_data,
+                is_superuser=current_user.is_superuser,
+            )
+            if sanitized_data is not None:
+                data = FlowDataRequest.model_validate(sanitized_data)
         elif flow and flow.data:
             validate_flow_for_current_settings(flow.data)
     except CatalogPolicyIdentityUnavailableError as exc:
@@ -321,19 +357,29 @@ async def build_flow(
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
-    job_id = await start_flow_build(
-        flow_id=flow_id,
-        background_tasks=background_tasks,
-        inputs=inputs,
-        data=data,
-        files=files,
-        stop_component_id=stop_component_id,
-        start_component_id=start_component_id,
-        log_builds=log_builds,
-        current_user=current_user,
-        queue_service=queue_service,
-        flow_name=flow_name,
-    )
+    # v1.build, not "playground": the canvas moved to POST /api/v2/workflows and the frontend
+    # has no reference to this route left (15 hits for api/v2/workflows, 0 for api/v1/build).
+    # What still arrives here is direct API callers and voice, so labelling it playground would
+    # attribute IDE traffic to a route the IDE no longer uses. The playground label is derived
+    # from the agui wire protocol on the v2 stream instead.
+    #
+    # Still a default rather than the truth for every caller: voice reaches this same function
+    # through build_flow_and_stream and binds its own protocol first, which wins.
+    with execution_protocol("v1.build"):
+        job_id = await start_flow_build(
+            flow_id=flow_id,
+            background_tasks=background_tasks,
+            inputs=inputs,
+            data=data,
+            files=files,
+            stop_component_id=stop_component_id,
+            start_component_id=start_component_id,
+            log_builds=log_builds,
+            current_user=current_user,
+            queue_service=queue_service,
+            flow_name=flow_name,
+            expose_error_details=flow.user_id == current_user.id,
+        )
     await _register_job_owner_or_cancel(queue_service, job_id, current_user.id)
 
     # This is required to support FE tests - we need to be able to set the event delivery to direct
@@ -491,6 +537,12 @@ async def build_vertex(
             graph.set_run_id(run_id)
         else:
             graph = cache.get("result")
+        try:
+            _validate_graph_for_execution(graph)
+        except HTTPException:
+            await _clear_invalid_graph_cache(chat_service, flow_id_str)
+            raise
+        if not isinstance(cache, CacheMiss):
             await graph.initialize_run()
             run_id = graph.run_id
         vertex = graph.get_vertex(vertex_id)
@@ -588,6 +640,8 @@ async def build_vertex(
                 component_run_id=run_id,
             ),
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_component,
@@ -609,24 +663,31 @@ async def build_vertex(
     return build_response
 
 
-async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService):
-    graph = None
+async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService, graph: Graph | None = None):
     try:
-        try:
-            cache = await chat_service.get_cache(flow_id)
-        except Exception as exc:  # noqa: BLE001
-            await logger.aexception("Error building Component")
-            yield str(StreamData(event="error", data={"error": str(exc)}))
-            return
+        if graph is None:
+            try:
+                cache = await chat_service.get_cache(flow_id)
+            except Exception as exc:  # noqa: BLE001
+                await logger.aexception("Error building Component")
+                yield str(StreamData(event="error", data={"error": str(exc)}))
+                return
 
-        if isinstance(cache, CacheMiss):
-            # If there's no cache
-            msg = f"No cache found for {flow_id}."
-            await logger.aerror(msg)
-            yield str(StreamData(event="error", data={"error": msg}))
-            return
-        else:
+            if isinstance(cache, CacheMiss):
+                # If there's no cache
+                msg = f"No cache found for {flow_id}."
+                await logger.aerror(msg)
+                yield str(StreamData(event="error", data={"error": msg}))
+                return
             graph = cache.get("result")
+
+        try:
+            _validate_graph_for_execution(graph)
+        except HTTPException as exc:
+            await _clear_invalid_graph_cache(chat_service, flow_id)
+            graph = None
+            yield str(StreamData(event="error", data={"error": exc.detail}))
+            return
 
         try:
             vertex: InterfaceVertex = graph.get_vertex(vertex_id)
@@ -749,11 +810,24 @@ async def build_vertex_stream(
         folder_id=flow.folder_id,
     )
 
+    chat_service = get_chat_service()
     try:
+        cache = await chat_service.get_cache(str(flow_id))
+        if isinstance(cache, CacheMiss):
+            graph = None
+        else:
+            graph = cache.get("result")
+            try:
+                _validate_graph_for_execution(graph)
+            except HTTPException:
+                await _clear_invalid_graph_cache(chat_service, str(flow_id))
+                raise
         return StreamingResponse(
-            _stream_vertex(str(flow_id), vertex_id, get_chat_service()),
+            _stream_vertex(str(flow_id), vertex_id, chat_service, graph),
             media_type="text/event-stream",
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Error building Component") from exc
 
@@ -899,32 +973,36 @@ async def build_public_tmp(
 
         # flow_id=new_flow_id for tracking/sessions/messages (virtual, per-user isolation).
         # source_flow_id=flow_id to load the actual flow data from the database.
-        job_id = await start_flow_build(
-            flow_id=new_flow_id,
-            source_flow_id=flow_id,
-            background_tasks=background_tasks,
-            inputs=inputs,
-            # Default path: build from server-sanitized data (trusted code substituted in,
-            # unknown custom components already rejected above). When None (opt-in mode or no
-            # flow data) the build falls back to loading the flow from the DB by source_flow_id.
-            # Either way the caller never supplies the data — it is derived from the stored flow.
-            data=(
-                FlowDataRequest(
-                    nodes=sanitized_public_data.get("nodes", []),
-                    edges=sanitized_public_data.get("edges", []),
-                    viewport=sanitized_public_data.get("viewport"),
-                )
-                if sanitized_public_data is not None
-                else None
-            ),
-            files=files,
-            stop_component_id=stop_component_id,
-            start_component_id=start_component_id,
-            log_builds=log_builds or False,
-            current_user=owner_user,
-            queue_service=queue_service,
-            flow_name=flow_name or f"{authenticated_user_id or client_id}_{flow_id}",
-        )
+        # Anonymous shared-link traffic on the v1 build route. Named for the route rather than
+        # the surface, for the same reason as v1.build above; the v2 public stream is v2.public.
+        with execution_protocol("v1.build.public"):
+            job_id = await start_flow_build(
+                flow_id=new_flow_id,
+                source_flow_id=flow_id,
+                background_tasks=background_tasks,
+                inputs=inputs,
+                # Default path: build from server-sanitized data (trusted code substituted in,
+                # unknown custom components already rejected above). When None (opt-in mode or no
+                # flow data) the build falls back to loading the flow from the DB by source_flow_id.
+                # Either way the caller never supplies the data — it is derived from the stored flow.
+                data=(
+                    FlowDataRequest(
+                        nodes=sanitized_public_data.get("nodes", []),
+                        edges=sanitized_public_data.get("edges", []),
+                        viewport=sanitized_public_data.get("viewport"),
+                    )
+                    if sanitized_public_data is not None
+                    else None
+                ),
+                files=files,
+                stop_component_id=stop_component_id,
+                start_component_id=start_component_id,
+                log_builds=log_builds or False,
+                current_user=owner_user,
+                queue_service=queue_service,
+                flow_name=flow_name or f"{authenticated_user_id or client_id}_{flow_id}",
+                expose_error_details=False,
+            )
         # Gate the public events/cancel endpoints to jobs that were actually
         # started through this public build path, preventing unauthenticated
         # callers from reading or cancelling private-flow builds by job_id.

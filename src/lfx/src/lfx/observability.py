@@ -19,10 +19,12 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import contextvars
 import os
 import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
+from urllib.parse import urlsplit, urlunsplit
 
 from lfx.log.logger import logger
 from lfx.observability_fastapi import patch_otel_fastapi_route_details
@@ -49,6 +51,93 @@ APPLICATION_TRACER_NAME = "langflow.observability"
 APPLICATION_METER_NAME = "langflow"
 
 DEFAULT_SERVICE_NAME = "langflow"
+
+# The surface a flow run arrived through, recorded as the flow span's ``protocol`` attribute so
+# an operator can tell a playground click from a webhook delivery from an MCP tool call.
+#
+# Ambient rather than a parameter because the graph is several layers below the surface that
+# knows the answer, and two of those layers hand the run to a fresh asyncio task. Task creation
+# copies the context, so setting this at the entry point carries it into the run without
+# threading an argument through every intermediate signature. It also means a path nobody wired
+# reports no protocol at all rather than inheriting a wrong one from its caller.
+_current_protocol: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "lfx_execution_protocol",
+    default=None,
+)
+
+
+# The client a run says it came from, recorded as the span's ``client`` attribute. Distinct from
+# ``protocol`` on purpose: protocol is how the request arrived and is derived server-side from the
+# route, while this is who the caller claims to be. Conflating them is a mistake worth naming,
+# because the playground calls the same public API any user would, so the route cannot identify it.
+#
+# Self-reported and therefore spoofable. That is fine for telemetry and must never become an
+# authorization signal. The vocabulary is closed so a caller cannot mint attribute values at will;
+# anything unrecognised is dropped rather than recorded, on the same principle as protocol, where a
+# missing attribute is an honest "nobody said" and a guessed one is a lie.
+KNOWN_EXECUTION_CLIENTS = frozenset({"playground", "sdk", "cli"})
+
+# Follows the X-LANGFLOW-* convention already used for request-scoped global variables.
+EXECUTION_CLIENT_HEADER = "x-langflow-client"
+
+_current_client: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "lfx_execution_client",
+    default=None,
+)
+
+
+def get_execution_client() -> str | None:
+    """Return the client the current run says it came from, or None if it did not say."""
+    return _current_client.get()
+
+
+@contextlib.contextmanager
+def execution_client(client: str | None) -> Iterator[None]:
+    """Bind *client* for the current context, ignoring anything outside the known vocabulary."""
+    if client not in KNOWN_EXECUTION_CLIENTS:
+        yield
+        return
+    token = _current_client.set(client)
+    try:
+        yield
+    finally:
+        _current_client.reset(token)
+
+
+def get_execution_protocol() -> str | None:
+    """Return the surface the current flow run arrived through, or None outside a served run."""
+    return _current_protocol.get()
+
+
+@contextlib.contextmanager
+def execution_protocol(protocol: str) -> Iterator[None]:
+    """Bind *protocol* as the surface for flow runs started in this context, outermost wins.
+
+    An already-bound protocol is left alone, because several surfaces share one driver
+    underneath: voice and the playground both reach the graph through the same build path, and
+    a flow-as-tool child run reaches it through whichever surface called the parent. In every
+    such pair the outer binding is the one that names how the request actually arrived, so the
+    inner generic driver must not overwrite it.
+
+    Reset on exit so a worker that serves many requests on one task cannot leak one request's
+    protocol into the next. A run handed to ``asyncio.create_task`` inside the block keeps the
+    value regardless, because the task copies the context at creation.
+
+    Entry points bind with this. The one exception is a callee that is itself an async
+    generator: an async generator body runs in the context of whoever calls ``__anext__``, so a
+    scope wrapped around it from outside would set and reset across its suspension points. Those
+    take a plain ``protocol`` argument and bind it inside, on the coroutine that does the work
+    (see ``_stream_event_frames``).
+    """
+    if _current_protocol.get() is not None:
+        yield
+        return
+    token = _current_protocol.set(protocol)
+    try:
+        yield
+    finally:
+        _current_protocol.reset(token)
+
 
 # Event-loop scheduling delay. Sampled rather than instrumented: there is no hook that
 # reports "the loop was blocked", so the only way to see it is to ask for a known sleep and
@@ -134,6 +223,48 @@ PROCESS_METRICS_CONFIG = {
 }
 
 
+# Environment resolution shared with the doctor (``lfx observability doctor``). These are plain
+# os.getenv and deliberately sit outside the otel-guarded block below, so the self-test can
+# import them at module scope and resolve endpoints exactly the way the bootstrap does. Keeping
+# one definition is the point: a doctor that resolved endpoints its own way could report a
+# healthy pipeline the runtime never exports to.
+
+
+def otlp_endpoint(signal: str) -> str | None:
+    """Resolve a signal's endpoint: the per-signal variable first, then the generic one."""
+    return os.getenv(f"OTEL_EXPORTER_OTLP_{signal.upper()}_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+
+
+def otlp_exporter_disabled(signal: str) -> bool:
+    """Whether the operator turned this signal off while leaving a shared endpoint set."""
+    return os.getenv(f"OTEL_{signal.upper()}_EXPORTER", "otlp").strip().lower() == "none"
+
+
+def otlp_exporter_class(signal: str, protocol: str):
+    """The OTLP exporter class for a signal and protocol.
+
+    Returns the class rather than an instance because the callers differ: the bootstrap wants a
+    default-constructed exporter reading the environment, while the doctor passes an explicit
+    timeout. Spelled out once here so a signal/protocol pairing cannot be wrong in one place and
+    right in another.
+    """
+    if signal == "traces":
+        if protocol == "grpc":
+            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter as ExporterClass
+        else:
+            from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter as ExporterClass
+    elif signal == "metrics":
+        if protocol == "grpc":
+            from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter as ExporterClass
+        else:
+            from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter as ExporterClass
+    elif protocol == "grpc":
+        from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter as ExporterClass
+    else:
+        from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter as ExporterClass
+    return ExporterClass
+
+
 # OpenTelemetry is optional. Resolve the SDK surface once, so the bootstrap functions can be a
 # simple availability check rather than a repeated import attempt. When it is absent, every
 # public entry point below returns without doing anything.
@@ -186,6 +317,7 @@ if _OTEL_AVAILABLE:
         def on_end(self, span) -> None:
             scope = span.instrumentation_scope.name if span.instrumentation_scope else ""
             if scope in APPLICATION_INSTRUMENTATION_SCOPES:
+                _redact_url_attributes(span)
                 super().on_end(span)
                 return
             if scope not in self._dropped_scopes:
@@ -278,14 +410,6 @@ if _OTEL_AVAILABLE:
             return "http/protobuf"
         return protocol
 
-    def _otlp_span_exporter(protocol: str):
-        """Build the OTLP span exporter; it reads endpoint, headers and timeout from the environment."""
-        if protocol == "grpc":
-            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-        else:
-            from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-        return OTLPSpanExporter()
-
     def _prometheus_reader():
         """Build the local Prometheus pull reader, or None when the exporter is not installed.
 
@@ -311,21 +435,18 @@ if _OTEL_AVAILABLE:
         The final flush on exit needs no wiring: MeterProvider registers its own atexit handler
         (shutdown_on_exit defaults to True), which shuts the reader down and drains it.
         """
-        endpoint = os.getenv("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+        endpoint = otlp_endpoint("metrics")
         if not endpoint:
             return None
 
         # The operator's documented way to turn metrics off while leaving a shared endpoint set.
-        if os.getenv("OTEL_METRICS_EXPORTER", "otlp").strip().lower() == "none":
+        if otlp_exporter_disabled("metrics"):
             return None
 
         protocol = _otlp_protocol("metrics")
         try:
-            if protocol == "grpc":
-                from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-            else:
-                from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-            reader = PeriodicExportingMetricReader(ApplicationOnlyMetricExporter(OTLPMetricExporter()))
+            exporter = otlp_exporter_class("metrics", protocol)()
+            reader = PeriodicExportingMetricReader(ApplicationOnlyMetricExporter(exporter))
         except Exception:  # noqa: BLE001
             logger.warning("Could not configure the OTLP metric exporter; metrics will not be pushed.")
             return None
@@ -394,12 +515,12 @@ if _OTEL_AVAILABLE:
         Nothing sets a tracer provider otherwise, so spans go nowhere. If application code
         or opentelemetry-instrument already installed one, leave it alone.
         """
-        endpoint = os.getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+        endpoint = otlp_endpoint("traces")
         if not endpoint:
             return None
 
         # The operator's documented way to turn traces off while leaving a shared endpoint set.
-        if os.getenv("OTEL_TRACES_EXPORTER", "otlp").strip().lower() == "none":
+        if otlp_exporter_disabled("traces"):
             return None
 
         if trace.get_tracer_provider().__class__.__name__ != "ProxyTracerProvider":
@@ -417,7 +538,8 @@ if _OTEL_AVAILABLE:
         protocol = _otlp_protocol("traces")
         try:
             tracer_provider = TracerProvider(resource=_resource())
-            tracer_provider.add_span_processor(ApplicationOnlySpanProcessor(_otlp_span_exporter(protocol)))
+            exporter = otlp_exporter_class("traces", protocol)()
+            tracer_provider.add_span_processor(ApplicationOnlySpanProcessor(exporter))
         except Exception:  # noqa: BLE001
             logger.warning("Could not configure the OTLP tracer provider; traces will not be exported.")
             return None
@@ -435,10 +557,10 @@ if _OTEL_AVAILABLE:
         automatic because the SDK stamps the active span's trace_id onto every record, and
         each flow execution already runs inside a span.
         """
-        endpoint = os.getenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+        endpoint = otlp_endpoint("logs")
         if not endpoint:
             return None
-        if os.getenv("OTEL_LOGS_EXPORTER", "otlp").strip().lower() == "none":
+        if otlp_exporter_disabled("logs"):
             return None
         if isinstance(_logs.get_logger_provider(), LoggerProvider):
             logger.warning("A logger provider is already installed; not replacing it.")
@@ -446,13 +568,9 @@ if _OTEL_AVAILABLE:
 
         protocol = _otlp_protocol("logs")
         try:
-            if protocol == "grpc":
-                from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
-            else:
-                from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
-
             provider = LoggerProvider(resource=_resource())
-            provider.add_log_record_processor(BatchLogRecordProcessor(OTLPLogExporter()))
+            exporter = otlp_exporter_class("logs", protocol)()
+            provider.add_log_record_processor(BatchLogRecordProcessor(exporter))
         except Exception as exc:  # noqa: BLE001
             logger.warning(f"Could not configure the OTLP log exporter; logs will not be shipped. {exc}")
             return None
@@ -496,6 +614,89 @@ class ApplicationTelemetry:
             self.tracer_provider.shutdown()
         if self.logger_provider is not None:
             self.logger_provider.shutdown()
+
+
+# URL attributes an HTTP instrumentor may set. Every one of them can carry a full URL, and a
+# full URL can carry a credential: providers put API keys in the query string (Gemini's
+# ?key=, several others), and a URL may also carry userinfo before the host.
+_URL_SPAN_ATTRIBUTES = ("http.url", "url.full", "http.target", "url.query")
+
+
+def _redact_url_attributes(span) -> None:
+    """Strip query strings and userinfo from a span's URL attributes, in place.
+
+    A live leak, not a hypothetical, and on a scope that is already allowlisted: the FastAPI
+    server span records ``url.query`` verbatim, and ``lfx serve`` accepts its API key as a
+    query parameter (``APIKeyQuery``). A probe against the real instrumented app exports
+    ``url.query = "x-api-key=<the key>"``, so any deployment whose callers pass the key that
+    way has been sending it to the operator's APM.
+
+    Done at the export boundary rather than through an instrumentor hook because this is the
+    same place that already decides what leaves: one chokepoint, and it covers instrumentors
+    the runtime does not install itself.
+
+    Scheme, host, port, path and every non-URL attribute survive, so "POST api.openai.com
+    /v1/chat/completions took 3s" still reads exactly as an operator needs it to.
+    """
+    attributes = span.attributes
+    if not attributes or not any(key in attributes for key in _URL_SPAN_ATTRIBUTES):
+        return
+
+    original_attributes = span._attributes  # noqa: SLF001
+    redacted = dict(attributes)
+
+    for key in _URL_SPAN_ATTRIBUTES:
+        if key not in attributes:
+            continue
+        if key == "url.query":
+            # The whole point of this attribute is the query string, so there is nothing to keep.
+            redacted[key] = ""
+        else:
+            value = attributes[key]
+            if not isinstance(value, str) or (
+                original_attributes.max_value_len is not None and len(value) >= original_attributes.max_value_len
+            ):
+                # A sequence is not a valid semantic URL value. A value at the SDK's length cap
+                # may have lost its query or userinfo delimiter, so neither can be redacted safely.
+                redacted[key] = ""
+                continue
+            try:
+                parts = urlsplit(value)
+                # Accessing port validates the authority. Keep using the raw netloc below so
+                # bracketed IPv6 and port zero retain their exact valid representation.
+                _ = parts.port
+            except ValueError:
+                # Telemetry must never break request handling. A malformed authority is not useful
+                # operational data, so fail closed rather than exporting it or raising from Span.end().
+                redacted[key] = ""
+            else:
+                # Strip userinfo from the raw authority instead of rebuilding it from hostname/port:
+                # the raw form preserves IPv6 brackets and port zero.
+                netloc = parts.netloc.rsplit("@", maxsplit=1)[-1]
+                missing_authority = not netloc and (
+                    key in ("http.url", "url.full") or parts.scheme.lower() in ("http", "https", "ws", "wss")
+                )
+                if missing_authority:
+                    # Absolute URL attributes and hierarchical HTTP-style values require an
+                    # authority. Otherwise credential-looking bytes may be hiding in the path.
+                    redacted[key] = ""
+                else:
+                    redacted[key] = urlunsplit((parts.scheme, netloc, parts.path, "", ""))
+
+    # Imported here, not at module scope: opentelemetry is an optional lfx extra and this
+    # module must stay importable without it.
+    from opentelemetry.attributes import BoundedAttributes
+
+    # Span.end() freezes the SDK's BoundedAttributes before processors run, and ReadableSpan
+    # exposes no public setter. Rebuild the immutable mapping with its original limits and
+    # carry the prior drop count forward so exporters receive the same span metadata.
+    redacted_attributes = BoundedAttributes(
+        maxlen=original_attributes.maxlen,
+        attributes=redacted,
+        max_value_len=original_attributes.max_value_len,
+    )
+    redacted_attributes.dropped = original_attributes.dropped
+    span._attributes = redacted_attributes  # noqa: SLF001
 
 
 def bootstrap_application_telemetry(*, prometheus_enabled: bool = False) -> ApplicationTelemetry:

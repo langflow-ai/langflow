@@ -156,6 +156,11 @@ module.exports = {
             "Develop/configuration-custom-database",
             {
               type: "doc",
+              id: "Develop/database-migrations",
+              label: "Database migrations"
+            },
+            {
+              type: "doc",
               id: "Develop/enterprise-database-guide",
               label: "Database guide for enterprise administrators"
             },

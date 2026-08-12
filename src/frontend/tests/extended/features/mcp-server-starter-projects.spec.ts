@@ -2,8 +2,11 @@ import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { cleanOldFolders } from "../../utils/clean-old-folders";
 import { TEXTS } from "../../utils/constants/texts";
-import { convertTestName } from "../../utils/convert-test-name";
 import { navigateSettingsPages } from "../../utils/go-to-settings";
+import {
+  getSidebarProjectButton,
+  getSidebarProjectOptionsButton,
+} from "../../utils/project-sidebar";
 
 test(
   "user must be able to see starter projects for mcp servers",
@@ -49,20 +52,17 @@ test(
 
     //rename a folder
 
-    const getFirstFolderName = convertTestName(
-      (await page
-        .getByText(TEXTS.labelNewProject)
-        .first()
-        .textContent()) as string,
-    );
+    const getFirstFolderName = (await page
+      .getByText(TEXTS.labelNewProject)
+      .first()
+      .textContent()) as string;
 
     await page
       .getByText(TEXTS.labelNewProject)
       .first()
       .hover()
       .then(async () => {
-        await page
-          .getByTestId(`more-options-button_${getFirstFolderName}`)
+        await getSidebarProjectOptionsButton(page, getFirstFolderName)
           .last()
           .click();
         await page.getByText("Rename", { exact: true }).last().click();
@@ -84,12 +84,10 @@ test(
     //delete a folder
 
     await page.getByTestId("icon-ChevronLeft").first().click();
-    await page
-      .getByTestId("sidebar-nav-renamed_project")
+    await getSidebarProjectButton(page, "renamed_project")
       .hover()
       .then(async () => {
-        await page
-          .getByTestId("more-options-button_renamed_project")
+        await getSidebarProjectOptionsButton(page, "renamed_project")
           .last()
           .click();
         await page.getByText(TEXTS.delete, { exact: true }).last().click();

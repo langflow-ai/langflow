@@ -321,17 +321,26 @@ class MemoryComponent(Component):
             flow_id_scope = _coerce_flow_id_to_uuid(_safe_graph_flow_id(self))
             user_id_scope = _safe_graph_user_id(self)
             await astore_message(message, flow_id=flow_id_scope, user_id=user_id_scope)
-            stored_messages = (
-                await aget_messages(
-                    session_id=message.session_id,
-                    context_id=message.context_id,
-                    sender_name=message.sender_name,
-                    sender=message.sender,
-                    flow_id=flow_id_scope,
-                    user_id=user_id_scope,
+            from lfx.memory.flow_context import should_persist_messages
+
+            if not should_persist_messages():
+                # Ephemeral (anonymous serving) run: astore_message deliberately
+                # skipped the DB write, so the read-back below would come up empty
+                # and the "nothing stored" guard would crash the flow. The in-run
+                # message itself is the result.
+                stored_messages = [message]
+            else:
+                stored_messages = (
+                    await aget_messages(
+                        session_id=message.session_id,
+                        context_id=message.context_id,
+                        sender_name=message.sender_name,
+                        sender=message.sender,
+                        flow_id=flow_id_scope,
+                        user_id=user_id_scope,
+                    )
+                    or []
                 )
-                or []
-            )
 
         if not stored_messages:
             msg = "No messages were stored. Please ensure that the session ID and sender are properly set."

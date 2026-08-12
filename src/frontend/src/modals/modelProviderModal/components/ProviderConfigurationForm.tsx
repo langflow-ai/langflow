@@ -348,6 +348,7 @@ const ProviderConfigurationForm = ({
             <Button
               onClick={onSave}
               size="sm"
+              data-testid="provider-save-button"
               loading={isLoading || isFetchingModels}
               disabled={!canSave || isLoading || isFetchingModels}
             >

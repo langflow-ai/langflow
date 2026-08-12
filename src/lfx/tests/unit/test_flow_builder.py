@@ -202,6 +202,18 @@ class TestComponent:
         node = flow["data"]["nodes"][0]
         assert node["data"]["node"]["template"]["input_value"]["value"] == "Hello"
 
+    def test_configure_component_marks_explicit_value_as_literal(self):
+        flow = _fresh_flow()
+        r = add_component(flow, "ChatInput", REGISTRY)
+        field = flow["data"]["nodes"][0]["data"]["node"]["template"]["input_value"]
+        field["value"] = "EXISTING_GLOBAL"
+        field["load_from_db"] = True
+
+        configure_component(flow, r["id"], {"input_value": "Hello"})
+
+        assert field["value"] == "Hello"
+        assert field["load_from_db"] is False
+
     def test_configure_nonexistent_raises(self):
         flow = _fresh_flow()
         with pytest.raises(ValueError, match="Component not found"):

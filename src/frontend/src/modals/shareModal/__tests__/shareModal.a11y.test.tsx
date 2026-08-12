@@ -55,30 +55,21 @@ const renderModal = () =>
   );
 
 describe("ShareModal accessibility", () => {
-  // FINDING (documented, not fixed): EditFlowSettings always renders its
-  // "Lock Flow" Switch, even here where ShareModal passes no `setLocked` and
-  // the control does nothing. The Switch has no aria-label and its Form.Label
-  // sits in a different Form.Field, so axe reports `button-name`. Asserting
-  // the exact known-violation set keeps any NEW violation failing while the
-  // pre-existing gap stays visible.
-  it("should_have_no_axe_violations_beyond_the_known_lock_switch_gap", async () => {
+  it("should_have_no_axe_violations", async () => {
     renderModal();
 
     // BaseModal portals its content to document.body, outside the render
     // container.
-    const results = await axe(document.body);
-
-    expect(results.violations.map((violation) => violation.id)).toEqual([
-      "button-name",
-    ]);
-    expect(results.violations[0].nodes[0].html).toContain("lock-flow-switch");
+    expect(await axe(document.body)).toHaveNoViolations();
   });
 
-  it("should_render_a_non_functional_lock_switch_that_has_no_name", () => {
+  it("should_not_render_a_lock_switch_it_cannot_operate", () => {
     renderModal();
 
-    // Companion to the finding above: the switch is present, inert, unnamed.
-    expect(screen.getByRole("switch")).toHaveAccessibleName("");
+    // ShareModal passes no `setLocked`, so EditFlowSettings must omit the
+    // switch rather than ship a focusable, unnamed, inert control.
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("lock-flow-switch")).not.toBeInTheDocument();
   });
 
   it("should_expose_dialog_role_with_accessible_name", () => {

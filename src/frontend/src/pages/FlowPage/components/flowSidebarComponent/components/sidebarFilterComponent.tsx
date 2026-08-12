@@ -41,6 +41,7 @@ export function SidebarFilterComponent({
           unstyled
           className="shrink-0"
           onClick={resetFilters}
+          aria-label={t("sidebar.removeFilter")}
           data-testid="sidebar-filter-reset"
         >
           <ForwardedIconComponent

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import uuid
 from abc import abstractmethod
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import anyio
@@ -11,6 +13,25 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     from lfx.services.settings.service import SettingsService
+
+
+@dataclass(frozen=True)
+class StorageReadiness:
+    """Result of a storage backend readiness probe (used by production preflight).
+
+    Attributes:
+        ok: True when the backend is usable (writable / reachable).
+        backend: The configured backend identifier, e.g. "local" or "s3".
+        detail: Human-readable one-line summary for display.
+        reason: Machine-friendly failure reason when ``ok`` is False
+            (e.g. "no-credentials", "bucket-missing", "access-denied",
+            "unreachable", "unwritable"). Empty on success.
+    """
+
+    ok: bool
+    backend: str
+    detail: str
+    reason: str = ""
 
 
 class StorageService(Service):
@@ -187,6 +208,34 @@ class StorageService(Service):
             Should not raise an error if the file doesn't exist
         """
         raise NotImplementedError
+
+    async def check_readiness(self) -> StorageReadiness:
+        """Probe whether this storage backend is usable, for production preflight.
+
+        The default implementation targets a local filesystem ``data_dir``: it
+        creates the directory if needed, writes and deletes a sentinel file to
+        prove the backend is writable. Object-store backends (e.g. S3) override
+        this with a credentials + reachability probe.
+
+        Returns:
+            StorageReadiness: ``ok=True`` when the backend is usable, otherwise a
+            typed failure with a human-readable ``detail`` and a machine ``reason``.
+        """
+        backend = getattr(self.settings_service.settings, "storage_type", "local")
+        try:
+            await self.data_dir.mkdir(parents=True, exist_ok=True)
+            sentinel = self.data_dir / f".langflow-preflight-{uuid.uuid4().hex}"
+            await sentinel.write_bytes(b"ok")
+            await sentinel.unlink()
+        except OSError as exc:
+            reason = getattr(exc, "strerror", None) or str(exc)
+            return StorageReadiness(
+                ok=False,
+                backend=backend,
+                detail=f"{self.data_dir} is not writable ({reason})",
+                reason="unwritable",
+            )
+        return StorageReadiness(ok=True, backend=backend, detail=f"writable ({self.data_dir})")
 
     async def teardown(self) -> None:
         """Perform cleanup operations when the service is being shut down.

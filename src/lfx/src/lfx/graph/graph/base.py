@@ -39,7 +39,7 @@ from lfx.graph.vertex.base import Vertex, VertexStates
 from lfx.graph.vertex.schema import NodeData, NodeTypeEnum
 from lfx.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
 from lfx.log.logger import LogConfig, configure, logger
-from lfx.observability import APPLICATION_TRACER_NAME
+from lfx.observability import APPLICATION_TRACER_NAME, get_execution_client, get_execution_protocol
 from lfx.schema.dotdict import dotdict
 from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
 from lfx.services.cache.utils import CacheMiss
@@ -48,12 +48,36 @@ from lfx.utils.async_helpers import run_until_complete
 
 try:
     from opentelemetry import trace as otel_trace
+    from opentelemetry.context import Context as OtelContext
 except ImportError:
     # lfx does not depend on opentelemetry. Under langflow it is installed and the application
     # span is emitted; under bare lfx this stays None and the span code path is a no-op.
     otel_trace = None
+    OtelContext = None
 
 FLOW_EXECUTION_SPAN_NAME = "flow.execute"
+
+
+class FlowSpanScope:
+    """Lets a driver that handles its own component errors still mark the run as failed.
+
+    The /build vertex walk catches a component exception, turns it into an error output for the
+    client and stops walking, rather than re-raising. The span's own except clauses therefore
+    never see it, and without this the run would be exported as a success. Callers that let
+    exceptions propagate (arun, async_start, process) need none of this and ignore the scope.
+
+    Only the exception *type* is accepted, never the message: component output ends up in those
+    messages and must not reach the operator's APM.
+    """
+
+    __slots__ = ("error_type",)
+
+    def __init__(self) -> None:
+        self.error_type: str | None = None
+
+    def record_error(self, error_type: str) -> None:
+        self.error_type = error_type
+
 
 INPUT_TYPE_COMPONENT_TYPES = {
     "chat": {InterfaceComponentTypes.ChatInput.value},
@@ -88,6 +112,8 @@ class Graph:
         user_id: str | None = None,
         log_config: LogConfig | None = None,
         context: dict[str, Any] | None = None,
+        *,
+        instantiate_components: bool = True,
     ) -> None:
         """Initializes a new Graph instance.
 
@@ -106,9 +132,20 @@ class Graph:
         self._runs = 0
         self._updates = 0
         self.flow_id = flow_id
+        # Server-set provenance for a public flow whose execution uses a virtual
+        # flow_id. Request data must never populate this storage scope.
+        self.source_flow_id: str | None = None
         self.flow_name = flow_name
         self.description = description
         self.user_id = user_id
+        # Warm-registry templates need the parsed graph structure without
+        # executing component constructors at preload/reconcile time. Normal
+        # graphs keep the historical eager-instantiation behavior.
+        self._instantiate_components_on_initialize = instantiate_components
+        # Warm parsing cannot emit migration/error events into an authenticated
+        # user's keyspace. Such templates stay cold-only so request parsing can
+        # preserve the historical per-user extension-event contract.
+        self.requires_extension_event_replay = False
         # Optional caller-supplied label forwarded to tracing providers. Kept
         # distinct from ``self.user_id`` so request-supplied identifiers can be
         # surfaced in external traces (e.g. Langfuse trace metadata) without
@@ -121,6 +158,10 @@ class Graph:
         self._sorted_vertices_layers: list[list[str]] = []
         self._run_id = ""
         self._session_id = ""
+        # Whether components in this run may persist chat memory. Set False for
+        # anonymous serving-plane runs (ephemeral); bound per component execution
+        # in get_instance_results so astore_message can skip the DB write.
+        self.persist_messages: bool = True
         self._start_time = datetime.now(timezone.utc)
         self.inactivated_vertices: set = set()
         self.activated_vertices: list[str] = []
@@ -821,11 +862,43 @@ class Graph:
         of it. It must stay False when the scope wraps an async generator: the context token would be
         attached and detached across the generator's suspension points, which leaks it into whatever
         task resumes the generator.
+
+        The status attribute exists because OTel's StatusCode has three values and a paused run is
+        none of them: it did not fail, and calling it OK would tell an operator the work finished
+        when a human is still holding it. Span status stays UNSET for a pause so alerting on the
+        error rate does not fire, and the attribute carries the distinction.
+
+        A parent that has already ended is turned into a link instead. Several drivers outlive the
+        request that started them: the v1 build route hands the work to a task and returns the
+        job_id, so the server span is closed before the flow runs, and ``create_task`` copies the
+        context regardless. Parenting to it yields a child that starts after its parent finished,
+        which renders as a broken trace. Detecting it here rather than asking callers to declare it
+        keeps the v2 stream correct for free: its server span stays open for the whole response, so
+        it is still a real parent and is left as one.
+
+        Yields a :class:`FlowSpanScope`. Callers that let exceptions propagate can ignore it; a
+        driver that catches component failures itself must call ``record_error`` or its run is
+        exported as a success.
         """
+        scope = FlowSpanScope()
         if otel_trace is None or self._is_subgraph:
-            yield
+            yield scope
             return
-        span = otel_trace.get_tracer(APPLICATION_TRACER_NAME).start_span(FLOW_EXECUTION_SPAN_NAME)
+        tracer = otel_trace.get_tracer(APPLICATION_TRACER_NAME)
+        # is_recording() goes False once a span has ended, which is the signal that this run
+        # outlived its request. An empty Context is what makes the replacement a root; without it
+        # start_span would pick the dead span up as parent anyway.
+        parent = otel_trace.get_current_span()
+        parent_context = parent.get_span_context()
+        if parent_context.is_valid and not parent.is_recording():
+            span = tracer.start_span(
+                FLOW_EXECUTION_SPAN_NAME,
+                context=OtelContext(),
+                links=[otel_trace.Link(parent_context)],
+            )
+        else:
+            span = tracer.start_span(FLOW_EXECUTION_SPAN_NAME)
+        status = "ok"
         try:
             with contextlib.ExitStack() as stack:
                 if make_current:
@@ -837,12 +910,27 @@ class Graph:
                             span, end_on_exit=False, record_exception=False, set_status_on_exception=False
                         )
                     )
-                yield
+                yield scope
         except GraphPausedException:
             # A HITL pause suspends the unit of work; it is not a failed request. The resume is
             # driven through Graph.process by the durable runner, which opens its own span.
+            status = "paused"
+            raise
+        except asyncio.CancelledError:
+            # CancelledError is a BaseException, so the handler below does not see it and the
+            # span would otherwise report the run as "ok". Reached by a user pressing stop (the
+            # job service marks the job CANCELLED and re-raises) and by any asyncio.wait_for
+            # ceiling wrapped around a span-carrying run: the v2 build driver, a2a, and the
+            # agentic assistant all have one. The run did not finish, so it gets its own value.
+            #
+            # Span status stays UNSET, which is right for a stop button and arguable for a
+            # timeout: a server-imposed ceiling is closer to a fault, and an operator alerting
+            # on span error rate will not see it. Left as one value for now because the two are
+            # indistinguishable here; the job row (CANCELLED vs FAILED) still tells them apart.
+            status = "cancelled"
             raise
         except Exception as exc:
+            status = "error"
             span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, type(exc).__name__))
             span.set_attribute("error.type", type(exc).__name__)
             raise
@@ -853,6 +941,21 @@ class Graph:
                 span.set_attribute("run_id", self._run_id)
             if self.session_id:
                 span.set_attribute("session_id", str(self.session_id))
+            # Absent rather than "unknown" when nothing set it: a missing attribute is a wiring
+            # gap the operator can see, an "unknown" value looks like a protocol we support.
+            if (protocol := get_execution_protocol()) is not None:
+                span.set_attribute("protocol", protocol)
+            # Absent when the caller did not identify itself, same rule as protocol: a missing
+            # attribute is "nobody said", which an operator can see and act on.
+            if (client := get_execution_client()) is not None:
+                span.set_attribute("client", client)
+            # A driver that swallowed its own component error exits this scope cleanly, so the
+            # only signal is what it recorded on the way out.
+            if status == "ok" and scope.error_type is not None:
+                status = "error"
+                span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, scope.error_type))
+                span.set_attribute("error.type", scope.error_type)
+            span.set_attribute("status", status)
             span.end()
 
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
@@ -1349,6 +1452,7 @@ class Graph:
             "vertices": self.vertices,
             "edges": self.edges,
             "flow_id": self.flow_id,
+            "source_flow_id": self.source_flow_id,
             "flow_name": self.flow_name,
             "description": self.description,
             "user_id": self.user_id,
@@ -1373,9 +1477,24 @@ class Graph:
             "_is_output_vertices": self._is_output_vertices,
             "has_session_id_vertices": self.has_session_id_vertices,
             "_sorted_vertices_layers": self._sorted_vertices_layers,
+            "_instantiate_components_on_initialize": self._instantiate_components_on_initialize,
         }
 
-    def __deepcopy__(self, memo):
+    def _copy_graph(
+        self,
+        memo: dict,
+        *,
+        user_id: str | None,
+        instantiate_components: bool,
+        before_initialize: Callable[[Graph], None] | None = None,
+    ) -> Graph:
+        """Copy this graph, optionally binding component construction to one user.
+
+        ``add_nodes_and_edges`` eagerly instantiates every component. Keeping the
+        user override on graph construction (instead of stamping it afterward)
+        preserves the cold-path constructor contract for components that inspect
+        ``_user_id`` during ``__init__``.
+        """
         # Check if we've already copied this instance
         if id(self) in memo:
             return memo[id(self)]
@@ -1385,30 +1504,103 @@ class Graph:
             start_copy = copy.deepcopy(self._start, memo)
             end_copy = copy.deepcopy(self._end, memo)
             new_graph = type(self)(
-                start_copy,
-                end_copy,
-                copy.deepcopy(self.flow_id, memo),
-                copy.deepcopy(self.flow_name, memo),
-                copy.deepcopy(self.user_id, memo),
+                start=start_copy,
+                end=end_copy,
+                flow_id=copy.deepcopy(self.flow_id, memo),
+                flow_name=copy.deepcopy(self.flow_name, memo),
+                description=copy.deepcopy(self.description, memo),
+                user_id=user_id,
+                instantiate_components=instantiate_components,
             )
+            if before_initialize is not None:
+                before_initialize(new_graph)
+            new_graph.source_flow_id = copy.deepcopy(self.source_flow_id, memo)
         else:
-            # Create a new graph without start and end, but copy flow_id, flow_name, and user_id
+            # Create a new graph without start and end, binding the requested user
+            # before add_nodes_and_edges instantiates request-local components.
             new_graph = type(self)(
-                None,
-                None,
-                copy.deepcopy(self.flow_id, memo),
-                copy.deepcopy(self.flow_name, memo),
-                copy.deepcopy(self.user_id, memo),
+                flow_id=copy.deepcopy(self.flow_id, memo),
+                flow_name=copy.deepcopy(self.flow_name, memo),
+                description=copy.deepcopy(self.description, memo),
+                user_id=user_id,
+                instantiate_components=instantiate_components,
             )
-            # Deep copy vertices and edges
-            new_graph.add_nodes_and_edges(copy.deepcopy(self._vertices, memo), copy.deepcopy(self._edges, memo))
+            # add_nodes_and_edges synchronously builds FileInput parameters, so
+            # trusted public-flow provenance must exist before reconstruction.
+            new_graph.source_flow_id = copy.deepcopy(self.source_flow_id, memo)
+            # Rebuild parsed graphs from their original frontend shape. ``_vertices``
+            # and ``_edges`` have already been flattened by ``process_flow``; using
+            # them here would turn grouped children into top-level vertices and
+            # change grouped execution/status semantics. Programmatic graphs do not
+            # necessarily have raw frontend data, so retain the processed fallback.
+            has_raw_graph_data = self.raw_graph_data != {"nodes": [], "edges": []} or not (
+                self._vertices or self._edges
+            )
+            source_graph_data = (
+                self.raw_graph_data
+                if has_raw_graph_data
+                else {
+                    "nodes": self._vertices,
+                    "edges": self._edges,
+                }
+            )
+            source_graph_data = copy.deepcopy(source_graph_data, memo)
+            if has_raw_graph_data:
+                # Match cold-path ordering: request-local raw overrides run on
+                # the original frontend shape before groups are flattened.
+                new_graph.raw_graph_data = source_graph_data
+                if before_initialize is not None:
+                    before_initialize(new_graph)
+                source_graph_data = new_graph.raw_graph_data
+            new_graph.add_nodes_and_edges(source_graph_data["nodes"], source_graph_data["edges"])
+            if not has_raw_graph_data and before_initialize is not None:
+                before_initialize(new_graph)
+
+        new_graph.requires_extension_event_replay = self.requires_extension_event_replay
 
         # Store the newly created object in memo
         memo[id(self)] = new_graph
 
         return new_graph
 
+    def __deepcopy__(self, memo):
+        return self._copy_graph(
+            memo,
+            user_id=copy.deepcopy(self.user_id, memo),
+            instantiate_components=self._instantiate_components_on_initialize,
+            before_initialize=None,
+        )
+
+    def copy_for_run(
+        self,
+        *,
+        user_id: str | None,
+        before_instantiate: Callable[[Graph], None] | None = None,
+    ) -> Graph:
+        """Return an isolated executable graph whose constructors see run defaults.
+
+        ``before_instantiate`` can apply request-local raw-parameter overrides
+        (for example the implicit streaming value) after frontend-data copying,
+        before group flattening and component construction observe them.
+        """
+        new_graph = self._copy_graph(
+            {},
+            user_id=user_id,
+            instantiate_components=False,
+            before_initialize=before_instantiate,
+        )
+        new_graph._instantiate_components_in_vertices()  # noqa: SLF001
+        new_graph._instantiate_components_on_initialize = True  # noqa: SLF001
+        return new_graph
+
     def __setstate__(self, state):
+        # Cache/checkpoint payloads written before lazy warm templates existed
+        # must retain the historical eager-instantiation behavior.
+        state.setdefault("_instantiate_components_on_initialize", True)
+        state.setdefault("requires_extension_event_replay", False)
+        # Graphs cached before source-flow provenance was introduced remain
+        # loadable and simply have no additional trusted storage namespace.
+        state.setdefault("source_flow_id", None)
         run_manager = state["run_manager"]
         if isinstance(run_manager, RunnableVerticesManager):
             state["run_manager"] = run_manager
@@ -1427,6 +1619,9 @@ class Graph:
         flow_name: str | None = None,
         user_id: str | None = None,
         context: dict | None = None,
+        *,
+        instantiate_components: bool = True,
+        emit_extension_events: bool = True,
     ) -> Graph:
         """Creates a graph from a payload.
 
@@ -1436,6 +1631,12 @@ class Graph:
             flow_name: The flow name.
             user_id: The user ID.
             context: Optional context dictionary for request-specific data.
+            instantiate_components: Whether to run component constructors while
+                parsing. Warm templates disable this and instantiate only on the
+                request-local copy with the authenticated caller identity.
+            emit_extension_events: Whether migration reports should be published
+                to the extension event service. Background warm parsing disables
+                this because it is not scoped to an active caller.
 
         Returns:
             Graph: The created graph.
@@ -1477,41 +1678,42 @@ class Graph:
                 migration_error.message,
             )
         # Emit extension events so the frontend can surface migration results.
-        try:
-            from lfx.services.deps import get_extension_events_service
+        if emit_extension_events:
+            try:
+                from lfx.services.deps import get_extension_events_service
 
-            _svc = get_extension_events_service()
-            if _svc is not None:
-                # Per-user keyspace so flow_id / migration error details only
-                # reach the user that loaded the flow; fall back to "global"
-                # for unauthenticated paths (CLI, tests, single-user dev).
-                _keyspace = f"user:{user_id}" if user_id else "global"
-                if migration_report.any_rewritten:
-                    _svc.emit(
-                        "flow_migrated",
-                        {
-                            "flow_id": str(flow_id) if flow_id else None,
-                            "rewritten_count": migration_report.rewritten_count,
-                        },
-                        keyspace=_keyspace,
-                    )
-                for migration_error in migration_report.errors:
-                    _svc.emit(
-                        "extension_error",
-                        {
-                            "flow_id": str(flow_id) if flow_id else None,
-                            "code": migration_error.code,
-                            "message": migration_error.message,
-                            "hint": migration_error.hint,
-                            "location": migration_error.location,
-                        },
-                        keyspace=_keyspace,
-                    )
-        except Exception:  # noqa: BLE001 -- best-effort emit; never break flow load on an event-bus failure
-            logger.warning(
-                "extension.event_emit_failed: failed to emit migration events in from_payload.",
-                exc_info=True,
-            )
+                _svc = get_extension_events_service()
+                if _svc is not None:
+                    # Per-user keyspace so flow_id / migration error details only
+                    # reach the user that loaded the flow; fall back to "global"
+                    # for unauthenticated paths (CLI, tests, single-user dev).
+                    _keyspace = f"user:{user_id}" if user_id else "global"
+                    if migration_report.any_rewritten:
+                        _svc.emit(
+                            "flow_migrated",
+                            {
+                                "flow_id": str(flow_id) if flow_id else None,
+                                "rewritten_count": migration_report.rewritten_count,
+                            },
+                            keyspace=_keyspace,
+                        )
+                    for migration_error in migration_report.errors:
+                        _svc.emit(
+                            "extension_error",
+                            {
+                                "flow_id": str(flow_id) if flow_id else None,
+                                "code": migration_error.code,
+                                "message": migration_error.message,
+                                "hint": migration_error.hint,
+                                "location": migration_error.location,
+                            },
+                            keyspace=_keyspace,
+                        )
+            except Exception:  # noqa: BLE001 -- best-effort emit; never break flow load on an event-bus failure
+                logger.warning(
+                    "extension.event_emit_failed: failed to emit migration events in from_payload.",
+                    exc_info=True,
+                )
         # Defense-in-depth: validate here so that no code path can construct
         # a graph with blocked/custom components, even if an API endpoint
         # forgets its own pre-check. Ideally this would live only at the API
@@ -1533,8 +1735,15 @@ class Graph:
                 validate_catalog_policy_for_flow(effective_catalog_payload, snapshot=catalog_policy_snapshot)
             vertices = payload["nodes"]
             edges = payload["edges"]
-            graph = cls(flow_id=flow_id, flow_name=flow_name, user_id=user_id, context=context)
+            graph = cls(
+                flow_id=flow_id,
+                flow_name=flow_name,
+                user_id=user_id,
+                context=context,
+                instantiate_components=instantiate_components,
+            )
             graph.add_nodes_and_edges(vertices, edges)
+            graph.requires_extension_event_replay = bool(migration_report.any_rewritten or migration_report.errors)
         except KeyError as exc:
             logger.exception(exc)
             if "nodes" not in payload and "edges" not in payload:
@@ -1686,7 +1895,8 @@ class Graph:
         # This is a hack to make sure that the LLM vertex is sent to
         # the toolkit vertex
         self._build_vertex_params()
-        self._instantiate_components_in_vertices()
+        if self._instantiate_components_on_initialize:
+            self._instantiate_components_in_vertices()
         self._set_cache_to_vertices_in_cycle()
         self._set_cache_if_listen_notify_components()
         for vertex in self.vertices:
@@ -2142,6 +2352,10 @@ class Graph:
         Formats the exception message and stack trace, constructs an error output,
         and records the failure using the vertex build logging system.
         """
+        if not self.persist_messages:
+            # Ephemeral (anonymous serving) run: vertex-build rows retain component
+            # params and outputs, so the no-persist contract covers them too.
+            return
         if isinstance(result, ComponentBuildError):
             params = result.message
             tb = result.formatted_traceback
@@ -2210,15 +2424,19 @@ class Graph:
                 raise result
             if isinstance(result, VertexBuildResult):
                 if self.flow_id is not None:
-                    await log_vertex_build(
-                        flow_id=self.flow_id,
-                        vertex_id=result.vertex.id,
-                        valid=result.valid,
-                        params=result.params,
-                        data=result.result_dict,
-                        artifacts=result.artifacts,
-                        job_id=self._run_id if self._run_id else None,
-                    )
+                    # Ephemeral (anonymous serving) runs skip the persisted build
+                    # record — vertex-build rows retain params/outputs — but still
+                    # register the result so live SSE emission is unaffected.
+                    if self.persist_messages:
+                        await log_vertex_build(
+                            flow_id=self.flow_id,
+                            vertex_id=result.vertex.id,
+                            valid=result.valid,
+                            params=result.params,
+                            data=result.result_dict,
+                            artifacts=result.artifacts,
+                            job_id=self._run_id if self._run_id else None,
+                        )
                     # Store for SSE emission later
                     build_results[result.vertex.id] = result
 
@@ -2794,6 +3012,10 @@ class Graph:
         subgraph._tracing_service_initialized = True
         subgraph._run_id = self._run_id
         subgraph.session_id = self.session_id
+        # A subgraph extends the parent's run, so it inherits the ephemeral
+        # (no-persist) decision too.
+        subgraph.persist_messages = self.persist_messages
+        subgraph.source_flow_id = self.source_flow_id
         subgraph._is_subgraph = True
 
         # Add the filtered nodes and edges
