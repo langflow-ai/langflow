@@ -29,6 +29,9 @@ pytest.importorskip("opentelemetry")
 # with anything the runtime emits on its own.
 PROMPT = "SENTINELPROMPTQQQ"
 EXC_MESSAGE = "SENTINELEXCMSGQQQ"
+# Distinct from PROMPT, which the probe also logs by hand: this one must only be able to reach
+# the export by way of the flow run itself.
+FLOW_INPUT = "SENTINELFLOWINPUTQQQ"
 
 PROBE = '''
 import json, os, sys
@@ -84,6 +87,28 @@ if os.environ.get("PROBE_SQUAT"):
     import structlog
 
     structlog.get_logger("langflow.observability").error("SQUATTEDBODYQQQ")
+
+# A whole flow run, with the sentinel as the user's actual input. Everything else in this file
+# drives the processor with a hand-written call; this drives the graph and asks what came out.
+if os.environ.get("PROBE_FLOW"):
+    import asyncio
+
+    from lfx.components.input_output import ChatInput, ChatOutput
+    from lfx.graph import Graph
+
+    def _run_flow():
+        chat_input = ChatInput(_id="chat-input")
+        chat_input.set(input_value="SENTINELFLOWINPUTQQQ")
+        chat_output = ChatOutput(_id="chat-output")
+        chat_output.set(input_value=chat_input.message_response)
+        graph = Graph(chat_input, chat_output, flow_id="11111111-1111-1111-1111-111111111111")
+
+        async def drive():
+            return [result async for result in graph.async_start()]
+
+        return asyncio.run(drive())
+
+    assert _run_flow(), "the probe flow produced no results, so it proves nothing about its logs"
 
 # The real agent failure shape, since that is the record an on-call actually lands on.
 if os.environ.get("PROBE_AGENT"):
@@ -183,6 +208,27 @@ def test_error_type_is_the_root_cause_not_the_wrapper():
     assert attributes["error.type"].endswith("ProviderError")
     assert not attributes["error.type"].endswith("ComponentBuildError")
     assert attributes["error.chain"] == "ComponentBuildError<ProviderError"
+
+
+def test_a_real_flow_run_puts_nothing_of_its_input_on_the_wire():
+    """The other tests drive the processor. This drives a graph and asks what came out.
+
+    Every assertion elsewhere in this file names the call site it is worried about, which means
+    it can only catch the leaks someone already thought of. A whole run with the user's input as
+    the sentinel catches the ones nobody named, on whatever paths that run happens to touch.
+
+    Bodies on, deliberately: with them withheld the assertion would hold no matter what any call
+    site did, which is the trap the agent case above documents.
+
+    Scope, so the green is not read as broader than it is. The run contributes seventeen records
+    on top of the probe's own three, and this says none of them carry the input at the default
+    INFO floor. It says nothing about DEBUG, where flow payloads are logged on purpose and the
+    severity gate rather than the body policy is what keeps them local.
+    """
+    records = run_probe(PROBE_FLOW="1", LANGFLOW_OTEL_LOG_BODIES="all")
+
+    assert len(records) > 3, f"the flow run contributed nothing beyond the probe's own lines: {records}"
+    assert FLOW_INPUT not in json.dumps(records)
 
 
 def test_a_suppressed_context_is_not_reported_as_the_root():
