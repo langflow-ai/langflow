@@ -5,11 +5,15 @@
 # - No frontend code or assets
 # - No Playwright
 
+ARG UV_VERSION=0.10.4
+ARG PYTHON_IMAGE=registry.access.redhat.com/ubi10/python-314-minimal
+ARG NODE_VERSION=22.22.2
+
 ################################
 # BUILDER
 ################################
-FROM ghcr.io/astral-sh/uv:latest AS uv_installer
-FROM registry.access.redhat.com/ubi10/python-314-minimal AS builder
+FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv_installer
+FROM ${PYTHON_IMAGE} AS builder
 USER root
 COPY --from=uv_installer /uv /usr/local/bin/uv
 COPY --from=uv_installer /uvx /usr/local/bin/uvx
@@ -53,7 +57,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 ################################
 # RUNTIME
 ################################
-FROM registry.access.redhat.com/ubi10/python-314-minimal AS runtime
+FROM ${PYTHON_IMAGE} AS runtime
 USER root
 # Install minimal runtime dependencies
 RUN microdnf update -y \
@@ -68,11 +72,11 @@ RUN python3.14 -m pip install --upgrade "pip>=26.1.2"
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
 # Install Node.js (required for npx-based MCP stdio servers)
+ARG NODE_VERSION
 RUN ARCH=$(uname -m) \
     && if [ "$ARCH" = "x86_64" ]; then NODE_ARCH="x64"; \
        elif [ "$ARCH" = "aarch64" ]; then NODE_ARCH="arm64"; \
        else NODE_ARCH="$ARCH"; fi \
-    && NODE_VERSION="22.16.0" \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
     | tar -xJ -C /usr/local --strip-components=1 \
     && npm install -g npm@latest

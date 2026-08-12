@@ -1,6 +1,10 @@
 # syntax=docker/dockerfile:1
 # Keep this syntax directive! It's used to enable Docker BuildKit
 
+ARG UV_VERSION=0.10.4
+ARG PYTHON_IMAGE=registry.access.redhat.com/ubi10/python-314-minimal
+ARG NODE_VERSION=22.22.2
+
 ################################
 # BUILDER-BASE
 # Used to build deps + create our virtual environment
@@ -9,8 +13,8 @@
 # 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
 # 2. do not add --platform=$BUILDPLATFORM because the pydantic binaries must be resolved for the final architecture
 # Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:latest AS uv_installer
-FROM registry.access.redhat.com/ubi10/python-314-minimal AS builder
+FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv_installer
+FROM ${PYTHON_IMAGE} AS builder
 USER root
 ARG MAIN_VERSION=""
 ARG BASE_VERSION=""
@@ -107,7 +111,7 @@ RUN python3.14 /tmp/install_release_wheels.py /tmp/release-artifacts \
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
-FROM registry.access.redhat.com/ubi10/python-314-minimal AS runtime
+FROM ${PYTHON_IMAGE} AS runtime
 USER root
 RUN microdnf update -y \
     && microdnf install -y curl git libpq gnupg xz tar shadow-utils \
@@ -115,11 +119,11 @@ RUN microdnf update -y \
 RUN python3.14 -m pip install --upgrade "pip>=26.1.2"
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
+ARG NODE_VERSION
 RUN ARCH=$(uname -m) \
     && if [ "$ARCH" = "x86_64" ]; then NODE_ARCH="x64"; \
        elif [ "$ARCH" = "aarch64" ]; then NODE_ARCH="arm64"; \
        else NODE_ARCH="$ARCH"; fi \
-    && NODE_VERSION="22.16.0" \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
     | tar -xJ -C /usr/local --strip-components=1 \
     && npm install -g npm@latest
