@@ -616,6 +616,21 @@ def _task_scope(context: ServerCallContext) -> str:
     return f"{flow_id}:{owner}" if flow_id else owner
 
 
+def _legacy_public_task_scope(context: ServerCallContext) -> str | None:
+    """Return the pre-public-principal task scope for anonymous mounted requests.
+
+    Before public A2A requests received a stable admitted principal, their SDK
+    owner scope was empty and durable rows were stored as ``<flow_id>:``. Keep
+    that read-only compatibility path restricted to the same flow and the
+    anonymous public principal; protected callers must never inherit it.
+    """
+    state = getattr(context, "state", None) or {}
+    flow_id = state.get("flow_id")
+    if flow_id and _admitted_principal_scope(context) == str(PUBLIC_ANONYMOUS_ACTOR_ID):
+        return f"{flow_id}:"
+    return None
+
+
 class DurableTaskStore(TaskStore):
     """DB-backed A2A task store keyed by ``(task_id, admitted principal + flow)``.
 
@@ -647,6 +662,10 @@ class DurableTaskStore(TaskStore):
         owner = _task_scope(context)
         async with session_scope_readonly() as session:  # pure read, no commit
             row = await session.get(A2ATask, (task_id, owner))
+            if row is None:
+                legacy_public_owner = _legacy_public_task_scope(context)
+                if legacy_public_owner is not None:
+                    row = await session.get(A2ATask, (task_id, legacy_public_owner))
             blob = row.task if row is not None else None
         if blob is None:
             return None

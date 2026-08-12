@@ -37,7 +37,7 @@ def _make_component(
     session_id: str | None,
     invoker_user_id: uuid.UUID | None = None,
     selected: str | None = "mb-one",
-    filter_by_session: bool = True,
+    filter_by_session: bool | str = True,
     search_query: str = "hello",
     include_metadata: bool = True,
 ) -> MemoryBaseComponent:
@@ -228,12 +228,17 @@ class TestBuildWhereClause:
         component = _make_component(flow_id=uuid.uuid4(), session_id=None, filter_by_session=True)
         assert component._build_where_clause(session_id=None) is None
 
-    def test_session_filter_truthy_string_does_not_disable_toggle(self):
-        # Regression: a previous version used the raw attribute as a bool, so
-        # an externally-set "false" string would be truthy and silently allow
-        # cross-session retrieval. Confirm bool() coerces properly.
-        component = _make_component(flow_id=uuid.uuid4(), session_id="s1", filter_by_session=True)
-        component.filter_by_session = "false"  # non-bool value
+    @pytest.mark.parametrize("serialized_false", ["false", "False", " 0 ", "no", "off", ""])
+    def test_serialized_false_values_disable_session_filter(self, serialized_false):
+        component = _make_component(
+            flow_id=uuid.uuid4(),
+            session_id="s1",
+            filter_by_session=serialized_false,
+        )
+        assert component._build_where_clause(session_id="s1") is None
+
+    def test_unknown_string_keeps_session_filter_enabled(self):
+        component = _make_component(flow_id=uuid.uuid4(), session_id="s1", filter_by_session="unexpected")
         assert component._build_where_clause(session_id="s1") == {"session_id": "s1"}
 
     def test_session_filter_falsy_value_disables_toggle(self):
@@ -357,6 +362,17 @@ class TestMemoryBaseRetrievalInvariants:
     async def test_missing_session_id_raises_when_filter_enabled(self):
         component = _make_component(flow_id=uuid.uuid4(), session_id=None, filter_by_session=True)
         with pytest.raises(ValueError, match="session_id is required"):
+            await component.retrieve_memory()
+
+    @pytest.mark.parametrize("serialized_false", ["false", "0"])
+    async def test_serialized_false_does_not_require_session_id(self, serialized_false):
+        component = _make_component(
+            flow_id=uuid.uuid4(),
+            session_id=None,
+            selected=None,
+            filter_by_session=serialized_false,
+        )
+        with pytest.raises(ValueError, match="No Memory Base"):
             await component.retrieve_memory()
 
     async def test_missing_session_id_allowed_when_filter_disabled(self):

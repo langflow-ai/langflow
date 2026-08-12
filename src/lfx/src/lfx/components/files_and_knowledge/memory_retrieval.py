@@ -67,6 +67,13 @@ def _to_python_scalar(value: Any) -> Any:
     return value
 
 
+def _session_filter_enabled(value: Any) -> bool:
+    """Parse serialized false values while keeping unknown values fail-closed."""
+    if isinstance(value, str):
+        return value.strip().lower() not in {"", "0", "false", "no", "off"}
+    return bool(value)
+
+
 class MemoryBaseComponent(Component):
     display_name = "Memory Base"
     description = (
@@ -142,10 +149,7 @@ class MemoryBaseComponent(Component):
         treat the operator dict as a literal value and silently match nothing.
         """
         predicates: dict = {}
-        # Defensive bool() — BoolInput coerces strings, but if this attribute is
-        # ever overridden externally with a non-bool value, ``"false"`` would be
-        # truthy and silently disable the toggle.
-        if bool(self.filter_by_session) and session_id:
+        if _session_filter_enabled(self.filter_by_session) and session_id:
             predicates["session_id"] = str(session_id)
 
         return predicates or None
@@ -274,7 +278,7 @@ class MemoryBaseComponent(Component):
         context from prior conversations across all sessions.
         """
         session_id = getattr(self.graph, "session_id", None)
-        if bool(self.filter_by_session) and not session_id:
+        if _session_filter_enabled(self.filter_by_session) and not session_id:
             # Only required when filtering is on, since the value gates the where clause.
             msg = (
                 "A session_id is required on the flow request when 'Filter by Session' "

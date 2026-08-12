@@ -1709,6 +1709,37 @@ async def test_none_folder_stays_public(client: AsyncClient, active_user, echo_f
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
+async def test_public_tasks_get_reads_legacy_anonymous_scope(client: AsyncClient, active_user, echo_flow_data):
+    """A pre-stable-principal public task remains readable after upgrading."""
+    from a2a.server.context import ServerCallContext
+    from a2a.types import a2a_pb2 as pb
+    from google.protobuf.json_format import MessageToDict
+    from langflow.api.v1.a2a import DurableTaskStore
+    from langflow.services.database.models import A2ATask
+
+    folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "none"})
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
+    task_id = uuid.uuid4().hex
+    task = pb.Task(
+        id=task_id,
+        context_id="legacy-public-context",
+        status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_COMPLETED),
+    )
+
+    async with session_scope() as session:
+        session.add(A2ATask(id=task_id, owner=f"{flow_id}:", task=MessageToDict(task)))
+        await session.commit()
+
+    response = await _jsonrpc(client, flow_id, "tasks/get", {"id": task_id})
+
+    assert response.status_code == 200
+    assert response.json()["result"]["id"] == task_id
+
+    protected_context = ServerCallContext(state={"flow_id": str(flow_id), "admitted_user_id": str(active_user.id)})
+    assert await DurableTaskStore().get(task_id, protected_context) is None
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
 async def test_oauth_folder_requires_owner_key(client: AsyncClient, active_user, echo_flow_data):
     """An oauth folder is reachable with an owner-scoped x-api-key, and 401s without one.
 

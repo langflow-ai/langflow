@@ -114,5 +114,6 @@ async def test_enabled_authorization_plugin_controls_public_execution(monkeypatc
                 action=module.PublicResourceAction.EXECUTE,
             )
         assert exc_info.value.status_code == 404
+        assert exc_info.value.detail == module.PUBLIC_FLOW_NOT_FOUND_DETAIL
 
     audit.assert_awaited_once()
