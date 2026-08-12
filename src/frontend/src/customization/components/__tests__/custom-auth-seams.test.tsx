@@ -5,6 +5,7 @@ import { CustomAdminPageMenuItem } from "../custom-admin-page-menu-item";
 import CustomLoginBrandTitle from "../custom-login-brand-title";
 import CustomLoginSignupPrompt from "../custom-login-signup-prompt";
 import CustomLoginSsoOptions from "../custom-login-sso-options";
+import CustomResourceShareAction from "../custom-resource-share-action";
 
 describe("OSS auth customization seams", () => {
   it("does not render admin navigation", () => {
@@ -35,6 +36,18 @@ describe("OSS auth customization seams", () => {
 
   it("renders no SSO login options", () => {
     const { container } = render(<CustomLoginSsoOptions />);
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("keeps non-flow share entry points inert in OSS", () => {
+    const { container } = render(
+      <CustomResourceShareAction
+        resourceId="resource-1"
+        resourceType="project"
+        resourceName="Project one"
+      />,
+    );
 
     expect(container).toBeEmptyDOMElement();
   });

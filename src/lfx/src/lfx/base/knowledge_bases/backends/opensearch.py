@@ -168,6 +168,10 @@ class OpenSearchBackend(BaseVectorStoreBackend):
 
     backend_type = BackendType.OPENSEARCH
 
+    def normalize_score(self, score: float) -> float:
+        """Keep OpenSearch relevance scores, which are already higher-is-better."""
+        return float(score)
+
     def _resolve_index_name(self) -> str:
         """Resolve the effective index for this KB.
 

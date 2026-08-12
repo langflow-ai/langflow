@@ -34,6 +34,7 @@ from lfx.graph.checkpoint.store import CheckpointStore
 from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
+from lfx.observability import execution_protocol
 from lfx.schema.schema import InputValueRequest
 from lfx.schema.workflow import JobStatus, WorkflowExecutionResponse
 from lfx.workflow.adapters import StreamAdapter, StreamEvent
@@ -41,7 +42,7 @@ from lfx.workflow.adapters.langflow import WORKFLOW_OUTPUT_CAPTURE_EVENT, build_
 from lfx.workflow.converters import ParsedWorkflowRun, create_error_response, run_response_to_workflow_response
 
 from langflow.api.utils import extract_global_variables_from_headers
-from langflow.api.utils.execution_errors import error_for_client
+from langflow.api.utils.execution_errors import caller_owns_flow, error_for_client
 from langflow.api.v1.schemas import FlowDataRequest, RunResponse
 from langflow.api.v2.workflow_validation import _validate_output_ids
 from langflow.api.warm_graph import warm_deepcopy
@@ -185,10 +186,14 @@ async def _stream_event_frames(
     parsed: ParsedWorkflowRun,
     current_user: UserRead,
     source_flow_id: UUID | None = None,
+    source_flow_owner_id: UUID | None = None,
     run_id: str | None = None,
     job_id: UUID | None = None,
     resume: dict | None = None,
     track_job_status: bool = True,
+    # Required, not defaulted: a default is how an unwired caller gets a confidently wrong
+    # label, which is the one thing the absent-rather-than-"unknown" rule exists to prevent.
+    protocol: str,
     emit_output_capture: bool = False,
     expose_error_details: bool = False,
 ) -> AsyncIterator[tuple[bytes, str]]:
@@ -240,38 +245,43 @@ async def _stream_event_frames(
     async def drive() -> None:
         nonlocal drive_error
         try:
-            await asyncio.wait_for(
-                generate_flow_events(
-                    flow_id=flow_id,
-                    background_tasks=background_tasks,
-                    event_manager=event_manager,
-                    inputs=input_request,
-                    data=flow_data,
-                    files=parsed.files,
-                    stop_component_id=parsed.stop_component_id,
-                    start_component_id=parsed.start_component_id,
-                    # Persist vertex builds (keyed by ``run_id``) only for job-tracked
-                    # runs so a background job's status can be reconstructed later. Live
-                    # streams pass no ``run_id`` and keep the no-persist behavior.
-                    log_builds=run_id is not None,
-                    current_user=current_user,
-                    flow_name=flow_name,
-                    source_flow_id=source_flow_id,
-                    run_id=run_id,
-                    job_id=job_id,
-                    resume=resume,
-                    track_job_status=track_job_status,
-                    # The sync path applies tweaks before Graph construction; this loop
-                    # builds from the DB (or request data), so without this the streaming
-                    # and background paths silently drop request tweaks.
-                    tweaks=parsed.tweaks,
-                    expose_error_details=expose_error_details,
-                    # Anonymous serving runs are ephemeral: thread the no-persist
-                    # decision onto the graph so astore_message skips the DB write.
-                    persist_messages=parsed.persist_messages,
-                ),
-                timeout=execution_timeout,
-            )
+            # Bound here rather than in the enclosing generator: drive() runs as its own task, so
+            # the set/reset pair cannot straddle a generator suspension point and leak into the
+            # consumer task that resumes it.
+            with execution_protocol(protocol):
+                await asyncio.wait_for(
+                    generate_flow_events(
+                        flow_id=flow_id,
+                        background_tasks=background_tasks,
+                        event_manager=event_manager,
+                        inputs=input_request,
+                        data=flow_data,
+                        files=parsed.files,
+                        stop_component_id=parsed.stop_component_id,
+                        start_component_id=parsed.start_component_id,
+                        # Persist vertex builds (keyed by ``run_id``) only for job-tracked
+                        # runs so a background job's status can be reconstructed later. Live
+                        # streams pass no ``run_id`` and keep the no-persist behavior.
+                        log_builds=run_id is not None,
+                        current_user=current_user,
+                        flow_name=flow_name,
+                        source_flow_id=source_flow_id,
+                        source_flow_owner_id=source_flow_owner_id,
+                        run_id=run_id,
+                        job_id=job_id,
+                        resume=resume,
+                        track_job_status=track_job_status,
+                        # The sync path applies tweaks before Graph construction; this loop
+                        # builds from the DB (or request data), so without this the streaming
+                        # and background paths silently drop request tweaks.
+                        tweaks=parsed.tweaks,
+                        expose_error_details=expose_error_details,
+                        # Anonymous serving runs are ephemeral: thread the no-persist
+                        # decision onto the graph so astore_message skips the DB write.
+                        persist_messages=parsed.persist_messages,
+                    ),
+                    timeout=execution_timeout,
+                )
         except asyncio.CancelledError:
             raise
         except asyncio.TimeoutError:
@@ -369,7 +379,11 @@ async def _stream_event_frames(
         # captured an exception and no cooperative terminal error reached the
         # stream, emit the adapter's terminal error event(s) here.
         if drive_error is not None and not terminal_error_seen:
-            client_error = error_for_client(drive_error, expose_details=expose_error_details)
+            client_error = (
+                drive_error
+                if isinstance(drive_error, WorkflowTimeoutError)
+                else error_for_client(drive_error, expose_details=expose_error_details)
+            )
             for event in adapter.error_events(client_error):
                 if terminal_error_type is not None and event.type == terminal_error_type:
                     terminal_error_seen = True
@@ -407,7 +421,11 @@ def _execute_streaming_workflow(
             background_tasks=background_tasks,
             parsed=parsed,
             current_user=current_user,
-            expose_error_details=flow.user_id == current_user.id,
+            source_flow_owner_id=flow.user_id,
+            # The live v2 stream. Which client sent it is a separate attribute, read from the
+            # X-Langflow-Client header, because the playground calls this same public endpoint.
+            protocol="v2",
+            expose_error_details=caller_owns_flow(flow, current_user),
         ):
             yield frame
 
@@ -551,7 +569,7 @@ async def execute_sync_workflow(
         WorkflowValidationError: If flow data is None or graph build fails
     """
     if expose_error_details is None:
-        expose_error_details = flow.user_id == current_user.id
+        expose_error_details = caller_owns_flow(flow, current_user)
 
     # Tweaks and chat input come straight from the parsed AG-UI request
     tweaks = parsed.tweaks
@@ -629,28 +647,35 @@ async def execute_sync_workflow(
     job_service = get_job_service()
     await job_service.create_job(job_id=job_id, flow_id=flow_id_str, user_id=current_user.id)
     try:
-        task_result, execution_session_id = await job_service.execute_with_status(
-            job_id=job_id,
-            run_coro_func=run_graph_internal,
-            graph=graph,
-            flow_id=flow_id_str,
-            session_id=session_id,
-            inputs=_build_run_inputs(parsed),
-            outputs=terminal_node_ids,
-            stream=False,
-        )
-
-        # Fire memory-base auto-capture hook — non-blocking background effect.
-        try:
-            _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only; same run_id set on graph
-            await get_task_service().fire_and_forget_task(
-                get_memory_base_service().on_flow_output,
-                flow_id=flow.id,
-                session_id=execution_session_id,
-                job_id=_run_id_uuid,
+        with execution_protocol("v2"):
+            task_result, execution_session_id = await job_service.execute_with_status(
+                job_id=job_id,
+                run_coro_func=run_graph_internal,
+                graph=graph,
+                flow_id=flow_id_str,
+                session_id=session_id,
+                inputs=_build_run_inputs(parsed),
+                outputs=terminal_node_ids,
+                stream=False,
             )
-        except (RuntimeError, ValueError, OSError):
-            await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
+
+        # MemoryBase auto-capture resolves the watching owner's embedding and
+        # preprocessing credentials by ``flow_id``. Only an owner-equivalent
+        # execution principal may trigger that owner-scoped side effect. This
+        # shared executor is also used by PUBLIC/A2A and delegated-share runs;
+        # letting either caller schedule this hook would spend another user's
+        # credentials and persist into their private knowledge base.
+        if caller_owns_flow(flow, current_user):
+            try:
+                _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only; same run_id set on graph
+                await get_task_service().fire_and_forget_task(
+                    get_memory_base_service().on_flow_output,
+                    flow_id=flow.id,
+                    session_id=execution_session_id,
+                    job_id=_run_id_uuid,
+                )
+            except (RuntimeError, ValueError, OSError):
+                await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
         # Build RunResponse
         run_response = RunResponse(outputs=task_result, session_id=execution_session_id)

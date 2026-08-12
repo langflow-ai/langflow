@@ -19,6 +19,7 @@ from cryptography.fernet import InvalidToken
 from elevenlabs import ElevenLabs
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from lfx.log import logger
+from lfx.observability import execution_protocol
 from lfx.schema.schema import InputValueRequest
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyError,
@@ -434,12 +435,15 @@ async def handle_function_call(
         input_request = InputValueRequest(
             input_value=args.get("input"), components=[], type="chat", session=conversation_id
         )
-        response = await build_flow_and_stream(
-            flow_id=UUID(flow_id),
-            inputs=input_request,
-            background_tasks=background_tasks,
-            current_user=current_user,
-        )
+        # Bound around the call, not the drain: the build task is created inside and copies the
+        # context then, so the drain below runs outside the scope without losing the label.
+        with execution_protocol("voice"):
+            response = await build_flow_and_stream(
+                flow_id=UUID(flow_id),
+                inputs=input_request,
+                background_tasks=background_tasks,
+                current_user=current_user,
+            )
         result = ""
         async for line in response.body_iterator:
             if not line:
@@ -1322,12 +1326,13 @@ async def flow_tts_websocket(
                                 input_request = InputValueRequest(
                                     input_value=transcript, components=[], type="chat", session=session_id
                                 )
-                                response = await build_flow_and_stream(
-                                    flow_id=UUID(flow_id),
-                                    inputs=input_request,
-                                    background_tasks=background_tasks,
-                                    current_user=current_user,
-                                )
+                                with execution_protocol("voice"):
+                                    response = await build_flow_and_stream(
+                                        flow_id=UUID(flow_id),
+                                        inputs=input_request,
+                                        background_tasks=background_tasks,
+                                        current_user=current_user,
+                                    )
                                 result = ""
                                 async for line in response.body_iterator:
                                     if not line:

@@ -229,11 +229,12 @@ async def test_v1_advanced_shared_flow_executes_as_caller_without_owner_requery(
         in_transaction=lambda: False,
         commit=AsyncMock(),
     )
+    task_service = SimpleNamespace(fire_and_forget_task=AsyncMock())
     monkeypatch.setattr(endpoints.Graph, "from_payload", fake_from_payload)
     monkeypatch.setattr(endpoints, "ensure_flow_permission", AsyncMock())
     monkeypatch.setattr(endpoints, "get_session_service", lambda: SimpleNamespace())
     monkeypatch.setattr(endpoints, "run_graph_internal", fake_run_graph_internal)
-    monkeypatch.setattr(endpoints, "get_task_service", lambda: SimpleNamespace(fire_and_forget_task=AsyncMock()))
+    monkeypatch.setattr(endpoints, "get_task_service", lambda: task_service)
     monkeypatch.setattr(endpoints, "get_memory_base_service", lambda: SimpleNamespace(on_flow_output=MagicMock()))
 
     response = await endpoints.experimental_run_flow(
@@ -252,6 +253,7 @@ async def test_v1_advanced_shared_flow_executes_as_caller_without_owner_requery(
     assert captured["user_id"] == str(caller_id)
     assert captured["runtime_graph"] is graph
     session.exec.assert_not_awaited()
+    task_service.fire_and_forget_task.assert_not_awaited()
 
 
 @pytest.mark.parametrize("cache_mismatch", ["component_principal", "flow_identity"])
@@ -424,7 +426,7 @@ async def test_v1_advanced_http_validation_error_depends_on_flow_ownership(
         assert exc_info.value.status_code == 400
         assert sensitive_detail in str(exc_info.value.detail)
     else:
-        assert exc_info.value.status_code == 500
+        assert exc_info.value.status_code == 400
         assert exc_info.value.detail == "Workflow execution failed."
         assert sensitive_detail not in str(exc_info.value.detail)
 

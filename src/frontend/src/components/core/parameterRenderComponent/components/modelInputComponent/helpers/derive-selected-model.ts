@@ -19,14 +19,11 @@ export interface DeriveSelectedModelParams {
    * not-enabled-locally trigger.
    */
   providerStatusIsReliable: boolean;
-  /** Current value of the component's `hasProcessedEmptyRef` (read-only here). */
-  hasProcessedEmpty: boolean;
 }
 
 /**
  * Derives the currently selected model shown in the trigger. Pure: extracted
- * verbatim from ModelInputComponent's `selectedModel` memo (LE-1736 W23). Shares
- * `hasProcessedEmpty` with useAutoSelectModel (W24), passed in by value.
+ * verbatim from ModelInputComponent's `selectedModel` memo (LE-1736 W23).
  */
 export function deriveSelectedModel({
   isConnectionMode,
@@ -36,7 +33,6 @@ export function deriveSelectedModel({
   flatOptions,
   providers,
   providerStatusIsReliable,
-  hasProcessedEmpty,
 }: DeriveSelectedModelParams): SelectedModel | null {
   if (isConnectionMode) {
     return {
@@ -49,9 +45,8 @@ export function deriveSelectedModel({
   const saved = recoverModelOption(savedValue);
   const currentName = saved?.name;
   if (!currentName) {
-    if (flatOptions.length > 0 && !hasProcessedEmpty) {
-      return flatOptions[0];
-    }
+    // Showing flatOptions[0] here would advertise a provider the field is not
+    // actually set to, which is how the pre-selection surfaced (LE-2168).
     return null;
   }
 

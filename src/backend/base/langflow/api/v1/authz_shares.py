@@ -123,7 +123,8 @@ def _share_visible(
         return True
     scope = row.scope
     if scope == ShareScope.PUBLIC.value:
-        return True
+        # PUBLIC is a direct-link grant, not a discovery/listing grant.
+        return False
     if scope == ShareScope.USER.value and row.target_id == user_id:
         return True
     if scope == ShareScope.TEAM.value and row.target_id is not None:

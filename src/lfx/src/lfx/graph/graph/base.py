@@ -39,7 +39,7 @@ from lfx.graph.vertex.base import Vertex, VertexStates
 from lfx.graph.vertex.schema import NodeData, NodeTypeEnum
 from lfx.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
 from lfx.log.logger import LogConfig, configure, logger
-from lfx.observability import APPLICATION_TRACER_NAME
+from lfx.observability import APPLICATION_TRACER_NAME, get_execution_client, get_execution_protocol
 from lfx.schema.dotdict import dotdict
 from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
 from lfx.services.cache.utils import CacheMiss
@@ -48,12 +48,36 @@ from lfx.utils.async_helpers import run_until_complete
 
 try:
     from opentelemetry import trace as otel_trace
+    from opentelemetry.context import Context as OtelContext
 except ImportError:
     # lfx does not depend on opentelemetry. Under langflow it is installed and the application
     # span is emitted; under bare lfx this stays None and the span code path is a no-op.
     otel_trace = None
+    OtelContext = None
 
 FLOW_EXECUTION_SPAN_NAME = "flow.execute"
+
+
+class FlowSpanScope:
+    """Lets a driver that handles its own component errors still mark the run as failed.
+
+    The /build vertex walk catches a component exception, turns it into an error output for the
+    client and stops walking, rather than re-raising. The span's own except clauses therefore
+    never see it, and without this the run would be exported as a success. Callers that let
+    exceptions propagate (arun, async_start, process) need none of this and ignore the scope.
+
+    Only the exception *type* is accepted, never the message: component output ends up in those
+    messages and must not reach the operator's APM.
+    """
+
+    __slots__ = ("error_type",)
+
+    def __init__(self) -> None:
+        self.error_type: str | None = None
+
+    def record_error(self, error_type: str) -> None:
+        self.error_type = error_type
+
 
 INPUT_TYPE_COMPONENT_TYPES = {
     "chat": {InterfaceComponentTypes.ChatInput.value},
@@ -838,11 +862,43 @@ class Graph:
         of it. It must stay False when the scope wraps an async generator: the context token would be
         attached and detached across the generator's suspension points, which leaks it into whatever
         task resumes the generator.
+
+        The status attribute exists because OTel's StatusCode has three values and a paused run is
+        none of them: it did not fail, and calling it OK would tell an operator the work finished
+        when a human is still holding it. Span status stays UNSET for a pause so alerting on the
+        error rate does not fire, and the attribute carries the distinction.
+
+        A parent that has already ended is turned into a link instead. Several drivers outlive the
+        request that started them: the v1 build route hands the work to a task and returns the
+        job_id, so the server span is closed before the flow runs, and ``create_task`` copies the
+        context regardless. Parenting to it yields a child that starts after its parent finished,
+        which renders as a broken trace. Detecting it here rather than asking callers to declare it
+        keeps the v2 stream correct for free: its server span stays open for the whole response, so
+        it is still a real parent and is left as one.
+
+        Yields a :class:`FlowSpanScope`. Callers that let exceptions propagate can ignore it; a
+        driver that catches component failures itself must call ``record_error`` or its run is
+        exported as a success.
         """
+        scope = FlowSpanScope()
         if otel_trace is None or self._is_subgraph:
-            yield
+            yield scope
             return
-        span = otel_trace.get_tracer(APPLICATION_TRACER_NAME).start_span(FLOW_EXECUTION_SPAN_NAME)
+        tracer = otel_trace.get_tracer(APPLICATION_TRACER_NAME)
+        # is_recording() goes False once a span has ended, which is the signal that this run
+        # outlived its request. An empty Context is what makes the replacement a root; without it
+        # start_span would pick the dead span up as parent anyway.
+        parent = otel_trace.get_current_span()
+        parent_context = parent.get_span_context()
+        if parent_context.is_valid and not parent.is_recording():
+            span = tracer.start_span(
+                FLOW_EXECUTION_SPAN_NAME,
+                context=OtelContext(),
+                links=[otel_trace.Link(parent_context)],
+            )
+        else:
+            span = tracer.start_span(FLOW_EXECUTION_SPAN_NAME)
+        status = "ok"
         try:
             with contextlib.ExitStack() as stack:
                 if make_current:
@@ -854,12 +910,27 @@ class Graph:
                             span, end_on_exit=False, record_exception=False, set_status_on_exception=False
                         )
                     )
-                yield
+                yield scope
         except GraphPausedException:
             # A HITL pause suspends the unit of work; it is not a failed request. The resume is
             # driven through Graph.process by the durable runner, which opens its own span.
+            status = "paused"
+            raise
+        except asyncio.CancelledError:
+            # CancelledError is a BaseException, so the handler below does not see it and the
+            # span would otherwise report the run as "ok". Reached by a user pressing stop (the
+            # job service marks the job CANCELLED and re-raises) and by any asyncio.wait_for
+            # ceiling wrapped around a span-carrying run: the v2 build driver, a2a, and the
+            # agentic assistant all have one. The run did not finish, so it gets its own value.
+            #
+            # Span status stays UNSET, which is right for a stop button and arguable for a
+            # timeout: a server-imposed ceiling is closer to a fault, and an operator alerting
+            # on span error rate will not see it. Left as one value for now because the two are
+            # indistinguishable here; the job row (CANCELLED vs FAILED) still tells them apart.
+            status = "cancelled"
             raise
         except Exception as exc:
+            status = "error"
             span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, type(exc).__name__))
             span.set_attribute("error.type", type(exc).__name__)
             raise
@@ -870,6 +941,21 @@ class Graph:
                 span.set_attribute("run_id", self._run_id)
             if self.session_id:
                 span.set_attribute("session_id", str(self.session_id))
+            # Absent rather than "unknown" when nothing set it: a missing attribute is a wiring
+            # gap the operator can see, an "unknown" value looks like a protocol we support.
+            if (protocol := get_execution_protocol()) is not None:
+                span.set_attribute("protocol", protocol)
+            # Absent when the caller did not identify itself, same rule as protocol: a missing
+            # attribute is "nobody said", which an operator can see and act on.
+            if (client := get_execution_client()) is not None:
+                span.set_attribute("client", client)
+            # A driver that swallowed its own component error exits this scope cleanly, so the
+            # only signal is what it recorded on the way out.
+            if status == "ok" and scope.error_type is not None:
+                status = "error"
+                span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, scope.error_type))
+                span.set_attribute("error.type", scope.error_type)
+            span.set_attribute("status", status)
             span.end()
 
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
