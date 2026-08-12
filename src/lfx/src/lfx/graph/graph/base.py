@@ -584,7 +584,17 @@ class Graph:
             with self.flow_execution_span():
                 try:
                     # Run the async generator
-                    async_gen = self.async_start(inputs, max_iterations, event_manager, open_flow_span=False)
+                    # By keyword: async_start takes (inputs, max_iterations, config,
+                    # event_manager), so positionally the event manager lands in config and
+                    # __apply_config subscripts it. The run dies in this thread and the caller
+                    # gets an empty generator rather than an error. config is already applied
+                    # above, so it is deliberately not forwarded again.
+                    async_gen = self.async_start(
+                        inputs=inputs,
+                        max_iterations=max_iterations,
+                        event_manager=event_manager,
+                        open_flow_span=False,
+                    )
 
                     while True:
                         try:
