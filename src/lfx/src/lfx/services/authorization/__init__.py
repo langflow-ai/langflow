@@ -1,6 +1,7 @@
 """LFX authorization service package (abstract base + default no-op allow-all implementation)."""
 
 from lfx.services.authorization.base import (
+    AuthorizationAuditEvent,
     AuthorizationMutation,
     AuthorizationMutationKind,
     AuthorizationMutationRejected,
@@ -15,6 +16,7 @@ from lfx.services.authorization.base import (
 from lfx.services.authorization.service import AuthorizationService
 
 __all__ = [
+    "AuthorizationAuditEvent",
     "AuthorizationMutation",
     "AuthorizationMutationKind",
     "AuthorizationMutationRejected",

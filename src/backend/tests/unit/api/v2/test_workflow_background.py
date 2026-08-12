@@ -343,39 +343,89 @@ async def test_finalize_job_status_still_writes_terminal_for_running_job():
     fake_service.update_job_status.assert_awaited_once()
 
 
-async def test_sync_run_persists_job_result(client, created_api_key, bg_flow):
-    """A sync run persists its outputs to Job.result so a later GET status returns them.
+def _enable_sync_persistence(monkeypatch) -> None:
+    """Turn on the opt-in sync-result cache (``sync_result_storage_enabled`` is off by default)."""
+    from lfx.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "sync_result_storage_enabled", True)
+
+
+async def test_sync_run_persists_job_result_when_enabled(client, created_api_key, bg_flow, monkeypatch):
+    """With the flag ON, a sync run caches BOTH its outputs and session for GET status.
 
     Sync already creates a Job row (to support HITL suspend + run_id-keyed builds);
-    this asserts the completed run now also writes Job.result in the same
-    list-of-OutputEvent shape the background path stores, so the status read is
-    protocol-uniform across sync and background.
+    with ``sync_result_storage_enabled`` the completed run also writes Job.result
+    (list-of-OutputEvent shape) and the session to job_metadata, so a later GET
+    status rebuilds the SAME response the caller got inline — outputs AND session_id.
     """
     from uuid import UUID
 
     from langflow.services.database.models.jobs.model import Job
 
-    body = {"flow_id": bg_flow, "mode": "sync", "input_value": "hi"}
+    _enable_sync_persistence(monkeypatch)
+
+    body = {"flow_id": bg_flow, "mode": "sync", "input_value": "hi", "session_id": "ab-session-marker"}
     resp = await client.post("api/v2/workflows", json=body, headers=_headers(created_api_key))
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert data["status"] == "completed", data
     assert data["outputs"], f"sync response carried no outputs: {data}"
+    assert data["session_id"] == "ab-session-marker"  # inline response is the source of truth
     job_id = data["job_id"]
 
-    # Job.result persisted (same {status, outputs:[...]} blob the runner writes).
+    # Job.result + session persisted on the job row.
     async with session_scope() as session:
         row = await session.get(Job, UUID(job_id))
     assert row is not None
     assert isinstance(row.result, dict), f"Job.result not a dict: {row.result!r}"
-    assert row.result.get("outputs"), f"Job.result has no outputs: {row.result}"
+    assert row.result.get("outputs"), f"Job.result has no outputs: {row.result!r}"
+    assert (row.job_metadata or {}).get("request", {}).get("session_id") == "ab-session-marker"
 
-    # GET status reconstructs the same outputs from Job.result.
+    # GET status returns the SAME outputs AND session_id — not the flow id (regression guard).
     status = await client.get("api/v2/workflows", params={"job_id": job_id}, headers=_headers(created_api_key))
     assert status.status_code == 200, status.text
     sbody = status.json()
     assert sbody["status"] == "completed"
     assert sbody["outputs"], f"GET status carried no outputs for sync job: {sbody}"
+    assert sbody["session_id"] == "ab-session-marker", (
+        f"GET status must report the submitted session, not the flow id: {sbody['session_id']}"
+    )
+
+
+async def test_sync_run_does_not_persist_result_by_default(client, created_api_key, bg_flow):
+    """With the flag OFF (default), a sync run leaves Job.result unwritten.
+
+    The caller already holds outputs + session inline, so the default path adds no
+    per-request result write. GET status still works via vertex-build reconstruction,
+    which resolves the REAL session (the pre-#14353 path) — never the flow id.
+    """
+    from uuid import UUID
+
+    from langflow.services.database.models.jobs.model import Job
+
+    body = {"flow_id": bg_flow, "mode": "sync", "input_value": "hi", "session_id": "ab-session-marker"}
+    resp = await client.post("api/v2/workflows", json=body, headers=_headers(created_api_key))
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert data["status"] == "completed"
+    assert data["session_id"] == "ab-session-marker"
+    job_id = data["job_id"]
+
+    # Default off: no result blob cached.
+    async with session_scope() as session:
+        row = await session.get(Job, UUID(job_id))
+    assert row is not None
+    assert not (isinstance(row.result, dict) and row.result.get("outputs")), (
+        f"sync result should not be cached when the flag is off: {row.result!r}"
+    )
+
+    # GET status still resolves the real session via vertex-build reconstruction.
+    status = await client.get("api/v2/workflows", params={"job_id": job_id}, headers=_headers(created_api_key))
+    assert status.status_code == 200, status.text
+    sbody = status.json()
+    assert sbody["session_id"] == "ab-session-marker", (
+        f"reconstruction must report the submitted session, not the flow id: {sbody['session_id']}"
+    )
 
 
 async def test_sync_run_survives_result_persist_db_error(client, created_api_key, bg_flow, monkeypatch):
@@ -387,7 +437,10 @@ async def test_sync_run_survives_result_persist_db_error(client, created_api_key
     ``OperationalError`` — not in the old ``(RuntimeError, ValueError, OSError)``
     tuple) used to escape and be misreported by the terminal ``except Exception``
     as a FAILED run. Assert the run still returns 200 ``completed`` with outputs,
-    and that ``Job.result`` was left unwritten (persistence genuinely failed).
+    that ``Job.result`` was left unwritten (persistence genuinely failed), and that
+    GET status still reports the REAL session — never a flow-id degradation. The
+    request blob is written BEFORE the result, so a result-write failure can never
+    leave a cached result paired with a degraded session (the invariant).
     """
     from uuid import UUID
 
@@ -395,13 +448,15 @@ async def test_sync_run_survives_result_persist_db_error(client, created_api_key
     from langflow.services.jobs.service import JobService
     from sqlalchemy.exc import OperationalError
 
+    _enable_sync_persistence(monkeypatch)
+
     async def _raise_locked(self, *args, **kwargs):  # noqa: ARG001
         statement = "UPDATE jobs SET result=?"
         raise OperationalError(statement, {}, Exception("database is locked"))
 
     monkeypatch.setattr(JobService, "set_result", _raise_locked)
 
-    body = {"flow_id": bg_flow, "mode": "sync", "input_value": "hi"}
+    body = {"flow_id": bg_flow, "mode": "sync", "input_value": "hi", "session_id": "ab-session-marker"}
     resp = await client.post("api/v2/workflows", json=body, headers=_headers(created_api_key))
     assert resp.status_code == 200, resp.text
     data = resp.json()
@@ -416,4 +471,11 @@ async def test_sync_run_survives_result_persist_db_error(client, created_api_key
     assert row is not None
     assert not (isinstance(row.result, dict) and row.result.get("outputs")), (
         f"Job.result should be unwritten after a set_result failure: {row.result!r}"
+    )
+
+    # Invariant: a result-write failure never yields a degraded-session GET.
+    status = await client.get("api/v2/workflows", params={"job_id": data["job_id"]}, headers=_headers(created_api_key))
+    assert status.status_code == 200, status.text
+    assert status.json()["session_id"] == "ab-session-marker", (
+        f"result-persist failure must not degrade GET session to the flow id: {status.json()['session_id']}"
     )

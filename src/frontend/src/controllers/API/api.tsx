@@ -83,6 +83,11 @@ function ApiInterceptor() {
           for (const [key, value] of Object.entries(customHeaders)) {
             config.headers[key] = value;
           }
+          // The axios interceptor below sets this too, but the canvas runs flows through
+          // fetch, not axios: AG-UI's HttpAgent issues a raw fetch and never touches the
+          // axios instance. Without this the client attribute is absent on the one surface
+          // it exists to identify. See the axios copy for what the value means.
+          config.headers["x-langflow-client"] = "playground";
         }
 
         return [url, config];
@@ -216,6 +221,12 @@ function ApiInterceptor() {
           for (const [key, value] of Object.entries(customHeaders)) {
             config.headers[key] = value;
           }
+          // Tells the backend which client this run came from, for the operator's traces. The
+          // playground calls the same public API a user's own script would, so the route cannot
+          // distinguish them and the caller has to say. Advisory only: it is self-reported and
+          // the server ignores anything outside its known vocabulary, so never rely on it for
+          // access decisions.
+          config.headers["x-langflow-client"] = "playground";
         }
 
         return {
@@ -417,4 +428,4 @@ async function performStreamingRequest({
   }
 }
 
-export { api, ApiInterceptor, performStreamingRequest };
+export { ApiInterceptor, api, performStreamingRequest };

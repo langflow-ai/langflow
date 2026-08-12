@@ -10,6 +10,7 @@ import os
 import tempfile
 
 import pytest
+from cryptography.fernet import Fernet
 from langflow.cli import preflight
 from langflow.cli.preflight import (
     PREFLIGHT_COMPLETED_ENV,
@@ -82,11 +83,33 @@ def test_deployment_profile_rejects_invalid():
 # ---------------------------------------------------------------------------
 
 
-async def test_secret_key_env_supplied(monkeypatch):
-    monkeypatch.setenv("LANGFLOW_SECRET_KEY", "x" * 40)
+@pytest.mark.parametrize(
+    "secret_key",
+    [
+        pytest.param("a" * 31, id="short-derived-key"),
+        pytest.param(Fernet.generate_key().decode(), id="fernet-key"),
+    ],
+)
+async def test_secret_key_env_supplied_and_usable(monkeypatch, secret_key):
+    monkeypatch.setenv("LANGFLOW_SECRET_KEY", secret_key)
     result = await probe_secret_key(_StubService())
     assert result.status == "ok"
     assert "operator-supplied" in result.detail
+
+
+@pytest.mark.parametrize(
+    "secret_key",
+    [
+        pytest.param("a" * 32, id="invalid-32-characters"),
+        pytest.param("x" * 40, id="invalid-40-characters"),
+    ],
+)
+async def test_secret_key_env_supplied_but_unusable_fails(monkeypatch, secret_key):
+    monkeypatch.setenv("LANGFLOW_SECRET_KEY", secret_key)
+    result = await probe_secret_key(_StubService())
+    assert result.status == "fail"
+    assert "Fernet key must be 32 url-safe base64-encoded bytes" in result.detail
+    assert "Fernet.generate_key()" in result.remediation
 
 
 async def test_secret_key_file_only_fails(monkeypatch, tmp_path):
