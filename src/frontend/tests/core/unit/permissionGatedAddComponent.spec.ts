@@ -45,7 +45,12 @@ test(
     // Without this the whole test would pass vacuously on any build where the
     // editor stops querying permissions: there would be no pending window to
     // assert about and every assertion below would hold for the wrong reason.
-    expect(permissionRequests).toBeGreaterThan(0);
+    // Polled rather than read once: the counter is incremented by the route
+    // handler on the Node side, which has no ordering guarantee against the
+    // browser-side visibility this assertion follows.
+    await expect
+      .poll(() => permissionRequests, { timeout: 30000 })
+      .toBeGreaterThan(0);
 
     await expect(addButton).toBeDisabled();
     await expect(page.locator(NODE_SELECTOR)).toHaveCount(0);
