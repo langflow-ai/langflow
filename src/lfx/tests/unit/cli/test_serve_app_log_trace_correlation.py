@@ -109,6 +109,11 @@ def exported(collector, tmp_path):
     """Run one flow through a real serve app exporting to the collector; return its requests."""
     env = {k: v for k, v in os.environ.items() if not k.startswith("OTEL_")}
     env["OTEL_EXPORTER_OTLP_ENDPOINT"] = f"http://127.0.0.1:{collector.server_address[1]}"
+    # The sentinel is how this test finds its own log record, and the body boundary withholds
+    # message bodies from the export by default. This test is about correlation, not about that
+    # boundary, so ask for bodies explicitly rather than have the discriminator disappear. No-op
+    # on a build that predates the setting.
+    env["LANGFLOW_OTEL_LOG_BODIES"] = "all"
     # A file rather than ``python -c``: Component.__init__ reads its own class source with
     # inspect.getsource, which has nothing to read for a class defined in a ``-c`` string.
     probe = tmp_path / "probe.py"
@@ -171,3 +176,25 @@ def test_a_log_line_from_the_flow_run_carries_the_flow_span_trace_id(exported):
     assert matching[0].trace_id == flow_span.trace_id, (
         f"log trace_id {matching[0].trace_id.hex()} != span trace_id {flow_span.trace_id.hex()}"
     )
+
+
+def test_the_request_span_shares_that_trace_id_too(exported):
+    """The pivot an operator actually starts from is the failing request, not the flow span.
+
+    Correlating the log to ``flow.execute`` alone would still hold if the flow span had started
+    its own trace, and then the request an operator is looking at in their APM would not lead
+    to either. Asserting all three share one id is what makes the walk end where it started.
+    """
+    spans = _spans(exported)
+    flow_span = next(s for s in spans if s.name == "flow.execute")
+    # SPAN_KIND_SERVER is 2; the FastAPI instrumentation names it after the route.
+    server_spans = [s for s in spans if s.kind == 2]
+    matching = [r for r in _log_records(exported) if r.body.string_value == SENTINEL]
+
+    assert server_spans, [s.name for s in spans]
+    assert matching
+    assert server_spans[0].trace_id != b"\x00" * 16
+    assert server_spans[0].trace_id == flow_span.trace_id, (
+        f"request {server_spans[0].trace_id.hex()} != flow {flow_span.trace_id.hex()}"
+    )
+    assert server_spans[0].trace_id == matching[0].trace_id
