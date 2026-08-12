@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import contextvars
 import os
 import time
 from dataclasses import dataclass
@@ -29,6 +30,8 @@ from lfx.log.logger import logger
 from lfx.observability_fastapi import patch_otel_fastapi_route_details
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from fastapi import FastAPI
     from opentelemetry.sdk._logs import LoggerProvider
     from opentelemetry.sdk.metrics import MeterProvider
@@ -47,6 +50,93 @@ APPLICATION_TRACER_NAME = "langflow.observability"
 APPLICATION_METER_NAME = "langflow"
 
 DEFAULT_SERVICE_NAME = "langflow"
+
+# The surface a flow run arrived through, recorded as the flow span's ``protocol`` attribute so
+# an operator can tell a playground click from a webhook delivery from an MCP tool call.
+#
+# Ambient rather than a parameter because the graph is several layers below the surface that
+# knows the answer, and two of those layers hand the run to a fresh asyncio task. Task creation
+# copies the context, so setting this at the entry point carries it into the run without
+# threading an argument through every intermediate signature. It also means a path nobody wired
+# reports no protocol at all rather than inheriting a wrong one from its caller.
+_current_protocol: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "lfx_execution_protocol",
+    default=None,
+)
+
+
+# The client a run says it came from, recorded as the span's ``client`` attribute. Distinct from
+# ``protocol`` on purpose: protocol is how the request arrived and is derived server-side from the
+# route, while this is who the caller claims to be. Conflating them is a mistake worth naming,
+# because the playground calls the same public API any user would, so the route cannot identify it.
+#
+# Self-reported and therefore spoofable. That is fine for telemetry and must never become an
+# authorization signal. The vocabulary is closed so a caller cannot mint attribute values at will;
+# anything unrecognised is dropped rather than recorded, on the same principle as protocol, where a
+# missing attribute is an honest "nobody said" and a guessed one is a lie.
+KNOWN_EXECUTION_CLIENTS = frozenset({"playground", "sdk", "cli"})
+
+# Follows the X-LANGFLOW-* convention already used for request-scoped global variables.
+EXECUTION_CLIENT_HEADER = "x-langflow-client"
+
+_current_client: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "lfx_execution_client",
+    default=None,
+)
+
+
+def get_execution_client() -> str | None:
+    """Return the client the current run says it came from, or None if it did not say."""
+    return _current_client.get()
+
+
+@contextlib.contextmanager
+def execution_client(client: str | None) -> Iterator[None]:
+    """Bind *client* for the current context, ignoring anything outside the known vocabulary."""
+    if client not in KNOWN_EXECUTION_CLIENTS:
+        yield
+        return
+    token = _current_client.set(client)
+    try:
+        yield
+    finally:
+        _current_client.reset(token)
+
+
+def get_execution_protocol() -> str | None:
+    """Return the surface the current flow run arrived through, or None outside a served run."""
+    return _current_protocol.get()
+
+
+@contextlib.contextmanager
+def execution_protocol(protocol: str) -> Iterator[None]:
+    """Bind *protocol* as the surface for flow runs started in this context, outermost wins.
+
+    An already-bound protocol is left alone, because several surfaces share one driver
+    underneath: voice and the playground both reach the graph through the same build path, and
+    a flow-as-tool child run reaches it through whichever surface called the parent. In every
+    such pair the outer binding is the one that names how the request actually arrived, so the
+    inner generic driver must not overwrite it.
+
+    Reset on exit so a worker that serves many requests on one task cannot leak one request's
+    protocol into the next. A run handed to ``asyncio.create_task`` inside the block keeps the
+    value regardless, because the task copies the context at creation.
+
+    Entry points bind with this. The one exception is a callee that is itself an async
+    generator: an async generator body runs in the context of whoever calls ``__anext__``, so a
+    scope wrapped around it from outside would set and reset across its suspension points. Those
+    take a plain ``protocol`` argument and bind it inside, on the coroutine that does the work
+    (see ``_stream_event_frames``).
+    """
+    if _current_protocol.get() is not None:
+        yield
+        return
+    token = _current_protocol.set(protocol)
+    try:
+        yield
+    finally:
+        _current_protocol.reset(token)
+
 
 # Event-loop scheduling delay. Sampled rather than instrumented: there is no hook that
 # reports "the loop was blocked", so the only way to see it is to ask for a known sleep and
@@ -130,6 +220,48 @@ PROCESS_METRICS_CONFIG = {
     "cpython.gc.collected_objects": None,
     "cpython.gc.uncollectable_objects": None,
 }
+
+
+# Environment resolution shared with the doctor (``lfx observability doctor``). These are plain
+# os.getenv and deliberately sit outside the otel-guarded block below, so the self-test can
+# import them at module scope and resolve endpoints exactly the way the bootstrap does. Keeping
+# one definition is the point: a doctor that resolved endpoints its own way could report a
+# healthy pipeline the runtime never exports to.
+
+
+def otlp_endpoint(signal: str) -> str | None:
+    """Resolve a signal's endpoint: the per-signal variable first, then the generic one."""
+    return os.getenv(f"OTEL_EXPORTER_OTLP_{signal.upper()}_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+
+
+def otlp_exporter_disabled(signal: str) -> bool:
+    """Whether the operator turned this signal off while leaving a shared endpoint set."""
+    return os.getenv(f"OTEL_{signal.upper()}_EXPORTER", "otlp").strip().lower() == "none"
+
+
+def otlp_exporter_class(signal: str, protocol: str):
+    """The OTLP exporter class for a signal and protocol.
+
+    Returns the class rather than an instance because the callers differ: the bootstrap wants a
+    default-constructed exporter reading the environment, while the doctor passes an explicit
+    timeout. Spelled out once here so a signal/protocol pairing cannot be wrong in one place and
+    right in another.
+    """
+    if signal == "traces":
+        if protocol == "grpc":
+            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter as ExporterClass
+        else:
+            from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter as ExporterClass
+    elif signal == "metrics":
+        if protocol == "grpc":
+            from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter as ExporterClass
+        else:
+            from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter as ExporterClass
+    elif protocol == "grpc":
+        from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter as ExporterClass
+    else:
+        from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter as ExporterClass
+    return ExporterClass
 
 
 # OpenTelemetry is optional. Resolve the SDK surface once, so the bootstrap functions can be a
@@ -277,14 +409,6 @@ if _OTEL_AVAILABLE:
             return "http/protobuf"
         return protocol
 
-    def _otlp_span_exporter(protocol: str):
-        """Build the OTLP span exporter; it reads endpoint, headers and timeout from the environment."""
-        if protocol == "grpc":
-            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-        else:
-            from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-        return OTLPSpanExporter()
-
     def _prometheus_reader():
         """Build the local Prometheus pull reader, or None when the exporter is not installed.
 
@@ -310,21 +434,18 @@ if _OTEL_AVAILABLE:
         The final flush on exit needs no wiring: MeterProvider registers its own atexit handler
         (shutdown_on_exit defaults to True), which shuts the reader down and drains it.
         """
-        endpoint = os.getenv("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+        endpoint = otlp_endpoint("metrics")
         if not endpoint:
             return None
 
         # The operator's documented way to turn metrics off while leaving a shared endpoint set.
-        if os.getenv("OTEL_METRICS_EXPORTER", "otlp").strip().lower() == "none":
+        if otlp_exporter_disabled("metrics"):
             return None
 
         protocol = _otlp_protocol("metrics")
         try:
-            if protocol == "grpc":
-                from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-            else:
-                from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-            reader = PeriodicExportingMetricReader(ApplicationOnlyMetricExporter(OTLPMetricExporter()))
+            exporter = otlp_exporter_class("metrics", protocol)()
+            reader = PeriodicExportingMetricReader(ApplicationOnlyMetricExporter(exporter))
         except Exception:  # noqa: BLE001
             logger.warning("Could not configure the OTLP metric exporter; metrics will not be pushed.")
             return None
@@ -393,12 +514,12 @@ if _OTEL_AVAILABLE:
         Nothing sets a tracer provider otherwise, so spans go nowhere. If application code
         or opentelemetry-instrument already installed one, leave it alone.
         """
-        endpoint = os.getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+        endpoint = otlp_endpoint("traces")
         if not endpoint:
             return None
 
         # The operator's documented way to turn traces off while leaving a shared endpoint set.
-        if os.getenv("OTEL_TRACES_EXPORTER", "otlp").strip().lower() == "none":
+        if otlp_exporter_disabled("traces"):
             return None
 
         if trace.get_tracer_provider().__class__.__name__ != "ProxyTracerProvider":
@@ -416,7 +537,8 @@ if _OTEL_AVAILABLE:
         protocol = _otlp_protocol("traces")
         try:
             tracer_provider = TracerProvider(resource=_resource())
-            tracer_provider.add_span_processor(ApplicationOnlySpanProcessor(_otlp_span_exporter(protocol)))
+            exporter = otlp_exporter_class("traces", protocol)()
+            tracer_provider.add_span_processor(ApplicationOnlySpanProcessor(exporter))
         except Exception:  # noqa: BLE001
             logger.warning("Could not configure the OTLP tracer provider; traces will not be exported.")
             return None
@@ -434,10 +556,10 @@ if _OTEL_AVAILABLE:
         automatic because the SDK stamps the active span's trace_id onto every record, and
         each flow execution already runs inside a span.
         """
-        endpoint = os.getenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+        endpoint = otlp_endpoint("logs")
         if not endpoint:
             return None
-        if os.getenv("OTEL_LOGS_EXPORTER", "otlp").strip().lower() == "none":
+        if otlp_exporter_disabled("logs"):
             return None
         if isinstance(_logs.get_logger_provider(), LoggerProvider):
             logger.warning("A logger provider is already installed; not replacing it.")
@@ -445,13 +567,9 @@ if _OTEL_AVAILABLE:
 
         protocol = _otlp_protocol("logs")
         try:
-            if protocol == "grpc":
-                from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
-            else:
-                from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
-
             provider = LoggerProvider(resource=_resource())
-            provider.add_log_record_processor(BatchLogRecordProcessor(OTLPLogExporter()))
+            exporter = otlp_exporter_class("logs", protocol)()
+            provider.add_log_record_processor(BatchLogRecordProcessor(exporter))
         except Exception as exc:  # noqa: BLE001
             logger.warning(f"Could not configure the OTLP log exporter; logs will not be shipped. {exc}")
             return None
@@ -615,6 +733,87 @@ def bootstrap_application_telemetry(*, prometheus_enabled: bool = False) -> Appl
         tracer_provider=tracer_provider,
         logger_provider=logger_provider,
     )
+
+
+class OutboundCallScope:
+    """Handle for a caller that learns the outcome after the call returns.
+
+    A protocol that reports failure in its return value rather than by raising leaves the span
+    with nothing to see. MCP is one: a failed tool call comes back as a ``CallToolResult`` with
+    ``isError`` set, so without this the span closes OK and the operator's error rate on
+    outbound calls is zero no matter how many tools are failing.
+
+    Takes an error type, never a message or a result: the failure text a server returns embeds
+    the arguments it was called with.
+    """
+
+    __slots__ = ("error_type",)
+
+    def __init__(self) -> None:
+        self.error_type: str | None = None
+
+    def record_error(self, error_type: str) -> None:
+        # First failure wins, so a later one cannot overwrite the one that caused the retry.
+        if self.error_type is None:
+            self.error_type = error_type
+
+
+def _root_error_type(exc: BaseException) -> str:
+    """Name the exception that actually failed, not the one the retry loop wrapped it in.
+
+    Both MCP retry loops re-raise as ``ValueError(f"Failed to run tool ...")`` with ``from e``,
+    so without walking the chain every timeout, dropped connection and closed resource records
+    as ``ValueError`` and the attribute tells an operator nothing. Only the type is read; the
+    message stays unrecorded either way.
+    """
+    root = exc
+    seen = {id(root)}
+    while root.__cause__ is not None and id(root.__cause__) not in seen:
+        root = root.__cause__
+        seen.add(id(root))
+    return type(root).__name__
+
+
+@contextlib.contextmanager
+def outbound_call_span(name: str, attributes: dict[str, str]) -> Iterator[OutboundCallScope]:
+    """One span for an outbound call the runtime makes itself, for the operator's APM.
+
+    Emitted under APPLICATION_TRACER_NAME rather than by instrumenting the transport. The
+    transport is shared with the LLM vendor SDKs, and the export filter allowlists by
+    instrumentation scope name, so an httpx span from our MCP client and one from the OpenAI
+    SDK are the same string and cannot be told apart. Emitting the span ourselves makes the
+    scope name the discriminator by construction.
+
+    Identifiers only, never arguments or results, which carry flow data. Errors record the
+    exception type, never its message, for the same reason.
+
+    Yields an :class:`OutboundCallScope`. A caller whose protocol reports failure in the return
+    value rather than by raising must call ``record_error`` or its failures export as successes.
+    """
+    scope = OutboundCallScope()
+    if not _OTEL_AVAILABLE:
+        yield scope
+        return
+    tracer = trace.get_tracer(APPLICATION_TRACER_NAME)
+    # Neither recording nor status-setting is delegated to the SDK: its versions write the
+    # exception message onto the span, and that can carry flow data.
+    with tracer.start_as_current_span(name, record_exception=False, set_status_on_exception=False) as span:
+        for key, value in attributes.items():
+            span.set_attribute(key, value)
+        try:
+            yield scope
+        # BaseException, not Exception: CancelledError is a BaseException, and a tool call
+        # cancelled by a client disconnect or an outer wait_for would otherwise export as a
+        # success. Only the type is recorded, so this stays inside the same boundary.
+        except BaseException as exc:
+            error_type = _root_error_type(exc)
+            span.set_status(trace.Status(trace.StatusCode.ERROR, error_type))
+            span.set_attribute("error.type", error_type)
+            raise
+        else:
+            if scope.error_type is not None:
+                span.set_status(trace.Status(trace.StatusCode.ERROR, scope.error_type))
+                span.set_attribute("error.type", scope.error_type)
 
 
 def instrument_fastapi_app(app: FastAPI) -> None:

@@ -24,6 +24,7 @@ from lfx.custom.utils import (
 from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
 from lfx.log.logger import logger
+from lfx.observability import execution_protocol
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
 from lfx.services.model_provider_policy import (
@@ -447,17 +448,21 @@ async def simple_run_flow(
                 user_id=user_id,
                 job_type=JobType.WORKFLOW,
             )
-            task_result, session_id = await _job_svc.execute_with_status(
-                run_id_uuid,
-                run_graph_internal,
-                graph=graph,
-                flow_id=flow_id_str,
-                session_id=input_request.session_id,
-                inputs=inputs,
-                outputs=outputs,
-                stream=stream,
-                event_manager=event_manager,
-            )
+            # The funnel default. Binding is outermost-wins, so a caller that already named its
+            # surface (webhook, mcp, openai_responses) keeps it and only the bare v1 route lands
+            # here; a new surface that reuses simple_run_flow is labelled "v1" rather than nothing.
+            with execution_protocol("v1"):
+                task_result, session_id = await _job_svc.execute_with_status(
+                    run_id_uuid,
+                    run_graph_internal,
+                    graph=graph,
+                    flow_id=flow_id_str,
+                    session_id=input_request.session_id,
+                    inputs=inputs,
+                    outputs=outputs,
+                    stream=stream,
+                    event_manager=event_manager,
+                )
         except Exception as exc:
             await logger.aerror(
                 "Workflow job execution failed for flow %s: %s",
@@ -545,15 +550,16 @@ async def simple_run_flow_task(
                 {"ids": vertex_ids, "to_run": vertex_ids, "run_id": run_id},
             )
 
-        result = await simple_run_flow(
-            flow=flow,
-            input_request=input_request,
-            stream=stream,
-            api_key_user=api_key_user,
-            event_manager=effective_event_manager,
-            run_id=run_id,
-            expose_error_details=api_key_user is not None and _caller_owns_flow(flow, api_key_user),
-        )
+        with execution_protocol("webhook"):
+            result = await simple_run_flow(
+                flow=flow,
+                input_request=input_request,
+                stream=stream,
+                api_key_user=api_key_user,
+                event_manager=effective_event_manager,
+                run_id=run_id,
+                expose_error_details=api_key_user is not None and _caller_owns_flow(flow, api_key_user),
+            )
 
         if should_emit and flow_id is not None:
             await webhook_event_manager.emit(flow_id, "end", {"run_id": run_id, "success": True})
@@ -1423,14 +1429,15 @@ async def experimental_run_flow(
     await release_db_transaction(session)
 
     try:
-        task_result, session_id = await run_graph_internal(
-            graph=graph,
-            flow_id=flow_id_str,
-            session_id=session_id,
-            inputs=inputs,
-            outputs=outputs,
-            stream=stream,
-        )
+        with execution_protocol("v1.advanced"):
+            task_result, session_id = await run_graph_internal(
+                graph=graph,
+                flow_id=flow_id_str,
+                session_id=session_id,
+                inputs=inputs,
+                outputs=outputs,
+                stream=stream,
+            )
     except Exception as exc:
         await logger.aexception("Advanced-run execution failed for flow %s", flow.id)
         client_error = error_for_client(exc, expose_details=expose_error_details)

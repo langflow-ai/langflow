@@ -15,6 +15,7 @@ from lfx.events.event_manager import EventManager, create_default_event_manager
 from lfx.execution import aget_default_coordinator
 from lfx.log.logger import logger
 from lfx.mcp.flow_builder_tools import set_tool_start_listener
+from lfx.observability import execution_protocol
 from lfx.schema.schema import InputValueRequest
 from lfx.utils.flow_validation import CustomComponentValidationError
 
@@ -65,9 +66,11 @@ async def _run_graph_with_events(
         inputs = InputValueRequest(input_value=input_value) if input_value else None
 
         coordinator = await aget_default_coordinator()
-        results = [
-            payload async for payload in coordinator.stream(graph, initial_inputs=inputs, event_manager=event_manager)
-        ]
+        with execution_protocol("agentic"):
+            results = [
+                payload
+                async for payload in coordinator.stream(graph, initial_inputs=inputs, event_manager=event_manager)
+            ]
         execution_result.result = extract_structured_result(results)
     except Exception as e:  # noqa: BLE001
         execution_result.error = e
@@ -143,7 +146,8 @@ async def execute_flow_file(
         inputs = InputValueRequest(input_value=input_value) if input_value else None
 
         coordinator = await aget_default_coordinator()
-        results = [payload async for payload in coordinator.stream(graph, initial_inputs=inputs)]
+        with execution_protocol("agentic"):
+            results = [payload async for payload in coordinator.stream(graph, initial_inputs=inputs)]
         flow_result = extract_structured_result(results)
     except HTTPException:
         raise
