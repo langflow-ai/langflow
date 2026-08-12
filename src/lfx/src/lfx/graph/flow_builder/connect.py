@@ -81,26 +81,75 @@ def _has_template_input(flow: dict, component_id: str, input_name: str) -> bool:
     return isinstance(field, dict) and bool(field)
 
 
-def _node_supports_tool_mode(node_data: dict) -> bool:
-    """Return True when the component can synthesize a toolset output.
+def _declares_tool_mode(node: dict) -> bool:
+    """Both halves of Component._handle_tool_mode, read off one serialized node.
 
-    States both halves of Component._handle_tool_mode, the runtime authority
-    that creates the ``component_as_tool`` output: an INPUT declaring
-    ``tool_mode``, or the class opting in via ``add_tool_output``.
+    That method is the runtime authority that creates the ``component_as_tool``
+    output: it fires for an INPUT declaring ``tool_mode``, or for a class opting
+    in via ``add_tool_output``.
 
     Output-side ``tool_mode`` is deliberately not consulted. That flag marks
     which outputs a toolset exposes, not whether the component has one \u2014 89 of
     the 127 bundled components set it, ChatInput and ChatOutput included \u2014 so
     reading it as a capability signal made this guard accept everything.
     """
-    inner = node_data.get("node", {})
-    if inner.get("add_tool_output"):
+    if node.get("add_tool_output"):
         return True
-    template = inner.get("template", {})
+    template = node.get("template", {})
     return any(isinstance(fdata, dict) and fdata.get("tool_mode") for fdata in template.values())
 
 
-def _enable_tool_mode(flow: dict, source_id: str) -> None:
+def _node_supports_tool_mode(node_data: dict, registry: dict[str, dict] | None = None) -> bool:
+    """Return True when the component can synthesize a toolset output.
+
+    Reads the node as saved, then falls back to ``registry`` -- the live
+    definition for the node's type -- when the saved copy declares neither
+    signal. ``add_tool_output`` only started being serialized into templates
+    this release, so a flow saved before it carries tool-capable nodes with no
+    capability signal at all. ``RunFlow`` is the whole of that set: it is the
+    one bundled component that opts in via ``add_tool_output`` while declaring
+    no ``tool_mode`` input, and being wrapped as a Tool is its entire purpose.
+    """
+    if _declares_tool_mode(node_data.get("node", {})):
+        return True
+    node_type = node_data.get("type")
+    entry = registry.get(node_type) if registry and isinstance(node_type, str) else None
+    return isinstance(entry, dict) and _declares_tool_mode(entry)
+
+
+def ensure_tool_mode_supported(
+    flow: dict,
+    component_id: str,
+    registry: dict[str, dict] | None = None,
+) -> dict:
+    """Validate that a component can be wrapped as a Tool. Mutates nothing.
+
+    Split out of ``_enable_tool_mode`` so a caller that performs the flip
+    remotely can refuse BEFORE it mutates the stored flow. The MCP
+    ``connect_components`` tool does exactly that: it hands the flip to
+    ``/custom_component/update`` because only the server's node rebuild
+    produces the ``tools_metadata`` template field.
+
+    Returns the node's ``data`` dict. Raises ValueError when the component is
+    missing from the flow or cannot produce a toolset output.
+    """
+    node_data = _find_node_data(flow, component_id)
+    if node_data is None:
+        msg = f"Component not found in flow: {component_id}"
+        raise ValueError(msg)
+    if not _node_supports_tool_mode(node_data, registry):
+        msg = (
+            f"Cannot connect '{component_id}.{_TOOL_OUTPUT_NAME}': this component does not "
+            "support tool mode - none of its inputs declare tool_mode=True and it does not "
+            "set add_tool_output. If this component IS tool-capable (RunFlow, for example), "
+            "this node's template predates the capability flag: refresh the component to "
+            "restore it. Otherwise pick a different output."
+        )
+        raise ValueError(msg)
+    return node_data
+
+
+def _enable_tool_mode(flow: dict, source_id: str, registry: dict[str, dict] | None = None) -> None:
     """Flip a component to tool mode in place.
 
     Mirrors Component._handle_tool_mode: when tool_mode is enabled the
@@ -113,17 +162,7 @@ def _enable_tool_mode(flow: dict, source_id: str) -> None:
     flipped by this same guard back when it accepted output-side tool_mode —
     is refused rather than kept alive.
     """
-    node_data = _find_node_data(flow, source_id)
-    if node_data is None:
-        msg = f"Component not found in flow: {source_id}"
-        raise ValueError(msg)
-    if not _node_supports_tool_mode(node_data):
-        msg = (
-            f"Cannot connect '{source_id}.component_as_tool': this component does "
-            "not support tool mode. Either pick a different output or wire a "
-            "component whose inputs declare tool_mode=True."
-        )
-        raise ValueError(msg)
+    node_data = ensure_tool_mode_supported(flow, source_id, registry)
     inner = node_data.setdefault("node", {})
     # Idempotent: already in tool mode with the synthesized output present.
     if inner.get("tool_mode") and any(o.get("name") == _TOOL_OUTPUT_NAME for o in inner.get("outputs", [])):
@@ -253,6 +292,7 @@ def add_connection(
     target_input: str,
     source_types: list[str] | None = None,
     target_types: list[str] | None = None,
+    registry: dict[str, dict] | None = None,
 ) -> dict:
     """Add a connection (edge) between two components.
 
@@ -265,6 +305,10 @@ def add_connection(
     types — this mirrors what the canvas does when a user drags from the
     Tool Mode toggle, and is required because the static component template
     does not list ``component_as_tool`` until tool mode is enabled.
+
+    ``registry`` is optional and consulted only for that tool-mode capability
+    check, where it rescues nodes whose saved template predates the
+    ``add_tool_output`` flag (see ``_node_supports_tool_mode``).
     """
     # dataType must equal the node's live data.type or the frontend drops the edge
     # (generated components are typed "CustomComponent" but keep a class-named id).
@@ -276,7 +320,7 @@ def add_connection(
     # Raises ValueError when the source cannot be wrapped as a Tool, so the
     # LLM gets a clear domain error instead of "output not found".
     if source_output == _TOOL_OUTPUT_NAME:
-        _enable_tool_mode(flow, source_id)
+        _enable_tool_mode(flow, source_id, registry)
 
     # Resolve types from the flow's node data if not explicitly provided
     types_resolved = source_types is None and target_types is None

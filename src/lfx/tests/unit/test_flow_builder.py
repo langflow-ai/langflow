@@ -632,6 +632,40 @@ class TestConnectComponentAsTool:
         assert src_node["data"]["node"]["tool_mode"] is True
         assert [o["name"] for o in src_node["data"]["node"]["outputs"]] == ["component_as_tool"]
 
+    def test_should_accept_stale_node_whose_capability_only_shows_in_the_registry(self):
+        """A tool-capable node saved before add_tool_output was serialized still connects.
+
+        ``add_tool_output`` only started being written into templates this
+        release, so every previously saved RunFlow node carries neither
+        capability signal — and RunFlow is the one bundled component that has no
+        ``tool_mode`` input to fall back on. Refusing those would break the exact
+        wiring RunFlow exists for, so the registry entry for the node's type is
+        consulted before giving up.
+        """
+        flow = _fresh_flow()
+        source = add_component(flow, "ExplicitToolOutput", TOOL_REGISTRY)["id"]
+        target = add_component(flow, "Agent", TOOL_REGISTRY)["id"]
+        src_node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == source)
+        # Age the node back to a pre-flag template.
+        src_node["data"]["node"].pop("add_tool_output", None)
+        assert src_node["data"]["type"] == "ExplicitToolOutput"
+
+        add_connection(flow, source, "component_as_tool", target, "tools", registry=TOOL_REGISTRY)
+
+        assert src_node["data"]["node"]["tool_mode"] is True
+        assert len(flow["data"]["edges"]) == 1
+
+    def test_should_still_reject_a_stale_node_that_is_not_tool_capable(self):
+        """The registry fallback widens the check to the live definition, not to everything."""
+        flow = _fresh_flow()
+        source = add_component(flow, "PlainOutput", TOOL_REGISTRY)["id"]
+        target = add_component(flow, "Agent", TOOL_REGISTRY)["id"]
+
+        with pytest.raises(ValueError, match=r"predates the capability flag"):
+            add_connection(flow, source, "component_as_tool", target, "tools", registry=TOOL_REGISTRY)
+
+        assert flow["data"]["edges"] == []
+
     def test_should_reject_pre_flipped_node_without_tool_mode_capability(self):
         """A node already carrying the toolset output is re-checked, not trusted.
 
