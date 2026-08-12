@@ -487,6 +487,7 @@ async def test_handle_call_tool_uses_provided_session_id(monkeypatch):
     forwarded_request = simple_run_flow_mock.await_args.kwargs["input_request"]
     assert forwarded_request.session_id == "user-1-thread-7"
     assert forwarded_request.input_value == "hello"
+    assert simple_run_flow_mock.await_args.kwargs["expose_error_details"] is True
 
 
 @pytest.mark.asyncio

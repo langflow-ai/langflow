@@ -48,11 +48,6 @@ def _coerce_uuid(value: Any) -> uuid.UUID | None:
         return None
 
 
-def _distance_to_similarity(distance: float) -> float:
-    """Chroma returns a distance; flip the sign so larger == more similar."""
-    return -1 * distance
-
-
 def _to_python_scalar(value: Any) -> Any:
     """Convert numpy scalars (int64, float64, bool_, …) to Python primitives.
 
@@ -65,6 +60,13 @@ def _to_python_scalar(value: Any) -> Any:
     if isinstance(value, np.generic):
         return value.item()
     return value
+
+
+def _session_filter_enabled(value: Any) -> bool:
+    """Parse serialized false values while keeping unknown values fail-closed."""
+    if isinstance(value, str):
+        return value.strip().lower() not in {"", "0", "false", "no", "off"}
+    return bool(value)
 
 
 class MemoryBaseComponent(Component):
@@ -142,10 +144,7 @@ class MemoryBaseComponent(Component):
         treat the operator dict as a literal value and silently match nothing.
         """
         predicates: dict = {}
-        # Defensive bool() — BoolInput coerces strings, but if this attribute is
-        # ever overridden externally with a non-bool value, ``"false"`` would be
-        # truthy and silently disable the toggle.
-        if bool(self.filter_by_session) and session_id:
+        if _session_filter_enabled(self.filter_by_session) and session_id:
             predicates["session_id"] = str(session_id)
 
         return predicates or None
@@ -182,13 +181,15 @@ class MemoryBaseComponent(Component):
         db: AsyncSession,
         selected: str,
         flow_id: uuid.UUID,
+        execution_user_id: uuid.UUID,
     ) -> tuple[MemoryBase, User]:
-        """Look up the MB row scoped to the current flow and resolve its owner."""
+        """Look up the MB row scoped to the exact flow execution principal."""
         mb = (
             await db.exec(
                 select(MemoryBase).where(
                     MemoryBase.name == selected,
                     MemoryBase.flow_id == flow_id,
+                    MemoryBase.user_id == execution_user_id,
                 )
             )
         ).first()
@@ -246,8 +247,8 @@ class MemoryBaseComponent(Component):
         await backend.ensure_ready()
         return backend
 
-    def _format_results(self, results: list[tuple]) -> DataFrame:
-        """Convert Chroma (doc, score) tuples into the component's DataFrame output.
+    def _format_results(self, results: list[tuple], backend: BaseVectorStoreBackend) -> DataFrame:
+        """Convert backend ``(doc, score)`` tuples into the component's DataFrame output.
 
         Metadata values are coerced from numpy scalars to Python primitives so the
         resulting DataFrame is JSON-serializable when the component is invoked as
@@ -257,7 +258,7 @@ class MemoryBaseComponent(Component):
         for doc, score in results:
             kwargs: dict = {"content": doc.page_content}
             if self.search_query:
-                kwargs["_score"] = _to_python_scalar(_distance_to_similarity(score))
+                kwargs["_score"] = _to_python_scalar(backend.normalize_score(score))
             if self.include_metadata:
                 for key, value in (doc.metadata or {}).items():
                     kwargs[key] = _to_python_scalar(value)
@@ -272,7 +273,7 @@ class MemoryBaseComponent(Component):
         context from prior conversations across all sessions.
         """
         session_id = getattr(self.graph, "session_id", None)
-        if bool(self.filter_by_session) and not session_id:
+        if _session_filter_enabled(self.filter_by_session) and not session_id:
             # Only required when filtering is on, since the value gates the where clause.
             msg = (
                 "A session_id is required on the flow request when 'Filter by Session' "
@@ -285,13 +286,18 @@ class MemoryBaseComponent(Component):
             msg = "flow_id is not available on the graph context; Memory Base retrieval is unavailable."
             raise ValueError(msg)
 
+        execution_user_id = _coerce_uuid(getattr(self.graph, "user_id", None))
+        if execution_user_id is None:
+            msg = "user_id is not available on the graph context; Memory Base retrieval is unavailable."
+            raise ValueError(msg)
+
         selected = self.memory_base
         if not selected:
             msg = "No Memory Base is selected."
             raise ValueError(msg)
 
         async with session_scope() as db:
-            mb, owner = await self._resolve_attached_mb(db, selected, flow_id)
+            mb, owner = await self._resolve_attached_mb(db, selected, flow_id, execution_user_id)
             owner_username = owner.username
             kb_name = mb.kb_name
 
@@ -305,10 +311,10 @@ class MemoryBaseComponent(Component):
         where = self._build_where_clause(session_id=session_id)
 
         logger.debug(
-            "MemoryBase retrieval mb=%s session_hash=%s where=%s top_k=%s",
+            "MemoryBase retrieval mb=%s session_hash=%s session_filter=%s top_k=%s",
             selected,
             hash_session_id(session_id) if session_id else "<none>",
-            where,
+            where is not None,
             self.top_k,
         )
 
@@ -326,4 +332,4 @@ class MemoryBaseComponent(Component):
             )
         finally:
             await backend.teardown()
-        return self._format_results(results)
+        return self._format_results(results, backend)

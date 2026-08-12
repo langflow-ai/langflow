@@ -66,6 +66,7 @@ from langflow.services.authorization import (
     visible_scope_prefilter,
 )
 from langflow.services.authorization.fetch import deny_to_404
+from langflow.services.authorization.public_access import PublicResourceAction, authorize_public_flow_access
 from langflow.services.authorization.utils import _resolve_authz_domain
 from langflow.services.cache.service import ThreadingInMemoryCache
 from langflow.services.database.lock_retry import (
@@ -76,7 +77,6 @@ from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
 )
 from langflow.services.database.models.flow.model import (
-    AccessTypeEnum,
     Flow,
     FlowCreate,
     FlowHeader,
@@ -359,6 +359,7 @@ async def read_public_flow(
     *,
     session: DbSession,
     flow_id: UUID,
+    request: Request,
 ):
     """Read a public flow without requiring authorization (public means public).
 
@@ -369,8 +370,12 @@ async def read_public_flow(
     flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
     if flow is None:
         raise HTTPException(status_code=404, detail="Flow not found")
-    if flow.access_type is not AccessTypeEnum.PUBLIC:
-        raise HTTPException(status_code=403, detail="Flow is not public")
+    await authorize_public_flow_access(
+        flow=flow,
+        action=PublicResourceAction.READ,
+        request_host=request.url.hostname,
+        session=session,
+    )
     flow_read = FlowRead.model_validate(flow, from_attributes=True)
     flow_read.data = strip_secret_field_values(flow_read.data)
     return flow_read
