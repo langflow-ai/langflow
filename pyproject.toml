@@ -175,7 +175,7 @@ bundles = [
     "lfx-empiriolabs>=0.1.0,<1.0.0",
     "lfx-exa>=0.1.0,<1.0.0",
     "lfx-firecrawl>=0.1.0,<1.0.0",
-    "lfx-nextplaid>=0.1.0,<1.0.0",
+    "lfx-nextplaid>=0.1.2,<1.0.0",
     "lfx-paddle>=0.1.0,<1.0.0",
     "lfx-valkey>=0.1.0,<1.0.0",
 ]

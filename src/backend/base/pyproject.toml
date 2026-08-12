@@ -113,7 +113,7 @@ dependencies = [
     "dynaconf>=3.2.13,<4.0.0",
     "pyasn1>=0.6.3,<0.7.0",
     "langgraph-checkpoint>4.0.0,<5.0.0",
-    "transformers>=5.15.0,<6.0.0",
+    "transformers>=5.6.0,<6.0.0",
     # Service-complete runtime dependencies. Provider component SDKs remain
     # owned by lfx-* extension distributions.
     "redis>=7.4.0,<8.0.0",
@@ -402,7 +402,7 @@ jigsawstack = ["jigsawstack==0.2.7"]
 assemblyai = ["assemblyai==0.35.1"]
 
 # Data processing
-datasets = ["datasets>=5.0.1,<6.0.0"]
+datasets = ["datasets>2.14.7,<6.0.0"]
 fastparquet = ["fastparquet>=2024.11.0,<2025.0.0"]
 
 # Vision / ML
