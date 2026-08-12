@@ -232,12 +232,18 @@ def test_a_failing_agent_run_exports_an_error_type_and_not_the_completion():
     the provider's error, so it exercises both halves at once: the completion must not survive,
     and the provider class must still surface as the root rather than the wrapper.
 
+    Asserted with bodies turned ON, deliberately. Under the default policy no body is exported
+    at all, so "the completion is absent" would be trivially true and would pass against a call
+    site that still formats the exception into its message. Bodies on is where an operator who
+    opted in would actually see the leak, so it is the only place the absence means anything.
+
     Scope note, because the assertion looks broader than it is: this reproduces the *shape* of
     the agent catch sites, it does not drive them. It would still pass if a call site went back
-    to error(f"...{e}"). What guards that is the ruff G004 rule, which is currently inert here
-    because logger-objects is unset, and is being fixed separately.
+    to error(f"...{e}"). Guarding that needs a source-level check, and ruff G004 is not it: it
+    is inert here because logger-objects is unset, and even configured it does not know
+    structlog's aerror/aexception, which is where four of the nine statements in this fix lived.
     """
-    records = run_probe(PROBE_AGENT="1")
+    records = run_probe(PROBE_AGENT="1", LANGFLOW_OTEL_LOG_BODIES="all")
     payload = json.dumps(records)
 
     assert "SENTINELCOMPLETIONQQQ" not in payload
