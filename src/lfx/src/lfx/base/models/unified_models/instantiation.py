@@ -454,7 +454,7 @@ def get_llm(
         if default_headers:
             kwargs["default_headers"] = default_headers
     elif provider == "Azure AI Foundry":
-        from lfx.base.models.model_utils import AZURE_AI_FOUNDRY_REQUEST_TIMEOUT
+        from lfx.base.models.model_utils import AZURE_AI_FOUNDRY_REQUEST_TIMEOUT, normalize_azure_ai_foundry_endpoint
 
         provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
         endpoint_value = provider_vars.get("AZURE_AI_FOUNDRY_ENDPOINT") or _env_if_allowed("AZURE_AI_FOUNDRY_ENDPOINT")
@@ -464,7 +464,7 @@ def get_llm(
                 "in Settings → Model Providers or set the environment variable."
             )
             raise ValueError(msg)
-        kwargs["endpoint"] = endpoint_value
+        kwargs["endpoint"] = normalize_azure_ai_foundry_endpoint(endpoint_value)
         connection_url_param = "endpoint"
         # Bound hung/blackholed endpoints the same way live discovery does.
         kwargs["request_timeout"] = AZURE_AI_FOUNDRY_REQUEST_TIMEOUT
@@ -815,6 +815,8 @@ def _compose_embedding_kwargs(
 
     # Apply Foundry endpoint last so a blank component api_base cannot wipe it.
     if provider == "Azure AI Foundry" and "api_base" in param_mapping:
+        from lfx.base.models.model_utils import normalize_azure_ai_foundry_endpoint
+
         foundry_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
         endpoint_value = (
             api_base_value
@@ -830,7 +832,7 @@ def _compose_embedding_kwargs(
                 raise ValueError(msg)
             return None
         connection_url_param = param_mapping["api_base"]
-        kwargs[connection_url_param] = endpoint_value
+        kwargs[connection_url_param] = normalize_azure_ai_foundry_endpoint(endpoint_value)
 
     _protect_model_connection(
         kwargs,

@@ -349,7 +349,13 @@ async def test_v1_streaming_run_requests_a_streaming_warm_copy(monkeypatch: pyte
     user_id = uuid4()
     updated_at = datetime(2026, 8, 5, 12, tzinfo=timezone.utc)
     result = await endpoints.simple_run_flow(
-        flow=SimpleNamespace(id=flow_id, name="warm", data={"nodes": [], "edges": []}, updated_at=updated_at),
+        flow=SimpleNamespace(
+            id=flow_id,
+            user_id=user_id,
+            name="warm",
+            data={"nodes": [], "edges": []},
+            updated_at=updated_at,
+        ),
         input_request=SimplifiedAPIRequest(session_id="v1-session"),
         stream=True,
         api_key_user=SimpleNamespace(id=user_id, is_superuser=False),
