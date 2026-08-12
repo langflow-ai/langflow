@@ -33,7 +33,12 @@ from langflow.api.utils import (
     validate_is_component,
 )
 from langflow.api.utils.core import strip_secret_field_values
-from langflow.api.utils.mcp.flow_secrets import persist_and_strip_mcp_secrets
+from langflow.api.utils.mcp.flow_secrets import (
+    extract_and_strip_mcp_secrets,
+    persist_and_strip_mcp_secrets,
+    restore_unresolvable_references,
+    stage_mcp_secrets,
+)
 from langflow.api.utils.zip_utils import extract_flows_from_zip
 from langflow.api.v1.authz_route_dependencies import (
     AuthorizedDeleteFlow,
@@ -428,6 +433,12 @@ async def update_flow(
         folder_id_will_change = target_folder_id != db_flow.folder_id
         flow_owner_ids = {flow_id: db_flow.user_id}
 
+        # Extract once, outside the retry loop. The in-place rewrite of flow.data survives a
+        # rollback while the staged rows do not, so re-extracting on attempt 2 would find
+        # only the reference it wrote itself and stage nothing. actor.id rather than
+        # current_user.id: the rollback expires the ORM User.
+        carried_secrets, secret_variables = extract_and_strip_mcp_secrets(flow.data)
+
         async def operation() -> FlowRead:
             # Re-load inside each attempt so retry after nested rollback never uses an expired ORM instance.
             db_flow_for_attempt = await _read_flow(
@@ -478,7 +489,8 @@ async def update_flow(
                     raise deny_to_404(exc, detail="Flow not found") from exc
             effective_flow_data = flow.data if flow.data is not None else db_flow_for_attempt.data
             _validate_catalog_policy_for_write(effective_flow_data, snapshot=catalog_policy_snapshot)
-            await persist_and_strip_mcp_secrets(flow.data, current_user.id, session)
+            failed = await stage_mcp_secrets(carried_secrets, secret_variables, actor.id, session)
+            restore_unresolvable_references(flow.data, secret_variables, failed)
             return await _patch_flow(
                 session=session,
                 db_flow=db_flow_for_attempt,
@@ -539,6 +551,13 @@ async def upsert_flow(
     Returns 201 for creation, 200 for update.  Returns 404 if owned by another user.
     """
     from fastapi.responses import JSONResponse
+
+    # Read once, outside the retry loop: a rollback between attempts expires the ORM User
+    # and a later attribute read would lazy-load outside the greenlet.
+    writer_id = current_user.id
+    # Extract once: a rollback between retry attempts discards the staged rows but not the
+    # in-place rewrite, so a second extraction would find only its own reference.
+    carried_secrets, secret_variables = extract_and_strip_mcp_secrets(flow.data)
 
     try:
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
@@ -655,7 +674,8 @@ async def upsert_flow(
                         raise deny_to_404(exc, detail="Flow not found") from exc
                 effective_flow_data = flow.data if flow.data is not None else existing_flow_for_attempt.data
                 _validate_catalog_policy_for_write(effective_flow_data, snapshot=catalog_policy_snapshot)
-                await persist_and_strip_mcp_secrets(flow.data, current_user.id, session)
+                failed = await stage_mcp_secrets(carried_secrets, secret_variables, writer_id, session)
+                restore_unresolvable_references(flow.data, secret_variables, failed)
                 return await _update_existing_flow(
                     session=session,
                     existing_flow=existing_flow_for_attempt,
@@ -680,7 +700,8 @@ async def upsert_flow(
                 current_user, FlowAction.CREATE, workspace_id=flow.workspace_id, folder_id=flow.folder_id
             )
             _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
-            await persist_and_strip_mcp_secrets(flow.data, current_user.id, session)
+            failed = await stage_mcp_secrets(carried_secrets, secret_variables, writer_id, session)
+            restore_unresolvable_references(flow.data, secret_variables, failed)
             flow_read = await _new_flow(
                 session=session,
                 flow=flow,

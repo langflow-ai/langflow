@@ -185,7 +185,7 @@ def extract_and_strip_mcp_secrets(
     return carried, variables
 
 
-def _restore_unresolvable_references(
+def restore_unresolvable_references(
     flow_data: dict[str, Any] | None, variables: dict[str, str], failed: set[str]
 ) -> None:
     """Put a literal back when its variable could not be created.
@@ -212,27 +212,24 @@ def _restore_unresolvable_references(
                     entries[entry_key] = variables[entry_value]
 
 
-async def persist_and_strip_mcp_secrets(flow_data: dict[str, Any] | None, user_id: UUID, session) -> None:
-    """Move any MCP credential in ``flow_data`` into the user's encrypted server rows.
+async def stage_mcp_secrets(
+    carried: list[tuple[str, dict[str, Any]]],
+    variables: dict[str, str],
+    user_id: UUID,
+    session,
+) -> set[str]:
+    """Stage the carried credential on the caller's session, returning what could not be.
 
-    An existing row is never overwritten: it is the config the user maintains through the
-    server manager, and a flow copy is not authoritative over it.
-
-    Nothing is committed here. The rows are staged on the caller's session so they land in
-    the same transaction as the flow itself — committing mid-request would break the
-    all-or-nothing contract of the batch write path and would survive a lock retry that
-    the caller expects to be re-runnable from a clean state.
-
-    A secret carried inside ``args`` (the ``--headers`` triple that auto-install bakes in)
-    is dropped rather than referenced, because variables are not resolved inside ``args``.
-    Under Langflow the ``mcp_server`` row still serves it; under ``lfx serve`` it is gone.
+    Split from the extraction on purpose. ``run_with_lock_retry`` rolls the session back
+    between attempts, which discards the staged rows, while the in-place rewrite of
+    ``flow_data`` survives in memory. Re-extracting on attempt 2 therefore finds only the
+    reference it wrote itself, stages nothing, and the flow commits pointing at a global
+    variable that does not exist. Extract once, stage per attempt.
     """
-    carried, variables = extract_and_strip_mcp_secrets(flow_data)
     if not carried and not variables:
-        return
+        return set()
 
     failed = await _ensure_variables(variables, user_id, session)
-    _restore_unresolvable_references(flow_data, variables, failed)
 
     for name, config in carried:
         existing = (
@@ -248,6 +245,32 @@ async def persist_and_strip_mcp_secrets(flow_data: dict[str, Any] | None, user_i
             await logger.adebug(f"MCP server row '{name}' already exists; keeping the stored config.")
         except Exception as exc:  # noqa: BLE001
             await logger.aerror(f"Could not persist MCP server config carried by a flow: {exc}")
+
+    return failed
+
+
+async def persist_and_strip_mcp_secrets(flow_data: dict[str, Any] | None, user_id: UUID, session) -> None:
+    """Move any MCP credential in ``flow_data`` into the user's encrypted server rows.
+
+    An existing row is never overwritten: it is the config the user maintains through the
+    server manager, and a flow copy is not authoritative over it.
+
+    Nothing is committed here. The rows are staged on the caller's session so they land in
+    the same transaction as the flow itself — committing mid-request would break the
+    all-or-nothing contract of the batch write path.
+
+    Callers that run inside ``run_with_lock_retry`` must not use this: extract once with
+    ``extract_and_strip_mcp_secrets`` outside the loop and call ``stage_mcp_secrets``
+    inside each attempt, so a rollback cannot leave the flow referencing a variable that
+    was never created.
+
+    A secret carried inside ``args`` (the ``--headers`` triple that auto-install bakes in)
+    is dropped rather than referenced, because variables are not resolved inside ``args``.
+    Under Langflow the ``mcp_server`` row still serves it; under ``lfx serve`` it is gone.
+    """
+    carried, variables = extract_and_strip_mcp_secrets(flow_data)
+    failed = await stage_mcp_secrets(carried, variables, user_id, session)
+    restore_unresolvable_references(flow_data, variables, failed)
 
 
 async def _ensure_variables(variables: dict[str, str], user_id: UUID, session) -> set[str]:

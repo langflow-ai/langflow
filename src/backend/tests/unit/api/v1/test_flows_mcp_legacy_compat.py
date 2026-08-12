@@ -54,9 +54,11 @@ def _legacy_flow_data(server_name: str) -> dict:
 
 
 async def _insert_legacy_flow(client: AsyncClient, headers, server_name: str) -> str:
-    """Land a pre-scrub row in the table: create through the API, then write the graph
-    straight to the column so the save hook never sees it — exactly the state an older
-    release left behind."""
+    """Land a pre-scrub row in the table.
+
+    Create through the API, then write the graph straight to the column so the save hook
+    never sees it — exactly the state an older release left behind.
+    """
     created = await client.post(
         "api/v1/flows/",
         json={"name": f"legacy-mcp-{uuid.uuid4().hex[:8]}", "description": "pre-scrub", "data": {}},

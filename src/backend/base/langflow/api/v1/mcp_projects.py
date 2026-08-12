@@ -1352,7 +1352,11 @@ class ProjectMCPServer:
         @handle_mcp_errors
         async def handle_list_project_tools(_request: types.ListToolsRequest) -> types.ListToolsResult:
             """Handle listing tools for this specific project."""
-            return await handle_list_tools_result(project_id=self.project_id, mcp_enabled_only=True)
+            result = await handle_list_tools_result(project_id=self.project_id, mcp_enabled_only=True)
+            # The SDK clears its cache only on the list[Tool] branch; the ListToolsResult
+            # branch upserts, so a tool that disappeared would linger with a stale schema.
+            self.server._tool_cache.clear()  # noqa: SLF001
+            return result
 
         @self.server.list_prompts()
         async def handle_list_prompts():

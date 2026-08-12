@@ -472,16 +472,23 @@ async def _collect_tools(
                         "handle_list_tools called with project_id but no current user; returning empty list"
                     )
                     return tools, excluded
-                flows_query = select(Flow).where(
-                    Flow.folder_id == project_id,
-                    Flow.user_id == current_user.id,
-                    Flow.is_component == False,  # noqa: E712
+                # Ordered for the same reason the call path is: without it, which duplicate
+                # holds the bare callable name and which gets get_unique_name's _1 suffix
+                # is heap order, so it can flip between two calls.
+                flows_query = (
+                    select(Flow)
+                    .where(
+                        Flow.folder_id == project_id,
+                        Flow.user_id == current_user.id,
+                        Flow.is_component == False,  # noqa: E712
+                    )
+                    .order_by(Flow.id)
                 )
                 if mcp_enabled_only:
                     flows_query = flows_query.where(Flow.mcp_enabled == True)  # noqa: E712
             elif current_user is not None:
                 # Global server: scope to the calling user only.
-                flows_query = select(Flow).where(Flow.user_id == current_user.id)
+                flows_query = select(Flow).where(Flow.user_id == current_user.id).order_by(Flow.id)
             else:
                 await logger.awarning(
                     "handle_list_tools called without a current user and no project_id; returning empty list"

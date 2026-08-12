@@ -8,7 +8,7 @@ variable is deliberately never overwritten.
 
 from langflow.api.utils.mcp.flow_secrets import strip_config_secrets, variable_name_for
 
-AWS_ACCESS_KEY_ID = "AKIAIOSFODNN7EXAMPLE"  # noqa: S105
+AWS_ACCESS_KEY_ID = "AKIAIOSFODNN7EXAMPLE"
 UPPERCASE_HEX_TOKEN = "A3F5C9D2E1B8074F"  # noqa: S105
 
 
@@ -98,7 +98,7 @@ class TestCredentialIsNeverLost:
     """Stripping a secret the runtime cannot resolve trades a leak for a broken flow."""
 
     def test_should_restore_the_literal_when_its_variable_failed(self):
-        from langflow.api.utils.mcp.flow_secrets import _restore_unresolvable_references
+        from langflow.api.utils.mcp.flow_secrets import restore_unresolvable_references
 
         secret = "sk-only-copy-of-this"  # noqa: S105
         name = variable_name_for("billing", "x-api-key")
@@ -116,13 +116,13 @@ class TestCredentialIsNeverLost:
             ]
         }
 
-        _restore_unresolvable_references(flow_data, {name: secret}, {name})
+        restore_unresolvable_references(flow_data, {name: secret}, {name})
 
         config = flow_data["nodes"][0]["data"]["node"]["template"]["mcp_server"]["value"]["config"]
         assert config["headers"]["x-api-key"] == secret
 
     def test_should_leave_resolvable_references_alone(self):
-        from langflow.api.utils.mcp.flow_secrets import _restore_unresolvable_references
+        from langflow.api.utils.mcp.flow_secrets import restore_unresolvable_references
 
         name = variable_name_for("billing", "x-api-key")
         flow_data = {
@@ -139,7 +139,7 @@ class TestCredentialIsNeverLost:
             ]
         }
 
-        _restore_unresolvable_references(flow_data, {name: "sk-secret"}, set())
+        restore_unresolvable_references(flow_data, {name: "sk-secret"}, set())
 
         config = flow_data["nodes"][0]["data"]["node"]["template"]["mcp_server"]["value"]["config"]
         assert config["headers"]["x-api-key"] == name
@@ -149,6 +149,55 @@ def test_should_not_commit_inside_the_helper():
     """The batch write path documents itself as all-or-nothing; a commit here breaks it."""
     from pathlib import Path
 
-    source = Path("src/backend/base/langflow/api/utils/mcp/flow_secrets.py").read_text(encoding="utf-8")
+    from langflow.api.utils.mcp import flow_secrets as flow_secrets_module
+
+    module = Path(flow_secrets_module.__file__)
+    source = module.read_text(encoding="utf-8")
 
     assert "session.commit()" not in source
+
+
+class TestStagingSurvivesARetry:
+    """A rollback discards the staged rows; the in-place rewrite of the flow survives it.
+
+    Re-extracting on the second attempt would find only the reference the first attempt
+    wrote, stage nothing, and let the flow commit pointing at a variable that was never
+    created. Extraction therefore happens once and staging happens per attempt.
+    """
+
+    def test_should_find_nothing_on_a_second_extraction(self):
+        """Documents why re-extracting per attempt cannot work."""
+        from langflow.api.utils.mcp.flow_secrets import extract_and_strip_mcp_secrets
+
+        flow_data = {
+            "nodes": [
+                {
+                    "data": {
+                        "node": {
+                            "template": {
+                                "mcp_server": {
+                                    "value": {
+                                        "name": "billing",
+                                        "config": {"headers": {"x-api-key": "sk-real-secret"}},
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+
+        first_carried, first_variables = extract_and_strip_mcp_secrets(flow_data)
+        second_carried, second_variables = extract_and_strip_mcp_secrets(flow_data)
+
+        assert first_carried
+        assert first_variables
+        assert second_carried == [], "a retry would stage nothing"
+        assert second_variables == {}, "a retry would stage nothing"
+
+    def test_should_expose_staging_separately_from_extraction(self):
+        from langflow.api.utils.mcp import flow_secrets
+
+        assert hasattr(flow_secrets, "stage_mcp_secrets")
+        assert hasattr(flow_secrets, "extract_and_strip_mcp_secrets")
