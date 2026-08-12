@@ -81,8 +81,70 @@ async def test_a2a_compatibility_grant_allows_execute_when_no_public_share():
     assert source is module.PublicGrantSource.A2A_AUTH_NONE
 
 
+def _session_with_public_share(permission_level: str | None):
+    result = SimpleNamespace(first=lambda: permission_level)
+    return SimpleNamespace(exec=AsyncMock(return_value=result))
+
+
 @pytest.mark.anyio
-@pytest.mark.parametrize("plugin_result", ["allow", "unsupported", "missing_tenant", "deny", "error"])
+async def test_canonical_read_share_bounds_a_still_public_legacy_flow():
+    """A read-only PUBLIC share is authoritative; the legacy flag cannot widen it to execute."""
+    module = _contract_module()
+    flow = SimpleNamespace(id=uuid4(), access_type=module.AccessTypeEnum.PUBLIC)
+
+    read_source = await module._resolve_grant(
+        flow=flow,
+        action=module.PublicResourceAction.READ,
+        session=_session_with_public_share("read"),
+        compatibility_grant=None,
+    )
+    execute_source = await module._resolve_grant(
+        flow=flow,
+        action=module.PublicResourceAction.EXECUTE,
+        session=_session_with_public_share("read"),
+        compatibility_grant=None,
+    )
+
+    assert read_source is module.PublicGrantSource.AUTHZ_SHARE
+    assert execute_source is None
+
+
+@pytest.mark.anyio
+async def test_canonical_read_share_also_bounds_the_a2a_compatibility_grant():
+    module = _contract_module()
+    flow = SimpleNamespace(id=uuid4(), access_type=object())
+
+    source = await module._resolve_grant(
+        flow=flow,
+        action=module.PublicResourceAction.EXECUTE,
+        session=_session_with_public_share("read"),
+        compatibility_grant=module.PublicGrantSource.A2A_AUTH_NONE,
+    )
+
+    assert source is None
+
+
+@pytest.mark.anyio
+async def test_deleting_the_share_falls_back_to_the_documented_legacy_grant():
+    """With no share row the legacy flag is still the compatibility grant it claims to be."""
+    module = _contract_module()
+    flow = SimpleNamespace(id=uuid4(), access_type=module.AccessTypeEnum.PUBLIC)
+
+    source = await module._resolve_grant(
+        flow=flow,
+        action=module.PublicResourceAction.EXECUTE,
+        session=_session_with_public_share(None),
+        compatibility_grant=None,
+    )
+
+    assert source is module.PublicGrantSource.LEGACY_ACCESS_TYPE
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "plugin_result",
+    ["allow", "unsupported", "missing_tenant", "deny", "error", "service_unavailable"],
+)
 async def test_enabled_authorization_plugin_controls_public_execution(monkeypatch, plugin_result):
     module = _contract_module()
     flow = SimpleNamespace(id=uuid4(), workspace_id=None, folder_id=None)
@@ -97,7 +159,16 @@ async def test_enabled_authorization_plugin_controls_public_execution(monkeypatc
     monkeypatch.setattr(module, "_resolve_grant", AsyncMock(return_value=module.PublicGrantSource.AUTHZ_SHARE))
     settings = SimpleNamespace(auth_settings=SimpleNamespace(AUTHZ_ENABLED=True))
     monkeypatch.setattr(module, "get_settings_service", lambda: settings)
-    monkeypatch.setattr(module, "get_authorization_service", lambda: service)
+    if plugin_result == "service_unavailable":
+        # A service that cannot even be constructed must deny like any other
+        # policy failure, not escape the handler as an unhandled 500.
+        def _unavailable():
+            msg = "authorization service unavailable"
+            raise RuntimeError(msg)
+
+        monkeypatch.setattr(module, "get_authorization_service", _unavailable)
+    else:
+        monkeypatch.setattr(module, "get_authorization_service", lambda: service)
     audit = AsyncMock()
     monkeypatch.setattr(module, "audit_decision", audit)
 

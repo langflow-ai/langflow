@@ -78,6 +78,10 @@ Revoking a share prevents new runs and rechecked continuations, including HITL r
 
 Owner-only execution retains detailed component errors for debugging. Delegated and public execution returns a stable generic workflow error without a component traceback or provider detail. Server logs and telemetry keep the original exception.
 
+:::important Upgrade note: paused public A2A tasks
+An A2A HITL resume requires the stored checkpoint's principal to match the principal the current request was admitted under. Checkpoints written before anonymous public execution existed recorded the flow owner, while an `auth_type=none` folder now admits the anonymous principal, so a public A2A task that is paused across this upgrade cannot be resumed and returns `404`. There is no compatibility read for these rows on purpose: accepting an owner-principal checkpoint under an anonymous principal is exactly the protected-to-public transition this check exists to block. Drain or cancel paused public A2A tasks before upgrading, then start them again. Protected (`apikey`, `oauth`) A2A tasks are unaffected.
+:::
+
 The machine-validated endpoint-family contract is maintained in `scripts/ci/execution_principal_matrix.json`. Changes to a listed runtime surface must update that matrix and its referenced tests.
 
 ### Effective permissions

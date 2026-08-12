@@ -48,11 +48,6 @@ def _coerce_uuid(value: Any) -> uuid.UUID | None:
         return None
 
 
-def _distance_to_similarity(distance: float) -> float:
-    """Chroma returns a distance; flip the sign so larger == more similar."""
-    return -1 * distance
-
-
 def _to_python_scalar(value: Any) -> Any:
     """Convert numpy scalars (int64, float64, bool_, …) to Python primitives.
 

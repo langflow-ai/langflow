@@ -107,8 +107,12 @@ async def _resolve_grant(
     else:
         permission = await _public_share_permission(session, flow.id)
 
-    if permission is not None and public_grant_allows(permission, action):
-        return PublicGrantSource.AUTHZ_SHARE
+    if permission is not None:
+        # A canonical PUBLIC share is authoritative for every anonymous action on
+        # this resource. Its level bounds the grant, so a still-set legacy flag
+        # cannot widen a read-only share back to execute, and the level the owner
+        # chose is the level that is enforced.
+        return PublicGrantSource.AUTHZ_SHARE if public_grant_allows(permission, action) else None
     if flow.access_type is AccessTypeEnum.PUBLIC:
         return PublicGrantSource.LEGACY_ACCESS_TYPE
     if compatibility_grant is PublicGrantSource.A2A_AUTH_NONE:
@@ -128,10 +132,12 @@ async def authorize_public_flow_access(
 
     The caller must load the exact flow by its direct-link identifier. This
     function never performs tenant discovery and never grants list visibility.
-    Changing ``Flow.access_type``/A2A ``auth_type`` removes a compatibility
-    grant; deleting the PUBLIC share removes the canonical grant. New starts
-    and resumes call this function again, while already-running work is not
-    interrupted.
+
+    A canonical PUBLIC share, when present, is the only grant consulted: its
+    permission level bounds the action and a still-set legacy flag cannot widen
+    it. With no share row, changing ``Flow.access_type``/A2A ``auth_type``
+    removes the compatibility grant. New starts and resumes call this function
+    again, while already-running work is not interrupted.
     """
     principal = AuthorizationPrincipal.public_anonymous()
     source = await _resolve_grant(
@@ -155,8 +161,11 @@ async def authorize_public_flow_access(
     tenant: str | None = None
     auth_settings = get_settings_service().auth_settings
     if allowed and auth_settings.AUTHZ_ENABLED:
-        authorization_service = get_authorization_service()
         try:
+            # Resolving the service is inside the guard on purpose: a service that
+            # cannot be constructed must deny like any other policy failure and
+            # still record the audit row below, not escape as a 500.
+            authorization_service = get_authorization_service()
             if not await authorization_service.supports_public_principals():
                 allowed = False
             else:

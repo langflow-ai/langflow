@@ -27,7 +27,6 @@ from lfx.components.files_and_knowledge import _kb_paths
 from lfx.components.files_and_knowledge.memory_retrieval import (
     MemoryBaseComponent,
     _coerce_uuid,
-    _distance_to_similarity,
     _to_python_scalar,
 )
 
@@ -146,10 +145,9 @@ class TestCoerceUuid:
         assert _coerce_uuid(object()) is None
 
 
-class TestDistanceToSimilarity:
-    def test_flips_sign(self):
-        assert _distance_to_similarity(0.42) == -0.42
-        assert _distance_to_similarity(-0.1) == 0.1
+# Score normalization is the backend's contract, covered per backend in
+# tests/unit/base/knowledge_bases; this module only asserts the component
+# delegates to it.
 
 
 def test_result_formatting_uses_backend_score_contract():
@@ -533,7 +531,8 @@ class TestMemoryBaseRetrievalBehavior:
         # the source of the provider/model the resolver returns.
         provider = metadata.get("embedding_provider", "OpenAI")
         model = metadata.get("embedding_model", "x")
-        fake_backend.normalize_score = MagicMock(side_effect=_distance_to_similarity)
+        # Stand in for the distance-based backend contract (higher == more similar).
+        fake_backend.normalize_score = MagicMock(side_effect=lambda score: -float(score))
         for cm in (
             _patched_session_scope(db),
             patch(

@@ -1411,6 +1411,10 @@ async def experimental_run_flow(
             raise error_for_client(http_error, expose_details=expose_error_details) from exc
         except HTTPException as exc:
             await logger.aexception("Advanced-run flow validation failed for flow %s", flow.id)
+            if expose_error_details:
+                # error_for_client returns ``exc`` itself here; re-raise rather
+                # than chaining the exception to itself.
+                raise
             raise error_for_client(exc, expose_details=expose_error_details) from exc
         except Exception as exc:
             await logger.aexception("Failed to build advanced-run graph for flow %s", flow.id)
