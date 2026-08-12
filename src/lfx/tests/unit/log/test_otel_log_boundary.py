@@ -323,6 +323,93 @@ def test_a_provider_error_code_that_is_not_identifier_shaped_is_dropped(code):
     assert "error.code" not in _error_transport_identity(error)
 
 
+# The verbatim-export surface, checked in source rather than described in a comment.
+#
+# The design note on APPLICATION_LOG_SCOPES says the point of a declared marker is that the whole
+# surface is "one grep for a single constant". That is only worth anything if someone runs the
+# grep, so this is it. Everything else in this file asserts what the exporter does with a record;
+# this asserts how many places can produce the kind of record that keeps its body.
+#
+# Two ways in, so both are covered: calling operator_logger(), and binding the marker key
+# directly, which would sidestep the helper entirely.
+BODY_EXPORT_OWNERS = frozenset({"observability.py"})
+MARKER_OWNERS = frozenset({"logger.py"})
+
+
+def _source_roots() -> list[Path]:
+    """The packages whose call sites matter: lfx, and langflow when its source is present."""
+    src = Path(__file__).resolve().parents[4]
+    candidates = [src / "lfx" / "src" / "lfx", src / "backend" / "base" / "langflow"]
+    return [path for path in candidates if path.is_dir()]
+
+
+def _calls_and_marker_uses(path: Path) -> tuple[list[int], list[int]]:
+    """Line numbers where *path* calls operator_logger, and where it names the marker key."""
+    import ast
+
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    calls: list[int] = []
+    markers: list[int] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call):
+            func = node.func
+            name = func.id if isinstance(func, ast.Name) else getattr(func, "attr", None)
+            if name == "operator_logger":
+                calls.append(node.lineno)
+            markers.extend(node.lineno for kw in node.keywords if kw.arg == "_otel_export_body")
+        elif isinstance(node, ast.Constant) and node.value == "_otel_export_body":
+            markers.append(node.lineno)
+    return calls, markers
+
+
+def test_only_the_bootstrap_can_export_a_log_body_verbatim():
+    """A new caller is a decision to export somebody's message text, so it should not be quiet.
+
+    Adding a legitimate one means adding its filename here, in a diff that says so.
+    """
+    roots = _source_roots()
+    assert roots, "found no source tree to scan; the path assumption in _source_roots is wrong"
+
+    offenders = [
+        f"{path}:{line}"
+        for root in roots
+        for path in sorted(root.rglob("*.py"))
+        for line in _calls_and_marker_uses(path)[0]
+        if path.name not in BODY_EXPORT_OWNERS | MARKER_OWNERS
+    ]
+
+    assert not offenders, (
+        "operator_logger() exports the message body verbatim to the operator's APM. "
+        f"New call sites outside {sorted(BODY_EXPORT_OWNERS)}:\n  " + "\n  ".join(offenders)
+    )
+
+
+def test_the_marker_key_is_not_bound_outside_the_logger():
+    """Binding the key by hand reaches the same place as operator_logger, without passing it."""
+    offenders = [
+        f"{path}:{line}"
+        for root in _source_roots()
+        for path in sorted(root.rglob("*.py"))
+        for line in _calls_and_marker_uses(path)[1]
+        if path.name not in MARKER_OWNERS
+    ]
+
+    assert not offenders, "the body-export marker is bound outside the logger:\n  " + "\n  ".join(offenders)
+
+
+def test_the_scan_finds_the_call_sites_that_are_supposed_to_be_there():
+    """The control. Both tests above assert an absence, and a scan that reads nothing is empty too."""
+    roots = _source_roots()
+    known = [
+        (path, calls)
+        for root in roots
+        for path in sorted(root.rglob("*.py"))
+        if (calls := _calls_and_marker_uses(path)[0]) and path.name in BODY_EXPORT_OWNERS
+    ]
+
+    assert known, "the scan found no operator_logger() calls at all, so it proves nothing"
+
+
 def test_naming_a_module_after_the_scope_does_not_export_its_bodies():
     """The boundary is a declared marker, not a name match.
 
