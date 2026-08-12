@@ -28,7 +28,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "nextplaid", "colbert", "p
 dependencies = [
     "lfx>=1.12.0.dev0,<2.0.0",
     "langchain-plaid>=0.1.0,<1.0.0",
-    "pillow>=10.0.0",
+    "pillow>=12.3.0",
 ]
 
 [project.urls]
