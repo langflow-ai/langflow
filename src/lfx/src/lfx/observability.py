@@ -735,6 +735,87 @@ def bootstrap_application_telemetry(*, prometheus_enabled: bool = False) -> Appl
     )
 
 
+class OutboundCallScope:
+    """Handle for a caller that learns the outcome after the call returns.
+
+    A protocol that reports failure in its return value rather than by raising leaves the span
+    with nothing to see. MCP is one: a failed tool call comes back as a ``CallToolResult`` with
+    ``isError`` set, so without this the span closes OK and the operator's error rate on
+    outbound calls is zero no matter how many tools are failing.
+
+    Takes an error type, never a message or a result: the failure text a server returns embeds
+    the arguments it was called with.
+    """
+
+    __slots__ = ("error_type",)
+
+    def __init__(self) -> None:
+        self.error_type: str | None = None
+
+    def record_error(self, error_type: str) -> None:
+        # First failure wins, so a later one cannot overwrite the one that caused the retry.
+        if self.error_type is None:
+            self.error_type = error_type
+
+
+def _root_error_type(exc: BaseException) -> str:
+    """Name the exception that actually failed, not the one the retry loop wrapped it in.
+
+    Both MCP retry loops re-raise as ``ValueError(f"Failed to run tool ...")`` with ``from e``,
+    so without walking the chain every timeout, dropped connection and closed resource records
+    as ``ValueError`` and the attribute tells an operator nothing. Only the type is read; the
+    message stays unrecorded either way.
+    """
+    root = exc
+    seen = {id(root)}
+    while root.__cause__ is not None and id(root.__cause__) not in seen:
+        root = root.__cause__
+        seen.add(id(root))
+    return type(root).__name__
+
+
+@contextlib.contextmanager
+def outbound_call_span(name: str, attributes: dict[str, str]) -> Iterator[OutboundCallScope]:
+    """One span for an outbound call the runtime makes itself, for the operator's APM.
+
+    Emitted under APPLICATION_TRACER_NAME rather than by instrumenting the transport. The
+    transport is shared with the LLM vendor SDKs, and the export filter allowlists by
+    instrumentation scope name, so an httpx span from our MCP client and one from the OpenAI
+    SDK are the same string and cannot be told apart. Emitting the span ourselves makes the
+    scope name the discriminator by construction.
+
+    Identifiers only, never arguments or results, which carry flow data. Errors record the
+    exception type, never its message, for the same reason.
+
+    Yields an :class:`OutboundCallScope`. A caller whose protocol reports failure in the return
+    value rather than by raising must call ``record_error`` or its failures export as successes.
+    """
+    scope = OutboundCallScope()
+    if not _OTEL_AVAILABLE:
+        yield scope
+        return
+    tracer = trace.get_tracer(APPLICATION_TRACER_NAME)
+    # Neither recording nor status-setting is delegated to the SDK: its versions write the
+    # exception message onto the span, and that can carry flow data.
+    with tracer.start_as_current_span(name, record_exception=False, set_status_on_exception=False) as span:
+        for key, value in attributes.items():
+            span.set_attribute(key, value)
+        try:
+            yield scope
+        # BaseException, not Exception: CancelledError is a BaseException, and a tool call
+        # cancelled by a client disconnect or an outer wait_for would otherwise export as a
+        # success. Only the type is recorded, so this stays inside the same boundary.
+        except BaseException as exc:
+            error_type = _root_error_type(exc)
+            span.set_status(trace.Status(trace.StatusCode.ERROR, error_type))
+            span.set_attribute("error.type", error_type)
+            raise
+        else:
+            if scope.error_type is not None:
+                span.set_status(trace.Status(trace.StatusCode.ERROR, scope.error_type))
+                span.set_attribute("error.type", scope.error_type)
+
+
 def instrument_fastapi_app(app: FastAPI) -> None:
     """Instrument an ASGI app for HTTP server telemetry under the stable conventions.
 
