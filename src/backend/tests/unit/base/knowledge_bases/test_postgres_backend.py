@@ -87,6 +87,16 @@ class TestCoerceEmbedding:
 
 
 class TestPostgresCollectionAndConfig:
+    def test_cosine_distance_score_is_normalized_to_higher_is_better(self, tmp_path: Path) -> None:
+        backend = create_backend(
+            "postgres",
+            kb_name="scores",
+            kb_path=tmp_path,
+            backend_config={},
+            user_id=uuid.uuid4(),
+        )
+        assert backend.normalize_score(0.25) == -0.25
+
     def test_backend_type_and_collection_is_scoped_to_owner(self, tmp_path: Path) -> None:
         owner_id = uuid.uuid4()
         backend = create_backend(

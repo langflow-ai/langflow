@@ -256,13 +256,27 @@ async def probe_storage(settings_service: SettingsService) -> CheckResult:
 
 
 async def probe_secret_key(settings_service: SettingsService) -> CheckResult:
-    """Require an operator-supplied encryption secret key (not auto-generated).
+    """Require a usable operator-supplied encryption secret key (not auto-generated).
 
     Reads provenance from the environment because the materialized settings
     value is indistinguishable between env-supplied, file-loaded, and
     per-boot auto-generated keys.
     """
-    if os.environ.get("LANGFLOW_SECRET_KEY", "").strip():
+    secret_key = os.environ.get("LANGFLOW_SECRET_KEY", "")
+    if secret_key.strip():
+        from cryptography.fernet import Fernet
+
+        from langflow.services.auth.utils import ensure_fernet_key
+
+        try:
+            Fernet(ensure_fernet_key(secret_key))
+        except ValueError as exc:
+            return CheckResult(
+                "fail",
+                f"operator-supplied but unusable ({_short_exc(exc)})",
+                "Set LANGFLOW_SECRET_KEY to a URL-safe base64-encoded 32-byte key, such as the output of "
+                "Fernet.generate_key(), and use the same value in every replica.",
+            )
         return CheckResult("ok", "operator-supplied (LANGFLOW_SECRET_KEY)")
 
     config_dir = settings_service.settings.config_dir
@@ -277,7 +291,8 @@ async def probe_secret_key(settings_service: SettingsService) -> CheckResult:
     return CheckResult(
         "fail",
         "secret key is auto-generated per boot",
-        "Set LANGFLOW_SECRET_KEY to a stable, operator-provided value (32+ characters).",
+        "Set LANGFLOW_SECRET_KEY to a URL-safe base64-encoded 32-byte key, such as the output of "
+        "Fernet.generate_key(), and use the same value in every replica.",
     )
 
 

@@ -274,6 +274,10 @@ class BaseVectorStoreBackend(ABC):
         docs = await self.vector_store.asimilarity_search(query=query, k=k, filter=filter)
         return [(doc, 0.0) for doc in docs]
 
+    def normalize_score(self, score: float) -> float:
+        """Convert this backend's distance score to the public higher-is-better contract."""
+        return -float(score)
+
     async def delete_by(self, where: dict[str, Any]) -> None:
         await self.ensure_ready()
         await self.vector_store.adelete(where=where)

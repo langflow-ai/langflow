@@ -30,6 +30,13 @@ class PolicyBundleRevision(SQLModel, table=True):  # type: ignore[call-arg]
     approved_provider_ids: list[str] = Field(default_factory=list, sa_column=sa.Column(sa.JSON, nullable=False))
     blocked_component_keys: list[str] = Field(default_factory=list, sa_column=sa.Column(sa.JSON, nullable=False))
     blocked_template_keys: list[str] = Field(default_factory=list, sa_column=sa.Column(sa.JSON, nullable=False))
+    # Nullable with a server default to match the EXPAND-phase migration:
+    # revisions written before the column existed read back as "blocks
+    # nothing" without a backfill. Writers always provide the value.
+    blocked_model_keys: list[str] = Field(
+        default_factory=list,
+        sa_column=sa.Column(sa.JSON, nullable=True, server_default=sa.text("'[]'")),
+    )
     content_hash: str = Field(sa_column=sa.Column(sa.String(64), nullable=False))
     source: str = Field(
         default="api",
