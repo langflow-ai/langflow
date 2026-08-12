@@ -34,6 +34,7 @@ from lfx.graph.checkpoint.store import CheckpointStore
 from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
+from lfx.observability import execution_protocol
 from lfx.schema.schema import InputValueRequest
 from lfx.schema.workflow import JobStatus, WorkflowExecutionResponse
 from lfx.workflow.adapters import StreamAdapter, StreamEvent
@@ -189,6 +190,9 @@ async def _stream_event_frames(
     job_id: UUID | None = None,
     resume: dict | None = None,
     track_job_status: bool = True,
+    # Required, not defaulted: a default is how an unwired caller gets a confidently wrong
+    # label, which is the one thing the absent-rather-than-"unknown" rule exists to prevent.
+    protocol: str,
     emit_output_capture: bool = False,
     expose_error_details: bool = False,
 ) -> AsyncIterator[tuple[bytes, str]]:
@@ -240,38 +244,39 @@ async def _stream_event_frames(
     async def drive() -> None:
         nonlocal drive_error
         try:
-            await asyncio.wait_for(
-                generate_flow_events(
-                    flow_id=flow_id,
-                    background_tasks=background_tasks,
-                    event_manager=event_manager,
-                    inputs=input_request,
-                    data=flow_data,
-                    files=parsed.files,
-                    stop_component_id=parsed.stop_component_id,
-                    start_component_id=parsed.start_component_id,
-                    # Persist vertex builds (keyed by ``run_id``) only for job-tracked
-                    # runs so a background job's status can be reconstructed later. Live
-                    # streams pass no ``run_id`` and keep the no-persist behavior.
-                    log_builds=run_id is not None,
-                    current_user=current_user,
-                    flow_name=flow_name,
-                    source_flow_id=source_flow_id,
-                    run_id=run_id,
-                    job_id=job_id,
-                    resume=resume,
-                    track_job_status=track_job_status,
-                    # The sync path applies tweaks before Graph construction; this loop
-                    # builds from the DB (or request data), so without this the streaming
-                    # and background paths silently drop request tweaks.
-                    tweaks=parsed.tweaks,
-                    expose_error_details=expose_error_details,
-                    # Anonymous serving runs are ephemeral: thread the no-persist
-                    # decision onto the graph so astore_message skips the DB write.
-                    persist_messages=parsed.persist_messages,
-                ),
-                timeout=execution_timeout,
-            )
+            # Bound here rather than in the enclosing generator: drive() runs as its own task, so
+            # the set/reset pair cannot straddle a generator suspension point and leak into the
+            # consumer task that resumes it.
+            with execution_protocol(protocol):
+                await asyncio.wait_for(
+                    generate_flow_events(
+                        flow_id=flow_id,
+                        background_tasks=background_tasks,
+                        event_manager=event_manager,
+                        inputs=input_request,
+                        data=flow_data,
+                        files=parsed.files,
+                        stop_component_id=parsed.stop_component_id,
+                        start_component_id=parsed.start_component_id,
+                        # Persist vertex builds (keyed by ``run_id``) only for job-tracked
+                        # runs so a background job's status can be reconstructed later. Live
+                        # streams pass no ``run_id`` and keep the no-persist behavior.
+                        log_builds=run_id is not None,
+                        current_user=current_user,
+                        flow_name=flow_name,
+                        source_flow_id=source_flow_id,
+                        run_id=run_id,
+                        job_id=job_id,
+                        resume=resume,
+                        track_job_status=track_job_status,
+                        # The sync path applies tweaks before Graph construction; this loop
+                        # builds from the DB (or request data), so without this the streaming
+                        # and background paths silently drop request tweaks.
+                        tweaks=parsed.tweaks,
+                        expose_error_details=expose_error_details,
+                    ),
+                    timeout=execution_timeout,
+                )
         except asyncio.CancelledError:
             raise
         except asyncio.TimeoutError:
@@ -407,6 +412,9 @@ def _execute_streaming_workflow(
             background_tasks=background_tasks,
             parsed=parsed,
             current_user=current_user,
+            # The live v2 stream. Which client sent it is a separate attribute, read from the
+            # X-Langflow-Client header, because the playground calls this same public endpoint.
+            protocol="v2",
             expose_error_details=flow.user_id == current_user.id,
         ):
             yield frame
@@ -629,16 +637,17 @@ async def execute_sync_workflow(
     job_service = get_job_service()
     await job_service.create_job(job_id=job_id, flow_id=flow_id_str, user_id=current_user.id)
     try:
-        task_result, execution_session_id = await job_service.execute_with_status(
-            job_id=job_id,
-            run_coro_func=run_graph_internal,
-            graph=graph,
-            flow_id=flow_id_str,
-            session_id=session_id,
-            inputs=_build_run_inputs(parsed),
-            outputs=terminal_node_ids,
-            stream=False,
-        )
+        with execution_protocol("v2"):
+            task_result, execution_session_id = await job_service.execute_with_status(
+                job_id=job_id,
+                run_coro_func=run_graph_internal,
+                graph=graph,
+                flow_id=flow_id_str,
+                session_id=session_id,
+                inputs=_build_run_inputs(parsed),
+                outputs=terminal_node_ids,
+                stream=False,
+            )
 
         # Fire memory-base auto-capture hook — non-blocking background effect.
         try:

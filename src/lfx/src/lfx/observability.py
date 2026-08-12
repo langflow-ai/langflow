@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import contextvars
 import os
 import time
 from dataclasses import dataclass
@@ -29,6 +30,8 @@ from lfx.log.logger import logger
 from lfx.observability_fastapi import patch_otel_fastapi_route_details
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from fastapi import FastAPI
     from opentelemetry.sdk._logs import LoggerProvider
     from opentelemetry.sdk.metrics import MeterProvider
@@ -47,6 +50,93 @@ APPLICATION_TRACER_NAME = "langflow.observability"
 APPLICATION_METER_NAME = "langflow"
 
 DEFAULT_SERVICE_NAME = "langflow"
+
+# The surface a flow run arrived through, recorded as the flow span's ``protocol`` attribute so
+# an operator can tell a playground click from a webhook delivery from an MCP tool call.
+#
+# Ambient rather than a parameter because the graph is several layers below the surface that
+# knows the answer, and two of those layers hand the run to a fresh asyncio task. Task creation
+# copies the context, so setting this at the entry point carries it into the run without
+# threading an argument through every intermediate signature. It also means a path nobody wired
+# reports no protocol at all rather than inheriting a wrong one from its caller.
+_current_protocol: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "lfx_execution_protocol",
+    default=None,
+)
+
+
+# The client a run says it came from, recorded as the span's ``client`` attribute. Distinct from
+# ``protocol`` on purpose: protocol is how the request arrived and is derived server-side from the
+# route, while this is who the caller claims to be. Conflating them is a mistake worth naming,
+# because the playground calls the same public API any user would, so the route cannot identify it.
+#
+# Self-reported and therefore spoofable. That is fine for telemetry and must never become an
+# authorization signal. The vocabulary is closed so a caller cannot mint attribute values at will;
+# anything unrecognised is dropped rather than recorded, on the same principle as protocol, where a
+# missing attribute is an honest "nobody said" and a guessed one is a lie.
+KNOWN_EXECUTION_CLIENTS = frozenset({"playground", "sdk", "cli"})
+
+# Follows the X-LANGFLOW-* convention already used for request-scoped global variables.
+EXECUTION_CLIENT_HEADER = "x-langflow-client"
+
+_current_client: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "lfx_execution_client",
+    default=None,
+)
+
+
+def get_execution_client() -> str | None:
+    """Return the client the current run says it came from, or None if it did not say."""
+    return _current_client.get()
+
+
+@contextlib.contextmanager
+def execution_client(client: str | None) -> Iterator[None]:
+    """Bind *client* for the current context, ignoring anything outside the known vocabulary."""
+    if client not in KNOWN_EXECUTION_CLIENTS:
+        yield
+        return
+    token = _current_client.set(client)
+    try:
+        yield
+    finally:
+        _current_client.reset(token)
+
+
+def get_execution_protocol() -> str | None:
+    """Return the surface the current flow run arrived through, or None outside a served run."""
+    return _current_protocol.get()
+
+
+@contextlib.contextmanager
+def execution_protocol(protocol: str) -> Iterator[None]:
+    """Bind *protocol* as the surface for flow runs started in this context, outermost wins.
+
+    An already-bound protocol is left alone, because several surfaces share one driver
+    underneath: voice and the playground both reach the graph through the same build path, and
+    a flow-as-tool child run reaches it through whichever surface called the parent. In every
+    such pair the outer binding is the one that names how the request actually arrived, so the
+    inner generic driver must not overwrite it.
+
+    Reset on exit so a worker that serves many requests on one task cannot leak one request's
+    protocol into the next. A run handed to ``asyncio.create_task`` inside the block keeps the
+    value regardless, because the task copies the context at creation.
+
+    Entry points bind with this. The one exception is a callee that is itself an async
+    generator: an async generator body runs in the context of whoever calls ``__anext__``, so a
+    scope wrapped around it from outside would set and reset across its suspension points. Those
+    take a plain ``protocol`` argument and bind it inside, on the coroutine that does the work
+    (see ``_stream_event_frames``).
+    """
+    if _current_protocol.get() is not None:
+        yield
+        return
+    token = _current_protocol.set(protocol)
+    try:
+        yield
+    finally:
+        _current_protocol.reset(token)
+
 
 # Event-loop scheduling delay. Sampled rather than instrumented: there is no hook that
 # reports "the loop was blocked", so the only way to see it is to ask for a known sleep and

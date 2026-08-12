@@ -11,6 +11,7 @@ from fastapi.responses import StreamingResponse
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
 from lfx.log.logger import logger
+from lfx.observability import execution_protocol
 from lfx.schema.schema import InputValueRequest, OutputValue
 from lfx.services.cache.utils import CacheMiss
 from lfx.utils.flow_validation import (
@@ -356,20 +357,29 @@ async def build_flow(
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
-    job_id = await start_flow_build(
-        flow_id=flow_id,
-        background_tasks=background_tasks,
-        inputs=inputs,
-        data=data,
-        files=files,
-        stop_component_id=stop_component_id,
-        start_component_id=start_component_id,
-        log_builds=log_builds,
-        current_user=current_user,
-        queue_service=queue_service,
-        flow_name=flow_name,
-        expose_error_details=flow.user_id == current_user.id,
-    )
+    # v1.build, not "playground": the canvas moved to POST /api/v2/workflows and the frontend
+    # has no reference to this route left (15 hits for api/v2/workflows, 0 for api/v1/build).
+    # What still arrives here is direct API callers and voice, so labelling it playground would
+    # attribute IDE traffic to a route the IDE no longer uses. The playground label is derived
+    # from the agui wire protocol on the v2 stream instead.
+    #
+    # Still a default rather than the truth for every caller: voice reaches this same function
+    # through build_flow_and_stream and binds its own protocol first, which wins.
+    with execution_protocol("v1.build"):
+        job_id = await start_flow_build(
+            flow_id=flow_id,
+            background_tasks=background_tasks,
+            inputs=inputs,
+            data=data,
+            files=files,
+            stop_component_id=stop_component_id,
+            start_component_id=start_component_id,
+            log_builds=log_builds,
+            current_user=current_user,
+            queue_service=queue_service,
+            flow_name=flow_name,
+            expose_error_details=flow.user_id == current_user.id,
+        )
     await _register_job_owner_or_cancel(queue_service, job_id, current_user.id)
 
     # This is required to support FE tests - we need to be able to set the event delivery to direct
@@ -963,33 +973,36 @@ async def build_public_tmp(
 
         # flow_id=new_flow_id for tracking/sessions/messages (virtual, per-user isolation).
         # source_flow_id=flow_id to load the actual flow data from the database.
-        job_id = await start_flow_build(
-            flow_id=new_flow_id,
-            source_flow_id=flow_id,
-            background_tasks=background_tasks,
-            inputs=inputs,
-            # Default path: build from server-sanitized data (trusted code substituted in,
-            # unknown custom components already rejected above). When None (opt-in mode or no
-            # flow data) the build falls back to loading the flow from the DB by source_flow_id.
-            # Either way the caller never supplies the data — it is derived from the stored flow.
-            data=(
-                FlowDataRequest(
-                    nodes=sanitized_public_data.get("nodes", []),
-                    edges=sanitized_public_data.get("edges", []),
-                    viewport=sanitized_public_data.get("viewport"),
-                )
-                if sanitized_public_data is not None
-                else None
-            ),
-            files=files,
-            stop_component_id=stop_component_id,
-            start_component_id=start_component_id,
-            log_builds=log_builds or False,
-            current_user=owner_user,
-            queue_service=queue_service,
-            flow_name=flow_name or f"{authenticated_user_id or client_id}_{flow_id}",
-            expose_error_details=False,
-        )
+        # Anonymous shared-link traffic on the v1 build route. Named for the route rather than
+        # the surface, for the same reason as v1.build above; the v2 public stream is v2.public.
+        with execution_protocol("v1.build.public"):
+            job_id = await start_flow_build(
+                flow_id=new_flow_id,
+                source_flow_id=flow_id,
+                background_tasks=background_tasks,
+                inputs=inputs,
+                # Default path: build from server-sanitized data (trusted code substituted in,
+                # unknown custom components already rejected above). When None (opt-in mode or no
+                # flow data) the build falls back to loading the flow from the DB by source_flow_id.
+                # Either way the caller never supplies the data — it is derived from the stored flow.
+                data=(
+                    FlowDataRequest(
+                        nodes=sanitized_public_data.get("nodes", []),
+                        edges=sanitized_public_data.get("edges", []),
+                        viewport=sanitized_public_data.get("viewport"),
+                    )
+                    if sanitized_public_data is not None
+                    else None
+                ),
+                files=files,
+                stop_component_id=stop_component_id,
+                start_component_id=start_component_id,
+                log_builds=log_builds or False,
+                current_user=owner_user,
+                queue_service=queue_service,
+                flow_name=flow_name or f"{authenticated_user_id or client_id}_{flow_id}",
+                expose_error_details=False,
+            )
         # Gate the public events/cancel endpoints to jobs that were actually
         # started through this public build path, preventing unauthenticated
         # callers from reading or cancelling private-flow builds by job_id.
