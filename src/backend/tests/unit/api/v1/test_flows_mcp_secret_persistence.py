@@ -149,3 +149,72 @@ async def test_should_leave_a_static_config_untouched(client: AsyncClient, logge
     flow, _ = await _saved_flow(client, logged_in_headers, server_name, config)
 
     assert _stored_config(flow) == config
+
+
+async def test_should_keep_the_credential_across_a_lock_retry(client: AsyncClient, logged_in_headers, monkeypatch):
+    """A retried PATCH must not leave the flow pointing at a variable that was never created.
+
+    ``run_with_lock_retry`` rolls the session back between attempts, which discards the
+    staged variable and ``mcp_server`` rows, while the in-place rewrite of ``flow.data``
+    survives in memory. Re-extracting on attempt 2 would find only the reference attempt 1
+    wrote and stage nothing, committing a flow that cannot authenticate.
+    """
+    from langflow.api.v1 import flows as flows_module
+    from langflow.services.database.models.folder.model import Folder
+    from langflow.services.deps import session_scope
+
+    server_name = f"retry-{uuid.uuid4().hex[:6]}"
+    project_payload = {"description": "", "flows_list": [], "components_list": []}
+    source = await client.post(
+        "api/v1/projects/",
+        json={**project_payload, "name": f"retry-src-{uuid.uuid4()}"},
+        headers=logged_in_headers,
+    )
+    destination = await client.post(
+        "api/v1/projects/",
+        json={**project_payload, "name": f"retry-dst-{uuid.uuid4()}"},
+        headers=logged_in_headers,
+    )
+    assert source.status_code == status.HTTP_201_CREATED
+    assert destination.status_code == status.HTTP_201_CREATED
+
+    base = await client.post(
+        "api/v1/flows/",
+        json={"name": f"retry-base-{uuid.uuid4().hex[:8]}", "data": {}, "folder_id": source.json()["id"]},
+        headers=logged_in_headers,
+    )
+    assert base.status_code == status.HTTP_201_CREATED, base.text
+    flow_id = base.json()["id"]
+
+    original_read_flow = flows_module._read_flow
+    attempts = {"count": 0}
+
+    async def read_flow_with_competing_commit(*args, **kwargs):
+        db_flow = await original_read_flow(*args, **kwargs)
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            async with session_scope() as competing_session:
+                competing_session.add(Folder(name=f"competing-{uuid.uuid4()}", user_id=None))
+        return db_flow
+
+    monkeypatch.setattr(flows_module, "_read_flow", read_flow_with_competing_commit)
+
+    payload = _flow_payload(server_name, {"url": "https://serving.internal/mcp", "headers": {"x-api-key": SECRET}})
+    # The folder move is what makes the write contend, and contention is what forces the
+    # retry this test exists to exercise.
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"data": payload["data"], "folder_id": destination.json()["id"]},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert attempts["count"] >= 2, "the PATCH did not retry, so this never exercised the rollback"
+    assert SECRET not in response.text
+
+    reference = _stored_config(response.json())["headers"]["x-api-key"]
+    variables = await client.get("api/v1/variables/", headers=logged_in_headers)
+    assert reference in [item["name"] for item in variables.json()], "the retry left a dangling reference"
+
+    server = await client.get(f"api/v2/mcp/servers/{server_name}", headers=logged_in_headers)
+    assert server.json()["headers"]["x-api-key"] == SECRET

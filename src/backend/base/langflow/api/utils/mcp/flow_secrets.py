@@ -20,6 +20,7 @@ from sqlmodel import select
 
 from langflow.logging import logger
 from langflow.services.auth.mcp_encryption import MCP_SECRET_CONFIG_MAPS, encrypt_mcp_config
+from langflow.services.database.lock_retry import is_database_lock_error
 from langflow.services.database.models import MCPServer
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE
@@ -243,7 +244,9 @@ async def stage_mcp_secrets(
         except IntegrityError:
             # Another writer created the same (user, name) first; its row is authoritative.
             await logger.adebug(f"MCP server row '{name}' already exists; keeping the stored config.")
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
+            if is_database_lock_error(exc):
+                raise
             await logger.aerror(f"Could not persist MCP server config carried by a flow: {exc}")
 
     return failed
@@ -287,7 +290,9 @@ async def _ensure_variables(variables: dict[str, str], user_id: UUID, session) -
     existing_names = set()
     try:
         existing_names = set(await variable_service.list_variables(user_id, session))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
+        if is_database_lock_error(exc):
+            raise
         await logger.awarning(f"Could not list global variables while scrubbing an MCP credential: {exc}")
 
     failed: set[str] = set()
@@ -299,7 +304,12 @@ async def _ensure_variables(variables: dict[str, str], user_id: UUID, session) -
                 await variable_service.create_variable(
                     user_id=user_id, name=name, value=value, type_=CREDENTIAL_TYPE, session=session
                 )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
+            # A contended write is transient, not a verdict on this variable. Swallowing it
+            # would hand the literal back and save the secret in plaintext; let the caller's
+            # retry re-run the whole operation instead.
+            if is_database_lock_error(exc):
+                raise
             failed.add(name)
             await logger.aerror(f"Could not create global variable '{name}' for an MCP credential: {exc}")
     return failed
