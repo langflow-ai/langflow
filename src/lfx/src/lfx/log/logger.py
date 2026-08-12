@@ -327,7 +327,16 @@ _OTEL_LOG_SEVERITY = {
 # Structured keys that describe the record itself rather than the event. They become
 # first-class LogRecord fields or are already covered by the resource, so re-sending them as
 # attributes would just duplicate bytes on every line.
-_OTEL_LOG_SKIP_KEYS = frozenset({"event", "level", "timestamp", "trace_id", "span_id"})
+#
+# ``exc_info`` is here for a different reason: it is a leak, not a duplicate. This processor runs
+# before ``ExceptionRenderer`` (which is what turns exc_info into a structured traceback), so at
+# this point the value is still a raw ``(type, value, traceback)`` tuple and ``str()`` of it
+# embeds the exception's *message* -- the text every call site below is careful to keep out of
+# the body. It exported that way from every ``logger.exception`` call in the codebase without any
+# individual call site being at fault. Dropped unconditionally, in both body policies, and
+# replaced by the derived ``error.type`` / ``error.chain`` attributes, which carry the class
+# names an operator actually pivots on.
+_OTEL_LOG_SKIP_KEYS = frozenset({"event", "level", "timestamp", "trace_id", "span_id", "exc_info"})
 
 # Do not ship DEBUG to the operator's backend by default.
 #
@@ -336,12 +345,11 @@ _OTEL_LOG_SKIP_KEYS = frozenset({"event", "level", "timestamp", "trace_id", "spa
 # with the rendered outputs), and the redaction processor only scrubs known sensitive *keys*,
 # not free text inside a message. INFO is the floor because it drops that bulk payload logging.
 #
-# It does NOT make the channel content-free, and this is the one place worth being precise:
-# unlike the span and metric exporters, which allowlist by instrumentation scope, this is a
-# severity threshold and nothing more. Flow-derived text still reaches the backend at ERROR --
-# vertex_types.py:359 interpolates a component's own output value into the message, and a
-# ComponentBuildError carries the underlying provider exception text. Narrowing that means
-# filtering on content, not level, which is a separate piece of work.
+# On its own a severity threshold does NOT make the channel content-free, which is why the
+# scope allowlist below exists as well. Flow-derived text reaches ERROR routinely: an agent's
+# ExceptionWithMessageError interpolates the model's partial completion into its own str(), and
+# a SQLAlchemy StatementError carries the bound parameters -- the chat text -- in its message.
+# Severity decides *whether* a record is exported; the body policy decides whether its text is.
 #
 # An operator who needs DEBUG in their backend can lower it deliberately.
 _OTEL_MIN_LOG_SEVERITY_DEFAULT = "INFO"
@@ -398,6 +406,211 @@ def _otel_min_severity() -> int:
     return _otel_min_severity_cache
 
 
+# The scope name operator statements are grouped under in the APM. Cosmetic: it makes them easy
+# to filter on, and it mirrors APPLICATION_TRACER_NAME on the span side. It is deliberately NOT
+# what decides the boundary -- see below.
+OPERATOR_LOG_SCOPE = "langflow.observability"
+
+# The declared opt-in that lets a record's body leave the process. Bound by ``operator_logger()``
+# and stripped here before anything renders it.
+#
+# A marker rather than a name match, which was the first design and was wrong. The obvious
+# implementation is ``ApplicationOnlySpanProcessor``'s rule -- allowlist the scope -- but a log
+# record's scope is *derived*, not declared: ``add_logger_name`` takes it from the bound logger,
+# and under ``structlog.stdlib.LoggerFactory`` (which this module installs whenever a log file is
+# configured) it is inferred from the calling module. So a module that merely happened to be
+# named ``langflow.observability`` would have exported every one of its bodies verbatim without
+# ever opting in, and this repo already has ``lfx/observability.py``,
+# ``lfx/observability_doctor.py`` and ``lfx/observability_fastapi.py``. That file is one PR away.
+#
+# The same derivation also means the default bucket is not one name: anonymous callers land on
+# "lfx", the module-global logger under a stdlib factory lands on "lfx.log.logger". Denying by
+# default and requiring a positive marker makes the decision independent of both.
+_OTEL_EXPORT_BODY_KEY = "_otel_export_body"
+
+# Not a sandbox, and not claimed to be: any code in the process can bind the same key, including
+# user-authored custom components, which already execute arbitrary Python here and could build
+# their own exporter regardless. What it buys is that the whole verbatim-export surface is one
+# grep for a single constant rather than a judgement about every log call in the codebase.
+
+# Attributes a withheld record still carries. Every one is an identifier by construction -- a
+# scope name, a module path, a line number, a service name -- so the set is safe to export
+# without inspecting any value. Anything not named here is dropped, which means a new key added
+# to the event dict later fails closed instead of silently joining the export.
+_OTEL_SKELETON_KEYS = frozenset(
+    {"logger", "service", "version", "environment", "pathname", "filename", "func_name", "lineno", "module"}
+)
+
+# Carries the way back in, because the operator who needs it is reading this string in an
+# APM at 3am, not the boot line they would have to go and find.
+_OTEL_WITHHELD_BODY = "[body withheld; set LANGFLOW_OTEL_LOG_BODIES=all to export bodies]"
+
+_OTEL_BODY_POLICY_DEFAULT = "allowlist"
+_OTEL_BODY_POLICIES = ("allowlist", "all")
+_otel_body_policy_cache: str | None = None
+
+# An exception chain is a linked list an application controls, so treat its length as untrusted.
+_MAX_ERROR_CHAIN_DEPTH = 10
+
+# A ``sys.exc_info()`` triple: (type, value, traceback).
+_EXC_INFO_TRIPLE_LEN = 3
+
+
+def _otel_body_policy() -> str:
+    """Resolve whether log bodies may be exported, and say so out loud when they may.
+
+    Resolved and cached once, for the same reasons as :func:`_otel_min_severity`: it runs on
+    every exported record, it cannot change without a restart, and caching before the warning
+    keeps a warning that gets routed back into logging from recursing.
+
+    ``all`` restores the pre-boundary behaviour wholesale. It is allowed because an operator
+    debugging a live incident may genuinely need the provider's error text, and refusing
+    outright would only get worked around by turning the whole signal off, which is worse. But
+    it re-opens the channel that carries prompts and completions, so it must never happen
+    quietly. An unrecognised value falls back to the safe policy, so a typo cannot open it.
+    """
+    global _otel_body_policy_cache  # noqa: PLW0603
+    if _otel_body_policy_cache is not None:
+        return _otel_body_policy_cache
+
+    raw = os.getenv("LANGFLOW_OTEL_LOG_BODIES", _OTEL_BODY_POLICY_DEFAULT).strip().lower()
+    policy = raw if raw in _OTEL_BODY_POLICIES else None
+    _otel_body_policy_cache = policy or _OTEL_BODY_POLICY_DEFAULT
+
+    with contextlib.suppress(Exception):
+        if policy is None:
+            warnings.warn(
+                f"LANGFLOW_OTEL_LOG_BODIES: ignoring {raw!r} (expected one of "
+                f"{list(_OTEL_BODY_POLICIES)}); withholding bodies from all but allowlisted scopes.",
+                stacklevel=2,
+            )
+        elif policy == "all":
+            warnings.warn(
+                "LANGFLOW_OTEL_LOG_BODIES=all exports log message bodies to the configured OTLP "
+                "endpoint. Langflow error messages carry model completions, chat history and "
+                "provider responses, and redaction only covers known sensitive keys, not free "
+                "text inside a message, so prompt and completion content will reach that "
+                "backend. Leave it unset unless that is intended.",
+                stacklevel=2,
+            )
+    return _otel_body_policy_cache
+
+
+def _callsite_adder() -> Any:
+    """Where the record came from, which is what makes a withheld body still actionable.
+
+    ``PATHNAME`` alongside ``FILENAME`` because ``MODULE`` is the filename stem, not the dotted
+    path: ``graph/vertex/base.py`` and ``graph/graph/base.py`` both report ``base``, and telling
+    those apart is most of the value here.
+
+    ``additional_ignores`` matters for foreign records. A stdlib log line reaches structlog
+    through ``InterceptHandler`` in this module, so without it every uvicorn, sqlalchemy and
+    httpx record reports this file's own emit call as its callsite -- a constant, and a wrong
+    one, written into stdout and the JSON file as well as OTLP.
+    """
+    parameter = structlog.processors.CallsiteParameter
+    return structlog.processors.CallsiteParameterAdder(
+        parameters=[
+            parameter.PATHNAME,
+            parameter.FILENAME,
+            parameter.FUNC_NAME,
+            parameter.LINENO,
+            parameter.MODULE,
+        ],
+        additional_ignores=[__name__, "logging"],
+    )
+
+
+def _otlp_logs_configured() -> bool:
+    """Whether this process will actually ship logs over OTLP.
+
+    Resolved through ``lfx.observability`` rather than by reading the environment here, so the
+    answer cannot drift from the bootstrap's. Those two helpers sit outside that module's
+    otel-guarded block precisely so callers like this one can import them without OpenTelemetry
+    installed. The import is deferred to call time because observability imports this module.
+    """
+    try:
+        from lfx.observability import otlp_endpoint, otlp_exporter_disabled
+    except ImportError:  # pragma: no cover - lfx.observability ships with lfx
+        return False
+    return bool(otlp_endpoint("logs")) and not otlp_exporter_disabled("logs")
+
+
+def _exception_from(exc_info: Any) -> BaseException | None:
+    """Recover the exception behind a structlog ``exc_info`` value, in any of its shapes.
+
+    ``logger.exception()`` sets it to ``True`` and leaves resolution to a renderer that has not
+    run yet at this point in the chain; an explicit ``exc_info=`` may be the exception itself or
+    a ``sys.exc_info()`` triple.
+    """
+    if exc_info is None or exc_info is False:
+        return None
+    if exc_info is True:
+        return sys.exc_info()[1]
+    if isinstance(exc_info, BaseException):
+        return exc_info
+    if isinstance(exc_info, tuple) and len(exc_info) == _EXC_INFO_TRIPLE_LEN and isinstance(exc_info[1], BaseException):
+        return exc_info[1]
+    return None
+
+
+def _error_identity(exc: BaseException) -> tuple[str, str]:
+    """Reduce an exception to class names: the root cause, and the chain that wrapped it.
+
+    The root cause is the point of this. Langflow wraps aggressively -- a provider's rate limit
+    surfaces as ``ComponentBuildError`` at the run boundary -- so the outermost class names our
+    catch site and is identical for every failing flow, while the innermost names the failure.
+    Reporting the chain outer-to-inner as well keeps the wrapping visible without costing
+    anything, because a class name is an identifier and carries no message text.
+
+    ``__cause__`` wins over ``__context__`` so an explicit ``raise ... from ...`` is followed in
+    preference to whatever happened to be in flight, and ``__suppress_context__`` ends the walk.
+    That last part is not a detail: every provider SDK built on httpx raises its own error with
+    ``raise ... from None`` inside an ``except httpx.HTTPStatusError`` block, so following a
+    suppressed context reports ``HTTPStatusError`` as the root of a rate limit, a bad request and
+    an auth failure alike -- the exact distinction this function exists to preserve. There are
+    another 39 ``from None`` sites in lfx and langflow. ``traceback`` makes the same choice.
+
+    Traversal is bounded and cycle-guarded, because the chain is built by application code and a
+    self-referencing ``__context__`` is reachable. Hitting the bound appends an ellipsis rather
+    than reporting the deepest link seen as though it were the root, so a truncated answer is
+    never mistaken for a complete one.
+
+    The root is returned fully qualified, per OTel's ``error.type``: three unrelated
+    ``TimeoutError`` classes (builtins, asyncio, sqlalchemy.exc) collapse to one string
+    otherwise, and telling a pool exhaustion from a socket timeout is the whole point. The chain
+    keeps bare names so it stays readable. Builtins are left unqualified because
+    ``builtins.ValueError`` is noise.
+
+    A class name is an identifier, which is why this is safe to export where the message is not.
+    The one wrinkle, shared with the ``error.type`` the span path already exports: a user-authored
+    component can define its own exception class, so the name is user-chosen even though it is not
+    user *data*. Measured and accepted rather than assumed.
+    """
+    seen: set[int] = set()
+    chain: list[str] = []
+    current: BaseException | None = exc
+    root = exc
+    truncated = False
+    while current is not None and id(current) not in seen:
+        if len(chain) >= _MAX_ERROR_CHAIN_DEPTH:
+            truncated = True
+            break
+        seen.add(id(current))
+        chain.append(type(current).__name__)
+        root = current
+        if current.__cause__ is not None:
+            current = current.__cause__
+        elif current.__suppress_context__:
+            break
+        else:
+            current = current.__context__
+
+    module = type(root).__module__
+    qualified = type(root).__qualname__ if module == "builtins" else f"{module}.{type(root).__qualname__}"
+    return qualified, "<".join([*chain, "..."]) if truncated else "<".join(chain)
+
+
 def emit_to_otel_logs(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
     """Ship the record to the configured OTel log pipeline, then hand it back unchanged.
 
@@ -409,6 +622,13 @@ def emit_to_otel_logs(_logger: Any, _method_name: str, event_dict: dict[str, Any
     Placed after the redaction processor so anything scrubbed there is scrubbed here too.
     Trace correlation is left to the SDK, which reads the active span from the context, so a
     log line emitted inside a flow execution lands on that flow's trace in the APM.
+
+    The body only leaves the process when its scope is allowlisted. Severity decides whether a
+    record is exported at all; this decides whether its text is, and the two are separate because
+    an operator wants to know a request failed at ERROR whether or not they are allowed to see
+    the sentence describing it. A withheld record is not a dropped one -- it keeps its severity,
+    scope, callsite, root-cause class and trace correlation, which is what a pivot from a failed
+    trace actually needs.
     """
     if _otel_logs is None:
         return event_dict
@@ -417,21 +637,69 @@ def emit_to_otel_logs(_logger: Any, _method_name: str, event_dict: dict[str, Any
     if severity is None or severity < _otel_min_severity():
         return event_dict
 
+    # Popped, not read: the marker is an instruction to this processor and must not reach the
+    # console renderer, the JSON file or the log buffer.
+    declared = event_dict.pop(_OTEL_EXPORT_BODY_KEY, False) is True
+    export_body = declared or _otel_body_policy() == "all"
+    # Anonymous callers have no logger name; group them under the package rather than "".
+    scope = event_dict.get("logger") or "lfx"
+
     try:
-        otel_logger = _otel_logs.get_logger(event_dict.get("logger") or "lfx")
+        if export_body:
+            body = str(event_dict.get("event", ""))
+            keep = event_dict.items()
+        else:
+            body = _OTEL_WITHHELD_BODY
+            keep = ((k, v) for k, v in event_dict.items() if k in _OTEL_SKELETON_KEYS)
+
+        attributes = {
+            k: v if isinstance(v, str | bool | int | float) else str(v)
+            for k, v in keep
+            if k not in _OTEL_LOG_SKIP_KEYS and v is not None
+        }
+
+        # Derived last so it wins: these are the trustworthy names, and an event dict carrying
+        # its own "error.type" key would otherwise shadow the one read off the live exception.
+        exception = _exception_from(event_dict.get("exc_info"))
+        if exception is not None:
+            root, chain = _error_identity(exception)
+            attributes["error.type"] = root
+            if chain != root:
+                attributes["error.chain"] = chain
+
+        otel_logger = _otel_logs.get_logger(scope)
         otel_logger.emit(
-            body=str(event_dict.get("event", "")),
+            body=body,
             severity_number=_OtelSeverity(severity),
             severity_text=str(event_dict.get("level", "")).upper(),
-            attributes={
-                k: v if isinstance(v, str | bool | int | float) else str(v)
-                for k, v in event_dict.items()
-                if k not in _OTEL_LOG_SKIP_KEYS and v is not None
-            },
+            attributes=attributes,
         )
     except Exception:  # noqa: BLE001 - logging must never break on a flaky exporter
         return event_dict
     return event_dict
+
+
+def otel_log_bodies_exported() -> bool:
+    """Whether message bodies leave the process for scopes that are not allowlisted.
+
+    Public because the bootstrap states the boundary in its startup line and must describe the
+    policy actually in force, not the default.
+    """
+    return _otel_body_policy() == "all"
+
+
+def operator_logger() -> Any:
+    """A logger whose message bodies are allowed to cross the OTLP boundary.
+
+    For operator statements about the runtime itself -- what got configured, what is exporting
+    where -- which are assembled from constants and identifiers and carry no flow data. Anything
+    that formats a component's output, a provider response or an exception message belongs on
+    the ordinary module-level ``logger`` instead, where the body is withheld.
+
+    The scope name is for grouping in the APM; the bound marker is what actually opts the body
+    in, so this cannot be obtained by naming a module after the scope.
+    """
+    return structlog.get_logger(OPERATOR_LOG_SCOPE).bind(**{_OTEL_EXPORT_BODY_KEY: True})
 
 
 def _apply_logger_level_overrides() -> None:
@@ -632,17 +900,13 @@ def configure(
         _add_service_info,
     ]
 
-    # Add callsite information only when LANGFLOW_DEV is set
-    if DEV:
-        processors.append(
-            structlog.processors.CallsiteParameterAdder(
-                parameters=[
-                    structlog.processors.CallsiteParameter.FILENAME,
-                    structlog.processors.CallsiteParameter.FUNC_NAME,
-                    structlog.processors.CallsiteParameter.LINENO,
-                ]
-            )
-        )
+    # Add callsite information when LANGFLOW_DEV is set, and when logs are being exported over
+    # OTLP. In the second case it is what makes a withheld record actionable: severity and scope
+    # alone do not tell an operator which line produced the failure, and the body that used to
+    # tell them is no longer leaving the process. Costs a frame walk per record, which is why it
+    # stays off for a deployment that is not exporting logs anywhere.
+    if DEV or _otlp_logs_configured():
+        processors.append(_callsite_adder())
 
     processors.extend(
         [
@@ -696,6 +960,10 @@ def configure(
                 structlog.processors.TimeStamper(fmt="iso", utc=True),
                 _add_service_info,
                 redact_processor,
+                # Foreign records reach OTLP through this chain, not the one above, so without
+                # the adder here they would export with no callsite at all -- and the callsite
+                # is what a withheld body leaves an operator to work with.
+                *([_callsite_adder()] if DEV or _otlp_logs_configured() else []),
                 emit_to_otel_logs,
             ]
             file_json_formatter = structlog.stdlib.ProcessorFormatter(

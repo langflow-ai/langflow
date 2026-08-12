@@ -1,0 +1,289 @@
+"""What crosses the OTLP logs boundary.
+
+The span exporter allowlists by instrumentation scope; the logs exporter withholds bodies
+unless a call site declares the opt-in, because a log record's scope is derived rather than
+declared and a look-alike module name would otherwise be enough.
+These tests are the executable form of the claim the vendor documentation makes, so they assert
+both halves: that flow-derived text does not leave, and that a withheld record still carries
+enough for an operator to act on. Only asserting the first half would pass if the signal were
+broken entirely, which is why every negative here is paired with a positive.
+
+Each case runs in a subprocess because the logger provider is process-global and the body policy
+is resolved from the environment once and cached for the life of the process.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+import pytest
+
+pytest.importorskip("opentelemetry")
+
+# Distinctive enough that a substring match against the whole exported payload cannot collide
+# with anything the runtime emits on its own.
+PROMPT = "SENTINELPROMPTQQQ"
+EXC_MESSAGE = "SENTINELEXCMSGQQQ"
+
+PROBE = '''
+import json, os, sys
+
+from opentelemetry import _logs
+from opentelemetry.sdk._logs import LoggerProvider
+from opentelemetry.sdk._logs.export import InMemoryLogExporter, SimpleLogRecordProcessor
+
+exporter = InMemoryLogExporter()
+provider = LoggerProvider()
+provider.add_log_record_processor(SimpleLogRecordProcessor(exporter))
+_logs.set_logger_provider(provider)
+
+from lfx.log.logger import configure, logger, operator_logger
+
+configure(log_level="INFO", log_env="container")
+
+
+class ProviderError(Exception):
+    pass
+
+
+class ComponentBuildError(Exception):
+    pass
+
+
+def wrapped_failure():
+    """The real shape: a provider error surfaced at the run boundary as a build error.
+
+    Raised rather than constructed, because ``raise ... from`` is what sets ``__cause__`` and
+    the chain walk has nothing to follow otherwise.
+    """
+    try:
+        try:
+            raise ProviderError("rate limited, request was SENTINELEXCMSGQQQ")
+        except ProviderError as inner:
+            raise ComponentBuildError(f"Error building Component Failing: {inner}") from inner
+    except ComponentBuildError as outer:
+        return outer
+
+
+# An ordinary call site interpolating the user's prompt into the message.
+logger.error("Error running flow: input was SENTINELPROMPTQQQ")
+
+# An exception passed explicitly, which is the form that put the message in an attribute.
+logger.error("component failed", exc_info=wrapped_failure())
+
+# An operator statement, which declares the opt-in.
+operator_logger().info("OTLP log export enabled (endpoint=https://collector:4318).")
+
+# A caller that only borrows the scope NAME, without declaring anything.
+if os.environ.get("PROBE_SQUAT"):
+    import structlog
+
+    structlog.get_logger("langflow.observability").error("SQUATTEDBODYQQQ")
+
+provider.force_flush()
+
+records = [
+    {
+        "scope": item.instrumentation_scope.name if item.instrumentation_scope else None,
+        "severity": item.log_record.severity_text,
+        "body": item.log_record.body,
+        "attributes": {k: str(v) for k, v in (item.log_record.attributes or {}).items()},
+    }
+    for item in exporter.get_finished_logs()
+]
+print("PROBE_RESULT " + json.dumps(records))
+'''
+
+
+def run_probe(**env_overrides: str) -> list[dict]:
+    """Run the probe in a clean interpreter and return the records it exported."""
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("OTEL_", "LANGFLOW_OTEL_"))}
+    # Callsite capture is gated on logs actually being exported somewhere.
+    env["OTEL_EXPORTER_OTLP_LOGS_ENDPOINT"] = "http://localhost:4318"
+    env.update(env_overrides)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        probe = Path(tmp) / "probe.py"
+        probe.write_text(PROBE, encoding="utf-8")
+        completed = subprocess.run(  # noqa: S603
+            [sys.executable, str(probe)],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=300,
+            check=False,
+        )
+    assert completed.returncode == 0, completed.stderr
+    line = next(ln for ln in completed.stdout.splitlines() if ln.startswith("PROBE_RESULT "))
+    return json.loads(line.removeprefix("PROBE_RESULT "))
+
+
+def application_records(records: list[dict]) -> list[dict]:
+    return [r for r in records if r["scope"] != "langflow.observability"]
+
+
+def test_prompt_and_exception_text_do_not_leave_the_process():
+    """The claim itself: what the span boundary withholds, the log boundary now withholds too."""
+    payload = json.dumps(run_probe())
+
+    assert PROMPT not in payload
+    assert EXC_MESSAGE not in payload
+
+
+def test_a_withheld_record_is_still_actionable():
+    """A boundary that exported nothing would pass the test above and be useless.
+
+    Severity, scope, callsite and root cause are what an operator pivots to from a failed trace,
+    and none of them is free text.
+    """
+    records = application_records(run_probe())
+
+    assert records, "application records must still be exported, only their bodies withheld"
+    assert all(r["severity"] == "ERROR" for r in records)
+    assert all(r["attributes"].get("module") for r in records)
+    assert all(r["attributes"].get("lineno") for r in records)
+
+    with_exception = [r for r in records if "error.type" in r["attributes"]]
+    assert with_exception, "a record carrying an exception must report its type"
+
+
+def test_error_type_is_the_root_cause_not_the_wrapper():
+    """Langflow wraps aggressively, so the outermost class names our catch site, not the failure.
+
+    Without this an operator cannot tell a rate limit from a bad request, which is most of what
+    the withheld message used to tell them. Qualified per OTel's error.type, so the probe's own
+    module prefixes it.
+    """
+    records = application_records(run_probe())
+    attributes = next(r["attributes"] for r in records if "error.type" in r["attributes"])
+
+    assert attributes["error.type"].endswith("ProviderError")
+    assert not attributes["error.type"].endswith("ComponentBuildError")
+    assert attributes["error.chain"] == "ComponentBuildError<ProviderError"
+
+
+def test_a_suppressed_context_is_not_reported_as_the_root():
+    """``raise ... from None`` means the inner error is deliberately not the story.
+
+    This is not a corner case: every provider SDK built on httpx raises its own error that way
+    inside an ``except httpx.HTTPStatusError`` block, so following a suppressed context reports
+    HTTPStatusError as the root of a rate limit, a bad request and an auth failure alike.
+    """
+    from lfx.log.logger import _error_identity
+
+    dropped = "provider detail that was deliberately dropped"
+    surfaced = "the error we chose to surface"
+    try:
+        try:
+            raise ValueError(dropped)
+        except ValueError:
+            raise RuntimeError(surfaced) from None
+    except RuntimeError as exc:
+        root, chain = _error_identity(exc)
+
+    assert root == "RuntimeError"
+    assert chain == "RuntimeError"
+
+
+def test_a_truncated_chain_says_so():
+    """Reporting the deepest link seen as though it were the root would be a quiet lie."""
+    from lfx.log.logger import _MAX_ERROR_CHAIN_DEPTH, _error_identity
+
+    current: BaseException = ValueError("root")
+    for index in range(_MAX_ERROR_CHAIN_DEPTH + 5):
+        wrapper = f"wrapper {index}"
+        try:
+            raise RuntimeError(wrapper) from current
+        except RuntimeError as exc:
+            current = exc
+
+    _, chain = _error_identity(current)
+
+    assert chain.endswith("<...")
+
+
+def test_naming_a_module_after_the_scope_does_not_export_its_bodies():
+    """The boundary is a declared marker, not a name match.
+
+    A log record's scope is derived -- from the bound logger, or under the stdlib factory from
+    the calling module -- so matching on it would mean a file added at
+    langflow/observability.py exported every one of its bodies without opting in.
+    """
+    records = run_probe(PROBE_SQUAT="1")
+    squatted = [r for r in records if r["body"] == "SQUATTEDBODYQQQ"]
+
+    assert not squatted, "a look-alike scope name must not export its body"
+
+
+def test_an_allowlisted_scope_still_exports_its_body():
+    """The allowlist has to actually let something through, or it is just an off switch."""
+    records = run_probe()
+    operator = [r for r in records if r["scope"] == "langflow.observability"]
+
+    assert len(operator) == 1
+    assert "OTLP log export enabled" in operator[0]["body"]
+
+
+def test_bodies_can_be_turned_back_on_deliberately():
+    """The escape hatch, and the control for every negative assertion above.
+
+    If the probe could not observe a leak, the tests that assert absence would pass against a
+    broken exporter. This one proves it observes exactly what the others say has gone.
+    """
+    payload = json.dumps(run_probe(LANGFLOW_OTEL_LOG_BODIES="all"))
+
+    assert PROMPT in payload
+
+
+def test_the_exception_attribute_channel_stays_closed_even_then():
+    """``exc_info`` carried the message as an attribute regardless of the body policy.
+
+    It is dropped unconditionally rather than as part of the body decision, because an operator
+    asking for message bodies is not asking for a stringified traceback tuple.
+    """
+    payload = json.dumps(run_probe(LANGFLOW_OTEL_LOG_BODIES="all"))
+
+    assert EXC_MESSAGE not in payload
+
+
+def test_an_unrecognised_body_policy_fails_closed():
+    """A typo in a Helm chart must not be the thing that opens the channel."""
+    payload = json.dumps(run_probe(LANGFLOW_OTEL_LOG_BODIES="ALL_OF_THEM"))
+
+    assert PROMPT not in payload
+
+
+@pytest.mark.parametrize(
+    ("endpoint", "expected"),
+    [
+        # The fabricated credential is the input under test, hence the allowlist pragma.
+        (
+            "https://user:sekrit@otlp.example.com:4318/v1/logs",  # pragma: allowlist secret
+            "https://otlp.example.com:4318/v1/logs",
+        ),
+        ("https://otlp.example.com/v1/logs?api-key=sekrit", "https://otlp.example.com/v1/logs"),
+        ("https://sekrit@otlp.example.com/v1/logs", "https://otlp.example.com/v1/logs"),
+        ("https://otlp.example.com/v1/logs#sekrit", "https://otlp.example.com/v1/logs"),
+        ("http://[fd00::1]:4318/v1/logs", "http://[fd00::1]:4318/v1/logs"),
+        ("http://localhost:4318", "http://localhost:4318"),
+        # urlsplit strips tab/CR/LF per WHATWG, which would rejoin whatever followed one of them
+        # into the path and write it verbatim to the one exported scope.
+        ("https://otlp.example.com/v1/logs\nInjected: sekrit", "<unparseable endpoint>"),
+        ("https://otlp.example.com/v1/logs\rInjected: sekrit", "<unparseable endpoint>"),
+    ],
+)
+def test_the_startup_line_reports_an_endpoint_without_its_credentials(endpoint: str, expected: str):
+    """That line is on the one scope exported verbatim, and vendors document tokens in the URL.
+
+    Without this, closing the body boundary would open a credential leak through the very line
+    announcing it.
+    """
+    from lfx.observability import safe_endpoint
+
+    assert safe_endpoint(endpoint) == expected
+    assert "sekrit" not in safe_endpoint(endpoint)

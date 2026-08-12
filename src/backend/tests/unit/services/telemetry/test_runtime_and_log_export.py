@@ -35,10 +35,12 @@ from langflow.services.telemetry.opentelemetry import OpenTelemetry
 from lfx.log.logger import configure
 from lfx.log.logger import logger
 
-otel = OpenTelemetry(prometheus_enabled=False)
-
+# Configure logging first, the order both runtimes use: the startup line the bootstrap emits
+# only reaches the exporter through the structlog chain this installs.
 # DEBUG so the emitter sees both records and has to make the severity decision itself.
 configure(log_level="DEBUG")
+
+otel = OpenTelemetry(prometheus_enabled=False)
 logger.debug({SENTINEL_DEBUG!r})
 logger.info({SENTINEL_INFO!r})
 logger.warning("disk is nearly full")
@@ -102,7 +104,12 @@ def _metric_names(requests) -> set[str]:
     return names
 
 
-def _log_records(requests) -> list:
+def _log_records(requests, *, scope: str | None = None) -> list:
+    """Log records the collector received, optionally only those on one instrumentation scope.
+
+    Scope is the axis the body boundary is drawn on, so several cases below need to ask about
+    one side of it at a time.
+    """
     records = []
     for path, body in requests:
         if path != "/v1/logs":
@@ -111,6 +118,8 @@ def _log_records(requests) -> list:
         request.ParseFromString(body)
         for rl in request.resource_logs:
             for sl in rl.scope_logs:
+                if scope is not None and sl.scope.name != scope:
+                    continue
                 records.extend(sl.log_records)
     return records
 
@@ -140,34 +149,64 @@ def test_host_level_metrics_are_not_exported(exported):
 
 
 def test_log_lines_reach_the_apm(exported):
-    """The pivot from a failing trace to the log lines emitted inside it."""
-    bodies = [r.body.string_value for r in _log_records(exported)]
+    """The pivot from a failing trace to the log lines emitted inside it.
 
-    assert SENTINEL_INFO in bodies, bodies
-    assert "disk is nearly full" in bodies
+    The record still travels; only its body is withheld. Whether an operator can see the text is
+    a separate question from whether the record exists, and alerting on error rate or pivoting
+    by trace id needs only the second.
+    """
+    records = _log_records(exported, scope="lfx")
+
+    assert len(records) >= 2, records
+    assert {r.severity_text for r in records} >= {"INFO", "WARNING"}
+
+
+def test_message_bodies_do_not_cross_the_boundary(exported):
+    """The logs signal allowlists by scope, the same rule the span exporter already applies.
+
+    Both sentinels are ordinary application log lines on the default scope, which is the channel
+    that carried prompts, chat history and provider error text to the operator's APM.
+    """
+    payload = json.dumps([str(r) for r in _log_records(exported)])
+
+    assert SENTINEL_INFO not in payload
+    assert SENTINEL_DEBUG not in payload
+
+
+def test_the_startup_line_states_the_boundary(exported):
+    """The allowlisted scope keeps its body, and it is what tells the operator what they get.
+
+    Documentation does not reach the person writing the Helm values; a line in their own log
+    stream does. It is also the proof that the allowlist lets something through rather than
+    being an off switch with extra steps.
+    """
+    bodies = [r.body.string_value for r in _log_records(exported, scope="langflow.observability")]
+
+    assert any("OTLP log export enabled" in b for b in bodies), bodies
+    assert any("bodies are withheld" in b.lower() for b in bodies), bodies
+    assert any("container stdout" in b for b in bodies), bodies
 
 
 def test_debug_lines_are_not_shipped_to_the_operator(exported):
     """The console is the developer's, the APM is the operator's.
 
-    Langflow logs flow outputs at DEBUG, and the redaction processor only scrubs known
-    sensitive keys, not free text in a message. So DEBUG stays local unless asked for.
+    Severity is the first of two gates and still the one that keeps the bulk of flow payload
+    logging local; the body boundary above is the second. This asserts the severity gate on its
+    own, so a regression in either is attributable.
     """
     records = _log_records(exported)
-    bodies = [r.body.string_value for r in records]
 
-    assert SENTINEL_DEBUG not in bodies
-    assert SENTINEL_DEBUG not in json.dumps([str(r) for r in records])
+    assert records, "the probe must export something for this to mean anything"
     assert all(r.severity_number >= 9 for r in records)  # INFO and above
 
 
 def test_log_severity_is_preserved(exported):
-    """An operator alerting on error rate needs the level, not just the text."""
-    by_body = {r.body.string_value: r for r in _log_records(exported)}
+    """An operator alerting on error rate needs the level, and it survives the body boundary."""
+    by_severity = {r.severity_text: r for r in _log_records(exported, scope="lfx")}
 
-    assert by_body[SENTINEL_INFO].severity_text == "INFO"
-    assert by_body["disk is nearly full"].severity_text == "WARNING"
-    assert by_body["disk is nearly full"].severity_number > by_body[SENTINEL_INFO].severity_number
+    assert "INFO" in by_severity, sorted(by_severity)
+    assert "WARNING" in by_severity, sorted(by_severity)
+    assert by_severity["WARNING"].severity_number > by_severity["INFO"].severity_number
 
 
 # The incident walk in one probe: a request comes in, something is logged while handling it,
@@ -214,7 +253,11 @@ def as_hex(value):
     return format(value, "032x") if value else None
 
 records = [
-    {"body": str(r.log_record.body), "trace_id": as_hex(r.log_record.trace_id)}
+    {
+        "body": str(r.log_record.body),
+        "severity": r.log_record.severity_text,
+        "trace_id": as_hex(r.log_record.trace_id),
+    }
     for r in logs.get_finished_logs()
 ]
 print("PROBE_RESULT " + json.dumps({
@@ -239,9 +282,12 @@ def test_a_log_emitted_during_a_request_carries_that_request_trace_id():
     line = next(ln for ln in completed.stdout.splitlines() if ln.startswith("PROBE_RESULT "))
     result = json.loads(line.removeprefix("PROBE_RESULT "))
 
-    match = [r for r in result["records"] if r["body"] == "payment provider timed out"]
+    # Matched on severity rather than text: the body is withheld at the boundary, and the
+    # correlation this test exists for is carried by trace_id, which is not.
+    match = [r for r in result["records"] if r["severity"] == "ERROR"]
     assert match, result["records"]
     assert match[0]["trace_id"] == result["span_trace_id"]
+    assert "payment provider timed out" not in json.dumps(result["records"])
 
 
 # The DEBUG floor is an override, not a lock: an operator debugging a live incident may
@@ -264,8 +310,8 @@ logger.debug({SENTINEL_DEBUG!r})
 logger.info({SENTINEL_INFO!r})
 provider.force_flush()
 
-bodies = [str(r.log_record.body) for r in exporter.get_finished_logs()]
-print("DEBUG_SHIPPED " + str({SENTINEL_DEBUG!r} in bodies))
+severities = [r.log_record.severity_text for r in exporter.get_finished_logs()]
+print("DEBUG_SHIPPED " + str("DEBUG" in severities))
 """
 
 
