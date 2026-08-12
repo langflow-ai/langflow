@@ -24,6 +24,7 @@ from lfx.io import (
     SecretStrInput,
     TabInput,
 )
+from lfx.observability import outbound_call_span
 from lfx.schema.message import Message
 from lfx.utils.ssrf_protection import (
     SSRFProtectionError,
@@ -44,6 +45,8 @@ DEFAULT_TIMEOUT = 60.0
 # read-layer byte cap; tracked as a follow-up.
 MAX_A2A_RESPONSE_CHARS = 100_000
 _CARD_SUFFIX = "/.well-known/agent-card.json"
+# One application span per outbound A2A call, covering the card resolve and the message/send.
+A2A_CALL_SPAN_NAME = "a2a.message.send"
 # A spec-compliant agent card is a few KB. Refuse to buffer or parse anything pathological: the
 # card comes from a remote server we don't trust.
 _MAX_CARD_BYTES = 256 * 1024
@@ -243,33 +246,48 @@ async def call_a2a_agent(
     (falling back to the task's status message). The same ``httpx_client`` fetches the card
     and posts the message; it must be built with :func:`build_a2a_client` so the api key is
     pinned to the ``agent_url`` origin. Factored out from the component so a test can drive it.
+
+    Emits one application span for the operator's APM, covering the card resolve and the send.
+    Identifiers only: the host we called and the name the card gave, never the URL (it can carry
+    credentials in its query string) and never the message or the reply.
     """
     from a2a.client.client import ClientConfig
     from a2a.client.client_factory import create_client
     from a2a.helpers.proto_helpers import new_text_part
     from a2a.types import a2a_pb2 as pb
 
-    # Resolve the card ourselves with a bounded read, then hand it to create_client so the SDK
-    # skips its own unbounded fetch. create_client(url) delegates to A2ACardResolver, which buffers
-    # the whole card body with no cap; a hostile server streaming an endless card would OOM the
-    # worker. Same 256KB cap as the editor preview, but here a bad card raises (fails the call).
-    card = await _resolve_card_bounded(httpx_client, agent_url)
-    client = await create_client(
-        card,
-        client_config=ClientConfig(
-            streaming=False,
-            httpx_client=httpx_client,
-            accepted_output_modes=accepted_output_modes or ["application/json"],
-        ),
-    )
-    request = pb.SendMessageRequest(
-        message=pb.Message(
-            message_id=uuid.uuid4().hex,
-            role=pb.Role.ROLE_USER,
-            parts=[new_text_part(message)],
+    parsed = httpx.URL(agent_url)
+    host = _pin_host(parsed)
+    with outbound_call_span(
+        A2A_CALL_SPAN_NAME, {"a2a.agent.host": f"{host}:{parsed.port}" if parsed.port else host}
+    ) as span:
+        # Resolve the card ourselves with a bounded read, then hand it to create_client so the SDK
+        # skips its own unbounded fetch. create_client(url) delegates to A2ACardResolver, which
+        # buffers the whole card body with no cap; a hostile server streaming an endless card would
+        # OOM the worker. Same 256KB cap as the editor preview, but a bad card raises (fails the
+        # call).
+        card = await _resolve_card_bounded(httpx_client, agent_url)
+        # The card is remote content, so clip it like every other card string we surface.
+        if getattr(card, "name", None):
+            span.set_attribute("a2a.agent.name", _clip(card.name))
+        client = await create_client(
+            card,
+            client_config=ClientConfig(
+                streaming=False,
+                httpx_client=httpx_client,
+                accepted_output_modes=accepted_output_modes or ["application/json"],
+            ),
         )
-    )
-    return await _reply_or_raise(client.send_message(request))
+        request = pb.SendMessageRequest(
+            message=pb.Message(
+                message_id=uuid.uuid4().hex,
+                role=pb.Role.ROLE_USER,
+                parts=[new_text_part(message)],
+            )
+        )
+        # A remote task that ends in any non-completed state raises out of _reply_or_raise, so the
+        # span's except arm records it. Nothing to report by hand the way MCP's isError needs.
+        return await _reply_or_raise(client.send_message(request))
 
 
 class A2AAgentComponent(Component):
