@@ -124,8 +124,11 @@ def _run_db_probe(*args: str) -> list[dict]:
         check=False,
     )
     assert completed.returncode == 0, completed.stderr
-    line = next(ln for ln in completed.stdout.splitlines() if ln.startswith("PROBE_RESULT "))
-    spans = json.loads(line.removeprefix("PROBE_RESULT "))["spans"]
+    # Not next(): a probe that exits cleanly without printing would raise StopIteration here and
+    # take its own stdout and stderr with it, which is the context needed to see why.
+    lines = [ln for ln in completed.stdout.splitlines() if ln.startswith("PROBE_RESULT ")]
+    assert lines, f"probe printed no result.\nstdout:\n{completed.stdout}\nstderr:\n{completed.stderr}"
+    spans = json.loads(lines[0].removeprefix("PROBE_RESULT "))["spans"]
     return [s for s in spans if s["scope"] == "opentelemetry.instrumentation.sqlalchemy"]
 
 

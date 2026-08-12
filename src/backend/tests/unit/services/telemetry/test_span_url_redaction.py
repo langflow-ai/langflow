@@ -79,8 +79,11 @@ def run_probe(source: str) -> dict:
             check=False,
         )
     assert completed.returncode == 0, completed.stderr
-    line = next(ln for ln in completed.stdout.splitlines() if ln.startswith("PROBE_RESULT "))
-    return json.loads(line.removeprefix("PROBE_RESULT "))
+    # Not next(): a probe that exits cleanly without printing would raise StopIteration here and
+    # take its own stdout and stderr with it, which is the context needed to see why.
+    lines = [ln for ln in completed.stdout.splitlines() if ln.startswith("PROBE_RESULT ")]
+    assert lines, f"probe printed no result.\nstdout:\n{completed.stdout}\nstderr:\n{completed.stderr}"
+    return json.loads(lines[0].removeprefix("PROBE_RESULT "))
 
 
 def test_the_serve_api_key_never_reaches_the_apm():
@@ -95,6 +98,7 @@ def test_the_serve_api_key_never_reaches_the_apm():
 def test_redaction_keeps_the_route_an_operator_needs():
     """Blanking everything would be safe and useless; path and method must survive."""
     result = run_probe(SERVER_SPAN_PROBE)
+    assert result["spans"], "expected a server span carrying url.path"
     attrs = result["spans"][0]["attrs"]
 
     assert attrs["url.path"] == "/flows/run"
@@ -145,7 +149,11 @@ def test_a_credential_in_the_authority_never_reaches_the_apm():
 
 def test_redaction_keeps_the_host_and_path_an_operator_needs():
     """Blanking the URL entirely would pass the test above and lose the point of the attribute."""
-    attrs = run_probe(USERINFO_SPAN_PROBE)["spans"][0]["attrs"]
+    result = run_probe(USERINFO_SPAN_PROBE)
+    # Asserted before indexing: an empty list would otherwise surface as an IndexError, which
+    # says nothing about why the probe produced no span.
+    assert result["spans"], "expected the probe span"
+    attrs = result["spans"][0]["attrs"]
 
     for key in ("http.url", "url.full"):
         assert attrs[key] == "https://db.internal:5432/records", attrs[key]
