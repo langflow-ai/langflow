@@ -303,10 +303,14 @@ async def _buffer_background_run(
             background_tasks=fresh_background_tasks,
             parsed=parsed,
             current_user=current_user,
+            expose_error_details=flow.user_id == current_user.id,
             # Build under the job id so the run's vertex builds are persisted
             # keyed by job_id and GET-status reconstruction can find them.
             run_id=job_id,
             track_job_status=False,
+            # Distinct from the live v2 stream: same driver, but nobody is holding the connection,
+            # so an operator reading latency needs to tell the two apart.
+            protocol="v2.background",
         ):
             if terminal_error_type is not None and event_type == terminal_error_type:
                 errored = True

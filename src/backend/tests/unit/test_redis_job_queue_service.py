@@ -2208,6 +2208,7 @@ async def test_generate_flow_events_calls_end_all_traces_on_cancel(monkeypatch):
             start_component_id=None,
             log_builds=False,
             current_user=current_user,
+            expose_error_details=False,
         )
     )
 
