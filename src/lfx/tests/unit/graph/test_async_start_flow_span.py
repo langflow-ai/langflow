@@ -56,6 +56,7 @@ async def main():
     graph = build()
     tracer = trace.get_tracer(APPLICATION_TRACER_NAME)
     inner_parent = None
+    caller_ids = None
 
     if MODE == "caller_opens":
         with graph.flow_execution_span():
@@ -73,13 +74,36 @@ async def main():
     elif MODE == "deferred_but_nobody_opened":
         async for _ in graph.async_start(open_flow_span=False):
             pass
+    elif MODE == "sync_start_under_a_caller_span":
+        # The sync entry point hands the run to a worker thread, and a new thread starts with an
+        # empty context, so the flow span has to be given the caller's or it begins its own trace.
+        with tracer.start_as_current_span("caller") as caller:
+            caller_context = caller.get_span_context()
+            list(graph.start())
+        caller_ids = (caller_context.trace_id, caller_context.span_id)
 
     provider.force_flush()
     spans = [
-        {"name": s.name, "span_id": s.context.span_id, "parent": s.parent.span_id if s.parent else None}
+        {
+            "name": s.name,
+            "span_id": s.context.span_id,
+            "trace_id": s.context.trace_id,
+            "parent": s.parent.span_id if s.parent else None,
+            "links": [link.context.span_id for link in s.links],
+        }
         for s in exporter.get_finished_spans()
     ]
-    print("PROBE_RESULT " + json.dumps({"spans": spans, "inner_parent": inner_parent}))
+    print(
+        "PROBE_RESULT "
+        + json.dumps(
+            {
+                "spans": spans,
+                "inner_parent": inner_parent,
+                "caller_trace": caller_ids[0] if caller_ids else None,
+                "caller_span": caller_ids[1] if caller_ids else None,
+            }
+        )
+    )
 
 
 asyncio.run(main())
@@ -131,3 +155,25 @@ def test_deferring_without_opening_one_emits_no_flow_span():
     result = run_probe("deferred_but_nobody_opened")
 
     assert [s for s in result["spans"] if s["name"] == "flow.execute"] == []
+
+
+def test_the_sync_start_runs_under_the_caller_span():
+    """``Graph.start`` hands the run to a worker thread, and a thread starts with no context.
+
+    Without the caller's context copied in, the flow span finds no current span and opens a
+    brand-new trace. Measured before the fix: different trace ids, no parent and no link, so a
+    caller's span and the run it started were two unrelated traces in the operator's APM.
+
+    The trace id is the assertion that matters. A parent alone could be satisfied by a span that
+    happened to nest under something else in the worker.
+    """
+    result = run_probe("sync_start_under_a_caller_span")
+
+    flow_spans = [s for s in result["spans"] if s["name"] == "flow.execute"]
+    assert len(flow_spans) == 1, result["spans"]
+    assert result["caller_trace"], "the probe did not record a caller span"
+
+    assert flow_spans[0]["trace_id"] == result["caller_trace"], (
+        f"flow span is in trace {flow_spans[0]['trace_id']:032x}, caller is in {result['caller_trace']:032x}"
+    )
+    assert flow_spans[0]["parent"] == result["caller_span"]

@@ -625,8 +625,20 @@ class Graph:
                     # Signal completion
                     result_queue.put(None)
 
-        # Start thread for async execution
-        thread = threading.Thread(target=run_async_code)
+        # Start thread for async execution, carrying the caller's context into it.
+        #
+        # A new thread starts with an empty context, so without this the flow span opened inside
+        # run_async_code finds no current span and starts a brand-new trace: measured, the
+        # caller's span and flow.execute came back with different trace ids and no parent or
+        # link between them, which is exactly the correlation this PR exists to provide. The
+        # same copy carries the protocol and client contextvars, which are set at the entry
+        # point for the same reason.
+        #
+        # The caller's span is still recording while the generator below is consumed, so the
+        # flow span parents to it normally. A caller that abandons the generator early leaves a
+        # dead parent, which flow_execution_span already handles by linking instead.
+        context = contextvars.copy_context()
+        thread = threading.Thread(target=context.run, args=(run_async_code,))
         thread.start()
 
         # Yield results from queue
