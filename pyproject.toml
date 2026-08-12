@@ -1,6 +1,6 @@
 [project]
 name = "langflow"
-version = "1.11.0"
+version = "1.11.3"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.15"
 license = "MIT"
@@ -17,7 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base[complete]>=0.11.0",
+    "langflow-base[complete]>=0.11.3",
     # langflow-extensions:bundle-deps-start
     # Release coordination: langflow declares BOUNDED ranges (>=A,<B) for every
     # curated lfx-* package, never exact pins -- exact pins in reusable library
@@ -217,7 +217,7 @@ override-dependencies = [
     # Security: Force upgraded versions to prevent transitive deps from pulling older vulnerable versions
     "orjson>=3.11.6",
     "gunicorn>=25.3.0",
-    "pypdf>=6.10.0",  # Force pypdf 6.10+ to prevent vulnerable 6.6.x versions
+    "pypdf>=6.15.0",
     "nltk>=3.9.4",
     "Markdown>=3.8.0",
     "dynaconf>=3.2.13",
@@ -230,6 +230,8 @@ override-dependencies = [
     "mako>=1.3.12,<2.0.0",  # CVE-2026-44307
     "urllib3>=2.7.0,<3.0.0",  # CVE-2026-44431, CVE-2026-44432
     "python-liquid>=2.2.0,<3.0.0",  # CVE-2026-45017
+    "GitPython>=3.1.58",  # GHSA-wvpp-8hx9-p66j, GHSA-jm78-9fvv-mhgr, GHSA-hmq2-w58f-27jc, GHSA-4gmw-gg2m-w46p, GHSA-9rj7-rf2p-w77r, GHSA-hh9p-6wh2-4mfc
+    "h2>=4.4.1",  # CVE-2026-71554
 ]
 
 [project.scripts]
@@ -249,6 +251,9 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 # 50-min step wall. A 90s cap fires below the ~127s stall, and timeout_method="thread" dumps ALL
 # thread stacks (faulthandler) — naming the exact blocking call even when it is a leaked background
 # task. Revert to timeout=150 / timeout_method="signal" once the stall is identified and bounded.
+# NOTE: the thread method's timer needs the GIL, so a C-level hang that holds the GIL defeats it
+# (observed: release-1.11.3 py3.13 Group 5 froze 25+ min with no dump). A second, GIL-proof
+# faulthandler watchdog (120s, dump + exit) backstops it in src/backend/tests/conftest.py.
 timeout = 90
 timeout_method = "thread"
 minversion = "6.0"

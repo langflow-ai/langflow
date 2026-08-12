@@ -25,6 +25,7 @@ from lfx.base.models.unified_models import (
     get_model_provider_metadata,
     get_model_provider_variable_mapping,
     get_model_providers,
+    instantiation,
     validate_model_provider_key,
 )
 from lfx.base.models.unified_models.class_registry import (
@@ -271,6 +272,7 @@ def test_get_llm_applies_registered_provider_base_url(monkeypatch):
     monkeypatch.setattr(
         um, "get_all_variables_for_provider", lambda *_a, **_k: {"FAKECO_API_BASE": "http://vllm.example:8000"}
     )
+    monkeypatch.setattr(instantiation, "ssrf_protected_openai_clients_for_url", lambda _url: {})
 
     model_selection = [
         {
@@ -322,6 +324,7 @@ def test_get_llm_real_resolver_uses_placeholder_not_base_url(monkeypatch):
     # Base URL comes from the env via the connection handler; do NOT patch the
     # api-key resolver -- that is the path under test.
     monkeypatch.setattr(um, "get_all_variables_for_provider", lambda *_a, **_k: {})
+    monkeypatch.setattr(instantiation, "ssrf_protected_openai_clients_for_url", lambda _url: {})
 
     model_selection = [{"name": "m1", "provider": "FakeCo", "metadata": {"model_class": "ChatOpenAI"}}]
     get_llm(model_selection, user_id=None)
@@ -354,6 +357,7 @@ def test_get_embeddings_applies_registered_provider_base_url_and_key(monkeypatch
     monkeypatch.setattr(
         um, "get_all_variables_for_provider", lambda *_a, **_k: {"FAKECO_API_BASE": "http://vllm.example:8000"}
     )
+    monkeypatch.setattr(instantiation, "ssrf_protected_openai_clients_for_url", lambda _url: {})
 
     model_selection = [
         {

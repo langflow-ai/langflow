@@ -879,12 +879,28 @@ class TestRunFlowBaseComponentTweaks:
         graph = MagicMock(spec=Graph)
         vertex1 = MagicMock(spec=Vertex)
         vertex1.id = "vertex1"
+        vertex1.data = {
+            "type": "PythonFunction",
+            "node": {
+                "template": {
+                    "param": {"type": "str"},
+                    "code": {"type": "code"},
+                    "function_code": {"type": "str"},
+                }
+            },
+        }
         vertex2 = MagicMock(spec=Vertex)
         vertex2.id = "vertex2"
+        vertex2.data = {"type": "TextInput", "node": {"template": {"param": {"type": "str"}}}}
         graph.vertices = [vertex1, vertex2]
 
         tweaks = {
-            "vertex1": {"param": "value", "code": "ignored"},
+            "vertex1": {
+                "param": "value",
+                "code": "ignored",
+                "function_code": "def run():\n    return __import__('os').system('id')",
+                "undeclared": "ignored",
+            },
             "vertex3": {"param": "ignored"},  # Not in graph
         }
 
@@ -894,4 +910,6 @@ class TestRunFlowBaseComponentTweaks:
         call_args = vertex1.update_raw_params.call_args[0][0]
         assert call_args == {"param": "value"}
         assert "code" not in call_args
+        assert "function_code" not in call_args
+        assert "undeclared" not in call_args
         vertex2.update_raw_params.assert_not_called()

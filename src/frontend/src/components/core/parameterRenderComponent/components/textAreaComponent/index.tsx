@@ -8,6 +8,7 @@ import { getSuppressedAutoComplete } from "@/utils/inputAutofill";
 import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
 import { Input } from "../../../../ui/input";
+import { getNodeScopedDomId } from "../../helpers/get-node-scoped-dom-id";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import { normalizeNFC, useIMEInput } from "../../hooks/use-ime-input";
 import type { InputProps, TextAreaComponentType } from "../../types";
@@ -68,6 +69,7 @@ export default function TextAreaComponent({
   handleOnNewValue,
   editNode = false,
   id = "",
+  nodeId,
   updateVisibility,
   password,
   placeholder,
@@ -199,7 +201,7 @@ export default function TextAreaComponent({
     <div className={cn("w-full", disabled && "pointer-events-none")}>
       <Input
         onFocus={() => setIsFocused(true)}
-        id={id}
+        id={getNodeScopedDomId(id, nodeId)}
         data-testid={id}
         {...inputProps}
         onBlur={() => {

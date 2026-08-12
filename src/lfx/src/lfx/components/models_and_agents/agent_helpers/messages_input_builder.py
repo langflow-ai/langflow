@@ -7,7 +7,7 @@ helper performs the conversion.
 
 from collections.abc import Iterable
 
-from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
 from lfx.log.logger import logger
 from lfx.schema.data import Data
@@ -26,10 +26,7 @@ def build_initial_messages(
 
     if chat_history is not None:
         for item in _normalize_history(chat_history):
-            # Mirror the current-turn guard in `_append_input`: a blank-text item is
-            # only truly empty when it ALSO has no files. An image-only message from a
-            # prior turn (text="", files=[image]) must survive — dropping it silently
-            # loses multimodal context on the next turn.
+            # Files-aware blank guard (mirrors `_append_input`): an image-only prior turn must survive.
             if _has_blank_text(item) and not getattr(item, "files", None):
                 continue
             converted = _safe_to_lc_message(item)
@@ -37,10 +34,8 @@ def build_initial_messages(
                 messages.append(converted)
 
     if not _append_input(messages, input_value):
-        # No fresh user input this turn. Always inject a deterministic continuation
-        # prompt — never let blank content reach the provider, and never let the LLM
-        # see a tail-AIMessage with no fresh user turn (causes silent re-execution
-        # of earlier tool calls).
+        # No fresh user turn: inject a deterministic prompt — blank content or a tail
+        # AIMessage makes providers fail or silently re-run earlier tool calls.
         messages.append(HumanMessage(content=CONTINUE_MESSAGE))
 
     return messages
@@ -65,11 +60,21 @@ def _append_input(messages: list[BaseMessage], input_value: Message | str | None
     A Message with blank text is still appended when files are attached — the file
     payload IS the input. `Message.to_lc_message()` builds the multimodal HumanMessage
     correctly in that case.
+
+    The input always lands as a user turn, even when it comes from an upstream Agent
+    (sender=Machine → `to_lc_message()` yields AIMessage). Chained agents such as the
+    Multi Agent Flow template would otherwise send a request ENDING in a model turn,
+    which Gemini rejects with 400 "Requests ending with a model turn are not supported".
+    The legacy AgentExecutor path rendered the input as a ("human", "{input}") turn
+    regardless of sender; this preserves that contract on the LangGraph path.
     """
     if isinstance(input_value, Message):
         if _has_blank_text(input_value) and not getattr(input_value, "files", None):
             return False
-        messages.append(input_value.to_lc_message())
+        lc_message = input_value.to_lc_message()
+        if isinstance(lc_message, AIMessage):
+            lc_message = HumanMessage(content=lc_message.content)
+        messages.append(lc_message)
         return True
     if isinstance(input_value, str):
         if not input_value.strip():

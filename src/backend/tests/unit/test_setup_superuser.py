@@ -2,7 +2,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langflow.services.auth.utils import create_super_user
+from langflow.services.auth.service import AuthService
 from langflow.services.database.models.user.model import User
 from langflow.services.utils import teardown_superuser
 from lfx.services.settings.constants import (
@@ -10,6 +10,12 @@ from lfx.services.settings.constants import (
     DEFAULT_SUPERUSER_PASSWORD,
 )
 from sqlalchemy.exc import IntegrityError
+
+
+@pytest.fixture
+def auth_service() -> AuthService:
+    return AuthService(MagicMock())
+
 
 # @patch("langflow.services.deps.get_session")
 # @patch("langflow.services.utils.create_super_user")
@@ -137,10 +143,11 @@ async def test_teardown_superuser_no_default_superuser():
 
 
 @pytest.mark.asyncio
-async def test_create_super_user_race_condition():
+async def test_create_super_user_race_condition(auth_service: AuthService):
     """Test create_super_user handles race conditions gracefully when multiple workers try to create the same user."""
     # Mock the database session
     mock_session = AsyncMock()
+    mock_session.add = MagicMock()
 
     # Create a mock user that will be "created" by the first worker
     mock_user = MagicMock(spec=User)
@@ -160,13 +167,13 @@ async def test_create_super_user_race_condition():
     mock_session.commit.side_effect = IntegrityError("statement", "params", Exception("orig"))
     with (
         patch("langflow.services.auth.service.get_user_by_username", mock_get_user_by_username),
-        patch("langflow.services.auth.utils.get_password_hash", mock_get_password_hash),
-        patch("langflow.services.database.models.user.model.User") as mock_user_class,
+        patch.object(auth_service, "get_password_hash", mock_get_password_hash),
+        patch("langflow.services.auth.service.User") as mock_user_class,
     ):
         # Configure the User class mock to return our mock_user when instantiated
         mock_user_class.return_value = mock_user
 
-        result = await create_super_user("testuser", "password", mock_session)
+        result = await auth_service.create_super_user("testuser", "password", mock_session)
 
     # Verify that the function handled the race condition correctly
     assert result == mock_user
@@ -177,10 +184,11 @@ async def test_create_super_user_race_condition():
 
 
 @pytest.mark.asyncio
-async def test_create_super_user_race_condition_no_user_found():
+async def test_create_super_user_race_condition_no_user_found(auth_service: AuthService):
     """Test that create_super_user re-raises exception if no user is found after IntegrityError."""
     # Mock the database session
     mock_session = AsyncMock()
+    mock_session.add = MagicMock()
 
     # Mock get_user_by_username to always return None (even after rollback)
     mock_get_user_by_username = AsyncMock()
@@ -196,11 +204,11 @@ async def test_create_super_user_race_condition_no_user_found():
 
     with (
         patch("langflow.services.auth.service.get_user_by_username", mock_get_user_by_username),
-        patch("langflow.services.auth.utils.get_password_hash", mock_get_password_hash),
-        patch("langflow.services.database.models.user.model.User", return_value=mock_user),
+        patch.object(auth_service, "get_password_hash", mock_get_password_hash),
+        patch("langflow.services.auth.service.User", return_value=mock_user),
         pytest.raises(IntegrityError),
     ):
-        await create_super_user("testuser", "password", mock_session)
+        await auth_service.create_super_user("testuser", "password", mock_session)
 
     # Verify rollback was called but exception was re-raised
     assert mock_session.rollback.call_count == 1
@@ -208,13 +216,15 @@ async def test_create_super_user_race_condition_no_user_found():
 
 
 @pytest.mark.asyncio
-async def test_create_super_user_concurrent_workers():
+async def test_create_super_user_concurrent_workers(auth_service: AuthService):
     """Test multiple concurrent calls to create_super_user with the same username."""
     # This would require a real database to properly test, but we can simulate
     # the behavior with mocks to verify the logic works correctly
 
     mock_session1 = AsyncMock()
     mock_session2 = AsyncMock()
+    mock_session1.add = MagicMock()
+    mock_session2.add = MagicMock()
 
     # Create mock users
     mock_user = MagicMock(spec=User)
@@ -230,11 +240,14 @@ async def test_create_super_user_concurrent_workers():
     # get_user_by_username returns None initially, then the created user for worker 2
     mock_get_user_by_username.side_effect = [None, None, mock_user]
 
-    with patch("langflow.services.auth.service.get_user_by_username", mock_get_user_by_username):
+    with (
+        patch("langflow.services.auth.service.get_user_by_username", mock_get_user_by_username),
+        patch.object(auth_service, "get_password_hash", return_value="hashed_password"),
+    ):
         # Simulate concurrent execution using asyncio.gather
         result1, result2 = await asyncio.gather(
-            create_super_user("admin", "password", mock_session1),
-            create_super_user("admin", "password", mock_session2),
+            auth_service.create_super_user("admin", "password", mock_session1),
+            auth_service.create_super_user("admin", "password", mock_session2),
         )
 
     # Both workers should end up with a user (worker 1 creates, worker 2 finds existing)

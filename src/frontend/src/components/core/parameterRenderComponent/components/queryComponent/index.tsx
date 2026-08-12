@@ -4,6 +4,7 @@ import QueryModal from "@/modals/queryModal";
 import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
 import { Input } from "../../../../ui/input";
+import { getNodeScopedDomId } from "../../helpers/get-node-scoped-dom-id";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import type { InputProps, QueryComponentType } from "../../types";
 import { getIconName } from "../inputComponent/components/helpers/get-icon-name";
@@ -55,6 +56,7 @@ export default function QueryComponent({
   handleOnNewValue,
   editNode = false,
   id = "",
+  nodeId,
   placeholder,
   isToolMode = false,
   display_name,
@@ -129,7 +131,7 @@ export default function QueryComponent({
       <Input
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
-        id={id}
+        id={getNodeScopedDomId(id, nodeId)}
         data-testid={id}
         value={disabled ? "" : value}
         onChange={handleInputChange}

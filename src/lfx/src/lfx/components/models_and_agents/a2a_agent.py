@@ -30,6 +30,7 @@ from lfx.utils.ssrf_protection import (
     is_host_allowed,
     is_ip_blocked,
     resolve_hostname,
+    validate_and_resolve_connector_url,
     validate_and_resolve_url,
 )
 from lfx.utils.ssrf_transport import SSRFProtectedTransport
@@ -409,8 +410,10 @@ class A2AAgentComponent(Component):
         """
         base = _agent_base_url(url)
         try:
-            # to_thread: validate_and_resolve_url does blocking DNS; keep it off the event loop.
-            _validated_url, validated_ips = await asyncio.to_thread(validate_and_resolve_url, base)
+            # Connector policy (the URL is flow-author-configured, like the Ollama / LM Studio
+            # base URLs): literal loopback allowed by default, internal ranges still blocked.
+            # to_thread: the validator does blocking DNS; keep it off the event loop.
+            _validated_url, validated_ips = await asyncio.to_thread(validate_and_resolve_connector_url, base)
         except SSRFProtectionError:
             return None
         try:
@@ -622,11 +625,15 @@ class A2AAgentComponent(Component):
         # from <base>/.well-known/agent-card.json, so normalize first to avoid double-appending.
         agent_url = _agent_base_url(self.agent_url)
 
-        # Validate + DNS-pin the agent URL before any outbound call (blocks loopback, RFC1918,
-        # link-local / cloud metadata, etc.); mirrors the API Request component.
+        # Validate + DNS-pin the agent URL before any outbound call. The agent URL is configured
+        # by the flow author (like the Ollama / LM Studio base URLs), so it follows the connector
+        # policy: a literal loopback host is allowed by default (connector_ssrf_allow_loopback)
+        # while RFC1918 / link-local / cloud-metadata targets stay blocked. Card-declared
+        # off-origin hops are remote-controlled and keep the strict validator plus the
+        # toggle-independent floor (see build_a2a_client).
         try:
-            # to_thread: validate_and_resolve_url does blocking DNS; keep it off the event loop.
-            _validated_url, validated_ips = await asyncio.to_thread(validate_and_resolve_url, agent_url)
+            # to_thread: the validator does blocking DNS; keep it off the event loop.
+            _validated_url, validated_ips = await asyncio.to_thread(validate_and_resolve_connector_url, agent_url)
         except SSRFProtectionError as e:
             msg = f"SSRF Protection: {e}"
             raise ValueError(msg) from e

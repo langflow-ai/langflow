@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -40,17 +40,42 @@ def test_foundry_embedding_kwargs_use_endpoint_when_api_base_blank(unified_model
     assert kwargs["api_key"] == "test-key"  # pragma: allowlist secret
 
 
-def test_foundry_embedding_kwargs_prefer_explicit_api_base(unified_models_module):
-    override = "https://override.example/openai/v1"
+def test_foundry_embedding_kwargs_normalize_project_endpoint(unified_models_module):
+    """A stored Foundry *project* endpoint is rewritten to the OpenAI-compatible form."""
+    unified_models_module.get_all_variables_for_provider = MagicMock(
+        return_value={"AZURE_AI_FOUNDRY_ENDPOINT": "https://example.services.ai.azure.com/api/projects/my-project"}
+    )
+
     composed = _compose_embedding_kwargs(
         "Azure AI Foundry",
         "text-embedding-3-small",
         uuid4(),
         unified_models_module,
         selected_provider="Azure AI Foundry",
-        api_base=override,
+        api_base="",
     )
 
     assert composed is not None
     _, kwargs = composed
+    assert kwargs["base_url"] == FOUNDRY_ENDPOINT
+
+
+def test_foundry_embedding_kwargs_prefer_explicit_api_base(unified_models_module):
+    override = "https://override.example/openai/v1"
+    with patch(
+        "lfx.base.models.unified_models.instantiation.ssrf_protected_openai_clients_for_url",
+        return_value={},
+    ) as protect_clients:
+        composed = _compose_embedding_kwargs(
+            "Azure AI Foundry",
+            "text-embedding-3-small",
+            uuid4(),
+            unified_models_module,
+            selected_provider="Azure AI Foundry",
+            api_base=override,
+        )
+
+    assert composed is not None
+    _, kwargs = composed
     assert kwargs["base_url"] == override
+    protect_clients.assert_called_once_with(override)

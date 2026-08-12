@@ -3,6 +3,7 @@ import SanitizedHTMLWrapper from "@/components/common/sanitizedHTMLWrapper";
 import MustachePromptModal from "@/modals/mustachePromptModal";
 import { cn } from "../../../../../utils/utils";
 import { Button } from "../../../../ui/button";
+import { getNodeScopedDomId } from "../../helpers/get-node-scoped-dom-id";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import type { InputProps, PromptAreaComponentType } from "../../types";
 
@@ -22,6 +23,7 @@ export default function MustachePromptAreaComponent({
   disabled,
   editNode = false,
   id = "",
+  nodeId,
   readonly = false,
   showParameter = true,
 }: InputProps<string, PromptAreaComponentType>): JSX.Element | null {
@@ -38,7 +40,7 @@ export default function MustachePromptAreaComponent({
 
   const renderPromptText = () => (
     <span
-      id={id}
+      id={getNodeScopedDomId(id, nodeId)}
       data-testid={id}
       className={cn(
         promptContentClasses.base,

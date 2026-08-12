@@ -451,17 +451,20 @@ LANGFLOW_CORS_ALLOW_METHODS=["GET","POST","PUT"]
 ```
 :::
 
-###  LANGFLOW_ACCESS_* {#session-cookie-hardening}
+### LANGFLOW_ACCESS_* and LANGFLOW_REFRESH_* {#session-cookie-hardening}
 
-For a shared or public deployment served over HTTPS, harden the access-token cookie. These default to permissive values for local HTTP development and for the current frontend, which reads the access token in JavaScript.
+For a shared or public deployment served over HTTPS, harden the session cookies. These default to values that support local HTTP development and same-site deployments. The current frontend reads the access token in JavaScript, while the refresh token remains `HttpOnly`.
 
-The refresh-token cookie is `HttpOnly` + `Secure` + `SameSite` by default.
+Set both `LANGFLOW_ACCESS_SECURE` and `LANGFLOW_REFRESH_SECURE` to `True` for HTTPS deployments. Cross-site HTTPS deployments must also set `LANGFLOW_REFRESH_SAME_SITE=none`.
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
 | `LANGFLOW_ACCESS_SECURE` | Boolean | `False` | When `true`, the `access_token_lf` cookie is sent only over HTTPS. Recommended `true` for any HTTPS deployment. |
 | `LANGFLOW_ACCESS_HTTPONLY` | Boolean | `False` | When `true`, the `access_token_lf` cookie is not readable by JavaScript. The default is `false` because the bundled frontend currently reads this cookie in JavaScript. |
 | `LANGFLOW_ACCESS_SAME_SITE` | String | `lax` | The `SameSite` attribute of the access-token cookie (`lax`, `strict`, or `none`). |
+| `LANGFLOW_REFRESH_SECURE` | Boolean | `False` | When `true`, the `refresh_token_lf` cookie is sent only over HTTPS. Set this to `true` for any HTTPS deployment. |
+| `LANGFLOW_REFRESH_HTTPONLY` | Boolean | `True` | When `true`, the `refresh_token_lf` cookie is not readable by JavaScript. |
+| `LANGFLOW_REFRESH_SAME_SITE` | String | `lax` | The `SameSite` attribute of the refresh-token cookie (`lax`, `strict`, or `none`). |
 
 ### LANGFLOW_RATE_LIMIT_* {#login-rate-limiting}
 
@@ -504,12 +507,12 @@ For more information, see [Docker image defaults](/deployment-docker#docker-imag
 
 Enable these flags when untrusted users can build flows on this server.
 
-The `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` and `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS` flags are _complementary_.
-`LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false` blocks user-authored component code, but built-in code-execution components still pass that check because their class code is trusted. Set `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true` to block those built-in components as well.
+The `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` and `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS` flags support two deployment modes.
+`LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false` blocks user-authored component code and registered built-in code-execution components at runtime. Set `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true` independently when custom components should remain enabled but built-in code execution should be disabled.
 
 To enable these flags, set the following:
 
-* `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`: blocks user-authored component code. See [Block custom components](/deployment-block-custom-components).
+* `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`: blocks user-authored component code and registered built-in code-execution components. See [Block custom components](/deployment-block-custom-components).
 * `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true`: blocks built-in code-execution components.
 * `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true`: confines built-in file access to the upload sandbox.
 * `LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true`: tightens Docker MCP server arguments.

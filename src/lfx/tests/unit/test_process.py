@@ -67,7 +67,7 @@ def test_apply_tweaks_blocks_code_named_field():
 
     with patch("lfx.processing.process.logger") as mock_logger:
         apply_tweaks(node, {"code": "attempted_injection"})
-        mock_logger.warning.assert_called_once_with("Security: refusing to override code field 'code' via tweaks.")
+        mock_logger.warning.assert_called_once_with("Security: refusing to override protected field 'code' via tweaks.")
 
     assert node["data"]["node"]["template"]["code"]["value"] == "original_code"
 

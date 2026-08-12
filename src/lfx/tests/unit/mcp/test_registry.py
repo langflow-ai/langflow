@@ -45,6 +45,60 @@ class TestLoadRegistry:
         assert "version" not in registry
 
 
+class TestSearchRegistryQueryFilter:
+    """query= must match display_name and description, not just the class name.
+
+    Regression: SQLComponent's display_name is "SQL Database" and ChatInput's
+    is "Chat Input" — a natural-language query like "SQL Database" or "Chat
+    Input" is not a substring of the no-space class name (sqlcomponent /
+    chatinput), so callers searching by the name they actually see in the UI
+    got zero results even though the component exists.
+    """
+
+    def test_query_matches_display_name_with_spaces(self) -> None:
+        registry = {
+            "SQLComponent": {
+                "template": {},
+                "category": "data",
+                "display_name": "SQL Database",
+            },
+        }
+        names = {r["type"] for r in search_registry(registry, query="SQL Database")}
+        assert "SQLComponent" in names
+
+    def test_query_matches_description(self) -> None:
+        registry = {
+            "WebSearch": {
+                "template": {},
+                "category": "tools",
+                "display_name": "Web Search",
+                "description": "Search the web for results.",
+            },
+        }
+        names = {r["type"] for r in search_registry(registry, query="search the web")}
+        assert "WebSearch" in names
+
+    def test_query_still_matches_class_name(self) -> None:
+        """Regression: name-based matching must keep working alongside the new fields."""
+        registry = {
+            "ChatInput": {"template": {}, "category": "inputs", "display_name": "Chat Input"},
+            "Agent": {"template": {}, "category": "agents", "display_name": "Agent"},
+        }
+        names = {r["type"] for r in search_registry(registry, query="chatinput")}
+        assert names == {"ChatInput"}
+
+    def test_query_no_match_excludes_component(self) -> None:
+        registry = {
+            "SQLComponent": {
+                "template": {},
+                "category": "data",
+                "display_name": "SQL Database",
+            },
+        }
+        names = {r["type"] for r in search_registry(registry, query="nonexistent")}
+        assert names == set()
+
+
 class TestSearchRegistryCategoryFilter:
     async def test_category_filter_returns_matching_components(self) -> None:
         """search_registry(category=...) must return only components from that category."""

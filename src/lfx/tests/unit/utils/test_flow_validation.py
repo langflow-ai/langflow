@@ -1,6 +1,7 @@
 """Unit tests for LFX flow validation helpers."""
 
 import json
+import re
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
@@ -8,7 +9,9 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from lfx.utils.flow_validation import (
     CODE_EXECUTION_COMPONENT_TYPES,
+    CODE_EXECUTION_FIELD_NAMES,
     FLOW_REFERENCE_COMPONENT_TYPES,
+    PROTECTED_TWEAK_FIELDS_BY_COMPONENT,
     CustomComponentValidationError,
     PublicFlowValidationError,
     collect_component_code_lookups,
@@ -58,6 +61,7 @@ async def test_ensure_component_hash_lookups_loaded_surfaces_loader_failures(mon
         settings=SimpleNamespace(allow_custom_components=False),
     )
     monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    monkeypatch.setattr(component_cache, "all_types_dict", None)
     monkeypatch.setattr(component_cache, "type_to_current_hash", None)
 
     with (
@@ -68,6 +72,237 @@ async def test_ensure_component_hash_lookups_loaded_surfaces_loader_failures(mon
         pytest.raises(RuntimeError, match="component import failed"),
     ):
         await ensure_component_hash_lookups_loaded()
+
+
+@pytest.mark.asyncio
+async def test_ensure_component_hash_lookups_loaded_force_loads_in_permissive_mode(monkeypatch):
+    """Caller-specific policy can require hashes even when custom components are globally enabled."""
+    from lfx.interface.components import component_cache
+    from lfx.utils import flow_validation as fv
+
+    trusted_code = "# trusted component"
+    trusted_hash = fv._compute_code_hash(trusted_code)
+    all_types_dict = {
+        "inputs": {
+            "ChatInput": {
+                "metadata": {"code_hash": trusted_hash},
+                "template": {"code": {"value": trusted_code}},
+            }
+        }
+    }
+    settings_service = SimpleNamespace(settings=SimpleNamespace(allow_custom_components=True))
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    monkeypatch.setattr(component_cache, "all_types_dict", None)
+    monkeypatch.setattr(component_cache, "type_to_current_hash", None)
+    monkeypatch.setattr(component_cache, "all_known_hashes", None)
+    monkeypatch.setattr(component_cache, "code_by_hash", None)
+
+    async def load_components(_settings_service):
+        component_cache.all_types_dict = all_types_dict
+        return all_types_dict
+
+    monkeypatch.setattr("lfx.interface.components.get_and_cache_all_types_dict", load_components)
+
+    lookups = await ensure_component_hash_lookups_loaded(force=True)
+
+    assert lookups == {"ChatInput": {trusted_hash}}
+    assert component_cache.code_by_hash == {trusted_hash: trusted_code}
+
+
+@pytest.mark.asyncio
+async def test_prepare_admin_only_flow_build_blocks_modified_known_component(monkeypatch):
+    """A regular user cannot relabel modified code as a built-in component in admin-only mode."""
+    from lfx.utils import flow_validation as fv
+
+    trusted_code = "# trusted ChatInput code"
+    trusted_hash = fv._compute_code_hash(trusted_code)
+    monkeypatch.setattr(
+        fv,
+        "ensure_component_hash_lookups_loaded",
+        AsyncMock(return_value={"ChatInput": {trusted_hash}}),
+    )
+
+    flow = {"nodes": [_node("custom", "ChatInput", "# modified code")], "edges": []}
+    with pytest.raises(CustomComponentValidationError, match="outdated components"):
+        await fv.prepare_admin_only_flow_build(flow)
+
+
+@pytest.mark.asyncio
+async def test_prepare_admin_only_flow_build_substitutes_server_source(monkeypatch):
+    """Even a matching request hash is replaced with the server's source before build."""
+    from lfx.utils import flow_validation as fv
+
+    submitted_code = "# request bytes with a matching truncated hash"
+    trusted_code = "# server-trusted component source"
+    monkeypatch.setattr(fv, "_compute_code_hash", lambda _code: "same-hash")
+    monkeypatch.setattr(
+        fv,
+        "ensure_component_hash_lookups_loaded",
+        AsyncMock(return_value={"ChatInput": {"same-hash"}}),
+    )
+    monkeypatch.setattr(fv, "get_trusted_code_for_validation", lambda _code: trusted_code)
+
+    flow = {"nodes": [_node("known", "ChatInput", submitted_code)], "edges": []}
+    sanitized = await fv.prepare_admin_only_flow_build(flow)
+
+    assert sanitized is not None
+    assert sanitized["nodes"][0]["data"]["node"]["template"]["code"]["value"] == trusted_code
+    assert flow["nodes"][0]["data"]["node"]["template"]["code"]["value"] == submitted_code
+
+
+@pytest.mark.asyncio
+async def test_prepare_admin_only_flow_build_fails_closed_without_trusted_source(monkeypatch):
+    """A matching hash is insufficient when the server cannot recover trusted source bytes."""
+    from lfx.utils import flow_validation as fv
+
+    code = "# known hash"
+    code_hash = fv._compute_code_hash(code)
+    monkeypatch.setattr(
+        fv,
+        "ensure_component_hash_lookups_loaded",
+        AsyncMock(return_value={"ChatInput": {code_hash}}),
+    )
+    monkeypatch.setattr(fv, "get_trusted_code_for_validation", lambda _code: None)
+
+    flow = {"nodes": [_node("known", "ChatInput", code)], "edges": []}
+    with pytest.raises(CustomComponentValidationError, match="no trusted server component"):
+        await fv.prepare_admin_only_flow_build(flow)
+
+
+@pytest.mark.asyncio
+async def test_prepare_flow_build_for_user_keeps_code_interpreter_policy_cumulative(monkeypatch):
+    """Admin-only sanitization must not disable the separate code-interpreter gate."""
+    from lfx.utils import flow_validation as fv
+
+    code = "print('builtin component')"
+    code_hash = fv._compute_code_hash(code)
+    settings_service = SimpleNamespace(
+        settings=SimpleNamespace(
+            allow_custom_components=True,
+            block_code_interpreter_components=True,
+            custom_component_admin_only=True,
+        )
+    )
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    monkeypatch.setattr(
+        fv,
+        "ensure_component_hash_lookups_loaded",
+        AsyncMock(return_value={"PythonREPLComponent": {code_hash}}),
+    )
+
+    with pytest.raises(CustomComponentValidationError, match="code-execution components are not allowed"):
+        await fv.prepare_flow_build_for_user(_code_interpreter_raw_graph(), is_superuser=False)
+
+
+def _malformed_inline_graphs() -> list[dict]:
+    return [
+        {"nodes": [["not-a-node"]], "edges": []},
+        {"nodes": {}, "edges": []},
+        {"nodes": None, "edges": []},
+        {
+            "nodes": [
+                {
+                    "id": "wrapper",
+                    "data": {
+                        "type": "GroupNode",
+                        "node": {"flow": {"data": "not-flow-data"}},
+                    },
+                }
+            ],
+            "edges": [],
+        },
+        {
+            "nodes": [
+                {
+                    "id": "wrapper",
+                    "data": {
+                        "type": "GroupNode",
+                        "node": {"flow": {"data": {"nodes": {}}}},
+                    },
+                }
+            ],
+            "edges": [],
+        },
+        {
+            "nodes": [
+                {
+                    "id": "bad-template",
+                    "data": {
+                        "type": "ChatInput",
+                        "node": {"template": "not-a-template"},
+                    },
+                }
+            ],
+            "edges": [],
+        },
+    ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("flow", _malformed_inline_graphs())
+async def test_prepare_flow_build_for_user_maps_malformed_shapes_to_policy_error(monkeypatch, flow):
+    """The cumulative async gate fails closed for malformed top-level and nested request shapes."""
+    from lfx.utils import flow_validation as fv
+
+    settings_service = SimpleNamespace(
+        settings=SimpleNamespace(
+            allow_custom_components=True,
+            block_code_interpreter_components=True,
+            custom_component_admin_only=True,
+        )
+    )
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    monkeypatch.setattr(fv, "ensure_component_hash_lookups_loaded", AsyncMock(return_value={}))
+
+    with pytest.raises(CustomComponentValidationError):
+        await fv.prepare_flow_build_for_user(flow, is_superuser=False)
+
+
+@pytest.mark.parametrize("flow", _malformed_inline_graphs())
+def test_prepare_flow_build_for_user_from_cache_maps_malformed_shapes_to_policy_error(monkeypatch, flow):
+    """The synchronous V2 gate maps malformed payloads to the normal policy error type."""
+    from lfx.utils import flow_validation as fv
+
+    settings_service = SimpleNamespace(
+        settings=SimpleNamespace(
+            allow_custom_components=True,
+            block_code_interpreter_components=True,
+            custom_component_admin_only=True,
+        )
+    )
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", dict)
+
+    with pytest.raises(CustomComponentValidationError):
+        fv.prepare_flow_build_for_user_from_cache(flow, is_superuser=False)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "nodes",
+    [
+        [["not-a-node"]],
+        [{"id": "bad", "data": "not-node-data"}],
+        [
+            {
+                "id": "wrapper",
+                "data": {
+                    "id": "wrapper",
+                    "type": "GroupNode",
+                    "node": {"flow": {"data": {"nodes": [["not-a-nested-node"]]}}},
+                },
+            }
+        ],
+    ],
+)
+async def test_prepare_admin_only_flow_build_maps_malformed_nodes_to_policy_error(monkeypatch, nodes):
+    """Malformed top-level and nested shapes fail closed without leaking TypeError/AttributeError."""
+    from lfx.utils import flow_validation as fv
+
+    monkeypatch.setattr(fv, "ensure_component_hash_lookups_loaded", AsyncMock(return_value={}))
+
+    with pytest.raises(CustomComponentValidationError, match="custom components are not allowed"):
+        await fv.prepare_admin_only_flow_build({"nodes": nodes, "edges": []})
 
 
 def test_validate_flow_for_current_settings_requires_settings_service(monkeypatch):
@@ -626,3 +861,54 @@ def test_block_code_interpreter_components_detects_nested_flow(monkeypatch):
 
     with pytest.raises(CustomComponentValidationError, match="code-execution components are not allowed"):
         validate_flow_for_current_settings(graph)
+
+
+# --- Frontend mirror parity -------------------------------------------------
+# The parameters panel must not offer an "API" toggle on a field that
+# apply_tweaks would refuse, so the refusal rules are mirrored in
+# src/frontend/src/modals/apiModal/utils/api-exposure-rules.ts. The mirror is
+# UX only — the backend stays the enforcement point — but a mirror that drifts
+# silently brings the bug back, so parity is asserted here.
+
+_FRONTEND_MIRROR = Path(__file__).parents[4] / "frontend/src/modals/apiModal/utils/api-exposure-rules.ts"
+
+
+def _strip_line_comments(source: str) -> str:
+    return "\n".join(line.split("//")[0] for line in source.splitlines())
+
+
+def _parse_ts_string_set(source: str, const_name: str) -> set[str]:
+    """Extract the string literals of `export const <const_name> ... new Set([...])`."""
+    marker = f"export const {const_name}"
+    start = source.index(marker)
+    open_bracket = source.index("[", start)
+    close_bracket = source.index("]", open_bracket)
+    return set(re.findall(r'"([^"]+)"', source[open_bracket:close_bracket]))
+
+
+def _parse_ts_protected_fields(source: str) -> dict[str, set[str]]:
+    """Extract `{ Component: new Set([...]) }` from the protected-fields record."""
+    start = source.index("export const PROTECTED_TWEAK_FIELDS_BY_COMPONENT")
+    body = source[source.index("{", source.index("=", start)) : source.index("};", start)]
+    return {
+        component: set(re.findall(r'"([^"]+)"', fields))
+        for component, fields in re.findall(r"(\w+):\s*new Set\(\[([^\]]*)\]\)", body)
+    }
+
+
+@pytest.mark.skipif(not _FRONTEND_MIRROR.exists(), reason="frontend package not present (standalone lfx checkout)")
+def test_frontend_mirrors_tweak_refusal_rules():
+    """The frontend mirror of the tweak-refusal rules must match this module exactly.
+
+    Failing here means the UI and the backend disagree about which fields can be
+    exposed as API inputs: either the UI is about to offer a field apply_tweaks
+    refuses, or it hides one that is legitimately tweakable. Update
+    api-exposure-rules.ts (and this test's expectations stay automatic).
+    """
+    source = _strip_line_comments(_FRONTEND_MIRROR.read_text(encoding="utf-8"))
+
+    assert _parse_ts_string_set(source, "CODE_EXECUTION_COMPONENT_TYPES") == set(CODE_EXECUTION_COMPONENT_TYPES)
+    assert _parse_ts_string_set(source, "CODE_EXECUTION_FIELD_NAMES") == set(CODE_EXECUTION_FIELD_NAMES)
+    assert _parse_ts_protected_fields(source) == {
+        component: set(fields) for component, fields in PROTECTED_TWEAK_FIELDS_BY_COMPONENT.items()
+    }

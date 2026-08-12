@@ -149,6 +149,29 @@ jobs:
           fi
           echo "✅ No duplicate tag found"
 
+      - name: Validate Tag Matches Project Version
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+
+          TAG_VERSION="${RELEASE_TAG#v}"
+          PROJECT_VERSION="$(
+            git show "${RELEASE_TAG}:pyproject.toml" |
+              python3 -c 'import sys, tomllib; print(tomllib.load(sys.stdin.buffer)["project"]["version"])'
+          )"
+
+          if [ "$TAG_VERSION" != "$PROJECT_VERSION" ]; then
+            echo "❌ Error: Release tag version does not match pyproject.toml."
+            echo "   Tag version: $TAG_VERSION"
+            echo "   Project version: $PROJECT_VERSION"
+            echo ""
+            echo "Run 'make patch v=$TAG_VERSION', commit the generated changes, and recreate the tag."
+            exit 1
+          fi
+
+          echo "✅ Release tag version matches pyproject.toml: $PROJECT_VERSION"
+
   validate-dependencies:
     name: Validate Release Dependencies
     runs-on: ubuntu-latest
@@ -269,6 +292,10 @@ jobs:
             local label="$1"
             local base_version="$2"
             local versions_file="$3"
+            if grep -Fxq "$base_version" "$versions_file"; then
+              echo "${label}: final ${base_version} is already published; refusing to derive another RC for a finalized release line." >&2
+              exit 1
+            fi
             local rc_number
             rc_number=$(uv run ./scripts/ci/langflow_pre_release_tag.py "$base_version" --print-rc-number - < "$versions_file")
             echo "${label}: next rc number for ${base_version} is ${rc_number}"

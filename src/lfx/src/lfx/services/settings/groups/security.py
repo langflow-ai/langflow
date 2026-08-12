@@ -36,8 +36,8 @@ class SecuritySettings(BaseModel):
     """SSRF validation for CONNECTOR components that take a tenant-controlled host/URL:
     vector stores (Chroma/Qdrant/Elasticsearch/OpenSearch/Milvus/Weaviate/Supabase/Upstash/
     ClickHouse), the SQL Database components, the Glean and AstraDB-CQL tools, model-provider
-    model discovery (LiteLLM/HuggingFace/xAI/DeepSeek/Groq/watsonx), and the Ollama / LM Studio /
-    Home Assistant base-URL fields.
+    model discovery (LiteLLM/HuggingFace/xAI/DeepSeek/Groq/watsonx), the Ollama / LM Studio /
+    Home Assistant base-URL fields, the A2A Agent agent URL, and the PaddleOCR base URL.
 
     Default True: connector host validation follows ssrf_protection_enabled / ssrf_allowed_hosts
     so tenant-controlled connector URLs cannot reach internal/cloud-metadata hosts by default.
@@ -67,7 +67,7 @@ class SecuritySettings(BaseModel):
     # Custom Component Security
     allow_custom_components: bool = True
     """If set to False, blocks execution of components whose code does not match a known
-    server template.
+    server template and disables registered built-in code-execution components at runtime.
 
     The server validates node code against its component template cache;
     when the cache is not yet loaded (e.g., during startup), all flow execution is blocked
@@ -110,18 +110,17 @@ class SecuritySettings(BaseModel):
     run custom component code permitted by allow_custom_components."""
 
     block_code_interpreter_components: bool = False
-    """If set to True, blocks execution of any flow that contains a built-in
-    arbitrary-code-execution component (Python Interpreter, Python REPL/Code tools, and the
-    Smart Transform / lambda evaluator).
+    """If set to True, blocks built-in components that execute user- or model-supplied
+    Python, including Python Interpreter/REPL/Function, Smart Transform, CSV Agent,
+    CodeAct, Cuga, and OpenDsStar.
 
-    These components are official, so their class-code hash is valid and they pass the
-    ``allow_custom_components=False`` policy — yet they execute arbitrary Python supplied
-    through their *input fields*, which is equivalent to letting users author custom code.
+    The policy is enforced during flow validation and again during component and tool
+    execution. ``LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`` also disables these registered
+    code-execution components while blocking user-authored component code. Set this flag
+    independently when custom components should remain allowed but built-in code execution
+    should not.
 
-    Defaults to False to preserve existing behavior. Multi-tenant / untrusted-user
-    deployments that disallow user-authored components should set this to True (alongside
-    ``LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false``) so these code-execution primitives cannot be
-    used to break out of the component allow-list."""
+    Defaults to False to preserve existing single-tenant behavior."""
 
     restrict_local_file_access: bool = False
     """If set to True, the built-in file-reading components (File, Directory, JSON/CSV-to-Data)

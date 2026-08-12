@@ -66,9 +66,14 @@ COPY --from=builder --chown=1000 /app/.venv /app/.venv
 
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
+ENV HOME=/app/data
 ENV BASH_ENV="" \
     ENV="" \
     PROMPT_COMMAND=""
+
+RUN mkdir -p /app/data \
+    && chown -R 1000:0 /app/data \
+    && chmod -R g+rwX /app/data
 
 LABEL org.opencontainers.image.title=lfx
 LABEL org.opencontainers.image.authors=['Langflow']
