@@ -31,6 +31,11 @@ def _source(adapter, *, mode: str, background: bool):
 
     ``background=True`` mirrors the production background call site, which passes
     ``execution_timeout=None``.
+
+    ``expose_error_details=True`` mirrors a flow owner running their own flow, which is
+    what the production call sites pass for that case. Without it the terminal error is
+    replaced with the generic client-facing string, and the ceiling assertion below could
+    no longer tell a timeout apart from any other failure.
     """
     extra = {"execution_timeout": None} if background else {}
 
@@ -42,6 +47,7 @@ def _source(adapter, *, mode: str, background: bool):
             background_tasks=SimpleNamespace(add_task=lambda *_a, **_k: None),
             parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode=mode),
             current_user=SimpleNamespace(id=uuid4()),
+            expose_error_details=True,
             **extra,
         ):
             yield frame, event_type
