@@ -18,6 +18,7 @@ from fastapi import HTTPException, status
 from langflow.services.authorization.audit import (
     _AUDIT_BATCH_MAX,
     _AUDIT_QUEUE_MAX,
+    AuditPersistenceError,
     _audit_writer_loop,
     _AuditEntry,
     _ensure_audit_writer_started,
@@ -25,6 +26,7 @@ from langflow.services.authorization.audit import (
     _split_obj,
     audit_decision,
     drain_pending_audit_writes,
+    get_audit_producer_health,
 )
 from langflow.services.authorization.audit import (
     AUDIT_ALLOW as _AUDIT_ALLOW,
@@ -86,6 +88,7 @@ __all__ = [
     "_AUDIT_QUEUE_MAX",
     "_AUDIT_SKIP",
     "_OWNER_CONTEXT_KEYS",
+    "AuditPersistenceError",
     "_AuditEntry",
     "_audit_writer_loop",
     "_auth_context",
@@ -112,6 +115,7 @@ __all__ = [
     "ensure_variable_permission",
     "ensure_voice_permission",
     "filter_visible_resources",
+    "get_audit_producer_health",
     "get_authorization_service",
     "get_settings_service",
     "permission_denied_to_http",
