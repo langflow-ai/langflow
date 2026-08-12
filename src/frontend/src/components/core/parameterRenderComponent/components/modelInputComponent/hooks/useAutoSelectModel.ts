@@ -1,4 +1,4 @@
-import { type MutableRefObject, useEffect } from "react";
+import { useEffect } from "react";
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import type { ModelProviderWithStatus } from "@/controllers/API/queries/models/use-get-model-providers";
 import { matchesModelIdentity } from "../helpers/model-option-identity";
@@ -16,15 +16,13 @@ export interface UseAutoSelectModelParams {
    * fetch must not be read as "the saved model is gone".
    */
   modelStatusIsReliable: boolean;
-  hasProcessedEmptyRef: MutableRefObject<boolean>;
 }
 
 /**
- * Auto-selects the first available model when the value is empty or the saved
- * value went stale — its provider is known but no longer offers the model,
- * whether it was disconnected or the model deactivated. Extracted from
- * ModelInputComponent (LE-1736 W24); the once-guard ref is shared with
- * deriveSelectedModel (W23) and owned by the component.
+ * Replaces a saved value that went stale — its provider is known but no longer
+ * offers the model, whether it was disconnected or the model deactivated. An
+ * empty value is left empty (LE-2168). Extracted from ModelInputComponent
+ * (LE-1736 W24).
  */
 export function useAutoSelectModel({
   flatOptions,
@@ -33,7 +31,6 @@ export function useAutoSelectModel({
   isConnectionMode,
   providers,
   modelStatusIsReliable,
-  hasProcessedEmptyRef,
 }: UseAutoSelectModelParams): void {
   useEffect(() => {
     if (
@@ -60,8 +57,6 @@ export function useAutoSelectModel({
       }
     }
 
-    if (hasProcessedEmptyRef.current && !isSavedValueStale) return;
-
     // Only a stale selection is replaced: an unvalidated env-harvested credential
     // already marks a provider enabled, so filling an empty field pre-selected one (LE-2168).
     if (!isSavedValueStale) return;
@@ -77,7 +72,6 @@ export function useAutoSelectModel({
       },
     ];
     handleOnNewValue({ value: newValue });
-    hasProcessedEmptyRef.current = true;
   }, [
     flatOptions,
     value,

@@ -286,6 +286,23 @@ export async function openAddSourcesModal(page: LangflowPage) {
   });
 }
 
+/**
+ * Picks an embedding model in the create modal. The field is required and is no
+ * longer pre-filled: an empty model input stays empty so a provider enabled by an
+ * env-harvested credential is never chosen on the user's behalf (LE-2168).
+ */
+export async function selectEmbeddingModel(page: LangflowPage) {
+  const combobox = page.getByRole("combobox", { name: /embedding model/i });
+  await expect(combobox).toBeVisible({ timeout: TIMEOUTS.standard });
+  await combobox.click();
+  const option = page.getByTestId("OpenAI-text-embedding-3-small-option");
+  await expect(option).toBeVisible({ timeout: TIMEOUTS.standard });
+  await option.click();
+  await expect(combobox).toContainText("text-embedding-3-small", {
+    timeout: TIMEOUTS.standard,
+  });
+}
+
 export async function attachFiles(page: LangflowPage, paths: string[]) {
   await page.getByTestId("kb-source-name-input").fill("review_kb");
   await page.locator("#file-input").setInputFiles(paths);

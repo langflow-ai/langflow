@@ -1,5 +1,4 @@
 import { renderHook } from "@testing-library/react";
-import type { MutableRefObject } from "react";
 import { useAutoSelectModel } from "../useAutoSelectModel";
 
 /**
@@ -32,7 +31,6 @@ const renderAutoSelect = (
   overrides: Partial<Parameters<typeof useAutoSelectModel>[0]> = {},
 ) => {
   const handleOnNewValue = jest.fn();
-  const hasProcessedEmptyRef: MutableRefObject<boolean> = { current: false };
 
   renderHook(() =>
     useAutoSelectModel({
@@ -42,7 +40,6 @@ const renderAutoSelect = (
       isConnectionMode: false,
       providers: PROVIDERS,
       modelStatusIsReliable: true,
-      hasProcessedEmptyRef,
       ...overrides,
     }),
   );
