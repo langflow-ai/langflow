@@ -314,6 +314,7 @@ def update_model_options_in_build_config(
     # The frontend surfaces a "configure" wrench next to the trigger when it
     # sees this flag so the user can enable the provider without silently
     # losing their selection.
+    replaced_unusable_selection = False
     if (
         isinstance(current_value, list)
         and current_value
@@ -330,6 +331,7 @@ def update_model_options_in_build_config(
         if not saved_provider_allowed:
             logger.debug("Dropping saved model from policy-hidden provider %s", saved_provider)
             build_config[model_field_name]["value"] = None
+            replaced_unusable_selection = True
         elif not already_present:
             # When the ModelInput declares filters (e.g. Agent passes
             # ``filters={"tool_calling": True}``) and the saved selection
@@ -350,6 +352,7 @@ def update_model_options_in_build_config(
                     filters,
                 )
                 build_config[model_field_name]["value"] = None
+                replaced_unusable_selection = True
             else:
                 injected = {**saved, "metadata": {**(saved.get("metadata") or {}), "not_enabled_locally": True}}
                 build_config[model_field_name]["options"] = [*options_list, injected]
@@ -432,11 +435,14 @@ def update_model_options_in_build_config(
                         default_model = opt
                         break
 
-            # If user's default not found, fallback to first option
-            if not default_model and options:
+            # A bare initial load is not a configuration act, and an unvalidated credential
+            # harvested from the environment already marks a provider enabled, so falling
+            # back to ``options[0]`` there pre-selects a provider the user never set up
+            # (LE-2168). A user-triggered update or a just-replaced selection still fills.
+            user_triggered = field_name is not None
+            if not default_model and options and (user_triggered or replaced_unusable_selection):
                 default_model = options[0]
 
-            # Set the value
             if default_model:
                 build_config[model_field_name]["value"] = [default_model]
 

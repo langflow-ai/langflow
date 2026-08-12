@@ -9,6 +9,7 @@ from uuid import uuid4
 import pytest
 from langflow.services.authorization.service import LangflowAuthorizationService
 from lfx.services.authorization import ShareRuleSnapshot
+from lfx.services.authorization import base as authz_base
 from lfx.services.authorization.base import BaseAuthorizationService
 from lfx.services.authorization.service import AuthorizationService as LfxDefaultService
 
@@ -27,6 +28,38 @@ async def test_base_class_default_is_false():
     """The class-level constant defaults False so subclasses must opt in."""
     assert BaseAuthorizationService.SUPPORTS_CROSS_USER_FETCH is False
     assert BaseAuthorizationService.SUPPORTS_API_KEY_SCOPES is False
+
+
+@pytest.mark.anyio
+async def test_public_principal_contract_is_explicit_and_defaults_deny():
+    """Anonymous authorization is a separate plugin contract, never a fake user allow-all path."""
+    principal_type = getattr(authz_base, "AuthorizationPrincipal", None)
+    request_type = getattr(authz_base, "PublicAuthorizationRequest", None)
+    action_type = getattr(authz_base, "PublicResourceAction", None)
+
+    assert principal_type is not None
+    assert request_type is not None
+    assert action_type is not None
+
+    first = principal_type.public_anonymous()
+    second = principal_type.public_anonymous()
+    assert first == second
+    assert first.user_id is None
+    assert first.actor_type == "anonymous_public"
+
+    request = request_type(
+        principal=first,
+        resource_type="flow",
+        resource_id=uuid4(),
+        action=action_type.EXECUTE,
+        domain_hint="*",
+        request_host="public.example.test",
+        grant_source="legacy_access_type",
+    )
+    service = LfxDefaultService()
+    assert await service.supports_public_principals() is False
+    assert await service.resolve_public_tenant(request) is None
+    assert await service.enforce_public(request, tenant="*") is False
 
 
 @pytest.mark.anyio

@@ -16,6 +16,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
+import CustomResourceShareAction from "@/customization/components/custom-resource-share-action";
 import enTranslations from "@/locales/en.json";
 import { formatFileSize } from "@/utils/stringManipulation";
 import { FILE_ICONS } from "@/utils/styleUtils";
@@ -143,6 +144,12 @@ function KnowledgeBaseRowActions({
             <ForwardedIconComponent name="Layers" className="mr-2 h-4 w-4" />
             {t("knowledge.action.viewChunks")}
           </DropdownMenuItem>
+          <CustomResourceShareAction
+            resourceId={knowledgeBase.id}
+            resourceType="knowledge_base"
+            resourceName={knowledgeBase.name}
+            display="menu"
+          />
           {isBusy ? (
             <DropdownMenuItem
               disabled={isCancelling}

@@ -163,14 +163,18 @@ async def test_read_variables(client: AsyncClient, generic_variable, credential_
     assert credential_variable["name"] in [r["name"] for r in result]
 
     # Assert that credentials are not decrypted and generic are decrypted
-    credential_vars = [r for r in result if r["type"] == CREDENTIAL_TYPE]
-    generic_vars = [r for r in result if r["type"] == GENERIC_TYPE]
+    credential_read = next(r for r in result if r["name"] == credential_variable["name"])
+    generic_read = next(r for r in result if r["name"] == generic_variable["name"])
 
     # Credential variables should remain encrypted (value should be different)
-    assert all(c["value"] != credential_variable["value"] for c in credential_vars)
+    assert credential_read["type"] == CREDENTIAL_TYPE
+    assert credential_read["value"] != credential_variable["value"]
+    assert credential_read["has_value"] is True
 
     # Generic variables should be decrypted (value should match original)
-    assert all(g["value"] == generic_variable["value"] for g in generic_vars)
+    assert generic_read["type"] == GENERIC_TYPE
+    assert generic_read["value"] == generic_variable["value"]
+    assert generic_read["has_value"] is True
 
 
 @pytest.mark.usefixtures("active_user")

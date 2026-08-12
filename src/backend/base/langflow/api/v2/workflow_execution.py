@@ -34,6 +34,7 @@ from lfx.graph.checkpoint.store import CheckpointStore
 from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
+from lfx.observability import execution_protocol
 from lfx.schema.schema import InputValueRequest
 from lfx.schema.workflow import JobStatus, WorkflowExecutionResponse
 from lfx.workflow.adapters import StreamAdapter, StreamEvent
@@ -41,13 +42,16 @@ from lfx.workflow.adapters.langflow import WORKFLOW_OUTPUT_CAPTURE_EVENT, build_
 from lfx.workflow.converters import ParsedWorkflowRun, create_error_response, run_response_to_workflow_response
 
 from langflow.api.utils import extract_global_variables_from_headers
+from langflow.api.utils.execution_errors import caller_owns_flow, error_for_client
 from langflow.api.v1.schemas import FlowDataRequest, RunResponse
 from langflow.api.v2.workflow_validation import _validate_output_ids
+from langflow.api.warm_graph import warm_deepcopy
 from langflow.exceptions.api import WorkflowTimeoutError, WorkflowValidationError
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_job_service, get_memory_base_service, get_settings_service, get_task_service
+from langflow.services.warm_registry.service import flow_version
 
 # Configuration constants
 EXECUTION_TIMEOUT = 300  # 5 minutes default timeout for sync execution, used as a fallback
@@ -182,11 +186,16 @@ async def _stream_event_frames(
     parsed: ParsedWorkflowRun,
     current_user: UserRead,
     source_flow_id: UUID | None = None,
+    source_flow_owner_id: UUID | None = None,
     run_id: str | None = None,
     job_id: UUID | None = None,
     resume: dict | None = None,
     track_job_status: bool = True,
+    # Required, not defaulted: a default is how an unwired caller gets a confidently wrong
+    # label, which is the one thing the absent-rather-than-"unknown" rule exists to prevent.
+    protocol: str,
     emit_output_capture: bool = False,
+    expose_error_details: bool = False,
 ) -> AsyncIterator[tuple[bytes, str]]:
     """Run a flow via the v1 build-vertex loop, dispatch its events through ``adapter``.
 
@@ -231,42 +240,48 @@ async def _stream_event_frames(
     #   3. The buffer task's ``terminal_error_type`` check fires on either
     #      RUN_ERROR source, so a single drive() failure cannot result in a
     #      job marked COMPLETED.
-    drive_error: BaseException | None = None
+    drive_error: Exception | None = None
 
     async def drive() -> None:
         nonlocal drive_error
         try:
-            await asyncio.wait_for(
-                generate_flow_events(
-                    flow_id=flow_id,
-                    background_tasks=background_tasks,
-                    event_manager=event_manager,
-                    inputs=input_request,
-                    data=flow_data,
-                    files=parsed.files,
-                    stop_component_id=parsed.stop_component_id,
-                    start_component_id=parsed.start_component_id,
-                    # Persist vertex builds (keyed by ``run_id``) only for job-tracked
-                    # runs so a background job's status can be reconstructed later. Live
-                    # streams pass no ``run_id`` and keep the no-persist behavior.
-                    log_builds=run_id is not None,
-                    current_user=current_user,
-                    flow_name=flow_name,
-                    source_flow_id=source_flow_id,
-                    run_id=run_id,
-                    job_id=job_id,
-                    resume=resume,
-                    track_job_status=track_job_status,
-                    # The sync path applies tweaks before Graph construction; this loop
-                    # builds from the DB (or request data), so without this the streaming
-                    # and background paths silently drop request tweaks.
-                    tweaks=parsed.tweaks,
-                    # Anonymous serving runs are ephemeral: thread the no-persist
-                    # decision onto the graph so astore_message skips the DB write.
-                    persist_messages=parsed.persist_messages,
-                ),
-                timeout=execution_timeout,
-            )
+            # Bound here rather than in the enclosing generator: drive() runs as its own task, so
+            # the set/reset pair cannot straddle a generator suspension point and leak into the
+            # consumer task that resumes it.
+            with execution_protocol(protocol):
+                await asyncio.wait_for(
+                    generate_flow_events(
+                        flow_id=flow_id,
+                        background_tasks=background_tasks,
+                        event_manager=event_manager,
+                        inputs=input_request,
+                        data=flow_data,
+                        files=parsed.files,
+                        stop_component_id=parsed.stop_component_id,
+                        start_component_id=parsed.start_component_id,
+                        # Persist vertex builds (keyed by ``run_id``) only for job-tracked
+                        # runs so a background job's status can be reconstructed later. Live
+                        # streams pass no ``run_id`` and keep the no-persist behavior.
+                        log_builds=run_id is not None,
+                        current_user=current_user,
+                        flow_name=flow_name,
+                        source_flow_id=source_flow_id,
+                        source_flow_owner_id=source_flow_owner_id,
+                        run_id=run_id,
+                        job_id=job_id,
+                        resume=resume,
+                        track_job_status=track_job_status,
+                        # The sync path applies tweaks before Graph construction; this loop
+                        # builds from the DB (or request data), so without this the streaming
+                        # and background paths silently drop request tweaks.
+                        tweaks=parsed.tweaks,
+                        expose_error_details=expose_error_details,
+                        # Anonymous serving runs are ephemeral: thread the no-persist
+                        # decision onto the graph so astore_message skips the DB write.
+                        persist_messages=parsed.persist_messages,
+                    ),
+                    timeout=execution_timeout,
+                )
         except asyncio.CancelledError:
             raise
         except asyncio.TimeoutError:
@@ -368,7 +383,12 @@ async def _stream_event_frames(
         # captured an exception and no cooperative terminal error reached the
         # stream, emit the adapter's terminal error event(s) here.
         if drive_error is not None and not terminal_error_seen:
-            for event in adapter.error_events(drive_error):
+            client_error = (
+                drive_error
+                if isinstance(drive_error, WorkflowTimeoutError)
+                else error_for_client(drive_error, expose_details=expose_error_details)
+            )
+            for event in adapter.error_events(client_error):
                 if terminal_error_type is not None and event.type == terminal_error_type:
                     terminal_error_seen = True
                 yield _frame(event, seq)
@@ -427,6 +447,11 @@ def _execute_streaming_workflow(
             background_tasks=background_tasks,
             parsed=parsed,
             current_user=current_user,
+            source_flow_owner_id=flow.user_id,
+            # The live v2 stream. Which client sent it is a separate attribute, read from the
+            # X-Langflow-Client header, because the playground calls this same public endpoint.
+            protocol="v2",
+            expose_error_details=caller_owns_flow(flow, current_user),
         ):
             yield frame
 
@@ -444,6 +469,8 @@ async def execute_sync_workflow_with_timeout(
     background_tasks: BackgroundTasks,
     http_request: Request,
     checkpoint_store: CheckpointStore | None = None,
+    *,
+    expose_error_details: bool | None = None,
 ) -> WorkflowExecutionResponse:
     """Execute workflow with timeout protection.
 
@@ -456,6 +483,7 @@ async def execute_sync_workflow_with_timeout(
         http_request: The HTTP request object for extracting headers
         checkpoint_store: When provided, enables HITL checkpointing so a flow that
             pauses for human input returns a ``suspended`` response instead of failing.
+        expose_error_details: Override the owner-derived client error policy.
 
     Returns:
         WorkflowExecutionResponse with complete results
@@ -474,6 +502,7 @@ async def execute_sync_workflow_with_timeout(
                 background_tasks=background_tasks,
                 http_request=http_request,
                 checkpoint_store=checkpoint_store,
+                expose_error_details=expose_error_details,
             ),
             timeout=_resolve_execution_timeout(),
         )
@@ -481,24 +510,34 @@ async def execute_sync_workflow_with_timeout(
         raise WorkflowTimeoutError from e
 
 
-async def _persist_sync_result(job_service, job_id: UUID, workflow_response, flow_id) -> None:
-    """Best-effort cache of a completed sync run's outputs into ``Job.result``.
+async def _persist_sync_result(job_service, job_id: UUID, workflow_response, request_blob: dict, flow_id) -> None:
+    """Best-effort cache of a completed sync run's outputs + request for GET status.
 
-    Stores the same ``{component_id, ...ComponentOutput}`` list shape the background
-    runner writes, so a later GET status on this sync job_id rebuilds an identical
-    response via ``workflow_response_from_output_events``. The caller already holds
-    the response inline, so a persistence failure must never fail the run — it is
-    logged and swallowed.
+    Writes two things so a later GET status on this sync job_id rebuilds the SAME
+    response the caller received inline:
 
-    The run has already executed and succeeded upstream; this helper only caches
-    the finished result, so EVERY exception it can raise (serialization or the
-    ``set_result`` DB write — e.g. a SQLite ``OperationalError`` under lock
-    contention) is a persistence failure, never a workflow failure. Catch broadly
-    so such an error cannot escape to the caller's terminal ``except Exception`` and
-    be misreported as a failed run. ``asyncio.CancelledError`` is a ``BaseException``
-    and still propagates, so timeouts/disconnects are unaffected.
+    * ``job_metadata["request"]`` — the submit request (mirrors what the background
+      service persists). The GET completed-status path resolves the session from it
+      (``persisted_request.get("session_id")``); only the background service writes
+      this blob, so without it a sync GET would degrade ``session_id`` to the flow id.
+    * ``Job.result`` — the ``{component_id, ...ComponentOutput}`` list shape the
+      background runner stores, rebuilt by ``workflow_response_from_output_events``.
+
+    The request blob is written FIRST so the GET completed-status invariant holds: a
+    persisted ``Job.result`` always has its session alongside it. If the result write
+    then fails, GET falls back to vertex-build reconstruction (which resolves the
+    session independently) instead of serving a result with a flow-id session.
+
+    The caller gates this on ``sync_result_storage_enabled``. The run has already
+    executed and succeeded upstream, so EVERY exception this can raise (serialization
+    or a DB write — e.g. a SQLite ``OperationalError`` under lock contention) is a
+    persistence failure, never a workflow failure. Catch broadly so such an error
+    cannot escape to the caller's terminal ``except Exception`` and be misreported as
+    a failed run. ``asyncio.CancelledError`` is a ``BaseException`` and still
+    propagates, so timeouts/disconnects are unaffected.
     """
     try:
+        await job_service.update_job_metadata(job_id, {"request": request_blob})
         output_events = [
             {"component_id": component_id, **output.model_dump(mode="json")}
             for component_id, output in (workflow_response.outputs or {}).items()
@@ -516,6 +555,8 @@ async def execute_sync_workflow(
     background_tasks: BackgroundTasks,  # noqa: ARG001
     http_request: Request,
     checkpoint_store: CheckpointStore | None = None,
+    *,
+    expose_error_details: bool | None = None,
 ) -> WorkflowExecutionResponse:
     """Execute workflow synchronously and return complete results.
 
@@ -545,6 +586,7 @@ async def execute_sync_workflow(
         checkpoint_store: When provided, enables HITL checkpointing so a pausing flow
             returns a ``suspended`` response (carrying the human-input request) instead of
             running through. Off by default, so non-HITL callers are unchanged.
+        expose_error_details: Override the owner-derived client error policy.
 
     Returns:
         WorkflowExecutionResponse: Complete execution results with outputs and metadata
@@ -552,6 +594,9 @@ async def execute_sync_workflow(
     Raises:
         WorkflowValidationError: If flow data is None or graph build fails
     """
+    if expose_error_details is None:
+        expose_error_details = caller_owns_flow(flow, current_user)
+
     # Tweaks and chat input come straight from the parsed AG-UI request
     tweaks = parsed.tweaks
     session_id = parsed.session_id
@@ -559,7 +604,11 @@ async def execute_sync_workflow(
     # Validate flow data - this is a system error, not execution error
     if flow.data is None:
         msg = f"Flow {flow.id} has no data. The flow may be corrupted."
-        raise WorkflowValidationError(msg)
+        validation_error = WorkflowValidationError(msg)
+        if expose_error_details:
+            raise validation_error
+        client_error = error_for_client(validation_error, expose_details=False)
+        raise WorkflowValidationError(str(client_error)) from validation_error
 
     # Resolve request-level variables: body ``globals`` plus the legacy
     # X-LANGFLOW-GLOBAL-VAR-* headers (still used by the Responses API).
@@ -573,15 +622,28 @@ async def execute_sync_workflow(
     try:
         flow_id_str = str(flow.id)
         user_id = str(current_user.id)
-        # Use deepcopy to prevent mutation of the original flow.data
-        # process_tweaks modifies nested dictionaries in-place
-        graph_data = deepcopy(flow.data)
-        graph_data = process_tweaks(graph_data, tweaks, stream=False)
-        # Pass context to graph (similar to V1's simple_run_flow)
-        # This allows components to access request metadata via graph.context
-        graph = Graph.from_payload(
-            graph_data, flow_id=flow_id_str, user_id=user_id, flow_name=flow.name, context=context
-        )
+        # Opt-in warm fast-path: serve a deepcopy of the pre-built template
+        # instead of rebuilding. Cold-fall-back (None) for tweaks, request context/globals,
+        # or a HITL/checkpointed run — none of which fit a shared user-agnostic template.
+        graph = None
+        if not tweaks and context is None and checkpoint_store is None:
+            graph = await warm_deepcopy(
+                flow_id_str,
+                expected_version=flow_version(flow.updated_at),
+                user_id=user_id,
+                session_id=session_id,
+                stream=False,
+            )
+        if graph is None:
+            # Use deepcopy to prevent mutation of the original flow.data
+            # process_tweaks modifies nested dictionaries in-place
+            graph_data = deepcopy(flow.data)
+            graph_data = process_tweaks(graph_data, tweaks, stream=False)
+            # Pass context to graph (similar to V1's simple_run_flow)
+            # This allows components to access request metadata via graph.context
+            graph = Graph.from_payload(
+                graph_data, flow_id=flow_id_str, user_id=user_id, flow_name=flow.name, context=context
+            )
         # Serving-plane end-user scoping: an anonymous run is ephemeral, so mark the
         # graph non-persisting (astore_message honors this per component). Defaults
         # True for every other run.
@@ -595,7 +657,8 @@ async def execute_sync_workflow(
             graph.checkpointing_enabled = True
             graph.checkpoint_store = checkpoint_store
     except Exception as e:
-        msg = f"Failed to build graph from flow data: {e!s}"
+        client_error = error_for_client(e, expose_details=expose_error_details)
+        msg = f"Failed to build graph from flow data: {client_error!s}"
         raise WorkflowValidationError(msg) from e
 
     # Get terminal nodes - these are the outputs we want
@@ -614,28 +677,35 @@ async def execute_sync_workflow(
     _sync_run_error: str = ""
     _run_start = time.perf_counter()
     try:
-        task_result, execution_session_id = await job_service.execute_with_status(
-            job_id=job_id,
-            run_coro_func=run_graph_internal,
-            graph=graph,
-            flow_id=flow_id_str,
-            session_id=session_id,
-            inputs=_build_run_inputs(parsed),
-            outputs=terminal_node_ids,
-            stream=False,
-        )
-
-        # Fire memory-base auto-capture hook — non-blocking background effect.
-        try:
-            _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only; same run_id set on graph
-            await get_task_service().fire_and_forget_task(
-                get_memory_base_service().on_flow_output,
-                flow_id=flow.id,
-                session_id=execution_session_id,
-                job_id=_run_id_uuid,
+        with execution_protocol("v2"):
+            task_result, execution_session_id = await job_service.execute_with_status(
+                job_id=job_id,
+                run_coro_func=run_graph_internal,
+                graph=graph,
+                flow_id=flow_id_str,
+                session_id=session_id,
+                inputs=_build_run_inputs(parsed),
+                outputs=terminal_node_ids,
+                stream=False,
             )
-        except (RuntimeError, ValueError, OSError):
-            await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
+
+        # MemoryBase auto-capture resolves the watching owner's embedding and
+        # preprocessing credentials by ``flow_id``. Only an owner-equivalent
+        # execution principal may trigger that owner-scoped side effect. This
+        # shared executor is also used by PUBLIC/A2A and delegated-share runs;
+        # letting either caller schedule this hook would spend another user's
+        # credentials and persist into their private knowledge base.
+        if caller_owns_flow(flow, current_user):
+            try:
+                _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only; same run_id set on graph
+                await get_task_service().fire_and_forget_task(
+                    get_memory_base_service().on_flow_output,
+                    flow_id=flow.id,
+                    session_id=execution_session_id,
+                    job_id=_run_id_uuid,
+                )
+            except (RuntimeError, ValueError, OSError):
+                await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
         # Build RunResponse
         run_response = RunResponse(outputs=task_result, session_id=execution_session_id)
@@ -649,10 +719,21 @@ async def execute_sync_workflow(
             effective_globals=request_variables,
             selected_ids=parsed.output_ids,
         )
-        # Persist the terminal outputs to Job.result so a later GET status on this
-        # sync job_id returns the same outputs the background path stores (same
-        # list-of-OutputEvent shape, so the status read is protocol-uniform).
-        await _persist_sync_result(job_service, job_id, workflow_response, flow.id)
+        # Optionally cache the completed run's outputs + request to the job row so a
+        # later GET status returns the same response. Off by default: sync callers
+        # already hold the full response inline, so this is an opt-in per-request
+        # write for consumers that poll GET status for a sync job. The request blob
+        # mirrors the background service's shape (identifying fields only, no tweaks/
+        # globals — those may carry secrets); GET resolves the session from it.
+        if get_settings_service().settings.sync_result_storage_enabled:
+            request_blob = {
+                "flow_id": str(flow.id),
+                "mode": "sync",
+                "session_id": execution_session_id,
+                "input_value": parsed.input_value,
+                "output_ids": parsed.output_ids,
+            }
+            await _persist_sync_result(job_service, job_id, workflow_response, request_blob, flow.id)
         _sync_run_success = True
         return workflow_response  # noqa: TRY300 — keep response-building under the broad except below
 
@@ -690,7 +771,7 @@ async def execute_sync_workflow(
             flow_id=parsed.flow_id,
             job_id=job_id,
             inputs=parsed.tweaks,
-            error=exc,
+            error=error_for_client(exc, expose_details=expose_error_details),
             effective_globals=request_variables,
         )
     finally:
