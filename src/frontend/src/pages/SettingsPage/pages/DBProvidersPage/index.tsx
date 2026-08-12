@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
+  type AvailableDBProviderId,
   DB_PROVIDER_OPTIONS,
   type DBProviderId,
-  type DBProviderTextField,
   getActiveDBProvider,
+  isDBProviderConfigured,
 } from "@/constants/dbProviderConstants";
 import { cn } from "@/utils/utils";
 import { ProviderConfigurationPanel } from "./components/ProviderConfigurationPanel";
@@ -46,8 +47,11 @@ export default function DBProvidersPage() {
       (provider) => provider.id === selectedProviderId,
     ) ?? DB_PROVIDER_OPTIONS[0];
 
-  const { getFieldValue, hasConfiguredValue, isHydrated, canSave } =
-    useDBProviderFields({ selectedProvider, globalVariables, variableValues });
+  const { getFieldValue, isHydrated, canSave } = useDBProviderFields({
+    selectedProvider,
+    globalVariables,
+    variableValues,
+  });
 
   const {
     handleSave,
@@ -104,13 +108,11 @@ export default function DBProvidersPage() {
               isActive={activeProviderId === provider.id}
               isSelected={selectedProvider.id === provider.id}
               isConfigured={
-                provider.id === "chroma" ||
-                provider.configFields
-                  .filter(
-                    (field): field is DBProviderTextField =>
-                      field.kind !== "boolean" && field.required,
-                  )
-                  .every((field) => hasConfiguredValue(field.variableKey))
+                provider.status === "available" &&
+                isDBProviderConfigured(
+                  provider.id as AvailableDBProviderId,
+                  globalVariables,
+                )
               }
               onSelect={() => {
                 setHasManuallySelectedProvider(true);
