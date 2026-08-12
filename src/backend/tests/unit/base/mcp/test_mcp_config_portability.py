@@ -303,3 +303,61 @@ class TestUrlResolutionProvenance:
 
         assert resolved == {"x-api-key": "from-the-caller"}
         assert seen == {}
+
+
+class TestEnvVariableResolution:
+    """``env`` was left literal, so a stdio server received ``MCP_FOO_...`` as its key.
+
+    The module promised the reference keeps a flow portable. Under Langflow the stored
+    server row masks the gap; under ``lfx serve`` or an import elsewhere the subprocess
+    is handed the variable name and authenticates with nonsense.
+    """
+
+    @staticmethod
+    def _capture_env(monkeypatch) -> dict:
+        seen: dict = {}
+
+        def fake_validate(command, args, env):  # noqa: ARG001
+            seen["env"] = env
+            msg = "stop here"
+            raise RuntimeError(msg)
+
+        monkeypatch.setattr(util, "validate_mcp_stdio_config", fake_validate)
+        return seen
+
+    async def test_should_resolve_env_from_database_variables(self, monkeypatch):
+        seen = self._capture_env(monkeypatch)
+
+        with pytest.raises(Exception, match="stop here"):
+            await util.update_tools(
+                server_name="local",
+                server_config={"mode": "Stdio", "command": "uvx", "args": [], "env": {"API_TOKEN": "MCP_LOCAL_TOKEN"}},
+                url_variables={"MCP_LOCAL_TOKEN": "sk-from-the-database"},
+            )
+
+        assert seen["env"] == {"API_TOKEN": "sk-from-the-database"}
+
+    async def test_should_not_resolve_env_from_caller_variables(self, monkeypatch):
+        """Env feeds a subprocess; letting the caller populate it is worse than a URL."""
+        seen = self._capture_env(monkeypatch)
+
+        with pytest.raises(Exception, match="stop here"):
+            await util.update_tools(
+                server_name="local",
+                server_config={"mode": "Stdio", "command": "uvx", "args": [], "env": {"API_TOKEN": "MCP_LOCAL_TOKEN"}},
+                request_variables={"MCP_LOCAL_TOKEN": "from-the-caller"},
+            )
+
+        assert seen["env"] == {"API_TOKEN": "MCP_LOCAL_TOKEN"}
+
+    async def test_should_leave_a_static_env_untouched(self, monkeypatch):
+        seen = self._capture_env(monkeypatch)
+
+        with pytest.raises(Exception, match="stop here"):
+            await util.update_tools(
+                server_name="local",
+                server_config={"mode": "Stdio", "command": "uvx", "args": [], "env": {"NODE_ENV": "production"}},
+                url_variables={"MCP_LOCAL_TOKEN": "sk-x"},
+            )
+
+        assert seen["env"] == {"NODE_ENV": "production"}

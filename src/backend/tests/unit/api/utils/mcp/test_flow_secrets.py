@@ -201,3 +201,54 @@ class TestStagingSurvivesARetry:
 
         assert hasattr(flow_secrets, "stage_mcp_secrets")
         assert hasattr(flow_secrets, "extract_and_strip_mcp_secrets")
+
+
+class TestNonSecretHeadersAreLeftAlone:
+    """Turning ``accept: application/json`` into a Credential variable is noise.
+
+    The list is an allowlist of headers that are never secrets, not a guess at which
+    values look secret: failing open on a heuristic would leak, while failing open on
+    these specific names cannot.
+    """
+
+    def test_should_not_capture_content_negotiation_headers(self):
+        config = {
+            "url": "https://a.example/mcp",
+            "headers": {"accept": "application/json", "content-type": "application/json"},
+        }
+
+        stripped, variables, found = strip_config_secrets(config, "billing")
+
+        assert found is False
+        assert variables == {}
+        assert stripped["headers"] == config["headers"]
+
+    def test_should_still_capture_a_secret_next_to_them(self):
+        config = {
+            "url": "https://a.example/mcp",
+            "headers": {"accept": "application/json", "x-api-key": "sk-real-secret"},
+        }
+
+        stripped, variables, found = strip_config_secrets(config, "billing")
+
+        assert found is True
+        assert stripped["headers"]["accept"] == "application/json"
+        assert stripped["headers"]["x-api-key"] != "sk-real-secret"
+        assert "sk-real-secret" in variables.values()
+
+    def test_should_match_the_header_name_case_insensitively(self):
+        config = {"url": "https://a.example/mcp", "headers": {"Accept": "application/json"}}
+
+        _, variables, found = strip_config_secrets(config, "billing")
+
+        assert found is False
+        assert variables == {}
+
+    def test_should_never_treat_an_env_entry_as_non_secret(self):
+        """The allowlist is about HTTP headers; an env var named accept is not one."""
+        config = {"command": "uvx", "env": {"accept": "something"}}
+
+        _, variables, found = strip_config_secrets(config, "billing")
+
+        assert found is True
+        assert "something" in variables.values()

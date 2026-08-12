@@ -19,13 +19,28 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from langflow.logging import logger
-from langflow.services.auth.mcp_encryption import MCP_SECRET_CONFIG_MAPS, encrypt_mcp_config
+from langflow.services.auth.mcp_encryption import MCP_SECRET_CONFIG_MAPS, decrypt_mcp_config, encrypt_mcp_config
 from langflow.services.database.lock_retry import is_database_lock_error
 from langflow.services.database.models import MCPServer
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE
 
 SECRET_CONFIG_FIELDS = ("api_key", "apiKey", "authorization", "Authorization")
+
+# Headers that are part of the HTTP conversation, never a credential. An allowlist of
+# known non-secrets, deliberately not a heuristic for "looks secret": guessing which
+# values are sensitive fails open into a leak, while these specific names cannot be one.
+NON_SECRET_HEADERS = frozenset(
+    {
+        "accept",
+        "accept-charset",
+        "accept-encoding",
+        "accept-language",
+        "cache-control",
+        "content-type",
+        "user-agent",
+    }
+)
 
 HEADER_ARG_FLAG = "--headers"
 
@@ -95,7 +110,13 @@ def strip_config_secrets(config: dict[str, Any], server_name: str) -> tuple[dict
         if isinstance(value, dict) and value:
             referenced = {}
             for entry_key, entry_value in value.items():
-                if isinstance(entry_value, str) and entry_value and not _is_variable_reference(entry_value):
+                skip = key == "headers" and str(entry_key).lower() in NON_SECRET_HEADERS
+                if (
+                    not skip
+                    and isinstance(entry_value, str)
+                    and entry_value
+                    and not _is_variable_reference(entry_value)
+                ):
                     name = variable_name_for(server_name, entry_key)
                     variables[name] = entry_value
                     referenced[entry_key] = name
@@ -237,6 +258,11 @@ async def stage_mcp_secrets(
             await session.exec(select(MCPServer).where(MCPServer.user_id == user_id, MCPServer.name == name))
         ).first()
         if existing is not None:
+            # A literal arriving in the flow is the user typing a new key, which has to reach
+            # the runtime: this row wins over the flow config, so leaving it alone made every
+            # rotation after the first a silent no-op. Only the secret-bearing maps are
+            # replaced, so the URL, mode and args the user maintains here survive.
+            _apply_rotated_secrets(existing, config)
             continue
         try:
             async with session.begin_nested():
@@ -298,6 +324,8 @@ async def _ensure_variables(variables: dict[str, str], user_id: UUID, session) -
     failed: set[str] = set()
     for name, value in variables.items():
         if name in existing_names:
+            if not await _rotate_variable(variable_service, name, value, user_id, session):
+                failed.add(name)
             continue
         try:
             async with session.begin_nested():
@@ -313,3 +341,39 @@ async def _ensure_variables(variables: dict[str, str], user_id: UUID, session) -
             failed.add(name)
             await logger.aerror(f"Could not create global variable '{name}' for an MCP credential: {exc}")
     return failed
+
+
+def _apply_rotated_secrets(existing: MCPServer, config: dict[str, Any]) -> None:
+    """Overwrite only the secret-bearing maps of a stored server config."""
+    stored = decrypt_mcp_config(existing.config or {})
+    changed = False
+    for key in MCP_SECRET_CONFIG_MAPS:
+        incoming = config.get(key)
+        if isinstance(incoming, dict) and incoming and stored.get(key) != incoming:
+            stored[key] = incoming
+            changed = True
+    if changed:
+        existing.config = encrypt_mcp_config(stored)
+
+
+async def _rotate_variable(variable_service, name: str, value: str, user_id: UUID, session) -> bool:
+    """Point an existing variable at the value the flow just carried.
+
+    Returns whether the variable now holds it, so the caller can restore the literal
+    rather than save a flow that authenticates with a credential the user replaced.
+    """
+    try:
+        current = await variable_service.get_variable(user_id=user_id, name=name, field="", session=session)
+    except Exception:  # noqa: BLE001
+        current = None
+    if current == value:
+        return True
+    try:
+        async with session.begin_nested():
+            await variable_service.update_variable(user_id=user_id, name=name, value=value, session=session)
+    except Exception as exc:
+        if is_database_lock_error(exc):
+            raise
+        await logger.aerror(f"Could not rotate global variable '{name}' for an MCP credential: {exc}")
+        return False
+    return True

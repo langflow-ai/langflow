@@ -218,3 +218,32 @@ async def test_should_keep_the_credential_across_a_lock_retry(client: AsyncClien
 
     server = await client.get(f"api/v2/mcp/servers/{server_name}", headers=logged_in_headers)
     assert server.json()["headers"]["x-api-key"] == SECRET
+
+
+async def test_should_apply_a_rotated_credential(client: AsyncClient, logged_in_headers):
+    """Typing a new key into the node must actually change what the runtime sends.
+
+    The variable name does not depend on the value, an existing variable and an existing
+    ``mcp_server`` row were both left alone, and the row wins at runtime — so every edit
+    after the first was dropped on the floor and the old credential kept being used. A
+    rotation that silently does nothing is worse than one that fails.
+    """
+    server_name = f"rotate-{uuid.uuid4().hex[:6]}"
+    rotated = "sk-rotated-and-must-be-used"
+
+    flow, _ = await _saved_flow(
+        client,
+        logged_in_headers,
+        server_name,
+        {"url": "https://serving.internal/mcp", "headers": {"x-api-key": SECRET}},
+    )
+
+    payload = _flow_payload(server_name, {"url": "https://serving.internal/mcp", "headers": {"x-api-key": rotated}})
+    response = await client.patch(
+        f"api/v1/flows/{flow['id']}", json={"data": payload["data"]}, headers=logged_in_headers
+    )
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert rotated not in response.text
+
+    server = await client.get(f"api/v2/mcp/servers/{server_name}", headers=logged_in_headers)
+    assert server.json()["headers"]["x-api-key"] == rotated, "the rotation was silently discarded"

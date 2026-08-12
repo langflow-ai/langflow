@@ -2566,7 +2566,10 @@ async def update_tools(
     client: MCPStdioClient | MCPStreamableHttpClient | None = None
     if mode == "Stdio":
         args = list(server_config.get("args", []))
-        env = server_config.get("env", {})
+        # Resolved from the database set only, never from request_variables: env is handed
+        # to a spawned process, so a caller-populated value is a worse hand-off than a URL.
+        # Left literal, the reference the scrub writes would reach the subprocess as its key.
+        env = _resolve_global_variables_in_headers(server_config.get("env", {}) or {}, url_variables)
         # SECURITY: A tenant-built flow can embed this stdio config directly in the
         # MCPTools component value, bypassing REST-layer model validation. Enforce the
         # shared policy here, then enforce it again at the final process-spawn boundary.
