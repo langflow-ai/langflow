@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { Position } from "@xyflow/react";
 import useFlowStore from "@/stores/flowStore";
 import type { AllNodeType } from "@/types/flow";
@@ -38,8 +38,15 @@ const baseProps = {
   targetPosition: Position.Left,
 };
 
+// The accessible name for an edge now comes from `edge.ariaLabel`, set once
+// at build time in PageComponent (see get-edge-aria-label.ts) and read
+// natively by ReactFlow's EdgeWrapper <g>. DefaultEdge itself must NOT
+// render a competing role/aria-label on its interaction path: doing so
+// either duplicates the wrapper's name (editable canvas, wrapper is
+// role="group" and focusable) or is silently dropped (locked/preview,
+// wrapper is role="img" and its subtree is pruned from the a11y tree).
 describe("DefaultEdge accessibility", () => {
-  it("should_have_no_axe_violations_with_named_nodes", async () => {
+  it("should_have_no_axe_violations", async () => {
     setNodes({
       n1: { display_name: "Chat Input" },
       n2: { display_name: "Chat Output" },
@@ -50,28 +57,20 @@ describe("DefaultEdge accessibility", () => {
     expect(await axe(container)).toHaveNoViolations();
   });
 
-  it("should_expose_accessible_name_from_node_display_names", () => {
+  it("does_not_render_its_own_role_or_aria_label_on_the_interaction_path", () => {
     setNodes({
       n1: { display_name: "Chat Input" },
       n2: { display_name: "Chat Output" },
     });
 
-    render(<DefaultEdge {...baseProps} />);
-
-    expect(
-      screen.getByRole("img", { name: "Edge from Chat Input to Chat Output" }),
-    ).toBeInTheDocument();
-  });
-
-  it("should_fall_back_to_raw_ids_when_display_name_is_missing", async () => {
-    setNodes({ n1: undefined, n2: undefined });
-
     const { container } = render(<DefaultEdge {...baseProps} />);
+    const interactionPath = container.querySelector(
+      '[data-testid="edge-context-menu-trigger"]',
+    );
 
-    expect(
-      screen.getByRole("img", { name: "Edge from n1 to n2" }),
-    ).toBeInTheDocument();
-    expect(await axe(container)).toHaveNoViolations();
+    expect(interactionPath).not.toBeNull();
+    expect(interactionPath).not.toHaveAttribute("role");
+    expect(interactionPath).not.toHaveAttribute("aria-label");
   });
 
   it("should_stay_accessible_when_selected_and_animated", async () => {
@@ -85,8 +84,5 @@ describe("DefaultEdge accessibility", () => {
     );
 
     expect(await axe(container)).toHaveNoViolations();
-    expect(
-      screen.getByRole("img", { name: "Edge from Chat Input to Chat Output" }),
-    ).toBeInTheDocument();
   });
 });

@@ -185,9 +185,7 @@ const CanvasControls = ({
                 onClick={handleAssistantClick}
                 disabled={locked}
                 title={locked ? t("version.readOnly") : undefined}
-                aria-label={
-                  locked ? t("version.readOnly") : t("assistant.title")
-                }
+                aria-label={t("assistant.title")}
               >
                 {/* Idle state — uses the design-tuned
                     ``langflow_assistant_idle.svg`` (noise filter + brand tint
@@ -268,9 +266,7 @@ const CanvasControls = ({
           data-testid="canvas-add-note-button"
           className="group flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
           title={locked ? t("version.readOnly") : t("canvas.addStickyNote")}
-          aria-label={
-            locked ? t("version.readOnly") : t("canvas.addStickyNote")
-          }
+          aria-label={t("canvas.addStickyNote")}
           onClick={handleAddNote}
           disabled={locked}
         >
@@ -300,11 +296,9 @@ const CanvasControls = ({
                 : t("canvasControls.minimizeAll")
           }
           aria-label={
-            locked
-              ? t("version.readOnly")
-              : allMinimized
-                ? t("canvasControls.expandAll")
-                : t("canvasControls.minimizeAll")
+            allMinimized
+              ? t("canvasControls.expandAll")
+              : t("canvasControls.minimizeAll")
           }
           onClick={toggleMinimizeAllAndAlign}
         >

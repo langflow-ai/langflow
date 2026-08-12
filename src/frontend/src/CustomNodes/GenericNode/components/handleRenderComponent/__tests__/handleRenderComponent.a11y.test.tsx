@@ -1,7 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { ReactFlowProvider } from "@xyflow/react";
 import useFlowStore from "@/stores/flowStore";
 import type { APIDataType } from "@/types/api";
+import type { AllNodeType } from "@/types/flow";
 import type { FlowStoreType } from "@/types/zustand/flow";
 import { axe } from "@/utils/a11y-test";
 import HandleRenderComponent from "../index";
@@ -92,5 +93,48 @@ describe("HandleRenderComponent accessibility", () => {
       ),
     ).toBeInTheDocument();
     expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("uses the node's display_name instead of its raw id when known", () => {
+    useFlowStore.setState({
+      nodes: [
+        {
+          id: "ChatInput-abc123",
+          data: { node: { display_name: "Chat Input" } },
+        } as unknown as AllNodeType,
+      ],
+      edges: [],
+      handleDragging: undefined,
+      filterType: undefined,
+    } as Partial<FlowStoreType>);
+
+    render(
+      <ReactFlowProvider>
+        <HandleRenderComponent {...baseProps} left={true} showNode={true} />
+      </ReactFlowProvider>,
+    );
+
+    expect(
+      screen.getByLabelText("Input handle for Message on node Chat Input"),
+    ).toBeInTheDocument();
+  });
+
+  it("is reachable by keyboard and can be activated with Enter/Space", () => {
+    render(
+      <ReactFlowProvider>
+        <HandleRenderComponent {...baseProps} left={true} showNode={true} />
+      </ReactFlowProvider>,
+    );
+
+    const handle = screen.getByRole("button", {
+      name: "Input handle for Message on node ChatInput-abc123",
+    });
+    expect(handle).toHaveAttribute("tabIndex", "0");
+
+    fireEvent.keyDown(handle, { key: "Enter" });
+    fireEvent.keyDown(handle, { key: " " });
+    // Neither call should throw; handleClick's own no-op guards (e.g. no
+    // active filter) are exercised elsewhere. This is a regression guard
+    // for the announced-but-inert-button failure mode.
   });
 });

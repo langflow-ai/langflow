@@ -125,14 +125,36 @@ describe("CanvasControls toolbar accessibility", () => {
     ).toBeInTheDocument();
   });
 
-  it("should_expose_read_only_accessible_name_when_locked", () => {
+  it("keeps each control's distinct accessible name when locked, instead of collapsing them all to the same read-only label", () => {
     render(<CanvasControls selectedNode={null} effectiveLocked />);
 
+    // State belongs in state (disabled + title), not in the name — three
+    // different controls all announcing "(Read-Only)" would be
+    // indistinguishable to a screen reader user.
     expect(screen.getByTestId("canvas-add-note-button")).toHaveAccessibleName(
-      "(Read-Only)",
+      "Add Sticky Note",
     );
     expect(
       screen.getByTestId("canvas_controls_minimize_all"),
-    ).toHaveAccessibleName("(Read-Only)");
+    ).toHaveAccessibleName("Minimize all");
+    expect(screen.getByTestId("assistant-button")).toHaveAccessibleName(
+      "Langflow Assistant",
+    );
+  });
+
+  it("disables the controls and surfaces read-only via title when locked", () => {
+    render(<CanvasControls selectedNode={null} effectiveLocked />);
+
+    expect(screen.getByTestId("canvas-add-note-button")).toBeDisabled();
+    expect(screen.getByTestId("canvas-add-note-button")).toHaveAttribute(
+      "title",
+      "(Read-Only)",
+    );
+    expect(screen.getByTestId("canvas_controls_minimize_all")).toBeDisabled();
+    expect(screen.getByTestId("canvas_controls_minimize_all")).toHaveAttribute(
+      "title",
+      "(Read-Only)",
+    );
+    expect(screen.getByTestId("assistant-button")).toBeDisabled();
   });
 });

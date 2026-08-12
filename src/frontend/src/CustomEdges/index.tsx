@@ -88,11 +88,6 @@ export const DefaultEdge = memo(function DefaultEdge({
     }
   });
 
-  const edgeAriaLabel = t("edge.ariaLabel", {
-    source: sourceNode?.data?.node?.display_name ?? source,
-    target: targetNode?.data?.node?.display_name ?? target,
-  });
-
   return (
     <>
       <BaseEdge
@@ -113,8 +108,6 @@ export const DefaultEdge = memo(function DefaultEdge({
             strokeOpacity={0}
             strokeWidth={20}
             fill="none"
-            aria-label={edgeAriaLabel}
-            role="img"
             data-testid={`edge-context-menu-trigger`}
           />
         </ContextMenuTrigger>

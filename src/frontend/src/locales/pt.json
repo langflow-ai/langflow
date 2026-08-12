@@ -2289,7 +2289,7 @@
   "knowledge.chunksMetadataValueLabel": "Valor do filtro de metadados",
   "handle.ariaLabelInput": "Identificador de entrada para {{field}} no nó {{node}}",
   "handle.ariaLabelOutput": "Identificador de saída para {{field}} no nó {{node}}",
-  "edge.ariaLabel": "Edge: de {{source}} para {{target}}",
+  "edge.ariaLabel": "Conexão de {{source}} para {{target}}",
   "shortcuts.key.command": "Comando",
   "shortcuts.key.ctrl": "Control",
   "shortcuts.key.shift": "Shift",
