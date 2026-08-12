@@ -526,7 +526,8 @@ class MCPToolsComponent(ComponentWithCache):
 
                 # Load global variables only when the config actually references them, so a
                 # static config still costs no query -- but a URL-only reference now counts.
-                if not request_variables and config_uses_global_variables(server_config):
+                db_variables: dict[str, str] | None = None
+                if config_uses_global_variables(server_config):
                     try:
                         from lfx.services.deps import get_variable_service
 
@@ -536,11 +537,17 @@ class MCPToolsComponent(ComponentWithCache):
                         # skip cleanly rather than raising into the broad except below.
                         if variable_service and hasattr(variable_service, "get_all_decrypted_variables"):
                             async with session_scope() as db:
-                                request_variables = await variable_service.get_all_decrypted_variables(
+                                db_variables = await variable_service.get_all_decrypted_variables(
                                     user_id=self.user_id, session=db
                                 )
                     except Exception as e:  # noqa: BLE001
                         await logger.awarning(f"Failed to load global variables for MCP component: {e}")
+
+                # Headers may resolve from either source; the URL only from the database.
+                # request_variables carry the caller's X-Langflow-Global-Var-* values, and a
+                # caller must not be able to choose where this flow connects.
+                if not request_variables:
+                    request_variables = db_variables
 
                 await logger.adebug(
                     "MCP update_tool_list: calling update_tools server=%r mode_headers=%s",
@@ -558,6 +565,7 @@ class MCPToolsComponent(ComponentWithCache):
                     mcp_stdio_client=self.stdio_client,
                     mcp_streamable_http_client=self.streamable_http_client,
                     request_variables=request_variables,
+                    url_variables=db_variables,
                     tool_execution_timeout=timeout,
                     current_user_id=self.user_id,
                 )

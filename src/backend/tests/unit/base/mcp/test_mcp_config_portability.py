@@ -245,3 +245,61 @@ class TestRunToolReachesTheDescriber:
         )
 
         assert "TaskGroup" in message or "Server error" in message
+
+
+class TestUrlResolutionProvenance:
+    """Who chooses the outbound target must not be the caller.
+
+    ``request_variables`` on a run come from the inbound ``X-Langflow-Global-Var-*``
+    headers. Letting them resolve ``{{MCP_HOST}}/mcp`` hands the destination to whoever
+    calls the flow, and the resolved credential headers travel to that destination.
+    SSRF validation rejects internal targets, not an arbitrary external one.
+    """
+
+    @staticmethod
+    def _capture_target(monkeypatch) -> dict:
+        """Record the URL at the point it is decided, before any DNS or socket work."""
+        seen: dict = {}
+
+        def fake_validate(url):
+            seen["url"] = url
+            msg = "stop here"
+            raise RuntimeError(msg)
+
+        monkeypatch.setattr(util, "validate_connector_url_for_ssrf", fake_validate)
+        return seen
+
+    async def test_should_not_resolve_the_url_from_caller_variables(self, monkeypatch):
+        seen = self._capture_target(monkeypatch)
+
+        with pytest.raises(Exception, match="stop here"):
+            await util.update_tools(
+                server_name="billing",
+                server_config={"mode": "Streamable_HTTP", "url": "{{MCP_HOST}}/mcp"},
+                request_variables={"MCP_HOST": "https://attacker.example"},
+            )
+
+        assert seen["url"] == "{{MCP_HOST}}/mcp", "the caller chose the target"
+
+    async def test_should_resolve_the_url_from_database_variables(self, monkeypatch):
+        seen = self._capture_target(monkeypatch)
+
+        with pytest.raises(Exception, match="stop here"):
+            await util.update_tools(
+                server_name="billing",
+                server_config={"mode": "Streamable_HTTP", "url": "{{MCP_HOST}}/mcp"},
+                request_variables={"MCP_HOST": "https://attacker.example"},
+                url_variables={"MCP_HOST": "https://serving.internal"},
+            )
+
+        assert seen["url"] == "https://serving.internal/mcp"
+
+    async def test_should_still_resolve_headers_from_caller_variables(self, monkeypatch):
+        """Header substitution by inbound request variable is a documented feature."""
+        seen = self._capture_target(monkeypatch)
+        resolved = util._resolve_global_variables_in_headers(
+            {"x-api-key": "CALLER_KEY"}, {"CALLER_KEY": "from-the-caller"}
+        )
+
+        assert resolved == {"x-api-key": "from-the-caller"}
+        assert seen == {}

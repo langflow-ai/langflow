@@ -2494,6 +2494,7 @@ async def update_tools(
     request_variables: dict[str, str] | None = None,
     tool_execution_timeout: float | None = None,
     current_user_id: str | UUID | None = None,
+    url_variables: dict[str, str] | None = None,
 ) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
     """Fetch server config and update available tools.
 
@@ -2503,7 +2504,14 @@ async def update_tools(
         mcp_stdio_client: Optional stdio client instance
         mcp_streamable_http_client: Optional streamable HTTP client instance
         mcp_sse_client: Optional SSE client instance (backward compatibility)
-        request_variables: Optional dict of global variables to resolve in headers
+        request_variables: Optional dict of global variables to resolve in headers. On a run
+            these carry the caller's ``X-Langflow-Global-Var-*`` values, so they are trusted
+            for headers only.
+        url_variables: Global variables trusted to resolve the target URL. Kept separate from
+            ``request_variables`` on purpose: resolving the URL from caller-supplied values
+            would let whoever calls a flow choose where it connects — and the resolved
+            credential headers travel to that destination. SSRF validation rejects internal
+            targets, not an arbitrary external one.
         tool_execution_timeout: Optional timeout in seconds for tool execution (int or float)
         current_user_id: Authenticated user id of the caller. Injected into the env of the
             internal agentic MCP server (``langflow.agentic.mcp``) at spawn time so its tools are
@@ -2544,7 +2552,7 @@ async def update_tools(
         mode = "Stdio" if "command" in server_config else "Streamable_HTTP" if "url" in server_config else ""
 
     command = server_config.get("command", "")
-    url = resolve_global_variables_in_url(server_config.get("url", ""), request_variables)
+    url = resolve_global_variables_in_url(server_config.get("url", ""), url_variables)
     tools = []
     headers = _process_headers(server_config.get("headers", {}), request_variables)
 
