@@ -857,6 +857,11 @@ class Graph:
         attribute is the exception type and not its message. Subgraphs (Loop iterations) are skipped
         so a loop over N items stays one span instead of N.
 
+        That rule is enforced per signal, and this is only the span half: the export filter lives in
+        ``ApplicationOnlySpanProcessor``, and the same content is kept off the logs signal by the
+        body policy in ``lfx.log.logger``. Neither covers container stdout or the local log file,
+        which still carry full messages by design.
+
         make_current attaches the span to the OTel context so a flow run from inside another flow
         (flow-as-tool, sub-flow components) nests under its caller instead of appearing as a sibling
         of it. It must stay False when the scope wraps an async generator: the context token would be
