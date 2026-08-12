@@ -677,7 +677,7 @@ function GenericNode({
               data={data}
               frozen={data.node?.frozen}
               showNode={showNode}
-              display_name={data.node?.display_name!}
+              display_name={data.node?.display_name}
               nodeId={data.id}
               selected={selected}
               setBorderColor={setBorderColor}

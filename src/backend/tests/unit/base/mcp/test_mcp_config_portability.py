@@ -5,6 +5,7 @@ was exact whole-value only, so a base URL could not be composed with a preserved
 id. A flow therefore had to be edited by hand on every promotion between planes.
 """
 
+import httpx
 import pytest
 from lfx.base.mcp import util
 
@@ -110,3 +111,137 @@ class TestOutboundAuthFailureReporting:
 
         assert "billing-mcp" in message
         assert "connection refused" in message
+
+
+def _grouped(exc: BaseException) -> BaseException:
+    """Wrap as the MCP SDK does: via anyio, the real failure never arrives bare.
+
+    Built through ``util`` so the test exercises the same group type the runtime sees —
+    the builtin on 3.11+, the ``exceptiongroup`` backport that anyio raises on 3.10.
+    """
+    group_type = util._EXCEPTION_GROUP_TYPES[0]
+    return group_type("unhandled errors in a TaskGroup", [exc])
+
+
+def _status_error(status: int) -> httpx.HTTPStatusError:
+    request = httpx.Request("POST", "https://serving.internal/mcp")
+    return httpx.HTTPStatusError(
+        f"Server error '{status}'", request=request, response=httpx.Response(status, request=request)
+    )
+
+
+class TestGroupedAuthFailureReporting:
+    """The status lives on a leaf inside a TaskGroup; the group's own str() carries nothing."""
+
+    @pytest.mark.parametrize("status", [401, 403])
+    def test_should_report_status_buried_in_a_task_group(self, status):
+        message = util.describe_mcp_connection_failure(
+            "billing-mcp", "https://serving.internal/mcp", _grouped(_status_error(status))
+        )
+
+        assert str(status) in message
+        assert "billing-mcp" in message
+        assert "serving.internal" in message
+
+    @pytest.mark.parametrize("status", [401, 403])
+    def test_should_name_authentication_as_the_cause(self, status):
+        """Without this the operator reads a transport fault and checks the network."""
+        message = util.describe_mcp_connection_failure(
+            "billing-mcp", "https://serving.internal/mcp", _grouped(_status_error(status))
+        )
+
+        assert "credential" in message.lower()
+
+    def test_should_not_claim_authentication_for_a_server_error(self):
+        """A 500 is the server's problem — sending the operator to rotate a key wastes the outage."""
+        message = util.describe_mcp_connection_failure(
+            "billing-mcp", "https://serving.internal/mcp", _grouped(_status_error(500))
+        )
+
+        assert "500" in message
+        assert "credential" not in message.lower()
+
+    def test_should_read_status_from_a_nested_group(self):
+        """Anyio nests groups when a subtask group fails inside another."""
+        message = util.describe_mcp_connection_failure(
+            "billing-mcp", "https://serving.internal/mcp", _grouped(_grouped(_status_error(401)))
+        )
+
+        assert "401" in message
+
+    def test_should_describe_a_tool_call_rejected_mid_session(self):
+        """A credential can expire after connect; the failure then lands on the call, not the connect."""
+        message = util.describe_mcp_tool_failure(
+            "read_ledger", "https://serving.internal/mcp", _grouped(_status_error(401))
+        )
+
+        assert "read_ledger" in message
+        assert "401" in message
+        assert "credential" in message.lower()
+
+    def test_should_leave_a_non_http_tool_failure_unchanged(self):
+        message = util.describe_mcp_tool_failure(
+            "read_ledger", "https://serving.internal/mcp", TimeoutError("timed out")
+        )
+
+        assert "read_ledger" in message
+        assert "timed out" in message
+        assert "credential" not in message.lower()
+
+
+class TestRunToolReachesTheDescriber:
+    """Describing the failure is worthless if run_tool never routes the auth case to it.
+
+    A rejected call raises an ExceptionGroup, which is none of ConnectionError /
+    TimeoutError / OSError / ValueError and busts no session, so it fell through every
+    branch to a bare re-raise and reached the user as the raw TaskGroup string.
+    """
+
+    @staticmethod
+    def _client(monkeypatch, exc: BaseException):
+        client = util.MCPStreamableHttpClient()
+        client._connected = True
+        client._connection_params = {"url": "http://127.0.0.1:7890/mcp"}
+        client._session_context = "probe"
+
+        class _Session:
+            async def call_tool(self, *_args, **_kwargs):
+                raise exc
+
+        async def _session(*_args, **_kwargs):
+            return _Session()
+
+        monkeypatch.setattr(client, "_get_or_create_session", _session)
+        return client
+
+    @pytest.mark.parametrize("status", [401, 403])
+    async def test_should_report_a_rejected_tool_call(self, monkeypatch, status):
+        client = self._client(monkeypatch, _grouped(_status_error(status)))
+
+        with pytest.raises(Exception, match=str(status)) as excinfo:
+            await client.run_tool("read_ledger", {})
+
+        assert "credential" in str(excinfo.value).lower()
+
+    async def test_should_not_blame_the_credential_for_a_server_error(self, monkeypatch):
+        client = self._client(monkeypatch, _grouped(_status_error(503)))
+
+        with pytest.raises(Exception, match="503") as excinfo:
+            await client.run_tool("read_ledger", {})
+
+        assert "credential" not in str(excinfo.value).lower()
+
+    def test_should_keep_the_port_in_the_named_target(self):
+        """``hostname`` drops the port, so a non-443 plane was named as the wrong target."""
+        message = util.describe_mcp_connection_failure(
+            "billing-mcp", "http://127.0.0.1:7890/mcp", _grouped(_status_error(401))
+        )
+
+        assert "127.0.0.1:7890" in message
+
+    def test_should_keep_the_underlying_cause_visible(self):
+        message = util.describe_mcp_connection_failure(
+            "billing-mcp", "https://serving.internal/mcp", _grouped(_status_error(401))
+        )
+
+        assert "TaskGroup" in message or "Server error" in message

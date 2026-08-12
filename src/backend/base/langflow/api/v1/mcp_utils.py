@@ -447,7 +447,7 @@ async def _collect_tools(
     Returns:
         The tools that built successfully and one entry per flow dropped from the list.
     """
-    tools = []
+    tools: list[types.Tool] = []
     excluded: list[dict[str, str]] = []
     try:
         # SECURITY: tools returned from the global server previously included every
@@ -488,7 +488,6 @@ async def _collect_tools(
             flows = (await session.exec(flows_query)).all()
 
             existing_names = set()
-            excluded: list[str] = []
             for flow in flows:
                 if flow.user_id is None:
                     continue

@@ -33,6 +33,7 @@ from langflow.api.utils import (
     validate_is_component,
 )
 from langflow.api.utils.core import strip_secret_field_values
+from langflow.api.utils.mcp.flow_secrets import persist_and_strip_mcp_secrets
 from langflow.api.utils.zip_utils import extract_flows_from_zip
 from langflow.api.v1.authz_route_dependencies import (
     AuthorizedDeleteFlow,
@@ -149,6 +150,7 @@ async def create_flow(
     try:
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
         _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
+        await persist_and_strip_mcp_secrets(flow.data, current_user.id, session)
         # FastAPI builds the dependency's body model independently from the
         # handler's body model. Carry the exact destination that was authorized
         # into the row we persist so stale caller scope fields cannot retarget
@@ -471,6 +473,7 @@ async def update_flow(
                     raise deny_to_404(exc, detail="Flow not found") from exc
             effective_flow_data = flow.data if flow.data is not None else db_flow_for_attempt.data
             _validate_catalog_policy_for_write(effective_flow_data, snapshot=catalog_policy_snapshot)
+            await persist_and_strip_mcp_secrets(flow.data, current_user.id, session)
             return await _patch_flow(
                 session=session,
                 db_flow=db_flow_for_attempt,
@@ -647,6 +650,7 @@ async def upsert_flow(
                         raise deny_to_404(exc, detail="Flow not found") from exc
                 effective_flow_data = flow.data if flow.data is not None else existing_flow_for_attempt.data
                 _validate_catalog_policy_for_write(effective_flow_data, snapshot=catalog_policy_snapshot)
+                await persist_and_strip_mcp_secrets(flow.data, current_user.id, session)
                 return await _update_existing_flow(
                     session=session,
                     existing_flow=existing_flow_for_attempt,
@@ -671,6 +675,7 @@ async def upsert_flow(
                 current_user, FlowAction.CREATE, workspace_id=flow.workspace_id, folder_id=flow.folder_id
             )
             _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
+            await persist_and_strip_mcp_secrets(flow.data, current_user.id, session)
             flow_read = await _new_flow(
                 session=session,
                 flow=flow,
@@ -724,6 +729,7 @@ async def create_flows(
     # keeps a denial in a later item from partially applying an earlier item.
     for flow in flow_list.flows:
         _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
+        await persist_and_strip_mcp_secrets(flow.data, current_user.id, session)
 
     # Resolve and authorize every flow's canonical project/workspace instead of
     # trusting caller-supplied denormalized scope fields.
@@ -894,6 +900,7 @@ async def upload_file(
         if effective_flow_data is None and existing_flow is not None and existing_flow.user_id == current_user.id:
             effective_flow_data = existing_flow.data
         _validate_catalog_policy_for_write(effective_flow_data, snapshot=catalog_policy_snapshot)
+        await persist_and_strip_mcp_secrets(flow.data, current_user.id, session)
 
     try:
         flow_reads: list[FlowRead] = []

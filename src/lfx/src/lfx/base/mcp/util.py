@@ -1,4 +1,5 @@
 import asyncio
+import builtins
 import contextlib
 import inspect
 import json
@@ -823,6 +824,26 @@ def _inject_mcp_stdio_headers(args: list[str], headers: dict[str, str]) -> list[
 
 GLOBAL_VARIABLE_PLACEHOLDER_PATTERN = re.compile(r"\{\{\s*([A-Za-z_][A-Za-z0-9_\-]*)\s*\}\}")
 
+HTTP_STATUS_IN_MESSAGE_PATTERN = re.compile(r"\b([45]\d{2})\b")
+
+
+def _exception_group_types() -> tuple[type[BaseException], ...]:
+    types_: list[type[BaseException]] = []
+    builtin_group = getattr(builtins, "BaseExceptionGroup", None)
+    if builtin_group is not None:
+        types_.append(builtin_group)
+    try:
+        from exceptiongroup import BaseExceptionGroup as BackportGroup
+    except ImportError:
+        pass
+    else:
+        if BackportGroup not in types_:
+            types_.append(BackportGroup)
+    return tuple(types_)
+
+
+_EXCEPTION_GROUP_TYPES = _exception_group_types()
+
 
 def _substitute_global_variables(value: str, request_variables: dict[str, str] | None) -> str:
     """Resolve a whole-value variable name, or ``{{NAME}}`` placeholders inside a value.
@@ -861,8 +882,43 @@ def config_uses_global_variables(server_config: dict | None) -> bool:
     return bool(isinstance(url, str) and GLOBAL_VARIABLE_PLACEHOLDER_PATTERN.search(url))
 
 
+def extract_http_status(error: BaseException) -> int | None:
+    """Find the HTTP status of an outbound failure, however deeply anyio grouped it.
+
+    The status never survives on the group itself: ``str()`` of a TaskGroup failure is
+    ``unhandled errors in a TaskGroup``, so reading the top-level exception tells the
+    operator nothing about why the server rejected the call.
+    """
+    for leaf in _iter_exception_leaves(error):
+        if isinstance(leaf, httpx.HTTPStatusError):
+            return leaf.response.status_code
+        if isinstance(leaf, McpError):
+            match = HTTP_STATUS_IN_MESSAGE_PATTERN.search(str(leaf))
+            if match:
+                return int(match.group(1))
+    return None
+
+
+def describe_mcp_tool_failure(tool_name: str, url: str | None, error: BaseException) -> str:
+    """Describe a tool call the remote server rejected, naming the status when there is one.
+
+    Connect-time reporting is not enough: a credential can expire after the session is
+    established, and the rejection then lands here instead.
+    """
+    status = extract_http_status(error)
+    target = f" at {url}" if url else ""
+    if status in (HTTP_UNAUTHORIZED, HTTP_FORBIDDEN):
+        return (
+            f"Tool '{tool_name}'{target} was rejected with HTTP {status}: "
+            f"the configured credential was refused. Cause: {error!s}"
+        )
+    if status is not None:
+        return f"Tool '{tool_name}'{target} failed with HTTP {status}: {error!s}"
+    return f"Tool '{tool_name}'{target} failed: {error!s}"
+
+
 def describe_mcp_connection_failure(server_name: str, url: str, error: BaseException) -> str:
-    """Describe an outbound MCP failure by target and cause.
+    """Describe an outbound MCP failure by target, status and cause.
 
     A wrong credential surfaced as ``unhandled errors in a TaskGroup`` with no indication
     that authentication failed or which server rejected it. Userinfo and query strings are
@@ -870,9 +926,21 @@ def describe_mcp_connection_failure(server_name: str, url: str, error: BaseExcep
     """
     try:
         parsed = urlparse(url)
-        target = f"{parsed.scheme}://{parsed.hostname}{parsed.path}" if parsed.scheme else url
+        # hostname drops the port along with the userinfo, and a target named without its
+        # port is the wrong target whenever the plane runs on anything but 80/443.
+        host = f"{parsed.hostname}:{parsed.port}" if parsed.port else parsed.hostname
+        target = f"{parsed.scheme}://{host}{parsed.path}" if parsed.scheme else url
     except ValueError:
         target = server_name
+
+    status = extract_http_status(error)
+    if status in (HTTP_UNAUTHORIZED, HTTP_FORBIDDEN):
+        return (
+            f"MCP server '{server_name}' at {target} rejected the request with HTTP {status}: "
+            f"the configured credential was refused. Cause: {error!s}"
+        )
+    if status is not None:
+        return f"MCP server '{server_name}' at {target} failed with HTTP {status}: {error!s}"
     return f"MCP server '{server_name}' at {target} failed: {error!s}"
 
 
@@ -925,9 +993,13 @@ STREAMABLE_HTTP_RETRY_BASE_DELAY_SEC = 0.35
 
 
 def _iter_exception_leaves(exc: BaseException) -> list[BaseException]:
-    """Flatten ExceptionGroup / TaskGroup failures to individual exceptions (Python 3.11+)."""
-    beg = getattr(__import__("builtins"), "BaseExceptionGroup", None)
-    if beg is not None and isinstance(exc, beg):
+    """Flatten ExceptionGroup / TaskGroup failures to individual exceptions.
+
+    On Python 3.10 the builtin does not exist and anyio raises the ``exceptiongroup``
+    backport instead, so checking builtins alone left every 3.10 deployment unable to
+    see the real cause inside a TaskGroup failure.
+    """
+    if isinstance(exc, _EXCEPTION_GROUP_TYPES):
         leaves: list[BaseException] = []
         for sub in exc.exceptions:
             leaves.extend(_iter_exception_leaves(sub))
@@ -1960,6 +2032,15 @@ class MCPStdioClient:
                     is_closed_resource_error = "ClosedResourceError" in str(type(e))
                     is_mcp_connection_error = "Connection closed" in str(e)
 
+                # A server that answered with a status is not a transport fault: the branches
+                # below match none of it, so it used to reach the caller as the raw TaskGroup
+                # string. Retrying is pointless — the same call gets the same answer.
+                if not (is_closed_resource_error or is_mcp_connection_error) and extract_http_status(e) is not None:
+                    msg = describe_mcp_tool_failure(tool_name, None, e)
+                    await logger.aerror(msg)
+                    self._connected = False
+                    raise ValueError(msg) from e
+
                 # Detect timeout errors
                 is_timeout_error = isinstance(e, asyncio.TimeoutError | TimeoutError)
 
@@ -1997,7 +2078,7 @@ class MCPStdioClient:
                     or is_mcp_connection_error
                     or is_timeout_error
                 ):
-                    msg = f"Failed to run tool '{tool_name}' after {attempt + 1} attempts: {e}"
+                    msg = describe_mcp_tool_failure(tool_name, None, e)
                     await logger.aerror(msg)
                     # Clean up failed session from cache
                     if self._session_context and self._component_cache:
@@ -2239,6 +2320,15 @@ class MCPStreamableHttpClient:
 
                 bust_session = _is_mcp_session_bust_error(e)
 
+                # A server that answered with a status is not a transport fault: the branches
+                # below match none of it, so it used to reach the caller as the raw TaskGroup
+                # string. Retrying is pointless — the same call gets the same answer.
+                if not bust_session and extract_http_status(e) is not None:
+                    msg = describe_mcp_tool_failure(tool_name, (self._connection_params or {}).get("url"), e)
+                    await logger.aerror(msg)
+                    self._connected = False
+                    raise ValueError(msg) from e
+
                 # Detect timeout errors
                 is_timeout_error = isinstance(e, asyncio.TimeoutError | TimeoutError)
 
@@ -2273,7 +2363,7 @@ class MCPStreamableHttpClient:
                     or bust_session
                     or is_timeout_error
                 ):
-                    msg = f"Failed to run tool '{tool_name}' after {attempt + 1} attempts: {e}"
+                    msg = describe_mcp_tool_failure(tool_name, (self._connection_params or {}).get("url"), e)
                     await logger.aerror(msg)
                     # Clean up failed session from cache
                     if self._session_context and self._component_cache:
