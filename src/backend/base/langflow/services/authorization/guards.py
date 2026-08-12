@@ -321,7 +321,11 @@ _RESOURCE_SPECS: dict[str, _ResourceSpec] = {
         owner_kw="project_user_id",
         id_kw="project_id",
         workspace_kw="workspace_id",
-        scope_kw=None,
+        # Existing-project checks use the concrete project domain so plugins
+        # can distinguish reserved projects from their parent workspace.
+        # CREATE has no project id and still resolves to the workspace/global
+        # domain as before.
+        scope_kw="project_id",
     ),
     "knowledge_base": _ResourceSpec(
         resource_type="knowledge_base",

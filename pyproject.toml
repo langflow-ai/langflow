@@ -169,7 +169,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 bundles = [
-    "lfx-bundles[all-no-torch]>=1.1.7,<2.0",
+    "lfx-bundles[all-no-torch]>=1.1.8,<2.0",
     "lfx-arxiv>=0.1.0,<1.0.0",
     "lfx-duckduckgo>=0.1.0,<1.0.0",
     "lfx-empiriolabs>=0.1.0,<1.0.0",
@@ -194,6 +194,14 @@ docling-image-description = [
 
 audio = [
     "langflow-base[audio]~=1.12.0",
+]
+
+# Opt-in microVM sandbox backend for code-execution components
+# (LANGFLOW_SANDBOX_BACKEND=exec-sandbox, issue #12029). Requires Python >= 3.12
+# and QEMU 8+ on the host; on older Pythons the extra installs nothing and the
+# backend fails closed at use time.
+sandbox = [
+    "langflow-base[sandbox]~=1.12.0",
 ]
 
 
@@ -237,7 +245,8 @@ override-dependencies = [
     # Security: Force upgraded versions to prevent transitive deps from pulling older vulnerable versions
     "orjson>=3.11.6",
     "gunicorn>=25.3.0",
-    "pypdf>=6.10.0",  # Force pypdf 6.10+ to prevent vulnerable 6.6.x versions
+    "pypdf>=6.15.0,<7.0.0",  # Force a patched pypdf 6.x release
+    "cryptography>=50.0.0",  # GHSA-g6cj-pr64-35w5 is fixed in 50.0.0
     "nltk>=3.9.4",
     "Markdown>=3.8.0",
     "dynaconf>=3.2.13",
@@ -245,11 +254,16 @@ override-dependencies = [
     "playwright>=1.59.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
     # Keep uv workspace resolution on the Python 3.14-compatible LiteLLM floor.
     "litellm>=1.93.0,<2.0.0",
+    # Temporary compatibility valve: langchain-litellm 0.6.1-0.7.0 cap
+    # cryptography below 49; 0.5.1 is the newest release without that cap.
+    "langchain-litellm==0.5.1",
     # Transitive dependency CVE fixes
     "lxml>=6.1.0,<7.0.0",  # CVE-2026-41066
     "mako>=1.3.12,<2.0.0",  # CVE-2026-44307
     "urllib3>=2.7.0,<3.0.0",  # CVE-2026-44431, CVE-2026-44432
     "python-liquid>=2.2.0,<3.0.0",  # CVE-2026-45017
+    "GitPython>=3.1.58",  # GHSA-wvpp-8hx9-p66j, GHSA-jm78-9fvv-mhgr, GHSA-hmq2-w58f-27jc, GHSA-4gmw-gg2m-w46p, GHSA-9rj7-rf2p-w77r, GHSA-hh9p-6wh2-4mfc
+    "h2>=4.4.1",  # CVE-2026-71554
 ]
 
 [tool.codespell]

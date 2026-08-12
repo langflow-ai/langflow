@@ -14,8 +14,10 @@ from langflow.api.v1 import catalog_policy
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.catalog_policy import CatalogPolicyRule
+from langflow.services.policy_bundle import PolicyBundleRevisionConflictError
 from lfx.services.catalog_policy import CatalogPolicySnapshot, CatalogPolicyUpdate
 from lfx.services.deps import session_scope_readonly
+from lfx.utils.component_aliases import ComponentIdentityIndex
 from sqlmodel import select
 
 
@@ -31,6 +33,10 @@ class _StubCatalogPolicy:
     @property
     def external_policy_snapshot(self):
         return None
+
+    @property
+    def supports_policy_bundle_updates(self):
+        return True
 
     async def replace_blocked_component_keys(self, keys, *, actor_user_id):
         desired = frozenset(keys)
@@ -76,6 +82,22 @@ class _ExternalCatalogPolicy(_StubCatalogPolicy):
     @property
     def external_policy_snapshot(self):
         return self.snapshot
+
+
+class _ConflictingCatalogPolicy(_StubCatalogPolicy):
+    async def replace_blocked_component_keys(self, keys, *, actor_user_id):
+        _ = keys, actor_user_id
+        raise PolicyBundleRevisionConflictError(expected_revision=7, active_revision=8)
+
+    async def replace_blocked_template_keys(self, keys, *, actor_user_id):
+        _ = keys, actor_user_id
+        raise PolicyBundleRevisionConflictError(expected_revision=7, active_revision=8)
+
+
+class _LegacyCatalogPolicy(_StubCatalogPolicy):
+    @property
+    def supports_policy_bundle_updates(self):
+        return False
 
 
 def _client(monkeypatch, *, service=None, superuser=True):
@@ -153,6 +175,8 @@ def test_empty_external_snapshot_still_reports_external_ownership(monkeypatch):
         ("put", "/api/v1/catalog-policy/components"),
         ("get", "/api/v1/catalog-policy/templates"),
         ("put", "/api/v1/catalog-policy/templates"),
+        ("get", "/api/v1/catalog-policy/usage"),
+        ("get", "/api/v1/catalog-policy/usage/flows?component=ChatInput"),
     ],
 )
 def test_all_routes_require_superuser(monkeypatch, method, path):
@@ -202,6 +226,20 @@ def test_put_components_normalizes_whole_set_and_audits_each_delta(monkeypatch):
     ]
 
 
+def test_put_rejects_legacy_plugin_without_bundle_update_support(monkeypatch):
+    client, service, _admin, audit = _client(monkeypatch, service=_LegacyCatalogPolicy())
+
+    response = client.put(
+        "/api/v1/catalog-policy/components",
+        json={"blocked": ["NewComponent"]},
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert "does not support shared policy bundle updates" in response.json()["detail"]
+    assert service.component_calls == []
+    audit.assert_not_awaited()
+
+
 def test_put_templates_preserves_case_and_accepts_unknown_keys(monkeypatch):
     client, service, admin, audit = _client(monkeypatch)
 
@@ -236,6 +274,49 @@ def test_put_requires_explicit_whole_set_without_writing_or_auditing(monkeypatch
 
     assert response.status_code == 422
     assert service.component_calls == []
+    audit.assert_not_awaited()
+
+
+@pytest.mark.parametrize("resource_kind", ["components", "templates"])
+@pytest.mark.parametrize(
+    "invalid_keys",
+    [
+        ["x" * 256],
+        [f"catalog-key-{index}" for index in range(1001)],
+    ],
+    ids=["key-too-long", "too-many-keys"],
+)
+def test_put_bounds_catalog_key_sets_without_writing_or_auditing(monkeypatch, resource_kind, invalid_keys):
+    client, service, _admin, audit = _client(monkeypatch)
+
+    response = client.put(
+        f"/api/v1/catalog-policy/{resource_kind}",
+        json={"blocked": invalid_keys},
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert service.component_calls == []
+    assert service.template_calls == []
+    audit.assert_not_awaited()
+
+
+@pytest.mark.parametrize("resource_kind", ["components", "templates"])
+def test_concurrent_legacy_put_returns_bundle_revision_conflict(monkeypatch, resource_kind):
+    client, _service, _admin, audit = _client(monkeypatch, service=_ConflictingCatalogPolicy())
+
+    response = client.put(
+        f"/api/v1/catalog-policy/{resource_kind}",
+        json={"blocked": ["NewKey"]},
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json() == {
+        "detail": {
+            "message": "Policy bundle revision conflict",
+            "expected_revision": 7,
+            "active_revision": 8,
+        }
+    }
     audit.assert_not_awaited()
 
 
@@ -312,3 +393,228 @@ def test_external_policy_rejects_valid_puts_without_writing_or_auditing(monkeypa
 def test_managed_marker_is_response_only():
     assert "managed_externally" not in catalog_policy.CatalogPolicyBlockedSet.model_fields
     assert "managed_externally" in catalog_policy.CatalogPolicyRead.model_fields
+
+
+def _usage_index(canonical: set[str], aliases: dict[str, set[str]] | None = None) -> ComponentIdentityIndex:
+    return ComponentIdentityIndex(
+        canonical_keys=frozenset(canonical),
+        aliases={alias: frozenset(targets) for alias, targets in (aliases or {}).items()},
+    )
+
+
+def _usage_client(monkeypatch, *, flows, flows_scanned, index):
+    client, _service, _admin, _audit = _client(monkeypatch)
+    usage = [
+        catalog_policy._FlowUsage(flow_id=flow_id, name=name, component_keys=frozenset(keys))
+        for flow_id, name, keys in flows
+    ]
+    loader = AsyncMock(return_value=(usage, flows_scanned))
+    monkeypatch.setattr(catalog_policy, "_usage_scan_cache", None)
+    monkeypatch.setattr(catalog_policy, "_load_flow_component_usage", loader)
+    monkeypatch.setattr(catalog_policy, "_usage_identity_index", AsyncMock(return_value=index))
+    return client, loader
+
+
+def test_usage_counts_each_flow_once_per_component(monkeypatch):
+    flow_a, flow_b = uuid4(), uuid4()
+    client, _loader = _usage_client(
+        monkeypatch,
+        flows=[
+            (flow_a, "Flow A", {"ChatInput", "Agent"}),
+            (flow_b, "Flow B", {"ChatInput"}),
+        ],
+        flows_scanned=5,
+        index=_usage_index({"ChatInput", "Agent"}),
+    )
+
+    response = client.get("/api/v1/catalog-policy/usage")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "components": {"Agent": 1, "ChatInput": 2},
+        "flows_scanned": 5,
+    }
+
+
+def test_usage_resolves_legacy_aliases_to_canonical_identity(monkeypatch):
+    flow_a, flow_b = uuid4(), uuid4()
+    client, _loader = _usage_client(
+        monkeypatch,
+        flows=[
+            # A legacy alias and its canonical key are the same component and
+            # must not double-count; unknown keys survive as themselves.
+            (flow_a, "Legacy", {"Prompt", "Prompt Template", "MyCustomComponent"}),
+            (flow_b, "Modern", {"Prompt Template"}),
+        ],
+        flows_scanned=2,
+        index=_usage_index({"Prompt Template"}, aliases={"Prompt": {"Prompt Template"}}),
+    )
+
+    response = client.get("/api/v1/catalog-policy/usage")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "components": {"MyCustomComponent": 1, "Prompt Template": 2},
+        "flows_scanned": 2,
+    }
+
+
+def test_usage_flows_drilldown_matches_aliases_and_sorts_by_name(monkeypatch):
+    flow_a, flow_b, flow_c = uuid4(), uuid4(), uuid4()
+    client, _loader = _usage_client(
+        monkeypatch,
+        flows=[
+            (flow_a, "zeta", {"Prompt"}),
+            (flow_b, "Alpha", {"Prompt Template"}),
+            (flow_c, "beta", {"Unrelated"}),
+        ],
+        flows_scanned=3,
+        index=_usage_index({"Prompt Template", "Unrelated"}, aliases={"Prompt": {"Prompt Template"}}),
+    )
+
+    response = client.get("/api/v1/catalog-policy/usage/flows", params={"component": "Prompt Template"})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "component": "Prompt Template",
+        "total": 2,
+        "flows": [
+            {"id": str(flow_b), "name": "Alpha"},
+            {"id": str(flow_a), "name": "zeta"},
+        ],
+    }
+
+    # The alias key drills down to the same affected flows.
+    aliased = client.get("/api/v1/catalog-policy/usage/flows", params={"component": "Prompt"})
+    assert aliased.status_code == 200
+    assert aliased.json()["total"] == 2
+
+
+def test_usage_flows_drilldown_truncates_to_limit_but_reports_total(monkeypatch):
+    flows = [(uuid4(), f"flow-{index:02d}", {"ChatInput"}) for index in range(5)]
+    client, _loader = _usage_client(
+        monkeypatch,
+        flows=flows,
+        flows_scanned=5,
+        index=_usage_index({"ChatInput"}),
+    )
+
+    response = client.get(
+        "/api/v1/catalog-policy/usage/flows",
+        params={"component": "ChatInput", "limit": 2},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["total"] == 5
+    assert [flow["name"] for flow in payload["flows"]] == ["flow-00", "flow-01"]
+
+
+def test_usage_flows_drilldown_unknown_key_matches_exact_only(monkeypatch):
+    flow_a = uuid4()
+    client, _loader = _usage_client(
+        monkeypatch,
+        flows=[(flow_a, "Custom", {"MyCustomComponent"})],
+        flows_scanned=1,
+        index=_usage_index({"ChatInput"}),
+    )
+
+    match = client.get("/api/v1/catalog-policy/usage/flows", params={"component": "MyCustomComponent"})
+    miss = client.get("/api/v1/catalog-policy/usage/flows", params={"component": "OtherComponent"})
+
+    assert match.status_code == 200
+    assert match.json()["total"] == 1
+    assert miss.status_code == 200
+    assert miss.json() == {"component": "OtherComponent", "total": 0, "flows": []}
+
+
+def test_usage_flows_drilldown_rejects_blank_component(monkeypatch):
+    client, _loader = _usage_client(monkeypatch, flows=[], flows_scanned=0, index=_usage_index(set()))
+
+    missing = client.get("/api/v1/catalog-policy/usage/flows")
+    blank = client.get("/api/v1/catalog-policy/usage/flows", params={"component": "   "})
+
+    assert missing.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert blank.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+def test_usage_endpoints_share_one_flow_scan_within_the_ttl(monkeypatch):
+    client, loader = _usage_client(
+        monkeypatch,
+        flows=[(uuid4(), "Flow A", {"ChatInput"})],
+        flows_scanned=1,
+        index=_usage_index({"ChatInput"}),
+    )
+
+    first = client.get("/api/v1/catalog-policy/usage")
+    second = client.get("/api/v1/catalog-policy/usage")
+    drilldown = client.get("/api/v1/catalog-policy/usage/flows", params={"component": "ChatInput"})
+
+    assert first.status_code == second.status_code == drilldown.status_code == 200
+    assert first.json() == second.json()
+    assert drilldown.json()["total"] == 1
+    loader.assert_awaited_once()
+
+
+def test_usage_scan_cache_expires_after_the_ttl(monkeypatch):
+    client, loader = _usage_client(
+        monkeypatch,
+        flows=[(uuid4(), "Flow A", {"ChatInput"})],
+        flows_scanned=1,
+        index=_usage_index({"ChatInput"}),
+    )
+    monkeypatch.setattr(catalog_policy, "USAGE_SCAN_CACHE_TTL_SECONDS", 0.0)
+
+    first = client.get("/api/v1/catalog-policy/usage")
+    second = client.get("/api/v1/catalog-policy/usage")
+
+    assert first.status_code == second.status_code == 200
+    assert loader.await_count == 2
+
+
+@pytest.mark.anyio
+async def test_usage_scans_persisted_flows_and_excludes_saved_components(
+    client, logged_in_headers_super_user, monkeypatch
+):
+    """End-to-end: flow rows written through the API are visible to usage reads."""
+    # Discard any scan cached by an earlier test against a different database.
+    monkeypatch.setattr(catalog_policy, "_usage_scan_cache", None)
+    custom_key = f"UsageProbeComponent{uuid4().hex}"
+
+    def _graph(*component_types: str) -> dict:
+        return {
+            "nodes": [
+                {"id": f"node-{index}", "data": {"type": component_type, "node": {}}}
+                for index, component_type in enumerate(component_types)
+            ],
+            "edges": [],
+        }
+
+    for payload in (
+        {"name": f"usage-flow-a-{uuid4().hex}", "data": _graph(custom_key, "ChatInput")},
+        {"name": f"usage-flow-b-{uuid4().hex}", "data": _graph(custom_key, custom_key)},
+        {
+            "name": f"usage-saved-component-{uuid4().hex}",
+            "data": _graph(custom_key),
+            "is_component": True,
+        },
+    ):
+        created = await client.post("api/v1/flows/", json=payload, headers=logged_in_headers_super_user)
+        assert created.status_code == status.HTTP_201_CREATED
+
+    usage = await client.get("/api/v1/catalog-policy/usage", headers=logged_in_headers_super_user)
+    assert usage.status_code == 200
+    usage_payload = usage.json()
+    # Saved components are excluded; duplicate nodes count once per flow.
+    assert usage_payload["components"][custom_key] == 2
+    assert usage_payload["flows_scanned"] >= 2
+
+    drilldown = await client.get(
+        "/api/v1/catalog-policy/usage/flows",
+        params={"component": custom_key},
+        headers=logged_in_headers_super_user,
+    )
+    assert drilldown.status_code == 200
+    drilldown_payload = drilldown.json()
+    assert drilldown_payload["total"] == 2
+    assert [flow["name"].split("-")[1] for flow in drilldown_payload["flows"]] == ["flow", "flow"]

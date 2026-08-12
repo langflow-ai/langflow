@@ -234,7 +234,7 @@ async def test_memory_base_resolves_as_knowledge_base_resource_owner():
 
 @pytest.mark.asyncio
 async def test_create_share_blocks_non_owner_under_oss_passthrough(patch_authz, silence_audit):  # noqa: ARG001
-    """A non-owner cannot mint a share row for another user's flow under OSS."""
+    """An OSS-floor deny is indistinguishable from a missing resource."""
     from langflow.services.database.models.flow.model import Flow
 
     patch_authz(cross_user=False, enabled=False)
@@ -248,8 +248,8 @@ async def test_create_share_blocks_non_owner_under_oss_passthrough(patch_authz, 
     with pytest.raises(HTTPException) as excinfo:
         await shares_module.create_share(payload=payload, current_user=attacker, session=session)
 
-    assert excinfo.value.status_code == 403
-    assert "Only the resource owner" in excinfo.value.detail
+    assert excinfo.value.status_code == 404
+    assert excinfo.value.detail == "Resource not found"
     # Floor fires before any DB write — no share row was added.
     assert session.added == []
 
@@ -343,6 +343,7 @@ async def test_create_share_returns_404_when_resource_missing(patch_authz, silen
         await shares_module.create_share(payload=payload, current_user=attacker, session=session)
 
     assert excinfo.value.status_code == 404
+    assert excinfo.value.detail == "Resource not found"
 
 
 # --------------------------------------------------------------------------- #
@@ -608,7 +609,7 @@ async def test_create_share_invokes_plugin_enforce_for_non_owner(patch_authz, si
 
 @pytest.mark.asyncio
 async def test_create_share_denied_when_plugin_denies_non_owner(patch_authz, silence_audit):  # noqa: ARG001
-    """Regression: plugin deny on share-create must yield 403 and no DB write."""
+    """A plugin deny on share-create must preserve resource UUID privacy."""
     from langflow.services.database.models.flow.model import Flow
 
     patch_authz(cross_user=True, enabled=True, allow=False)
@@ -622,7 +623,37 @@ async def test_create_share_denied_when_plugin_denies_non_owner(patch_authz, sil
     with pytest.raises(HTTPException) as excinfo:
         await shares_module.create_share(payload=payload, current_user=delegate, session=session)
 
-    assert excinfo.value.status_code == 403
+    assert excinfo.value.status_code == 404
+    assert excinfo.value.detail == "Resource not found"
+    assert session.added == []
+
+
+@pytest.mark.asyncio
+async def test_create_share_preserves_non_403_permission_errors(monkeypatch, patch_authz, silence_audit):  # noqa: ARG001
+    """Only permission denies are masked; unexpected guard errors stay intact."""
+    from langflow.services.database.models.flow.model import Flow
+
+    patch_authz(cross_user=True, enabled=True)
+
+    async def _raise_service_error(*_args, **_kwargs):
+        raise HTTPException(status_code=503, detail="Authorization service unavailable")
+
+    monkeypatch.setattr(shares_module, "ensure_share_permission", _raise_service_error)
+
+    owner = _make_user()
+    delegate = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    session = _FakeAsyncSession({(Flow, flow.id): flow})
+
+    with pytest.raises(HTTPException) as excinfo:
+        await shares_module.create_share(
+            payload=_payload_for(flow.id),
+            current_user=delegate,
+            session=session,
+        )
+
+    assert excinfo.value.status_code == 503
+    assert excinfo.value.detail == "Authorization service unavailable"
     assert session.added == []
 
 

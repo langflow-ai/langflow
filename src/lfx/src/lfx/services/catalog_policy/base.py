@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from lfx.services.base import Service
+from lfx.services.policy_bundle import PolicyBundleSnapshot
 from lfx.services.schema import ServiceType
 
 if TYPE_CHECKING:
@@ -85,6 +86,29 @@ class BaseCatalogPolicyService(Service, abc.ABC):
     @abc.abstractmethod
     def snapshot(self) -> CatalogPolicySnapshot:
         """Return the current immutable process-local snapshot."""
+
+    @property
+    def policy_bundle_snapshot(self) -> PolicyBundleSnapshot:
+        """Return a compatibility bundle view for catalog-only implementations."""
+        snapshot = self.snapshot
+        return PolicyBundleSnapshot(
+            blocked_component_keys=snapshot.blocked_component_keys,
+            blocked_template_keys=snapshot.blocked_template_keys,
+        )
+
+    @property
+    def supports_policy_bundle_updates(self) -> bool:
+        """Return whether committed shared bundles can be applied atomically.
+
+        Legacy plugins default to ``False`` so Langflow never reports a
+        successful database write that the active enforcement plugin ignored.
+        """
+        return False
+
+    def apply_policy_bundle(self, snapshot: PolicyBundleSnapshot) -> bool:
+        """Publish a durable bundle when the implementation supports live updates."""
+        _ = snapshot
+        return False
 
     @property
     def enabled(self) -> bool:

@@ -19,6 +19,7 @@ import pytest
 
 _HAS_OTEL = importlib.util.find_spec("opentelemetry") is not None
 requires_otel = pytest.mark.skipif(not _HAS_OTEL, reason="requires the lfx[otel] extra")
+_TEST_USERINFO = "user:password"  # pragma: allowlist secret
 
 
 def _run(probe: str, env_overrides: dict[str, str]) -> subprocess.CompletedProcess:
@@ -198,6 +199,85 @@ def test_span_filter_drops_llm_scopes():
 
     exported = {span.name for span in exporter.get_finished_spans()}
     assert exported == {"flow.execute"}
+
+
+def _export_application_span(attributes, *, span_limits=None):
+    from lfx.observability import APPLICATION_TRACER_NAME, ApplicationOnlySpanProcessor
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider(span_limits=span_limits)
+    provider.add_span_processor(ApplicationOnlySpanProcessor(exporter))
+    try:
+        span = provider.get_tracer(APPLICATION_TRACER_NAME).start_span("url.redaction")
+        for key, value in attributes.items():
+            span.set_attribute(key, value)
+        span.end()
+        provider.force_flush()
+        exported = exporter.get_finished_spans()
+    finally:
+        provider.shutdown()
+
+    assert len(exported) == 1
+    return exported[0]
+
+
+@requires_otel
+@pytest.mark.parametrize(
+    ("attribute", "value", "expected"),
+    [
+        ("url.query", "x-api-key=secret", ""),
+        ("http.target", "/flows/run?x-api-key=secret#fragment", "/flows/run"),
+        (
+            "url.full",
+            f"https://{_TEST_USERINFO}@example.com:443/flows/run?x-api-key=secret#fragment",
+            "https://example.com:443/flows/run",
+        ),
+        (
+            "http.url",
+            f"http://{_TEST_USERINFO}@[2001:db8::1]:0/flows/run?x-api-key=secret#fragment",
+            "http://[2001:db8::1]:0/flows/run",
+        ),
+        (
+            "http.url",
+            f"http://{_TEST_USERINFO}@example.com:notaport/flows/run?x-api-key=secret#fragment",
+            "",
+        ),
+        ("url.full", "http://[broken/flows/run?x-api-key=secret", ""),
+        ("url.full", f"http:{_TEST_USERINFO}@example.com/flows/run?x-api-key=secret", ""),
+        ("http.url", f"http:///{_TEST_USERINFO}@example.com/flows/run?x-api-key=secret", ""),
+        ("http.target", f"http:{_TEST_USERINFO}@example.com/flows/run?x-api-key=secret", ""),
+        ("url.full", (f"https://{_TEST_USERINFO}@example.com/flows/run?x-api-key=secret",), ""),
+    ],
+)
+def test_span_filter_redacts_url_attributes_without_losing_operational_details(attribute, value, expected):
+    span_attributes = {attribute: value, "http.request.method": "GET"}
+    if attribute != "url.query":
+        span_attributes["url.query"] = "another-secret=x"
+    exported = _export_application_span(span_attributes)
+
+    assert exported.attributes[attribute] == expected
+    if attribute != "url.query":
+        assert exported.attributes["url.query"] == ""
+    assert exported.attributes["http.request.method"] == "GET"
+    assert "secret" not in str(exported.attributes)
+    assert "password" not in str(exported.attributes)
+
+
+@requires_otel
+def test_span_filter_preserves_attribute_limits_and_drop_count():
+    from opentelemetry.sdk.trace import SpanLimits
+
+    exported = _export_application_span(
+        {"discarded": "value", "url.full": "https://secret@example.com/flows/run?secret=x"},
+        span_limits=SpanLimits(max_span_attributes=1, max_span_attribute_length=14),
+    )
+
+    assert exported.attributes["url.full"] == ""
+    assert exported.dropped_attributes == 1
+    assert exported._attributes.maxlen == 1
+    assert exported._attributes.max_value_len == 14
 
 
 @requires_otel

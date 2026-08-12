@@ -13,6 +13,7 @@ from lfx.graph.vertex.base import Vertex
 from lfx.log.logger import logger
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
+from lfx.utils.file_path_security import LocalFileAccessError
 from sqlmodel import select
 
 from langflow.api.disconnect import DisconnectHandlerStreamingResponse
@@ -26,6 +27,7 @@ from langflow.api.utils import (
     get_top_level_vertices,
     parse_exception,
 )
+from langflow.api.utils.execution_errors import error_details_for_client, error_for_client
 from langflow.api.v1.schemas import (
     FlowDataRequest,
     ResultDataResponse,
@@ -191,6 +193,7 @@ async def start_flow_build(
     queue_service: JobQueueService,
     flow_name: str | None = None,
     source_flow_id: uuid.UUID | None = None,
+    expose_error_details: bool = False,
 ) -> str:
     """Start the flow build process by setting up the queue and starting the build task.
 
@@ -209,6 +212,7 @@ async def start_flow_build(
         source_flow_id: If provided, the actual flow ID to load from DB.
             Used by public flows where flow_id is a virtual UUID for session isolation
             but the flow data must be loaded from the original flow in the database.
+        expose_error_details: Whether client events may include component errors and tracebacks.
 
     Returns:
         the job_id.
@@ -229,11 +233,13 @@ async def start_flow_build(
             current_user=current_user,
             flow_name=flow_name,
             source_flow_id=source_flow_id,
+            expose_error_details=expose_error_details,
         )
         queue_service.start_job(job_id, task_coro)
     except Exception as e:
         await logger.aexception("Failed to create queue and start task")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        client_error = error_for_client(e, expose_details=expose_error_details)
+        raise HTTPException(status_code=500, detail=str(client_error)) from e
     return job_id
 
 
@@ -442,6 +448,8 @@ async def generate_flow_events(
     run_id: str | None = None,
     track_job_status: bool = True,
     tweaks: dict | None = None,
+    expose_error_details: bool = False,
+    persist_messages: bool = True,
 ) -> None:
     """Generate events for flow building process.
 
@@ -571,7 +579,7 @@ async def generate_flow_events(
                 error_message=str(exc),
             )
 
-            if "stream or streaming set to True" in str(exc):
+            if isinstance(exc, LocalFileAccessError) or "stream or streaming set to True" in str(exc):
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
             await logger.aexception("Error checking build status: " + str(exc))
             raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -614,22 +622,33 @@ async def generate_flow_events(
                 session_id=effective_session_id,
                 run_id=str(job_id) if job_id is not None else run_id,
             )
-            if source_flow_id is not None:
-                graph.flow_id = str(flow_id)
-            return graph
+        else:
+            if not flow_name:
+                lookup_flow_id = source_flow_id if source_flow_id is not None else flow_id
+                result = await fresh_session.exec(select(Flow.name).where(Flow.id == lookup_flow_id))
+                flow_name = result.first()
 
-        if not flow_name:
-            result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
-            flow_name = result.first()
+            # Sanitized public data still contains FileInput references under
+            # the real source-flow namespace. Build under that trusted scope;
+            # after parameter containment completes, switch the graph to the
+            # visitor-virtual execution ID below.
+            graph_build_flow_id = str(source_flow_id) if source_flow_id is not None else flow_id_str
+            graph = await build_graph_from_data(
+                flow_id=graph_build_flow_id,
+                payload=data.model_dump(),
+                user_id=str(current_user.id),
+                flow_name=flow_name,
+                session_id=effective_session_id,
+                run_id=str(job_id) if job_id is not None else run_id,
+            )
 
-        return await build_graph_from_data(
-            flow_id=flow_id_str,
-            payload=data.model_dump(),
-            user_id=str(current_user.id),
-            flow_name=flow_name,
-            session_id=effective_session_id,
-            run_id=str(job_id) if job_id is not None else run_id,
-        )
+        if source_flow_id is not None:
+            # This value comes from the server-resolved public flow, never from
+            # request data. FileInput containment and ChatInput attachment
+            # validation use it only after flow_id becomes visitor-virtual.
+            graph.source_flow_id = str(source_flow_id)
+            graph.flow_id = str(flow_id)
+        return graph
 
     def sort_vertices(graph: Graph) -> list[str]:
         try:
@@ -678,9 +697,17 @@ async def generate_flow_events(
                     tb = traceback.format_exc()
                     await logger.aexception("Error building Component")
                     params = format_exception_message(exc)
+                error_message = params
+                client_error = error_details_for_client(
+                    exc,
+                    expose_details=expose_error_details,
+                    message=params,
+                    stack_trace=tb,
+                )
+                params = client_error.message
+                tb = client_error.stack_trace
                 message = {"errorMessage": params, "stackTrace": tb}
                 valid = False
-                error_message = params
                 output_label = vertex.outputs[0]["name"] if vertex.outputs else "output"
                 outputs = {output_label: OutputValue(message=message, type="error")}
                 result_data_response = ResultDataResponse(results={}, outputs=outputs)
@@ -693,8 +720,10 @@ async def generate_flow_events(
             # ``run_id``) persist every vertex, including streaming terminal outputs,
             # so GET-status reconstruction by job_id is complete. The live build
             # path (``run_id is None``) keeps the original "skip streaming vertices"
-            # behavior unchanged.
-            if log_builds and (run_id is not None or not vertex.will_stream):
+            # behavior unchanged. Ephemeral (anonymous serving) runs skip the
+            # persisted record entirely — vertex-build rows retain params/outputs,
+            # so the no-persist contract covers them too.
+            if log_builds and graph.persist_messages and (run_id is not None or not vertex.will_stream):
                 background_tasks.add_task(
                     log_vertex_build,
                     flow_id=flow_id_str,
@@ -838,14 +867,22 @@ async def generate_flow_events(
 
     try:
         ids, vertices_to_run, graph = await build_graph_and_get_order()
+        # Serving-plane end-user scoping: an anonymous run is ephemeral, so mark the
+        # graph non-persisting (astore_message honors this per component). Defaults
+        # True, so the Playground and every other caller are unaffected.
+        graph.persist_messages = persist_messages
     except Exception as e:
+        client_error = error_for_client(e, expose_details=expose_error_details)
         error_message = ErrorMessage(
             flow_id=flow_id,
-            exception=e,
+            exception=client_error,
             session_id=inputs.session,
+            include_traceback=expose_error_details,
         )
         event_manager.on_error(data=error_message.data)
-        raise
+        if expose_error_details:
+            raise
+        raise client_error from e
 
     # Create a WORKFLOW job record so memory-base on_flow_output can track this run.
     # Best-effort: failures here must never break the build path.
@@ -904,14 +941,18 @@ async def generate_flow_events(
             await logger.aerror(f"Error building vertices: {e}")
             custom_component = graph.get_vertex(vertex_id).custom_component
             trace_name = getattr(custom_component, "trace_name", None)
+            client_error = error_for_client(e, expose_details=expose_error_details)
             error_message = ErrorMessage(
                 flow_id=flow_id,
-                exception=e,
+                exception=client_error,
                 session_id=graph.session_id,
                 trace_name=trace_name,
+                include_traceback=expose_error_details,
             )
             event_manager.on_error(data=error_message.data)
-            raise
+            if expose_error_details:
+                raise
+            raise client_error from e
 
     try:
         runner_owns_status = job_id is not None  # background path: JobRunner already wraps execute_with_status

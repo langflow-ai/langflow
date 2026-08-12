@@ -13,6 +13,7 @@ import {
   DialogTrigger,
   Dialog as Modal,
   DialogContentPlain as ModalContent,
+  VisuallyHidden,
 } from "../../components/ui/dialog";
 import type { modalHeaderType } from "../../types/components";
 import { cn } from "../../utils/utils";
@@ -245,7 +246,10 @@ interface BaseModalProps {
   dialogContentWithouFixed?: boolean;
   height?: string;
   width?: string;
-  /** Accessible name for type="full-screen", which has no DialogTitle. */
+  /**
+   * Accessible name for modals that render no BaseModal.Header, and therefore
+   * no DialogTitle — required for type="full-screen", optional elsewhere.
+   */
   ariaLabel?: string;
 }
 function BaseModal({
@@ -281,11 +285,23 @@ function BaseModal({
 
   const { minWidth, height } = switchCaseModalSize(size);
 
+  // Modals with no BaseModal.Header render no DialogTitle, so Radix warns and
+  // DialogContent injects its "Dialog" fallback. Name those from `ariaLabel`
+  // with a real hidden title instead. type="full-screen" is a plain div rather
+  // than a Radix dialog, so it keeps naming itself with the aria-label
+  // attribute — a DialogTitle outside a Dialog root would throw.
+  const hiddenTitle =
+    ariaLabel && !headerChild && type !== "full-screen" ? (
+      <VisuallyHidden>
+        <DialogTitle>{ariaLabel}</DialogTitle>
+      </VisuallyHidden>
+    ) : null;
+
   // BaseModal.Header renders DialogTitle/Description inside its own component
   // body, so DialogContent's child-tree scan cannot see them and would inject a
   // VisuallyHidden "Dialog" title that steals aria-labelledby. Skip that
-  // fallback whenever a Header is present.
-  const hideTitleFallback = !!headerChild;
+  // fallback whenever this component supplies a title of its own.
+  const hideTitleFallback = !!headerChild || !!hiddenTitle;
   const hideDescriptionFallback =
     React.isValidElement(headerChild) &&
     !!(headerChild.props as { description?: unknown }).description;
@@ -298,6 +314,7 @@ function BaseModal({
 
   const modalContent = (
     <>
+      {hiddenTitle}
       {headerChild && headerChild}
       {ContentChild}
       {ContentFooter && ContentFooter}

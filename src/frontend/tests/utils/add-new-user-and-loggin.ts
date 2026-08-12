@@ -1,7 +1,9 @@
 import { type Page } from "@playwright/test";
 import { expect } from "../fixtures";
-import { TEXTS } from "../utils/constants/texts";
+import { createActiveUserViaApi } from "./auth/manage-users-via-api";
+import { TEXTS } from "./constants/texts";
 import { waitForNewProjectButton } from "./flow/new-project-flow";
+
 export const addNewUserAndLogin = async (page: Page) => {
   await page.route("**/api/v1/auto_login", (route) => {
     route.fulfill({
@@ -32,7 +34,7 @@ export const addNewUserAndLogin = async (page: Page) => {
 
   await page.goto("/");
 
-  await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+  await expect(page.getByRole("button", { name: TEXTS.signIn })).toBeVisible({
     timeout: 30000,
   });
 
@@ -64,32 +66,11 @@ export const addNewUserAndLogin = async (page: Page) => {
 
   await waitForNewProjectButton(page);
 
-  await page.getByTestId("user-profile-settings").click();
-
-  await page.getByText("Admin Page", { exact: true }).click();
-
-  //CRUD an user
-  await page.getByText("New User", { exact: true }).click();
-
-  await page
-    .getByPlaceholder(TEXTS.placeholderUsername)
-    .last()
-    .fill(randomName);
-  await page.locator('input[name="password"]').fill(randomPassword);
-  await page.locator('input[name="confirmpassword"]').fill(randomPassword);
-
-  await page.waitForSelector("#is_active", {
-    timeout: 1500,
-  });
-
-  await page.locator("#is_active").click();
-
-  await page.getByText(TEXTS.save, { exact: true }).click();
-
-  await page.waitForSelector("text=new user added", { timeout: 30000 });
-
-  await expect(page.getByText(randomName, { exact: true })).toBeVisible({
-    timeout: 2000,
+  // OSS no longer ships the Admin Page UI; create the user through the
+  // authenticated superuser API instead.
+  await createActiveUserViaApi(page, {
+    username: randomName,
+    password: randomPassword,
   });
 
   await page.waitForSelector("[data-testid='user-profile-settings']", {
@@ -104,16 +85,12 @@ export const addNewUserAndLogin = async (page: Page) => {
 
   await page.getByText(TEXTS.logout, { exact: true }).click();
 
-  await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+  await expect(page.getByRole("button", { name: TEXTS.signIn })).toBeVisible({
     timeout: 30000,
   });
 
   await page.getByPlaceholder(TEXTS.placeholderUsername).fill(randomName);
   await page.getByPlaceholder(TEXTS.placeholderPassword).fill(randomPassword);
-
-  await page.waitForSelector("text=Sign in", {
-    timeout: 1500,
-  });
 
   await page.getByRole("button", { name: TEXTS.signIn }).click();
 

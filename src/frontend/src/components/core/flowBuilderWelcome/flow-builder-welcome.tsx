@@ -49,7 +49,12 @@ export function FlowBuilderWelcome({
 
   useEffect(() => {
     const handleKey = (e: globalThis.KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      // Radix's DismissableLayer preventDefaults the Escape it consumes to
+      // dismiss a dialog (e.g. the TemplatesModal opened from "Browse
+      // more…") but does not stop propagation, so without this guard one
+      // keypress would close both the modal and the welcome underneath,
+      // stranding keyboard/screen-reader focus on the canvas (LE-2041 QA).
+      if (e.key === "Escape" && !e.defaultPrevented) onClose();
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);

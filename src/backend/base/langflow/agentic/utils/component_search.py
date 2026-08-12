@@ -5,6 +5,27 @@ from typing import Any
 from lfx.interface.components import get_and_cache_all_types_dict
 from lfx.log.logger import logger
 from lfx.services.settings.service import SettingsService
+from lfx.utils.component_aliases import build_component_identity_index
+
+from langflow.services.deps import get_catalog_policy_service
+
+
+def _filter_components_by_catalog_policy(all_types_dict: dict[str, dict[str, dict]]) -> dict[str, dict[str, dict]]:
+    """Return request-local category copies without catalog-blocked components."""
+    blocked_component_keys = get_catalog_policy_service().snapshot.blocked_component_keys
+    if not blocked_component_keys:
+        return all_types_dict
+
+    identity_index = build_component_identity_index(all_types_dict)
+    blocked_identities = identity_index.resolve_many(blocked_component_keys)
+    return {
+        category: {
+            component_name: component
+            for component_name, component in components.items()
+            if identity_index.resolve(component_name).isdisjoint(blocked_identities)
+        }
+        for category, components in all_types_dict.items()
+    }
 
 
 async def list_all_components(
@@ -53,7 +74,7 @@ async def list_all_components(
 
     try:
         # Get all components from cache
-        all_types_dict = await get_and_cache_all_types_dict(settings_service)
+        all_types_dict = _filter_components_by_catalog_policy(await get_and_cache_all_types_dict(settings_service))
         results = []
 
         # Iterate through component types
@@ -134,7 +155,7 @@ async def get_component_by_name(
         settings_service = get_settings_service()
 
     try:
-        all_types_dict = await get_and_cache_all_types_dict(settings_service)
+        all_types_dict = _filter_components_by_catalog_policy(await get_and_cache_all_types_dict(settings_service))
 
         # If component_type specified, search only that type
         if component_type:
@@ -197,7 +218,7 @@ async def get_all_component_types(settings_service: SettingsService | None = Non
         settings_service = get_settings_service()
 
     try:
-        all_types_dict = await get_and_cache_all_types_dict(settings_service)
+        all_types_dict = _filter_components_by_catalog_policy(await get_and_cache_all_types_dict(settings_service))
         return sorted(all_types_dict.keys())
 
     except Exception as e:  # noqa: BLE001
@@ -232,7 +253,7 @@ async def get_components_count(
         settings_service = get_settings_service()
 
     try:
-        all_types_dict = await get_and_cache_all_types_dict(settings_service)
+        all_types_dict = _filter_components_by_catalog_policy(await get_and_cache_all_types_dict(settings_service))
 
         if component_type:
             components = all_types_dict.get(component_type, {})

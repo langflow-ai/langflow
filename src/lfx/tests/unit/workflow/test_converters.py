@@ -49,6 +49,7 @@ from lfx.workflow.converters import (
     create_error_response,
     create_job_response,
     run_response_to_workflow_response,
+    workflow_response_from_output_events,
 )
 
 
@@ -1656,6 +1657,37 @@ class TestBuildComponentOutput:
             valid=False,
         )
         assert output.status == JobStatus.FAILED
+
+
+class TestWorkflowResponseFromOutputEvents:
+    def test_fail_on_rejected_reports_incomplete_stored_result(self):
+        valid = {
+            "component_id": "ChatOutput-1",
+            "type": "message",
+            "status": "completed",
+            "content": "hello",
+        }
+        malformed = {"component_id": "ChatOutput-2", "type": "message"}
+        numeric_id = {"component_id": 123, "type": "message", "status": "completed", "content": "ignored"}
+        unhashable_id = {"component_id": [], "type": "message", "status": "completed", "content": "ignored"}
+
+        stored_events = [valid, malformed, numeric_id, unhashable_id]
+        with pytest.raises(ValueError, match="rejected 3 of 4"):
+            workflow_response_from_output_events(
+                stored_events,
+                flow_id="flow-1",
+                job_id=str(uuid4()),
+                fail_on_rejected=True,
+            )
+
+        # The default remains tolerant for legacy callers and preserves every
+        # capture that can be decoded when no secondary recovery source exists.
+        partial = workflow_response_from_output_events(
+            stored_events,
+            flow_id="flow-1",
+            job_id=str(uuid4()),
+        )
+        assert list(partial.outputs) == ["ChatOutput-1"]
 
 
 class TestGlobalsSyncOnlyDocumented:

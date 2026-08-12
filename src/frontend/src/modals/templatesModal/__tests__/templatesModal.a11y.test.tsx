@@ -51,19 +51,15 @@ describe("TemplatesModal accessibility", () => {
     expect(await axe(document.body)).toHaveNoViolations();
   });
 
-  // FINDING (documented, not fixed): TemplatesModal renders only
-  // BaseModal.Content — there is no BaseModal.Header. BaseModal therefore
-  // leaves DialogContent's fallback in place, and the dialog announces as the
-  // literal string "Dialog" instead of "Templates" (WCAG 2.4.6 / 4.1.2). This
-  // is the one modal of the five with no meaningful accessible name.
-  it("should_expose_the_dialog_with_its_current_fallback_name", () => {
+  // TemplatesModal renders only BaseModal.Content — there is no
+  // BaseModal.Header to supply a DialogTitle, so it names itself through
+  // BaseModal's `ariaLabel`. Without it the dialog announced as the literal
+  // string "Dialog" (WCAG 2.4.6 / 4.1.2).
+  it("should_expose_the_dialog_with_a_meaningful_accessible_name", () => {
     renderModal();
 
-    expect(screen.getByRole("dialog", { name: "Dialog" })).toBeInTheDocument();
-    // The word "Templates" is on screen as the nav category heading, but it is
-    // not wired to the dialog's accessible name.
-    expect(screen.getAllByText("Templates").length).toBeGreaterThan(0);
-    expect(screen.getByRole("dialog")).not.toHaveAccessibleName("Templates");
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("Templates");
+    expect(screen.queryByRole("dialog", { name: "Dialog" })).toBeNull();
   });
 
   it("should_expose_the_template_categories_as_a_navigation_list", () => {

@@ -568,6 +568,7 @@ def register_all_service_factories() -> None:
     from lfx.services.executor import factory as executor_factory
     from lfx.services.mcp_composer import factory as mcp_composer_factory
     from lfx.services.model_provider_policy.service import ModelProviderPolicyService
+    from lfx.services.policy_bundle.service import PolicyBundleService
     from lfx.services.settings import factory as settings_factory
 
     from langflow.services.auth import factory as auth_factory
@@ -625,6 +626,11 @@ def register_all_service_factories() -> None:
         ServiceType.AUTHORIZATION_SERVICE, LangflowAuthorizationService, override=True
     )
     service_manager.register_factory(authorization_factory.AuthorizationServiceFactory())
+    service_manager.register_service_class(
+        ServiceType.POLICY_BUNDLE_SERVICE,
+        PolicyBundleService,
+        override=True,
+    )
     service_manager.register_service_class(
         ServiceType.CATALOG_POLICY_SERVICE,
         LangflowCatalogPolicyService,
@@ -726,11 +732,13 @@ async def initialize_services(*, fix_migration: bool = False, skip_superuser_set
 
     # Setup the superuser
     await initialize_database(fix_migration=fix_migration)
-    from langflow.services.model_provider_policy import hydrate_model_provider_policy
+    from langflow.services.policy_bundle import hydrate_policy_bundle
 
     async with session_scope() as session:
-        await hydrate_model_provider_policy(session)
-
+        await hydrate_policy_bundle(session)
+    # Preserve the pre-bundle plugin lifecycle for catalog implementations
+    # that load their own source in hydrate(). Bundle-aware services treat
+    # this as an idempotent read of the already published revision.
     await hydrate_catalog_policy()
     db_service = get_db_service()
     await db_service.initialize_alembic_log_file()

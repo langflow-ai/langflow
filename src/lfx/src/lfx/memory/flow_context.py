@@ -44,6 +44,32 @@ def reset_current_flow_id(token: contextvars.Token[str | UUID | None]) -> None:
     _current_flow_id.reset(token)
 
 
+# Ambient "may this run persist chat memory?" flag. Bound per component execution
+# (next to the flow-id scope) from ``graph.persist_messages`` so ``astore_message``
+# can skip the DB write for anonymous serving requests, which must run ephemerally.
+# Defaults True so every existing path — anything not opting out — persists exactly
+# as before.
+_messages_persist: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "lfx_messages_persist",
+    default=True,
+)
+
+
+def should_persist_messages() -> bool:
+    """Return whether the current run may persist chat memory (True outside a run)."""
+    return _messages_persist.get()
+
+
+def set_messages_persist(persist: bool) -> contextvars.Token[bool]:  # noqa: FBT001
+    """Bind the message-persistence flag for the current async task / thread."""
+    return _messages_persist.set(persist)
+
+
+def reset_messages_persist(token: contextvars.Token[bool]) -> None:
+    """Restore the previous message-persistence flag."""
+    _messages_persist.reset(token)
+
+
 def coerce_flow_id(flow_id: str | UUID | None) -> UUID | None:
     """Coerce an ambient ``flow_id`` (usually ``graph.flow_id``, a ``str``) to ``UUID``.
 

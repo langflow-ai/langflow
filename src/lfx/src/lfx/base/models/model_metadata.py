@@ -300,6 +300,22 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
                 "options": [],
                 "langchain_param": "endpoint",
             },
+            {
+                "variable_name": "Azure AI Foundry API Version",
+                "variable_key": "AZURE_AI_FOUNDRY_API_VERSION",
+                "description": (
+                    "Optional. api-version used for the deployments listing that powers "
+                    "live model discovery. Leave empty for the default "
+                    "(2023-03-15-preview)."
+                ),
+                "required": False,
+                "is_secret": False,
+                "is_list": False,
+                "options": [],
+                # No langchain_param / component_metadata: consumed by live discovery
+                # only — the OpenAI-compatible inference endpoint takes no api-version,
+                # so this must never reach the chat/embedding constructors.
+            },
         ],
         "api_docs_url": "https://learn.microsoft.com/en-us/azure/foundry/how-to/develop/langchain-models",
         "mapping": {

@@ -1,11 +1,19 @@
-"""Storage service for langflow - redirects to lfx implementation."""
+"""Storage service for langflow.
+
+``StorageReadiness`` is the single readiness-probe result type, defined in
+``lfx.services.storage.service`` and re-exported here so langflow backends and
+the production preflight share one type rather than two structurally-identical
+copies.
+"""
 
 from __future__ import annotations
 
+import uuid
 from abc import abstractmethod
 from typing import TYPE_CHECKING
 
 import anyio
+from lfx.services.storage.service import StorageReadiness
 
 from langflow.services.base import Service
 
@@ -14,6 +22,8 @@ if TYPE_CHECKING:
 
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
+
+__all__ = ["StorageReadiness", "StorageService"]
 
 
 class StorageService(Service):
@@ -26,6 +36,30 @@ class StorageService(Service):
         self.session_service = session_service
         self.data_dir: anyio.Path = anyio.Path(settings_service.settings.config_dir)
         self.set_ready()
+
+    async def check_readiness(self) -> StorageReadiness:
+        """Probe whether this storage backend is usable, for production preflight.
+
+        The default implementation targets a local filesystem ``data_dir``: it
+        creates the directory if needed, writes and deletes a sentinel file to
+        prove the backend is writable. Object-store backends (e.g. S3) override
+        this with a credentials + reachability probe.
+        """
+        backend = getattr(self.settings_service.settings, "storage_type", "local")
+        try:
+            await self.data_dir.mkdir(parents=True, exist_ok=True)
+            sentinel = self.data_dir / f".langflow-preflight-{uuid.uuid4().hex}"
+            await sentinel.write_bytes(b"ok")
+            await sentinel.unlink()
+        except OSError as exc:
+            reason = getattr(exc, "strerror", None) or str(exc)
+            return StorageReadiness(
+                ok=False,
+                backend=backend,
+                detail=f"{self.data_dir} is not writable ({reason})",
+                reason="unwritable",
+            )
+        return StorageReadiness(ok=True, backend=backend, detail=f"writable ({self.data_dir})")
 
     @abstractmethod
     def build_full_path(self, flow_id: str, file_name: str) -> str:

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
@@ -145,6 +145,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     handleApprove,
     handleUpdateFlowAction,
     handleApplyFlowProposal,
+    handleRevertFlowProposal,
     handleDismissFlowProposal,
     handleApprovePlan,
     handleDismissPlan,
@@ -153,10 +154,21 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     isRefiningPlan,
     skipAll,
     handleRetry,
+    handleMarkReverted,
     handleStopGeneration,
     handleClearHistory,
     loadSession,
   } = useAssistantChat();
+
+  // v1 scope: only the LATEST assistant message with a restore point offers
+  // Revert — restoring an older point mid-chain would confuse the timeline.
+  const latestRestorePointId = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m.role === "assistant" && m.restoreVersionId) return m.id;
+    }
+    return undefined;
+  }, [messages]);
 
   // Sync processing state to store so the canvas can lock during assistant work
   const setAssistantProcessing = useAssistantManagerStore(
@@ -409,6 +421,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
                   onApprove={handleApproveAndClose}
                   onUpdateFlowAction={handleUpdateFlowAction}
                   onApplyFlowProposal={handleApplyFlowProposal}
+                  onRevertFlowProposal={handleRevertFlowProposal}
                   onDismissFlowProposal={handleDismissFlowProposal}
                   onApprovePlan={handleApprovePlan}
                   onDismissPlan={handleDismissPlan}
@@ -416,6 +429,8 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
                   onRetry={hasEnabledModels ? handleRetry : undefined}
                   skipApprovalGate={skipAll}
                   onAcknowledgeValidation={handleAcknowledgeValidation}
+                  isLatestRestorePoint={msg.id === latestRestorePointId}
+                  onReverted={handleMarkReverted}
                 />
               ))}
             </StickToBottom.Content>

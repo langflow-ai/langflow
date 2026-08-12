@@ -597,17 +597,19 @@ async def test_ensure_project_permission_accepts_enum(monkeypatch, fake_user):
 
 
 @pytest.mark.anyio
-async def test_ensure_project_permission_uses_workspace_domain(monkeypatch, fake_user):
+async def test_ensure_project_permission_uses_project_domain(monkeypatch, fake_user):
     install_settings(monkeypatch, authz_enabled=True)
     service = _StubAuthorizationService(allow=True)
     install_authz(monkeypatch, service)
     install_audit_recorder(monkeypatch)
 
+    project_id = uuid4()
     workspace_id = uuid4()
     await authz_guards.ensure_project_permission(
-        fake_user, ProjectAction.WRITE, project_id=uuid4(), project_user_id=uuid4(), workspace_id=workspace_id
+        fake_user, ProjectAction.WRITE, project_id=project_id, project_user_id=uuid4(), workspace_id=workspace_id
     )
-    assert service.calls[0]["domain"] == f"workspace:{workspace_id}"
+    assert service.calls[0]["domain"] == f"project:{project_id}"
+    assert service.calls[0]["context"]["project_id"] == project_id
     assert service.calls[0]["context"]["workspace_id"] == workspace_id
 
 
@@ -640,8 +642,25 @@ async def test_ensure_project_permission_create_uses_wildcard_obj(monkeypatch, f
     install_audit_recorder(monkeypatch)
 
     await authz_guards.ensure_project_permission(fake_user, ProjectAction.CREATE)
+    assert service.calls[0]["domain"] == "*"
     assert service.calls[0]["obj"] == "project:*"
     assert service.calls[0]["act"] == "create"
+    assert service.calls[0]["context"]["workspace_id"] is None
+
+
+@pytest.mark.anyio
+async def test_ensure_project_permission_create_uses_workspace_domain(monkeypatch, fake_user):
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    workspace_id = uuid4()
+    await authz_guards.ensure_project_permission(fake_user, ProjectAction.CREATE, workspace_id=workspace_id)
+
+    assert service.calls[0]["domain"] == f"workspace:{workspace_id}"
+    assert service.calls[0]["obj"] == "project:*"
+    assert service.calls[0]["context"]["project_id"] is None
 
 
 # ----------------------------------------------------------------------------- #

@@ -78,7 +78,7 @@ def import_all_services_into_a_dict():
 
             # Shared services live in lfx so both the standalone runtime and
             # the Langflow application use the same contract and instance.
-            if service_name in {"mcp_composer", "model_provider_policy"}:
+            if service_name in {"mcp_composer", "model_provider_policy", "policy_bundle"}:
                 module_name = f"lfx.services.{service_name}.service"
             else:
                 module_name = f"langflow.services.{service_name}.service"
@@ -99,10 +99,12 @@ def import_all_services_into_a_dict():
     from lfx.services.auth.base import BaseAuthService
     from lfx.services.authorization.base import BaseAuthorizationService
     from lfx.services.catalog_policy.base import BaseCatalogPolicyService
+    from lfx.services.policy_bundle.base import BasePolicyBundleService
     from lfx.services.settings.service import SettingsService
 
     services["BaseAuthService"] = BaseAuthService
     services["BaseAuthorizationService"] = BaseAuthorizationService
     services["BaseCatalogPolicyService"] = BaseCatalogPolicyService
+    services["BasePolicyBundleService"] = BasePolicyBundleService
     services["SettingsService"] = SettingsService
     return services
