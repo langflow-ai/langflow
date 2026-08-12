@@ -76,10 +76,13 @@ class MrscraperBatchScrape(Component):
                 scraper_id=self.scraper_id,
                 urls=url_list,
             )
-        else:
+        elif self.mode == "Manual":
             result = await client.bulk_rerun_manual_scraper(
                 scraper_id=self.scraper_id,
                 urls=url_list,
             )
+        else:
+            msg = f"Unsupported scraper mode {self.mode!r} for scraper {self.scraper_id!r}. Expected 'AI' or 'Manual'."
+            raise ValueError(msg)
 
         return Data(data=result)

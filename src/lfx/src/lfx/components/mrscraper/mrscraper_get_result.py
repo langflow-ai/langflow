@@ -44,5 +44,5 @@ class MrscraperGetResult(Component):
             raise ImportError(msg) from e
 
         client = MrScraper(token=self.api_token)
-        result = await client.get_result_by_id(result_id=self.result_id)
-        return Data(data=result)
+        response = await client.get_result_by_id(result_id=self.result_id)
+        return Data(data=response["data"])

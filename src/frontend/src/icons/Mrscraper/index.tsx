@@ -4,7 +4,7 @@ import SvgMrscraperLogo from "./MrscraperIcon";
 
 export const MrscraperIcon = forwardRef<
   SVGSVGElement,
-  React.PropsWithChildren<{}>
+  React.SVGProps<SVGSVGElement> & { isDark?: boolean }
 >((props, ref) => {
   return <SvgMrscraperLogo ref={ref} {...props} />;
 });

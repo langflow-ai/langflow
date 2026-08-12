@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import builtins
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -16,6 +17,38 @@ from lfx.components.mrscraper.mrscraper_run_manual_scraper import MrscraperRunMa
 
 # Placeholder token for SDK mocks (not a real credential).
 MOCK_MR_API_TOKEN = "test-mrscraper-sdk-token-placeholder"  # noqa: S105
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("component_class", "method_name"),
+    [
+        (MrscraperAiScraper, "run_scraper"),
+        (MrscraperBatchScrape, "batch_scrape"),
+        (MrscraperCrawlWebsite, "crawl"),
+        (MrscraperFetchHtml, "fetch"),
+        (MrscraperGetResult, "get_result"),
+        (MrscraperGetResults, "fetch_all_results"),
+        (MrscraperRunAiScraper, "rerun"),
+        (MrscraperRunManualScraper, "rerun_manual"),
+    ],
+)
+async def test_missing_sdk_error(component_class: type, method_name: str) -> None:
+    """Every component explains how to install the optional SDK."""
+    original_import = builtins.__import__
+
+    def import_without_mrscraper(name: str, *args, **kwargs):
+        if name == "mrscraper":
+            msg = "No module named 'mrscraper'"
+            raise ImportError(msg)
+        return original_import(name, *args, **kwargs)
+
+    with (
+        patch("builtins.__import__", side_effect=import_without_mrscraper),
+        pytest.raises(ImportError, match="pip install mrscraper-sdk"),
+    ):
+        await getattr(component_class(), method_name)()
 
 
 @pytest.mark.unit
@@ -53,6 +86,25 @@ class TestMrscraperAiScraper:
         assert kwargs["message"] == "Extract titles"
         assert kwargs["agent"] == "general"
         assert kwargs["proxy_country"] == "us"
+
+    @pytest.mark.asyncio
+    async def test_run_scraper_omits_empty_proxy_country(self) -> None:
+        """An empty proxy country is sent as ``None``, not the string ``"None"``."""
+        mock_client = MagicMock()
+        mock_client.create_scraper = AsyncMock(return_value={"ok": True})
+
+        with patch("mrscraper.MrScraper", return_value=mock_client):
+            c = MrscraperAiScraper()
+            c.set(
+                api_token=MOCK_MR_API_TOKEN,
+                url="https://example.com/page",
+                message="Extract titles",
+                agent="general",
+                proxy_country="",
+            )
+            await c.run_scraper()
+
+        assert mock_client.create_scraper.call_args.kwargs["proxy_country"] is None
 
 
 @pytest.mark.unit
@@ -117,6 +169,27 @@ class TestMrscraperBatchScrape:
 
         assert out.data == {"batch": 2}
         mock_client.bulk_rerun_manual_scraper.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_invalid_mode_raises(self) -> None:
+        """Unsupported modes fail before either bulk API is called."""
+        mock_client = MagicMock()
+        mock_client.bulk_rerun_ai_scraper = AsyncMock()
+        mock_client.bulk_rerun_manual_scraper = AsyncMock()
+
+        with patch("mrscraper.MrScraper", return_value=mock_client):
+            c = MrscraperBatchScrape()
+            c.set(
+                api_token=MOCK_MR_API_TOKEN,
+                scraper_id="sid",
+                urls="https://example.com",
+                mode="unsupported",
+            )
+            with pytest.raises(ValueError, match=r"unsupported.*sid"):
+                await c.batch_scrape()
+
+        mock_client.bulk_rerun_ai_scraper.assert_not_called()
+        mock_client.bulk_rerun_manual_scraper.assert_not_called()
 
 
 @pytest.mark.unit
@@ -184,14 +257,14 @@ class TestMrscraperGetResult:
     async def test_get_result_by_id(self) -> None:
         """Maps `result_id` to SDK `get_result_by_id`."""
         mock_client = MagicMock()
-        mock_client.get_result_by_id = AsyncMock(return_value={"id": "r1"})
+        mock_client.get_result_by_id = AsyncMock(return_value={"status_code": 200, "data": {"id": "r1"}, "headers": {}})
 
         with patch("mrscraper.MrScraper", return_value=mock_client):
             c = MrscraperGetResult()
             c.set(api_token=MOCK_MR_API_TOKEN, result_id="r1")
             out = await c.get_result()
 
-        assert out.data["id"] == "r1"
+        assert out.data == {"id": "r1"}
         mock_client.get_result_by_id.assert_awaited_once_with(result_id="r1")
 
 
