@@ -57,6 +57,7 @@ from langflow.api.v1.mcp_utils import (
     handle_list_tools,
     handle_mcp_errors,
     handle_read_resource,
+    raise_if_sse_disabled,
 )
 from langflow.api.v1.schemas import (
     AuthSettings,
@@ -374,7 +375,7 @@ async def list_project_tools(
 @router.head(
     "/{project_id}/sse",
     response_class=HTMLResponse,
-    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+    dependencies=[Depends(raise_error_if_astra_cloud_env), Depends(raise_if_sse_disabled)],
     include_in_schema=False,
 )
 async def im_alive(project_id: str):  # noqa: ARG001
@@ -384,7 +385,7 @@ async def im_alive(project_id: str):  # noqa: ARG001
 @router.get(
     "/{project_id}/sse",
     response_class=HTMLResponse,
-    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+    dependencies=[Depends(raise_error_if_astra_cloud_env), Depends(raise_if_sse_disabled)],
     include_in_schema=False,
 )
 async def handle_project_sse(
@@ -465,12 +466,12 @@ async def _handle_project_sse_messages(
 
 @router.post(
     "/{project_id}",
-    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+    dependencies=[Depends(raise_error_if_astra_cloud_env), Depends(raise_if_sse_disabled)],
     include_in_schema=False,
 )
 @router.post(
     "/{project_id}/",
-    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+    dependencies=[Depends(raise_error_if_astra_cloud_env), Depends(raise_if_sse_disabled)],
     include_in_schema=False,
 )
 async def handle_project_messages(

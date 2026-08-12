@@ -13,6 +13,7 @@ from typing import Any, ParamSpec, TypeVar
 from urllib.parse import quote, unquote, urlparse
 from uuid import UUID, uuid4
 
+from fastapi import HTTPException
 from lfx.base.mcp.constants import MAX_MCP_TOOL_NAME_LENGTH
 from lfx.base.mcp.util import get_flow_snake_case, get_unique_name, sanitize_mcp_name
 from lfx.log.logger import logger
@@ -78,6 +79,12 @@ class MCPConfig:
 
 def get_mcp_config():
     return MCPConfig()
+
+
+def raise_if_sse_disabled() -> None:
+    """Reject legacy SSE transport requests when the deployment has turned it off."""
+    if not get_settings_service().settings.mcp_sse_enabled:
+        raise HTTPException(status_code=404, detail="SSE transport is disabled. Use the Streamable HTTP endpoint.")
 
 
 async def handle_list_resources(project_id=None):
@@ -291,13 +298,21 @@ async def handle_call_tool(
     exec_context = {"request_variables": request_variables} if request_variables else None
 
     async def execute_tool(session):
-        # Get flow id from name
-        flow = await get_flow_snake_case(name, current_user.id, session, is_action=is_action)
+        # Scoping in the query, not after it: post-filtering let an unexposed flow run by
+        # name and let one project win a name shared with another, silencing the second.
+        flow = await get_flow_snake_case(
+            name,
+            current_user.id,
+            session,
+            is_action=is_action,
+            project_id=project_id,
+            mcp_enabled_only=project_id is not None,
+        )
         if not flow:
             msg = f"Flow with name '{name}' not found"
             raise ValueError(msg)
 
-        # If project_id is provided, verify the flow belongs to the project
+        # Defense in depth: the query above already scopes by project.
         if project_id and flow.folder_id != project_id:
             msg = f"Flow '{name}' not found in project {project_id}"
             raise ValueError(msg)
@@ -385,15 +400,15 @@ async def handle_call_tool(
                                     add_result(value.get_text())
                                 else:
                                     add_result(str(value))
+                # Raise rather than return the message as content: an MCP client cannot
+                # tell a failure from an answer unless the response carries isError.
                 except CustomComponentValidationError as exc:
                     logger.warning(f"MCP tool call blocked for flow {flow.id}: {exc!s}")
-                    collected_results.append(types.TextContent(type="text", text=f"Flow build blocked: {exc!s}"))
-                except ValueError as exc:
-                    error_msg = f"Error Executing the {flow.name} tool. Error: {exc!s}"
-                    collected_results.append(types.TextContent(type="text", text=error_msg))
-                except Exception as e:  # noqa: BLE001
-                    error_msg = f"Error Executing the {flow.name} tool. Error: {e!s}"
-                    collected_results.append(types.TextContent(type="text", text=error_msg))
+                    msg = f"Flow build blocked for the {flow.name} tool. Error: {exc!s}"
+                    raise RuntimeError(msg) from exc
+                except Exception as exc:
+                    msg = f"Error Executing the {flow.name} tool. Error: {exc!s}"
+                    raise RuntimeError(msg) from exc
 
                 return collected_results
             finally:
@@ -465,6 +480,7 @@ async def handle_list_tools(project_id: UUID | None = None, *, mcp_enabled_only:
             flows = (await session.exec(flows_query)).all()
 
             existing_names = set()
+            excluded: list[str] = []
             for flow in flows:
                 if flow.user_id is None:
                     continue
@@ -505,9 +521,17 @@ async def handle_list_tools(project_id: UUID | None = None, *, mcp_enabled_only:
                     tools.append(tool)
                     existing_names.add(name)
                 except Exception as e:  # noqa: BLE001
-                    msg = f"Error in listing tools: {e!s} from flow: {base_name}"
-                    await logger.awarning(msg)
+                    excluded.append(f"{base_name} ({flow.id}): {e!s}")
+                    await logger.aerror(f"Flow excluded from MCP tool list -- {base_name} ({flow.id}): {e!s}")
                     continue
+
+            # A project that answers 200 with an empty list reads as "no tools configured".
+            # If every flow was dropped, say so instead of letting the deploy look healthy.
+            # Scoped to the project endpoint: the global server is the editor-plane surface,
+            # where an empty list is a normal state and raising would be a UI regression.
+            if project_id and excluded and not tools:
+                msg = "No MCP tools could be built. Excluded flows: " + "; ".join(excluded)
+                raise RuntimeError(msg)
     except Exception as e:
         msg = f"Error in listing tools: {e!s}"
         await logger.aexception(msg)

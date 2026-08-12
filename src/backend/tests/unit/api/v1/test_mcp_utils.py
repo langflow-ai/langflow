@@ -142,6 +142,8 @@ async def test_handle_list_tools_skips_blocked_custom_flows(monkeypatch):
     finally:
         mcp_utils.current_user_ctx.reset(token)
 
+    # The global server is the editor-plane surface, where an empty list is a normal
+    # state; only the project endpoint raises. See test_mcp_failure_reporting.py.
     assert tools == []
 
 

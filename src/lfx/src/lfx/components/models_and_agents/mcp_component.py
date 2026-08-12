@@ -15,6 +15,7 @@ from lfx.base.agents.utils import maybe_unflatten_dict, safe_cache_get, safe_cac
 from lfx.base.mcp.util import (
     MCPStdioClient,
     MCPStreamableHttpClient,
+    config_uses_global_variables,
     update_tools,
 )
 from lfx.base.tools.constants import TOOL_OUTPUT_DISPLAY_NAME, TOOL_OUTPUT_NAME
@@ -523,10 +524,9 @@ class MCPToolsComponent(ComponentWithCache):
                 if hasattr(self, "graph") and self.graph and hasattr(self.graph, "context"):
                     request_variables = self.graph.context.get("request_variables")
 
-                # Only load global variables from database if we have headers that might use them
-                # This avoids unnecessary database queries when headers are empty
-                has_headers = server_config.get("headers") and len(server_config.get("headers", {})) > 0
-                if not request_variables and has_headers:
+                # Load global variables only when the config actually references them, so a
+                # static config still costs no query -- but a URL-only reference now counts.
+                if not request_variables and config_uses_global_variables(server_config):
                     try:
                         from lfx.services.deps import get_variable_service
 

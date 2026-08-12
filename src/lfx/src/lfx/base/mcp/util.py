@@ -701,7 +701,24 @@ def get_unique_name(base_name, max_length, existing_names):
         i += 1
 
 
-async def get_flow_snake_case(flow_name: str, user_id: str, session, *, is_action: bool | None = None):
+async def get_flow_snake_case(
+    flow_name: str,
+    user_id: str,
+    session,
+    *,
+    is_action: bool | None = None,
+    project_id: UUID | str | None = None,
+    mcp_enabled_only: bool = False,
+):
+    """Resolve an MCP tool name to a flow.
+
+    ``project_id`` and ``mcp_enabled_only`` default to the historical behavior because
+    this function is public ``lfx`` surface and still backs the global MCP server, where
+    user-only scoping is correct. Project-scoped callers must pass both: without them a
+    tool call resolves against every flow the user owns, so an unexposed flow is
+    reachable by name and two projects sharing an ``action_name`` collide on whichever
+    row the planner happens to return first.
+    """
     try:
         from langflow.services.database.models.flow.model import Flow
         from sqlmodel import select
@@ -712,6 +729,14 @@ async def get_flow_snake_case(flow_name: str, user_id: str, session, *, is_actio
     uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
 
     stmt = select(Flow).where(Flow.user_id == uuid_user_id).where(Flow.is_component == False)  # noqa: E712
+    if project_id is not None:
+        uuid_project_id = UUID(project_id) if isinstance(project_id, str) else project_id
+        stmt = stmt.where(Flow.folder_id == uuid_project_id)
+    if mcp_enabled_only:
+        stmt = stmt.where(Flow.mcp_enabled == True)  # noqa: E712
+    # ``action_name`` has no uniqueness constraint; without an explicit order the winner
+    # is heap-order dependent and an unrelated edit can flip which flow a tool call runs.
+    stmt = stmt.order_by(Flow.id)
     flows = (await session.exec(stmt)).all()
 
     for flow in flows:
@@ -796,6 +821,61 @@ def _inject_mcp_stdio_headers(args: list[str], headers: dict[str, str]) -> list[
     return [*final_args, *extra_args]
 
 
+GLOBAL_VARIABLE_PLACEHOLDER_PATTERN = re.compile(r"\{\{\s*([A-Za-z_][A-Za-z0-9_\-]*)\s*\}\}")
+
+
+def _substitute_global_variables(value: str, request_variables: dict[str, str] | None) -> str:
+    """Resolve a whole-value variable name, or ``{{NAME}}`` placeholders inside a value.
+
+    Whole-value matching alone cannot compose a value, so a base URL could not be varied
+    per environment while keeping a project id. An unknown placeholder is left verbatim:
+    blanking it would build a URL that looks valid and points somewhere else.
+    """
+    if not request_variables or not value:
+        return value
+    if value in request_variables:
+        return request_variables[value]
+    return GLOBAL_VARIABLE_PLACEHOLDER_PATTERN.sub(
+        lambda match: request_variables.get(match.group(1), match.group(0)), value
+    )
+
+
+def resolve_global_variables_in_url(url: str, request_variables: dict[str, str] | None) -> str:
+    """Resolve global variables in a server URL, matching how headers are resolved."""
+    if not isinstance(url, str):
+        return url
+    return _substitute_global_variables(url, request_variables)
+
+
+def config_uses_global_variables(server_config: dict | None) -> bool:
+    """Report whether a server config references global variables anywhere.
+
+    Gating the variable load on headers alone meant a config whose only variable lived in
+    the URL never had anything to resolve against.
+    """
+    if not server_config:
+        return False
+    if server_config.get("headers"):
+        return True
+    url = server_config.get("url")
+    return bool(isinstance(url, str) and GLOBAL_VARIABLE_PLACEHOLDER_PATTERN.search(url))
+
+
+def describe_mcp_connection_failure(server_name: str, url: str, error: BaseException) -> str:
+    """Describe an outbound MCP failure by target and cause.
+
+    A wrong credential surfaced as ``unhandled errors in a TaskGroup`` with no indication
+    that authentication failed or which server rejected it. Userinfo and query strings are
+    dropped because they routinely carry the credential that just failed.
+    """
+    try:
+        parsed = urlparse(url)
+        target = f"{parsed.scheme}://{parsed.hostname}{parsed.path}" if parsed.scheme else url
+    except ValueError:
+        target = server_name
+    return f"MCP server '{server_name}' at {target} failed: {error!s}"
+
+
 def _resolve_global_variables_in_headers(headers: dict, request_variables: dict[str, str] | None) -> dict:
     """Resolve global variable names in header values to their actual values.
 
@@ -809,14 +889,10 @@ def _resolve_global_variables_in_headers(headers: dict, request_variables: dict[
     if not request_variables:
         return headers
 
-    resolved = {}
-    for key, value in headers.items():
-        # If the value matches a global variable name, replace it with the actual value
-        if isinstance(value, str) and value in request_variables:
-            resolved[key] = request_variables[value]
-        else:
-            resolved[key] = value
-    return resolved
+    return {
+        key: _substitute_global_variables(value, request_variables) if isinstance(value, str) else value
+        for key, value in headers.items()
+    }
 
 
 def _validate_node_installation(command: str) -> str:
@@ -2303,7 +2379,7 @@ async def update_tools(
         mode = "Stdio" if "command" in server_config else "Streamable_HTTP" if "url" in server_config else ""
 
     command = server_config.get("command", "")
-    url = server_config.get("url", "")
+    url = resolve_global_variables_in_url(server_config.get("url", ""), request_variables)
     tools = []
     headers = _process_headers(server_config.get("headers", {}), request_variables)
 
@@ -2351,7 +2427,14 @@ async def update_tools(
         # outbound fetches (no-op when SSRF protection is disabled / host is allowlisted).
         validate_connector_url_for_ssrf(url)
         verify_ssl = server_config.get("verify_ssl", True)
-        tools = await mcp_streamable_http_client.connect_to_server(url, headers=headers, verify_ssl=verify_ssl)
+        try:
+            tools = await mcp_streamable_http_client.connect_to_server(url, headers=headers, verify_ssl=verify_ssl)
+        except Exception as exc:
+            # A rejected credential otherwise surfaced as "unhandled errors in a TaskGroup",
+            # naming neither the target nor the fact that authentication was the problem.
+            detail = describe_mcp_connection_failure(server_name, url, exc)
+            logger.error(detail)
+            raise ConnectionError(detail) from exc
         client = mcp_streamable_http_client
     else:
         logger.error(f"Invalid MCP server mode for '{server_name}': {mode}")

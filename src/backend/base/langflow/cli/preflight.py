@@ -345,6 +345,49 @@ async def probe_pgvector(_settings_service: SettingsService) -> CheckResult:
 # ---------------------------------------------------------------------------
 
 
+_MCP_SERVING_POSTURE: tuple[tuple[str, bool, str], ...] = (
+    ("skip_mcp_auto_init", True, "LANGFLOW_SKIP_MCP_AUTO_INIT"),
+    ("add_projects_to_mcp_servers", False, "LANGFLOW_ADD_PROJECTS_TO_MCP_SERVERS"),
+    ("mcp_composer_enabled", False, "LANGFLOW_MCP_COMPOSER_ENABLED"),
+    ("mcp_servers_locked", True, "LANGFLOW_MCP_SERVERS_LOCKED"),
+    ("mcp_sse_enabled", False, "LANGFLOW_MCP_SSE_ENABLED"),
+    ("mcp_server_interpreter_hardening", True, "LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING"),
+    ("mcp_server_docker_hardening", True, "LANGFLOW_MCP_SERVER_DOCKER_HARDENING"),
+    ("ssrf_protection_enabled", True, "LANGFLOW_SSRF_PROTECTION_ENABLED"),
+    ("connector_ssrf_validation_enabled", True, "LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED"),
+    ("connector_ssrf_allow_loopback", False, "LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK"),
+    ("disable_track_apikey_usage", True, "LANGFLOW_DISABLE_TRACK_APIKEY_USAGE"),
+)
+
+
+async def probe_mcp_posture(settings_service: SettingsService) -> CheckResult:
+    """Report MCP knobs left at a single-tenant default on a production boot.
+
+    Each of these defaults to the permissive value, so a multi-tenant serving plane must
+    override eleven settings by hand and nothing tells the operator when one is missed.
+    Degraded rather than required on purpose: promoting it to a boot failure would break
+    every existing ``prod`` deployment that has not adopted the list. The deploy job is
+    the right place to make the same list a hard precondition.
+    """
+    settings = settings_service.settings
+    if not settings.mcp_server_enabled:
+        return CheckResult("ok", "MCP server disabled (LANGFLOW_MCP_SERVER_ENABLED=false)")
+
+    unsafe = [env for attr, expected, env in _MCP_SERVING_POSTURE if getattr(settings, attr, expected) != expected]
+    if settings.mcp_server_allowed_packages is None:
+        unsafe.append("LANGFLOW_MCP_SERVER_ALLOWED_PACKAGES")
+
+    if not unsafe:
+        return CheckResult("ok", "hardened for multi-tenant serving")
+
+    return CheckResult(
+        "warn",
+        f"{len(unsafe)} setting(s) at a single-tenant default: {', '.join(unsafe)}",
+        remediation="Set each listed variable to its multi-tenant-safe value, or set "
+        "LANGFLOW_MCP_SERVER_ENABLED=false if this plane does not serve MCP.",
+    )
+
+
 async def probe_telemetry(settings_service: SettingsService) -> CheckResult:
     """Config-only telemetry check (no outbound network call at boot)."""
     if settings_service.settings.do_not_track:
@@ -456,6 +499,7 @@ REQUIRED_CHECKS: list[PreflightCheck] = [
 ]
 
 DEGRADED_CHECKS: list[PreflightCheck] = [
+    PreflightCheck("mcp_posture", "MCP serving posture", "degraded", probe_mcp_posture),
     PreflightCheck("telemetry", "Telemetry", "degraded", probe_telemetry),
     PreflightCheck("cache", "Cache service", "degraded", probe_cache),
     PreflightCheck("shared_queue", "Shared queue (Redis)", "degraded", probe_shared_queue),

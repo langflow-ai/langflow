@@ -51,6 +51,16 @@ class McpSettings(BaseModel):
     # MCP Server
     mcp_server_enabled: bool = True
     """If set to False, Langflow will not enable the MCP server."""
+
+    mcp_sse_enabled: bool = True
+    """If set to False, the legacy SSE transport and its message endpoint answer 404.
+
+    ``mcp_server_enabled`` mounts both transports and there is no way to serve only the
+    modern one. SSE holds a stream open for the life of the connection and keeps a
+    never-evicted ``SseServerTransport`` per project, which is a poor fit for a shared
+    multi-tenant serving tier. Default True preserves compatibility for clients that
+    still speak SSE; Streamable HTTP is unaffected either way.
+    Env var: LANGFLOW_MCP_SSE_ENABLED."""
     mcp_server_enable_progress_notifications: bool = False
     """If set to False, Langflow will not send progress notifications in the MCP server."""
 

@@ -21,6 +21,7 @@ from langflow.api.v1.mcp_utils import (
     handle_list_tools,
     handle_mcp_errors,
     handle_read_resource,
+    raise_if_sse_disabled,
 )
 
 
@@ -160,7 +161,7 @@ def _bind_mcp_transport_user(request: Request, current_user: CurrentActiveMCPUse
 @router.head(
     "/sse",
     response_class=HTMLResponse,
-    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+    dependencies=[Depends(raise_error_if_astra_cloud_env), Depends(raise_if_sse_disabled)],
 )
 async def im_alive():
     return Response()
@@ -169,7 +170,7 @@ async def im_alive():
 @router.get(
     "/sse",
     response_class=ResponseNoOp,
-    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+    dependencies=[Depends(raise_error_if_astra_cloud_env), Depends(raise_if_sse_disabled)],
 )
 async def handle_sse(request: Request, current_user: CurrentActiveMCPUser):
     msg = f"Starting SSE connection, server name: {server.name}"
@@ -216,7 +217,7 @@ async def handle_sse(request: Request, current_user: CurrentActiveMCPUser):
         current_user_ctx.reset(token)
 
 
-@router.post("/", dependencies=[Depends(raise_error_if_astra_cloud_env)])
+@router.post("/", dependencies=[Depends(raise_error_if_astra_cloud_env), Depends(raise_if_sse_disabled)])
 async def handle_messages(request: Request, current_user: CurrentActiveMCPUser):
     _bind_mcp_transport_user(request, current_user)
     try:
