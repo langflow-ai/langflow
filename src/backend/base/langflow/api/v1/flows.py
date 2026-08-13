@@ -57,6 +57,7 @@ from langflow.api.v1.flows_helpers import (
 )
 from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
 from langflow.api.v1.schemas import FlowListCreate
+from langflow.api.v1.schemas.public_flows import PublicFlowRead
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user, get_optional_user
 from langflow.services.authorization import (
@@ -67,7 +68,11 @@ from langflow.services.authorization import (
     visible_scope_prefilter,
 )
 from langflow.services.authorization.fetch import deny_to_404
-from langflow.services.authorization.public_access import PublicResourceAction, authorize_public_flow_access
+from langflow.services.authorization.public_access import (
+    PublicResourceAction,
+    authorize_public_flow_access,
+    public_flow_capabilities,
+)
 from langflow.services.authorization.utils import _resolve_authz_domain
 from langflow.services.cache.service import ThreadingInMemoryCache
 from langflow.services.database.lock_retry import (
@@ -438,7 +443,7 @@ async def get_note_translations(
     return result
 
 
-@router.get("/public_flow/{flow_id}", response_model=FlowRead, status_code=200)
+@router.get("/public_flow/{flow_id}", response_model=PublicFlowRead, status_code=200)
 async def read_public_flow(
     *,
     session: DbSession,
@@ -450,6 +455,11 @@ async def read_public_flow(
     Because this endpoint is unauthenticated, secret field values (every template
     field marked ``password``) are stripped before returning so a PUBLIC flow does
     not leak the owner's stored API keys / credentials to anonymous callers.
+
+    The response also carries the anonymous capability set. A canonical PUBLIC
+    share admits flows whose ``access_type`` is still PRIVATE and bounds them at
+    its own permission level, so a direct-link client that re-derives access from
+    the legacy flag disagrees with this decision in both directions.
     """
     flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
     if flow is None:
@@ -460,7 +470,12 @@ async def read_public_flow(
         request_host=request.url.hostname,
         session=session,
     )
-    flow_read = FlowRead.model_validate(flow, from_attributes=True)
+    capabilities = await public_flow_capabilities(
+        flow=flow,
+        request_host=request.url.hostname,
+        session=session,
+    )
+    flow_read = PublicFlowRead.model_validate(flow, from_attributes=True, update={"public_access": capabilities})
     flow_read.data = strip_secret_field_values(flow_read.data)
     return flow_read
 
