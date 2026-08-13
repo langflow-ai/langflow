@@ -460,10 +460,25 @@ _MAX_ERROR_CHAIN_DEPTH = 10
 # thing to find on __cause__ and would read as "the walk finished".
 _CHAIN_TRUNCATED = BaseException()
 
-# What a provider error code is allowed to look like before it is exported. Vendors document
-# these as identifiers ("context_length_exceeded", "invalid_function_parameters"); nothing
-# guarantees one will not arrive holding a sentence, or an echo of the request, so the shape is
-# checked rather than the field trusted.
+# Whose ``code`` may be read at all. This is the boundary; the shape check below is only a
+# second filter behind it.
+#
+# Shape is not a privacy boundary, and the first version of this treated it as one. Any exception
+# carrying a ``.code`` was read, so a user-authored component could set
+# ``err.code = "sk-abcdefghijklmnop"`` or an identifier-shaped prompt and it exported cleanly
+# past the body withholding, because those look exactly like ``context_length_exceeded`` to a
+# regex. Naming the modules instead means the value comes from a vendor's own documented
+# vocabulary rather than from anything in the flow.
+#
+# Root package of ``type(exc).__module__``. Deliberately short: an SDK earns a place here once
+# someone has checked that its ``code`` is a closed vocabulary and not a passthrough of the
+# request. Being absent costs one attribute; being wrongly present costs a leak.
+_PROVIDER_SDK_MODULES = frozenset({"openai", "anthropic"})
+
+# What a provider error code is allowed to look like, applied after the module check above.
+# Vendors document these as identifiers ("context_length_exceeded",
+# "invalid_function_parameters"), and nothing guarantees one will not arrive holding a sentence
+# or an echo of the request, so the shape is checked as well as the source.
 _ERROR_CODE_PATTERN = re.compile(r"\A[A-Za-z0-9_.:-]{1,64}\Z")
 
 _HTTP_STATUS_MIN = 100
@@ -663,9 +678,10 @@ def _error_transport_identity(exc: BaseException) -> dict[str, str | int]:
     that dict's sibling ``message`` is the prompt tail, and a boundary that reaches into a
     payload to pull one key out is one refactor away from taking the payload.
 
-    The code's *shape* is validated rather than trusted. Nothing stops a provider putting a
-    sentence, or an echo of the request, in a field named ``code``; an identifier-shaped value
-    under 64 characters is a code, and anything else is dropped rather than exported on faith.
+    ``code`` is read only from the provider SDKs named in ``_PROVIDER_SDK_MODULES``, and its
+    shape is checked on top of that. The module check is the boundary: shape alone is not one,
+    because an identifier-shaped secret is indistinguishable from an identifier-shaped error
+    code. ``status_code`` needs no such restriction, being an int bounded to the HTTP range.
     """
     attributes: dict[str, str | int] = {}
     for link in _exception_chain(exc):
@@ -675,7 +691,7 @@ def _error_transport_identity(exc: BaseException) -> dict[str, str | int]:
             status = _first_int(link, ("status_code",)) or _first_int(getattr(link, "response", None), ("status_code",))
             if status is not None and _HTTP_STATUS_MIN <= status <= _HTTP_STATUS_MAX:
                 attributes["http.response.status_code"] = status
-        if "error.code" not in attributes:
+        if "error.code" not in attributes and type(link).__module__.split(".")[0] in _PROVIDER_SDK_MODULES:
             code = getattr(link, "code", None)
             if isinstance(code, str) and _ERROR_CODE_PATTERN.match(code):
                 attributes["error.code"] = code

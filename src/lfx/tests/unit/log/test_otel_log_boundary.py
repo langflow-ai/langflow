@@ -340,6 +340,26 @@ def test_the_provider_error_message_is_not_exported_alongside_the_code():
     assert PROMPT not in json.dumps(_error_transport_identity(error))
 
 
+def test_an_identifier_shaped_secret_on_a_foreign_exception_is_not_exported():
+    """Shape is not a privacy boundary, which is what the first version of this got wrong.
+
+    ``sk-abcdefghijklmnop`` and ``context_length_exceeded`` are the same shape, so a regex can
+    only tell them apart by where they came from. A user-authored component can define its own
+    exception class and set whatever it likes on ``.code``; reading it because it looked like an
+    identifier exported that value straight past the body withholding.
+    """
+    from lfx.log.logger import _error_transport_identity
+
+    class ComponentError(Exception):
+        pass
+
+    for secret in (PROMPT, "sk-abcdefghijklmnop", "user_email_bob_at_example"):
+        error = ComponentError("boom")
+        error.code = secret
+
+        assert "error.code" not in _error_transport_identity(error), secret
+
+
 @pytest.mark.parametrize(
     "code",
     [
@@ -358,12 +378,12 @@ def test_a_provider_error_code_that_is_not_identifier_shaped_is_dropped(code):
     rather than the name trusted. Dropping it costs one attribute; exporting it on faith is how
     a payload gets through a boundary that was supposed to only pass identifiers.
     """
+    openai = pytest.importorskip("openai")
     from lfx.log.logger import _error_transport_identity
 
-    class ProviderError(Exception):
-        pass
-
-    error = ProviderError("boom")
+    # A trusted class deliberately: the module check would reject a local class regardless, and
+    # then this would pass without exercising the shape filter it is here to test.
+    error = openai.APIError("boom", request=None, body=None)
     error.code = code
 
     assert "error.code" not in _error_transport_identity(error)
