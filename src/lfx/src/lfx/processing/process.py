@@ -261,6 +261,41 @@ def apply_tweaks(
     return refused
 
 
+def _refused_tweak_names(
+    template_data: dict[str, Any],
+    component_type: str | None,
+    node_tweaks: dict[str, Any],
+    *,
+    policy: str,
+    flow_declares_allowlist: bool,
+    exempt_keys: frozenset[str] = frozenset(),
+) -> list[str]:
+    """Return the names this node would refuse. Mutates nothing.
+
+    Refusal has to be decided for the whole request before anything is applied.
+    Applying as we go and raising at the end leaves the accepted half written,
+    and the graph the run paths hand us is cached and reused, so that half
+    survives into later runs that send no tweaks at all.
+    """
+    from lfx.utils.flow_validation import is_protected_tweak_field, is_tweak_refused_by_policy
+
+    refused: list[str] = []
+    for tweak_name in node_tweaks:
+        field = template_data.get(tweak_name)
+        if not isinstance(field, dict):
+            continue
+        if is_protected_tweak_field(component_type, tweak_name, field.get("type", "")):
+            refused.append(tweak_name)
+            continue
+        if tweak_name not in exempt_keys and is_tweak_refused_by_policy(
+            policy,
+            flow_declares_allowlist=flow_declares_allowlist,
+            field_is_api_editable=field.get("api_editable") is True,
+        ):
+            refused.append(tweak_name)
+    return refused
+
+
 def _resolve_tweak_policy() -> str:
     """Return the deployment tweak policy, defaulting to permissive.
 
@@ -401,31 +436,42 @@ def process_tweaks(
     refused: list[str] = []
 
     all_nodes_tweaks = {}
+    pending: list[tuple[dict[str, Any], dict[str, Any]]] = []
     for key, value in tweaks_dict.items():
         if isinstance(value, dict):
             if (node := nodes_map.get(key)) or (node := nodes_display_name_map.get(key)):
-                refused += apply_tweaks(
-                    node,
-                    value,
-                    policy=policy,
-                    flow_declares_allowlist=flow_declares_allowlist,
-                    exempt_keys=exempt_keys,
-                )
+                pending.append((node, value))
         else:
             all_nodes_tweaks[key] = value
     if all_nodes_tweaks:
-        for node in nodes:
-            refused += apply_tweaks(
-                node,
-                all_nodes_tweaks,
-                policy=policy,
-                flow_declares_allowlist=flow_declares_allowlist,
-                exempt_keys=exempt_keys,
-            )
+        pending.extend((node, all_nodes_tweaks) for node in nodes)
+
+    # Decide first, mutate second. A refusal must leave the payload untouched.
+    for node, node_tweaks in pending:
+        template_data = node.get("data", {}).get("node", {}).get("template")
+        if not isinstance(template_data, dict):
+            continue
+        refused += _refused_tweak_names(
+            template_data,
+            node.get("data", {}).get("type"),
+            node_tweaks,
+            policy=policy,
+            flow_declares_allowlist=flow_declares_allowlist,
+            exempt_keys=exempt_keys,
+        )
 
     if refused:
         reason = _refusal_reason(policy, flow_declares_allowlist=flow_declares_allowlist)
         raise TweakRefusedError(sorted(set(refused)), reason=reason)
+
+    for node, node_tweaks in pending:
+        apply_tweaks(
+            node,
+            node_tweaks,
+            policy=policy,
+            flow_declares_allowlist=flow_declares_allowlist,
+            exempt_keys=exempt_keys,
+        )
 
     return graph_data
 
@@ -449,21 +495,39 @@ def process_tweaks_on_graph(graph: Graph, tweaks: dict[str, dict[str, Any]]):
     )
     refused: list[str] = []
 
+    pending: list[tuple[Vertex, dict[str, Any]]] = []
     for vertex in graph.vertices:
         if isinstance(vertex, Vertex) and isinstance(vertex.id, str):
-            node_id = vertex.id
-            if node_tweaks := tweaks.get(node_id):
-                refused += apply_tweaks_on_vertex(
-                    vertex,
-                    node_tweaks,
-                    policy=policy,
-                    flow_declares_allowlist=flow_declares_allowlist,
-                )
+            if node_tweaks := tweaks.get(vertex.id):
+                pending.append((vertex, node_tweaks))
         else:
             logger.warning("Each node should be a Vertex with an 'id' attribute of type str")
+
+    # Decide first, mutate second. The graph reaching this function is cached and
+    # reused by the Run Flow component, so a half-applied payload would survive
+    # into later runs of the same sub-flow.
+    for vertex, node_tweaks in pending:
+        template_data = vertex.data.get("node", {}).get("template", {})
+        if not isinstance(template_data, dict):
+            continue
+        refused += _refused_tweak_names(
+            template_data,
+            vertex.data.get("type"),
+            node_tweaks,
+            policy=policy,
+            flow_declares_allowlist=flow_declares_allowlist,
+        )
 
     if refused:
         reason = _refusal_reason(policy, flow_declares_allowlist=flow_declares_allowlist)
         raise TweakRefusedError(sorted(set(refused)), reason=reason)
+
+    for vertex, node_tweaks in pending:
+        apply_tweaks_on_vertex(
+            vertex,
+            node_tweaks,
+            policy=policy,
+            flow_declares_allowlist=flow_declares_allowlist,
+        )
 
     return graph

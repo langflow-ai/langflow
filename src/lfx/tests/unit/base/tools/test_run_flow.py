@@ -78,8 +78,9 @@ def test_process_tweaks_on_graph_filters_undeclared_and_protected_fields():
     # than logged and dropped.
     assert exc.value.refused == ["code", "function_code"]
 
-    # The safe field is still applied. A key the template does not declare, and a
-    # malformed template entry, are skipped rather than refused.
-    runnable.update_raw_params.assert_called_once_with({"param": "safe"}, overwrite=True)
+    # Nothing is applied when anything is refused. The graph here is cached and
+    # reused by the Run Flow component, so a half-applied payload would survive
+    # into later runs of the same sub-flow.
+    runnable.update_raw_params.assert_not_called()
     invalid_template.update_raw_params.assert_not_called()
     protected_only.update_raw_params.assert_not_called()

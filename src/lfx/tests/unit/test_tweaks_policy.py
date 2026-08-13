@@ -253,3 +253,56 @@ def test_graph_path_applies_and_persists_an_allowed_tweak():
     assert refused == []
     assert vertex.raw_params == {"a": "new"}
     assert vertex.params["a"] == "new"
+
+
+# --- atomicity ------------------------------------------------------------
+# A refusal must leave the payload untouched. Applying as we go and raising at
+# the end left the accepted half written, and the graph the run paths hand us is
+# cached and reused, so that half survived into later runs sending no tweaks.
+
+
+def test_a_refusal_applies_nothing_on_the_graph_path():
+    from unittest.mock import MagicMock
+
+    from lfx.graph.vertex.base import Vertex
+    from lfx.processing.process import process_tweaks_on_graph
+
+    def real_shaped(vid, template, node_type=None):
+        # spec=Vertex so isinstance passes; process_tweaks_on_graph filters on it.
+        v = MagicMock(spec=Vertex)
+        v.id = vid
+        v.data = {"node": {"template": template}}
+        if node_type:
+            v.data["type"] = node_type
+        v.params = {}
+        v.load_from_db_fields = []
+        return v
+
+    ok = real_shaped("a", {"text": {"value": "original", "type": "str"}})
+    protected = real_shaped("b", {"database_url": {"value": "stored", "type": "str"}}, "SQLComponent")
+
+    class _G:
+        vertices = [ok, protected]
+
+    with pytest.raises(TweakRefusedError) as exc:
+        process_tweaks_on_graph(_G(), {"a": {"text": "attacker"}, "b": {"database_url": "evil"}})
+
+    assert exc.value.refused == ["database_url"]
+    # The accepted sibling must NOT have been written.
+    ok.update_raw_params.assert_not_called()
+    assert ok.params == {}
+
+
+def test_a_refusal_applies_nothing_on_the_dict_path():
+    graph = _graph(
+        [
+            _node({"a": {"value": "original", "type": "str"}}, node_id="n1"),
+            _node({"database_url": {"value": "stored", "type": "str"}}, node_type="SQLComponent", node_id="n2"),
+        ]
+    )
+    with pytest.raises(TweakRefusedError):
+        process_tweaks(graph, {"n1": {"a": "attacker"}, "n2": {"database_url": "evil"}})
+
+    nodes = graph["data"]["nodes"]
+    assert nodes[0]["data"]["node"]["template"]["a"]["value"] == "original"
+    assert nodes[1]["data"]["node"]["template"]["database_url"]["value"] == "stored"
