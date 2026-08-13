@@ -256,24 +256,47 @@ async def _get_project_base_url() -> tuple[str, str | None, int | None]:
     return f"http://{host}:{port}".rstrip("/"), host, port
 
 
-async def get_project_streamable_http_url(project_id: UUID) -> str:
-    """Generate the Streamable HTTP endpoint for a project (no /sse suffix)."""
+async def _build_project_url(project_id: UUID, suffix: str) -> str:
+    """Build the client-facing project URL, honouring an operator-supplied base URL."""
     base_url, host, port = await _get_project_base_url()
-    project_url = f"{base_url}/api/v1/mcp/project/{project_id}/streamable"
+    project_url = f"{base_url}/api/v1/mcp/project/{project_id}/{suffix}"
     # An explicit LANGFLOW_MCP_BASE_URL is used as-is; only host/port-derived URLs get WSL rewriting.
     if host is None or port is None:
         return project_url
     return await get_url_by_os(host, port, project_url)
 
 
+async def _build_local_project_url(project_id: UUID, suffix: str) -> str:
+    """Build the pod-local project URL, always from the bind host/port."""
+    host, port = await _get_project_base_url_components()
+    project_url = f"http://{host}:{port}/api/v1/mcp/project/{project_id}/{suffix}"
+    return await get_url_by_os(host, port, project_url)
+
+
+async def get_project_streamable_http_url(project_id: UUID) -> str:
+    """Generate the Streamable HTTP endpoint for a project (no /sse suffix)."""
+    return await _build_project_url(project_id, "streamable")
+
+
 async def get_project_sse_url(project_id: UUID) -> str:
     """Generate the legacy SSE URL for a project, including WSL handling."""
-    base_url, host, port = await _get_project_base_url()
-    project_sse_url = f"{base_url}/api/v1/mcp/project/{project_id}/sse"
-    # An explicit LANGFLOW_MCP_BASE_URL is used as-is; only host/port-derived URLs get WSL rewriting.
-    if host is None or port is None:
-        return project_sse_url
-    return await get_url_by_os(host, port, project_sse_url)
+    return await _build_project_url(project_id, "sse")
+
+
+async def get_project_local_streamable_http_url(project_id: UUID) -> str:
+    """Streamable HTTP endpoint as reachable from inside this process.
+
+    MCP Composer runs as a subprocess here and dials the project endpoint as an upstream
+    member server, so it needs the address that resolves locally. ``LANGFLOW_MCP_BASE_URL``
+    names where *clients* should connect; routing pod-local traffic through that gateway
+    would leave the pod and, behind a load balancer, come back to a different one.
+    """
+    return await _build_local_project_url(project_id, "streamable")
+
+
+async def get_project_local_sse_url(project_id: UUID) -> str:
+    """Legacy SSE endpoint as reachable from inside this process. See the streamable variant."""
+    return await _build_local_project_url(project_id, "sse")
 
 
 async def _get_mcp_composer_auth_config(project: Folder) -> dict:
