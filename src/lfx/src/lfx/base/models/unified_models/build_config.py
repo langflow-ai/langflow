@@ -310,8 +310,13 @@ def update_model_options_in_build_config(
     # of whatever field triggered the update — e.g. api_key text).  Using
     # field_value here would incorrectly reset the model selection whenever a
     # non-model field (like api_key) is cleared or set to a global variable.
+    # An explicit model-field update carrying an empty value must NOT be
+    # auto-filled: ``options`` spans every enabled provider, so ``options[0]``
+    # would silently substitute a model from whichever provider iterates
+    # first — one the node was never configured for.
+    explicit_model_clear = field_name == model_field_name and not field_value
     current_model_value = build_config.get(model_field_name, {}).get("value")
-    if not current_model_value:
+    if not current_model_value and not explicit_model_clear:
         options = cached.get("options", [])
         if options:
             # Determine model type based on cache_key_prefix
@@ -490,8 +495,18 @@ def handle_model_input_update(
             option_names = {opt["name"] for opt in options}
             value_is_valid = bool(field_value) and field_value[0]["name"] in option_names
 
-            # If the value is invalid, reset to the first option if available, otherwise empty.
-            build_config[model_field_name]["value"] = field_value if value_is_valid else [options[0]] if options else ""
+            if value_is_valid:
+                build_config[model_field_name]["value"] = field_value
+            elif not field_value:
+                # Explicitly cleared: stay empty. ``options`` is one flat list
+                # across every enabled provider, so ``options[0]`` would pick a
+                # model from an arbitrary provider the node never selected.
+                build_config[model_field_name]["value"] = []
+            else:
+                # A non-empty invalid value resets to the first option so the
+                # user can pick a valid one (e.g. the Agent filters flow that
+                # drops a tool-incompatible model for a compatible default).
+                build_config[model_field_name]["value"] = [options[0]] if options else ""
             field_value = build_config[model_field_name]["value"]
 
     # Step 2: Reset provider-specific visibility without changing values.

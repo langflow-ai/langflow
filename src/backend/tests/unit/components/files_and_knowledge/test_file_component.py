@@ -183,6 +183,49 @@ class TestFileComponentDynamicOutputs:
         assert mock_proc.communicate.call_args_list[0].kwargs["input"] is not None
         assert mock_proc.communicate.call_args_list[1].kwargs["input"] is None
 
+    @patch("lfx.components.files_and_knowledge.file.get_storage_service")
+    @patch("lfx.components.files_and_knowledge.file.get_settings_service")
+    def test_process_files_preserves_local_temp_marker_for_docling_in_s3(self, mock_settings, mock_storage, tmp_path):
+        """Cloud downloads already on disk must not be reinterpreted as S3 keys."""
+        from lfx.base.data.base_file import BaseFileComponent
+        from lfx.schema.data import Data
+
+        mock_settings.return_value.settings.storage_type = "s3"
+        local_temp_file = tmp_path / "report.pdf"
+        local_temp_file.write_bytes(b"pdf")
+        component = FileComponent()
+        component.advanced_mode = True
+        component.markdown = False
+        component.silent_errors = False
+        base_file = BaseFileComponent.BaseFile(
+            data=Data(data={"file_path": str(local_temp_file)}),
+            path=local_temp_file,
+            delete_after_processing=True,
+            cleanup_local_file=True,
+        )
+        docling_result = Data(data={"doc": [{"text": "processed"}], "file_path": str(local_temp_file)})
+
+        with patch.object(component, "_process_docling_subprocess_impl", return_value=docling_result) as mock_process:
+            result = component.process_files([base_file])
+
+        assert result
+        mock_storage.assert_not_called()
+        mock_process.assert_called_once_with(str(local_temp_file), str(local_temp_file))
+
+    @patch("lfx.components.files_and_knowledge.file.get_storage_service")
+    @patch("lfx.components.files_and_knowledge.file.get_settings_service")
+    def test_docling_unmarked_absolute_path_still_requires_s3_key(self, mock_settings, mock_storage, tmp_path):
+        """The local-temp bypass must not weaken validation for ordinary S3 inputs."""
+        mock_settings.return_value.settings.storage_type = "s3"
+        unmarked_file = tmp_path / "report.pdf"
+        unmarked_file.write_bytes(b"pdf")
+        component = FileComponent()
+
+        with pytest.raises(ValueError, match="Invalid S3 path format"):
+            component._process_docling_in_subprocess(str(unmarked_file))
+
+        mock_storage.assert_not_called()
+
     def test_dynamic_outputs_have_tool_mode_enabled(self):
         """Test that all dynamically created outputs have tool_mode=True."""
         component = FileComponent()
@@ -796,6 +839,31 @@ class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
         new_temp_files = temp_files_after - temp_files_before
         assert len(new_temp_files) == 0, f"Temp files not cleaned up: {new_temp_files}"
 
+    @patch("lfx.base.data.cloud_storage_utils.create_s3_client")
+    @patch("lfx.base.data.cloud_storage_utils.validate_aws_credentials")
+    def test_s3_download_uses_explicit_local_cleanup(self, mock_validate, mock_create_client):  # noqa: ARG002
+        """Successful AWS downloads must remain eligible for local temp cleanup."""
+        component = FileComponent()
+        component.set_attributes(
+            {
+                "storage_location": [{"name": "AWS"}],
+                "aws_access_key_id": "test_key",
+                "aws_secret_access_key": "test_secret",
+                "bucket_name": "test-bucket",
+                "s3_file_key": "test-file.txt",
+            }
+        )
+        mock_s3_client = MagicMock()
+        mock_s3_client.download_fileobj.side_effect = lambda _bucket, _key, target: target.write(b"SAFE_CANARY")
+        mock_create_client.return_value = mock_s3_client
+
+        base_file = component._read_from_aws_s3()[0]
+
+        assert base_file.cleanup_local_file is True
+        assert base_file.path.read_bytes() == b"SAFE_CANARY"
+        component._delete_after_processing(base_file)
+        assert not base_file.path.exists()
+
     @patch("lfx.base.data.cloud_storage_utils.create_google_drive_service")
     def test_google_drive_temp_file_cleanup_on_download_failure(self, mock_create_service):
         """Test that temp file is cleaned up when Google Drive download fails."""
@@ -833,6 +901,30 @@ class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
         )
         new_temp_files = temp_files_after - temp_files_before
         assert len(new_temp_files) == 0, f"Temp files not cleaned up: {new_temp_files}"
+
+    @patch("googleapiclient.http.MediaIoBaseDownload")
+    @patch("lfx.base.data.cloud_storage_utils.create_google_drive_service")
+    def test_google_drive_download_uses_explicit_local_cleanup(self, mock_create_service, mock_downloader_class):
+        """Successful Drive downloads must remain eligible for local temp cleanup."""
+        component = FileComponent()
+        component.set_attributes(
+            {
+                "storage_location": [{"name": "Google Drive"}],
+                "service_account_key": '{"type": "service_account", "project_id": "test"}',
+                "file_id": "test-file-id",
+            }
+        )
+        mock_drive_service = MagicMock()
+        mock_drive_service.files().get().execute.return_value = {"name": "test-file.txt"}
+        mock_create_service.return_value = mock_drive_service
+        mock_downloader_class.return_value.next_chunk.return_value = (None, True)
+
+        base_file = component._read_from_google_drive()[0]
+
+        assert base_file.cleanup_local_file is True
+        assert base_file.path.exists()
+        component._delete_after_processing(base_file)
+        assert not base_file.path.exists()
 
 
 class TestFileComponentCloudEnvironment:

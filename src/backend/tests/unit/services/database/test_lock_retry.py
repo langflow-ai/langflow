@@ -34,13 +34,24 @@ def test_should_detect_lock_error_from_extended_result_code():
 
 
 def test_should_detect_lock_error_from_message_without_error_name():
-    assert is_database_lock_error(OperationalError("stmt", {}, Exception("database is locked"))) is True
+    original = sqlite3.OperationalError("database is locked")
+    assert is_database_lock_error(OperationalError("stmt", {}, original)) is True
 
 
 def test_should_not_treat_other_database_errors_as_lock_errors():
     assert is_database_lock_error(IntegrityError("stmt", {}, Exception("UNIQUE constraint failed"))) is False
     assert is_database_lock_error(ValueError("database is locked")) is False
     assert is_database_lock_error(None) is False
+
+
+def test_should_not_inspect_sqlalchemy_bound_parameters_for_lock_text():
+    constraint_error = IntegrityError(
+        "UPDATE flow SET name = ?",
+        {"name": "database is locked"},
+        sqlite3.IntegrityError("UNIQUE constraint failed: flow.user_id, flow.name"),
+    )
+
+    assert is_database_lock_error(constraint_error) is False
 
 
 def test_should_detect_lock_error_wrapped_in_another_exception():

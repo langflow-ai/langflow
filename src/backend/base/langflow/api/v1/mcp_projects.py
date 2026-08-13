@@ -83,6 +83,7 @@ from langflow.services.database.models.api_key.model import ApiKeyCreate
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service
+from langflow.services.rate_limit.service import get_last_forwarded_for_hop
 
 # Constants
 ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
@@ -792,6 +793,9 @@ def get_client_ip(request: Request) -> str:
     (``rate_limit_trust_proxy``) do we consult ``X-Forwarded-For``, and then we
     take the rightmost entry — the last hop added by the trusted proxy, which a
     client cannot forge — mirroring ``langflow.services.rate_limit.service.get_client_ip``.
+    Every occurrence of the header is joined first, so a proxy that appends its
+    own line rather than extending the client's cannot leave the attacker's line
+    as the one we read.
 
     Args:
         request: FastAPI Request object
@@ -802,11 +806,9 @@ def get_client_ip(request: Request) -> str:
     # Only consult X-Forwarded-For when an operator has explicitly declared a
     # trusted proxy; otherwise the header is attacker-controlled.
     if get_settings_service().settings.rate_limit_trust_proxy:
-        forwarded_for = request.headers.get("X-Forwarded-For")
-        if forwarded_for:
-            # Rightmost entry = last hop added by the trusted proxy (unspoofable);
-            # the leftmost entry is client-supplied and must never be trusted.
-            return forwarded_for.split(",")[-1].strip()
+        last_hop = get_last_forwarded_for_hop(request)
+        if last_hop:
+            return last_hop
 
     # Default: trust only the real TCP peer.
     if request.client:

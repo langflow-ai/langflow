@@ -89,7 +89,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "assemblyai": ["assemblyai>=0.33.0,<1.0.0"],
     "confluence": ["atlassian-python-api==3.41.16", _LC_COMMUNITY],
     "firecrawl": ["firecrawl-py>=1.0.16,<2.0.0"],
-    "git": ["GitPython>=3.1.50", _LC_COMMUNITY],
+    "git": ["GitPython>=3.1.58", _LC_COMMUNITY],
     "glean": [],  # httpx + pydantic only (lfx core)
     "icosacomputing": ["requests>=2.32.0"],
     "mem0": ["mem0ai>=2.0.2,<3.0.0"],
