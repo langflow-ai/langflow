@@ -18,8 +18,10 @@ degrades to a no-op when it is absent, so bare lfx imports this module without c
 from __future__ import annotations
 
 import asyncio
+import builtins
 import contextlib
 import contextvars
+import importlib
 import os
 import time
 from dataclasses import dataclass
@@ -28,6 +30,13 @@ from urllib.parse import urlsplit, urlunsplit
 
 from lfx.log.logger import logger
 from lfx.observability_fastapi import patch_otel_fastapi_route_details
+
+_BASE_EXCEPTION_GROUP_TYPE = getattr(builtins, "BaseExceptionGroup", None)
+if _BASE_EXCEPTION_GROUP_TYPE is None:
+    # The backport is present with the supported Python 3.10 dependency set, but
+    # observability must remain importable in a deliberately minimal bare-lfx install.
+    with contextlib.suppress(ImportError):
+        _BASE_EXCEPTION_GROUP_TYPE = importlib.import_module("exceptiongroup").BaseExceptionGroup
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -808,13 +817,32 @@ def _root_error_type(exc: BaseException) -> str:
 
     Both MCP retry loops re-raise as ``ValueError(f"Failed to run tool ...")`` with ``from e``,
     so without walking the chain every timeout, dropped connection and closed resource records
-    as ``ValueError`` and the attribute tells an operator nothing. Only the type is read; the
-    message stays unrecorded either way.
+    as ``ValueError`` and the attribute tells an operator nothing. Transport task groups can
+    also wrap one actionable failure in an exception group; a group is unwrapped only when it
+    has one member, because a multi-error group has no single root type. Only the type is read;
+    the message stays unrecorded either way.
     """
     root = exc
     seen = {id(root)}
-    while root.__cause__ is not None and id(root.__cause__) not in seen:
-        root = root.__cause__
+    while True:
+        # asyncio implements wait_for timeouts by cancelling the inner task, so TimeoutError
+        # explicitly chains a CancelledError. The timeout is the actionable failure; the inner
+        # cancellation is an implementation detail. A real outer cancellation still arrives as
+        # CancelledError directly and is reported as such.
+        if isinstance(root, (asyncio.TimeoutError, TimeoutError)):
+            break
+        next_error = root.__cause__
+        if (
+            next_error is None
+            and _BASE_EXCEPTION_GROUP_TYPE is not None
+            and isinstance(root, _BASE_EXCEPTION_GROUP_TYPE)
+        ):
+            grouped = root.exceptions
+            if isinstance(grouped, tuple) and len(grouped) == 1 and isinstance(grouped[0], BaseException):
+                next_error = grouped[0]
+        if next_error is None or id(next_error) in seen:
+            break
+        root = next_error
         seen.add(id(root))
     return type(root).__name__
 
