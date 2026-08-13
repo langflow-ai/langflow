@@ -52,7 +52,7 @@ export default function PlaygroundPage() {
     try {
       const flow = await getFlow({ id: id!, public: true });
       return flow;
-    } catch (error: unknown) {
+    } catch (error) {
       console.error(error);
       leaveUnreachableFlow();
     }
@@ -112,7 +112,7 @@ export default function PlaygroundPage() {
   }, []);
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center align-middle">
+    <main className="flex h-full w-full flex-col items-center justify-center align-middle">
       <div className="fixed bottom-4 left-4 z-[999]">
         <AlertDisplayArea />
       </div>
@@ -126,6 +126,6 @@ export default function PlaygroundPage() {
           <></>
         </CustomIOModal>
       )}
-    </div>
+    </main>
   );
 }
