@@ -401,6 +401,14 @@ def _clear_server_cache(server_name: str) -> None:
         safe_cache_set(shared_component_cache_service, "servers", servers)
 
 
+async def _persist(session, *, owns_transaction: bool) -> None:
+    """Commit when we own the transaction, otherwise just flush for the owner."""
+    if owns_transaction:
+        await session.commit()
+    else:
+        await session.flush()
+
+
 async def update_server(
     server_name: str,
     server_config: dict,
@@ -412,6 +420,7 @@ async def update_server(
     check_existing: bool = False,
     delete: bool = False,
     merge_existing: bool = False,
+    owns_transaction: bool = True,
 ):
     """Create, update, or delete one MCP server row for the user.
 
@@ -420,6 +429,15 @@ async def update_server(
     and never contend, so no update is lost at any worker/replica count - without an
     in-process lock. A concurrent create of the *same* name is caught by the unique
     constraint and folded into an update.
+
+    ``owns_transaction=False`` is for callers that already own the transaction - notably
+    the startup reconciliation, which runs inside ``session.begin_nested()``. Committing
+    there would end the transaction the caller's context manager owns, so every later
+    statement (including this function's own trailing read) raises ``InvalidRequestError:
+    Can't operate on closed transaction inside context manager``, and it would also
+    escape any rollback the caller relies on for atomicity. Flushing instead keeps the
+    write visible to the rest of the caller's transaction while leaving commit/rollback
+    to whoever opened it.
     """
     settings = getattr(settings_service, "settings", None)
     if not delete:
@@ -434,7 +452,7 @@ async def update_server(
         if existing is None:
             raise HTTPException(status_code=500, detail="Server not found.")
         await session.delete(existing)
-        await session.commit()
+        await _persist(session, owns_transaction=owns_transaction)
         _clear_server_cache(server_name)
         return None
 
@@ -463,11 +481,15 @@ async def update_server(
         session.add(existing)
 
     try:
-        await session.commit()
+        await _persist(session, owns_transaction=owns_transaction)
     except IntegrityError:
         # A concurrent request created the same (user, name) first (we came in with
         # existing=None). Re-apply the create/merge rules against the winning row
         # instead of overwriting it with our pre-race config.
+        if not owns_transaction:
+            # Recovering here needs a rollback, which on a borrowed transaction would
+            # discard the caller's work too. Let the caller's savepoint unwind instead.
+            raise
         await session.rollback()
         result = await session.exec(
             select(MCPServer).where(MCPServer.user_id == current_user.id, MCPServer.name == server_name)
@@ -488,7 +510,7 @@ async def update_server(
         existing.version += 1
         existing.updated_at = datetime.now(timezone.utc)
         session.add(existing)
-        await session.commit()
+        await _persist(session, owns_transaction=owns_transaction)
 
     _clear_server_cache(server_name)
     return await get_server(server_name, current_user, session, storage_service, settings_service)
