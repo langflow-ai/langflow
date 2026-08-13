@@ -178,6 +178,34 @@ def test_process_tweaks_refuses_a_caller_supplied_stream_key():
     assert exc.value.refused == ["stream"]
 
 
+def test_process_tweaks_does_not_mutate_the_caller_dict():
+    """Injecting ``stream`` must not write into the dict the caller owns.
+
+    A caller that reuses one tweaks dict across two runs would otherwise send
+    ``stream`` on the second run without knowing it. The exemption only covers
+    the injected key, so a strict policy would refuse ``stream`` and 422 a
+    request naming a key the caller never supplied.
+    """
+    graph = _graph(
+        [
+            _node(
+                {
+                    "stream": {"value": False, "type": "bool"},
+                    "a": {"value": "old", "type": "str", "api_editable": True},
+                },
+                node_id="n1",
+            )
+        ]
+    )
+    caller_tweaks = {"n1": {"a": "new"}}
+
+    with patch("lfx.processing.process._resolve_tweak_policy", return_value="declared"):
+        process_tweaks(graph, caller_tweaks)
+        assert caller_tweaks == {"n1": {"a": "new"}}, "process_tweaks wrote into the caller's dict"
+        # The reused dict must still run clean.
+        process_tweaks(_graph(graph["data"]["nodes"]), caller_tweaks)
+
+
 def test_process_tweaks_permissive_leaves_a_normal_flow_working():
     graph = _graph([_node({"a": {"value": "old", "type": "str"}}, node_id="n1")])
     with patch("lfx.processing.process._resolve_tweak_policy", return_value="permissive"):

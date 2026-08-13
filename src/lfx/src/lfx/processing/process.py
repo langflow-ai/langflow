@@ -419,7 +419,11 @@ def process_tweaks(
     from lfx.exceptions.tweaks import TweakRefusedError
     from lfx.utils.flow_validation import flow_declares_api_editable
 
-    tweaks_dict = cast("dict[str, Any]", tweaks.model_dump()) if not isinstance(tweaks, dict) else tweaks
+    # Copied, not aliased: ``stream`` is injected below, and writing that into
+    # the caller's own dict makes the key look caller-supplied on a second run
+    # with the same dict. The exemption would not apply and a strict policy
+    # would refuse ``stream``, a key the caller never sent.
+    tweaks_dict = cast("dict[str, Any]", tweaks.model_dump()) if not isinstance(tweaks, dict) else dict(tweaks)
     # ``stream`` is injected here rather than supplied by the caller, so the
     # policy layer must not refuse it. Without this the strict policies would
     # reject every request that omits ``stream``.
