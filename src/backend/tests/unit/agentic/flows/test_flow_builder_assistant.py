@@ -612,6 +612,7 @@ class TestFlowBuilderPromptFilesystem:
     not has_api_key("OPENAI_API_KEY"),
     reason="OPENAI_API_KEY required for intent classification test",
 )
+@pytest.mark.api_key_required
 class TestIntentClassificationBuildFlow:
     """Test that the intent classifier correctly identifies build_flow requests.
 
