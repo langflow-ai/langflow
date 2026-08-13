@@ -13,6 +13,12 @@ test(
     await page.getByTestId("blank-flow").click();
     await waitForFlowEditorReady(page);
 
+    // Start the shortcut on the canvas so a previously focused noflow control
+    // cannot intentionally suppress the global search hotkey.
+    await page
+      .getByRole("application", { name: "Flow canvas" })
+      .click({ position: { x: 100, y: 100 } });
+
     // Press "/" to activate search
     await page.keyboard.press("/");
 

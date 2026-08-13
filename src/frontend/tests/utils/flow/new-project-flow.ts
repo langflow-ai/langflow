@@ -67,9 +67,10 @@ export const openTemplatesModal = async (
   const modalSelector = `[data-testid="${TID.modalTitle}"]`;
   const modalTimeout = options?.modalTimeout ?? TIMEOUTS.standard;
 
-  await page.waitForURL(/\/flow\/[^/?#]+(?:[?#].*)?$/, {
-    timeout: modalTimeout,
-  });
+  await page.waitForURL(
+    (url) => /^\/flow\/[^/]+(?:\/folder\/[^/]+)?\/?$/.test(url.pathname),
+    { timeout: modalTimeout },
+  );
   await page.waitForSelector(welcomeSelector, { timeout: modalTimeout });
   await page.getByTestId("flow-builder-welcome-browse-more").click();
 

@@ -10,24 +10,22 @@ import {
   openTemplatesModal,
   waitForNewProjectButton,
 } from "../../utils/flow/new-project-flow";
+import { submitLoginAndRequireSuccess } from "../../utils/login-langflow";
 import { renameFlow } from "../../utils/rename-flow";
 
 test(
   "when auto_login is false, admin can CRUD user's and should see just your own flows",
   { tag: ["@release", "@api", "@database"] },
   async ({ page }) => {
-    page.expectServerError({
-      method: "GET",
-      path: "/api/v1/auto_login",
-      status: 500,
-      count: 1,
-    });
     await page.route("**/api/v1/auto_login", (route) => {
       route.fulfill({
-        status: 500,
+        status: 403,
         contentType: "application/json",
         body: JSON.stringify({
-          detail: { auto_login: false },
+          detail: {
+            message: "Auto login is disabled.",
+            auto_login: false,
+          },
         }),
       });
     });
@@ -69,7 +67,7 @@ test(
       sessionStorage.removeItem("testMockAutoLogin");
     });
 
-    await page.getByRole("button", { name: TEXTS.signIn }).click();
+    await submitLoginAndRequireSuccess(page);
 
     await page.waitForSelector('[data-testid="mainpage_title"]', {
       timeout: 30000,
@@ -153,7 +151,7 @@ test(
       .fill(secondRandomName);
     await page.getByPlaceholder(TEXTS.placeholderPassword).fill(randomPassword);
 
-    await page.getByRole("button", { name: TEXTS.signIn }).click();
+    await submitLoginAndRequireSuccess(page);
 
     await page.evaluate(() => {
       sessionStorage.removeItem("testMockAutoLogin");
@@ -230,7 +228,7 @@ test(
       sessionStorage.removeItem("testMockAutoLogin");
     });
 
-    await page.getByRole("button", { name: TEXTS.signIn }).click();
+    await submitLoginAndRequireSuccess(page);
 
     await page.waitForSelector('[data-testid="mainpage_title"]', {
       timeout: 30000,

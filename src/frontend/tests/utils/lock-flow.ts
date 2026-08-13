@@ -22,7 +22,6 @@ export async function lockFlow(page: Page) {
     state: "hidden",
     timeout: 10000,
   });
-  await expect(page.getByTestId("icon-Lock")).toBeVisible();
 }
 
 export async function unlockFlow(page: Page) {

@@ -1,4 +1,5 @@
 import type { BrowserContext, Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { configureLoopbackOpenAI } from "../configure-loopback-openai";
 import { TID } from "../constants/testIds";
 import { ANIMATIONS, TIMEOUTS } from "../constants/timeouts";
@@ -37,8 +38,23 @@ export async function publishBasicPromptingAndOpenShareablePlayground(
     timeout: TIMEOUTS.medium,
   });
   await page.waitForTimeout(ANIMATIONS.fullscreenPlayground);
+  const flowId = new URL(page.url()).pathname.match(/\/flow\/([^/?#]+)/)?.[1];
+  if (!flowId) {
+    throw new Error(`Expected a /flow/:id editor URL, got ${page.url()}`);
+  }
+  const publishResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      response.request().method() === "PATCH" &&
+      url.pathname === `/api/v1/flows/${flowId}`
+    );
+  });
   await page.getByTestId(TID.publishSwitch).click();
-  await page.waitForTimeout(ANIMATIONS.publishTogglePropagation);
+  const publishResponse = await publishResponsePromise;
+  expect(
+    publishResponse.ok(),
+    `Publishing flow ${flowId} returned ${publishResponse.status()}`,
+  ).toBeTruthy();
 
   const pagePromise = context.waitForEvent("page");
   await page.getByTestId(TID.shareablePlayground).click();

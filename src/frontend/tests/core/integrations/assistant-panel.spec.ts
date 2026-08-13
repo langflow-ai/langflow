@@ -1,8 +1,10 @@
 import { expect, test } from "../../fixtures";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
+import { mockAssistant } from "../../utils/mock-assistant";
 
 test.describe("Assistant Panel UI", { tag: ["@release"] }, () => {
   test("should open and close from canvas controls", async ({ page }) => {
+    await mockAssistant(page);
     await openStarterProject(page, "Basic Prompting");
 
     // Panel should not be visible initially

@@ -5,6 +5,7 @@ import {
   LOOPBACK_OPENAI_API_KEY,
 } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
+import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 
@@ -15,26 +16,24 @@ test(
   },
   async ({ page }) => {
     await openBlankFlow(page);
-    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-      timeout: 30000,
+    await addComponentFromSidebar(page, {
+      search: TEXTS.searchChatOutput,
+      testId: "input_outputChat Output",
+      hoverAdd: true,
+      addButtonSlug: "chat-output",
     });
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatOutput);
-
-    await page
-      .getByTestId("input_outputChat Output")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 400, y: 100 },
-      });
-
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatInput);
-
-    await page
-      .getByTestId("input_outputChat Input")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 100 },
-      });
+    await expect(
+      page.getByRole("group", { name: "Chat Output node" }),
+    ).toBeAttached();
+    await addComponentFromSidebar(page, {
+      search: TEXTS.searchChatInput,
+      testId: "input_outputChat Input",
+      hoverAdd: true,
+      addButtonSlug: "chat-input",
+    });
+    await expect(
+      page.getByRole("group", { name: "Chat Input node" }),
+    ).toBeAttached();
 
     await page.getByTestId("sidebar-search-input").click();
     await page
@@ -79,8 +78,8 @@ test(
       .getByTestId("handle-openaimodelcomponent-shownode-model response-right")
       .click();
     await page
-      .getByTestId("handle-chatoutput-noshownode-inputs-target")
-      .last()
+      .getByRole("group", { name: "Chat Output node" })
+      .locator('[data-testid^="handle-chatoutput-"][data-testid*="-inputs-"]')
       .click();
     await configureLoopbackOpenAI(page);
     await adjustScreenView(page);
@@ -130,26 +129,24 @@ test(
   async ({ page }) => {
     await openBlankFlow(page);
 
-    expect(await page.getByTestId("playground-btn-flow").isDisabled());
+    await expect(page.getByTestId("playground-btn-flow")).toBeDisabled();
+    await expect(page.getByText("Langflow Chat")).toBeHidden();
 
-    expect(await page.getByText("Langflow Chat").isHidden());
-
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatOutput);
-
-    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
-      timeout: 30000,
+    await addComponentFromSidebar(page, {
+      search: TEXTS.searchChatOutput,
+      testId: "input_outputChat Output",
+      hoverAdd: true,
+      addButtonSlug: "chat-output",
     });
-    await page
-      .locator('//*[@id="input_outputChat Output"]')
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
+    await expect(
+      page.getByRole("group", { name: "Chat Output node" }),
+    ).toBeAttached();
 
     await adjustScreenView(page);
 
+    await expect(page.getByTestId("playground-btn-flow-io")).toBeEnabled();
     await page.getByTestId("playground-btn-flow-io").click({ force: true });
 
-    expect(await page.getByText("Langflow Chat").isVisible());
+    await expect(page.getByText("Langflow Chat")).toBeVisible();
   },
 );

@@ -110,18 +110,13 @@ test.describe("Assistant Panel Integration", { tag: ["@release"] }, () => {
     ).toContainText("Langflow is a deterministic visual workflow builder.");
     await expect(page.getByTestId("assistant-new-session")).toBeEnabled();
 
-    const resetRequest = page.waitForRequest(
-      (request) =>
-        request.method() === "POST" &&
-        new URL(request.url()).pathname.endsWith(
-          "/api/v1/agentic/sessions/reset",
-        ),
-    );
+    await assistantMock.armSessionReset();
+    const resetRequest = assistantMock.waitForSessionReset();
     await page.getByTestId("assistant-new-session").click();
-    const request = await resetRequest;
-    expect(new URL(request.url()).searchParams.get("session_id")).toMatch(
-      /^agentic_/,
-    );
+    const resetUrl = await resetRequest;
+    expect(resetUrl.origin).toBe(new URL(page.url()).origin);
+    expect(resetUrl.pathname).toBe("/api/v1/agentic/sessions/reset");
+    expect(resetUrl.searchParams.get("session_id")).toMatch(/^agentic_/);
 
     await expect(page.getByTestId("assistant-message-user")).not.toBeVisible();
     await expect(

@@ -752,7 +752,7 @@ test.describe("knowledge bases route accessibility", () => {
       await page.keyboard.press("Escape");
       await expect(page.getByRole("menu")).toBeHidden();
       await expect(
-        page.getByRole("button", { name: /Actions for/ }),
+        actionsCell.getByRole("button", { name: /Actions for/ }),
       ).toBeFocused();
     },
   );

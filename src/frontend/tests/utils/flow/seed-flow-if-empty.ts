@@ -25,7 +25,7 @@ export async function seedFlowIfEmpty(page: Page): Promise<boolean> {
   await openTemplatesModal(page, { fromEmptyPage: true });
   await selectStarterTemplate(page, TEXTS.templateBasicPrompting);
   await waitForFlowEditorReady(page);
-  await page.getByTestId("icon-ChevronLeft").first().click();
+  await page.goto("/");
   await expect(page.getByTestId("mainpage_title")).toBeVisible({
     timeout: TIMEOUTS.standard,
   });

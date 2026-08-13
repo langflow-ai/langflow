@@ -41,6 +41,10 @@ const forbiddenSkipGuards = new Set([
   "openAiKey",
   "tavilyKey",
 ]);
+const loopbackProviderHelpers = [
+  "configure-loopback-openai.ts",
+  "configure-loopback-web-search.ts",
+];
 
 function* sourceFiles(directory) {
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
@@ -148,6 +152,69 @@ test("blocking Playwright specs use the hardened fixture and avoid live provider
     }
 
     visit(tree);
+  }
+
+  assert.deepEqual(violations, []);
+});
+
+test("loopback provider helpers wait for the shared flow editor readiness contract", () => {
+  const violations = [];
+
+  for (const helper of loopbackProviderHelpers) {
+    const filename = path.join(testsRoot, "utils", helper);
+    const source = fs.readFileSync(filename, "utf8");
+    const tree = ts.createSourceFile(
+      filename,
+      source,
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TS,
+    );
+    let importsReadinessHelper = false;
+    let callsReadinessHelper = false;
+
+    function visit(node) {
+      if (
+        ts.isImportDeclaration(node) &&
+        node.moduleSpecifier.text === "./flow/wait-for-flow-editor-ready" &&
+        node.importClause?.namedBindings &&
+        ts.isNamedImports(node.importClause.namedBindings) &&
+        node.importClause.namedBindings.elements.some(
+          (binding) =>
+            (binding.propertyName ?? binding.name).text ===
+            "waitForFlowEditorReady",
+        )
+      ) {
+        importsReadinessHelper = true;
+      }
+
+      if (
+        ts.isCallExpression(node) &&
+        ts.isIdentifier(node.expression) &&
+        node.expression.text === "waitForFlowEditorReady"
+      ) {
+        callsReadinessHelper = true;
+      }
+
+      if (
+        ts.isCallExpression(node) &&
+        ts.isPropertyAccessExpression(node.expression) &&
+        node.expression.name.text === "getByTestId" &&
+        ts.isStringLiteral(node.arguments[0]) &&
+        node.arguments[0].text === "react-flow-id"
+      ) {
+        violations.push(`${helper} treats the React Flow DOM id as a test id`);
+      }
+
+      ts.forEachChild(node, visit);
+    }
+
+    visit(tree);
+    if (!importsReadinessHelper || !callsReadinessHelper) {
+      violations.push(
+        `${helper} does not use waitForFlowEditorReady after reloading`,
+      );
+    }
   }
 
   assert.deepEqual(violations, []);

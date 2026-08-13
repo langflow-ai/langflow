@@ -8,7 +8,6 @@ import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
-import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import DataTableTab from "@/components/core/dataTableTabComponent";
 import { Button } from "@/components/ui/button";
 import Loading from "@/components/ui/loading";
@@ -270,6 +269,11 @@ const FilesTab = ({
       maxWidth: 60,
       editable: false,
       resizable: false,
+      // The table-level key handler forwards Enter/Space to the Radix trigger.
+      // Keep AG Grid from also treating Space as row selection, which can
+      // remount the cell before the trigger receives the key.
+      suppressKeyboardEvent: (params) =>
+        params.event.key === "Enter" || params.event.key === " ",
       cellClass: "cursor-default",
       cellRenderer: (params) => {
         return (
@@ -391,10 +395,7 @@ const FilesTab = ({
       emptyState={
         <div className="flex h-full flex-col">
           <div className="flex h-full flex-col py-4">
-            <CardsWrapComponent
-              onFileDrop={onFileDrop}
-              dragMessage={t("files.dropToUpload")}
-            >
+            <DragWrapComponent onFileDrop={onFileDrop}>
               <div className="flex h-full w-full flex-col items-center justify-center gap-8 pb-8">
                 <div className="flex flex-col items-center gap-2">
                   <h3 className="text-2xl font-semibold">
@@ -408,7 +409,7 @@ const FilesTab = ({
                   {UploadButtonComponent}
                 </div>
               </div>
-            </CardsWrapComponent>
+            </DragWrapComponent>
           </div>
         </div>
       }

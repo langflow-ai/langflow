@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+import sqlite3
 import threading
 import zipfile
 from collections.abc import Collection
@@ -23,6 +24,7 @@ from lfx.utils.flow_validation import (
 )
 from pydantic import ValidationError
 from sqlalchemy import case
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import and_, col, select
 
 from langflow.api.utils import (
@@ -105,14 +107,64 @@ __all__ = [
     "_verify_fs_path",
 ]
 
+_SQLITE_UNIQUE_MARKER = "UNIQUE constraint failed: "
+_POSTGRES_UNIQUE_VIOLATION_SQLSTATE = "23505"
+_SQLITE_FLOW_UNIQUE_COLUMNS = {
+    ("id",): "id",
+    ("user_id", "name"): "name",
+    ("user_id", "endpoint_name"): "endpoint_name",
+}
+_POSTGRES_FLOW_UNIQUE_COLUMNS = {
+    "flow_pkey": "id",
+    "pk_flow": "id",
+    "uq_flow_id": "id",
+    "unique_flow_name": "name",
+    "unique_flow_endpoint_name": "endpoint_name",
+}
+
+
+def _postgres_unique_column(exc: BaseException) -> str | None:
+    """Return a safe flow column for a PostgreSQL unique violation."""
+    current: BaseException | None = exc
+    constraint_name: str | None = None
+    is_unique_violation = False
+    seen: set[int] = set()
+
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        sqlstate = getattr(current, "sqlstate", None) or getattr(current, "pgcode", None)
+        is_unique_violation = is_unique_violation or sqlstate == _POSTGRES_UNIQUE_VIOLATION_SQLSTATE
+        diagnostic = getattr(current, "diag", None)
+        candidate = getattr(diagnostic, "constraint_name", None) or getattr(current, "constraint_name", None)
+        if candidate:
+            constraint_name = str(candidate)
+        current = getattr(current, "orig", None) or current.__cause__
+
+    if not is_unique_violation or constraint_name is None:
+        return None
+    return _POSTGRES_FLOW_UNIQUE_COLUMNS.get(constraint_name)
+
 
 def _handle_unique_constraint_error(exc: Exception, *, status_code: int = 400) -> HTTPException:
     """Parse a UNIQUE constraint error and return an appropriate HTTPException."""
-    msg = str(exc)
-    if "UNIQUE constraint failed" not in msg:
-        return HTTPException(status_code=500, detail=msg)
-    columns = msg.split("UNIQUE constraint failed: ")[1].split(".")[1].split("\n")[0]
-    column = columns.split(",")[1] if "id" in columns.split(",")[0] else columns.split(",")[0]
+    if not isinstance(exc, IntegrityError):
+        return HTTPException(status_code=500, detail="Could not persist the flow.")
+
+    msg = str(exc.orig)
+    column = _postgres_unique_column(exc.orig)
+    if isinstance(exc.orig, sqlite3.IntegrityError) and _SQLITE_UNIQUE_MARKER in msg:
+        constraint = msg.split(_SQLITE_UNIQUE_MARKER, maxsplit=1)[1].splitlines()[0]
+        columns: list[str] = []
+        for qualified in constraint.split(","):
+            table, separator, candidate = qualified.strip().rpartition(".")
+            if not separator or table.rsplit(".", maxsplit=1)[-1] != "flow":
+                columns = []
+                break
+            columns.append(candidate)
+        column = _SQLITE_FLOW_UNIQUE_COLUMNS.get(tuple(columns))
+
+    if column is None:
+        return HTTPException(status_code=500, detail="Could not persist the flow.")
     return HTTPException(status_code=status_code, detail=f"{column.capitalize().replace('_', ' ')} must be unique")
 
 
@@ -135,6 +187,8 @@ router = APIRouter(prefix="/flows", tags=["Flows"])
 
 FLOW_UPDATE_FAILED = "Could not update the flow."
 FLOW_UPDATE_BUSY = "The database is busy. Please retry the request."
+FLOW_CREATE_FAILED = "Could not create the flow."
+FLOW_CREATE_BUSY = "The database is busy. Please retry the request."
 FLOW_DELETE_FAILED = "Could not delete the flow."
 FLOW_DELETE_BUSY = "The database is busy. Please retry the request."
 
@@ -156,17 +210,47 @@ async def create_flow(
         # into the row we persist so stale caller scope fields cannot retarget
         # the write after the guard has run.
         flow.workspace_id, flow.folder_id = _create
-        return await _new_flow(
+        stable_flow = flow.model_copy(deep=True)
+        user_id = current_user.id
+
+        async def create_attempt(_attempt: int) -> FlowRead:
+            # _new_flow mutates its input while normalizing ownership, name,
+            # endpoint and destination. Rebuild it for every transaction so a
+            # rollback never leaves the retry with partially normalized state.
+            return await _new_flow(
+                session=session,
+                flow=stable_flow.model_copy(deep=True),
+                user_id=user_id,
+                storage_service=storage_service,
+                widen_for_authz=True,
+                propagate_unhandled_errors=True,
+            )
+
+        return await run_with_lock_retry(
+            create_attempt,
             session=session,
-            flow=flow,
-            user_id=current_user.id,
-            storage_service=storage_service,
-            widen_for_authz=True,
+            description="flow creation",
         )
-    except HTTPException:
-        raise
+    except HTTPException as exc:
+        if exc.status_code != status.HTTP_500_INTERNAL_SERVER_ERROR:
+            raise
+        await logger.aerror("Flow creation failed", error_type=type(exc).__name__)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=FLOW_CREATE_FAILED) from exc
     except Exception as e:
-        raise _handle_unique_constraint_error(e) from e
+        if is_database_lock_error(e):
+            await logger.aerror("Flow creation remained locked after retries", error_type=type(e).__name__)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=FLOW_CREATE_BUSY,
+                headers={"Retry-After": "1"},
+            ) from e
+        await logger.aerror("Flow creation failed", error_type=type(e).__name__)
+        # Do not expose SQLAlchemy statements, bound parameters, database URLs
+        # or user-provided flow identifiers through the API response.
+        handled_error = _handle_unique_constraint_error(e)
+        if handled_error.status_code != status.HTTP_500_INTERNAL_SERVER_ERROR:
+            raise handled_error from e
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=FLOW_CREATE_FAILED) from e
 
 
 @router.get("/", response_model=list[FlowRead] | Page[FlowRead] | list[FlowHeader], status_code=200)

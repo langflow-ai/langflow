@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 
 export async function adjustScreenView(
   page: Page,
@@ -12,10 +13,12 @@ export async function adjustScreenView(
     timeout: 30000,
   });
 
-  const fitViewButton = page.getByTestId("fit_view");
-  if (!(await fitViewButton.isVisible().catch(() => false))) {
-    await page.getByTestId("canvas_controls_dropdown").click();
+  const controlsTrigger = page.getByTestId("canvas_controls_dropdown");
+  if ((await controlsTrigger.getAttribute("data-state")) !== "open") {
+    await controlsTrigger.click();
   }
+  await expect(controlsTrigger).toHaveAttribute("data-state", "open");
+  const fitViewButton = page.getByTestId("fit_view");
   await fitViewButton.waitFor({ state: "visible" });
   await fitViewButton.click();
 
@@ -31,7 +34,9 @@ export async function adjustScreenView(
     // until the 1s timeout fires — turning a successful zoom into a flake.
     await zoomOutButton.click({ timeout: 5000, noWaitAfter: true });
   }
-  await page
-    .getByTestId("canvas_controls_dropdown")
-    .click({ force: true, timeout: 5000, noWaitAfter: true });
+  await controlsTrigger.click({
+    force: true,
+    timeout: 5000,
+    noWaitAfter: true,
+  });
 }

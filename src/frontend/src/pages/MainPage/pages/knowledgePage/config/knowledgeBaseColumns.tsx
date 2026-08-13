@@ -362,6 +362,9 @@ export const createKnowledgeBaseColumns = (
       // cell's controls instead, so every action button is keyboard-reachable.
       // (Focus enters the cell via Enter — see handleCellKeyDown.)
       suppressKeyboardEvent: (params) => {
+        if (params.event.key === "Enter" || params.event.key === " ") {
+          return true;
+        }
         if (params.event.key !== "Tab") return false;
         const active = document.activeElement as HTMLElement | null;
         const cell = active?.closest(".ag-cell");

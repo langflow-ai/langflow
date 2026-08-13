@@ -323,10 +323,15 @@ test.describe("files route accessibility", () => {
       await expect(page.getByRole("menu")).toBeHidden({
         timeout: TIMEOUTS.standard,
       });
-      const focusedName = await page.evaluate(
-        () => document.activeElement?.getAttribute("aria-label") ?? "",
-      );
-      expect(focusedName).toMatch(/File actions/);
+      const actionsTrigger = firstRow.getByRole("button", {
+        name: /File actions/,
+      });
+      await expect(actionsTrigger).toBeFocused();
+      // Wait for Radix's close state to settle before exercising the second
+      // activation key. Hidden content can disappear before the trigger's
+      // open state has committed, which would make an immediate Space toggle
+      // close the already-closing menu instead of reopening it.
+      await expect(actionsTrigger).toHaveAttribute("data-state", "closed");
 
       // Space is the equivalent keyboard activation and Escape restores focus.
       await firstRow.locator('[role="gridcell"][col-id="actions"]').focus();
@@ -336,9 +341,7 @@ test.describe("files route accessibility", () => {
       });
       await page.keyboard.press("Escape");
       await expect(page.getByRole("menu")).toBeHidden();
-      await expect(
-        page.getByRole("button", { name: /File actions/ }),
-      ).toBeFocused();
+      await expect(actionsTrigger).toBeFocused();
     },
   );
 

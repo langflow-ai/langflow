@@ -14,18 +14,15 @@ test(
   "user must be able to see api key in webhook component when auto login is disabled",
   { tag: ["@release"] },
   async ({ page }) => {
-    page.expectServerError({
-      method: "GET",
-      path: "/api/v1/auto_login",
-      status: 500,
-      count: 1,
-    });
     await page.route("**/api/v1/auto_login", (route) => {
       route.fulfill({
-        status: 500,
+        status: 403,
         contentType: "application/json",
         body: JSON.stringify({
-          detail: { auto_login: false },
+          detail: {
+            message: "Auto login is disabled.",
+            auto_login: false,
+          },
         }),
       });
     });

@@ -10,17 +10,16 @@ import type { LangflowPage } from "../types";
  * for the mainpage_title).
  */
 export async function mockAutoLoginDisabled(page: LangflowPage): Promise<void> {
-  page.expectServerError({
-    method: "GET",
-    path: "/api/v1/auto_login",
-    status: 500,
-    count: 1,
-  });
   await page.route("**/api/v1/auto_login", (route) => {
     route.fulfill({
-      status: 500,
+      status: 403,
       contentType: "application/json",
-      body: JSON.stringify({ detail: { auto_login: false } }),
+      body: JSON.stringify({
+        detail: {
+          message: "Auto login is disabled.",
+          auto_login: false,
+        },
+      }),
     });
   });
 

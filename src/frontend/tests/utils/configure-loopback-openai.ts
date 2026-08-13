@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect } from "../fixtures";
 import { adjustScreenView } from "./adjust-screen-view";
+import { waitForFlowEditorReady } from "./flow/wait-for-flow-editor-ready";
 import { updateOldComponents } from "./update-old-components";
 
 export const LOOPBACK_OPENAI_BASE_URL = "http://127.0.0.1:8787/v1";
@@ -115,8 +116,6 @@ export async function configureLoopbackOpenAI(
   expect(updateResponse.ok(), `PATCH flow ${flowId}`).toBeTruthy();
 
   await page.reload();
-  await expect(page.getByTestId("react-flow-id")).toBeVisible({
-    timeout: 30_000,
-  });
+  await waitForFlowEditorReady(page);
   if (!options?.skipAdjustScreenView) await adjustScreenView(page);
 }

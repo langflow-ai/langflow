@@ -230,6 +230,7 @@ jobs:
         run: |
           set -euo pipefail
           cd src/frontend
+          TESTS_FOLDER="${TESTS_FOLDER:-tests}"
 
           if [[ ! "$TESTS_FOLDER" =~ ^tests(/[A-Za-z0-9._-]+)*$ ]] || [[ "/$TESTS_FOLDER/" == *"/../"* ]]; then
             echo "Invalid tests_folder: $TESTS_FOLDER" >&2
@@ -362,6 +363,7 @@ jobs:
         working-directory: ./src/frontend
         run: |
           set -euo pipefail
+          TESTS_FOLDER="${TESTS_FOLDER:-tests}"
           if [[ ! "$TESTS_FOLDER" =~ ^tests(/[A-Za-z0-9._-]+)*$ ]] || [[ "/$TESTS_FOLDER/" == *"/../"* ]]; then
             echo "Invalid tests_folder: $TESTS_FOLDER" >&2
             exit 1

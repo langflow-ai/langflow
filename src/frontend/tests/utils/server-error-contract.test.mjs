@@ -8,6 +8,8 @@ import {
   observeServerError,
   readResponseBodyWithTimeout,
   sanitizeResponseExcerpt,
+  shouldSettleApiRequestOnResponse,
+  shouldTrackApiRequest,
 } from "./server-error-contract.mjs";
 
 test("redacts structured secrets including whitespace-containing values", () => {
@@ -180,6 +182,50 @@ test("returns unresolved requests after the bounded drain", async () => {
   tracker.start(request);
 
   assert.deepEqual(await tracker.drain(1), [request]);
+});
+
+test("snapshots requests that have not produced a response status", () => {
+  const tracker = createPendingRequestTracker();
+  const request = { id: "awaiting-response-headers" };
+  tracker.start(request);
+
+  assert.deepEqual(tracker.snapshot(), [request]);
+  tracker.finish(request);
+  assert.deepEqual(tracker.snapshot(), []);
+});
+
+test("tracks API operations but not teardown-prone profile image assets", () => {
+  assert.equal(
+    shouldTrackApiRequest("http://localhost:7860/api/v1/flows/"),
+    true,
+  );
+  assert.equal(
+    shouldTrackApiRequest(
+      "http://localhost:7860/api/v1/files/profile_pictures/People/avatar-01.svg",
+    ),
+    false,
+  );
+  assert.equal(
+    shouldTrackApiRequest("http://localhost:3000/assets/app.js"),
+    false,
+  );
+});
+
+test("settles successful streaming API requests when response headers arrive", () => {
+  assert.equal(
+    shouldSettleApiRequestOnResponse(
+      "http://localhost:7860/api/v2/workflows",
+      "text/event-stream; charset=utf-8",
+    ),
+    true,
+  );
+  assert.equal(
+    shouldSettleApiRequestOnResponse(
+      "http://localhost:7860/api/v1/flows/",
+      "application/json",
+    ),
+    false,
+  );
 });
 
 const expected = {

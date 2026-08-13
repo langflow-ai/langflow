@@ -17,7 +17,19 @@ export async function openBlankFlow(page: Page): Promise<void> {
   await page.waitForSelector(`[data-testid="${TID.blankFlow}"]`, {
     timeout: TIMEOUTS.standard,
   });
+  const createResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      response.request().method() === "POST" &&
+      url.pathname === "/api/v1/flows/"
+    );
+  });
   await page.getByTestId(TID.blankFlow).click();
+  const createResponse = await createResponsePromise;
+  expect(
+    createResponse.ok(),
+    `Creating a blank flow returned ${createResponse.status()}`,
+  ).toBeTruthy();
   await expect(page.getByTestId(TID.modalTitle)).toBeHidden({
     timeout: TIMEOUTS.standard,
   });

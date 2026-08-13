@@ -7,6 +7,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
 import { dismissLegacyWarnings } from "../../utils/dismiss-legacy-warnings";
 import { ensureFileSelected } from "../../utils/ensure-checkbox-checked";
+import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { generateRandomFilename } from "../../utils/generate-filename";
 import {
@@ -37,19 +38,14 @@ test(
 
     await addLegacyComponents(page);
 
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("file");
-
-    await page.waitForSelector('[data-testid="files_and_knowledgeRead File"]', {
-      timeout: 10000,
+    await addComponentFromSidebar(page, {
+      search: "file",
+      testId: "files_and_knowledgeRead File",
+      hoverAdd: true,
     });
-
-    await page
-      .getByTestId("files_and_knowledgeRead File")
-      .first()
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
+    await expect(
+      page.getByRole("group", { name: "Read File node" }),
+    ).toHaveCount(1);
     await adjustScreenView(page);
     await page.waitForTimeout(2000);
     const fileManagement = await page

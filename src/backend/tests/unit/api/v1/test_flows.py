@@ -106,6 +106,323 @@ async def test_create_flow(client: AsyncClient, logged_in_headers):
     assert "webhook" in result, "The result must have a 'webhook' key"
 
 
+async def test_create_flow_retries_transient_sqlite_lock_with_fresh_payload(
+    client: AsyncClient, logged_in_headers, monkeypatch
+):
+    """A transient SQLite writer lock retries from a deeply copied FlowCreate snapshot."""
+    import sqlite3
+
+    from langflow.api.v1 import flows as flows_module
+    from sqlalchemy.exc import OperationalError
+
+    original_new_flow = flows_module._new_flow
+    attempts: list[object] = []
+    expected_name = f"create-lock-retry-{uuid.uuid4()}"
+    expected_data = {
+        "nodes": [{"id": "original-node", "data": {"settings": {"values": ["original"]}}}],
+        "edges": [],
+    }
+    insert_statement = "INSERT INTO flow (id, name) VALUES (?, ?)"
+
+    async def create_after_one_lock(**kwargs):
+        attempts.append(kwargs["flow"])
+        if len(attempts) == 1:
+            kwargs["flow"].name = "mutated-during-failed-attempt"
+            kwargs["flow"].data["nodes"][0]["data"]["settings"]["values"].append("mutated")
+            raise OperationalError(
+                insert_statement,
+                {"name": expected_name},
+                sqlite3.OperationalError("database is locked"),
+            )
+        return await original_new_flow(**kwargs)
+
+    monkeypatch.setattr(flows_module, "_new_flow", create_after_one_lock)
+
+    response = await client.post(
+        "api/v1/flows/",
+        json={"name": expected_name, "data": expected_data},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED, response.text
+    assert response.json()["name"] == expected_name
+    assert response.json()["data"] == expected_data
+    assert len(attempts) == 2
+    assert attempts[0] is not attempts[1]
+    assert attempts[0].data is not attempts[1].data
+    assert attempts[0].data["nodes"][0] is not attempts[1].data["nodes"][0]
+
+
+async def test_create_flow_duplicate_explicit_id_returns_sanitized_unique_error(client: AsyncClient, logged_in_headers):
+    """A real duplicate primary-key failure reaches the route's uniqueness mapping."""
+    explicit_id = str(uuid.uuid4())
+    first_response = await client.post(
+        "api/v1/flows/",
+        json={"id": explicit_id, "name": f"explicit-id-first-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert first_response.status_code == status.HTTP_201_CREATED, first_response.text
+
+    duplicate_response = await client.post(
+        "api/v1/flows/",
+        json={"id": explicit_id, "name": f"explicit-id-second-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+
+    assert duplicate_response.status_code == status.HTTP_400_BAD_REQUEST, duplicate_response.text
+    assert duplicate_response.json()["detail"] == "Id must be unique"
+    assert explicit_id not in duplicate_response.text
+    assert "INSERT INTO" not in duplicate_response.text
+    assert "sqlalche.me" not in duplicate_response.text
+
+
+def test_flow_unique_constraint_error_maps_postgres_sqlstate_without_leaking_values():
+    """PostgreSQL 23505 diagnostics map only known flow constraints to safe field names."""
+    from types import SimpleNamespace
+
+    from langflow.api.v1 import flows as flows_module
+    from sqlalchemy.exc import IntegrityError
+
+    leaked_id = str(uuid.uuid4())
+    expected_details = {
+        "flow_pkey": "Id must be unique",
+        "pk_flow": "Id must be unique",
+        "uq_flow_id": "Id must be unique",
+        "unique_flow_name": "Name must be unique",
+        "unique_flow_endpoint_name": "Endpoint name must be unique",
+    }
+
+    for constraint_name, expected_detail in expected_details.items():
+        driver_error = RuntimeError(f"duplicate key value {leaked_id}")
+        driver_error.sqlstate = "23505"
+        driver_error.diag = SimpleNamespace(constraint_name=constraint_name)
+        integrity_error = IntegrityError("INSERT INTO flow ...", {"id": leaked_id}, driver_error)
+
+        response_error = flows_module._handle_unique_constraint_error(integrity_error)
+
+        assert response_error.status_code == status.HTTP_400_BAD_REQUEST
+        assert response_error.detail == expected_detail
+        assert leaked_id not in str(response_error.detail)
+
+    marker_driver_error = RuntimeError(f"duplicate key value UNIQUE constraint failed: flow.id {leaked_id}")
+    marker_driver_error.sqlstate = "23505"
+    marker_driver_error.diag = SimpleNamespace(constraint_name="unique_flow_name")
+    marker_integrity_error = IntegrityError("INSERT INTO flow ...", {"name": leaked_id}, marker_driver_error)
+
+    marker_response_error = flows_module._handle_unique_constraint_error(marker_integrity_error)
+
+    assert marker_response_error.status_code == status.HTTP_400_BAD_REQUEST
+    assert marker_response_error.detail == "Name must be unique"
+    assert leaked_id not in str(marker_response_error.detail)
+
+    unknown_driver_error = RuntimeError(f"duplicate key value {leaked_id}")
+    unknown_driver_error.sqlstate = "23505"
+    unknown_driver_error.diag = SimpleNamespace(constraint_name="unrelated_unique_constraint")
+    unknown_integrity_error = IntegrityError("INSERT INTO other ...", {"id": leaked_id}, unknown_driver_error)
+
+    unknown_response_error = flows_module._handle_unique_constraint_error(unknown_integrity_error)
+
+    assert unknown_response_error.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert unknown_response_error.detail == "Could not persist the flow."
+    assert leaked_id not in str(unknown_response_error.detail)
+
+
+def test_flow_unique_constraint_error_rejects_unknown_sqlite_table():
+    """SQLite messages for other tables or unknown flow constraint shapes stay generic."""
+    import sqlite3
+
+    from langflow.api.v1 import flows as flows_module
+    from sqlalchemy.exc import IntegrityError
+
+    leaked_id = str(uuid.uuid4())
+    unknown_constraints = (
+        "unrelated.id",
+        "other.name",
+        "flow.name",
+        "flow.user_id, unrelated.name",
+    )
+
+    for constraint in unknown_constraints:
+        driver_error = sqlite3.IntegrityError(f"UNIQUE constraint failed: {constraint}")
+        integrity_error = IntegrityError("INSERT INTO other ...", {"id": leaked_id}, driver_error)
+
+        response_error = flows_module._handle_unique_constraint_error(integrity_error)
+
+        assert response_error.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        assert response_error.detail == "Could not persist the flow."
+        assert constraint not in str(response_error.detail)
+        assert leaked_id not in str(response_error.detail)
+
+
+async def test_create_flow_real_competing_sqlite_writer_is_retried(client: AsyncClient, logged_in_headers, monkeypatch):
+    """A real second SQLite connection holding the write lock triggers a create retry."""
+    from langflow.api.v1 import flows as flows_module
+    from langflow.services.database.models.folder.model import Folder
+    from langflow.services.deps import session_scope
+    from sqlalchemy import text
+
+    original_new_flow = flows_module._new_flow
+    attempts = {"count": 0}
+    expected_name = f"create-real-lock-{uuid.uuid4()}"
+
+    async def create_after_competing_write(**kwargs):
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            async with session_scope() as competing_session:
+                competing_session.add(Folder(name=f"create-competing-write-{uuid.uuid4()}", user_id=None))
+                await competing_session.flush()
+                # The competing connection now holds SQLite's write lock. Make
+                # the route connection report the real lock immediately; the
+                # failed attempt unwinds this context and releases the writer.
+                await kwargs["session"].exec(text("PRAGMA busy_timeout = 0"))
+                return await original_new_flow(**kwargs)
+        return await original_new_flow(**kwargs)
+
+    monkeypatch.setattr(flows_module, "_new_flow", create_after_competing_write)
+
+    response = await client.post(
+        "api/v1/flows/",
+        json={"name": expected_name, "data": {}},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED, response.text
+    assert response.json()["name"] == expected_name
+    assert attempts["count"] >= 2
+
+
+async def test_create_flow_exhausted_lock_retries_return_sanitized_503(
+    client: AsyncClient, logged_in_headers, monkeypatch
+):
+    """Exhausted create retries expose neither SQL nor bound values."""
+    import sqlite3
+
+    from langflow.api.v1 import flows as flows_module
+    from langflow.services.database.lock_retry import DEFAULT_LOCK_RETRY_ATTEMPTS
+    from sqlalchemy.exc import OperationalError
+
+    leaked_statement = "INSERT INTO flow (id, name) VALUES (?, ?)"
+    leaked_value = f"secret-create-value-{uuid.uuid4()}"
+    leaked_id = str(uuid.uuid4())
+    attempts = {"count": 0}
+
+    async def always_locked(**_kwargs):
+        attempts["count"] += 1
+        raise OperationalError(
+            leaked_statement,
+            {"id": leaked_id, "name": leaked_value},
+            sqlite3.OperationalError("database is locked"),
+        )
+
+    monkeypatch.setattr(flows_module, "_new_flow", always_locked)
+    original_retry = flows_module.run_with_lock_retry
+
+    async def run_without_delay(operation, *, session, description):
+        return await original_retry(operation, session=session, description=description, base_delay=0)
+
+    monkeypatch.setattr(flows_module, "run_with_lock_retry", run_without_delay)
+
+    response = await client.post(
+        "api/v1/flows/",
+        json={"name": leaked_value, "id": leaked_id, "data": {}},
+        headers=logged_in_headers,
+    )
+
+    assert attempts["count"] == DEFAULT_LOCK_RETRY_ATTEMPTS
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert response.headers["Retry-After"] == "1"
+    assert response.json()["detail"] == flows_module.FLOW_CREATE_BUSY
+    assert leaked_statement not in response.text
+    assert leaked_value not in response.text
+    assert leaked_id not in response.text
+    assert "sqlalche.me" not in response.text
+
+
+async def test_create_flow_non_lock_failure_returns_sanitized_500(client: AsyncClient, logged_in_headers, monkeypatch):
+    """A non-lock failure inside the real create helper is not retried or disclosed."""
+    from langflow.api.v1 import flows as flows_module
+    from langflow.api.v1 import flows_helpers
+
+    leaked_detail = f"sensitive-create-detail-{uuid.uuid4()} UNIQUE constraint failed: flow.id"
+    attempts = {"count": 0}
+
+    async def fail_save(*_args, **_kwargs):
+        attempts["count"] += 1
+        raise RuntimeError(leaked_detail)
+
+    monkeypatch.setattr(flows_helpers, "_save_flow_to_fs", fail_save)
+
+    response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"create-non-lock-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+
+    assert attempts["count"] == 1
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.json()["detail"] == flows_module.FLOW_CREATE_FAILED
+    assert leaked_detail not in response.text
+    assert "Retry-After" not in response.headers
+
+
+async def test_create_flow_helper_http_500_returns_sanitized_500(client: AsyncClient, logged_in_headers, monkeypatch):
+    """A helper HTTP 500 cannot disclose filesystem paths or flow identifiers."""
+    from fastapi import HTTPException
+    from langflow.api.v1 import flows as flows_module
+    from langflow.api.v1 import flows_helpers
+
+    leaked_id = str(uuid.uuid4())
+    leaked_detail = f"Failed to write flow to filesystem: /private/flows/{leaked_id}.json"
+
+    async def fail_save(*_args, **_kwargs):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=leaked_detail)
+
+    monkeypatch.setattr(flows_helpers, "_save_flow_to_fs", fail_save)
+
+    response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"create-helper-http-500-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.json()["detail"] == flows_module.FLOW_CREATE_FAILED
+    assert leaked_detail not in response.text
+    assert leaked_id not in response.text
+
+
+async def test_new_flow_default_sanitizes_unhandled_error(active_user, monkeypatch):
+    """Direct helper callers retain the safe default instead of receiving raw persistence errors."""
+    import pytest
+    from fastapi import HTTPException
+    from langflow.api.v1 import flows_helpers
+    from langflow.services.database.models.flow.model import FlowCreate
+    from langflow.services.deps import get_storage_service, session_scope
+
+    leaked_id = str(uuid.uuid4())
+    leaked_statement = "INSERT INTO flow VALUES (?)"
+    leaked_detail = f"{leaked_statement}: {leaked_id}"
+
+    async def fail_save(*_args, **_kwargs):
+        raise RuntimeError(leaked_detail)
+
+    monkeypatch.setattr(flows_helpers, "_save_flow_to_fs", fail_save)
+
+    with pytest.raises(HTTPException) as exc_info:
+        async with session_scope() as session:
+            await flows_helpers._new_flow(
+                session=session,
+                flow=FlowCreate(name=f"direct-helper-failure-{uuid.uuid4()}", data={}),
+                user_id=active_user.id,
+                storage_service=get_storage_service(),
+            )
+
+    assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert exc_info.value.detail == "An internal error occurred while creating the flow."
+    assert leaked_detail not in str(exc_info.value)
+    assert leaked_id not in str(exc_info.value)
+
+
 async def test_create_and_put_flow_enforce_catalog_policy_with_default_allow(
     client: AsyncClient,
     logged_in_headers,

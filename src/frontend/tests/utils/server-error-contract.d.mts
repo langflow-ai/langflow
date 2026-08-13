@@ -19,6 +19,7 @@ export type PendingRequestTracker<T> = {
   start(request: T): void;
   finish(request: T): void;
   drain(timeoutMs: number): Promise<T[]>;
+  snapshot(): T[];
 };
 
 export type ResponseBodyReadResult =
@@ -26,6 +27,11 @@ export type ResponseBodyReadResult =
   | { status: "timeout" | "error"; diagnostic: string };
 
 export function createPendingRequestTracker<T>(): PendingRequestTracker<T>;
+export function shouldTrackApiRequest(rawUrl: string): boolean;
+export function shouldSettleApiRequestOnResponse(
+  rawUrl: string,
+  contentType: string,
+): boolean;
 export function sanitizeResponseExcerpt(
   body: string,
   maxLength?: number,

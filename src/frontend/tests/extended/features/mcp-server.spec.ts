@@ -1,7 +1,7 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import path from "node:path";
+import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
-import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
 import {
@@ -10,8 +10,38 @@ import {
 } from "../../utils/fill-local-mcp-server-command";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { openFlowCard } from "../../utils/flow/open-flow-card";
+import { waitForFlowEditorReady } from "../../utils/flow/wait-for-flow-editor-ready";
 import { openAddMcpServerModal } from "../../utils/open-add-mcp-server-modal";
-import { zoomOut } from "../../utils/zoom-out";
+
+async function addMcpNodeFromSidebar(page: Page, name: string): Promise<void> {
+  const toolDropdowns = page.getByTestId("dropdown_str_tool");
+  const previousNodeCount = await toolDropdowns.count();
+  const addButton = page.getByTestId(`add-component-button-${name}`);
+
+  await expect(page.getByTestId("canvas-add-note-button")).toBeEnabled({
+    timeout: 30_000,
+  });
+  await expect(addButton).toBeVisible({ timeout: 30_000 });
+  await addButton.click();
+  await expect(toolDropdowns).toHaveCount(previousNodeCount + 1, {
+    timeout: 30_000,
+  });
+  await expect(
+    page.getByRole("group", { name: "MCP Tools node" }).last(),
+  ).toBeVisible({
+    timeout: 30_000,
+  });
+}
+
+async function fitMcpCanvas(page: Page, zoomOutCount = 0): Promise<void> {
+  await expect(page.locator("#react-flow-id")).toBeVisible({
+    timeout: 30_000,
+  });
+  await page.keyboard.press("ControlOrMeta+Digit1");
+  for (let index = 0; index < zoomOutCount; index += 1) {
+    await page.keyboard.press("ControlOrMeta+Minus");
+  }
+}
 
 async function saveMcpServer(
   page: Parameters<typeof fillLocalMcpServerCommand>[0],
@@ -28,7 +58,10 @@ async function saveMcpServer(
   );
   await page.getByTestId("add-mcp-server-button").click();
   const response = await saved;
-  expect(response.ok(), `${method} MCP server ${name}`).toBeTruthy();
+  expect(
+    response.ok(),
+    `${method} MCP server ${name} returned ${response.status()} ${response.statusText()}`,
+  ).toBeTruthy();
   await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
     state: "hidden",
     timeout: 30_000,
@@ -87,36 +120,10 @@ test(
     tag: ["@release", "@workspace", "@components"],
   },
   async ({ page }) => {
-    await page.waitForTimeout(5000);
     await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
-    await page.waitForSelector(
-      '[data-testid="add-component-button-lf-starter_project"]',
-      {
-        timeout: 30000,
-      },
-    );
-    await page.getByTestId("add-component-button-lf-starter_project").click();
-
-    // See if the color matches
-
-    const isDark = await page.evaluate(() => {
-      return document.body.classList.contains("dark");
-    });
-
-    for (const path of await page
-      .getByTestId("generic-node-title-arrangement")
-      .getByTestId("icon-Mcp")
-      .locator("path")
-      .all()) {
-      const color = await path.evaluate(
-        (el) => window.getComputedStyle(el).fill,
-      );
-      expect(color).toBe(isDark ? "rgb(255, 255, 255)" : "rgb(0, 0, 0)");
-    }
-
-    await adjustScreenView(page, { numberOfZoomOut: 3 });
-
+    await addMcpNodeFromSidebar(page, "lf-starter_project");
+    await fitMcpCanvas(page, 3);
     await openAddMcpServerModal(page);
 
     await page.getByTestId("stdio-tab").click();
@@ -133,6 +140,22 @@ test(
     await fillLocalMcpServerCommand(page);
 
     await saveMcpServer(page, testName);
+
+    // See if the color matches
+    const isDark = await page.evaluate(() => {
+      return document.body.classList.contains("dark");
+    });
+    for (const icon of await page
+      .getByRole("group", { name: "MCP Tools node" })
+      .last()
+      .getByTestId("icon-Mcp")
+      .locator("path")
+      .all()) {
+      const color = await icon.evaluate(
+        (element) => window.getComputedStyle(element).fill,
+      );
+      expect(color).toBe(isDark ? "rgb(255, 255, 255)" : "rgb(0, 0, 0)");
+    }
 
     // Wait for the modal overlay to fully close
     await page
@@ -160,7 +183,7 @@ test(
 
     await page.getByTestId("fetch-0-option").click();
 
-    await adjustScreenView(page);
+    await fitMcpCanvas(page);
 
     await page.waitForSelector('[data-testid="int_int_max_length"]', {
       state: "visible",
@@ -228,7 +251,7 @@ test(
     });
 
     expect(await page.getByTestId("stdio-command-input").inputValue()).toBe(
-      "uv",
+      "python",
     );
     for (const [index, arg] of LOCAL_MCP_SERVER_ARGS.entries()) {
       expect(await page.getByTestId(`stdio-args_${index}`).inputValue()).toBe(
@@ -280,21 +303,7 @@ test(
   async ({ page }) => {
     await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
-
-    await page.waitForTimeout(500);
-
-    const sidebarButton = page.getByTestId("sidebar-add-mcp-server-button");
-    const fallbackButton = page.getByTestId("add-mcp-server-button-sidebar");
-
-    if (await sidebarButton.isVisible({ timeout: 30000 }).catch(() => false)) {
-      await sidebarButton.click();
-    } else {
-      await fallbackButton.click();
-    }
-    await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
-      state: "visible",
-      timeout: 30000,
-    });
+    await openAddMcpServerModal(page, { source: "sidebar" });
 
     await page.getByTestId("stdio-tab").click();
 
@@ -307,17 +316,13 @@ test(
     const testName = `test_server_${randomSuffix}`;
     await page.getByTestId("stdio-name-input").fill(testName);
 
-    await page.waitForTimeout(500);
-
     await fillLocalMcpServerCommand(page);
 
     await saveMcpServer(page, testName);
-
-    await page.waitForTimeout(500);
-
-    await page
-      .getByTestId(`add-component-button-${testName}`)
-      .click({ timeout: 30000 });
+    await page.reload();
+    await waitForFlowEditorReady(page);
+    await page.getByTestId("sidebar-nav-mcp").click();
+    await addMcpNodeFromSidebar(page, testName);
 
     await expect(page.getByTestId("dropdown_str_tool")).toBeVisible({
       timeout: 60000,
@@ -343,15 +348,7 @@ test(
 
     await page.getByTestId("fetch-0-option").click();
 
-    // Wait for canvas controls to be visible before adjusting view
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-      state: "visible",
-      timeout: 10000,
-    });
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click({ force: true });
+    await fitMcpCanvas(page);
 
     await page.waitForSelector('[data-testid="int_int_max_length"]', {
       state: "visible",
@@ -414,16 +411,8 @@ test(
   async ({ page }) => {
     await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
-    await page.waitForSelector(
-      '[data-testid="add-component-button-lf-starter_project"]',
-      {
-        timeout: 30000,
-      },
-    );
-    await page.getByTestId("add-component-button-lf-starter_project").click();
-
-    await adjustScreenView(page, { numberOfZoomOut: 3 });
-
+    await addMcpNodeFromSidebar(page, "lf-starter_project");
+    await fitMcpCanvas(page, 3);
     await openAddMcpServerModal(page);
 
     // Go to STDIO tab and fill all fields
@@ -436,11 +425,11 @@ test(
     // Test data with random suffix
     const randomSuffix = Math.floor(Math.random() * 90000) + 10000; // 5-digit random number
     const testName = `test_stdio_server_${randomSuffix}`;
-    const testCommand = "uv";
-    const testArg1 = "run";
-    const testArg2 = "python";
-    const testArg3 = "tests/fixtures/mcp-loopback-server.py";
-    const testArg4 = "--transport";
+    const testCommand = "python";
+    const testArg1 = "tests/fixtures/mcp-loopback-server.py";
+    const testArg2 = "--transport";
+    const testArg3 = "stdio";
+    const testArg4 = "--tool-set=fetch";
     const testEnvKey1 = "NODE_ENV";
     const testEnvValue1 = "production";
     const testEnvKey2 = "DEBUG_MODE";
@@ -567,16 +556,8 @@ test(
   async ({ page }) => {
     await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
-    await page.waitForSelector(
-      '[data-testid="add-component-button-lf-starter_project"]',
-      {
-        timeout: 30000,
-      },
-    );
-    await page.getByTestId("add-component-button-lf-starter_project").click();
-
-    await adjustScreenView(page, { numberOfZoomOut: 3 });
-
+    await addMcpNodeFromSidebar(page, "lf-starter_project");
+    await fitMcpCanvas(page, 3);
     await openAddMcpServerModal(page);
 
     // Go to HTTP tab and fill all fields
@@ -751,23 +732,10 @@ test(
     tag: ["@release", "@workspace", "@components"],
   },
   async ({ page }) => {
-    await page.waitForTimeout(5000);
     await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
-    await page.waitForSelector(
-      '[data-testid="add-component-button-lf-starter_project"]',
-      {
-        timeout: 30000,
-      },
-    );
-    await page.getByTestId("add-component-button-lf-starter_project").click();
-
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTestId("fit_view").click();
-
-    await zoomOut(page, 3);
-
+    await addMcpNodeFromSidebar(page, "lf-starter_project");
+    await fitMcpCanvas(page, 3);
     await openAddMcpServerModal(page);
 
     await page.getByTestId("stdio-tab").click();
@@ -814,15 +782,7 @@ test(
 
     await page.getByTestId("fetch-0-option").click();
 
-    // Wait for canvas controls to be visible before adjusting view
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-      state: "visible",
-      timeout: 10000,
-    });
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click({ force: true });
+    await fitMcpCanvas(page);
 
     await page.waitForSelector('[data-testid="int_int_max_length"]', {
       state: "visible",
@@ -892,7 +852,7 @@ test(
     });
 
     expect(await page.getByTestId("stdio-command-input").inputValue()).toBe(
-      "uv",
+      "python",
     );
     for (const [index, arg] of LOCAL_MCP_SERVER_ARGS.entries()) {
       expect(await page.getByTestId(`stdio-args_${index}`).inputValue()).toBe(
@@ -900,7 +860,7 @@ test(
       );
     }
 
-    // Swap only the package operand; the leading `--with mcp~=1.28` still applies.
+    // Swap the deterministic fixture's tool set without changing its transport.
     await page
       .getByTestId(`stdio-args_${LOCAL_MCP_SERVER_ARGS.length - 1}`)
       .fill("time");
@@ -928,7 +888,7 @@ test(
       timeout: 30000,
     });
     await page.getByText("MCP Tools", { exact: true }).last().click();
-    await adjustScreenView(page);
+    await fitMcpCanvas(page);
     // Re-select the server after returning to flow (server reference may be lost after editing)
     await page.waitForSelector('[data-testid="mcp-server-dropdown"]', {
       timeout: 30000,
@@ -1080,16 +1040,8 @@ test(
     try {
       await openBlankFlow(page);
       await page.getByTestId("sidebar-nav-mcp").click();
-      await page.waitForSelector(
-        '[data-testid="add-component-button-lf-starter_project"]',
-        {
-          timeout: 30000,
-        },
-      );
-      await page.getByTestId("add-component-button-lf-starter_project").click();
-
-      await adjustScreenView(page, { numberOfZoomOut: 3 });
-
+      await addMcpNodeFromSidebar(page, "lf-starter_project");
+      await fitMcpCanvas(page, 3);
       await openAddMcpServerModal(page);
 
       // Switch to HTTP tab for Streamable HTTP
@@ -1128,16 +1080,39 @@ test(
 
       await page.getByTestId("dropdown_str_tool").click();
 
-      // Check for tools from server - wait for any option to render
-      const toolOptions = page.locator('[data-testid*="-0-option"]');
-      await expect(toolOptions.first()).toBeVisible({ timeout: 30000 });
+      // Verify the complete deterministic tool set before selecting a tool.
+      const toolOptions = page.locator('[data-testid$="-option"]:visible');
+      await expect(toolOptions).toHaveCount(3, { timeout: 30000 });
+      const echoOption = page.locator(
+        '[data-testid^="echo-"][data-testid$="-option"]',
+      );
+      const fetchOption = page.locator(
+        '[data-testid^="fetch-"][data-testid$="-option"]',
+      );
+      const timeOption = page.locator(
+        '[data-testid^="get_current_time-"][data-testid$="-option"]',
+      );
+      await expect(echoOption).toBeVisible();
+      await expect(fetchOption).toBeVisible();
+      await expect(timeOption).toBeVisible();
 
-      // Verify multiple tools loaded from the checked-in loopback server.
-      const toolCount = await toolOptions.count();
-      expect(toolCount).toBeGreaterThanOrEqual(3);
-
-      // Select the first available tool
-      await toolOptions.first().click();
+      const componentUpdated = page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          new URL(response.url()).pathname ===
+            "/api/v1/custom_component/update",
+        { timeout: 30_000 },
+      );
+      await fetchOption.click();
+      const updateResponse = await componentUpdated;
+      expect(
+        updateResponse.ok(),
+        `Selecting the loopback MCP tool returned ${updateResponse.status()} ${updateResponse.statusText()}`,
+      ).toBeTruthy();
+      await expect(page.getByTestId("int_int_max_length")).toBeVisible();
+      await expect(
+        page.getByTestId("anchor-popover-anchor-input-url"),
+      ).toBeVisible();
     } finally {
       await stopFixture(fixture);
     }

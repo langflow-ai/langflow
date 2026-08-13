@@ -25,6 +25,8 @@ import {
   observeServerError,
   readResponseBodyWithTimeout,
   sanitizeResponseExcerpt,
+  shouldSettleApiRequestOnResponse,
+  shouldTrackApiRequest,
 } from "./utils/server-error-contract.mjs";
 import type {
   A11yScanOptions,
@@ -114,7 +116,8 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
     }> = [];
     const clientErrors: ObservedHttpError[] = [];
     const serverErrorContract = createServerErrorContract();
-    const pendingApiRequests = createPendingRequestTracker<Request>();
+    const pendingApiResponseStatuses = createPendingRequestTracker<Request>();
+    const pendingApiRequestLifecycles = createPendingRequestTracker<Request>();
     const pendingResponseInspections = new Set<Promise<void>>();
     const responseInspectionErrors: Error[] = [];
 
@@ -332,11 +335,30 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
     };
 
     const requestListener = (request: Request) => {
-      if (request.url().includes("/api/")) {
-        pendingApiRequests.start(request);
+      if (shouldTrackApiRequest(request.url())) {
+        pendingApiResponseStatuses.start(request);
+        pendingApiRequestLifecycles.start(request);
       }
     };
     const responseListener = (response: Response) => {
+      if (shouldTrackApiRequest(response.url())) {
+        // HTTP status is final as soon as Playwright emits `response`; body
+        // completion is tracked separately so a valid long-lived stream is not
+        // mistaken for a request whose eventual 5xx status is still unknown.
+        pendingApiResponseStatuses.finish(response.request());
+      }
+      if (
+        shouldSettleApiRequestOnResponse(
+          response.url(),
+          response.headers()["content-type"] ?? "",
+        )
+      ) {
+        // Streaming responses can remain open after the terminal event has
+        // already been rendered. Their HTTP status is known at this point and
+        // still inspected below, so waiting for requestfinished would turn a
+        // healthy SSE stream into an unresolved-request flake.
+        pendingApiRequestLifecycles.finish(response.request());
+      }
       const inspection = inspectResponse(response)
         .catch((error: unknown) => {
           responseInspectionErrors.push(
@@ -351,13 +373,15 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
       pendingResponseInspections.add(inspection);
     };
     const requestFinishedListener = (request: Request) => {
-      if (request.url().includes("/api/")) {
-        pendingApiRequests.finish(request);
+      if (shouldTrackApiRequest(request.url())) {
+        pendingApiResponseStatuses.finish(request);
+        pendingApiRequestLifecycles.finish(request);
       }
     };
     const requestFailedListener = (request: Request) => {
-      if (request.url().includes("/api/")) {
-        pendingApiRequests.finish(request);
+      if (shouldTrackApiRequest(request.url())) {
+        pendingApiResponseStatuses.finish(request);
+        pendingApiRequestLifecycles.finish(request);
       }
     };
     page.on("request", requestListener);
@@ -368,9 +392,8 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
     await use(page as LangflowPage);
     // Keep request and response observation attached while draining so an API
     // request started by the completion of another request is not missed.
-    const unresolvedApiRequests = await pendingApiRequests.drain(
-      API_REQUEST_DRAIN_TIMEOUT_MS,
-    );
+    await pendingApiRequestLifecycles.drain(API_REQUEST_DRAIN_TIMEOUT_MS);
+    const unresolvedApiRequests = pendingApiResponseStatuses.snapshot();
     page.off("request", requestListener);
     page.off("response", responseListener);
     page.off("requestfinished", requestFinishedListener);

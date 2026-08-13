@@ -165,7 +165,36 @@ export function createPendingRequestTracker() {
 
       return [...pending];
     },
+    snapshot() {
+      return [...pending];
+    },
   };
+}
+
+export function shouldTrackApiRequest(rawUrl) {
+  const pathname = new URL(rawUrl, "http://localhost").pathname;
+  if (!pathname.includes("/api/")) {
+    return false;
+  }
+
+  // Profile pictures are static assets requested by <img> elements. Browser
+  // teardown can cancel them after the test has finished, so treating an
+  // incomplete image download as an unresolved API operation creates false
+  // flakes. Their responses are still inspected separately for HTTP 5xx.
+  return !pathname.startsWith("/api/v1/files/profile_pictures/");
+}
+
+export function shouldSettleApiRequestOnResponse(rawUrl, contentType) {
+  if (!shouldTrackApiRequest(rawUrl)) {
+    return false;
+  }
+  const normalizedContentType = contentType.toLowerCase();
+  return [
+    "text/event-stream",
+    "application/grpc",
+    "application/octet-stream",
+    "application/x-ndjson",
+  ].some((streamType) => normalizedContentType.includes(streamType));
 }
 
 export function createServerErrorContract() {

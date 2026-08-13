@@ -41,7 +41,9 @@ async function fulfillJson(route: Route, body: unknown): Promise<void> {
 }
 
 export type AssistantMockController = {
+  armSessionReset: () => Promise<void>;
   releaseCancelledRequest: () => void;
+  waitForSessionReset: () => Promise<URL>;
 };
 
 /**
@@ -90,6 +92,13 @@ export async function mockAssistant(
   let cancelledRequestGate = new Promise<void>((resolve) => {
     releaseCancelledRequest = resolve;
   });
+  let resolveSessionReset: (url: URL) => void = () => {};
+  const sessionResetGate = new Promise<URL>((resolve) => {
+    resolveSessionReset = resolve;
+  });
+  await page.exposeFunction("__recordAssistantSessionReset", (url: string) => {
+    resolveSessionReset(new URL(url));
+  });
 
   await page.route("**/api/v1/agentic/assist/stream", async (route) => {
     const requestBody = route.request().postDataJSON() as {
@@ -116,7 +125,9 @@ export async function mockAssistant(
       return;
     }
 
-    const wantsComponent = /create (?:a simple )?component/i.test(input);
+    const wantsComponent = /create\s+(?:a\s+)?(?:simple\s+)?component/i.test(
+      input,
+    );
     const body = wantsComponent
       ? sse({
           event: "complete",
@@ -152,10 +163,6 @@ export async function mockAssistant(
     });
   });
 
-  await page.route("**/api/v1/agentic/sessions/reset?*", async (route) => {
-    await fulfillJson(route, { status: "ok" });
-  });
-
   await page.route("**/api/v1/custom_component", async (route) => {
     await fulfillJson(route, {
       data: {
@@ -187,5 +194,46 @@ export async function mockAssistant(
     });
   });
 
-  return { releaseCancelledRequest };
+  return {
+    armSessionReset: async () => {
+      await page.evaluate(() => {
+        const assistantWindow = window as typeof window & {
+          __assistantSessionResetMockInstalled?: boolean;
+          __recordAssistantSessionReset: (url: string) => Promise<void>;
+        };
+        if (assistantWindow.__assistantSessionResetMockInstalled) {
+          return;
+        }
+
+        const originalFetch = window.fetch.bind(window);
+        window.fetch = async (input, init) => {
+          const inputUrl =
+            typeof input === "string"
+              ? input
+              : input instanceof URL
+                ? input.href
+                : input.url;
+          const url = new URL(inputUrl, window.location.origin);
+          const method = (
+            init?.method ?? (input instanceof Request ? input.method : "GET")
+          ).toUpperCase();
+          if (
+            method === "POST" &&
+            url.origin === window.location.origin &&
+            url.pathname === "/api/v1/agentic/sessions/reset"
+          ) {
+            await assistantWindow.__recordAssistantSessionReset(url.toString());
+            return new Response(JSON.stringify({ status: "ok" }), {
+              headers: { "content-type": "application/json" },
+              status: 200,
+            });
+          }
+          return originalFetch(input, init);
+        };
+        assistantWindow.__assistantSessionResetMockInstalled = true;
+      });
+    },
+    releaseCancelledRequest,
+    waitForSessionReset: () => sessionResetGate,
+  };
 }

@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect } from "../fixtures";
+import { waitForFlowEditorReady } from "./flow/wait-for-flow-editor-ready";
 
 const LOOPBACK_WEB_SEARCH_CODE = `
 from lfx.custom import Component
@@ -63,7 +64,5 @@ export async function configureLoopbackWebSearch(page: Page): Promise<void> {
   });
   expect(update.ok(), `PATCH flow ${flowId}`).toBeTruthy();
   await page.reload();
-  await expect(page.getByTestId("react-flow-id")).toBeVisible({
-    timeout: 30_000,
-  });
+  await waitForFlowEditorReady(page);
 }
