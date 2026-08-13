@@ -16,10 +16,21 @@ import InputFileComponent from "../index";
 const UPLOADED = { name: "fresh", path: "user/fresh.txt" };
 
 let filesData: { name: string; path: string }[] = [];
+/** Bumped whenever a settled list read lands, like react-query's own value. */
+let filesUpdatedAt = 1;
+
+const refetchFiles = jest.fn(() => {
+  filesUpdatedAt += 1;
+});
 
 jest.mock("@/controllers/API/queries/file-management", () => ({
   __esModule: true,
-  useGetFilesV2: () => ({ data: filesData }),
+  useGetFilesV2: () => ({
+    data: filesData,
+    refetch: refetchFiles,
+    isFetching: false,
+    dataUpdatedAt: filesUpdatedAt,
+  }),
 }));
 
 jest.mock("@/controllers/API/queries/files/use-post-upload-file", () => ({
@@ -104,6 +115,7 @@ const selection = () => screen.queryByTestId("rendered-files")?.textContent;
 describe("InputFileComponent stale file-list responses", () => {
   beforeEach(() => {
     filesData = [UPLOADED];
+    filesUpdatedAt = 1;
     nodeState = { value: UPLOADED.name, file_path: UPLOADED.path };
     jest.clearAllMocks();
   });
@@ -118,6 +130,7 @@ describe("InputFileComponent stale file-list responses", () => {
 
     expect(nodeState.file_path).toBe(UPLOADED.path);
     expect(nodeState.value).toBe(UPLOADED.name);
+    expect(refetchFiles).toHaveBeenCalled();
   });
 
   it("should_restore_the_chip_once_a_complete_list_response_arrives", () => {
@@ -126,11 +139,27 @@ describe("InputFileComponent stale file-list responses", () => {
     filesData = [];
     rerender(<StatefulHarness />);
 
+    // The forced re-read finds it, as it is issued after the upload landed.
     filesData = [UPLOADED];
     rerender(<StatefulHarness />);
 
     expect(selection()).toBe(UPLOADED.path);
     expect(nodeState.file_path).toBe(UPLOADED.path);
+  });
+
+  it("should_drop_the_file_once_a_re_read_confirms_it_is_gone", () => {
+    const { rerender } = render(<StatefulHarness />);
+
+    // First absence only forces the re-read.
+    filesData = [];
+    rerender(<StatefulHarness />);
+    expect(nodeState.file_path).toBe(UPLOADED.path);
+
+    // The re-read still does not have it: a real delete.
+    rerender(<StatefulHarness />);
+
+    expect(nodeState.file_path).toBe("");
+    expect(nodeState.value).toBe("");
   });
 
   it("should_keep_the_file_selectable_while_the_list_cannot_render_the_chip", () => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
@@ -161,9 +161,19 @@ export default function InputFileComponent({
 
   const isDisabled = disabled || isPending;
 
-  const { data: files } = useGetFilesV2({
+  const {
+    data: files,
+    refetch: refetchFiles,
+    isFetching: isFetchingFiles,
+    dataUpdatedAt: filesUpdatedAt,
+  } = useGetFilesV2({
     enabled: !!ENABLE_FILE_MANAGEMENT,
   });
+
+  // Selected paths this component has already forced a fresh list read for.
+  // A path is only dropped once a list fetched *after* we noticed it missing
+  // still omits it.
+  const recheckedPaths = useRef<Set<string>>(new Set());
 
   const [isFileManagerOpen, setIsFileManagerOpen] = useState(false);
 
@@ -196,34 +206,57 @@ export default function InputFileComponent({
     storedNames[storedPaths.indexOf(path)] ??
     "";
 
-  // Reconcile the node with the file list - a rename the list reports should
-  // update the stored name. Absence is deliberately not reconciled: a response
-  // that does not mention the attached file is not evidence that the file is
-  // gone, only that this read did not see it (it can lag the upload that
-  // created the file, or an older in-flight response can resolve last).
-  // Clearing value/file_path on absence is persisted with the flow and is
-  // terminal, since an empty selection leaves nothing for a later, correct
-  // response to restore. Removal happens through an explicit user action.
+  // Reconcile the node with the file list: follow renames, and drop a file that
+  // was really deleted. One response omitting the file is not evidence that it
+  // is gone - the list can lag the upload that created it (the upload seeds the
+  // cache optimistically, so the refetch it triggers is the first read that has
+  // to find the file), or an older in-flight response can resolve last. Since
+  // clearing value/file_path is persisted with the flow and is terminal - an
+  // empty selection leaves nothing for a later, correct response to restore -
+  // a missing path first forces a fresh read, and is only dropped when a list
+  // fetched after that still omits it.
   //
   // The modal owns the selection while open; this effect's `file_path` snapshot
   // can lag one render behind it and would revert a just-uploaded file.
   useEffect(() => {
     if (files === undefined || tempFile || isFileManagerOpen) return;
-    if (renderedFiles.length === 0) return;
+    if (isFetchingFiles || selectedFiles.length === 0) return;
 
-    const nextNames = selectedFiles.map(resolveName);
+    const listedPaths = new Set(files.map((file) => file.path));
+    for (const path of selectedFiles) {
+      if (listedPaths.has(path)) recheckedPaths.current.delete(path);
+    }
 
-    if (isList) {
-      if (sameList(value, nextNames) && sameList(file_path, selectedFiles)) {
-        return;
-      }
-      handleOnNewValue({ value: nextNames, file_path: selectedFiles });
+    const unverified = selectedFiles.filter(
+      (path) => !listedPaths.has(path) && !recheckedPaths.current.has(path),
+    );
+    if (unverified.length > 0) {
+      for (const path of unverified) recheckedPaths.current.add(path);
+      refetchFiles();
       return;
     }
 
-    if (value === nextNames[0] && file_path === selectedFiles[0]) return;
-    handleOnNewValue({ value: nextNames[0], file_path: selectedFiles[0] });
-  }, [files, value, file_path, isFileManagerOpen]);
+    const nextPaths = selectedFiles.filter((path) => listedPaths.has(path));
+    const nextNames = nextPaths.map(resolveName);
+
+    if (isList) {
+      if (sameList(value, nextNames) && sameList(file_path, nextPaths)) return;
+      handleOnNewValue({ value: nextNames, file_path: nextPaths });
+      return;
+    }
+
+    const nextName = nextNames[0] ?? "";
+    const nextPath = nextPaths[0] ?? "";
+    if (value === nextName && file_path === nextPath) return;
+    handleOnNewValue({ value: nextName, file_path: nextPath });
+  }, [
+    files,
+    filesUpdatedAt,
+    isFetchingFiles,
+    value,
+    file_path,
+    isFileManagerOpen,
+  ]);
 
   return (
     <div className="w-full">
