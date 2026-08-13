@@ -190,3 +190,21 @@ def test_full_target_checks_only_default_workspace_distributions() -> None:
 
     assert 'required = {"langflow", "langflow-base"}' in dockerfile
     assert '{"torch", "torchvision"} & names' in dockerfile
+
+
+def test_published_images_pin_hardened_package_managers() -> None:
+    install_script = (REPO_ROOT / "docker" / "install_hardened_npm.sh").read_text(encoding="utf-8")
+
+    for version in ("12.0.2", "10.3.1", "5.0.9", "7.5.22", "5.0.0", "4.0.1", "4.0.5"):
+        assert f'"{version}"' in install_script
+    assert "npm ls --global --all --omit=dev" in install_script
+    assert 'rm -rf "$npm_cache" /tmp/node-compile-cache' in install_script
+
+    for dockerfile in (
+        "build_and_push.Dockerfile",
+        "build_and_push_backend.Dockerfile",
+        "build_and_push_ep.Dockerfile",
+    ):
+        source = (REPO_ROOT / "docker" / dockerfile).read_text(encoding="utf-8")
+        assert 'python3.14 -m pip install --no-cache-dir --upgrade "pip==26.2.1"' in source
+        assert "sh /tmp/install_hardened_npm.sh" in source
