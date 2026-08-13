@@ -745,9 +745,7 @@ class PostgresBackend(BaseVectorStoreBackend):
                     # error on the first ingest. Advisory only — a probe failure
                     # leaves it unknown rather than failing the whole check.
                     try:
-                        can_create = await conn.scalar(
-                            text("SELECT has_schema_privilege(current_schema(), 'CREATE')")
-                        )
+                        can_create = await conn.scalar(text("SELECT has_schema_privilege(current_schema(), 'CREATE')"))
                     except Exception as exc:  # noqa: BLE001 — privilege probe is best-effort
                         await logger.adebug("CREATE-privilege probe failed for %s: %s", self.kb_name, exc)
         except Exception as exc:  # noqa: BLE001 — map driver errors to a friendly message
