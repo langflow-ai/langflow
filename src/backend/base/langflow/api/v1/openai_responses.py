@@ -8,11 +8,13 @@ from typing import Annotated, Any
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from lfx.log.logger import logger
+from lfx.observability import execution_protocol
 from lfx.schema.openai_responses_schemas import create_openai_error, create_openai_error_chunk
 from lfx.utils.flow_validation import CustomComponentValidationError
 
 from langflow.api.utils import extract_global_variables_from_headers
-from langflow.api.v1.endpoints import consume_and_yield, run_flow_generator, simple_run_flow
+from langflow.api.utils.execution_errors import error_for_client
+from langflow.api.v1.endpoints import _caller_owns_flow, consume_and_yield, run_flow_generator, simple_run_flow
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
@@ -32,6 +34,15 @@ from langflow.services.telemetry.schema import RunPayload
 from langflow.services.telemetry.service import TelemetryService
 
 router = APIRouter(tags=["OpenAI Responses API"])
+
+
+def _flow_not_found_response(model: str) -> OpenAIErrorResponse:
+    error_response = create_openai_error(
+        message=f"Flow with id '{model}' not found",
+        type_="invalid_request_error",
+        code="flow_not_found",
+    )
+    return OpenAIErrorResponse(error=error_response["error"])
 
 
 def has_chat_input(flow_data: dict | None) -> bool:
@@ -59,6 +70,7 @@ async def run_flow_for_openai_responses(
     variables: dict[str, str] | None = None,
 ) -> OpenAIResponsesResponse | StreamingResponse:
     """Run a flow for OpenAI Responses API compatibility."""
+    expose_error_details = _caller_owns_flow(flow, api_key_user)
     # Check if flow has chat input
     if not has_chat_input(flow.data):
         msg = "Flow must have a ChatInput component to be compatible with OpenAI Responses API"
@@ -104,16 +116,20 @@ async def run_flow_for_openai_responses(
 
         async def openai_stream_generator() -> AsyncGenerator[str, None]:
             """Convert Langflow events to OpenAI Responses API streaming format."""
-            main_task = asyncio.create_task(
-                run_flow_generator(
-                    flow=flow,
-                    input_request=simplified_request,
-                    api_key_user=api_key_user,
-                    event_manager=event_manager,
-                    client_consumed_queue=asyncio_queue_client_consumed,
-                    context=context,
+            # Around the create_task only: the task copies the context at creation, and there is
+            # no await inside the scope, so nothing straddles a suspension point of this generator.
+            with execution_protocol("openai_responses"):
+                main_task = asyncio.create_task(
+                    run_flow_generator(
+                        flow=flow,
+                        input_request=simplified_request,
+                        api_key_user=api_key_user,
+                        event_manager=event_manager,
+                        client_consumed_queue=asyncio_queue_client_consumed,
+                        context=context,
+                        expose_error_details=expose_error_details,
+                    )
                 )
-            )
 
             try:
                 await logger.adebug(
@@ -433,13 +449,14 @@ async def run_flow_for_openai_responses(
                 )
 
             except Exception as e:  # noqa: BLE001
-                logger.error(f"Error in stream generator: {e}")
+                await logger.aexception("Error in OpenAI Responses stream generator")
+                client_error = error_for_client(e, expose_details=expose_error_details)
                 # Send error as content chunk with finish_reason="error"
                 error_chunk = create_openai_error_chunk(
                     response_id=response_id,
                     created_timestamp=created_timestamp,
                     model=request.model,
-                    error_message=str(e),
+                    error_message=str(client_error),
                 )
                 yield f"data: {error_chunk.model_dump_json()}\n\n"
                 yield "data: [DONE]\n\n"
@@ -458,13 +475,15 @@ async def run_flow_for_openai_responses(
         )
 
     # Handle non-streaming response
-    result = await simple_run_flow(
-        flow=flow,
-        input_request=simplified_request,
-        stream=False,
-        api_key_user=api_key_user,
-        context=context,
-    )
+    with execution_protocol("openai_responses"):
+        result = await simple_run_flow(
+            flow=flow,
+            input_request=simplified_request,
+            stream=False,
+            api_key_user=api_key_user,
+            context=context,
+            expose_error_details=expose_error_details,
+        )
 
     # Extract output text, tool calls, and usage from result
     output_text = ""
@@ -655,12 +674,9 @@ async def create_response(
         flow = None
 
     if flow is None:
-        error_response = create_openai_error(
-            message=f"Flow with id '{request.model}' not found",
-            type_="invalid_request_error",
-            code="flow_not_found",
-        )
-        return OpenAIErrorResponse(error=error_response["error"])
+        return _flow_not_found_response(request.model)
+
+    expose_error_details = _caller_owns_flow(flow, api_key_user)
 
     try:
         await ensure_flow_permission(
@@ -673,12 +689,7 @@ async def create_response(
         )
     except HTTPException as exc:
         if exc.status_code == status.HTTP_403_FORBIDDEN:
-            error_response = create_openai_error(
-                message=f"Insufficient permissions to execute flow '{request.model}'",
-                type_="invalid_request_error",
-                code="flow_execute_forbidden",
-            )
-            return OpenAIErrorResponse(error=error_response["error"])
+            return _flow_not_found_response(request.model)
         raise
 
     try:
@@ -692,23 +703,28 @@ async def create_response(
         )
 
     except CustomComponentValidationError as exc:
+        await logger.aerror("OpenAI Responses custom-component validation failed: %s", exc, exc_info=True)
+        client_error = error_for_client(exc, expose_details=expose_error_details)
         error_response = create_openai_error(
-            message=str(exc),
+            message=str(client_error),
             type_="invalid_request_error",
             code="custom_components_blocked",
         )
         return OpenAIErrorResponse(error=error_response["error"])
 
     except ValueError as exc:
+        await logger.aerror("OpenAI Responses flow validation failed: %s", exc, exc_info=True)
+        client_error = error_for_client(exc, expose_details=expose_error_details)
         error_response = create_openai_error(
-            message=str(exc),
+            message=str(client_error),
             type_="invalid_request_error",
             code="invalid_flow_request",
         )
         return OpenAIErrorResponse(error=error_response["error"])
 
     except Exception as exc:  # noqa: BLE001
-        logger.error(f"Error processing OpenAI Responses request: {exc}")
+        await logger.aexception("Error processing OpenAI Responses request")
+        client_error = error_for_client(exc, expose_details=expose_error_details)
 
         # Log telemetry for failed completion
         background_tasks.add_task(
@@ -724,7 +740,7 @@ async def create_response(
 
         # Return OpenAI-compatible error
         error_response = create_openai_error(
-            message=str(exc),
+            message=str(client_error),
             type_="processing_error",
         )
         return OpenAIErrorResponse(error=error_response["error"])

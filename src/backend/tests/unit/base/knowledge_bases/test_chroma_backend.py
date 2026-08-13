@@ -72,6 +72,10 @@ async def backend(tmp_path: Path):
 class TestChromaBackendLifecycle:
     """Smoke tests covering construction, lazy build, and teardown."""
 
+    def test_distance_score_is_normalized_to_higher_is_better(self, tmp_path: Path) -> None:
+        backend = ChromaBackend(kb_name="scores", kb_path=tmp_path)
+        assert backend.normalize_score(0.25) == -0.25
+
     def test_backend_type_constant(self, backend: ChromaBackend):
         assert backend.backend_type is BackendType.CHROMA
 

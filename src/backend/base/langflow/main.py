@@ -5,6 +5,7 @@ import re
 import sys
 import tempfile
 import warnings
+from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager, suppress
 from http import HTTPStatus
 from pathlib import Path
@@ -21,7 +22,13 @@ from fastapi_pagination import add_pagination
 from filelock import FileLock
 from lfx.interface.utils import setup_llm_caching
 from lfx.log.logger import configure, logger
-from lfx.observability import instrument_fastapi_app, start_event_loop_lag_monitor, stop_event_loop_lag_monitor
+from lfx.observability import (
+    EXECUTION_CLIENT_HEADER,
+    execution_client,
+    instrument_fastapi_app,
+    start_event_loop_lag_monitor,
+    stop_event_loop_lag_monitor,
+)
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -29,6 +36,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from langflow.api import health_check_router, log_router
 from langflow.api.router import router
 from langflow.api.v1.mcp_projects import init_mcp_servers
+from langflow.api.warm_graph import is_warm_registry_enabled
 from langflow.cli.preflight import PreflightAbortError, ensure_production_preflight
 from langflow.initial_setup.setup import (
     copy_profile_pictures,
@@ -68,6 +76,26 @@ warnings.filterwarnings("ignore", category=ResourceWarning, message=".*MemoryObj
 _tasks: list[asyncio.Task] = []
 
 MAX_PORT = 65535
+
+# Enterprise lifespan hook registry. Enterprise plugins append async callables
+# at app-construction time (plugin registration runs before the lifespan
+# starts); the lifespan awaits "startup" hooks after all services are
+# initialized, right before it yields, and "shutdown" hooks first on teardown.
+# Hooks are best-effort: a failing hook is logged and never blocks OSS startup
+# or shutdown.
+_enterprise_lifespan_hooks: dict[str, list[Callable[[], Awaitable[None]]]] = {
+    "startup": [],
+    "shutdown": [],
+}
+
+
+async def _run_enterprise_lifespan_hooks(phase: str) -> None:
+    for hook in list(_enterprise_lifespan_hooks.get(phase, [])):
+        try:
+            await hook()
+        except Exception as e:  # noqa: BLE001
+            hook_name = getattr(hook, "__qualname__", repr(hook))
+            await logger.awarning(f"Enterprise lifespan {phase} hook {hook_name} failed: {e}")
 
 
 async def log_exception_to_telemetry(exc: Exception, context: str) -> None:
@@ -183,6 +211,7 @@ def get_lifespan(*, fix_migration=False, version=None):
         # Same reason as ``temp_dirs`` below: the shutdown path stops this, so it must exist
         # even when startup fails before it is created.
         lag_monitor = None
+        warm_registry_task = None
         # Bind ``temp_dirs`` before the ``try`` so the shutdown cleanup in the
         # ``finally`` block (which iterates it) never raises ``UnboundLocalError``
         # when startup fails before bundle loading assigns it below. Otherwise an
@@ -458,6 +487,34 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await load_flows_from_directory()
                 await logger.adebug(f"Flows loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
+            # Opt-in execution cache: warm flows into the in-memory
+            # registry, then run the background reconcile loop that keeps this machine
+            # in sync with the shared ``flow`` table (add new / swap changed / evict
+            # deleted) with no Redis. Placed here — after the component-type cache,
+            # starter projects, and flow sources are loaded — so graph builds have every
+            # dependency they need (an earlier placement made hardened configs fail every
+            # build). Preload is outside readiness and machine-serialized; reconciliation
+            # starts after this worker's attempt, including when preload fails. Runs once
+            # per worker (app "lifespan"); the settings service is safe here.
+            if is_warm_registry_enabled(get_settings_service().settings):
+                from langflow.services.warm_registry.reconcile import reconcile_loop, warm_all
+
+                async def run_warm_registry() -> None:
+                    """Preload off readiness, then keep cached entries reconciled."""
+                    try:
+                        # Best effort and intentionally off the readiness path: one
+                        # large or malformed stored flow must not hold the worker's
+                        # health endpoint hostage during deployment.
+                        await warm_all()
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as exc:  # noqa: BLE001 — the loop self-heals
+                        await logger.aerror(f"warm flow registry: initial warm failed: {exc}")
+                    await reconcile_loop()
+
+                # One supervised handle keeps shutdown cancellation simple.
+                warm_registry_task = asyncio.create_task(run_warm_registry())
+
             # Per-worker setup: sync_flows_from_fs and queue service
             # (MUST be started per-worker: they create asyncio tasks bound to this event loop)
             sync_flows_from_fs_task = asyncio.create_task(sync_flows_from_fs())
@@ -577,6 +634,10 @@ def get_lifespan(*, fix_migration=False, version=None):
             except Exception as e:  # noqa: BLE001
                 await logger.awarning(f"DB pool metrics failed to register: {e}")
 
+            # Enterprise startup hooks run last: every service they may touch
+            # is initialized by this point.
+            await _run_enterprise_lifespan_hooks("startup")
+
             yield
         except asyncio.CancelledError:
             await logger.adebug("Lifespan received cancellation signal")
@@ -614,6 +675,12 @@ def get_lifespan(*, fix_migration=False, version=None):
             # CRITICAL: Cleanup MCP sessions FIRST, before any other shutdown logic.
             # This ensures MCP subprocesses are killed even if shutdown is interrupted.
             await cleanup_mcp_sessions()
+
+            # Enterprise shutdown hooks run before service teardown so they can
+            # still flush through live services. Also reached when startup
+            # failed before the hooks ran — enterprise stop() paths must (and
+            # do) tolerate never having started.
+            await _run_enterprise_lifespan_hooks("shutdown")
 
             # After the MCP cleanup above, deliberately: stopping the sampler awaits a
             # cancellation, and parking there first would both delay that guarantee and give
@@ -694,6 +761,12 @@ def get_lifespan(*, fix_migration=False, version=None):
                     if models_dev_refresh_task and not models_dev_refresh_task.done():
                         models_dev_refresh_task.cancel()
                         tasks_to_cancel.append(models_dev_refresh_task)
+                    # Shutdown cleanup: cancel the reconcile loop if running and await it
+                    # below (cancel() raises CancelledError inside the loop) so shutdown
+                    # waits for it to actually finish.
+                    if warm_registry_task and not warm_registry_task.done():
+                        warm_registry_task.cancel()
+                        tasks_to_cancel.append(warm_registry_task)
                     if tasks_to_cancel:
                         # Wait for all tasks to complete, capturing exceptions
                         results = await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
@@ -812,6 +885,21 @@ def create_app():
         allow_headers=settings.cors_allow_headers,
     )
     app.add_middleware(JavaScriptMIMETypeMiddleware)
+
+    @app.middleware("http")
+    async def bind_execution_client(request: Request, call_next):
+        """Bind the caller's self-declared client for the life of the request.
+
+        Middleware rather than per-route wiring because every surface wants it and a route that
+        forgot would silently report nothing. The value is read from a header rather than the
+        request body: the v2 run model rejects extra fields, so a body field would be a public
+        schema change, and this is advisory metadata rather than part of the contract.
+
+        Self-reported, so it is spoofable, and execution_client drops anything outside the known
+        vocabulary. Never use it for authorization.
+        """
+        with execution_client(request.headers.get(EXECUTION_CLIENT_HEADER)):
+            return await call_next(request)
 
     @app.middleware("http")
     async def check_boundary(request: Request, call_next):
