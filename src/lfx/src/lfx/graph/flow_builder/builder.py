@@ -131,6 +131,7 @@ def build_flow_from_spec(
                 edge["source_output"],
                 id_map[edge["target_id"]],
                 edge["target_input"],
+                registry=registry,
             )
         except (ValueError, KeyError) as e:
             return {"error": f"Failed to connect {src_out} -> {tgt_in}", "details": str(e)}

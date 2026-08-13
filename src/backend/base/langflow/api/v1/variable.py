@@ -30,7 +30,7 @@ from langflow.services.database.models.flow_version.crud import get_flow_version
 from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
-from langflow.services.variable.service import DatabaseVariableService
+from langflow.services.variable.service import DatabaseVariableService, has_variable_value
 
 router = APIRouter(prefix="/variables", tags=["Variables"])
 logger = logging.getLogger(__name__)
@@ -189,6 +189,7 @@ async def create_variable(
         raise HTTPException(status_code=500, detail=str(e)) from e
     else:
         response = VariableRead.model_validate(created_variable, from_attributes=True)
+        response.has_value = has_variable_value(created_variable)
         response.is_owner = True
         response.can_manage_shares = True
         return response
@@ -327,6 +328,7 @@ async def update_variable(
         )
         is_owner = str(owner_id) == str(current_user.id)
         response = VariableRead.model_validate(updated_variable, from_attributes=True)
+        response.has_value = has_variable_value(updated_variable)
         response.is_owner = is_owner
         response.can_manage_shares = is_owner
         # A shared variable may be used by runtime resolution, but mutation
