@@ -20,10 +20,11 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from string import Template
 
 import pytest
 
-pytest.importorskip("opentelemetry")
+pytest.importorskip("opentelemetry.sdk.trace.export.in_memory_span_exporter")
 
 # The user's prompt. Present in the flow before anything fails, so a run that leaks inputs
 # rather than errors is caught by the same sweep.
@@ -31,7 +32,7 @@ PROMPT = "SENTINELPROMPTQQQ"
 # The component's own failure text, which is what record_exception would write into an event.
 EXC_MESSAGE = "SENTINELCOMPONENTFAILUREQQQ"
 
-PROBE = '''
+PROBE_TEMPLATE = Template('''
 import asyncio, json, os, sys
 
 from opentelemetry import trace
@@ -64,13 +65,13 @@ class Passthrough(Component):
 
     def respond(self) -> Message:
         if MODE == "failure":
-            raise RuntimeError("SENTINELCOMPONENTFAILUREQQQ")
+            raise RuntimeError("$EXC_MESSAGE")
         return self.input_value
 
 
 def build():
     chat_input = ChatInput(_id="chat-input")
-    chat_input.set(input_value="SENTINELPROMPTQQQ")
+    chat_input.set(input_value="$PROMPT")
     middle = Passthrough(_id="passthrough")
     middle.set(input_value=chat_input.message_response)
     chat_output = ChatOutput(_id="chat-output")
@@ -84,7 +85,7 @@ async def main():
         # whether the boundary holds or the probe never looked.
         tracer = trace.get_tracer(APPLICATION_TRACER_NAME)
         with tracer.start_as_current_span("probe.control") as span:
-            span.record_exception(RuntimeError("SENTINELCOMPONENTFAILUREQQQ"))
+            span.record_exception(RuntimeError("$EXC_MESSAGE"))
     else:
         graph = build()
         # arun, not async_start: async_start opens the span with make_current=False because it
@@ -92,7 +93,7 @@ async def main():
         # record_exception has nothing to act on there. arun makes it current, which is the path
         # where the argument under test actually applies.
         try:
-            await graph.arun(inputs=[{"input_value": "SENTINELPROMPTQQQ"}], outputs=["chat-output"])
+            await graph.arun(inputs=[{"input_value": "$PROMPT"}], outputs=["chat-output"])
         except Exception:
             pass
 
@@ -113,14 +114,15 @@ async def main():
 
 
 asyncio.run(main())
-'''
+''')
 
 
 def run_probe(mode: str) -> list[dict]:
     env = {k: v for k, v in os.environ.items() if not k.startswith("OTEL_")}
+    source = PROBE_TEMPLATE.substitute(PROMPT=PROMPT, EXC_MESSAGE=EXC_MESSAGE)
     with tempfile.TemporaryDirectory() as tmp:
         probe = Path(tmp) / "probe.py"
-        probe.write_text(PROBE, encoding="utf-8")
+        probe.write_text(source, encoding="utf-8")
         completed = subprocess.run(  # noqa: S603
             [sys.executable, str(probe), mode],
             env=env,
@@ -149,6 +151,11 @@ def test_a_successful_run_is_one_flow_span_and_no_component_spans():
 def test_the_prompt_reaches_neither_an_attribute_nor_an_event():
     """The flow carries a prompt before anything fails, so a run that leaks inputs is caught too."""
     spans = run_probe("success")
+
+    # Asserted before the absence: an empty list satisfies "the sentinel is not in here", so
+    # without this the check stops running the moment the probe stops producing spans, and stays
+    # green while it does.
+    assert [s for s in application_spans(spans) if s["name"] == "flow.execute"], spans
 
     assert PROMPT not in json.dumps(spans)
 
