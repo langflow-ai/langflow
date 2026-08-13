@@ -38,6 +38,7 @@ from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.services.deps import get_settings_service
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
+from lfx.utils.url_redaction import redact_urls_in_text, sanitize_url_for_display
 
 MCP_TOOL_SPAN_NAME = "mcp.tool.call"
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
@@ -908,36 +909,6 @@ def extract_http_status(error: BaseException) -> int | None:
     return None
 
 
-URL_IN_TEXT_PATTERN = re.compile(r"[a-zA-Z][a-zA-Z0-9+.\-]*://[^\s'\"<>]+")
-
-
-def sanitize_url_for_display(url: str) -> str:
-    """Reduce a URL to scheme, host, port and path.
-
-    Userinfo and query strings routinely carry the credential that just failed, and the
-    port has to survive because a target named without it is the wrong target whenever the
-    plane runs on anything but 80/443.
-    """
-    try:
-        parsed = urlparse(url)
-    except ValueError:
-        return url
-    if not parsed.scheme or not parsed.hostname:
-        return url
-    host = f"{parsed.hostname}:{parsed.port}" if parsed.port else parsed.hostname
-    return f"{parsed.scheme}://{host}{parsed.path}"
-
-
-def _redact_urls_in_text(text: str) -> str:
-    """Strip credentials out of any URL embedded in a message we did not compose.
-
-    Formatting our own target safely is not enough: ``raise_for_status`` builds a message
-    that already contains the full request URL, so a 401 arrives carrying the very
-    credential it rejected.
-    """
-    return URL_IN_TEXT_PATTERN.sub(lambda match: sanitize_url_for_display(match.group(0)), text)
-
-
 def describe_mcp_tool_failure(tool_name: str, url: str | None, error: BaseException) -> str:
     """Describe a tool call the remote server rejected, naming the status when there is one.
 
@@ -946,7 +917,7 @@ def describe_mcp_tool_failure(tool_name: str, url: str | None, error: BaseExcept
     """
     status = extract_http_status(error)
     target = f" at {sanitize_url_for_display(url)}" if url else ""
-    cause = _redact_urls_in_text(str(error))
+    cause = redact_urls_in_text(str(error))
     if status in (HTTP_UNAUTHORIZED, HTTP_FORBIDDEN):
         return (
             f"Tool '{tool_name}'{target} was rejected with HTTP {status}: "
@@ -964,7 +935,7 @@ def describe_mcp_connection_failure(server_name: str, url: str, error: BaseExcep
     that authentication failed or which server rejected it.
     """
     target = sanitize_url_for_display(url) if urlparse(url).scheme else server_name
-    cause = _redact_urls_in_text(str(error))
+    cause = redact_urls_in_text(str(error))
 
     status = extract_http_status(error)
     if status in (HTTP_UNAUTHORIZED, HTTP_FORBIDDEN):
