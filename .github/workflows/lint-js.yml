@@ -24,12 +24,13 @@ jobs:
     name: Run Biome
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           ref: ${{ inputs.branch || github.ref }}
           # Need full history so biome can diff against the PR base
           fetch-depth: 0

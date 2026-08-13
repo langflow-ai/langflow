@@ -281,6 +281,13 @@ jobs:
   test-frontend-unit:
     needs: [path-filter, set-ci-condition]
     name: Run Frontend Unit Tests
+    # The called workflow publishes a check run and, for PR events, a coverage
+    # comment. Keep these writes scoped to this reporting job; every other CI
+    # job retains the workflow-level read-only token.
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
     if: |
       always() &&
       !cancelled() &&
