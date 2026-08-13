@@ -166,11 +166,7 @@ def test_published_images_pin_hardened_package_managers() -> None:
     assert "npm ls --global --all --omit=dev" in install_script
     assert 'rm -rf "$npm_cache" /tmp/node-compile-cache' in install_script
 
-    for dockerfile in (
-        "build_and_push.Dockerfile",
-        "build_and_push_backend.Dockerfile",
-        "build_and_push_ep.Dockerfile",
-    ):
+    for dockerfile in PUBLISHED_DOCKERFILES:
         source = (REPO_ROOT / "docker" / dockerfile).read_text(encoding="utf-8")
         assert 'python3.14 -m pip install --no-cache-dir --upgrade "pip==26.2.1"' in source
         assert "sh /tmp/install_hardened_npm.sh" in source
