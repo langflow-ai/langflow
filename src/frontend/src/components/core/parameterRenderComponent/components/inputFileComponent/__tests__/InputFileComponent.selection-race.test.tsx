@@ -15,10 +15,20 @@ const JSON_FILE = { name: "removed", path: "user/removed.json" };
 const UPLOADED = { name: "fresh", path: "user/fresh.txt" };
 
 let filesData: { name: string; path: string }[] = [];
+let filesUpdatedAt = 1;
+
+const refetchFiles = jest.fn(() => {
+  filesUpdatedAt += 1;
+});
 
 jest.mock("@/controllers/API/queries/file-management", () => ({
   __esModule: true,
-  useGetFilesV2: () => ({ data: filesData }),
+  useGetFilesV2: () => ({
+    data: filesData,
+    refetch: refetchFiles,
+    isFetching: false,
+    dataUpdatedAt: filesUpdatedAt,
+  }),
 }));
 
 jest.mock("@/controllers/API/queries/files/use-post-upload-file", () => ({
@@ -80,6 +90,7 @@ function Harness() {
 
   return (
     <InputFileComponent
+      id="input-file-selection-race"
       value={state.value as never}
       file_path={state.file_path as never}
       handleOnNewValue={(changes) => {
@@ -106,13 +117,23 @@ describe("InputFileComponent selection reconciliation", () => {
     jest.clearAllMocks();
   });
 
-  it("should_drop_a_file_the_server_no_longer_has_while_the_manager_is_closed", () => {
+  it("should_drop_a_file_the_server_no_longer_has_once_a_re_read_confirms_it", () => {
     const { rerender } = render(<Harness />);
     expect(selection()).toBe(`${TXT.path},${JSON_FILE.path}`);
 
     filesData = [TXT];
     rerender(<Harness key="reconcile" />);
 
+    // The first absence only forces a fresh read - it is not yet evidence.
+    expect(onNewValue).not.toHaveBeenCalled();
+    expect(refetchFiles).toHaveBeenCalled();
+
+    // The re-read still omits it: a real delete, so the selection is dropped.
+    rerender(<Harness key="reconcile" />);
+
+    expect(onNewValue).toHaveBeenCalledWith(
+      expect.objectContaining({ file_path: [TXT.path] }),
+    );
     expect(selection()).toBe(TXT.path);
   });
 
