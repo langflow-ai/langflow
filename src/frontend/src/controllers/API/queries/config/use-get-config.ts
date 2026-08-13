@@ -20,6 +20,7 @@ interface BaseConfig {
   event_delivery: EventDeliveryType;
   voice_mode_available: boolean;
   allow_custom_components: boolean;
+  substitute_outdated_component_code?: boolean;
   catalog_governance_enabled: boolean;
   mcp_base_url: string;
   // Runtime mirror of LANGFLOW_ENABLE_EXTENSION_RELOAD — see utilityStore.enableExtensionReload.
@@ -95,6 +96,9 @@ export const useGetConfig: useQueryFunctionType<
   const setAllowCustomComponents = useUtilityStore(
     (state) => state.setAllowCustomComponents,
   );
+  const setSubstituteOutdatedComponentCode = useUtilityStore(
+    (state) => state.setSubstituteOutdatedComponentCode,
+  );
   const setCatalogGovernanceEnabled = useUtilityStore(
     (state) => state.setCatalogGovernanceEnabled,
   );
@@ -146,6 +150,9 @@ export const useGetConfig: useQueryFunctionType<
       setEventDelivery(data.event_delivery ?? EventDeliveryType.STREAMING);
       const allowCustomComponents = data.allow_custom_components ?? true;
       setAllowCustomComponents(allowCustomComponents);
+      setSubstituteOutdatedComponentCode(
+        data.substitute_outdated_component_code ?? true,
+      );
       setCatalogGovernanceEnabled(Boolean(data.catalog_governance_enabled));
       setMcpBaseUrl(data.mcp_base_url ?? "");
       setEnableExtensionReload(Boolean(data.enable_extension_reload));
