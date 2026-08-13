@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
@@ -160,6 +160,8 @@ export default function InputFileComponent({
     enabled: !!ENABLE_FILE_MANAGEMENT,
   });
 
+  const [isFileManagerOpen, setIsFileManagerOpen] = useState(false);
+
   const selectedFiles = (
     isList
       ? Array.isArray(file_path)
@@ -172,8 +174,10 @@ export default function InputFileComponent({
         : [file_path ?? ""]
   ).filter((value) => value !== "");
 
+  // The modal owns the selection while open; this effect's `file_path` snapshot
+  // can lag one render behind it and would revert a just-uploaded file.
   useEffect(() => {
-    if (files !== undefined && !tempFile) {
+    if (files !== undefined && !tempFile && !isFileManagerOpen) {
       if (isList) {
         if (
           Array.isArray(value) &&
@@ -206,7 +210,7 @@ export default function InputFileComponent({
           : (files?.find((f) => selectedFiles.includes(f.path))?.path ?? ""),
       });
     }
-  }, [files, value, file_path]);
+  }, [files, value, file_path, isFileManagerOpen]);
 
   return (
     <div className="w-full">
@@ -243,6 +247,7 @@ export default function InputFileComponent({
                 </div>
                 <FileManagerModal
                   files={files}
+                  onOpenChange={setIsFileManagerOpen}
                   selectedFiles={selectedFiles}
                   handleSubmit={(selectedFiles) => {
                     handleOnNewValue({
