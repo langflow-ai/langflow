@@ -35,6 +35,7 @@ _MODEL = "gpt-4o-mini"
 _KEY = "OPENAI_API_KEY"
 
 
+@pytest.mark.api_key_required
 @_OPENAI
 class TestIntentRoutingRealLLM:
     """RC-1 — real TranslationFlow routes follow-ups correctly given session/canvas context (report #3/#4/#7/#8)."""
@@ -94,6 +95,7 @@ class TestIntentRoutingRealLLM:
         assert result.intent == "build_flow", f"expected build_flow, got {result.intent}"
 
 
+@pytest.mark.api_key_required
 @_OPENAI
 class TestNoFakeSuccessRealAgent:
     """RC-2 — a real build_flow run drives the canvas or errors loudly, never a silent text complete (report #1/#4)."""
@@ -274,6 +276,7 @@ class TestUserComponentOverlayReal:
         # test_user_components_threading.py.
 
 
+@pytest.mark.api_key_required
 @_OPENAI
 class TestCompoundIntentMultilingualRealLLM:
     """Language-agnostic proof for the compound intent.
@@ -315,10 +318,11 @@ class TestCompoundIntentMultilingualRealLLM:
         assert result.intent == "component_then_flow", f"{phrase!r} → {result.intent}"
 
 
-@_OPENAI
 class TestRunFlowIntentRealLLM:
     """Bugfix proof — run requests route to run_flow (deterministic), build still via the real LLM."""
 
+    @pytest.mark.api_key_required
+    @_OPENAI
     async def test_run_request_is_classified_run_flow(self):
         result = await classify_intent(
             text="rode o flow e me diga o resultado",
@@ -329,6 +333,8 @@ class TestRunFlowIntentRealLLM:
         )
         assert result.intent == "run_flow", f"expected run_flow, got {result.intent}"
 
+    @pytest.mark.api_key_required
+    @_OPENAI
     async def test_english_run_request_is_classified_run_flow(self):
         result = await classify_intent(
             text="run the flow and tell me the output",
@@ -356,6 +362,8 @@ class TestRunFlowIntentRealLLM:
         )
         assert result.intent == "build_flow", f"continuation must be a flow request, got {result.intent}"
 
+    @pytest.mark.api_key_required
+    @_OPENAI
     async def test_build_request_is_not_swallowed_by_run_flow(self):
         # The new run_flow intent must NOT over-capture a build request.
         # (We assert the stable invariant — NOT run_flow — rather than exact

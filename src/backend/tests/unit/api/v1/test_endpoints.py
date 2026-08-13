@@ -659,6 +659,22 @@ async def test_get_config_authenticated_returns_full_config(client: AsyncClient,
     assert "agentic_experience" in result, "Authenticated response must expose the agentic experience flag"
 
 
+async def test_get_config_exposes_outdated_component_substitution_policy(
+    client: AsyncClient, logged_in_headers: dict, monkeypatch
+):
+    """Both editor modes need the server policy to decide whether drift blocks a run."""
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "substitute_outdated_component_code", False)
+
+    for headers in ({}, logged_in_headers):
+        response = await client.get("api/v1/config", headers=headers)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["substitute_outdated_component_code"] is False
+
+
 async def test_get_config_embedded_mode_cascades_hide_flags(client: AsyncClient, logged_in_headers: dict, monkeypatch):
     """Embedded mode should only force UI hide flags, not security lock flags."""
     from langflow.services.deps import get_settings_service

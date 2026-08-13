@@ -233,6 +233,25 @@ describe("MustachePromptAreaComponent", () => {
       const button = screen.getByTestId("button_open_mustache_prompt_modal");
       expect(button).toBeInTheDocument();
     });
+
+    it("should forward ariaLabelledBy to the modal trigger button", () => {
+      render(
+        <MustachePromptAreaComponent
+          {...defaultProps}
+          ariaLabelledBy="field-label-id"
+        />,
+      );
+
+      const button = screen.getByTestId("button_open_mustache_prompt_modal");
+      expect(button).toHaveAttribute("aria-labelledby", "field-label-id");
+    });
+
+    it("should render the modal trigger with no aria-labelledby when the field label is absent", () => {
+      render(<MustachePromptAreaComponent {...defaultProps} />);
+
+      const button = screen.getByTestId("button_open_mustache_prompt_modal");
+      expect(button).not.toHaveAttribute("aria-labelledby");
+    });
   });
 
   describe("variable highlighting", () => {
