@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from opentelemetry.sdk._logs import LoggerProvider
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.trace import Span
 
 # The tracer name Langflow's own application spans are emitted under. Deliberately not
 # "langflow": the LLM tracer integrations already take a tracer under that name, and their
@@ -792,15 +793,26 @@ class OutboundCallScope:
     the arguments it was called with.
     """
 
-    __slots__ = ("error_type",)
+    __slots__ = ("error_type", "span")
 
-    def __init__(self) -> None:
+    def __init__(self, span: Span | None = None) -> None:
         self.error_type: str | None = None
+        self.span = span
 
     def record_error(self, error_type: str) -> None:
         # First failure wins, so a later one cannot overwrite the one that caused the retry.
         if self.error_type is None:
             self.error_type = error_type
+
+    def set_attribute(self, key: str, value: str) -> None:
+        """Record an identifier the caller only learns mid-call.
+
+        A2A only learns which agent it reached after resolving the remote card, which is itself
+        part of the call the span covers. Same boundary as the opening attributes: identifiers
+        only, never a message, an argument or a result.
+        """
+        if self.span is not None:
+            self.span.set_attribute(key, value)
 
 
 def _root_error_type(exc: BaseException) -> str:
@@ -835,14 +847,14 @@ def outbound_call_span(name: str, attributes: dict[str, str]) -> Iterator[Outbou
     Yields an :class:`OutboundCallScope`. A caller whose protocol reports failure in the return
     value rather than by raising must call ``record_error`` or its failures export as successes.
     """
-    scope = OutboundCallScope()
     if not _OTEL_AVAILABLE:
-        yield scope
+        yield OutboundCallScope()
         return
     tracer = trace.get_tracer(APPLICATION_TRACER_NAME)
     # Neither recording nor status-setting is delegated to the SDK: its versions write the
     # exception message onto the span, and that can carry flow data.
     with tracer.start_as_current_span(name, record_exception=False, set_status_on_exception=False) as span:
+        scope = OutboundCallScope(span)
         for key, value in attributes.items():
             span.set_attribute(key, value)
         try:

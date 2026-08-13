@@ -38,6 +38,10 @@ export type UtilityStoreType = {
   setHideGettingStartedProgress: (hideGettingStartedProgress: boolean) => void;
   allowCustomComponents: boolean;
   setAllowCustomComponents: (allowCustomComponents: boolean) => void;
+  substituteOutdatedComponentCode: boolean;
+  setSubstituteOutdatedComponentCode: (
+    substituteOutdatedComponentCode: boolean,
+  ) => void;
   catalogGovernanceEnabled: boolean;
   setCatalogGovernanceEnabled: (catalogGovernanceEnabled: boolean) => void;
   a2aEnabled: boolean;

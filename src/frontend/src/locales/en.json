@@ -1,4 +1,5 @@
 {
+  "field.required": "required",
   "crash.title": "Sorry, we found an unexpected error!",
   "crash.descriptionBefore": "Please report errors with detailed tracebacks on the",
   "crash.githubIssues": "GitHub Issues",
@@ -949,6 +950,7 @@
   "modelInput.loadingModels": "Loading models",
   "modelInput.loadFailed": "Couldn't load models — click to retry",
   "modelInput.connectOtherModels": "Connect other models",
+  "modelInput.optionPosition": "{{current}} of {{total}}",
   "knowledge.createTitle": "Create Knowledge Base",
   "knowledge.addSourcesTitle": "Add Files",
   "knowledge.reviewTitle": "Review & Build",
@@ -1283,6 +1285,8 @@
   "input.selectOption": "Select input option",
   "accordion.addVariable": "Add variable",
   "accordion.fullscreen": "Fullscreen",
+  "accordion.collapse": "Collapse",
+  "accordion.expand": "Expand",
   "assistant.noModelsConfigured": "No Model Provider Configured",
   "assistant.code": "Code",
   "assistant.continue": "Continue",

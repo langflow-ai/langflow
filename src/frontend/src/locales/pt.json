@@ -1,6 +1,9 @@
 {
+  "field.required": "Obrigatório",
   "accordion.addVariable": "Incluir variável",
   "accordion.fullscreen": "Tela cheia",
+  "accordion.collapse": "Recolher",
+  "accordion.expand": "Expandir",
   "account.discord": "Discord",
   "account.docs": "Documentos",
   "account.github": "GitHub",
@@ -1557,6 +1560,7 @@
   "model.selectModel": "Selecione um modelo",
   "model.setupProvider": "Provedor de instalação",
   "modelInput.connectOtherModels": "Conecte outros modelos",
+  "modelInput.optionPosition": "{{current}} de {{total}}",
   "modelInput.loadFailed": "Não foi possível carregar os modelos — clique para tentar novamente",
   "modelInput.loadingModels": "Carregando modelos",
   "modelInput.manageProviders": "Gerenciar provedores de modelos",

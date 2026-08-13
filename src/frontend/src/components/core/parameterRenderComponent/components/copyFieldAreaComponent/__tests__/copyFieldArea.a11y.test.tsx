@@ -18,10 +18,6 @@ const renderComponent = () =>
       id="webhook_url"
       editNode={false}
       disabled={false}
-      nodeClass={undefined as never}
-      handleNodeClass={jest.fn()}
-      nodeId="node-1"
-      name="webhook_url"
     />,
   );
 
@@ -39,5 +35,25 @@ describe("CopyFieldAreaComponent accessibility", () => {
     renderComponent();
 
     expect(screen.getByRole("button", { name: /copy/i })).toBeInTheDocument();
+  });
+
+  it("should_prefer_the_forwarded_field_label_over_its_own_aria_label", () => {
+    render(
+      <>
+        <span id="webhook-label">Webhook URL</span>
+        <CopyFieldAreaComponent
+          value="http://localhost/api/v1/webhook/test"
+          handleOnNewValue={jest.fn()}
+          id="webhook_url"
+          editNode={false}
+          disabled={false}
+          ariaLabelledBy="webhook-label"
+        />
+      </>,
+    );
+
+    expect(
+      screen.getByRole("textbox", { name: "Webhook URL" }),
+    ).toBeInTheDocument();
   });
 });
