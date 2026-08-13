@@ -12,6 +12,7 @@ import { useUtilityStore } from "@/stores/utilityStore";
 import { type CookieOptions, getCookie, setCookie } from "@/utils/utils";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { getInputsAndOutputs } from "../../utils/storeUtils";
+import { canOpenPublicPlayground } from "./publicPlaygroundAccess";
 export default function PlaygroundPage() {
   useGetConfig({});
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
@@ -31,7 +32,7 @@ export default function PlaygroundPage() {
     try {
       const flow = await getFlow({ id: id!, public: true });
       return flow;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
       navigate("/");
     }
@@ -67,7 +68,7 @@ export default function PlaygroundPage() {
       );
       if (
         (inputs.length === 0 && outputs.length === 0) ||
-        currentSavedFlow?.access_type !== "PUBLIC"
+        !canOpenPublicPlayground(currentSavedFlow)
       ) {
         // redirect to the home page
         navigate("/");
