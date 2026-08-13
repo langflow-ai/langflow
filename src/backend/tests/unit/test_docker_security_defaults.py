@@ -1,7 +1,13 @@
 import shlex
+import sys
 from pathlib import Path
 
 import pytest
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 PUBLISHED_IMAGES = (
@@ -195,8 +201,28 @@ def test_full_target_checks_only_default_workspace_distributions() -> None:
 def test_published_images_pin_hardened_package_managers() -> None:
     install_script = (REPO_ROOT / "docker" / "install_hardened_npm.sh").read_text(encoding="utf-8")
 
-    for version in ("12.0.2", "10.3.1", "5.0.9", "7.5.22", "5.0.0", "4.0.1", "4.0.5"):
-        assert f'"{version}"' in install_script
+    assert 'NPM_VERSION="12.0.2"' in install_script
+    assert 'npm install --global "npm@${NPM_VERSION}"' in install_script
+    assert 'actual_npm_version="$(npm --version)"' in install_script
+    assert 'if [ "$actual_npm_version" != "$NPM_VERSION" ]; then' in install_script
+
+    for variable, version, package, validation_entry in (
+        ("IP_ADDRESS_VERSION", "10.3.1", "ip-address", '"ip-address": "10.3.1"'),
+        ("BRACE_EXPANSION_VERSION", "5.0.9", "brace-expansion", '"brace-expansion": "5.0.9"'),
+        ("TAR_VERSION", "7.5.22", "tar", 'tar: "7.5.22"'),
+        ("UNDICI_VERSION", "6.28.0", "undici", 'undici: "6.28.0"'),
+    ):
+        assert f'{variable}="{version}"' in install_script
+        assert f'"{package}@${{{variable}}}"' in install_script
+        assert validation_entry in install_script
+
+    assert "for package in ip-address brace-expansion tar undici; do" in install_script
+    for validation_entry in (
+        'sigstore: "5.0.0"',
+        '"@sigstore/core": "4.0.1"',
+        '"tinyglobby/node_modules/picomatch": "4.0.5"',
+    ):
+        assert validation_entry in install_script
     assert "npm ls --global --all --omit=dev" in install_script
     assert 'rm -rf "$npm_cache" /tmp/node-compile-cache' in install_script
 
@@ -208,3 +234,12 @@ def test_published_images_pin_hardened_package_managers() -> None:
         source = (REPO_ROOT / "docker" / dockerfile).read_text(encoding="utf-8")
         assert 'python3.14 -m pip install --no-cache-dir --upgrade "pip==26.2.1"' in source
         assert "sh /tmp/install_hardened_npm.sh" in source
+
+    backend_project = tomllib.loads(
+        (REPO_ROOT / "src" / "backend" / "base" / "pyproject.toml").read_text(encoding="utf-8")
+    )
+    assert "pip>=26.2.1,<27.0.0" in backend_project["project"]["dependencies"]
+
+    lockfile = tomllib.loads((REPO_ROOT / "uv.lock").read_text(encoding="utf-8"))
+    locked_pip_versions = {package["version"] for package in lockfile["package"] if package["name"] == "pip"}
+    assert locked_pip_versions == {"26.2.1"}
