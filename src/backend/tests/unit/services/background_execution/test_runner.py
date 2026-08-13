@@ -90,7 +90,6 @@ async def test_runner_failed_suspend_finalizes_failed_not_hung(active_user, monk
     job = await job_service.get_job_by_job_id(job_id)
     assert job.status == JobStatus.FAILED
     assert job.error == {"type": "suspend_failed", "detail": "Workflow suspension failed."}
-    assert "suspend persistence down" not in json.dumps(job.error)
 
 
 async def test_runner_finalizes_completed(active_user):

@@ -175,7 +175,7 @@ bundles = [
     "lfx-empiriolabs>=0.1.0,<1.0.0",
     "lfx-exa>=0.1.0,<1.0.0",
     "lfx-firecrawl>=0.1.0,<1.0.0",
-    "lfx-nextplaid>=0.1.0,<1.0.0",
+    "lfx-nextplaid>=0.1.2,<1.0.0",
     "lfx-paddle>=0.1.0,<1.0.0",
     "lfx-valkey>=0.1.0,<1.0.0",
 ]
@@ -250,7 +250,7 @@ override-dependencies = [
     "nltk>=3.9.4",
     "Markdown>=3.8.0",
     "dynaconf>=3.2.13",
-    "pillow>=12.1.1",  # Force Pillow 12.1.1+ to prevent CVE-vulnerable versions
+    "pillow>=12.3.0",  # Force Pillow 12.3.0+ to prevent CVE-vulnerable versions
     "playwright>=1.59.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
     # Keep uv workspace resolution on the Python 3.14-compatible LiteLLM floor.
     "litellm>=1.93.0,<2.0.0",

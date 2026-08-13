@@ -15,8 +15,14 @@ CI_SCRIPTS_WORKFLOW = DEFAULT_MATRIX.parents[2] / ".github" / "workflows" / "ci-
 def _workflow_pull_request_paths() -> list[str]:
     """Read the quoted pull-request path filters without adding a YAML dependency."""
     workflow = CI_SCRIPTS_WORKFLOW.read_text(encoding="utf-8")
+    assert workflow.count("    paths:\n") == 1, "expected exactly one pull-request paths block"
+    assert "  workflow_dispatch:" in workflow, "expected workflow_dispatch to terminate the paths block"
     paths_block = workflow.split("    paths:\n", 1)[1].split("  workflow_dispatch:", 1)[0]
-    return [json.loads(line.strip().removeprefix("- ")) for line in paths_block.splitlines() if line.strip()]
+    entries = [line.strip().removeprefix("- ") for line in paths_block.splitlines() if line.strip()]
+    for entry in entries:
+        assert entry.startswith('"'), f"path filter must start with a double quote: {entry}"
+        assert entry.endswith('"'), f"path filter must end with a double quote: {entry}"
+    return [json.loads(entry) for entry in entries]
 
 
 def _github_path_matches(path: str, pattern: str) -> bool:
@@ -73,6 +79,25 @@ def test_checker_rejects_a_missing_error_policy(tmp_path: Path) -> None:
     incomplete.write_text(json.dumps(source), encoding="utf-8")
 
     assert any("error_policy" in error and "missing" in error for error in validate_matrix(incomplete))
+
+
+def test_checker_reports_missing_matrix_file(tmp_path: Path) -> None:
+    missing = tmp_path / "missing.json"
+
+    assert validate_matrix(missing) == [
+        f"could not read execution-principal matrix {missing}: [Errno 2] No such file or directory: '{missing}'"
+    ]
+
+
+def test_checker_reports_malformed_matrix_json(tmp_path: Path) -> None:
+    malformed = tmp_path / "malformed.json"
+    malformed.write_text("{not-json", encoding="utf-8")
+
+    errors = validate_matrix(malformed)
+
+    assert len(errors) == 1
+    assert "is not valid JSON" in errors[0]
+    assert str(malformed) in errors[0]
 
 
 def test_checker_rejects_generic_non_behavioral_test_references(tmp_path: Path) -> None:

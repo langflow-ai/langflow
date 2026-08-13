@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from fastapi import HTTPException
+
 SAFE_WORKFLOW_ERROR_MESSAGE = "Workflow execution failed."
 
 
@@ -35,4 +37,17 @@ def error_for_client(error: Exception, *, expose_details: bool) -> Exception:
     """Return an exception suitable for serializers that accept an exception object."""
     if expose_details:
         return error
+    if isinstance(error, HTTPException):
+        return HTTPException(
+            status_code=error.status_code,
+            detail=SAFE_WORKFLOW_ERROR_MESSAGE,
+            headers=error.headers,
+        )
     return RuntimeError(SAFE_WORKFLOW_ERROR_MESSAGE)
+
+
+def caller_owns_flow(flow: object, user: object) -> bool:
+    """Return whether the request actor and stored flow owner are the same principal."""
+    flow_user_id = getattr(flow, "user_id", None)
+    user_id = getattr(user, "id", None)
+    return flow_user_id is not None and user_id is not None and str(flow_user_id) == str(user_id)

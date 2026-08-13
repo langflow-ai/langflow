@@ -61,6 +61,7 @@ from lfx.workflow.converters import (
 from pydantic_core import ValidationError as PydanticValidationError
 from sqlalchemy.exc import OperationalError
 
+from langflow.api.utils.execution_errors import caller_owns_flow
 from langflow.api.v2.workflow_execution import (
     _execute_streaming_workflow,
     _resolve_execution_timeout,
@@ -232,7 +233,7 @@ async def authorize_flow_action(
 
 def _apply_execution_gates(parsed, flow, current_user: UserRead):
     """Run request gates and return any server-sanitized execution payload."""
-    expose_error_details = flow.user_id == current_user.id
+    expose_error_details = caller_owns_flow(flow, current_user)
     _reject_unsupported_sync_fields(parsed)
     _reject_sync_only_fields(parsed)
     try:
@@ -481,7 +482,8 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 background_tasks=fresh_background_tasks,
                 parsed=parsed,
                 current_user=user,
-                expose_error_details=flow.user_id == user.id,
+                source_flow_owner_id=flow.user_id,
+                expose_error_details=caller_owns_flow(flow, user),
                 job_id=job_id,
                 resume=resume,
                 # Key the persisted vertex builds by the durable job_id so a completed run's GET
@@ -492,6 +494,9 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 # job_id) and fires the memory-base hook below with that id, so the build pipeline
                 # must not mint its own run_id-keyed WORKFLOW row + hook (it would double both).
                 track_job_status=False,
+                # This factory is the runner the v2 background route actually reaches, so the label
+                # belongs here; without it a background run is indistinguishable from a live stream.
+                protocol="v2.background",
                 # Emit the off-wire terminal-output capture the runner records into
                 # ``Job.result`` — protocol-neutral, so agui-protocol runs get a
                 # populated GET-status result too (not just langflow).
@@ -512,7 +517,7 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
             # callback cannot derail the run.
             with contextlib.suppress(Exception):
                 await fresh_background_tasks()
-            if not errored:
+            if not errored and caller_owns_flow(flow, user):
                 try:
                     await get_task_service().fire_and_forget_task(
                         get_memory_base_service().on_flow_output,

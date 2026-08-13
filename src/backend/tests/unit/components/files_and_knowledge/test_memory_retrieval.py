@@ -22,11 +22,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import numpy as np
 import pytest
+from langflow.services.memory_base.kb_path_helpers import hash_session_id
 from lfx.components.files_and_knowledge import _kb_paths
 from lfx.components.files_and_knowledge.memory_retrieval import (
     MemoryBaseComponent,
     _coerce_uuid,
-    _distance_to_similarity,
     _to_python_scalar,
 )
 
@@ -37,7 +37,7 @@ def _make_component(
     session_id: str | None,
     invoker_user_id: uuid.UUID | None = None,
     selected: str | None = "mb-one",
-    filter_by_session: bool = True,
+    filter_by_session: bool | str = True,
     search_query: str = "hello",
     include_metadata: bool = True,
 ) -> MemoryBaseComponent:
@@ -98,6 +98,28 @@ def _exec_returning(value):
     return db
 
 
+def _exec_owner_scoped(mb_row):
+    """Model the DB result for an exact ``name + flow + execution user`` lookup.
+
+    The legacy vulnerable query omitted ``user_id`` and therefore resolved the
+    owner's row for every execution principal.  Keeping that behavior when the
+    predicate is absent makes the non-owner tests below fail for the actual
+    security reason instead of depending on SQL string assertions alone.
+    """
+    db = MagicMock()
+
+    async def _exec(stmt):
+        params = stmt.compile().params
+        requested_user_id = params.get("user_id_1")
+        matched = requested_user_id is None or requested_user_id == mb_row.user_id
+        result = MagicMock()
+        result.first.return_value = mb_row if matched else None
+        return result
+
+    db.exec = AsyncMock(side_effect=_exec)
+    return db
+
+
 # ---------------------------------------------------------------------------
 # Pure helpers
 # ---------------------------------------------------------------------------
@@ -123,10 +145,21 @@ class TestCoerceUuid:
         assert _coerce_uuid(object()) is None
 
 
-class TestDistanceToSimilarity:
-    def test_flips_sign(self):
-        assert _distance_to_similarity(0.42) == -0.42
-        assert _distance_to_similarity(-0.1) == 0.1
+# Score normalization is the backend's contract, covered per backend in
+# tests/unit/base/knowledge_bases; this module only asserts the component
+# delegates to it.
+
+
+def test_result_formatting_uses_backend_score_contract():
+    component = _make_component(flow_id=uuid.uuid4(), session_id="s1")
+    backend = MagicMock()
+    backend.normalize_score.return_value = 0.91
+    doc = SimpleNamespace(page_content="match", metadata={})
+
+    result = component._format_results([(doc, 7.0)], backend)
+
+    assert result.to_dict(orient="records")[0]["_score"] == 0.91
+    backend.normalize_score.assert_called_once_with(7.0)
 
 
 class TestToPythonScalar:
@@ -194,12 +227,17 @@ class TestBuildWhereClause:
         component = _make_component(flow_id=uuid.uuid4(), session_id=None, filter_by_session=True)
         assert component._build_where_clause(session_id=None) is None
 
-    def test_session_filter_truthy_string_does_not_disable_toggle(self):
-        # Regression: a previous version used the raw attribute as a bool, so
-        # an externally-set "false" string would be truthy and silently allow
-        # cross-session retrieval. Confirm bool() coerces properly.
-        component = _make_component(flow_id=uuid.uuid4(), session_id="s1", filter_by_session=True)
-        component.filter_by_session = "false"  # non-bool value
+    @pytest.mark.parametrize("serialized_false", ["false", "False", " 0 ", "no", "off", ""])
+    def test_serialized_false_values_disable_session_filter(self, serialized_false):
+        component = _make_component(
+            flow_id=uuid.uuid4(),
+            session_id="s1",
+            filter_by_session=serialized_false,
+        )
+        assert component._build_where_clause(session_id="s1") is None
+
+    def test_unknown_string_keeps_session_filter_enabled(self):
+        component = _make_component(flow_id=uuid.uuid4(), session_id="s1", filter_by_session="unexpected")
         assert component._build_where_clause(session_id="s1") == {"session_id": "s1"}
 
     def test_session_filter_falsy_value_disables_toggle(self):
@@ -325,6 +363,17 @@ class TestMemoryBaseRetrievalInvariants:
         with pytest.raises(ValueError, match="session_id is required"):
             await component.retrieve_memory()
 
+    @pytest.mark.parametrize("serialized_false", ["false", "0"])
+    async def test_serialized_false_does_not_require_session_id(self, serialized_false):
+        component = _make_component(
+            flow_id=uuid.uuid4(),
+            session_id=None,
+            selected=None,
+            filter_by_session=serialized_false,
+        )
+        with pytest.raises(ValueError, match="No Memory Base"):
+            await component.retrieve_memory()
+
     async def test_missing_session_id_allowed_when_filter_disabled(self):
         """Cross-session retrieval should not require a session_id on the graph."""
         flow_id = uuid.uuid4()
@@ -358,6 +407,36 @@ class TestMemoryBaseRetrievalInvariants:
         component = _make_component(flow_id=None, session_id="s1")
         with pytest.raises(ValueError, match="flow_id"):
             await component.retrieve_memory()
+
+    @pytest.mark.parametrize("runtime_user_id", [None, "not-a-uuid"])
+    async def test_missing_or_invalid_runtime_user_fails_before_owner_resolution(self, runtime_user_id):
+        """A malformed graph principal must never fall back to the Memory Base owner."""
+        flow_id = uuid.uuid4()
+        owner_id = uuid.uuid4()
+        component = _make_component(
+            flow_id=flow_id,
+            session_id=None,
+            filter_by_session=False,
+            invoker_user_id=owner_id,
+        )
+        component.graph.user_id = runtime_user_id
+        mb_row = _make_mb_row(flow_id=flow_id, owner_id=owner_id)
+        fake_backend = AsyncMock()
+        fake_backend.similarity_search.return_value = []
+
+        with contextlib.ExitStack() as stack:
+            TestMemoryBaseRetrievalBehavior._enter_full_chain(
+                stack,
+                db=_exec_owner_scoped(mb_row),
+                fake_backend=fake_backend,
+                owner=SimpleNamespace(id=owner_id, username="owner"),
+                metadata={"embedding_provider": "OpenAI", "embedding_model": "x"},
+            )
+            with pytest.raises(ValueError, match="user_id"):
+                await component.retrieve_memory()
+
+        fake_backend.ensure_ready.assert_not_awaited()
+        fake_backend.similarity_search.assert_not_awaited()
 
     async def test_no_memory_base_selected_raises(self):
         component = _make_component(flow_id=uuid.uuid4(), session_id="s1", selected=None)
@@ -452,6 +531,8 @@ class TestMemoryBaseRetrievalBehavior:
         # the source of the provider/model the resolver returns.
         provider = metadata.get("embedding_provider", "OpenAI")
         model = metadata.get("embedding_model", "x")
+        # Stand in for the distance-based backend contract (higher == more similar).
+        fake_backend.normalize_score = MagicMock(side_effect=lambda score: -float(score))
         for cm in (
             _patched_session_scope(db),
             patch(
@@ -509,6 +590,31 @@ class TestMemoryBaseRetrievalBehavior:
         assert kwargs["k"] == 5
         assert kwargs["filter"] == {"session_id": "s1"}
 
+    async def test_debug_log_redacts_raw_session_id(self):
+        flow_id = uuid.uuid4()
+        owner_id = uuid.uuid4()
+        session_id = "private-session-id"
+        component = _make_component(flow_id=flow_id, session_id=session_id, filter_by_session=True)
+        mb_row = _make_mb_row(flow_id=flow_id, owner_id=owner_id)
+        owner = SimpleNamespace(id=owner_id, username="alice")
+        fake_backend = AsyncMock()
+        fake_backend.similarity_search.return_value = []
+
+        with contextlib.ExitStack() as stack:
+            self._enter_full_chain(
+                stack,
+                db=_exec_returning(mb_row),
+                fake_backend=fake_backend,
+                owner=owner,
+                metadata={"embedding_provider": "OpenAI", "embedding_model": "x"},
+            )
+            debug_mock = stack.enter_context(patch("lfx.components.files_and_knowledge.memory_retrieval.logger.debug"))
+            await component.retrieve_memory()
+
+        logged = repr(debug_mock.call_args_list)
+        assert session_id not in logged
+        assert hash_session_id(session_id) in logged
+
     async def test_similarity_search_no_filter_when_disabled(self):
         flow_id = uuid.uuid4()
         owner_id = uuid.uuid4()
@@ -531,6 +637,71 @@ class TestMemoryBaseRetrievalBehavior:
 
         kwargs = fake_backend.similarity_search.call_args.kwargs
         assert kwargs["filter"] is None
+
+    async def test_owner_can_retrieve_across_sessions_under_owner_principal(self):
+        """The owner-equivalent execution principal keeps the cross-session feature working."""
+        flow_id = uuid.uuid4()
+        owner_id = uuid.uuid4()
+        component = _make_component(
+            flow_id=flow_id,
+            session_id=None,
+            filter_by_session=False,
+            invoker_user_id=owner_id,
+        )
+        mb_row = _make_mb_row(flow_id=flow_id, owner_id=owner_id)
+        owner = SimpleNamespace(id=owner_id, username="owner")
+        fake_backend = AsyncMock()
+        fake_backend.similarity_search.return_value = []
+
+        with contextlib.ExitStack() as stack:
+            self._enter_full_chain(
+                stack,
+                db=_exec_owner_scoped(mb_row),
+                fake_backend=fake_backend,
+                owner=owner,
+                metadata={"embedding_provider": "OpenAI", "embedding_model": "x"},
+            )
+            result = await component.retrieve_memory()
+
+        assert len(result) == 0
+        fake_backend.ensure_ready.assert_awaited_once()
+        fake_backend.similarity_search.assert_awaited_once()
+
+    @pytest.mark.parametrize(
+        "caller_kind",
+        ["delegate", "public_v1", "public_v2", "public_a2a_initial", "public_a2a_hitl_resume"],
+    )
+    async def test_non_owner_principal_cannot_open_owner_backend_when_session_filter_is_off(self, caller_kind):
+        """Every non-owner route principal fails before owner lookup/backend construction."""
+        from langflow.services.authorization.public_access import PUBLIC_ANONYMOUS_ACTOR_ID
+
+        flow_id = uuid.uuid4()
+        owner_id = uuid.uuid4()
+        caller_id = uuid.uuid4() if caller_kind == "delegate" else PUBLIC_ANONYMOUS_ACTOR_ID
+        component = _make_component(
+            flow_id=flow_id,
+            session_id=None,
+            filter_by_session=False,
+            invoker_user_id=caller_id,
+        )
+        mb_row = _make_mb_row(flow_id=flow_id, owner_id=owner_id)
+        owner = SimpleNamespace(id=owner_id, username="owner")
+        fake_backend = AsyncMock()
+        fake_backend.similarity_search.return_value = []
+
+        with contextlib.ExitStack() as stack:
+            self._enter_full_chain(
+                stack,
+                db=_exec_owner_scoped(mb_row),
+                fake_backend=fake_backend,
+                owner=owner,
+                metadata={"embedding_provider": "OpenAI", "embedding_model": "x"},
+            )
+            with pytest.raises(ValueError, match="not attached to this flow"):
+                await component.retrieve_memory()
+
+        fake_backend.ensure_ready.assert_not_awaited()
+        fake_backend.similarity_search.assert_not_awaited()
 
     async def test_empty_search_query_returns_empty_dataframe_without_embedding(self):
         flow_id = uuid.uuid4()

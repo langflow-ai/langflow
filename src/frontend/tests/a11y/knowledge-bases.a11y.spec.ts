@@ -27,6 +27,7 @@ import {
   SEEDED_RUN,
   SEEDED_RUN_DETAIL,
   SEEDED_STATUS_KNOWLEDGE_BASES,
+  selectEmbeddingModel,
   settleNetwork,
 } from "./helpers/knowledge-bases.fixtures";
 
@@ -382,6 +383,7 @@ test.describe("knowledge bases route accessibility", () => {
 
     await page.getByTestId("kb-source-name-input").fill("review_kb");
     await page.locator("#file-input").setInputFiles(SAMPLE_FILE_PATH);
+    await selectEmbeddingModel(page);
 
     await page.getByRole("button", { name: /next step/i }).click();
     await expect(
@@ -391,6 +393,33 @@ test.describe("knowledge bases route accessibility", () => {
     await settleNetwork(page);
     await page.runA11yScan("kb-upload-step-review");
   });
+
+  test(
+    "blocks step 2 until an embedding model is picked",
+    RELEASE,
+    async ({ page }) => {
+      await openCreateModal(page);
+      await page.getByTestId("kb-source-name-input").fill("review_kb");
+
+      // The field starts empty on purpose (LE-2168), so the required-field error
+      // is the first thing a user meets on "Next step".
+      await page.getByRole("button", { name: /next step/i }).click();
+      const error = page.getByText(/embedding model is required/i);
+      await expect(error).toBeVisible({ timeout: TIMEOUTS.standard });
+      await expect(error).toHaveAttribute("role", "alert");
+      await expect(
+        page.getByRole("heading", { name: /review & build/i }),
+      ).toBeHidden();
+      await page.runA11yScan("kb-upload-embedding-required");
+
+      await selectEmbeddingModel(page);
+      await expect(error).toBeHidden({ timeout: TIMEOUTS.standard });
+      await page.getByRole("button", { name: /next step/i }).click();
+      await expect(
+        page.getByRole("heading", { name: /review & build/i }),
+      ).toBeVisible({ timeout: TIMEOUTS.standard });
+    },
+  );
 
   test("scans the no-search-results table", RELEASE, async ({ page }) => {
     await mockKnowledgeBases(page, SEEDED_KNOWLEDGE_BASES);
@@ -558,6 +587,7 @@ test.describe("knowledge bases route accessibility", () => {
     await openCreateModal(page);
 
     await page.getByTestId("kb-source-name-input").fill("review_kb");
+    await selectEmbeddingModel(page);
     await page.getByRole("button", { name: /next step/i }).click();
     await expect(
       page.getByRole("heading", { name: /review & build/i }),
@@ -575,6 +605,7 @@ test.describe("knowledge bases route accessibility", () => {
     });
 
     await attachFiles(page, [SAMPLE_FILE_PATH]);
+    await selectEmbeddingModel(page);
     await page.getByRole("button", { name: /next step/i }).click();
     await expect(page.getByText(/generating preview/i)).toBeVisible({
       timeout: TIMEOUTS.standard,
@@ -597,6 +628,7 @@ test.describe("knowledge bases route accessibility", () => {
     );
 
     await attachFiles(page, [SAMPLE_FILE_PATH]);
+    await selectEmbeddingModel(page);
     await page.getByRole("button", { name: /next step/i }).click();
     await expect(page.getByText(/could not generate preview/i)).toBeVisible({
       timeout: TIMEOUTS.standard,
@@ -634,6 +666,7 @@ test.describe("knowledge bases route accessibility", () => {
       );
       await openCreateModal(page);
       await attachFiles(page, [SAMPLE_FILE_PATH, SAMPLE_FILE_PATH_2]);
+      await selectEmbeddingModel(page);
 
       await page.getByRole("button", { name: /next step/i }).click();
       await expect(
