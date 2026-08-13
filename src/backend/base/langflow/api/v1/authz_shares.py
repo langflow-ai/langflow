@@ -290,15 +290,14 @@ async def _ensure_can_administer_share(
 
 def _ensure_supported_share_permission(*, resource_type: str, scope: str, permission_level: str) -> None:
     """Reject share levels that have no matching public flow product behavior."""
-    if (
-        resource_type == "flow"
-        and scope == ShareScope.PUBLIC.value
-        and permission_level != SharePermissionLevel.EXECUTE.value
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="PUBLIC flow shares require permission_level 'execute'.",
-        )
+    if resource_type != "flow" or scope != ShareScope.PUBLIC.value:
+        return
+    if permission_level == SharePermissionLevel.EXECUTE.value:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        detail="PUBLIC flow shares require permission_level 'execute'.",
+    )
 
 
 @router.post("", response_model=ShareRead, status_code=status.HTTP_201_CREATED)
