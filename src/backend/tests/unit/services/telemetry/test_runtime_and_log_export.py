@@ -14,6 +14,7 @@ import threading
 import pytest
 from opentelemetry.proto.collector.logs.v1.logs_service_pb2 import ExportLogsServiceRequest
 from opentelemetry.proto.collector.metrics.v1.metrics_service_pb2 import ExportMetricsServiceRequest
+from opentelemetry.proto.collector.trace.v1.trace_service_pb2 import ExportTraceServiceRequest
 
 # What an operator needs before anything is failing: saturation and runtime health.
 EXPECTED_PROCESS_METRICS = {
@@ -314,3 +315,104 @@ def test_an_unrecognised_value_fails_closed_and_warns():
     assert shipped is False
     assert "LANGFLOW_OTEL_LOG_LEVEL" in stderr
     assert "verbose" in stderr
+
+
+# The same incident walk, but for a flow run rather than an HTTP request, and driven end to end:
+# langflow's real telemetry bootstrap, the real OTLP exporters, and the trace ids read back off
+# the protobuf that reached the collector. `lfx serve` is asserted separately, in
+# src/lfx/tests/unit/cli/test_serve_app_log_trace_correlation.py, because the two runtimes reach
+# the flow span by different paths and only one of them can be true at a time.
+FLOW_SENTINEL = "component-log-line-emitted-inside-the-flow-run"
+
+FLOW_PROBE = f"""
+import asyncio
+
+from langflow.processing.process import run_graph
+from langflow.services.telemetry.opentelemetry import OpenTelemetry
+from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.custom.custom_component.component import Component
+from lfx.graph import Graph
+from lfx.io import MessageInput, Output
+from lfx.log.logger import configure, logger
+from lfx.schema.message import Message
+
+
+class LoggingComponent(Component):
+    display_name = "Logging"
+    inputs = [MessageInput(name="input_value", display_name="Input")]
+    outputs = [Output(name="message", display_name="Message", method="passthrough")]
+
+    def passthrough(self) -> Message:
+        logger.info({FLOW_SENTINEL!r})
+        return self.input_value
+
+
+# Installs the OTLP providers from the OTEL_* env vars, exactly as a langflow server does.
+otel = OpenTelemetry(prometheus_enabled=False)
+configure(log_level="INFO")
+
+chat_input = ChatInput()
+logging_component = LoggingComponent().set(input_value=chat_input.message_response)
+chat_output = ChatOutput().set(input_value=logging_component.passthrough)
+graph = Graph(chat_input, chat_output, flow_id="00000000-0000-0000-0000-0000000000aa")
+
+asyncio.run(run_graph(graph=graph, input_value="hello", input_type="chat", output_type="chat"))
+otel.shutdown()
+print("PROBE_RESULT ok")
+"""
+
+
+def _spans(requests) -> list:
+    spans = []
+    for path, body in requests:
+        if path != "/v1/traces":
+            continue
+        request = ExportTraceServiceRequest()
+        request.ParseFromString(body)
+        for rs in request.resource_spans:
+            for ss in rs.scope_spans:
+                spans.extend(ss.spans)
+    return spans
+
+
+@pytest.fixture
+def exported_flow_run(collector, tmp_path):
+    """Run one real flow under the real bootstrap; return what reached the collector."""
+    env = {k: v for k, v in os.environ.items() if not k.startswith("OTEL_")}
+    env["OTEL_EXPORTER_OTLP_ENDPOINT"] = f"http://127.0.0.1:{collector.server_address[1]}"
+    # The sentinel is how this test finds its own record, and the log body boundary withholds
+    # message bodies from the export by default, so without this the match comes back empty and
+    # the test fails before it reaches the correlation it exists to check. This test is about
+    # correlation, not about that boundary, so ask for bodies explicitly. No-op on a build that
+    # predates the setting. The lfx fixture in test_serve_app_log_trace_correlation.py does the
+    # same thing for the same reason.
+    env["LANGFLOW_OTEL_LOG_BODIES"] = "all"
+    # A file rather than ``python -c``: Component.__init__ reads its own class source with
+    # inspect.getsource, which has nothing to read for a class defined in a ``-c`` string.
+    probe = tmp_path / "flow_probe.py"
+    probe.write_text(FLOW_PROBE)
+    completed = subprocess.run(  # noqa: S603
+        [sys.executable, str(probe)],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=600,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert "PROBE_RESULT ok" in completed.stdout, completed.stdout
+    return collector.requests
+
+
+def test_a_log_line_from_a_flow_run_carries_the_flow_span_trace_id(exported_flow_run):
+    """The pivot from a flow's trace to its logs. Without it the two signals are separate silos."""
+    flow_span = next(s for s in _spans(exported_flow_run) if s.name == "flow.execute")
+    matching = [r for r in _log_records(exported_flow_run) if r.body.string_value == FLOW_SENTINEL]
+
+    assert matching, [r.body.string_value for r in _log_records(exported_flow_run)]
+    # A zeroed trace id is what "no active span" looks like on the wire, so it would pass a
+    # naive equality check against another zeroed one.
+    assert flow_span.trace_id != b"\x00" * 16
+    assert matching[0].trace_id == flow_span.trace_id, (
+        f"log trace_id {matching[0].trace_id.hex()} != span trace_id {flow_span.trace_id.hex()}"
+    )
