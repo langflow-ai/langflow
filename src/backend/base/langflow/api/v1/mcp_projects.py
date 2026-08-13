@@ -52,6 +52,7 @@ from langflow.api.utils.mcp import (
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.api.v1.mcp import ResponseNoOp
 from langflow.api.v1.mcp_utils import (
+    authenticated_caller_ctx,
     current_request_variables_ctx,
     current_user_ctx,
     handle_call_tool,
@@ -181,6 +182,7 @@ async def verify_project_auth(
         if project_user_id != user.id:
             raise HTTPException(status_code=404, detail="Project not found")
 
+        authenticated_caller_ctx.set(user.id)
         return user
 
     return await _superuser_fallback(settings_service)
@@ -198,6 +200,10 @@ async def _superuser_fallback(settings_service) -> User:
     if result:
         logger.warning(AUTO_LOGIN_WARNING)
         set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_AUTO_LOGIN))
+        # Auto-login means the deployment has no authentication boundary at all, so the
+        # caller is this principal by the instance's own definition. A project that opted
+        # into auth_type="none" is a different case and returns above without a caller.
+        authenticated_caller_ctx.set(result.id)
         return result
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
@@ -255,6 +261,7 @@ async def verify_project_auth_conditional(
     if project_user_id != user.id:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    authenticated_caller_ctx.set(user.id)
     return user
 
 

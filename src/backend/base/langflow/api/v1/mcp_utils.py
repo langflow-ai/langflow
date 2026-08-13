@@ -42,6 +42,22 @@ MCP_SERVERS_FILE = "_mcp_servers"
 # Create context variables
 current_user_ctx: ContextVar[User] = ContextVar("current_user_ctx")
 
+authenticated_caller_ctx: ContextVar[UUID | None] = ContextVar("authenticated_caller_ctx", default=None)
+
+
+def caller_owns_resource(owner_id: UUID | None) -> bool:
+    """Whether the credential presented on this request belongs to the resource owner.
+
+    The principal a tool call *executes as* is not always the principal that authenticated:
+    a project with ``auth_type="none"`` runs as its owner on behalf of an anonymous caller,
+    so comparing the execution principal to the owner answers yes for everyone. The caller
+    context defaults to unset, which reads as anonymous, so a path that never establishes a
+    caller loses the privilege instead of inheriting the owner's.
+    """
+    caller_id = authenticated_caller_ctx.get()
+    return caller_id is not None and owner_id is not None and caller_id == owner_id
+
+
 EXCLUDED_FLOWS_META_KEY = "langflow.org/excluded-flows"
 # Carries per-request variables injected via HTTP headers (e.g., X-Langflow-Global-Var-*)
 current_request_variables_ctx: ContextVar[dict[str, str] | None] = ContextVar(
@@ -384,7 +400,7 @@ async def handle_call_tool(
                             stream=False,
                             api_key_user=current_user,
                             context=exec_context,
-                            expose_error_details=flow.user_id == current_user.id,
+                            expose_error_details=caller_owns_resource(flow.user_id),
                         )
                     # Process all outputs and messages, ensuring no duplicates
                     processed_texts = set()

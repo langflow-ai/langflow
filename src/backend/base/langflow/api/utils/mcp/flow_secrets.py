@@ -15,6 +15,7 @@ import re
 from typing import Any
 from uuid import UUID
 
+from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
@@ -207,51 +208,37 @@ def extract_and_strip_mcp_secrets(
     return carried, variables
 
 
-def restore_unresolvable_references(
-    flow_data: dict[str, Any] | None, variables: dict[str, str], failed: set[str]
-) -> None:
-    """Put a literal back when its variable could not be created.
-
-    Stripping a credential the runtime can no longer resolve trades a leak for a broken
-    flow the caller was told was saved. Secrecy is not worth a silent outage, so an entry
-    whose variable failed goes back the way the caller sent it.
-    """
-    if not failed:
-        return
-    for field in _iter_mcp_server_fields(flow_data):
-        value = field.get("value")
-        if not isinstance(value, dict):
-            continue
-        config = value.get("config")
-        if not isinstance(config, dict):
-            continue
-        for key in MCP_SECRET_CONFIG_MAPS:
-            entries = config.get(key)
-            if not isinstance(entries, dict):
-                continue
-            for entry_key, entry_value in entries.items():
-                if entry_value in failed:
-                    entries[entry_key] = variables[entry_value]
-
-
 async def stage_mcp_secrets(
     carried: list[tuple[str, dict[str, Any]]],
     variables: dict[str, str],
     user_id: UUID,
     session,
-) -> set[str]:
-    """Stage the carried credential on the caller's session, returning what could not be.
+) -> None:
+    """Stage the carried credential on the caller's session.
 
     Split from the extraction on purpose. ``run_with_lock_retry`` rolls the session back
     between attempts, which discards the staged rows, while the in-place rewrite of
     ``flow_data`` survives in memory. Re-extracting on attempt 2 therefore finds only the
     reference it wrote itself, stages nothing, and the flow commits pointing at a global
     variable that does not exist. Extract once, stage per attempt.
+
+    Raises when a credential could not be stored securely. Putting the literal back into
+    ``flow.data`` instead would answer 200 while writing the secret to an unencrypted
+    column that travels through export, share and version history — the caller would never
+    learn the protection had been skipped. Refusing the write is visible and recoverable.
     """
     if not carried and not variables:
-        return set()
+        return
 
     failed = await _ensure_variables(variables, user_id, session)
+    if failed:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Could not store an MCP credential securely, so the flow was not saved. "
+                "Retry, or set the credential as a global variable and reference it from the server config."
+            ),
+        )
 
     for name, config in carried:
         existing = (
@@ -275,8 +262,6 @@ async def stage_mcp_secrets(
                 raise
             await logger.aerror(f"Could not persist MCP server config carried by a flow: {exc}")
 
-    return failed
-
 
 async def persist_and_strip_mcp_secrets(flow_data: dict[str, Any] | None, user_id: UUID, session) -> None:
     """Move any MCP credential in ``flow_data`` into the user's encrypted server rows.
@@ -298,8 +283,7 @@ async def persist_and_strip_mcp_secrets(flow_data: dict[str, Any] | None, user_i
     Under Langflow the ``mcp_server`` row still serves it; under ``lfx serve`` it is gone.
     """
     carried, variables = extract_and_strip_mcp_secrets(flow_data)
-    failed = await stage_mcp_secrets(carried, variables, user_id, session)
-    restore_unresolvable_references(flow_data, variables, failed)
+    await stage_mcp_secrets(carried, variables, user_id, session)
 
 
 async def _ensure_variables(variables: dict[str, str], user_id: UUID, session) -> set[str]:

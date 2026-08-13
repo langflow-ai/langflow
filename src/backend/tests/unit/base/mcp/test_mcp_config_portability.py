@@ -361,3 +361,75 @@ class TestEnvVariableResolution:
             )
 
         assert seen["env"] == {"NODE_ENV": "production"}
+
+
+class TestEnvOnlyConfigsNeedVariables:
+    """A stdio server whose only secret lives in ``env`` never loaded the variables.
+
+    ``persist_and_strip_mcp_secrets`` rewrites ``env`` values to ``MCP_*`` names exactly as
+    it does headers, but the gate only looked at ``headers`` and ``url``. The subprocess
+    was then handed the literal name instead of the credential.
+    """
+
+    def test_should_report_variables_needed_when_only_env_uses_one(self):
+        config = {"mode": "Stdio", "command": "uvx", "args": [], "env": {"API_TOKEN": "MCP_LOCAL_API_TOKEN_1A2B3C4D"}}
+
+        assert util.config_uses_global_variables(config) is True
+
+    def test_should_report_variables_needed_for_an_env_placeholder(self):
+        config = {"mode": "Stdio", "command": "uvx", "env": {"API_TOKEN": "{{MCP_LOCAL_TOKEN}}"}}
+
+        assert util.config_uses_global_variables(config) is True
+
+    def test_should_report_no_variables_needed_for_an_empty_env(self):
+        assert util.config_uses_global_variables({"mode": "Stdio", "command": "uvx", "env": {}}) is False
+
+
+def _raise_for_status_error(status: int, url: str) -> httpx.HTTPStatusError:
+    """Build the error httpx actually raises, whose message embeds the request URL."""
+    request = httpx.Request("POST", url)
+    response = httpx.Response(status, request=request)
+    try:
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        return exc
+    msg = "raise_for_status did not raise"
+    raise AssertionError(msg)
+
+
+CREDENTIAL_URL = "https://user:hunter2@serving.internal/mcp?api_key=secret"
+
+
+class TestFailureMessagesNeverCarryCredentials:
+    """Both describers append the cause verbatim, and httpx puts the request URL in it.
+
+    Stripping userinfo and query from the target we format ourselves is not enough: the
+    message httpx builds for a 401 already contains the whole URL, credentials included.
+    """
+
+    def test_connection_failure_should_not_leak_the_url_inside_the_cause(self):
+        message = util.describe_mcp_connection_failure(
+            "billing-mcp", CREDENTIAL_URL, _raise_for_status_error(401, CREDENTIAL_URL)
+        )
+
+        assert "hunter2" not in message
+        assert "secret" not in message
+
+    def test_tool_failure_should_not_leak_the_target_url(self):
+        message = util.describe_mcp_tool_failure("charge", CREDENTIAL_URL, RuntimeError("HTTP 401"))
+
+        assert "hunter2" not in message
+        assert "secret" not in message
+
+    def test_tool_failure_should_not_leak_the_url_inside_the_cause(self):
+        message = util.describe_mcp_tool_failure("charge", CREDENTIAL_URL, _raise_for_status_error(401, CREDENTIAL_URL))
+
+        assert "hunter2" not in message
+        assert "secret" not in message
+
+    def test_tool_failure_should_still_name_the_target_and_status(self):
+        message = util.describe_mcp_tool_failure("charge", CREDENTIAL_URL, _raise_for_status_error(401, CREDENTIAL_URL))
+
+        assert "charge" in message
+        assert "serving.internal" in message
+        assert "401" in message

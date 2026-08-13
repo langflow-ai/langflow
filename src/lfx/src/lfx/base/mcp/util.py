@@ -879,11 +879,13 @@ def config_uses_global_variables(server_config: dict | None) -> bool:
     """Report whether a server config references global variables anywhere.
 
     Gating the variable load on headers alone meant a config whose only variable lived in
-    the URL never had anything to resolve against.
+    the URL never had anything to resolve against. ``env`` counts for the same reason and
+    is scrubbed into ``MCP_*`` names by the same code path: leaving it out handed the
+    stdio subprocess the variable name in place of the credential.
     """
     if not server_config:
         return False
-    if server_config.get("headers"):
+    if server_config.get("headers") or server_config.get("env"):
         return True
     url = server_config.get("url")
     return bool(isinstance(url, str) and GLOBAL_VARIABLE_PLACEHOLDER_PATTERN.search(url))
@@ -906,6 +908,36 @@ def extract_http_status(error: BaseException) -> int | None:
     return None
 
 
+URL_IN_TEXT_PATTERN = re.compile(r"[a-zA-Z][a-zA-Z0-9+.\-]*://[^\s'\"<>]+")
+
+
+def sanitize_url_for_display(url: str) -> str:
+    """Reduce a URL to scheme, host, port and path.
+
+    Userinfo and query strings routinely carry the credential that just failed, and the
+    port has to survive because a target named without it is the wrong target whenever the
+    plane runs on anything but 80/443.
+    """
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return url
+    if not parsed.scheme or not parsed.hostname:
+        return url
+    host = f"{parsed.hostname}:{parsed.port}" if parsed.port else parsed.hostname
+    return f"{parsed.scheme}://{host}{parsed.path}"
+
+
+def _redact_urls_in_text(text: str) -> str:
+    """Strip credentials out of any URL embedded in a message we did not compose.
+
+    Formatting our own target safely is not enough: ``raise_for_status`` builds a message
+    that already contains the full request URL, so a 401 arrives carrying the very
+    credential it rejected.
+    """
+    return URL_IN_TEXT_PATTERN.sub(lambda match: sanitize_url_for_display(match.group(0)), text)
+
+
 def describe_mcp_tool_failure(tool_name: str, url: str | None, error: BaseException) -> str:
     """Describe a tool call the remote server rejected, naming the status when there is one.
 
@@ -913,42 +945,36 @@ def describe_mcp_tool_failure(tool_name: str, url: str | None, error: BaseExcept
     established, and the rejection then lands here instead.
     """
     status = extract_http_status(error)
-    target = f" at {url}" if url else ""
+    target = f" at {sanitize_url_for_display(url)}" if url else ""
+    cause = _redact_urls_in_text(str(error))
     if status in (HTTP_UNAUTHORIZED, HTTP_FORBIDDEN):
         return (
             f"Tool '{tool_name}'{target} was rejected with HTTP {status}: "
-            f"the configured credential was refused. Cause: {error!s}"
+            f"the configured credential was refused. Cause: {cause}"
         )
     if status is not None:
-        return f"Tool '{tool_name}'{target} failed with HTTP {status}: {error!s}"
-    return f"Tool '{tool_name}'{target} failed: {error!s}"
+        return f"Tool '{tool_name}'{target} failed with HTTP {status}: {cause}"
+    return f"Tool '{tool_name}'{target} failed: {cause}"
 
 
 def describe_mcp_connection_failure(server_name: str, url: str, error: BaseException) -> str:
     """Describe an outbound MCP failure by target, status and cause.
 
     A wrong credential surfaced as ``unhandled errors in a TaskGroup`` with no indication
-    that authentication failed or which server rejected it. Userinfo and query strings are
-    dropped because they routinely carry the credential that just failed.
+    that authentication failed or which server rejected it.
     """
-    try:
-        parsed = urlparse(url)
-        # hostname drops the port along with the userinfo, and a target named without its
-        # port is the wrong target whenever the plane runs on anything but 80/443.
-        host = f"{parsed.hostname}:{parsed.port}" if parsed.port else parsed.hostname
-        target = f"{parsed.scheme}://{host}{parsed.path}" if parsed.scheme else url
-    except ValueError:
-        target = server_name
+    target = sanitize_url_for_display(url) if urlparse(url).scheme else server_name
+    cause = _redact_urls_in_text(str(error))
 
     status = extract_http_status(error)
     if status in (HTTP_UNAUTHORIZED, HTTP_FORBIDDEN):
         return (
             f"MCP server '{server_name}' at {target} rejected the request with HTTP {status}: "
-            f"the configured credential was refused. Cause: {error!s}"
+            f"the configured credential was refused. Cause: {cause}"
         )
     if status is not None:
-        return f"MCP server '{server_name}' at {target} failed with HTTP {status}: {error!s}"
-    return f"MCP server '{server_name}' at {target} failed: {error!s}"
+        return f"MCP server '{server_name}' at {target} failed with HTTP {status}: {cause}"
+    return f"MCP server '{server_name}' at {target} failed: {cause}"
 
 
 def _resolve_global_variables_in_headers(headers: dict, request_variables: dict[str, str] | None) -> dict:

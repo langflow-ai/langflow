@@ -6,6 +6,10 @@ generating a name that collides with a different server's, since an existing glo
 variable is deliberately never overwritten.
 """
 
+from uuid import uuid4
+
+import pytest
+from fastapi import HTTPException
 from langflow.api.utils.mcp.flow_secrets import strip_config_secrets, variable_name_for
 
 AWS_ACCESS_KEY_ID = "AKIAIOSFODNN7EXAMPLE"
@@ -94,55 +98,41 @@ class TestVariableNameIsInjective:
         assert "BILLING_MCP" in name
 
 
-class TestCredentialIsNeverLost:
-    """Stripping a secret the runtime cannot resolve trades a leak for a broken flow."""
+class TestUnstorableCredentialFailsTheWrite:
+    """Putting the literal back reported success while writing the secret in clear text.
 
-    def test_should_restore_the_literal_when_its_variable_failed(self):
-        from langflow.api.utils.mcp.flow_secrets import restore_unresolvable_references
+    Restoring traded a leak for a working flow, but the caller was told the save succeeded
+    and never learned the credential had landed in an unencrypted column that travels
+    through export, share and version history. A control that silently turns itself off is
+    worse than one that fails, so the write is refused instead.
+    """
 
-        secret = "sk-only-copy-of-this"  # noqa: S105
-        name = variable_name_for("billing", "x-api-key")
-        flow_data = {
-            "nodes": [
-                {
-                    "data": {
-                        "node": {
-                            "template": {
-                                "mcp_server": {"value": {"name": "billing", "config": {"headers": {"x-api-key": name}}}}
-                            }
-                        }
-                    }
-                }
-            ]
-        }
+    async def test_should_raise_when_a_variable_cannot_be_created(self, monkeypatch):
+        import langflow.api.utils.mcp.flow_secrets as module
 
-        restore_unresolvable_references(flow_data, {name: secret}, {name})
+        async def failing_ensure(variables, user_id, session):  # noqa: ARG001
+            return set(variables)
 
-        config = flow_data["nodes"][0]["data"]["node"]["template"]["mcp_server"]["value"]["config"]
-        assert config["headers"]["x-api-key"] == secret
-
-    def test_should_leave_resolvable_references_alone(self):
-        from langflow.api.utils.mcp.flow_secrets import restore_unresolvable_references
+        monkeypatch.setattr(module, "_ensure_variables", failing_ensure)
 
         name = variable_name_for("billing", "x-api-key")
-        flow_data = {
-            "nodes": [
-                {
-                    "data": {
-                        "node": {
-                            "template": {
-                                "mcp_server": {"value": {"name": "billing", "config": {"headers": {"x-api-key": name}}}}
-                            }
-                        }
-                    }
-                }
-            ]
-        }
+        with pytest.raises(HTTPException) as exc_info:
+            await module.stage_mcp_secrets([], {name: "sk-secret"}, uuid4(), session=None)
 
-        restore_unresolvable_references(flow_data, {name: "sk-secret"}, set())
+        assert exc_info.value.status_code == 500
+        assert "sk-secret" not in str(exc_info.value.detail)
 
-        config = flow_data["nodes"][0]["data"]["node"]["template"]["mcp_server"]["value"]["config"]
-        assert config["headers"]["x-api-key"] == name
+    async def test_should_not_raise_when_every_variable_was_stored(self, monkeypatch):
+        import langflow.api.utils.mcp.flow_secrets as module
+
+        async def clean_ensure(variables, user_id, session):  # noqa: ARG001
+            return set()
+
+        monkeypatch.setattr(module, "_ensure_variables", clean_ensure)
+
+        name = variable_name_for("billing", "x-api-key")
+
+        await module.stage_mcp_secrets([], {name: "sk-secret"}, uuid4(), session=None)
 
 
 def test_should_not_commit_inside_the_helper():
@@ -252,3 +242,37 @@ class TestNonSecretHeadersAreLeftAlone:
 
         assert found is True
         assert "something" in variables.values()
+
+
+class TestNonMcpFlowsCostNothing:
+    """A flow without an MCP server must not reach the database on the write path.
+
+    The scrub runs on every flow write. If it opened a savepoint or issued a query for
+    flows that carry no credential it would lengthen the write transaction for everyone,
+    which on SQLite is how unrelated writers start seeing "database is locked".
+    """
+
+    def test_should_extract_nothing_from_a_flow_without_an_mcp_server(self):
+        from langflow.api.utils.mcp.flow_secrets import extract_and_strip_mcp_secrets
+
+        flow_data = {
+            "nodes": [
+                {"data": {"node": {"template": {"input_value": {"value": "hello"}}}}},
+                {"data": {"node": {"template": {"path": {"value": "report.txt"}}}}},
+            ]
+        }
+
+        carried, variables = extract_and_strip_mcp_secrets(flow_data)
+
+        assert carried == []
+        assert variables == {}
+
+    async def test_should_not_touch_the_session_when_there_is_nothing_to_stage(self):
+        from langflow.api.utils.mcp.flow_secrets import stage_mcp_secrets
+
+        class ExplodingSession:
+            def __getattr__(self, name):
+                msg = f"the write path must not use the session, but it called {name!r}"
+                raise AssertionError(msg)
+
+        await stage_mcp_secrets([], {}, uuid4(), session=ExplodingSession())
