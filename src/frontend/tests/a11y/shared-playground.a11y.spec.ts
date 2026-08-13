@@ -93,6 +93,12 @@ async function publishChatFlowAndGetId(page: LangflowPage): Promise<string> {
 }
 
 async function openSharedPlayground(page: LangflowPage, flowId: string) {
+  // The disableAnimations style tag only freezes CSS animations; framer-motion
+  // animates inline styles from JS. TextEffect renders statically under
+  // prefers-reduced-motion, but framer's useReducedMotion reads the preference
+  // once at mount, so emulate it *before* navigating — otherwise the empty-state
+  // text is scanned mid-fade with low-contrast intermediate frames.
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(`/playground/${flowId}/`);
   // A non-public flow bounces to "/", so still being on /playground/ once the
   // chat input mounts is itself the assertion that the surface loaded.
