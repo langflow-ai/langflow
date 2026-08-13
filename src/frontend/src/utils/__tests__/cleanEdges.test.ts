@@ -97,8 +97,24 @@ interface EdgeType {
 const filterHiddenFieldsEdges = (
   _edge: EdgeType,
   edges: EdgeType[],
-  _targetNode: AllNodeType,
-) => edges;
+  targetNode: AllNodeType,
+) => {
+  // MCP components dynamically add tool parameters after connecting to an external
+  // MCP server. Before the schema loads, dynamic fields may have show: false.
+  // Removing edges in that transient state causes false positives.
+  const isMcpComponent = targetNode.data.type === "MCPTools";
+  const targetHandle = _edge.data?.targetHandle as TargetHandleType | undefined;
+  if (!targetHandle) return edges;
+  const fieldName = targetHandle.fieldName;
+  const nodeTemplates = targetNode.data.node.template as Record<
+    string,
+    { show?: boolean }
+  >;
+  if (nodeTemplates[fieldName!]?.show === false && !isMcpComponent) {
+    return edges.filter((e) => e.id !== _edge.id);
+  }
+  return edges;
+};
 
 // Reimplement cleanEdges function for testing (matches the fix in reactflowUtils.ts)
 function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
@@ -189,6 +205,16 @@ function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
             : rawInputTypes;
       const hasProxy = template[field!]?.proxy;
       const isToolMode = template[field!]?.tool_mode;
+      // MCP components dynamically add tool parameters after connecting to an external
+      // MCP server. When the flow loads, cleanEdges runs before the server has
+      // responded with the tool's schema, so the template field may not exist yet
+      // or may lack input_types. Removing the edge in that state is a false positive.
+      const isMcpComponent = targetNode.data.type === "MCPTools";
+      const fieldNotInTemplate = template[field!] === undefined;
+      const fieldHasNoInputTypes =
+        isMcpComponent && !fieldNotInTemplate && !rawInputTypes?.length;
+      const isMcpWithPendingParams =
+        isMcpComponent && (fieldNotInTemplate || fieldHasNoInputTypes);
 
       let id: TargetHandleType | SourceHandleType;
 
@@ -230,7 +256,9 @@ function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       );
       const isLoopInput = targetOutput?.allows_loop === true;
 
+      // Skip edge removal for MCP components whose parameters haven't loaded yet
       if (
+        !isMcpWithPendingParams &&
         (scapedJSONStringfy(id) !== targetHandle ||
           (targetNode.data.node?.tool_mode && isToolMode)) &&
         !isLoopInput
@@ -899,6 +927,224 @@ describe("cleanEdges", () => {
       const resultBasic2 = cleanEdges([sourceNodeBasic], [edgeBasic2]);
 
       expect(resultBasic2.edges.length).toBe(0);
+    });
+  });
+
+  describe("MCP Tools edge validation", () => {
+    it("should preserve edge to MCP component when tool parameter field not yet in template", () => {
+      // Scenario: Parser connected to MCP Tools, but MCP server hasn't loaded tool schema yet
+      const parserNode: AllNodeType = {
+        id: "Parser-1",
+        type: "genericNode",
+        data: {
+          id: "Parser-1",
+          type: "Parser",
+          selected_output: "output",
+          node: {
+            display_name: "Parser",
+            template: {},
+            outputs: [
+              {
+                name: "output",
+                display_name: "Output",
+                types: ["Message"],
+                selected: "Message",
+              },
+            ],
+          },
+        },
+      };
+
+      const mcpNode: AllNodeType = {
+        id: "MCPTools-1",
+        type: "genericNode",
+        data: {
+          id: "MCPTools-1",
+          type: "MCPTools",
+          node: {
+            display_name: "MCP Tools",
+            template: {
+              // MCP server config fields exist
+              mcp_server: { type: "str", input_types: ["str"] },
+              // But tool-specific parameter "query" is NOT in template yet
+              // (schema hasn't loaded from MCP server)
+            },
+            outputs: [],
+          },
+        },
+      };
+
+      // Edge from Parser output to MCP "query" parameter
+      const sourceHandle = scapedJSONStringfy({
+        id: "Parser-1",
+        name: "output",
+        output_types: ["Message"],
+        dataType: "Parser",
+      });
+
+      const targetHandle = scapedJSONStringfy({
+        type: "str",
+        fieldName: "query",
+        id: "MCPTools-1",
+        inputTypes: ["str"],
+      });
+
+      const edge: EdgeType = {
+        id: "edge-1",
+        source: "Parser-1",
+        target: "MCPTools-1",
+        sourceHandle,
+        targetHandle,
+      };
+
+      const result = cleanEdges([parserNode, mcpNode], [edge]);
+
+      // Edge should be preserved because MCP component parameters are pending
+      expect(result.edges.length).toBe(1);
+      expect(result.brokenEdges.length).toBe(0);
+    });
+
+    it("should preserve edge to MCP component when field exists but input_types not loaded", () => {
+      // Scenario: Field exists in template but input_types array is empty (loading in progress)
+      const parserNode: AllNodeType = {
+        id: "Parser-1",
+        type: "genericNode",
+        data: {
+          id: "Parser-1",
+          type: "Parser",
+          selected_output: "output",
+          node: {
+            display_name: "Parser",
+            template: {},
+            outputs: [
+              {
+                name: "output",
+                display_name: "Output",
+                types: ["Message"],
+                selected: "Message",
+              },
+            ],
+          },
+        },
+      };
+
+      const mcpNode: AllNodeType = {
+        id: "MCPTools-1",
+        type: "genericNode",
+        data: {
+          id: "MCPTools-1",
+          type: "MCPTools",
+          node: {
+            display_name: "MCP Tools",
+            template: {
+              mcp_server: { type: "str", input_types: ["str"] },
+              query: {
+                type: "str",
+                input_types: [], // Empty - still loading
+                show: true,
+              },
+            },
+            outputs: [],
+          },
+        },
+      };
+
+      const sourceHandle = scapedJSONStringfy({
+        id: "Parser-1",
+        name: "output",
+        output_types: ["Message"],
+        dataType: "Parser",
+      });
+
+      const targetHandle = scapedJSONStringfy({
+        type: "str",
+        fieldName: "query",
+        id: "MCPTools-1",
+        inputTypes: ["str"],
+      });
+
+      const edge: EdgeType = {
+        id: "edge-1",
+        source: "Parser-1",
+        target: "MCPTools-1",
+        sourceHandle,
+        targetHandle,
+      };
+
+      const result = cleanEdges([parserNode, mcpNode], [edge]);
+
+      // Edge should be preserved while parameters are loading
+      expect(result.edges.length).toBe(1);
+      expect(result.brokenEdges.length).toBe(0);
+    });
+
+    it("should still remove broken edges for non-MCP components", () => {
+      // Ensure normal validation still works for other component types
+      const sourceNode: AllNodeType = {
+        id: "Source-1",
+        type: "genericNode",
+        data: {
+          id: "Source-1",
+          type: "TextInput",
+          selected_output: "output",
+          node: {
+            display_name: "Text Input",
+            template: {},
+            outputs: [
+              {
+                name: "output",
+                display_name: "Output",
+                types: ["str"],
+                selected: "str",
+              },
+            ],
+          },
+        },
+      };
+
+      const targetNode: AllNodeType = {
+        id: "Target-1",
+        type: "genericNode",
+        data: {
+          id: "Target-1",
+          type: "SomeComponent", // NOT MCPTools
+          node: {
+            display_name: "Some Component",
+            template: {
+              // Field doesn't exist
+            },
+            outputs: [],
+          },
+        },
+      };
+
+      const sourceHandle = scapedJSONStringfy({
+        id: "Source-1",
+        name: "output",
+        output_types: ["str"],
+        dataType: "TextInput",
+      });
+
+      const targetHandle = scapedJSONStringfy({
+        type: "str",
+        fieldName: "missing_field",
+        id: "Target-1",
+        inputTypes: ["str"],
+      });
+
+      const edge: EdgeType = {
+        id: "edge-1",
+        source: "Source-1",
+        target: "Target-1",
+        sourceHandle,
+        targetHandle,
+      };
+
+      const result = cleanEdges([sourceNode, targetNode], [edge]);
+
+      // Edge should be removed because this is NOT an MCP component
+      expect(result.edges.length).toBe(0);
+      expect(result.brokenEdges.length).toBe(1);
     });
   });
 });

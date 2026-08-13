@@ -150,6 +150,18 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       const hasProxy = targetNode.data.node!.template[field]?.proxy;
       const isToolMode = targetNode.data.node!.template[field]?.tool_mode;
       const isAdvanced = targetNode.data.node!.template[field]?.advanced;
+      // MCP components dynamically add tool parameters after connecting to an external
+      // MCP server. When the flow loads, cleanEdges runs before the server has
+      // responded with the tool's schema, so the template field may not exist yet
+      // or may lack input_types. Removing the edge in that state is a false
+      // positive — the edge is valid once the parameters arrive.
+      const isMcpComponent = targetNode.data.type === "MCPTools";
+      const fieldNotInTemplate =
+        targetNode.data.node!.template[field] === undefined;
+      const fieldHasNoInputTypes =
+        isMcpComponent && !fieldNotInTemplate && !rawInputTypes?.length;
+      const isMcpWithPendingParams =
+        isMcpComponent && (fieldNotInTemplate || fieldHasNoInputTypes);
 
       if (
         !field &&
@@ -196,7 +208,11 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
         expectedTargetHandle,
         targetHandle,
       );
+      // Skip edge removal for MCP components whose parameters haven't loaded yet
+      // from the external MCP server. The field/template mismatch is transient —
+      // once the schema arrives, the edge will validate correctly on the next pass.
       if (
+        !isMcpWithPendingParams &&
         (!targetHandlesMatchResult ||
           (targetNode.data.node?.tool_mode && isToolMode) ||
           isAdvanced) &&
@@ -371,8 +387,14 @@ export function filterHiddenFieldsEdges(
     const fieldName = targetHandle.fieldName;
     const nodeTemplates = targetNode.data.node!.template;
 
+    // MCP components dynamically add tool parameters after connecting to an external
+    // MCP server. Before the schema loads, dynamic fields may have show: false or
+    // not exist at all. Removing edges in that transient state causes "connections
+    // were removed because they were invalid" false positives.
+    const isMcpComponent = targetNode.data.type === "MCPTools";
+
     // Only check the specific field the edge is connected to
-    if (nodeTemplates[fieldName]?.show === false) {
+    if (nodeTemplates[fieldName]?.show === false && !isMcpComponent) {
       newEdges = newEdges.filter((e) => e.id !== edge.id);
     }
   }
