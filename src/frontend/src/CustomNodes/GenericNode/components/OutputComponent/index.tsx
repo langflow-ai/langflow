@@ -24,12 +24,9 @@ import type { outputComponentType } from "../../../../types/components";
 import { cn } from "../../../../utils/utils";
 
 export default function OutputComponent({
-  selected,
-  types,
   frozen = false,
   nodeId,
   outputs,
-  idx,
   name,
   proxy,
   isToolMode = false,
