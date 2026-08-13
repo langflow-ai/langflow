@@ -436,23 +436,24 @@ def test_from_payload_substitutes_before_validating(monkeypatch):
     """Graph.from_payload owns the payload it builds, so the real swap happens there — first."""
     from lfx.graph.graph.base import Graph
 
-    calls: list[tuple[str, dict]] = []
+    calls: list[tuple[str, dict, dict]] = []
     monkeypatch.setattr(
         fv,
         "substitute_outdated_component_code_in_place",
-        lambda payload: (calls.append(("substitute", payload)), [])[1],
+        lambda payload, **kwargs: (calls.append(("substitute", payload, kwargs)), [])[1],
     )
     monkeypatch.setattr(
         fv,
         "validate_flow_for_current_settings",
-        lambda payload, **_kwargs: calls.append(("validate", payload)),
+        lambda payload, **kwargs: calls.append(("validate", payload, kwargs)),
     )
 
     payload = {"nodes": [], "edges": []}
     Graph.from_payload(payload)
 
-    assert [name for name, _ in calls] == ["substitute", "validate"]
+    assert [name for name, *_ in calls] == ["substitute", "validate"]
     assert calls[0][1] is payload
+    assert calls[0][2] == {"validate_public_execution": False}
 
 
 def test_validator_still_refuses_drifted_flow_when_opted_out(monkeypatch):

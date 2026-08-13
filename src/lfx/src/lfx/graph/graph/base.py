@@ -1725,7 +1725,18 @@ class Graph:
         # instead of being refused over code it was not going to run. No-op when custom
         # components are allowed or the operator turned the substitution off; a node whose type
         # is not a known server component is left untouched and still refused below.
-        substitute_outdated_component_code_in_place(payload)
+        # Public routes sanitize before handing the payload to the executor, but a hot extension
+        # reload can occur before graph construction. In restricted mode the substitution below
+        # may therefore select a newer source generation than the route checked. Re-run the public
+        # code-execution gate for the anonymous execution principal against the exact
+        # post-substitution bytes and the same registry snapshot, before component instantiation.
+        from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
+
+        validate_public_execution = str(user_id) == str(PUBLIC_ANONYMOUS_ACTOR_ID)
+        substitute_outdated_component_code_in_place(
+            payload,
+            validate_public_execution=validate_public_execution,
+        )
         # Defense-in-depth: validate here so that no code path can construct
         # a graph with blocked/custom components, even if an API endpoint
         # forgets its own pre-check. Ideally this would live only at the API

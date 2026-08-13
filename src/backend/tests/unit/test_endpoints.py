@@ -601,8 +601,8 @@ async def test_get_vertices_rebuilds_outdated_components_when_custom_components_
     substitute = flow_validation.substitute_outdated_component_code_in_place
     swapped: list[str] = []
 
-    def _spy(payload):
-        result = substitute(payload)
+    def _spy(payload, **kwargs):
+        result = substitute(payload, **kwargs)
         swapped.extend(result)
         return result
 

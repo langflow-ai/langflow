@@ -1,9 +1,12 @@
 """Unit tests for LFX flow validation helpers."""
 
+import asyncio
+import copy
 import hashlib
 import json
 import re
 from pathlib import Path
+from threading import Event, Thread
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
@@ -774,6 +777,13 @@ def _node(node_id: str, component_type: str, code: str | None, *, display_name: 
     return {"id": node_id, "data": {"id": node_id, "type": component_type, "node": node_block}}
 
 
+def _public_lookup_snapshot(type_to_code: dict[str, str]) -> tuple[dict[str, str], dict[str, set[str]]]:
+    return type_to_code, {
+        component_type: {hashlib.sha256(code.encode()).hexdigest()[:12]}
+        for component_type, code in type_to_code.items()
+    }
+
+
 def test_collect_component_code_lookups_maps_type_and_aliases():
     """Each component's canonical name and display-name alias map to its trusted code."""
     lookups = collect_component_code_lookups(_server_components())
@@ -861,7 +871,11 @@ async def test_prepare_public_flow_build_substitutes_trusted_code(monkeypatch):
     from lfx.utils import flow_validation as fv
 
     monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _public_settings())
-    monkeypatch.setattr(fv, "_ensure_component_code_lookups", AsyncMock(return_value={"ChatInput": "# trusted"}))
+    monkeypatch.setattr(
+        fv,
+        "_ensure_public_component_lookup_snapshot",
+        AsyncMock(return_value=_public_lookup_snapshot({"ChatInput": "# trusted"})),
+    )
 
     flow = {"nodes": [_node("a", "ChatInput", "stored old code")], "edges": []}
     sanitized = await fv.prepare_public_flow_build(flow)
@@ -873,12 +887,190 @@ async def test_prepare_public_flow_build_substitutes_trusted_code(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_prepare_public_flow_build_rechecks_code_execution_after_substitution(monkeypatch):
+    """A stale namespaced alias cannot become executable server code after the public precheck."""
+    from lfx.utils import flow_validation as fv
+
+    extension_type = "ext:langflow:PythonREPLComponent@official"
+    trusted_repl_code = "class PythonREPLComponent(Component):\n    pass\n"
+    trusted_repl_hash = fv._compute_code_hash(trusted_repl_code)
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _public_settings())
+    monkeypatch.setattr(
+        fv,
+        "_ensure_public_component_lookup_snapshot",
+        AsyncMock(
+            return_value=(
+                {extension_type: trusted_repl_code},
+                {
+                    extension_type: {trusted_repl_hash},
+                    "PythonREPLComponent": {trusted_repl_hash},
+                },
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        fv,
+        "get_component_hash_lookups_for_validation",
+        lambda: {"PythonREPLComponent": {trusted_repl_hash}},
+    )
+
+    flow = {
+        "nodes": [_node("repl", extension_type, "# stale harmless bytes", display_name="Harmless Tool")],
+        "edges": [],
+    }
+    # The stale bytes and namespaced type evade the route-level defense-in-depth precheck.
+    fv.validate_public_flow_no_code_execution(flow)
+
+    # Trusted substitution resolves that alias to the server's Python REPL source. The helper
+    # must re-check the graph it returns so every public caller fails closed.
+    with pytest.raises(PublicFlowValidationError, match="code-execution"):
+        await fv.prepare_public_flow_build(flow)
+
+
+def test_public_component_lookup_snapshot_linearizes_reload(monkeypatch):
+    """A hot reload cannot pair trusted source from one generation with hashes from another."""
+    from lfx.interface.components import component_cache
+    from lfx.utils import flow_validation as fv
+
+    old_code = {"ChatInput": "# old trusted"}
+    old_hashes = {"ChatInput": {"oldhash00001"}}
+    new_code = {"ChatInput": "# new trusted"}
+    new_hashes = {"ChatInput": {"newhash00002"}}
+    monkeypatch.setattr(component_cache, "all_types_dict", {"inputs": {}})
+    monkeypatch.setattr(component_cache, "all_types_ready", True)
+    monkeypatch.setattr(component_cache, "type_to_code", old_code)
+    monkeypatch.setattr(component_cache, "type_to_current_hash", old_hashes)
+
+    code_read_started = Event()
+    release_code_read = Event()
+    reload_finished = Event()
+    results: list[tuple[dict[str, str], object]] = []
+
+    def read_code():
+        code_read_started.set()
+        assert release_code_read.wait(timeout=2)
+        return component_cache.type_to_code
+
+    monkeypatch.setattr(fv, "get_component_code_lookups_for_validation", read_code)
+    monkeypatch.setattr(
+        fv,
+        "get_component_hash_lookups_for_validation",
+        lambda: component_cache.type_to_current_hash,
+    )
+
+    def read_snapshot() -> None:
+        results.append(asyncio.run(fv._ensure_public_component_lookup_snapshot(SimpleNamespace())))
+
+    def reload_registry() -> None:
+        with component_cache.state_lock:
+            component_cache.type_to_code = new_code
+            component_cache.type_to_current_hash = new_hashes
+        reload_finished.set()
+
+    reader = Thread(target=read_snapshot)
+    reader.start()
+    assert code_read_started.wait(timeout=2)
+    reloader = Thread(target=reload_registry)
+    reloader.start()
+    assert not reload_finished.wait(timeout=0.1), "reload interleaved with a public lookup snapshot"
+    release_code_read.set()
+    reader.join(timeout=2)
+    reloader.join(timeout=2)
+
+    assert not reader.is_alive()
+    assert not reloader.is_alive()
+    assert results == [(old_code, old_hashes)]
+    assert component_cache.type_to_code == new_code
+    assert component_cache.type_to_current_hash == new_hashes
+
+
+@pytest.mark.asyncio
+async def test_public_graph_rechecks_code_after_registry_reload(monkeypatch):
+    """Graph construction checks the final source if the registry changes after preparation."""
+    from lfx.graph.graph.base import Graph
+    from lfx.interface.components import component_cache
+    from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
+    from lfx.utils import flow_validation as fv
+
+    extension_type = "ext:langflow:ReloadableComponent@official"
+    safe_code = "class SafeComponent(Component):\n    pass\n"
+    blocked_code = "class PythonREPLComponent(Component):\n    pass\n"
+    blocked_hash = fv._compute_code_hash(blocked_code)
+    settings_service = _public_settings(allow_custom=False)
+    monkeypatch.setattr(settings_service.settings, "substitute_outdated_component_code", True, raising=False)
+    monkeypatch.setattr(settings_service.settings, "block_code_interpreter_components", False, raising=False)
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    monkeypatch.setattr(
+        "lfx.services.deps.get_catalog_policy_service",
+        lambda: SimpleNamespace(snapshot=CatalogPolicySnapshot()),
+    )
+    monkeypatch.setattr(
+        fv,
+        "_ensure_public_component_lookup_snapshot",
+        AsyncMock(return_value=_public_lookup_snapshot({extension_type: safe_code})),
+    )
+
+    stored = {"nodes": [_node("reloadable", extension_type, "# stale stored bytes")], "edges": []}
+    prepared = await fv.prepare_public_flow_build(stored)
+    assert prepared is not None
+    assert prepared["nodes"][0]["data"]["node"]["template"]["code"]["value"] == safe_code
+
+    # Publish a later generation in which the same declared identity resolves to a blocked
+    # component. Graph.from_payload performs the runtime substitution, so its public gate must
+    # validate this generation's exact bytes instead of relying on the earlier safe preparation.
+    monkeypatch.setattr(component_cache, "all_types_dict", {"test": {}})
+    monkeypatch.setattr(component_cache, "all_types_ready", True)
+    monkeypatch.setattr(component_cache, "type_to_code", {extension_type: blocked_code})
+    monkeypatch.setattr(
+        component_cache,
+        "type_to_current_hash",
+        {
+            extension_type: {blocked_hash},
+            "PythonREPLComponent": {blocked_hash},
+        },
+    )
+    # This regression targets the validation boundary, so do not require the policy-only test
+    # node to carry the complete frontend template shape needed to construct a real Vertex.
+    monkeypatch.setattr(Graph, "add_nodes_and_edges", lambda _self, _vertices, _edges: None)
+
+    owner_graph = Graph.from_payload(
+        copy.deepcopy(prepared),
+        user_id="authenticated-owner",
+        instantiate_components=False,
+        emit_extension_events=False,
+    )
+    assert owner_graph is not None
+
+    with pytest.raises(PublicFlowValidationError, match="code-execution"):
+        Graph.from_payload(
+            copy.deepcopy(prepared),
+            user_id=str(PUBLIC_ANONYMOUS_ACTOR_ID),
+            instantiate_components=False,
+            emit_extension_events=False,
+        )
+
+    from lfx.graph.checkpoint.schema import GraphCheckpoint
+
+    checkpoint = GraphCheckpoint(
+        run_id="public-run",
+        user_id=str(PUBLIC_ANONYMOUS_ACTOR_ID),
+        flow_payload=copy.deepcopy(prepared),
+    )
+    with pytest.raises(PublicFlowValidationError, match="code-execution"):
+        Graph.resume_from_checkpoint(checkpoint)
+
+
+@pytest.mark.asyncio
 async def test_prepare_public_flow_build_blocks_unknown_custom_component(monkeypatch):
     """A public flow with an unrecognized custom component is rejected."""
     from lfx.utils import flow_validation as fv
 
     monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _public_settings())
-    monkeypatch.setattr(fv, "_ensure_component_code_lookups", AsyncMock(return_value={"ChatInput": "# trusted"}))
+    monkeypatch.setattr(
+        fv,
+        "_ensure_public_component_lookup_snapshot",
+        AsyncMock(return_value=_public_lookup_snapshot({"ChatInput": "# trusted"})),
+    )
 
     flow = {"nodes": [_node("x", "MyCustom", "import os; os.system('x')", display_name="My Custom")], "edges": []}
     with pytest.raises(CustomComponentValidationError) as exc_info:
@@ -893,7 +1085,9 @@ async def test_prepare_public_flow_build_neutralizes_relabelled_code(monkeypatch
 
     monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _public_settings())
     monkeypatch.setattr(
-        fv, "_ensure_component_code_lookups", AsyncMock(return_value={"ChatInput": "# trusted ChatInput"})
+        fv,
+        "_ensure_public_component_lookup_snapshot",
+        AsyncMock(return_value=_public_lookup_snapshot({"ChatInput": "# trusted ChatInput"})),
     )
 
     flow = {"nodes": [_node("a", "ChatInput", "import os; os.system('pwned')")], "edges": []}
@@ -919,6 +1113,52 @@ async def test_prepare_public_flow_build_opt_in_honors_global(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_prepare_public_flow_build_opt_in_still_blocks_code_execution(monkeypatch):
+    """Public custom-code opt-in never opts into unauthenticated Python execution."""
+    from lfx.utils import flow_validation as fv
+
+    monkeypatch.setattr(
+        "lfx.services.deps.get_settings_service",
+        lambda: _public_settings(allow_custom=True, allow_public_custom=True),
+    )
+    monkeypatch.setattr(fv, "validate_flow_for_current_settings", lambda _target: None)
+
+    with pytest.raises(PublicFlowValidationError, match="code-execution"):
+        await fv.prepare_public_flow_build(_flow_with_component("PythonREPLComponent"))
+
+
+@pytest.mark.asyncio
+async def test_prepare_public_flow_build_restricted_opt_in_checks_effective_substitution(monkeypatch):
+    """Global restricted mode returns and checks substituted bytes even with public opt-in."""
+    from lfx.utils import flow_validation as fv
+
+    extension_type = "ext:langflow:PythonREPLComponent@official"
+    trusted_repl_code = "class PythonREPLComponent(Component):\n    pass\n"
+    trusted_repl_hash = fv._compute_code_hash(trusted_repl_code)
+    settings_service = _public_settings(allow_custom=False, allow_public_custom=True)
+    monkeypatch.setattr(settings_service.settings, "substitute_outdated_component_code", True, raising=False)
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    monkeypatch.setattr(fv, "validate_flow_for_current_settings", lambda _target: None)
+    monkeypatch.setattr(
+        fv,
+        "_ensure_public_component_lookup_snapshot",
+        AsyncMock(
+            return_value=(
+                {extension_type: trusted_repl_code},
+                {
+                    extension_type: {trusted_repl_hash},
+                    "PythonREPLComponent": {trusted_repl_hash},
+                },
+            )
+        ),
+    )
+    stale = {"nodes": [_node("repl", extension_type, "# harmless stale bytes")], "edges": []}
+
+    with pytest.raises(PublicFlowValidationError, match="code-execution"):
+        await fv.prepare_public_flow_build(stale)
+
+
+@pytest.mark.asyncio
 async def test_prepare_public_flow_build_requires_settings_service(monkeypatch):
     monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: None)
     with pytest.raises(RuntimeError, match="Settings service must be initialized"):
@@ -931,7 +1171,7 @@ async def test_prepare_public_flow_build_fails_closed_without_templates(monkeypa
     from lfx.utils import flow_validation as fv
 
     monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _public_settings())
-    monkeypatch.setattr(fv, "_ensure_component_code_lookups", AsyncMock(return_value={}))
+    monkeypatch.setattr(fv, "_ensure_public_component_lookup_snapshot", AsyncMock(return_value=({}, {})))
 
     flow = {"nodes": [_node("a", "ChatInput", "x")], "edges": []}
     with pytest.raises(CustomComponentValidationError):
@@ -945,7 +1185,11 @@ async def test_prepare_public_flow_build_noop_on_empty(monkeypatch, empty):
     from lfx.utils import flow_validation as fv
 
     monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _public_settings())
-    monkeypatch.setattr(fv, "_ensure_component_code_lookups", AsyncMock(return_value={"ChatInput": "# t"}))
+    monkeypatch.setattr(
+        fv,
+        "_ensure_public_component_lookup_snapshot",
+        AsyncMock(return_value=_public_lookup_snapshot({"ChatInput": "# t"})),
+    )
     assert await fv.prepare_public_flow_build(empty) is None
 
 

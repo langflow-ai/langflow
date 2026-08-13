@@ -626,6 +626,21 @@ def get_trusted_code_for_validation(code: str) -> str | None:
         return code_by_hash.get(code_hash)
 
 
+def get_trusted_code_and_hashes_for_validation(code: str) -> tuple[str | None, dict[str, set[str]] | None]:
+    """Return trusted source and type hashes from one component-registry generation."""
+    from lfx.interface.components import _build_code_hash_lookups, component_cache
+
+    code_hash = _compute_code_hash(code)
+    with component_cache.state_lock:
+        if component_cache.all_types_ready and component_cache.all_types_dict is not None:
+            if component_cache.code_by_hash is None:
+                component_cache.code_by_hash = collect_code_by_hash(component_cache.all_types_dict)
+            if component_cache.type_to_current_hash is None:
+                _build_code_hash_lookups(component_cache)
+        code_by_hash = component_cache.code_by_hash
+        return (code_by_hash.get(code_hash) if code_by_hash else None, component_cache.type_to_current_hash)
+
+
 def _substitute_trusted_code_by_hash(nodes: list[dict]) -> list[str]:
     """Replace code-bearing nodes with the matching server-trusted source.
 
@@ -671,7 +686,7 @@ def _substitute_trusted_code_by_hash(nodes: list[dict]) -> list[str]:
     return blocked
 
 
-def resolve_trusted_code_for_build(code: str) -> str:
+def resolve_trusted_code_for_build(code: str, *, public_execution: bool = False) -> str:
     """Return the component code to ``exec`` for a build, enforcing restricted-mode substitution.
 
     In permissive mode (``allow_custom_components=True``, the default) the node's own ``code`` is
@@ -696,11 +711,37 @@ def resolve_trusted_code_for_build(code: str) -> str:
     if allow_custom_components:
         return code
 
-    trusted = get_trusted_code_for_validation(code)
+    if public_execution:
+        trusted, type_to_current_hash = get_trusted_code_and_hashes_for_validation(code)
+    else:
+        trusted = get_trusted_code_for_validation(code)
+        type_to_current_hash = None
     if trusted is None:
         msg = "Flow build blocked: no trusted server component matches this component's code."
         raise CustomComponentValidationError(msg)
+    if public_execution:
+        # This is the last lookup before eval_custom_component_code. A hot extension reload may
+        # have replaced the trusted source since Graph.from_payload's public check, so validate
+        # the exact source returned from the current registry generation before executing it.
+        validate_public_flow_no_code_execution(
+            {"nodes": [_validation_node_for_code(trusted)]},
+            type_to_current_hash=type_to_current_hash,
+        )
     return trusted
+
+
+def _validation_node_for_code(code: str) -> dict[str, Any]:
+    """Build the minimal node shape used by code-hash policy checks."""
+    return {
+        "data": {
+            "id": "runtime-component",
+            "type": "",
+            "node": {
+                "display_name": "Runtime Component",
+                "template": {"code": {"value": code}},
+            },
+        }
+    }
 
 
 def check_flow_and_raise(
@@ -1136,7 +1177,11 @@ def _substitute_outdated_node_code(
     return swapped
 
 
-def substitute_outdated_component_code_in_place(flow_data: dict | None) -> list[str]:
+def substitute_outdated_component_code_in_place(
+    flow_data: dict | None,
+    *,
+    validate_public_execution: bool = False,
+) -> list[str]:
     """Rebuild drifted built-in nodes with this server's code before the flow is validated.
 
     Only active in restricted mode (``allow_custom_components=False``) with
@@ -1157,6 +1202,12 @@ def substitute_outdated_component_code_in_place(flow_data: dict | None) -> list[
     ``migrate_flow_payload``; callers that must preserve the stored flow (so the editor keeps
     flagging the node as outdated) pass a copy. Returns ``display_name (id)`` labels for the
     nodes that were swapped.
+
+    When ``validate_public_execution`` is true, the exact post-substitution bytes are checked
+    against the public code-execution policy using the same registry snapshot that supplied
+    trusted source. This closes the prepare-to-graph hot-reload window on unauthenticated
+    execution paths: a later registry generation cannot replace already-checked source without
+    that replacement being checked before component instantiation.
     """
     if not flow_data:
         return []
@@ -1167,10 +1218,17 @@ def substitute_outdated_component_code_in_place(flow_data: dict | None) -> list[
 
     lookups = get_outdated_code_substitution_lookups()
     if lookups is None:
+        if validate_public_execution:
+            validate_public_flow_no_code_execution(flow_data)
         return []
 
     swapped = _substitute_outdated_node_code(nodes, *lookups)
     _log_outdated_component_code_substitution(swapped)
+    if validate_public_execution:
+        validate_public_flow_no_code_execution(
+            flow_data,
+            type_to_current_hash=lookups[1].type_to_current_hash,
+        )
     return swapped
 
 
@@ -1190,21 +1248,28 @@ def _log_outdated_component_code_substitution(swapped: list[str]) -> None:
     )
 
 
-async def _ensure_component_code_lookups(settings_service: Any) -> dict[str, str]:
-    """Load the component registry if needed and return the type→trusted-code map (fail closed)."""
+async def _ensure_public_component_lookup_snapshot(
+    settings_service: Any,
+) -> tuple[dict[str, str], Mapping[str, set[str]]]:
+    """Return code and hash indexes from one component-registry snapshot (fail closed)."""
     from lfx.interface.components import component_cache, get_and_cache_all_types_dict
 
-    if component_cache.all_types_dict is None:
+    with component_cache.state_lock:
+        registry_unavailable = component_cache.all_types_dict is None or not component_cache.all_types_ready
+    if registry_unavailable:
         try:
             await get_and_cache_all_types_dict(settings_service)
         except Exception as exc:
             logger.warning("Failed to load component templates for public flow sanitization", exc_info=exc)
             raise
 
-    all_types_dict = component_cache.all_types_dict
-    if not all_types_dict:
-        return {}
-    return collect_component_code_lookups(all_types_dict)
+    # Publication and invalidation replace all derived indexes under this RLock. Keep it across
+    # both reads so trusted source selected for substitution and hashes used by the public
+    # code-execution gate always describe the same registry generation.
+    with component_cache.state_lock:
+        type_to_code = get_component_code_lookups_for_validation()
+        type_to_current_hash = get_component_hash_lookups_for_validation()
+    return type_to_code or {}, type_to_current_hash or {}
 
 
 async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> dict | None:
@@ -1223,17 +1288,26 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
     still build, while arbitrary / relabelled custom code never executes. Returns the sanitized
     graph dict for the caller to build from.
 
-    Opt-in (``allow_public_custom_components`` is True): preserves the prior behavior — runs the
-    standard custom-component validation and returns ``None`` so the caller builds from the
-    database as before.
+    Opt-in (``allow_public_custom_components`` is True): preserves stored custom code only when
+    the global custom-component policy is also permissive; that combination validates public
+    code-execution surfaces and returns ``None`` so the caller builds from the database. When the
+    global policy is restricted, this helper mirrors its trusted-code substitution on a copy,
+    validates the effective graph, and returns it for the caller to build.
+
+    The code-execution check is intentionally repeated after default-mode substitution. A
+    namespaced extension identity may not itself appear in the public blocklist, while its
+    trusted server source resolves to a blocked component. Validating only the stored bytes would
+    let stale code evade the hash check and become blocked code during trusted substitution.
 
     Returns:
         The sanitized graph dict to build from, or ``None`` to fall back to the default
-        database-loaded build (opt-in mode, or no flow data to sanitize).
+        database-loaded build (fully permissive opt-in, or no flow data to sanitize).
 
     Raises:
         CustomComponentValidationError: if the flow contains an unrecognized custom component, or
             the component templates cannot be loaded (fail closed).
+        PublicFlowValidationError: if the executable graph contains a code-execution or
+            flow-invoking component.
     """
     import copy
 
@@ -1243,9 +1317,13 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
     if settings_service is None:
         raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
 
-    # Opt-in: honor the global custom-component policy and build from the database as before.
-    if settings_service.settings.allow_public_custom_components:
+    settings = settings_service.settings
+
+    # Fully permissive opt-in: honor the global custom-component policy and build from the
+    # database as before. No later trusted-code substitution can change what is checked here.
+    if settings.allow_public_custom_components and settings.allow_custom_components:
         validate_flow_for_current_settings(target)
+        validate_public_flow_no_code_execution(target)
         return None
 
     normalized_flow_data = _extract_flow_data(target)
@@ -1263,21 +1341,43 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
     if not isinstance(nodes, list) or not nodes:
         return None
 
-    type_to_code = await _ensure_component_code_lookups(settings_service)
-    if not type_to_code:
+    type_to_code, type_to_current_hash = await _ensure_public_component_lookup_snapshot(settings_service)
+    if not type_to_code or not type_to_current_hash:
         # Templates unavailable — do not let unverified code through.
         raise CustomComponentValidationError(INITIALIZING_COMPONENT_TEMPLATES_MESSAGE)
 
     sanitized = copy.deepcopy(normalized_flow_data)
-    blocked = _substitute_trusted_node_code(sanitized.get("nodes", []), type_to_code)
-    if blocked:
-        blocked_names = ", ".join(blocked)
-        logger.warning(f"Public flow build blocked: unrecognized custom components are not allowed: {blocked_names}")
-        message = (
-            f"Public flows cannot be built without authentication when they contain custom components: {blocked_names}"
+    if settings.allow_public_custom_components:
+        # Public custom-code opt-in does not override the global restricted-mode policy. Mirror
+        # the substitution Graph.from_payload would otherwise perform later, then return this
+        # effective graph so the public code-execution check covers the bytes that will run.
+        validate_flow_for_current_settings(target)
+        if getattr(settings, "substitute_outdated_component_code", True):
+            substitutable_types = SubstitutableComponentTypes(type_to_current_hash, type_to_code)
+            swapped = _substitute_outdated_node_code(sanitized.get("nodes", []), type_to_code, substitutable_types)
+            _log_outdated_component_code_substitution(swapped)
+        check_flow_and_raise(
+            sanitized,
+            allow_custom_components=False,
+            type_to_current_hash=type_to_current_hash,
         )
-        raise CustomComponentValidationError(message)
+    else:
+        blocked = _substitute_trusted_node_code(sanitized.get("nodes", []), type_to_code)
+        if blocked:
+            blocked_names = ", ".join(blocked)
+            logger.warning(
+                f"Public flow build blocked: unrecognized custom components are not allowed: {blocked_names}"
+            )
+            message = (
+                "Public flows cannot be built without authentication when they contain custom components: "
+                f"{blocked_names}"
+            )
+            raise CustomComponentValidationError(message)
 
+    # Validate what the executor will actually receive, not only the stale stored bytes checked
+    # by route-level defense in depth. This central guarantee covers v1, v2, A2A start, and A2A
+    # resume callers alike.
+    validate_public_flow_no_code_execution(sanitized, type_to_current_hash=type_to_current_hash)
     return sanitized
 
 
@@ -1300,7 +1400,11 @@ def _node_code_hash(node_info: Any) -> str | None:
     return None
 
 
-def _blocked_code_hashes(canonical_types: frozenset[str]) -> frozenset[str]:
+def _blocked_code_hashes(
+    canonical_types: frozenset[str],
+    *,
+    type_to_current_hash: Mapping[str, set[str]] | None = None,
+) -> frozenset[str]:
     """Best-effort set of server template code-hashes for ``canonical_types``.
 
     A component's canonical name is always one of its own alias keys in the
@@ -1309,7 +1413,8 @@ def _blocked_code_hashes(canonical_types: frozenset[str]) -> frozenset[str]:
     custom components are allowed and the hash gate is inactive) — type-name
     matching still applies in that case.
     """
-    type_to_current_hash = get_component_hash_lookups_for_validation()
+    if type_to_current_hash is None:
+        type_to_current_hash = get_component_hash_lookups_for_validation()
     if not type_to_current_hash:
         return frozenset()
     hashes: set[str] = set()
@@ -1368,7 +1473,11 @@ def _collect_blocked_components(
     return found
 
 
-def validate_public_flow_no_code_execution(target: Mapping[str, Any] | Any | None) -> None:
+def validate_public_flow_no_code_execution(
+    target: Mapping[str, Any] | Any | None,
+    *,
+    type_to_current_hash: Mapping[str, set[str]] | None = None,
+) -> None:
     """Reject unauthenticated public-flow builds that would run arbitrary code.
 
     Public flows are reachable without authentication through
@@ -1410,7 +1519,10 @@ def validate_public_flow_no_code_execution(target: Mapping[str, Any] | Any | Non
     code_execution = _collect_blocked_components(
         nodes,
         blocked_types=CODE_EXECUTION_COMPONENT_TYPES,
-        blocked_hashes=_blocked_code_hashes(CODE_EXECUTION_COMPONENT_TYPES),
+        blocked_hashes=_blocked_code_hashes(
+            CODE_EXECUTION_COMPONENT_TYPES,
+            type_to_current_hash=type_to_current_hash,
+        ),
     )
     if code_execution:
         blocked_names = ", ".join(code_execution)
@@ -1424,7 +1536,10 @@ def validate_public_flow_no_code_execution(target: Mapping[str, Any] | Any | Non
     flow_references = _collect_blocked_components(
         nodes,
         blocked_types=FLOW_REFERENCE_COMPONENT_TYPES,
-        blocked_hashes=_blocked_code_hashes(FLOW_REFERENCE_COMPONENT_TYPES),
+        blocked_hashes=_blocked_code_hashes(
+            FLOW_REFERENCE_COMPONENT_TYPES,
+            type_to_current_hash=type_to_current_hash,
+        ),
     )
     if flow_references:
         blocked_names = ", ".join(flow_references)
