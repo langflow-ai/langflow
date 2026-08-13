@@ -236,19 +236,43 @@ async def _get_project_base_url_components() -> tuple[str, int]:
     return host, server_port
 
 
+async def _get_project_base_url() -> tuple[str, str | None, int | None]:
+    """Return ``(base_url, host, port)`` for building MCP project URLs.
+
+    When ``LANGFLOW_MCP_BASE_URL`` is set it is the authoritative externally-reachable origin
+    (scheme + host + optional path) and is used verbatim; ``host``/``port`` come back ``None`` so
+    callers skip OS/WSL rewriting of an operator-supplied URL. This is what lets a pod bind to
+    ``0.0.0.0`` while advertising a routable gateway/service address — ``host`` alone cannot do both
+    (it is also the uvicorn bind address, and the builder rewrites ``0.0.0.0`` to ``localhost``).
+
+    With the setting empty (the default) behaviour is unchanged: build ``http://{host}:{port}`` from
+    ``host``/``port`` and keep WSL handling. Backwards compatible.
+    """
+    settings_service = get_settings_service()
+    configured = (getattr(settings_service.settings, "mcp_base_url", "") or "").strip().rstrip("/")
+    if configured:
+        return configured, None, None
+    host, port = await _get_project_base_url_components()
+    return f"http://{host}:{port}".rstrip("/"), host, port
+
+
 async def get_project_streamable_http_url(project_id: UUID) -> str:
     """Generate the Streamable HTTP endpoint for a project (no /sse suffix)."""
-    host, port = await _get_project_base_url_components()
-    base_url = f"http://{host}:{port}".rstrip("/")
+    base_url, host, port = await _get_project_base_url()
     project_url = f"{base_url}/api/v1/mcp/project/{project_id}/streamable"
+    # An explicit LANGFLOW_MCP_BASE_URL is used as-is; only host/port-derived URLs get WSL rewriting.
+    if host is None or port is None:
+        return project_url
     return await get_url_by_os(host, port, project_url)
 
 
 async def get_project_sse_url(project_id: UUID) -> str:
     """Generate the legacy SSE URL for a project, including WSL handling."""
-    host, port = await _get_project_base_url_components()
-    base_url = f"http://{host}:{port}".rstrip("/")
+    base_url, host, port = await _get_project_base_url()
     project_sse_url = f"{base_url}/api/v1/mcp/project/{project_id}/sse"
+    # An explicit LANGFLOW_MCP_BASE_URL is used as-is; only host/port-derived URLs get WSL rewriting.
+    if host is None or port is None:
+        return project_sse_url
     return await get_url_by_os(host, port, project_sse_url)
 
 
