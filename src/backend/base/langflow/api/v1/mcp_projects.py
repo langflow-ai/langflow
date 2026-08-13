@@ -1637,6 +1637,9 @@ async def init_mcp_servers():
                                     project_user,
                                     session,
                                     raise_on_error=True,
+                                    # This savepoint owns the transaction; a commit inside
+                                    # would close it and break every later statement.
+                                    owns_transaction=False,
                                 )
 
                     if persist_reason == "auto_enable_apikey":
