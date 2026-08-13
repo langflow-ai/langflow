@@ -67,7 +67,7 @@ overrides = [
     { name = "markdown", specifier = ">=3.8.0" },
     { name = "nltk", specifier = ">=3.9.4" },
     { name = "orjson", specifier = ">=3.11.6" },
-    { name = "pillow", specifier = ">=12.1.1" },
+    { name = "pillow", specifier = ">=12.3.0" },
     { name = "playwright", specifier = ">=1.59.0" },
     { name = "pypdf", specifier = ">=6.15.0,<7.0.0" },
     { name = "python-liquid", specifier = ">=2.2.0,<3.0.0" },
@@ -8536,7 +8536,7 @@ requires-dist = [
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2" },
     { name = "cuga", marker = "python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'cuga'", specifier = ">=0.2.20,<0.3.0" },
     { name = "cuga", marker = "python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'cuga'", specifier = ">=0.2.20,<0.3.0" },
-    { name = "datasets", marker = "extra == 'datasets'", specifier = ">2.14.7,<5.0.0" },
+    { name = "datasets", marker = "extra == 'datasets'", specifier = ">2.14.7,<6.0.0" },
     { name = "ddgs", marker = "extra == 'duckduckgo'", specifier = ">=9.0.0" },
     { name = "defusedxml", specifier = ">=0.7.1,<1.0.0" },
     { name = "docling-core", marker = "extra == 'docling'", specifier = ">=2.77.0,<3.0.0" },
@@ -8674,7 +8674,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "passlib", specifier = ">=1.7.4,<2.0.0" },
     { name = "pgvector", marker = "extra == 'pgvector'", specifier = ">=0.4.2" },
-    { name = "pillow", specifier = ">=12.1.1,<13.0.0" },
+    { name = "pillow", specifier = ">=12.3.0,<13.0.0" },
     { name = "pip", specifier = ">=26.0.0,<27.0.0" },
     { name = "platformdirs", specifier = ">=4.2.0,<5.0.0" },
     { name = "prometheus-client", specifier = ">=0.20.0,<1.0.0" },
@@ -9200,7 +9200,7 @@ requires-dist = [
     { name = "orjson", specifier = ">=3.11.6,<4.0.0" },
     { name = "pandas", specifier = ">=2.0.0,<3.0.0" },
     { name = "passlib", specifier = ">=1.7.4,<2.0.0" },
-    { name = "pillow", specifier = ">=11.1.0,<13.0.0" },
+    { name = "pillow", specifier = ">=12.3.0,<13.0.0" },
     { name = "platformdirs", specifier = ">=4.3.8,<5.0.0" },
     { name = "psutil", specifier = ">=5.9.0,<8.0.0" },
     { name = "pydantic", specifier = ">=2.0.0,<2.14" },
@@ -10182,7 +10182,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-nextplaid"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "src/bundles/nextplaid" }
 dependencies = [
     { name = "langchain-plaid" },
@@ -10194,7 +10194,7 @@ dependencies = [
 requires-dist = [
     { name = "langchain-plaid", specifier = ">=0.1.0,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
-    { name = "pillow", specifier = ">=10.0.0" },
+    { name = "pillow", specifier = ">=12.3.0,<13.0.0" },
 ]
 
 [[package]]
