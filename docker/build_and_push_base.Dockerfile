@@ -112,7 +112,7 @@ USER root
 RUN microdnf update -y \
     && microdnf install -y curl git libpq gnupg xz tar shadow-utils \
     && microdnf clean all
-RUN python3.14 -m pip install --upgrade pip
+RUN python3.14 -m pip install --no-cache-dir --upgrade "pip==26.2.1"
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
 # NODE_VERSION and the npm major below are coupled: npm 12 requires Node
@@ -120,13 +120,15 @@ COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
 # @latest, so the next npm major raising its engines floor cannot break this
 # layer unannounced against a pinned NODE_VERSION.
 ARG NODE_VERSION
+COPY ./docker/install_hardened_npm.sh /tmp/install_hardened_npm.sh
 RUN ARCH=$(uname -m) \
     && if [ "$ARCH" = "x86_64" ]; then NODE_ARCH="x64"; \
        elif [ "$ARCH" = "aarch64" ]; then NODE_ARCH="arm64"; \
        else NODE_ARCH="$ARCH"; fi \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
     | tar -xJ -C /usr/local --strip-components=1 \
-    && npm install -g npm@12
+    && sh /tmp/install_hardened_npm.sh \
+    && rm -f /tmp/install_hardened_npm.sh
 RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
