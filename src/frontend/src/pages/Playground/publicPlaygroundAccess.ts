@@ -25,3 +25,31 @@ export function canOpenPublicPlayground(
   if (flow.public_access) return flow.public_access.can_execute;
   return flow.access_type === "PUBLIC";
 }
+
+/**
+ * Where to send a visitor whose direct link did not resolve to a playground.
+ *
+ * The route gate no longer pre-empts this with a blanket login redirect, since
+ * that made public links unreachable for anonymous visitors whenever auto-login
+ * was disabled. The link is only known to be unusable once the server has
+ * declined it, so the choice of destination lands here instead.
+ *
+ * An anonymous visitor on a login-required deployment may simply be looking at
+ * a flow that is not public — sign-in is the useful next step, and the link is
+ * preserved as the redirect target so they land back here afterwards. Everyone
+ * else (already signed in, or auto-login deployments) goes home.
+ */
+export function unreachablePlaygroundDestination({
+  flowId,
+  autoLogin,
+  isAuthenticated,
+}: {
+  flowId: string | undefined;
+  autoLogin: boolean | null;
+  isAuthenticated: boolean;
+}): string {
+  if (flowId && autoLogin === false && !isAuthenticated) {
+    return `/login?redirect=/playground/${flowId}/`;
+  }
+  return "/";
+}
