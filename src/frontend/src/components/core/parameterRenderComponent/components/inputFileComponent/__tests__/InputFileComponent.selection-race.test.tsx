@@ -80,6 +80,7 @@ function Harness() {
 
   return (
     <InputFileComponent
+      id="input-file-selection-race"
       value={state.value as never}
       file_path={state.file_path as never}
       handleOnNewValue={(changes) => {
@@ -106,14 +107,19 @@ describe("InputFileComponent selection reconciliation", () => {
     jest.clearAllMocks();
   });
 
-  it("should_drop_a_file_the_server_no_longer_has_while_the_manager_is_closed", () => {
+  it("should_only_render_the_files_the_list_reports_while_the_manager_is_closed", () => {
     const { rerender } = render(<Harness />);
     expect(selection()).toBe(`${TXT.path},${JSON_FILE.path}`);
 
     filesData = [TXT];
     rerender(<Harness key="reconcile" />);
 
+    // Not rendered, but not dropped either: a list response that omits a file
+    // is not evidence that the file is gone.
     expect(selection()).toBe(TXT.path);
+    expect(onNewValue).not.toHaveBeenCalledWith(
+      expect.objectContaining({ file_path: [TXT.path] }),
+    );
   });
 
   it("should_not_rewrite_the_selection_while_the_file_manager_is_open", () => {
