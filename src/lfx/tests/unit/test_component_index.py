@@ -477,3 +477,43 @@ class TestImportLangflowComponents:
         # Should return empty dict, not raise
         assert "components" in result
         assert len(result["components"]) == 0
+
+
+class TestToolOutputCapabilitySerialization:
+    """``add_tool_output`` must survive into the serialized template.
+
+    It is half of ``Component._handle_tool_mode``, the runtime authority for
+    whether a component can produce a ``component_as_tool`` output. Consumers
+    that only see a template (the flow builder, the MCP registry) cannot state
+    that rule unless the flag is serialized, and the alternative signal they
+    reached for — ``tool_mode`` on outputs — is set by nearly every component.
+    """
+
+    def _frontend_node(self, **attrs):
+        from lfx.custom.custom_component.base_component import BaseComponent
+        from lfx.template.frontend_node.custom_components import ComponentFrontendNode
+
+        component = type("StubComponent", (), {"inputs": [], "outputs": [], **attrs})()
+        config = BaseComponent.get_template_config(component)
+        return ComponentFrontendNode.from_inputs(**config, base_classes=[]).to_dict(keep_name=False)
+
+    def test_enabled_capability_is_serialized(self):
+        assert self._frontend_node(add_tool_output=True)["add_tool_output"] is True
+
+    def test_disabled_capability_is_omitted(self):
+        """The default must not bloat every template with a false flag."""
+        assert "add_tool_output" not in self._frontend_node(add_tool_output=False)
+
+    def test_bundled_index_carries_runtime_capabilities(self):
+        index_path = Path(__file__).parents[2] / "src" / "lfx" / "_assets" / "component_index.json"
+        index = orjson.loads(index_path.read_bytes())
+        components = {name: tmpl for _category, entries in index["entries"] for name, tmpl in entries.items()}
+
+        # RunFlow has no tool_mode input; add_tool_output is its only signal.
+        assert components["RunFlow"]["add_tool_output"] is True
+        # CSVAgent redeclares LCAgentComponent's input_value, which shadows the
+        # base input's tool_mode in the name-keyed template.
+        assert components["CSVAgent"]["template"]["input_value"]["tool_mode"] is True
+        # ChatInput has neither, yet its message output carries tool_mode.
+        assert "add_tool_output" not in components["ChatInput"]
+        assert any(o.get("tool_mode") for o in components["ChatInput"]["outputs"])

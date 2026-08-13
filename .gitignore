@@ -308,3 +308,8 @@ whitesource/
 
 # Cursor local (personal) settings
 .cursor/settings.local.json
+
+# Mend
+requirements-mend.txt
+requirements-workspace-mend.txt
+requirements-gp-mend.txt

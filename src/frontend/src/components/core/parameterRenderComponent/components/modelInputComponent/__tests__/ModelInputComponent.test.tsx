@@ -735,7 +735,7 @@ describe("ModelInputComponent", () => {
       expect(screen.getByRole("combobox")).toBeInTheDocument();
     });
 
-    it("should auto-select first model when value is empty and options exist", () => {
+    it("should not auto-select a model when value is empty (LE-2168)", () => {
       const handleOnNewValue = jest.fn();
 
       renderWithQueryClient(
@@ -746,8 +746,9 @@ describe("ModelInputComponent", () => {
         />,
       );
 
-      // Should have called handleOnNewValue with first option
-      expect(handleOnNewValue).toHaveBeenCalled();
+      // A provider is enabled as soon as a credential exists, including keys
+      // harvested from the environment, so an empty field must stay empty.
+      expect(handleOnNewValue).not.toHaveBeenCalled();
     });
   });
 

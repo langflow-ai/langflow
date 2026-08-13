@@ -53,10 +53,6 @@ export function authorizedVariableIds(
   );
 }
 
-export const canShareVariable = (
-  variable: GlobalVariable | undefined,
-): boolean => variable?.can_manage_shares === true;
-
 export function formatVariableValue(
   variable: GlobalVariable | undefined,
   value: unknown,

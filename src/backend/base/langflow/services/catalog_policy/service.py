@@ -195,6 +195,7 @@ class LangflowCatalogPolicyService(BaseCatalogPolicyService):
                             approved_provider_ids=current.approved_provider_ids,
                             blocked_component_keys=components,
                             blocked_template_keys=templates,
+                            blocked_model_keys=current.blocked_model_keys,
                             actor_user_id=actor_user_id,
                             reason=f"Replace blocked {resource_kind.value} catalog keys",
                         )

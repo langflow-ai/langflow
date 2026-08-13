@@ -446,6 +446,9 @@ async def test_sync_flows_from_fs(client: AsyncClient, logged_in_headers):
         created_flow = response.json()
         flow_id = created_flow["id"]
         user_id = created_flow["user_id"]
+        async with session_scope() as session:
+            original_flow = (await session.exec(select(Flow).where(Flow.id == uuid.UUID(flow_id)))).one()
+            original_updated_at = original_flow.updated_at
 
         # Construct the full path where the file was saved
         # The API saves relative paths to: storage_service.data_dir / "flows" / user_id / filename
@@ -476,6 +479,9 @@ async def test_sync_flows_from_fs(client: AsyncClient, logged_in_headers):
         assert result["description"] == "new description"
         assert result["data"] == {"nodes": {}, "edges": {}}
         assert result["locked"] is True
+        async with session_scope() as session:
+            updated_flow = (await session.exec(select(Flow).where(Flow.id == uuid.UUID(flow_id)))).one()
+            assert updated_flow.updated_at > original_updated_at
     finally:
         if "flow_file" in locals():
             await flow_file.unlink(missing_ok=True)

@@ -16,6 +16,7 @@ import sqlalchemy as sa
 from alembic import command, util
 from alembic.config import Config
 from lfx.log.logger import logger
+from lfx.observability import instrument_database
 from lfx.services.deps import session_scope
 from sqlalchemy import event, inspect
 from sqlalchemy.dialects import sqlite as dialect_sqlite
@@ -280,6 +281,12 @@ class DatabaseService(Service):
             self.engine = self._create_engine_with_retry()
         else:
             self.engine = self._create_engine()
+        # Here rather than in the app factory: this is an AsyncEngine, and the instrumentor
+        # patches the sync engine underneath it. Instrumenting globally instead (no engine
+        # argument) attaches to pool events only, which yields a connect span per checkout and
+        # not a single query span. Verified against a live backend: 13 connect spans and zero
+        # db.statement for one API request.
+        instrument_database(self.engine)
 
         # Create async session maker for efficient session creation
         # This is the recommended SQLAlchemy 2.0+ pattern
