@@ -1220,8 +1220,22 @@ class Component(CustomComponent):
                 continue
             input_ = self._inputs[key]
             # BaseInputMixin has a `validate_assignment=True`
+            original_value = input_.value
 
-            input_.value = value
+            # Some components expose a structured UI input while retaining a
+            # backwards-compatible scalar or mapping constructor API.
+            if getattr(input_, "field_type", None) == "table" and not isinstance(value, list):
+                continue
+
+            try:
+                input_.value = value
+            except ValidationError:
+                # Component constructors historically accepted provider-specific values
+                # that are normalized later by the component (for example, Ollama's
+                # legacy string format values). Keep the raw constructor attribute while
+                # leaving the typed input at its declared default.
+                object.__setattr__(input_, "value", original_value)
+                continue
             params[input_.name] = input_.value
 
     def set_attributes(self, params: dict) -> None:
