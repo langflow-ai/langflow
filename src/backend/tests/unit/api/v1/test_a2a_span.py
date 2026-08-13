@@ -312,3 +312,147 @@ def test_a_url_with_no_host_omits_the_attribute_rather_than_exporting_an_empty_o
     # The span still happens; the run was attempted and failed, and that is worth seeing.
     assert spans, "the call span should be emitted even when the URL has no host"
     assert "a2a.agent.host" not in spans[0]["attrs"], spans[0]["attrs"]
+
+
+# A card is a directory entry: it names the interface that serves the calls, and this path
+# supports that interface living on another origin. Discovery and RPC on two ports here, so a
+# span attributing the call to the wrong one is visible rather than argued about.
+OFF_ORIGIN_PROBE = """
+import asyncio, json, socket
+
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+exporter = InMemorySpanExporter()
+provider = TracerProvider()
+provider.add_span_processor(SimpleSpanProcessor(exporter))
+trace.set_tracer_provider(provider)
+
+import uvicorn
+from a2a.helpers.proto_helpers import new_text_part
+from a2a.server.agent_execution import AgentExecutor
+from a2a.server.request_handlers import DefaultRequestHandler
+from a2a.server.routes import create_agent_card_routes, create_jsonrpc_routes
+from a2a.server.tasks import InMemoryTaskStore, TaskUpdater
+from a2a.types import a2a_pb2 as pb
+from a2a.utils.constants import PROTOCOL_VERSION_CURRENT, TransportProtocol
+from starlette.applications import Starlette
+
+from lfx.components.models_and_agents.a2a_agent import build_a2a_client, call_a2a_agent
+
+
+class ProbeExecutor(AgentExecutor):
+    async def execute(self, context, event_queue):
+        # The Task has to be enqueued before any status update, same as the sibling probe.
+        await event_queue.enqueue_event(
+            pb.Task(
+                id=context.task_id,
+                context_id=context.context_id,
+                status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_SUBMITTED),
+            )
+        )
+        updater = TaskUpdater(event_queue, context.task_id, context.context_id)
+        await updater.start_work()
+        await updater.add_artifact([new_text_part("ok")], name="result")
+        await updater.complete()
+
+    async def cancel(self, context, event_queue):
+        await TaskUpdater(event_queue, context.task_id, context.context_id).cancel()
+
+
+def make_card(rpc_port):
+    return pb.AgentCard(
+        name="off-origin-agent",
+        description="probe",
+        version="1.0",
+        supported_interfaces=[
+            pb.AgentInterface(
+                url=f"http://127.0.0.1:{rpc_port}/",
+                protocol_binding=TransportProtocol.JSONRPC.value,
+                protocol_version=PROTOCOL_VERSION_CURRENT,
+            )
+        ],
+        capabilities=pb.AgentCapabilities(streaming=False),
+        default_input_modes=["application/json"],
+        default_output_modes=["application/json"],
+        skills=[pb.AgentSkill(id="echo", name="echo", description="echo", tags=["echo"])],
+    )
+
+
+async def serve(app, sock):
+    server = uvicorn.Server(uvicorn.Config(app, log_level="warning"))
+    task = asyncio.create_task(server.serve(sockets=[sock]))
+    while not server.started:
+        await asyncio.sleep(0.05)
+    return server, task
+
+
+async def main():
+    discovery_sock, rpc_sock = socket.socket(), socket.socket()
+    discovery_sock.bind(("127.0.0.1", 0)); rpc_sock.bind(("127.0.0.1", 0))
+    discovery_port = discovery_sock.getsockname()[1]
+    rpc_port = rpc_sock.getsockname()[1]
+
+    card = make_card(rpc_port)
+    handler = DefaultRequestHandler(agent_executor=ProbeExecutor(), task_store=InMemoryTaskStore(), agent_card=card)
+    # The directory serves only the card; the agent serves only the RPC.
+    discovery_server, d_task = await serve(Starlette(routes=create_agent_card_routes(card)), discovery_sock)
+    rpc_server, r_task = await serve(Starlette(routes=create_jsonrpc_routes(handler, rpc_url="/")), rpc_sock)
+
+    agent_url = f"http://127.0.0.1:{discovery_port}"
+    async with build_a2a_client(agent_url, ["127.0.0.1"], timeout=30) as client:
+        await call_a2a_agent(agent_url, "hello", httpx_client=client)
+
+    discovery_server.should_exit = True
+    rpc_server.should_exit = True
+    await d_task
+    await r_task
+    provider.force_flush()
+
+    spans = [
+        {"name": s.name, "attrs": {k: str(v) for k, v in (s.attributes or {}).items()}}
+        for s in exporter.get_finished_spans()
+    ]
+    print("PROBE_RESULT " + json.dumps({"spans": spans, "discovery_port": discovery_port, "rpc_port": rpc_port}))
+
+
+asyncio.run(main())
+"""
+
+
+def test_the_span_names_the_host_that_served_the_call_not_the_directory():
+    """A card can point its RPC interface at another origin, and this path supports that.
+
+    Attributing the call to the discovery host means an operator debugging latency or errors is
+    looking at the wrong machine, and the two are not interchangeable: one is a directory.
+    """
+    env = {k: v for k, v in os.environ.items() if not k.startswith("OTEL_")}
+    # The card points its interface at a second loopback port, which is off-origin relative to
+    # discovery and so goes through the strict validator, and loopback is blocked there by
+    # design. This test is about which host the span names, not about SSRF policy.
+    env["LANGFLOW_SSRF_ALLOWED_HOSTS"] = "127.0.0.1"
+    with tempfile.TemporaryDirectory() as tmp:
+        probe_path = Path(tmp) / "probe.py"
+        probe_path.write_text(OFF_ORIGIN_PROBE, encoding="utf-8")
+        completed = subprocess.run(  # noqa: S603
+            [sys.executable, str(probe_path)],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=300,
+            check=False,
+        )
+    assert completed.returncode == 0, completed.stderr
+    lines = [ln for ln in completed.stdout.splitlines() if ln.startswith("PROBE_RESULT ")]
+    assert lines, f"probe printed no result.\nstdout:\n{completed.stdout}\nstderr:\n{completed.stderr}"
+    result = json.loads(lines[0].removeprefix("PROBE_RESULT "))
+
+    call_spans = [s for s in result["spans"] if s["name"] == "a2a.message.send"]
+    assert call_spans, result["spans"]
+    attrs = call_spans[0]["attrs"]
+
+    assert attrs["a2a.agent.host"] == f"127.0.0.1:{result['rpc_port']}", attrs
+    assert attrs["a2a.agent.discovery_host"] == f"127.0.0.1:{result['discovery_port']}", attrs
+    assert result["rpc_port"] != result["discovery_port"]

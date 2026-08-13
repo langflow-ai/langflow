@@ -89,6 +89,19 @@ def _pin_host(url: httpx.URL | str) -> str:
     return parsed.raw_host.decode("ascii")
 
 
+def _authority(url: httpx.URL) -> str:
+    """``host`` or ``host:port`` in the representation the transport actually connects to.
+
+    Uses ``raw_host`` for the same reason :func:`_pin_host` does: httpx connects on the
+    IDNA/punycode form, so a unicode host here would not match what an operator sees anywhere
+    else. Returns "" for a URL with no authority, which the caller treats as nothing to say.
+    """
+    host = _pin_host(url)
+    if not host:
+        return ""
+    return f"{host}:{url.port}" if url.port else host
+
+
 def _ssrf_floor_ips(url: httpx.URL | str) -> list[str]:
     """Toggle-independent SSRF floor for a card-declared (caller-controlled) off-origin target.
 
@@ -256,16 +269,21 @@ async def call_a2a_agent(
     from a2a.helpers.proto_helpers import new_text_part
     from a2a.types import a2a_pb2 as pb
 
-    parsed = httpx.URL(agent_url)
-    host = _pin_host(parsed)
+    # The discovery host, which is only where the card was fetched from. The card selects the
+    # RPC interface, and this path deliberately supports one on another origin, so the host that
+    # actually serves the call is set below once the client exists. Recording both means an
+    # operator can see a directory and its agent are different machines instead of having the
+    # latency of one blamed on the other.
+    #
     # httpx accepts a URL with no authority, and a user typing "agent.example.com/path" without
     # a scheme produces exactly that, so raw_host comes back empty. Omit the attribute rather
     # than export "" or a placeholder: the same rule protocol and client follow, where a missing
     # attribute is an honest "nobody said" and an invented one is a lie an operator would filter
     # a dashboard on.
     attributes = {}
-    if host:
-        attributes["a2a.agent.host"] = f"{host}:{parsed.port}" if parsed.port else host
+    discovery_host = _authority(httpx.URL(agent_url))
+    if discovery_host:
+        attributes["a2a.agent.discovery_host"] = discovery_host
     with outbound_call_span(A2A_CALL_SPAN_NAME, attributes) as span:
         # Resolve the card ourselves with a bounded read, then hand it to create_client so the SDK
         # skips its own unbounded fetch. create_client(url) delegates to A2ACardResolver, which
@@ -284,6 +302,14 @@ async def call_a2a_agent(
                 accepted_output_modes=accepted_output_modes or ["application/json"],
             ),
         )
+        # Read the URL the SDK settled on rather than reimplementing its interface selection,
+        # which weighs client preference and protocol bindings and would drift from the SDK the
+        # moment either changes. The transport's ``url`` is a public attribute; the client
+        # attribute holding it is not, so this degrades to the discovery host if the SDK
+        # rearranges itself.
+        call_host = _authority(httpx.URL(str(getattr(getattr(client, "_transport", None), "url", "") or agent_url)))
+        if call_host:
+            span.set_attribute("a2a.agent.host", call_host)
         request = pb.SendMessageRequest(
             message=pb.Message(
                 message_id=uuid.uuid4().hex,
