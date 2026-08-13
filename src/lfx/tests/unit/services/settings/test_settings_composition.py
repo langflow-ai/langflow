@@ -137,6 +137,7 @@ EXPECTED_FIELDS = {
     "disable_track_apikey_usage",
     "remove_api_keys",
     "allow_custom_components",
+    "tweaks_policy",
     # ComponentsSettings
     "components_path",
     "components_index_path",
