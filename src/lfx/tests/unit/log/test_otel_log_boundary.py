@@ -363,7 +363,9 @@ def test_an_identifier_shaped_secret_on_a_foreign_exception_is_not_exported():
 @pytest.mark.parametrize(
     "code",
     [
-        "a sentence with spaces, and the prompt SENTINELPROMPTQQQ",
+        "SENTINELPROMPTQQQ",
+        "sk-abcdefghijklmnop",
+        "the user asked about their salary",
         "x" * 65,
         "",
         None,
@@ -371,22 +373,30 @@ def test_an_identifier_shaped_secret_on_a_foreign_exception_is_not_exported():
         {"nested": "object"},
     ],
 )
-def test_a_provider_error_code_that_is_not_identifier_shaped_is_dropped(code):
-    """Nothing guarantees a field named `code` holds a code.
+def test_a_code_the_server_chose_is_not_exported(code):
+    """The SDK copies `code` out of the response JSON, so a real SDK error is not a safe source.
 
-    The value is provider-controlled and travels to the operator's APM, so its shape is checked
-    rather than the name trusted. Dropping it costs one attribute; exporting it on faith is how
-    a payload gets through a boundary that was supposed to only pass identifiers.
+    Langflow can be pointed at any OpenAI-compatible endpoint through OPENAI_BASE_URL, so a
+    genuine openai.BadRequestError can carry whatever string that endpoint returned. Neither
+    shape nor source separates that from a real code; only a fixed set of values does.
+
+    Built from a real SDK exception on purpose: a locally defined class would be rejected by the
+    module check first, and this would pass without exercising the value allowlist it tests.
     """
+    httpx = pytest.importorskip("httpx")
     openai = pytest.importorskip("openai")
     from lfx.log.logger import _error_transport_identity
 
-    # A trusted class deliberately: the module check would reject a local class regardless, and
-    # then this would pass without exercising the shape filter it is here to test.
-    error = openai.APIError("boom", request=None, body=None)
-    error.code = code
+    request = httpx.Request("POST", "https://a-compatible-endpoint.internal/v1/chat/completions")
+    body = {"error": {"message": "m", "code": code}}
+    error = openai.BadRequestError("boom", response=httpx.Response(400, request=request, json=body), body=body["error"])
 
-    assert "error.code" not in _error_transport_identity(error)
+    identity = _error_transport_identity(error)
+
+    assert "error.code" not in identity, identity
+    # The status still crosses: it is an int bounded to the HTTP range, so there is nothing to
+    # smuggle in it, and it is half of what an operator triages on.
+    assert identity["http.response.status_code"] == 400
 
 
 # The verbatim-export surface, checked in source rather than described in a comment.

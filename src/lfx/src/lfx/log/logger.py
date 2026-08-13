@@ -5,7 +5,6 @@ import json
 import logging
 import logging.handlers
 import os
-import re
 import sys
 import warnings
 from collections import deque
@@ -475,11 +474,34 @@ _CHAIN_TRUNCATED = BaseException()
 # request. Being absent costs one attribute; being wrongly present costs a leak.
 _PROVIDER_SDK_MODULES = frozenset({"openai", "anthropic"})
 
-# What a provider error code is allowed to look like, applied after the module check above.
-# Vendors document these as identifiers ("context_length_exceeded",
-# "invalid_function_parameters"), and nothing guarantees one will not arrive holding a sentence
-# or an echo of the request, so the shape is checked as well as the source.
-_ERROR_CODE_PATTERN = re.compile(r"\A[A-Za-z0-9_.:-]{1,64}\Z")
+# The exact codes that may be exported. Not a pattern: the value is whatever the server put in
+# the response JSON, and the SDK parrots it, so shape says nothing about where it came from.
+#
+# That is the part the module check alone missed. Langflow supports OpenAI-compatible endpoints
+# through OPENAI_BASE_URL, so a genuine openai.BadRequestError can carry a code that a
+# self-hosted or hostile endpoint chose. Matching against a fixed set defined here means the
+# exported string is one we wrote, and nothing from the wire can pass through it.
+#
+# Drawn from the documented vocabularies and kept to codes that answer an operator's question:
+# is this us, the customer's input, or the provider. An unlisted code exports nothing rather
+# than being trusted, which costs one attribute and closes the channel.
+_KNOWN_PROVIDER_ERROR_CODES = frozenset(
+    {
+        "content_filter",
+        "context_length_exceeded",
+        "insufficient_quota",
+        "invalid_api_key",
+        "invalid_function_parameters",
+        "invalid_request_error",
+        "missing_required_parameter",
+        "model_not_found",
+        "rate_limit_exceeded",
+        "server_error",
+        "string_above_max_length",
+        "unknown_parameter",
+        "unsupported_value",
+    }
+)
 
 _HTTP_STATUS_MIN = 100
 _HTTP_STATUS_MAX = 599
@@ -678,10 +700,17 @@ def _error_transport_identity(exc: BaseException) -> dict[str, str | int]:
     that dict's sibling ``message`` is the prompt tail, and a boundary that reaches into a
     payload to pull one key out is one refactor away from taking the payload.
 
-    ``code`` is read only from the provider SDKs named in ``_PROVIDER_SDK_MODULES``, and its
-    shape is checked on top of that. The module check is the boundary: shape alone is not one,
-    because an identifier-shaped secret is indistinguishable from an identifier-shaped error
-    code. ``status_code`` needs no such restriction, being an int bounded to the HTTP range.
+    ``code`` must be one of ``_KNOWN_PROVIDER_ERROR_CODES``, from an exception belonging to one
+    of ``_PROVIDER_SDK_MODULES``. The value allowlist is the boundary, because neither shape nor
+    source is one: the SDK copies ``code`` out of the response JSON, and Langflow can be pointed
+    at any OpenAI-compatible endpoint, so a genuine ``openai.BadRequestError`` can carry a string
+    the server chose. Matching a fixed set means the exported value is one written here.
+
+    The module check stays in front of it. It buys nothing against a leak once the value is
+    fixed, but it stops a component raising its own error with ``code="rate_limit_exceeded"``
+    from putting a false provider signal on an operator's dashboard.
+
+    ``status_code`` needs neither, being an int bounded to the HTTP range.
     """
     attributes: dict[str, str | int] = {}
     for link in _exception_chain(exc):
@@ -693,7 +722,10 @@ def _error_transport_identity(exc: BaseException) -> dict[str, str | int]:
                 attributes["http.response.status_code"] = status
         if "error.code" not in attributes and type(link).__module__.split(".")[0] in _PROVIDER_SDK_MODULES:
             code = getattr(link, "code", None)
-            if isinstance(code, str) and _ERROR_CODE_PATTERN.match(code):
+            # isinstance first: `code` is whatever was in the response JSON, so it can be a dict
+            # or a list, and an unhashable value raises TypeError from a set membership test.
+            # That would be swallowed by the caller's broad except and silently drop the record.
+            if isinstance(code, str) and code in _KNOWN_PROVIDER_ERROR_CODES:
                 attributes["error.code"] = code
     return attributes
 
