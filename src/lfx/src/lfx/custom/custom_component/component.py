@@ -1334,8 +1334,9 @@ class Component(CustomComponent):
         for output in self._get_outputs_to_process():
             self._current_output = output.name
             result = await self._get_output_result(output)
-            results[output.name] = result
-            artifacts[output.name] = self._build_artifact(result)
+            masked_result = self._sanitize_secret_values(result)
+            results[output.name] = masked_result
+            artifacts[output.name] = self._build_artifact(masked_result)
             self._log_output(output)
 
         self._finalize_results(results, artifacts)
@@ -1431,7 +1432,6 @@ class Component(CustomComponent):
         ):
             result.set_flow_id(self._vertex.graph.flow_id)
         result = output.apply_options(result)
-        result = self._sanitize_secret_values(result)
         output.value = result
 
         return result
@@ -1477,6 +1477,9 @@ class Component(CustomComponent):
             value = value.replace(secret, "**********")
         return value
 
+    def add_secret_values(self, secret_values: set[str]) -> None:
+        self._secret_values.update(secret for secret in secret_values if secret)
+
     def _sanitize_secret_values(self, value):
         if not self._secret_values:
             return _mask_secret_value(value)
@@ -1484,15 +1487,17 @@ class Component(CustomComponent):
         if isinstance(value, str):
             return self._sanitize_secret_string(value)
         if isinstance(value, Message):
-            if isinstance(value.text, str):
-                value.text = self._sanitize_secret_string(value.text)
-            value.data = self._sanitize_secret_values(value.data)
-            return value
+            text = self._sanitize_secret_string(value.text) if isinstance(value.text, str) else value.text
+            data = self._sanitize_secret_values(deepcopy(value.data))
+            return value.model_copy(update={"text": text, "data": data})
         if isinstance(value, Data):
-            value.data = self._sanitize_secret_values(value.data)
-            if isinstance(value.default_value, str):
-                value.default_value = self._sanitize_secret_string(value.default_value)
-            return value
+            data = self._sanitize_secret_values(deepcopy(value.data))
+            default_value = (
+                self._sanitize_secret_string(value.default_value)
+                if isinstance(value.default_value, str)
+                else value.default_value
+            )
+            return value.model_copy(update={"data": data, "default_value": default_value})
         if isinstance(value, dict):
             return {key: self._sanitize_secret_values(item) for key, item in value.items()}
         if isinstance(value, list):
