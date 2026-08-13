@@ -37,9 +37,13 @@ def _patch_sync_dependencies(monkeypatch, *, execute_side_effect=None, persist_s
         update_job_status=AsyncMock(),
     )
     telemetry = SimpleNamespace(log_package_run=AsyncMock())
+    settings = SimpleNamespace(sync_result_storage_enabled=True)
+    settings_service = SimpleNamespace(settings=settings)
 
+    monkeypatch.setattr(wf_exec, "warm_deepcopy", AsyncMock(return_value=None))
     monkeypatch.setattr(wf_exec.Graph, "from_payload", lambda *_args, **_kwargs: _FakeGraph())
     monkeypatch.setattr(wf_exec, "get_job_service", lambda: job_service)
+    monkeypatch.setattr(wf_exec, "get_settings_service", lambda: settings_service)
     monkeypatch.setattr(
         wf_exec,
         "get_task_service",
@@ -57,7 +61,7 @@ async def _execute_sync(wf_exec):
     flow_id = uuid4()
     return await wf_exec.execute_sync_workflow(
         parsed=ParsedWorkflowRun(flow_id=str(flow_id), input_value="", mode="sync"),
-        flow=SimpleNamespace(id=flow_id, data={"nodes": [], "edges": []}, name="flow"),
+        flow=SimpleNamespace(id=flow_id, data={"nodes": [], "edges": []}, name="flow", updated_at=None),
         job_id=uuid4(),
         current_user=SimpleNamespace(id=uuid4()),
         background_tasks=BackgroundTasks(),
@@ -95,6 +99,7 @@ async def test_stream_pause_does_not_emit_terminal_run_telemetry(monkeypatch):
             current_user=SimpleNamespace(id=uuid4()),
             run_id="job-1",
             job_id=uuid4(),
+            protocol="langflow",
         )
     ]
 
