@@ -24,6 +24,7 @@ from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 MongoVectorStoreComponent = mongodb_atlas_mod.MongoVectorStoreComponent
 
 
+@pytest.mark.api_key_required
 @pytest.mark.skipif(
     not os.environ.get("MONGODB_ATLAS_URI"), reason="Environment variable MONGODB_ATLAS_URI is not defined."
 )

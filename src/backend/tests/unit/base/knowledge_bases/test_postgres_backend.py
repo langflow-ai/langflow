@@ -233,6 +233,7 @@ def fake_embeddings():
     return DeterministicFakeEmbedding(size=16)
 
 
+@pytest.mark.api_key_required
 class TestPostgresBackendLive:
     """Exercises the real vector path against a pgvector database when available."""
 

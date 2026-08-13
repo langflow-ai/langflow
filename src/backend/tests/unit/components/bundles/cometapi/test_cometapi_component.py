@@ -179,6 +179,7 @@ class TestCometAPIComponent(ComponentTestBaseWithoutClient):
         assert model.model_name == "gpt-4o-mini"
         assert model.openai_api_base == "https://api.cometapi.com/v1"
 
+    @pytest.mark.api_key_required
     @pytest.mark.skipif(os.getenv("COMETAPI_KEY") is None, reason="COMETAPI_KEY is not set")
     def test_get_models_integration(self):
         """Integration test for get_models with real API key (if available)."""
