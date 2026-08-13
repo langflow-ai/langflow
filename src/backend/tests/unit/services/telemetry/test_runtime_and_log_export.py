@@ -380,6 +380,13 @@ def exported_flow_run(collector, tmp_path):
     """Run one real flow under the real bootstrap; return what reached the collector."""
     env = {k: v for k, v in os.environ.items() if not k.startswith("OTEL_")}
     env["OTEL_EXPORTER_OTLP_ENDPOINT"] = f"http://127.0.0.1:{collector.server_address[1]}"
+    # The sentinel is how this test finds its own record, and the log body boundary withholds
+    # message bodies from the export by default, so without this the match comes back empty and
+    # the test fails before it reaches the correlation it exists to check. This test is about
+    # correlation, not about that boundary, so ask for bodies explicitly. No-op on a build that
+    # predates the setting. The lfx fixture in test_serve_app_log_trace_correlation.py does the
+    # same thing for the same reason.
+    env["LANGFLOW_OTEL_LOG_BODIES"] = "all"
     # A file rather than ``python -c``: Component.__init__ reads its own class source with
     # inspect.getsource, which has nothing to read for a class defined in a ``-c`` string.
     probe = tmp_path / "flow_probe.py"
