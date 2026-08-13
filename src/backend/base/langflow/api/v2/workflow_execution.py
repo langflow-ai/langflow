@@ -30,6 +30,7 @@ from fastapi import BackgroundTasks, Request
 from fastapi.responses import EventSourceResponse
 from fastapi.sse import format_sse_event
 from lfx.events.event_manager import create_default_event_manager
+from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.graph.checkpoint.store import CheckpointStore
 from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
@@ -512,6 +513,11 @@ async def execute_sync_workflow(
         if checkpoint_store is not None:
             graph.checkpointing_enabled = True
             graph.checkpoint_store = checkpoint_store
+    except TweakRefusedError:
+        # A refused tweak is a caller error, not a malformed flow. Wrapping it as
+        # a validation failure discards the structured body naming the refused
+        # keys, so let the app-level handler answer with 422.
+        raise
     except Exception as e:
         msg = f"Failed to build graph from flow data: {e!s}"
         raise WorkflowValidationError(msg) from e

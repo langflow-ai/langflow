@@ -20,6 +20,7 @@ from lfx.custom.utils import (
     get_instance_name,
     update_component_build_config,
 )
+from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
 from lfx.interface.components import component_cache
@@ -765,6 +766,11 @@ async def _run_flow_internal(
     except InvalidChatInputError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except HTTPException:
+        raise
+    except TweakRefusedError:
+        # A refused tweak is a caller error, not a server fault. The generic
+        # handler below turns it into a 500 and discards the structured body
+        # naming the refused keys, so let the app-level handler answer with 422.
         raise
     except Exception as exc:
         background_tasks.add_task(
