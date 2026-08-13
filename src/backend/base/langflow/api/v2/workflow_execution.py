@@ -317,6 +317,7 @@ async def _stream_event_frames(
     terminal_error_seen = False
     stream_paused = False
     _stream_completed = False
+    _stream_cancelled = False
 
     seq = 0
     _run_start = time.perf_counter()
@@ -395,6 +396,11 @@ async def _stream_event_frames(
                 seq += 1
         # Reached only when the try body exits normally (no cancellation or exception).
         _stream_completed = True
+    except asyncio.CancelledError:
+        # Client disconnected (or server shutdown). Not a workflow failure — suppress
+        # telemetry so a tab-close is never recorded as a failed run.
+        _stream_cancelled = True
+        raise
     finally:
         if not run_task.done():
             run_task.cancel()
@@ -404,7 +410,8 @@ async def _stream_event_frames(
         # Emit a RunPayload so Enterprise metering (run_event_store) and the
         # Scarf telemetry pipeline both see every v2 workflow run.
         # Mirrors the v1 endpoints.py instrumentation for the streaming path.
-        if not stream_paused:
+        # Skip on: pause (run is resumable), client disconnect (not a failure).
+        if not stream_paused and not _stream_cancelled:
             with contextlib.suppress(Exception):
                 from langflow.services.deps import get_telemetry_service
                 from langflow.services.telemetry.schema import RunPayload
@@ -418,7 +425,7 @@ async def _stream_event_frames(
                             run_seconds=int(time.perf_counter() - _run_start),
                             run_success=_run_success,
                             run_error_message="" if _run_success else str(drive_error or "workflow error"),
-                            run_id=run_id or "",
+                            run_id=run_id,
                         )
                     )
 

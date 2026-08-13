@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import time
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -105,6 +107,82 @@ async def test_stream_pause_does_not_emit_terminal_run_telemetry(monkeypatch):
 
     assert any(b"human_input_required" in frame for frame in frames)
     telemetry.log_package_run.assert_not_awaited()
+
+
+async def test_stream_client_disconnect_does_not_emit_run_telemetry(monkeypatch):
+    """CancelledError (client disconnect / tab close) must not be recorded as a failed run."""
+    from langflow.api.v2 import workflow_execution as wf_exec
+    from langflow.services import deps
+
+    async def fake_generate_flow_events(**_kwargs):
+        # Simulate a mid-stream disconnect: never puts the sentinel, just hangs
+        await asyncio.sleep(9999)
+
+    telemetry = SimpleNamespace(log_package_run=AsyncMock())
+    monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
+    monkeypatch.setattr(deps, "get_telemetry_service", lambda: telemetry)
+
+    adapter = get_stream_adapter(
+        "langflow",
+        StreamAdapterContext(run_id="job-2", thread_id="thread-2"),
+    )
+
+    async def _consume_then_cancel():
+        gen = wf_exec._stream_event_frames(
+            adapter=adapter,
+            flow_id=uuid4(),
+            flow_name="flow",
+            background_tasks=BackgroundTasks(),
+            parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
+            current_user=SimpleNamespace(id=uuid4()),
+            run_id="job-2",
+            job_id=uuid4(),
+            protocol="langflow",
+        )
+        # Exhaust initial events then simulate the consumer task being cancelled
+        async for _frame, _event_type in gen:
+            break  # stop after the first frame to trigger cancellation on aclose
+
+    task = asyncio.create_task(_consume_then_cancel())
+    await asyncio.sleep(0)  # let the generator start
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+
+    telemetry.log_package_run.assert_not_awaited()
+
+
+async def test_stream_non_job_tracked_run_emits_run_id_none(monkeypatch):
+    """Non-job-tracked streams (run_id=None) must emit run_id=None, not run_id=''."""
+    from langflow.api.v2 import workflow_execution as wf_exec
+    from langflow.services import deps
+
+    async def fake_generate_flow_events(**kwargs):
+        await kwargs["event_manager"].queue.put((None, None, time.time()))
+
+    telemetry = SimpleNamespace(log_package_run=AsyncMock())
+    monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
+    monkeypatch.setattr(deps, "get_telemetry_service", lambda: telemetry)
+
+    adapter = get_stream_adapter(
+        "langflow",
+        StreamAdapterContext(run_id="", thread_id="thread-3"),
+    )
+    async for _frame, _event_type in wf_exec._stream_event_frames(
+        adapter=adapter,
+        flow_id=uuid4(),
+        flow_name="flow",
+        background_tasks=BackgroundTasks(),
+        parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
+        current_user=SimpleNamespace(id=uuid4()),
+        run_id=None,  # explicitly no job tracking
+        job_id=None,
+        protocol="langflow",
+    ):
+        pass
+
+    payload = telemetry.log_package_run.await_args.args[0]
+    assert payload.run_id is None, f"expected run_id=None, got {payload.run_id!r}"
 
 
 async def test_sync_pause_does_not_emit_terminal_run_telemetry(monkeypatch):
