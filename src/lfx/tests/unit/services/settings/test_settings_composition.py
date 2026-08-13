@@ -261,6 +261,8 @@ EXPECTED_FIELDS = {
     "sandbox_allow_network",
     "sandbox_allowed_domains",
     "sandbox_allow_software_emulation",
+    # SecuritySettings: rebuild drifted built-ins with this server's code (issue #14455)
+    "substitute_outdated_component_code",
     # ---- Serving-plane end-user identity ----
     # SecuritySettings
     "serving_end_user_header",
@@ -300,6 +302,7 @@ def test_critical_defaults_unchanged():
     assert settings.connector_ssrf_validation_enabled is True
     assert settings.allow_custom_components is True
     assert settings.block_code_interpreter_components is False
+    assert settings.substitute_outdated_component_code is True
     assert settings.restrict_local_file_access is False
     assert settings.mcp_server_docker_hardening is False
     assert settings.mcp_server_interpreter_hardening is False

@@ -24,6 +24,7 @@ export function PromptEditableArea({
   onInput,
   onKeyDown,
   onPromptModalSetValue,
+  ariaLabelledBy,
 }: {
   contentEditableRef: RefObject<HTMLDivElement | null>;
   disabled?: boolean;
@@ -41,6 +42,8 @@ export function PromptEditableArea({
   onInput: (e: FormEvent<HTMLDivElement>) => void;
   onKeyDown: (e: KeyboardEvent<HTMLDivElement>) => void;
   onPromptModalSetValue: (newValue: string) => void;
+  // Id of NodeInputField's label element for this field.
+  ariaLabelledBy?: string;
 }) {
   const { t } = useTranslation();
   const ModalComponent = isDoubleBrackets ? MustachePromptModal : PromptModal;
@@ -55,6 +58,9 @@ export function PromptEditableArea({
         suppressContentEditableWarning
         id={domId}
         data-testid={id}
+        role="textbox"
+        aria-multiline="true"
+        aria-labelledby={ariaLabelledBy}
         className={cn(
           "relative min-h-10 overflow-y-auto rounded-md border bg-background px-3 py-2 pr-8 text-sm outline-none break-words whitespace-pre-wrap",
           "focus:border-primary hover:border-muted-foreground",
