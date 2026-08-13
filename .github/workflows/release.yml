@@ -932,12 +932,15 @@ jobs:
           forbidden |= installed & {"langflow-core", "torch", "torchvision"}
           assert not forbidden, f"forbidden base distributions: {sorted(forbidden)}"
           PY
-          command -v langflow
-          if command -v langflow-base; then
+          # `uv pip install` targets the project environment without exporting
+          # its bin directory into this shell's PATH. Run the installed entry
+          # point through uv so this validates the wheel, not the runner PATH.
+          uv run --no-sync langflow --help
+          if uv run --no-sync python -c 'import shutil, sys; sys.exit(0 if shutil.which("langflow-base") else 1)'; then
             echo "Unexpected langflow-base console command is installed."
             exit 1
           fi
-          uv run python -m langflow run --host localhost --port 7860 --backend-only &
+          uv run --no-sync python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
           timeout 120 bash -c 'until curl -f http://localhost:7860/api/v1/auto_login; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
