@@ -579,51 +579,56 @@ class Graph:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
-            # A thread entry point rather than a generator, so the span can be current for
-            # every anext below. See async_start.
-            with self.flow_execution_span():
+            try:
+                # Nothing is caught inside this block on purpose. A failure has to leave the
+                # span scope for the span to see it: caught in here, the context manager exits
+                # cleanly and a failed run is exported as status "ok", which is worse than no
+                # telemetry because it looks like a healthy run.
+                #
+                # A thread entry point rather than a generator, so the span can be current for
+                # every anext below. See async_start.
                 try:
-                    # Run the async generator
-                    # By keyword: async_start takes (inputs, max_iterations, config,
-                    # event_manager), so positionally the event manager lands in config and
-                    # __apply_config subscripts it. The run dies in this thread and the caller
-                    # gets an empty generator rather than an error. config is already applied
-                    # above, so it is deliberately not forwarded again.
-                    async_gen = self.async_start(
-                        inputs=inputs,
-                        max_iterations=max_iterations,
-                        event_manager=event_manager,
-                        open_flow_span=False,
-                    )
+                    with self.flow_execution_span():
+                        # By keyword: async_start takes (inputs, max_iterations, config,
+                        # event_manager), so positionally the event manager lands in config and
+                        # __apply_config subscripts it. config is already applied above, so it
+                        # is deliberately not forwarded again.
+                        async_gen = self.async_start(
+                            inputs=inputs,
+                            max_iterations=max_iterations,
+                            event_manager=event_manager,
+                            open_flow_span=False,
+                        )
 
-                    while True:
-                        try:
-                            # Get next result from async generator
-                            result = loop.run_until_complete(anext(async_gen))
-                            result_queue.put(result)
+                        while True:
+                            try:
+                                result = loop.run_until_complete(anext(async_gen))
+                                result_queue.put(result)
 
-                            if isinstance(result, Finish):
+                                if isinstance(result, Finish):
+                                    break
+
+                            except StopAsyncIteration:
                                 break
+                except Exception as exc:  # noqa: BLE001 - the worker boundary; see below
+                    # Every Exception, not just ValueError. This runs on a thread, so anything
+                    # not put on the queue dies with the thread while the caller reads the None
+                    # below and sees a clean end of stream. The generator consumer re-raises
+                    # whatever arrives here, so the caller gets the failure it would have got
+                    # from a synchronous call.
+                    result_queue.put(exc)
+            finally:
+                # Ensure all pending tasks are completed
+                pending = asyncio.all_tasks(loop)
+                if pending:
+                    # Create a future to gather all pending tasks
+                    cleanup_future = asyncio.gather(*pending, return_exceptions=True)
+                    loop.run_until_complete(cleanup_future)
 
-                        except StopAsyncIteration:
-                            break
-                        except ValueError as e:
-                            # Put the exception in the queue
-                            result_queue.put(e)
-                            break
-
-                finally:
-                    # Ensure all pending tasks are completed
-                    pending = asyncio.all_tasks(loop)
-                    if pending:
-                        # Create a future to gather all pending tasks
-                        cleanup_future = asyncio.gather(*pending, return_exceptions=True)
-                        loop.run_until_complete(cleanup_future)
-
-                    # Close the loop
-                    loop.close()
-                    # Signal completion
-                    result_queue.put(None)
+                # Close the loop
+                loop.close()
+                # Signal completion, after any exception above so the caller reads that first.
+                result_queue.put(None)
 
         # Start thread for async execution, carrying the caller's context into it.
         #

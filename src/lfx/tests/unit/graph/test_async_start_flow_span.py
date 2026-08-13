@@ -39,6 +39,7 @@ trace.set_tracer_provider(provider)
 
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph import Graph
+from lfx.io import Output
 from lfx.observability import APPLICATION_TRACER_NAME
 
 MODE = sys.argv[1]
@@ -57,6 +58,7 @@ async def main():
     tracer = trace.get_tracer(APPLICATION_TRACER_NAME)
     inner_parent = None
     caller_ids = None
+    raised = None
 
     if MODE == "caller_opens":
         with graph.flow_execution_span():
@@ -74,6 +76,71 @@ async def main():
     elif MODE == "deferred_but_nobody_opened":
         async for _ in graph.async_start(open_flow_span=False):
             pass
+    elif MODE in ("sync_start_value_error", "sync_start_other_error"):
+        # A failure has to leave the span scope for the span to see it. Two kinds, because the
+        # handler that used to sit inside that scope only named ValueError: async_start raises a
+        # raw ValueError when a cyclic graph hits max_iterations, while a component failure
+        # arrives wrapped as ComponentBuildError and took the other path entirely.
+        if MODE == "sync_start_value_error":
+            from lfx.components.input_output import TextInputComponent, TextOutputComponent
+            from lfx.components.logic.conditional_router import ConditionalRouterComponent
+            from lfx.custom import Component
+            from lfx.io import MessageTextInput
+            from lfx.schema.message import Message
+
+            class Concatenate(Component):
+                display_name = "Concatenate"
+                name = "Concatenate"
+                inputs = [MessageTextInput(name="text", display_name="Text", required=False)]
+                outputs = [Output(display_name="Message", name="some_text", method="concatenate")]
+
+                def concatenate(self) -> Message:
+                    return Message(text=f"{self.text}{self.text}" or "test")
+
+            text_input = TextInputComponent(_id="text_input")
+            router = ConditionalRouterComponent(_id="router")
+            text_input.set(input_value=router.false_response)
+            concat = Concatenate(_id="concatenate")
+            concat.set(text=text_input.text_response)
+            router.set(
+                input_text=text_input.text_response,
+                match_text="testtesttesttest",
+                operator="equals",
+                false_case_message=concat.concatenate,
+            )
+            text_output = TextOutputComponent(_id="text_output")
+            text_output.set(input_value=router.true_response)
+            end = ChatOutput(_id="chat_output")
+            end.set(input_value=text_output.text_response)
+            failing_graph = Graph(text_input, end)
+            runner = lambda: list(failing_graph.start(max_iterations=2, config={"output": {"cache": False}}))
+        else:
+            from lfx.custom import Component
+            from lfx.io import MessageInput
+            from lfx.schema.message import Message
+
+            class Exploding(Component):
+                display_name = "Exploding"
+                name = "Exploding"
+                inputs = [MessageInput(name="input_value", display_name="Input")]
+                outputs = [Output(name="message", display_name="Message", method="respond")]
+
+                def respond(self) -> Message:
+                    raise TypeError("not a ValueError")
+
+            chat_input = ChatInput(_id="chat-input")
+            chat_input.set(input_value="hello")
+            middle = Exploding(_id="exploding")
+            middle.set(input_value=chat_input.message_response)
+            chat_output = ChatOutput(_id="chat-output")
+            chat_output.set(input_value=middle.respond)
+            failing_graph = Graph(chat_input, chat_output, flow_id="11111111-1111-1111-1111-111111111111")
+            runner = lambda: list(failing_graph.start())
+
+        try:
+            runner()
+        except Exception as exc:  # noqa: BLE001 - the probe reports it rather than failing
+            raised = type(exc).__name__
     elif MODE == "sync_start_under_a_caller_span":
         # The sync entry point hands the run to a worker thread, and a new thread starts with an
         # empty context, so the flow span has to be given the caller's or it begins its own trace.
@@ -90,6 +157,8 @@ async def main():
             "trace_id": s.context.trace_id,
             "parent": s.parent.span_id if s.parent else None,
             "links": [link.context.span_id for link in s.links],
+            "status": (s.attributes or {}).get("status"),
+            "error_type": (s.attributes or {}).get("error.type"),
         }
         for s in exporter.get_finished_spans()
     ]
@@ -101,6 +170,7 @@ async def main():
                 "inner_parent": inner_parent,
                 "caller_trace": caller_ids[0] if caller_ids else None,
                 "caller_span": caller_ids[1] if caller_ids else None,
+                "raised": raised,
             }
         )
     )
@@ -177,3 +247,33 @@ def test_the_sync_start_runs_under_the_caller_span():
         f"flow span is in trace {flow_spans[0]['trace_id']:032x}, caller is in {result['caller_trace']:032x}"
     )
     assert flow_spans[0]["parent"] == result["caller_span"]
+
+
+@pytest.mark.parametrize(
+    ("mode", "expected_error"),
+    [
+        ("sync_start_value_error", "ValueError"),
+        ("sync_start_other_error", "ComponentBuildError"),
+    ],
+)
+def test_a_failing_sync_run_reaches_the_caller_and_the_span(mode: str, expected_error: str):
+    """A failure has to leave the span scope, then be caught at the worker boundary.
+
+    Caught inside the scope, the context manager exits cleanly and the run's telemetry is wrong.
+    Not caught at all, the exception dies with the worker thread while the caller reads the
+    end-of-stream sentinel and sees a clean finish. Both halves are asserted here because the
+    old code did one of each: the ValueError handler sat inside the span, and everything else
+    propagated past it and was lost.
+
+    Measured before the fix, for the ValueError case: the exception reached the caller but no
+    flow span was exported at all, because the consumer raises the moment it is queued, the
+    generator is abandoned and the worker never finishes ending the span.
+    """
+    result = run_probe(mode)
+
+    assert result["raised"] == expected_error, result
+
+    flow_spans = [s for s in result["spans"] if s["name"] == "flow.execute"]
+    assert len(flow_spans) == 1, result["spans"]
+    assert flow_spans[0]["status"] == "error", flow_spans[0]
+    assert flow_spans[0]["error_type"] == expected_error, flow_spans[0]
