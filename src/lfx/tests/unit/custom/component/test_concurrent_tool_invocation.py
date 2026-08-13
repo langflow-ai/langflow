@@ -5,11 +5,12 @@ the same component instance is reused, causing inputs to be overwritten between
 concurrent invocations (data corruption).
 """
 
+import asyncio
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 
-from lfx.base.tools.component_tool import ComponentToolkit
+from lfx.base.tools.component_tool import ComponentToolkit, send_message_noop
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DataInput, MessageTextInput
 from lfx.io import Output
@@ -240,6 +241,129 @@ def test_deepcopy_preserves_component_reference_cycles():
     # And the copies must be distinct from the originals.
     assert a_copy is not a
     assert b_copy is not b
+
+
+def test_should_keep_send_message_when_sync_tool_calls_overlap():
+    """Bug #14088: an overlapping tool call must not leave send_message replaced.
+
+    GIVEN: A component-backed tool whose invocations overlap in time
+    WHEN:  They interleave as A starts, B starts, A finishes, B finishes
+    THEN:  The shared component still carries its original send_message
+    """
+    # Arrange - gates let the test drive the interleaving instead of racing for it
+    gates = {"a": threading.Event(), "b": threading.Event()}
+    entered = {"a": threading.Event(), "b": threading.Event()}
+
+    class GatedComponent(Component):
+        display_name = "Gated Tool"
+        description = "Blocks inside the tool call until its gate is released."
+        name = "GatedComponent"
+
+        inputs = [MessageTextInput(name="tag", display_name="Tag", tool_mode=True)]
+        outputs = [Output(display_name="Result", name="result", method="process")]
+
+        def process(self) -> Data:
+            entered[self.tag].set()
+            gates[self.tag].wait(timeout=5)
+            return Data(data={"tag": self.tag})
+
+    component = GatedComponent()
+    original_send_message = component.send_message
+    tool = ComponentToolkit(component=component).get_tools()[0]
+
+    # Act
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        first = executor.submit(tool.invoke, {"tag": "a"})
+        assert entered["a"].wait(timeout=5)
+        second = executor.submit(tool.invoke, {"tag": "b"})
+        assert entered["b"].wait(timeout=5)
+
+        gates["a"].set()
+        first.result(timeout=5)
+        gates["b"].set()
+        second.result(timeout=5)
+
+    # Assert
+    assert component.send_message is not send_message_noop, "send_message was left as the tool-mode no-op"
+    assert component.send_message == original_send_message
+
+
+async def test_should_keep_send_message_when_async_tool_calls_overlap():
+    """Bug #14088, async wrapper: same interleaving, same guarantee.
+
+    GIVEN: A component-backed tool with an async output method
+    WHEN:  Two calls interleave as A starts, B starts, A finishes, B finishes
+    THEN:  The shared component still carries its original send_message
+    """
+    # Arrange
+    gates = {"a": asyncio.Event(), "b": asyncio.Event()}
+    entered = {"a": asyncio.Event(), "b": asyncio.Event()}
+
+    class AsyncGatedComponent(Component):
+        display_name = "Async Gated Tool"
+        description = "Blocks inside the tool call until its gate is released."
+        name = "AsyncGatedComponent"
+
+        inputs = [MessageTextInput(name="tag", display_name="Tag", tool_mode=True)]
+        outputs = [Output(display_name="Result", name="result", method="process")]
+
+        async def process(self) -> Data:
+            entered[self.tag].set()
+            await asyncio.wait_for(gates[self.tag].wait(), timeout=5)
+            return Data(data={"tag": self.tag})
+
+    component = AsyncGatedComponent()
+    original_send_message = component.send_message
+    tool = ComponentToolkit(component=component).get_tools()[0]
+
+    # Act
+    first = asyncio.create_task(tool.ainvoke({"tag": "a"}))
+    await asyncio.wait_for(entered["a"].wait(), timeout=5)
+    second = asyncio.create_task(tool.ainvoke({"tag": "b"}))
+    await asyncio.wait_for(entered["b"].wait(), timeout=5)
+
+    gates["a"].set()
+    await asyncio.wait_for(first, timeout=5)
+    gates["b"].set()
+    await asyncio.wait_for(second, timeout=5)
+
+    # Assert
+    assert component.send_message is not send_message_noop, "send_message was left as the tool-mode no-op"
+    assert component.send_message == original_send_message
+
+
+def test_should_suppress_messages_on_the_invocation_copy_only():
+    """The tool call must silence the copy it runs, never the shared component.
+
+    GIVEN: A component-backed tool whose output method calls send_message
+    WHEN:  The tool is invoked
+    THEN:  The message is swallowed for that call, and the shared component is untouched
+    """
+    # Arrange
+    suppressed_inside_call: list[bool] = []
+
+    class MessagingComponent(Component):
+        display_name = "Messaging Tool"
+        description = "Sends a message while running."
+        name = "MessagingComponent"
+
+        inputs = [MessageTextInput(name="tag", display_name="Tag", tool_mode=True)]
+        outputs = [Output(display_name="Result", name="result", method="process")]
+
+        def process(self) -> Data:
+            suppressed_inside_call.append(self.send_message is send_message_noop)
+            return Data(data={"tag": self.tag})
+
+    component = MessagingComponent()
+    original_send_message = component.send_message
+    tool = ComponentToolkit(component=component).get_tools()[0]
+
+    # Act
+    tool.invoke({"tag": "a"})
+
+    # Assert - the copy ran with the no-op in place, the original kept the real method
+    assert suppressed_inside_call == [True]
+    assert component.send_message == original_send_message
 
 
 # ---------------------------------------------------------------------------
