@@ -182,6 +182,65 @@ async def test_prepare_admin_only_flow_build_fails_closed_without_trusted_source
         await fv.prepare_admin_only_flow_build(flow)
 
 
+def _configure_admin_only_outdated_substitution(monkeypatch):
+    """Configure the cumulative restricted + admin-only policy around one known component."""
+    from lfx.utils import flow_validation as fv
+
+    current_code = "# current ChatInput code"
+    current_hash = fv._compute_code_hash(current_code)
+    type_to_hash = {"ChatInput": {current_hash}}
+    type_to_code = {"ChatInput": current_code}
+    settings_service = SimpleNamespace(
+        settings=SimpleNamespace(
+            allow_custom_components=False,
+            substitute_outdated_component_code=True,
+            block_code_interpreter_components=False,
+            custom_component_admin_only=True,
+        )
+    )
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
+    monkeypatch.setattr(
+        "lfx.services.deps.get_catalog_policy_service",
+        lambda: SimpleNamespace(snapshot=CatalogPolicySnapshot()),
+    )
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda: type_to_hash)
+    monkeypatch.setattr(fv, "get_component_code_lookups_for_validation", lambda: type_to_code)
+    monkeypatch.setattr(fv, "get_trusted_code_for_validation", lambda _code: current_code)
+    monkeypatch.setattr(fv, "ensure_component_hash_lookups_loaded", AsyncMock(return_value=type_to_hash))
+    return current_code
+
+
+@pytest.mark.asyncio
+async def test_prepare_flow_build_for_user_keeps_outdated_substitution_cumulative(monkeypatch):
+    """Admin-only mode must preserve restricted mode's trusted drift substitution."""
+    from lfx.utils import flow_validation as fv
+
+    current_code = _configure_admin_only_outdated_substitution(monkeypatch)
+    stored_code = "# outdated ChatInput code"
+    flow = {"nodes": [_node("known", "ChatInput", stored_code)], "edges": []}
+
+    sanitized = await fv.prepare_flow_build_for_user(flow, is_superuser=False)
+
+    assert sanitized is not None
+    assert sanitized["nodes"][0]["data"]["node"]["template"]["code"]["value"] == current_code
+    assert flow["nodes"][0]["data"]["node"]["template"]["code"]["value"] == stored_code
+
+
+def test_prepare_flow_build_for_user_from_cache_keeps_outdated_substitution_cumulative(monkeypatch):
+    """The V2/AG-UI cache-only gate must apply the same cumulative policy."""
+    from lfx.utils import flow_validation as fv
+
+    current_code = _configure_admin_only_outdated_substitution(monkeypatch)
+    stored_code = "# outdated ChatInput code"
+    flow = {"nodes": [_node("known", "ChatInput", stored_code)], "edges": []}
+
+    sanitized = fv.prepare_flow_build_for_user_from_cache(flow, is_superuser=False)
+
+    assert sanitized is not None
+    assert sanitized["nodes"][0]["data"]["node"]["template"]["code"]["value"] == current_code
+    assert flow["nodes"][0]["data"]["node"]["template"]["code"]["value"] == stored_code
+
+
 @pytest.mark.asyncio
 async def test_prepare_flow_build_for_user_keeps_code_interpreter_policy_cumulative(monkeypatch):
     """Admin-only sanitization must not disable the separate code-interpreter gate."""

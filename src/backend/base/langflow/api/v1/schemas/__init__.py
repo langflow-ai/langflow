@@ -397,6 +397,9 @@ class BaseConfigResponse(BaseModel):
     # Signals that at least one component or template is governed without
     # exposing the policy contents through the public config response.
     catalog_governance_enabled: bool = False
+    # The editor uses the same policy as the build path when deciding whether
+    # drifted built-in components must block a run.
+    substitute_outdated_component_code: bool
 
 
 class PublicConfigResponse(BaseConfigResponse):
@@ -436,6 +439,7 @@ class PublicConfigResponse(BaseConfigResponse):
             mcp_base_url=settings.mcp_base_url,
             enable_extension_reload=settings.enable_extension_reload,
             allow_custom_components=settings.allow_custom_components,
+            substitute_outdated_component_code=settings.substitute_outdated_component_code,
             authz_enabled=bool(getattr(auth_settings, "AUTHZ_ENABLED", False)),
             catalog_governance_enabled=catalog_governance_enabled,
         )
@@ -515,6 +519,7 @@ class ConfigResponse(BaseConfigResponse):
             default_folder_name=DEFAULT_FOLDER_NAME,
             hide_getting_started_progress=settings.hide_getting_started_progress,
             allow_custom_components=settings.allow_custom_components,
+            substitute_outdated_component_code=settings.substitute_outdated_component_code,
             authz_enabled=bool(getattr(auth_settings, "AUTHZ_ENABLED", False)),
             catalog_governance_enabled=catalog_governance_enabled,
             embedded_mode=settings.embedded_mode,

@@ -420,7 +420,7 @@ def collect_code_by_hash(
 
 def _get_invalid_components(
     nodes: list[dict],
-    type_to_current_hash: dict[str, set[str]],
+    type_to_current_hash: Mapping[str, set[str]],
     substitutable_types: Container[str] | None = None,
 ) -> tuple[list[str], list[str]]:
     """Walk nodes and classify invalid components.
@@ -707,15 +707,15 @@ def check_flow_and_raise(
     flow_data: dict | None,
     *,
     allow_custom_components: bool,
-    type_to_current_hash: dict[str, set[str]] | None = None,
+    type_to_current_hash: Mapping[str, set[str]] | None = None,
     substitutable_types: Container[str] | None = None,
 ) -> None:
     """Validate flow component code against known server templates.
 
-    ``substitutable_types`` (a container of component types, e.g. the type→trusted-code map
-    from :func:`get_component_code_lookups_for_validation`) exempts drifted built-ins from the
-    outdated check because the build substitutes this server's code for them. Unrecognized
-    component types are still blocked.
+    ``substitutable_types`` (normally :class:`SubstitutableComponentTypes` from
+    :func:`get_outdated_code_substitution_lookups`) exempts drifted built-ins from the outdated
+    check because the build substitutes this server's code for them. Unrecognized component
+    types are still blocked.
     """
     if allow_custom_components or not flow_data:
         return
@@ -886,15 +886,21 @@ def validate_flow_for_current_settings(
     if block_code_interpreter_components:
         check_code_execution_components_and_raise(normalized_flow_data)
 
-    type_to_current_hash = get_component_hash_lookups_for_validation() if not allow_custom_components else None
-
     # Pre-check call sites (API endpoints, warm-graph reuse) validate a payload they do not own,
     # so the substitution itself happens later, in Graph.from_payload, on the payload that is
     # actually built. Here we only need to agree with it about which drifted built-ins are going
     # to be rebuilt with this server's code, so the pre-check does not refuse a build that will
     # then succeed. Both sides read the same SubstitutableComponentTypes rule, so an ambiguous
     # type is neither substituted nor exempted here and stays blocked as outdated.
-    substitution_lookups = get_outdated_code_substitution_lookups() if not allow_custom_components else None
+    substitution_lookups = None
+    type_to_current_hash = None
+    if not allow_custom_components:
+        substitution_lookups = get_outdated_code_substitution_lookups()
+        type_to_current_hash = (
+            substitution_lookups[1].type_to_current_hash
+            if substitution_lookups
+            else get_component_hash_lookups_for_validation()
+        )
 
     check_flow_and_raise(
         normalized_flow_data,
@@ -1013,14 +1019,14 @@ class SubstitutableComponentTypes(Container[str]):
     """The component types whose drifted code this server will rebuild with its own copy.
 
     A type qualifies only when the registry resolves it to *exactly one* current code hash and
-    this server has trusted code for it. Two components can contribute the same type alias — a
-    built-in and a ``components_path`` component of the same name, or an ``XComponent``/``X``
-    pair across bundles. ``collect_component_hash_lookups`` keeps every such hash, but
-    ``collect_component_code_lookups`` is first-wins by registry iteration order, so for an
-    ambiguous type the trusted code is not necessarily the source the node meant. Stored code
+    this server has trusted code that hashes to that value. Two components can contribute the
+    same type alias — a built-in and a ``components_path`` component of the same name, or an
+    ``XComponent``/``X`` pair across bundles. ``collect_component_hash_lookups`` keeps every such
+    hash, but ``collect_component_code_lookups`` is first-wins by registry iteration order, so for
+    an ambiguous type the trusted code is not necessarily the source the node meant. Stored code
     that matches neither hash is indistinguishable from "this node is the other component", so
-    those types are excluded and :func:`check_flow_and_raise` blocks them as outdated, exactly
-    as it did before the substitution pass existed.
+    those types are excluded and :func:`check_flow_and_raise` blocks them as outdated, exactly as
+    it did before the substitution pass existed.
 
     Membership is decided on demand rather than materialized, so the substitution pass and the
     pre-check that must agree with it share one rule without copying the registry per build.
@@ -1033,7 +1039,10 @@ class SubstitutableComponentTypes(Container[str]):
         if not isinstance(component_type, str):
             return False
         current_hashes = self.type_to_current_hash.get(component_type)
-        return current_hashes is not None and len(current_hashes) == 1 and component_type in self.type_to_code
+        if current_hashes is None or len(current_hashes) != 1:
+            return False
+        trusted_code = self.type_to_code.get(component_type)
+        return isinstance(trusted_code, str) and _compute_code_hash(trusted_code) == next(iter(current_hashes))
 
     def current_hash(self, component_type: str) -> str:
         """Return the single current code hash for a substitutable ``component_type``."""
@@ -1048,6 +1057,7 @@ def get_outdated_code_substitution_lookups() -> tuple[dict[str, str], Substituta
     turned ``substitute_outdated_component_code`` off, or when the component registry is not
     loaded yet (fail closed rather than let unverified code through).
     """
+    from lfx.interface.components import component_cache
     from lfx.services.deps import get_settings_service
 
     settings_service = get_settings_service()
@@ -1060,8 +1070,12 @@ def get_outdated_code_substitution_lookups() -> tuple[dict[str, str], Substituta
     if not getattr(settings, "substitute_outdated_component_code", True):
         return None
 
-    type_to_current_hash = get_component_hash_lookups_for_validation()
-    type_to_code = get_component_code_lookups_for_validation()
+    # The cache publishes and invalidates all derived indexes under this lock. Keep it across
+    # both reads so a hot reload cannot pair hashes from one registry snapshot with source from
+    # another. The individual helpers also take this RLock while lazily self-healing an index.
+    with component_cache.state_lock:
+        type_to_current_hash = get_component_hash_lookups_for_validation()
+        type_to_code = get_component_code_lookups_for_validation()
     if not type_to_current_hash or not type_to_code:
         return None
 
@@ -1156,17 +1170,24 @@ def substitute_outdated_component_code_in_place(flow_data: dict | None) -> list[
         return []
 
     swapped = _substitute_outdated_node_code(nodes, *lookups)
-    if swapped:
-        # Substitution is safe but not neutral: a component can behave differently after an
-        # upgrade (e.g. #14236 removed a default value), so never do it silently.
-        logger.warning(
-            f"Flow build: ran this server's component code for {len(swapped)} outdated "
-            f"component(s) instead of the code stored in the flow: {', '.join(swapped)}. "
-            "The stored flow is unchanged and these components remain flagged as outdated. "
-            "Apply the pending component upgrade in the editor to pin the flow to this version, "
-            "or configure LANGFLOW_SUBSTITUTE_OUTDATED_COMPONENT_CODE=false to refuse these builds."
-        )
+    _log_outdated_component_code_substitution(swapped)
     return swapped
+
+
+def _log_outdated_component_code_substitution(swapped: list[str]) -> None:
+    """Warn when a build uses current server code for drifted stored components."""
+    if not swapped:
+        return
+
+    # Substitution is safe but not neutral: a component can behave differently after an
+    # upgrade (e.g. #14236 removed a default value), so never do it silently.
+    logger.warning(
+        f"Flow build: ran this server's component code for {len(swapped)} outdated "
+        f"component(s) instead of the code stored in the flow: {', '.join(swapped)}. "
+        "The stored flow is unchanged and these components remain flagged as outdated. "
+        "Apply the pending component upgrade in the editor to pin the flow to this version, "
+        "or configure LANGFLOW_SUBSTITUTE_OUTDATED_COMPONENT_CODE=false to refuse these builds."
+    )
 
 
 async def _ensure_component_code_lookups(settings_service: Any) -> dict[str, str]:
@@ -1454,15 +1475,17 @@ async def ensure_component_hash_lookups_loaded(*, force: bool = False) -> dict[s
 def _sanitize_admin_only_flow_build(
     target: Mapping[str, Any] | Any | None,
     *,
-    type_to_current_hash: dict[str, set[str]] | None,
+    type_to_current_hash: Mapping[str, set[str]] | None,
 ) -> dict[str, Any] | None:
     """Return trusted build data after component hashes have been loaded.
 
     Admin-only mode permits regular users to refresh and run known server
     component templates, but not to submit new or modified component code.
-    Validate every code-bearing node against the server registry, then replace
-    the request bytes with the trusted source for the matching hash before the
-    graph is handed to the build worker.
+    When the global restricted-mode policy permits trusted substitution for a
+    drifted built-in, apply it to the detached copy first. Then validate every
+    code-bearing node against the server registry and replace the request bytes
+    with the trusted source for the matching hash before the graph is handed to
+    the build worker.
     """
     import copy
 
@@ -1476,13 +1499,25 @@ def _sanitize_admin_only_flow_build(
             raise CustomComponentValidationError(msg)
         return None
 
+    sanitized = copy.deepcopy(normalized_flow_data)
+    # ``validate_flow_for_current_settings`` may have admitted known drift because restricted
+    # mode will rebuild it with server code. Preserve that decision when admin-only mode adds its
+    # own sanitizer; otherwise this second, strict hash check restores the very rejection the
+    # substitution policy was designed to avoid. The helper no-ops in permissive mode, so
+    # admin-only remains strict when it is the only active custom-component restriction.
+    substitution_lookups = get_outdated_code_substitution_lookups()
+    validation_hashes = type_to_current_hash
+    if substitution_lookups:
+        nodes = sanitized.get("nodes", [])
+        swapped = _substitute_outdated_node_code(nodes, *substitution_lookups) if isinstance(nodes, list) else []
+        _log_outdated_component_code_substitution(swapped)
+        validation_hashes = substitution_lookups[1].type_to_current_hash
     check_flow_and_raise(
-        normalized_flow_data,
+        sanitized,
         allow_custom_components=False,
-        type_to_current_hash=type_to_current_hash,
+        type_to_current_hash=validation_hashes,
     )
 
-    sanitized = copy.deepcopy(normalized_flow_data)
     nodes = sanitized.get("nodes", [])
     blocked = _substitute_trusted_code_by_hash(nodes) if isinstance(nodes, list) else []
     if blocked:

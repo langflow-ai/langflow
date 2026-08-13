@@ -35,7 +35,7 @@ When set to `true`, non-superusers can still view and use custom components in f
 
 While `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`, Langflow never runs the component code stored in a flow. It looks up its own copy of that component and runs that instead. The code saved in the flow is only used to identify which component the node is.
 
-This matters when you upgrade. Langflow releases change built-in component code, so after an upgrade the code saved in your flows no longer matches the code the new version ships. By default, Langflow rebuilds those nodes with its own current copy of the component and the flows keep running. Each substitution is logged, and the flow itself is left untouched, so the visual editor still marks the component as outdated until you update it.
+This matters when you upgrade. Langflow releases change built-in component code, so after an upgrade the code saved in your flows no longer matches the code the new version ships. By default, Langflow rebuilds those nodes with its own current copy of the component and the flows keep running. Each substitution is logged, and the flow itself is left untouched. The visual editor continues to mark the component as outdated until you update it, but that marker doesn't block editor or Playground runs.
 
 Nothing new becomes runnable: the code that runs is always the server's own, chosen by component type. A node whose component type this server doesn't recognize is still refused. This is the same rule Langflow already applies by default to unauthenticated public flow builds.
 

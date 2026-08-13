@@ -1519,6 +1519,7 @@ async def get_and_cache_all_types_dict(
             cache.type_to_current_hash = None
             cache.all_known_hashes = None
             cache.code_by_hash = None
+            cache.type_to_code = None
             cache.component_identity_index = None
             initialization_task = asyncio.create_task(
                 _initialize_component_cache(cache, settings_service, telemetry_service, initialization_future),

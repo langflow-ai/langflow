@@ -20,6 +20,8 @@ from lfx.utils.flow_validation import (
     CustomComponentValidationError,
     SubstitutableComponentTypes,
     check_flow_and_raise,
+    collect_component_code_lookups,
+    collect_component_hash_lookups,
     substitute_outdated_component_code_in_place,
     validate_flow_for_current_settings,
 )
@@ -60,6 +62,26 @@ def _ambiguous_lookups() -> tuple[dict[str, set[str]], dict[str, str]]:
         {"ChatInput": {_hash(CURRENT_CHAT_INPUT), _hash(OVERRIDE_CHAT_INPUT)}},
         {"ChatInput": CURRENT_CHAT_INPUT},
     )
+
+
+def _mismatched_lookups() -> tuple[dict[str, set[str]], dict[str, str]]:
+    """Build the exact first-alias mismatch reported on the PR review thread."""
+    all_types = {
+        "first": {
+            "ChatInput": {
+                # This first alias contributes source but no hash metadata.
+                "template": {"code": {"value": OVERRIDE_CHAT_INPUT}},
+            }
+        },
+        "second": {
+            "ChatInput": {
+                "metadata": {"code_hash": _hash(CURRENT_CHAT_INPUT)},
+                "template": {"code": {"value": CURRENT_CHAT_INPUT}},
+            }
+        },
+    }
+    type_to_hash, _ = collect_component_hash_lookups(all_types)
+    return type_to_hash, collect_component_code_lookups(all_types)
 
 
 def _subst_args(lookups=_lookups) -> tuple[dict[str, str], SubstitutableComponentTypes]:
@@ -205,6 +227,25 @@ def test_in_place_substitution_skips_ambiguous_type(monkeypatch):
     assert _code_of(flow["nodes"][0]) == STORED_CHAT_INPUT
 
 
+def test_mismatched_trusted_code_is_neither_substituted_nor_exempted():
+    """A single hash is not enough when the type lookup points at different source."""
+    type_to_hash, type_to_code = _mismatched_lookups()
+    substitutable_types = SubstitutableComponentTypes(type_to_hash, type_to_code)
+    nodes = [_node("a", "ChatInput", STORED_CHAT_INPUT, display_name="Chat Input")]
+
+    assert "ChatInput" not in substitutable_types
+    assert fv._substitute_outdated_node_code(nodes, type_to_code, substitutable_types) == []
+    assert _code_of(nodes[0]) == STORED_CHAT_INPUT
+
+    with pytest.raises(CustomComponentValidationError, match="outdated components must be updated"):
+        check_flow_and_raise(
+            {"nodes": nodes},
+            allow_custom_components=False,
+            type_to_current_hash=type_to_hash,
+            substitutable_types=substitutable_types,
+        )
+
+
 # --- substitute_outdated_component_code_in_place (settings-aware) -------------------
 
 
@@ -247,6 +288,45 @@ def test_no_substitution_while_registry_is_still_loading(monkeypatch):
 
     assert substitute_outdated_component_code_in_place(flow) == []
     assert _code_of(flow["nodes"][0]) == STORED_CHAT_INPUT
+
+
+def test_substitution_lookups_are_captured_under_one_cache_lock(monkeypatch):
+    """A hot reload cannot pair the hash index from one registry with code from another."""
+    from lfx.interface import components as component_module
+
+    class TrackingLock:
+        def __init__(self) -> None:
+            self.active = False
+            self.entries = 0
+
+        def __enter__(self):
+            assert not self.active
+            self.active = True
+            self.entries += 1
+
+        def __exit__(self, *_args) -> None:
+            self.active = False
+
+    lock = TrackingLock()
+    monkeypatch.setattr(component_module, "component_cache", SimpleNamespace(state_lock=lock))
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings())
+    type_to_hash, type_to_code = _lookups()
+
+    def get_hashes():
+        assert lock.active
+        return type_to_hash
+
+    def get_code():
+        assert lock.active
+        return type_to_code
+
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", get_hashes)
+    monkeypatch.setattr(fv, "get_component_code_lookups_for_validation", get_code)
+
+    lookups = fv.get_outdated_code_substitution_lookups()
+
+    assert lookups is not None
+    assert lock.entries == 1
 
 
 @pytest.mark.parametrize("empty", [None, {}, {"nodes": []}, {"nodes": "not-a-list"}])
@@ -331,6 +411,25 @@ def test_validator_accepts_drifted_flow_and_leaves_it_untouched(monkeypatch):
     validate_flow_for_current_settings(flow)
 
     assert _code_of(flow["nodes"][0]) == STORED_CHAT_INPUT
+
+
+def test_validator_uses_hashes_from_the_same_snapshot_as_substitution(monkeypatch):
+    """Validation must not pair an earlier hash index with a later substitution index."""
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings())
+    monkeypatch.setattr(
+        "lfx.services.deps.get_catalog_policy_service",
+        lambda: SimpleNamespace(snapshot=CatalogPolicySnapshot()),
+    )
+    type_to_hash, type_to_code = _lookups()
+    lookups = type_to_code, SubstitutableComponentTypes(type_to_hash, type_to_code)
+    monkeypatch.setattr(fv, "get_outdated_code_substitution_lookups", lambda: lookups)
+    monkeypatch.setattr(
+        fv,
+        "get_component_hash_lookups_for_validation",
+        lambda: pytest.fail("standalone hash lookup would create a mixed registry snapshot"),
+    )
+
+    validate_flow_for_current_settings({"nodes": [_node("a", "ChatInput", STORED_CHAT_INPUT)]})
 
 
 def test_from_payload_substitutes_before_validating(monkeypatch):
