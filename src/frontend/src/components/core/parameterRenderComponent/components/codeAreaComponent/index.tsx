@@ -54,6 +54,7 @@ export default function CodeAreaComponent({
   id = "",
   placeholder,
   showParameter = true,
+  ariaLabelledBy,
 }: InputProps<string>): JSX.Element | null {
   const allowCustomComponents = useUtilityStore(
     (state) => state.allowCustomComponents,
@@ -138,7 +139,7 @@ export default function CodeAreaComponent({
         setNodeClass={handleNodeClass!}
         setValue={(newValue) => handleOnNewValue({ value: newValue })}
       >
-        <Button unstyled className="w-full">
+        <Button unstyled className="w-full" aria-labelledby={ariaLabelledBy}>
           <div className="relative w-full">
             {renderCodeText()}
             {renderExternalLinkIcon()}

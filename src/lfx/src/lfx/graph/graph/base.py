@@ -857,6 +857,11 @@ class Graph:
         attribute is the exception type and not its message. Subgraphs (Loop iterations) are skipped
         so a loop over N items stays one span instead of N.
 
+        That rule is enforced per signal, and this is only the span half: the export filter lives in
+        ``ApplicationOnlySpanProcessor``, and the same content is kept off the logs signal by the
+        body policy in ``lfx.log.logger``. Neither covers container stdout or the local log file,
+        which still carry full messages by design.
+
         make_current attaches the span to the OTel context so a flow run from inside another flow
         (flow-as-tool, sub-flow components) nests under its caller instead of appearing as a sibling
         of it. It must stay False when the scope wraps an async generator: the context token would be
@@ -1643,7 +1648,11 @@ class Graph:
         """
         from lfx.extension.migration import migrate_flow_payload
         from lfx.services.deps import get_catalog_policy_service
-        from lfx.utils.flow_validation import validate_catalog_policy_for_flow, validate_flow_for_current_settings
+        from lfx.utils.flow_validation import (
+            substitute_outdated_component_code_in_place,
+            validate_catalog_policy_for_flow,
+            validate_flow_for_current_settings,
+        )
 
         if "data" in payload:
             payload = payload["data"]
@@ -1714,6 +1723,25 @@ class Graph:
                     "extension.event_emit_failed: failed to emit migration events in from_payload.",
                     exc_info=True,
                 )
+        # Restricted deployments (allow_custom_components=False) never execute a node's stored
+        # code — the build substitutes this server's copy keyed by code hash. Rewrite the code of
+        # recognized built-ins whose stored copy has merely drifted across versions, so the
+        # validation below passes on its own and the flow builds with this server's component
+        # instead of being refused over code it was not going to run. No-op when custom
+        # components are allowed or the operator turned the substitution off; a node whose type
+        # is not a known server component is left untouched and still refused below.
+        # Public routes sanitize before handing the payload to the executor, but a hot extension
+        # reload can occur before graph construction. In restricted mode the substitution below
+        # may therefore select a newer source generation than the route checked. Re-run the public
+        # code-execution gate for the anonymous execution principal against the exact
+        # post-substitution bytes and the same registry snapshot, before component instantiation.
+        from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
+
+        validate_public_execution = str(user_id) == str(PUBLIC_ANONYMOUS_ACTOR_ID)
+        substitute_outdated_component_code_in_place(
+            payload,
+            validate_public_execution=validate_public_execution,
+        )
         # Defense-in-depth: validate here so that no code path can construct
         # a graph with blocked/custom components, even if an API endpoint
         # forgets its own pre-check. Ideally this would live only at the API

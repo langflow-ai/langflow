@@ -75,6 +75,8 @@ describe("FlowSettingsModal accessibility", () => {
     mockReadOnly = false;
   });
 
+  // The lock switch now carries an aria-label (see editFlowSettingsComponent),
+  // so the modal is fully clean under axe.
   it("should_have_no_axe_violations", async () => {
     renderModal();
 
@@ -125,10 +127,10 @@ describe("FlowSettingsModal accessibility", () => {
   });
 
   // The "Lock Flow" Form.Label sits inside the `description` Form.Field, so
-  // even with the real Radix Form it associates with the description textarea
-  // rather than the Switch. The Switch carries its own aria-label so it still
-  // has an accessible name independent of that mislabeling (WCAG 4.1.2).
-  it("should_give_the_lock_switch_an_accessible_name", () => {
+  // even with the real Radix Form it associates with the description
+  // textarea rather than the Switch. The Switch carries its own aria-label
+  // to compensate, so it still gets an accessible name (WCAG 4.1.2).
+  it("should_give_the_lock_switch_an_accessible_name_via_aria_label", () => {
     renderModal();
 
     expect(screen.getByRole("switch")).toHaveAccessibleName("Lock flow switch");

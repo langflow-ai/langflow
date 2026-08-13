@@ -28,6 +28,7 @@ from lfx.base.knowledge_bases.backends.base import (
     METADATA_KEY_SOURCE_METADATA,
     METADATA_KEY_SOURCE_TYPE,
     METADATA_KEY_TOTAL_CHUNKS,
+    BackendConfigurationError,
     BaseVectorStoreBackend,
 )
 from lfx.base.knowledge_bases.ingestion_sources import (
@@ -1140,6 +1141,12 @@ class KBIngestionHelper:
                 try:
                     await backend.add_documents(batch)
                     break
+                except BackendConfigurationError:
+                    # Permanent, operator-actionable misconfiguration (missing
+                    # extension, embedding-dimension mismatch, …). Retrying only
+                    # burns the backoff budget (~20s) on a call that cannot
+                    # succeed, so surface it immediately.
+                    raise
                 except Exception as exc:
                     if attempt == MAX_RETRY_ATTEMPTS - 1:
                         raise

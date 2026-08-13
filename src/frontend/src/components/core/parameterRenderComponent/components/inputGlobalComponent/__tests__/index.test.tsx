@@ -112,6 +112,33 @@ describe("InputGlobalComponent", () => {
     });
   });
 
+  it("forwards ariaLabelledBy through to the underlying InputComponent", () => {
+    mockUseGetGlobalVariables.mockReturnValue({
+      data: [],
+      isFetchedAfterMount: true,
+      isFetching: false,
+      isSuccess: true,
+    });
+
+    render(
+      <InputGlobalComponent
+        id="test"
+        value=""
+        display_name="API Key"
+        handleOnNewValue={handleOnNewValue}
+        load_from_db={false}
+        password={false}
+        editNode={false}
+        disabled={false}
+        ariaLabelledBy="field-label-id"
+      />,
+    );
+
+    expect(mockInputComponent).toHaveBeenCalledWith(
+      expect.objectContaining({ ariaLabelledBy: "field-label-id" }),
+    );
+  });
+
   describe("options passed to InputComponent", () => {
     const configuredVariables = [
       { name: "MY_API_KEY" },

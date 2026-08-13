@@ -41,6 +41,7 @@ def doctor_command(
     from rich.console import Console
     from rich.markup import escape
 
+    from lfx.log.logger import otel_log_bodies_exported
     from lfx.observability_doctor import FAILED, OK, SKIPPED, run_doctor
 
     # highlight=False: the captured exporter messages are full of URLs and numbers, and rich's
@@ -76,6 +77,19 @@ def doctor_command(
             console.print(f"    [dim]headers: {escape(', '.join(signal.header_keys))}[/dim]")
         for message in signal.exporter_logs:
             console.print(f"    [dim]{escape(message)}[/dim]")
+        # The signals do not carry the same content, and the doctor is where an operator checks
+        # what they are about to send. Saying it per signal beats a paragraph in a vendor doc.
+        if signal.signal == "logs" and signal.status != SKIPPED:
+            if otel_log_bodies_exported():
+                console.print(
+                    "    [yellow]message bodies ARE exported (LANGFLOW_OTEL_LOG_BODIES=all): "
+                    "completions, chat history and provider error text[/yellow]"
+                )
+            else:
+                console.print(
+                    "    [dim]bodies withheld unless a call site opts in; records keep "
+                    "severity, scope, callsite, error.type and trace correlation[/dim]"
+                )
 
     if not report.ok:
         raise typer.Exit(1)
