@@ -485,8 +485,11 @@ _PROVIDER_SDK_MODULES = frozenset({"openai", "anthropic"})
 # Drawn from the documented vocabularies and kept to codes that answer an operator's question:
 # is this us, the customer's input, or the provider. An unlisted code exports nothing rather
 # than being trusted, which costs one attribute and closes the channel.
-_KNOWN_PROVIDER_ERROR_CODES = frozenset(
-    {
+# Mapped to itself so the lookup returns the literal written here rather than the caller's
+# object. Exporting the input, even after it compares equal, hands the wire back its own value.
+_KNOWN_PROVIDER_ERROR_CODES = {
+    code: code
+    for code in (
         "content_filter",
         "context_length_exceeded",
         "insufficient_quota",
@@ -500,8 +503,8 @@ _KNOWN_PROVIDER_ERROR_CODES = frozenset(
         "string_above_max_length",
         "unknown_parameter",
         "unsupported_value",
-    }
-)
+    )
+}
 
 _HTTP_STATUS_MIN = 100
 _HTTP_STATUS_MAX = 599
@@ -700,11 +703,12 @@ def _error_transport_identity(exc: BaseException) -> dict[str, str | int]:
     that dict's sibling ``message`` is the prompt tail, and a boundary that reaches into a
     payload to pull one key out is one refactor away from taking the payload.
 
-    ``code`` must be one of ``_KNOWN_PROVIDER_ERROR_CODES``, from an exception belonging to one
-    of ``_PROVIDER_SDK_MODULES``. The value allowlist is the boundary, because neither shape nor
-    source is one: the SDK copies ``code`` out of the response JSON, and Langflow can be pointed
-    at any OpenAI-compatible endpoint, so a genuine ``openai.BadRequestError`` can carry a string
-    the server chose. Matching a fixed set means the exported value is one written here.
+    ``code`` must be an exact ``str`` matching ``_KNOWN_PROVIDER_ERROR_CODES``, on an exception
+    belonging to one of ``_PROVIDER_SDK_MODULES``, and what is exported is the literal from that
+    mapping rather than the value handed in. The value allowlist is the boundary, because neither
+    shape nor source is one: the SDK copies ``code`` out of the response JSON, and Langflow can be
+    pointed at any OpenAI-compatible endpoint, so a genuine ``openai.BadRequestError`` can carry a
+    string the server chose. Matching a fixed set means the exported value is one written here.
 
     The module check stays in front of it. It buys nothing against a leak once the value is
     fixed, but it stops a component raising its own error with ``code="rate_limit_exceeded"``
@@ -722,11 +726,17 @@ def _error_transport_identity(exc: BaseException) -> dict[str, str | int]:
                 attributes["http.response.status_code"] = status
         if "error.code" not in attributes and type(link).__module__.split(".")[0] in _PROVIDER_SDK_MODULES:
             code = getattr(link, "code", None)
-            # isinstance first: `code` is whatever was in the response JSON, so it can be a dict
-            # or a list, and an unhashable value raises TypeError from a set membership test.
-            # That would be swallowed by the caller's broad except and silently drop the record.
-            if isinstance(code, str) and code in _KNOWN_PROVIDER_ERROR_CODES:
-                attributes["error.code"] = code
+            # `type(...) is str`, not isinstance: a str subclass can override __hash__ and
+            # __eq__, so it compares equal to an allowlisted code while carrying something else,
+            # and the lookup would then export the object rather than the match. One that raises
+            # from __hash__ is worse than a leak in a different direction: it propagates into the
+            # caller's broad except and drops the whole record.
+            #
+            # `code` is whatever was in the response JSON, so it can equally be a dict or a list.
+            # The type check covers that too.
+            canonical = _KNOWN_PROVIDER_ERROR_CODES.get(code) if type(code) is str else None
+            if canonical is not None:
+                attributes["error.code"] = canonical
     return attributes
 
 

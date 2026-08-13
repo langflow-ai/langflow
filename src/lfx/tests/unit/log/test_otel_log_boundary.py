@@ -110,6 +110,42 @@ if os.environ.get("PROBE_FLOW"):
 
     assert _run_flow(), "the probe flow produced no results, so it proves nothing about its logs"
 
+# A provider error whose `code` fights back. The module is forged rather than importing openai,
+# which is absent from the canonical lfx test environment.
+if os.environ.get("PROBE_HOSTILE_CODE"):
+
+    class HostileCode(str):
+        """Compares equal to an allowlisted code while carrying something else."""
+
+        def __new__(cls, carried, pretends_to_be):
+            value = super().__new__(cls, carried)
+            value.pretends_to_be = pretends_to_be
+            return value
+
+        def __hash__(self):
+            return hash(self.pretends_to_be)
+
+        def __eq__(self, other):
+            return other == self.pretends_to_be
+
+    class ExplodingCode(str):
+        def __hash__(self):
+            msg = "hash exploded"
+            raise RuntimeError(msg)
+
+    class ProviderError(Exception):
+        pass
+
+    ProviderError.__module__ = "openai"
+
+    liar = ProviderError("boom")
+    liar.code = HostileCode("SENTINELPROMPTQQQ", "context_length_exceeded")
+    logger.error("provider call failed", exc_info=liar)
+
+    exploding = ProviderError("boom")
+    exploding.code = ExplodingCode("whatever")
+    logger.error("provider call failed again", exc_info=exploding)
+
 # The real agent failure shape, since that is the record an on-call actually lands on.
 if os.environ.get("PROBE_AGENT"):
     from lfx.base.agents.events import ExceptionWithMessageError
@@ -338,6 +374,81 @@ def test_the_provider_error_message_is_not_exported_alongside_the_code():
     error = openai.BadRequestError("boom", response=httpx.Response(400, request=request, json=body), body=body["error"])
 
     assert PROMPT not in json.dumps(_error_transport_identity(error))
+
+
+def _forged_provider_error(code):
+    """A provider-module exception without importing one.
+
+    openai is absent from the canonical lfx test environment (``uv sync --dev --extra otel``), so
+    an importorskip here would make the decisive regression silently not run where it matters.
+    Only the module name is borrowed; the value allowlist is what is under test.
+    """
+
+    class ProviderError(Exception):
+        pass
+
+    ProviderError.__module__ = "openai"
+    error = ProviderError("boom")
+    error.code = code
+    return error
+
+
+def test_a_lying_string_subclass_does_not_smuggle_a_value_through():
+    """`isinstance` admits subclasses, and a subclass chooses its own __eq__ and __hash__.
+
+    So it compares equal to an allowlisted code while carrying something else, and a lookup that
+    returns the caller's object hands the wire back its own value. Exact type, and export the
+    literal from the mapping rather than the input.
+    """
+    from lfx.log.logger import _error_transport_identity
+
+    class HostileCode(str):
+        __slots__ = ("pretends_to_be",)
+
+        def __new__(cls, carried, pretends_to_be):
+            value = super().__new__(cls, carried)
+            value.pretends_to_be = pretends_to_be
+            return value
+
+        def __hash__(self):
+            return hash(self.pretends_to_be)
+
+        def __eq__(self, other):
+            return other == self.pretends_to_be
+
+    identity = _error_transport_identity(_forged_provider_error(HostileCode(PROMPT, "context_length_exceeded")))
+
+    assert "error.code" not in identity, identity
+
+
+def test_a_genuine_code_is_exported_as_the_literal_from_the_allowlist():
+    """The positive half, and it must run in the canonical environment too."""
+    from lfx.log.logger import _error_transport_identity
+
+    identity = _error_transport_identity(_forged_provider_error("context_length_exceeded"))
+
+    assert identity["error.code"] == "context_length_exceeded"
+    # The literal from the mapping, not the caller's object.
+    assert type(identity["error.code"]) is str
+
+
+def test_a_code_that_raises_from_hash_neither_leaks_nor_drops_the_record():
+    """Record retention, which is the other way this fails.
+
+    A __hash__ that raises propagates out of the membership test into the caller's broad except,
+    which drops the whole record. That is a quieter outage than a leak: the operator simply stops
+    seeing the failing runs.
+    """
+    records = run_probe(PROBE_HOSTILE_CODE="1")
+    payload = json.dumps(records)
+
+    assert PROMPT not in payload
+
+    provider_records = [r for r in records if "provider call failed" in str(r["body"])]
+    # Bodies are withheld by default, so match on what survives instead.
+    failures = [r for r in application_records(records) if r["attributes"].get("error.type")]
+    assert len(failures) >= 2, f"both provider records must survive: {records}"
+    assert not provider_records or PROMPT not in json.dumps(provider_records)
 
 
 def test_an_identifier_shaped_secret_on_a_foreign_exception_is_not_exported():
