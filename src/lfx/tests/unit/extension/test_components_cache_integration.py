@@ -58,6 +58,7 @@ async def test_component_cache_initialization_is_single_flight_and_atomic() -> N
     from lfx.interface import components as components_module
 
     cache = components_module.ComponentCache()
+    cache.type_to_code = {"StaleComponent": "# stale trusted code"}
     settings_service = SimpleNamespace(settings=SimpleNamespace())
     trusted_code = "# trusted ChatInput code"
     code_hash = hashlib.sha256(trusted_code.encode()).hexdigest()[:12]
@@ -96,6 +97,7 @@ async def test_component_cache_initialization_is_single_flight_and_atomic() -> N
             assert not cache.all_types_ready
             assert cache.type_to_current_hash is None
             assert cache.code_by_hash is None
+            assert cache.type_to_code is None
             assert cache.component_identity_index is None
         assert not follower.done()
 
@@ -108,6 +110,7 @@ async def test_component_cache_initialization_is_single_flight_and_atomic() -> N
     assert cache.all_types_ready
     assert cache.type_to_current_hash == {"ChatInput": {code_hash}, "Chat Input": {code_hash}}
     assert cache.code_by_hash == {code_hash: trusted_code}
+    assert cache.type_to_code == {"ChatInput": trusted_code, "Chat Input": trusted_code}
     assert cache.component_identity_index is not None
     assert cache.component_identity_index.resolve("Chat Input") == frozenset({"ChatInput"})
 
@@ -896,6 +899,7 @@ def test_post_swap_hook_invalidates_hash_lookups(tmp_path: Path) -> None:
     component_cache.all_types_ready = True
     component_cache.type_to_current_hash = {"DeltaThing": {"abc123def456"}}  # pragma: allowlist secret
     component_cache.all_known_hashes = {"abc123def456"}  # pragma: allowlist secret
+    component_cache.type_to_code = {"DeltaThing": "# stale trusted code"}
     component_cache.component_identity_index = object()
 
     class _Component:
@@ -931,6 +935,7 @@ def test_post_swap_hook_invalidates_hash_lookups(tmp_path: Path) -> None:
 
     assert component_cache.type_to_current_hash is None
     assert component_cache.all_known_hashes is None
+    assert component_cache.type_to_code is None
     assert component_cache.component_identity_index is None
 
 
