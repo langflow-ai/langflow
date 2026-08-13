@@ -10,7 +10,6 @@ from lfx.log.logger import logger
 from lfx.services.mcp_composer.service import MCPComposerService
 from lfx.utils.util_strings import escape_like_pattern
 from sqlalchemy import literal, null, or_, update
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
@@ -136,20 +135,20 @@ async def _new_project(
                 Folder.user_id == current_user.id,
             )
         )
-        if project_results:
-            project_names = [existing.name for existing in project_results]
-            project_numbers = []
-            for name in project_names:
-                if "(" not in name:
-                    continue
-                try:
-                    project_numbers.append(int(name.split("(")[-1].split(")")[0]))
-                except ValueError:
-                    continue
-            if project_numbers:
-                new_project.name = f"{new_project.name} ({max(project_numbers) + 1})"
-            else:
-                new_project.name = f"{new_project.name} (1)"
+        # No emptiness guard: session.exec() returns a ScalarResult, which is always truthy even
+        # when it yields no rows. Iterating an empty result simply leaves project_numbers empty.
+        project_numbers = []
+        for name in (existing.name for existing in project_results):
+            if "(" not in name:
+                continue
+            try:
+                project_numbers.append(int(name.split("(")[-1].split(")")[0]))
+            except ValueError:
+                continue
+        if project_numbers:
+            new_project.name = f"{new_project.name} ({max(project_numbers) + 1})"
+        else:
+            new_project.name = f"{new_project.name} (1)"
 
     settings_service = get_settings_service()
     mcp_auth: dict = {"auth_type": "none"}
@@ -337,7 +336,7 @@ async def read_projects(
             for project in sorted_projects
         ]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail=sanitize_database_error(e, PROJECT_READ_FAILED)) from e
 
 
 @router.get("/{project_id}", response_model=FolderWithPaginatedFlows | FolderReadWithFlows, status_code=200)
@@ -374,7 +373,7 @@ async def read_project(
     except Exception as e:
         if "No result found" in str(e):
             raise HTTPException(status_code=404, detail="Project not found") from e
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail=sanitize_database_error(e, PROJECT_READ_FAILED)) from e
 
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -514,7 +513,7 @@ async def read_project(
         return project_read  # noqa: TRY300 - conversion must happen while the ORM session is active
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail=sanitize_database_error(e, PROJECT_READ_FAILED)) from e
 
 
 async def _apply_project_update(
@@ -533,6 +532,9 @@ async def _apply_project_update(
     ``except Exception`` swallows the resulting IntegrityError — leaving the session needing
     rollback so the later flush raises PendingRollbackError, which reached callers as a 500
     carrying the SQL statement and bound parameters.
+
+    A concurrent rename that slips between that check and the flush still hits the constraint;
+    both callers map it through _handle_unique_constraint_error, so it also surfaces as a 409.
 
     Raises on deployment-guard errors; callers map those to their own status.
     """
@@ -820,9 +822,9 @@ async def update_project(
             e,
             log_message=f"op=update_project project_id={project_id}",
         )
-        # Sanitized like the read/delete handlers: SQLAlchemy's str() embeds the statement and the
-        # bound parameters, which must not reach the client.
-        raise HTTPException(status_code=500, detail=sanitize_database_error(e, PROJECT_UPDATE_FAILED)) from e
+        # Same mapping as the PUT upsert so both verbs answer a constraint backstop identically:
+        # 409 for a unique violation that slipped past the pre-check, sanitized 500 otherwise.
+        raise _handle_unique_constraint_error(e, status_code=status.HTTP_409_CONFLICT) from e
 
 
 @router.put(
@@ -917,27 +919,14 @@ async def upsert_project(
 
     except HTTPException:
         raise
-    except IntegrityError as e:
-        # ``folder``'s only unique constraint is ``(user_id, name)``, so an IntegrityError here is
-        # the fail-loud 409 case. Raised directly instead of via _handle_unique_constraint_error
-        # because that helper (a) only recognizes SQLite's error text, so a Postgres unique
-        # violation would degrade to 500 and break the 409 contract on the real sync DB, and
-        # (b) mis-parses this composite constraint into a stray " folder must be unique".
-        # Follow-up: fix the shared helper (SQLSTATE 23505 + composite parse) and drop this branch —
-        # upsert_flow calls the same helper and carries both bugs.
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Project name must be unique") from e
     except Exception as e:
         await araise_if_deployment_guard_error_or_skip(
             e,
             log_message=f"op=upsert_project project_id={project_id}",
         )
-        # Keep the helper's 409 mapping for a unique violation that arrives wrapped in some other
-        # exception type, but never let its non-409 fallback through: it details str(exc), which
-        # for a SQLAlchemy error is the statement plus the bound parameters.
-        mapped = _handle_unique_constraint_error(e, status_code=409)
-        if mapped.status_code == status.HTTP_409_CONFLICT:
-            raise mapped from e
-        raise HTTPException(status_code=500, detail=sanitize_database_error(e, PROJECT_SAVE_FAILED)) from e
+        # The shared helper maps a unique violation on either backend (409, with a detail naming
+        # the constraint that fired) and sanitizes anything else into a 500.
+        raise _handle_unique_constraint_error(e, status_code=status.HTTP_409_CONFLICT) from e
 
 
 @router.delete("/{project_id}", status_code=204)
