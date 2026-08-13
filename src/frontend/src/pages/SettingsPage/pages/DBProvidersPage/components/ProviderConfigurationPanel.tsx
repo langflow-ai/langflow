@@ -164,6 +164,9 @@ export function ProviderConfigurationPanel({
               size="sm"
               loading={isPending}
               disabled={isPending || isActive || !postgresStatus?.ok}
+              // Preserve the "pgVector" brand casing; the Button auto-title-cases
+              // string children ("pgVector" → "Pgvector") otherwise.
+              ignoreTitleCase
             >
               {isActive
                 ? t("settings.dbProviders.postgresSelected")
