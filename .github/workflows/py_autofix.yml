@@ -6,6 +6,12 @@ on:
       - "src/lfx/src/lfx/components/**"
       - "scripts/build_component_index.py"
     types: [opened, synchronize, reopened, labeled]
+
+# autofix-ci/action uploads a diff artifact and the autofix.ci GitHub App applies
+# it with its own credentials, so no job here needs write access to the repo.
+permissions:
+  contents: read
+
 env:
   PYTHON_VERSION: "3.13"
 

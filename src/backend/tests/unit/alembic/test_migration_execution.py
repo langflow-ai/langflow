@@ -651,7 +651,10 @@ def test_upgrade_from_main_branch(db_url):
     try:
         with engine.connect() as connection:
             migration_context = MigrationContext.configure(connection)
-            diffs = compare_metadata(migration_context, SQLModel.metadata)
+            with warnings.catch_warnings():
+                if db_url.startswith("sqlite"):
+                    filter_known_sqlite_reflection_warnings()
+                diffs = compare_metadata(migration_context, SQLModel.metadata)
     finally:
         engine.dispose()
 

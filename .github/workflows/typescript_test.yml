@@ -237,7 +237,20 @@ jobs:
           fi
           command=(npx playwright test "$TESTS_FOLDER")
           [[ -z "$TEST_GREP" ]] || command+=(--grep "$TEST_GREP")
-          TEST_COUNT=$("${command[@]}" --list | wc -l)
+          # `--list` prints a "Listing tests:" header and a "Total: N tests in M
+          # files" footer, so `wc -l` over-counts and over-shards.  Parse the
+          # footer instead, and treat a zero-match grep as zero tests rather than
+          # letting Playwright's non-zero exit kill the step under `set -e`.
+          if ! list_output=$("${command[@]}" --list 2>&1); then
+            printf '%s\n' "$list_output"
+            echo "No tests matched grep='$TEST_GREP' in '$TESTS_FOLDER'; using a single shard."
+            TEST_COUNT=0
+          else
+            printf '%s\n' "$list_output"
+            TEST_COUNT=$(printf '%s\n' "$list_output" \
+              | sed -n 's/^Total: \([0-9][0-9]*\) test.*/\1/p' | tail -n 1)
+            TEST_COUNT=${TEST_COUNT:-0}
+          fi
 
           echo "Total tests to run: $TEST_COUNT"
 

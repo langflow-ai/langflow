@@ -44,10 +44,22 @@ def test_sqlite_reflection_filter_suppresses_only_known_expression_indexes() -> 
             UserWarning,
             stacklevel=1,
         )
+        warnings.warn(
+            "WARNING: SQL-parsed foreign key constraint '('user_id', 'user', 'id')' "
+            "could not be located in PRAGMA foreign_keys for table file",
+            SAWarning,
+            stacklevel=1,
+        )
+        warnings.warn(
+            "Unrelated SQLite reflection problem for table file",
+            SAWarning,
+            stacklevel=1,
+        )
 
     assert [str(item.message) for item in caught] == [
         "Skipped unsupported reflection of expression-based index ix_unrelated_expression",
         "autogenerate skipping metadata-specified expression-based index "
         "'ix_unrelated_expression'; dialect 'sqlite' under SQLAlchemy 2.0.51 "
         "can't reflect these indexes so they can't be compared",
+        "Unrelated SQLite reflection problem for table file",
     ]

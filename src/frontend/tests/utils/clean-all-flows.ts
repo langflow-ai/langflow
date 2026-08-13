@@ -30,5 +30,9 @@ export const cleanAllFlows = async (page: Page) => {
     await expect(dropdownMenu).toHaveCount(cardCountBeforeDelete - 1);
   }
 
+  // The final iteration can delete the last flow and fall out of the loop
+  // normally, so confirm the empty state before reporting a failure.
+  if (await emptyPageDescription.isVisible().catch(() => false)) return;
+
   throw new Error(`Unable to delete all flows after ${MAX_DELETIONS} attempts`);
 };

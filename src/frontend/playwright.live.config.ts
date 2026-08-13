@@ -2,6 +2,9 @@ import { defineConfig } from "@playwright/test";
 import baseConfig from "./playwright.config";
 import { PORT } from "./src/customization/config-constants";
 
+// Deliberately not 7860: that is the blocking suite's backend port.
+const LIVE_BACKEND_PORT = 7861;
+
 export default defineConfig(baseConfig, {
   testDir: "./tests/live",
   testIgnore: [],
@@ -18,13 +21,16 @@ export default defineConfig(baseConfig, {
   // The blocking suite routes OpenAI-compatible traffic to a loopback fixture.
   // The live smoke deliberately owns a separate server list so neither that
   // fixture nor its OPENAI_BASE_URL can leak into the real-provider check.
+  // Playwright only applies `env` to a server it starts itself, so this suite
+  // also owns a dedicated port, database file, and `reuseExistingServer: false`
+  // — otherwise a blocking-suite backend still listening on 7860 would be
+  // reused and the "live" check would silently talk to the loopback fixture.
   webServer: [
     {
-      command:
-        "uv run uvicorn --factory langflow.main:create_app --host localhost --port 7860 --loop asyncio --log-level error --no-access-log",
-      port: 7860,
+      command: `uv run uvicorn --factory langflow.main:create_app --host localhost --port ${LIVE_BACKEND_PORT} --loop asyncio --log-level error --no-access-log`,
+      port: LIVE_BACKEND_PORT,
       env: {
-        LANGFLOW_DATABASE_URL: "sqlite:///./temp",
+        LANGFLOW_DATABASE_URL: "sqlite:///./temp-live",
         LANGFLOW_AUTO_LOGIN: "true",
         LANGFLOW_SUPERUSER: "langflow",
         LANGFLOW_SUPERUSER_PASSWORD: "test-superuser-password", // pragma: allowlist secret
@@ -34,16 +40,16 @@ export default defineConfig(baseConfig, {
         LANGFLOW_A2A_ENABLED: "true",
       },
       stderr: "pipe",
-      reuseExistingServer: true,
+      reuseExistingServer: false,
       timeout: 120 * 750,
     },
     {
       command: "npm start",
       port: PORT || 3000,
       env: {
-        VITE_PROXY_TARGET: "http://localhost:7860",
+        VITE_PROXY_TARGET: `http://localhost:${LIVE_BACKEND_PORT}`,
       },
-      reuseExistingServer: true,
+      reuseExistingServer: false,
     },
   ],
 });

@@ -44,6 +44,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
+          persist-credentials: false
 
       - name: Set immutable architecture tags
         id: tags
@@ -132,6 +133,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
+          persist-credentials: false
 
       - name: Set immutable architecture tags
         id: tags

@@ -25,7 +25,7 @@ export const cleanOldFolders = async (page: Page) => {
           response.request().method() === "DELETE" &&
           /\/api\/v1\/projects\/[^/]+$/.test(new URL(response.url()).pathname),
       ),
-      page.getByText(TEXTS.delete, { exact: true }).last().click(),
+      page.getByTestId("btn_delete_delete_confirmation_modal").click(),
     ]);
     expect(deleteResponse.ok()).toBe(true);
 

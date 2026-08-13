@@ -536,7 +536,7 @@ function GenericNode({
     takeSnapshot,
     setNode,
     showNode,
-    updateNodeCode,
+    handleUpdateCode,
     isOutdated,
     isUserEdited,
     selected,

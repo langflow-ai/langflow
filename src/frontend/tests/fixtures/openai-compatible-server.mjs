@@ -334,7 +334,15 @@ const server = createServer(async (request, response) => {
       return;
     }
   } catch (error) {
-    writeJson(response, 400, { error: { message: String(error) } });
+    // The streaming branches above write headers before they finish, so a late
+    // failure cannot be reported as JSON — calling writeHead twice throws
+    // ERR_HTTP_HEADERS_SENT inside this async handler, and the resulting
+    // unhandled rejection would tear down the fixture for the rest of the run.
+    if (response.headersSent) {
+      response.destroy();
+    } else {
+      writeJson(response, 400, { error: { message: String(error) } });
+    }
     return;
   }
 

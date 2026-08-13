@@ -51,7 +51,12 @@ export async function configureLoopbackWebSearch(page: Page): Promise<void> {
   );
   expect(searchNodes.length).toBeGreaterThan(0);
   for (const node of searchNodes) {
-    node.data.node.template.code.value = LOOPBACK_WEB_SEARCH_CODE;
+    const codeField = node.data?.node?.template?.code;
+    expect(
+      codeField,
+      "UnifiedWebSearch node is missing template.code",
+    ).toBeTruthy();
+    codeField.value = LOOPBACK_WEB_SEARCH_CODE;
   }
   const update = await page.request.patch(`/api/v1/flows/${flowId}`, {
     data: { data: flow.data },
