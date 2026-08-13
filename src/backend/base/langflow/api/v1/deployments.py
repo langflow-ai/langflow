@@ -744,22 +744,22 @@ async def list_deployments(
 ):
     if flow_ids and flow_version_ids:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="flow_ids and flow_version_ids are mutually exclusive.",
         )
     if load_from_provider and flow_version_ids:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="flow_version_ids filtering is not supported when loading deployments directly from the provider.",
         )
     if load_from_provider and flow_ids:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="flow_ids filtering is not supported when loading deployments directly from the provider.",
         )
     if load_from_provider and project_id is not None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="project_id filtering is not supported when loading deployments directly from the provider.",
         )
     effective_flow_version_ids = flow_version_ids
@@ -1110,7 +1110,7 @@ async def list_deployment_configs(
 
     if provider_account is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Either provider_id or deployment_id must be provided.",
         )
 
@@ -1380,7 +1380,7 @@ async def update_snapshot(
         )
     if flow_version.data is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Flow version '{body.flow_version_id}' has no data.",
         )
     await validate_project_scoped_flow_version_ids(

@@ -17,6 +17,12 @@ test(
     );
 
     // Disable auto login
+    page.expectServerError({
+      method: "GET",
+      path: "/api/v1/auto_login",
+      status: 500,
+      count: 1,
+    });
     await page.route("**/api/v1/auto_login", (route) => {
       route.fulfill({
         status: 500,

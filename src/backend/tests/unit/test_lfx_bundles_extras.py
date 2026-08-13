@@ -157,3 +157,10 @@ def test_altk_dependency_supports_python_314() -> None:
         }
     )
     assert not altk.marker.evaluate(environment)
+
+
+def test_huggingface_dependency_does_not_request_removed_inference_extra() -> None:
+    requirements = (Requirement(dependency) for dependency in _load_extras()["huggingface"])
+    huggingface_hub = next(requirement for requirement in requirements if requirement.name == "huggingface-hub")
+
+    assert not huggingface_hub.extras

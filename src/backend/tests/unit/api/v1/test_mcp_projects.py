@@ -34,9 +34,6 @@ from sqlmodel import select
 
 from tests.unit.utils.mcp import project_session_manager_lifespan
 
-# Mark all tests in this module as asyncio
-pytestmark = pytest.mark.asyncio
-
 
 def _set_startup_mcp_settings(
     monkeypatch,
@@ -476,7 +473,7 @@ async def test_update_project_mcp_settings_invalid_json(client: AsyncClient, use
     response = await client.patch(
         f"api/v1/mcp/project/{user_test_project.id}", headers=logged_in_headers, json="invalid"
     )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 @pytest.fixture

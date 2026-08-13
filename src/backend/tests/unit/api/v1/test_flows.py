@@ -608,7 +608,7 @@ async def test_read_flows_rejects_invalid_flow_type(client: AsyncClient, logged_
         params={"get_all": True, "flow_type": "not_a_real_type"},
         headers=logged_in_headers,
     )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 async def test_read_flows_header_mode_filtered_by_flow_type(client: AsyncClient, logged_in_headers):
@@ -1136,7 +1136,7 @@ async def test_upload_flow_rejects_list_payload(client: AsyncClient, logged_in_h
         files={"file": ("flows.json", file_content, "application/json")},
         headers=logged_in_headers,
     )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 async def test_upload_flow_rejects_scalar_payload(client: AsyncClient, logged_in_headers):
@@ -1150,7 +1150,7 @@ async def test_upload_flow_rejects_scalar_payload(client: AsyncClient, logged_in
         files={"file": ("flows.json", file_content, "application/json")},
         headers=logged_in_headers,
     )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 async def test_upload_flow_rejects_endpoint_name_with_dots(client: AsyncClient, logged_in_headers):
@@ -1175,7 +1175,7 @@ async def test_upload_flow_rejects_endpoint_name_with_dots(client: AsyncClient, 
         files={"file": ("flows.json", file_content, "application/json")},
         headers=logged_in_headers,
     )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 async def test_upload_flow_accepts_valid_endpoint_name(client: AsyncClient, logged_in_headers):
@@ -1631,6 +1631,440 @@ async def test_bulk_delete_with_deployed_flow_returns_409(client: AsyncClient, l
     )
     assert delete_resp.status_code == status.HTTP_409_CONFLICT
     assert "cannot be deleted because it has deployed versions" in delete_resp.json()["detail"].lower()
+
+
+async def test_delete_flow_retries_transient_sqlite_lock(client: AsyncClient, logged_in_headers, monkeypatch):
+    """A transient SQLite lock retries the complete single-flow deletion."""
+    import sqlite3
+
+    from langflow.api.v1 import flows as flows_module
+    from sqlalchemy.exc import OperationalError
+
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"delete-lock-retry-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_id = create_response.json()["id"]
+    original_delete = flows_module.cascade_delete_flow
+    attempts = {"count": 0}
+    statement = "DELETE FROM flow WHERE flow.id = ?"
+
+    async def delete_after_one_lock(session, target_flow_id):
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            raise OperationalError(
+                statement,
+                {"id": target_flow_id},
+                sqlite3.OperationalError("database is locked"),
+            )
+        return await original_delete(session, target_flow_id)
+
+    monkeypatch.setattr(flows_module, "cascade_delete_flow", delete_after_one_lock)
+
+    response = await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert attempts["count"] == 2
+    read_response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert read_response.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_delete_flow_exhausted_lock_retries_return_sanitized_503(
+    client: AsyncClient, logged_in_headers, monkeypatch
+):
+    """Exhausted single-flow lock retries expose no SQL or bound values."""
+    import sqlite3
+
+    from langflow.api.v1 import flows as flows_module
+    from langflow.services.database.lock_retry import DEFAULT_LOCK_RETRY_ATTEMPTS
+    from sqlalchemy.exc import OperationalError
+
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"delete-lock-exhausted-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    flow_id = create_response.json()["id"]
+    leaked_statement = "DELETE FROM flow WHERE flow.id = ?"
+    leaked_value = f"secret-bound-value-{uuid.uuid4()}"
+    attempts = {"count": 0}
+
+    async def always_locked(_session, _target_flow_id):
+        attempts["count"] += 1
+        raise OperationalError(
+            leaked_statement,
+            {"id": flow_id, "value": leaked_value},
+            sqlite3.OperationalError("database is locked"),
+        )
+
+    monkeypatch.setattr(flows_module, "cascade_delete_flow", always_locked)
+    original_retry = flows_module.run_with_lock_retry
+
+    async def run_without_delay(operation, *, session, description):
+        return await original_retry(operation, session=session, description=description, base_delay=0)
+
+    monkeypatch.setattr(flows_module, "run_with_lock_retry", run_without_delay)
+
+    response = await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+
+    assert attempts["count"] == DEFAULT_LOCK_RETRY_ATTEMPTS
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert response.headers["Retry-After"] == "1"
+    detail = response.json()["detail"]
+    assert detail == flows_module.FLOW_DELETE_BUSY
+    assert leaked_statement not in detail
+    assert leaked_value not in detail
+    assert flow_id not in detail
+    assert "sqlalche.me" not in detail
+
+
+async def test_delete_flow_non_lock_failure_returns_sanitized_500(client: AsyncClient, logged_in_headers, monkeypatch):
+    """A non-lock failure is not retried and does not disclose exception details."""
+    from langflow.api.v1 import flows as flows_module
+
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"delete-non-lock-failure-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    flow_id = create_response.json()["id"]
+    leaked_detail = f"sensitive-delete-detail-{uuid.uuid4()}"
+    attempts = {"count": 0}
+
+    async def fail_delete(_session, _target_flow_id):
+        attempts["count"] += 1
+        raise RuntimeError(leaked_detail)
+
+    monkeypatch.setattr(flows_module, "cascade_delete_flow", fail_delete)
+
+    response = await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+
+    assert attempts["count"] == 1
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.json()["detail"] == flows_module.FLOW_DELETE_FAILED
+    assert leaked_detail not in response.text
+    assert "Retry-After" not in response.headers
+
+
+async def test_delete_flow_real_competing_sqlite_writer_is_retried(client: AsyncClient, logged_in_headers, monkeypatch):
+    """A real second SQLite connection holding the write lock triggers a retry."""
+    from langflow.api.v1 import flows as flows_module
+    from langflow.services.database.models.folder.model import Folder
+    from langflow.services.deps import session_scope
+    from sqlalchemy import text
+
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"delete-real-lock-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    flow_id = create_response.json()["id"]
+    original_delete = flows_module.cascade_delete_flow
+    attempts = {"count": 0}
+
+    async def delete_after_competing_commit(session, target_flow_id):
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            async with session_scope() as competing_session:
+                competing_session.add(Folder(name=f"delete-competing-write-{uuid.uuid4()}", user_id=None))
+                await competing_session.flush()
+                # The second connection now holds SQLite's write lock. Disable
+                # waiting on the route connection so its real DELETE reports
+                # the lock immediately and exercises the retry boundary.
+                await session.exec(text("PRAGMA busy_timeout = 0"))
+                return await original_delete(session, target_flow_id)
+        return await original_delete(session, target_flow_id)
+
+    monkeypatch.setattr(flows_module, "cascade_delete_flow", delete_after_competing_commit)
+
+    response = await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert attempts["count"] >= 2
+    read_response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert read_response.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_delete_flow_retry_is_idempotent_when_concurrent_delete_wins(
+    client: AsyncClient, logged_in_headers, monkeypatch
+):
+    """A retry treats an already-deleted target as successful."""
+    import sqlite3
+
+    from langflow.api.v1 import flows as flows_module
+    from langflow.services.database.models.flow.model import Flow
+    from langflow.services.deps import session_scope
+    from sqlalchemy.exc import OperationalError
+
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"delete-concurrent-winner-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    flow_id = UUID(create_response.json()["id"])
+    attempts = {"count": 0}
+    statement = "DELETE FROM flow WHERE flow.id = ?"
+
+    async def concurrent_delete_then_lock(_session, target_flow_id):
+        attempts["count"] += 1
+        async with session_scope() as competing_session:
+            target = await competing_session.get(Flow, target_flow_id)
+            if target is not None:
+                await competing_session.delete(target)
+        raise OperationalError(statement, {"id": target_flow_id}, sqlite3.OperationalError("database is locked"))
+
+    monkeypatch.setattr(flows_module, "cascade_delete_flow", concurrent_delete_then_lock)
+
+    response = await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert attempts["count"] == 1
+
+
+async def test_delete_flow_retry_preserves_permission_denial(client: AsyncClient, logged_in_headers, monkeypatch):
+    """A retry-time authorization denial remains a 403 instead of becoming a 500."""
+    import sqlite3
+
+    from fastapi import HTTPException
+    from langflow.api.v1 import flows as flows_module
+    from sqlalchemy.exc import OperationalError
+
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"delete-retry-denied-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    flow_id = create_response.json()["id"]
+    statement = "DELETE FROM flow WHERE flow.id = ?"
+
+    async def locked_once(_session, target_flow_id):
+        raise OperationalError(statement, {"id": target_flow_id}, sqlite3.OperationalError("database is locked"))
+
+    async def deny_retry(*_args, **_kwargs):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="delete permission revoked")
+
+    monkeypatch.setattr(flows_module, "cascade_delete_flow", locked_once)
+    monkeypatch.setattr(flows_module, "ensure_flow_permission", deny_retry)
+    original_retry = flows_module.run_with_lock_retry
+
+    async def run_without_delay(operation, *, session, description):
+        return await original_retry(operation, session=session, description=description, base_delay=0)
+
+    monkeypatch.setattr(flows_module, "run_with_lock_retry", run_without_delay)
+
+    response = await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json()["detail"] == "delete permission revoked"
+
+
+async def test_delete_flow_deployment_guard_retry_reauthorizes_before_second_cascade(
+    client: AsyncClient, logged_in_headers, monkeypatch
+):
+    """A deployment-guard retry must reauthorize before attempting the delete again."""
+    from fastapi import HTTPException
+    from langflow.api.v1 import flows as flows_module
+    from langflow.api.v1.mappers.deployments import sync as deployment_sync
+    from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
+
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"delete-deployment-retry-denied-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_payload = create_response.json()
+    flow_id = UUID(flow_payload["id"])
+    owner_id = UUID(flow_payload["user_id"])
+    permission_attempts = 0
+    cascade_attempts = 0
+    repair_owner_maps: list[dict[UUID, UUID]] = []
+
+    async def allow_then_deny(*_args, **_kwargs):
+        nonlocal permission_attempts
+        permission_attempts += 1
+        if permission_attempts == 2:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="delete permission revoked")
+
+    async def fail_deployment_guard_once(_session, _target_flow_id):
+        nonlocal cascade_attempts
+        cascade_attempts += 1
+        raise DeploymentGuardError(
+            code="FLOW_HAS_DEPLOYED_VERSIONS",
+            technical_detail="Flow is deployed.",
+            detail="Flow is deployed.",
+        )
+
+    async def record_deployment_repair(*, db, flow_owner_ids):  # noqa: ARG001
+        repair_owner_maps.append(dict(flow_owner_ids))
+
+    monkeypatch.setattr(flows_module, "ensure_flow_permission", allow_then_deny)
+    monkeypatch.setattr(flows_module, "cascade_delete_flow", fail_deployment_guard_once)
+    monkeypatch.setattr(deployment_sync, "sync_flow_deployment_state_by_owner", record_deployment_repair)
+
+    response = await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json()["detail"] == "delete permission revoked"
+    assert permission_attempts == 2
+    assert cascade_attempts == 1
+    assert repair_owner_maps == [{flow_id: owner_id}]
+    read_response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert read_response.status_code == status.HTTP_200_OK
+
+
+async def test_bulk_delete_retries_transient_sqlite_lock(client: AsyncClient, logged_in_headers, monkeypatch):
+    """A transient SQLite lock retries the complete bulk deletion transaction."""
+    import sqlite3
+
+    from langflow.api.v1 import flows as flows_module
+    from sqlalchemy.exc import OperationalError
+
+    flow_ids = []
+    for index in range(2):
+        create_response = await client.post(
+            "api/v1/flows/",
+            json={"name": f"bulk-delete-lock-{index}-{uuid.uuid4()}", "data": {}},
+            headers=logged_in_headers,
+        )
+        flow_ids.append(create_response.json()["id"])
+
+    original_delete = flows_module.cascade_delete_flow
+    attempts = {"count": 0}
+    statement = "DELETE FROM flow WHERE flow.id = ?"
+
+    async def delete_after_one_lock(session, target_flow_id):
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            raise OperationalError(
+                statement,
+                {"id": target_flow_id},
+                sqlite3.OperationalError("database is locked"),
+            )
+        return await original_delete(session, target_flow_id)
+
+    monkeypatch.setattr(flows_module, "cascade_delete_flow", delete_after_one_lock)
+
+    response = await client.request("DELETE", "api/v1/flows/", json=flow_ids, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json() == {"deleted": 2}
+    assert attempts["count"] == 3
+    for flow_id in flow_ids:
+        assert (
+            await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+        ).status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_bulk_delete_retry_rebuilds_authorized_owner_map(client: AsyncClient, logged_in_headers, monkeypatch):
+    """A retry passes the deployment guard only owners reloaded after rollback."""
+    import sqlite3
+
+    from langflow.api.v1 import flows as flows_module
+    from langflow.services.database.models.flow.model import Flow
+    from langflow.services.deps import session_scope
+    from sqlalchemy.exc import OperationalError
+
+    flow_ids = []
+    for index in range(2):
+        create_response = await client.post(
+            "api/v1/flows/",
+            json={"name": f"bulk-delete-owner-reload-{index}-{uuid.uuid4()}", "data": {}},
+            headers=logged_in_headers,
+        )
+        flow_ids.append(UUID(create_response.json()["id"]))
+
+    original_delete = flows_module.cascade_delete_flow
+    guard_maps: list[dict[UUID, UUID]] = []
+    first_delete = True
+    statement = "DELETE FROM flow WHERE flow.id = ?"
+
+    async def delete_after_concurrent_removal(session, target_flow_id):
+        nonlocal first_delete
+        if first_delete:
+            first_delete = False
+            async with session_scope() as competing_session:
+                removed = await competing_session.get(Flow, flow_ids[1])
+                assert removed is not None
+                await competing_session.delete(removed)
+            raise OperationalError(
+                statement,
+                {"id": target_flow_id},
+                sqlite3.OperationalError("database is locked"),
+            )
+        return await original_delete(session, target_flow_id)
+
+    async def record_guard_map(*, db, flow_owner_ids, operation):  # noqa: ARG001
+        try:
+            return await operation()
+        finally:
+            guard_maps.append(dict(flow_owner_ids))
+
+    monkeypatch.setattr(flows_module, "cascade_delete_flow", delete_after_concurrent_removal)
+    monkeypatch.setattr(flows_module, "retry_flow_operation_on_deployment_guard", record_guard_map)
+
+    response = await client.request(
+        "DELETE",
+        "api/v1/flows/",
+        json=[str(flow_id) for flow_id in flow_ids],
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json() == {"deleted": 1}
+    assert set(guard_maps[0]) == set(flow_ids)
+    assert set(guard_maps[1]) == {flow_ids[0]}
+
+
+async def test_bulk_delete_exhausted_lock_retries_return_sanitized_503(
+    client: AsyncClient, logged_in_headers, monkeypatch
+):
+    """Exhausted bulk-delete lock retries expose no SQL or bound values."""
+    import sqlite3
+
+    from langflow.api.v1 import flows as flows_module
+    from langflow.services.database.lock_retry import DEFAULT_LOCK_RETRY_ATTEMPTS
+    from sqlalchemy.exc import OperationalError
+
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"bulk-delete-lock-exhausted-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    flow_id = create_response.json()["id"]
+    leaked_statement = "DELETE FROM flow WHERE flow.id = ?"
+    leaked_value = f"secret-bound-value-{uuid.uuid4()}"
+    attempts = {"count": 0}
+
+    async def always_locked(_session, _target_flow_id):
+        attempts["count"] += 1
+        raise OperationalError(
+            leaked_statement,
+            {"id": flow_id, "value": leaked_value},
+            sqlite3.OperationalError("database is locked"),
+        )
+
+    monkeypatch.setattr(flows_module, "cascade_delete_flow", always_locked)
+    original_retry = flows_module.run_with_lock_retry
+
+    async def run_without_delay(operation, *, session, description):
+        return await original_retry(operation, session=session, description=description, base_delay=0)
+
+    monkeypatch.setattr(flows_module, "run_with_lock_retry", run_without_delay)
+
+    response = await client.request("DELETE", "api/v1/flows/", json=[flow_id], headers=logged_in_headers)
+
+    assert attempts["count"] == DEFAULT_LOCK_RETRY_ATTEMPTS
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert response.headers["Retry-After"] == "1"
+    detail = response.json()["detail"]
+    assert detail == flows_module.FLOW_DELETE_BUSY
+    assert leaked_statement not in detail
+    assert leaked_value not in detail
+    assert flow_id not in detail
+    assert "sqlalche.me" not in detail
 
 
 async def test_patch_flow_folder_move_with_deployed_versions_returns_409(

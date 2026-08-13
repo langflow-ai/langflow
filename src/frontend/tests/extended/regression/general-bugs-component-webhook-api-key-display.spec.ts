@@ -3,6 +3,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { waitForFlowEditorReady } from "../../utils/flow/wait-for-flow-editor-ready";
 import { loginLangflow } from "../../utils/login-langflow";
 import {
   addParameterToNode,
@@ -13,6 +14,12 @@ test(
   "user must be able to see api key in webhook component when auto login is disabled",
   { tag: ["@release"] },
   async ({ page }) => {
+    page.expectServerError({
+      method: "GET",
+      path: "/api/v1/auto_login",
+      status: 500,
+      count: 1,
+    });
     await page.route("**/api/v1/auto_login", (route) => {
       route.fulfill({
         status: 500,
@@ -46,6 +53,7 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
+    await waitForFlowEditorReady(page);
     await page.getByTestId("sidebar-search-input").click();
 
     await page.getByTestId("sidebar-search-input").fill("webhook");

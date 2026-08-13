@@ -238,7 +238,7 @@ def _reject_unsupported_fields(parsed: ParsedWorkflowRun) -> None:
     if unsupported:
         fields = ", ".join(unsupported)
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "error": "Unsupported request fields",
                 "code": "LFX_SERVE_UNSUPPORTED_FIELDS",
@@ -275,7 +275,7 @@ def _validate_output_ids(output_ids: list[str] | None, terminal_node_ids: list[s
     unknown = [output_id for output_id in output_ids if output_id not in known]
     if unknown:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "error": "Unknown output_ids",
                 "code": "UNKNOWN_OUTPUT_IDS",
@@ -488,7 +488,7 @@ def create_workflow_router(
         # caller may access it (matches the pre-seam handler's precedence).
         if request.stream_protocol not in STREAM_ADAPTERS:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail={
                     "error": "Unknown stream_protocol",
                     "code": "UNKNOWN_STREAM_PROTOCOL",
@@ -511,7 +511,7 @@ def create_workflow_router(
         if parsed.mode == "background":
             if not host.supports_background:
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail={
                         "error": "Unsupported mode",
                         "code": "LFX_SERVE_UNSUPPORTED_MODE",

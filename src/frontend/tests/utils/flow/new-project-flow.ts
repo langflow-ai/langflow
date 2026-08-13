@@ -48,38 +48,32 @@ export const openTemplatesModal = async (
     fromEmptyPage?: boolean;
   },
 ) => {
-  await waitForNewProjectButton(page, { timeout: options?.buttonTimeout });
+  const buttonTimeout = options?.buttonTimeout ?? TIMEOUTS.standard;
+  if (options?.fromEmptyPage) {
+    await page.getByTestId(TID.newProjectBtnEmptyPage).waitFor({
+      state: "visible",
+      timeout: buttonTimeout,
+    });
+  } else {
+    await waitForNewProjectButton(page, { timeout: buttonTimeout });
+  }
   await page
     .getByTestId(
       options?.fromEmptyPage ? TID.newProjectBtnEmptyPage : TID.newProjectBtn,
     )
     .click();
 
-  // After clicking the header "New Flow" button the app navigates to a
-  // freshly-created empty flow and surfaces the FlowBuilderWelcome overlay.
-  // On a slow runner the navigation + canvas mount can take well over 5s,
-  // so race the welcome overlay against the templates modal — whichever
-  // shows up first wins, and we only click "Browse more" when the overlay
-  // actually surfaces.
   const welcomeSelector = '[data-testid="flow-builder-welcome-panel"]';
   const modalSelector = `[data-testid="${TID.modalTitle}"]`;
+  const modalTimeout = options?.modalTimeout ?? TIMEOUTS.standard;
 
-  // The race must honor the caller's modalTimeout: clicking "New Flow" first
-  // POSTs the placeholder flow, and on CI shards where parallel workers share
-  // one SQLite backend that write can queue up to the 30s busy_timeout —
-  // callers in write-heavy loops pass TIMEOUTS.long to ride that window out.
-  const raceTimeout = options?.modalTimeout ?? TIMEOUTS.standard;
-
-  await Promise.race([
-    page.waitForSelector(welcomeSelector, { timeout: raceTimeout }),
-    page.waitForSelector(modalSelector, { timeout: raceTimeout }),
-  ]);
-
-  if ((await page.locator(welcomeSelector).count()) > 0) {
-    await page.getByTestId("flow-builder-welcome-browse-more").click();
-  }
+  await page.waitForURL(/\/flow\/[^/?#]+(?:[?#].*)?$/, {
+    timeout: modalTimeout,
+  });
+  await page.waitForSelector(welcomeSelector, { timeout: modalTimeout });
+  await page.getByTestId("flow-builder-welcome-browse-more").click();
 
   await page.waitForSelector(modalSelector, {
-    timeout: options?.modalTimeout ?? TIMEOUTS.standard,
+    timeout: modalTimeout,
   });
 };

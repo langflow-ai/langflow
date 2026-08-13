@@ -4,6 +4,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import warnings
 from pathlib import Path
 
 import pytest
@@ -13,8 +14,10 @@ from alembic.config import Config
 from alembic.migration import MigrationContext
 from alembic.operations import ops
 from langflow.alembic.expand_compat import filter_expand_revision_directives, filter_sso_expand_diffs
+from langflow.alembic.warning_filters import filter_known_sqlite_reflection_warnings
 from langflow.services.database.service import SQLModel
 from sqlalchemy import Column, String, Text, create_engine, inspect, text
+from sqlalchemy.exc import SAWarning
 
 _WORKSPACE_ROOT = Path(__file__).resolve().parents[5]
 _SCRIPT_LOCATION = _WORKSPACE_ROOT / "src/backend/base/langflow/alembic"
@@ -476,16 +479,31 @@ def test_no_phantom_migrations(db_url):
     which would produce unintended migration diffs.
     """
     alembic_cfg = _make_alembic_cfg(db_url)
-    command.upgrade(alembic_cfg, "head")
-    # Exercise the same Alembic autogenerate path used by DatabaseService at
-    # application startup, including the active EXPAND compatibility hook.
-    command.check(alembic_cfg)
+    with warnings.catch_warnings(record=True) as migration_warnings:
+        warnings.simplefilter("always", SAWarning)
+        command.upgrade(alembic_cfg, "head")
+        # Exercise the same Alembic autogenerate path used by DatabaseService at
+        # application startup, including the active EXPAND compatibility hook.
+        command.check(alembic_cfg)
+
+    known_sqlite_reflection_warning = re.compile(
+        r"^Skipped unsupported reflection of expression-based index "
+        r"ix_message_session_metadata_(?:tenant|user)$"
+    )
+    assert not [
+        warning
+        for warning in migration_warnings
+        if issubclass(warning.category, SAWarning) and known_sqlite_reflection_warning.fullmatch(str(warning.message))
+    ]
 
     engine = create_engine(_engine_url(db_url))
     try:
         with engine.connect() as connection:
             migration_context = MigrationContext.configure(connection)
-            diffs = compare_metadata(migration_context, SQLModel.metadata)
+            with warnings.catch_warnings():
+                if db_url.startswith("sqlite"):
+                    filter_known_sqlite_reflection_warnings()
+                diffs = compare_metadata(migration_context, SQLModel.metadata)
     finally:
         engine.dispose()
 

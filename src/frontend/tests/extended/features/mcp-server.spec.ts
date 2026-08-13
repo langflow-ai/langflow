@@ -1,15 +1,85 @@
+import { type ChildProcess, spawn } from "node:child_process";
+import path from "node:path";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
 import {
-  FETCH_SERVER_ARGS,
-  fillFetchServerCommand,
-} from "../../utils/fill-fetch-server-command";
+  fillLocalMcpServerCommand,
+  LOCAL_MCP_SERVER_ARGS,
+} from "../../utils/fill-local-mcp-server-command";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { openFlowCard } from "../../utils/flow/open-flow-card";
 import { openAddMcpServerModal } from "../../utils/open-add-mcp-server-modal";
 import { zoomOut } from "../../utils/zoom-out";
+
+async function saveMcpServer(
+  page: Parameters<typeof fillLocalMcpServerCommand>[0],
+  name: string,
+  method: "POST" | "PATCH" = "POST",
+): Promise<void> {
+  const saved = page.waitForResponse(
+    (response) =>
+      response.request().method() === method &&
+      new URL(response.url()).pathname.endsWith(
+        `/api/v2/mcp/servers/${encodeURIComponent(name)}`,
+      ),
+    { timeout: 30_000 },
+  );
+  await page.getByTestId("add-mcp-server-button").click();
+  const response = await saved;
+  expect(response.ok(), `${method} MCP server ${name}`).toBeTruthy();
+  await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
+    state: "hidden",
+    timeout: 30_000,
+  });
+}
+
+async function startStreamableHttpFixture(port: number): Promise<ChildProcess> {
+  const fixture = path.resolve(
+    __dirname,
+    "../../fixtures/mcp-loopback-server.py",
+  );
+  const child = spawn(
+    "uv",
+    [
+      "run",
+      "python",
+      fixture,
+      "--transport",
+      "streamable-http",
+      "--port",
+      String(port),
+      "--tool-set",
+      "all",
+    ],
+    { stdio: "pipe" },
+  );
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null) {
+      throw new Error(`Local MCP HTTP fixture exited with ${child.exitCode}`);
+    }
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/mcp`);
+      if (response.status < 500) return child;
+    } catch {
+      // The checked-in fixture may still be binding its loopback socket.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  child.kill("SIGTERM");
+  throw new Error("Local MCP HTTP fixture did not become ready");
+}
+
+async function stopFixture(child: ChildProcess): Promise<void> {
+  if (child.exitCode !== null) return;
+  child.kill("SIGTERM");
+  await new Promise<void>((resolve) => {
+    child.once("exit", () => resolve());
+    setTimeout(resolve, 2_000);
+  });
+}
 
 test(
   "user must be able to change mode of MCP tools without any issues",
@@ -60,9 +130,9 @@ test(
     const testName = `test_server_${randomSuffix}`;
     await page.getByTestId("stdio-name-input").fill(testName);
 
-    await fillFetchServerCommand(page);
+    await fillLocalMcpServerCommand(page);
 
-    await page.getByTestId("add-mcp-server-button").click();
+    await saveMcpServer(page, testName);
 
     // Wait for the modal overlay to fully close
     await page
@@ -158,9 +228,9 @@ test(
     });
 
     expect(await page.getByTestId("stdio-command-input").inputValue()).toBe(
-      "uvx",
+      "uv",
     );
-    for (const [index, arg] of FETCH_SERVER_ARGS.entries()) {
+    for (const [index, arg] of LOCAL_MCP_SERVER_ARGS.entries()) {
       expect(await page.getByTestId(`stdio-args_${index}`).inputValue()).toBe(
         arg,
       );
@@ -168,7 +238,7 @@ test(
 
     await page.waitForTimeout(500);
 
-    await page.getByTestId("add-mcp-server-button").click();
+    await saveMcpServer(page, testName, "PATCH");
 
     await page
       .getByTestId(`mcp-server-menu-button-${testName}`)
@@ -239,9 +309,9 @@ test(
 
     await page.waitForTimeout(500);
 
-    await fillFetchServerCommand(page);
+    await fillLocalMcpServerCommand(page);
 
-    await page.getByTestId("add-mcp-server-button").click();
+    await saveMcpServer(page, testName);
 
     await page.waitForTimeout(500);
 
@@ -366,11 +436,11 @@ test(
     // Test data with random suffix
     const randomSuffix = Math.floor(Math.random() * 90000) + 10000; // 5-digit random number
     const testName = `test_stdio_server_${randomSuffix}`;
-    const testCommand = "uvx";
-    const testArg1 = "mcp-server-test";
-    const testArg2 = "--verbose";
-    const testArg3 = "--port=8080";
-    const testArg4 = "--config=test.json";
+    const testCommand = "uv";
+    const testArg1 = "run";
+    const testArg2 = "python";
+    const testArg3 = "tests/fixtures/mcp-loopback-server.py";
+    const testArg4 = "--transport";
     const testEnvKey1 = "NODE_ENV";
     const testEnvValue1 = "production";
     const testEnvKey2 = "DEBUG_MODE";
@@ -405,7 +475,7 @@ test(
     await page.getByTestId("stdio-env-value-1").fill(testEnvValue2);
 
     // Save the server
-    await page.getByTestId("add-mcp-server-button").click();
+    await saveMcpServer(page, testName);
 
     // Go to settings to edit the server
     await page.getByTestId("user_menu_button").click({ timeout: 30000 });
@@ -559,7 +629,7 @@ test(
     await page.getByTestId("http-env-value-1").fill(testEnvValue2);
 
     // Save the server
-    await page.getByTestId("add-mcp-server-button").click();
+    await saveMcpServer(page, testName);
 
     // Wait for save to complete and modal to close
     await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
@@ -711,9 +781,9 @@ test(
     const testName = `test_server_${randomSuffix}`;
     await page.getByTestId("stdio-name-input").fill(testName);
 
-    await fillFetchServerCommand(page);
+    await fillLocalMcpServerCommand(page);
 
-    await page.getByTestId("add-mcp-server-button").click();
+    await saveMcpServer(page, testName);
 
     // Wait for save to complete and modal to close
     await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
@@ -822,9 +892,9 @@ test(
     });
 
     expect(await page.getByTestId("stdio-command-input").inputValue()).toBe(
-      "uvx",
+      "uv",
     );
-    for (const [index, arg] of FETCH_SERVER_ARGS.entries()) {
+    for (const [index, arg] of LOCAL_MCP_SERVER_ARGS.entries()) {
       expect(await page.getByTestId(`stdio-args_${index}`).inputValue()).toBe(
         arg,
       );
@@ -832,10 +902,10 @@ test(
 
     // Swap only the package operand; the leading `--with mcp~=1.28` still applies.
     await page
-      .getByTestId(`stdio-args_${FETCH_SERVER_ARGS.length - 1}`)
-      .fill("mcp-server-time");
+      .getByTestId(`stdio-args_${LOCAL_MCP_SERVER_ARGS.length - 1}`)
+      .fill("time");
 
-    await page.getByTestId("add-mcp-server-button").click();
+    await saveMcpServer(page, testName, "PATCH");
 
     // Wait for save to complete and modal to close
     await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
@@ -945,9 +1015,9 @@ test(
 
     await page.getByTestId("stdio-name-input").fill(testName);
 
-    await fillFetchServerCommand(page);
+    await fillLocalMcpServerCommand(page);
 
-    await page.getByTestId("add-mcp-server-button").click();
+    await saveMcpServer(page, testName);
 
     await expect(page.getByText(testName, { exact: true })).toBeVisible({
       timeout: 10000,
@@ -1003,162 +1073,73 @@ test(
   {
     tag: ["@release", "@workspace", "@components"],
   },
-  async ({ page }) => {
-    // Start the MCP server with proper health checking
-    const server = "https://mcp.deepwiki.com/mcp";
-    await openBlankFlow(page);
-    await page.getByTestId("sidebar-nav-mcp").click();
-    await page.waitForSelector(
-      '[data-testid="add-component-button-lf-starter_project"]',
-      {
-        timeout: 30000,
-      },
-    );
-    await page.getByTestId("add-component-button-lf-starter_project").click();
+  async ({ page }, testInfo) => {
+    const port = 18_790 + testInfo.workerIndex;
+    const fixture = await startStreamableHttpFixture(port);
+    const server = `http://127.0.0.1:${port}/mcp`;
+    try {
+      await openBlankFlow(page);
+      await page.getByTestId("sidebar-nav-mcp").click();
+      await page.waitForSelector(
+        '[data-testid="add-component-button-lf-starter_project"]',
+        {
+          timeout: 30000,
+        },
+      );
+      await page.getByTestId("add-component-button-lf-starter_project").click();
 
-    await adjustScreenView(page, { numberOfZoomOut: 3 });
+      await adjustScreenView(page, { numberOfZoomOut: 3 });
 
-    await openAddMcpServerModal(page);
+      await openAddMcpServerModal(page);
 
-    // Switch to HTTP tab for Streamable HTTP
-    await page.getByTestId("http-tab").click();
+      // Switch to HTTP tab for Streamable HTTP
+      await page.getByTestId("http-tab").click();
 
-    await page.waitForSelector('[data-testid="http-name-input"]', {
-      state: "visible",
-      timeout: 30000,
-    });
-
-    const randomSuffix = Math.floor(Math.random() * 90000) + 10000;
-    const testName = `test_streamable_http_${randomSuffix}`;
-
-    // Fill in the server details
-    await page.getByTestId("http-name-input").fill(testName);
-
-    // Use the HTTP endpoint URL
-    await page.getByTestId("http-url-input").fill(server);
-
-    await page.getByTestId("add-mcp-server-button").click();
-
-    // Wait for the modal overlay to fully close before interacting
-    await page
-      .locator(".fixed.inset-0.z-50")
-      .waitFor({ state: "hidden", timeout: 10000 })
-      .catch(() => {});
-
-    // Wait for tools to load with proper timeout (external server can be slow in CI)
-    await page.waitForSelector(
-      '[data-testid="dropdown_str_tool"]:not([disabled])',
-      {
-        timeout: 60000,
+      await page.waitForSelector('[data-testid="http-name-input"]', {
         state: "visible",
-      },
-    );
+        timeout: 30000,
+      });
 
-    await page.getByTestId("dropdown_str_tool").click();
+      const randomSuffix = Math.floor(Math.random() * 90000) + 10000;
+      const testName = `test_streamable_http_${randomSuffix}`;
 
-    // Check for tools from server - wait for any option to render
-    const toolOptions = page.locator('[data-testid*="-0-option"]');
-    await expect(toolOptions.first()).toBeVisible({ timeout: 30000 });
+      // Fill in the server details
+      await page.getByTestId("http-name-input").fill(testName);
 
-    // Verify multiple tools loaded from deepwiki
-    const toolCount = await toolOptions.count();
-    expect(toolCount).toBeGreaterThan(0);
+      // Use the HTTP endpoint URL
+      await page.getByTestId("http-url-input").fill(server);
 
-    // Select the first available tool
-    await toolOptions.first().click();
+      await saveMcpServer(page, testName);
+
+      // Wait for the modal overlay to fully close before interacting
+      await page
+        .locator(".fixed.inset-0.z-50")
+        .waitFor({ state: "hidden", timeout: 10000 })
+        .catch(() => {});
+
+      // Wait for tools to load with proper timeout (external server can be slow in CI)
+      await page.waitForSelector(
+        '[data-testid="dropdown_str_tool"]:not([disabled])',
+        {
+          timeout: 60000,
+          state: "visible",
+        },
+      );
+
+      await page.getByTestId("dropdown_str_tool").click();
+
+      // Check for tools from server - wait for any option to render
+      const toolOptions = page.locator('[data-testid*="-0-option"]');
+      await expect(toolOptions.first()).toBeVisible({ timeout: 30000 });
+
+      // Verify multiple tools loaded from the checked-in loopback server.
+      const toolCount = await toolOptions.count();
+      expect(toolCount).toBeGreaterThanOrEqual(3);
+
+      // Select the first available tool
+      await toolOptions.first().click();
+    } finally {
+      await stopFixture(fixture);
+    }
   },
 );
-
-// test(
-//   "SSE MCP server with deepwiki should load tools correctly",
-//   { tag: ["@release", "@workspace", "@components"] },
-//   async ({ page }) => {
-//     await page.waitForTimeout(5000);
-
-//     // Start the MCP server with proper health checking
-//     const server = "https://observability.mcp.cloudflare.com/mcp";
-
-//     await awaitBootstrapTest(page);
-
-//     await page.waitForSelector('[data-testid="blank-flow"]', {
-//       timeout: 30000,
-//     });
-//     await page.getByTestId("blank-flow").click();
-//     await page.getByTestId("sidebar-search-input").click();
-//     await page.getByTestId("sidebar-search-input").fill("mcp tools");
-
-//     await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
-//       timeout: 30000,
-//     });
-
-//     await page
-//       .getByTestId("models_and_agentsMCP Tools")
-//       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-//         targetPosition: { x: 100, y: 100 },
-//       });
-
-//     await adjustScreenView(page, { numberOfZoomOut: 3 });
-
-//     await openAddMcpServerModal(page);
-
-//     // Switch to HTTP tab for SSE
-//     await page.getByTestId("http-tab").click();
-
-//     await page.waitForSelector('[data-testid="http-name-input"]', {
-//       state: "visible",
-//       timeout: 30000,
-//     });
-
-//     const randomSuffix = Math.floor(Math.random() * 90000) + 10000;
-//     const testName = `test_sse_${randomSuffix}`;
-
-//     // Fill in the server details
-//     await page.getByTestId("http-name-input").fill(testName);
-
-//     // Use the HTTP endpoint URL
-//     await page.getByTestId("http-url-input").fill(server);
-
-//     await page.getByTestId("add-mcp-server-button").click();
-
-//     // Wait for tools to load with proper timeout (external server can be slow in CI)
-//     await page.waitForSelector(
-//       '[data-testid="dropdown_str_tool"]:not([disabled])',
-//       {
-//         timeout: 30000,
-//         state: "visible",
-//       },
-//     );
-
-//     await page.getByTestId("dropdown_str_tool").click();
-
-//     // Check for tools from wiki
-//     const toolOptions = page.locator('[data-testid*="-option"]');
-//     const toolCount = await toolOptions.count();
-
-//     // server-everything should have multiple tools (at least 5+)
-//     expect(toolCount).toBeGreaterThan(5);
-
-//     // Verify specific tools exist from server-everything
-//     const readWikiStructureOption = page.getByTestId(
-//       "read_wiki_structure-0-option",
-//     );
-//     expect(await readWikiStructureOption.count()).toBeGreaterThan(0);
-
-//     // Select the readWikiStructure to verify it loads properly
-//     await readWikiStructureOption.last().click();
-
-//     // Wait for the tool input field to appear
-//     await page.waitForSelector(
-//       '[data-testid="popover-anchor-input-repoName"]',
-//       {
-//         state: "visible",
-//         timeout: 30000,
-//       },
-//     );
-
-//     // Verify the input field is present
-//     await expect(
-//       page.getByTestId("popover-anchor-input-repoName"),
-//     ).toBeVisible();
-//   },
-// );

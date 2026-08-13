@@ -1,9 +1,9 @@
 import type { BrowserContext, Page } from "@playwright/test";
+import { configureLoopbackOpenAI } from "../configure-loopback-openai";
 import { TID } from "../constants/testIds";
 import { ANIMATIONS, TIMEOUTS } from "../constants/timeouts";
 import { buildFlowAndWait } from "../flow/build-flow-and-wait";
 import { openStarterProject } from "../flow/open-starter-project";
-import { initialGPTsetup } from "../initialGPTsetup";
 
 export type PublishedFlow = {
   /** The new tab where the shareable playground opens. */
@@ -13,7 +13,7 @@ export type PublishedFlow = {
 };
 
 /**
- * End-to-end: open Basic Prompting, configure GPT, build, publish, toggle
+ * End-to-end: open Basic Prompting, configure the loopback model, build, publish, toggle
  * the public switch, and open the shareable playground in a new tab.
  *
  * Replaces 4 separate inline implementations (auth, persistence,
@@ -28,7 +28,7 @@ export async function publishBasicPromptingAndOpenShareablePlayground(
   await openStarterProject(page, "Basic Prompting", {
     skipBootstrap: options?.skipBootstrap,
   });
-  await initialGPTsetup(page);
+  await configureLoopbackOpenAI(page);
 
   await buildFlowAndWait(page);
 

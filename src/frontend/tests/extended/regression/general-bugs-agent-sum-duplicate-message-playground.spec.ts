@@ -1,16 +1,12 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { selectAnthropicModel } from "../../utils/select-anthropic-model";
 
 test(
   "user must not experience message duplication in mathematical expressions with agent component",
   { tag: ["@release", "@components", "@workspace"] },
   async ({ page }) => {
-    skipIfMissing.anthropicKey();
-    loadDotenvIfLocal(__dirname);
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
@@ -19,7 +15,7 @@ test(
       .first()
       .click();
 
-    await selectAnthropicModel(page);
+    await configureLoopbackOpenAI(page);
 
     await page.getByTestId("playground-btn-flow-io").click();
 

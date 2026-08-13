@@ -1,5 +1,7 @@
 """Change datetime type
 
+Phase: MIGRATE
+
 Revision ID: 79e675cb6752
 Revises: e3bc869fa272
 Create Date: 2024-04-11 19:23:10.697335
@@ -18,6 +20,13 @@ revision: str = "79e675cb6752"
 down_revision: str | None = "e3bc869fa272"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
+
+
+def _log_unhandled_column_type(*, conn, table_name: str, column_name: str, column_type: sa.types.TypeEngine) -> None:
+    """Keep the historical SQLite DATETIME no-op from looking like a migration problem."""
+    message = "Column '%s' has type %s in table '%s'"
+    log = logger.debug if conn.dialect.name == "sqlite" and isinstance(column_type, sa.DateTime) else logger.warning
+    log(message, column_name, column_type, table_name)
 
 
 def upgrade() -> None:
@@ -39,7 +48,12 @@ def upgrade() -> None:
         elif created_at_column is None:
             logger.warning("Column 'created_at' not found in table 'apikey'")
         else:
-            logger.warning(f"Column 'created_at' has type {created_at_column['type']} in table 'apikey'")
+            _log_unhandled_column_type(
+                conn=conn,
+                table_name="apikey",
+                column_name="created_at",
+                column_type=created_at_column["type"],
+            )
     if "variable" in table_names:
         columns = inspector.get_columns("variable")
         created_at_column = next((column for column in columns if column["name"] == "created_at"), None)
@@ -55,7 +69,12 @@ def upgrade() -> None:
             elif created_at_column is None:
                 logger.warning("Column 'created_at' not found in table 'variable'")
             else:
-                logger.warning(f"Column 'created_at' has type {created_at_column['type']} in table 'variable'")
+                _log_unhandled_column_type(
+                    conn=conn,
+                    table_name="variable",
+                    column_name="created_at",
+                    column_type=created_at_column["type"],
+                )
             if updated_at_column is not None and isinstance(updated_at_column["type"], postgresql.TIMESTAMP):
                 batch_op.alter_column(
                     "updated_at",
@@ -66,7 +85,12 @@ def upgrade() -> None:
             elif updated_at_column is None:
                 logger.warning("Column 'updated_at' not found in table 'variable'")
             else:
-                logger.warning(f"Column 'updated_at' has type {updated_at_column['type']} in table 'variable'")
+                _log_unhandled_column_type(
+                    conn=conn,
+                    table_name="variable",
+                    column_name="updated_at",
+                    column_type=updated_at_column["type"],
+                )
 
     # ### end Alembic commands ###
 

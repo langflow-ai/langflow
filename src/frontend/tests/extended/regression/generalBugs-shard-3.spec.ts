@@ -1,10 +1,11 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
+import {
+  configureLoopbackOpenAI,
+  LOOPBACK_OPENAI_API_KEY,
+} from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 
 test(
@@ -13,8 +14,6 @@ test(
     tag: ["@release"],
   },
   async ({ page }) => {
-    skipIfMissing.openAiKey();
-    loadDotenvIfLocal(__dirname);
     await openBlankFlow(page);
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 30000,
@@ -49,7 +48,6 @@ test(
       targetPosition: { x: 100, y: 200 },
     });
 
-    await initialGPTsetup(page);
     await adjustScreenView(page);
 
     await page.getByText("OpenAI", { exact: true }).last().click();
@@ -68,7 +66,7 @@ test(
 
     await page
       .getByTestId("popover-anchor-input-api_key")
-      .fill(process.env.OPENAI_API_KEY || "");
+      .fill(LOOPBACK_OPENAI_API_KEY);
 
     await page
       .getByTestId("handle-chatinput-noshownode-chat message-source")
@@ -84,6 +82,7 @@ test(
       .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .last()
       .click();
+    await configureLoopbackOpenAI(page);
     await adjustScreenView(page);
 
     await page

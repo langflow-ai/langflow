@@ -20,6 +20,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+from importlib import metadata as importlib_metadata
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
@@ -49,7 +50,7 @@ from lfx.extension.manifest import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
 
 
 logger = logging.getLogger(__name__)
@@ -142,6 +143,7 @@ def _load_bundle_directory(
     distribution: str | None,
     result: LoadResult,
     module_namespace: str = DEFAULT_MODULE_NAMESPACE,
+    optional_dependency_distributions: Mapping[str, str] | None = None,
 ) -> None:
     """Walk ``bundle_root``, import every .py file, register Component subclasses.
 
@@ -186,14 +188,35 @@ def _load_bundle_directory(
     # accurate when a future caller reuses a LoadResult (e.g. multi-bundle or
     # a batch wrapper) and the aggregate ``result.errors`` list already has
     # entries from a sibling call.
-    call_local_errors_emitted = 0
+    call_local_diagnostics_emitted = 0
 
     for file_path in files:
         module_name = module_name_for(file_path, bundle_root, bundle_name, slot, namespace=module_namespace)
-        module, import_error = import_bundle_module(module_name, file_path)
+        module, import_error, import_cause = import_bundle_module(module_name, file_path)
         if import_error is not None:
-            result.errors.append(import_error)
-            call_local_errors_emitted += 1
+            missing_module = import_cause.name if isinstance(import_cause, ModuleNotFoundError) else None
+            missing_root = missing_module.split(".", 1)[0] if missing_module else None
+            normalized_missing_root = "".join(char for char in (missing_root or "").casefold() if char.isalnum())
+            declared_distribution = (optional_dependency_distributions or {}).get(normalized_missing_root)
+            dependency_is_absent = False
+            if result.manifestless and declared_distribution:
+                try:
+                    importlib_metadata.distribution(declared_distribution)
+                except importlib_metadata.PackageNotFoundError:
+                    dependency_is_absent = True
+            if dependency_is_absent:
+                result.warnings.append(
+                    ExtensionError(
+                        code="optional-dependency-missing",
+                        message=f"ModuleNotFoundError: optional dependency {missing_module!r} is not installed.",
+                        location=str(file_path),
+                        content=missing_module,
+                        hint=f"Install the provider extra: pip install '{result.extension_id}[{bundle_name}]'.",
+                    )
+                )
+            else:
+                result.errors.append(import_error)
+            call_local_diagnostics_emitted += 1
             continue
 
         # Hash the file once per module so multi-class files don't re-read
@@ -230,13 +253,13 @@ def _load_bundle_directory(
                         hint=("Rename one of the component classes; class names must be unique within a bundle."),
                     )
                 )
-                call_local_errors_emitted += 1
+                call_local_diagnostics_emitted += 1
                 continue
             seen_classes[class_name] = loaded
             result.components.append(loaded)
             found_any_component = True
 
-    if not found_any_component and call_local_errors_emitted == 0:
+    if not found_any_component and call_local_diagnostics_emitted == 0:
         # Only emit the "no Component subclass" error if no other failure
         # *from this call* already explained why the bundle yielded nothing.
         # Gating on the aggregate ``result.errors`` would silently drop this

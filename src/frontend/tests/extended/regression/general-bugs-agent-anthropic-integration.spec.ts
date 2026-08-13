@@ -1,25 +1,29 @@
 import { expect, test } from "../../fixtures";
+import {
+  configureLoopbackOpenAI,
+  LOOPBACK_OPENAI_API_KEY,
+} from "../../utils/configure-loopback-openai";
 import { TID } from "../../utils/constants/testIds";
 import { TIMEOUTS } from "../../utils/constants/timeouts";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 
 test(
-  "user must be able to run Simple Agent in the playground with Anthropic provider",
+  "user can select Anthropic and run Simple Agent through the loopback provider",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
-    skipIfMissing.anthropicKey();
-    loadDotenvIfLocal(__dirname);
-
     await openStarterProject(page, "Simple Agent");
 
-    await page.getByTestId("value-dropdown-dropdown_str_agent_llm").click();
-    await page.getByText("Anthropic").last().click();
+    const providerDropdown = page.getByTestId(
+      "value-dropdown-dropdown_str_agent_llm",
+    );
+    await providerDropdown.click();
+    await page.getByText("Anthropic", { exact: true }).last().click();
+    await expect(providerDropdown).toContainText("Anthropic");
+    const apiKeyInput = page.getByTestId(TID.popoverAnchorInputApiKey);
+    await expect(apiKeyInput).toHaveAttribute("type", "password");
+    await apiKeyInput.fill(LOOPBACK_OPENAI_API_KEY);
 
-    await page
-      .getByTestId(TID.popoverAnchorInputApiKey)
-      .fill(process.env.ANTHROPIC_API_KEY || "");
+    await configureLoopbackOpenAI(page);
 
     await page.getByTestId(TID.playgroundBtnFlowIo).click();
 
@@ -37,6 +41,6 @@ test(
       .textContent();
 
     const lengthOfTextFromLlm = textFromLlm?.length;
-    expect(lengthOfTextFromLlm).toBeGreaterThan(100);
+    expect(lengthOfTextFromLlm).toBeGreaterThan(30);
   },
 );

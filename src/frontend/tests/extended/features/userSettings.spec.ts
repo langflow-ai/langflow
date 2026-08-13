@@ -2,14 +2,8 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
 import { waitForNewProjectButton } from "../../utils/flow/new-project-flow";
-
-test.beforeAll(async () => {
-  await new Promise((resolve) => setTimeout(resolve, 10000));
-});
-
-test.afterEach(async () => {
-  await new Promise((resolve) => setTimeout(resolve, 10000));
-});
+import { openStarterProject } from "../../utils/flow/open-starter-project";
+import { waitForFlowEditorReady } from "../../utils/flow/wait-for-flow-editor-ready";
 
 test(
   "should see general profile gradient",
@@ -18,6 +12,7 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page, {
       skipModal: true,
+      seedFlowIfEmpty: false,
     });
     await page.waitForSelector('[data-testid="mainpage_title"]', {
       timeout: 30000,
@@ -83,6 +78,7 @@ test(
 
     await awaitBootstrapTest(page, {
       skipModal: true,
+      seedFlowIfEmpty: false,
     });
     await page.getByTestId("user-profile-settings").click();
     await page.getByText(TEXTS.settings).click();
@@ -101,8 +97,6 @@ test(
       .getByPlaceholder("Enter a value for the variable...")
       .fill("testtesttesttesttesttesttesttest");
     await page.getByTestId("popover-anchor-apply-to-fields").click();
-
-    const fieldsCount = await page.getByPlaceholder("Fields").count();
 
     await page.getByPlaceholder("Fields").first().waitFor({
       state: "visible",
@@ -180,6 +174,7 @@ test(
 test("should see shortcuts", { tag: ["@release"] }, async ({ page }) => {
   await awaitBootstrapTest(page, {
     skipModal: true,
+    seedFlowIfEmpty: false,
   });
   await page.waitForSelector('[data-testid="mainpage_title"]', {
     timeout: 30000,
@@ -311,6 +306,7 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page, {
       skipModal: true,
+      seedFlowIfEmpty: false,
     });
     await page.getByTestId("user-profile-settings").click();
     await page.getByText(TEXTS.settings).click();
@@ -363,14 +359,8 @@ test(
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page
-      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
-      .click();
-
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-      timeout: 100000,
+    await openStarterProject(page, TEXTS.templateBasicPrompting, {
+      skipBootstrap: true,
     });
 
     // Now navigate to user settings
@@ -394,9 +384,7 @@ test(
     // Verify we're back on the flow page, not the settings main page.
     // Re-rendering the flow canvas after leaving settings is slow on busy
     // (e.g. Windows) CI runners, so allow a generous window before asserting.
-    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-      timeout: 15000,
-    });
+    await waitForFlowEditorReady(page);
 
     // Additional verification that we're on the flow page
     expect(page.url()).toMatch(/\/flow\//);

@@ -1,26 +1,16 @@
 import { readFileSync } from "fs";
 import { expect, test } from "../../fixtures";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TID } from "../../utils/constants/testIds";
 import { TIMEOUTS } from "../../utils/constants/timeouts";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 
 test(
   "user must be able to send images in the playground with the agent component",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
-    skipIfMissing.anthropicKey();
-    loadDotenvIfLocal(__dirname);
-
     await openStarterProject(page, "Simple Agent");
-
-    await page.getByTestId("value-dropdown-dropdown_str_agent_llm").click();
-    await page.getByText("Anthropic").last().click();
-
-    await page
-      .getByTestId(TID.popoverAnchorInputApiKey)
-      .fill(process.env.ANTHROPIC_API_KEY || "");
+    await configureLoopbackOpenAI(page);
 
     await page.getByTestId(TID.playgroundBtnFlowIo).click();
 
@@ -71,8 +61,7 @@ test(
       .last()
       .textContent();
 
-    expect(textFromLlm?.toLowerCase()).toMatch(/(chain|inkscape|logo)/);
-    const lengthOfTextFromLlm = textFromLlm?.length;
-    expect(lengthOfTextFromLlm).toBeGreaterThan(100);
+    expect(textFromLlm?.toLowerCase()).toContain("loopback image received");
+    expect(textFromLlm?.toLowerCase()).toContain("chain.png");
   },
 );

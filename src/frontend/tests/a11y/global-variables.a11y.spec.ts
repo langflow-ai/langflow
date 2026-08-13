@@ -128,7 +128,10 @@ async function openGlobalVariablesRoute(
 ) {
   await mockVariables(page, variables);
   await mockComponentTypes(page);
-  await awaitBootstrapTest(page, { skipModal: true });
+  await awaitBootstrapTest(page, {
+    skipModal: true,
+    seedFlowIfEmpty: false,
+  });
   await page.goto("/settings/global-variables");
   await disableAnimations(page);
   await expect(page.getByTestId("settings_menu_header")).toContainText(

@@ -2,6 +2,10 @@ import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import {
+  configureLoopbackOpenAI,
+  LOOPBACK_OPENAI_API_KEY,
+} from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
 import { dismissLegacyWarnings } from "../../utils/dismiss-legacy-warnings";
 import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
@@ -13,11 +17,6 @@ test(
   "user must be able to check similarity between embedding texts",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
     await awaitBootstrapTest(page);
 
     await page.getByTestId("blank-flow").click();
@@ -144,11 +143,11 @@ test(
     const isSecondInputVisible = await secondApiKeyInput.isVisible();
 
     if (isFirstInputVisible) {
-      await firstApiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+      await firstApiKeyInput.fill(LOOPBACK_OPENAI_API_KEY);
     }
 
     if (isSecondInputVisible) {
-      await secondApiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+      await secondApiKeyInput.fill(LOOPBACK_OPENAI_API_KEY);
     }
 
     await page
@@ -253,6 +252,8 @@ test(
       .nth(0);
     await textOutputInput.hover();
     await page.mouse.up();
+
+    await configureLoopbackOpenAI(page);
 
     await page.getByTestId("button_run_text output").click();
 

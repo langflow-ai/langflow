@@ -144,10 +144,9 @@ const FilesTab = ({
     if (!actionsButton) {
       return;
     }
-    // Move focus onto the (otherwise unreachable) trigger and replay the key so
-    // the dropdown opens through its native handler, matching a mouse click.
+    // Replay the key before moving focus. Focusing first lets AG Grid remount
+    // the cell and leaves this reference pointing at a detached Radix trigger.
     keyboardEvent.preventDefault();
-    actionsButton.focus();
     actionsButton.dispatchEvent(
       new KeyboardEvent("keydown", {
         key: keyboardEvent.key,

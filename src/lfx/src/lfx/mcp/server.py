@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
 from mcp.server.fastmcp import Context, FastMCP
 
+from lfx.base.mcp.pydantic_compat import ensure_fastmcp_settings_ready
 from lfx.graph.flow_builder import (
     add_component as fb_add_component,
 )
@@ -93,6 +94,7 @@ async def _telemetry_lifespan(_server: FastMCP) -> AsyncIterator[dict]:
         _telemetry = None
 
 
+ensure_fastmcp_settings_ready()
 mcp = FastMCP(
     "langflow-mcp",
     instructions=(

@@ -109,7 +109,7 @@ def parse_flow_version_reference_ids(reference_ids: Sequence[UUID | str]) -> lis
             flow_version_ids.append(UUID(flow_version_ref_str))
         except ValueError as exc:
             msg = f"Invalid flow version id: {flow_version_ref}"
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg) from exc
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=msg) from exc
     return flow_version_ids
 
 
@@ -185,7 +185,7 @@ async def build_flow_artifacts_from_flow_versions(
     for row in rows:
         if row.flow_version_data is None:
             msg = f"Flow version {row.flow_version_id} has no data (snapshot may be corrupted)."
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=msg)
         artifacts.append(
             (
                 row.flow_version_id,
@@ -253,7 +253,7 @@ async def build_project_scoped_flow_artifacts_from_flow_versions(
     for row in rows:
         if row.flow_version_data is None:
             msg = f"Flow version {row.flow_version_id} has no data (snapshot may be corrupted)."
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=msg)
         artifacts.append(
             (
                 row.flow_version_id,

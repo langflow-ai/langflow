@@ -16,6 +16,12 @@ test(
   "when auto_login is false, admin can CRUD user's and should see just your own flows",
   { tag: ["@release", "@api", "@database"] },
   async ({ page }) => {
+    page.expectServerError({
+      method: "GET",
+      path: "/api/v1/auto_login",
+      status: 500,
+      count: 1,
+    });
     await page.route("**/api/v1/auto_login", (route) => {
       route.fulfill({
         status: 500,

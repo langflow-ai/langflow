@@ -87,6 +87,15 @@ const NodeToolbarComponent = memo(
       },
     });
 
+    const freezeAllVertices = useCallback(() => {
+      const { nodes, edges } = useFlowStore.getState();
+      FreezeAllVertices({
+        flowId: currentFlowId,
+        data: { nodes, edges },
+        stopNodeId: data.id,
+      });
+    }, [FreezeAllVertices, currentFlowId, data.id]);
+
     const postToolModeValue = usePostTemplateValue({
       node: data.node!,
       nodeId: data.id,
@@ -247,9 +256,7 @@ const NodeToolbarComponent = memo(
       advancedSurfaceOpen: inspectionPanelVisible,
       openModal,
       showconfirmShare,
-      FreezeAllVertices: () => {
-        FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
-      },
+      FreezeAllVertices: freezeAllVertices,
       downloadFunction: () => downloadNode(flowComponent!),
       displayDocs: openDocs,
       saveComponent,
@@ -298,7 +305,7 @@ const NodeToolbarComponent = memo(
           save: saveComponent,
           freezeAll: () => {
             takeSnapshot();
-            FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
+            freezeAllVertices();
           },
           code: handleCodeModal,
           show: () => {
@@ -338,9 +345,7 @@ const NodeToolbarComponent = memo(
       [
         saveComponent,
         takeSnapshot,
-        FreezeAllVertices,
-        currentFlowId,
-        data.id,
+        freezeAllVertices,
         handleCodeModal,
         handleMinimize,
         shareComponent,
@@ -426,10 +431,7 @@ const NodeToolbarComponent = memo(
               frozen={frozen}
               onFreeze={() => {
                 takeSnapshot();
-                FreezeAllVertices({
-                  flowId: currentFlowId,
-                  stopNodeId: data.id,
-                });
+                freezeAllVertices();
               }}
               toolMode={toolMode}
               onToolMode={() => {

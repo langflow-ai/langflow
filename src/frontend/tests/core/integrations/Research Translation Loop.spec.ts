@@ -1,18 +1,13 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { selectGptModel } from "../../utils/select-gpt-model";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
   "Research Translation Loop.spec",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    skipIfMissing.openAiKey();
-    loadDotenvIfLocal(__dirname);
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
@@ -33,15 +28,9 @@ withEventDeliveryModes(
       timeout: 100000,
     });
 
-    await initialGPTsetup(page, {
+    await configureLoopbackOpenAI(page, {
       skipAdjustScreenView: true,
-      skipSelectGptModel: true,
     });
-    // TODO: Uncomment this when we have a way to test Anthropic
-    // await page.getByTestId("dropdown_str_provider").click();
-    // await page.getByTestId("Anthropic-1-option").click();
-
-    await selectGptModel(page);
 
     await page.getByTestId("playground-btn-flow-io").click();
 

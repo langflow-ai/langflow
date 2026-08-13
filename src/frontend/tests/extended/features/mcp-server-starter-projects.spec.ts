@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { cleanOldFolders } from "../../utils/clean-old-folders";
 import { TEXTS } from "../../utils/constants/texts";

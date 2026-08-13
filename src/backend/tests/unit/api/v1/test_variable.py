@@ -730,7 +730,7 @@ async def test_detect_env_vars_endpoint__rejects_missing_nodes(client: AsyncClie
             headers=logged_in_headers,
         )
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     assert "must be a JSON object with a 'nodes' list" in response.json()["detail"]
 
 

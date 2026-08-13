@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { TEXTS } from "../utils/constants/texts";
 import { getSidebarProjectOptionsButton } from "./project-sidebar";
 export const cleanOldFolders = async (page: Page) => {
@@ -19,9 +19,19 @@ export const cleanOldFolders = async (page: Page) => {
     await moreOptionsBtn.waitFor({ state: "visible", timeout: 5000 });
     await moreOptionsBtn.click();
     await page.getByText(TEXTS.delete, { exact: true }).last().click();
-    await page.getByText(TEXTS.delete, { exact: true }).last().click();
+    const [deleteResponse] = await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.request().method() === "DELETE" &&
+          /\/api\/v1\/projects\/[^/]+$/.test(new URL(response.url()).pathname),
+      ),
+      page.getByText(TEXTS.delete, { exact: true }).last().click(),
+    ]);
+    expect(deleteResponse.ok()).toBe(true);
 
-    await page.waitForTimeout(500);
     numberOfFolders--;
+    await expect(page.getByText(TEXTS.labelNewProject)).toHaveCount(
+      numberOfFolders,
+    );
   }
 };

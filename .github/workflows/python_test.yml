@@ -45,12 +45,14 @@ on:
           - self-hosted
           - '["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]'
         default: ubuntu-latest
+
+permissions:
+  contents: read
+
 env:
   POETRY_VERSION: "1.8.2"
   NODE_VERSION: "22"
   PYTEST_RUN_PATH: "src/backend/tests"
-  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
 jobs:
   build:
@@ -62,19 +64,20 @@ jobs:
         splitCount: [5]
         group: [1, 2, 3, 4, 5]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.ref }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         id: setup-node
         with:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
@@ -83,22 +86,18 @@ jobs:
       - name: Install the project
         run: uv sync
 
-      - name: Generate dynamic coverage configuration
-        run: |
-          echo "Generating dynamic coverage configuration..."
-          python3 scripts/generate_coverage_config.py
-          echo "Generated .coveragerc with the following exclusions:"
-          echo "Bundled components and legacy files excluded from coverage"
-
       - name: Run unit tests
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         with:
           timeout_minutes: 50
           max_attempts: 2
-          command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5 --cov --cov-config=src/backend/.coveragerc --cov-report=xml --cov-report=html"
+          command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5 --cov --cov-config=pyproject.toml --cov-report=xml --cov-report=html"
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         if: matrix.python-version == '3.10'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -109,7 +108,7 @@ jobs:
           directory: ./
 
       - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: matrix.python-version == '3.10'
         with:
           name: backend-coverage-report-group-${{ matrix.group }}
@@ -125,12 +124,13 @@ jobs:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13", "3.14"]') }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.ref }}
       - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
@@ -150,12 +150,13 @@ jobs:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13", "3.14"]') }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.ref }}
       - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
@@ -166,7 +167,7 @@ jobs:
           DO_NOT_TRACK: true # disable telemetry reporting
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         if: matrix.python-version == '3.10'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -177,7 +178,7 @@ jobs:
           directory: ./src/lfx/
 
       - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: matrix.python-version == '3.10'
         with:
           name: lfx-coverage-report
@@ -194,12 +195,13 @@ jobs:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13", "3.14"]') }}
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.ref }}
       - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}

@@ -662,7 +662,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         api_provider_payload = self._parse_deployment_create_request(payload)
         if api_provider_payload.llm is None:
             msg = "provider_data.llm is required for wxO deployment create."
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=msg)
         provider_payload = await self._resolve_provider_payload_from_create_api(
             user_id=user_id,
             project_id=project_id,
@@ -671,7 +671,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         )
         if api_provider_payload.display_name is None:
             msg = "provider_data.display_name is required for wxO deployment create."
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=msg)
         return AdapterDeploymentCreate(
             spec=BaseDeploymentData(
                 description=payload.description,
@@ -766,7 +766,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         missing_strict = [str(fv) for fv in strict_fv_ids if fv not in flow_version_snapshot_id_map]
         if missing_strict:
             msg = f"Cannot resolve provider snapshot ids for flow_version_ids in watsonx operations: {missing_strict}"
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=msg)
 
         reused_fv_ids = {
             item.flow_version_id
@@ -1688,7 +1688,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                     "Cannot resolve provider snapshot ids for flow_version_ids "
                     f"in watsonx operations: [{flow_version_id}]"
                 )
-                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=msg)
             flow_tool = self._get_flow_tool_payload(
                 flow_tool_by_flow_version_id=flow_tool_by_flow_version_id,
                 flow_version_id=flow_version_id,
@@ -1709,7 +1709,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                     "Cannot resolve provider snapshot ids for flow_version_ids "
                     f"in watsonx operations: [{flow_version_id}]"
                 )
-                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=msg)
             provider_operations.append(
                 self._to_remove_tool_provider_operation(
                     tool_id=flow_version_snapshot_id_map[flow_version_id],
@@ -1882,5 +1882,5 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 "Cannot resolve provider snapshot ids for flow_version_ids in watsonx operations: "
                 f"{missing_flow_versions}"
             )
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=msg)
         return snapshot_map

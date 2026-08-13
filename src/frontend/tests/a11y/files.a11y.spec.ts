@@ -307,6 +307,11 @@ test.describe("files route accessibility", () => {
         )
         .toBe("actions");
 
+      // A non-activation key may move grid focus, but must not open actions.
+      await page.keyboard.press("ArrowDown");
+      await expect(page.getByRole("menu")).toBeHidden();
+      await firstRow.locator('[role="gridcell"][col-id="actions"]').focus();
+
       // Enter on the actions cell opens the dropdown (WCAG 2.1.1).
       await page.keyboard.press("Enter");
       await expect(page.getByRole("menu")).toBeVisible({
@@ -322,6 +327,18 @@ test.describe("files route accessibility", () => {
         () => document.activeElement?.getAttribute("aria-label") ?? "",
       );
       expect(focusedName).toMatch(/File actions/);
+
+      // Space is the equivalent keyboard activation and Escape restores focus.
+      await firstRow.locator('[role="gridcell"][col-id="actions"]').focus();
+      await page.keyboard.press("Space");
+      await expect(page.getByRole("menu")).toBeVisible({
+        timeout: TIMEOUTS.standard,
+      });
+      await page.keyboard.press("Escape");
+      await expect(page.getByRole("menu")).toBeHidden();
+      await expect(
+        page.getByRole("button", { name: /File actions/ }),
+      ).toBeFocused();
     },
   );
 

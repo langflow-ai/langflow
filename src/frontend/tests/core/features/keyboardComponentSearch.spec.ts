@@ -1,5 +1,6 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { waitForFlowEditorReady } from "../../utils/flow/wait-for-flow-editor-ready";
 
 test(
   "user can search and add components using keyboard shortcuts",
@@ -10,10 +11,7 @@ test(
 
     // Start with blank flow
     await page.getByTestId("blank-flow").click();
-    await page.waitForTimeout(500);
-    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-      timeout: 3000,
-    });
+    await waitForFlowEditorReady(page);
 
     // Press "/" to activate search
     await page.keyboard.press("/");

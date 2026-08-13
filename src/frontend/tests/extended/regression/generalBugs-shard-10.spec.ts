@@ -2,16 +2,11 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
   "freeze must work correctly",
   { tag: ["@release", "@api", "@components"] },
   async ({ page }) => {
-    skipIfMissing.openAiKey();
-    loadDotenvIfLocal(__dirname);
     const promptText = "answer as you are a dog";
     const newPromptText = "answer as you are a bird";
 
@@ -52,8 +47,6 @@ test(
 
     await page.getByText(TEXTS.checkAndSave).click();
 
-    await initialGPTsetup(page);
-
     await page.getByTestId("button_run_chat output").click();
 
     await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`);
@@ -64,9 +57,6 @@ test(
     await page.waitForSelector('[data-testid="div-chat-message"]', {
       timeout: 30000,
     });
-    // Wait for streaming to complete
-    await page.waitForTimeout(1000);
-
     const textContents = await page
       .getByTestId("div-chat-message")
       .allTextContents();
@@ -91,16 +81,14 @@ test(
 
     await page.waitForSelector(".border-ring-frozen", { timeout: 3000 });
 
-    expect(page.locator(".border-ring-frozen")).toHaveCount(1);
+    await expect(page.locator(".border-ring-frozen")).toHaveCount(1);
 
     await page.getByText("Prompt Template", { exact: true }).last().click();
 
     // Now change the prompt (this should have no effect since Chat Output is frozen)
     await page.getByTestId("button_open_prompt_modal").click();
 
-    await page.waitForTimeout(500);
-
-    if ((await page.getByTestId("edit-prompt-sanitized").count()) > 0) {
+    if (await page.getByTestId("edit-prompt-sanitized").isVisible()) {
       await page.getByTestId("edit-prompt-sanitized").last().click();
     }
 
@@ -109,8 +97,9 @@ test(
       .fill(newPromptText);
 
     await page.getByText(TEXTS.checkAndSave).click();
-
-    await page.waitForTimeout(500);
+    await expect(
+      page.getByTestId("modal-promptarea_prompt_template"),
+    ).toBeHidden();
 
     await page.getByTestId("button_run_chat output").click();
 
@@ -124,9 +113,6 @@ test(
     await page.waitForSelector('[data-testid="div-chat-message"]', {
       timeout: 30000,
     });
-    // Wait for streaming to complete
-    await page.waitForTimeout(1000);
-
     const textContents2 = await page
       .getByTestId("div-chat-message")
       .allTextContents();

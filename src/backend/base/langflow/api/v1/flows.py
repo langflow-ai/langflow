@@ -135,6 +135,8 @@ router = APIRouter(prefix="/flows", tags=["Flows"])
 
 FLOW_UPDATE_FAILED = "Could not update the flow."
 FLOW_UPDATE_BUSY = "The database is busy. Please retry the request."
+FLOW_DELETE_FAILED = "Could not delete the flow."
+FLOW_DELETE_BUSY = "The database is busy. Please retry the request."
 
 
 @router.post("/", response_model=FlowRead, status_code=201)
@@ -703,16 +705,56 @@ async def upsert_flow(
 async def delete_flow(
     *,
     session: DbSession,
-    flow_id: UUID,  # noqa: ARG001
+    flow_id: UUID,
     flow: AuthorizedDeleteFlow,
-    current_user: CurrentActiveUser,  # noqa: ARG001
+    current_user: CurrentActiveUser,
 ):
     """Delete a flow."""
-    await retry_flow_operation_on_deployment_guard(
-        db=session,
-        flow_owner_ids={flow.id: flow.user_id},
-        operation=lambda: cascade_delete_flow(session, flow.id),
-    )
+    actor = UserRead.model_validate(current_user, from_attributes=True)
+    target_flow_id = flow_id
+    flow_owner_ids: dict[UUID, UUID] = {target_flow_id: flow.user_id}
+
+    async def _delete_attempt(_attempt: int) -> None:
+        async def _delete_operation() -> None:
+            flow_owner_ids.clear()
+            retry_target = await _read_flow(session, target_flow_id, actor.id)
+            if retry_target is None:
+                return
+            await ensure_flow_permission(
+                actor,
+                FlowAction.DELETE,
+                flow_id=retry_target.id,
+                flow_user_id=retry_target.user_id,
+                workspace_id=retry_target.workspace_id,
+                folder_id=retry_target.folder_id,
+            )
+            flow_owner_ids[retry_target.id] = retry_target.user_id
+            await cascade_delete_flow(session, target_flow_id)
+
+        await retry_flow_operation_on_deployment_guard(
+            db=session,
+            flow_owner_ids=flow_owner_ids,
+            operation=_delete_operation,
+        )
+
+    try:
+        await run_with_lock_retry(_delete_attempt, session=session, description=f"delete_flow {target_flow_id}")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        await araise_if_deployment_guard_error_or_skip(
+            exc,
+            log_message=f"op=delete_flow flow_id={target_flow_id}",
+        )
+        if is_database_lock_error(exc):
+            await logger.awarning("op=delete_flow flow_id=%s exhausted lock retries", target_flow_id)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=FLOW_DELETE_BUSY,
+                headers={"Retry-After": "1"},
+            ) from exc
+        await logger.aerror("op=delete_flow failed with %s", type(exc).__name__)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=FLOW_DELETE_FAILED) from exc
     return {"message": "Flow deleted successfully"}
 
 
@@ -946,10 +988,12 @@ async def delete_multiple_flows(
     db: DbSession,
 ):
     """Delete multiple flows by their IDs."""
+    actor = UserRead.model_validate(user, from_attributes=True)
     try:
         authorized_flow_owner_ids: dict[UUID, UUID] = {}
 
         async def _delete_operation() -> int:
+            authorized_flow_owner_ids.clear()
             if not flow_ids:
                 return 0
             # Widen fetch when cross-user DELETE is supported; else owner-scoped.
@@ -960,12 +1004,12 @@ async def delete_multiple_flows(
             if await authz.supports_cross_user_fetch() and await authz.is_enabled():
                 stmt = base_stmt
             else:
-                stmt = base_stmt.where(Flow.user_id == user.id)
+                stmt = base_stmt.where(Flow.user_id == actor.id)
             flows_to_delete = (await db.exec(stmt)).all()
             for flow in flows_to_delete:
                 # Propagate plugin deny (403) so bulk delete fails audibly.
                 await ensure_flow_permission(
-                    user,
+                    actor,
                     FlowAction.DELETE,
                     flow_id=flow.id,
                     flow_user_id=flow.user_id,
@@ -978,20 +1022,36 @@ async def delete_multiple_flows(
             await db.flush()
             return len(flows_to_delete)
 
-        deleted_count = await retry_flow_operation_on_deployment_guard(
-            db=db,
-            flow_owner_ids=authorized_flow_owner_ids,
-            operation=_delete_operation,
+        async def _delete_attempt(_attempt: int) -> int:
+            return await retry_flow_operation_on_deployment_guard(
+                db=db,
+                flow_owner_ids=authorized_flow_owner_ids,
+                operation=_delete_operation,
+            )
+
+        deleted_count = await run_with_lock_retry(
+            _delete_attempt,
+            session=db,
+            description=f"delete_multiple_flows count={len(flow_ids)}",
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         await araise_if_deployment_guard_error_or_skip(
             exc,
             log_message=f"op=delete_multiple_flows flow_ids_count={len(flow_ids)}",
         )
-        import logging as _logging
-
-        _logging.getLogger(__name__).exception("Error deleting multiple flows")
-        raise HTTPException(status_code=500, detail="An internal error occurred while deleting flows.") from exc
+        if is_database_lock_error(exc):
+            await logger.awarning("op=delete_multiple_flows flow_ids_count=%s exhausted lock retries", len(flow_ids))
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=FLOW_DELETE_BUSY,
+                headers={"Retry-After": "1"},
+            ) from exc
+        await logger.aerror(
+            "op=delete_multiple_flows flow_ids_count=%s failed with %s", len(flow_ids), type(exc).__name__
+        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=FLOW_DELETE_FAILED) from exc
 
     return {"deleted": deleted_count}
 
