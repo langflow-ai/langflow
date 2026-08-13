@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
+from sqlalchemy.orm.exc import StaleDataError
 from sqlmodel import col, delete, select
 
 from langflow.api.utils import DbSession, custom_params
@@ -42,6 +43,14 @@ from langflow.services.tracing.langfuse import (
 )
 
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
+
+MESSAGE_UPDATE_FAILED = "Could not update the message."
+
+
+async def _log_message_update_failure(error: Exception) -> None:
+    from lfx.log.logger import logger
+
+    await logger.aerror("Message update failed", error_type=type(error).__name__)
 
 
 @router.get("/job_queue", dependencies=[Depends(get_current_active_superuser)])
@@ -309,13 +318,17 @@ async def update_message(
     background_tasks: BackgroundTasks,
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
+    # Rollback expires ORM state, so keep the ownership key as a stable scalar
+    # for the post-race lookup.
+    current_user_id = current_user.id
     try:
         # Fetch is scoped by user ownership. A foreign message ID resolves to
         # None so callers receive the same 404 as a non-existent message.
         # This avoids leaking whether another user's message exists.
-        db_message = await get_message_for_user(session, current_user.id, message_id)
+        db_message = await get_message_for_user(session, current_user_id, message_id)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        await _log_message_update_failure(e)
+        raise HTTPException(status_code=500, detail=MESSAGE_UPDATE_FAILED) from e
 
     if not db_message:
         # Intentionally return 404 for both "not found" and "not owned".
@@ -324,9 +337,11 @@ async def update_message(
     # Bind the parent flow's authorization to message writes so a viewer-role
     # user cannot edit messages on a flow they only have READ on.
     if db_message.flow_id is not None:
-        await _ensure_flow_action_or_404(
+        db_flow = await _ensure_flow_action_or_404(
             session, flow_id=db_message.flow_id, user=current_user, action=FlowAction.WRITE
         )
+        if db_flow is None:
+            raise HTTPException(status_code=404, detail="Message not found")
 
     try:
         previous_positive_feedback = _get_positive_feedback_value(db_message)
@@ -338,8 +353,23 @@ async def update_message(
         session.add(db_message)
         await session.flush()
         await session.refresh(db_message)
+    except StaleDataError as e:
+        # A flow/session cleanup can delete the row after the ownership lookup.
+        # Recover the failed transaction, then re-check through the same
+        # owner-scoped query so missing and foreign IDs remain indistinguishable.
+        try:
+            await session.rollback()
+            current_db_message = await get_message_for_user(session, current_user_id, message_id)
+        except Exception as recheck_error:
+            await _log_message_update_failure(recheck_error)
+            raise HTTPException(status_code=500, detail=MESSAGE_UPDATE_FAILED) from recheck_error
+        if current_db_message is None:
+            raise HTTPException(status_code=404, detail="Message not found") from e
+        await _log_message_update_failure(e)
+        raise HTTPException(status_code=500, detail=MESSAGE_UPDATE_FAILED) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        await _log_message_update_failure(e)
+        raise HTTPException(status_code=500, detail=MESSAGE_UPDATE_FAILED) from e
 
     current_positive_feedback = _get_positive_feedback_value(db_message)
     langfuse_trace_id = _resolve_langfuse_trace_id(db_message)

@@ -65,9 +65,7 @@ test(
     await expect(
       page.getByText("Upload files or import from your preferred cloud."),
     ).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "Upload", exact: true }),
-    ).toBeVisible();
+    await expect(page.getByTestId("upload-file-btn")).toBeVisible();
   },
 );
 

@@ -71,6 +71,23 @@ test("redacts assignments inside a non-sensitive structured field", () => {
   assert.deepEqual(JSON.parse(excerpt), { message: "api_key=[REDACTED]" });
 });
 
+test("redacts provider credentials described in prose", () => {
+  const structuredExcerpt = sanitizeResponseExcerpt(
+    JSON.stringify({
+      detail: "Incorrect API key provided: sk-proj-live-secret",
+      nested: { message: "The token was service-token-value" },
+    }),
+  );
+  const plaintextExcerpt = sanitizeResponseExcerpt(
+    "Authentication token: auth-token-value request failed",
+  );
+
+  assert.equal(structuredExcerpt.includes("sk-proj-live-secret"), false);
+  assert.equal(structuredExcerpt.includes("service-token-value"), false);
+  assert.equal(plaintextExcerpt.includes("auth-token-value"), false);
+  assert.equal((structuredExcerpt.match(/\[REDACTED\]/g) ?? []).length, 2);
+});
+
 test("redacts URI userinfo and additional credential fields", () => {
   const excerpt = sanitizeResponseExcerpt(
     JSON.stringify({
@@ -211,13 +228,27 @@ test("tracks API operations but not teardown-prone profile image assets", () => 
   );
 });
 
-test("settles successful streaming API requests when response headers arrive", () => {
+test("settles only genuine long-lived API streams when headers arrive", () => {
   assert.equal(
     shouldSettleApiRequestOnResponse(
-      "http://localhost:7860/api/v2/workflows",
-      "text/event-stream; charset=utf-8",
+      "http://localhost:7860/api/v1/build/job/events?event_delivery=streaming",
+      "application/x-ndjson; charset=utf-8",
     ),
     true,
+  );
+  assert.equal(
+    shouldSettleApiRequestOnResponse(
+      "http://localhost:7860/api/v1/build/flow/flow?event_delivery=direct",
+      "application/x-ndjson",
+    ),
+    true,
+  );
+  assert.equal(
+    shouldSettleApiRequestOnResponse(
+      "http://localhost:7860/api/v1/build/job/events?event_delivery=polling",
+      "application/x-ndjson",
+    ),
+    false,
   );
   assert.equal(
     shouldSettleApiRequestOnResponse(
@@ -226,6 +257,73 @@ test("settles successful streaming API requests when response headers arrive", (
     ),
     false,
   );
+  assert.equal(
+    shouldSettleApiRequestOnResponse(
+      "http://localhost:7860/api/v2/files/file-id",
+      "application/octet-stream",
+    ),
+    false,
+  );
+  assert.equal(
+    shouldSettleApiRequestOnResponse(
+      "http://localhost:7860/api/v1/logs/stream",
+      "text/event-stream; charset=utf-8",
+    ),
+    true,
+  );
+  assert.equal(
+    shouldSettleApiRequestOnResponse(
+      "http://localhost:3000/assets/app.js",
+      "text/event-stream",
+    ),
+    false,
+  );
+});
+
+test("keeps a delayed JSON body tracked and observes its follow-up 5xx", async () => {
+  const lifecycles = createPendingRequestTracker();
+  const contract = createServerErrorContract();
+  const jsonRequest = { id: "ordinary-json" };
+  const followUpRequest = { id: "follow-up-5xx" };
+
+  lifecycles.start(jsonRequest);
+  assert.equal(
+    shouldSettleApiRequestOnResponse(
+      "http://localhost:7860/api/v1/flows/",
+      "application/json",
+    ),
+    false,
+  );
+  assert.deepEqual(lifecycles.snapshot(), [jsonRequest]);
+
+  const drain = lifecycles.drain(200);
+  setTimeout(() => {
+    // requestfinished fires only after the delayed JSON body is consumed. The
+    // application can then issue another request in the same teardown drain.
+    lifecycles.finish(jsonRequest);
+    lifecycles.start(followUpRequest);
+    observeServerError(contract, {
+      method: "POST",
+      path: "/api/v1/flows/follow-up",
+      status: 503,
+      responseBody: "temporarily unavailable",
+    });
+    lifecycles.finish(followUpRequest);
+  }, 5);
+
+  assert.deepEqual(await drain, []);
+  assert.deepEqual(getServerErrorContractFailures(contract), {
+    unexpected: [
+      {
+        method: "POST",
+        path: "/api/v1/flows/follow-up",
+        status: 503,
+        responseBody: "temporarily unavailable",
+      },
+    ],
+    droppedUnexpected: 0,
+    missing: [],
+  });
 });
 
 const expected = {

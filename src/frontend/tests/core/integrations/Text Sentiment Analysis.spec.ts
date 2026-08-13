@@ -28,24 +28,33 @@ withEventDeliveryModes(
     await page.getByTestId("icon-MoreHorizontal").click();
     await page.getByText("Expand").click();
     await unselectNodes(page);
-    await page.getByTestId("button_run_chat output").last().click();
-    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
-      timeout: 120000,
-    });
+    const [buildResponse] = await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          new URL(response.url()).pathname === "/api/v2/workflows",
+      ),
+      page.getByTestId("button_run_chat output").last().click(),
+    ]);
+    expect(buildResponse.ok()).toBeTruthy();
+    expect(await buildResponse.finished()).toBeNull();
 
     await page
       .getByRole("button", { name: TEXTS.playground, exact: true })
       .click();
-    await page
-      .getByText("Add a Chat Input component to your flow to send messages.", {
-        exact: true,
-      })
-      .last()
-      .isVisible();
+    await expect(
+      page
+        .getByText(
+          "Add a Chat Input component to your flow to send messages.",
+          {
+            exact: true,
+          },
+        )
+        .last(),
+    ).toBeVisible();
 
-    await page.waitForTimeout(5000);
-
-    const textAnalysis = await page.locator(".markdown").last().textContent();
-    expect(textAnalysis?.toLowerCase()).toContain("positive");
+    await expect(page.locator(".markdown").last()).toContainText("positive", {
+      ignoreCase: true,
+    });
   },
 );

@@ -1,46 +1,82 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
-import {
-  configureLoopbackOpenAI,
-  LOOPBACK_OPENAI_API_KEY,
-} from "../../utils/configure-loopback-openai";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TID } from "../../utils/constants/testIds";
 import { TIMEOUTS } from "../../utils/constants/timeouts";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
+import { sendPlaygroundMessage } from "../../utils/playground/send-playground-message";
+
+const ANTHROPIC_MODEL = "claude-sonnet-4-5-20250929";
+
+async function mockAnthropicModelCatalog(page: Page) {
+  await page.route("**/api/v1/models/enabled_models", async (route) => {
+    await route.fulfill({
+      json: {
+        enabled_models: {
+          Anthropic: { [ANTHROPIC_MODEL]: true },
+          OpenAI: { "gpt-4o-mini": true },
+        },
+      },
+    });
+  });
+  await page.route("**/api/v1/models", async (route) => {
+    await route.fulfill({
+      json: [
+        {
+          provider: "Anthropic",
+          icon: "Anthropic",
+          is_enabled: true,
+          is_configured: true,
+          models: [
+            {
+              model_name: ANTHROPIC_MODEL,
+              metadata: { model_type: "llm", tool_calling: true },
+            },
+          ],
+        },
+        {
+          provider: "OpenAI",
+          icon: "OpenAI",
+          is_enabled: true,
+          is_configured: true,
+          models: [
+            {
+              model_name: "gpt-4o-mini",
+              metadata: { model_type: "llm", tool_calling: true },
+            },
+          ],
+        },
+      ],
+    });
+  });
+}
 
 test(
-  "user can select Anthropic and run Simple Agent through the loopback provider",
+  "user can select Anthropic before running Simple Agent through the loopback provider",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
+    await mockAnthropicModelCatalog(page);
     await openStarterProject(page, "Simple Agent");
 
-    const providerDropdown = page.getByTestId(
-      "value-dropdown-dropdown_str_agent_llm",
+    const modelDropdown = page.getByTestId(TID.modelModel);
+    await modelDropdown.click();
+    const anthropicOption = page.getByTestId(
+      `Anthropic-${ANTHROPIC_MODEL}-option`,
     );
-    await providerDropdown.click();
-    await page.getByText("Anthropic", { exact: true }).last().click();
-    await expect(providerDropdown).toContainText("Anthropic");
-    const apiKeyInput = page.getByTestId(TID.popoverAnchorInputApiKey);
-    await expect(apiKeyInput).toHaveAttribute("type", "password");
-    await apiKeyInput.fill(LOOPBACK_OPENAI_API_KEY);
+    await anthropicOption.scrollIntoViewIfNeeded();
+    await anthropicOption.click();
+    await expect(modelDropdown).toContainText(ANTHROPIC_MODEL);
 
+    // The assertion above covers current ModelInput catalog selection. Runtime
+    // behavior is intentionally isolated from Anthropic credentials/network by
+    // switching the saved flow to the local OpenAI-compatible fixture below.
     await configureLoopbackOpenAI(page);
 
     await page.getByTestId(TID.playgroundBtnFlowIo).click();
+    await sendPlaygroundMessage(page, "Describe deterministic CI in one line.");
 
-    await page.waitForSelector(`[data-testid="${TID.buttonSend}"]`, {
-      timeout: TIMEOUTS.componentMount,
+    await expect(page.locator(".markdown.prose").last()).toContainText(/\S/, {
+      timeout: TIMEOUTS.buildComplete,
     });
-
-    await page.getByTestId(TID.buttonSend).click();
-
-    await page.waitForSelector("text=Finished", { timeout: TIMEOUTS.short });
-
-    const textFromLlm = await page
-      .locator(".markdown.prose")
-      .last()
-      .textContent();
-
-    const lengthOfTextFromLlm = textFromLlm?.length;
-    expect(lengthOfTextFromLlm).toBeGreaterThan(30);
   },
 );

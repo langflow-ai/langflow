@@ -2,6 +2,7 @@ import type { BrowserContext, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { configureLoopbackOpenAI } from "../configure-loopback-openai";
 import { TID } from "../constants/testIds";
+import { TEXTS } from "../constants/texts";
 import { ANIMATIONS, TIMEOUTS } from "../constants/timeouts";
 import { buildFlowAndWait } from "../flow/build-flow-and-wait";
 import { openStarterProject } from "../flow/open-starter-project";
@@ -59,7 +60,12 @@ export async function publishBasicPromptingAndOpenShareablePlayground(
   const pagePromise = context.waitForEvent("page");
   await page.getByTestId(TID.shareablePlayground).click();
   const playgroundPage = await pagePromise;
-  await playgroundPage.waitForTimeout(ANIMATIONS.shareablePlaygroundMount);
+  await playgroundPage.waitForURL(new RegExp(`/playground/${flowId}/?$`), {
+    timeout: TIMEOUTS.long,
+  });
+  await playgroundPage
+    .getByPlaceholder(TEXTS.placeholderSendMessage)
+    .waitFor({ state: "visible", timeout: TIMEOUTS.long });
 
   return { playgroundPage, url: playgroundPage.url() };
 }

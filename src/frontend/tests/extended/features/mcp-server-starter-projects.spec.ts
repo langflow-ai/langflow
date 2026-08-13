@@ -3,10 +3,15 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { cleanOldFolders } from "../../utils/clean-old-folders";
 import { TEXTS } from "../../utils/constants/texts";
 import { navigateSettingsPages } from "../../utils/go-to-settings";
+import { useMcpServerListWithoutToolCounts } from "../../utils/mcp-server-list-without-tool-counts";
 import {
   getSidebarProjectButton,
   getSidebarProjectOptionsButton,
 } from "../../utils/project-sidebar";
+
+test.beforeEach(async ({ page }) => {
+  await useMcpServerListWithoutToolCounts(page);
+});
 
 test(
   "user must be able to see starter projects for mcp servers",
@@ -67,8 +72,16 @@ test(
           .click();
         await page.getByText("Rename", { exact: true }).last().click();
         await page.getByTestId("input-project").last().fill("renamed_project");
+        const renameResponsePromise = page.waitForResponse(
+          (response) =>
+            response.request().method() === "PATCH" &&
+            /\/api\/v1\/projects\/[^/]+$/.test(
+              new URL(response.url()).pathname,
+            ),
+        );
         await page.keyboard.press("Enter");
-        await page.waitForTimeout(1000);
+        const renameResponse = await renameResponsePromise;
+        expect(renameResponse.ok()).toBeTruthy();
       });
 
     await navigateSettingsPages(page, "Settings", "MCP Servers");
@@ -91,8 +104,16 @@ test(
           .last()
           .click();
         await page.getByText(TEXTS.delete, { exact: true }).last().click();
+        const deleteResponsePromise = page.waitForResponse(
+          (response) =>
+            response.request().method() === "DELETE" &&
+            /\/api\/v1\/projects\/[^/]+$/.test(
+              new URL(response.url()).pathname,
+            ),
+        );
         await page.getByText(TEXTS.delete, { exact: true }).last().click();
-        await page.waitForTimeout(1000);
+        const deleteResponse = await deleteResponsePromise;
+        expect(deleteResponse.ok()).toBeTruthy();
       });
 
     await navigateSettingsPages(page, "Settings", "MCP Servers");

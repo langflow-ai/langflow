@@ -128,6 +128,7 @@ export default defineConfig({
         LANGFLOW_SUPERUSER_PASSWORD: "test-superuser-password", // pragma: allowlist secret
         LANGFLOW_DEACTIVATE_TRACING: "true",
         LANGFLOW_LOG_LEVEL: "ERROR",
+        OPENAI_API_KEY: "langflow-loopback-test-key", // pragma: allowlist secret
         OPENAI_BASE_URL: "http://127.0.0.1:8787/v1",
         DO_NOT_TRACK: "true",
         // Serve the A2A discovery + JSON-RPC endpoints so the Agent tab tests

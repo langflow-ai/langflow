@@ -11,7 +11,47 @@ import {
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { openFlowCard } from "../../utils/flow/open-flow-card";
 import { waitForFlowEditorReady } from "../../utils/flow/wait-for-flow-editor-ready";
+import { useMcpServerListWithoutToolCounts } from "../../utils/mcp-server-list-without-tool-counts";
 import { openAddMcpServerModal } from "../../utils/open-add-mcp-server-modal";
+
+test.beforeEach(async ({ page }) => {
+  await useMcpServerListWithoutToolCounts(page);
+});
+
+async function scrollMcpSidebarRowIntoView(page: Page, name: string) {
+  const sidebar = page.getByRole("navigation", { name: "Components sidebar" });
+  const mcpNavigationButton = page.getByTestId("sidebar-nav-mcp");
+  const isExpanded = (await sidebar.getAttribute("data-state")) === "expanded";
+  const isMcpActive =
+    (await mcpNavigationButton.getAttribute("data-active")) === "true";
+
+  if (!isExpanded) {
+    await page.locator('[data-sidebar-collapsed-nav-item="mcp"]').click();
+  } else if (!isMcpActive) {
+    await mcpNavigationButton.click();
+  }
+  await expect(sidebar).toHaveAttribute("data-state", "expanded");
+  await expect(mcpNavigationButton).toHaveAttribute("data-active", "true");
+
+  const row = page.getByTestId(`mcp_${name.toLowerCase()}_draggable`);
+  await expect(row).toBeAttached({ timeout: 30_000 });
+  await row.evaluate((element) => {
+    const scrollContainer = element.closest<HTMLElement>(
+      '[data-sidebar="content"]',
+    );
+    if (!scrollContainer) {
+      throw new Error("MCP sidebar scroll container was not found");
+    }
+
+    element.scrollIntoView({
+      block: "center",
+      inline: "nearest",
+      behavior: "instant",
+    });
+  });
+  await expect(row).toBeInViewport({ timeout: 30_000 });
+  return row;
+}
 
 async function addMcpNodeFromSidebar(page: Page, name: string): Promise<void> {
   const toolDropdowns = page.getByTestId("dropdown_str_tool");
@@ -21,6 +61,7 @@ async function addMcpNodeFromSidebar(page: Page, name: string): Promise<void> {
   await expect(page.getByTestId("canvas-add-note-button")).toBeEnabled({
     timeout: 30_000,
   });
+  await scrollMcpSidebarRowIntoView(page, name);
   await expect(addButton).toBeVisible({ timeout: 30_000 });
   await addButton.click();
   await expect(toolDropdowns).toHaveCount(previousNodeCount + 1, {
@@ -367,7 +408,8 @@ test(
 
     expect(urlOptionCount).toBeGreaterThan(0);
 
-    await page.getByTestId(`mcp${testName}`).click({ button: "right" });
+    const serverRow = await scrollMcpSidebarRowIntoView(page, testName);
+    await serverRow.click({ button: "right" });
 
     await page.getByTestId("draggable-component-menu-delete").click();
 

@@ -353,10 +353,11 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
           response.headers()["content-type"] ?? "",
         )
       ) {
-        // Streaming responses can remain open after the terminal event has
-        // already been rendered. Their HTTP status is known at this point and
-        // still inspected below, so waiting for requestfinished would turn a
-        // healthy SSE stream into an unresolved-request flake.
+        // A genuine long-lived stream can remain open after its terminal event
+        // has rendered. Its status is already final and inspectResponse below
+        // still owns bounded error-body inspection. Finite API responses stay
+        // tracked until requestfinished/requestfailed so body-triggered follow-
+        // up requests remain visible to teardown.
         pendingApiRequestLifecycles.finish(response.request());
       }
       const inspection = inspectResponse(response)

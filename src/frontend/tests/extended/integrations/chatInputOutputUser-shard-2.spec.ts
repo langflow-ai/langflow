@@ -59,12 +59,12 @@ test(
     // close the playground (fullscreen covers the toolbar, use the close button)
     await page.getByTestId("playground-close-button").click();
 
-    await page.getByText(TEXTS.componentChatInput, { exact: true }).click();
+    await page.getByRole("group", { name: "Chat Input node" }).click();
     await openParametersPanel(page);
     await toggleParameterOnNode(page, "sender_name");
     await closeParametersPanel(page);
 
-    await page.getByText("Chat Output", { exact: true }).click();
+    await page.getByRole("group", { name: "Chat Output node" }).click();
     await openParametersPanel(page);
     await toggleParameterOnNode(page, "sender_name");
     await closeParametersPanel(page);

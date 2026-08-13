@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { TID } from "../constants/testIds";
 import { TIMEOUTS } from "../constants/timeouts";
 
@@ -57,22 +57,38 @@ export const openTemplatesModal = async (
   } else {
     await waitForNewProjectButton(page, { timeout: buttonTimeout });
   }
-  await page
-    .getByTestId(
-      options?.fromEmptyPage ? TID.newProjectBtnEmptyPage : TID.newProjectBtn,
-    )
-    .click();
-
-  const welcomeSelector = '[data-testid="flow-builder-welcome-panel"]';
   const modalSelector = `[data-testid="${TID.modalTitle}"]`;
   const modalTimeout = options?.modalTimeout ?? TIMEOUTS.standard;
+  const [createResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        new URL(response.url()).pathname === "/api/v1/flows/",
+      { timeout: modalTimeout },
+    ),
+    page
+      .getByTestId(
+        options?.fromEmptyPage ? TID.newProjectBtnEmptyPage : TID.newProjectBtn,
+      )
+      .click(),
+  ]);
+  expect(
+    createResponse.ok(),
+    `Creating a new flow returned ${createResponse.status()}`,
+  ).toBeTruthy();
 
   await page.waitForURL(
     (url) => /^\/flow\/[^/]+(?:\/folder\/[^/]+)?\/?$/.test(url.pathname),
     { timeout: modalTimeout },
   );
-  await page.waitForSelector(welcomeSelector, { timeout: modalTimeout });
-  await page.getByTestId("flow-builder-welcome-browse-more").click();
+  const browseMoreButton = page.getByRole("button", {
+    name: /browse more/i,
+  });
+  await browseMoreButton.waitFor({
+    state: "visible",
+    timeout: modalTimeout,
+  });
+  await browseMoreButton.click();
 
   await page.waitForSelector(modalSelector, {
     timeout: modalTimeout,

@@ -3,6 +3,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { configureLoopbackWebSearch } from "../../utils/configure-loopback-web-search";
 import { TEXTS } from "../../utils/constants/texts";
+import { TIMEOUTS } from "../../utils/constants/timeouts";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
@@ -29,20 +30,35 @@ withEventDeliveryModes(
     const randomCity2 = cities[Math.floor(Math.random() * cities.length)];
     const randomFood = foods[Math.floor(Math.random() * foods.length)];
 
+    const flowId = new URL(page.url()).pathname.match(/\/flow\/([^/]+)/)?.[1];
+    expect(flowId).toBeTruthy();
+    const inputSave = page.waitForResponse(
+      (candidate) =>
+        candidate.request().method() === "PATCH" &&
+        new URL(candidate.url()).pathname === `/api/v1/flows/${flowId}`,
+      { timeout: TIMEOUTS.standard },
+    );
     await page
       .getByTestId("textarea_str_input_value")
       .first()
       .fill(
         `Create a travel plan from ${randomCity} to ${randomCity2} with ${randomFood}`,
       );
+    const inputSaveResponse = await inputSave;
+    expect(inputSaveResponse.ok()).toBeTruthy();
 
-    await page.getByTestId("button_run_chat output").click();
-
-    await page.getByTestId("button_run_chat output").last().click();
-
-    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
-      timeout: 60000 * 3,
-    });
+    const runButton = page.getByTestId("button_run_chat output");
+    await expect(runButton).toBeVisible();
+    const [response] = await Promise.all([
+      page.waitForResponse(
+        (candidate) =>
+          candidate.request().method() === "POST" &&
+          new URL(candidate.url()).pathname === "/api/v2/workflows",
+      ),
+      runButton.click(),
+    ]);
+    expect(response.ok()).toBeTruthy();
+    expect(await response.finished()).toBeNull();
 
     await page
       .getByRole("button", { name: TEXTS.playground, exact: true })

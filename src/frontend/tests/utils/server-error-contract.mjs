@@ -32,7 +32,16 @@ function redactTextualSecrets(text) {
       /((?:["']?[\w-]*(?:api[_-]?key|token|secret|password|authorization|credential|session|cookie|database[_-]?url|dsn|private[_-]?key)[\w-]*["']?\s*[:=]\s*))(?!["']|\[REDACTED\]).*?(?=\s+["']?[\w-]+["']?\s*[:=]|["'](?:[,}\]]|$)|[,;&}\]\r\n]|$)/gi,
       "$1[REDACTED]",
     );
-  return redactUriUserinfo(assignmentsRedacted).replace(
+  const proseSecretsRedacted = assignmentsRedacted
+    .replace(
+      /(\b(?:incorrect|invalid|expired|revoked)?\s*(?:api[\s_-]?key|access[\s_-]?token|auth(?:entication|orization)?[\s_-]?token|token|secret|password|credential)\s+(?:provided|supplied|received|was|is)\s*[:=]?\s*)(?!\[REDACTED\])(["']?)[^\s"',;}\]\r\n]+\2/gi,
+      "$1[REDACTED]",
+    )
+    .replace(
+      /(\b(?:incorrect|invalid|expired|revoked)?\s*(?:api[\s_-]?key|access[\s_-]?token|auth(?:entication|orization)?[\s_-]?token|token|secret|password|credential)\s*[:=]\s*)(?!\[REDACTED\])(["']?)[^\s"',;}\]\r\n]+\2/gi,
+      "$1[REDACTED]",
+    );
+  return redactUriUserinfo(proseSecretsRedacted).replace(
     /\b(bearer|basic)(\s+)[\w.+/=-]+/gi,
     "$1$2[REDACTED]",
   );
@@ -59,13 +68,14 @@ export function sanitizeResponseExcerpt(
   body,
   maxLength = MAX_RESPONSE_BODY_LENGTH,
 ) {
-  let sanitized;
   try {
-    sanitized = JSON.stringify(redactStructuredValue(JSON.parse(body)));
+    return JSON.stringify(redactStructuredValue(JSON.parse(body))).slice(
+      0,
+      maxLength,
+    );
   } catch {
-    sanitized = body;
+    return redactTextualSecrets(body).slice(0, maxLength);
   }
-  return redactTextualSecrets(sanitized).slice(0, maxLength);
 }
 
 export async function readResponseBodyWithTimeout(
@@ -188,13 +198,30 @@ export function shouldSettleApiRequestOnResponse(rawUrl, contentType) {
   if (!shouldTrackApiRequest(rawUrl)) {
     return false;
   }
-  const normalizedContentType = contentType.toLowerCase();
-  return [
-    "text/event-stream",
-    "application/grpc",
-    "application/octet-stream",
-    "application/x-ndjson",
-  ].some((streamType) => normalizedContentType.includes(streamType));
+
+  const normalizedContentType = contentType
+    .split(";", 1)[0]
+    .trim()
+    .toLowerCase();
+  if (
+    normalizedContentType === "text/event-stream" ||
+    normalizedContentType === "application/grpc" ||
+    normalizedContentType.startsWith("application/grpc+")
+  ) {
+    return true;
+  }
+
+  if (normalizedContentType !== "application/x-ndjson") {
+    return false;
+  }
+
+  // Langflow also uses NDJSON for finite polling responses. Only the explicit
+  // streaming/direct delivery modes can legitimately outlive the test while
+  // their response headers already provide the final HTTP status.
+  const deliveryMode = new URL(rawUrl, "http://localhost").searchParams.get(
+    "event_delivery",
+  );
+  return deliveryMode === "streaming" || deliveryMode === "direct";
 }
 
 export function createServerErrorContract() {

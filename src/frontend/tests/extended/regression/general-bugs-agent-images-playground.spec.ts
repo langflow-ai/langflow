@@ -1,4 +1,4 @@
-import { readFileSync } from "fs";
+import path from "path";
 import { expect, test } from "../../fixtures";
 import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TID } from "../../utils/constants/testIds";
@@ -10,37 +10,19 @@ test(
   { tag: ["@release", "@components"] },
   async ({ page }) => {
     await openStarterProject(page, "Simple Agent");
-    await configureLoopbackOpenAI(page);
+    await configureLoopbackOpenAI(page, { skipUpdateOldComponents: true });
 
     await page.getByTestId(TID.playgroundBtnFlowIo).click();
-
-    // Read the image file as a binary string
-    const filePath = "tests/assets/chain.png";
-    const fileContent = readFileSync(filePath, "base64");
-
-    // Create the DataTransfer and File objects within the browser context
-    const dataTransfer = await page.evaluateHandle(
-      ({ fileContent }) => {
-        const dt = new DataTransfer();
-        const byteCharacters = atob(fileContent);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const file = new File([byteArray], "chain.png", { type: "image/png" });
-        dt.items.add(file);
-        return dt;
-      },
-      { fileContent },
-    );
 
     await page.waitForSelector(`[data-testid="${TID.inputChatPlayground}"]`, {
       timeout: TIMEOUTS.componentMount,
     });
 
-    const element = await page.getByTestId(TID.inputChatPlayground);
-    await element.dispatchEvent("drop", { dataTransfer });
+    const filePath = path.resolve(__dirname, "../../assets/chain.png");
+    await page.locator('input[type="file"]').setInputFiles(filePath);
+    await expect(page.locator('img[alt$="chain.png"]')).toBeVisible({
+      timeout: TIMEOUTS.standard,
+    });
 
     await page.getByTestId(TID.inputChatPlayground).fill("what is this image?");
 
@@ -49,19 +31,11 @@ test(
     });
 
     await page.getByTestId(TID.buttonSend).click();
-
-    await page.waitForSelector("text=chain.png", {
-      timeout: TIMEOUTS.standard,
+    const response = page.locator(".markdown.prose").last();
+    await expect(response).toContainText("loopback image received", {
+      ignoreCase: true,
+      timeout: TIMEOUTS.buildComplete,
     });
-
-    await expect(page.getByText("chain.png")).toBeVisible();
-
-    const textFromLlm = await page
-      .locator(".markdown.prose")
-      .last()
-      .textContent();
-
-    expect(textFromLlm?.toLowerCase()).toContain("loopback image received");
-    expect(textFromLlm?.toLowerCase()).toContain("chain.png");
+    await expect(response).toContainText("chain.png", { ignoreCase: true });
   },
 );

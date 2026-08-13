@@ -26,7 +26,7 @@ test(
 
     await page.waitForSelector("text=Chat Input", { timeout: 30000 });
 
-    await page.getByText(TEXTS.componentChatInput, { exact: true }).click();
+    await page.getByRole("group", { name: "Chat Input node" }).click();
     await openParametersPanel(page);
     await closeParametersPanel(page);
     await page

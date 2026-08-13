@@ -1,7 +1,10 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { expect } from "../../fixtures";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
-import { TEXTS } from "../../utils/constants/texts";
-import { openStarterProject } from "../../utils/flow/open-starter-project";
+import { TIMEOUTS } from "../../utils/constants/timeouts";
+import { waitForFlowEditorReady } from "../../utils/flow/wait-for-flow-editor-ready";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 const LOOPBACK_YOUTUBE_COMMENTS_CODE = `
@@ -80,17 +83,54 @@ async function configureLoopbackYouTubeComponents(
   });
   expect(update.ok()).toBeTruthy();
   await page.reload();
-  await expect(page.getByTestId("react-flow-id")).toBeVisible({
-    timeout: 30_000,
+  await waitForFlowEditorReady(page);
+}
+
+async function openCheckedInYouTubeAnalysis(
+  page: Parameters<typeof configureLoopbackOpenAI>[0],
+) {
+  await awaitBootstrapTest(page, {
+    skipModal: true,
+    seedFlowIfEmpty: false,
   });
+  const templatePath = path.resolve(
+    "..",
+    "bundles",
+    "lfx-bundles",
+    "src",
+    "lfx_bundles",
+    "youtube",
+    "starter_projects",
+    "Youtube Analysis.json",
+  );
+  const template = JSON.parse(readFileSync(templatePath, "utf8")) as {
+    data: { nodes: unknown[]; edges: unknown[]; viewport?: unknown };
+    description?: string;
+    tags?: string[];
+  };
+  const created = await page.request.post("/api/v1/flows/", {
+    data: {
+      name: `YouTube Analysis E2E ${Date.now()}`,
+      description: template.description,
+      data: template.data,
+      tags: template.tags,
+    },
+  });
+  if (created.status() !== 201) {
+    throw new Error(
+      `Creating the checked-in YouTube Analysis flow returned ${created.status()} ${await created.text()}`,
+    );
+  }
+  const flow = (await created.json()) as { id: string };
+  await page.goto(`/flow/${flow.id}`);
+  await waitForFlowEditorReady(page);
 }
 
 withEventDeliveryModes(
   "YouTube Analysis",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    await page.goto("/");
-    await openStarterProject(page, "YouTube Analysis");
+    await openCheckedInYouTubeAnalysis(page);
 
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
@@ -99,18 +139,26 @@ withEventDeliveryModes(
     await configureLoopbackOpenAI(page);
     await configureLoopbackYouTubeComponents(page);
 
-    await page.getByTestId("button_run_chat output").last().click();
-    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
-      timeout: 120_000,
-    });
+    const [buildResponse] = await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          new URL(response.url()).pathname === "/api/v2/workflows",
+      ),
+      page.getByTestId("button_run_chat output").last().click(),
+    ]);
+    expect(buildResponse.ok()).toBeTruthy();
+    expect(await buildResponse.finished()).toBeNull();
 
     await page.getByTestId("playground-btn-flow-io").click();
-    await expect(page.getByText("Finished", { exact: true })).toBeVisible({
-      timeout: 120_000,
-    });
+    await expect(page.locator(".markdown").last()).toContainText(
+      "Recommendations",
+      {
+        timeout: TIMEOUTS.buildComplete,
+      },
+    );
 
     const output = await page.locator(".markdown").last().innerText();
-    expect(output).toContain("Recommendations");
     expect(output).toContain("Synthesis");
     expect(output).toContain("Audience Reception");
     expect(output).toContain("Content Summary");
