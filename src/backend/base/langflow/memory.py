@@ -235,8 +235,12 @@ async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession
             if asyncio.iscoroutine(result):
                 await result
         await session.commit()
-        for message in messages:
-            await session.refresh(message)
+        # No refresh loop here. It cost one SELECT per message and fetched nothing the caller did
+        # not already hold: the session factory sets expire_on_commit=False, so the commit leaves
+        # these objects loaded, and no column on `message` is filled in by the database -- all 18
+        # are plain columns whose defaults (id, timestamp, error, edit, is_output) are Python-side
+        # and already evaluated before the INSERT. Re-add a refresh only if a column gains a
+        # server_default or a trigger.
     except asyncio.CancelledError:
         try:
             await session.rollback()

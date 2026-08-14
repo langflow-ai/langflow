@@ -64,7 +64,7 @@ async def update_job_status(
     status: JobStatus,
     *,
     finished_timestamp: datetime | None = None,
-) -> Job | None:
+) -> bool:
     """Update the status of a job.
 
     Args:
@@ -74,7 +74,12 @@ async def update_job_status(
         finished_timestamp: Optional timestamp to set atomically with the status
 
     Returns:
-        Updated Job object or None if not found
+        True if the job was found and updated, False if no such job exists.
+
+        This used to return the updated Job, which cost a SELECT to re-read the row the UPDATE had
+        just written, twice per flow run. No caller ever bound the result -- every one of them
+        awaits this for its effect -- so the row was fetched and discarded. rowcount already carries
+        the only part anyone could have used, which is whether the job existed.
     """
     values = {"status": status}
     if finished_timestamp is not None:
@@ -83,9 +88,7 @@ async def update_job_status(
     result = await db.exec(
         update(Job).where(Job.job_id == job_id).values(**values).execution_options(synchronize_session=False)
     )
-    if result.rowcount == 0:
-        return None
-    return await get_job_by_job_id(db, job_id)
+    return result.rowcount > 0
 
 
 async def get_latest_jobs_by_asset_ids(db: AsyncSession, asset_ids: Sequence[UUID]) -> dict[UUID, Job]:

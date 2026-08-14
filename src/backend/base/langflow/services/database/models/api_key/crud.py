@@ -11,6 +11,7 @@ from uuid import UUID
 
 from cryptography.fernet import InvalidToken
 from lfx.log.logger import logger
+from sqlalchemy.orm import joinedload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -225,9 +226,15 @@ async def _check_key_from_db_with_context(
 
     incoming_hash = hash_api_key(api_key)
 
-    # Fast path: O(1) indexed lookup by hash
-    query = select(ApiKey).where(ApiKey.api_key_hash == incoming_hash, ApiKey.is_active.is_(True))
-    matches = (await session.exec(query)).all()
+    # Fast path: O(1) indexed lookup by hash. The owning user rides along on the same statement:
+    # every authenticated request needs it, and on PostgreSQL a second lookup is a second network
+    # round-trip for a row the join already reached.
+    query = (
+        select(ApiKey)
+        .where(ApiKey.api_key_hash == incoming_hash, ApiKey.is_active.is_(True))
+        .options(joinedload(ApiKey.user))
+    )
+    matches = (await session.exec(query)).unique().all()
 
     if len(matches) == 1:
         api_key_obj = matches[0]
@@ -235,7 +242,7 @@ async def _check_key_from_db_with_context(
             return None
         # Resolve + authorize the user BEFORE the usage counters, so a denied authentication
         # (missing user, blocked external user) does not bump total_uses / last_used_at.
-        user = await session.get(User, api_key_obj.user_id)
+        user = api_key_obj.user
         if user is None or not user.is_active:
             return None
         if await _external_access_ceiling_blocks_user(session, user, settings_service):

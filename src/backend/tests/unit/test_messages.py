@@ -140,13 +140,17 @@ async def test_aadd_messagetables_propagates_cancelled_error_from_commit():
     session.refresh.assert_not_awaited()
 
 
-async def test_aadd_messagetables_propagates_cancelled_error_from_refresh():
-    cancellation = asyncio.CancelledError("refresh cancelled")
+async def test_aadd_messagetables_rolls_back_and_propagates_cancellation():
+    # Cancellation used to be injected at the post-commit refresh. That refresh is gone: it re-read
+    # rows the caller already held. The property it was protecting is unchanged, so the injection
+    # point moves to commit, which is now the only await that can be cancelled here. The sibling
+    # test below covers the same cancellation when rollback ITSELF fails; this one covers the
+    # ordinary case where the rollback succeeds.
+    cancellation = asyncio.CancelledError("commit cancelled")
     message = MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")
     session = SimpleNamespace(
         add=lambda _message: None,
-        commit=AsyncMock(),
-        refresh=AsyncMock(side_effect=cancellation),
+        commit=AsyncMock(side_effect=cancellation),
         rollback=AsyncMock(),
     )
 
@@ -155,7 +159,6 @@ async def test_aadd_messagetables_propagates_cancelled_error_from_refresh():
 
     assert exc_info.value is cancellation
     session.commit.assert_awaited_once()
-    session.refresh.assert_awaited_once_with(message)
     session.rollback.assert_awaited_once()
 
 
@@ -167,7 +170,6 @@ async def test_aadd_messagetables_preserves_cancellation_when_rollback_and_loggi
     session = SimpleNamespace(
         add=lambda _message: None,
         commit=AsyncMock(side_effect=cancellation),
-        refresh=AsyncMock(),
         rollback=AsyncMock(side_effect=RuntimeError("rollback failed")),
     )
 
@@ -177,7 +179,6 @@ async def test_aadd_messagetables_preserves_cancellation_when_rollback_and_loggi
     assert exc_info.value is cancellation
     session.commit.assert_awaited_once()
     session.rollback.assert_awaited_once()
-    session.refresh.assert_not_awaited()
     log_exception.assert_awaited_once()
 
 

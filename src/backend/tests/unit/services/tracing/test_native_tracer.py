@@ -4,14 +4,22 @@ from __future__ import annotations
 
 import asyncio
 import os
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import UUID, uuid4
+from uuid import UUID, uuid4, uuid5
 
 import pytest
-from langflow.services.database.models.traces.model import SpanStatus, SpanType
+from langflow.services.database.models.traces.model import SpanStatus, SpanTable, SpanType, TraceTable
 from langflow.services.tracing.native import NativeTracer
-from langflow.services.tracing.span_sorting import resolve_span_uuids, topological_sort_spans
+from langflow.services.tracing.span_sorting import (
+    LANGFLOW_SPAN_NAMESPACE,
+    resolve_span_uuids,
+    topological_sort_spans,
+)
+from sqlalchemy import event, text
+from sqlalchemy.engine import Engine
+from sqlmodel import select
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -361,48 +369,101 @@ class TestWaitForFlush:
 # ---------------------------------------------------------------------------
 
 
+@pytest.fixture
+async def db_flow_id(async_session, monkeypatch) -> str:
+    """Point ``_flush_to_database`` at a real DB session and return a flow_id that exists in it.
+
+    ``_flush_to_database`` imports ``session_scope`` from ``lfx.services.deps`` at call time, so
+    patching the attribute on that module is enough to hand it the in-memory session created by
+    the shared ``async_session`` fixture. The flush then writes real rows, and the tests read
+    those rows back instead of inspecting how they got there.
+    """
+    import lfx.services.deps
+    from langflow.services.database.models.flow.model import Flow
+
+    flow = Flow(id=uuid4(), name=f"flow-{uuid4()}", data={})
+    async_session.add(flow)
+    await async_session.commit()
+
+    @asynccontextmanager
+    async def _scope():
+        yield async_session
+        await async_session.commit()
+
+    monkeypatch.setattr(lfx.services.deps, "session_scope", _scope)
+    return str(flow.id)
+
+
+async def _fetch_trace(session, trace_id: UUID):
+    """Read the persisted trace row back.
+
+    ``populate_existing`` forces a refresh from the DB so a second flush is not masked by rows
+    already in the session's identity map.
+    """
+    statement = select(TraceTable).where(TraceTable.id == trace_id).execution_options(populate_existing=True)
+    return (await session.exec(statement)).first()
+
+
+async def _fetch_spans(session, trace_id: UUID) -> list[SpanTable]:
+    statement = (
+        select(SpanTable)
+        .where(SpanTable.trace_id == trace_id)
+        .order_by(SpanTable.start_time)
+        .execution_options(populate_existing=True)
+    )
+    return list((await session.exec(statement)).all())
+
+
+def _span_uuid(trace_id: UUID, component_id: str) -> UUID:
+    """The id the tracer derives for a non-UUID span id (the upsert's conflict key)."""
+    return uuid5(LANGFLOW_SPAN_NAMESPACE, f"{trace_id}-{component_id}")
+
+
 class TestFlushToDatabase:
-    @pytest.mark.asyncio
-    async def test_flush_invalid_flow_id_logs_error_and_continues(self):
+    async def test_flush_invalid_flow_id_logs_error_and_continues(self, async_session, db_flow_id):  # noqa: ARG002
         tracer = _make_tracer(flow_id="not-a-uuid")
         tracer.add_trace("comp-1", "Comp (comp-1)", "chain", {})
         tracer.end_trace("comp-1", "Comp")
 
-        mock_session = AsyncMock()
-        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session.__aexit__ = AsyncMock(return_value=False)
-
-        with (
-            patch("langflow.services.tracing.native.logger") as mock_logger,
-            patch("lfx.services.deps.session_scope", return_value=mock_session),
-        ):
+        with patch("langflow.services.tracing.native.logger") as mock_logger:
             await tracer._flush_to_database()
 
         mock_logger.error.assert_called_once()
-        # Verify it continued and attempted to persist with a sentinel flow_id
-        assert mock_session.merge.call_count >= 2
 
-    @pytest.mark.asyncio
-    async def test_flush_writes_trace_and_spans(self):
-        flow_id = str(uuid4())
-        tracer = _make_tracer(flow_id=flow_id)
+        # It continued: the rows are in the DB, filed under the deterministic sentinel flow_id.
+        trace = await _fetch_trace(async_session, tracer.trace_id)
+        assert trace is not None
+        assert trace.flow_id == uuid5(LANGFLOW_SPAN_NAMESPACE, "invalid-flow-id:not-a-uuid")
+        assert [span.name for span in await _fetch_spans(async_session, tracer.trace_id)] == ["Comp"]
+
+    async def test_flush_writes_trace_and_spans(self, async_session, db_flow_id):
+        tracer = _make_tracer(flow_id=db_flow_id)
         tracer.add_trace("comp-1", "Comp (comp-1)", "chain", {"in": "val"})
         tracer.end_trace("comp-1", "Comp", outputs={"out": "result"})
 
-        mock_session = AsyncMock()
-        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session.__aexit__ = AsyncMock(return_value=False)
+        await tracer._flush_to_database()
 
-        with patch("lfx.services.deps.session_scope", return_value=mock_session):
-            await tracer._flush_to_database()
+        trace = await _fetch_trace(async_session, tracer.trace_id)
+        assert trace is not None
+        assert trace.flow_id == UUID(db_flow_id)
+        assert trace.name == tracer.trace_name
+        assert trace.session_id == tracer.session_id
+        assert trace.status == SpanStatus.OK
+        assert trace.end_time is not None
 
-        # merge should be called at least twice: once for trace, once for span
-        assert mock_session.merge.call_count >= 2
+        spans = await _fetch_spans(async_session, tracer.trace_id)
+        assert len(spans) == 1
+        span = spans[0]
+        assert span.id == _span_uuid(tracer.trace_id, "comp-1")
+        assert span.name == "Comp"
+        assert span.span_type == SpanType.CHAIN
+        assert span.status == SpanStatus.OK
+        assert span.inputs == {"in": "val"}
+        assert span.outputs == {"out": "result"}
+        assert span.error is None
 
-    @pytest.mark.asyncio
-    async def test_flush_uses_uuid5_for_non_uuid_span_id(self):
-        flow_id = str(uuid4())
-        tracer = _make_tracer(flow_id=flow_id)
+    async def test_flush_uses_uuid5_for_non_uuid_span_id(self, async_session, db_flow_id):
+        tracer = _make_tracer(flow_id=db_flow_id)
         # Manually add a completed span with a non-UUID string id
         tracer.completed_spans.append(
             {
@@ -420,48 +481,31 @@ class TestFlushToDatabase:
             }
         )
 
-        mock_session = AsyncMock()
-        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session.__aexit__ = AsyncMock(return_value=False)
+        await tracer._flush_to_database()
 
-        with patch("lfx.services.deps.session_scope", return_value=mock_session):
-            # Should not raise even with non-UUID span id
-            await tracer._flush_to_database()
+        spans = await _fetch_spans(async_session, tracer.trace_id)
+        assert len(spans) == 1
+        # The persisted primary key is derived from the trace id, not random: this is what makes the
+        # upsert idempotent across a HITL pause/resume.
+        assert spans[0].id == _span_uuid(tracer.trace_id, "not-a-uuid-string")
 
-        assert mock_session.merge.call_count >= 1
-
-    @pytest.mark.asyncio
-    async def test_flush_error_status_when_span_has_error(self):
-        flow_id = str(uuid4())
-        tracer = _make_tracer(flow_id=flow_id)
+    async def test_flush_error_status_when_span_has_error(self, async_session, db_flow_id):
+        tracer = _make_tracer(flow_id=db_flow_id)
         tracer.add_trace("comp-1", "Comp (comp-1)", "chain", {})
         tracer.end_trace("comp-1", "Comp", error=ValueError("boom"))
 
-        captured_traces = []
+        await tracer._flush_to_database()
 
-        mock_session = AsyncMock()
-        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session.__aexit__ = AsyncMock(return_value=False)
+        trace = await _fetch_trace(async_session, tracer.trace_id)
+        assert trace is not None
+        assert trace.status == SpanStatus.ERROR
 
-        async def capture_merge(obj):
-            captured_traces.append(obj)
+        spans = await _fetch_spans(async_session, tracer.trace_id)
+        assert [span.status for span in spans] == [SpanStatus.ERROR]
+        assert spans[0].error == "boom"
 
-        mock_session.merge = capture_merge
-
-        with patch("lfx.services.deps.session_scope", return_value=mock_session):
-            await tracer._flush_to_database()
-
-        # First merged object is the TraceTable
-        from langflow.services.database.models.traces.model import TraceTable
-
-        trace_obj = next((o for o in captured_traces if isinstance(o, TraceTable)), None)
-        assert trace_obj is not None
-        assert trace_obj.status == SpanStatus.ERROR
-
-    @pytest.mark.asyncio
-    async def test_flush_calculates_total_tokens_from_spans(self):
-        flow_id = str(uuid4())
-        tracer = _make_tracer(flow_id=flow_id)
+    async def test_flush_calculates_total_tokens_from_spans(self, async_session, db_flow_id):
+        tracer = _make_tracer(flow_id=db_flow_id)
         tracer.completed_spans = [
             {
                 "id": str(uuid4()),
@@ -493,24 +537,92 @@ class TestFlushToDatabase:
             },
         ]
 
-        captured_traces = []
-        mock_session = AsyncMock()
-        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session.__aexit__ = AsyncMock(return_value=False)
+        await tracer._flush_to_database()
 
-        async def capture_merge(obj):
-            captured_traces.append(obj)
+        trace = await _fetch_trace(async_session, tracer.trace_id)
+        assert trace is not None
+        assert trace.total_tokens == 80
 
-        mock_session.merge = capture_merge
+    async def test_flush_twice_upserts_instead_of_duplicating(self, async_session, db_flow_id):
+        """The HITL shape: a paused run flushes partial spans, then flushes again after resume.
 
-        with patch("lfx.services.deps.session_scope", return_value=mock_session):
+        Both flushes carry the same trace id and the same deterministic span ids, so the second one
+        must overwrite the first's rows rather than insert duplicates or raise on the primary key.
+        """
+        tracer = _make_tracer(flow_id=db_flow_id)
+        tracer.add_trace("comp-1", "Comp (comp-1)", "chain", {"in": "val"})
+        tracer.end_trace("comp-1", "Comp")  # paused: no outputs yet
+
+        await tracer._flush_to_database()
+
+        # Resume: the same span finishes, and a second component runs.
+        tracer.completed_spans[0]["outputs"] = {"out": "done"}
+        tracer.completed_spans[0]["latency_ms"] = 42
+        tracer.add_trace("comp-2", "Second (comp-2)", "chain", {})
+        tracer.end_trace("comp-2", "Second", outputs={"out": "also done"})
+
+        await tracer._flush_to_database()  # must not raise
+
+        traces = (await async_session.exec(select(TraceTable).execution_options(populate_existing=True))).all()
+        assert [trace.id for trace in traces] == [tracer.trace_id]
+
+        spans = await _fetch_spans(async_session, tracer.trace_id)
+        assert len(spans) == 2
+        assert {span.id for span in spans} == {
+            _span_uuid(tracer.trace_id, "comp-1"),
+            _span_uuid(tracer.trace_id, "comp-2"),
+        }
+
+        # The resumed row holds the second flush's values, not the paused ones.
+        first = next(span for span in spans if span.id == _span_uuid(tracer.trace_id, "comp-1"))
+        assert first.outputs == {"out": "done"}
+        assert first.latency_ms == 42
+
+    async def test_flush_collapses_repeated_builds_of_one_vertex(self, async_session, db_flow_id):
+        """A Loop component or a graph cycle builds the same vertex once per iteration.
+
+        Every build appends its own span, and the span id is uuid5 of (trace id, component id), so
+        one flush carries the same primary key more than once. PostgreSQL refuses to let a single
+        ON CONFLICT DO UPDATE touch a row twice and aborts the whole statement, which would discard
+        the trace and every span with it, silently -- the flush error is swallowed. So the rows must
+        be collapsed before they are sent, keeping the last build, which is what the per-row
+        merge() this replaced produced via the identity map.
+
+        SQLite applies the upsert row by row and accepts duplicates, so the stored rows look correct
+        on the default backend either way. That is why this test also asserts on the SHAPE of the
+        statement: it checks that only one row's worth of parameters was sent, which is the thing
+        PostgreSQL rejects. Without the collapse this assertion fails on SQLite too, so the guard
+        works on the backend CI actually runs.
+        """
+        tracer = _make_tracer(flow_id=db_flow_id)
+        for iteration in range(3):
+            tracer.add_trace("loop-body", "Loop Body (loop-body)", "chain", {"i": iteration})
+            tracer.end_trace("loop-body", "Loop Body", outputs={"i": iteration})
+
+        assert [span["id"] for span in tracer.completed_spans] == ["loop-body"] * 3
+
+        span_inserts = []
+
+        def capture(_conn, _cursor, statement, parameters, _context, _executemany):
+            if "INTO span" in statement:
+                span_inserts.append(parameters)
+
+        event.listen(Engine, "before_cursor_execute", capture)
+        try:
             await tracer._flush_to_database()
+        finally:
+            event.remove(Engine, "before_cursor_execute", capture)
 
-        from langflow.services.database.models.traces.model import TraceTable
+        assert len(span_inserts) == 1, "the three builds must go out as one statement"
+        assert len(span_inserts[0]) == len(SpanTable.__table__.columns), (
+            "the statement carried more than one row of values, which PostgreSQL rejects with "
+            "CardinalityViolation on the conflicting primary key"
+        )
 
-        trace_obj = next((o for o in captured_traces if isinstance(o, TraceTable)), None)
-        assert trace_obj is not None
-        assert trace_obj.total_tokens == 80
+        spans = await _fetch_spans(async_session, tracer.trace_id)
+        assert len(spans) == 1
+        assert spans[0].id == _span_uuid(tracer.trace_id, "loop-body")
+        assert spans[0].outputs == {"i": 2}
 
 
 # ---------------------------------------------------------------------------
@@ -829,11 +941,20 @@ class TestResolveSpanUuids:
 
 
 class TestFlushParentChildOrder:
-    @pytest.mark.asyncio
-    async def test_flush_inserts_parent_before_child(self):
-        """Verify that the DB merge order respects parent -> child ordering."""
-        flow_id = str(uuid4())
-        tracer = _make_tracer(flow_id=flow_id)
+    async def test_flush_inserts_parent_before_child(self, async_session, db_flow_id):
+        """Both spans land and the child's FK resolves to the parent row.
+
+        This used to assert the order of the ``session.merge()`` calls. The flush now writes every
+        span in one upsert, so call order is no longer observable from the outside; what that
+        assertion existed to protect is the FK on ``span.parent_span_id`` being satisfiable, i.e.
+        the parent row must exist by the time the child row is written. So the test turns SQLite's
+        FK enforcement on (off by default, unlike PostgreSQL) and asserts on the persisted rows: a
+        regression that emits the child first now fails the INSERT outright.
+        """
+        tracer = _make_tracer(flow_id=db_flow_id)
+
+        await async_session.execute(text("PRAGMA foreign_keys=ON"))
+        assert (await async_session.execute(text("PRAGMA foreign_keys"))).scalar() == 1
 
         parent_uuid = uuid4()
         child_uuid = uuid4()
@@ -871,31 +992,17 @@ class TestFlushParentChildOrder:
             },
         ]
 
-        merged_objects = []
-        mock_session = AsyncMock()
-        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session.__aexit__ = AsyncMock(return_value=False)
+        await tracer._flush_to_database()
 
-        async def capture_merge(obj):
-            merged_objects.append(obj)
+        spans = await _fetch_spans(async_session, tracer.trace_id)
+        by_id = {span.id: span for span in spans}
+        assert set(by_id) == {parent_uuid, child_uuid}
+        assert by_id[parent_uuid].parent_span_id is None
+        assert by_id[child_uuid].parent_span_id == parent_uuid
 
-        mock_session.merge = capture_merge
-
-        with patch("lfx.services.deps.session_scope", return_value=mock_session):
-            await tracer._flush_to_database()
-
-        from langflow.services.database.models.traces.model import SpanTable
-
-        span_objects = [o for o in merged_objects if isinstance(o, SpanTable)]
-        assert len(span_objects) == 2
-        # Parent (no parent_span_id) must come before child
-        assert span_objects[0].id == parent_uuid
-        assert span_objects[1].id == child_uuid
-        assert span_objects[1].parent_span_id == parent_uuid
-
-    async def test_flush_detaches_span_from_missing_parent(self):
+    async def test_flush_detaches_span_from_missing_parent(self, async_session, db_flow_id):
         """A missing parent must not leave an invalid self-referential FK."""
-        tracer = _make_tracer(flow_id=str(uuid4()))
+        tracer = _make_tracer(flow_id=db_flow_id)
         tracer.completed_spans = [
             {
                 "id": str(uuid4()),
@@ -914,21 +1021,11 @@ class TestFlushParentChildOrder:
             }
         ]
 
-        merged_objects = []
-        mock_session = AsyncMock()
-        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session.__aexit__ = AsyncMock(return_value=False)
+        await async_session.execute(text("PRAGMA foreign_keys=ON"))
 
-        async def capture_merge(obj):
-            merged_objects.append(obj)
+        await tracer._flush_to_database()
 
-        mock_session.merge = capture_merge
-
-        with patch("lfx.services.deps.session_scope", return_value=mock_session):
-            await tracer._flush_to_database()
-
-        from langflow.services.database.models.traces.model import SpanTable
-
-        span_objects = [obj for obj in merged_objects if isinstance(obj, SpanTable)]
-        assert len(span_objects) == 1
-        assert span_objects[0].parent_span_id is None
+        spans = await _fetch_spans(async_session, tracer.trace_id)
+        assert len(spans) == 1
+        assert spans[0].name == "Orphan Span"
+        assert spans[0].parent_span_id is None

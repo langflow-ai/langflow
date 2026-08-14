@@ -186,9 +186,7 @@ class JobService(Service):
             await session.flush()
             return job
 
-    async def update_job_status(
-        self, job_id: UUID, status: JobStatus, *, finished_timestamp: bool = False
-    ) -> Job | None:
+    async def update_job_status(self, job_id: UUID, status: JobStatus, *, finished_timestamp: bool = False) -> bool:
         """Update job status and optionally set finished timestamp.
 
         Args:
@@ -197,7 +195,7 @@ class JobService(Service):
             finished_timestamp: If True, set finished_timestamp to current time
 
         Returns:
-            Updated Job object or None if not found
+            True if the job was found and updated, False if no such job exists.
         """
         async with session_scope() as session:
             finished_at = datetime.now(timezone.utc) if finished_timestamp else None

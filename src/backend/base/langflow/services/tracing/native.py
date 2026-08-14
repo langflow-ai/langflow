@@ -45,6 +45,54 @@ TYPE_MAP = {
 }
 
 
+async def _upsert_rows(session, model, rows: list) -> None:
+    """Insert rows, overwriting any that already exist, in one statement.
+
+    Replaces a ``session.merge()`` per row. merge() has to SELECT each primary key before it can
+    choose between INSERT and UPDATE, so a flush cost ``2 + 2N`` statements for N spans, and the
+    SELECT missed every time on a normal run because the trace id is minted when the run starts and
+    the span ids are derived from it. This costs one statement regardless of N.
+
+    The upsert, rather than a plain insert, is what keeps HITL working. A paused run flushes its
+    partial spans (``langflow/api/build.py``), and on resume the run flushes again with the same
+    trace id and the same deterministic uuid5 span ids. Those rows must be overwritten with their
+    finished state, so the conflict clause updates every non-key column, exactly as merge() did.
+    """
+    if not rows:
+        return
+
+    keys = sorted(column.name for column in model.__table__.primary_key)
+
+    # Collapse rows that share a primary key, keeping the last, because a run can legitimately
+    # produce two spans with the same id: the span uuid is uuid5 of (trace id, component id), and a
+    # Loop component or a graph cycle traces the same vertex once per iteration. PostgreSQL refuses
+    # to let one ON CONFLICT DO UPDATE touch a row twice, so an undeduped batch raises
+    # CardinalityViolation and the rollback discards the trace and every span with it. SQLite accepts
+    # it, so this is invisible on the default backend. The merge() loop this replaced collapsed
+    # duplicates through the identity map, and last-write-wins is what it produced.
+    deduped = {tuple(value[key] for key in keys): value for value in (row.model_dump() for row in rows)}
+    values = list(deduped.values())
+
+    connection = await session.connection()
+    if connection.dialect.name == "postgresql":
+        from sqlalchemy.dialects.postgresql import insert as dialect_insert
+    else:
+        from sqlalchemy.dialects.sqlite import insert as dialect_insert
+
+    # PostgreSQL's wire protocol allows 65535 bind parameters per statement, and one statement here
+    # carries len(columns) of them per row, so a big enough trace would fail as a whole. Chunking
+    # keeps the round-trip count proportional to spans/chunk_size instead of to spans.
+    chunk_size = max(1, 30000 // len(values[0]))
+    for start in range(0, len(values), chunk_size):
+        chunk = values[start : start + chunk_size]
+        statement = dialect_insert(model).values(chunk)
+        statement = statement.on_conflict_do_update(
+            index_elements=keys,
+            set_={name: statement.excluded[name] for name in chunk[0] if name not in keys},
+        )
+        await session.exec(statement)
+
+
 class NativeTracer(BaseTracer):
     """Tracer that stores execution traces in Langflow's database.
 
@@ -348,15 +396,16 @@ class NativeTracer(BaseTracer):
                     total_latency_ms=total_latency_ms,
                     total_tokens=total_tokens,
                 )
-                await session.merge(trace)
+                await _upsert_rows(session, TraceTable, [trace])
 
                 # Pre-compute UUIDs and topologically sort so parents are inserted before children
                 # (required by PostgreSQL's immediate FK enforcement on span.parent_span_id → span.id).
+                # The upsert below preserves this order inside its executemany.
                 resolved = resolve_span_uuids(self.completed_spans, self.trace_id)
                 resolved = topological_sort_spans(resolved)
 
-                for span_data, span_uuid, parent_uuid in resolved:
-                    span = SpanTable(
+                spans = [
+                    SpanTable(
                         id=span_uuid,
                         trace_id=self.trace_id,
                         parent_span_id=parent_uuid,
@@ -371,7 +420,9 @@ class NativeTracer(BaseTracer):
                         error=span_data.get("error"),
                         attributes=span_data.get("attributes") or {},
                     )
-                    await session.merge(span)
+                    for span_data, span_uuid, parent_uuid in resolved
+                ]
+                await _upsert_rows(session, SpanTable, spans)
 
                 logger.debug("Flushed %d spans to database", len(self.completed_spans))
 
