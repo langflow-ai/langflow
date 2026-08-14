@@ -73,6 +73,14 @@ if (typeof global.URL === "undefined") {
   global.URL = require("url").URL;
 }
 
+// jsdom does not expose TextEncoder/TextDecoder, but react-router v7 reads them
+// at module load, so every suite importing react-router-dom fails without these.
+if (typeof global.TextEncoder === "undefined") {
+  const { TextEncoder, TextDecoder } = require("util");
+  global.TextEncoder = TextEncoder;
+  global.TextDecoder = TextDecoder;
+}
+
 // Mock localStorage
 const localStorageMock = {
   getItem: jest.fn(),
