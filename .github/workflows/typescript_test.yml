@@ -280,6 +280,10 @@ jobs:
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     if: ${{ needs.determine-test-suite.outputs.test_grep != '' }}
     needs: determine-test-suite
+    # Without this the job inherits GitHub's 6-hour ceiling: a hung setup step
+    # (apt-get in `playwright install --with-deps`) burns six hours and still
+    # takes the report gate down with it.
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.determine-test-suite.outputs.matrix) }}
@@ -329,6 +333,9 @@ jobs:
 
       - name: Install Playwright Browser Dependencies (Linux)
         if: steps.cache-playwright.outputs.cache-hit != 'true' && runner.os == 'Linux' && !contains(inputs.runs-on, 'self-hosted')
+        # `--with-deps` shells out to apt-get, which can block indefinitely on a
+        # lock or a prompt. Fail in minutes instead of hanging the job.
+        timeout-minutes: 10
         shell: bash
         run: |
           cd ./src/frontend
@@ -336,6 +343,7 @@ jobs:
 
       - name: Install Playwright Browsers (Windows/macOS/Self-Hosted)
         if: steps.cache-playwright.outputs.cache-hit != 'true' && (runner.os != 'Linux' || contains(inputs.runs-on, 'self-hosted'))
+        timeout-minutes: 10
         shell: bash
         run: |
           cd ./src/frontend
@@ -446,14 +454,17 @@ jobs:
         run: npm ci
         working-directory: ./src/frontend
 
+      # Every attempt is downloaded, not just the current one: "re-run failed
+      # jobs" only re-runs the shards that failed, so the shards that passed
+      # first time around keep their earlier attempt-N artifact names. Filtering
+      # to github.run_attempt would leave the gate permanently short.
       - name: Download blob reports
         id: download
         continue-on-error: true
         uses: actions/download-artifact@v8
         with:
-          path: all-blob-reports
-          pattern: blob-report-${{ runner.os }}-*-attempt-${{ github.run_attempt }}
-          merge-multiple: true
+          path: all-blob-reports-raw
+          pattern: blob-report-${{ runner.os }}-*-attempt-*
 
       - name: Check report count, merge, and validate
         id: validate
@@ -465,23 +476,61 @@ jobs:
         working-directory: ./src/frontend
         run: |
           set -euo pipefail
+          raw_dir="$GITHUB_WORKSPACE/all-blob-reports-raw"
           report_dir="$GITHUB_WORKSPACE/all-blob-reports"
           status=failed
-          trap 'echo "test_status=$status" >> "$GITHUB_OUTPUT"' EXIT
+          report_json=false
+          trap 'echo "test_status=$status" >> "$GITHUB_OUTPUT"; echo "report_json=$report_json" >> "$GITHUB_OUTPUT"' EXIT
 
           if [[ "${{ steps.download.outcome }}" != "success" ]]; then
             echo "Blob report download failed." >&2
             exit 1
           fi
 
-          actual_reports=$(find "$report_dir" -type f -name '*.zip' | wc -l | tr -d ' ')
-          if [[ "$actual_reports" != "$EXPECTED_REPORTS" ]]; then
-            echo "Expected $EXPECTED_REPORTS blob reports; downloaded $actual_reports." >&2
-            find "$report_dir" -maxdepth 2 -type f -print || true
+          if [[ ! "$EXPECTED_REPORTS" =~ ^[0-9]+$ ]] || (( EXPECTED_REPORTS == 0 )); then
+            echo "Invalid shard count from determine-test-suite: '$EXPECTED_REPORTS'." >&2
             exit 1
           fi
 
+          # A shard that was re-run has a report under more than one attempt.
+          # Build "shard <tab> attempt <tab> path", sort by shard then attempt
+          # descending, and keep the first row per shard so the newest attempt
+          # wins. Avoids associative arrays, which need bash 4+ (macOS ships 3.2).
+          manifest=$(mktemp)
+          find "$raw_dir" -type f -name '*.zip' -print | while IFS= read -r zip; do
+            artifact=$(basename "$(dirname "$zip")")
+            fields=$(printf '%s\n' "$artifact" \
+              | sed -nE 's/.*-([0-9]+)-of-[0-9]+-attempt-([0-9]+)$/\1 \2/p')
+            if [[ -z "$fields" ]]; then
+              echo "Ignoring unrecognized blob report artifact: $artifact" >&2
+              continue
+            fi
+            read -r shard attempt <<<"$fields"
+            printf '%s\t%s\t%s\n' "$shard" "$attempt" "$zip"
+          done | sort -k1,1n -k2,2nr | awk -F'\t' '!seen[$1]++' > "$manifest"
+
+          actual_reports=$(wc -l < "$manifest" | tr -d ' ')
+          missing=$(awk -F'\t' -v total="$EXPECTED_REPORTS" '
+            { seen[$1] = 1 }
+            END { for (i = 1; i <= total; i++) if (!(i in seen)) printf "%s ", i }
+          ' "$manifest")
+
+          if [[ -n "$missing" ]] || [[ "$actual_reports" != "$EXPECTED_REPORTS" ]]; then
+            echo "Expected $EXPECTED_REPORTS blob reports; resolved $actual_reports." >&2
+            [[ -n "$missing" ]] && echo "Missing shards: $missing" >&2
+            find "$raw_dir" -maxdepth 2 -type d -name 'blob-report-*' -print || true
+            exit 1
+          fi
+
+          rm -rf "$report_dir"
+          mkdir -p "$report_dir"
+          while IFS=$'\t' read -r shard attempt zip; do
+            echo "Shard $shard <- attempt $attempt"
+            cp "$zip" "$report_dir/"
+          done < "$manifest"
+
           npx playwright@"${PLAYWRIGHT_VERSION}" merge-reports --reporter json "$report_dir"
+          report_json=true
           checker_status=0
           npm run e2e:check-report -- "$PLAYWRIGHT_JSON_OUTPUT_NAME" || checker_status=$?
           npx playwright@"${PLAYWRIGHT_VERSION}" merge-reports --reporter html "$report_dir"
@@ -499,8 +548,10 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+      # Only meaningful once the merge has run; gating on the step output keeps
+      # a short-circuited gate from reporting a second, misleading failure.
       - name: Upload merged JSON report
-        if: ${{ always() }}
+        if: ${{ always() && steps.validate.outputs.report_json == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: json-report-${{ runner.os }}-attempt-${{ github.run_attempt }}
