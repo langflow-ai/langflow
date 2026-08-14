@@ -64,6 +64,23 @@ export function useIsFlowReadOnly(flowId: string | undefined | null): boolean {
   return Boolean(flowId) && (isLoading || !can(flowId, "write"));
 }
 
+/**
+ * Returns whether the read-only verdict for `flowId` is still unresolved.
+ *
+ * This is the transient half of `useIsFlowReadOnly`: both are true while the
+ * provider resolves, but only this one clears once the answer arrives. Controls
+ * that invoke a gated mutation read it to disable themselves for the same
+ * window the gate rejects them, so the click is refused visibly instead of
+ * being discarded, and to tell "checking" apart from "not allowed" in the
+ * reason they surface.
+ */
+export function useIsFlowPermissionPending(
+  flowId: string | undefined | null,
+): boolean {
+  const { isLoading } = usePermissions();
+  return Boolean(flowId) && isLoading;
+}
+
 export interface PermissionsProviderProps {
   resourceType: PermissionResourceType;
   resourceIds: string[];

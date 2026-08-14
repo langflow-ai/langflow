@@ -1973,6 +1973,8 @@
   "sidebar.nav.versionHistory": "Historique des versions",
   "sidebar.nav.versions": "Versions",
   "sidebar.newCustomComponent": "Nouveau composant personnalisé",
+  "sidebar.permissionsPending": "Vérification des autorisations...",
+  "sidebar.permissionDenied": "Accès en lecture seule",
   "sidebar.noComponentsFound": "Aucun composant trouvé.",
   "sidebar.projectCreateError": "Impossible de créer le projet.",
   "sidebar.projectUploadError": "Une erreur s'est produite lors du téléchargement de votre projet. Essayez de le glisser-déposer dans un projet existant.",
