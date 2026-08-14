@@ -559,7 +559,12 @@ async def client_fixture(
         def init_app():
             db_dir = tempfile.mkdtemp()
             db_path = Path(db_dir) / "test.db"
-            monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
+            # Opt in to another backend with LANGFLOW_TEST_DATABASE_URL, e.g. a throwaway
+            # PostgreSQL. Some behaviour only exists off SQLite: PostgreSQL enforces foreign keys
+            # immediately, rejects an ON CONFLICT DO UPDATE that would touch a row twice, and caps
+            # a statement at 65535 bind parameters. Unset, everything below is unchanged.
+            db_url = os.getenv("LANGFLOW_TEST_DATABASE_URL") or f"sqlite:///{db_path}"
+            monkeypatch.setenv("LANGFLOW_DATABASE_URL", db_url)
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
             monkeypatch.setenv("LANGFLOW_SUPERUSER", "langflow")
             monkeypatch.setenv("LANGFLOW_SUPERUSER_PASSWORD", "test-superuser-password")
@@ -577,7 +582,7 @@ async def client_fixture(
             get_service_manager().services.clear()  # Clear the services cache
             app = create_app()
             db_service = get_db_service()
-            db_service.database_url = f"sqlite:///{db_path}"
+            db_service.database_url = db_url
             db_service.reload_engine()
             return app, db_path
 
