@@ -90,9 +90,13 @@ permissions:
 env:
   NODE_VERSION: "22"
   PYTHON_VERSION: "3.13"
-  # Define the directory where Playwright browsers will be installed.
-  # This path is used for caching across workflows
-  PLAYWRIGHT_BROWSERS_PATH: "ms-playwright"
+  # Where Playwright installs browsers, and what actions/cache archives.
+  # Absolute on purpose: a relative value resolves against each step's working
+  # directory, so the install (run from src/frontend) wrote to
+  # src/frontend/ms-playwright while the cache archived <workspace>/ms-playwright
+  # — "Path Validation Error ... no cache is being saved" on every job, so no
+  # shard ever hit the cache and all 70 re-downloaded Chromium every run.
+  PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/ms-playwright
   PLAYWRIGHT_VERSION: "1.60.0"
   LANGFLOW_FEATURE_WXO_DEPLOYMENTS: "true"
 
@@ -331,23 +335,27 @@ jobs:
           restore-keys: |
             playwright-${{ env.PLAYWRIGHT_VERSION }}-chromium-${{ runner.os }}
 
-      - name: Install Playwright Browser Dependencies (Linux)
-        if: steps.cache-playwright.outputs.cache-hit != 'true' && runner.os == 'Linux' && !contains(inputs.runs-on, 'self-hosted')
-        # `--with-deps` shells out to apt-get, which can block indefinitely on a
-        # lock or a prompt. Fail in minutes instead of hanging the job.
+      # No `--with-deps` on Linux. On the hosted image every library Chromium
+      # links against is already present — the only thing apt installed was 21MB
+      # of CJK/X11 font packages, and with every shard missing the cache at once
+      # they all pulled them from the same mirror. That is what timed out shard
+      # 59 (6h, before the timeout existed) and shard 45 (10m). Fonts affect
+      # glyph rendering, not whether Chromium starts, and the cache-hit path has
+      # always skipped them anyway.
+      - name: Install Playwright Browsers
+        if: steps.cache-playwright.outputs.cache-hit != 'true'
         timeout-minutes: 10
         shell: bash
+        working-directory: ./src/frontend
         run: |
-          cd ./src/frontend
-          npx playwright install --with-deps chromium
-
-      - name: Install Playwright Browsers (Windows/macOS/Self-Hosted)
-        if: steps.cache-playwright.outputs.cache-hit != 'true' && (runner.os != 'Linux' || contains(inputs.runs-on, 'self-hosted'))
-        timeout-minutes: 10
-        shell: bash
-        run: |
-          cd ./src/frontend
-          npx playwright install chromium
+          for attempt in 1 2 3; do
+            if npx playwright install chromium; then
+              exit 0
+            fi
+            echo "Playwright browser install failed (attempt $attempt/3)." >&2
+            sleep $(( attempt * 15 ))
+          done
+          exit 1
 
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v10.0.0
