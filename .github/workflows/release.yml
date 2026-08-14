@@ -1072,7 +1072,9 @@ jobs:
               FIND_LINKS+=(--find-links "./$wheel_dir")
             fi
           done
-          uv pip install "${FIND_LINKS[@]}" --prerelease=allow -e .
+          # The release candidate wheels must win over workspace source
+          # overrides (for example langflow-base = { workspace = true }).
+          uv pip install --no-sources "${FIND_LINKS[@]}" --prerelease=allow -e .
       - name: Check for dependency incompatibility
         if: ${{ inputs.run_pip_check }}
         run: uv pip check

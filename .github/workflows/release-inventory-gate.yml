@@ -357,6 +357,12 @@ jobs:
           set -euo pipefail
           mkdir -p inventory-reports
           for profile in base default full; do
+            report="inventory-reports/image-${profile}-${{ matrix.arch }}.json"
+            # The application image runs as a non-root UID that does not match
+            # the self-hosted runner. Pre-create the bind-mounted report with
+            # write permission instead of making the whole directory writable.
+            : > "$report"
+            chmod a+rw "$report"
             docker run --rm --entrypoint python \
               -v "$PWD/scripts/ci:/inventory:ro" \
               -v "$PWD/inventory-reports:/reports" \
@@ -364,7 +370,7 @@ jobs:
               /inventory/check_release_inventory.py \
               --contract /inventory/release_inventory_contract.json \
               --profile "image-${profile}" \
-              --output "/reports/image-${profile}-${{ matrix.arch }}.json"
+              --output "/reports/$(basename "$report")"
           done
 
       - name: Verify image startup and health

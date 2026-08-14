@@ -251,11 +251,79 @@ test(
       .getByTestId("handle-textoutput-shownode-inputs-left")
       .nth(0);
     await textOutputInput.hover();
+    const flowId = new URL(page.url()).pathname.match(/\/flow\/([^/]+)/)?.[1];
+    if (!flowId) {
+      throw new Error(`Expected a flow URL, received ${page.url()}`);
+    }
+    const persistedGraph = page.waitForResponse((response) => {
+      const request = response.request();
+      if (
+        request.method() !== "PATCH" ||
+        new URL(response.url()).pathname !== `/api/v1/flows/${flowId}`
+      ) {
+        return false;
+      }
+      const body = request.postDataJSON() as
+        | { data?: { edges?: Array<{ source?: string; target?: string }> } }
+        | undefined;
+      const edges = body?.data?.edges ?? [];
+      return (
+        edges.length === 7 &&
+        edges.some(
+          (edge) =>
+            edge.source?.startsWith("ParseData-") &&
+            edge.target?.startsWith("TextOutput-"),
+        )
+      );
+    });
     await page.mouse.up();
+    await expect(page.locator(".react-flow__edge")).toHaveCount(7);
+    const graphResponse = await persistedGraph;
+    expect(
+      graphResponse.ok(),
+      `Persisting the complete similarity graph returned ${graphResponse.status()}`,
+    ).toBeTruthy();
 
     await configureLoopbackOpenAI(page);
 
+    const buildResponsePromise = page.waitForResponse((response) => {
+      const request = response.request();
+      return (
+        request.method() === "POST" &&
+        new URL(response.url()).pathname === "/api/v2/workflows"
+      );
+    });
     await page.getByTestId("button_run_text output").click();
+    const buildResponse = await buildResponsePromise;
+    expect(buildResponse.ok(), "Similarity workflow request").toBeTruthy();
+    const buildPayload = buildResponse.request().postDataJSON() as {
+      data?: {
+        edges?: unknown[];
+        nodes?: Array<{
+          data?: {
+            type?: string;
+            node?: {
+              template?: Record<
+                string,
+                { load_from_db?: boolean; value?: unknown }
+              >;
+            };
+          };
+        }>;
+      };
+    };
+    expect(buildPayload.data?.edges).toHaveLength(7);
+    const embeddingNode = buildPayload.data?.nodes?.find((node) =>
+      /OpenAIEmbeddings/.test(node.data?.type ?? ""),
+    );
+    expect(
+      embeddingNode,
+      "Similarity workflow contains its OpenAI Embeddings node",
+    ).toBeTruthy();
+    expect(embeddingNode?.data?.node?.template?.openai_api_key).toMatchObject({
+      load_from_db: false,
+      value: LOOPBACK_OPENAI_API_KEY,
+    });
 
     await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
       timeout: 120000,

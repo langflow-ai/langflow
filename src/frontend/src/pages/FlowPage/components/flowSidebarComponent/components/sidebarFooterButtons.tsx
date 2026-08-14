@@ -4,9 +4,11 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
+import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
+import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 
 const SidebarMenuButtons = ({
@@ -21,6 +23,8 @@ const SidebarMenuButtons = ({
   const allowCustomComponents = useUtilityStore(
     (state) => state.allowCustomComponents,
   );
+  const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
+  const isFlowReadOnly = useIsFlowReadOnly(currentFlowId);
 
   const handleAddMcpServerClick = () => {
     setAddMcpOpen(true);
@@ -82,7 +86,7 @@ const SidebarMenuButtons = ({
     <SidebarMenuButton asChild className="group">
       <Button
         unstyled
-        disabled={isLoading}
+        disabled={isLoading || isFlowReadOnly || !customComponent}
         onClick={() => {
           if (customComponent) {
             addComponent(customComponent, "CustomComponent");

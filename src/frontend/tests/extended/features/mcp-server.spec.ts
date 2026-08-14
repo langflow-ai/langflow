@@ -2,14 +2,12 @@ import { type ChildProcess, spawn } from "node:child_process";
 import path from "node:path";
 import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
 import {
   fillLocalMcpServerCommand,
   LOCAL_MCP_SERVER_ARGS,
 } from "../../utils/fill-local-mcp-server-command";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
-import { openFlowCard } from "../../utils/flow/open-flow-card";
 import { waitForFlowEditorReady } from "../../utils/flow/wait-for-flow-editor-ready";
 import { useMcpServerListWithoutToolCounts } from "../../utils/mcp-server-list-without-tool-counts";
 import { openAddMcpServerModal } from "../../utils/open-add-mcp-server-modal";
@@ -774,7 +772,7 @@ test(
     tag: ["@release", "@workspace", "@components"],
   },
   async ({ page }) => {
-    await openBlankFlow(page);
+    const blankFlowId = await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
     await addMcpNodeFromSidebar(page, "lf-starter_project");
     await fitMcpCanvas(page, 3);
@@ -915,14 +913,8 @@ test(
       timeout: 30000,
     });
 
-    await awaitBootstrapTest(page, { skipModal: true });
-
-    const newFlowDiv = page
-      .getByTestId("flow-name-div")
-      .filter({ hasText: "New Flow" })
-      .first();
-    await newFlowDiv.waitFor({ state: "visible", timeout: 10000 });
-    await openFlowCard(page, "New Flow");
+    await page.goto(`/flow/${blankFlowId}`);
+    await waitForFlowEditorReady(page);
 
     // Wait for the MCP Tools component to be visible on canvas
     await page.waitForSelector('text="MCP Tools"', {
@@ -1025,14 +1017,8 @@ test(
       timeout: 10000,
     });
 
-    await awaitBootstrapTest(page, { skipModal: true });
-
-    const newFlowDiv2 = page
-      .getByTestId("flow-name-div")
-      .filter({ hasText: "New Flow" })
-      .first();
-    await newFlowDiv2.waitFor({ state: "visible", timeout: 10000 });
-    await openFlowCard(page, "New Flow");
+    await page.goto(`/flow/${blankFlowId}`);
+    await waitForFlowEditorReady(page);
 
     // Wait for the MCP Tools component to be visible on canvas
     await page.waitForSelector('text="MCP Tools"', {

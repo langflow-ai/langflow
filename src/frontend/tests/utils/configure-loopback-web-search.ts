@@ -47,10 +47,18 @@ export async function configureLoopbackWebSearch(page: Page): Promise<void> {
   expect(response.ok(), `GET flow ${flowId}`).toBeTruthy();
   const flow = await response.json();
   const searchNodes = flow.data.nodes.filter(
-    (node: { data?: { type?: string } }) =>
+    (node: { id?: string; data?: { type?: string } }) =>
       node.data?.type === "UnifiedWebSearch",
   );
   expect(searchNodes.length).toBeGreaterThan(0);
+  const searchNodeIds = searchNodes.map(
+    (node: { id?: string }, index: number) =>
+      node.id ?? `missing-unified-web-search-id-${index}`,
+  );
+  expect(
+    searchNodeIds.filter((id) => id.startsWith("missing-")),
+    "UnifiedWebSearch nodes must have stable ids",
+  ).toHaveLength(0);
   for (const node of searchNodes) {
     const codeField = node.data?.node?.template?.code;
     expect(
@@ -65,4 +73,31 @@ export async function configureLoopbackWebSearch(page: Page): Promise<void> {
   expect(update.ok(), `PATCH flow ${flowId}`).toBeTruthy();
   await page.reload();
   await waitForFlowEditorReady(page);
+
+  const verifyResponse = await page.request.get(`/api/v1/flows/${flowId}`);
+  expect(verifyResponse.ok(), `Verify flow ${flowId}`).toBeTruthy();
+  const verifiedFlow = await verifyResponse.json();
+  const verifiedNodesById = new Map(
+    verifiedFlow.data.nodes.map((node: { id?: string }) => [node.id, node]),
+  );
+  const missingFixtureNodes = searchNodeIds.filter((nodeId) => {
+    const node = verifiedNodesById.get(nodeId) as
+      | {
+          data?: {
+            type?: string;
+            node?: { template?: { code?: { value?: string } } };
+          };
+        }
+      | undefined;
+    return (
+      node?.data?.type !== "UnifiedWebSearch" ||
+      !node.data.node?.template?.code?.value?.includes(
+        "LOOPBACK_WEB_SEARCH_USED",
+      )
+    );
+  });
+  expect(
+    missingFixtureNodes,
+    "Loopback web-search configuration was overwritten after reload",
+  ).toHaveLength(0);
 }

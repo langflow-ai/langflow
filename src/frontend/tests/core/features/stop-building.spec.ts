@@ -1,8 +1,9 @@
-import { expect, test } from "../../fixtures";
+import { test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
+import { replaceComponentCode } from "../../utils/flow/replace-component-code";
 import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
 import { updateOldComponents } from "../../utils/update-old-components";
 import { zoomOut } from "../../utils/zoom-out";
@@ -151,21 +152,7 @@ class CustomComponent(Component):
 
     await page.getByTestId("title-Custom Component").first().click();
 
-    await expect(page.getByTestId("code-button-modal").last()).toBeVisible({
-      timeout: 3000,
-    });
-
-    await page.getByTestId("code-button-modal").last().click();
-
-    await page.waitForSelector('[id="checkAndSaveBtn"]', {
-      timeout: 3000,
-    });
-
-    await page.locator("textarea").last().press(`ControlOrMeta+a`);
-    await page.keyboard.press("Backspace");
-    await page.locator("textarea").last().fill(timerCode);
-    await page.locator('//*[@id="checkAndSaveBtn"]').click();
-    await page.waitForTimeout(500);
+    await replaceComponentCode(page, timerCode);
 
     await page.getByTestId("button_run_custom component").click();
 
