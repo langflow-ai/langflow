@@ -323,3 +323,30 @@ def test_serving_scope_required_but_absent_raises(monkeypatch):
             requested_session_id="chat-1",
             default_session_id=FLOW_ID,
         )
+
+
+# --- ScopedSession.end_user_id: the raw id every serving path stamps on the graph ----
+
+
+def test_scope_carries_raw_end_user_id_for_identified():
+    scoped = scope_session_for_identity(
+        EndUserIdentity(id="alice"), requested_session_id="chat-1", default_session_id=FLOW_ID
+    )
+    assert scoped.session_id == "alice::chat-1"
+    assert scoped.end_user_id == "alice"
+
+
+def test_scope_has_no_end_user_id_when_anonymous():
+    scoped = scope_session_for_identity(ANONYMOUS, requested_session_id="chat-1", default_session_id=FLOW_ID)
+    assert scoped.end_user_id is None
+
+
+def test_serving_scope_returns_raw_end_user_id(monkeypatch):
+    _stub_settings(monkeypatch, serving_end_user_header=HEADER, serving_trust_proxy_headers=True)
+    scoped = resolve_serving_scope(
+        http_request=_FakeRequest(**{HEADER: "alice"}),
+        requested_session_id="chat-1",
+        default_session_id=FLOW_ID,
+    )
+    assert scoped is not None
+    assert scoped.end_user_id == "alice"

@@ -7,6 +7,8 @@ trusted header actually reaches the run over HTTP, complementing the lfx unit te
 ``resolve_serving_scope`` (which cover the decision in isolation).
 """
 
+from uuid import uuid4
+
 from fastapi import status
 
 HEADER = "X-End-User-Id"
@@ -82,3 +84,27 @@ async def test_required_but_absent_is_rejected(client, simple_api_test, created_
     resp = await _run(client, simple_api_test["id"], created_api_key.api_key, session_id="chat-1")  # no header
     assert resp.status_code == status.HTTP_401_UNAUTHORIZED, resp.text
     assert resp.json()["detail"]["code"] == "END_USER_IDENTITY_REQUIRED"
+
+
+async def test_identified_run_stamps_message_user_id_over_http(
+    client, simple_api_test, created_api_key, active_user, monkeypatch
+):
+    """Full v1 chain: the header lands on message.user_id as the end user, not the SID.
+
+    Proves header -> simple_run_flow -> graph.end_user_id -> _store_message -> the
+    UUID-typed message.user_id column, and that the read predicate agrees (P2's
+    write==read contract) over the real /run stack.
+    """
+    from langflow.memory import aget_messages
+
+    _enable_serving(monkeypatch)
+    uid = uuid4()  # a UUID-shaped end-user id is stamped directly
+    resp = await _run(client, simple_api_test["id"], created_api_key.api_key, session_id="chat-1", end_user=str(uid))
+    assert resp.status_code == status.HTTP_200_OK, resp.text
+    scoped_session = resp.json()["session_id"]
+    assert scoped_session == f"{uid}::chat-1"
+
+    # Stored under the end user...
+    assert len(await aget_messages(session_id=scoped_session, user_id=uid)) >= 1
+    # ...and NOT under the service account (the api-key owner = SID).
+    assert await aget_messages(session_id=scoped_session, user_id=active_user.id) == []

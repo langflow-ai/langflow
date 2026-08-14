@@ -439,6 +439,10 @@ async def simple_run_flow(
             if scoped is not None:
                 effective_session_id = scoped.session_id
                 graph.persist_messages = scoped.persist
+                # Carry the end-user identity onto the graph so services (chat memory,
+                # and later telemetry / agent file writes) scope per-user state to the
+                # end user. None for an anonymous run.
+                graph.end_user_id = scoped.end_user_id
 
         inputs = None
         if input_request.input_value is not None:

@@ -440,18 +440,24 @@ def _unknown_protocol_http_exception(exc: UnknownStreamProtocolError) -> HTTPExc
 def _parse_persisted_workflow_request(request: dict) -> ParsedWorkflowRun:
     """Re-parse a persisted background/resume request into a ``ParsedWorkflowRun``.
 
-    ``persist_messages`` is an internal serving-plane decision (anonymous runs are
-    ephemeral), not a client wire field — ``WorkflowRunRequest`` forbids extras, so
-    it is popped before constructing the request and re-applied to the parsed run.
-    Without this, the worker re-parse would reset it to the ``True`` default and an
-    anonymous background/resume run would persist memory it must not. Legacy rows
-    that predate the field fall back to ``True`` (persist), matching prior behavior.
+    ``persist_messages`` and ``end_user_id`` are internal serving-plane decisions
+    (anonymous runs are ephemeral; identified runs carry the end user), not client
+    wire fields — ``WorkflowRunRequest`` forbids extras, so they are popped before
+    constructing the request and re-applied to the parsed run. Without this, the
+    worker re-parse would reset ``persist_messages`` to the ``True`` default (an
+    anonymous background/resume run would persist memory it must not) and drop
+    ``end_user_id`` (an identified run would stamp memory to the SID, not the end
+    user). Legacy rows that predate the fields fall back to persist=True /
+    end_user_id=None, matching prior behavior.
     """
+    internal = {"persist_messages", "end_user_id"}
     persist_messages = request.get("persist_messages", True)
-    request_fields = {k: v for k, v in request.items() if k != "persist_messages"}
+    end_user_id = request.get("end_user_id")
+    request_fields = {k: v for k, v in request.items() if k not in internal}
     return replace(
         parse_workflow_run_request(WorkflowRunRequest(**request_fields)),
         persist_messages=persist_messages,
+        end_user_id=end_user_id,
     )
 
 
@@ -567,6 +573,10 @@ async def execute_workflow_background(
             # anonymous background/resume run does not persist memory (see the pop in
             # _default_frame_source_factory).
             "persist_messages": parsed.persist_messages,
+            # The end-user identity is likewise an internal decision, not a wire field:
+            # it must survive the round-trip so an identified background/resume run
+            # stamps memory to the end user on the worker, not the SID.
+            "end_user_id": parsed.end_user_id,
         }
         job_id_new = await service.submit(flow_id=flow.id, request=request_dict, user=current_user)
         return WorkflowJobResponse(job_id=str(job_id_new), flow_id=parsed.flow_id, status=JobStatus.QUEUED)

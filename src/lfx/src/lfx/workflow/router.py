@@ -178,7 +178,14 @@ def _scope_parsed_to_end_user(parsed, flow, http_request: Request):
         return parsed
     # An anonymous request runs ephemerally: scoped.persist is False, which the
     # execution path threads onto the graph so astore_message skips the DB write.
-    return replace(parsed, session_id=scoped.session_id, persist_messages=scoped.persist)
+    # ``end_user_id`` (None for anonymous) is stamped onto the graph at the build site
+    # so downstream services scope per-user state to the end user.
+    return replace(
+        parsed,
+        session_id=scoped.session_id,
+        persist_messages=scoped.persist,
+        end_user_id=scoped.end_user_id,
+    )
 
 
 async def check_developer_api_enabled() -> None:

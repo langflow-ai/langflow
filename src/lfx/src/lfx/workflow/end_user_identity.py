@@ -91,11 +91,14 @@ class ScopedSession:
 
     ``session_id`` is the effective key the run should execute and persist under.
     ``persist`` is False for anonymous requests, which run ephemerally and must
-    not write per-user memory.
+    not write per-user memory. ``end_user_id`` is the raw end-user id the run should
+    stamp onto ``graph.end_user_id`` (``None`` for an anonymous request), carried here
+    so every serving entry point — v1 and v2 — reads it from the one shared helper.
     """
 
     session_id: str
     persist: bool
+    end_user_id: str | None = None
 
 
 class EndUserIdentityRequiredError(Exception):
@@ -213,14 +216,14 @@ def scope_session_for_identity(
         run may persist per-user memory.
     """
     if identity.is_anonymous:
-        return ScopedSession(session_id=f"{ANONYMOUS_SESSION_PREFIX}{uuid4()}", persist=False)
+        return ScopedSession(session_id=f"{ANONYMOUS_SESSION_PREFIX}{uuid4()}", persist=False, end_user_id=None)
     prefix = f"{identity.id}{SCOPE_SEPARATOR}"
     base = requested_session_id or default_session_id
     # A key echoed from a previous response already carries this user's own prefix;
     # strip it once so the merge is idempotent. Another user's prefix never matches
     # (the gateway authenticated *this* id), so cross-user keys cannot be unwrapped.
     base = base.removeprefix(prefix)
-    return ScopedSession(session_id=f"{prefix}{base}", persist=True)
+    return ScopedSession(session_id=f"{prefix}{base}", persist=True, end_user_id=identity.id)
 
 
 def resolve_serving_scope(

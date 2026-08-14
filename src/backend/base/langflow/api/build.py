@@ -458,6 +458,7 @@ async def generate_flow_events(
     tweaks: dict | None = None,
     expose_error_details: bool = False,
     persist_messages: bool = True,
+    end_user_id: str | None = None,
 ) -> None:
     """Generate events for flow building process.
 
@@ -888,6 +889,9 @@ async def generate_flow_events(
         # graph non-persisting (astore_message honors this per component). Defaults
         # True, so the Playground and every other caller are unaffected.
         graph.persist_messages = persist_messages
+        # Carry the end-user identity onto the graph so per-user state (chat memory)
+        # scopes to the end user. None for anonymous / feature-off / editor runs.
+        graph.end_user_id = end_user_id
     except Exception as e:
         client_error = error_for_client(e, expose_details=expose_error_details)
         error_message = ErrorMessage(
