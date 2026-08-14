@@ -12,8 +12,6 @@ from lfx.components.huggingface.huggingface_inference_api import HuggingFaceInfe
 from lfx.components.litellm.litellm_proxy import LiteLLMProxyComponent
 from lfx.components.lmstudio.lmstudioembeddings import LMStudioEmbeddingsComponent
 from lfx.components.lmstudio.lmstudiomodel import LMStudioModelComponent
-from lfx.components.ollama.ollama import ChatOllamaComponent
-from lfx.components.ollama.ollama_embeddings import OllamaEmbeddingsComponent
 from lfx.components.xai.xai import XAI_DEFAULT_MODELS, XAIModelComponent
 from lfx.utils.ssrf_protection import SSRFProtectionError
 
@@ -148,28 +146,9 @@ def test_huggingface_build_blocks_metadata_url_before_sdk_client():
     mock_create.assert_not_called()
 
 
-def test_ollama_embeddings_build_blocks_metadata_url_before_sdk_client():
-    component = OllamaEmbeddingsComponent(base_url=BLOCKED_URL, model_name="model")
-
-    with (
-        patch("lfx.components.ollama.ollama_embeddings.OllamaEmbeddings") as mock_embeddings,
-        pytest.raises(ValueError, match="SSRF Protection"),
-    ):
-        component.build_embeddings()
-
-    mock_embeddings.assert_not_called()
-
-
-def test_ollama_build_blocks_metadata_url_before_sdk_client():
-    component = ChatOllamaComponent(base_url=BLOCKED_URL, model_name="model", mirostat="Disabled")
-
-    with (
-        patch("lfx.components.ollama.ollama.ChatOllama") as mock_chat_ollama,
-        pytest.raises(ValueError, match="SSRF Protection"),
-    ):
-        component.build_model()
-
-    mock_chat_ollama.assert_not_called()
+# The Ollama SSRF regressions live in ``test_ssrf_guarded_ollama_components.py``: Ollama graduated
+# into ``lfx-ollama`` (a default ``langflow`` dependency), so this file's ``lfx_bundles`` skip
+# would hide them in the default install.
 
 
 def test_litellm_build_blocks_metadata_url_before_httpx_and_openai_client():
