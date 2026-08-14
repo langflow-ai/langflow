@@ -2,12 +2,20 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
+import { routeTestScopedDefaultFlowNames } from "../../utils/flow/route-test-scoped-default-flow-names";
 import {
   closeParametersPanel,
   openParametersPanel,
   toggleParameterOnNode,
 } from "../../utils/open-advanced-options";
 import { uploadFile } from "../../utils/upload-file";
+
+// awaitBootstrapTest creates a default "New Flow (n)" whose suffix comes from a
+// client-side inventory snapshot, so two shards can pick the same one before
+// either POST commits and the loser gets a 400 on the unique (user_id, name).
+test.beforeEach(async ({ page }, testInfo) => {
+  await routeTestScopedDefaultFlowNames(page, testInfo, "general-bugs-3836");
+});
 
 test(
   "user must be able to send an image on chat using advanced tool on ChatInputComponent",
