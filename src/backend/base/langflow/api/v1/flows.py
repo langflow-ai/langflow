@@ -76,6 +76,7 @@ from langflow.services.cache.service import ThreadingInMemoryCache
 from langflow.services.database.lock_retry import (
     is_database_lock_error,
     run_with_lock_retry,
+    sanitize_database_error,
 )
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
@@ -111,14 +112,58 @@ __all__ = [
 ]
 
 
+DB_OPERATION_FAILED = "The database rejected the request."
+
+# SQLite and PostgreSQL report a violation differently: SQLite names the columns
+# ("UNIQUE constraint failed: flow.user_id, flow.name") while PostgreSQL names the constraint
+# ('... violates unique constraint "unique_flow_name"'). Match whichever marker is present so both
+# backends produce the same client-facing detail. Every constraint below is named in the models.
+_UNIQUE_VIOLATION_DETAILS: tuple[tuple[str, str], ...] = (
+    ("unique_flow_endpoint_name", "Endpoint name must be unique"),
+    ("flow.endpoint_name", "Endpoint name must be unique"),
+    ("unique_flow_name", "Name must be unique"),
+    ("flow.name", "Name must be unique"),
+    ("unique_folder_name", "Project name must be unique"),
+    ("folder.name", "Project name must be unique"),
+    ("flow_pkey", "A flow with this ID already exists"),
+    ("flow.id", "A flow with this ID already exists"),
+    ("folder_pkey", "A project with this ID already exists"),
+    ("folder.id", "A project with this ID already exists"),
+)
+_UNIQUE_VIOLATION_TEXT = ("UNIQUE constraint failed", "duplicate key value violates unique constraint")
+_UNIQUE_VIOLATION_SQLSTATE = "23505"
+
+
+def _is_unique_violation(exc: Exception, msg: str) -> bool:
+    """Detect a unique violation on any backend.
+
+    Prefers the SQLSTATE on the driver exception (23505 on PostgreSQL, exposed as ``sqlstate`` by
+    psycopg3 and ``pgcode`` by psycopg2) and falls back to the message text, which is all SQLite
+    offers.
+    """
+    orig = getattr(exc, "orig", None)
+    sqlstate = getattr(orig, "sqlstate", None) or getattr(orig, "pgcode", None)
+    if sqlstate == _UNIQUE_VIOLATION_SQLSTATE:
+        return True
+    return any(marker in msg for marker in _UNIQUE_VIOLATION_TEXT)
+
+
 def _handle_unique_constraint_error(exc: Exception, *, status_code: int = 400) -> HTTPException:
-    """Parse a UNIQUE constraint error and return an appropriate HTTPException."""
+    """Map a unique-constraint violation to *status_code*; map anything else to a sanitized 500.
+
+    Callers either raise the result directly or read a 500 as "not a conflict" (see update_flow),
+    so the 500 branch stays — but its detail is sanitized, because SQLAlchemy's ``str()`` embeds
+    the failing statement and its bound parameters.
+    """
     msg = str(exc)
-    if "UNIQUE constraint failed" not in msg:
-        return HTTPException(status_code=500, detail=msg)
-    columns = msg.split("UNIQUE constraint failed: ")[1].split(".")[1].split("\n")[0]
-    column = columns.split(",")[1] if "id" in columns.split(",")[0] else columns.split(",")[0]
-    return HTTPException(status_code=status_code, detail=f"{column.capitalize().replace('_', ' ')} must be unique")
+    if not _is_unique_violation(exc, msg):
+        return HTTPException(status_code=500, detail=sanitize_database_error(exc, DB_OPERATION_FAILED))
+    for marker, detail in _UNIQUE_VIOLATION_DETAILS:
+        if marker in msg:
+            return HTTPException(status_code=status_code, detail=detail)
+    # A named constraint we do not have a message for; still a conflict, but say nothing specific
+    # rather than echoing the driver text.
+    return HTTPException(status_code=status_code, detail="A record with these values already exists")
 
 
 def _validate_catalog_policy_for_write(
