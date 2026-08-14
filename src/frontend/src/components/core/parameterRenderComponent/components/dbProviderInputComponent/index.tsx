@@ -44,6 +44,12 @@ interface DBProviderInputProps {
   disabled?: boolean;
   /** Accessible name for the combobox trigger (WCAG 4.1.2). */
   "aria-label"?: string;
+  /**
+   * Id of the canvas field's label element. Takes precedence over
+   * `aria-label` when set, so the trigger is named by the field's own
+   * visible label rather than a generic string.
+   */
+  ariaLabelledBy?: string;
   onValueChange: (
     backendType: AvailableDBProviderId,
     backendConfig: Record<string, DBProviderConfigValue>,
@@ -55,6 +61,7 @@ export default function DBProviderInputComponent({
   value,
   disabled,
   handleOnNewValue,
+  ariaLabelledBy,
 }: BaseInputProps<DBProviderSelection | AvailableDBProviderId>) {
   const {
     data: globalVariables = [],
@@ -84,6 +91,7 @@ export default function DBProviderInputComponent({
       value={currentValue.backend_type}
       globalVariables={globalVariables}
       disabled={disabled}
+      ariaLabelledBy={ariaLabelledBy}
       onValueChange={(backendType, backendConfig) => {
         handleOnNewValue({
           value: {
@@ -102,6 +110,7 @@ export function DBProviderInput({
   globalVariables,
   disabled,
   "aria-label": ariaLabel,
+  ariaLabelledBy,
   onValueChange,
 }: DBProviderInputProps) {
   const { t } = useTranslation();
@@ -156,7 +165,10 @@ export function DBProviderInput({
           role="combobox"
           ref={refButton}
           aria-expanded={open}
-          aria-label={ariaLabel}
+          // aria-labelledby wins over aria-label when both are set, so only
+          // one is ever emitted — otherwise the aria-label is dead weight.
+          aria-label={!ariaLabelledBy ? ariaLabel : undefined}
+          aria-labelledby={ariaLabelledBy}
           data-testid={id}
           className={cn(
             "dropdown-component-false-outline py-2",
