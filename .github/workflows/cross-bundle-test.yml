@@ -169,7 +169,10 @@ jobs:
             if [ "${{ matrix.bundle }}" = "src/bundles/lfx-bundles" ]; then
               uv pip install "./${{ matrix.bundle }}[all-no-torch]" respx pytest-timeout
             fi
-            .venv/bin/python -m pytest "${{ matrix.bundle }}/tests" -q
+            # -m "not api_key_required": those tests need real provider credentials, which CI
+            # does not hold. They already self-skip on a missing env var, but deselecting makes
+            # the pyproject marker's "not run in CI" contract enforced rather than aspirational.
+            .venv/bin/python -m pytest "${{ matrix.bundle }}/tests" -q -m "not api_key_required"
           else
             echo "no tests/ directory in ${{ matrix.bundle }}; skipping"
           fi

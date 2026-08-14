@@ -119,6 +119,8 @@ jobs:
           retention-days: 30
 
   bundle-guarded-tests:
+    permissions:
+      contents: read
     # The backend unit suite installs with a plain `uv sync`, which since #13869 no longer
     # brings in the opt-in lfx-bundles metapackage -- so every test carrying
     # `pytest.importorskip("lfx_bundles")` silently skipped in all of CI (issue #14554).
@@ -138,6 +140,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
@@ -149,23 +152,49 @@ jobs:
       - name: Install the project with the bundles extra
         run: uv sync --extra bundles
 
-      - name: Run the bundle-guarded unit tests
+      - name: Fail if the bundles extra did not actually install lfx_bundles
+        # Before the tests, not after: if lfx_bundles is missing, every guarded test
+        # importorskips and the run below reports green having executed nothing -- the exact
+        # failure mode this job exists to catch.
+        run: uv run python -c "import lfx_bundles; print('lfx_bundles', lfx_bundles.__file__)"
+
+      - name: Run the bundle-guarded backend unit tests
         run: |
           # Discovered, not hard-coded: a newly guarded test is picked up automatically
           # instead of quietly joining the set of tests nothing runs.
-          mapfile -t guarded < <(grep -rl 'pytest.importorskip("lfx_bundles' src/backend/tests src/lfx/tests || true)
+          # `while read` rather than `mapfile`: mapfile needs bash 4+, and runs-on is an input
+          # to this workflow, so the shell is not guaranteed to be a GitHub ubuntu runner.
+          guarded=()
+          while IFS= read -r f; do guarded+=("$f"); done < <(grep -rl 'pytest.importorskip("lfx_bundles' src/backend/tests || true)
           if [ ${#guarded[@]} -eq 0 ]; then
-            echo "No lfx_bundles-guarded tests found -- nothing to run."
+            echo "No lfx_bundles-guarded backend tests found -- nothing to run."
             exit 0
           fi
-          printf 'Running %d bundle-guarded test file(s):\n' "${#guarded[@]}"
+          printf 'Running %d bundle-guarded backend test file(s):\n' "${#guarded[@]}"
           printf '  %s\n' "${guarded[@]}"
           uv run pytest "${guarded[@]}" -v --timeout=300
 
-      - name: Fail if the bundles extra did not actually install lfx_bundles
-        # Without this the job is worthless: a resolution change drops lfx_bundles, every test
-        # importorskips again, and the job still reports green.
-        run: uv run python -c "import lfx_bundles; print('lfx_bundles', lfx_bundles.__file__)"
+      - name: Run the bundle-guarded lfx unit tests
+        # A separate invocation, and from src/lfx: src/backend/tests and src/lfx/tests both
+        # provide a top-level `tests` package, so collecting both in one pytest run dies with
+        # ImportPathMismatchError on tests.conftest. This mirrors the existing split between
+        # the Unit Tests and LFX Tests jobs (`make lfx_tests` also runs from src/lfx).
+        working-directory: src/lfx
+        run: |
+          guarded=()
+          while IFS= read -r f; do guarded+=("$f"); done < <(grep -rl 'pytest.importorskip("lfx_bundles' tests || true)
+          if [ ${#guarded[@]} -eq 0 ]; then
+            echo "No lfx_bundles-guarded lfx tests found -- nothing to run."
+            exit 0
+          fi
+          # The lfx package resolves its own venv, which does not carry lfx-bundles; install
+          # the in-repo bundle so the guards pass here too.
+          uv sync --dev --extra otel
+          uv pip install "../bundles/lfx-bundles[all-no-torch]"
+          uv run python -c "import lfx_bundles; print('lfx_bundles', lfx_bundles.__file__)"
+          printf 'Running %d bundle-guarded lfx test file(s):\n' "${#guarded[@]}"
+          printf '  %s\n' "${guarded[@]}"
+          uv run pytest "${guarded[@]}" -v --timeout=300
 
   integration-tests:
     name: Integration Tests - Python ${{ matrix.python-version }}
