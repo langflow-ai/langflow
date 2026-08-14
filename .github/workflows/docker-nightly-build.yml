@@ -117,7 +117,7 @@ jobs:
           password: ${{ secrets.TEMP_GHCR_TOKEN}}
 
       - name: Build and push to Docker Hub
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
@@ -131,7 +131,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push to GitHub Container Registry
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
@@ -214,7 +214,7 @@ jobs:
           password: ${{ secrets.TEMP_GHCR_TOKEN}}
 
       - name: Build and push to Docker Hub
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
@@ -228,7 +228,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push to GitHub Container Registry
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
@@ -311,7 +311,7 @@ jobs:
           password: ${{ secrets.TEMP_GHCR_TOKEN}}
 
       - name: Build and push to Docker Hub
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
@@ -325,7 +325,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push to GitHub Container Registry
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
