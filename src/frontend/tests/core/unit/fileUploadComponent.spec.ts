@@ -778,25 +778,20 @@ test(
 
     await addLegacyComponents(page);
 
-    // Add a file component to the flow
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("file");
-
-    await page.waitForSelector('[data-testid="files_and_knowledgeRead File"]', {
-      timeout: 10000,
+    await addComponentFromSidebar(page, {
+      search: "file",
+      testId: "files_and_knowledgeRead File",
+      hoverAdd: true,
     });
-
-    await page
-      .getByTestId("files_and_knowledgeRead File")
-      .first()
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
+    await expect(
+      page.getByRole("group", { name: "Read File node" }),
+    ).toHaveCount(1);
     await adjustScreenView(page);
 
     // Open the file management modal
-    await page.getByTestId("button_open_file_management").click();
-    console.warn(psdFileName);
+    const fileManagement = page.getByTestId("button_open_file_management");
+    await expect(fileManagement).toBeVisible();
+    await fileManagement.click();
 
     // Check if the PNG file has the disabled class (greyed out)
     await expect(page.getByTestId(`file-item-${psdFileName}`)).toHaveClass(
