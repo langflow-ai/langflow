@@ -2641,3 +2641,90 @@ async def test_upsert_flow_folder_move_with_deployed_versions_returns_409(
     )
     assert put_resp.status_code == status.HTTP_409_CONFLICT
     assert "cannot be moved to another project" in put_resp.json()["detail"].lower()
+
+
+# _handle_unique_constraint_error: backend-agnostic mapping of unique violations.
+#
+# These are direct unit tests because the integration suite only ever runs SQLite, so the
+# PostgreSQL branch — the one that matters for the deployment this feature targets — has no other
+# coverage. Before this, a PostgreSQL unique violation fell through to a 500 whose detail was the
+# whole SQLAlchemy string, i.e. the statement plus its bound parameters.
+
+
+class _FakePgDriverError(Exception):
+    """Stand-in for a psycopg driver exception, which exposes the SQLSTATE."""
+
+    def __init__(self, sqlstate: str) -> None:
+        super().__init__("duplicate key")
+        self.sqlstate = sqlstate
+
+
+class _FakeDbError(Exception):
+    """Stand-in for sqlalchemy.exc.IntegrityError, which wraps the driver exception in .orig."""
+
+    def __init__(self, message: str, orig: Exception | None = None) -> None:
+        super().__init__(message)
+        self.orig = orig
+
+
+def test_handle_unique_constraint_error_sqlite_composite_constraint():
+    """The (user_id, name) constraint must name the field, not the table."""
+    from langflow.api.v1.flows import _handle_unique_constraint_error
+
+    exc = _FakeDbError("(sqlite3.IntegrityError) UNIQUE constraint failed: flow.user_id, flow.name")
+    result = _handle_unique_constraint_error(exc, status_code=status.HTTP_409_CONFLICT)
+
+    assert result.status_code == status.HTTP_409_CONFLICT
+    assert result.detail == "Name must be unique"
+
+
+def test_handle_unique_constraint_error_sqlite_endpoint_name():
+    from langflow.api.v1.flows import _handle_unique_constraint_error
+
+    exc = _FakeDbError("(sqlite3.IntegrityError) UNIQUE constraint failed: flow.user_id, flow.endpoint_name")
+    result = _handle_unique_constraint_error(exc, status_code=status.HTTP_409_CONFLICT)
+
+    assert result.detail == "Endpoint name must be unique"
+
+
+def test_handle_unique_constraint_error_postgres_is_a_conflict_not_a_leaking_500():
+    """A PostgreSQL unique violation must map to the conflict status, not fall through to 500."""
+    from langflow.api.v1.flows import _handle_unique_constraint_error
+
+    message = (
+        '(psycopg.errors.UniqueViolation) duplicate key value violates unique constraint "unique_flow_name"\n'
+        "DETAIL:  Key (user_id, name)=(abc, my-flow) already exists.\n"
+        "[SQL: INSERT INTO flow (id, name) VALUES (%(id)s, %(name)s)]\n"
+        "[parameters: {'id': 'abc', 'name': 'my-flow'}]"
+    )
+    exc = _FakeDbError(message, orig=_FakePgDriverError("23505"))
+    result = _handle_unique_constraint_error(exc, status_code=status.HTTP_409_CONFLICT)
+
+    assert result.status_code == status.HTTP_409_CONFLICT
+    assert result.detail == "Name must be unique"
+    assert "SQL" not in result.detail
+    assert "parameters" not in result.detail
+
+
+def test_handle_unique_constraint_error_primary_key_is_not_reported_as_a_name_conflict():
+    """A concurrent upsert at the same id collides on the PK, not on (user_id, name)."""
+    from langflow.api.v1.flows import _handle_unique_constraint_error
+
+    exc = _FakeDbError("(sqlite3.IntegrityError) UNIQUE constraint failed: folder.id")
+    result = _handle_unique_constraint_error(exc, status_code=status.HTTP_409_CONFLICT)
+
+    assert result.status_code == status.HTTP_409_CONFLICT
+    assert result.detail == "A project with this ID already exists"
+
+
+def test_handle_unique_constraint_error_non_unique_error_is_sanitized():
+    """Anything that is not a unique violation still becomes a 500, but must not echo the SQL."""
+    from langflow.api.v1.flows import _handle_unique_constraint_error
+    from sqlalchemy.exc import OperationalError
+
+    exc = OperationalError("SELECT * FROM flow WHERE id = %(id)s", {"id": "secret-value"}, Exception("boom"))
+    result = _handle_unique_constraint_error(exc)
+
+    assert result.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert "secret-value" not in result.detail
+    assert "SELECT" not in result.detail

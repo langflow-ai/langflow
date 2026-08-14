@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import io
-import sqlite3
 import threading
 import zipfile
 from collections.abc import Collection
@@ -24,7 +23,6 @@ from lfx.utils.flow_validation import (
 )
 from pydantic import ValidationError
 from sqlalchemy import case
-from sqlalchemy.exc import IntegrityError
 from sqlmodel import and_, col, select
 
 from langflow.api.utils import (
@@ -78,6 +76,7 @@ from langflow.services.cache.service import ThreadingInMemoryCache
 from langflow.services.database.lock_retry import (
     is_database_lock_error,
     run_with_lock_retry,
+    sanitize_database_error,
 )
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
@@ -150,27 +149,108 @@ def _postgres_unique_column(exc: BaseException) -> str | None:
     return _POSTGRES_FLOW_UNIQUE_COLUMNS.get(constraint_name)
 
 
-def _handle_unique_constraint_error(exc: Exception, *, status_code: int = 400) -> HTTPException:
-    """Parse a UNIQUE constraint error and return an appropriate HTTPException."""
-    if not isinstance(exc, IntegrityError):
-        return HTTPException(status_code=500, detail="Could not persist the flow.")
+DB_OPERATION_FAILED = "The database rejected the request."
+FLOW_PERSIST_FAILED = "Could not persist the flow."
 
-    msg = str(exc.orig)
-    column = _postgres_unique_column(exc.orig)
-    if isinstance(exc.orig, sqlite3.IntegrityError) and _SQLITE_UNIQUE_MARKER in msg:
-        constraint = msg.split(_SQLITE_UNIQUE_MARKER, maxsplit=1)[1].splitlines()[0]
-        columns: list[str] = []
-        for qualified in constraint.split(","):
-            table, separator, candidate = qualified.strip().rpartition(".")
-            if not separator or table.rsplit(".", maxsplit=1)[-1] != "flow":
-                columns = []
-                break
-            columns.append(candidate)
+# SQLite and PostgreSQL report a violation differently: SQLite names the columns
+# ("UNIQUE constraint failed: flow.user_id, flow.name") while PostgreSQL names the constraint
+# ('... violates unique constraint "unique_flow_name"'). Match whichever marker is present so both
+# backends produce the same client-facing detail. Every constraint below is named in the models.
+_UNIQUE_VIOLATION_DETAILS: tuple[tuple[str, str], ...] = (
+    ("unique_flow_endpoint_name", "Endpoint name must be unique"),
+    ("flow.endpoint_name", "Endpoint name must be unique"),
+    ("unique_flow_name", "Name must be unique"),
+    ("flow.name", "Name must be unique"),
+    ("unique_folder_name", "Project name must be unique"),
+    ("folder.name", "Project name must be unique"),
+    ("flow_pkey", "A flow with this ID already exists"),
+    ("flow.id", "A flow with this ID already exists"),
+    ("folder_pkey", "A project with this ID already exists"),
+    ("folder.id", "A project with this ID already exists"),
+)
+_UNIQUE_VIOLATION_TEXT = ("UNIQUE constraint failed", "duplicate key value violates unique constraint")
+_UNIQUE_VIOLATION_SQLSTATE = "23505"
+
+
+def _is_unique_violation(exc: Exception, msg: str) -> bool:
+    """Detect a unique violation on any backend.
+
+    Prefers the SQLSTATE on the driver exception (23505 on PostgreSQL, exposed as ``sqlstate`` by
+    psycopg3 and ``pgcode`` by psycopg2) and falls back to the message text, which is all SQLite
+    offers.
+
+    Only database errors are considered. SQLAlchemy hangs the driver exception off ``.orig``, so
+    that attribute is what separates a real DBAPI failure from an unrelated exception whose text
+    merely contains the SQLite marker — a flow name can carry that string, and text alone must not
+    be enough to launder it into a 4xx conflict.
+    """
+    if not hasattr(exc, "orig"):
+        return False
+    orig = exc.orig
+    sqlstate = getattr(orig, "sqlstate", None) or getattr(orig, "pgcode", None)
+    if sqlstate == _UNIQUE_VIOLATION_SQLSTATE:
+        return True
+    return any(marker in msg for marker in _UNIQUE_VIOLATION_TEXT)
+
+
+def _sqlite_unique_detail(msg: str, *, status_code: int) -> HTTPException:
+    """Map a SQLite ``UNIQUE constraint failed: <cols>`` message to a client-facing detail.
+
+    SQLite names columns rather than the constraint, so the column tuple is the only signal.
+    On ``flow`` only the exact shapes in ``_SQLITE_FLOW_UNIQUE_COLUMNS`` are named; any other
+    shape is a 500 rather than a guess. Other tables fall through to the qualified-name markers,
+    which is how a project (``folder``) collision keeps its own wording.
+    """
+    constraint = msg.split(_SQLITE_UNIQUE_MARKER, maxsplit=1)[1].splitlines()[0]
+    tables: set[str] = set()
+    columns: list[str] = []
+    for qualified in constraint.split(","):
+        table, separator, candidate = qualified.strip().rpartition(".")
+        if not separator:
+            return HTTPException(status_code=500, detail=FLOW_PERSIST_FAILED)
+        tables.add(table.rsplit(".", maxsplit=1)[-1])
+        columns.append(candidate)
+
+    if tables == {"flow"}:
         column = _SQLITE_FLOW_UNIQUE_COLUMNS.get(tuple(columns))
+        if column is None:
+            return HTTPException(status_code=500, detail=FLOW_PERSIST_FAILED)
+        return HTTPException(status_code=status_code, detail=f"{column.capitalize().replace('_', ' ')} must be unique")
 
-    if column is None:
-        return HTTPException(status_code=500, detail="Could not persist the flow.")
-    return HTTPException(status_code=status_code, detail=f"{column.capitalize().replace('_', ' ')} must be unique")
+    for marker, detail in _UNIQUE_VIOLATION_DETAILS:
+        if marker in constraint:
+            return HTTPException(status_code=status_code, detail=detail)
+    return HTTPException(status_code=500, detail=FLOW_PERSIST_FAILED)
+
+
+def _handle_unique_constraint_error(exc: Exception, *, status_code: int = 400) -> HTTPException:
+    """Map a unique-constraint violation to *status_code*; map anything else to a sanitized 500.
+
+    Callers either raise the result directly or read a 500 as "not a conflict" (see update_flow),
+    so the 500 branch stays — but its detail is sanitized, because SQLAlchemy's ``str()`` embeds
+    the failing statement and its bound parameters.
+
+    The three signals are tried strongest first. PostgreSQL's ``diag.constraint_name`` is
+    authoritative and comes from the driver, so it wins over the message text, which can carry a
+    user-supplied value that imitates a marker. SQLite offers no constraint name, so its message
+    is parsed structurally. Only then does the marker table run, and an unrecognized violation is
+    a 500 rather than a conflict invented from driver text.
+    """
+    msg = str(exc)
+    if not _is_unique_violation(exc, msg):
+        return HTTPException(status_code=500, detail=sanitize_database_error(exc, DB_OPERATION_FAILED))
+
+    column = _postgres_unique_column(getattr(exc, "orig", None) or exc)
+    if column is not None:
+        return HTTPException(status_code=status_code, detail=f"{column.capitalize().replace('_', ' ')} must be unique")
+
+    if _SQLITE_UNIQUE_MARKER in msg:
+        return _sqlite_unique_detail(msg, status_code=status_code)
+
+    for marker, detail in _UNIQUE_VIOLATION_DETAILS:
+        if marker in msg:
+            return HTTPException(status_code=status_code, detail=detail)
+    return HTTPException(status_code=500, detail=FLOW_PERSIST_FAILED)
 
 
 def _validate_catalog_policy_for_write(
