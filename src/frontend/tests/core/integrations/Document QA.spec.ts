@@ -1,19 +1,20 @@
 import { expect } from "../../fixtures";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
   "Document Q&A",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    skipIfMissing.openAiKey();
-    loadDotenvIfLocal(__dirname);
+    await page.route(/\/api\/v1\/store\/tags(\?.*)?$/, async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({ json: [] });
+        return;
+      }
 
+      await route.continue();
+    });
     await openStarterProject(page, "Document Q&A");
-    await initialGPTsetup(page);
 
     await expect(page.getByTestId("title-Knowledge")).toBeVisible();
     await expect(page.getByTestId("title-Agent")).toBeVisible();

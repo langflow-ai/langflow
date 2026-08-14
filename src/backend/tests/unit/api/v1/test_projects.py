@@ -350,7 +350,7 @@ async def test_create_project_validation_error(client: AsyncClient, logged_in_he
     invalid_case = basic_case.copy()
     invalid_case.pop("name")
     response = await client.post("api/v1/projects/", json=invalid_case, headers=logged_in_headers)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 async def test_delete_project_then_404(client: AsyncClient, logged_in_headers, basic_case):
@@ -460,7 +460,7 @@ async def test_delete_project_does_not_leak_sql_on_database_error(
 async def test_read_project_invalid_id_format(client: AsyncClient, logged_in_headers):
     bad_id = "not-a-uuid"
     response = await client.get(f"api/v1/projects/{bad_id}", headers=logged_in_headers)
-    assert response.status_code in (status.HTTP_422_UNPROCESSABLE_ENTITY, status.HTTP_400_BAD_REQUEST)
+    assert response.status_code in (status.HTTP_422_UNPROCESSABLE_CONTENT, status.HTTP_400_BAD_REQUEST)
 
 
 async def test_read_projects_pagination(client: AsyncClient, logged_in_headers):

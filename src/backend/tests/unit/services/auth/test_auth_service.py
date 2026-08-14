@@ -43,7 +43,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 @pytest.fixture
 def auth_settings(tmp_path) -> AuthSettings:
     settings = AuthSettings(CONFIG_DIR=str(tmp_path))
-    settings.SECRET_KEY = SecretStr("unit-test-secret")
+    settings.SECRET_KEY = SecretStr("MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=")  # pragma: allowlist secret
     settings.AUTO_LOGIN = False
     settings.WEBHOOK_AUTH_ENABLE = False
     settings.ACCESS_TOKEN_EXPIRE_SECONDS = 60
@@ -1936,7 +1936,7 @@ def _foreign_external_jwt(claims: dict) -> str:
     (EXTERNAL_AUTH_TRUSTED_JWT_DECODE) accepts it without signature checks.
     """
     payload = {"exp": datetime.now(timezone.utc) + timedelta(minutes=5), **claims}
-    return jwt.encode(payload, "not-the-service-secret", algorithm="HS256")
+    return jwt.encode(payload, "not-the-service-secret-at-least-32-bytes", algorithm="HS256")
 
 
 @pytest.mark.parametrize("entrypoint", ["credentials", "access-token"])

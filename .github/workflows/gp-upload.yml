@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Check if this is the latest release branch
         id: check-branch
@@ -41,7 +41,7 @@ jobs:
 
       - name: Set up Python
         if: steps.check-branch.outputs.skip != 'true'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -71,7 +71,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Check if this is the latest release branch
         id: check-branch
@@ -92,7 +92,7 @@ jobs:
 
       - name: Set up Python
         if: steps.check-branch.outputs.skip != 'true'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 

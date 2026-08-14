@@ -163,7 +163,7 @@ async def initialize_agentic_user_variables(user_id: UUID | str, session: AsyncS
         existing_vars = await variable_service.list_variables(user_id, session)
 
         for var_name, default_value in agentic_variables.items():
-            logger.adebug(f"Checking if agentic variable {var_name} exists for user {user_id}")
+            await logger.adebug(f"Checking if agentic variable {var_name} exists for user {user_id}")
             if var_name not in existing_vars:
                 try:
                     await variable_service.create_variable(

@@ -436,8 +436,10 @@ class TestMCPSessionManager:
         with patch.object(session_manager, "_create_stdio_session") as mock_create:
             mock_session1 = AsyncMock()
             mock_session2 = AsyncMock()
-            mock_task1 = AsyncMock()
-            mock_task2 = AsyncMock()
+            mock_task1 = MagicMock()
+            mock_task1.done.return_value = True
+            mock_task2 = MagicMock()
+            mock_task2.done.return_value = True
             mock_create.side_effect = [(mock_session1, mock_task1), (mock_session2, mock_task2)]
 
             # First connection
