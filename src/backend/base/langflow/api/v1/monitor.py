@@ -229,6 +229,7 @@ async def get_messages(
     current_user: Annotated[User, Depends(get_current_active_user)],
     flow_id: Annotated[UUID | None, Query()] = None,
     session_id: Annotated[str | None, Query()] = None,
+    end_user_id: Annotated[str | None, Query()] = None,
     sender: Annotated[str | None, Query()] = None,
     sender_name: Annotated[str | None, Query()] = None,
     order_by: Annotated[str | None, Query()] = "timestamp",
@@ -258,6 +259,13 @@ async def get_messages(
 
             decoded_session_id = unquote(session_id)
             stmt = stmt.where(MessageTable.session_id == decoded_session_id)
+        if end_user_id:
+            # Serving-plane: pull one end user's messages by the indexed owner column. Derive the
+            # raw id to the same UUID the write stamped (D6 / resolve_message_owner_id) so the
+            # predicate matches. Optional + off by default -> existing callers are unchanged (BC).
+            from lfx.memory.flow_context import derive_message_owner_uuid
+
+            stmt = stmt.where(MessageTable.user_id == derive_message_owner_uuid(end_user_id))
         if sender:
             stmt = stmt.where(MessageTable.sender == sender)
         if sender_name:

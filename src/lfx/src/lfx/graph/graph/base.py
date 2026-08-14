@@ -905,6 +905,13 @@ class Graph:
         if not self._run_id:
             self.set_run_id()
         if self.tracing_service:
+            # Serving-plane telemetry attribution: surface the end user as the tracing label. The
+            # primary trace user_id stays the SID (executing / resource / billing owner); this only
+            # fills the SEPARATE tracing_user_id when an identified serving run set end_user_id and no
+            # explicit caller label was already provided. Editor / anonymous / feature-off runs leave
+            # end_user_id None, so tracing_user_id is untouched — strict BC.
+            if self.end_user_id and not self.tracing_user_id:
+                self.tracing_user_id = self.end_user_id
             run_name = f"{self.flow_name} - {self.flow_id}"
             await self.tracing_service.start_tracers(
                 run_id=uuid.UUID(self._run_id),
