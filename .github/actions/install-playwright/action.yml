@@ -25,13 +25,15 @@ runs:
     - name: Get Playwright version
       uses: actions/github-script@v7
       id: version
+      env:
+        WORKING_DIRECTORY: ${{ inputs.working-directory }}
       with:
         script: |
           const fs = require('fs');
           const path = require('path');
 
-          // Get working directory
-          const workingDirectory = "${{ inputs.working-directory }}";
+          // Get working directory (via env — avoid interpolating inputs into script source)
+          const workingDirectory = process.env.WORKING_DIRECTORY || './';
           console.debug("Specified working directory:", workingDirectory);
           if (workingDirectory) process.chdir(workingDirectory);
           console.debug("Actual working directory:", process.cwd());
@@ -67,7 +69,9 @@ runs:
       shell: bash
       if: steps.cache.outputs.cache-hit != 'true'
       working-directory: ${{ inputs.working-directory }}
-      run: npx playwright install ${{ inputs.browsers }} --with-deps
+      env:
+        PLAYWRIGHT_BROWSERS: ${{ inputs.browsers }}
+      run: npx playwright install $PLAYWRIGHT_BROWSERS --with-deps
 
     - name: Install just Playwright's dependencies
       shell: bash

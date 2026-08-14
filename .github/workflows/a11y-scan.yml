@@ -37,22 +37,27 @@ jobs:
       - name: Resolve Ref To Scan
         id: resolve_ref
         shell: bash
+        env:
+          INPUT_REF: ${{ inputs.ref }}
+          EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REF_VALUE: ${{ github.ref }}
+          REPOSITORY: ${{ github.repository }}
         run: |
-          if [ -n "${{ inputs.ref }}" ]; then
-            REF="${{ inputs.ref }}"
-          elif [ "${{ github.event_name }}" = "schedule" ]; then
-            REF=$(git ls-remote --heads https://github.com/${{ github.repository }} 'refs/heads/release-*' \
+          if [ -n "$INPUT_REF" ]; then
+            REF="$INPUT_REF"
+          elif [ "$EVENT_NAME" = "schedule" ]; then
+            REF=$(git ls-remote --heads "https://github.com/$REPOSITORY" 'refs/heads/release-*' \
               | awk '{print $2}' \
               | sed 's|refs/heads/||' \
               | grep -E '^release-[0-9]+\.[0-9]+\.[0-9]+$' \
               | sort -V \
               | tail -n 1)
             if [ -z "$REF" ]; then
-              echo "No release-* branch found in ${{ github.repository }}"
+              echo "No release-* branch found in $REPOSITORY"
               exit 1
             fi
           else
-            REF="${{ github.ref }}"
+            REF="$GITHUB_REF_VALUE"
           fi
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
           echo "Scanning ref: $REF"
