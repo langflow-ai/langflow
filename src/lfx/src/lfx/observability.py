@@ -202,6 +202,14 @@ _OTLP_ENDPOINT_VARS = (
 # Only asgi and fastapi (installed by instrument_fastapi_app) and APPLICATION_TRACER_NAME (the
 # flow span) are emitted against our provider, so only they are listed. Re-add a scope the same
 # commit that wires its instrumentor with tracer_provider=, never before.
+# Named rather than inlined because two places need the same string: the allowlist below and
+# the instrumentation call that produces the spans. An operator turning them off should get
+# neither, and a literal repeated in both is one edit away from disagreeing.
+DB_INSTRUMENTATION_SCOPE = "opentelemetry.instrumentation.sqlalchemy"
+
+# Values that turn a boolean env var off. Anything else leaves the default in place.
+_FALSE_VALUES = frozenset({"0", "f", "false", "n", "no", "off"})
+
 APPLICATION_INSTRUMENTATION_SCOPES = frozenset(
     {
         "opentelemetry.instrumentation.asgi",
@@ -215,10 +223,43 @@ APPLICATION_INSTRUMENTATION_SCOPES = frozenset(
         # LLM vendor SDKs instrument them globally against whatever provider is global (ours),
         # so admitting them would put one span per outbound LLM call in the operator's APM.
         # Outbound provider health is delivered as leak-safe metrics instead.
-        "opentelemetry.instrumentation.sqlalchemy",
+        DB_INSTRUMENTATION_SCOPE,
         APPLICATION_TRACER_NAME,
     }
 )
+
+
+def db_spans_enabled() -> bool:
+    """Whether database spans are exported. On by default.
+
+    They are the bulk of the span volume -- measured against a live run, roughly 80% of
+    exported spans and about 50 spans per flow run, against one ``flow.execute`` -- and a
+    commercial APM bills per span ingested. An operator who only wants flow and request
+    health should not have to pay for the rest.
+
+    On by default anyway, because the volume buys something. In that same run 17% of pool
+    checkouts took over 50ms and 4% took over 200ms, which is the difference between "the
+    flow was slow" and "the flow was slow waiting for the database". Defaulting this off
+    would hide the most common cause of a slow run behind a setting nobody knows to look for.
+
+    Anything other than a recognised false value keeps them on, so a typo cannot silently
+    turn off telemetry the operator believes is running.
+    """
+    return os.getenv("LANGFLOW_OTEL_DB_SPANS", "true").strip().lower() not in _FALSE_VALUES
+
+
+def exported_span_scopes() -> frozenset[str]:
+    """The scopes this process actually exports, after operator configuration.
+
+    Only ever *subtracts* from ``APPLICATION_INSTRUMENTATION_SCOPES``. That direction is the
+    whole safety property: the allowlist is what keeps prompt-carrying scopes out of the APM,
+    so configuration must not be able to widen it. A setting that could add a scope would be
+    an env var that reopens the leak the allowlist exists to close.
+    """
+    if db_spans_enabled():
+        return APPLICATION_INSTRUMENTATION_SCOPES
+    return APPLICATION_INSTRUMENTATION_SCOPES - {DB_INSTRUMENTATION_SCOPE}
+
 
 # The same boundary for metrics. Separate from the span set because the meter the runtime
 # records its own counters and histograms on is named "langflow", while its application spans
@@ -383,10 +424,13 @@ if _OTEL_AVAILABLE:
         def __init__(self, *args, **kwargs) -> None:
             super().__init__(*args, **kwargs)
             self._dropped_scopes: set[str] = set()
+            # Resolved once, at construction, so the set cannot change under a running
+            # process and leave two spans of the same scope treated differently.
+            self._scopes = exported_span_scopes()
 
         def on_end(self, span) -> None:
             scope = span.instrumentation_scope.name if span.instrumentation_scope else ""
-            if scope in APPLICATION_INSTRUMENTATION_SCOPES:
+            if scope in self._scopes:
                 _redact_url_attributes(span)
                 super().on_end(span)
                 return
@@ -864,6 +908,13 @@ def instrument_database(engine: object) -> None:
 
 
 def _instrument_sqlalchemy(engine: object) -> None:
+    if not db_spans_enabled():
+        # Not instrumenting at all, rather than instrumenting and dropping on the way out.
+        # The spans are never created, so the operator pays no span-creation cost for
+        # telemetry they turned off. The processor subtracts the scope as well, which is what
+        # covers the case of some other library instrumenting sqlalchemy against our provider.
+        logger.debug("LANGFLOW_OTEL_DB_SPANS is off; not instrumenting sqlalchemy")
+        return
     try:
         from opentelemetry import trace
         from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
