@@ -520,8 +520,13 @@ class MCPToolsComponent(ComponentWithCache):
                         server_config["headers"] = merged_headers
                 # Get request_variables from graph context for global variable resolution
                 request_variables = None
-                if hasattr(self, "graph") and self.graph and hasattr(self.graph, "context"):
-                    request_variables = self.graph.context.get("request_variables")
+                end_user_id = None
+                if hasattr(self, "graph") and self.graph:
+                    if hasattr(self.graph, "context"):
+                        request_variables = self.graph.context.get("request_variables")
+                    # Serving-plane end-user id (set by the entry-point scoping); forwarded only
+                    # to allowlisted internal MCP targets by update_tools (fail-closed).
+                    end_user_id = getattr(self.graph, "end_user_id", None)
 
                 # Only load global variables from database if we have headers that might use them
                 # This avoids unnecessary database queries when headers are empty
@@ -560,6 +565,7 @@ class MCPToolsComponent(ComponentWithCache):
                     request_variables=request_variables,
                     tool_execution_timeout=timeout,
                     current_user_id=self.user_id,
+                    end_user_id=end_user_id,
                 )
 
                 self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]
