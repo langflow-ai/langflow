@@ -109,6 +109,28 @@ class SecuritySettings(BaseModel):
     owner (report H1-3754930 follow-up). Enable this only if you knowingly want public flows to
     run custom component code permitted by allow_custom_components."""
 
+    substitute_outdated_component_code: bool = True
+    """Whether a built-in component whose stored code has drifted from this server's copy is
+    rebuilt with this server's code instead of being refused. Only consulted when
+    ``allow_custom_components`` is False (with the default True nothing is gated, so nothing is
+    substituted).
+
+    With ``allow_custom_components=False`` the node's stored code never runs anyway — the build
+    already substitutes the server's copy keyed by code hash (``resolve_trusted_code_for_build``).
+    The hash check therefore refuses flows over code it was not going to execute, which makes every
+    upgrade that touches a built-in component break every saved flow using it until each node is
+    updated by hand.
+
+    Default is True: a node whose ``type`` is a known server component is rebuilt with that
+    component's current server code, matching what the unauthenticated public build path already
+    does by default (see ``prepare_public_flow_build``). Nothing new becomes runnable — the code
+    that runs is always this server's own, selected by component type, and a node whose type is
+    not a known server component is still refused. Substitutions are logged, and the stored flow is
+    left untouched so the editor keeps flagging the node as outdated.
+
+    Set to False to keep the strict behavior: refuse the build whenever a node's stored code does
+    not match the current server template. Has no effect when ``allow_custom_components`` is True."""
+
     block_code_interpreter_components: bool = False
     """If set to True, blocks built-in components that execute user- or model-supplied
     Python, including Python Interpreter/REPL/Function, Smart Transform, CSV Agent,
@@ -213,6 +235,38 @@ class SecuritySettings(BaseModel):
     host/another-container namespaces and non-default networks are rejected; and
     ``--security-opt`` is rejected only when it disables the sandbox. Benign forms (no flags,
     ``--user``, ``--network none``/``bridge``, ``--security-opt no-new-privileges``) stay allowed."""
+
+    # Serving-plane end-user identity
+    serving_end_user_header: str | None = None
+    """Name of the trusted request header that carries the end-user identity on the serving plane
+    (e.g. ``X-End-User-Id``). The value is an opaque, deterministic per-user string minted and
+    injected by the authenticated gateway; Langflow does not parse or validate it, it only uses it
+    as the per-user memory/state scope key.
+
+    UNSET (the default) means the feature is OFF: no end-user identity is read and every serving
+    request is fully anonymous (ephemeral, no persisted per-user memory). Setting a header name
+    turns the feature on, but the header is still only trusted when
+    ``serving_trust_proxy_headers`` is True.
+
+    Security: an unverified client-supplied header would let any caller read another user's memory,
+    so the header must be injected/validated by the authenticated gateway and the serving pods must
+    be reachable only through that gateway (network policy). See ``serving_trust_proxy_headers``."""
+    serving_trust_proxy_headers: bool = False
+    """Fail-closed opt-in for the serving-plane end-user identity header. The header named by
+    ``serving_end_user_header`` is trusted ONLY when this is True.
+
+    Default False: even with a header name configured, the header is ignored and every request is
+    anonymous until an operator explicitly opts in. Enable this only when the deployment guarantees
+    (a) the authenticated gateway injects/overwrites the header from a validated identity and
+    (b) network policy makes the gateway the only caller able to reach the serving pods. Without
+    those two guarantees a client can spoof the header and read another user's memory."""
+    serving_end_user_required: bool = False
+    """Whether a serving request with no end-user identity is rejected. Only meaningful when the
+    feature is on (``serving_end_user_header`` set and ``serving_trust_proxy_headers`` True).
+
+    Default False: a request with no identity is allowed and runs as an anonymous, ephemeral
+    session with no persisted memory. Set True to reject identity-less requests instead (e.g. a
+    deployment that must attribute every run to an end user)."""
 
     # Rate Limiting
     rate_limit_enabled: bool = True

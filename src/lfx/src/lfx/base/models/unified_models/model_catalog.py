@@ -6,7 +6,7 @@ import contextlib
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.models.model_metadata import EXPLICIT_ENABLE_ONLY_PROVIDERS, get_provider_param_mapping
-from lfx.base.models.model_utils import inject_custom_enabled_models, replace_with_live_models
+from lfx.base.models.model_utils import apply_metadata_filters, inject_custom_enabled_models, replace_with_live_models
 from lfx.utils.async_helpers import run_until_complete
 
 from .class_registry import EMBEDDING_PARAM_MAPPINGS, EMBEDDING_PROVIDER_CLASS_MAPPING
@@ -194,13 +194,18 @@ def get_language_model_options(
     enabled_providers = {provider for provider in enabled_providers if provider_policy.allows(provider)}
 
     # Replace static defaults with actual available models from configured instances
+    suppressed: dict[str, set[tuple[str, str]]] = {}
     if enabled_providers:
         replace_with_live_models(all_models, user_id, enabled_providers, "llm", model_provider_metadata)
+        # Live rows replace the statically filtered catalog wholesale — re-apply the
+        # metadata filters so e.g. the Agent picker can't see no-tool live models.
+        suppressed = apply_metadata_filters(all_models, metadata_filters)
     inject_custom_enabled_models(
         all_models,
         explicitly_enabled_models,
         model_type="llm",
         metadata_filters=metadata_filters or None,
+        suppressed=suppressed or None,
     )
     all_models = [provider_data for provider_data in all_models if provider_policy.allows(provider_data["provider"])]
 
@@ -250,6 +255,8 @@ def get_language_model_options(
             ):
                 continue
             if model_status_contains(disabled_models, provider, model_name, model_type=row_model_type):
+                continue
+            if not provider_policy.allows_model(provider, model_name, model_type=row_model_type):
                 continue
 
             # Get parameter mapping for this provider
@@ -398,6 +405,8 @@ def get_embedding_model_options(
             ):
                 continue
             if model_status_contains(disabled_models, provider, model_name, model_type=row_model_type):
+                continue
+            if not provider_policy.allows_model(provider, model_name, model_type=row_model_type):
                 continue
 
             # Build the option dict

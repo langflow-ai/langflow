@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import threading
 import traceback
 import types
 from datetime import datetime, timezone
@@ -22,6 +23,54 @@ if TYPE_CHECKING:
     from lfx.graph.vertex.base import Vertex
 
     from langflow.services.tracing.schema import Log
+
+
+# Built once per process. TracerProvider.__init__ registers an atexit shutdown, so building
+# one per flow run would leave every provider alive for the life of the process.
+_OTEL_PROVIDER: Any = None
+_OTEL_PROVIDER_LOCK = threading.Lock()
+
+
+def _langsmith_otel_provider() -> Any:
+    """An isolated provider exporting to LangSmith's OTLP endpoint and nowhere else.
+
+    ``LANGSMITH_TRACING_MODE=otel|hybrid`` makes the client build an OpenTelemetry pipeline,
+    and a client constructed without a provider registers its own as the *global* one.
+    ``set_tracer_provider`` is one-shot, so whichever side runs first wins: LangSmith either
+    swallows the service's own HTTP and flow spans, or application observability cannot
+    install at all. That is issue #13319 in a different costume.
+
+    Handing over a bare ``TracerProvider()`` does not work, and the resemblance to
+    ``langfuse.py`` is what makes that tempting. The Langfuse SDK calls ``add_span_processor``
+    on the provider it is given; LangSmith only takes tracers from it, so a provider with no
+    processor silently discards every span and tracing looks healthy while nothing is sent.
+
+    This mirrors the SDK's own ``get_otlp_tracer_provider`` with one deliberate difference: it
+    does not honour ``OTEL_EXPORTER_OTLP_ENDPOINT``. That variable points at the operator's
+    APM, which is not where a vendor's prompt-bearing traces belong.
+    """
+    global _OTEL_PROVIDER  # noqa: PLW0603
+
+    with _OTEL_PROVIDER_LOCK:
+        if _OTEL_PROVIDER is None:
+            from langsmith import utils as ls_utils
+            from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+            from opentelemetry.sdk.resources import Resource
+            from opentelemetry.sdk.trace import TracerProvider
+            from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+            headers = {"x-api-key": ls_utils.get_api_key(None) or ""}
+            project = ls_utils.get_tracer_project()
+            if project:
+                headers["Langsmith-Project"] = project
+
+            provider = TracerProvider(resource=Resource(attributes={"service.name": "langsmith"}))
+            provider.add_span_processor(
+                BatchSpanProcessor(OTLPSpanExporter(endpoint=f"{ls_utils.get_api_url(None)}/otel", headers=headers))
+            )
+            _OTEL_PROVIDER = provider
+
+    return _OTEL_PROVIDER
 
 
 class LangSmithTracer(BaseTracer):
@@ -79,9 +128,19 @@ class LangSmithTracer(BaseTracer):
         if os.getenv("LANGCHAIN_API_KEY") is None:
             return False
         try:
-            from langsmith import Client
+            from langsmith.client import _resolve_tracing_mode
+            from langsmith.run_trees import get_cached_client
 
-            self._client = Client()
+            client_kwargs: dict[str, Any] = {}
+            if _resolve_tracing_mode(None) in ("otel", "hybrid"):
+                client_kwargs["otel_tracer_provider"] = _langsmith_otel_provider()
+
+            # get_cached_client honours these kwargs only while its module-level client is
+            # unset, so this holds when we are the first LangSmith user in the process. It is
+            # the same function langchain calls, so seeding it here replaces a redundant
+            # second client rather than adding one. Anything that builds the client before us
+            # (a LangChainTracer, a RunTree) gets the SDK's default global-provider behaviour.
+            self._client = get_cached_client(**client_kwargs)
         except ImportError:
             logger.exception("Could not import langsmith. Please install it with `pip install langsmith`.")
             return False

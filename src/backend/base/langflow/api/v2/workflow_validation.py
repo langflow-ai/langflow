@@ -19,6 +19,7 @@ from lfx.utils.flow_validation import (
 )
 from lfx.workflow.converters import ParsedWorkflowRun
 
+from langflow.api.utils.execution_errors import caller_owns_flow, error_for_client
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.user.model import UserRead
@@ -79,14 +80,14 @@ def _reject_sync_only_fields(parsed: ParsedWorkflowRun) -> None:
 
 
 def _enforce_flow_data_override_owner(parsed: ParsedWorkflowRun, flow: FlowRead, current_user: UserRead) -> None:
-    """Only the flow owner may execute caller-supplied graph data."""
-    if parsed.data is None or flow.user_id == current_user.id:
+    """Only the flow owner may execute caller-supplied graph data or tweaks."""
+    if (parsed.data is None and not parsed.tweaks) or caller_owns_flow(flow, current_user):
         return
 
     raise _flow_not_found_privacy_exception(
         HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the flow owner can override flow data during execution",
+            detail="Only the flow owner can override flow data or component parameters during execution",
         ),
         parsed.flow_id,
     )
@@ -96,6 +97,8 @@ def _validate_flow_data_for_execution(
     parsed: ParsedWorkflowRun,
     flow: FlowRead,
     current_user: UserRead,
+    *,
+    expose_error_details: bool,
 ) -> ParsedWorkflowRun:
     """Apply component policies and return sanitized caller-supplied graph data."""
     try:
@@ -109,11 +112,14 @@ def _validate_flow_data_for_execution(
         elif flow.data:
             validate_flow_for_current_settings(flow.data)
     except CustomComponentValidationError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        client_error = error_for_client(exc, expose_details=expose_error_details)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(client_error)) from exc
     except CatalogPolicyIdentityUnavailableError as exc:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+        client_error = error_for_client(exc, expose_details=expose_error_details)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(client_error)) from exc
     except RuntimeError as exc:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+        client_error = error_for_client(exc, expose_details=expose_error_details)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(client_error)) from exc
     return parsed
 
 

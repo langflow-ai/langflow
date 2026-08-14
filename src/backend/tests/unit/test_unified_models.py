@@ -171,8 +171,8 @@ def test_update_model_options_with_custom_field_name():
     assert result["embedding_model"]["options"][0]["name"] == "text-embedding-ada-002"
     assert result["embedding_model"]["options"][1]["provider"] == "Cohere"
 
-    # Verify default value was set
-    assert result["embedding_model"]["value"] == [result["embedding_model"]["options"][0]]
+    # A bare initial load must not guess a provider for the user (LE-2168)
+    assert not result["embedding_model"]["value"]
 
 
 def test_update_model_options_static_options_with_custom_field_name():
@@ -311,7 +311,7 @@ def test_update_model_options_does_not_duplicate_saved_value_already_in_options(
 @pytest.mark.parametrize(
     ("current_value", "expected_value"),
     [
-        ([], [{"name": "gpt-4o-mini", "provider": "OpenAI", "metadata": {"model_class": "ChatOpenAI"}}]),
+        ([], []),
         ("gpt-4o-mini", "gpt-4o-mini"),
         (
             [{"provider": "OpenAI", "metadata": {"model_class": "ChatOpenAI"}}],

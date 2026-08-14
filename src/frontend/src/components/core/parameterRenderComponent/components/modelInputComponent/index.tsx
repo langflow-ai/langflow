@@ -96,7 +96,6 @@ export default function ModelInputComponent({
   );
 
   const { refreshAllModelInputs } = useRefreshModelInputs();
-  const hasProcessedEmptyRef = useRef(false);
 
   const _postTemplateValue = usePostTemplateValue({
     parameterId: "model",
@@ -202,7 +201,6 @@ export default function ModelInputComponent({
         flatOptions,
         providers: providersData,
         providerStatusIsReliable,
-        hasProcessedEmpty: hasProcessedEmptyRef.current,
       }),
     [
       value,
@@ -221,7 +219,6 @@ export default function ModelInputComponent({
     isConnectionMode,
     providers: providersData,
     modelStatusIsReliable,
-    hasProcessedEmptyRef,
   });
 
   /**

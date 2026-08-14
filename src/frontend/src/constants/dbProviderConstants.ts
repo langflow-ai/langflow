@@ -228,9 +228,9 @@ export const DB_PROVIDER_OPTIONS: DBProviderOption[] = [
     // card only reflects whether it's reachable (via test-connection) and lets
     // the user make it active, exactly like Chroma Local.
     id: "postgres",
-    label: "Postgres pgvector",
+    label: "Postgres pgVector",
     description:
-      "Postgres pgvector is set up automatically from your server's environment configuration — there's nothing to enter here. When it's available, your knowledge bases and memory bases use it automatically.",
+      "Postgres pgVector is set up automatically from your server's environment configuration — there's nothing to enter here. When it's available, your knowledge bases and memory bases use it automatically.",
     icon: "Postgres",
     status: "available",
     configFields: [],
@@ -251,6 +251,19 @@ export function getGlobalVariableValue(
 ): string | undefined {
   const value = variables.find((variable) => variable.name === name)?.value;
   return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+export function hasGlobalVariableValue(
+  variables: GlobalVariable[],
+  name: string,
+): boolean {
+  const variable = variables.find((entry) => entry.name === name);
+  if (!variable) return false;
+  if (variable.has_value !== undefined) return variable.has_value;
+  // Credential values are masked in API responses, so without an explicit
+  // `has_value` signal we fail closed rather than assume a secret is stored —
+  // a stale empty row must never enable a remote provider.
+  return Boolean(getGlobalVariableValue(variables, name));
 }
 
 /**
@@ -283,9 +296,13 @@ export function getActiveDBProvider(
     variables,
     ACTIVE_DB_PROVIDER_VARIABLE,
   );
-  if (configuredProvider === "opensearch") return "opensearch";
-  if (configuredProvider === "chroma_cloud") return "chroma_cloud";
-  if (configuredProvider === "postgres") return "postgres";
+  if (
+    (configuredProvider === "opensearch" ||
+      configuredProvider === "chroma_cloud" ||
+      configuredProvider === "postgres") &&
+    isDBProviderConfigured(configuredProvider, variables)
+  )
+    return configuredProvider;
   return "chroma";
 }
 
@@ -410,10 +427,7 @@ export function isDBProviderConfigured(
     )
     .every((field) => {
       if (field.isSecret) {
-        // Credential-type variables have their values masked (empty) in the
-        // global-variables API response, so checking the value would always
-        // return false even when the secret is saved. Check existence instead.
-        return variables.some((v) => v.name === field.variableKey);
+        return hasGlobalVariableValue(variables, field.variableKey);
       }
       return Boolean(getGlobalVariableValue(variables, field.variableKey));
     });
