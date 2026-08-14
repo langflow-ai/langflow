@@ -1,0 +1,1 @@
+# Azure OpenAI component tests
