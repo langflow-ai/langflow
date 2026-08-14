@@ -38,6 +38,13 @@ class AzureChatOpenAIComponent(LCModelComponent):
             required=True,
         ),
         MessageTextInput(name="azure_deployment", display_name="Deployment Name", required=True),
+        MessageTextInput(
+            name="model",
+            display_name="Model Name",
+            info="The underlying OpenAI model name (e.g. `gpt-4o`). Required by some Azure "
+            "deployments to resolve the model, and used for accurate token/cost tracing.",
+            advanced=True,
+        ),
         SecretStrInput(name="api_key", display_name="Azure Chat OpenAI API Key", required=True),
         DropdownInput(
             name="api_version",
@@ -71,6 +78,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         azure_endpoint = self.azure_endpoint
         azure_deployment = self.azure_deployment
+        model = self.model
         api_version = self.api_version
         api_key = self.api_key
         temperature = self.temperature
@@ -81,6 +89,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
             output = AzureChatOpenAI(
                 azure_endpoint=azure_endpoint,
                 azure_deployment=azure_deployment,
+                model=model or None,
                 api_version=api_version,
                 api_key=api_key,
                 temperature=temperature,
