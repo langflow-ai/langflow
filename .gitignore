@@ -306,6 +306,7 @@ whitesource/
 
 #ai folders
 .bob/
+_context
 
 # Cursor local (personal) settings
 .cursor/settings.local.json
