@@ -1,20 +1,8 @@
-import type { Locator } from "@playwright/test";
-
 import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
-async function findVisibleElement(
-  elements: Locator[],
-): Promise<Locator | undefined> {
-  for (const element of elements) {
-    if (await element.isVisible()) {
-      return element;
-    }
-  }
-  return undefined;
-}
+import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
 
 test(
   "user must see on handle click the possibility connections - RetrievalQA",
@@ -30,35 +18,19 @@ test(
 
     await addLegacyComponents(page);
 
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("retrievalqa");
-
-    await page.waitForSelector(
-      '[data-testid="langchain_utilitiesRetrieval QA"]',
-      {
-        timeout: 3000,
-      },
-    );
-    await page
-      .getByTestId("langchain_utilitiesRetrieval QA")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
+    await addComponentFromSidebar(page, {
+      search: "retrievalqa",
+      testId: "langchain_utilitiesRetrieval QA",
+      position: { x: 200, y: 200 },
+    });
 
     await adjustScreenView(page);
 
-    const outputElements = await page
+    const outputHandle = page
       .getByTestId("handle-retrievalqa-shownode-text-right")
-      .all();
-
-    let visibleElementHandle = await findVisibleElement(outputElements);
-    if (!visibleElementHandle) {
-      throw new Error("Output handle not visible");
-    }
-
-    await visibleElementHandle.click({
-      force: true,
-    });
+      .first();
+    await expect(outputHandle).toBeVisible();
+    await outputHandle.click({ position: { x: 31, y: 16 } });
 
     const disclosureTestIds = [
       "disclosure-input & output",
@@ -151,41 +123,15 @@ test(
       }
     }
 
-    const chainInputElements1 = await page
-      .getByTestId("handle-retrievalqa-shownode-llm-left")
-      .all();
-
-    const llmHandle = await findVisibleElement(chainInputElements1);
-    if (llmHandle) {
-      visibleElementHandle = llmHandle;
-    }
-
-    await visibleElementHandle.blur();
-
-    await visibleElementHandle.click({
-      force: true,
-    });
+    const modelHandle = page
+      .getByTestId("handle-retrievalqa-shownode-language model-left")
+      .first();
+    await expect(modelHandle).toBeVisible();
+    await modelHandle.click({ position: { x: 1, y: 16 } });
 
     await expect(page.getByTestId("disclosure-models & agents")).toBeVisible();
 
-    const rqaChainInputElements0 = await page
-      .getByTestId("handle-retrievalqa-shownode-template-left")
-      .all();
-
-    const templateHandle = await findVisibleElement(rqaChainInputElements0);
-    if (templateHandle) {
-      visibleElementHandle = templateHandle;
-    }
-
-    const templateHandleBox = await visibleElementHandle.boundingBox();
-    if (!templateHandleBox) {
-      throw new Error("The RetrievalQA template handle has no layout box");
-    }
-    // The node body covers the handle's center; click its exposed left edge so
-    // Playwright still verifies the same point a user can actually target.
-    await visibleElementHandle.click({
-      position: { x: 1, y: templateHandleBox.height / 2 },
-    });
+    await outputHandle.click({ position: { x: 31, y: 16 } });
 
     await expect(page.getByTestId("disclosure-input & output")).toBeVisible();
     await expect(page.getByTestId("disclosure-data sources")).toBeVisible();
