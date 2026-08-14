@@ -481,8 +481,10 @@ async def simple_run_flow(
                 user_id=user_id,
                 job_type=JobType.WORKFLOW,
                 # Record the serving end user (set on the graph by resolve_serving_scope) so
-                # status/stop isolate to it; user_id stays the executing SID. See F8.
-                end_user_id=graph.end_user_id,
+                # status/stop isolate to it; user_id stays the executing SID. See F8. Defensive
+                # getattr: the warm-run path may hand back a lightweight graph stand-in without
+                # this attribute, matching every other end_user_id read in the codebase.
+                end_user_id=getattr(graph, "end_user_id", None),
             )
             # The funnel default. Binding is outermost-wins, so a caller that already named its
             # surface (webhook, mcp, openai_responses) keeps it and only the bare v1 route lands
@@ -1286,6 +1288,19 @@ async def webhook_run_flow(
         raise HTTPException(status_code=400, detail=error_msg)
 
     raise_if_hitl_unsupported(flow.data or {})
+
+    # The run executes in a fire-and-forget background task that never raises, so the identity gate
+    # inside simple_run_flow can't surface its 401 from the webhook. Enforce it synchronously here so
+    # a required-but-absent end-user identity is rejected BEFORE the task is scheduled (idempotent
+    # with the scoping simple_run_flow does again on the same http_request). See I3. Kept outside the
+    # try below so the 401 is not rewritten to a 500 by its generic handler.
+    try:
+        resolve_serving_scope(http_request=request, requested_session_id=None, default_session_id=str(flow.id))
+    except EndUserIdentityRequiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=end_user_required_detail(exc),
+        ) from exc
 
     try:
         # get all webhook components in the flow

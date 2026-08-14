@@ -46,14 +46,27 @@ async def ensure_resume_execute_permission(current_user, flow_id: UUID) -> None:
     )
 
 
-async def list_pending_human_requests(flow_id: UUID, user_id: UUID) -> list[dict]:
+async def list_pending_human_requests(
+    flow_id: UUID,
+    user_id: UUID,
+    *,
+    request_end_user_id: str | None = None,
+    include_all_end_users: bool = False,
+) -> list[dict]:
     """Suspended HITL jobs for a flow + their pending request, for the Traces overlay.
 
     Traces and jobs are separate stores; the paused state lives on the SUSPENDED job, so
     the frontend correlates these to trace rows by ``session_id``.
+
+    Serving-plane isolation (B1): this enumerates by flow_id and each row exposes the merged
+    ``session_id`` + the HITL prompt, so rows are filtered to the requesting end user by the SAME
+    rule the single-job guard uses (``_end_user_matches``). ``include_all_end_users`` bypasses the
+    filter for a superuser. Default (feature off / anonymous) keeps only end-user-less jobs, which
+    on an editor plane is every job — unchanged behavior.
     """
     from sqlmodel import select
 
+    from langflow.api.v2.workflow import _end_user_matches
     from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
     from langflow.services.deps import session_scope
 
@@ -70,6 +83,8 @@ async def list_pending_human_requests(flow_id: UUID, user_id: UUID) -> list[dict
 
     pending: list[dict] = []
     for job in jobs:
+        if not include_all_end_users and not _end_user_matches(request_end_user_id, job.job_metadata):
+            continue
         request = await get_job_service().get_pending_human_request(job.job_id)
         if not request:
             continue

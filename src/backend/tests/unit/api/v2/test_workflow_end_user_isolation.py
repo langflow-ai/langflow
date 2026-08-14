@@ -185,3 +185,65 @@ async def test_feature_off_leaves_job_status_reachable(client, created_api_key, 
     assert submit.status_code == 200, submit.text
     job_id = submit.json()["job_id"]
     assert (await _status(client, job_id, created_api_key.api_key, end_user="bob")).status_code == 200
+
+
+# --- B1: the enumerating /pending endpoint is gated too ------------------------------
+
+
+async def _make_suspended_hitl_job(flow_id: str, sid, end_user: str | None):
+    """Create a SUSPENDED workflow job carrying a pending human-input event.
+
+    Owned by the SID and tagged with ``end_user`` so ``/pending`` surfaces (and scopes) it.
+    """
+    from langflow.services.database.models.jobs.model import JobStatus, JobType
+    from langflow.services.deps import get_job_service
+    from langflow.services.jobs.exceptions import HUMAN_INPUT_REQUIRED_EVENT
+
+    svc = get_job_service()
+    job_id = uuid4()
+    await svc.create_job(job_id=job_id, flow_id=flow_id, job_type=JobType.WORKFLOW, user_id=sid, end_user_id=end_user)
+    await svc.update_job_status(job_id, JobStatus.SUSPENDED)
+    await svc.append_event(
+        job_id,
+        HUMAN_INPUT_REQUIRED_EVENT,
+        {"request_id": f"r-{end_user}", "prompt": f"q for {end_user}", "allowed_decisions": []},
+    )
+    return str(job_id)
+
+
+async def _pending(client, flow_id, api_key, *, end_user=None):
+    headers = {"x-api-key": api_key}
+    if end_user is not None:
+        headers[HEADER] = end_user
+    return await client.get(f"api/v2/workflows/pending?flow_id={flow_id}", headers=headers)
+
+
+async def test_pending_list_is_scoped_to_the_end_user(client, created_api_key, bg_flow, monkeypatch):
+    _serving_on(monkeypatch)
+    sid = created_api_key.user_id
+    alice_job = await _make_suspended_hitl_job(bg_flow, sid, "alice")
+    bob_job = await _make_suspended_hitl_job(bg_flow, sid, "bob")
+
+    # Alice enumerates -> only her suspended run (bob's prompt + merged session id must not leak).
+    resp = await _pending(client, bg_flow, created_api_key.api_key, end_user="alice")
+    assert resp.status_code == 200, resp.text
+    ids = {row["job_id"] for row in resp.json()}
+    assert ids == {alice_job}
+
+    # Bob enumerates -> only his.
+    resp = await _pending(client, bg_flow, created_api_key.api_key, end_user="bob")
+    assert {row["job_id"] for row in resp.json()} == {bob_job}
+
+    # Anonymous (feature on, no header) -> neither identified run.
+    resp = await _pending(client, bg_flow, created_api_key.api_key)
+    assert resp.json() == []
+
+
+async def test_pending_list_feature_off_returns_all_bc(client, created_api_key, bg_flow):
+    # Default settings: no end-user scoping, so the SID owner sees every suspended run (unchanged).
+    sid = created_api_key.user_id
+    a = await _make_suspended_hitl_job(bg_flow, sid, None)
+    b = await _make_suspended_hitl_job(bg_flow, sid, None)
+    resp = await _pending(client, bg_flow, created_api_key.api_key)
+    assert resp.status_code == 200, resp.text
+    assert {a, b} <= {row["job_id"] for row in resp.json()}

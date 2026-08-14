@@ -439,6 +439,29 @@ def _unknown_protocol_http_exception(exc: UnknownStreamProtocolError) -> HTTPExc
     )
 
 
+def _end_user_matches(request_end_user_id: str | None, job_metadata: object) -> bool:
+    """The pure serving-plane end-user ownership rule, shared by every jobs endpoint.
+
+    Given a request's resolved end-user id and a job's ``job_metadata``, decide whether they name
+    the same end user (superuser / feature gating is the caller's job). Used by the single-job guard
+    (``_caller_owns_job_end_user`` for status/stop/resume) AND the enumerating pending list, so the
+    isolation rule lives in exactly one place:
+
+    * ``job_metadata`` is coerced to ``{}`` unless it is a real dict — a security guard must never
+      decide from a malformed/legacy value (a JSON string, list, or test mock).
+    * No request end user (feature off / anonymous): matches ONLY a job that also has none.
+    * Both present: the derived owner ids must be equal, so a raw-string vs UUID-form gateway id
+      compares canonically (D6), exactly as message ownership keys it.
+    """
+    metadata = job_metadata if isinstance(job_metadata, dict) else {}
+    job_end_user = metadata.get("end_user_id")
+    if request_end_user_id is None:
+        return job_end_user is None
+    if job_end_user is None:
+        return False
+    return derive_message_owner_uuid(request_end_user_id) == derive_message_owner_uuid(job_end_user)
+
+
 def _caller_owns_job_end_user(job: Job, http_request: Request, current_user: UserRead) -> bool:
     """Whether the caller may act on ``job`` under serving-plane end-user isolation.
 
@@ -462,14 +485,7 @@ def _caller_owns_job_end_user(job: Job, http_request: Request, current_user: Use
     """
     if current_user.is_superuser:
         return True
-    request_end_user = resolve_serving_end_user_id(http_request=http_request)
-    job_end_user = (job.job_metadata or {}).get("end_user_id")
-    if request_end_user is None:
-        # No end-user scope on this request: only reachable when the job also has none.
-        return job_end_user is None
-    if job_end_user is None:
-        return False
-    return derive_message_owner_uuid(request_end_user) == derive_message_owner_uuid(job_end_user)
+    return _end_user_matches(resolve_serving_end_user_id(http_request=http_request), job.job_metadata)
 
 
 def _parse_persisted_workflow_request(request: dict) -> ParsedWorkflowRun:
@@ -1012,12 +1028,22 @@ async def stop_workflow(
     description="Suspended HITL jobs for a flow plus their pending request, for the Traces overlay.",
 )
 async def list_pending_workflows(
+    http_request: Request,
     current_user: Annotated[UserRead, Depends(get_current_user_for_workflow)],
     flow_id: Annotated[UUID, Query(description="Flow ID to list pending HITL requests for")],
 ) -> list[dict]:
     from langflow.api.v2.hitl import list_pending_human_requests
 
-    return await list_pending_human_requests(flow_id, current_user.id)
+    # Serving-plane end-user isolation: this endpoint ENUMERATES suspended runs by flow_id (no job
+    # id needed), and each row exposes the merged session_id + the HITL prompt — so a scope check is
+    # even more load-bearing here than on status/stop/resume. Filter to the caller's own end user;
+    # superuser sees all. Feature off / anonymous -> only end-user-less jobs, unchanged. See F8 / B1.
+    return await list_pending_human_requests(
+        flow_id,
+        current_user.id,
+        request_end_user_id=resolve_serving_end_user_id(http_request=http_request),
+        include_all_end_users=current_user.is_superuser,
+    )
 
 
 @router.post(

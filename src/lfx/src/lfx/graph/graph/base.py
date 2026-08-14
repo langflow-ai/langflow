@@ -99,6 +99,24 @@ if TYPE_CHECKING:
     from lfx.services.tracing.service import TracingService
 
 
+def _serving_trace_end_user_enabled() -> bool:
+    """Whether the operator opted into forwarding the end-user id to the tracing provider (I4).
+
+    Default False (fail-closed): the end-user id is PII and tracing providers are third-party. Reads
+    the serving setting lazily; any resolution failure (lfx-standalone / no settings) is treated as
+    off so telemetry never leaks the identity by accident.
+    """
+    try:
+        from lfx.services.deps import get_settings_service
+
+        settings_service = get_settings_service()
+    except (ImportError, AttributeError, RuntimeError):
+        return False
+    if settings_service is None:
+        return False
+    return bool(getattr(settings_service.settings, "serving_trace_end_user", False))
+
+
 class Graph:
     """A class representing a graph of vertices and edges."""
 
@@ -905,12 +923,13 @@ class Graph:
         if not self._run_id:
             self.set_run_id()
         if self.tracing_service:
-            # Serving-plane telemetry attribution: surface the end user as the tracing label. The
-            # primary trace user_id stays the SID (executing / resource / billing owner); this only
-            # fills the SEPARATE tracing_user_id when an identified serving run set end_user_id and no
-            # explicit caller label was already provided. Editor / anonymous / feature-off runs leave
-            # end_user_id None, so tracing_user_id is untouched — strict BC.
-            if self.end_user_id and not self.tracing_user_id:
+            # Serving-plane telemetry attribution: surface the end user as the SEPARATE tracing label
+            # (never the primary trace user_id, which stays the SID). Gated OFF by default: the
+            # end-user id is PII and tracing providers are third-party SaaS, so it is forwarded only
+            # when the operator opts in via ``serving_trace_end_user``, matching the fail-closed
+            # posture of outbound MCP forwarding. Only fills when an identified serving run set
+            # end_user_id and no explicit caller label was already provided.
+            if self.end_user_id and not self.tracing_user_id and _serving_trace_end_user_enabled():
                 self.tracing_user_id = self.end_user_id
             run_name = f"{self.flow_name} - {self.flow_id}"
             await self.tracing_service.start_tracers(

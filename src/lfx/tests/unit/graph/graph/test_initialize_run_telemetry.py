@@ -1,13 +1,14 @@
 """Serving-plane telemetry attribution: initialize_run surfaces the end user as the tracing label.
 
 ``graph.tracing_user_id`` is a SEPARATE label from the trace's primary ``user_id`` (which stays the
-executing SID). On an identified serving run the graph carries ``end_user_id``; ``initialize_run``
-fills ``tracing_user_id`` from it so providers can attribute the run to the end user. Editor /
-anonymous / feature-off runs leave ``end_user_id`` None, so the label is untouched (strict BC).
+executing SID). The end-user id is PII, so forwarding it to the (third-party) tracing provider is
+gated behind ``serving_trace_end_user`` and OFF by default (I4). When the operator opts in, an
+identified serving run's ``end_user_id`` fills ``tracing_user_id``; otherwise the label is untouched.
 """
 
 from uuid import uuid4
 
+import lfx.graph.graph.base as base_module
 import pytest
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph.graph.base import Graph
@@ -31,12 +32,22 @@ def _graph() -> Graph:
     return Graph(chat_input, chat_output, flow_id=str(uuid4()), user_id=str(uuid4()))
 
 
-@pytest.mark.asyncio
-async def test_end_user_fills_tracing_user_id() -> None:
-    graph = _graph()
+def _with_tracer(graph: Graph) -> _CapturingTracer:
     tracer = _CapturingTracer()
     graph._tracing_service = tracer
     graph._tracing_service_initialized = True
+    return tracer
+
+
+def _enable_forwarding(monkeypatch, *, enabled: bool) -> None:
+    monkeypatch.setattr(base_module, "_serving_trace_end_user_enabled", lambda: enabled)
+
+
+@pytest.mark.asyncio
+async def test_end_user_fills_tracing_user_id_when_opted_in(monkeypatch) -> None:
+    _enable_forwarding(monkeypatch, enabled=True)
+    graph = _graph()
+    tracer = _with_tracer(graph)
     graph.end_user_id = "alice"
 
     await graph.initialize_run()
@@ -48,11 +59,24 @@ async def test_end_user_fills_tracing_user_id() -> None:
 
 
 @pytest.mark.asyncio
-async def test_no_end_user_leaves_tracing_user_id_none() -> None:
+async def test_gate_off_by_default_does_not_forward_end_user(monkeypatch) -> None:
+    # Default (operator has not opted in): the end user is NOT sent to the tracing provider.
+    _enable_forwarding(monkeypatch, enabled=False)
     graph = _graph()
-    tracer = _CapturingTracer()
-    graph._tracing_service = tracer
-    graph._tracing_service_initialized = True
+    tracer = _with_tracer(graph)
+    graph.end_user_id = "alice"
+
+    await graph.initialize_run()
+
+    assert graph.tracing_user_id is None
+    assert tracer.captured["tracing_user_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_no_end_user_leaves_tracing_user_id_none(monkeypatch) -> None:
+    _enable_forwarding(monkeypatch, enabled=True)
+    graph = _graph()
+    tracer = _with_tracer(graph)
     # end_user_id defaults None (editor / anonymous / feature-off)
 
     await graph.initialize_run()
@@ -62,12 +86,11 @@ async def test_no_end_user_leaves_tracing_user_id_none() -> None:
 
 
 @pytest.mark.asyncio
-async def test_explicit_tracing_user_id_is_not_overridden() -> None:
+async def test_explicit_tracing_user_id_is_not_overridden(monkeypatch) -> None:
     # A caller label already set (e.g. v1 input_request.user_id) wins over the end-user fill-in.
+    _enable_forwarding(monkeypatch, enabled=True)
     graph = _graph()
-    tracer = _CapturingTracer()
-    graph._tracing_service = tracer
-    graph._tracing_service_initialized = True
+    _with_tracer(graph)
     graph.tracing_user_id = "caller-label"
     graph.end_user_id = "alice"
 
