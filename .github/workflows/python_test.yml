@@ -200,7 +200,9 @@ jobs:
           uv run python -c "import lfx_bundles; print('lfx_bundles', lfx_bundles.__file__)"
           printf 'Running %d bundle-guarded lfx test file(s):\n' "${#guarded[@]}"
           printf '  %s\n' "${guarded[@]}"
-          uv run pytest "${guarded[@]}" -v --timeout=300 -m "not api_key_required"
+          # No --timeout: pytest-timeout is not in lfx's dev group (pytest, pytest-asyncio,
+          # pytest-cov only), and `make lfx_tests` does not pass one either.
+          uv run pytest "${guarded[@]}" -v -m "not api_key_required"
 
   integration-tests:
     name: Integration Tests - Python ${{ matrix.python-version }}
