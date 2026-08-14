@@ -22,7 +22,6 @@ from fastapi.testclient import TestClient
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph import Graph
 from lfx.schema.workflow import JobStatus, WorkflowJobResponse
-from lfx.workflow import router as router_module
 from lfx.workflow.host import ResolvedFlow, WorkflowHostBase
 from lfx.workflow.router import create_workflow_router
 
@@ -77,8 +76,14 @@ def _settings(**overrides):
 @pytest.fixture
 def client_with_settings(monkeypatch):
     def _make(host: _CaptureHost, settings_ns):
+        # The session scoping now reads settings inside the shared
+        # ``resolve_serving_scope`` helper, which imports ``get_settings_service``
+        # from ``lfx.services.deps`` at call time — so the stub is applied there
+        # (not on the router module) for the router to observe it.
+        from lfx.services import deps as deps_module
+
         monkeypatch.setattr(
-            router_module,
+            deps_module,
             "get_settings_service",
             lambda: SimpleNamespace(settings=settings_ns),
         )

@@ -39,7 +39,7 @@ author's responsibility.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 if TYPE_CHECKING:
@@ -105,6 +105,23 @@ class EndUserIdentityRequiredError(Exception):
     feature is on (a header name is configured) and identity is required, so it
     never fires in the default fully-anonymous configuration.
     """
+
+
+# Stable error code every serving entry point returns for a required-but-absent identity.
+END_USER_IDENTITY_REQUIRED_CODE = "END_USER_IDENTITY_REQUIRED"
+
+
+def end_user_required_detail(exc: EndUserIdentityRequiredError) -> dict[str, str]:
+    """Transport-neutral error body for a required-but-absent identity (mapped to HTTP 401).
+
+    Shared by every serving entry point (v2 router, v1 ``/run``, webhook, ...) so the
+    ``code``/shape a client sees is identical no matter which door rejected the request.
+    """
+    return {
+        "error": "End-user identity required",
+        "code": END_USER_IDENTITY_REQUIRED_CODE,
+        "message": str(exc),
+    }
 
 
 def resolve_end_user_identity(
@@ -204,3 +221,48 @@ def scope_session_for_identity(
     # (the gateway authenticated *this* id), so cross-user keys cannot be unwrapped.
     base = base.removeprefix(prefix)
     return ScopedSession(session_id=f"{prefix}{base}", persist=True)
+
+
+def resolve_serving_scope(
+    *,
+    http_request: Any,
+    requested_session_id: str | None,
+    default_session_id: str,
+) -> ScopedSession | None:
+    """Resolve the serving-plane session scope for one request, or ``None`` when off.
+
+    Single source of the session-scoping decision for every serving entry point (the v2
+    workflow router, v1 ``/run``, webhook, ...). Reads lfx serving settings, resolves the
+    trusted end-user identity, and returns the :class:`ScopedSession` (effective
+    ``session_id`` + ``persist``). ``None`` means the feature is off (no header
+    configured), so the caller must leave the session and persistence untouched —
+    byte-for-byte the pre-feature behavior, which is the default configuration.
+
+    ``http_request`` only needs a case-insensitive ``headers.get(name)`` (e.g. a FastAPI
+    ``Request``); it is duck-typed so lfx need not import the web framework. Callers map
+    the raised error to their transport (HTTP 401).
+
+    Raises:
+        EndUserIdentityRequiredError: identity is required but absent (feature on).
+    """
+    # Imported lazily so this module stays import-light and free of a hard service-layer
+    # dependency; the pure resolve/scope helpers above remain independently testable.
+    from lfx.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    settings = settings_service.settings if settings_service is not None else None
+    header_name = settings.serving_end_user_header if settings is not None else None
+    if not header_name:
+        return None
+
+    identity = resolve_end_user_identity(
+        header_name=header_name,
+        trust_proxy_headers=bool(settings.serving_trust_proxy_headers),
+        require_identity=bool(settings.serving_end_user_required),
+        get_header=http_request.headers.get,
+    )
+    return scope_session_for_identity(
+        identity,
+        requested_session_id=requested_session_id,
+        default_session_id=default_session_id,
+    )

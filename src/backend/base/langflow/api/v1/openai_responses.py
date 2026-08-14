@@ -68,6 +68,7 @@ async def run_flow_for_openai_responses(
     *,
     stream: bool = False,
     variables: dict[str, str] | None = None,
+    http_request: Request | None = None,
 ) -> OpenAIResponsesResponse | StreamingResponse:
     """Run a flow for OpenAI Responses API compatibility."""
     expose_error_details = _caller_owns_flow(flow, api_key_user)
@@ -128,6 +129,7 @@ async def run_flow_for_openai_responses(
                         client_consumed_queue=asyncio_queue_client_consumed,
                         context=context,
                         expose_error_details=expose_error_details,
+                        http_request=http_request,
                     )
                 )
 
@@ -483,6 +485,7 @@ async def run_flow_for_openai_responses(
             api_key_user=api_key_user,
             context=context,
             expose_error_details=expose_error_details,
+            http_request=http_request,
         )
 
     # Extract output text, tool calls, and usage from result
@@ -700,6 +703,7 @@ async def create_response(
             api_key_user=api_key_user,
             stream=request.stream,
             variables=variables,
+            http_request=http_request,
         )
 
     except CustomComponentValidationError as exc:

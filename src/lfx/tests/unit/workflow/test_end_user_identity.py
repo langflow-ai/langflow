@@ -5,6 +5,8 @@ key, an anonymous request yields no key and does not persist, and a spoofed
 header is ignored unless trust is explicitly opted into.
 """
 
+from types import SimpleNamespace
+
 import pytest
 from lfx.workflow.end_user_identity import (
     ANONYMOUS,
@@ -12,6 +14,7 @@ from lfx.workflow.end_user_identity import (
     EndUserIdentity,
     EndUserIdentityRequiredError,
     resolve_end_user_identity,
+    resolve_serving_scope,
     scope_session_for_identity,
 )
 
@@ -228,3 +231,95 @@ def test_anonymous_without_session_still_gets_reserved_namespace():
     scoped = scope_session_for_identity(ANONYMOUS, requested_session_id=None, default_session_id=FLOW_ID)
     assert scoped.session_id.startswith(ANONYMOUS_SESSION_PREFIX)
     assert scoped.persist is False
+
+
+# --- resolve_serving_scope: the shared entry-point helper --------------------------
+# Every serving door (v2 router, v1 /run, webhook, openai) routes through this one
+# function, so these pin the settings-driven decision independent of any transport.
+
+
+class _FakeRequest:
+    """Minimal request: only the ``headers.get`` that resolve_serving_scope needs."""
+
+    def __init__(self, **headers: str) -> None:
+        self.headers = SimpleNamespace(get=_headers(**headers))
+
+
+def _stub_settings(monkeypatch, **overrides):
+    base = {
+        "serving_end_user_header": None,
+        "serving_trust_proxy_headers": False,
+        "serving_end_user_required": False,
+    }
+    base.update(overrides)
+    from lfx.services import deps as deps_module
+
+    monkeypatch.setattr(
+        deps_module,
+        "get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(**base)),
+    )
+
+
+def test_serving_scope_is_none_when_feature_off(monkeypatch):
+    # No header configured: the helper returns None so callers leave the run untouched,
+    # even if a client sends the header.
+    _stub_settings(monkeypatch, serving_end_user_header=None)
+    scoped = resolve_serving_scope(
+        http_request=_FakeRequest(**{HEADER: "alice"}),
+        requested_session_id="chat-1",
+        default_session_id=FLOW_ID,
+    )
+    assert scoped is None
+
+
+def test_serving_scope_identified_merges_session(monkeypatch):
+    _stub_settings(monkeypatch, serving_end_user_header=HEADER, serving_trust_proxy_headers=True)
+    scoped = resolve_serving_scope(
+        http_request=_FakeRequest(**{HEADER: "alice"}),
+        requested_session_id="chat-1",
+        default_session_id=FLOW_ID,
+    )
+    assert scoped is not None
+    assert scoped.session_id == "alice::chat-1"
+    assert scoped.persist is True
+
+
+def test_serving_scope_anonymous_is_reserved_and_ephemeral(monkeypatch):
+    _stub_settings(monkeypatch, serving_end_user_header=HEADER, serving_trust_proxy_headers=True)
+    scoped = resolve_serving_scope(
+        http_request=_FakeRequest(),  # no header
+        requested_session_id="chat-1",
+        default_session_id=FLOW_ID,
+    )
+    assert scoped is not None
+    assert scoped.session_id.startswith(ANONYMOUS_SESSION_PREFIX)
+    assert "chat-1" not in scoped.session_id
+    assert scoped.persist is False
+
+
+def test_serving_scope_spoofed_header_ignored_when_trust_off(monkeypatch):
+    _stub_settings(monkeypatch, serving_end_user_header=HEADER, serving_trust_proxy_headers=False)
+    scoped = resolve_serving_scope(
+        http_request=_FakeRequest(**{HEADER: "victim"}),
+        requested_session_id="chat-1",
+        default_session_id=FLOW_ID,
+    )
+    assert scoped is not None
+    assert "victim" not in scoped.session_id
+    assert scoped.persist is False
+
+
+def test_serving_scope_required_but_absent_raises(monkeypatch):
+    _stub_settings(
+        monkeypatch,
+        serving_end_user_header=HEADER,
+        serving_trust_proxy_headers=True,
+        serving_end_user_required=True,
+    )
+    with pytest.raises(EndUserIdentityRequiredError):
+        resolve_serving_scope(
+            http_request=_FakeRequest(),  # no header
+            requested_session_id="chat-1",
+            default_session_id=FLOW_ID,
+        )
