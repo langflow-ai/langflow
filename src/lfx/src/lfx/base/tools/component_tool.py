@@ -102,33 +102,6 @@ def patch_components_send_message(component: Component):
     return old_send_message
 
 
-def _patch_send_message_decorator(component, func):
-    """Decorator to patch the send_message method of a component.
-
-    This is useful when we want to use a component as a tool, but we don't want to
-    send any messages to the UI. With this only the Component calling the tool
-    will send messages to the UI.
-    """
-
-    async def async_wrapper(*args, **kwargs):
-        original_send_message = component.send_message
-        component.send_message = send_message_noop
-        try:
-            return await func(*args, **kwargs)
-        finally:
-            component.send_message = original_send_message
-
-    def sync_wrapper(*args, **kwargs):
-        original_send_message = component.send_message
-        component.send_message = send_message_noop
-        try:
-            return func(*args, **kwargs)
-        finally:
-            component.send_message = original_send_message
-
-    return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
-
-
 def _build_output_function(
     component: Component,
     output_method: Callable,
@@ -148,6 +121,11 @@ def _build_output_function(
         # Create an isolated copy to prevent race conditions when this
         # tool is invoked concurrently by an agent (GitHub issue #8791)
         comp = deepcopy(component)
+        # Only the Component calling the tool reports to the UI, so the tool run is
+        # silenced on its own copy. Silencing the shared component instead would leak
+        # across overlapping calls: the second call records the first call's no-op as
+        # the method to restore, and restores it after the first call is done.
+        comp.send_message = send_message_noop  # type: ignore[method-assign, assignment]
         local_method = getattr(comp, method_name, output_method)
         build_started = False
         result = None
@@ -183,7 +161,7 @@ def _build_output_function(
         # removing the model_dump() call here because it is not serializable
         return serialize(result)
 
-    return _patch_send_message_decorator(component, output_function)
+    return output_function
 
 
 def _build_output_async_function(
@@ -205,6 +183,9 @@ def _build_output_async_function(
         # Create an isolated copy to prevent race conditions when this
         # tool is invoked concurrently by an agent (GitHub issue #8791)
         comp = deepcopy(component)
+        # See _build_output_function: the no-op belongs to this call's copy, never to
+        # the shared component.
+        comp.send_message = send_message_noop  # type: ignore[method-assign, assignment]
         local_method = getattr(comp, method_name, output_method)
         build_started = False
         result = None
@@ -239,7 +220,7 @@ def _build_output_async_function(
         # removing the model_dump() call here because it is not serializable
         return serialize(result)
 
-    return _patch_send_message_decorator(component, output_function)
+    return output_function
 
 
 def _format_tool_name(name: str):
