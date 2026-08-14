@@ -1,6 +1,10 @@
 import type { Page } from "@playwright/test";
 import { expect } from "../fixtures";
 import { waitForFlowEditorReady } from "./flow/wait-for-flow-editor-ready";
+import {
+  flushPendingFlowAutosave,
+  reloadAndWaitForFlowPersistence,
+} from "./flow-editor-persistence";
 
 const LOOPBACK_WEB_SEARCH_CODE = `
 from lfx.custom import Component
@@ -43,6 +47,8 @@ class WebSearchComponent(Component):
 export async function configureLoopbackWebSearch(page: Page): Promise<void> {
   const flowId = new URL(page.url()).pathname.match(/\/flow\/([^/]+)/)?.[1];
   expect(flowId).toBeTruthy();
+  if (!flowId) throw new Error(`Expected a flow URL, received ${page.url()}`);
+  await flushPendingFlowAutosave(page);
   const response = await page.request.get(`/api/v1/flows/${flowId}`);
   expect(response.ok(), `GET flow ${flowId}`).toBeTruthy();
   const flow = await response.json();
@@ -71,7 +77,35 @@ export async function configureLoopbackWebSearch(page: Page): Promise<void> {
     data: { data: flow.data },
   });
   expect(update.ok(), `PATCH flow ${flowId}`).toBeTruthy();
-  await page.reload();
+  await reloadAndWaitForFlowPersistence(
+    page,
+    flowId,
+    flow.data,
+    (persistedData) => {
+      const persistedNodes = new Map(
+        (persistedData.nodes ?? []).map((node) => [
+          (node as { id?: string }).id,
+          node,
+        ]),
+      );
+      return searchNodeIds.every((nodeId) => {
+        const node = persistedNodes.get(nodeId) as
+          | {
+              data?: {
+                type?: string;
+                node?: { template?: { code?: { value?: string } } };
+              };
+            }
+          | undefined;
+        return (
+          node?.data?.type === "UnifiedWebSearch" &&
+          node.data.node?.template?.code?.value?.includes(
+            "LOOPBACK_WEB_SEARCH_USED",
+          ) === true
+        );
+      });
+    },
+  );
   await waitForFlowEditorReady(page);
 
   const verifyResponse = await page.request.get(`/api/v1/flows/${flowId}`);

@@ -2,6 +2,30 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
+test.beforeEach(async ({ page }, testInfo) => {
+  let flowCreationIndex = 0;
+  await page.route("**/api/v1/flows/", async (route) => {
+    const request = route.request();
+    if (request.method() !== "POST") {
+      await route.continue();
+      return;
+    }
+
+    const body = request.postDataJSON() as Record<string, unknown>;
+    if (body.name !== "New Flow") {
+      await route.continue();
+      return;
+    }
+
+    await route.continue({
+      postData: JSON.stringify({
+        ...body,
+        name: `note-color-${testInfo.testId}-${testInfo.retry}-${flowCreationIndex++}`,
+      }),
+    });
+  });
+});
+
 test(
   "user should be able to change note colors using the color picker",
   { tag: ["@release", "@workspace"] },
@@ -18,8 +42,6 @@ test(
     await page.getByTestId("canvas-add-note-button").click();
     const targetElement = page.locator('//*[@id="react-flow-id"]');
     await targetElement.click();
-    await page.mouse.up();
-    await page.mouse.down();
     await adjustScreenView(page, { numberOfZoomOut: 4 });
 
     // Select the note to show the toolbar
@@ -27,16 +49,15 @@ test(
 
     // Verify default color is amber (yellow-ish)
     const noteNode = page.getByTestId("note_node");
-    let bgColor = await noteNode.evaluate(
-      (el) => window.getComputedStyle(el).backgroundColor,
-    );
+    const readNoteColor = () =>
+      noteNode.evaluate((el) => window.getComputedStyle(el).backgroundColor);
+    let bgColor = await readNoteColor();
     expect(
       bgColor === "rgb(252, 211, 77)" || bgColor === "rgb(253, 230, 138)",
     ).toBe(true);
 
     // Open color picker
     await page.getByTestId("color_picker").click();
-    await page.waitForTimeout(300);
 
     // Verify all preset color buttons are visible (amber, neutral, rose, blue, lime, transparent)
     const colorButtons = [
@@ -57,52 +78,52 @@ test(
     await expect(page.getByTestId("color_picker_button_custom")).toBeVisible();
 
     // Change to rose color
+    const amberColor = bgColor;
     await page.getByTestId("color_picker_button_rose").click();
-    await page.waitForTimeout(500);
 
     // Click elsewhere to close popover and verify the note color changed
     await page.getByTestId("note_node").click();
-    bgColor = await noteNode.evaluate(
-      (el) => window.getComputedStyle(el).backgroundColor,
-    );
+    await expect.poll(readNoteColor).not.toBe(amberColor);
+    bgColor = await readNoteColor();
     // Rose color should be pinkish - check it's not amber anymore
     expect(bgColor).not.toBe("rgb(252, 211, 77)");
 
     // Change to blue color
     await page.getByTestId("color_picker").click();
-    await page.waitForTimeout(300);
-    await page.getByTestId("color_picker_button_blue").click();
-    await page.waitForTimeout(500);
+    const blueButton = page.getByTestId("color_picker_button_blue");
+    await expect(blueButton).toBeVisible();
+    const roseColor = bgColor;
+    await blueButton.click();
 
     await page.getByTestId("note_node").click();
-    bgColor = await noteNode.evaluate(
-      (el) => window.getComputedStyle(el).backgroundColor,
-    );
+    await expect.poll(readNoteColor).not.toBe(roseColor);
+    bgColor = await readNoteColor();
     // Verify color changed (exact RGB depends on CSS variables)
     expect(bgColor).toBeTruthy();
 
     // Change to lime color
     await page.getByTestId("color_picker").click();
-    await page.waitForTimeout(300);
-    await page.getByTestId("color_picker_button_lime").click();
-    await page.waitForTimeout(500);
+    const limeButton = page.getByTestId("color_picker_button_lime");
+    await expect(limeButton).toBeVisible();
+    const blueColor = bgColor;
+    await limeButton.click();
 
     await page.getByTestId("note_node").click();
-    bgColor = await noteNode.evaluate(
-      (el) => window.getComputedStyle(el).backgroundColor,
-    );
+    await expect.poll(readNoteColor).not.toBe(blueColor);
+    bgColor = await readNoteColor();
     expect(bgColor).toBeTruthy();
 
     // Change to transparent
     await page.getByTestId("color_picker").click();
-    await page.waitForTimeout(300);
-    await page.getByTestId("color_picker_button_transparent").click();
-    await page.waitForTimeout(500);
+    const transparentButton = page.getByTestId(
+      "color_picker_button_transparent",
+    );
+    await expect(transparentButton).toBeVisible();
+    await transparentButton.click();
 
     await page.getByTestId("note_node").click();
-    bgColor = await noteNode.evaluate(
-      (el) => window.getComputedStyle(el).backgroundColor,
-    );
+    await expect.poll(readNoteColor).toBe("rgba(0, 0, 0, 0)");
+    bgColor = await readNoteColor();
     expect(bgColor === "rgba(0, 0, 0, 0)").toBe(true);
   },
 );
@@ -122,8 +143,6 @@ test(
     await page.getByTestId("canvas-add-note-button").click();
     const targetElement = page.locator('//*[@id="react-flow-id"]');
     await targetElement.click();
-    await page.mouse.up();
-    await page.mouse.down();
     await adjustScreenView(page, { numberOfZoomOut: 4 });
 
     // Select the note
@@ -131,7 +150,6 @@ test(
 
     // Open color picker
     await page.getByTestId("color_picker").click();
-    await page.waitForTimeout(300);
 
     // Verify the custom color picker button exists
     const customButton = page.getByTestId("color_picker_button_custom");

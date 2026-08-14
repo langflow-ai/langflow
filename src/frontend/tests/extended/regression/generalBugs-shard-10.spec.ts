@@ -1,7 +1,78 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
+
+type WorkflowEvent = {
+  type?: unknown;
+  [key: string]: unknown;
+};
+
+function containsFrozenResult(value: unknown): boolean {
+  if (Array.isArray(value)) {
+    return value.some(containsFrozenResult);
+  }
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return (
+    record.used_frozen_result === true ||
+    Object.values(record).some(containsFrozenResult)
+  );
+}
+
+async function runChatOutput(page: Page): Promise<WorkflowEvent[]> {
+  const [response] = await Promise.all([
+    page.waitForResponse(
+      (candidate) =>
+        candidate.request().method() === "POST" &&
+        new URL(candidate.url()).pathname === "/api/v2/workflows",
+    ),
+    page.getByTestId("button_run_chat output").click(),
+  ]);
+  expect(
+    response.ok(),
+    `Running the workflow returned ${response.status()} ${response.statusText()}`,
+  ).toBeTruthy();
+
+  const events = (await response.text())
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith("data:"))
+    .map((line, index) => {
+      const payload = line.slice("data:".length).trim();
+      let value: unknown;
+      try {
+        value = JSON.parse(payload);
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new Error(
+          `Workflow SSE event ${index + 1} contained invalid JSON: ${detail}`,
+        );
+      }
+      if (typeof value !== "object" || value === null || Array.isArray(value)) {
+        throw new Error(
+          `Workflow SSE event ${index + 1} must be a JSON object`,
+        );
+      }
+      return value as WorkflowEvent;
+    });
+  expect(
+    events.length,
+    "Workflow response contained no SSE events",
+  ).toBeGreaterThan(0);
+  expect(
+    events.some((event) => event.type === "RUN_ERROR"),
+    "Workflow stream contained RUN_ERROR",
+  ).toBe(false);
+  expect(
+    events.some((event) => event.type === "RUN_FINISHED"),
+    "Workflow stream did not reach RUN_FINISHED",
+  ).toBe(true);
+  return events;
+}
 
 test(
   "freeze must work correctly",
@@ -47,9 +118,7 @@ test(
 
     await page.getByText(TEXTS.checkAndSave).click();
 
-    await page.getByTestId("button_run_chat output").click();
-
-    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`);
+    await runChatOutput(page);
 
     await page.getByTestId("playground-btn-flow-io").click();
 
@@ -101,11 +170,11 @@ test(
       page.getByTestId("modal-promptarea_prompt_template"),
     ).toBeHidden();
 
-    await page.getByTestId("button_run_chat output").click();
-
-    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
-      timeout: 30000,
-    });
+    const frozenRunEvents = await runChatOutput(page);
+    expect(
+      containsFrozenResult(frozenRunEvents),
+      "Frozen workflow run did not report a reused result",
+    ).toBe(true);
 
     await page.getByTestId("playground-btn-flow-io").click();
 

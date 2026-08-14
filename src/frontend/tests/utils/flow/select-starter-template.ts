@@ -7,11 +7,6 @@ import {
 import { TID } from "../constants/testIds";
 import { TIMEOUTS } from "../constants/timeouts";
 
-type ObservedResponse = {
-  response: Response;
-  sequence: number;
-};
-
 function requestDeletesFlow(request: Request, flowId: string): boolean {
   if (
     request.method() !== "DELETE" ||
@@ -26,15 +21,6 @@ function requestDeletesFlow(request: Request, flowId: string): boolean {
   } catch {
     return false;
   }
-}
-
-function isHeaderFlowRefresh(response: Response): boolean {
-  const url = new URL(response.url());
-  return (
-    response.request().method() === "GET" &&
-    url.pathname === "/api/v1/flows/" &&
-    url.searchParams.get("header_flows") === "true"
-  );
 }
 
 async function assertResponseFinished(
@@ -66,92 +52,66 @@ export async function selectStarterTemplate(
     "A starter template must be selected from its blank placeholder flow",
   ).toBeTruthy();
 
-  let sequence = 0;
-  const responseSequences = new Map<Response, number>();
-  const cleanupResponses: ObservedResponse[] = [];
-  const headerRefreshResponses: ObservedResponse[] = [];
-  const observeResponse = (response: Response) => {
-    const observed = { response, sequence: sequence++ };
-    responseSequences.set(response, observed.sequence);
-    if (requestDeletesFlow(response.request(), placeholderFlowId!)) {
-      cleanupResponses.push(observed);
-    }
-    if (isHeaderFlowRefresh(response)) {
-      headerRefreshResponses.push(observed);
-    }
-  };
-  page.on("response", observeResponse);
+  const cleanupResponsePromise = page.waitForResponse(
+    (response) => requestDeletesFlow(response.request(), placeholderFlowId!),
+    { timeout: TIMEOUTS.standard },
+  );
+  // Keep an early create/navigation failure from leaving the armed cleanup
+  // waiter as an unhandled rejection. Awaiting the original promise below
+  // still preserves the exact cleanup failure when this path succeeds.
+  void cleanupResponsePromise.catch(() => undefined);
+  const [createResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        new URL(response.url()).pathname === "/api/v1/flows/",
+    ),
+    template.click(),
+  ]);
+  expect(
+    createResponse.ok(),
+    `Creating starter template ${templateName} returned ${createResponse.status()}`,
+  ).toBe(true);
 
-  try {
-    const [createResponse] = await Promise.all([
-      page.waitForResponse(
-        (response) =>
-          response.request().method() === "POST" &&
-          new URL(response.url()).pathname === "/api/v1/flows/",
+  const createdFlow = await createResponse.json();
+  const createdFlowId = (createdFlow as { id?: unknown })?.id;
+  expect(
+    typeof createdFlowId === "string" && createdFlowId.length > 0,
+    `Creating starter template ${templateName} returned no flow id`,
+  ).toBe(true);
+
+  await page.waitForURL(
+    (url) =>
+      new RegExp(`^/flow/${createdFlowId}(?:/folder/[^/?#]+)?/?$`).test(
+        url.pathname,
       ),
-      template.click(),
-    ]);
-    expect(
-      createResponse.ok(),
-      `Creating starter template ${templateName} returned ${createResponse.status()}`,
-    ).toBe(true);
+    { timeout: TIMEOUTS.standard },
+  );
 
-    const createdFlow = await createResponse.json();
-    const createdFlowId = (createdFlow as { id?: unknown })?.id;
-    expect(
-      typeof createdFlowId === "string" && createdFlowId.length > 0,
-      `Creating starter template ${templateName} returned no flow id`,
-    ).toBe(true);
+  const cleanupResponse = await cleanupResponsePromise;
+  await assertResponseFinished(cleanupResponse, "Deleting starter placeholder");
 
-    await page.waitForURL(
-      (url) =>
-        new RegExp(`^/flow/${createdFlowId}(?:/folder/[^/?#]+)?/?$`).test(
-          url.pathname,
-        ),
-      { timeout: TIMEOUTS.standard },
-    );
+  // useDeleteFlow updates the browser store directly and refetches folders; it
+  // does not promise a subsequent header-flow request. Perform our own
+  // authoritative readback so the helper cannot return with an orphaned blank
+  // flow while also avoiding a wait on incidental network activity.
+  const inventoryResponse = await page.request.get(
+    "/api/v1/flows/?get_all=true&header_flows=true&remove_example_flows=true",
+  );
+  expect(
+    inventoryResponse.ok(),
+    `Reading flow inventory returned ${inventoryResponse.status()} ${inventoryResponse.statusText()}`,
+  ).toBeTruthy();
+  const inventory = await inventoryResponse.json();
+  expect(Array.isArray(inventory), "Flow inventory must be an array").toBe(
+    true,
+  );
+  expect(
+    (inventory as Array<{ id?: unknown }>).some(
+      (flow) => flow?.id === placeholderFlowId,
+    ),
+    "Starter placeholder remained in the authoritative flow inventory",
+  ).toBe(false);
 
-    const createSequence = responseSequences.get(createResponse) ?? -1;
-    await expect
-      .poll(
-        () => {
-          const cleanupResponse = cleanupResponses.find(
-            (observed) => observed.sequence > createSequence,
-          );
-          return (
-            cleanupResponse !== undefined &&
-            headerRefreshResponses.some(
-              (observed) => observed.sequence > cleanupResponse.sequence,
-            )
-          );
-        },
-        {
-          message:
-            "Starter flow navigation must finish placeholder cleanup and refresh the flow inventory",
-          timeout: TIMEOUTS.standard,
-        },
-      )
-      .toBe(true);
-
-    const cleanupResponse = cleanupResponses.find(
-      (observed) => observed.sequence > createSequence,
-    )!;
-    const headerRefreshResponse = headerRefreshResponses.find(
-      (observed) => observed.sequence > cleanupResponse.sequence,
-    )!.response;
-    await Promise.all([
-      assertResponseFinished(
-        cleanupResponse.response,
-        "Deleting starter placeholder",
-      ),
-      assertResponseFinished(
-        headerRefreshResponse,
-        "Refreshing flow inventory",
-      ),
-    ]);
-
-    return createdFlowId as string;
-  } finally {
-    page.off("response", observeResponse);
-  }
+  return createdFlowId as string;
 }

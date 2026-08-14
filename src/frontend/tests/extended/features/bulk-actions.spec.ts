@@ -47,8 +47,7 @@ test(
     await page.waitForSelector('[data-testid="home-dropdown-menu"]', {
       timeout: 100000,
     });
-    await page.getByTestId("list-card").first().isVisible({ timeout: 3000 });
-    await page.waitForTimeout(500);
+    await expect(page.getByTestId("list-card").nth(2)).toBeVisible();
 
     // Test shift selection
     await page.keyboard.down("Shift");
@@ -90,24 +89,21 @@ test(
     await expect(secondCheckbox).not.toBeChecked();
     await expect(thirdCheckbox).toBeChecked();
 
-    const firstFlowName =
-      (await page
-        .locator("[data-testid='flow-name-div']")
-        .first()
-        .locator("span")
-        .textContent()) ?? "";
-    const secondFlowName =
-      (await page
-        .locator("[data-testid='flow-name-div']")
-        .nth(1)
-        .locator("span")
-        .textContent()) ?? "";
-    const thirdFlowName =
-      (await page
-        .locator("[data-testid='flow-name-div']")
-        .nth(2)
-        .locator("span")
-        .textContent()) ?? "";
+    const flowNameElements = page
+      .locator("[data-testid='flow-name-div']")
+      .locator("[data-testid^='flow-name-']");
+    const firstFlowTestId = await flowNameElements
+      .first()
+      .getAttribute("data-testid");
+    const secondFlowTestId = await flowNameElements
+      .nth(1)
+      .getAttribute("data-testid");
+    const thirdFlowTestId = await flowNameElements
+      .nth(2)
+      .getAttribute("data-testid");
+    expect(firstFlowTestId).toMatch(/^flow-name-/);
+    expect(secondFlowTestId).toMatch(/^flow-name-/);
+    expect(thirdFlowTestId).toMatch(/^flow-name-/);
 
     // Test bulk delete
     await page.getByTestId("delete-bulk-btn").first().click();
@@ -122,12 +118,8 @@ test(
     });
 
     // Verify flows are deleted
-    await expect(
-      page.getByText(firstFlowName, { exact: true }),
-    ).not.toBeVisible();
-    await expect(page.getByText(secondFlowName, { exact: true })).toBeVisible();
-    await expect(
-      page.getByText(thirdFlowName, { exact: true }),
-    ).not.toBeVisible();
+    await expect(page.getByTestId(firstFlowTestId!)).toHaveCount(0);
+    await expect(page.getByTestId(secondFlowTestId!)).toBeVisible();
+    await expect(page.getByTestId(thirdFlowTestId!)).toHaveCount(0);
   },
 );

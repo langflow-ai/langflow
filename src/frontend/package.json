@@ -159,7 +159,7 @@
     "a11y:html-report": "node tests/utils/build-a11y-html-report.mjs",
     "a11y:job-summary": "node tests/utils/build-a11y-job-summary.mjs",
     "e2e:check-report": "node tests/utils/check-playwright-report.mjs",
-    "test:e2e-utilities": "node --test tests/utils/blocking-provider-policy.test.mjs tests/utils/check-playwright-report.test.mjs tests/utils/get-default-project-id-for-test.test.mjs tests/utils/server-error-contract.test.mjs",
+    "test:e2e-utilities": "node --test tests/utils/blocking-provider-policy.test.mjs tests/utils/check-playwright-report.test.mjs tests/utils/flow-editor-persistence-policy.test.mjs tests/utils/get-default-project-id-for-test.test.mjs tests/utils/server-error-contract.test.mjs",
     "serve": "vite preview",
     "format": "npx @biomejs/biome format --write",
     "lint": "npx @biomejs/biome lint",

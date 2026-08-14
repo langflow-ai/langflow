@@ -2,6 +2,10 @@ import type { Page } from "@playwright/test";
 import { expect } from "../fixtures";
 import { adjustScreenView } from "./adjust-screen-view";
 import { waitForFlowEditorReady } from "./flow/wait-for-flow-editor-ready";
+import {
+  flushPendingFlowAutosave,
+  reloadAndWaitForFlowPersistence,
+} from "./flow-editor-persistence";
 import { updateOldComponents } from "./update-old-components";
 
 export const LOOPBACK_OPENAI_BASE_URL = "http://127.0.0.1:8787/v1";
@@ -31,6 +35,7 @@ type TemplateField = {
 
 type FlowNode = {
   id?: string;
+  type?: string;
   data?: {
     node?: {
       template?: Record<string, TemplateField>;
@@ -40,7 +45,11 @@ type FlowNode = {
 };
 
 type FlowRead = {
-  data?: { nodes?: FlowNode[]; edges?: unknown[] };
+  data?: {
+    nodes?: FlowNode[];
+    edges?: unknown[];
+    [key: string]: unknown;
+  };
 };
 
 function configureTemplate(node: FlowNode): boolean {
@@ -164,6 +173,7 @@ export async function configureLoopbackOpenAI(
   if (!options?.skipUpdateOldComponents) await updateOldComponents(page);
 
   const flowId = currentFlowId(page);
+  await flushPendingFlowAutosave(page);
   const flowResponse = await page.request.get(`/api/v1/flows/${flowId}`);
   expect(flowResponse.ok(), `GET flow ${flowId}`).toBeTruthy();
   const flow = (await flowResponse.json()) as FlowRead;
@@ -184,7 +194,22 @@ export async function configureLoopbackOpenAI(
     throw new Error(`Flow ${flowId} contains a model node without an id`);
   }
 
-  await page.reload();
+  await reloadAndWaitForFlowPersistence(
+    page,
+    flowId,
+    flow.data ?? {},
+    (persistedData) => {
+      const persistedNodes = new Map(
+        (persistedData.nodes ?? []).flatMap((node) =>
+          node.id ? [[node.id, node]] : [],
+        ),
+      );
+      return configuredNodeIds.every((id) => {
+        const node = persistedNodes.get(id) as FlowNode | undefined;
+        return node !== undefined && isLoopbackConfigured(node);
+      });
+    },
+  );
   await waitForFlowEditorReady(page);
   const verifyResponse = await page.request.get(`/api/v1/flows/${flowId}`);
   expect(verifyResponse.ok(), `Verify flow ${flowId}`).toBeTruthy();
@@ -203,5 +228,8 @@ export async function configureLoopbackOpenAI(
       `Loopback model configuration was overwritten for nodes: ${clobberedNodeIds.join(", ")}`,
     );
   }
-  if (!options?.skipAdjustScreenView) await adjustScreenView(page);
+  if (!options?.skipAdjustScreenView) {
+    await adjustScreenView(page);
+    await flushPendingFlowAutosave(page);
+  }
 }
