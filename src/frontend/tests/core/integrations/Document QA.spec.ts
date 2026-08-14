@@ -6,6 +6,14 @@ withEventDeliveryModes(
   "Document Q&A",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
+    await page.route(/\/api\/v1\/store\/tags(\?.*)?$/, async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({ json: [] });
+        return;
+      }
+
+      await route.continue();
+    });
     await openStarterProject(page, "Document Q&A");
 
     await expect(page.getByTestId("title-Knowledge")).toBeVisible();

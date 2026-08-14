@@ -126,6 +126,14 @@ async function openGlobalVariablesRoute(
   page: LangflowPage,
   variables = populatedVariables,
 ) {
+  await page.route(/\/api\/v1\/store\/tags(\?.*)?$/, async (route: Route) => {
+    if (route.request().method() === "GET") {
+      await route.fulfill({ json: [] });
+      return;
+    }
+
+    await route.continue();
+  });
   await mockVariables(page, variables);
   await mockComponentTypes(page);
   await awaitBootstrapTest(page, {

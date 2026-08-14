@@ -46,12 +46,12 @@ test(
       page.getByText("lf-starter_project", { exact: true }),
     ).toBeVisible();
 
-    expect(
-      await page.getByText("lf-new_project", { exact: true }).count(),
-    ).toBe(1);
-    expect(
-      await page.getByText("lf-new_project_1", { exact: true }).count(),
-    ).toBe(1);
+    await expect(page.getByText("lf-new_project", { exact: true })).toHaveCount(
+      1,
+    );
+    await expect(
+      page.getByText("lf-new_project_1", { exact: true }),
+    ).toHaveCount(1);
 
     await page.getByTestId("icon-ChevronLeft").first().click();
 
@@ -90,9 +90,9 @@ test(
       page.getByText("lf-starter_project", { exact: true }),
     ).toBeVisible();
 
-    expect(
-      await page.getByText("lf-renamed_project", { exact: true }).count(),
-    ).toBe(1);
+    await expect(
+      page.getByText("lf-renamed_project", { exact: true }),
+    ).toHaveCount(1);
 
     //delete a folder
 
@@ -121,9 +121,9 @@ test(
     await expect(
       page.getByText("lf-starter_project", { exact: true }),
     ).toBeVisible();
-    expect(
-      await page.getByText("lf-renamed_project", { exact: true }).count(),
-    ).toBe(0);
+    await expect(
+      page.getByText("lf-renamed_project", { exact: true }),
+    ).toHaveCount(0);
   },
 );
 

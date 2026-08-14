@@ -12,10 +12,17 @@ test.describe.configure({ mode: "serial" });
 async function openFilesPage(page: Page) {
   await awaitBootstrapTest(page, {
     skipModal: true,
-    seedFlowIfEmpty: false,
   });
-  await page.goto("/assets/files");
+  const filesResponsePromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === "GET" &&
+      new URL(response.url()).pathname === "/api/v2/files",
+  );
+  await page.getByText(TEXTS.labelMyFiles, { exact: true }).first().click();
   await page.waitForURL(/\/assets\/files\/?$/);
+  const filesResponse = await filesResponsePromise;
+  expect(filesResponse.ok()).toBe(true);
+  expect(await filesResponse.finished()).toBeNull();
   await expect(page.getByTestId("mainpage_title")).toContainText("Files");
   await expect(page.getByTestId("drag-wrap-component")).toBeVisible();
 }
@@ -256,7 +263,7 @@ test(
     await expect(pyRow).toHaveCount(0);
 
     // Test search by file type
-    await searchInput.fill("py");
+    await searchInput.fill(".py");
 
     // Verify only Python file is visible
     await expect(pyRow).toBeVisible();

@@ -177,7 +177,15 @@ test(
       visibleElementHandle = templateHandle;
     }
 
-    await visibleElementHandle.click();
+    const templateHandleBox = await visibleElementHandle.boundingBox();
+    if (!templateHandleBox) {
+      throw new Error("The RetrievalQA template handle has no layout box");
+    }
+    // The node body covers the handle's center; click its exposed left edge so
+    // Playwright still verifies the same point a user can actually target.
+    await visibleElementHandle.click({
+      position: { x: 1, y: templateHandleBox.height / 2 },
+    });
 
     await expect(page.getByTestId("disclosure-input & output")).toBeVisible();
     await expect(page.getByTestId("disclosure-data sources")).toBeVisible();
