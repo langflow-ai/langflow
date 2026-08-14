@@ -516,6 +516,7 @@ For more information, see [Docker image defaults](/deployment-docker#docker-imag
 | `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS` | Boolean | `False` | When `true`, blocks execution of any flow containing a built-in arbitrary-code-execution component, including the [**Python Interpreter**](/python-interpreter), Python REPL/Code tools, [**Smart Transform**](/smart-transform), [**CSV Agent**](/bundles-langchain#csv-agent), and code-running agents such as [**CodeAct**](/bundles-codeagents#codeact-agent-smolagents), [**CUGA**](/bundles-cuga), and [**OpenDsStar**](/bundles-codeagents#opendstar-agent). |
 | `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS` | Boolean | `False` | When `true`, built-in file-reading components, including the [**File**](/read-file), [**Directory**](/legacy-core-components#legacy-data-components), [**JSON/CSV-to-Data**](/legacy-core-components#legacy-data-components), and the [**CSV Agent**](/bundles-langchain#csv-agent), [**JSON Agent**](/bundles-langchain#legacy-langchain-components), and [**OpenAPI Agent**](/bundles-langchain#openapi-agent) can only read and write paths inside the [`LANGFLOW_CONFIG_DIR`](/memory) storage directory. This also blocks `sqlite` and `duckdb` dialects in the [**SQL Database**](/sql-database) components and local-filesystem Git clones. |
 | `LANGFLOW_MCP_SERVER_DOCKER_HARDENING` | Boolean | `False` | When `true`, applies a strict Docker-argument policy to MCP stdio servers that use the `docker` transport. Rejects host filesystem or device mounts, `host/another-container` namespaces, non-default networks, privilege flags, and sandbox-disabling `--security-opt` values. Forms such as `--network none` / `bridge` and `--security-opt no-new-privileges` remain allowed. |
+| `LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING` | Boolean | `True` | When `true`, blocks tenant-controlled Python, Node.js, and shell MCP stdio entrypoints while retaining approved package runners and Langflow's authenticated internal MCP server. Set to `false` only for an explicitly trusted single-tenant deployment that requires legacy interpreter commands; this re-enables host process execution from MCP configurations. |
 
 Enable these flags when untrusted users can build flows on this server.
 
@@ -528,10 +529,15 @@ To enable these flags, set the following:
 * `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true`: blocks built-in code-execution components.
 * `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true`: confines built-in file access to the upload sandbox.
 * `LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true`: tightens Docker MCP server arguments.
+* `LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING=true`: keeps direct interpreter and shell MCP entrypoints blocked (the default). Leave it enabled for shared deployments.
 
 Pair these settings with the [SSRF settings](#ssrf-protection) to reduce common escape hatches.
 
 These settings **do not** provide full user isolation. For more information, see [Security](/security).
+
+### MCP interpreter hardening {#mcp-interpreter-hardening}
+
+MCP stdio configurations can start processes on the Langflow host. Interpreter hardening is enabled by default and blocks direct Python, Node.js, and shell scripts supplied through those configurations. Use `LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING=false` only for a trusted single-tenant deployment that intentionally relies on legacy commands such as `python -m mcp_weather_server`; never use this opt-out for shared or untrusted users.
 
 :::tip
 Do not enable a shared tracer when users are untrusted. Instead, use [built-in local tracing](/traces).

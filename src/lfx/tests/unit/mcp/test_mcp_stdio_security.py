@@ -17,6 +17,14 @@ from lfx.base.mcp.security import (
 )
 
 
+@pytest.fixture(autouse=True)
+def legacy_interpreter_policy_for_existing_security_cases(monkeypatch):
+    """Keep non-interpreter policy cases focused while the production default is hardened."""
+    from lfx.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "mcp_server_interpreter_hardening", False)
+
+
 @pytest.mark.parametrize(
     ("command", "args", "env"),
     [
@@ -241,6 +249,33 @@ def test_empty_config_is_noop():
     validate_mcp_stdio_config("", [], {})
 
 
+def test_interpreter_hardening_fails_closed_when_settings_are_unavailable(monkeypatch):
+    """A missing settings service must not reopen tenant-controlled interpreters."""
+    from lfx.services import deps
+
+    def unavailable_settings_service():
+        raise RuntimeError
+
+    monkeypatch.setattr(deps, "get_settings_service", unavailable_settings_service)
+
+    with pytest.raises(MCPStdioSecurityError, match="INTERPRETER_HARDENING"):
+        validate_mcp_stdio_config("python3", ["tenant_server.py"], {})
+
+
+def test_source_policy_defaults_to_hardened_when_settings_are_unavailable(monkeypatch):
+    """Direct callers of the source-policy layer must fail closed too."""
+    from lfx.base.mcp.source_policy import validate_mcp_stdio_source_policy
+    from lfx.services import deps
+
+    def unavailable_settings_service():
+        raise RuntimeError
+
+    monkeypatch.setattr(deps, "get_settings_service", unavailable_settings_service)
+
+    with pytest.raises(ValueError, match="interpreter hardening"):
+        validate_mcp_stdio_source_policy("python3", ["tenant_server.py"])
+
+
 async def test_update_tools_blocks_malicious_stdio_before_connecting():
     """A flow-embedded malicious stdio config must be rejected before connecting.
 
@@ -260,6 +295,31 @@ async def test_update_tools_blocks_malicious_stdio_before_connecting():
         await update_tools("evil-server", malicious, mcp_stdio_client=stdio_client)
 
     assert stdio_client.connect_to_server.call_count == 0
+
+
+async def test_update_tools_blocks_tenant_interpreter_before_connecting(monkeypatch):
+    """The flow execution path rejects an arbitrary interpreter script before spawn."""
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    from lfx.base.mcp.util import update_tools
+    from lfx.services import deps
+
+    settings = SimpleNamespace(
+        mcp_server_interpreter_hardening=True,
+        mcp_server_allowed_packages=None,
+        mcp_server_docker_hardening=False,
+    )
+    monkeypatch.setattr(deps, "get_settings_service", lambda: SimpleNamespace(settings=settings))
+
+    stdio_client = AsyncMock()
+    stdio_client.connect_to_server = AsyncMock()
+    tenant_config = {"mode": "Stdio", "command": "python3", "args": ["tenant_server.py"]}
+
+    with pytest.raises(MCPStdioSecurityError, match="INTERPRETER_HARDENING"):
+        await update_tools("tenant-server", tenant_config, mcp_stdio_client=stdio_client)
+
+    stdio_client.connect_to_server.assert_not_awaited()
 
 
 async def test_update_tools_requires_user_for_agentic_server():

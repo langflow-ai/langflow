@@ -728,7 +728,7 @@ def validate_mcp_stdio_source_policy(
         bool(_setting("mcp_server_docker_hardening", default=False)) if docker_hardening is None else docker_hardening
     )
     use_interpreter_hardening = (
-        bool(_setting("mcp_server_interpreter_hardening", default=False))
+        bool(_setting("mcp_server_interpreter_hardening", default=True))
         if interpreter_hardening is None
         else interpreter_hardening
     )

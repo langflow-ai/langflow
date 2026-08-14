@@ -112,6 +112,15 @@ the curated standalone `lfx-*` extensions.
     `langflow-base[litellm]` when custom components or IDE tooling depend on
     the LiteLLM compatibility surface.
 
+- MCP stdio interpreter hardening
+
+    Direct Python, Node.js, and shell entrypoints in MCP stdio configurations
+    are now blocked by default. Trusted single-tenant deployments that require
+    legacy commands such as `python -m mcp_weather_server` can set
+    `LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING=false`; do not use this opt-out
+    when MCP configurations can be supplied by untrusted users. See [MCP
+    interpreter hardening](/api-keys-and-authentication#mcp-interpreter-hardening).
+
 ## 1.11.x
 
 Highlights of this release include the following changes.

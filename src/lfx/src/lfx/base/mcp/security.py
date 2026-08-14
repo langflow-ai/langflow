@@ -288,8 +288,9 @@ def _interpreter_hardening_enabled() -> bool:
         from lfx.services.deps import get_settings_service
 
         return bool(get_settings_service().settings.mcp_server_interpreter_hardening)
-    except Exception:  # noqa: BLE001 - settings may be unavailable; preserve the legacy default
-        return False
+    except Exception:  # noqa: BLE001 - settings may be unavailable; fail closed
+        # Operators can explicitly opt out through LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING=false.
+        return True
 
 
 def _normalize_package_name(package_spec: str) -> str:
@@ -466,8 +467,7 @@ def validate_mcp_stdio_config(
             legacy single-tenant package-runner behavior is preserved.
         interpreter_hardening: restrict Python/Node entrypoints to Langflow's authenticated
             internal agentic MCP module. ``None`` reads
-            ``LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING``; the default is disabled for
-            legacy single-tenant compatibility.
+            ``LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING``; the secure default is enabled.
 
     Raises:
         MCPStdioSecurityError: If the command is not allowlisted, the args contain shell

@@ -65,6 +65,16 @@ With all MCP clients, there are several ways to do this:
 This tutorial demonstrates how to install a weather server locally with `uv pip install`, and how to use `npx` to run the geolocation server package.
 Your particular MCP server's requirements may vary.
 
+:::warning
+MCP stdio servers run processes on the Langflow host. Langflow blocks direct Python, Node.js, and shell entrypoints by default. Because this tutorial uses the locally installed `python -m mcp_weather_server` server, run it only in a trusted single-user deployment, or explicitly enable the legacy behavior before starting Langflow:
+
+```shell
+LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING=false uv run langflow run
+```
+
+Do not disable this protection on a shared or otherwise untrusted deployment. Prefer an operator-approved `uvx` or `npx` package runner when available. See [MCP interpreter hardening](/api-keys-and-authentication#mcp-interpreter-hardening).
+:::
+
 In Langflow, you use the **MCP Tools** component to connect a specific MCP server to a flow.
 You need one **MCP Tools** component for each MCP server that you want your flow to use.
 

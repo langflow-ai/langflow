@@ -22,6 +22,14 @@ from langflow.api.v2.schemas import (
 from pydantic import ValidationError
 
 
+@pytest.fixture(autouse=True)
+def legacy_interpreter_policy_for_existing_security_cases(monkeypatch):
+    """Keep these historical validator cases focused on their named policy checks."""
+    from lfx.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "mcp_server_interpreter_hardening", False)
+
+
 class TestMCPCommandInjectionSecurity:
     """Test suite for MCP command injection security fixes."""
 
