@@ -276,3 +276,107 @@ class TestNonMcpFlowsCostNothing:
                 raise AssertionError(msg)
 
         await stage_mcp_secrets([], {}, uuid4(), session=ExplodingSession())
+
+
+class TestRotationIsScopedToAnInteractiveEdit:
+    """An import must not re-point a server every other flow of that user shares.
+
+    ``mcp_server`` rows are keyed on (user_id, name), so rotating one on any flow write
+    let a single import silently hand every flow bound to that name whatever credential
+    the imported file carried — and the previous value is unrecoverable, because the
+    encrypted column is overwritten in place. Rotation only makes sense where the user is
+    demonstrably editing a server the flow was already bound to.
+    """
+
+    @staticmethod
+    def _stored(name, headers):
+        from langflow.services.auth.mcp_encryption import encrypt_mcp_config
+        from langflow.services.database.models import MCPServer
+
+        return MCPServer(user_id=uuid4(), name=name, config=encrypt_mcp_config({"headers": headers}))
+
+    @staticmethod
+    def _session_returning(row):
+        class Result:
+            def first(self):
+                return row
+
+        class Session:
+            async def exec(self, _stmt):
+                return Result()
+
+            def add(self, _row):
+                msg = "must not insert when the row already exists"
+                raise AssertionError(msg)
+
+        return Session()
+
+    @staticmethod
+    def _headers_of(row):
+        from langflow.services.auth.mcp_encryption import decrypt_mcp_config
+
+        return decrypt_mcp_config(row.config or {}).get("headers")
+
+    async def test_should_not_rotate_on_an_import(self, monkeypatch):
+        import langflow.api.utils.mcp.flow_secrets as module
+
+        async def clean_ensure(variables, user_id, session):  # noqa: ARG001
+            return set()
+
+        monkeypatch.setattr(module, "_ensure_variables", clean_ensure)
+        row = self._stored("ui_svc", {"Authorization": "Bearer UI-KEY-1"})
+        carried = [("ui_svc", {"headers": {"Authorization": "Bearer UI-KEY-2-FROM-LEGACY-EXPORT"}})]
+
+        await module.stage_mcp_secrets(carried, {}, uuid4(), self._session_returning(row))
+
+        assert self._headers_of(row) == {"Authorization": "Bearer UI-KEY-1"}
+
+    async def test_should_rotate_a_server_the_flow_was_already_bound_to(self, monkeypatch):
+        import langflow.api.utils.mcp.flow_secrets as module
+
+        async def clean_ensure(variables, user_id, session):  # noqa: ARG001
+            return set()
+
+        monkeypatch.setattr(module, "_ensure_variables", clean_ensure)
+        row = self._stored("ui_svc", {"Authorization": "Bearer OLD"})
+        carried = [("ui_svc", {"headers": {"Authorization": "Bearer ROTATED"}})]
+
+        await module.stage_mcp_secrets(carried, {}, uuid4(), self._session_returning(row), rotatable_servers={"ui_svc"})
+
+        assert self._headers_of(row) == {"Authorization": "Bearer ROTATED"}
+
+    async def test_should_not_rotate_a_server_the_flow_was_not_bound_to(self, monkeypatch):
+        """Saving a freshly imported flow must not adopt its credential either."""
+        import langflow.api.utils.mcp.flow_secrets as module
+
+        async def clean_ensure(variables, user_id, session):  # noqa: ARG001
+            return set()
+
+        monkeypatch.setattr(module, "_ensure_variables", clean_ensure)
+        row = self._stored("ui_svc", {"Authorization": "Bearer UI-KEY-1"})
+        carried = [("ui_svc", {"headers": {"Authorization": "Bearer IMPORTED"}})]
+
+        await module.stage_mcp_secrets(
+            carried, {}, uuid4(), self._session_returning(row), rotatable_servers={"other_svc"}
+        )
+
+        assert self._headers_of(row) == {"Authorization": "Bearer UI-KEY-1"}
+
+
+class TestServerNamesAFlowIsBoundTo:
+    def test_should_collect_every_referenced_server_name(self):
+        from langflow.api.utils.mcp.flow_secrets import mcp_server_names
+
+        flow_data = {
+            "nodes": [
+                {"data": {"node": {"template": {"mcp_server": {"value": {"name": "ui_svc", "config": {}}}}}}},
+                {"data": {"node": {"template": {"mcp_server": {"value": {"name": "other", "config": {}}}}}}},
+            ]
+        }
+
+        assert mcp_server_names(flow_data) == {"ui_svc", "other"}
+
+    def test_should_be_empty_for_a_flow_without_mcp_servers(self):
+        from langflow.api.utils.mcp.flow_secrets import mcp_server_names
+
+        assert mcp_server_names({"nodes": [{"data": {"node": {"template": {}}}}]}) == set()

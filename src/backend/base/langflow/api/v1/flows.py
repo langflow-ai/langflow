@@ -35,6 +35,7 @@ from langflow.api.utils import (
 from langflow.api.utils.core import strip_secret_field_values
 from langflow.api.utils.mcp.flow_secrets import (
     extract_and_strip_mcp_secrets,
+    mcp_server_names,
     persist_and_strip_mcp_secrets,
     stage_mcp_secrets,
 )
@@ -488,7 +489,16 @@ async def update_flow(
                     raise deny_to_404(exc, detail="Flow not found") from exc
             effective_flow_data = flow.data if flow.data is not None else db_flow_for_attempt.data
             _validate_catalog_policy_for_write(effective_flow_data, snapshot=catalog_policy_snapshot)
-            await stage_mcp_secrets(carried_secrets, secret_variables, actor.id, session)
+            # The only write path where a literal is the user editing a key rather than a
+            # file arriving. Scoped to servers this flow already referenced, so saving a
+            # freshly imported flow cannot adopt its credential either.
+            await stage_mcp_secrets(
+                carried_secrets,
+                secret_variables,
+                actor.id,
+                session,
+                rotatable_servers=mcp_server_names(db_flow_for_attempt.data),
+            )
             return await _patch_flow(
                 session=session,
                 db_flow=db_flow_for_attempt,

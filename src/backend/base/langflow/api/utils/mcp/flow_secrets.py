@@ -208,11 +208,25 @@ def extract_and_strip_mcp_secrets(
     return carried, variables
 
 
+def mcp_server_names(flow_data: dict[str, Any] | None) -> set[str]:
+    """Names of the MCP servers a flow already references."""
+    names: set[str] = set()
+    for field in _iter_mcp_server_fields(flow_data):
+        value = field.get("value")
+        if isinstance(value, dict):
+            name = value.get("name")
+            if isinstance(name, str) and name:
+                names.add(name)
+    return names
+
+
 async def stage_mcp_secrets(
     carried: list[tuple[str, dict[str, Any]]],
     variables: dict[str, str],
     user_id: UUID,
     session,
+    *,
+    rotatable_servers: set[str] | None = None,
 ) -> None:
     """Stage the carried credential on the caller's session.
 
@@ -245,11 +259,13 @@ async def stage_mcp_secrets(
             await session.exec(select(MCPServer).where(MCPServer.user_id == user_id, MCPServer.name == name))
         ).first()
         if existing is not None:
-            # A literal arriving in the flow is the user typing a new key, which has to reach
-            # the runtime: this row wins over the flow config, so leaving it alone made every
-            # rotation after the first a silent no-op. Only the secret-bearing maps are
-            # replaced, so the URL, mode and args the user maintains here survive.
-            _apply_rotated_secrets(existing, config)
+            # Rotating here only makes sense when the user is editing a server this flow was
+            # already bound to. The row is keyed on (user, name) and shared by every flow of
+            # that user, so rotating on any write let one import re-point all of them at
+            # whatever credential the file carried, unrecoverably. Only the secret-bearing
+            # maps are replaced, so the URL, mode and args maintained here survive.
+            if rotatable_servers and name in rotatable_servers:
+                _apply_rotated_secrets(existing, config)
             continue
         try:
             async with session.begin_nested():
