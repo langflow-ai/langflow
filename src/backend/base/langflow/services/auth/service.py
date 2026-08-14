@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
+import secrets
+import time
 import warnings
+from collections import OrderedDict
 from collections.abc import Awaitable, Callable, Coroutine, Iterable, Mapping
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
@@ -27,6 +31,8 @@ from langflow.services.auth.context import (
     set_current_auth_context,
 )
 from langflow.services.auth.exceptions import (
+    AuthBackendUnavailableError,
+    AuthenticationError,
     InactiveUserError,
     InvalidCredentialsError,
     MissingCredentialsError,
@@ -57,6 +63,89 @@ from langflow.services.schema import ServiceType
 _MAX_EXTERNAL_AUTHORIZATION_GROUPS = 500
 _MAX_EXTERNAL_AUTHORIZATION_GROUP_LENGTH = 256
 _MAX_EXTERNAL_GROUP_CLAIM_PATH_DEPTH = 16
+_MAX_DIRECTORY_RECONCILE_CACHE_ENTRIES = 10_000
+_MAX_EXTERNAL_AUTH_ATTEMPTS = 3
+_EXTERNAL_AUTH_RETRY_BACKOFF_SECONDS = 0.02
+
+# SQLSTATE classes that mean "the transaction was rolled back, retry it": the
+# statement never took effect, so nothing the caller sent was rejected.
+_RETRYABLE_SQLSTATES = frozenset(
+    {
+        "40001",  # serialization_failure
+        "40P01",  # deadlock_detected
+        "55P03",  # lock_not_available
+    }
+)
+
+
+def _is_retryable_backend_failure(exc: BaseException) -> bool:
+    """Return whether an exception is a transient backend failure, not a verdict.
+
+    A deadlock victim, a serialization failure or a lost connection all mean the
+    request never got an answer. Reporting those as an authentication failure
+    tells the caller to fix a credential that was never actually rejected.
+    """
+    from sqlalchemy.exc import DBAPIError, InterfaceError, OperationalError
+    from sqlalchemy.exc import TimeoutError as SQLTimeoutError
+
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if isinstance(current, (InterfaceError, OperationalError, SQLTimeoutError)):
+            return True
+        if isinstance(current, DBAPIError):
+            if current.connection_invalidated:
+                return True
+            orig = current.orig
+            # psycopg3 exposes ``sqlstate``; psycopg2 exposes ``pgcode``.
+            sqlstate = getattr(orig, "sqlstate", None) or getattr(orig, "pgcode", None)
+            if isinstance(sqlstate, str) and sqlstate in _RETRYABLE_SQLSTATES:
+                return True
+        current = current.__cause__ or current.__context__
+    return False
+
+
+class _DirectoryReconcileCache:
+    """Bounded, short-lived record of directory states already reconciled.
+
+    LE-2109: bearer tokens arrive on every request, and reconciliation opens a
+    transaction, takes the authorization plugin's policy locks and appends an
+    audit row. Repeating all of that for a directory state that has not moved
+    is pure overhead, so one successful *no-op* pass is remembered for a short
+    interval, keyed by the exact state it verified. A claim carrying a
+    different group set produces a different key and always reconciles.
+
+    Entries are per-process and expire on their own, so the worst case is that
+    an out-of-band directory change is observed one interval late.
+    """
+
+    def __init__(self, *, max_entries: int = _MAX_DIRECTORY_RECONCILE_CACHE_ENTRIES) -> None:
+        self._max_entries = max_entries
+        self._deadlines: OrderedDict[tuple[object, ...], float] = OrderedDict()
+
+    def is_fresh(self, key: tuple[object, ...], *, now: float) -> bool:
+        deadline = self._deadlines.get(key)
+        if deadline is None:
+            return False
+        if deadline <= now:
+            del self._deadlines[key]
+            return False
+        return True
+
+    def remember(self, key: tuple[object, ...], *, now: float, ttl_seconds: float) -> None:
+        if ttl_seconds <= 0:
+            return
+        self._purge_expired(now)
+        self._deadlines.pop(key, None)
+        self._deadlines[key] = now + ttl_seconds
+        while len(self._deadlines) > self._max_entries:
+            self._deadlines.popitem(last=False)
+
+    def _purge_expired(self, now: float) -> None:
+        expired = [key for key, deadline in self._deadlines.items() if deadline <= now]
+        for key in expired:
+            del self._deadlines[key]
 
 
 def _has_external_group_overage(claims: Mapping[str, object], claim_path: tuple[str, ...]) -> bool:
@@ -157,6 +246,7 @@ class AuthService(BaseAuthService):
 
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
+        self._directory_reconcile_cache = _DirectoryReconcileCache()
         self.set_ready()
 
     @property
@@ -233,6 +323,12 @@ class AuthService(BaseAuthService):
         if token:
             try:
                 return await self._authenticate_with_token(token, db)
+            except AuthBackendUnavailableError:
+                # A backend outage is not a credential verdict, so there is
+                # nothing for the remaining credentials to disambiguate. Retrying
+                # them would only widen the outage's blast radius, and answering
+                # 401 would blame a token that was never rejected.
+                raise
             except (AuthInvalidTokenError, TokenExpiredError, InactiveUserError) as e:
                 # Native auth failed. If a *distinct* external credential was
                 # extracted, try it before surfacing the native error so a present
@@ -438,9 +534,39 @@ class AuthService(BaseAuthService):
             AuthCredentialContext(method=AUTH_METHOD_EXTERNAL, external_provider=identity.provider)
         )
         set_current_external_access_context(access_context_from_identity(identity, self.settings.auth_settings))
-        user = await self._materialize_external_user(identity, db)
-        await self._reconcile_verified_external_groups(identity=identity, user=user, db=db)
-        return user
+        # The credential has already verified here. Materialization and group
+        # reconciliation own everything staged on this session, so a conflict
+        # that rolled the transaction back can be replayed from scratch: a
+        # deadlock victim, a serialization failure, or two concurrent logins
+        # racing to create the same row. What must never happen is reporting
+        # any of those as a failed authentication — nothing was rejected.
+        for attempt in range(1, _MAX_EXTERNAL_AUTH_ATTEMPTS + 1):
+            try:
+                user = await self._materialize_external_user(identity, db)
+                await self._reconcile_verified_external_groups(identity=identity, user=user, db=db)
+            except AuthenticationError:
+                raise
+            except Exception as exc:
+                retryable = _is_retryable_backend_failure(exc)
+                if not retryable and not isinstance(exc, IntegrityError):
+                    raise
+                await db.rollback()
+                if attempt >= _MAX_EXTERNAL_AUTH_ATTEMPTS:
+                    logger.warning(
+                        "External identity resolved but its backend work kept failing for provider=%s: %s: %s",
+                        identity.provider,
+                        type(exc).__name__,
+                        exc,
+                    )
+                    if not retryable:
+                        raise
+                    raise AuthBackendUnavailableError from exc
+                # Jitter so two requests that conflicted do not line up again.
+                await asyncio.sleep(_EXTERNAL_AUTH_RETRY_BACKOFF_SECONDS * attempt * (1 + secrets.randbelow(100) / 100))
+            else:
+                return user
+        msg = "unreachable: the final attempt either returns or raises"
+        raise AssertionError(msg)
 
     async def _reconcile_verified_external_groups(
         self,
@@ -535,6 +661,29 @@ class AuthService(BaseAuthService):
         elif complete and not groups:
             claim_state = DirectoryMembershipClaimState.EMPTY
 
+        # LE-2109: bearer tokens arrive on every request. Reconciliation writes
+        # rows, takes the plugin's policy locks and appends an audit entry, so
+        # a directory state that was verified unchanged a moment ago is skipped
+        # until the configured interval elapses. Any difference in the group
+        # set, the claim state or the resolved user changes the key and
+        # reconciles immediately.
+        reconcile_interval = float(self.settings.auth_settings.EXTERNAL_AUTH_GROUP_RECONCILE_INTERVAL_SECONDS)
+        cache_key = (
+            identity.provider,
+            identity.subject,
+            str(user.id),
+            claim_name,
+            claim_state.value if claim_state is not None else None,
+            complete,
+            groups,
+        )
+        now = time.monotonic()
+        if reconcile_interval > 0 and self._directory_reconcile_cache.is_fresh(cache_key, now=now):
+            # Skipping reconciliation must not skip the JIT/profile bookkeeping
+            # that materializing the user staged on this session.
+            await db.commit()
+            return
+
         if not complete:
             assert claim_state is not None  # noqa: S101 - internal state-machine invariant
             logger.warning(
@@ -564,6 +713,11 @@ class AuthService(BaseAuthService):
                         "authoritative": False,
                         "complete": False,
                     },
+                )
+                self._directory_reconcile_cache.remember(
+                    cache_key,
+                    now=now,
+                    ttl_seconds=reconcile_interval,
                 )
                 return
 
@@ -624,6 +778,12 @@ class AuthService(BaseAuthService):
                     user_id=user.id,
                     changed=True,
                 )
+            else:
+                self._directory_reconcile_cache.remember(
+                    cache_key,
+                    now=now,
+                    ttl_seconds=reconcile_interval,
+                )
             return
 
         await audit_reconciliation(
@@ -643,6 +803,16 @@ class AuthService(BaseAuthService):
             user_id=user.id,
             changed=changed,
         )
+        if not changed:
+            # Only a reconciliation that verified the stored state already
+            # matched the claim is safe to skip next time. A pass that changed
+            # something gets one confirming pass before the interval starts, so
+            # a post-commit propagation retry is never hidden by the cache.
+            self._directory_reconcile_cache.remember(
+                cache_key,
+                now=now,
+                ttl_seconds=reconcile_interval,
+            )
 
     async def _authenticate_with_api_key(self, api_key: str) -> UserRead | None:
         """Internal method to authenticate with API key (raises generic exceptions).
