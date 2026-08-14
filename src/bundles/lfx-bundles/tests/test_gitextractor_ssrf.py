@@ -10,8 +10,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from tests.base import ComponentTestBaseWithoutClient
-
 pytest.importorskip("lfx_bundles")
 
 
@@ -60,7 +58,7 @@ async def test_gitloader_blocks_dangerous_clone_url():
         assert mock_loader.call_count == 0
 
 
-class TestGitExtractorComponent(ComponentTestBaseWithoutClient):
+class TestGitExtractorComponent:
     @pytest.fixture
     def component_class(self):
         from lfx.components.git.gitextractor import GitExtractorComponent
@@ -70,10 +68,6 @@ class TestGitExtractorComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def default_kwargs(self):
         return {"repository_url": "https://example.com/repository.git"}
-
-    @pytest.fixture
-    def file_names_mapping(self):
-        return []
 
     @pytest.fixture
     def gitextractor_repo_with_symlink(self, component_class, default_kwargs, tmp_path, monkeypatch):

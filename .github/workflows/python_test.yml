@@ -118,6 +118,55 @@ jobs:
             htmlcov/
           retention-days: 30
 
+  bundle-guarded-tests:
+    # The backend unit suite installs with a plain `uv sync`, which since #13869 no longer
+    # brings in the opt-in lfx-bundles metapackage -- so every test carrying
+    # `pytest.importorskip("lfx_bundles")` silently skipped in all of CI (issue #14554).
+    # Most of those moved into src/bundles/lfx-bundles/tests/ and now run under
+    # cross-bundle-test.yml. The stragglers cannot: they inherit tests/base.py's
+    # version-compatibility harness (tests.constants + tests.integration.utils), which is
+    # langflow-specific and cannot follow them into the bundle's lfx-only venv. This job is
+    # their home -- same suite, bundles installed.
+    name: Unit Tests (bundles installed) - Python ${{ matrix.python-version }}
+    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Cost control: oldest + newest supported Python, matching cross-bundle-test.yml.
+        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.14"]') }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ matrix.python-version }}
+          prune-cache: false
+
+      - name: Install the project with the bundles extra
+        run: uv sync --extra bundles
+
+      - name: Run the bundle-guarded unit tests
+        run: |
+          # Discovered, not hard-coded: a newly guarded test is picked up automatically
+          # instead of quietly joining the set of tests nothing runs.
+          mapfile -t guarded < <(grep -rl 'pytest.importorskip("lfx_bundles' src/backend/tests src/lfx/tests || true)
+          if [ ${#guarded[@]} -eq 0 ]; then
+            echo "No lfx_bundles-guarded tests found -- nothing to run."
+            exit 0
+          fi
+          printf 'Running %d bundle-guarded test file(s):\n' "${#guarded[@]}"
+          printf '  %s\n' "${guarded[@]}"
+          uv run pytest "${guarded[@]}" -v --timeout=300
+
+      - name: Fail if the bundles extra did not actually install lfx_bundles
+        # Without this the job is worthless: a resolution change drops lfx_bundles, every test
+        # importorskips again, and the job still reports green.
+        run: uv run python -c "import lfx_bundles; print('lfx_bundles', lfx_bundles.__file__)"
+
   integration-tests:
     name: Integration Tests - Python ${{ matrix.python-version }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
