@@ -110,6 +110,19 @@ class TestConnectionResult:
     details: dict[str, Any] = field(default_factory=dict)
 
 
+class BackendConfigurationError(ValueError):
+    """A permanent, operator-actionable backend misconfiguration.
+
+    Raised for conditions that a retry of the same call can never fix: a missing
+    database extension, an embedding-dimension mismatch between the stored
+    collection and the current model, a missing privilege, etc. Ingestion's
+    retry loop (``KBIngestionHelper.write_documents_to_backend``) re-raises these
+    immediately instead of spending its backoff budget on a call that cannot
+    succeed. Subclasses ``ValueError`` so existing ``except ValueError`` sites
+    (and their tests) keep catching it.
+    """
+
+
 class BaseVectorStoreBackend(ABC):
     """Base class every KB vector-store backend inherits from.
 

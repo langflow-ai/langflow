@@ -4,6 +4,7 @@ import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import * as React from "react";
 import { cn } from "../../utils/utils";
+import { stopCanvasKeyPropagation } from "./stop-canvas-key-propagation";
 import { useClosedTriggerAriaControls } from "./use-closed-trigger-aria-controls";
 
 const Select = SelectPrimitive.Root;
@@ -86,7 +87,7 @@ SelectContent.displayName = SelectPrimitive.Content.displayName;
 const SelectContentWithoutPortal = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({ className, children, position = "popper", ...props }, ref) => (
+>(({ className, children, position = "popper", onKeyDown, ...props }, ref) => (
   <SelectPrimitive.Content
     ref={ref}
     className={cn(
@@ -97,6 +98,7 @@ const SelectContentWithoutPortal = React.forwardRef<
     )}
     position={position}
     {...props}
+    onKeyDown={stopCanvasKeyPropagation(onKeyDown)}
   >
     <SelectPrimitive.Viewport
       className={cn(

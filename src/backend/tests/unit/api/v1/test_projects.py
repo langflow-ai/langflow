@@ -268,6 +268,32 @@ async def test_update_project(client: AsyncClient, logged_in_headers, basic_case
     assert "parent_id" in result, "The dictionary must contain a key called 'parent_id'"
 
 
+async def test_update_project_rename_onto_taken_name_returns_409(client: AsyncClient, logged_in_headers):
+    """PATCH renaming a project onto a name the owner already uses is a 409, not a 500.
+
+    Regression test: the rename dirties the ORM row, the next query autoflushes into the
+    (user_id, name) constraint, and handle_mcp_server_rename swallowed that IntegrityError —
+    so the later flush raised PendingRollbackError and the handler returned 500 with the SQL
+    statement and bound parameters in the response body.
+    """
+    await client.post("api/v1/projects/", json={"name": "patch_target_name"}, headers=logged_in_headers)
+    second = await client.post("api/v1/projects/", json={"name": "patch_source_name"}, headers=logged_in_headers)
+    second_id = second.json()["id"]
+
+    response = await client.patch(
+        f"api/v1/projects/{second_id}",
+        json={"name": "patch_target_name"},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT, response.text
+    detail = response.json()["detail"]
+    assert detail == "Project name must be unique"
+    # The 500 body used to carry the failing statement and its parameters.
+    assert "SQL" not in detail
+    assert "parameters" not in detail
+
+
 async def test_update_project_cannot_rename_system_starter(monkeypatch):
     from langflow.api.v1 import projects as projects_module
     from langflow.services.database.models.folder.model import FolderUpdate
@@ -2365,3 +2391,176 @@ async def test_delete_project_with_deployments_returns_409_project_guard(
     detail = delete_resp.json()["detail"]
     assert "project cannot be deleted because it has deployments" in detail.lower()
     assert "flow cannot be deleted because it has deployed versions" not in detail.lower()
+
+
+# PUT endpoint tests (upsert)
+
+
+async def test_upsert_project_creates_new_project_with_specified_id(client: AsyncClient, logged_in_headers):
+    """PUT creates a new project at the specified ID and returns 201."""
+    specified_id = str(uuid4())
+    project_data = {"name": "upsert_new_project", "description": "Created via upsert"}
+
+    response = await client.put(f"api/v1/projects/{specified_id}", json=project_data, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_201_CREATED, response.text
+    result = response.json()
+    assert result["id"] == specified_id
+    assert result["name"] == "upsert_new_project"
+
+
+async def test_upsert_project_updates_existing_project(client: AsyncClient, logged_in_headers):
+    """PUT updates an existing project in place and returns 200."""
+    create_response = await client.post(
+        "api/v1/projects/",
+        json={"name": "initial_project_name", "description": "initial description"},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    project_id = create_response.json()["id"]
+
+    updated_project = {"name": "updated_project_name", "description": "updated description"}
+    response = await client.put(f"api/v1/projects/{project_id}", json=updated_project, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    result = response.json()
+    assert result["id"] == project_id
+    assert result["name"] == "updated_project_name"
+    assert result["description"] == "updated description"
+
+
+async def test_upsert_project_returns_404_for_other_users_project(client: AsyncClient, logged_in_headers):
+    """PUT returns 404 when targeting another user's project (avoids leaking existence)."""
+    _, other_user_headers = await _create_other_user(client)
+
+    create_response = await client.post(
+        "api/v1/projects/",
+        json={"name": "other_user_project", "description": ""},
+        headers=other_user_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    other_user_project_id = create_response.json()["id"]
+
+    response = await client.put(
+        f"api/v1/projects/{other_user_project_id}",
+        json={"name": "trying_to_steal", "description": ""},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert "not found" in response.json()["detail"].lower()
+
+
+async def test_upsert_project_returns_409_for_name_conflict_on_create(client: AsyncClient, logged_in_headers):
+    """PUT fails loud (409) when the name collides during CREATE (no auto-rename)."""
+    await client.post(
+        "api/v1/projects/",
+        json={"name": "duplicate_project_name", "description": ""},
+        headers=logged_in_headers,
+    )
+
+    specified_id = str(uuid4())
+    response = await client.put(
+        f"api/v1/projects/{specified_id}",
+        json={"name": "duplicate_project_name", "description": ""},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT, response.text
+    # Exact detail, not a substring: a loose check passed while the shared helper's composite-key
+    # mis-parse was surfacing " folder must be unique" to callers.
+    assert response.json()["detail"] == "Project name must be unique"
+
+
+async def test_upsert_project_returns_409_for_name_conflict_on_update(client: AsyncClient, logged_in_headers):
+    """PUT returns 409 when renaming a project onto another project's name during UPDATE."""
+    await client.post("api/v1/projects/", json={"name": "project_one", "description": ""}, headers=logged_in_headers)
+    second_response = await client.post(
+        "api/v1/projects/", json={"name": "project_two", "description": ""}, headers=logged_in_headers
+    )
+    second_project_id = second_response.json()["id"]
+
+    response = await client.put(
+        f"api/v1/projects/{second_project_id}",
+        json={"name": "project_one", "description": ""},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT, response.text
+    assert response.json()["detail"] == "Project name must be unique"
+
+
+async def test_upsert_project_allows_same_name_update_no_conflict(client: AsyncClient, logged_in_headers):
+    """Re-PUT of a project's own name must NOT 409 (idempotent same-UUID re-sync is the core use case)."""
+    create_response = await client.post(
+        "api/v1/projects/",
+        json={"name": "sync_project", "description": "initial description"},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    project_id = create_response.json()["id"]
+
+    # Re-send the project's OWN name with a changed description: same-name update, no collision.
+    response = await client.put(
+        f"api/v1/projects/{project_id}",
+        json={"name": "sync_project", "description": "changed description"},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    result = response.json()
+    assert result["id"] == project_id
+    assert result["name"] == "sync_project"
+    assert result["description"] == "changed description"
+
+
+async def test_upsert_project_create_with_flows_list_moves_flows(client: AsyncClient, logged_in_headers):
+    """PUT create at a specified id runs the flow-move side effect (flows_list) like POST does."""
+    flow_resp = await client.post(
+        "api/v1/flows/",
+        json={"name": "upsert-move-flow", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+    flow_id = flow_resp.json()["id"]
+
+    specified_id = str(uuid4())
+    proj_resp = await client.put(
+        f"api/v1/projects/{specified_id}",
+        json={"name": "upsert-move-project", "flows_list": [flow_id]},
+        headers=logged_in_headers,
+    )
+    assert proj_resp.status_code == status.HTTP_201_CREATED, proj_resp.text
+    assert proj_resp.json()["id"] == specified_id
+
+    flow_after = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert flow_after.status_code == status.HTTP_200_OK
+    assert flow_after.json()["folder_id"] == specified_id
+
+
+async def test_upsert_project_update_rejects_flows_list(client: AsyncClient, logged_in_headers):
+    """PUT to an EXISTING project carrying flows_list fails loud (400) instead of silently dropping it."""
+    flow_resp = await client.post(
+        "api/v1/flows/",
+        json={"name": "reject-move-flow", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+    flow_id = flow_resp.json()["id"]
+
+    create_resp = await client.post(
+        "api/v1/projects/",
+        json={"name": "reject-move-project", "description": ""},
+        headers=logged_in_headers,
+    )
+    assert create_resp.status_code == status.HTTP_201_CREATED
+    project_id = create_resp.json()["id"]
+
+    response = await client.put(
+        f"api/v1/projects/{project_id}",
+        json={"name": "reject-move-project", "flows_list": [flow_id]},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST, response.text
+    assert "flows_list" in response.json()["detail"]

@@ -2,8 +2,18 @@
 
 Application observability answers whether the service is healthy: request rates, latency,
 errors, and the units of work the service performed. It is a separate concern from the LLM
-tracer integrations, which describe what a flow did and carry prompt and completion text, and
-the boundary between them is enforced here, on the export path.
+tracer integrations, which describe what a flow did and carry prompt and completion text.
+
+The boundary between them is drawn per signal, all three deny by default on the way out. Spans go
+through ``ApplicationOnlySpanProcessor`` and metrics through ``ApplicationOnlyMetricExporter``,
+both below, each allowlisting an instrumentation scope. Logs are filtered in ``lfx.log.logger``,
+where a record is assembled, and on a declared opt-in rather than a scope name, because a log
+record's scope is derived from the calling module and so is not something a call site can be
+trusted to have chosen.
+
+Worth knowing when reading the claim we make about this: the filter covers what this process
+exports over OTLP, and nothing else. The console and the rotating log file still contain every
+message in full, so shipping those to the same backend goes around it.
 
 This lives in lfx, not langflow, because lfx is the runtime that actually serves flows in
 production (``lfx serve`` / ``lfx run``). The graph emits the application span, ``lfx serve``
@@ -18,16 +28,25 @@ degrades to a no-op when it is absent, so bare lfx imports this module without c
 from __future__ import annotations
 
 import asyncio
+import builtins
 import contextlib
 import contextvars
+import importlib
 import os
 import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from urllib.parse import urlsplit, urlunsplit
 
-from lfx.log.logger import logger
+from lfx.log.logger import logger, operator_logger, otel_log_bodies_exported
 from lfx.observability_fastapi import patch_otel_fastapi_route_details
+
+_BASE_EXCEPTION_GROUP_TYPE = getattr(builtins, "BaseExceptionGroup", None)
+if _BASE_EXCEPTION_GROUP_TYPE is None:
+    # The backport is present with the supported Python 3.10 dependency set, but
+    # observability must remain importable in a deliberately minimal bare-lfx install.
+    with contextlib.suppress(ImportError):
+        _BASE_EXCEPTION_GROUP_TYPE = importlib.import_module("exceptiongroup").BaseExceptionGroup
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -250,6 +269,47 @@ def otlp_exporter_disabled(signal: str) -> bool:
     return os.getenv(f"OTEL_{signal.upper()}_EXPORTER", "otlp").strip().lower() == "none"
 
 
+# C0 controls plus DEL. None can appear in a URL, and urlsplit strips a subset of them silently.
+_CONTROL_CHARACTERS = frozenset(chr(code) for code in [*range(0x20), 0x7F])
+
+
+def safe_endpoint(endpoint: str) -> str:
+    """An OTLP endpoint with its credentials removed, for printing.
+
+    The endpoint is operator-supplied and routinely carries a token, either as userinfo in the
+    authority or as a query parameter; both are how vendors document their collectors. The
+    startup line that reports the endpoint is now on the one log scope whose bodies are exported
+    verbatim, so without this, closing the log body boundary would open a credential leak through
+    the line announcing it.
+
+    Userinfo and query string go; scheme, host, port and path stay, because a wrong port is the
+    thing this line exists to make visible. Unparseable input degrades to a fixed marker rather
+    than raising, since this only ever runs to build a log message.
+
+    Control characters are rejected outright rather than parsed. ``urlsplit`` silently strips
+    tab, carriage return and newline per WHATWG, which quietly rejoins whatever followed one of
+    them into the path, so an endpoint with an embedded newline comes back as a single line with
+    the injected text appended to the path, and that line is written verbatim to the one log
+    scope that is exported. A URL cannot legally contain them, so their presence means this is
+    not a URL.
+    """
+    if _CONTROL_CHARACTERS.intersection(endpoint):
+        return "<unparseable endpoint>"
+    try:
+        parts = urlsplit(endpoint)
+        _ = parts.port  # Validates the authority; a bad port raises here rather than later.
+    except ValueError:
+        return "<unparseable endpoint>"
+    # An endpoint with no authority is not an endpoint, and the failure mode is the one this
+    # function exists to prevent: ``urlsplit`` treats ``https:sekrit`` as an opaque value and
+    # parks the whole of it in ``path``, so a typo that drops the slashes would have printed the
+    # secret verbatim on the one log scope that is exported. Same for a bare word with no scheme.
+    if not parts.netloc:
+        return "<unparseable endpoint>"
+    netloc = parts.netloc.rsplit("@", maxsplit=1)[-1]
+    return urlunsplit((parts.scheme, netloc, parts.path, "", ""))
+
+
 def otlp_exporter_class(signal: str, protocol: str):
     """The OTLP exporter class for a signal and protocol.
 
@@ -462,7 +522,7 @@ if _OTEL_AVAILABLE:
             return None
 
         # Without this, a protocol/port mismatch is indistinguishable from never having booted.
-        logger.info(f"OTLP metric export enabled (protocol={protocol}, endpoint={endpoint}).")
+        operator_logger().info(f"OTLP metric export enabled (protocol={protocol}, endpoint={safe_endpoint(endpoint)}).")
         return reader
 
     def _install_meter_provider(*, prometheus_enabled: bool) -> tuple[MeterProvider | None, bool]:
@@ -556,7 +616,7 @@ if _OTEL_AVAILABLE:
 
         trace.set_tracer_provider(tracer_provider)
         # Without this, a protocol/port mismatch is indistinguishable from never having booted.
-        logger.info(f"OTLP trace export enabled (protocol={protocol}, endpoint={endpoint}).")
+        operator_logger().info(f"OTLP trace export enabled (protocol={protocol}, endpoint={safe_endpoint(endpoint)}).")
         return tracer_provider
 
     def _configure_logger_provider_from_environment() -> LoggerProvider | None:
@@ -586,8 +646,46 @@ if _OTEL_AVAILABLE:
             return None
 
         _logs.set_logger_provider(provider)
-        logger.info(f"OTLP log export enabled (protocol={protocol}, endpoint={endpoint}).")
+        _announce_log_export(protocol, endpoint)
         return provider
+
+    def _announce_log_export(protocol: str, endpoint: str) -> None:
+        """State the log boundary in the operator's own log stream, at boot.
+
+        Documentation does not reach the person writing the Helm values, and this is the signal
+        with the residual exposure worth knowing about: the body filter covers what Langflow
+        exports over OTLP, and nothing else. Container stdout and the rotating log file still
+        carry every message in full, so a sidecar log shipper reaches the same backend by a route
+        this process never sees. That is a deployment choice, and it is only a deliberate one if
+        the operator has been told.
+
+        WARNING rather than INFO when the logs endpoint was inherited from the shared
+        ``OTEL_EXPORTER_OTLP_ENDPOINT``, because then shipping logs was a side effect of
+        configuring traces rather than a decision. Setting the per-signal variable says the
+        operator meant it, and earns the quieter level.
+        """
+        inherited = not os.getenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT")
+        bodies_exported = otel_log_bodies_exported()
+        boundary = (
+            "Message bodies ARE exported (LANGFLOW_OTEL_LOG_BODIES=all); they carry model "
+            "completions, chat history and provider error text."
+            if bodies_exported
+            else "Message bodies are withheld unless a call site opts in; records keep severity, "
+            "scope, callsite, error.type and trace correlation."
+        )
+        message = (
+            f"OTLP log export enabled (protocol={protocol}, endpoint={safe_endpoint(endpoint)}). "
+            f"{boundary} This filter covers OTLP only: container stdout and the local log file "
+            f"still contain full messages, so shipping those to the same backend bypasses it. "
+            f"Set OTEL_LOGS_EXPORTER=none to export traces and metrics without logs."
+        )
+        if inherited:
+            operator_logger().warning(
+                f"{message} Logs were enabled by the shared OTEL_EXPORTER_OTLP_ENDPOINT; set "
+                f"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT to make that explicit."
+            )
+        else:
+            operator_logger().info(message)
 
 
 @dataclass
@@ -820,13 +918,32 @@ def _root_error_type(exc: BaseException) -> str:
 
     Both MCP retry loops re-raise as ``ValueError(f"Failed to run tool ...")`` with ``from e``,
     so without walking the chain every timeout, dropped connection and closed resource records
-    as ``ValueError`` and the attribute tells an operator nothing. Only the type is read; the
-    message stays unrecorded either way.
+    as ``ValueError`` and the attribute tells an operator nothing. Transport task groups can
+    also wrap one actionable failure in an exception group; a group is unwrapped only when it
+    has one member, because a multi-error group has no single root type. Only the type is read;
+    the message stays unrecorded either way.
     """
     root = exc
     seen = {id(root)}
-    while root.__cause__ is not None and id(root.__cause__) not in seen:
-        root = root.__cause__
+    while True:
+        # asyncio implements wait_for timeouts by cancelling the inner task, so TimeoutError
+        # explicitly chains a CancelledError. The timeout is the actionable failure; the inner
+        # cancellation is an implementation detail. A real outer cancellation still arrives as
+        # CancelledError directly and is reported as such.
+        if isinstance(root, (asyncio.TimeoutError, TimeoutError)):
+            break
+        next_error = root.__cause__
+        if (
+            next_error is None
+            and _BASE_EXCEPTION_GROUP_TYPE is not None
+            and isinstance(root, _BASE_EXCEPTION_GROUP_TYPE)
+        ):
+            grouped = root.exceptions
+            if isinstance(grouped, tuple) and len(grouped) == 1 and isinstance(grouped[0], BaseException):
+                next_error = grouped[0]
+        if next_error is None or id(next_error) in seen:
+            break
+        root = next_error
         seen.add(id(root))
     return type(root).__name__
 
