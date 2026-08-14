@@ -202,6 +202,24 @@ textarea[class^="ag-"]:focus {
   z-index: 1001 !important;
 }
 
+/* WCAG 2.4.7 — nodes and edges are tab stops, but React Flow's own stylesheet
+   clears their outline (.react-flow__node.selectable:focus-visible and
+   .react-flow__edge:focus-visible in @xyflow/react/dist/style.css), which also
+   suppresses the global :focus-visible fallback in index.css. That stylesheet is
+   imported from App.tsx and so lands after this file, hence the leading
+   .react-flow to out-specify it rather than !important.
+
+   Uses --ring, the app-wide focus token, not the --node-ring used for handle
+   halos: --node-ring is a light grey chosen to sit on a colored handle and does
+   not carry enough contrast to serve as a focus indicator on the canvas. */
+.react-flow .react-flow__node.selectable:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 3px;
+  border-radius: 0.75rem;
+}
+/* The matching edge indicator lives in App.css, next to the other
+   .react-flow__edge-path stroke rules it has to override. */
+
 .card-shine-effect {
   --shine-deg: 135deg;
   position: relative;
