@@ -1,4 +1,5 @@
 import type { Page, Request, Response } from "@playwright/test";
+import { TIMEOUTS } from "./constants/timeouts";
 import {
   canTrackFullFlowAutosavePayload,
   isFlowPersistenceBarrierSatisfied,
@@ -26,6 +27,7 @@ type BrowserFlowStoreModule = {
   default: {
     getState: () => {
       autoSaveFlow?: {
+        cancel: () => void;
         flush: () => Promise<void> | void;
       };
     };
@@ -89,6 +91,25 @@ export async function flushPendingFlowAutosave(page: Page): Promise<void> {
   }
 }
 
+async function cancelPendingFlowAutosave(page: Page): Promise<void> {
+  const didCancel = await page.evaluate(async () => {
+    const storeModulePath = "/src/stores/flowStore.ts";
+    const flowStoreModule = (await import(
+      /* @vite-ignore */ storeModulePath
+    )) as BrowserFlowStoreModule;
+    const autoSaveFlow = flowStoreModule.default.getState().autoSaveFlow;
+    if (!autoSaveFlow?.cancel) return false;
+    autoSaveFlow.cancel();
+    return true;
+  });
+
+  if (!didCancel) {
+    throw new Error(
+      "Flow editor autosave queue was unavailable before fixture reload",
+    );
+  }
+}
+
 /**
  * Reload a flow and wait for its model refreshes and their exact full-flow
  * autosave. The listener is armed before navigation so fast CI responses cannot
@@ -102,6 +123,10 @@ export async function reloadAndWaitForFlowPersistence(
 ): Promise<void> {
   const flowPath = `/api/v1/flows/${flowId}`;
   const expectedModelRefreshes = modelRefreshNodeCount(data);
+  // A viewport/layout update can schedule a stale browser snapshot after the
+  // fixture's direct PATCH. Cancel that pending debounce before navigation so
+  // it cannot overwrite the configured graph during reload.
+  await cancelPendingFlowAutosave(page);
   if (!requiresPostRefreshAutosave(data)) {
     await page.reload();
     return;
@@ -205,15 +230,26 @@ export async function reloadAndWaitForFlowPersistence(
     page.on("request", onRequest);
     page.on("response", onResponse);
   });
+  let persistenceTimeout: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    persistenceTimeout = setTimeout(() => {
+      reject(
+        new Error(
+          `Flow ${flowId} did not finish model refresh and autosave persistence within ${TIMEOUTS.standard}ms`,
+        ),
+      );
+    }, TIMEOUTS.standard);
+  });
 
   try {
     await page.reload();
-    await persistence;
+    await Promise.race([persistence, deadline]);
   } catch (error) {
     failPersistence(error);
     await persistence.catch(() => undefined);
     throw error;
   } finally {
+    if (persistenceTimeout !== undefined) clearTimeout(persistenceTimeout);
     dispose();
   }
 }

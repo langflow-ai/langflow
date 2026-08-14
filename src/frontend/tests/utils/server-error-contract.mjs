@@ -129,6 +129,7 @@ export async function readResponseBodyWithTimeout(
 export function createPendingRequestTracker() {
   const pending = new Set();
   const idleWaiters = new Set();
+  let acceptingNewRequests = true;
   let idleTimeoutId;
 
   const notifyIfIdle = () => {
@@ -150,11 +151,18 @@ export function createPendingRequestTracker() {
 
   return {
     start(request) {
+      if (!acceptingNewRequests) {
+        return;
+      }
       if (idleTimeoutId !== undefined) {
         clearTimeout(idleTimeoutId);
         idleTimeoutId = undefined;
       }
       pending.add(request);
+    },
+    stop() {
+      acceptingNewRequests = false;
+      notifyIfIdle();
     },
     finish(request) {
       pending.delete(request);

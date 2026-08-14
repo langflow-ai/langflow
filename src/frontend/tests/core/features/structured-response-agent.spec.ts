@@ -2,8 +2,14 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
+import { routeTestScopedDefaultFlowNames } from "../../utils/flow/route-test-scoped-default-flow-names";
+import { selectStarterTemplate } from "../../utils/flow/select-starter-template";
 import { openParametersPanel } from "../../utils/open-advanced-options";
 import { unselectNodes } from "../../utils/unselect-nodes";
+
+test.beforeEach(async ({ page }, testInfo) => {
+  await routeTestScopedDefaultFlowNames(page, testInfo, "structured-agent");
+});
 
 /**
  * E2E coverage for the Native Structured Output feature on the Agent
@@ -28,12 +34,7 @@ test(
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page
-      .getByRole("heading", { name: TEXTS.templateSimpleAgent })
-      .first()
-      .click();
+    await selectStarterTemplate(page, TEXTS.templateSimpleAgent);
 
     // The Agent declares two outputs (Response, Structured Response). On the
     // canvas they share a single combobox-style dropdown keyed by the
@@ -64,12 +65,7 @@ test(
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page
-      .getByRole("heading", { name: TEXTS.templateSimpleAgent })
-      .first()
-      .click();
+    await selectStarterTemplate(page, TEXTS.templateSimpleAgent);
 
     // Focus the Agent node so the inspection panel reflects its fields.
     const agentNode = page
@@ -99,12 +95,7 @@ test(
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page
-      .getByRole("heading", { name: TEXTS.templateSimpleAgent })
-      .first()
-      .click();
+    await selectStarterTemplate(page, TEXTS.templateSimpleAgent);
 
     await adjustScreenView(page);
 

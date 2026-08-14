@@ -304,6 +304,22 @@ test(
   "should interact with API Keys",
   { tag: ["@release", "@api"] },
   async ({ page }) => {
+    await page.addInitScript(() => {
+      const clipboardWrites: string[] = [];
+      Object.defineProperty(window, "__playwrightClipboardWrites", {
+        configurable: true,
+        value: clipboardWrites,
+      });
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+          writeText: async (value: string) => {
+            clipboardWrites.push(value);
+          },
+        },
+      });
+    });
+
     await awaitBootstrapTest(page, {
       skipModal: true,
       seedFlowIfEmpty: false,
@@ -311,16 +327,9 @@ test(
     await page.getByTestId("user-profile-settings").click();
     await page.getByText(TEXTS.settings).click();
 
-    // Wait for settings page to fully load
-    await page
-      .waitForLoadState("networkidle", { timeout: 10000 })
-      .catch(() => {});
-    await page.waitForTimeout(1000);
-
-    await page.getByText("Langflow API").first().click();
-
-    // Wait for API section to load
-    await page.waitForTimeout(1000);
+    const langflowApiNavItem = page.getByText("Langflow API").first();
+    await expect(langflowApiNavItem).toBeVisible({ timeout: 10000 });
+    await langflowApiNavItem.click();
 
     await expect(
       page.getByText("Langflow API Keys", { exact: true }).nth(1),
@@ -335,16 +344,38 @@ test(
     await page.getByPlaceholder("My API Key").fill(randomName);
     await page.getByText("Generate API Key", { exact: true }).click();
 
-    // Wait for api key creation to complete
-    await page.waitForSelector("text=Please save", { timeout: 30000 });
-    await page.waitForSelector('[data-testid="btn-copy-api-key"]', {
-      timeout: 3000,
-      state: "visible",
+    await expect(page.getByText("Please save")).toBeVisible({
+      timeout: 30000,
     });
+    const generatedKeyInput = page.getByTestId("api-key-input");
+    await expect(generatedKeyInput).toHaveValue(/\S+/, { timeout: 30000 });
 
     await page.getByTestId("btn-copy-api-key").click();
 
-    await page.waitForSelector("text=Api Key Copied!", { timeout: 30000 });
+    await expect(
+      page.getByText("API Key copied!", { exact: true }),
+    ).toBeVisible();
+
+    const clipboardCapture = await page.evaluate(() => {
+      const renderedKey = document.querySelector<HTMLInputElement>(
+        '[data-testid="api-key-input"]',
+      )?.value;
+      const writes = (
+        window as Window & { __playwrightClipboardWrites?: string[] }
+      ).__playwrightClipboardWrites;
+
+      return {
+        copiedRenderedKey:
+          Boolean(renderedKey) &&
+          writes?.length === 1 &&
+          writes[0] === renderedKey,
+        writeCount: writes?.length ?? 0,
+      };
+    });
+    expect(clipboardCapture).toEqual({
+      copiedRenderedKey: true,
+      writeCount: 1,
+    });
 
     await page.getByTestId("secret_key_modal_submit_button").click();
 

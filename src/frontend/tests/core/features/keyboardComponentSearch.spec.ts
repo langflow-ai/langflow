@@ -15,15 +15,20 @@ test(
 
     // Start the shortcut on the canvas so a previously focused noflow control
     // cannot intentionally suppress the global search hotkey.
-    await page
-      .getByRole("application", { name: "Flow canvas" })
-      .click({ position: { x: 100, y: 100 } });
+    await page.locator(".react-flow__pane").click();
+    await expect
+      .poll(() =>
+        page.evaluate(() => !document.activeElement?.closest(".noflow")),
+      )
+      .toBe(true);
+    const sidebarSearchInput = page.getByTestId("sidebar-search-input");
+    await expect(sidebarSearchInput).not.toBeFocused();
 
     // Press "/" to activate search
-    await page.keyboard.press("/");
+    await page.keyboard.press("Slash");
 
     // Verify search is focused and disclosures are closed when search is empty
-    await expect(page.getByTestId("sidebar-search-input")).toBeFocused({
+    await expect(sidebarSearchInput).toBeFocused({
       timeout: 1000,
     });
     await expect(page.getByTestId("input_outputChat Input")).not.toBeVisible();
@@ -55,11 +60,11 @@ test(
     await expect(addedComponent).toBeVisible();
 
     // Clear search input and verify disclosures are closed
-    await page.getByTestId("sidebar-search-input").clear();
+    await sidebarSearchInput.clear();
     await expect(page.getByTestId("input_outputChat Input")).not.toBeVisible();
 
     // Test Enter key selection
-    await page.keyboard.press("/");
+    await page.keyboard.press("Slash");
     await page.keyboard.type("prompt");
 
     // Verify disclosures open with new search
@@ -77,14 +82,14 @@ test(
     expect(nodeCount).toBe(2);
 
     // Verify search is cleared and disclosures are closed after adding component
-    await page.keyboard.press("/");
-    await page.getByTestId("sidebar-search-input").clear();
-    await expect(page.getByTestId("sidebar-search-input")).toHaveValue("");
+    await page.keyboard.press("Slash");
+    await sidebarSearchInput.clear();
+    await expect(sidebarSearchInput).toHaveValue("");
     await expect(page.getByTestId("input_outputChat Input")).not.toBeVisible();
 
-    await expect(page.getByTestId("sidebar-search-input")).toBeFocused();
+    await expect(sidebarSearchInput).toBeFocused();
     await page.keyboard.press("Escape");
-    await expect(page.getByTestId("sidebar-search-input")).not.toBeFocused();
+    await expect(sidebarSearchInput).not.toBeFocused();
     await expect(page.getByTestId("input_outputChat Input")).not.toBeVisible();
   },
 );

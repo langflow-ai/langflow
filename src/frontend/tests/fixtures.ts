@@ -391,11 +391,21 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
     page.on("requestfailed", requestFailedListener);
 
     await use(page as LangflowPage);
-    // Keep request and response observation attached while draining so an API
-    // request started by the completion of another request is not missed.
+    // Freeze only the finite lifecycle set at the test boundary. Existing
+    // requests must still finish, while teardown polling must not continually
+    // extend this drain. Keep request/status observation active through the
+    // tracker's quiet period so a causal follow-up request is still admitted.
+    pendingApiRequestLifecycles.stop();
     await pendingApiRequestLifecycles.drain(API_REQUEST_DRAIN_TIMEOUT_MS);
-    const unresolvedApiRequests = pendingApiResponseStatuses.snapshot();
+
+    // The lifecycle quiet period has admitted any immediate follow-up request
+    // into the status tracker. Close that admission boundary now, then drain
+    // the already-admitted statuses while response listeners remain attached;
+    // this preserves late 5xx inspection without admitting later polling.
+    pendingApiResponseStatuses.stop();
     page.off("request", requestListener);
+    await pendingApiResponseStatuses.drain(API_REQUEST_DRAIN_TIMEOUT_MS);
+    const unresolvedApiRequests = pendingApiResponseStatuses.snapshot();
     page.off("response", responseListener);
     page.off("requestfinished", requestFinishedListener);
     page.off("requestfailed", requestFailedListener);

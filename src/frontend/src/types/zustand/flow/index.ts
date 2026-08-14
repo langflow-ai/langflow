@@ -68,6 +68,7 @@ export type ComponentsToUpdateType = {
 };
 
 export type AutoSaveFlowType = ((flow?: FlowType) => void) & {
+  cancel: () => void;
   flush: () => Promise<void> | void;
 };
 

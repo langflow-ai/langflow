@@ -23,6 +23,11 @@ export async function waitForFlowEditorReady(page: Page): Promise<void> {
   await expect(sidebarSearchInput).toBeVisible({
     timeout: TIMEOUTS.standard,
   });
+  await expect(page.getByTestId(TID.flowSidebar)).toHaveAttribute(
+    "data-search-hotkey-ready",
+    "true",
+    { timeout: TIMEOUTS.standard },
+  );
   const catalogEntry = page.locator('[data-testid$="_draggable"]').first();
   if (!(await catalogEntry.isVisible().catch(() => false))) {
     const firstCategory = page.locator('[data-testid^="disclosure-"]').first();

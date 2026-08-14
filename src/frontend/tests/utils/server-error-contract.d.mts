@@ -17,6 +17,7 @@ export type ServerErrorContract = {
 
 export type PendingRequestTracker<T> = {
   start(request: T): void;
+  stop(): void;
   finish(request: T): void;
   drain(timeoutMs: number): Promise<T[]>;
   snapshot(): T[];

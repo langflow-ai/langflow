@@ -170,6 +170,88 @@ test("includes an immediate follow-up request in the same drain", async () => {
   assert.deepEqual(await drain, []);
 });
 
+test("drains tracked requests without admitting background work after teardown", async () => {
+  const tracker = createPendingRequestTracker();
+  const inFlightRequest = { id: "in-flight" };
+  const backgroundRequest = { id: "background-poll" };
+  tracker.start(inFlightRequest);
+  tracker.stop();
+
+  const drain = tracker.drain(100);
+  tracker.start(backgroundRequest);
+  queueMicrotask(() => tracker.finish(inFlightRequest));
+
+  assert.deepEqual(await drain, []);
+  assert.deepEqual(tracker.snapshot(), []);
+});
+
+test("freezes lifecycles while retaining a delayed follow-up 5xx status", async () => {
+  const lifecycles = createPendingRequestTracker();
+  const statuses = createPendingRequestTracker();
+  const contract = createServerErrorContract();
+  const inFlightRequest = { id: "in-flight" };
+  const backgroundPoll = { id: "background-poll" };
+  const followUpRequest = { id: "follow-up-5xx" };
+  const postStatusBoundaryPoll = { id: "post-status-boundary-poll" };
+  const startRequest = (request) => {
+    statuses.start(request);
+    lifecycles.start(request);
+  };
+
+  startRequest(inFlightRequest);
+  lifecycles.stop();
+  const lifecycleDrain = lifecycles.drain(200);
+  const followUpAdmitted = new Promise((resolve) => {
+    queueMicrotask(() => {
+      statuses.finish(inFlightRequest);
+      lifecycles.finish(inFlightRequest);
+
+      // Polling after the test boundary remains status-observable but cannot
+      // extend the frozen finite-lifecycle drain.
+      startRequest(backgroundPoll);
+      statuses.finish(backgroundPoll);
+
+      setTimeout(() => {
+        startRequest(followUpRequest);
+        resolve();
+      }, 5);
+    });
+  });
+
+  await followUpAdmitted;
+  assert.deepEqual(lifecycles.snapshot(), []);
+  assert.deepEqual(statuses.snapshot(), [followUpRequest]);
+  assert.deepEqual(await lifecycleDrain, []);
+
+  statuses.stop();
+  const statusDrain = statuses.drain(200);
+  startRequest(postStatusBoundaryPoll);
+  queueMicrotask(() => {
+    observeServerError(contract, {
+      method: "GET",
+      path: "/api/v1/flows/follow-up",
+      status: 503,
+      responseBody: "temporarily unavailable",
+    });
+    statuses.finish(followUpRequest);
+  });
+
+  assert.deepEqual(await statusDrain, []);
+  assert.deepEqual(statuses.snapshot(), []);
+  assert.deepEqual(getServerErrorContractFailures(contract), {
+    unexpected: [
+      {
+        method: "GET",
+        path: "/api/v1/flows/follow-up",
+        status: 503,
+        responseBody: "temporarily unavailable",
+      },
+    ],
+    droppedUnexpected: 0,
+    missing: [],
+  });
+});
+
 test("tracks a follow-up request when the drain starts empty", async () => {
   const tracker = createPendingRequestTracker();
   const followUpRequest = { id: "initially-idle-follow-up" };

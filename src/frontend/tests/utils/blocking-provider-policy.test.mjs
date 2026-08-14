@@ -219,3 +219,19 @@ test("loopback provider helpers wait for the shared flow editor readiness contra
 
   assert.deepEqual(violations, []);
 });
+
+test("flow editor readiness includes search hotkey registration", () => {
+  const filename = path.join(
+    testsRoot,
+    "utils",
+    "flow",
+    "wait-for-flow-editor-ready.ts",
+  );
+  const source = fs.readFileSync(filename, "utf8");
+
+  assert.match(source, /getByTestId\(TID\.flowSidebar\)/);
+  assert.match(
+    source,
+    /toHaveAttribute\(\s*"data-search-hotkey-ready",\s*"true"/,
+  );
+});
