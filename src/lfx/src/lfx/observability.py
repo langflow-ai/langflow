@@ -842,17 +842,25 @@ def _redact_db_path_attributes(span) -> None:
     dashboards written against one environment do not port to another.
 
     The file name is kept rather than dropping the value, because an operator running more than
-    one SQLite database still needs to tell them apart. Postgres and MySQL are unaffected: their
-    ``db.name`` is a logical name with no separator, so it is already its own final segment and
-    nothing changes.
+    one SQLite database still needs to tell them apart.
+
+    Only SQLite spans are touched, and the gate is ``db.system`` rather than "does this value
+    look like a path". A separator is legal inside a Postgres or MySQL database name, so a
+    shape-based test would silently rename a logical database in the operator's dashboards.
     """
     attributes = span.attributes
-    db_name = attributes.get("db.name") if attributes else None
+    if not attributes or attributes.get("db.system") != "sqlite":
+        # Gated on the system rather than on "does this look like a path", because a
+        # separator is legal inside a Postgres or MySQL database name. Shortening one of
+        # those would silently rename a logical database in the operator's dashboards.
+        return
+
+    db_name = attributes.get("db.name")
     if not isinstance(db_name, str):
         return
     shortened = _shorten_db_path(db_name)
     if shortened == db_name:
-        # Not a path. Covers every non-file database, so this costs one comparison there.
+        # An in-memory database, or a bare file name that is already its final segment.
         return
 
     updated = dict(attributes)

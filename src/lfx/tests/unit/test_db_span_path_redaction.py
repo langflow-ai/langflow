@@ -90,6 +90,29 @@ def test_other_attributes_are_untouched():
     assert span.attributes["db.statement"] == "SELECT flow.name FROM flow WHERE flow.id = ?"
 
 
+def test_a_postgres_name_containing_a_separator_is_left_alone():
+    """The gate is db.system, not the shape of the value.
+
+    A separator is legal inside a Postgres database name. Shortening one would silently
+    rename a logical database in the operator's dashboards, which is a worse bug than the
+    leak this function exists to fix.
+    """
+    span = export(
+        "SELECT tenant/archive",
+        {"db.system": "postgresql", "db.name": "tenant/archive", "db.operation": "SELECT tenant/archive"},
+    )
+
+    assert span.name == "SELECT tenant/archive"
+    assert span.attributes["db.name"] == "tenant/archive"
+
+
+def test_a_path_without_a_sqlite_system_is_left_alone():
+    """No db.system means no evidence it is a file, so nothing is assumed."""
+    span = export(f"SELECT {DB_PATH}", {"db.name": DB_PATH})
+
+    assert span.attributes["db.name"] == DB_PATH
+
+
 def test_a_logical_database_name_is_left_alone():
     """Postgres and MySQL report a name with no separator, so nothing should change."""
     span = export(
