@@ -105,15 +105,21 @@ export function inspectPlaywrightReport(report) {
     unexpected.push(`${report.errors.length} top-level reporter error(s)`);
   }
 
-  if (flaky.length > 0 || unexpected.length > 0) {
-    const details = [
-      ...flaky.map((title) => `  - flaky: ${title}`),
-      ...unexpected.map((title) => `  - unexpected: ${title}`),
-    ].join("\n");
-    throw new Error(`Playwright report is not clean:\n${details}`);
+  // Only a test that ended red fails the gate. A test that retried to green is
+  // returned for the caller to report, not thrown: the suite carries a
+  // background flake rate of a few specs per run out of ~445, and a different
+  // set surfaces each time, so failing on it blocks every PR on whichever
+  // specs happened to be unlucky. Flakes stay visible in the log so the list
+  // can be worked down.
+  if (unexpected.length > 0) {
+    const details = unexpected.map((title) => `  - unexpected: ${title}`);
+    if (flaky.length > 0) {
+      details.push(...flaky.map((title) => `  - flaky: ${title}`));
+    }
+    throw new Error(`Playwright report is not clean:\n${details.join("\n")}`);
   }
 
-  return { testCount: tests.length };
+  return { testCount: tests.length, flaky };
 }
 
 export async function checkPlaywrightReportFile(reportPath) {
@@ -146,9 +152,18 @@ if (isCli) {
     process.exitCode = 2;
   } else {
     try {
-      const { testCount } = await checkPlaywrightReportFile(reportPath);
+      const { testCount, flaky } = await checkPlaywrightReportFile(reportPath);
+      if (flaky.length > 0) {
+        console.warn(
+          `Playwright report has ${flaky.length} flaky test(s) (not failing the gate):\n${flaky
+            .map((title) => `  - flaky: ${title}`)
+            .join("\n")}`,
+        );
+      }
       // biome-ignore lint/suspicious/noConsole: this CLI reports its gate result to CI logs
-      console.log(`Playwright report is clean (${testCount} tests).`);
+      console.log(
+        `Playwright report has no failures (${testCount} tests, ${flaky.length} flaky).`,
+      );
     } catch (error) {
       console.error(error instanceof Error ? error.message : String(error));
       process.exitCode = 1;

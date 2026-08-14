@@ -4,7 +4,10 @@ on:
   workflow_call:
     outputs:
       test_status:
-        description: "Clean, failed, or skipped Playwright report status."
+        description: >-
+          Clean, failed, or skipped Playwright report status. Clean means no
+          test ended red; a test that retried to green is logged as flaky but
+          does not change this to failed.
         value: ${{ jobs.report-gate.outputs.test_status }}
     secrets:
       OPENAI_API_KEY:

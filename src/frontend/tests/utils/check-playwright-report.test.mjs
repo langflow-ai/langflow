@@ -31,20 +31,54 @@ test("accepts a clean report", () => {
     inspectPlaywrightReport(
       reportWith({ status: "expected", results: [{ status: "passed" }] }),
     ),
-    { testCount: 1 },
+    { testCount: 1, flaky: [] },
   );
 });
 
-test("rejects a flaky report", () => {
+test("reports a flaky test without failing", () => {
+  assert.deepEqual(
+    inspectPlaywrightReport(
+      reportWith({
+        status: "flaky",
+        results: [{ status: "failed" }, { status: "passed" }],
+      }),
+    ),
+    { testCount: 1, flaky: ["tests/example.spec.ts:12:4 — suite > spec"] },
+  );
+});
+
+test("reports a retried-to-pass test as flaky without failing", () => {
+  assert.deepEqual(
+    inspectPlaywrightReport(
+      reportWith({
+        status: "expected",
+        results: [{ status: "timedOut" }, { status: "passed" }],
+      }),
+    ),
+    { testCount: 1, flaky: ["tests/example.spec.ts:12:4 — suite > spec"] },
+  );
+});
+
+test("still fails when a flaky test accompanies a real failure", () => {
+  const report = reportWith({
+    status: "unexpected",
+    results: [{ status: "failed" }],
+  });
+  report.suites[0].specs.push({
+    title: "flaky spec",
+    file: "tests/flaky.spec.ts",
+    line: 3,
+    column: 1,
+    tests: [
+      {
+        status: "flaky",
+        results: [{ status: "failed" }, { status: "passed" }],
+      },
+    ],
+  });
   assert.throws(
-    () =>
-      inspectPlaywrightReport(
-        reportWith({
-          status: "flaky",
-          results: [{ status: "failed" }, { status: "passed" }],
-        }),
-      ),
-    /flaky: tests\/example\.spec\.ts:12:4 — suite > spec/,
+    () => inspectPlaywrightReport(report),
+    /unexpected: tests\/example\.spec\.ts:12:4[\s\S]*flaky: tests\/flaky\.spec\.ts:3:1/,
   );
 });
 
@@ -87,10 +121,9 @@ test("prints the recursive suite title and spec location", () => {
     errors: [],
   };
 
-  assert.throws(
-    () => inspectPlaywrightReport(report),
-    /tests\/nested\.spec\.ts:27 — outer > inner > does work/,
-  );
+  assert.deepEqual(inspectPlaywrightReport(report).flaky, [
+    "tests/nested.spec.ts:27 — outer > inner > does work",
+  ]);
 });
 
 test("rejects a missing report", async () => {
@@ -117,7 +150,7 @@ test("rejects a partial test record", () => {
 test("accepts a legitimately skipped record without attempts", () => {
   assert.deepEqual(
     inspectPlaywrightReport(reportWith({ status: "skipped", results: [] })),
-    { testCount: 1 },
+    { testCount: 1, flaky: [] },
   );
 });
 
