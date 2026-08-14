@@ -436,6 +436,26 @@ class Graph:
         }
         self._add_edge(edge_data)
 
+    @contextlib.contextmanager
+    def _flow_span_scope(self, *, open_flow_span: bool):
+        """Open the flow span for a run, or defer to the caller that already opened one.
+
+        The guard is here because deferring and then not opening one is the failure this flag
+        makes possible, and it is silent: the run simply produces no flow span. Warn rather than
+        raise, because telemetry must never take a run down.
+        """
+        if open_flow_span:
+            with self.flow_execution_span(make_current=False):
+                yield
+            return
+        if otel_trace is not None and not otel_trace.get_current_span().is_recording():
+            logger.warning(
+                "async_start was told the caller owns the flow span, but no span is current, "
+                "so this run will not be recorded. The caller should open "
+                "graph.flow_execution_span() around its consumption of the stream."
+            )
+        yield
+
     async def async_start(
         self,
         inputs: list[dict] | None = None,
@@ -445,9 +465,20 @@ class Graph:
         *,
         reset_output_values: bool = True,
         fallback_to_env_vars: bool = False,
+        open_flow_span: bool = True,
     ):
-        # make_current=False: this is an async generator, see flow_execution_span.
-        with self.flow_execution_span(make_current=False):
+        """Run the graph, yielding each step.
+
+        open_flow_span=False says the caller already opened the flow span and this run belongs
+        to it. Prefer that: a span opened here cannot be made current, because this is an async
+        generator and the context token would be attached and detached across its suspension
+        points, so nothing that runs inside the graph nests under the flow span. A caller that
+        is a coroutine has no such problem, so the span it opens is a real parent.
+
+        Left defaulting to True so a caller that has not been converted still gets a span rather
+        than silently none. Those runs keep the flat shape.
+        """
+        with self._flow_span_scope(open_flow_span=open_flow_span):
             # Preserve start_component_id from constructor if available
             start_component_id = self._start.get_id() if self._start else None
             self.prepare(start_component_id=start_component_id)
@@ -549,25 +580,43 @@ class Graph:
             asyncio.set_event_loop(loop)
 
             try:
-                # Run the async generator
-                async_gen = self.async_start(inputs, max_iterations, event_manager)
+                # Nothing is caught inside this block on purpose. A failure has to leave the
+                # span scope for the span to see it: caught in here, the context manager exits
+                # cleanly and a failed run is exported as status "ok", which is worse than no
+                # telemetry because it looks like a healthy run.
+                #
+                # A thread entry point rather than a generator, so the span can be current for
+                # every anext below. See async_start.
+                try:
+                    with self.flow_execution_span():
+                        # By keyword: async_start takes (inputs, max_iterations, config,
+                        # event_manager), so positionally the event manager lands in config and
+                        # __apply_config subscripts it. config is already applied above, so it
+                        # is deliberately not forwarded again.
+                        async_gen = self.async_start(
+                            inputs=inputs,
+                            max_iterations=max_iterations,
+                            event_manager=event_manager,
+                            open_flow_span=False,
+                        )
 
-                while True:
-                    try:
-                        # Get next result from async generator
-                        result = loop.run_until_complete(anext(async_gen))
-                        result_queue.put(result)
+                        while True:
+                            try:
+                                result = loop.run_until_complete(anext(async_gen))
+                                result_queue.put(result)
 
-                        if isinstance(result, Finish):
-                            break
+                                if isinstance(result, Finish):
+                                    break
 
-                    except StopAsyncIteration:
-                        break
-                    except ValueError as e:
-                        # Put the exception in the queue
-                        result_queue.put(e)
-                        break
-
+                            except StopAsyncIteration:
+                                break
+                except Exception as exc:  # noqa: BLE001 - the worker boundary; see below
+                    # Every Exception, not just ValueError. This runs on a thread, so anything
+                    # not put on the queue dies with the thread while the caller reads the None
+                    # below and sees a clean end of stream. The generator consumer re-raises
+                    # whatever arrives here, so the caller gets the failure it would have got
+                    # from a synchronous call.
+                    result_queue.put(exc)
             finally:
                 # Ensure all pending tasks are completed
                 pending = asyncio.all_tasks(loop)
@@ -578,11 +627,23 @@ class Graph:
 
                 # Close the loop
                 loop.close()
-                # Signal completion
+                # Signal completion, after any exception above so the caller reads that first.
                 result_queue.put(None)
 
-        # Start thread for async execution
-        thread = threading.Thread(target=run_async_code)
+        # Start thread for async execution, carrying the caller's context into it.
+        #
+        # A new thread starts with an empty context, so without this the flow span opened inside
+        # run_async_code finds no current span and starts a brand-new trace: measured, the
+        # caller's span and flow.execute came back with different trace ids and no parent or
+        # link between them, which is exactly the correlation this PR exists to provide. The
+        # same copy carries the protocol and client contextvars, which are set at the entry
+        # point for the same reason.
+        #
+        # The caller's span is still recording while the generator below is consumed, so the
+        # flow span parents to it normally. A caller that abandons the generator early leaves a
+        # dead parent, which flow_execution_span already handles by linking instead.
+        context = contextvars.copy_context()
+        thread = threading.Thread(target=context.run, args=(run_async_code,))
         thread.start()
 
         # Yield results from queue
