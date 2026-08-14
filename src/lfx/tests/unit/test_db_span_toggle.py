@@ -195,3 +195,77 @@ def test_a_real_query_produces_no_database_spans_when_turned_off():
 
     assert DB_INSTRUMENTATION_SCOPE not in result["scopes"], result
     assert "flow.execute" in result["names"], result
+
+
+# Proving the instrumentor never attached, rather than that its spans were filtered out.
+# The distinction is the whole point of the two gates: the export filter alone would still
+# pay the cost of creating every span. This probe deliberately uses a plain
+# SimpleSpanProcessor with no filtering, so a span that exists at all is visible.
+
+UNFILTERED_PROBE = """
+import json
+
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+from lfx.observability import instrument_database
+
+exporter = InMemorySpanExporter()
+provider = TracerProvider()
+# No ApplicationOnlySpanProcessor here on purpose: nothing is filtered, so any span the
+# sqlalchemy instrumentor creates will show up.
+provider.add_span_processor(SimpleSpanProcessor(exporter))
+trace.set_tracer_provider(provider)
+
+import sqlalchemy as sa
+
+engine = sa.create_engine("sqlite://")
+instrument_database(engine)
+
+with engine.connect() as conn:
+    conn.execute(sa.text("SELECT 1"))
+
+provider.force_flush()
+scopes = [s.instrumentation_scope.name if s.instrumentation_scope else "" for s in exporter.get_finished_spans()]
+print("PROBE_RESULT " + json.dumps({"scopes": scopes}))
+"""
+
+
+def run_unfiltered_probe(env_value: str | None) -> dict:
+    import os
+
+    env = {k: v for k, v in os.environ.items() if not k.startswith("OTEL_")}
+    env.pop(ENV_VAR, None)
+    if env_value is not None:
+        env[ENV_VAR] = env_value
+    with tempfile.TemporaryDirectory() as tmp:
+        probe = Path(tmp) / "probe.py"
+        probe.write_text(UNFILTERED_PROBE, encoding="utf-8")
+        completed = subprocess.run(  # noqa: S603
+            [sys.executable, str(probe)], env=env, capture_output=True, text=True, timeout=300, check=False
+        )
+    assert completed.returncode == 0, completed.stderr
+    lines = [ln for ln in completed.stdout.splitlines() if ln.startswith("PROBE_RESULT ")]
+    assert lines, f"probe printed no result.\nstdout:\n{completed.stdout}\nstderr:\n{completed.stderr}"
+    return json.loads(lines[0].removeprefix("PROBE_RESULT "))
+
+
+def test_the_instrumentor_attaches_by_default():
+    """The control: with no filtering in the way, a query does produce database spans."""
+    result = run_unfiltered_probe(None)
+
+    assert DB_INSTRUMENTATION_SCOPE in result["scopes"], result
+
+
+def test_the_instrumentor_is_not_attached_when_turned_off():
+    """Skipped, not filtered.
+
+    Nothing filters in this probe, so a database span here would mean the instrumentor had
+    attached and the export boundary was doing the suppressing. The span-creation cost would
+    still be paid on every query, which is half of what turning this off is meant to save.
+    """
+    result = run_unfiltered_probe("false")
+
+    assert DB_INSTRUMENTATION_SCOPE not in result["scopes"], result

@@ -96,9 +96,14 @@ def doctor_command(
         if signal.signal == "traces" and signal.status != SKIPPED:
             if db_spans_enabled():
                 console.print(
-                    "    [dim]database spans ARE exported, and they are most of the volume "
-                    "(~50 spans per flow run). Set LANGFLOW_OTEL_DB_SPANS=false to send flow "
-                    "and request spans only, at the cost of losing database latency[/dim]"
+                    # "enabled", not "are exported": this reads the setting, and it cannot
+                    # see whether the instrumentor actually attached. _instrument_sqlalchemy
+                    # swallows an ImportError or a double-instrument, so claiming export
+                    # here would be a confident lie on exactly the box where it is wrong.
+                    "    [dim]database span export is enabled. When the instrumentation "
+                    "attaches, these are most of the volume (~50 spans per flow run). Set "
+                    "LANGFLOW_OTEL_DB_SPANS=false to send flow and request spans only, at "
+                    "the cost of losing database latency[/dim]"
                 )
             else:
                 console.print(
