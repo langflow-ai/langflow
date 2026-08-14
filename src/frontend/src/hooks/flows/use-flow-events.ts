@@ -6,6 +6,14 @@ import type { FlowEvent, FlowEventsResponse } from "@/types/flow-events";
 const IDLE_INTERVAL = 5000;
 const ACTIVE_INTERVAL = 1000;
 const MIN_BANNER_DISPLAY_MS = 2000;
+// Seeding the cursor with "now" drops every event posted between the route
+// committing and this hook mounting with the new flow id -- the API only returns
+// events strictly newer than `since`, so a dropped event never comes back. Start
+// the cursor in the past instead and let the server's `settled` flag decide
+// whether what we catch up on is still worth showing.
+const INITIAL_LOOKBACK_SECONDS = 10;
+
+const startingCursor = () => Date.now() / 1000 - INITIAL_LOOKBACK_SECONDS;
 
 type UseFlowEventsReturn = {
   isAgentWorking: boolean;
@@ -19,9 +27,10 @@ export function useFlowEvents(flowId: string | undefined): UseFlowEventsReturn {
   const [events, setEvents] = useState<FlowEvent[]>([]);
   const [lastSettledAt, setLastSettledAt] = useState<number | null>(null);
 
-  const cursorRef = useRef<number>(Date.now() / 1000);
+  const cursorRef = useRef<number>(startingCursor());
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isActiveRef = useRef(false);
+  const isCatchUpPollRef = useRef(true);
   const isPollingRef = useRef(false);
   const mountedRef = useRef(true);
   const activeSinceRef = useRef<number>(0);
@@ -57,6 +66,9 @@ export function useFlowEvents(flowId: string | undefined): UseFlowEventsReturn {
   const poll = useCallback(async () => {
     if (!flowId || isPollingRef.current) return;
 
+    const isCatchUpPoll = isCatchUpPollRef.current;
+    isCatchUpPollRef.current = false;
+
     isPollingRef.current = true;
     try {
       const response = await api.get<FlowEventsResponse>(
@@ -72,16 +84,24 @@ export function useFlowEvents(flowId: string | undefined): UseFlowEventsReturn {
         const maxTs = Math.max(...newEvents.map((e) => e.timestamp));
         cursorRef.current = maxTs;
 
-        setEvents((prev) => [...prev, ...newEvents]);
+        // The catch-up poll reaches back before mount, so it can surface work
+        // that is already over. Advance the cursor past it but stay quiet --
+        // flashing a banner (and re-fetching the flow on the settle that
+        // follows) for finished work is worse than showing nothing.
+        const isFinishedWork = isCatchUpPoll && settled && !isActiveRef.current;
 
-        if (!isActiveRef.current) {
-          isActiveRef.current = true;
-          activeSinceRef.current = Date.now();
-          setIsAgentWorking(true);
-          clearInterval_();
-          intervalRef.current = setInterval(() => {
-            pollRef.current?.();
-          }, ACTIVE_INTERVAL);
+        if (!isFinishedWork) {
+          setEvents((prev) => [...prev, ...newEvents]);
+
+          if (!isActiveRef.current) {
+            isActiveRef.current = true;
+            activeSinceRef.current = Date.now();
+            setIsAgentWorking(true);
+            clearInterval_();
+            intervalRef.current = setInterval(() => {
+              pollRef.current?.();
+            }, ACTIVE_INTERVAL);
+          }
         }
       }
 
@@ -129,11 +149,12 @@ export function useFlowEvents(flowId: string | undefined): UseFlowEventsReturn {
     if (!flowId) return;
 
     mountedRef.current = true;
-    cursorRef.current = Date.now() / 1000;
+    cursorRef.current = startingCursor();
     setEvents([]);
     setIsAgentWorking(false);
     setLastSettledAt(null);
     isActiveRef.current = false;
+    isCatchUpPollRef.current = true;
     isPollingRef.current = false;
     activeSinceRef.current = 0;
 
