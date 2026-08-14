@@ -684,7 +684,11 @@ async def execute_sync_workflow(
 
     # Execute graph - component errors are caught and returned in response body
     job_service = get_job_service()
-    await job_service.create_job(job_id=job_id, flow_id=flow_id_str, user_id=current_user.id)
+    # user_id stays the executing service account (flow fetch / resume rely on it); the end
+    # user is recorded in job_metadata so status/stop isolate to it. See F8 / create_job.
+    await job_service.create_job(
+        job_id=job_id, flow_id=flow_id_str, user_id=current_user.id, end_user_id=parsed.end_user_id
+    )
     _sync_run_paused = False
     _sync_run_success = False
     _sync_run_error: str = ""

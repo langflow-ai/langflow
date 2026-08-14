@@ -480,6 +480,9 @@ async def simple_run_flow(
                 flow_id=flow.id,
                 user_id=user_id,
                 job_type=JobType.WORKFLOW,
+                # Record the serving end user (set on the graph by resolve_serving_scope) so
+                # status/stop isolate to it; user_id stays the executing SID. See F8.
+                end_user_id=graph.end_user_id,
             )
             # The funnel default. Binding is outermost-wins, so a caller that already named its
             # surface (webhook, mcp, openai_responses) keeps it and only the bare v1 route lands

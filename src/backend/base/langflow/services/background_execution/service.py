@@ -208,6 +208,10 @@ class BackgroundExecutionService(Service):
                 flow_id=flow_id,
                 user_id=user.id,
                 dedupe_key=dedupe_key,
+                # Serving end user (if any) rides the persisted request; record it so
+                # status/stop/resume isolate on it. user_id stays the SID so the worker's
+                # _user_stub(job.user_id) still fetches the SID-owned flow on re-enqueue.
+                end_user_id=request.get("end_user_id"),
             )
         except DuplicateJobError:
             # Idempotent retry: a non-terminal job already exists for this key,

@@ -34,6 +34,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from fastapi.responses import EventSourceResponse, StreamingResponse
 from lfx.log.logger import logger
+from lfx.memory.flow_context import derive_message_owner_uuid
 from lfx.schema.workflow import (
     WORKFLOW_STATUS_RESPONSES,
     JobId,
@@ -58,6 +59,7 @@ from lfx.workflow.converters import (
     parse_workflow_run_request,
     workflow_response_from_output_events,
 )
+from lfx.workflow.end_user_identity import resolve_serving_end_user_id
 from pydantic_core import ValidationError as PydanticValidationError
 from sqlalchemy.exc import OperationalError
 
@@ -87,7 +89,7 @@ from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.services.auth.utils import get_current_user_for_workflow
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.database.models.flow.model import FlowRead
-from langflow.services.database.models.jobs.model import JobType
+from langflow.services.database.models.jobs.model import Job, JobType
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import (
     get_background_execution_service,
@@ -437,6 +439,39 @@ def _unknown_protocol_http_exception(exc: UnknownStreamProtocolError) -> HTTPExc
     )
 
 
+def _caller_owns_job_end_user(job: Job, http_request: Request, current_user: UserRead) -> bool:
+    """Whether the caller may act on ``job`` under serving-plane end-user isolation.
+
+    On the serving plane every end user shares the one service account (SID), so SID-level
+    ownership (already applied by ``get_job_by_job_id(user_id=SID)``) cannot tell two end
+    users apart. This layers the end-user check on top: the request's trusted end-user id
+    (the gateway header) must resolve to the same owner the job was created under
+    (``job_metadata['end_user_id']``). A mismatch means it is another end user's job.
+
+    Because ``job.user_id`` stays the SID (so re-enqueue/resume can still fetch the SID-owned
+    flow — F8), the end-user identity lives only in ``job_metadata``; this is the sole place
+    it gates access. Decisions:
+
+    * Superuser always passes (editor/admin bypass, unchanged).
+    * Feature off / anonymous request (``resolve_serving_end_user_id`` -> None): there is no
+      end-user scope to enforce, so a job created without an end user passes and one created
+      under an end user does not (an anonymous caller must not reach an identified run).
+    * Identified request: the derived request owner must equal the derived job owner. Both
+      sides derive through :func:`derive_message_owner_uuid` so the raw-string vs UUID-form
+      gateway id compares canonically, exactly as message ownership keys it.
+    """
+    if current_user.is_superuser:
+        return True
+    request_end_user = resolve_serving_end_user_id(http_request=http_request)
+    job_end_user = (job.job_metadata or {}).get("end_user_id")
+    if request_end_user is None:
+        # No end-user scope on this request: only reachable when the job also has none.
+        return job_end_user is None
+    if job_end_user is None:
+        return False
+    return derive_message_owner_uuid(request_end_user) == derive_message_owner_uuid(job_end_user)
+
+
 def _parse_persisted_workflow_request(request: dict) -> ParsedWorkflowRun:
     """Re-parse a persisted background/resume request into a ``ParsedWorkflowRun``.
 
@@ -610,6 +645,7 @@ async def execute_workflow_background(
     description="Get status of workflow job by job ID",
 )
 async def get_workflow_status(
+    http_request: Request,
     current_user: Annotated[UserRead, Depends(get_current_user_for_workflow)],
     job_id: Annotated[JobId | None, Query(description="Job ID to query")] = None,
     session: Annotated[object, Depends(injectable_session_scope_readonly)] = None,
@@ -617,6 +653,7 @@ async def get_workflow_status(
     """Get workflow job status and results.
 
     Args:
+        http_request: The FastAPI request, for serving-plane end-user isolation.
         current_user: Authenticated user (session cookie or API key)
         job_id: Optional job ID to query specific job
         session: Database session for querying vertex builds
@@ -675,6 +712,19 @@ async def get_workflow_status(
                 "error": "Workflow job not found",
                 "code": "JOB_NOT_FOUND",
                 "message": f"Job {job_id} is not a workflow job (type: {job.type})",
+                "job_id": str(job_id),
+            },
+        )
+
+    # Serving-plane end-user isolation: a different end user (sharing the SID) must not read
+    # this run. 404 (not 403) so the job's existence is not leaked. See F8.
+    if not _caller_owns_job_end_user(job, http_request, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "Workflow job not found",
+                "code": "JOB_NOT_FOUND",
+                "message": f"Workflow job {job_id} not found",
                 "job_id": str(job_id),
             },
         )
@@ -828,6 +878,7 @@ async def get_workflow_status(
 )
 async def stop_workflow(
     request: WorkflowStopRequest,
+    http_request: Request,
     current_user: Annotated[UserRead, Depends(get_current_user_for_workflow)],
 ) -> WorkflowStopResponse:
     """Stop a running workflow execution by job_id.
@@ -836,6 +887,7 @@ async def stop_workflow(
 
     Args:
         request: Stop request containing job_id and optional force flag
+        http_request: The FastAPI request, for serving-plane end-user isolation.
         current_user: Authenticated user (session cookie or API key)
 
     Returns:
@@ -884,6 +936,19 @@ async def stop_workflow(
                 "error": "Job not found",
                 "code": "JOB_NOT_FOUND",
                 "message": f"Job {job_id} is not a workflow job (type: {job.type})",
+                "job_id": str(job_id),
+            },
+        )
+
+    # Serving-plane end-user isolation: a different end user (sharing the SID) must not stop
+    # this run. 404 (not 403) so the job's existence is not leaked. See F8.
+    if not _caller_owns_job_end_user(job, http_request, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "Job not found",
+                "code": "JOB_NOT_FOUND",
+                "message": f"Job {job_id} not found",
                 "job_id": str(job_id),
             },
         )
@@ -963,6 +1028,7 @@ async def list_pending_workflows(
 async def resume_workflow(
     job_id: str,
     request: WorkflowResumeRequest,
+    http_request: Request,
     current_user: Annotated[UserRead, Depends(get_current_user_for_workflow)],
 ) -> WorkflowResumeResponse:
     """Resume a SUSPENDED workflow run with a human decision.
@@ -988,6 +1054,10 @@ async def resume_workflow(
     job = await get_job_service().get_job_by_job_id(parsed_job_id)
     is_owner = job is not None and job.user_id is not None and job.user_id == current_user.id
     if job is None or job.type != JobType.WORKFLOW or not (is_owner or current_user.is_superuser):
+        raise _not_found()
+    # Serving-plane end-user isolation: a different end user (sharing the SID) must not resume
+    # another's suspended run. Layered on the SID owner/superuser check above. See F8.
+    if not _caller_owns_job_end_user(job, http_request, current_user):
         raise _not_found()
 
     from langflow.api.v2.hitl import ensure_resume_execute_permission, is_decision_allowed, mark_card_answered

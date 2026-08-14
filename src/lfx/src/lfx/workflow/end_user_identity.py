@@ -183,6 +183,39 @@ def resolve_end_user_identity(
     return EndUserIdentity(id=value)
 
 
+def resolve_serving_end_user_id(*, http_request: Any) -> str | None:
+    """The raw trusted end-user id for a serving request, or ``None`` when off / anonymous.
+
+    Mirrors :func:`resolve_serving_scope`'s identity resolution but returns just the raw
+    end-user id (no session merge) — for callers that need the owner key to stamp / check a
+    job (its ``job_metadata['end_user_id']``), not a scoped session. Returns ``None`` when the
+    feature is off (no header configured), the header is untrusted, or the request is
+    anonymous, so callers fall back to the executing (service-account) user and preserve
+    pre-feature behavior.
+
+    This is a *pure identifier* resolver, never a gate: it forces ``require_identity`` off so
+    a status/stop/resume call can never raise here (the required-identity gate is a run-entry
+    concern, already enforced by :func:`resolve_serving_scope` at the run door). ``http_request``
+    only needs a case-insensitive ``headers.get(name)`` (duck-typed so lfx need not import the
+    web framework).
+    """
+    from lfx.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    settings = settings_service.settings if settings_service is not None else None
+    header_name = settings.serving_end_user_header if settings is not None else None
+    if not header_name:
+        return None
+
+    identity = resolve_end_user_identity(
+        header_name=header_name,
+        trust_proxy_headers=bool(settings.serving_trust_proxy_headers),
+        require_identity=False,
+        get_header=http_request.headers.get,
+    )
+    return identity.id
+
+
 def scope_session_for_identity(
     identity: EndUserIdentity,
     *,

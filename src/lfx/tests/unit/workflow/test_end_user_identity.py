@@ -14,6 +14,7 @@ from lfx.workflow.end_user_identity import (
     EndUserIdentity,
     EndUserIdentityRequiredError,
     resolve_end_user_identity,
+    resolve_serving_end_user_id,
     resolve_serving_scope,
     scope_session_for_identity,
 )
@@ -323,6 +324,44 @@ def test_serving_scope_required_but_absent_raises(monkeypatch):
             requested_session_id="chat-1",
             default_session_id=FLOW_ID,
         )
+
+
+# --- resolve_serving_end_user_id: the job-owner key resolver (P3) -------------------
+# The jobs lifecycle needs just the raw end-user id (no session merge) to stamp / check
+# job ownership. Same settings-driven identity resolution, returning the raw id or None.
+
+
+def test_serving_end_user_id_is_none_when_feature_off(monkeypatch):
+    _stub_settings(monkeypatch, serving_end_user_header=None)
+    assert resolve_serving_end_user_id(http_request=_FakeRequest(**{HEADER: "alice"})) is None
+
+
+def test_serving_end_user_id_returns_raw_id_when_identified(monkeypatch):
+    _stub_settings(monkeypatch, serving_end_user_header=HEADER, serving_trust_proxy_headers=True)
+    assert resolve_serving_end_user_id(http_request=_FakeRequest(**{HEADER: "alice"})) == "alice"
+
+
+def test_serving_end_user_id_is_none_when_anonymous(monkeypatch):
+    _stub_settings(monkeypatch, serving_end_user_header=HEADER, serving_trust_proxy_headers=True)
+    assert resolve_serving_end_user_id(http_request=_FakeRequest()) is None  # no header
+
+
+def test_serving_end_user_id_ignores_spoofed_header_when_trust_off(monkeypatch):
+    _stub_settings(monkeypatch, serving_end_user_header=HEADER, serving_trust_proxy_headers=False)
+    assert resolve_serving_end_user_id(http_request=_FakeRequest(**{HEADER: "victim"})) is None
+
+
+def test_serving_end_user_id_never_raises_even_when_required(monkeypatch):
+    # Unlike resolve_serving_scope, this is a pure identifier resolver, never a gate: a
+    # required-but-absent identity must not raise here (the run door already enforced it),
+    # so status/stop/resume can call it on an anonymous request without a 500.
+    _stub_settings(
+        monkeypatch,
+        serving_end_user_header=HEADER,
+        serving_trust_proxy_headers=True,
+        serving_end_user_required=True,
+    )
+    assert resolve_serving_end_user_id(http_request=_FakeRequest()) is None
 
 
 # --- ScopedSession.end_user_id: the raw id every serving path stamps on the graph ----
