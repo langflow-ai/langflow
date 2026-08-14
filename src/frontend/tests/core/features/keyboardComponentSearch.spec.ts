@@ -9,8 +9,22 @@ test(
     // Navigate to homepage and handle initial modal
     await awaitBootstrapTest(page);
 
-    // Start with blank flow
+    // Start with blank flow. The click creates the flow and navigates, but the
+    // canvas we are leaving has a sidebar search input too -- so waiting on that
+    // selector alone can resolve against the outgoing page, which is then torn
+    // down mid-test and takes the focus set below with it. Wait for the new
+    // flow's own load to land before touching the keyboard.
+    const newFlowLoaded = page.waitForResponse(
+      (response) =>
+        response.request().method() === "GET" &&
+        /\/api\/v1\/flows\/[0-9a-f-]{36}$/.test(response.url()),
+    );
     await page.getByTestId("blank-flow").click();
+    await newFlowLoaded;
+    // Readiness is asserted after the navigation barrier above, so it cannot be
+    // satisfied by the outgoing canvas. This subsumes the previous fixed 500ms
+    // wait: it holds until the sidebar search input is visible *and* the sidebar
+    // reports data-search-hotkey-ready, which is the state the sleep guessed at.
     await waitForFlowEditorReady(page);
 
     // Start the shortcut on the canvas so a previously focused noflow control
