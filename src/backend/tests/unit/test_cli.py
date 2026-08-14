@@ -316,6 +316,31 @@ def test_api_key_banner_shows_clipboard_hint_on_success(capsys):
     assert "clipboard" in output.lower()
 
 
+def test_api_key_banner_unicode_fallback_does_not_log_key(capsys):
+    """Terminal encoding fallback must display the key without logging or false clipboard claims."""
+    api_key_obj = SimpleNamespace(api_key="lf-unicode-fallback-secret")
+
+    def raise_unicode_error(*_args, **_kwargs):
+        encoding = "ascii"
+        input_text = "🔑"
+        reason = "encoding"
+        raise UnicodeEncodeError(encoding, input_text, 0, 1, reason)
+
+    console_instance = SimpleNamespace(print=raise_unicode_error)
+
+    with (
+        patch("pyperclip.copy", side_effect=Exception("clipboard unavailable")),
+        patch("langflow.__main__.Console", return_value=console_instance),
+        patch("langflow.__main__.logger") as mock_logger,
+    ):
+        api_key_banner(api_key_obj)
+
+    output = capsys.readouterr().out
+    assert "lf-unicode-fallback-secret" in output
+    assert "clipboard" not in output.lower()
+    assert all(api_key_obj.api_key not in str(call) for call in mock_logger.mock_calls)
+
+
 def test_build_direct_uvicorn_kwargs_pins_full_shape():
     """Drift guard: the exact key set passed to uvicorn.run must stay stable."""
     result = build_direct_uvicorn_kwargs(**_kwargs())

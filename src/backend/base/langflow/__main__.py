@@ -1180,10 +1180,12 @@ register_cli_command_plugins(app)
 def api_key_banner(unmasked_api_key) -> None:
     is_mac = platform.system() == "Darwin"
     clipboard_msg = ""
+    clipboard_copied = False
     try:
         import pyperclip
 
         pyperclip.copy(unmasked_api_key.api_key)
+        clipboard_copied = True
         clipboard_msg = (
             f"\nThe API key has been copied to your clipboard. [bold]{['Ctrl', 'Cmd'][is_mac]} + V[/bold] to paste it."
         )
@@ -1206,13 +1208,16 @@ def api_key_banner(unmasked_api_key) -> None:
     try:
         banner_console.print(panel)
     except UnicodeEncodeError:
-        # Fallback for Windows encoding issues
-        logger.info("API Key Created Successfully:")
-        logger.info(unmasked_api_key.api_key)
-        logger.info("This is the only time the API key will be displayed.")
-        logger.info("Make sure to store it in a secure location.")
-        ctrl_cmd = "Ctrl" if not is_mac else "Cmd"
-        logger.info(f"The API key has been copied to your clipboard. {ctrl_cmd} + V to paste it.")
+        # Fallback for terminal encoding issues.  The key is intentionally
+        # written to the interactive terminal only; logging it would persist
+        # this one-time secret in application logs.
+        typer.echo("API Key Created Successfully:")
+        typer.echo(unmasked_api_key.api_key)
+        typer.echo("This is the only time the API key will be displayed.")
+        typer.echo("Make sure to store it in a secure location.")
+        if clipboard_copied:
+            ctrl_cmd = "Ctrl" if not is_mac else "Cmd"
+            typer.echo(f"The API key has been copied to your clipboard. {ctrl_cmd} + V to paste it.")
 
 
 def main() -> None:
