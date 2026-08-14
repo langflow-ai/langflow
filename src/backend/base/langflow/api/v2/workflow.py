@@ -1151,12 +1151,8 @@ async def reattach_workflow_events(
     service = get_background_execution_service()
     last_event_id = http_request.headers.get("Last-Event-ID")
 
-    try:
-        # Pre-validate ownership/existence so a deny surfaces as a 404 before
-        # the SSE stream opens. ``events`` re-validates as defense-in-depth.
-        await service.status(UUID(job_id), current_user)
-    except (PermissionError, ValueError) as exc:
-        raise HTTPException(
+    def _not_found() -> HTTPException:
+        return HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={
                 "error": "Background run not found",
@@ -1164,7 +1160,20 @@ async def reattach_workflow_events(
                 "message": f"No background run for job {job_id}.",
                 "job_id": job_id,
             },
-        ) from exc
+        )
+
+    try:
+        # Pre-validate ownership/existence so a deny surfaces as a 404 before
+        # the SSE stream opens. ``events`` re-validates as defense-in-depth.
+        await service.status(UUID(job_id), current_user)
+        job = await get_job_service().get_job_by_job_id(UUID(job_id), user_id=current_user.id)
+    except (PermissionError, ValueError) as exc:
+        raise _not_found() from exc
+
+    # Serving-plane end-user isolation: a different end user (sharing the SID) must not reattach
+    # to another's live event stream — the same rule the status/stop/resume paths enforce. See F8.
+    if job is None or not _caller_owns_job_end_user(job, http_request, current_user):
+        raise _not_found()
 
     return EventSourceResponse(
         service.events(UUID(job_id), last_event_id=last_event_id, user=current_user),

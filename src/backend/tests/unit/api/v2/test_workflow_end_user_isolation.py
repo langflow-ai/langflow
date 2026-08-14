@@ -247,3 +247,21 @@ async def test_pending_list_feature_off_returns_all_bc(client, created_api_key, 
     resp = await _pending(client, bg_flow, created_api_key.api_key)
     assert resp.status_code == 200, resp.text
     assert {a, b} <= {row["job_id"] for row in resp.json()}
+
+
+async def _events(client, job_id, api_key, *, end_user=None):
+    headers = {"x-api-key": api_key}
+    if end_user is not None:
+        headers[HEADER] = end_user
+    return await client.get(f"api/v2/workflows/{job_id}/events", headers=headers)
+
+
+async def test_reattach_events_is_scoped_to_the_end_user(client, created_api_key, bg_flow, monkeypatch):
+    # Reattaching to a live event stream is the same class as status/stop/resume (needs a job id):
+    # a different end user sharing the SID must be denied before the SSE stream opens.
+    _serving_on(monkeypatch)
+    sid = created_api_key.user_id
+    alice_job = await _make_suspended_hitl_job(bg_flow, sid, "alice")
+
+    assert (await _events(client, alice_job, created_api_key.api_key, end_user="bob")).status_code == 404
+    assert (await _events(client, alice_job, created_api_key.api_key)).status_code == 404
