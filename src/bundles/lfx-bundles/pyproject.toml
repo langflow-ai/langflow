@@ -1,6 +1,6 @@
 [project]
 name = "lfx-bundles"
-version = "1.1.10"
+version = "1.1.11"
 description = "Langflow's long-tail provider bundles as a single manifest-less metapackage (the langchain-community model)."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -264,4 +264,15 @@ include = [
     "src/lfx_bundles",
     "README.md",
     "pyproject.toml",
+]
+
+[tool.pytest.ini_options]
+# The bundle's own tests (``tests/``) are run by .github/workflows/cross-bundle-test.yml in a
+# venv holding lfx + this bundle. They were previously in src/backend/tests/, where they skipped
+# in every default install because ``lfx-bundles`` is opt-in -- see issue #14554.
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "unit: fast, isolated component test",
+    "api_key_required: needs a real provider credential; not run in CI",  # pragma: allowlist secret
 ]
