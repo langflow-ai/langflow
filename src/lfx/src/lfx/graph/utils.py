@@ -267,6 +267,14 @@ async def log_transaction(
         if source is None:
             return
 
+        # Serving-plane ephemeral runs must not persist execution telemetry either:
+        # transaction rows store component inputs/outputs verbatim, which would
+        # retain the very conversation content the anonymous no-persist contract
+        # excludes. Read the flag off the vertex's graph (deterministic here, where
+        # the per-component ContextVar binding is already out of scope).
+        if not getattr(getattr(source, "graph", None), "persist_messages", True):
+            return
+
         # Get the transaction service via dependency injection
         from lfx.services.deps import get_transaction_service
 

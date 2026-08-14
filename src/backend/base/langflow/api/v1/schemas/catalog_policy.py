@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Annotated
+from uuid import UUID
 
 from pydantic import BaseModel, Field, StringConstraints, field_validator
 
@@ -49,6 +50,34 @@ class CatalogPolicyRead(BaseModel):
     managed_externally: bool
 
 
+class CatalogPolicyUsageRead(BaseModel):
+    """Per-component flow-usage counts for catalog governance."""
+
+    components: dict[str, int] = Field(
+        description=(
+            "Number of flows using each component, keyed by the canonical "
+            "registry identity (or the exact stored key for components not in "
+            "the current registry). A flow is counted once per component."
+        ),
+    )
+    flows_scanned: int = Field(description="Total number of flows examined.")
+
+
+class CatalogPolicyUsageFlowRef(BaseModel):
+    """A flow that uses the queried component."""
+
+    id: UUID
+    name: str
+
+
+class CatalogPolicyUsageFlowsRead(BaseModel):
+    """Flows affected by blocking one component key."""
+
+    component: str
+    total: int = Field(description="Total number of matching flows, before the limit is applied.")
+    flows: list[CatalogPolicyUsageFlowRef]
+
+
 __all__ = [
     "CATALOG_POLICY_KEYS_MAX_LENGTH",
     "CATALOG_POLICY_KEY_MAX_LENGTH",
@@ -56,5 +85,8 @@ __all__ = [
     "CatalogPolicyKey",
     "CatalogPolicyKeyList",
     "CatalogPolicyRead",
+    "CatalogPolicyUsageFlowRef",
+    "CatalogPolicyUsageFlowsRead",
+    "CatalogPolicyUsageRead",
     "normalize_catalog_policy_keys",
 ]

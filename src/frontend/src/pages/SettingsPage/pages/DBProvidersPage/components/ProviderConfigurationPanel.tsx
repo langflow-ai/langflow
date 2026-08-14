@@ -7,6 +7,7 @@ import {
   type DBProviderConfigField,
   type DBProviderOption,
   getGlobalVariableValue,
+  hasGlobalVariableValue,
 } from "@/constants/dbProviderConstants";
 import type { GlobalVariable } from "@/types/global_variables";
 import { BooleanFieldRow } from "./BooleanFieldRow";
@@ -163,6 +164,9 @@ export function ProviderConfigurationPanel({
               size="sm"
               loading={isPending}
               disabled={isPending || isActive || !postgresStatus?.ok}
+              // Preserve the "pgVector" brand casing; the Button auto-title-cases
+              // string children ("pgVector" → "Pgvector") otherwise.
+              ignoreTitleCase
             >
               {isActive
                 ? t("settings.dbProviders.postgresSelected")
@@ -199,17 +203,16 @@ export function ProviderConfigurationPanel({
                 )}
                 isSecretConfigured={
                   field.isSecret &&
-                  globalVariables.some((v) => v.name === field.variableKey)
+                  hasGlobalVariableValue(globalVariables, field.variableKey)
                 }
                 disabled={isPending}
                 onChange={(value) => onVariableChange(field.variableKey, value)}
                 onFocus={() => {
-                  // Use variable existence (not its returned value) as the
-                  // gate — credential-type variables may have their value
-                  // masked in the API response.
+                  // Credential values are masked, so use the API's explicit
+                  // value-presence signal to decide whether this is an edit.
                   const isConfigured =
                     field.isSecret &&
-                    globalVariables.some((v) => v.name === field.variableKey);
+                    hasGlobalVariableValue(globalVariables, field.variableKey);
                   if (isConfigured && !(field.variableKey in variableValues)) {
                     onSecretEditingChange(field.variableKey, true);
                     onVariableChange(field.variableKey, "");

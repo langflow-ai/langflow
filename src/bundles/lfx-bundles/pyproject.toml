@@ -1,6 +1,6 @@
 [project]
 name = "lfx-bundles"
-version = "1.1.6"
+version = "1.1.10"
 description = "Langflow's long-tail provider bundles as a single manifest-less metapackage (the langchain-community model)."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -40,16 +40,16 @@ chroma = ["chromadb>=1.0.0,<2.0.0", "langchain-chroma~=0.2.6", "langchain-commun
 cleanlab = ["cleanlab-tlm>=1.1.2,<2.0.0"]
 clickhouse = ["clickhouse-connect==0.7.19", "langchain-community>=0.4.1,<1.0.0"]
 cloudflare = ["langchain-community>=0.4.1,<1.0.0"]
-codeagents = ["smolagents>=1.8.0", "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')"]
+codeagents = ["smolagents>=1.8.0", "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')", "langchain-litellm==0.5.1; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')"]
 cometapi = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
 composio = ["composio==0.16.0", "composio-langchain==0.16.0"]
 confluence = ["atlassian-python-api==3.41.16", "langchain-community>=0.4.1,<1.0.0"]
 couchbase = ["couchbase>=4.2.1", "langchain-community>=0.4.1,<1.0.0"]
-cuga = ["cuga>=0.2.20,<0.3.0; sys_platform != 'darwin' and python_version < '3.14'", "cuga>=0.2.20,<0.3.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'"]
+cuga = ["cuga>=0.2.20,<0.3.0; sys_platform != 'darwin' and python_version < '3.14'", "cuga>=0.2.20,<0.3.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'", "langchain-litellm==0.5.1; sys_platform != 'darwin' and python_version < '3.14'", "langchain-litellm==0.5.1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'"]
 deepseek = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"]
 elastic = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0", "opensearch-py==2.8.0"]
 faiss = ["faiss-cpu==1.9.0.post1; python_version < '3.14'", "faiss-cpu>=1.13.2; python_version >= '3.14'", "langchain-community>=0.4.1,<1.0.0"]
-git = ["GitPython>=3.1.50", "langchain-community>=0.4.1,<1.0.0"]
+git = ["GitPython>=3.1.58", "langchain-community>=0.4.1,<1.0.0"]
 glean = []
 google = ["lfx-google>=0.1.0,<1.0.0"]
 groq = ["langchain-groq~=1.1.1"]

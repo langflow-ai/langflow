@@ -8,6 +8,7 @@ import shlex
 import shutil
 import unicodedata
 from collections.abc import AsyncIterator, Awaitable, Callable
+from pathlib import Path
 from types import UnionType
 from typing import Annotated, Any, TypedDict, Union, get_args, get_origin
 from urllib.parse import urlparse
@@ -30,12 +31,14 @@ from lfx.base.mcp.security import (
     validate_mcp_stdio_config,
 )
 from lfx.log.logger import logger
+from lfx.observability import outbound_call_span
 from lfx.schema.data import Data
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.services.deps import get_settings_service
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
+MCP_TOOL_SPAN_NAME = "mcp.tool.call"
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 
 # HTTP status codes used in validation
@@ -156,6 +159,10 @@ def create_mcp_http_client_with_ssl_option(
     This is a custom factory that extends the standard MCP client factory
     to support disabling SSL verification for self-signed certificates.
 
+    Redirects are disabled: connector URLs are SSRF-checked once before
+    connect, and following 3xx without re-validation could reach private
+    or link-local hosts. Matches A2A agent client hardening.
+
     Args:
         headers: Optional headers to include with all requests.
         timeout: Request timeout as httpx.Timeout object.
@@ -166,7 +173,7 @@ def create_mcp_http_client_with_ssl_option(
         Configured httpx.AsyncClient instance.
     """
     kwargs: dict[str, Any] = {
-        "follow_redirects": True,
+        "follow_redirects": False,
         "verify": verify_ssl,
     }
 
@@ -1830,7 +1837,40 @@ class MCPStdioClient:
         session_manager = self._get_session_manager()
         return await session_manager.get_session(self._session_context, self._connection_params, "stdio")
 
+    def _tool_span_attributes(self, tool_name: str) -> dict[str, str]:
+        """Identifiers for the span: which tool, on which server, over which transport.
+
+        The server is the command and its first argument, basenames only. That is the part that
+        says which server this is (``uvx some-mcp-server``, ``python server.py``); later flags
+        are left out because they can carry tokens, and the span boundary is identifiers only.
+        """
+        attributes = {"mcp.tool.name": tool_name, "mcp.transport": "stdio"}
+        command = getattr(self._connection_params, "command", None)
+        if command:
+            args = getattr(self._connection_params, "args", None) or []
+            server = Path(command).name
+            if args:
+                server = f"{server} {Path(args[0]).name}"
+            attributes["mcp.server"] = server
+        return attributes
+
     async def run_tool(self, tool_name: str, arguments: dict[str, Any], timeout: float | None = None) -> Any:  # noqa: ASYNC109
+        """Run the tool, with one application span covering the call and any retries."""
+        with outbound_call_span(MCP_TOOL_SPAN_NAME, self._tool_span_attributes(tool_name)) as span:
+            result = await self._run_tool(tool_name, arguments, timeout)
+            # MCP reports a failed tool as isError on the result rather than by raising, and the
+            # caller only converts that to an exception after this span has closed. Without this
+            # a failed call exports as a success and the outbound error rate is always zero.
+            if getattr(result, "isError", False):
+                span.record_error("ToolError")
+            return result
+
+    async def _run_tool(
+        self,
+        tool_name: str,
+        arguments: dict[str, Any],
+        timeout: float | None = None,  # noqa: ASYNC109
+    ) -> Any:
         """Run a tool with the given arguments using context-specific session.
 
         Args:
@@ -1861,6 +1901,7 @@ class MCPStdioClient:
 
         max_retries = 2
         last_error_type = None
+        last_error: Exception | None = None
 
         for attempt in range(max_retries):
             try:
@@ -1873,6 +1914,7 @@ class MCPStdioClient:
                     timeout=effective_timeout,
                 )
             except Exception as e:
+                last_error = e
                 current_error_type = type(e).__name__
                 await logger.awarning(f"Tool '{tool_name}' failed on attempt {attempt + 1}: {current_error_type} - {e}")
 
@@ -1938,7 +1980,7 @@ class MCPStdioClient:
         # This should never be reached due to the exception handling above
         msg = f"Failed to run tool '{tool_name}': Maximum retries exceeded with repeated {last_error_type} errors"
         await logger.aerror(msg)
-        raise ValueError(msg)
+        raise ValueError(msg) from last_error
 
     async def disconnect(self):
         """Properly close the connection and clean up resources."""
@@ -2115,7 +2157,42 @@ class MCPStreamableHttpClient:
             # DELETE is advisory—log and continue
             logger.debug(f"Unable to send session DELETE to '{url}': {e}")
 
+    def _tool_span_attributes(self, tool_name: str) -> dict[str, str]:
+        """Identifiers for the span: which tool, on which server, over which transport.
+
+        The transport is read from the session manager rather than hardcoded, because this class
+        also serves SSE: ``MCPSseClient`` is an alias for it, and a streamable-http server can
+        fall back to SSE at runtime. A literal would label those calls streamable_http.
+
+        The server is the host, never the full URL: a URL can carry credentials in its query
+        string, which is the leak the export boundary exists to strip.
+        """
+        attributes = {"mcp.tool.name": tool_name, "mcp.transport": "streamable_http"}
+        params = self._connection_params
+        if isinstance(params, dict) and params.get("url"):
+            session_manager = self._get_session_manager()
+            server_key = session_manager._get_server_key(params, "streamable_http")
+            attributes["mcp.transport"] = session_manager._transport_preference.get(server_key, "streamable_http")
+            host = urlparse(params["url"]).netloc.rsplit("@", maxsplit=1)[-1]
+            if host:
+                attributes["mcp.server"] = host
+        return attributes
+
     async def run_tool(self, tool_name: str, arguments: dict[str, Any], timeout: float | None = None) -> Any:  # noqa: ASYNC109
+        """Run the tool, with one application span covering the call and any retries."""
+        with outbound_call_span(MCP_TOOL_SPAN_NAME, self._tool_span_attributes(tool_name)) as span:
+            result = await self._run_tool(tool_name, arguments, timeout)
+            # See the stdio client: MCP reports tool failure in the result, not by raising.
+            if getattr(result, "isError", False):
+                span.record_error("ToolError")
+            return result
+
+    async def _run_tool(
+        self,
+        tool_name: str,
+        arguments: dict[str, Any],
+        timeout: float | None = None,  # noqa: ASYNC109
+    ) -> Any:
         """Run a tool with the given arguments using context-specific session.
 
         Args:
@@ -2146,6 +2223,7 @@ class MCPStreamableHttpClient:
 
         max_retries = 2
         last_error_type = None
+        last_error: Exception | None = None
 
         for attempt in range(max_retries):
             try:
@@ -2158,6 +2236,7 @@ class MCPStreamableHttpClient:
                     timeout=effective_timeout,
                 )
             except Exception as e:
+                last_error = e
                 current_error_type = type(e).__name__
                 await logger.awarning(f"Tool '{tool_name}' failed on attempt {attempt + 1}: {current_error_type} - {e}")
 
@@ -2214,7 +2293,7 @@ class MCPStreamableHttpClient:
         # This should never be reached due to the exception handling above
         msg = f"Failed to run tool '{tool_name}': Maximum retries exceeded with repeated {last_error_type} errors"
         await logger.aerror(msg)
-        raise ValueError(msg)
+        raise ValueError(msg) from last_error
 
     async def disconnect(self):
         """Properly close the connection and clean up resources."""

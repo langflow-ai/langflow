@@ -131,12 +131,15 @@ class TestDescribeComponentToolMode:
     """Tests for describe_component's component_as_tool detection.
 
     A component supports tool-mode whenever any INPUT field has
-    ``tool_mode=True`` — this matches the canonical heuristic in
-    ``Component._handle_tool_mode`` which serves as the runtime authority.
+    ``tool_mode=True`` or the class opts in via ``add_tool_output`` — together
+    those are ``Component._handle_tool_mode``, the runtime authority.
     Regression: previously the registry checked OUTPUTS for ``tool_mode``,
     which silently excluded most tool-capable components (FirecrawlScrapeApi,
     every component that follows the ``MessageTextInput(tool_mode=True)``
-    pattern) from the flow builder's tool wiring.
+    pattern) from the flow builder's tool wiring — and then, once the input
+    side was added, advertised a toolset for nearly everything, because
+    output-side ``tool_mode`` marks which outputs a toolset exposes rather
+    than whether the component has one.
     """
 
     def test_should_expose_component_as_tool_when_any_input_has_tool_mode(self) -> None:
@@ -201,18 +204,39 @@ class TestDescribeComponentToolMode:
 
         assert any(o["name"] == "component_as_tool" for o in result["outputs"])
 
-    def test_should_still_expose_component_as_tool_when_output_carries_tool_mode_flag(self) -> None:
-        """Backward compat: if some component sets tool_mode on an output, keep working."""
+    def test_should_not_expose_component_as_tool_when_only_an_output_carries_tool_mode(self) -> None:
+        """Output-side tool_mode is not a capability signal.
+
+        ``Output.tool_mode`` defaults to True, so ordinary components such as
+        ChatInput carry it. Reading it as the capability advertised a toolset
+        output that ``Component._handle_tool_mode`` never creates.
+        """
         registry = {
-            "LegacyTool": {
-                "outputs": [{"name": "result", "types": ["Tool"], "tool_mode": True}],
-                "template": {},
+            "PlainComponent": {
+                "outputs": [{"name": "result", "types": ["Data"], "tool_mode": True}],
+                "template": {"value": {"type": "str", "show": True}},
             }
         }
 
-        result = describe_component(registry, "LegacyTool")
+        result = describe_component(registry, "PlainComponent")
 
-        assert any(o["name"] == "component_as_tool" for o in result["outputs"])
+        assert not any(o["name"] == "component_as_tool" for o in result["outputs"])
+
+    def test_should_expose_component_as_tool_when_class_declares_add_tool_output(self) -> None:
+        """RunFlow-shaped: no tool_mode input, explicit add_tool_output opt-in."""
+        registry = {
+            "RunFlow": {
+                "outputs": [{"name": "flow_outputs", "types": ["Data"]}],
+                "template": {},
+                "add_tool_output": True,
+            }
+        }
+
+        result = describe_component(registry, "RunFlow")
+
+        tool_output = next(o for o in result["outputs"] if o["name"] == "component_as_tool")
+        assert tool_output["types"] == ["Tool"]
+        assert "tool inputs" not in tool_output["description"]
 
     def test_should_include_input_names_in_component_as_tool_description(self) -> None:
         """Include tool-mode input names in the component_as_tool description.

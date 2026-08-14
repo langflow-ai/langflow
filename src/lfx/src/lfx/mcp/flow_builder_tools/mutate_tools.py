@@ -433,8 +433,18 @@ class ConnectComponents(Component):
         # module-private helpers above so this orchestrator stays flat (CC ≤ 3).
         emit_tool_start("connect_components", source_id=self.source_id, target_id=self.target_id)
         flow = _ensure_working_flow()
+        # Only the tool-mode capability check reads the registry, and loading it
+        # walks the user's component overlay — keep ordinary edges off that path.
+        registry = _load_registry_user_aware() if self.source_output == "component_as_tool" else None
         try:
-            fb_add_connection(flow, self.source_id, self.source_output, self.target_id, self.target_input)
+            fb_add_connection(
+                flow,
+                self.source_id,
+                self.source_output,
+                self.target_id,
+                self.target_input,
+                registry=registry,
+            )
             layout_flow(flow)
             _sync_model_input_connection_mode(flow, self.target_id, self.target_input)
             # Flip tool-mode BEFORE emitting the edge, else the source node has
