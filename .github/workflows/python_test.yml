@@ -162,17 +162,23 @@ jobs:
         run: |
           # Discovered, not hard-coded: a newly guarded test is picked up automatically
           # instead of quietly joining the set of tests nothing runs.
+          # -E with ['\"] so a single-quoted importorskip is not silently missed -- a guarded
+          # test this scan overlooks is exactly the bug being fixed.
           # `while read` rather than `mapfile`: mapfile needs bash 4+, and runs-on is an input
           # to this workflow, so the shell is not guaranteed to be a GitHub ubuntu runner.
           guarded=()
-          while IFS= read -r f; do guarded+=("$f"); done < <(grep -rl 'pytest.importorskip("lfx_bundles' src/backend/tests || true)
+          while IFS= read -r f; do guarded+=("$f"); done < <(grep -rlE --include='*.py' "pytest\.importorskip\([[:space:]]*['\"]lfx_bundles" src/backend/tests || true)
           if [ ${#guarded[@]} -eq 0 ]; then
             echo "No lfx_bundles-guarded backend tests found -- nothing to run."
             exit 0
           fi
           printf 'Running %d bundle-guarded backend test file(s):\n' "${#guarded[@]}"
           printf '  %s\n' "${guarded[@]}"
-          uv run pytest "${guarded[@]}" -v --timeout=300
+          # -m "not api_key_required" matches `make unit_tests`, which the main backend job
+          # uses: those tests make live provider calls and are deselected repo-wide by
+          # policy. Deselecting is a deliberate exclusion, unlike the silent import-skip
+          # this job exists to prevent.
+          uv run pytest "${guarded[@]}" -v --timeout=300 -m "not api_key_required"
 
       - name: Run the bundle-guarded lfx unit tests
         # A separate invocation, and from src/lfx: src/backend/tests and src/lfx/tests both
@@ -182,7 +188,7 @@ jobs:
         working-directory: src/lfx
         run: |
           guarded=()
-          while IFS= read -r f; do guarded+=("$f"); done < <(grep -rl 'pytest.importorskip("lfx_bundles' tests || true)
+          while IFS= read -r f; do guarded+=("$f"); done < <(grep -rlE --include='*.py' "pytest\.importorskip\([[:space:]]*['\"]lfx_bundles" tests || true)
           if [ ${#guarded[@]} -eq 0 ]; then
             echo "No lfx_bundles-guarded lfx tests found -- nothing to run."
             exit 0
@@ -194,7 +200,7 @@ jobs:
           uv run python -c "import lfx_bundles; print('lfx_bundles', lfx_bundles.__file__)"
           printf 'Running %d bundle-guarded lfx test file(s):\n' "${#guarded[@]}"
           printf '  %s\n' "${guarded[@]}"
-          uv run pytest "${guarded[@]}" -v --timeout=300
+          uv run pytest "${guarded[@]}" -v --timeout=300 -m "not api_key_required"
 
   integration-tests:
     name: Integration Tests - Python ${{ matrix.python-version }}
