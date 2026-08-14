@@ -3,6 +3,29 @@ import userEvent from "@testing-library/user-event";
 import { useUtilityStore } from "@/stores/utilityStore";
 import SidebarMenuButtons from "../sidebarFooterButtons";
 
+let mockPermissionPending = false;
+let mockPermissionDenied = false;
+// Read-only is true for both halves of the gate, mirroring the real hook.
+const mockUseIsFlowReadOnly = jest.fn(
+  (_flowId: string | undefined) =>
+    mockPermissionPending || mockPermissionDenied,
+);
+const mockUseIsFlowPermissionPending = jest.fn(
+  (_flowId: string | undefined) => mockPermissionPending,
+);
+jest.mock("@/contexts/permissionsContext", () => ({
+  useIsFlowReadOnly: (flowId: string | undefined) =>
+    mockUseIsFlowReadOnly(flowId),
+  useIsFlowPermissionPending: (flowId: string | undefined) =>
+    mockUseIsFlowPermissionPending(flowId),
+}));
+
+jest.mock("@/stores/flowStore", () => ({
+  __esModule: true,
+  default: (selector: (state: { currentFlow: { id: string } }) => unknown) =>
+    selector({ currentFlow: { id: "flow-1" } }),
+}));
+
 // Mock the UI components
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
@@ -40,20 +63,6 @@ jest.mock("@/components/ui/button", () => ({
       {children}
     </button>
   ),
-}));
-
-jest.mock("@/stores/flowStore", () => ({
-  __esModule: true,
-  default: (selector: (state: { currentFlow: { id: string } }) => unknown) =>
-    selector({ currentFlow: { id: "flow1" } }),
-}));
-
-let mockPermissionPending = false;
-let mockPermissionDenied = false;
-jest.mock("@/contexts/permissionsContext", () => ({
-  useIsFlowPermissionPending: () => mockPermissionPending,
-  // Read-only is true for both halves of the gate, mirroring the real hook.
-  useIsFlowReadOnly: () => mockPermissionPending || mockPermissionDenied,
 }));
 
 // Mock sidebar hook with default values
@@ -129,6 +138,14 @@ describe("SidebarMenuButtons", () => {
     mockNavigate.mockClear();
     mockPermissionPending = false;
     mockPermissionDenied = false;
+    // Reinstate the flag-driven implementation so a test that overrides it
+    // with `mockReturnValue` cannot leak that return into the next one.
+    mockUseIsFlowReadOnly.mockImplementation(
+      () => mockPermissionPending || mockPermissionDenied,
+    );
+    mockUseIsFlowPermissionPending.mockImplementation(
+      () => mockPermissionPending,
+    );
     useUtilityStore.setState({ allowCustomComponents: true });
     // Reset to default sidebar state
     mockUseSidebar.mockReturnValue({
@@ -207,6 +224,7 @@ describe("SidebarMenuButtons", () => {
       const customButton = screen.getByTestId(
         "sidebar-custom-component-button",
       );
+      expect(customButton).toBeDisabled();
       await user.click(customButton);
 
       expect(mockAddComponent).not.toHaveBeenCalled();
@@ -224,8 +242,24 @@ describe("SidebarMenuButtons", () => {
       const customButton = screen.getByTestId(
         "sidebar-custom-component-button",
       );
+      expect(customButton).toBeDisabled();
       await user.click(customButton);
 
+      expect(mockAddComponent).not.toHaveBeenCalled();
+    });
+
+    it("should disable the custom component button while the flow is read-only", async () => {
+      mockUseIsFlowReadOnly.mockReturnValue(true);
+      const user = userEvent.setup();
+
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      const customButton = screen.getByTestId(
+        "sidebar-custom-component-button",
+      );
+      expect(customButton).toBeDisabled();
+      await user.click(customButton);
+      expect(mockUseIsFlowReadOnly).toHaveBeenCalledWith("flow-1");
       expect(mockAddComponent).not.toHaveBeenCalled();
     });
 

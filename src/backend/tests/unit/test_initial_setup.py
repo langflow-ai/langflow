@@ -6,7 +6,7 @@ import uuid
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path as SyncPath
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from urllib.parse import urlparse
 
 import orjson
@@ -365,9 +365,8 @@ async def test_refresh_starter_projects():
 )
 async def test_detect_github_url(url, expected):
     # Mock the GitHub API response for the default branch case
-    mock_response = AsyncMock()
-    mock_response.json = lambda: {"default_branch": "main"}  # Not async, just returns a dict
-    mock_response.raise_for_status.return_value = None
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"default_branch": "main"}
 
     with patch("httpx.AsyncClient.get", return_value=mock_response) as mock_get:
         result = await detect_github_url(url)
@@ -458,14 +457,15 @@ async def test_sync_flows_from_fs(client: AsyncClient, logged_in_headers):
         flow_file = storage_service.data_dir / "flows" / str(user_id) / flow_filename
 
         # Read the file created by the API
-        content = await flow_file.read_text(encoding="utf-8")
-        fs_flow = Flow.model_validate_json(content)
-        fs_flow.name = "new name"
-        fs_flow.description = "new description"
-        fs_flow.data = {"nodes": {}, "edges": {}}
-        fs_flow.locked = True
+        fs_flow = orjson.loads(await flow_file.read_bytes())
+        fs_flow.update(
+            name="new name",
+            description="new description",
+            data={"nodes": {}, "edges": {}},
+            locked=True,
+        )
 
-        await flow_file.write_text(fs_flow.model_dump_json(), encoding="utf-8")
+        await flow_file.write_bytes(orjson.dumps(fs_flow))
 
         result = {}
         for i in range(10):

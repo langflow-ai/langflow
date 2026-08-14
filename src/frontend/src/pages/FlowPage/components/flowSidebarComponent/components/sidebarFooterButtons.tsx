@@ -27,13 +27,14 @@ const SidebarMenuButtons = ({
   // Same flow id `useAddComponent` gates on, so the affordance and the gate
   // can never disagree about which flow is being evaluated.
   const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
-  const isReadOnly = useIsFlowReadOnly(currentFlowId);
+  const isFlowReadOnly = useIsFlowReadOnly(currentFlowId);
 
   // One flag for every reason the add is refused: the component types are
-  // still loading, the permission answer is in flight, or it denies write.
-  // Dimming only some of them would leave the same control looking disabled
-  // for one cause and enabled for another, which reads as a bug not a policy.
-  const isUnavailable = isLoading || isReadOnly;
+  // still loading, there is nothing to add yet, the permission answer is in
+  // flight, or it denies write. Dimming only some of them would leave the
+  // same control looking disabled for one cause and enabled for another,
+  // which reads as a bug not a policy.
+  const isUnavailable = isLoading || isFlowReadOnly || !customComponent;
 
   const handleAddMcpServerClick = () => {
     setAddMcpOpen(true);

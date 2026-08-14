@@ -63,6 +63,12 @@ def test_full_release_requires_and_consumes_the_aligned_base_artifact() -> None:
     assert "pypi/langflow-core" not in validation + main_build
 
 
+def test_main_build_prefers_release_wheels_over_workspace_sources() -> None:
+    main_build = _job_block(WORKFLOW_PATH, "build-main", "build-bundles")
+
+    assert 'uv pip install --no-sources "${FIND_LINKS[@]}" --prerelease=allow -e .' in main_build
+
+
 def test_bundle_releases_enter_the_dependency_validation_gate() -> None:
     validation = _job_block(WORKFLOW_PATH, "validate-dependencies", "determine-rc-number")
 

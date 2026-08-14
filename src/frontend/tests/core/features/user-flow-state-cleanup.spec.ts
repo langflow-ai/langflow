@@ -19,10 +19,13 @@ test(
     // Disable auto login
     await page.route("**/api/v1/auto_login", (route) => {
       route.fulfill({
-        status: 500,
+        status: 403,
         contentType: "application/json",
         body: JSON.stringify({
-          detail: { auto_login: false },
+          detail: {
+            message: "Auto login is disabled.",
+            auto_login: false,
+          },
         }),
       });
     });

@@ -7,6 +7,7 @@ from uuid import UUID
 
 from lfx.log.logger import logger
 from lfx.services.authorization.base import ResourceVisibilityScope
+from lfx.services.settings.constants import AGENTIC_VARIABLES
 from sqlmodel import col, select
 
 from langflow.services.auth import utils as auth_utils
@@ -278,7 +279,12 @@ class DatabaseVariableService(VariableService, Service):
             value = None
             if variable.type == GENERIC_TYPE and is_owner:
                 if not variable.value:
-                    await logger.awarning("Variable '%s' has no stored value — skipping.", variable.name)
+                    if variable.name in AGENTIC_VARIABLES:
+                        await logger.adebug(
+                            "Agentic placeholder variable '%s' has no stored value — skipping.", variable.name
+                        )
+                    else:
+                        await logger.awarning("Variable '%s' has no stored value — skipping.", variable.name)
                     continue
                 # Security defense-in-depth: a GENERIC variable is stored as plain text, so its
                 # value must never be a Fernet token. If it is (e.g. a CREDENTIAL row that was

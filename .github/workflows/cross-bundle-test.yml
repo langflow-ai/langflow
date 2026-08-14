@@ -42,7 +42,7 @@ jobs:
     outputs:
       bundles: ${{ steps.find.outputs.bundles }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - id: find
@@ -78,11 +78,12 @@ jobs:
         # publishes (see header).
         python-version: ${{ github.event_name == 'schedule' && fromJson('["3.10", "3.11", "3.12", "3.13", "3.14"]') || fromJson('["3.10", "3.13"]') }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}

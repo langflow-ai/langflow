@@ -1,10 +1,21 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test.describe("Bulk Delete Sessions", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route(/\/api\/v1\/store\/tags(\?.*)?$/, async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({ json: [] });
+        return;
+      }
+
+      await route.continue();
+    });
+  });
+
   // Helper to send a message in the playground
   async function sendMessage(page: Page, message: string) {
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
@@ -65,11 +76,6 @@ test.describe("Bulk Delete Sessions", () => {
     "should show Select All checkbox when multiple sessions exist",
     { tag: ["@release"] },
     async ({ page }) => {
-      test.skip(
-        !process?.env?.OPENAI_API_KEY,
-        "OPENAI_API_KEY required to run this test",
-      );
-
       await awaitBootstrapTest(page);
 
       // Load a starter project
@@ -77,7 +83,7 @@ test.describe("Bulk Delete Sessions", () => {
       await page
         .getByRole("heading", { name: TEXTS.templateBasicPrompting })
         .click();
-      await initialGPTsetup(page);
+      await configureLoopbackOpenAI(page);
 
       // Open playground
       await page
@@ -101,11 +107,6 @@ test.describe("Bulk Delete Sessions", () => {
     "should select all sessions when Select All checkbox is clicked",
     { tag: ["@release"] },
     async ({ page }) => {
-      test.skip(
-        !process?.env?.OPENAI_API_KEY,
-        "OPENAI_API_KEY required to run this test",
-      );
-
       await awaitBootstrapTest(page);
 
       // Load a starter project
@@ -113,7 +114,7 @@ test.describe("Bulk Delete Sessions", () => {
       await page
         .getByRole("heading", { name: TEXTS.templateBasicPrompting })
         .click();
-      await initialGPTsetup(page);
+      await configureLoopbackOpenAI(page);
 
       // Open playground
       await page
@@ -152,11 +153,6 @@ test.describe("Bulk Delete Sessions", () => {
     "should deselect all sessions when Select All is clicked again",
     { tag: ["@release"] },
     async ({ page }) => {
-      test.skip(
-        !process?.env?.OPENAI_API_KEY,
-        "OPENAI_API_KEY required to run this test",
-      );
-
       await awaitBootstrapTest(page);
 
       // Load a starter project
@@ -164,7 +160,7 @@ test.describe("Bulk Delete Sessions", () => {
       await page
         .getByRole("heading", { name: TEXTS.templateBasicPrompting })
         .click();
-      await initialGPTsetup(page);
+      await configureLoopbackOpenAI(page);
 
       // Open playground
       await page
@@ -204,11 +200,6 @@ test.describe("Bulk Delete Sessions", () => {
     "should allow individual session selection",
     { tag: ["@release"] },
     async ({ page }) => {
-      test.skip(
-        !process?.env?.OPENAI_API_KEY,
-        "OPENAI_API_KEY required to run this test",
-      );
-
       await awaitBootstrapTest(page);
 
       // Load a starter project
@@ -216,7 +207,7 @@ test.describe("Bulk Delete Sessions", () => {
       await page
         .getByRole("heading", { name: TEXTS.templateBasicPrompting })
         .click();
-      await initialGPTsetup(page);
+      await configureLoopbackOpenAI(page);
 
       // Open playground
       await page
@@ -263,11 +254,6 @@ test.describe("Bulk Delete Sessions", () => {
     "should use bulk delete API endpoint for multiple sessions",
     { tag: ["@release", "@api"] },
     async ({ page }) => {
-      test.skip(
-        !process?.env?.OPENAI_API_KEY,
-        "OPENAI_API_KEY required to run this test",
-      );
-
       await awaitBootstrapTest(page);
 
       // Setup API interceptor
@@ -278,7 +264,7 @@ test.describe("Bulk Delete Sessions", () => {
       await page
         .getByRole("heading", { name: TEXTS.templateBasicPrompting })
         .click();
-      await initialGPTsetup(page);
+      await configureLoopbackOpenAI(page);
 
       // Open playground
       await page
@@ -324,11 +310,6 @@ test.describe("Bulk Delete Sessions", () => {
     "should delete all sessions including current and create new default session",
     { tag: ["@release"] },
     async ({ page }) => {
-      test.skip(
-        !process?.env?.OPENAI_API_KEY,
-        "OPENAI_API_KEY required to run this test",
-      );
-
       await awaitBootstrapTest(page);
 
       // Load a starter project
@@ -336,7 +317,7 @@ test.describe("Bulk Delete Sessions", () => {
       await page
         .getByRole("heading", { name: TEXTS.templateBasicPrompting })
         .click();
-      await initialGPTsetup(page);
+      await configureLoopbackOpenAI(page);
 
       // Open playground
       await page
@@ -392,11 +373,6 @@ test.describe("Bulk Delete Sessions", () => {
     "should hide checkboxes and Select All when only one session exists",
     { tag: ["@release"] },
     async ({ page }) => {
-      test.skip(
-        !process?.env?.OPENAI_API_KEY,
-        "OPENAI_API_KEY required to run this test",
-      );
-
       await awaitBootstrapTest(page);
 
       // Load a starter project
@@ -404,7 +380,7 @@ test.describe("Bulk Delete Sessions", () => {
       await page
         .getByRole("heading", { name: TEXTS.templateBasicPrompting })
         .click();
-      await initialGPTsetup(page);
+      await configureLoopbackOpenAI(page);
 
       // Open playground
       await page
@@ -431,11 +407,6 @@ test.describe("Bulk Delete Sessions", () => {
     "should update Select All checkbox state based on individual selections",
     { tag: ["@release"] },
     async ({ page }) => {
-      test.skip(
-        !process?.env?.OPENAI_API_KEY,
-        "OPENAI_API_KEY required to run this test",
-      );
-
       await awaitBootstrapTest(page);
 
       // Load a starter project
@@ -443,7 +414,7 @@ test.describe("Bulk Delete Sessions", () => {
       await page
         .getByRole("heading", { name: TEXTS.templateBasicPrompting })
         .click();
-      await initialGPTsetup(page);
+      await configureLoopbackOpenAI(page);
 
       // Open playground
       await page

@@ -71,6 +71,10 @@ class CustomComponent(Component):
 
     await page.getByText(TEXTS.checkAndSave).last().click();
 
+    await expect(page.getByTestId("code-button-modal").last()).not.toHaveClass(
+      /animate-pulse-pink/,
+    );
+
     await page.getByTestId("button_run_custom component").click();
 
     // Building and running a custom component that raises a runtime error can
@@ -85,5 +89,9 @@ class CustomComponent(Component):
       .count();
 
     expect(numberOfErrorMessages).toBeGreaterThan(0);
+    const customNode = page.getByRole("group", {
+      name: "Custom Component node",
+    });
+    await expect(customNode.getByTestId("icon-Loader2")).toBeHidden();
   },
 );

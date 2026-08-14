@@ -48,6 +48,17 @@ async function mockMessages(page: LangflowPage, messages: MessageRow[]) {
   );
 }
 
+async function mockStoreTags(page: LangflowPage) {
+  await page.route(/\/api\/v1\/store\/tags(\?.*)?$/, async (route: Route) => {
+    if (route.request().method() === "GET") {
+      await route.fulfill({ json: [] });
+      return;
+    }
+
+    await route.continue();
+  });
+}
+
 async function disableAnimations(page: LangflowPage) {
   await page.addStyleTag({
     content: `
@@ -91,6 +102,10 @@ function messageRow(page: LangflowPage, text: string) {
 }
 
 test.describe("Messages settings route accessibility", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockStoreTags(page);
+  });
+
   test(
     "scans the populated messages table",
     { tag: ["@release", "@workspace"] },

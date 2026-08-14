@@ -190,6 +190,14 @@ the deserialize half is covered by
 ### v0 (this release)
 
 - Initial surface enumerated above.  Frozen as `BUNDLE_API_VERSION = 1`.
+- Typed loader diagnostics now distinguish unavailable optional providers from
+  broken bundle imports.  `optional-dependency-missing` is added to
+  `ERROR_CODES`; a manifest-less `lfx-bundles` module emits this warning only
+  when its declared provider distribution is genuinely absent, allowing the
+  remaining bundle components to load.  Undeclared imports and installed but
+  broken distributions remain `module-import-failed` errors.  Expected
+  `bundle-shadowed` / `seed-bundle-shadowed` precedence outcomes are warnings;
+  winner selection is unchanged.
 - Extension manifests may now declare multiple component bundles.  Startup
   discovery loads every declared bundle through `load_extension_bundles()`;
   direct callers may select one with `load_extension(..., bundle_name=...)`.

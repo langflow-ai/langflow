@@ -3,7 +3,12 @@ import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { TEXTS } from "../../utils/constants/texts";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { routeTestScopedDefaultFlowNames } from "../../utils/flow/route-test-scoped-default-flow-names";
 import { zoomOut } from "../../utils/zoom-out";
+
+test.beforeEach(async ({ page }, testInfo) => {
+  await routeTestScopedDefaultFlowNames(page, testInfo, "reset-flow-run");
+});
 
 test(
   "user can run flow with If-Else component multiple times with different branches",

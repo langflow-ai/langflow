@@ -1,4 +1,4 @@
-import type { Edge, Node, ReactFlowJsonObject } from "@xyflow/react";
+import type { Edge, Node } from "@xyflow/react";
 import type { AxiosRequestConfig } from "axios";
 import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
@@ -7,7 +7,7 @@ import { UseRequestProcessor } from "../../services/request-processor";
 
 interface retrieveGetVerticesOrder {
   flowId: string;
-  data?: ReactFlowJsonObject;
+  data?: { nodes: Node[]; edges: Edge[] };
   stopNodeId?: string;
   startNodeId?: string;
 }
@@ -34,7 +34,7 @@ export const usePostRetrieveVertexOrder: useMutationFunctionType<
   }: retrieveGetVerticesOrder): Promise<retrieveGetVerticesOrderResponse> => {
     // nodeId is optional and is a query parameter
     // if nodeId is not provided, the API will return all vertices
-    const config: AxiosRequestConfig<any> = {};
+    const config: AxiosRequestConfig<unknown> = {};
     if (stopNodeId) {
       config["params"] = { stop_component_id: decodeURIComponent(stopNodeId) };
     } else if (startNodeId) {

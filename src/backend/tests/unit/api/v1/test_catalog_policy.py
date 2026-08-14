@@ -294,7 +294,7 @@ def test_put_bounds_catalog_key_sets_without_writing_or_auditing(monkeypatch, re
         json={"blocked": invalid_keys},
     )
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     assert service.component_calls == []
     assert service.template_calls == []
     audit.assert_not_awaited()
@@ -534,8 +534,8 @@ def test_usage_flows_drilldown_rejects_blank_component(monkeypatch):
     missing = client.get("/api/v1/catalog-policy/usage/flows")
     blank = client.get("/api/v1/catalog-policy/usage/flows", params={"component": "   "})
 
-    assert missing.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-    assert blank.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert missing.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert blank.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 def test_usage_endpoints_share_one_flow_scan_within_the_ttl(monkeypatch):

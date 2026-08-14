@@ -239,7 +239,7 @@ def test_put_rejects_malformed_model_keys_without_writing(monkeypatch, invalid_k
         },
     )
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     replace_state.assert_not_awaited()
     apply_state.assert_not_called()
 
@@ -328,7 +328,7 @@ def test_put_requires_expected_revision_and_all_three_lists(monkeypatch, payload
 
     response = client.put("/api/v1/policy-bundle", json=payload)
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     replace_state.assert_not_awaited()
     apply_state.assert_not_called()
 
@@ -354,7 +354,7 @@ def test_put_bounds_each_catalog_key_set_without_writing(monkeypatch, field_name
 
     response = client.put("/api/v1/policy-bundle", json=payload)
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     replace_state.assert_not_awaited()
     policy_api.audit_decision.assert_not_awaited()
     apply_state.assert_not_called()

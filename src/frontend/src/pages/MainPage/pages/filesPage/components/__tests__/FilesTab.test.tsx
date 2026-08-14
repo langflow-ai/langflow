@@ -54,13 +54,6 @@ jest.mock("@/components/ui/loading", () => ({
   default: () => <div data-testid="loading-spinner" />,
 }));
 
-jest.mock("@/components/core/cardsWrapComponent", () => ({
-  __esModule: true,
-  default: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="empty-state-wrapper">{children}</div>
-  ),
-}));
-
 jest.mock("../dragWrapComponent", () => ({
   __esModule: true,
   default: ({ children }: { children: React.ReactNode }) => (
@@ -193,7 +186,10 @@ describe("FilesTab", () => {
     it("renders the empty state with an upload button and no table", () => {
       mockGetFiles.mockReturnValue({ data: [] });
       render(<FilesTab {...defaultProps} />, { wrapper: createWrapper() });
-      expect(screen.getByTestId("empty-state-wrapper")).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: "No files" }),
+      ).toBeInTheDocument();
+      expect(screen.getByTestId("drag-wrapper")).toBeInTheDocument();
       expect(screen.getByTestId("upload-file-btn")).toBeInTheDocument();
       expect(screen.queryByTestId("mock-table")).not.toBeInTheDocument();
       expect(
