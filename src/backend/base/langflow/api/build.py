@@ -563,10 +563,14 @@ async def generate_flow_events(
             await log_telemetry(start_time, components_count, run_id=build_run_id, success=True)
 
         except TweakRefusedError:
-            # A refused tweak is a caller error, not a build failure. The generic
-            # handler below turns everything into a 500, which would hide the
-            # structured 422 naming the refused keys. Re-raise so the app-level
-            # TweakRefusedError handler answers instead.
+            # A refused tweak is a caller error, not a build failure, so it must
+            # not be flattened into the generic 500 below.
+            #
+            # Where it surfaces depends on how this ran. Called inline, it
+            # reaches the app-level handler and answers 422. Streaming and
+            # background callers run this in their own task, so the refusal is
+            # reported as an error event on an already-committed HTTP 200
+            # instead. Enforcement holds either way: the tweak is never applied.
             raise
         except Exception as exc:
             await log_telemetry(
