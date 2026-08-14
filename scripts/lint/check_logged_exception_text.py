@@ -81,9 +81,11 @@ LOG_METHODS = frozenset(
     }
 )
 
-# Keyword arguments whose whole purpose is to carry the exception object. The SDK renders
-# these as structured fields rather than into the message, which is the point.
-EXCEPTION_KEYWORDS = frozenset({"exc_info", "exception", "error", "exc"})
+# The one keyword that is a traceback channel rather than a rendered field. Deliberately
+# just this one: ``error=str(e)`` and ``exception=f"{e}"`` read as exception-shaped, but a
+# structured processor renders their values into the record like any other field, so
+# allowlisting them by name would wave through the exact leak this guard exists to catch.
+EXCEPTION_KEYWORDS = frozenset({"exc_info"})
 
 
 def _is_log_call(node: ast.Call) -> bool:
@@ -152,6 +154,21 @@ def _findings_in_call(call: ast.Call, target: str) -> str | None:
     return None
 
 
+def _walk_live_scope(node: ast.AST, target: str):
+    """Yield every node under ``node`` where the enclosing binding of ``target`` is live.
+
+    Descent stops at a nested ``except ... as <target>``, because that handler rebinds the
+    name and owns its own body. ``ast.walk`` cannot express this: it flattens the whole
+    subtree, so skipping the nested handler node still visits its children and the same log
+    call gets reported twice, once per binding.
+    """
+    for child in ast.iter_child_nodes(node):
+        if isinstance(child, ast.ExceptHandler) and child.name == target:
+            continue
+        yield child
+        yield from _walk_live_scope(child, target)
+
+
 def _check_file(path: Path) -> list[tuple[str, int, str, str]]:
     rel = str(path.relative_to(REPO_ROOT)) if path.is_relative_to(REPO_ROOT) else str(path)
     source = path.read_text(encoding="utf-8")
@@ -166,11 +183,7 @@ def _check_file(path: Path) -> list[tuple[str, int, str, str]]:
         if not isinstance(handler, ast.ExceptHandler) or not handler.name:
             continue
         target = handler.name
-        for node in ast.walk(handler):
-            # A nested handler that rebinds the same name owns its own body; skip it here
-            # so the finding is reported once, against the binding that is actually live.
-            if isinstance(node, ast.ExceptHandler) and node is not handler and node.name == target:
-                continue
+        for node in _walk_live_scope(handler, target):
             if not isinstance(node, ast.Call) or not _is_log_call(node):
                 continue
             reason = _findings_in_call(node, target)

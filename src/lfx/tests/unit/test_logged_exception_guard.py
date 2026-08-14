@@ -131,6 +131,18 @@ REJECTED = {
         except ValueError as e:
             logger.error(f"{type(e).__name__}: {e}")
     """,
+    "an exception-shaped keyword is still a rendered field": """
+        try:
+            work()
+        except ValueError as e:
+            logger.error("work failed", error=str(e))
+    """,
+    "and so is a differently named one": """
+        try:
+            work()
+        except ValueError as e:
+            logger.error("work failed", exception=f"{e}")
+    """,
     "conversion flags do not launder it": """
         try:
             work()
@@ -191,3 +203,44 @@ def test_the_flow_execution_path_is_clean(tmp_path):  # noqa: ARG001
     )
 
     assert completed.returncode == 0, completed.stdout + completed.stderr
+
+
+def test_a_nested_rebinding_is_reported_once(tmp_path):
+    """``ast.walk`` cannot prune, so the naive version reported this twice.
+
+    The inner handler rebinds ``e`` and owns its body. Counting matters: a guard that
+    double-reports trains people to skim its output.
+    """
+    code, output = run_guard(
+        """
+        try:
+            work()
+        except ValueError as e:
+            try:
+                cleanup()
+            except KeyError as e:
+                logger.error(f"cleanup failed: {e}")
+        """,
+        tmp_path,
+    )
+
+    assert code == 1, output
+    assert output.count("sample.py:8") == 1, output
+
+
+def test_an_unrelated_nested_handler_does_not_hide_the_outer_binding(tmp_path):
+    """Pruning is by name. A nested handler binding something else must not shield a leak."""
+    code, output = run_guard(
+        """
+        try:
+            work()
+        except ValueError as e:
+            try:
+                cleanup()
+            except KeyError as other:
+                logger.error(f"cleanup failed: {e}")
+        """,
+        tmp_path,
+    )
+
+    assert code == 1, output
