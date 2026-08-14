@@ -142,6 +142,77 @@ async def test_deleting_the_share_falls_back_to_the_documented_legacy_grant():
 
 @pytest.mark.anyio
 @pytest.mark.parametrize(
+    ("permission_level", "legacy_public", "expected"),
+    [
+        ("execute", False, (True, True)),
+        ("read", False, (True, False)),
+        ("read", True, (True, False)),
+        (None, True, (True, True)),
+        (None, False, (False, False)),
+    ],
+)
+async def test_capabilities_report_the_same_decision_the_guard_would_make(permission_level, legacy_public, expected):
+    """The advisory capability set never disagrees with authorize_public_flow_access."""
+    module = _contract_module()
+    access_type = module.AccessTypeEnum.PUBLIC if legacy_public else module.AccessTypeEnum.PRIVATE
+    flow = SimpleNamespace(id=uuid4(), access_type=access_type, workspace_id=None, folder_id=None)
+
+    capabilities = await module.public_flow_capabilities(
+        flow=flow,
+        session=_session_with_public_share(permission_level),
+    )
+
+    assert (capabilities.can_read, capabilities.can_execute) == expected
+
+
+@pytest.mark.anyio
+async def test_capabilities_are_advisory_and_never_audited(monkeypatch):
+    """A capability probe is not an access attempt, so it must not emit audit rows.
+
+    Auditing it would write a DENY row on every page view of a read-only share
+    and drown the real anonymous-denial signal operators watch for.
+    """
+    module = _contract_module()
+    flow = SimpleNamespace(id=uuid4(), access_type=module.AccessTypeEnum.PRIVATE, workspace_id=None, folder_id=None)
+    audit = AsyncMock()
+    monkeypatch.setattr(module, "audit_decision", audit)
+
+    capabilities = await module.public_flow_capabilities(
+        flow=flow,
+        session=_session_with_public_share("read"),
+    )
+
+    assert (capabilities.can_read, capabilities.can_execute) == (True, False)
+    audit.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_capabilities_fail_closed_when_an_enabled_plugin_denies(monkeypatch):
+    """An enabled plugin bounds the hint too, so the UI cannot offer a run the guard would refuse."""
+    module = _contract_module()
+    flow = SimpleNamespace(id=uuid4(), access_type=module.AccessTypeEnum.PUBLIC, workspace_id=None, folder_id=None)
+    service = SimpleNamespace(
+        supports_public_principals=AsyncMock(return_value=True),
+        resolve_public_tenant=AsyncMock(return_value="tenant-a"),
+        enforce_public=AsyncMock(
+            side_effect=lambda request, tenant: request.action is module.PublicResourceAction.READ  # noqa: ARG005
+        ),
+    )
+    settings = SimpleNamespace(auth_settings=SimpleNamespace(AUTHZ_ENABLED=True))
+    monkeypatch.setattr(module, "get_settings_service", lambda: settings)
+    monkeypatch.setattr(module, "get_authorization_service", lambda: service)
+
+    capabilities = await module.public_flow_capabilities(
+        flow=flow,
+        session=_session_with_public_share(None),
+    )
+
+    assert capabilities.can_read is True
+    assert capabilities.can_execute is False
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
     "plugin_result",
     ["allow", "unsupported", "missing_tenant", "deny", "error", "service_unavailable"],
 )

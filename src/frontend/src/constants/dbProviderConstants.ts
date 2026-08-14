@@ -228,9 +228,9 @@ export const DB_PROVIDER_OPTIONS: DBProviderOption[] = [
     // card only reflects whether it's reachable (via test-connection) and lets
     // the user make it active, exactly like Chroma Local.
     id: "postgres",
-    label: "Postgres pgvector",
+    label: "Postgres pgVector",
     description:
-      "Postgres pgvector is set up automatically from your server's environment configuration — there's nothing to enter here. When it's available, your knowledge bases and memory bases use it automatically.",
+      "Postgres pgVector is set up automatically from your server's environment configuration — there's nothing to enter here. When it's available, your knowledge bases and memory bases use it automatically.",
     icon: "Postgres",
     status: "available",
     configFields: [],

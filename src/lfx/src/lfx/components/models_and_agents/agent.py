@@ -702,7 +702,10 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                 if msg_id:
                     await delete_message(id_=msg_id)
                 await self._send_message_event(e.agent_message, category="remove_message")
-            logger.error(f"ExceptionWithMessageError: {e}")
+            # exception(), not error(f"...{e}"): this class's str() interpolates the model's
+            # partial completion, and passing the exception rather than formatting it is what
+            # gives the exported record an error.type to triage on.
+            logger.exception("Agent run failed after a partial message was emitted")
             raise
 
         usage_data = token_usage_handler.get_usage()
@@ -822,15 +825,17 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         while True:
             try:
                 result = await run_once()
-            except (ValueError, TypeError, KeyError) as exc:
-                await logger.aerror(f"{type(exc).__name__}: {exc!s}")
+            except (ValueError, TypeError, KeyError):
+                await logger.aexception("Agent run failed")
                 raise
             except Exception as exc:
-                # run_agent may wrap the provider error in ExceptionWithMessageError.
+                # run_agent may wrap the provider error in ExceptionWithMessageError, whose
+                # str() carries the model's partial completion. Matching on it locally is fine;
+                # logging it is not, so the record below passes the exception instead.
                 error_text = f"{exc} {getattr(exc, '__cause__', '') or ''}"
                 remediation = find_remediation(error_text, provider, already_applied=applied)
                 if remediation is None:
-                    await logger.aerror(f"{type(exc).__name__}: {exc!s}")
+                    await logger.aexception("Agent run failed with no remediation available")
                     raise
                 if connected_model is not None and not apply_overrides_to_model(connected_model, remediation.overrides):
                     await logger.aerror(
@@ -889,7 +894,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         try:
             llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
         except (ValueError, TypeError) as exc:
-            await logger.aerror(f"json_response.requirements_failed: {exc}")
+            await logger.aexception("json_response.requirements_failed")
             return Data(data={"content": "", "error": str(exc)})
 
         injected_system_prompt = self._inject_dynamic_prompt_values(getattr(self, "system_prompt", "") or "") or ""
@@ -938,7 +943,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             NotImplementedError,
             AttributeError,
         ) as exc:
-            await logger.aerror(f"json_response.orchestration_failed: {exc}")
+            await logger.aexception("json_response.orchestration_failed")
             return Data(data={"content": "", "error": str(exc)})
 
     async def get_memory_data(self):

@@ -17,6 +17,7 @@ the mitigations the v2 public endpoint is supposed to inherit from v1:
 
 from __future__ import annotations
 
+import copy
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
@@ -505,6 +506,48 @@ async def test_public_endpoint_builds_from_server_sanitized_flow_data(client: As
 
 @pytest.mark.benchmark
 @pytest.mark.security
+async def test_public_endpoint_sanitizes_before_global_outdated_code_gate(
+    client: AsyncClient, public_flow_id, monkeypatch
+):
+    """Default public builds must reach trusted sanitization even when strict global drift policy is off."""
+    import langflow.api.v2.workflow_public as workflow_public_module
+
+    settings = workflow_public_module.get_settings_service().settings
+    monkeypatch.setattr(settings, "allow_custom_components", False)
+    monkeypatch.setattr(settings, "substitute_outdated_component_code", False)
+    monkeypatch.setattr(settings, "allow_public_custom_components", False)
+
+    stale_code = "# deliberately stale client-stored ChatInput source"
+    async with session_scope() as session:
+        flow = await session.get(Flow, public_flow_id)
+        assert flow is not None
+        assert flow.data is not None
+        updated_data = copy.deepcopy(flow.data)
+        chat_input = next(node for node in updated_data["nodes"] if node["data"]["type"] == "ChatInput")
+        chat_input["data"]["node"]["template"]["code"]["value"] = stale_code
+        flow.data = updated_data
+        session.add(flow)
+        await session.commit()
+
+    captured: dict = {}
+    _stub_generate_flow_events(monkeypatch, captured)
+
+    _send_unauthenticated(client, "outdated-public-code-client")
+    async with client.stream(
+        "POST",
+        "api/v2/workflows/public",
+        json={"flow_id": str(public_flow_id), "input_value": "Hi"},
+        headers={"Content-Type": "application/json"},
+    ) as response:
+        assert response.status_code == codes.OK
+        await _read_stream(response)
+
+    sanitized_chat_input = next(node for node in captured["data"].nodes if node["data"]["type"] == "ChatInput")
+    assert sanitized_chat_input["data"]["node"]["template"]["code"]["value"] != stale_code
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
 async def test_public_endpoint_rejects_missing_client_id(client: AsyncClient, public_flow_id):
     """Without a ``client_id`` cookie or authenticated user, the request is rejected."""
     client.cookies.clear()  # no client_id, no auth
@@ -529,12 +572,12 @@ async def test_public_endpoint_sanitizes_component_validation_error(client: Asyn
 
     raw_message = "Flow build blocked: custom components are not allowed: SecretInternalComponent"
 
-    def _raise(*_args, **_kwargs):
+    async def _raise(*_args, **_kwargs):
         raise CustomComponentValidationError(raw_message)
 
     import langflow.api.v2.workflow_public as workflow_public_module
 
-    monkeypatch.setattr(workflow_public_module, "validate_flow_for_current_settings", _raise)
+    monkeypatch.setattr(workflow_public_module, "prepare_public_flow_build", _raise)
 
     _send_unauthenticated(client, "component-validation-client")
     response = await client.post(
@@ -567,7 +610,7 @@ async def test_public_endpoint_sanitizes_catalog_identity_unavailable_response(
 
     import langflow.api.v2.workflow_public as workflow_public_module
 
-    monkeypatch.setattr(workflow_public_module, "validate_flow_for_current_settings", _raise)
+    monkeypatch.setattr(workflow_public_module, "validate_catalog_policy_for_flow", _raise)
 
     _send_unauthenticated(client, "catalog-identity-unavailable-client")
     response = await client.post(
@@ -632,10 +675,10 @@ async def test_public_endpoint_surfaces_value_error_as_400(client: AsyncClient, 
 
     gate_error_message = "custom gate failure"
 
-    def _raise(*_args, **_kwargs):
+    async def _raise(*_args, **_kwargs):
         raise ValueError(gate_error_message)
 
-    monkeypatch.setattr(workflow_public_module, "validate_flow_for_current_settings", _raise)
+    monkeypatch.setattr(workflow_public_module, "prepare_public_flow_build", _raise)
 
     _send_unauthenticated(client, "value-error-client")
     response = await client.post(

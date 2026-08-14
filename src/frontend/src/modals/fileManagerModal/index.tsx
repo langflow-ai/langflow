@@ -17,12 +17,14 @@ export default function FileManagerModal({
   types,
   isList,
   allowFolderSelection = false,
+  onOpenChange,
 }: {
   children?: ReactNode;
   selectedFiles?: string[];
   open?: boolean;
   handleSubmit: (files: string[]) => void;
   setOpen?: (open: boolean) => void;
+  onOpenChange?: (open: boolean) => void;
   disabled?: boolean;
   files: FileType[];
   types: string[];
@@ -40,6 +42,10 @@ export default function FileManagerModal({
     queryClient.refetchQueries({
       queryKey: ["useGetFilesV2"],
     });
+  }, [internalOpen]);
+
+  useEffect(() => {
+    onOpenChange?.(internalOpen);
   }, [internalOpen]);
 
   const [internalSelectedFiles, setInternalSelectedFiles] = useState<string[]>(

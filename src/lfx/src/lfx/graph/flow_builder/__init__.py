@@ -13,6 +13,7 @@ from lfx.graph.flow_builder.component import (
 )
 from lfx.graph.flow_builder.connect import (
     add_connection,
+    ensure_tool_mode_supported,
     list_connections,
     remove_connection,
 )
@@ -25,6 +26,7 @@ __all__ = [
     "add_connection",
     "configure_component",
     "empty_flow",
+    "ensure_tool_mode_supported",
     "flow_graph_repr",
     "flow_info",
     "flow_to_spec_summary",

@@ -1901,6 +1901,7 @@ class MCPStdioClient:
 
         max_retries = 2
         last_error_type = None
+        last_error: Exception | None = None
 
         for attempt in range(max_retries):
             try:
@@ -1913,6 +1914,7 @@ class MCPStdioClient:
                     timeout=effective_timeout,
                 )
             except Exception as e:
+                last_error = e
                 current_error_type = type(e).__name__
                 await logger.awarning(f"Tool '{tool_name}' failed on attempt {attempt + 1}: {current_error_type} - {e}")
 
@@ -1978,7 +1980,7 @@ class MCPStdioClient:
         # This should never be reached due to the exception handling above
         msg = f"Failed to run tool '{tool_name}': Maximum retries exceeded with repeated {last_error_type} errors"
         await logger.aerror(msg)
-        raise ValueError(msg)
+        raise ValueError(msg) from last_error
 
     async def disconnect(self):
         """Properly close the connection and clean up resources."""
@@ -2171,7 +2173,7 @@ class MCPStreamableHttpClient:
             session_manager = self._get_session_manager()
             server_key = session_manager._get_server_key(params, "streamable_http")
             attributes["mcp.transport"] = session_manager._transport_preference.get(server_key, "streamable_http")
-            host = urlparse(params["url"]).netloc
+            host = urlparse(params["url"]).netloc.rsplit("@", maxsplit=1)[-1]
             if host:
                 attributes["mcp.server"] = host
         return attributes
@@ -2221,6 +2223,7 @@ class MCPStreamableHttpClient:
 
         max_retries = 2
         last_error_type = None
+        last_error: Exception | None = None
 
         for attempt in range(max_retries):
             try:
@@ -2233,6 +2236,7 @@ class MCPStreamableHttpClient:
                     timeout=effective_timeout,
                 )
             except Exception as e:
+                last_error = e
                 current_error_type = type(e).__name__
                 await logger.awarning(f"Tool '{tool_name}' failed on attempt {attempt + 1}: {current_error_type} - {e}")
 
@@ -2289,7 +2293,7 @@ class MCPStreamableHttpClient:
         # This should never be reached due to the exception handling above
         msg = f"Failed to run tool '{tool_name}': Maximum retries exceeded with repeated {last_error_type} errors"
         await logger.aerror(msg)
-        raise ValueError(msg)
+        raise ValueError(msg) from last_error
 
     async def disconnect(self):
         """Properly close the connection and clean up resources."""
