@@ -540,7 +540,7 @@ class MCPToolsComponent(ComponentWithCache):
                                     user_id=self.user_id, session=db
                                 )
                     except Exception as e:  # noqa: BLE001
-                        await logger.awarning(f"Failed to load global variables for MCP component: {e}")
+                        await logger.awarning("Failed to load global variables for MCP component", exc_info=e)
 
                 await logger.adebug(
                     "MCP update_tool_list: calling update_tools server=%r mode_headers=%s",
