@@ -9,6 +9,7 @@ These grants are direct-link only and must never be used by list endpoints.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
 from typing import TYPE_CHECKING
@@ -22,6 +23,7 @@ from lfx.services.authorization import (
     PublicResourceAction,
 )
 from lfx.services.deps import session_scope_readonly
+from pydantic import BaseModel, Field
 from sqlmodel import select
 
 from langflow.services.authorization.audit import AUDIT_ALLOW, AUDIT_DENY, audit_decision
@@ -45,6 +47,18 @@ class PublicGrantSource(str, Enum):
     AUTHZ_SHARE = "authz_share"
     LEGACY_ACCESS_TYPE = "legacy_access_type"
     A2A_AUTH_NONE = "a2a_auth_none"
+
+
+class PublicFlowCapabilities(BaseModel):
+    """Anonymous direct-link capabilities for one flow.
+
+    Serialized into direct-link responses so a client renders the actions this
+    layer would actually allow, rather than re-deriving them from the legacy
+    ``Flow.access_type`` flag.
+    """
+
+    can_read: bool = Field(description="Anonymous callers may read this flow at its direct link.")
+    can_execute: bool = Field(description="Anonymous callers may run this flow at its direct link.")
 
 
 _READ_PERMISSIONS = frozenset({"read", "execute", "write", "admin"})
@@ -120,26 +134,26 @@ async def _resolve_grant(
     return None
 
 
-async def authorize_public_flow_access(
+@dataclass(frozen=True, slots=True)
+class _PublicDecision:
+    """One resolved anonymous decision, before it is audited or enforced."""
+
+    allowed: bool
+    domain: str
+    grant_source: str
+    tenant: str | None
+
+
+async def _decide(
     *,
     flow: Flow,
     action: PublicResourceAction,
-    request_host: str | None = None,
-    compatibility_grant: PublicGrantSource | None = None,
-    session: AsyncSession | None = None,
-) -> AuthorizationPrincipal:
-    """Authorize a direct-link flow action and return its anonymous principal.
-
-    The caller must load the exact flow by its direct-link identifier. This
-    function never performs tenant discovery and never grants list visibility.
-
-    A canonical PUBLIC share, when present, is the only grant consulted: its
-    permission level bounds the action and a still-set legacy flag cannot widen
-    it. With no share row, changing ``Flow.access_type``/A2A ``auth_type``
-    removes the compatibility grant. New starts and resumes call this function
-    again, while already-running work is not interrupted.
-    """
-    principal = AuthorizationPrincipal.public_anonymous()
+    principal: AuthorizationPrincipal,
+    request_host: str | None,
+    compatibility_grant: PublicGrantSource | None,
+    session: AsyncSession | None,
+) -> _PublicDecision:
+    """Resolve the grant and, when authorization is enabled, the policy verdict."""
     source = await _resolve_grant(
         flow=flow,
         action=action,
@@ -164,7 +178,7 @@ async def authorize_public_flow_access(
         try:
             # Resolving the service is inside the guard on purpose: a service that
             # cannot be constructed must deny like any other policy failure and
-            # still record the audit row below, not escape as a 500.
+            # still record the audit row in the caller, not escape as a 500.
             authorization_service = get_authorization_service()
             if not await authorization_service.supports_public_principals():
                 allowed = False
@@ -175,29 +189,103 @@ async def authorize_public_flow_access(
             allowed = False
             await logger.aexception("Anonymous public authorization failed closed for flow %s", flow.id)
 
+    return _PublicDecision(allowed=allowed, domain=domain, grant_source=request.grant_source, tenant=tenant)
+
+
+async def authorize_public_flow_access(
+    *,
+    flow: Flow,
+    action: PublicResourceAction,
+    request_host: str | None = None,
+    compatibility_grant: PublicGrantSource | None = None,
+    session: AsyncSession | None = None,
+) -> AuthorizationPrincipal:
+    """Authorize a direct-link flow action and return its anonymous principal.
+
+    The caller must load the exact flow by its direct-link identifier. This
+    function never performs tenant discovery and never grants list visibility.
+
+    A canonical PUBLIC share, when present, is the only grant consulted: its
+    permission level bounds the action and a still-set legacy flag cannot widen
+    it. With no share row, changing ``Flow.access_type``/A2A ``auth_type``
+    removes the compatibility grant. New starts and resumes call this function
+    again, while already-running work is not interrupted.
+    """
+    principal = AuthorizationPrincipal.public_anonymous()
+    decision = await _decide(
+        flow=flow,
+        action=action,
+        principal=principal,
+        request_host=request_host,
+        compatibility_grant=compatibility_grant,
+        session=session,
+    )
+
     await audit_decision(
         user_id=None,
         principal=principal,
         action=f"flow:{action.value}",
         obj=f"flow:{flow.id}",
-        result=AUDIT_ALLOW if allowed else AUDIT_DENY,
+        result=AUDIT_ALLOW if decision.allowed else AUDIT_DENY,
         details={
-            "domain": domain,
-            "grant_source": request.grant_source,
-            **({"tenant": tenant} if tenant is not None else {}),
+            "domain": decision.domain,
+            "grant_source": decision.grant_source,
+            **({"tenant": decision.tenant} if decision.tenant is not None else {}),
         },
     )
-    if not allowed:
+    if not decision.allowed:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=PUBLIC_FLOW_NOT_FOUND_DETAIL)
     return principal
+
+
+async def public_flow_capabilities(
+    *,
+    flow: Flow,
+    request_host: str | None = None,
+    session: AsyncSession | None = None,
+) -> PublicFlowCapabilities:
+    """Report which anonymous direct-link actions this flow currently permits.
+
+    A direct-link UI needs this because the grant it was admitted by is not
+    visible in the flow row: a canonical ``AuthzShare(scope=public)`` authorizes
+    a flow whose ``access_type`` is still PRIVATE, and its permission level —
+    not the legacy flag — is what bounds execution. Re-deriving public access
+    from ``Flow.access_type`` in the client disagrees with this layer in both
+    directions, so callers should render from these flags instead.
+
+    Advisory only. It grants nothing: every action still authorizes itself on
+    its own request path through :func:`authorize_public_flow_access`. It is
+    also deliberately not audited — the visitor is not attempting these actions,
+    and emitting a DENY row per page view would turn every read-only share into
+    a stream of false anonymous-denial signals for operators.
+    """
+    principal = AuthorizationPrincipal.public_anonymous()
+
+    async def _allows(action: PublicResourceAction) -> bool:
+        decision = await _decide(
+            flow=flow,
+            action=action,
+            principal=principal,
+            request_host=request_host,
+            compatibility_grant=None,
+            session=session,
+        )
+        return decision.allowed
+
+    return PublicFlowCapabilities(
+        can_read=await _allows(PublicResourceAction.READ),
+        can_execute=await _allows(PublicResourceAction.EXECUTE),
+    )
 
 
 __all__ = [
     "PUBLIC_ANONYMOUS_ACTOR_ID",
     "PUBLIC_FLOW_NOT_FOUND_DETAIL",
+    "PublicFlowCapabilities",
     "PublicGrantSource",
     "PublicResourceAction",
     "authorize_public_flow_access",
     "public_execution_user",
+    "public_flow_capabilities",
     "public_grant_allows",
 ]

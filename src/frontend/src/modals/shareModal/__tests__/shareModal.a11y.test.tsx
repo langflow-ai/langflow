@@ -60,7 +60,9 @@ describe("ShareModal accessibility", () => {
 
     // BaseModal portals its content to document.body, outside the render
     // container.
-    expect(await axe(document.body)).toHaveNoViolations();
+    const results = await axe(document.body);
+
+    expect(results.violations).toEqual([]);
   });
 
   it("should_not_render_a_lock_switch_it_cannot_operate", () => {

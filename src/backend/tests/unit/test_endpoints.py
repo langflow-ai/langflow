@@ -579,10 +579,49 @@ async def test_get_vertices(client, added_flow_webhook_test, logged_in_headers):
     assert set(ids) == {"ChatInput"}
 
 
-async def test_get_vertices_blocks_custom_components_when_disabled(
+async def test_get_vertices_rebuilds_outdated_components_when_custom_components_disabled(
     client, added_flow_webhook_test, logged_in_headers, monkeypatch
 ):
+    """A saved flow whose built-in code drifted across versions still builds (issue #14455).
+
+    With allow_custom_components=False the code stored in the node is never what executes —
+    ``resolve_trusted_code_for_build`` substitutes this server's copy — so refusing the flow over
+    a stale code hash only broke every saved flow on upgrade. This node's type is a known server
+    component, so the build runs the server's copy of it instead of being refused.
+
+    The spy asserts the substitution actually fired against the real component registry, which is
+    what keeps this test honest: were the fixture's stored code ever to catch up with the server's
+    copy, the build would still return 200 without exercising the substitution at all.
+    """
+    from lfx.utils import flow_validation
+
     monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", False)
+
+    # from_payload imports this by module attribute on every call, so the spy sees the real run.
+    substitute = flow_validation.substitute_outdated_component_code_in_place
+    swapped: list[str] = []
+
+    def _spy(payload, **kwargs):
+        result = substitute(payload, **kwargs)
+        swapped.extend(result)
+        return result
+
+    monkeypatch.setattr(flow_validation, "substitute_outdated_component_code_in_place", _spy)
+
+    flow_id = added_flow_webhook_test["id"]
+    response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+
+    assert response.status_code == 200
+    assert any("ChatInput" in label for label in swapped), f"expected a ChatInput swap, got {swapped}"
+
+
+async def test_get_vertices_blocks_outdated_components_when_substitution_disabled(
+    client, added_flow_webhook_test, logged_in_headers, monkeypatch
+):
+    """LANGFLOW_SUBSTITUTE_OUTDATED_COMPONENT_CODE=false keeps the strict hash gate."""
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "allow_custom_components", False)
+    monkeypatch.setattr(settings, "substitute_outdated_component_code", False)
 
     flow_id = added_flow_webhook_test["id"]
     response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)

@@ -9,17 +9,26 @@ The first test asserts that path stays a safe no-op; the rest need the exporters
 the extra is absent.
 """
 
+import builtins
 import importlib.util
 import json
 import os
 import subprocess
 import sys
 
+import httpx
 import pytest
 
 _HAS_OTEL = importlib.util.find_spec("opentelemetry") is not None
 requires_otel = pytest.mark.skipif(not _HAS_OTEL, reason="requires the lfx[otel] extra")
 _TEST_USERINFO = "user:password"  # pragma: allowlist secret
+
+
+def _make_exception_group(message: str, exceptions: list[Exception]) -> BaseException:
+    group_type = getattr(builtins, "ExceptionGroup", None)
+    if group_type is None:
+        group_type = pytest.importorskip("exceptiongroup").ExceptionGroup
+    return group_type(message, exceptions)
 
 
 def _run(probe: str, env_overrides: dict[str, str]) -> subprocess.CompletedProcess:
@@ -278,6 +287,23 @@ def test_span_filter_preserves_attribute_limits_and_drop_count():
     assert exported.dropped_attributes == 1
     assert exported._attributes.maxlen == 1
     assert exported._attributes.max_value_len == 14
+
+
+def test_root_error_type_unwraps_a_single_exception_group():
+    from lfx.observability import _root_error_type
+
+    connection_error = httpx.ConnectError("server unavailable")
+    error_group = _make_exception_group("MCP transport failed", [connection_error])
+
+    assert _root_error_type(error_group) == "ConnectError"
+
+
+def test_root_error_type_keeps_a_multi_exception_group():
+    from lfx.observability import _root_error_type
+
+    error_group = _make_exception_group("MCP transport failed", [ConnectionError(), TimeoutError()])
+
+    assert _root_error_type(error_group) == "ExceptionGroup"
 
 
 @requires_otel

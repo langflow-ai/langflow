@@ -6,12 +6,14 @@ from unittest.mock import ANY, AsyncMock, MagicMock, patch
 import pandas as pd
 import pytest
 from httpx import AsyncClient
+from langchain_core.documents import Document
 from langflow.api.utils import knowledge_base_service
 from langflow.api.utils.kb_helpers import (
     KBAnalysisHelper,
     KBIngestionHelper,
     KBStorageHelper,
 )
+from lfx.base.knowledge_bases.backends.base import BackendConfigurationError
 
 
 @pytest.fixture
@@ -84,6 +86,54 @@ class TestKnowledgeBaseHelpers:
         words, chars = KBAnalysisHelper._calculate_text_metrics(df, ["text"])
         assert words == 5
         assert chars == 22
+
+
+class TestWriteDocumentsRetry:
+    """The ingest retry loop must skip permanent, operator-actionable errors.
+
+    Missing-extension and dimension-mismatch surface as ``BackendConfigurationError``;
+    retrying them only burns the ~20s backoff budget on a call that cannot succeed.
+    """
+
+    @staticmethod
+    def _fresh_job_service():
+        # ``is_job_cancelled`` treats a missing job as "not cancelled".
+        service = MagicMock()
+        service.get_job_by_job_id = AsyncMock(return_value=None)
+        return service
+
+    async def test_backend_configuration_error_is_not_retried(self):
+        backend = MagicMock()
+        backend.add_documents = AsyncMock(side_effect=BackendConfigurationError("missing extension"))
+
+        with (
+            patch("langflow.api.utils.kb_helpers.asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
+            pytest.raises(BackendConfigurationError),
+        ):
+            await KBIngestionHelper.write_documents_to_backend(
+                documents=[Document(page_content="a")],
+                backend=backend,
+                task_job_id=uuid.uuid4(),
+                job_service=self._fresh_job_service(),
+            )
+
+        assert backend.add_documents.await_count == 1  # raised on the first attempt
+        mock_sleep.assert_not_awaited()  # and never backed off
+
+    async def test_transient_error_is_retried(self):
+        backend = MagicMock()
+        backend.add_documents = AsyncMock(side_effect=[RuntimeError("boom"), None])
+
+        with patch("langflow.api.utils.kb_helpers.asyncio.sleep", new_callable=AsyncMock):
+            written = await KBIngestionHelper.write_documents_to_backend(
+                documents=[Document(page_content="a")],
+                backend=backend,
+                task_job_id=uuid.uuid4(),
+                job_service=self._fresh_job_service(),
+            )
+
+        assert written == 1
+        assert backend.add_documents.await_count == 2  # retried once, then succeeded
 
 
 class TestGetKBMetaData:
