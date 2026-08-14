@@ -174,6 +174,34 @@ describe("ChatMessage Component", () => {
     ).toBeInTheDocument();
   });
 
+  it.each(["100%25 complete", "malformed % input"])(
+    "preserves percent sequences in user messages: %s",
+    (message) => {
+      render(
+        <ChatMessage
+          {...defaultProps}
+          chat={{ ...mockChat, message, isSend: true }}
+        />,
+      );
+
+      expect(screen.getByText(message)).toBeInTheDocument();
+    },
+  );
+
+  it.each(["100%25 complete", "malformed % input"])(
+    "preserves percent sequences in bot messages: %s",
+    (message) => {
+      render(
+        <ChatMessage
+          {...defaultProps}
+          chat={{ ...mockChat, message, isSend: false, sender_name: "AI" }}
+        />,
+      );
+
+      expect(screen.getByText(message)).toBeInTheDocument();
+    },
+  );
+
   // Regression guard: the actions row used to be hidden with `invisible` +
   // `group-hover:visible`, which removes it from the tab order entirely
   // (visibility:hidden elements can't receive focus) — a keyboard-only user

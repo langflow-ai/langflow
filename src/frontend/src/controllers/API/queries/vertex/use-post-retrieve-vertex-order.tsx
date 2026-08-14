@@ -34,12 +34,12 @@ export const usePostRetrieveVertexOrder: useMutationFunctionType<
   }: retrieveGetVerticesOrder): Promise<retrieveGetVerticesOrderResponse> => {
     // nodeId is optional and is a query parameter
     // if nodeId is not provided, the API will return all vertices
-    const config: AxiosRequestConfig<any> = {};
+    const config: AxiosRequestConfig = {};
     if (stopNodeId) {
-      config["params"] = { stop_component_id: decodeURIComponent(stopNodeId) };
+      config["params"] = { stop_component_id: stopNodeId };
     } else if (startNodeId) {
       config["params"] = {
-        start_component_id: decodeURIComponent(startNodeId),
+        start_component_id: startNodeId,
       };
     }
     let requestBody: { nodes: Node[]; edges: Edge[] } | null = null;

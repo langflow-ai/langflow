@@ -97,13 +97,9 @@ export function useStreamingMessage({
     };
   }, []);
 
-  // Decode the message for display
-  let decodedMessage = chatMessage ?? "";
-  try {
-    decodedMessage = decodeURIComponent(chatMessage);
-  } catch (_e) {
-    // ignore decode errors
-  }
+  // Stream chunks and persisted messages are already decoded JSON values.
+  // Do not decode them again: literal percent sequences must remain intact.
+  const decodedMessage = chatMessage;
 
   return {
     chatMessage: decodedMessage,

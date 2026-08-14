@@ -99,6 +99,15 @@ describe("ChatMessage actions (WCAG 2.1.1 keyboard reachability)", () => {
     expect(results).toHaveNoViolations();
   });
 
+  it.each(["100%25 complete", "malformed % input"])(
+    "preserves percent sequences in I/O modal messages: %s",
+    (message) => {
+      render(<ChatMessage {...defaultProps} chat={{ ...mockChat, message }} />);
+
+      expect(screen.getByTestId("markdown-field")).toHaveTextContent(message);
+    },
+  );
+
   // Regression guard: the copy/edit/feedback actions used to be hidden with
   // `invisible` + `group-hover:visible`, which removes them from the tab
   // order entirely (visibility:hidden elements can't receive focus) — a

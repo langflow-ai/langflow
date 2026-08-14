@@ -22,12 +22,10 @@ export const UserMessage = memo(
     const isAudioMessage = chat.category === "audio";
     const chatMessage = chat.message ? chat.message.toString() : "";
 
-    let decodedMessage = chatMessage ?? "";
-    try {
-      decodedMessage = decodeURIComponent(chatMessage);
-    } catch (_e) {
-      // ignore decode errors
-    }
+    // Messages arrive as decoded JSON values. DecodeURIComponent here would
+    // turn literal percent sequences (for example, "%25") into different
+    // user-visible text and can double-decode attacker-controlled input.
+    const decodedMessage = chatMessage;
 
     const isEmpty = decodedMessage?.trim() === "";
     const hasFiles = chat.files && chat.files.length > 0;

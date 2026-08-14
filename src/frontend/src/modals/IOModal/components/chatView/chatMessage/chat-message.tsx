@@ -123,12 +123,10 @@ export default function ChatMessage({
     }
   }, [chat.category]);
 
-  let decodedMessage = chatMessage ?? "";
-  try {
-    decodedMessage = decodeURIComponent(chatMessage);
-  } catch (_e) {
-    // console.error(e);
-  }
+  // Chat messages are decoded by JSON parsing before they reach the UI.
+  // Decoding again changes literal percent sequences and permits double-
+  // unescaping of attacker-controlled content.
+  const decodedMessage = chatMessage;
   const isEmpty = decodedMessage?.trim() === "";
   const { mutate: updateMessageMutation } = useUpdateMessage();
 
