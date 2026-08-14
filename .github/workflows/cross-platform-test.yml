@@ -1000,8 +1000,8 @@ jobs:
               assert not entry_points(group=group), f"Extension entry points registered in {group}"
 
           scripts = Path(sys.executable).parent
-          assert (scripts / "langflow").is_file()
-          assert not (scripts / "langflow-base").exists()
+          assert (scripts / "langflow-base").is_file(), f"langflow-base console script missing from {scripts}"
+          assert not (scripts / "langflow").exists(), "langflow console script leaked into the base-only environment"
           provided_extras = set(metadata("langflow-base").get_all("Provides-Extra", []))
           assert {"complete", "all"} <= provided_extras
           compatibility_requirements = [
@@ -1032,7 +1032,7 @@ jobs:
           export DO_NOT_TRACK=true
           LOG_FILE="$RUNTIME_DIR/server.log"
 
-          base-test-env/bin/langflow run \
+          base-test-env/bin/langflow-base run \
             --host 127.0.0.1 --port 7861 --backend-only --workers 1 >"$LOG_FILE" 2>&1 &
           SERVER_PID=$!
           cleanup() {
