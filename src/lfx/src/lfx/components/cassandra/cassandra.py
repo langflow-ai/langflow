@@ -180,15 +180,15 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
 
         if documents:
             self.log(f"Adding {len(documents)} documents to the Vector Store.")
-            table = Cassandra.from_documents(
-                documents=documents,
+            table = Cassandra(
                 embedding=self.embedding,
                 table_name=self.table_name,
                 keyspace=self.keyspace,
                 ttl_seconds=self.ttl_seconds or None,
-                batch_size=self.batch_size,
                 body_index_options=body_index_options,
+                setup_mode=setup_mode,
             )
+            table.add_documents(documents, batch_size=self.batch_size)
         else:
             self.log("No documents to add to the Vector Store.")
             table = Cassandra(
