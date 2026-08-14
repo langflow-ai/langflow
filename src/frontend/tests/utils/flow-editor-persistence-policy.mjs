@@ -23,16 +23,24 @@ export function isMatchingFullFlowAutosavePayload(value, matchesData) {
   return hasFlowMetadata && matchesData(value.data);
 }
 
-export function canAcceptFullFlowAutosavePayload(
+export function canTrackFullFlowAutosavePayload(
   value,
   matchesData,
-  completedModelRefreshes,
+  observedModelRefreshes,
   expectedModelRefreshes,
 ) {
   return (
-    completedModelRefreshes >= expectedModelRefreshes &&
+    observedModelRefreshes >= expectedModelRefreshes &&
     isMatchingFullFlowAutosavePayload(value, matchesData)
   );
+}
+
+export function isFlowPersistenceBarrierSatisfied(
+  autosaveFinished,
+  completedModelRefreshes,
+  requiredModelRefreshes,
+) {
+  return autosaveFinished && completedModelRefreshes >= requiredModelRefreshes;
 }
 
 export function modelRefreshNodeCount(data) {

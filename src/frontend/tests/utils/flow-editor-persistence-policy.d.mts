@@ -17,11 +17,16 @@ export function isMatchingFullFlowAutosavePayload(
   matchesData: (data: FlowPersistenceData) => boolean,
 ): boolean;
 export function isModelRefreshBody(value: unknown): boolean;
-export function canAcceptFullFlowAutosavePayload(
+export function canTrackFullFlowAutosavePayload(
   value: unknown,
   matchesData: (data: FlowPersistenceData) => boolean,
-  completedModelRefreshes: number,
+  observedModelRefreshes: number,
   expectedModelRefreshes: number,
+): boolean;
+export function isFlowPersistenceBarrierSatisfied(
+  autosaveFinished: boolean,
+  completedModelRefreshes: number,
+  requiredModelRefreshes: number,
 ): boolean;
 export function modelRefreshNodeCount(data: FlowPersistenceData): number;
 export function requiresPostRefreshAutosave(data: FlowPersistenceData): boolean;

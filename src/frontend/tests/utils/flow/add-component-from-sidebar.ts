@@ -84,9 +84,14 @@ export async function addComponentFromSidebar(
     return;
   }
 
+  const nodes = page.locator(".react-flow__node");
+  const previousNodeCount = await nodes.count();
   await page
     .getByTestId(testId)
     .dragTo(page.locator(SELECTORS.reactFlowCanvasXPath), {
       targetPosition: position ?? { x: 200, y: 200 },
     });
+  await expect(nodes).toHaveCount(previousNodeCount + 1, {
+    timeout: TIMEOUTS.standard,
+  });
 }

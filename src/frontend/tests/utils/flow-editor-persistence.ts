@@ -1,6 +1,7 @@
 import type { Page, Request, Response } from "@playwright/test";
 import {
-  canAcceptFullFlowAutosavePayload,
+  canTrackFullFlowAutosavePayload,
+  isFlowPersistenceBarrierSatisfied,
   isModelRefreshBody,
   modelRefreshNodeCount,
   requiresPostRefreshAutosave,
@@ -106,10 +107,10 @@ export async function reloadAndWaitForFlowPersistence(
     return;
   }
 
-  const modelRefreshFinished: Promise<void>[] = [];
   const trackedModelRefreshes = new Set<Request>();
   const trackedAutosaves = new Set<Request>();
   let completedModelRefreshes = 0;
+  let autosaveFinished = false;
   let sawReloadNavigation = false;
   let sawReloadFlowRead = false;
   let dispose = () => {};
@@ -126,6 +127,18 @@ export async function reloadAndWaitForFlowPersistence(
       else resolve();
     };
     failPersistence = finish;
+
+    const maybeFinish = () => {
+      if (
+        isFlowPersistenceBarrierSatisfied(
+          autosaveFinished,
+          completedModelRefreshes,
+          trackedModelRefreshes.size,
+        )
+      ) {
+        finish();
+      }
+    };
 
     const onRequest = (request: Request) => {
       const pathname = new URL(request.url()).pathname;
@@ -153,10 +166,10 @@ export async function reloadAndWaitForFlowPersistence(
 
       const body = requestBody(request);
       if (
-        canAcceptFullFlowAutosavePayload(
+        canTrackFullFlowAutosavePayload(
           body,
           matchesPersistedData,
-          completedModelRefreshes,
+          trackedModelRefreshes.size,
           expectedModelRefreshes,
         )
       ) {
@@ -167,25 +180,21 @@ export async function reloadAndWaitForFlowPersistence(
     const onResponse = (response: Response) => {
       const request = response.request();
       if (trackedModelRefreshes.has(request)) {
-        const finished = assertFinishedResponse(
-          response,
-          `Model refresh in flow ${flowId}`,
-        );
-        modelRefreshFinished.push(finished);
-        void finished
+        void assertFinishedResponse(response, `Model refresh in flow ${flowId}`)
           .then(() => {
             completedModelRefreshes += 1;
+            maybeFinish();
           })
           .catch(finish);
         return;
       }
       if (!trackedAutosaves.has(request)) return;
 
-      void Promise.all([
-        ...modelRefreshFinished,
-        assertFinishedResponse(response, `Autosave for flow ${flowId}`),
-      ])
-        .then(() => finish())
+      void assertFinishedResponse(response, `Autosave for flow ${flowId}`)
+        .then(() => {
+          autosaveFinished = true;
+          maybeFinish();
+        })
         .catch(finish);
     };
 

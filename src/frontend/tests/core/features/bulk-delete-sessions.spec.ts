@@ -5,6 +5,17 @@ import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
 
 test.describe("Bulk Delete Sessions", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route(/\/api\/v1\/store\/tags(\?.*)?$/, async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({ json: [] });
+        return;
+      }
+
+      await route.continue();
+    });
+  });
+
   // Helper to send a message in the playground
   async function sendMessage(page: Page, message: string) {
     await page.waitForSelector('[data-testid="input-chat-playground"]', {

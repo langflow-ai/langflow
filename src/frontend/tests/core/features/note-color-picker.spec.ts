@@ -1,29 +1,10 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { routeTestScopedDefaultFlowNames } from "../../utils/flow/route-test-scoped-default-flow-names";
 
 test.beforeEach(async ({ page }, testInfo) => {
-  let flowCreationIndex = 0;
-  await page.route("**/api/v1/flows/", async (route) => {
-    const request = route.request();
-    if (request.method() !== "POST") {
-      await route.continue();
-      return;
-    }
-
-    const body = request.postDataJSON() as Record<string, unknown>;
-    if (body.name !== "New Flow") {
-      await route.continue();
-      return;
-    }
-
-    await route.continue({
-      postData: JSON.stringify({
-        ...body,
-        name: `note-color-${testInfo.testId}-${testInfo.retry}-${flowCreationIndex++}`,
-      }),
-    });
-  });
+  await routeTestScopedDefaultFlowNames(page, testInfo, "note-color");
 });
 
 test(

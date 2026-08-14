@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  canAcceptFullFlowAutosavePayload,
+  canTrackFullFlowAutosavePayload,
+  isFlowPersistenceBarrierSatisfied,
   isMatchingFullFlowAutosavePayload,
   isModelRefreshBody,
   modelRefreshNodeCount,
@@ -105,7 +106,7 @@ test("recognizes refreshes for dynamically named model fields", () => {
   );
 });
 
-test("ignores a matching autosave until every refresh body finishes", () => {
+test("tracks a matching autosave after every refresh request is observed", () => {
   const fullFlowAutosave = {
     data: configuredData,
     description: null,
@@ -116,22 +117,41 @@ test("ignores a matching autosave until every refresh body finishes", () => {
   };
 
   assert.equal(
-    canAcceptFullFlowAutosavePayload(
+    canTrackFullFlowAutosavePayload(
       fullFlowAutosave,
       matchesConfiguredAgent,
       0,
       1,
     ),
     false,
-    "a matching autosave arriving before refresh completion must be ignored",
+    "a matching autosave arriving before all refresh requests must be ignored",
   );
   assert.equal(
-    canAcceptFullFlowAutosavePayload(
+    canTrackFullFlowAutosavePayload(
       fullFlowAutosave,
       matchesConfiguredAgent,
       1,
       1,
     ),
     true,
+  );
+});
+
+test("the persistence barrier completes in either response order", () => {
+  assert.equal(
+    isFlowPersistenceBarrierSatisfied(true, 0, 1),
+    false,
+    "a finished autosave must still wait for the refresh response body",
+  );
+  assert.equal(
+    isFlowPersistenceBarrierSatisfied(false, 1, 1),
+    false,
+    "finished refreshes must still wait for the matching autosave body",
+  );
+  assert.equal(isFlowPersistenceBarrierSatisfied(true, 1, 1), true);
+  assert.equal(
+    isFlowPersistenceBarrierSatisfied(true, 1, 2),
+    false,
+    "a second observed refresh must finish before the listener is disposed",
   );
 });
