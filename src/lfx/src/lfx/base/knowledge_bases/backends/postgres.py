@@ -5,6 +5,15 @@ The backend is configured by one deployment-level
 Memory Base maps to a stable, owner-qualified collection so users may safely use
 the same display name.
 
+Storage layout
+--------------
+Every collection gets its **own** physical table, named after its
+owner-qualified ``collection_name`` (``lf_<sha256[:24]>``). The embedding column
+is typed to the collection's embedding dimension (``vector(N)``) so pgvector can
+build an HNSW index on it — a dimensionless ``vector`` column cannot be indexed
+and forces a sequential scan on every search. Because each table carries its own
+dimension, different KBs may use different embedding models side by side.
+
 The small async adapter below deliberately uses SQLAlchemy + ``pgvector``
 directly. This keeps the published ``pgvector`` extra satisfiable while
 preserving Langflow's security floor on the Python pgvector client; released
@@ -15,6 +24,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import uuid
 from typing import TYPE_CHECKING, Any
 
@@ -22,6 +32,7 @@ from langchain_core.documents import Document
 from langchain_core.vectorstores import VectorStore
 
 from lfx.base.knowledge_bases.backends.base import (
+    BackendConfigurationError,
     BackendType,
     BaseVectorStoreBackend,
     IngestedDocument,
@@ -32,38 +43,152 @@ from lfx.log.logger import logger
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Sequence
 
+    from sqlalchemy.ext.asyncio import AsyncConnection
+
 
 # Single env var that configures pgVector for the whole deployment.
 DEFAULT_CONNECTION_STRING_VARIABLE = "PGVECTOR_CONNECTION_STRING"
-# Tables Langflow persists to using the conventional LangChain PGVector schema.
-# These are fixed schema identifiers (never user input) and
-# are written as literals in the SQL below so every user value stays a bound
-# parameter.
-_EMBEDDING_TABLE = "langchain_pg_embedding"
-_COLLECTION_TABLE = "langchain_pg_collection"
 
-# Prebuilt SQL for the native metric/lifecycle reads. Interpolating only the
-# fixed table-name constants above keeps the queries static (no S608 vector);
-# ``:name`` / ``:where`` are always passed as bound parameters.
-_COUNT_SQL = (
-    f"SELECT count(*) FROM {_EMBEDDING_TABLE} e "  # noqa: S608 — fixed table names, bound params
-    f"JOIN {_COLLECTION_TABLE} c ON e.collection_id = c.uuid WHERE c.name = :name"
+# Advisory-lock key serializing per-collection DDL (table + index creation) so
+# concurrent ingests don't race the bootstrap. Postgres advisory locks are
+# database-wide; this one constant key covers every collection, so bootstraps
+# across all collections on a database briefly serialize against each other.
+_ADVISORY_LOCK_KEY = 1573678846307946496
+
+# Collection tables are always ``lf_`` + 24 lowercase hex chars derived from a
+# sha256 of the owner id + KB name (see ``collection_name``). The value is never
+# user input, but every interpolation of it into SQL is still guarded against
+# this exact shape so the S608 posture holds even if the derivation changes.
+_COLLECTION_NAME_RE = re.compile(r"^lf_[0-9a-f]{24}$")
+
+# pgvector can build an HNSW index on a ``vector`` column only up to this many
+# dimensions. Larger models (e.g. 3072-dim embeddings) still store and search
+# correctly — they just fall back to an exact (sequential) scan until halfvec
+# indexing is wired up. See ``_ensure_embedding_table``.
+_HNSW_MAX_DIM = 2000
+
+# pgvector added iterative index scans in 0.8.0. Before then, a metadata filter
+# is applied only to the fixed HNSW candidate window (``hnsw.ef_search``), so a
+# selective filter can return fewer than ``k`` rows. See ``_widen_filtered_scan``.
+_ITERATIVE_SCAN_MIN_VERSION = (0, 8, 0)
+# pgvector's default HNSW candidate window; we widen it for filtered queries.
+_HNSW_DEFAULT_EF_SEARCH = 40
+# Filtered queries scan ``k * this`` candidates (capped) so a post-scan metadata
+# filter has a much larger pool to match against even on pre-0.8 servers.
+_FILTER_EF_SEARCH_MULTIPLIER = 40
+_FILTER_EF_SEARCH_CAP = 1000
+
+# Static, table-name-free SQL (name is a bound param, missing table -> 0).
+_STORAGE_SIZE_SQL = "SELECT COALESCE(pg_total_relation_size(to_regclass(:name)), 0)"
+
+# Separation of duties: the ``vector`` extension is privileged DDL on the
+# database catalog, so *the operator* provisions it — Langflow only reads and
+# writes. Every site that detects the extension's absence (``test_connection``,
+# first-ingest table setup, and — once wired — the deployment pre-flight probe)
+# surfaces this one message so the resolution is always the same, clear step.
+MISSING_EXTENSION_MESSAGE = (
+    "The pgvector 'vector' extension is not installed on this database. Ask your "
+    "database operator to enable it by running `CREATE EXTENSION vector;` as a "
+    "superuser. Langflow does not install database extensions — it only reads from "
+    "and writes to the database."
 )
-_DELETE_BY_SQL = (
-    f"DELETE FROM {_EMBEDDING_TABLE} "  # noqa: S608 — fixed table names, bound params
-    f"WHERE collection_id = (SELECT uuid FROM {_COLLECTION_TABLE} WHERE name = :name) "
-    "AND cmetadata @> CAST(:where AS jsonb)"
+# Structured ``details.type`` tag on the test-connection result. The frontend
+# renders only ``ok`` + ``message`` today; this tag is carried in the response's
+# optional ``details`` bag so a future UI can key off it for extension-specific
+# hints without re-parsing the message text.
+MISSING_EXTENSION_DETAILS_TYPE = "MissingExtension"
+
+# Per-collection tables mean the connecting role needs CREATE on the schema at
+# first ingest. ``test_connection`` verifies this so the operator learns at
+# configure time, not when the first ingest fails with a raw permission error.
+MISSING_CREATE_PRIVILEGE_MESSAGE = (
+    "Connected to Postgres, but this role cannot create tables in the current schema. "
+    "Langflow creates one table per knowledge base on first ingest, so it needs CREATE on the schema. "
+    "Grant it (for example `GRANT CREATE ON SCHEMA public TO <role>;`) or point "
+    "PGVECTOR_CONNECTION_STRING at a role and schema that already has it."
 )
-_DELETE_COLLECTION_SQL = f"DELETE FROM {_COLLECTION_TABLE} WHERE name = :name"  # noqa: S608 — fixed table name
-_STORAGE_SIZE_SQL = f"SELECT pg_total_relation_size('{_EMBEDDING_TABLE}')"
+MISSING_CREATE_PRIVILEGE_DETAILS_TYPE = "MissingCreatePrivilege"
 
 
-def _iter_documents_sql(*, include_embeddings: bool) -> str:
-    columns = "e.document, e.cmetadata" + (", e.embedding" if include_embeddings else "")
+def _validate_table_name(name: str) -> str:
+    """Return ``name`` iff it matches the fixed collection-table shape.
+
+    Guards every place a collection table name is interpolated into SQL text.
+    """
+    if not _COLLECTION_NAME_RE.match(name):
+        msg = f"Refusing to build SQL for an unexpected collection table name: {name!r}."
+        raise ValueError(msg)
+    return name
+
+
+def _count_sql(table: str) -> str:
+    return f"SELECT count(*) FROM {_validate_table_name(table)}"  # noqa: S608 — table name validated above
+
+
+def _delete_by_sql(table: str) -> str:
     return (
-        f"SELECT {columns} FROM {_EMBEDDING_TABLE} e "  # noqa: S608 — fixed table names, bound params
-        f"JOIN {_COLLECTION_TABLE} c ON e.collection_id = c.uuid WHERE c.name = :name"
+        f"DELETE FROM {_validate_table_name(table)} "  # noqa: S608 — table name validated; :where is bound
+        "WHERE cmetadata @> CAST(:where AS jsonb)"
     )
+
+
+def _drop_table_sql(table: str) -> str:
+    return f'DROP TABLE IF EXISTS "{_validate_table_name(table)}"'
+
+
+def _iter_documents_sql(table: str, *, include_embeddings: bool) -> str:
+    columns = "document, cmetadata" + (", embedding" if include_embeddings else "")
+    return f"SELECT {columns} FROM {_validate_table_name(table)}"  # noqa: S608 — table name validated above
+
+
+def _parse_vector_dim(type_str: str | None) -> int | None:
+    """Extract N from a ``vector(N)`` Postgres type string."""
+    match = re.search(r"vector\((\d+)\)", type_str or "")
+    return int(match.group(1)) if match else None
+
+
+def _parse_pgvector_version(raw: str | None) -> tuple[int, ...] | None:
+    """Parse a pgvector ``extversion`` string (e.g. ``"0.8.0"``) into a tuple.
+
+    Returns ``None`` when the value is missing or unparseable, so callers treat
+    an unknown version conservatively (assume the older behavior).
+    """
+    match = re.match(r"(\d+)(?:\.(\d+))?(?:\.(\d+))?", str(raw or ""))
+    if not match:
+        return None
+    return tuple(int(group) if group else 0 for group in match.groups())
+
+
+def _dimension_mismatch_message(kb_name: str, *, existing_dim: int, model_dim: int) -> str:
+    """The single operator-facing message for an embedding-width mismatch.
+
+    Shared by ingest (``_ensure_embedding_table``) and retrieval
+    (``_translate_dimension_error``) so both surface the exact same guidance.
+    """
+    return (
+        f"Knowledge base '{kb_name}' was created with {existing_dim}-dimensional embeddings, "
+        f"but the current embedding model produces {model_dim}. Recreate the knowledge base or "
+        "restore the original embedding model."
+    )
+
+
+def _translate_dimension_error(exc: Exception, *, kb_name: str, query_dim: int) -> str | None:
+    """Translate pgvector's raw dimension-mismatch error into the shared message.
+
+    Returns the operator-facing message (identical to ingest's) when ``exc`` is a
+    ``different vector dimensions N and M`` error, else ``None``. Parsing the
+    numbers out of the driver message — rather than issuing an extra catalog
+    probe on every search — keeps the retrieval happy path free of a round-trip;
+    the translation only runs once a query has already failed on the mismatch.
+    """
+    match = re.search(r"different vector dimensions (\d+) and (\d+)", str(exc))
+    if not match:
+        return None
+    dims = {int(match.group(1)), int(match.group(2))}
+    existing = next((dim for dim in sorted(dims) if dim != query_dim), None)
+    if existing is None:
+        return None
+    return _dimension_mismatch_message(kb_name, existing_dim=existing, model_dim=query_dim)
 
 
 def _normalize_driver(url: str) -> str:
@@ -185,6 +310,11 @@ class PostgresBackend(BaseVectorStoreBackend):
         payload = f"{len(owner)}:{owner}{len(self.kb_name)}:{self.kb_name}"
         return f"lf_{hashlib.sha256(payload.encode()).hexdigest()[:24]}"
 
+    @property
+    def table_name(self) -> str:
+        """Physical embedding table for this collection (validated for SQL use)."""
+        return _validate_table_name(self.collection_name)
+
     def _ensure_async_engine(self):
         """Lazily build the sidecar async engine used for count/scan/delete/ping."""
         engine = getattr(self, "_pg_engine", None)
@@ -203,15 +333,10 @@ class PostgresBackend(BaseVectorStoreBackend):
         self._pg_engine = engine
         return engine
 
-    def _database_tables(self):
-        """Build the conventional PGVector SQLAlchemy table definitions lazily."""
-        tables = getattr(self, "_pg_tables", None)
-        if tables is not None:
-            return tables
+    def _require_pgvector(self) -> None:
+        """Raise a friendly RuntimeError when the optional pgvector extra is absent."""
         try:
-            from pgvector.sqlalchemy import Vector
-            from sqlalchemy import Column, ForeignKey, Index, MetaData, String, Table
-            from sqlalchemy.dialects.postgresql import JSON, JSONB, UUID
+            from pgvector.sqlalchemy import Vector  # noqa: F401
         except (ImportError, RuntimeError) as exc:
             msg = (
                 "PostgresBackend requires the 'pgvector' package. "
@@ -219,54 +344,159 @@ class PostgresBackend(BaseVectorStoreBackend):
             )
             raise RuntimeError(msg) from exc
 
+    def _embedding_table(self, dim: int | None = None):
+        """Build the per-collection embedding table definition.
+
+        ``dim`` types the vector column for DDL; read/write query construction
+        does not depend on it, so callers that only reference the column may
+        leave it ``None``.
+        """
+        self._require_pgvector()
+        from pgvector.sqlalchemy import Vector
+        from sqlalchemy import Column, MetaData, String, Table
+        from sqlalchemy.dialects.postgresql import JSONB
+
         metadata = MetaData()
-        collection = Table(
-            _COLLECTION_TABLE,
-            metadata,
-            Column("uuid", UUID(as_uuid=True), primary_key=True),
-            Column("name", String, nullable=False, unique=True),
-            Column("cmetadata", JSON),
-        )
-        embedding = Table(
-            _EMBEDDING_TABLE,
+        return Table(
+            self.table_name,
             metadata,
             Column("id", String, primary_key=True),
-            Column(
-                "collection_id",
-                UUID(as_uuid=True),
-                ForeignKey(f"{_COLLECTION_TABLE}.uuid", ondelete="CASCADE"),
-            ),
-            Column("embedding", Vector()),
+            Column("embedding", Vector(dim) if dim else Vector()),
             Column("document", String, nullable=True),
             Column("cmetadata", JSONB, nullable=True),
         )
-        Index(
-            "ix_cmetadata_gin",
-            embedding.c.cmetadata,
-            postgresql_using="gin",
-            postgresql_ops={"cmetadata": "jsonb_path_ops"},
-        )
-        self._pg_tables = (metadata, collection, embedding)
-        return self._pg_tables
 
-    async def _ensure_store_ready(self) -> None:
-        """Create the extension, shared tables, and this owner's collection."""
-        await self.ensure_ready()
-        metadata, collection, _embedding = self._database_tables()
+    async def _existing_embedding_dim(self, conn: AsyncConnection) -> int | None:
+        """Return the dimension of an existing collection table, or None if absent."""
         from sqlalchemy import text
-        from sqlalchemy.dialects.postgresql import insert
+
+        # Resolve the relation with ``to_regclass`` (search_path-aware) so this
+        # agrees with ``_table_exists``; a bare ``pg_class.relname`` match could
+        # pick a same-named table in a different schema.
+        type_str = await conn.scalar(
+            text(
+                "SELECT format_type(a.atttypid, a.atttypmod) "
+                "FROM pg_attribute a "
+                "WHERE a.attrelid = to_regclass(:name) AND a.attname = 'embedding' "
+                "AND a.attnum > 0 AND NOT a.attisdropped"
+            ),
+            {"name": self.table_name},
+        )
+        return _parse_vector_dim(type_str)
+
+    async def _ensure_embedding_table(self, dim: int) -> None:
+        """Create this collection's typed, indexed table (idempotent).
+
+        Runs under a database-wide advisory lock so concurrent first-ingests of
+        the same (or different) collections don't race the DDL. The HNSW and GIN
+        indexes are built at creation time while the table is empty, which is
+        cheap and avoids ``CREATE INDEX CONCURRENTLY``'s no-transaction rule.
+
+        The ``vector`` extension is **not** created here: provisioning it is the
+        database operator's responsibility (see ``MISSING_EXTENSION_MESSAGE``).
+        Its absence is checked up front and surfaced with a clear, actionable
+        message rather than failing obscurely on the ``vector(N)`` column type.
+        """
+        dim = int(dim)
+        if dim <= 0:
+            msg = f"Embedding dimension must be a positive integer, got {dim!r}."
+            raise ValueError(msg)
+        table = self.table_name
+        self._require_pgvector()
+        from sqlalchemy import text
 
         engine = self._ensure_async_engine()
         async with engine.begin() as conn:
-            await conn.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": 1573678846307946496})
-            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-            await conn.run_sync(metadata.create_all)
-            statement = (
-                insert(collection)
-                .values(uuid=uuid.uuid4(), name=self.collection_name, cmetadata={})
-                .on_conflict_do_nothing(index_elements=[collection.c.name])
+            await conn.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": _ADVISORY_LOCK_KEY})
+            # Operator owns the extension; Langflow verifies, never creates it.
+            if not await self._vector_extension_installed(conn):
+                raise BackendConfigurationError(MISSING_EXTENSION_MESSAGE)
+            await conn.execute(
+                text(
+                    f'CREATE TABLE IF NOT EXISTS "{table}" ('
+                    "id VARCHAR PRIMARY KEY, "
+                    f"embedding vector({dim}), "
+                    "document VARCHAR, "
+                    "cmetadata JSONB)"
+                )
             )
-            await conn.execute(statement)
+            # ``CREATE TABLE IF NOT EXISTS`` never alters an existing table, so a
+            # model whose dimension differs from the one this KB was created with
+            # would fail obscurely on INSERT. Surface it clearly instead.
+            existing_dim = await self._existing_embedding_dim(conn)
+            if existing_dim is not None and existing_dim != dim:
+                raise BackendConfigurationError(
+                    _dimension_mismatch_message(self.kb_name, existing_dim=existing_dim, model_dim=dim)
+                )
+            await conn.execute(
+                text(
+                    f'CREATE INDEX IF NOT EXISTS "{table}_cmeta_gin" ON "{table}" USING gin (cmetadata jsonb_path_ops)'
+                )
+            )
+            if dim <= _HNSW_MAX_DIM:
+                await conn.execute(
+                    text(
+                        f'CREATE INDEX IF NOT EXISTS "{table}_hnsw" ON "{table}" '
+                        "USING hnsw (embedding vector_cosine_ops)"
+                    )
+                )
+            else:
+                await logger.awarning(
+                    "pgvector cannot HNSW-index %d-dimensional embeddings (max %d) for %s; "
+                    "similarity search will use an exact scan.",
+                    dim,
+                    _HNSW_MAX_DIM,
+                    self.kb_name,
+                )
+
+    async def _table_exists(self, conn: AsyncConnection) -> bool:
+        from sqlalchemy import text
+
+        return (await conn.scalar(text("SELECT to_regclass(:name)"), {"name": self.table_name})) is not None
+
+    async def _vector_extension_installed(self, conn: AsyncConnection) -> bool:
+        """Return True iff the pgvector ``vector`` extension exists on this database."""
+        return bool(await self._pgvector_extversion(conn))
+
+    async def _pgvector_extversion(self, conn: AsyncConnection) -> str | None:
+        """Return the installed pgvector ``extversion`` (e.g. ``"0.8.0"``) or None."""
+        from sqlalchemy import text
+
+        return await conn.scalar(text("SELECT extversion FROM pg_extension WHERE extname = 'vector'"))
+
+    async def _widen_filtered_scan(self, conn: AsyncConnection, *, k: int) -> None:
+        """Best-effort mitigation for pgvector's post-filter HNSW recall gap.
+
+        pgvector evaluates a metadata ``WHERE`` filter only *after* the
+        approximate HNSW scan has produced its candidate window
+        (``hnsw.ef_search``, default 40). A highly selective filter — e.g. a
+        single ``session_id`` in a Memory Base that stores every session — can
+        fall entirely outside that window, so ``ORDER BY embedding <=> $1 ...
+        LIMIT k`` returns fewer than ``k`` rows (sometimes zero) even though many
+        matching rows exist. The effect is planner-dependent, so it can pass in
+        dev and regress silently as the table grows.
+
+        Two transaction-scoped mitigations, applied together:
+
+        * pgvector >= 0.8.0: enable iterative index scans so the executor keeps
+          pulling candidates from the index until it has ``k`` rows that satisfy
+          the filter. This is the real fix, but it needs a *server-side*
+          extension >= 0.8.0 — the pinned client floor (``pgvector>=0.4.2``)
+          does not imply it, hence the version probe.
+        * Always widen ``hnsw.ef_search`` for the filtered query so even a server
+          that cannot iterate searches a far larger candidate pool before
+          filtering.
+
+        Both use ``SET LOCAL`` so they never outlive this query's transaction.
+        """
+        from sqlalchemy import text
+
+        # ef_search is a bounded int computed here, never user input.
+        ef_search = min(_FILTER_EF_SEARCH_CAP, max(_HNSW_DEFAULT_EF_SEARCH, k * _FILTER_EF_SEARCH_MULTIPLIER))
+        await conn.execute(text(f"SET LOCAL hnsw.ef_search = {int(ef_search)}"))
+        version = _parse_pgvector_version(await self._pgvector_extversion(conn))
+        if version is not None and version >= _ITERATIVE_SCAN_MIN_VERSION:
+            await conn.execute(text("SET LOCAL hnsw.iterative_scan = relaxed_order"))
 
     # ---- the one required method ----------------------------------------
 
@@ -274,7 +504,7 @@ class PostgresBackend(BaseVectorStoreBackend):
         return _PostgresVectorStore(self)
 
     async def _add_documents(self, documents: list[Document], *, ids: Sequence[str] | None = None) -> list[str]:
-        await self._ensure_store_ready()
+        await self.ensure_ready()
         if self.embedding_function is None:
             msg = "PostgresBackend requires an embedding function to add documents."
             raise ValueError(msg)
@@ -282,9 +512,21 @@ class PostgresBackend(BaseVectorStoreBackend):
         if len(vectors) != len(documents):
             msg = "Embedding provider returned a different number of vectors than documents."
             raise ValueError(msg)
+        if not vectors:
+            return []
 
-        _metadata, collection, embedding = self._database_tables()
-        from sqlalchemy import select
+        # The embedding dimension is only knowable once we have real vectors, so
+        # the typed, indexed table is provisioned lazily on first write. Memoize
+        # per (backend instance, dimension): a large ingest batches through one
+        # backend, and re-running the advisory-lock + extension + DDL probes on
+        # every batch would serialize all collections deployment-wide (the lock
+        # key is one constant) for no benefit once the table is known ready.
+        dim = len(vectors[0])
+        if getattr(self, "_table_ready_dim", None) != dim:
+            await self._ensure_embedding_table(dim)
+            self._table_ready_dim = dim
+
+        embedding = self._embedding_table()
         from sqlalchemy.dialects.postgresql import insert
 
         document_ids = (
@@ -298,13 +540,9 @@ class PostgresBackend(BaseVectorStoreBackend):
 
         engine = self._ensure_async_engine()
         async with engine.begin() as conn:
-            collection_id = await conn.scalar(
-                select(collection.c.uuid).where(collection.c.name == self.collection_name)
-            )
             rows = [
                 {
                     "id": document_id,
-                    "collection_id": collection_id,
                     "embedding": vector,
                     "document": document.page_content,
                     "cmetadata": document.metadata,
@@ -315,7 +553,6 @@ class PostgresBackend(BaseVectorStoreBackend):
             statement = statement.on_conflict_do_update(
                 index_elements=[embedding.c.id],
                 set_={
-                    "collection_id": statement.excluded.collection_id,
                     "embedding": statement.excluded.embedding,
                     "document": statement.excluded.document,
                     "cmetadata": statement.excluded.cmetadata,
@@ -331,29 +568,42 @@ class PostgresBackend(BaseVectorStoreBackend):
         k: int,
         filter: dict[str, Any] | None = None,  # noqa: A002
     ) -> list[tuple[Document, float]]:
-        await self._ensure_store_ready()
+        await self.ensure_ready()
         if self.embedding_function is None:
             msg = "PostgresBackend requires an embedding function to search documents."
             raise ValueError(msg)
         query_vector = await self.embedding_function.aembed_query(query)
 
-        _metadata, collection, embedding = self._database_tables()
+        embedding = self._embedding_table(len(query_vector))
         from sqlalchemy import select
 
         distance = embedding.c.embedding.cosine_distance(query_vector).label("distance")
         statement = (
-            select(embedding.c.id, embedding.c.document, embedding.c.cmetadata, distance)
-            .join(collection, embedding.c.collection_id == collection.c.uuid)
-            .where(collection.c.name == self.collection_name)
-            .order_by(distance)
-            .limit(k)
+            select(embedding.c.id, embedding.c.document, embedding.c.cmetadata, distance).order_by(distance).limit(k)
         )
         if filter:
             statement = statement.where(embedding.c.cmetadata.contains(filter))
 
         engine = self._ensure_async_engine()
         async with engine.connect() as conn:
-            rows = (await conn.execute(statement)).all()
+            if not await self._table_exists(conn):
+                return []  # nothing ingested yet — no table to scan
+            if filter:
+                # pgvector applies the metadata filter only after the approximate
+                # HNSW scan, so a selective filter (e.g. a single session_id in a
+                # Memory Base holding every session) can slip past the candidate
+                # window and return < k rows — silently dropping matches. Widen
+                # the scan (and iterate where the server supports it) first.
+                await self._widen_filtered_scan(conn, k=k)
+            try:
+                rows = (await conn.execute(statement)).all()
+            except Exception as exc:
+                # A table built for a different embedding width otherwise leaks
+                # the raw driver error; surface the same clear message ingest does.
+                friendly = _translate_dimension_error(exc, kb_name=self.kb_name, query_dim=len(query_vector))
+                if friendly is not None:
+                    raise BackendConfigurationError(friendly) from exc
+                raise
         return [
             (
                 Document(
@@ -373,13 +623,15 @@ class PostgresBackend(BaseVectorStoreBackend):
         from sqlalchemy import text
 
         engine = self._ensure_async_engine()
-        try:
-            async with engine.connect() as conn:
-                value = await conn.scalar(text(_COUNT_SQL), {"name": self.collection_name})
-            return int(value or 0)
-        except Exception as exc:  # noqa: BLE001 — fresh KB: tables may not exist yet
-            await logger.awarning("Postgres count() failed for %s: %s", self.kb_name, exc)
-            return 0
+        # The only expected "empty" case — a KB with no table yet — is handled by
+        # the explicit ``_table_exists`` check. A genuine failure (network drop,
+        # ``permission denied``) is allowed to propagate rather than masquerade as
+        # "0 chunks"; every caller of ``count()`` already treats it best-effort.
+        async with engine.connect() as conn:
+            if not await self._table_exists(conn):
+                return 0
+            value = await conn.scalar(text(_count_sql(self.table_name)))
+        return int(value or 0)
 
     async def iter_documents(
         self,
@@ -397,26 +649,28 @@ class PostgresBackend(BaseVectorStoreBackend):
         from sqlalchemy import text
 
         engine = self._ensure_async_engine()
-        query = _iter_documents_sql(include_embeddings=include_embeddings)
-        try:
-            async with engine.connect() as conn:
-                result = await conn.stream(text(query), {"name": self.collection_name})
-                batch: list[IngestedDocument] = []
-                async for row in result:
-                    batch.append(
-                        IngestedDocument(
-                            content=row[0] or "",
-                            metadata=dict(row[1] or {}),
-                            embedding=_coerce_embedding(row[2]) if include_embeddings else None,
-                        )
+        query = _iter_documents_sql(self.table_name, include_embeddings=include_embeddings)
+        # As with ``count()``: the "no table yet" case is handled explicitly, so a
+        # real streaming failure propagates instead of silently yielding nothing
+        # (which would read as an empty KB / data loss to the caller).
+        async with engine.connect() as conn:
+            if not await self._table_exists(conn):
+                return
+            result = await conn.stream(text(query))
+            batch: list[IngestedDocument] = []
+            async for row in result:
+                batch.append(
+                    IngestedDocument(
+                        content=row[0] or "",
+                        metadata=dict(row[1] or {}),
+                        embedding=_coerce_embedding(row[2]) if include_embeddings else None,
                     )
-                    if len(batch) >= batch_size:
-                        yield batch
-                        batch = []
-                if batch:
+                )
+                if len(batch) >= batch_size:
                     yield batch
-        except Exception as exc:  # noqa: BLE001 — fresh KB: tables may not exist yet
-            await logger.awarning("Postgres iter_documents failed for %s: %s", self.kb_name, exc)
+                    batch = []
+            if batch:
+                yield batch
 
     async def delete_by(self, where: dict[str, Any]) -> None:
         """Delete chunks whose ``cmetadata`` contains ``where`` (JSONB @>)."""
@@ -428,10 +682,9 @@ class PostgresBackend(BaseVectorStoreBackend):
         engine = self._ensure_async_engine()
         try:
             async with engine.begin() as conn:
-                await conn.execute(
-                    text(_DELETE_BY_SQL),
-                    {"name": self.collection_name, "where": json.dumps(where)},
-                )
+                if not await self._table_exists(conn):
+                    return
+                await conn.execute(text(_delete_by_sql(self.table_name)), {"where": json.dumps(where)})
         except Exception as exc:
             await logger.awarning("Postgres delete_by failed for %s: %s", self.kb_name, exc)
             raise
@@ -443,7 +696,7 @@ class PostgresBackend(BaseVectorStoreBackend):
         engine = self._ensure_async_engine()
         try:
             async with engine.connect() as conn:  # whole-table approximation
-                value = await conn.scalar(text(_STORAGE_SIZE_SQL))
+                value = await conn.scalar(text(_STORAGE_SIZE_SQL), {"name": self.table_name})
             return int(value or 0)
         except Exception as exc:  # noqa: BLE001 — table may not exist before first write
             await logger.awarning("Postgres storage_size_bytes failed for %s: %s", self.kb_name, exc)
@@ -455,8 +708,8 @@ class PostgresBackend(BaseVectorStoreBackend):
 
         engine = self._ensure_async_engine()
         try:
-            async with engine.begin() as conn:  # FK cascade removes the embeddings
-                await conn.execute(text(_DELETE_COLLECTION_SQL), {"name": self.collection_name})
+            async with engine.begin() as conn:  # drops the table + its indexes
+                await conn.execute(text(_drop_table_sql(self.table_name)))
         except Exception as exc:
             await logger.awarning("Postgres delete_collection failed for %s: %s", self.kb_name, exc)
             raise
@@ -468,7 +721,7 @@ class PostgresBackend(BaseVectorStoreBackend):
         except ValueError as exc:
             return TestConnectionResult(ok=False, message=str(exc), details={"type": "ConfigError"})
         try:
-            self._database_tables()
+            self._require_pgvector()
             engine = self._ensure_async_engine()
         except Exception as exc:  # noqa: BLE001 — normalize optional dependency and engine setup failures
             message = str(exc) if isinstance(exc, RuntimeError) else "Postgres backend setup failed."
@@ -479,11 +732,22 @@ class PostgresBackend(BaseVectorStoreBackend):
             )
         from sqlalchemy import text
 
+        can_create: bool | None = None
         try:
             async with engine.connect() as conn:
                 await conn.execute(text("SELECT 1"))
                 ext_version = await conn.scalar(text("SELECT extversion FROM pg_extension WHERE extname = 'vector'"))
                 server_version = await conn.scalar(text("SHOW server_version"))
+                if ext_version:
+                    # Per-collection tables mean this role must be able to CREATE
+                    # in the target schema at first ingest. Probe it now so a
+                    # missing grant is reported here, not as a raw permission
+                    # error on the first ingest. Advisory only — a probe failure
+                    # leaves it unknown rather than failing the whole check.
+                    try:
+                        can_create = await conn.scalar(text("SELECT has_schema_privilege(current_schema(), 'CREATE')"))
+                    except Exception as exc:  # noqa: BLE001 — privilege probe is best-effort
+                        await logger.adebug("CREATE-privilege probe failed for %s: %s", self.kb_name, exc)
         except Exception as exc:  # noqa: BLE001 — map driver errors to a friendly message
             return TestConnectionResult(
                 ok=False,
@@ -495,8 +759,14 @@ class PostgresBackend(BaseVectorStoreBackend):
         if not ext_version:
             return TestConnectionResult(
                 ok=False,
-                message="Connected, but the 'vector' (pgvector) extension is not installed on this database.",
-                details={"type": "MissingExtension"},
+                message=MISSING_EXTENSION_MESSAGE,
+                details={"type": MISSING_EXTENSION_DETAILS_TYPE},
+            )
+        if can_create is False:
+            return TestConnectionResult(
+                ok=False,
+                message=MISSING_CREATE_PRIVILEGE_MESSAGE,
+                details={"type": MISSING_CREATE_PRIVILEGE_DETAILS_TYPE},
             )
         return TestConnectionResult(
             ok=True,
@@ -513,4 +783,5 @@ class PostgresBackend(BaseVectorStoreBackend):
                 await logger.awarning("Postgres engine.dispose failed for %s: %s", self.kb_name, exc)
         self._pg_engine = None
         self._vector_store = None
-        self._pg_tables = None
+        # Drop the bootstrap memo: a reused instance must re-verify its table.
+        self._table_ready_dim = None

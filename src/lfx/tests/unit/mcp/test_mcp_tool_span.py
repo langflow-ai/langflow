@@ -30,6 +30,7 @@ SENTINEL = "argument-text-that-must-not-be-exported"
 # A real MCP server, small enough to inline. Started as a subprocess by the stdio client, so the
 # whole path under test is genuine: process spawn, stdio framing, JSON-RPC, tool dispatch.
 SERVER = '''
+import asyncio
 import sys
 from mcp.server.fastmcp import FastMCP
 
@@ -47,6 +48,13 @@ def boom(text: str) -> str:
     """Fail, echoing the argument back in the error the way a real server does."""
     msg = f"tool blew up on {text}"
     raise RuntimeError(msg)
+
+
+@mcp.tool()
+async def slow() -> str:
+    """Take long enough for the client-side timeout to fire."""
+    await asyncio.sleep(10)
+    return "finished"
 
 
 mcp.run(transport="stdio")
@@ -80,11 +88,18 @@ async def main():
     # The real helper, not a stand-in span: async_start opens it with make_current=False, and
     # that is the path where parenting was silently wrong.
     graph = Graph()
+    # True is the converted shape: a coroutine caller owns the span, so it is current for the
+    # whole run. False is what async_start could do on its own, and could not make current.
     make_current = sys.argv[2] == "true"
     with graph.flow_execution_span(make_current=make_current):
         flow_span_id = trace.get_current_span().get_span_context().span_id
         result = await client.run_tool("echo", arguments={{"text": SENTINEL}})
         failed = await client.run_tool("boom", arguments={{"text": SENTINEL}})
+        if make_current:
+            try:
+                await client.run_tool("slow", arguments={{}}, timeout=0.01)
+            except ValueError:
+                pass
 
     await client.disconnect()
     provider.force_flush()
@@ -184,10 +199,19 @@ def test_a_failed_tool_call_is_not_exported_as_a_success(probe_result):
     assert probe_result["failed_is_error"], "the boom tool was supposed to fail"
 
     spans = [s for s in probe_result["spans"] if s["name"] == "mcp.tool.call"]
-    failed = [s for s in spans if s["status"] == "ERROR"]
+    failed = [s for s in spans if s["attrs"]["mcp.tool.name"] == "boom" and s["status"] == "ERROR"]
     assert len(failed) == 1, f"expected one failed tool span, got {[(s['attrs'], s['status']) for s in spans]}"
     assert failed[0]["attrs"]["mcp.tool.name"] == "boom"
     assert failed[0]["attrs"]["error.type"] == "ToolError"
+
+
+def test_a_timed_out_tool_call_reports_the_timeout_type(probe_result):
+    timed_out = next(
+        s for s in probe_result["spans"] if s["name"] == "mcp.tool.call" and s["attrs"]["mcp.tool.name"] == "slow"
+    )
+
+    assert timed_out["status"] == "ERROR"
+    assert timed_out["attrs"]["error.type"] == "TimeoutError"
 
 
 def test_the_server_is_identified_on_the_span(probe_result):
@@ -197,20 +221,36 @@ def test_the_server_is_identified_on_the_span(probe_result):
     assert tool_span["attrs"]["mcp.server"]
 
 
-@pytest.mark.xfail(
-    reason=(
-        "async_start opens the flow span with make_current=False, so nothing downstream can see "
-        "it: the tool span starts a fresh trace instead of nesting. Not a flip of that flag, "
-        "which is False on purpose (attaching a context token across an async generator's "
-        "suspension points leaks it into whatever task resumes the generator). Carrying the span "
-        "context out of band, so a call site can parent to it without attaching, is a design "
-        "decision this test is here to hold open rather than pre-empt. The probe cannot even read "
-        "the flow span id on that path, which is the same gap seen from the other side."
-    ),
-    strict=True,
+@pytest.mark.parametrize(
+    ("url", "expected_server"),
+    [
+        (
+            "http://alice:secret-token@127.0.0.1:9931/mcp?api_key=query-secret",  # pragma: allowlist secret
+            "127.0.0.1:9931",
+        ),
+        ("https://alice:secret-token@[2001:db8::1]:0/mcp", "[2001:db8::1]:0"),  # pragma: allowlist secret
+    ],
 )
-def test_the_tool_span_nests_under_the_flow_span_when_it_is_not_current(detached_probe_result):
-    """The acceptance criterion says 'parented to the flow span', and on this path it is not."""
+def test_http_server_attribute_strips_url_userinfo(url, expected_server):
+    from lfx.base.mcp.util import MCPStreamableHttpClient
+
+    client = MCPStreamableHttpClient(tool_execution_timeout=1)
+    client._connection_params = {"url": url}
+
+    attributes = client._tool_span_attributes("echo")
+
+    assert attributes["mcp.server"] == expected_server
+    assert "alice" not in attributes["mcp.server"]
+    assert "secret-token" not in attributes["mcp.server"]
+
+
+def test_a_detached_flow_span_cannot_parent_the_tool_span(detached_probe_result):
+    """Why the span had to move to the caller, pinned so the reason does not get lost.
+
+    A span that is not current cannot be a parent: the tool span starts its own trace instead.
+    That is what async_start could do on its own, being a generator, and it is why the callers
+    now open the span and pass open_flow_span=False.
+    """
     tool_span = next(s for s in detached_probe_result["spans"] if s["name"] == "mcp.tool.call")
 
-    assert tool_span["parent_span_id"] == detached_probe_result["flow_span_id"]
+    assert tool_span["parent_span_id"] is None
