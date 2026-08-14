@@ -7,6 +7,7 @@ import {
 } from "../../utils/flow/new-project-flow";
 import { selectStarterTemplate } from "../../utils/flow/select-starter-template";
 import { waitForFlowEditorReady } from "../../utils/flow/wait-for-flow-editor-ready";
+import { waitForMainPageReady } from "../../utils/flow/wait-for-main-page-ready";
 
 test(
   "user should be able to select flows with different methods and perform bulk actions",
@@ -14,7 +15,7 @@ test(
   async ({ page }) => {
     const returnToHome = async () => {
       await page.goto("/");
-      await expect(page.getByTestId("mainpage_title")).toBeVisible();
+      await waitForMainPageReady(page);
       await waitForNewProjectButton(page);
     };
 

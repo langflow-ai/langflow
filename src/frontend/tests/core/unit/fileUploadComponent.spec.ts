@@ -9,6 +9,7 @@ import { dismissLegacyWarnings } from "../../utils/dismiss-legacy-warnings";
 import { ensureFileSelected } from "../../utils/ensure-checkbox-checked";
 import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { waitForMainPageReady } from "../../utils/flow/wait-for-main-page-ready";
 import { generateRandomFilename } from "../../utils/generate-filename";
 import {
   addParameterToNode,
@@ -709,10 +710,11 @@ test(
     // Navigate to My Files page
     await page.getByText(TEXTS.labelMyFiles).first().click();
 
-    // Check if we're on the files page
-    await page.waitForSelector('[data-testid="mainpage_title"]');
-    const title = await page.getByTestId("mainpage_title");
-    expect(await title.textContent()).toContain("Files");
+    // Check if we're on the files page. Asserting on the text rather than the
+    // selector alone: the page we are leaving has a mainpage_title too, and
+    // react-router v7 keeps it mounted long enough for a one-shot read to
+    // return "Starter Project".
+    await waitForMainPageReady(page, "Files");
 
     // Upload the PSD file
     const fileChooserPromisePsd = page.waitForEvent("filechooser", {
