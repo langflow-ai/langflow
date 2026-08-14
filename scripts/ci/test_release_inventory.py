@@ -167,6 +167,12 @@ def test_release_gate_covers_supported_python_and_image_architectures() -> None:
     assert "--target full" in image_job
     assert "--target full-bundles" in image_job
 
+    # Runtime images use a non-root UID that differs from the runner. Only the
+    # exact report files should be writable through the bind mount.
+    assert ': > "$report"' in image_job
+    assert 'chmod a+rw "$report"' in image_job
+    assert "chmod -R" not in image_job
+
 
 def test_release_publication_and_images_depend_on_inventory_gate() -> None:
     for job_name in ("publish-base", "publish-bundles", "publish-main", "publish-sdk", "publish-lfx"):

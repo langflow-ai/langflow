@@ -1,12 +1,10 @@
 import { expect } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { buildFlowAndWait } from "../../utils/flow/build-flow-and-wait";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import {
   waitForOpenModalWithChatInput,
   waitForOpenModalWithoutChatInput,
@@ -48,8 +46,6 @@ for (const template of TEMPLATES) {
     template.name,
     { tag: ["@release", "@starter-projects"] },
     async ({ page }) => {
-      loadDotenvIfLocal(__dirname);
-      skipIfMissing.openAiKey();
       await page.goto("/");
 
       if ((template.open ?? "starter") === "heading") {
@@ -64,7 +60,7 @@ for (const template of TEMPLATES) {
         timeout: 100000,
       });
 
-      await initialGPTsetup(page);
+      await configureLoopbackOpenAI(page);
 
       if (template.expandChatOutput) {
         await page.getByTestId("title-Chat Output").click();

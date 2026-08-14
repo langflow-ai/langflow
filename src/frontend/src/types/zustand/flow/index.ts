@@ -67,6 +67,11 @@ export type ComponentsToUpdateType = {
   userEdited: boolean;
 };
 
+export type AutoSaveFlowType = ((flow?: FlowType) => void) & {
+  cancel: () => void;
+  flush: () => Promise<void> | void;
+};
+
 export type FlowStoreType = {
   dismissedNodes: string[];
   addDismissedNodes: (dismissedNodes: string[]) => void;
@@ -80,7 +85,7 @@ export type FlowStoreType = {
     [key: number]: number;
   }) => void;
   fitViewNode: (nodeId: string) => void;
-  autoSaveFlow: ((flow?: FlowType) => void) | undefined;
+  autoSaveFlow: AutoSaveFlowType | undefined;
   componentsToUpdate: ComponentsToUpdateType[];
   setComponentsToUpdate: (
     update:

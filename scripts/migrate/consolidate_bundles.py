@@ -150,7 +150,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "composio": ["composio==0.9.2", "composio-langchain==0.9.2"],
     "huggingface": [
         "langchain-huggingface~=1.2.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
-        "huggingface-hub[inference]>=1.0.0,<2.0.0",
+        "huggingface-hub>=1.0.0,<2.0.0",
         _LC_COMMUNITY,
     ],
     "nvidia": [

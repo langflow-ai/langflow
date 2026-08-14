@@ -3,6 +3,18 @@ import userEvent from "@testing-library/user-event";
 import { useUtilityStore } from "@/stores/utilityStore";
 import SidebarMenuButtons from "../sidebarFooterButtons";
 
+const mockUseIsFlowReadOnly = jest.fn((_flowId: string | undefined) => false);
+jest.mock("@/contexts/permissionsContext", () => ({
+  useIsFlowReadOnly: (flowId: string | undefined) =>
+    mockUseIsFlowReadOnly(flowId),
+}));
+
+jest.mock("@/stores/flowStore", () => ({
+  __esModule: true,
+  default: (selector: (state: { currentFlow: { id: string } }) => unknown) =>
+    selector({ currentFlow: { id: "flow-1" } }),
+}));
+
 // Mock the UI components
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
@@ -113,6 +125,7 @@ describe("SidebarMenuButtons", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockNavigate.mockClear();
+    mockUseIsFlowReadOnly.mockReturnValue(false);
     useUtilityStore.setState({ allowCustomComponents: true });
     // Reset to default sidebar state
     mockUseSidebar.mockReturnValue({
@@ -191,6 +204,7 @@ describe("SidebarMenuButtons", () => {
       const customButton = screen.getByTestId(
         "sidebar-custom-component-button",
       );
+      expect(customButton).toBeDisabled();
       await user.click(customButton);
 
       expect(mockAddComponent).not.toHaveBeenCalled();
@@ -208,8 +222,24 @@ describe("SidebarMenuButtons", () => {
       const customButton = screen.getByTestId(
         "sidebar-custom-component-button",
       );
+      expect(customButton).toBeDisabled();
       await user.click(customButton);
 
+      expect(mockAddComponent).not.toHaveBeenCalled();
+    });
+
+    it("should disable the custom component button while the flow is read-only", async () => {
+      mockUseIsFlowReadOnly.mockReturnValue(true);
+      const user = userEvent.setup();
+
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      const customButton = screen.getByTestId(
+        "sidebar-custom-component-button",
+      );
+      expect(customButton).toBeDisabled();
+      await user.click(customButton);
+      expect(mockUseIsFlowReadOnly).toHaveBeenCalledWith("flow-1");
       expect(mockAddComponent).not.toHaveBeenCalled();
     });
 

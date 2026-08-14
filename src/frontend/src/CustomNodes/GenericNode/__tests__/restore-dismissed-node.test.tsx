@@ -15,8 +15,29 @@ const mockRemoveDismissedNodes = jest.fn();
 const mockRegisterNodeUpdate = jest.fn();
 const mockCompleteNodeUpdate = jest.fn();
 
-let mockTemplates: Record<string, any>;
-let mockFlowStoreState: any;
+type MockFlowStoreState = {
+  deleteNode: typeof mockDeleteNode;
+  setNode: typeof mockSetNode;
+  edges: unknown[];
+  setEdges: typeof mockSetEdges;
+  dismissedNodes: string[];
+  addDismissedNodes: jest.Mock;
+  removeDismissedNodes: typeof mockRemoveDismissedNodes;
+  dismissedNodesLegacy: string[];
+  addDismissedNodesLegacy: jest.Mock;
+  componentsToUpdate: Array<{
+    id: string;
+    outdated: boolean;
+    blocked: boolean;
+    breakingChange: boolean;
+    userEdited: boolean;
+  }>;
+  nodes: Array<{ id: string; selected: boolean }>;
+  rightClickedNodeId: null;
+};
+
+let mockTemplates: Record<string, { template: { code: { value: string } } }>;
+let mockFlowStoreState: MockFlowStoreState;
 
 jest.mock("@xyflow/react", () => ({
   useUpdateNodeInternals: () => mockUpdateNodeInternals,
@@ -58,7 +79,7 @@ jest.mock(
   "@/controllers/API/queries/nodes/use-post-validate-component-code",
   () => ({
     usePostValidateComponentCode: () => ({
-      mutate: mockValidateComponentCode,
+      mutateAsync: mockValidateComponentCode,
     }),
   }),
 );
@@ -150,7 +171,7 @@ jest.mock("../../hooks/use-update-node-code", () => ({
 }));
 
 jest.mock("../../helpers/process-node-advanced-fields", () => ({
-  processNodeAdvancedFields: (...args: any[]) =>
+  processNodeAdvancedFields: (...args: unknown[]) =>
     mockProcessNodeAdvancedFields(...args),
 }));
 
@@ -259,21 +280,17 @@ describe("GenericNode dismissed update recovery", () => {
       outputs: [],
     });
 
-    mockValidateComponentCode.mockImplementation(
-      (_payload, { onSuccess }: { onSuccess: (value: any) => void }) => {
-        onSuccess({
-          data: {
-            display_name: "Prompt",
-            description: "Prompt node",
-            template: {
-              code: { value: "server_code" },
-            },
-            outputs: [],
-          },
-          type: "Prompt",
-        });
+    mockValidateComponentCode.mockResolvedValue({
+      data: {
+        display_name: "Prompt",
+        description: "Prompt node",
+        template: {
+          code: { value: "server_code" },
+        },
+        outputs: [],
       },
-    );
+      type: "Prompt",
+    });
   });
 
   it("restores a dismissed outdated node through the single-node update flow", async () => {
@@ -288,8 +305,16 @@ describe("GenericNode dismissed update recovery", () => {
           node: {
             display_name: "Prompt",
             description: "Prompt node",
+            documentation: "",
             template: {
-              code: { value: "old_code" },
+              code: {
+                type: "code",
+                required: true,
+                list: false,
+                show: true,
+                readonly: false,
+                value: "old_code",
+              },
             },
             outputs: [],
           },

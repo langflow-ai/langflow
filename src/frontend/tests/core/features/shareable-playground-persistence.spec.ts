@@ -10,7 +10,6 @@ import { mockAutoLoginDisabled } from "../../utils/auth/mock-auto-login-disabled
 import { TID } from "../../utils/constants/testIds";
 import { TEXTS } from "../../utils/constants/texts";
 import { TIMEOUTS } from "../../utils/constants/timeouts";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { publishBasicPromptingAndOpenShareablePlayground } from "../../utils/playground/publish-and-open-shareable";
 import { sendPlaygroundMessage } from "../../utils/playground/send-playground-message";
@@ -49,9 +48,7 @@ test(
   "shareable playground: logged-in user messages persist after page refresh",
   { tag: ["@release", "@api", "@database"] },
   async ({ page, context }) => {
-    skipIfMissing.openAiKey();
     skipIfMissing.autoLoginDisabled();
-    loadDotenvIfLocal(__dirname);
 
     await setupAutoLoginOff(page);
     const { url: playgroundUrl, playgroundPage } =
@@ -90,9 +87,7 @@ test(
   "shareable playground: default session appears first",
   { tag: ["@release", "@api", "@database"] },
   async ({ page, context }) => {
-    skipIfMissing.openAiKey();
     skipIfMissing.autoLoginDisabled();
-    loadDotenvIfLocal(__dirname);
 
     await setupAutoLoginOff(page);
     const { url: playgroundUrl, playgroundPage } =
@@ -123,9 +118,7 @@ test(
   "shareable playground: delete session persists after refresh",
   { tag: ["@release", "@api", "@database"] },
   async ({ page, context }) => {
-    skipIfMissing.openAiKey();
     skipIfMissing.autoLoginDisabled();
-    loadDotenvIfLocal(__dirname);
 
     await setupAutoLoginOff(page);
     const { url: playgroundUrl, playgroundPage } =
@@ -173,9 +166,7 @@ test(
   "shareable playground: rename session persists after refresh",
   { tag: ["@release", "@api", "@database"] },
   async ({ page, context }) => {
-    skipIfMissing.openAiKey();
     skipIfMissing.autoLoginDisabled();
-    loadDotenvIfLocal(__dirname);
 
     await setupAutoLoginOff(page);
     const { url: playgroundUrl, playgroundPage } =
