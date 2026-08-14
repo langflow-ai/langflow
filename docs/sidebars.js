@@ -173,6 +173,8 @@ module.exports = {
           label: "Observability",
           items: [
             "Develop/logging",
+            "Develop/observability-opentelemetry",
+            "Develop/observability-new-relic",
             "Develop/observability-grafana-loki",
             "Develop/traces",
             {
