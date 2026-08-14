@@ -15,6 +15,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DataInput, MessageTextInput
 from lfx.io import Output
 from lfx.schema.data import Data
+from lfx.schema.message import Message
 
 
 class SlowLabelComponent(Component):
@@ -332,15 +333,16 @@ async def test_should_keep_send_message_when_async_tool_calls_overlap():
     assert component.send_message == original_send_message
 
 
-def test_should_suppress_messages_on_the_invocation_copy_only():
+async def test_should_suppress_messages_on_the_invocation_copy_only():
     """The tool call must silence the copy it runs, never the shared component.
 
-    GIVEN: A component-backed tool whose output method calls send_message
+    GIVEN: A component whose output method sends a message while running as a tool
     WHEN:  The tool is invoked
-    THEN:  The message is swallowed for that call, and the shared component is untouched
+    THEN:  The message never reaches the delivery path, the call still gets the Message
+           back, and the shared component keeps its own send_message
     """
-    # Arrange
-    suppressed_inside_call: list[bool] = []
+    # Arrange - delivered records every message that reaches the real send_message
+    delivered: list[str] = []
 
     class MessagingComponent(Component):
         display_name = "Messaging Tool"
@@ -350,20 +352,27 @@ def test_should_suppress_messages_on_the_invocation_copy_only():
         inputs = [MessageTextInput(name="tag", display_name="Tag", tool_mode=True)]
         outputs = [Output(display_name="Result", name="result", method="process")]
 
-        def process(self) -> Data:
-            suppressed_inside_call.append(self.send_message is send_message_noop)
-            return Data(data={"tag": self.tag})
+        async def send_message(self, message: Message, *_args, **_kwargs):
+            delivered.append(message.text)
+            return message
+
+        async def process(self) -> Data:
+            echoed = await self.send_message(Message(text=f"message from {self.tag}"))
+            return Data(data={"tag": self.tag, "echoed": echoed.text})
 
     component = MessagingComponent()
     original_send_message = component.send_message
     tool = ComponentToolkit(component=component).get_tools()[0]
 
     # Act
-    tool.invoke({"tag": "a"})
+    result = await tool.ainvoke({"tag": "a"})
 
-    # Assert - the copy ran with the no-op in place, the original kept the real method
-    assert suppressed_inside_call == [True]
+    # Assert - the no-op swallowed the message without breaking the call
+    assert delivered == []
+    assert result["echoed"] == "message from a"
+    # And the shared component was never touched
     assert component.send_message == original_send_message
+    assert component.send_message is not send_message_noop
 
 
 # ---------------------------------------------------------------------------
