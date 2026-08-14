@@ -90,6 +90,9 @@ async def test_save_store_api_key(client: AsyncClient, logged_in_headers):
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(result, dict), "The result must be a dictionary"
     assert "detail" in result, "The dictionary must contain a key called 'detail'"
+    set_cookie = response.headers.get("set-cookie", "")
+    assert "apikey_tkn_lflw=" in set_cookie
+    assert "Max-Age=0" in set_cookie
 
 
 async def test_delete_api_key_route_unauthorized(client: AsyncClient, logged_in_headers, active_user):

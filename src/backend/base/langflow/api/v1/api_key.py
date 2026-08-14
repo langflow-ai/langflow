@@ -113,9 +113,6 @@ async def save_store_api_key(
     current_user: CurrentActiveUser,
     db: DbSession,
 ):
-    settings_service = get_settings_service()
-    auth_settings = settings_service.auth_settings
-
     try:
         api_key = api_key_request.api_key
 
@@ -124,15 +121,14 @@ async def save_store_api_key(
         current_user.store_api_key = encrypted
         db.add(current_user)
         await db.commit()
-
-        response.set_cookie(
+        auth_settings = get_settings_service().auth_settings
+        response.delete_cookie(
             "apikey_tkn_lflw",
-            encrypted,
+            path="/",
+            domain=auth_settings.COOKIE_DOMAIN,
+            secure=auth_settings.ACCESS_SECURE,
             httponly=auth_settings.ACCESS_HTTPONLY,
             samesite=auth_settings.ACCESS_SAME_SITE,
-            secure=auth_settings.ACCESS_SECURE,
-            expires=None,  # Set to None to make it a session cookie
-            domain=auth_settings.COOKIE_DOMAIN,
         )
 
     except Exception as e:

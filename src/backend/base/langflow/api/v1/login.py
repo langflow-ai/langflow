@@ -18,6 +18,18 @@ from langflow.services.rate_limit import check_rate_limit
 router = APIRouter(tags=["Login"])
 
 
+def _expire_legacy_store_api_key_cookie(response: Response, auth_settings) -> None:
+    """Remove the obsolete store API-key cookie from clients that still have it."""
+    response.delete_cookie(
+        "apikey_tkn_lflw",
+        path="/",
+        domain=auth_settings.COOKIE_DOMAIN,
+        secure=auth_settings.ACCESS_SECURE,
+        httponly=auth_settings.ACCESS_HTTPONLY,
+        samesite=auth_settings.ACCESS_SAME_SITE,
+    )
+
+
 def get_limiter_from_app(request: Request):
     """Get the rate limiter from app state (initialized after settings load)."""
     return request.app.state.limiter
@@ -78,15 +90,7 @@ async def login_to_get_access_token(
             expires=auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS,
             domain=auth_settings.COOKIE_DOMAIN,
         )
-        response.set_cookie(
-            "apikey_tkn_lflw",
-            str(user.store_api_key),
-            httponly=auth_settings.ACCESS_HTTPONLY,
-            samesite=auth_settings.ACCESS_SAME_SITE,
-            secure=auth_settings.ACCESS_SECURE,
-            expires=None,  # Set to None to make it a session cookie
-            domain=auth_settings.COOKIE_DOMAIN,
-        )
+        _expire_legacy_store_api_key_cookie(response, auth_settings)
         await get_variable_service().initialize_user_variables(user.id, db)
         # Initialize agentic variables if agentic experience is enabled
         from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
@@ -134,27 +138,14 @@ async def auto_login(response: Response, db: DbSession):
             expires=None,  # Set to None to make it a session cookie
             domain=auth_settings.COOKIE_DOMAIN,
         )
+        _expire_legacy_store_api_key_cookie(response, auth_settings)
 
         user = await get_user_by_id(db, user_id)
 
-        if user:
-            if user.store_api_key is None:
-                user.store_api_key = ""
+        if user and get_settings_service().settings.agentic_experience:
+            from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
 
-            response.set_cookie(
-                "apikey_tkn_lflw",
-                str(user.store_api_key),  # Ensure it's a string
-                httponly=auth_settings.ACCESS_HTTPONLY,
-                samesite=auth_settings.ACCESS_SAME_SITE,
-                secure=auth_settings.ACCESS_SECURE,
-                expires=None,  # Set to None to make it a session cookie
-                domain=auth_settings.COOKIE_DOMAIN,
-            )
-
-            if get_settings_service().settings.agentic_experience:
-                from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
-
-                await initialize_agentic_user_variables(user.id, db)
+            await initialize_agentic_user_variables(user.id, db)
 
         return tokens
 

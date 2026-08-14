@@ -101,6 +101,9 @@ async def test_login_successful(client, test_user):
     response = await client.post("api/v1/login", data={"username": "testuser", "password": "testpassword"})
     assert response.status_code == 200
     assert "access_token" in response.json()
+    set_cookie = response.headers.get("set-cookie", "")
+    assert "apikey_tkn_lflw=" in set_cookie
+    assert "Max-Age=0" in set_cookie
 
 
 async def test_login_unsuccessful_wrong_username(client):
