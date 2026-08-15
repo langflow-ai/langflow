@@ -8,7 +8,9 @@ come from parsing the key itself.  Without it, the starter-project updater
 pre-move node types like ``TavilySearchComponent``.
 """
 
+import pytest
 from lfx.utils.component_aliases import (
+    build_component_identity_index,
     flatten_components_with_aliases,
     get_component_type_aliases,
 )
@@ -93,3 +95,101 @@ def test_identity_alias_beats_display_name_collision_composio_first():
     all_types_dict = {"c": dict([_AGENTQL_COMPOSIO, _AGENTQL_STANDALONE])}
     flat = flatten_components_with_aliases(all_types_dict)
     assert flat["AgentQL"] is flat[_AGENTQL_STANDALONE[0]]
+
+
+ASTRADB_KEY = "ext:datastax:AstraDBVectorStoreComponent@official"  # pragma: allowlist secret
+IDENTITY_COMPONENTS = {
+    "models_and_agents": {
+        "Prompt Template": {
+            "name": "Prompt Template",
+            "display_name": "Prompt Template",
+            "metadata": {"module": "lfx.components.models_and_agents.prompt.PromptComponent"},
+            "template": {"_type": "Component"},
+        },
+        "LangChain Hub Prompt": {
+            "name": "LangChain Hub Prompt",
+            "display_name": "Prompt Hub",
+            "metadata": {"module": "lfx.components.langchain_utilities.langchain_hub.LangChainHubPromptComponent"},
+            "template": {"_type": "Component"},
+        },
+    },
+    "llm_operations": {
+        "Smart Transform": {
+            "name": "Smart Transform",
+            "display_name": "Smart Transform",
+            "metadata": {"module": "lfx.components.llm_operations.lambda_filter.LambdaFilterComponent"},
+            "template": {"_type": "Component"},
+        },
+    },
+    "input_output": {
+        "ChatInput": {
+            "display_name": "Chat Input",
+            "metadata": {"module": "lfx.components.input_output.chat.ChatInput"},
+            "template": {"_type": "Component"},
+        }
+    },
+    "datastax": {
+        ASTRADB_KEY: {
+            "name": "AstraDB",
+            "display_name": "Astra DB",
+            "metadata": {"module": "lfx_datastax.components.datastax.astradb_vectorstore.AstraDBVectorStoreComponent"},
+            "template": {"_type": "Component"},
+        }
+    },
+}
+
+
+@pytest.mark.parametrize(
+    ("identity", "canonical"),
+    [
+        ("Prompt Template", "Prompt Template"),
+        ("Prompt", "Prompt Template"),
+        ("PromptComponent", "Prompt Template"),
+        (ASTRADB_KEY, ASTRADB_KEY),
+        ("AstraDB", ASTRADB_KEY),
+        ("AstraDBVectorStoreComponent", ASTRADB_KEY),
+        ("AstraDBVectorStore", ASTRADB_KEY),
+        ("ChatInput", "ChatInput"),
+        ("Chat Input", "ChatInput"),
+        ("LambdaFilter", "Smart Transform"),
+        ("LambdaFilterComponent", "Smart Transform"),
+        ("LangChainHubPrompt", "LangChain Hub Prompt"),
+        ("LangChainHubPromptComponent", "LangChain Hub Prompt"),
+    ],
+)
+def test_component_identity_index_resolves_current_and_legacy_identities(identity, canonical):
+    identity_index = build_component_identity_index(IDENTITY_COMPONENTS)
+    assert identity_index.resolve(identity) == frozenset({canonical})
+
+
+def test_component_identity_index_keeps_same_tier_collisions_ambiguous():
+    components = {
+        "one": {"First": {"name": "Shared"}},
+        "two": {"Second": {"name": "Shared"}},
+    }
+    identity_index = build_component_identity_index(components)
+    assert identity_index.resolve("Shared") == frozenset({"First", "Second"})
+
+
+def test_component_identity_index_canonical_and_identity_tiers_win_without_first_wins():
+    identity_index = build_component_identity_index(
+        {
+            "canonical": {"AgentQL": {"display_name": "Canonical"}},
+            "extensions": dict([_AGENTQL_COMPOSIO, _AGENTQL_STANDALONE]),
+        }
+    )
+
+    # An exact registry key wins over every alias with the same spelling.
+    assert identity_index.resolve("AgentQL") == frozenset({"AgentQL"})
+
+    extension_only_index = build_component_identity_index(
+        {"extensions": dict([_AGENTQL_COMPOSIO, _AGENTQL_STANDALONE])}
+    )
+    # The standalone class identity wins over the Composio display label,
+    # independent of iteration order.
+    assert extension_only_index.resolve("AgentQL") == frozenset({_AGENTQL_STANDALONE[0]})
+
+
+def test_component_identity_index_preserves_unknown_exact_identity():
+    identity_index = build_component_identity_index(IDENTITY_COMPONENTS)
+    assert identity_index.resolve("UnknownComponent") == frozenset({"UnknownComponent"})

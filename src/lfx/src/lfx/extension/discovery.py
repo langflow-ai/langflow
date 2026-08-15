@@ -116,6 +116,11 @@ class DiscoveredExtension:
     extension_root: Path
 
     @property
+    def bundle_names(self) -> tuple[str, ...]:
+        """Return every component bundle declared by the Extension manifest."""
+        return tuple(bundle.name for bundle in self.manifest.manifest.bundles)
+
+    @property
     def slot(self) -> Literal["official"]:
         """Read-only Extensions registered by discovery always live at @official.
 
@@ -398,13 +403,14 @@ def _build_installed_record(
             hint="Run `lfx extension validate` against the package source to see the per-field detail.",
         )
 
-    # A provider-only extension ships no component bundle (bundles is empty);
-    # the path-safety check only applies to a bundle directory.
-    bundle = manifest.bundles[0] if manifest.bundles else None
-    if bundle is not None:
+    # A provider-only extension ships no component bundle (bundles is empty).
+    # Validate every declared bundle before publishing the Extension record:
+    # later entries are just as import-capable as the first.
+    for bundle in manifest.bundles:
         path_error = _verify_bundle_path_safety(extension_root, bundle)
         if path_error is not None:
             return None, path_error
+    bundle = manifest.bundles[0] if manifest.bundles else None
     source = ManifestSource(manifest=manifest, path=manifest_path, kind=kind)
     return (
         DiscoveredExtension(
@@ -618,12 +624,13 @@ def _build_seed_record(seed_subdir: Path) -> tuple[DiscoveredExtension | None, E
             hint="Run `lfx extension validate` against the seed subdirectory to see per-field detail.",
         )
 
-    # Provider-only seed extension: no component bundle to path-check.
-    bundle = source.manifest.bundles[0] if source.manifest.bundles else None
-    if bundle is not None:
+    # Provider-only seed extensions have no component bundle to path-check.
+    # Multi-bundle manifests must pass the same trust boundary for every path.
+    for bundle in source.manifest.bundles:
         path_error = _verify_bundle_path_safety(seed_subdir, bundle)
         if path_error is not None:
             return None, path_error
+    bundle = source.manifest.bundles[0] if source.manifest.bundles else None
     return (
         DiscoveredExtension(
             extension_id=source.manifest.id,

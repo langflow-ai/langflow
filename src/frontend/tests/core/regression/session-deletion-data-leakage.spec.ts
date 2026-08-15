@@ -1,9 +1,8 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test.describe("Session Deletion Data Leakage Fix", () => {
   // Helper to send a message in the playground
@@ -80,7 +79,6 @@ test.describe("Session Deletion Data Leakage Fix", () => {
     "should prevent data leakage when default session is deleted and recreated",
     { tag: ["@release"] },
     async ({ page }) => {
-      skipIfMissing.openAiKey();
       await awaitBootstrapTest(page);
 
       // Load a starter project
@@ -88,7 +86,7 @@ test.describe("Session Deletion Data Leakage Fix", () => {
       await page
         .getByRole("heading", { name: TEXTS.templateBasicPrompting })
         .click();
-      await initialGPTsetup(page);
+      await configureLoopbackOpenAI(page);
 
       // Open playground
       await page
@@ -145,7 +143,6 @@ test.describe("Session Deletion Data Leakage Fix", () => {
     "should clear LLM context when session is deleted",
     { tag: ["@release"] },
     async ({ page }) => {
-      skipIfMissing.openAiKey();
       await awaitBootstrapTest(page);
 
       // Load a starter project with memory
@@ -153,7 +150,7 @@ test.describe("Session Deletion Data Leakage Fix", () => {
       await page
         .getByRole("heading", { name: TEXTS.templateBasicPrompting })
         .click();
-      await initialGPTsetup(page);
+      await configureLoopbackOpenAI(page);
 
       // Open playground
       await page

@@ -16,13 +16,14 @@ import sqlalchemy as sa
 from alembic import command, util
 from alembic.config import Config
 from lfx.log.logger import logger
+from lfx.observability import instrument_database
 from lfx.services.deps import session_scope
 from sqlalchemy import event, inspect
 from sqlalchemy.dialects import sqlite as dialect_sqlite
 from sqlalchemy.engine import Engine, make_url
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
-from sqlmodel import SQLModel, select, text
+from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 from tenacity import retry, stop_after_attempt, wait_fixed
 
@@ -34,6 +35,7 @@ from langflow.services.database.constants import (
     MIN_POSTGRESQL_MAJOR_VERSION,
     POSTGRESQL_VERSION_REQUIRED_MESSAGE,
 )
+from langflow.services.database.migration import get_current_alembic_heads
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.session import NoopSession
 from langflow.services.database.utils import Result, TableResults
@@ -280,6 +282,12 @@ class DatabaseService(Service):
             self.engine = self._create_engine_with_retry()
         else:
             self.engine = self._create_engine()
+        # Here rather than in the app factory: this is an AsyncEngine, and the instrumentor
+        # patches the sync engine underneath it. Instrumenting globally instead (no engine
+        # argument) attaches to pool events only, which yields a connect span per checkout and
+        # not a single query span. Verified against a live backend: 13 connect spans and zero
+        # db.statement for one API request.
+        instrument_database(self.engine)
 
         # Create async session maker for efficient session creation
         # This is the recommended SQLAlchemy 2.0+ pattern
@@ -488,7 +496,7 @@ class DatabaseService(Service):
                 .join(models.Folder)
                 .where(
                     models.Flow.user_id == None,  # noqa: E711
-                    models.Folder.name != STARTER_FOLDER_NAME,
+                    sa.or_(models.Folder.name != STARTER_FOLDER_NAME, models.Folder.user_id.is_not(None)),
                 )
             )
             orphaned_flows = (await session.exec(stmt)).all()
@@ -673,16 +681,51 @@ class DatabaseService(Service):
                 self.try_downgrade_upgrade_until_success(alembic_cfg)
 
     async def run_migrations(self, *, fix=False) -> None:
-        should_initialize_alembic = False
         async with session_scope() as session:
-            # If the table does not exist it throws an error
-            # so we need to catch it
-            try:
-                await session.exec(text("SELECT * FROM alembic_version"))
-            except Exception:  # noqa: BLE001
+            should_initialize_alembic = not await get_current_alembic_heads(session)
+            if should_initialize_alembic:
                 await logger.adebug("Alembic not initialized")
-                should_initialize_alembic = True
         await asyncio.to_thread(self._run_migrations, should_initialize_alembic, fix)
+
+    def _current_alembic_revisions(self) -> set[str]:
+        """Read current revisions from the configured database, never alembic.ini."""
+        engine = sa.create_engine(_normalize_sync_postgres_url(self.database_url))
+        try:
+            with engine.connect() as connection:
+                return set(connection.execute(sa.text("SELECT version_num FROM alembic_version")).scalars())
+        finally:
+            engine.dispose()
+
+    def _run_migration_downgrade(self, *, expected_current_revision: str, target_revision: str) -> None:
+        """Downgrade the configured database only from one explicitly expected revision."""
+        buffer_context = self._open_alembic_log_buffer()
+        with _postgres_migration_lock(self.database_url), buffer_context as buffer:
+            current_revisions = self._current_alembic_revisions()
+            if current_revisions != {expected_current_revision}:
+                found = ", ".join(sorted(current_revisions)) or "none"
+                msg = (
+                    "Refusing migration downgrade: expected current revision "
+                    f"{expected_current_revision}, found {found}"
+                )
+                raise RuntimeError(msg)
+
+            alembic_cfg = Config(stdout=buffer)
+            alembic_cfg.set_main_option("script_location", str(self.script_location))
+            alembic_cfg.set_main_option("sqlalchemy.url", self.database_url.replace("%", "%%"))
+            command.downgrade(alembic_cfg, target_revision)
+
+    async def run_migration_downgrade(
+        self,
+        *,
+        expected_current_revision: str,
+        target_revision: str,
+    ) -> None:
+        """Safely downgrade the configured database in a worker thread."""
+        await asyncio.to_thread(
+            self._run_migration_downgrade,
+            expected_current_revision=expected_current_revision,
+            target_revision=target_revision,
+        )
 
     @staticmethod
     def try_downgrade_upgrade_until_success(alembic_cfg, retries=5) -> None:

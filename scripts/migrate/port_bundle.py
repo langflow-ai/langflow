@@ -63,9 +63,9 @@ Phase D -- artefacts (when --migration-release is set):
        recomputes the embedded SHA256 (requires ``uv run`` because
        the script depends on ``orjson`` -- the same library
        ``scripts/build_component_index.py`` uses).
-   14. Patches the two non-uv-sync Dockerfiles
-       (``docker/build_and_push_backend.Dockerfile`` and
-       ``docker/build_and_push_base.Dockerfile``) to install the bundle.
+   14. Patches ``docker/build_and_push_backend.Dockerfile`` when present. The
+       shared application Dockerfile discovers curated bundles through the
+       root package and intentionally keeps its ``base`` target bundle-free.
 
 Phase E -- optional cleanup (when --remove-base-extra is set):
    15. Removes ``<bundle> = [...]`` from
@@ -118,7 +118,6 @@ COMPONENT_INDEX_PATH = REPO_ROOT / "src" / "lfx" / "src" / "lfx" / "_assets" / "
 MIGRATION_TABLE = REPO_ROOT / "src" / "lfx" / "src" / "lfx" / "extension" / "migration" / "migration_table.json"
 BACKEND_BASE_TESTS = REPO_ROOT / "src" / "backend" / "tests" / "unit" / "base"
 DOCKER_BACKEND = REPO_ROOT / "docker" / "build_and_push_backend.Dockerfile"
-DOCKER_BASE = REPO_ROOT / "docker" / "build_and_push_base.Dockerfile"
 PILOT_TEST_DIR = REPO_ROOT / "src" / "lfx" / "tests" / "integration" / "extension"
 
 
@@ -1544,42 +1543,6 @@ def _patch_backend_dockerfile(plan: PortPlan, *, apply: bool) -> list[str]:
     return actions
 
 
-def _patch_base_dockerfile(plan: PortPlan, *, apply: bool) -> list[str]:
-    if not DOCKER_BASE.is_file():
-        return []
-    actions = [f"patch {DOCKER_BASE.relative_to(REPO_ROOT)}"]
-    if not apply:
-        return actions
-    text = DOCKER_BASE.read_text(encoding="utf-8")
-    if f"/app/src/bundles/{plan.bundle}" in text:
-        actions.append(f"  (lfx-{plan.bundle} already referenced; skipping)")
-        return actions
-    # Append a new ``uv pip install --no-deps`` block after the last
-    # existing one (matched by ``/app/src/bundles/<existing>``).
-    snippet = (
-        f"\n# Bundle re-attach: ``lfx-{plan.bundle}`` ships the {plan.display_name}\n"
-        f"# components as a standalone distribution.  ``--no-deps`` is intentional\n"
-        f"# -- the bundle's runtime deps live in the langflow-base lockfile so\n"
-        f"# installing them here would yank duplicates that fight the locked\n"
-        f"# versions.\n"
-        f"RUN --mount=type=cache,target=/root/.cache/uv \\\n"
-        f"    RUSTFLAGS='--cfg reqwest_unstable' \\\n"
-        f"    uv pip install --no-deps /app/src/bundles/{plan.bundle}\n"
-    )
-    pattern = re.compile(
-        r"(uv pip install --no-deps /app/src/bundles/\w+\n)(?!.*uv pip install --no-deps /app/src/bundles)",
-        re.DOTALL,
-    )
-    new_text, count = pattern.subn(rf"\g<1>{snippet}", text, count=1)
-    if count == 0:
-        actions.append(
-            "  WARNING: no existing ``uv pip install --no-deps /app/src/bundles/...`` block found; patch by hand."
-        )
-        return actions
-    DOCKER_BASE.write_text(new_text, encoding="utf-8")
-    return actions
-
-
 # ---------------------------------------------------------------------------
 # Phase E: optional langflow-base[<bundle>] extra cleanup
 # ---------------------------------------------------------------------------
@@ -1628,7 +1591,7 @@ def main() -> int:
             "patches the workspace, and -- with ``--migration-release`` -- "
             "appends migration entries, writes the pilot test, surgically "
             "removes the bundle's category from component_index.json, and "
-            "patches both Dockerfiles."
+            "patches the backend Dockerfile."
         )
     )
     parser.add_argument("--bundle", required=True, help="Snake-case provider name.")
@@ -1661,8 +1624,8 @@ def main() -> int:
     parser.add_argument(
         "--update-dockerfiles",
         action="store_true",
-        help="Patch ``docker/build_and_push_backend.Dockerfile`` and "
-        "``docker/build_and_push_base.Dockerfile`` to install the bundle.",
+        help="Patch ``docker/build_and_push_backend.Dockerfile`` when present. "
+        "The shared application Dockerfile resolves curated bundles from root metadata.",
     )
     parser.add_argument(
         "--remove-base-extra",
@@ -1700,7 +1663,6 @@ def main() -> int:
         actions += _update_component_index(plan, apply=args.apply)
     if args.update_dockerfiles:
         actions += _patch_backend_dockerfile(plan, apply=args.apply)
-        actions += _patch_base_dockerfile(plan, apply=args.apply)
     if args.remove_base_extra:
         actions.append("== Phase E: optional cleanup ==")
         actions += _remove_base_extra(plan, apply=args.apply)

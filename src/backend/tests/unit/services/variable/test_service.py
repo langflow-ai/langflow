@@ -7,10 +7,17 @@ import pytest
 from cryptography.fernet import Fernet
 from langflow.services.auth.service import AuthService
 from langflow.services.auth.utils import ensure_fernet_key
+from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable.model import VariableUpdate
 from langflow.services.deps import get_settings_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
-from langflow.services.variable.service import DatabaseVariableService
+from langflow.services.variable.service import DatabaseVariableService, has_variable_value
+from lfx.services.authorization.base import ResourceVisibilityScope
+from lfx.services.model_provider_policy import (
+    ModelProviderPolicyContext,
+    ModelProviderPolicyPurpose,
+    ModelProviderPolicySnapshot,
+)
 from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -107,6 +114,115 @@ async def test_initialize_user_variables__skipping_environment_variable_storage(
     assert True
 
 
+async def test_initialize_user_variables_skips_policy_hidden_provider_before_validation(
+    service,
+    session: AsyncSession,
+    monkeypatch,
+):
+    user_id = uuid4()
+    monkeypatch.setattr(
+        service.settings_service.settings,
+        "variables_to_get_from_environment",
+        ["ANTHROPIC_API_KEY"],
+    )
+    snapshot = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(user_id=user_id),
+        purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        candidate_provider_ids=frozenset({"openai", "anthropic"}),
+        allowed_provider_ids=frozenset({"openai"}),
+    )
+
+    with (
+        patch.dict(
+            "os.environ",
+            {"ANTHROPIC_API_KEY": "hidden-secret"},  # pragma: allowlist secret
+            clear=True,
+        ),
+        patch("lfx.services.model_provider_policy.resolve_model_provider_policy", return_value=snapshot),
+        patch(
+            "lfx.base.models.unified_models.validate_model_provider_key",
+            side_effect=AssertionError("hidden provider credential must not be validated"),
+        ),
+    ):
+        await service.initialize_user_variables(user_id=user_id, session=session)
+
+    assert await service.list_variables(user_id, session=session) == []
+
+
+async def test_initialize_user_variables_stops_when_policy_resolution_fails(
+    service,
+    session: AsyncSession,
+    monkeypatch,
+):
+    user_id = uuid4()
+    monkeypatch.setattr(
+        service.settings_service.settings,
+        "variables_to_get_from_environment",
+        ["OPENAI_API_KEY"],
+    )
+
+    with (
+        patch.dict("os.environ", {"OPENAI_API_KEY": "must-not-import"}, clear=True),  # pragma: allowlist secret
+        patch(
+            "lfx.services.model_provider_policy.resolve_model_provider_policy",
+            side_effect=RuntimeError("policy unavailable"),
+        ),
+    ):
+        await service.initialize_user_variables(user_id=user_id, session=session)
+
+    assert await service.list_variables(user_id, session=session) == []
+
+
+async def test_initialize_user_variables_passes_trusted_superuser_context(
+    service,
+    session: AsyncSession,
+    monkeypatch,
+):
+    user = User(
+        username=f"provider_superuser_{uuid4().hex}",
+        password="test-password",  # noqa: S106 - inert test fixture credential  # pragma: allowlist secret
+        is_active=True,
+        is_superuser=True,
+    )
+    session.add(user)
+    await session.flush()
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", True)
+    monkeypatch.setattr(
+        service.settings_service.settings,
+        "variables_to_get_from_environment",
+        ["OPENAI_API_KEY"],
+    )
+    seen_attributes = None
+
+    def allow_superuser(*, user_id, providers, purpose, attributes=None):
+        nonlocal seen_attributes
+        seen_attributes = attributes
+        assert user_id == user.id
+        assert purpose is ModelProviderPolicyPurpose.CONFIGURE
+        assert "OpenAI" in providers
+        return ModelProviderPolicySnapshot(
+            context=ModelProviderPolicyContext(user_id=user_id, attributes=attributes or {}),
+            purpose=purpose,
+            candidate_provider_ids=frozenset({"openai"}),
+            allowed_provider_ids=frozenset({"openai"}),
+        )
+
+    with (
+        patch.dict(
+            "os.environ",
+            {"OPENAI_API_KEY": "superuser-env-key"},  # pragma: allowlist secret
+            clear=True,
+        ),
+        patch("lfx.services.model_provider_policy.resolve_model_provider_policy", side_effect=allow_superuser),
+        patch("lfx.base.models.unified_models.validate_model_provider_key"),
+    ):
+        await service.initialize_user_variables(user_id=user.id, session=session)
+
+    assert seen_attributes == {"is_superuser": True}
+    imported = await service.get_variable_object(user.id, "OPENAI_API_KEY", session)
+    assert imported.user_id == user.id
+
+
 async def test_get_variable(service, session: AsyncSession):
     user_id = uuid4()
     name = "name"
@@ -128,6 +244,118 @@ async def test_get_variable__valueerror(service, session: AsyncSession):
 
     with pytest.raises(ValueError, match=f"{name} variable not found."):
         await service.get_variable(user_id, name, field, session=session)
+
+
+async def test_get_variable_resolves_one_explicitly_shared_runtime_value(service, session: AsyncSession):
+    owner_id = uuid4()
+    actor_id = uuid4()
+    shared = await service.create_variable(
+        owner_id,
+        "SHARED_TOKEN",
+        "shared-secret",
+        type_=CREDENTIAL_TYPE,
+        session=session,
+    )
+
+    authz = MagicMock()
+    authz.is_enabled = AsyncMock(return_value=True)
+    authz.supports_cross_user_fetch = AsyncMock(return_value=True)
+    authz.get_resource_visibility = None
+    authz.list_visible_resource_ids = AsyncMock(return_value=[shared.id])
+
+    with patch("langflow.services.deps.get_authorization_service", return_value=authz):
+        result = await service.get_variable(actor_id, "SHARED_TOKEN", "", session=session)
+
+    assert isinstance(result, SecretStr)
+    assert result.get_secret_value() == "shared-secret"
+
+
+async def test_get_variable_resolves_scope_native_global_runtime_value(service, session: AsyncSession):
+    owner_id = uuid4()
+    actor_id = uuid4()
+    await service.create_variable(
+        owner_id,
+        "GLOBAL_SHARED_TOKEN",
+        "shared-secret",
+        type_=CREDENTIAL_TYPE,
+        session=session,
+    )
+
+    authz = MagicMock()
+    authz.is_enabled = AsyncMock(return_value=True)
+    authz.supports_cross_user_fetch = AsyncMock(return_value=True)
+    authz.get_resource_visibility = AsyncMock(return_value=ResourceVisibilityScope(all_resources=True))
+    authz.list_visible_resource_ids = AsyncMock(side_effect=AssertionError("legacy visibility hook used"))
+
+    with patch("langflow.services.deps.get_authorization_service", return_value=authz):
+        result = await service.get_variable(actor_id, "GLOBAL_SHARED_TOKEN", "", session=session)
+
+    assert isinstance(result, SecretStr)
+    assert result.get_secret_value() == "shared-secret"
+    authz.get_resource_visibility.assert_awaited_once()
+    authz.list_visible_resource_ids.assert_not_awaited()
+
+
+async def test_get_variable_fails_closed_for_domain_only_runtime_scope(service, session: AsyncSession):
+    owner_id = uuid4()
+    actor_id = uuid4()
+    await service.create_variable(
+        owner_id,
+        "DOMAIN_ONLY_TOKEN",
+        "shared-secret",
+        type_=CREDENTIAL_TYPE,
+        session=session,
+    )
+
+    authz = MagicMock()
+    authz.is_enabled = AsyncMock(return_value=True)
+    authz.supports_cross_user_fetch = AsyncMock(return_value=True)
+    authz.get_resource_visibility = AsyncMock(
+        return_value=ResourceVisibilityScope(workspace_ids=(uuid4(),), project_ids=(uuid4(),))
+    )
+    authz.list_visible_resource_ids = AsyncMock(side_effect=AssertionError("legacy visibility hook used"))
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        pytest.raises(ValueError, match="DOMAIN_ONLY_TOKEN variable not found"),
+    ):
+        await service.get_variable(actor_id, "DOMAIN_ONLY_TOKEN", "", session=session)
+
+    authz.get_resource_visibility.assert_awaited_once()
+    authz.list_visible_resource_ids.assert_not_awaited()
+
+
+async def test_get_all_redacts_shared_generic_values(service, session: AsyncSession):
+    owner_id = uuid4()
+    actor_id = uuid4()
+    owned = await service.create_variable(
+        actor_id,
+        "OWNED_VALUE",
+        "owned-plaintext",
+        type_=GENERIC_TYPE,
+        session=session,
+    )
+    shared = await service.create_variable(
+        owner_id,
+        "SHARED_VALUE",
+        "shared-plaintext",
+        type_=GENERIC_TYPE,
+        session=session,
+    )
+
+    rows = await service.get_all(
+        actor_id,
+        session,
+        visibility=ResourceVisibilityScope(resource_ids=(shared.id,)),
+    )
+    by_id = {row.id: row for row in rows}
+
+    assert by_id[owned.id].value == "owned-plaintext"
+    assert by_id[owned.id].is_owner is True
+    assert by_id[owned.id].can_manage_shares is True
+    assert by_id[shared.id].value is None
+    assert by_id[shared.id].is_owner is False
+    assert by_id[shared.id].can_manage_shares is False
 
 
 async def test_get_variable__typeerror(service, session: AsyncSession):
@@ -454,6 +682,58 @@ async def test_get_all__empty_value_warns_and_skips(service, session: AsyncSessi
     warning_calls = [str(c) for c in mock_logger.awarning.call_args_list]
     assert any("EMPTY_VAR" in c for c in warning_calls)
     assert any("no stored value" in c for c in warning_calls)
+
+
+async def test_get_all__empty_agentic_placeholder_is_debug_only(service, session: AsyncSession):
+    """Known agentic placeholders are intentionally empty until an agent run populates them."""
+    user_id = uuid4()
+    variable = await service.create_variable(user_id, "FLOW_ID", "initial", type_=GENERIC_TYPE, session=session)
+    variable.value = ""
+    session.add(variable)
+    await session.flush()
+
+    mock_logger = MagicMock(adebug=AsyncMock(), awarning=AsyncMock())
+    with patch("langflow.services.variable.service.logger", mock_logger):
+        result = await service.get_all(user_id, session=session)
+
+    assert not any(item.name == "FLOW_ID" for item in result)
+    mock_logger.adebug.assert_awaited_once()
+    mock_logger.awarning.assert_not_awaited()
+
+
+async def test_get_all_reports_whether_masked_credentials_have_a_value(service, session: AsyncSession):
+    user_id = uuid4()
+    await service.create_variable(
+        user_id,
+        "CONFIGURED_CREDENTIAL",
+        "secret-value",
+        type_=CREDENTIAL_TYPE,
+        session=session,
+    )
+    await service.create_variable(
+        user_id,
+        "EMPTY_CREDENTIAL",
+        "",
+        type_=CREDENTIAL_TYPE,
+        session=session,
+    )
+
+    variables = {variable.name: variable for variable in await service.get_all(user_id, session=session)}
+
+    assert variables["CONFIGURED_CREDENTIAL"].value is None
+    assert variables["CONFIGURED_CREDENTIAL"].has_value is True
+    assert variables["EMPTY_CREDENTIAL"].value is None
+    assert variables["EMPTY_CREDENTIAL"].has_value is False
+
+
+def test_has_variable_value_returns_false_when_decrypt_yields_nothing():
+    """An unreadable credential must report has_value=False, not crash listing."""
+    from langflow.services.database.models.variable.model import Variable
+
+    variable = Variable(name="BROKEN_CREDENTIAL", value="ciphertext", type=CREDENTIAL_TYPE, user_id=uuid4())
+    for unreadable in (None, ""):
+        with patch("langflow.services.auth.utils.decrypt_api_key", return_value=unreadable):
+            assert has_variable_value(variable) is False
 
 
 async def test_get_all__decrypt_failure_warns_and_skips(service, session: AsyncSession):

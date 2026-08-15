@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import GlobalVariableDeleteConfirmation from "@/components/core/globalVariableDeleteConfirmation";
 import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
 import { getPlaceholder } from "@/components/core/parameterRenderComponent/helpers/get-placeholder-disabled";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,6 @@ import { Separator } from "@/components/ui/separator";
 import { usePatchGlobalVariables } from "@/controllers/API/queries/variables";
 import { useGetVoiceList } from "@/controllers/API/queries/voice/use-get-voice-list";
 import { useDebounce } from "@/hooks/use-debounce";
-import GeneralDeleteConfirmationModal from "@/shared/components/delete-confirmation-modal";
 import GeneralGlobalVariableModal from "@/shared/components/global-variable-modal";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useVoiceStore } from "@/stores/voiceStore";
@@ -308,7 +308,7 @@ const SettingsVoiceModal = ({
                         optionsIcon="Globe"
                         optionsButton={<GeneralGlobalVariableModal />}
                         optionButton={(option) => (
-                          <GeneralDeleteConfirmationModal
+                          <GlobalVariableDeleteConfirmation
                             option={option}
                             onConfirmDelete={() => {}}
                           />
@@ -397,7 +397,7 @@ const SettingsVoiceModal = ({
                         optionsIcon="Globe"
                         optionsButton={<GeneralGlobalVariableModal />}
                         optionButton={(option) => (
-                          <GeneralDeleteConfirmationModal
+                          <GlobalVariableDeleteConfirmation
                             option={option}
                             onConfirmDelete={() => {}}
                           />

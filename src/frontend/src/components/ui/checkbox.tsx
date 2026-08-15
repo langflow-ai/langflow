@@ -29,17 +29,27 @@ Checkbox.displayName = CheckboxPrimitive.Root.displayName;
 const CheckBoxDiv = ({
   className = "",
   checked,
+  presentational = false,
+  "aria-label": ariaLabel,
 }: {
   className?: string;
   checked?: boolean;
+  // When true, render a purely visual indicator (hidden from assistive tech).
+  // Use this when the wrapping element already owns the checkbox/toggle
+  // semantics (e.g. a toggle button), so we don't nest an interactive
+  // "checkbox" role inside another interactive role (IBM aria_descendant_valid).
+  presentational?: boolean;
+  "aria-label"?: string;
 }) => (
   // Read-only state indicator: activation is owned by the wrapping
   // trigger/tooltip, so it exposes checkbox role + state but stays
   // non-focusable itself.
   <div
-    role="checkbox"
-    aria-checked={Boolean(checked)}
-    aria-readonly="true"
+    role={presentational ? undefined : "checkbox"}
+    aria-hidden={presentational ? "true" : undefined}
+    aria-label={presentational ? undefined : ariaLabel}
+    aria-checked={presentational ? undefined : Boolean(checked)}
+    aria-readonly={presentational ? undefined : "true"}
     className={cn(
       className,
       "peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",

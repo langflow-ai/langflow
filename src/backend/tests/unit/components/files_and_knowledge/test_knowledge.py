@@ -18,6 +18,8 @@ This file covers the *new* surface area introduced by the merge:
 
 from __future__ import annotations
 
+import json
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -348,6 +350,100 @@ class TestKnowledgeBasePathIsolation:
         assert component._resolve_kb_path(tmp_path, "current_user", "existing_kb") == (
             tmp_path / "current_user" / "existing_kb"
         )
+
+
+# ---------------------------------------------------------------------------
+# Backend resolution: the DB row is authoritative, and an unresolvable backend
+# must raise rather than silently degrade to local storage.
+#
+# Ingestion used to read ``embedding_metadata.json`` while retrieval read the
+# database row. Across replicas those disagree — a pod without the sidecar wrote
+# a remote-backed KB into a local Chroma dir while queries followed the row to
+# the configured cluster and returned nothing, with no error raised anywhere.
+# ---------------------------------------------------------------------------
+class TestBackendResolution:
+    KB_NAME = "support_docs"
+    USER_ID = "3f1c9c1e-6d2a-4a53-8a4e-9c0b1d2e3f40"
+
+    @staticmethod
+    def _record(backend_type: str, backend_config: dict | None = None) -> SimpleNamespace:
+        return SimpleNamespace(backend_type=backend_type, backend_config=backend_config or {})
+
+    def _component(self) -> KnowledgeComponent:
+        # ``user_id`` is a read-only property backed by ``_user_id``; the public
+        # name is ignored by the constructor (it lands as the string "None").
+        return KnowledgeComponent(knowledge_base=self.KB_NAME, _user_id=self.USER_ID)
+
+    @staticmethod
+    def _write_sidecar(kb_path, backend_type: str, backend_config: dict | None = None) -> None:
+        kb_path.mkdir(parents=True, exist_ok=True)
+        (kb_path / "embedding_metadata.json").write_text(
+            json.dumps({"backend_type": backend_type, "backend_config": backend_config or {}})
+        )
+
+    async def test_database_record_wins_over_stale_sidecar(self, tmp_path) -> None:
+        """A sidecar left on one pod must not override the KB's real backend."""
+        self._write_sidecar(tmp_path, "chroma")
+        component = self._component()
+
+        with patch(
+            "langflow.api.utils.knowledge_base_service.get_by_user_and_name",
+            new=AsyncMock(return_value=self._record("opensearch", {"index_name": "kb_support"})),
+        ):
+            backend_type, backend_config = await component._resolve_backend_config(tmp_path)
+
+        assert backend_type == "opensearch"
+        assert backend_config == {"index_name": "kb_support"}
+
+    async def test_falls_back_to_sidecar_for_legacy_kb_without_a_record(self, tmp_path) -> None:
+        """KBs predating the DB row still resolve off disk."""
+        self._write_sidecar(tmp_path, "opensearch", {"index_name": "legacy"})
+        component = self._component()
+
+        with patch(
+            "langflow.api.utils.knowledge_base_service.get_by_user_and_name",
+            new=AsyncMock(return_value=None),
+        ):
+            backend_type, backend_config = await component._resolve_backend_config(tmp_path)
+
+        assert backend_type == "opensearch"
+        assert backend_config == {"index_name": "legacy"}
+
+    async def test_raises_when_neither_source_resolves(self, tmp_path) -> None:
+        """No row and no sidecar is unknown, not local — refuse to guess."""
+        component = self._component()
+
+        with (
+            patch(
+                "langflow.api.utils.knowledge_base_service.get_by_user_and_name",
+                new=AsyncMock(return_value=None),
+            ),
+            pytest.raises(ValueError, match="Refusing to fall back to local storage"),
+        ):
+            await component._resolve_backend_config(tmp_path)
+
+    async def test_database_lookup_failure_propagates(self, tmp_path) -> None:
+        """A DB error must not be swallowed into a local-storage default."""
+        self._write_sidecar(tmp_path, "chroma")
+        component = self._component()
+
+        with (
+            patch(
+                "langflow.api.utils.knowledge_base_service.get_by_user_and_name",
+                new=AsyncMock(side_effect=RuntimeError("connection lost")),
+            ),
+            pytest.raises(RuntimeError, match="connection lost"),
+        ):
+            await component._resolve_backend_config(tmp_path)
+
+    def test_missing_sidecar_reads_as_unresolved_not_chroma(self, tmp_path) -> None:
+        """``None`` keeps 'could not resolve' distinct from 'explicitly local'."""
+        assert KnowledgeComponent._get_backend_from_metadata(tmp_path) is None
+
+    def test_unreadable_sidecar_reads_as_unresolved_not_chroma(self, tmp_path) -> None:
+        (tmp_path / "embedding_metadata.json").write_text("{ not json")
+
+        assert KnowledgeComponent._get_backend_from_metadata(tmp_path) is None
 
 
 # ---------------------------------------------------------------------------

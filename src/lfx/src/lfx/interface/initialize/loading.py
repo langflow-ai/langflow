@@ -48,7 +48,12 @@ def instantiate_class(
     # Restricted-mode hardening (allow_custom_components=False): exec the server's trusted copy
     # keyed by this code's hash, never the node's stored bytes, to close the 48-bit hash-collision
     # RCE on the authenticated build path. No-op in permissive mode (the default).
-    code = resolve_trusted_code_for_build(code)
+    from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
+
+    code = resolve_trusted_code_for_build(
+        code,
+        public_execution=str(user_id) == str(PUBLIC_ANONYMOUS_ACTOR_ID),
+    )
     class_object: type[CustomComponent | Component] = eval_custom_component_code(code)
     custom_component: CustomComponent | Component = class_object(
         _user_id=user_id,
@@ -76,12 +81,28 @@ async def get_instance_results(
         vertex.load_from_db_fields,
         fallback_to_env_vars=fallback_to_env_vars,
     )
-    from lfx.memory.flow_context import reset_current_flow_id, set_current_flow_id
+    from lfx.memory.flow_context import (
+        reset_current_flow_id,
+        reset_messages_persist,
+        set_current_flow_id,
+        set_messages_persist,
+        should_persist_messages,
+    )
 
-    flow_id = getattr(getattr(vertex, "graph", None), "flow_id", None)
+    graph = getattr(vertex, "graph", None)
+    flow_id = getattr(graph, "flow_id", None)
     # Always bind — including None — so a graph without flow_id shadows any outer
     # flow scope instead of inheriting it (nested runs must stay legacy-unscoped).
     flow_scope_token = set_current_flow_id(flow_id)
+    # Bind the run's message-persistence flag here too (defaults True) so
+    # astore_message can skip the DB write for an anonymous serving run. Reading it
+    # off the graph and binding in the component's own task sidesteps any
+    # cross-task ContextVar propagation concern. The binding is monotonically
+    # restrictive: an ephemeral outer run can never be re-enabled from inside —
+    # nested graphs built with Graph.from_payload (Run Flow, Sub Flow, Flow as
+    # Tool, A2A) default persist_messages=True and would otherwise overwrite the
+    # outer run's no-persist decision.
+    persist_token = set_messages_persist(should_persist_messages() and bool(getattr(graph, "persist_messages", True)))
     try:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
@@ -93,6 +114,7 @@ async def get_instance_results(
             raise ValueError(msg)
     finally:
         reset_current_flow_id(flow_scope_token)
+        reset_messages_persist(persist_token)
 
 
 def get_params(vertex_params):

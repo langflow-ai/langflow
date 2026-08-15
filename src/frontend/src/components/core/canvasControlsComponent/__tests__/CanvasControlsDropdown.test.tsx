@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { axe } from "@/utils/a11y-test";
 import CanvasControlsDropdown, {
   KEYBOARD_SHORTCUTS,
 } from "../CanvasControlsDropdown";
@@ -20,7 +21,8 @@ let mockStoreValues = {
 
 jest.mock("@xyflow/react", () => ({
   useReactFlow: () => mockReactFlowFns,
-  useStore: (selector: any) => selector(mockStoreValues),
+  useStore: (selector: (state: typeof mockStoreValues) => unknown) =>
+    selector(mockStoreValues),
 }));
 
 // Mock dependencies
@@ -36,23 +38,36 @@ jest.mock("@/components/common/genericIconComponent", () => ({
 }));
 
 jest.mock("@/components/ui/button", () => ({
-  Button: ({ children, ...props }: any) => (
+  Button: ({
+    children,
+    ...props
+  }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
     <button {...props}>{children}</button>
   ),
 }));
 
 jest.mock("@/components/ui/dropdown-menu", () => ({
-  DropdownMenu: ({ children, ...props }: any) => (
+  DropdownMenu: ({
+    children,
+    ...props
+  }: React.HTMLAttributes<HTMLDivElement>) => (
     <div data-testid="dropdown-menu" {...props}>
       {children}
     </div>
   ),
-  DropdownMenuTrigger: ({ children, asChild, ...props }: any) => (
+  DropdownMenuTrigger: ({
+    children,
+    asChild: _asChild,
+    ...props
+  }: React.HTMLAttributes<HTMLDivElement> & { asChild?: boolean }) => (
     <div data-testid="dropdown-trigger" {...props}>
       {children}
     </div>
   ),
-  DropdownMenuContent: ({ children, ...props }: any) => (
+  DropdownMenuContent: ({
+    children,
+    ...props
+  }: React.HTMLAttributes<HTMLDivElement>) => (
     <div data-testid="dropdown-content" {...props}>
       {children}
     </div>
@@ -65,7 +80,19 @@ jest.mock("@/components/ui/separator", () => ({
 
 jest.mock("../DropdownControlButton", () => ({
   __esModule: true,
-  default: ({ testId, onClick, disabled, label, shortcut }: any) => (
+  default: ({
+    testId,
+    onClick,
+    disabled,
+    label,
+    shortcut,
+  }: {
+    testId: string;
+    onClick: () => void;
+    disabled?: boolean;
+    label: string;
+    shortcut?: string;
+  }) => (
     <button
       data-testid={testId + "_dropdown"}
       onClick={onClick}
@@ -80,7 +107,7 @@ jest.mock("../DropdownControlButton", () => ({
 
 jest.mock("../utils/canvasUtils", () => ({
   formatZoomPercentage: jest.fn((zoom: number) => `${Math.round(zoom * 100)}%`),
-  reactFlowSelector: jest.fn((state: any) => state),
+  reactFlowSelector: jest.fn((state: unknown) => state),
 }));
 
 describe("CanvasControlsDropdown", () => {
@@ -109,6 +136,49 @@ describe("CanvasControlsDropdown", () => {
 
     expect(screen.getByTestId("canvas_controls_dropdown")).toBeInTheDocument();
     expect(screen.getByText("100%")).toBeInTheDocument();
+  });
+
+  it("should_have_no_axe_violations", async () => {
+    const { container } = render(
+      <CanvasControlsDropdown selectedNode={null} />,
+    );
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("should_have_no_axe_violations when zoom is at its min bound (disabled zoom out)", async () => {
+    mockStoreValues.minZoomReached = true;
+
+    const { container } = render(
+      <CanvasControlsDropdown selectedNode={null} />,
+    );
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("exposes an accessible name that names the control and includes the current zoom value", () => {
+    render(<CanvasControlsDropdown selectedNode={null} />);
+
+    expect(screen.getByTestId("canvas_controls_dropdown")).toHaveAttribute(
+      "aria-label",
+      "Zoom canvas control, 100%",
+    );
+  });
+
+  it("updates the accessible name's zoom value when the zoom level changes", () => {
+    mockStoreValues = {
+      isInteractive: true,
+      minZoomReached: false,
+      maxZoomReached: false,
+      zoom: 1.5,
+    };
+
+    render(<CanvasControlsDropdown selectedNode={null} />);
+
+    expect(screen.getByTestId("canvas_controls_dropdown")).toHaveAttribute(
+      "aria-label",
+      "Zoom canvas control, 150%",
+    );
   });
 
   it("renders chevron icon", () => {

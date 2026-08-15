@@ -6,6 +6,7 @@ import { axe } from "@/utils/a11y-test";
 import LoginPage from "../index";
 
 const mockLoginMutate = jest.fn();
+const mockCustomLoginSsoOptions = jest.fn((): React.ReactNode => null);
 
 jest.mock("@/assets/LangflowLogo.svg?react", () => ({
   __esModule: true,
@@ -38,8 +39,18 @@ jest.mock("@/customization/components/custom-link", () => ({
   ),
 }));
 
+jest.mock("@/customization/components/custom-login-sso-options", () => ({
+  __esModule: true,
+  default: () => mockCustomLoginSsoOptions(),
+}));
+
 jest.mock("@/hooks/use-sanitize-redirect-url", () => ({
   useSanitizeRedirectUrl: jest.fn(),
+}));
+
+jest.mock("@/pages/LoginPage/components/dot-grid-background", () => ({
+  __esModule: true,
+  default: () => null,
 }));
 
 function renderLoginPage() {
@@ -54,6 +65,7 @@ function renderLoginPage() {
 describe("LoginPage accessibility", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCustomLoginSsoOptions.mockReturnValue(null);
     useAlertStore.setState({
       notificationList: [],
       tempNotificationList: [],
@@ -84,6 +96,30 @@ describe("LoginPage accessibility", () => {
     expect(mockLoginMutate).not.toHaveBeenCalled();
   });
 
+  it("renders downstream login options between password sign-in and sign-up", () => {
+    mockCustomLoginSsoOptions.mockReturnValue(
+      <div data-testid="custom-login-sso-options" />,
+    );
+
+    renderLoginPage();
+
+    const signInButton = screen.getByRole("button", { name: /sign in/i });
+    const loginOptions = screen.getByTestId("custom-login-sso-options");
+    const signUpLink = screen.getByRole("link", { name: /sign up/i });
+
+    expect(screen.getByText("Langflow")).toBeInTheDocument();
+    expect(screen.getByText(/don't have an account\?/i)).toBeInTheDocument();
+    expect(
+      signInButton.compareDocumentPosition(loginOptions) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      loginOptions.compareDocumentPosition(signUpLink) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(signUpLink).toHaveAttribute("href", "/signup");
+  });
+
   it("should_have_no_axe_violations", async () => {
     const { container } = renderLoginPage();
 
@@ -93,11 +129,20 @@ describe("LoginPage accessibility", () => {
   it("uses_valid_external_labels_for_username_and_password", () => {
     renderLoginPage();
 
-    expect(
-      screen.getByRole("textbox", { name: /username/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /username/i })).toHaveAttribute(
+      "autocomplete",
+      "username",
+    );
     expect(
       screen.getByLabelText(/^Password/i, { selector: "input" }),
+    ).toHaveAttribute("autocomplete", "current-password");
+  });
+
+  it("names_the_login_form_region", () => {
+    renderLoginPage();
+
+    expect(
+      screen.getByRole("region", { name: /sign in to langflow/i }),
     ).toBeInTheDocument();
   });
 

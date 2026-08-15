@@ -125,6 +125,9 @@ export function FilesPanel({
                       size="icon"
                       className="h-6 w-6 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
                       onClick={() => onRemoveFile(index)}
+                      aria-label={t("knowledge.removeFile", {
+                        name: file.name,
+                      })}
                     >
                       <ForwardedIconComponent name="X" className="h-3 w-3" />
                     </Button>

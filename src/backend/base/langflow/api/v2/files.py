@@ -18,6 +18,7 @@ from langflow.api.schemas import UploadFileResponse
 from langflow.api.utils import CurrentActiveUser, DbSession, build_content_disposition
 from langflow.services.authorization import FileAction, ensure_file_permission
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
+from langflow.services.authorization.listing import restrict_to_owned_or_visible_scope, visible_scope_prefilter
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.settings.service import SettingsService
@@ -486,15 +487,31 @@ async def list_files(
         # TODO: Pending further testing
         # await load_sample_files(current_user, session, get_storage_service())
         # Fetch from the UserFile table
-        stmt = select(UserFile).where(UserFile.user_id == current_user.id)
+        visibility = await visible_scope_prefilter(
+            current_user,
+            resource_type="file",
+            act=FileAction.READ,
+        )
+        stmt = select(UserFile)
+        if visibility is None:
+            stmt = stmt.where(UserFile.user_id == current_user.id)
+        else:
+            # UserFile has no canonical workspace/project columns. Omitting
+            # them intentionally keeps domain-only grants owner-scoped.
+            stmt = restrict_to_owned_or_visible_scope(
+                stmt,
+                id_column=UserFile.id,
+                owner_clause=UserFile.user_id == current_user.id,
+                visibility=visibility,
+            )
         results = await session.exec(stmt)
 
         full_list = list(results)
 
-        # Filter out the _mcp_servers file
-        mcp_file = await get_mcp_file(current_user)
-
-        return [file for file in full_list if file.name != mcp_file]
+        # Reserved MCP configuration files are internal implementation details.
+        # Derive the reserved name from each row's true owner because a widened
+        # visibility scope can return files owned by multiple users.
+        return [file for file in full_list if file.name != f"{MCP_SERVERS_FILE}_{file.user_id!s}"]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error listing files: {e}") from e
 

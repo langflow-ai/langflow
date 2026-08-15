@@ -94,7 +94,6 @@ const OPENAI_MODEL: ModelOption = {
   provider: "OpenAI",
   metadata: { model_type: "llm" },
 };
-
 const baseProps: BaseInputProps & ModelInputComponentType = {
   id: "test-model-input",
   value: [SAVED_MODEL],
@@ -277,7 +276,6 @@ describe("ModelInputComponent — provider disconnected after a model was saved"
       ).not.toBeInTheDocument();
     },
   );
-
   it("should_not_render_the_configure_wrench_next_to_the_setup_provider_button", () => {
     renderWithQueryClient(<ModelInputComponent {...baseProps} />);
 

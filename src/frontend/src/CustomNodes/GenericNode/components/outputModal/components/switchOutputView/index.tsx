@@ -13,13 +13,14 @@ import {
 import { Case } from "../../../../../../shared/components/caseComponent";
 import TextOutputView from "../../../../../../shared/components/textOutputView";
 import useFlowStore from "../../../../../../stores/flowStore";
+import type { OutputModalTab } from "../../index";
 import ErrorOutput from "./components";
 
 // Define the props type
 interface SwitchOutputViewProps {
   nodeId: string;
   outputName: string;
-  type: "Outputs" | "Logs";
+  type: OutputModalTab;
 }
 
 const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
@@ -48,7 +49,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
       (outputConfig.types && outputConfig.types.includes("Tool")));
 
   const results: OutputLogType | LogsLogType[] =
-    (type === "Outputs"
+    (type === "outputs"
       ? flowPoolNode?.data?.outputs?.[outputName]
       : flowPoolNode?.data?.logs?.[outputName]) ?? {};
   const resultType = Array.isArray(results) ? undefined : results?.type;
@@ -132,7 +133,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
     );
   };
 
-  return type === "Outputs" ? (
+  return type === "outputs" ? (
     <>
       <Case condition={isToolOutput && resultMessageMemoized}>
         <ToolOutputDisplay

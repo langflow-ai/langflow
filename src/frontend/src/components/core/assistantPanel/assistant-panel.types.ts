@@ -1,4 +1,5 @@
 import type {
+  AgenticErrorDetail,
   AgenticFlowUpdateEvent,
   AgenticProgressState,
   AgenticResult,
@@ -24,6 +25,9 @@ export interface AssistantMessage {
   completedSteps?: AgenticStepType[];
   result?: AgenticResult;
   error?: string;
+  /** Structured failure context from the SSE error event's additive
+   * ``detail`` field — rendered as a collapsed "Error details" expander. */
+  errorDetail?: AgenticErrorDetail;
   flowPreview?: {
     flow: Record<string, unknown>;
     name: string;
@@ -38,6 +42,9 @@ export interface AssistantMessage {
   continuationExpected?: boolean;
   pendingFlowProposal?: PendingFlowProposal;
   flowProposalStatus?: FlowProposalStatus;
+  /** Canvas nodes/edges captured right before Add/Replace so a client-side
+   * Revert restores the pre-apply state and re-enables the apply actions. */
+  flowProposalSnapshot?: { nodes: unknown[]; edges: unknown[] };
   pendingPlanProposal?: PendingPlanProposal;
   planProposalStatus?: PlanProposalStatus;
   writtenFiles?: WrittenFile[];
@@ -49,6 +56,13 @@ export interface AssistantMessage {
    * through the dedicated Continue/Dismiss card.
    */
   buildTasks?: BuildTask[];
+  /**
+   * The canvas-mutating tool currently executing (from the tool_start SSE
+   * event). Rendered as a spinner row under the checklist; cleared when the
+   * matching flow_update lands or the run completes/cancels. Kept on error
+   * so the user sees exactly where the run stopped.
+   */
+  inProgressTask?: InProgressBuildTask;
   /**
    * Skip rendering this message entirely. Used by skip-all to suppress
    * the propose_plan turn's preamble — the user never sees the "I am
@@ -77,6 +91,12 @@ export interface AssistantMessage {
    * the backend's ``duration_seconds``). Same units that ``MessageMetadata``
    * expects in the playground. */
   duration?: number;
+  /** Flow version snapshotted BEFORE this turn's canvas edits (additive
+   * ``restore_version_id`` on the SSE complete event) — fuels Revert. */
+  restoreVersionId?: string;
+  /** True once the user reverted the flow to this message's restore point;
+   * the action then renders as a disabled "Reverted" state. */
+  reverted?: boolean;
   /** Non-fatal model errors this turn recovered from (silent fallback/retry).
    * Rendered as an (i) next to the message metadata. */
   notices?: AssistantModelNotice[];
@@ -101,6 +121,24 @@ export interface BuildTask {
   /** Target endpoint for connect. */
   targetId?: string;
   /** Local timestamp the SSE event was received — for ordering. */
+  receivedAt: number;
+}
+
+/** A canvas-mutating tool the agent is executing right now (not yet completed). */
+export interface InProgressBuildTask {
+  /** Backend tool name, e.g. "add_component", "build_flow". */
+  tool: string;
+  /** English fallback label from the backend; the UI prefers i18n by tool. */
+  label?: string;
+  /** Friendly type for add_component (e.g. "ChatInput"). */
+  componentType?: string;
+  /** Subject component id for remove/configure/propose. */
+  componentId?: string;
+  /** Source endpoint for connect_components. */
+  sourceId?: string;
+  /** Target endpoint for connect_components. */
+  targetId?: string;
+  /** Local timestamp the SSE event was received. */
   receivedAt: number;
 }
 
@@ -182,7 +220,7 @@ export interface AssistantPanelProps {
 /** AssistantMessage with Date serialized as ISO string and progress stripped. */
 export type SerializedAssistantMessage = Omit<
   AssistantMessage,
-  "timestamp" | "progress"
+  "timestamp" | "progress" | "flowProposalSnapshot"
 > & {
   timestamp: string;
 };

@@ -1,6 +1,9 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+pytest.importorskip("lfx_bundles")
+
 from lfx.components.xai.xai import XAIModelComponent
 from lfx.custom.custom_component.component import Component
 from lfx.custom.utils import build_custom_component_template

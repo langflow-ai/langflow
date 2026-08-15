@@ -3,7 +3,8 @@
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from lfx.cli.script_loader import (
@@ -183,6 +184,70 @@ class TestLoadGraphFromScript:
         component_names = {v.custom_component.__class__.__name__ for v in graph.vertices}
         assert "ChatInput" in component_names
         assert "ChatOutput" in component_names
+
+    @pytest.mark.parametrize(
+        ("blocked_component_keys", "expected_blocked"),
+        [
+            pytest.param({"OtherComponent"}, False, id="unrelated-blocklist-allows-graph"),
+            pytest.param({"Chat Input"}, True, id="legacy-alias-blocks-graph"),
+        ],
+    )
+    async def test_active_catalog_policy_warms_cold_identity_cache_before_validation(
+        self,
+        blocked_component_keys,
+        expected_blocked,
+    ):
+        """Script graphs must resolve active policy aliases on the first cold-cache load."""
+        from lfx.components.input_output import ChatInput, ChatOutput
+        from lfx.graph import Graph
+        from lfx.interface import components as components_module
+        from lfx.services.catalog_policy import CatalogPolicySnapshot
+
+        chat_input = ChatInput()
+        chat_output = ChatOutput().set(input_value=chat_input.message_response)
+        graph = Graph(chat_input, chat_output)
+        graph.raw_graph_data = {
+            "nodes": [{"id": "chat-input", "data": {"id": "chat-input", "type": "ChatInput"}}],
+            "edges": [],
+        }
+        cache = components_module.ComponentCache()
+        settings_service = SimpleNamespace(settings=SimpleNamespace(allow_custom_components=True))
+        catalog_service = SimpleNamespace(
+            snapshot=CatalogPolicySnapshot(blocked_component_keys=blocked_component_keys),
+        )
+        builtins = {
+            "components": {
+                "input_output": {
+                    "ChatInput": {
+                        "display_name": "Chat Input",
+                        "template": {"_type": "Component"},
+                    }
+                }
+            }
+        }
+
+        with (
+            patch("lfx.cli.script_loader._load_module_from_script", return_value=SimpleNamespace(graph=graph)),
+            patch.object(components_module, "component_cache", cache),
+            patch.object(
+                components_module,
+                "import_langflow_components",
+                new=AsyncMock(return_value=builtins),
+            ) as load,
+            patch.object(components_module, "_determine_loading_strategy", new=AsyncMock(return_value={})),
+            patch.object(components_module, "import_extension_components", new=AsyncMock(return_value={})),
+            patch("lfx.services.deps.get_settings_service", return_value=settings_service),
+            patch("lfx.services.deps.get_catalog_policy_service", return_value=catalog_service),
+        ):
+            if expected_blocked:
+                with pytest.raises(RuntimeError, match="catalog policy blocks components: ChatInput"):
+                    await load_graph_from_script(Path("cold-cache-script.py"))
+            else:
+                assert await load_graph_from_script(Path("cold-cache-script.py")) is graph
+
+        load.assert_awaited_once_with(settings_service, None)
+        assert cache.all_types_ready
+        assert cache.component_identity_index is not None
 
     async def test_load_graph_from_script_no_graph_variable(self):
         """Test error when script has no graph variable."""

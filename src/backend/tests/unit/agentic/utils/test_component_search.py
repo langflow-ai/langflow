@@ -4,6 +4,7 @@ Tests list_all_components, get_all_component_types, get_components_by_type,
 get_component_by_name, and get_components_count functions.
 """
 
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -14,6 +15,7 @@ from langflow.agentic.utils.component_search import (
     get_components_count,
     list_all_components,
 )
+from lfx.services.catalog_policy import CatalogPolicySnapshot
 
 MODULE = "langflow.agentic.utils.component_search"
 
@@ -55,6 +57,10 @@ def _mock_deps():
     mock_settings = MagicMock()
     with (
         patch(f"{MODULE}.get_and_cache_all_types_dict", new_callable=AsyncMock, return_value=MOCK_TYPES_DICT),
+        patch(
+            f"{MODULE}.get_catalog_policy_service",
+            return_value=SimpleNamespace(snapshot=CatalogPolicySnapshot()),
+        ),
         patch(f"{MODULE}.logger", _mock_logger()),
     ):
         yield mock_settings
@@ -118,6 +124,19 @@ class TestListAllComponents:
         results = await list_all_components(query="AI agent", settings_service=MagicMock())
         assert len(results) == 1
         assert results[0]["name"] == "Agent"
+
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("_mock_deps")
+    async def test_should_hide_catalog_blocked_components_from_discovery(self):
+        service = SimpleNamespace(snapshot=CatalogPolicySnapshot(blocked_component_keys={"OpenAIModel"}))
+        with patch(f"{MODULE}.get_catalog_policy_service", return_value=service):
+            results = await list_all_components(settings_service=MagicMock())
+            component = await get_component_by_name("OpenAIModel", settings_service=MagicMock())
+            count = await get_components_count(settings_service=MagicMock())
+
+        assert {result["name"] for result in results} == {"AnthropicModel", "Agent"}
+        assert component is None
+        assert count == 2
 
 
 class TestGetAllComponentTypes:

@@ -46,6 +46,26 @@ def available_model_providers(global_variables: dict[str, str] | None) -> list[s
     return providers
 
 
+def inject_history_limit_into_flow(flow_data: dict, limit: int | None) -> dict:
+    """Set the memory window (``n_messages``) on the flow's Agent components.
+
+    Runtime override for the ``/history N`` command — the dominant memory lever
+    (the Agent's DB memory), which the buffer-injection env var does not control.
+    Best-effort: ``None``/negative is a no-op; an Agent without the field is left
+    untouched.
+    """
+    if limit is None or limit < 0:
+        return flow_data
+    for node in flow_data.get("data", {}).get("nodes", []):
+        node_data = node.get("data", {})
+        if node_data.get("type") != "Agent":
+            continue
+        field = node_data.get("node", {}).get("template", {}).get("n_messages")
+        if isinstance(field, dict):
+            field["value"] = limit
+    return flow_data
+
+
 MAX_ASSISTANT_ITERATIONS = 200
 # Pinned assistant step budget (a COST decision, tripwire-tested): LangflowAssistant.json
 # pins it on its Agents and the Python builder flow defaults to it — one source of truth.
@@ -285,12 +305,24 @@ def load_and_prepare_flow(
     model_name: str | None,
     api_key_var: str | None,
     provider_vars: dict[str, str] | None = None,
+    history_limit: int | None = None,
 ) -> str:
     """Load flow file and prepare JSON with model injection."""
     flow_data = _load_flow_template(flow_path)
 
     if provider and model_name:
         flow_data = inject_model_into_flow(flow_data, provider, model_name, api_key_var, provider_vars)
+
+    # global_variables reaches here as provider_vars; the /history command's limit
+    # rides in it as HISTORY_LIMIT when not passed explicitly.
+    if history_limit is None and provider_vars:
+        raw = provider_vars.get("HISTORY_LIMIT")
+        if raw not in (None, ""):
+            try:
+                history_limit = int(raw)
+            except (TypeError, ValueError):
+                history_limit = None
+    flow_data = inject_history_limit_into_flow(flow_data, history_limit)
 
     # The runtime step budget rides in provider_vars as ITERATIONS_LIMIT.
     if provider_vars:

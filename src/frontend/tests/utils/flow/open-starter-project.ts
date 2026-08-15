@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { awaitBootstrapTest } from "../await-bootstrap-test";
-import { TID } from "../constants/testIds";
+import { selectStarterTemplate } from "./select-starter-template";
+import { waitForFlowEditorReady } from "./wait-for-flow-editor-ready";
 
 /**
  * Bootstrap the app, open the templates panel, and click the heading
@@ -24,6 +25,6 @@ export async function openStarterProject(
   if (!options?.skipBootstrap) {
     await awaitBootstrapTest(page);
   }
-  await page.getByTestId(TID.sideNavAllTemplates).click();
-  await page.getByRole("heading", { name: templateName }).first().click();
+  await selectStarterTemplate(page, templateName);
+  await waitForFlowEditorReady(page);
 }

@@ -9,6 +9,7 @@ jest.mock("@/controllers/API/queries/permissions", () => ({
 
 import {
   PermissionsProvider,
+  useIsFlowPermissionPending,
   useIsFlowReadOnly,
   usePermissions,
 } from "../permissionsContext";
@@ -73,6 +74,32 @@ describe("PermissionsProvider gating", () => {
     });
     expect(result.current.can("flow-1", "delete")).toBe(true);
   });
+
+  it("can preserve the previous permission map while resource ids change", () => {
+    setMockedPermissions({ "flow-1": ["read"] });
+
+    renderHook(() => usePermissions(), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <PermissionsProvider
+          resourceType="flow"
+          resourceIds={["flow-1"]}
+          preservePreviousPermissions
+        >
+          {children}
+        </PermissionsProvider>
+      ),
+    });
+
+    expect(mockUseGetEffectivePermissions).toHaveBeenCalledWith(
+      expect.objectContaining({ resourceIds: ["flow-1"] }),
+      { placeholderData: expect.any(Function) },
+    );
+    const queryOptions = mockUseGetEffectivePermissions.mock.calls[0][1] as {
+      placeholderData: (previousData: unknown) => unknown;
+    };
+    const previousData = { resource_type: "flow", permissions: {} };
+    expect(queryOptions.placeholderData(previousData)).toBe(previousData);
+  });
 });
 
 describe("useIsFlowReadOnly", () => {
@@ -107,6 +134,73 @@ describe("useIsFlowReadOnly", () => {
   it("keeps the non-RBAC fallback writable without a provider", () => {
     const { result } = renderHook(() => useIsFlowReadOnly("flow-1"));
     expect(result.current).toBe(false);
+  });
+});
+
+describe("useIsFlowPermissionPending", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("is true while flow permissions are loading", () => {
+    setMockedPermissions(undefined, { isLoading: true });
+    const { result } = renderHook(() => useIsFlowPermissionPending("flow-1"), {
+      wrapper: flowWrapper(["flow-1"]),
+    });
+    expect(result.current).toBe(true);
+  });
+
+  it("clears once the answer arrives, even when write is denied", () => {
+    setMockedPermissions({ "flow-1": ["read"] });
+    const { result } = renderHook(() => useIsFlowPermissionPending("flow-1"), {
+      wrapper: flowWrapper(["flow-1"]),
+    });
+    // Read-only stays true here; pending is the transient half and must not
+    // outlive the query, or a denied user would see "checking" forever.
+    expect(result.current).toBe(false);
+  });
+
+  it("is false when write permission is allowed", () => {
+    setMockedPermissions({ "flow-1": ["read", "write"] });
+    const { result } = renderHook(() => useIsFlowPermissionPending("flow-1"), {
+      wrapper: flowWrapper(["flow-1"]),
+    });
+    expect(result.current).toBe(false);
+  });
+
+  it("is false without a flow id even while the provider resolves", () => {
+    setMockedPermissions(undefined, { isLoading: true });
+    const { result } = renderHook(() => useIsFlowPermissionPending(undefined), {
+      wrapper: flowWrapper([]),
+    });
+    expect(result.current).toBe(false);
+  });
+
+  it("is false without a provider, matching the non-RBAC fallback", () => {
+    const { result } = renderHook(() => useIsFlowPermissionPending("flow-1"));
+    expect(result.current).toBe(false);
+  });
+
+  it("tracks useIsFlowReadOnly while loading and diverges after", () => {
+    setMockedPermissions(undefined, { isLoading: true });
+    const loading = renderHook(
+      () => ({
+        readOnly: useIsFlowReadOnly("flow-1"),
+        pending: useIsFlowPermissionPending("flow-1"),
+      }),
+      { wrapper: flowWrapper(["flow-1"]) },
+    );
+    expect(loading.result.current).toEqual({ readOnly: true, pending: true });
+
+    setMockedPermissions({ "flow-1": ["read"] });
+    const resolved = renderHook(
+      () => ({
+        readOnly: useIsFlowReadOnly("flow-1"),
+        pending: useIsFlowPermissionPending("flow-1"),
+      }),
+      { wrapper: flowWrapper(["flow-1"]) },
+    );
+    expect(resolved.result.current).toEqual({ readOnly: true, pending: false });
   });
 });
 

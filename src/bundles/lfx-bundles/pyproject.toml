@@ -1,6 +1,6 @@
 [project]
 name = "lfx-bundles"
-version = "1.1.1"
+version = "1.1.12"
 description = "Langflow's long-tail provider bundles as a single manifest-less metapackage (the langchain-community model)."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -14,11 +14,11 @@ keywords = ["langflow", "lfx", "extension", "bundle", "providers"]
 # is an optional extra (see [project.optional-dependencies]); installing
 # lfx-bundles bare gives the provider *code* but defers each provider's SDK to
 # its extra, so a user opts into exactly the providers they need.  The
-# generated ``all`` extra pulls every provider's deps and is what ``langflow``
-# depends on (``lfx-bundles[all]``) so ``pip install langflow`` stays
-# functionally identical to today.
+# generated ``all`` extra pulls every provider's deps for explicit opt-in
+# installs such as ``pip install "lfx[bundles]"`` or
+# ``pip install "lfx-bundles[all]"``.
 dependencies = [
-    "lfx>=1.11.0.dev0,<2.0.0",
+    "lfx>=1.12.0.dev0,<2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -33,28 +33,28 @@ aiml = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
 altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
 apify = ["apify-client>=1.8.1", "langchain-community>=0.4.1,<1.0.0"]
 assemblyai = ["assemblyai>=0.33.0,<1.0.0"]
-azure = ["langchain-openai>=1.1.6", "langchain-azure-ai>=1.1.0,<2"]
+azure = ["lfx-azure>=0.1.0,<1.0.0"]
 baidu = ["qianfan==0.3.5", "langchain-community>=0.4.1,<1.0.0"]
 bing = ["langchain-community>=0.4.1,<1.0.0"]
 chroma = ["chromadb>=1.0.0,<2.0.0", "langchain-chroma~=0.2.6", "langchain-community>=0.4.1,<1.0.0"]
 cleanlab = ["cleanlab-tlm>=1.1.2,<2.0.0"]
 clickhouse = ["clickhouse-connect==0.7.19", "langchain-community>=0.4.1,<1.0.0"]
 cloudflare = ["langchain-community>=0.4.1,<1.0.0"]
-codeagents = ["smolagents>=1.8.0", "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')"]
+codeagents = ["smolagents>=1.8.0", "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')", "langchain-litellm==0.5.1; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')"]
 cometapi = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
 composio = ["composio==0.16.0", "composio-langchain==0.16.0"]
 confluence = ["atlassian-python-api==3.41.16", "langchain-community>=0.4.1,<1.0.0"]
 couchbase = ["couchbase>=4.2.1", "langchain-community>=0.4.1,<1.0.0"]
-cuga = ["cuga>=0.2.20,<0.3.0; sys_platform != 'darwin' and python_version < '3.14'", "cuga>=0.2.20,<0.3.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'"]
+cuga = ["cuga>=0.2.20,<0.3.0; sys_platform != 'darwin' and python_version < '3.14'", "cuga>=0.2.20,<0.3.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'", "langchain-litellm==0.5.1; sys_platform != 'darwin' and python_version < '3.14'", "langchain-litellm==0.5.1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'"]
 deepseek = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"]
 elastic = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0", "opensearch-py==2.8.0"]
 faiss = ["faiss-cpu==1.9.0.post1; python_version < '3.14'", "faiss-cpu>=1.13.2; python_version >= '3.14'", "langchain-community>=0.4.1,<1.0.0"]
 git = ["GitPython>=3.1.58", "langchain-community>=0.4.1,<1.0.0"]
 glean = []
-google = ["langchain-google-genai~=4.1.2", "langchain-google-community~=3.0.2", "google-api-python-client~=2.161", "google-auth-oauthlib>=1.2.0,<2.0.0"]
+google = ["lfx-google>=0.1.0,<1.0.0"]
 groq = ["langchain-groq~=1.1.1"]
 homeassistant = ["requests>=2.32.0"]
-huggingface = ["langchain-huggingface~=1.2.0; sys_platform != 'darwin' or platform_machine != 'x86_64'", "huggingface-hub[inference]>=1.0.0,<2.0.0", "langchain-community>=0.4.1,<1.0.0"]
+huggingface = ["langchain-huggingface~=1.2.0; sys_platform != 'darwin' or platform_machine != 'x86_64'", "huggingface-hub>=1.0.0,<2.0.0", "langchain-community>=0.4.1,<1.0.0"]
 icosacomputing = ["requests>=2.32.0"]
 jigsawstack = ["jigsawstack==0.2.7"]
 langwatch = []
@@ -71,7 +71,7 @@ notion = ["requests>=2.32.0", "Markdown>=3.8.0"]
 novita = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
 nvidia = ["langchain-nvidia-ai-endpoints~=1.0.0", "nv-ingest-client>=26.1.0,<26.3.0 ; python_version >= '3.12'", "gassist>=0.0.1; sys_platform == 'win32'"]
 olivya = []
-ollama = ["langchain-ollama~=0.3.10"]
+ollama = ["lfx-ollama>=0.1.0,<1.0.0"]
 openrouter = ["langchain-openai>=1.1.6"]
 perplexity = ["langchain-perplexity>=1.0.0,<2.0.0"]
 pgvector = ["pgvector>=0.4.2", "langchain-community>=0.4.1,<1.0.0"]
@@ -104,7 +104,6 @@ all = [
     "lfx-bundles[altk]",
     "lfx-bundles[apify]",
     "lfx-bundles[assemblyai]",
-    "lfx-bundles[azure]",
     "lfx-bundles[baidu]",
     "lfx-bundles[bing]",
     "lfx-bundles[chroma]",
@@ -122,7 +121,6 @@ all = [
     "lfx-bundles[faiss]",
     "lfx-bundles[git]",
     "lfx-bundles[glean]",
-    "lfx-bundles[google]",
     "lfx-bundles[groq]",
     "lfx-bundles[homeassistant]",
     "lfx-bundles[huggingface]",
@@ -142,7 +140,6 @@ all = [
     "lfx-bundles[novita]",
     "lfx-bundles[nvidia]",
     "lfx-bundles[olivya]",
-    "lfx-bundles[ollama]",
     "lfx-bundles[openrouter]",
     "lfx-bundles[perplexity]",
     "lfx-bundles[pgvector]",
@@ -176,7 +173,6 @@ all-no-torch = [
     "lfx-bundles[altk]",
     "lfx-bundles[apify]",
     "lfx-bundles[assemblyai]",
-    "lfx-bundles[azure]",
     "lfx-bundles[baidu]",
     "lfx-bundles[bing]",
     "lfx-bundles[chroma]",
@@ -192,7 +188,6 @@ all-no-torch = [
     "lfx-bundles[faiss]",
     "lfx-bundles[git]",
     "lfx-bundles[glean]",
-    "lfx-bundles[google]",
     "lfx-bundles[groq]",
     "lfx-bundles[homeassistant]",
     "lfx-bundles[huggingface]",
@@ -212,7 +207,6 @@ all-no-torch = [
     "lfx-bundles[novita]",
     "lfx-bundles[nvidia]",
     "lfx-bundles[olivya]",
-    "lfx-bundles[ollama]",
     "lfx-bundles[openrouter]",
     "lfx-bundles[perplexity]",
     "lfx-bundles[pgvector]",
@@ -255,15 +249,30 @@ Repository = "https://github.com/langflow-ai/langflow"
 lfx_bundles = "lfx_bundles"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling==1.31.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/lfx_bundles"]
+include = [
+    "src/lfx_bundles/**/*.py",
+    "src/lfx_bundles/**/starter_projects/*.json",
+]
 
 [tool.hatch.build.targets.sdist]
 include = [
     "src/lfx_bundles",
     "README.md",
     "pyproject.toml",
+]
+
+[tool.pytest.ini_options]
+# The bundle's own tests (``tests/``) are run by .github/workflows/cross-bundle-test.yml in a
+# venv holding lfx + this bundle. They were previously in src/backend/tests/, where they skipped
+# in every default install because ``lfx-bundles`` is opt-in -- see issue #14554.
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "unit: fast, isolated component test",
+    "api_key_required: needs a real provider credential; not run in CI",  # pragma: allowlist secret
 ]

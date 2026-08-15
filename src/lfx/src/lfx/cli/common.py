@@ -31,7 +31,7 @@ from lfx.cli.script_loader import (
     find_graph_variable,
     load_graph_from_script,
 )
-from lfx.execution import get_default_coordinator
+from lfx.execution import aget_default_coordinator
 from lfx.load import load_flow_from_json
 from lfx.run._defaults import apply_run_defaults, resolve_fallback_to_env_vars
 from lfx.schema.schema import InputValueRequest
@@ -439,6 +439,11 @@ async def execute_graph_with_capture(
 
     fallback_to_env_vars = resolve_fallback_to_env_vars()
 
+    # Resolve before the stdout/stderr capture below: the first resolution in a process
+    # imports the `lfx.executors` entry-point plugins, and their import-time output belongs
+    # on the real streams rather than in this request's buffers.
+    coordinator = await aget_default_coordinator()
+
     scope_vars = build_request_variables_from_global_vars(graph.context.get("request_variables"))
     scope_token = activate_request_variables(scope_vars or None)
     no_env_fallback_token = activate_no_env_fallback(disabled=bool(graph.context.get("no_env_fallback")))
@@ -446,15 +451,19 @@ async def execute_graph_with_capture(
     stderr_token = stderr_router.activate(captured_stderr)
 
     try:
-        results = [
-            payload
-            async for payload in get_default_coordinator().stream(
-                graph,
-                initial_inputs=inputs,
-                fallback_to_env_vars=fallback_to_env_vars,
-                event_manager=event_manager,
-            )
-        ]
+        # Opened here rather than inside async_start, which is a generator and cannot make its
+        # span current. See Graph.async_start.
+        with graph.flow_execution_span():
+            results = [
+                payload
+                async for payload in coordinator.stream(
+                    graph,
+                    initial_inputs=inputs,
+                    fallback_to_env_vars=fallback_to_env_vars,
+                    event_manager=event_manager,
+                    open_flow_span=False,
+                )
+            ]
     except Exception as exc:
         # Capture any error output that was written to stderr
         error_output = captured_stderr.getvalue()

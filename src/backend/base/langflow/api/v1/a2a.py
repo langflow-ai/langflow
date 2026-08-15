@@ -52,6 +52,7 @@ from lfx.graph.checkpoint.schema import GraphCheckpoint
 from lfx.graph.checkpoint.store import CheckpointStore
 from lfx.graph.exceptions import GraphPausedException
 from lfx.log.logger import logger
+from lfx.observability import execution_protocol
 from lfx.run.hitl import reroute_decision_on_timeout
 from lfx.schema.workflow import (
     GLOBAL_KEY_MAX_LEN,
@@ -63,10 +64,11 @@ from lfx.services.deps import get_settings_service, session_scope, session_scope
 from lfx.utils.flow_validation import prepare_public_flow_build, validate_public_flow_no_code_execution
 from lfx.utils.ssrf_transport import create_ssrf_protected_client
 from lfx.workflow.converters import parse_workflow_run_request, run_response_to_workflow_response
-from sqlalchemy import delete
-from sqlmodel import select
+from sqlalchemy import case, delete, false
+from sqlmodel import col, select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils.core import strip_secret_field_values
 from langflow.api.utils.flow_utils import compute_virtual_flow_id, scope_session_to_namespace
 from langflow.api.v1.a2a_executor import FlowAgentExecutor, ResumeConflictError
 from langflow.api.v1.a2a_utils import (
@@ -78,9 +80,29 @@ from langflow.api.v1.a2a_utils import (
 )
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
+from langflow.services.auth.context import AuthCredentialContext, set_current_auth_context
+from langflow.services.authorization import (
+    FlowAction,
+    ensure_flow_permission,
+    filter_visible_resources,
+    restrict_to_owned_or_visible_scope,
+    should_apply_owner_override,
+    visible_scope_prefilter,
+)
+from langflow.services.authorization.fetch import deny_to_404
+from langflow.services.authorization.public_access import (
+    PUBLIC_ANONYMOUS_ACTOR_ID,
+    PublicGrantSource,
+    PublicResourceAction,
+    authorize_public_flow_access,
+    public_execution_user,
+)
+from langflow.services.authorization.utils import _resolve_authz_domain
 from langflow.services.database.models import A2ACheckpoint, A2ATask, Flow
-from langflow.services.database.models.api_key.crud import check_key
+from langflow.services.database.models.api_key.crud import authenticate_api_key
 from langflow.services.database.models.flow.model import FlowType
+from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.user.model import User
 
 router = APIRouter(prefix="/a2a", tags=["a2a"])
 
@@ -96,11 +118,11 @@ def _require_a2a_enabled() -> None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
 
 
-async def _enforce_a2a_auth(flow: Flow, request: Request) -> None:
+async def _enforce_a2a_auth(flow: Flow, request: Request) -> User | None:
     """Enforce the folder's auth scheme before any dispatch, failing closed on the rest.
 
-    The flow always runs as its owner (see ``_run_flow``), so an unauthenticated run is a
-    run under the owner's identity. Gate by the folder's ``auth_type``:
+    Public agents run as the isolated anonymous principal; protected agents run
+    as the authenticated flow owner. Gate by the folder's ``auth_type``:
 
     - ``"none"`` / missing / no-folder -> public agent (the intended public A2A model).
     - ``"apikey"`` / ``"oauth"`` -> require a valid langflow API key in ``x-api-key`` whose
@@ -108,32 +130,51 @@ async def _enforce_a2a_auth(flow: Flow, request: Request) -> None:
       happens in front); the langflow transport itself still takes an owner-scoped api key,
       exactly as the MCP transport does (``mcp_projects.verify_project_auth``), since credential
       forwarding from the broker isn't available yet. Accepting another user's valid key would
-      let them trigger a run under the owner's identity, so scope to ``flow.user_id``.
+      let them trigger an owner-authenticated run, so scope to ``flow.user_id``.
     - anything else (an auth type A2A doesn't understand) -> fail closed with 403: treating a
-      *protected* folder as public would expose an owner-identity run anonymously.
+      *protected* folder as public would bypass its admission policy.
 
-    Uses ``check_key`` directly, NOT ``api_key_security``: under AUTO_LOGIN the latter
+    Uses ``authenticate_api_key`` directly, NOT ``api_key_security``: under AUTO_LOGIN the latter
     returns the superuser for a *missing* key, which would silently bypass this gate.
     """
-    # Short writable session (check_key flushes usage counters), closed before
-    # dispatch so no lock is held across the up-to-300s run.
-    async with session_scope() as session:
+    # Resolve the folder policy first, then close that read session before API-key
+    # authentication opens its owned write transaction.
+    async with session_scope_readonly() as session:
         auth_type = await folder_auth_type(flow, session)
-        if auth_type == "none":
-            return  # public agent
-        if auth_type not in ("apikey", "oauth"):
-            # Protected folder with a scheme A2A can't enforce: fail closed, never public.
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"A2A access is disabled for this agent: unsupported folder auth type {auth_type!r}.",
-            )
-        api_key = request.headers.get(A2A_APIKEY_HEADER)
-        if not api_key:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="API key required")
-        user = await check_key(session, api_key)
-        # Same message for invalid and wrong-owner: don't reveal a key is valid for another user.
-        if user is None or user.id != flow.user_id:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
+    if auth_type == "none":
+        await authorize_public_flow_access(
+            flow=flow,
+            action=PublicResourceAction.EXECUTE,
+            request_host=request.url.hostname,
+            compatibility_grant=PublicGrantSource.A2A_AUTH_NONE,
+        )
+        return None  # public agent
+    if auth_type not in ("apikey", "oauth"):
+        # Protected folder with a scheme A2A can't enforce: fail closed, never public.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"A2A access is disabled for this agent: unsupported folder auth type {auth_type!r}.",
+        )
+    api_key = request.headers.get(A2A_APIKEY_HEADER)
+    if not api_key:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="API key required")
+    api_key_result = await authenticate_api_key(api_key)
+    # Same message for invalid and wrong-owner: don't reveal a key is valid for another user.
+    if api_key_result is None or api_key_result.user.id != flow.user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
+    user = api_key_result.user
+    set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
+    try:
+        await ensure_flow_permission(
+            user,
+            FlowAction.EXECUTE,
+            flow_id=flow.id,
+            flow_user_id=flow.user_id,
+            folder_id=flow.folder_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Not Found") from exc
+    return user
 
 
 class _FlowContextBuilder(DefaultServerCallContextBuilder):
@@ -146,6 +187,11 @@ class _FlowContextBuilder(DefaultServerCallContextBuilder):
         # a non-canonical UUID in the path (uppercase or hyphenless, both valid to the UUID route
         # converter). Without this, the same task addressed via two encodings lands in two scopes.
         context.state["flow_id"] = str(UUID(request.path_params["flow_id"]))
+        context.state["request_host"] = request.url.hostname
+        # Written only by ``a2a_jsonrpc`` after its auth gate. Never derive this
+        # from headers inside the SDK producer: folder policy can change after
+        # the HTTP handler returns while a background run is still starting.
+        context.state["admitted_user_id"] = getattr(request.state, "a2a_admitted_user_id", None)
         return context
 
 
@@ -155,42 +201,81 @@ async def _is_public_a2a_flow(flow: Flow) -> bool:
         return await folder_auth_type(flow, session) == "none"
 
 
-async def _prepare_a2a_execution_flow(flow: Flow) -> Flow:
-    """Apply the public-flow code policy before an anonymous A2A owner-identity run."""
-    if not await _is_public_a2a_flow(flow):
-        return flow
-
+async def _prepare_a2a_execution_flow(flow: Flow, request_host: str | None = None) -> Flow:
+    """Reauthorize and apply public code policy after the caller binds the public principal."""
+    await authorize_public_flow_access(
+        flow=flow,
+        action=PublicResourceAction.EXECUTE,
+        request_host=request_host,
+        compatibility_grant=PublicGrantSource.A2A_AUTH_NONE,
+    )
     validate_public_flow_no_code_execution(flow.data)
-    sanitized_data = await prepare_public_flow_build(flow.data)
-    if sanitized_data is None:
-        return flow
+    prepared_data = await prepare_public_flow_build(flow.data)
+    sanitized_data = strip_secret_field_values(prepared_data if prepared_data is not None else flow.data)
     return flow.model_copy(update={"data": sanitized_data}, deep=True)
 
 
-async def _prepare_a2a_resume_checkpoint(flow_id: UUID, checkpoint: GraphCheckpoint) -> GraphCheckpoint:
-    """Re-apply the public-flow policy to the graph payload restored for HITL resume."""
-    user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
-    flow = await get_flow_by_id_or_endpoint_name(str(flow_id), user.id)
-    if not await _is_public_a2a_flow(flow):
+def _require_admitted_a2a_principal(
+    flow: Flow,
+    *,
+    is_public_now: bool,
+    admitted_user_id: str | None,
+) -> str:
+    """Require mutable folder policy to match the immutable HTTP-gate principal."""
+    current_principal_id = PUBLIC_ANONYMOUS_ACTOR_ID if is_public_now else flow.user_id
+    if current_principal_id is None or admitted_user_id != str(current_principal_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+    return str(current_principal_id)
+
+
+async def _prepare_a2a_resume_checkpoint(
+    flow_id: UUID,
+    checkpoint: GraphCheckpoint,
+    request_host: str | None = None,
+    admitted_user_id: str | None = None,
+) -> GraphCheckpoint:
+    """Reauthorize and re-apply public policy before restoring a HITL graph."""
+    flow = await get_flow_by_id_or_endpoint_name(str(flow_id))
+    is_public_now = await _is_public_a2a_flow(flow)
+    current_principal_id = _require_admitted_a2a_principal(
+        flow,
+        is_public_now=is_public_now,
+        admitted_user_id=admitted_user_id,
+    )
+    if checkpoint.user_id != current_principal_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+    if not is_public_now:
         return checkpoint
 
+    await authorize_public_flow_access(
+        flow=flow,
+        action=PublicResourceAction.EXECUTE,
+        request_host=request_host,
+        compatibility_grant=PublicGrantSource.A2A_AUTH_NONE,
+    )
     validate_public_flow_no_code_execution(checkpoint.flow_payload)
-    sanitized_data = await prepare_public_flow_build(checkpoint.flow_payload)
-    if sanitized_data is None:
-        return checkpoint
+    prepared_data = await prepare_public_flow_build(checkpoint.flow_payload)
+    sanitized_data = strip_secret_field_values(prepared_data if prepared_data is not None else checkpoint.flow_payload)
     return checkpoint.model_copy(update={"flow_payload": sanitized_data}, deep=True)
 
 
-async def _run_flow(flow_id: UUID, task_id: str, text: str, context_id: str | None) -> WorkflowExecutionResponse:
-    """Run a flow synchronously through the v2 surface, as the flow owner.
+async def _run_flow(
+    flow_id: UUID,
+    task_id: str,
+    text: str,
+    context_id: str | None,
+    request_host: str | None = None,
+    admitted_user_id: str | None = None,
+) -> WorkflowExecutionResponse:
+    """Run a flow synchronously through the v2 surface under its admitted principal.
 
-    The public A2A endpoint carries no caller identity, so the run executes as
-    the flow's owner. The helpers self-manage short readonly sessions, so no DB
-    session is held across the up-to-300s run. ``task_id`` doubles as the v2
-    job_id when it is a UUID (so run_id == taskId on the sync path); a non-UUID
-    client task id falls back to a fresh job_id.
+    Anonymous A2A runs use the isolated public principal; API-key/OAuth runs
+    retain their authenticated owner principal. The helpers self-manage short
+    readonly sessions, so no DB session is held across the up-to-300s run.
+    ``task_id`` doubles as the v2 job_id when it is a UUID (so run_id == taskId
+    on the sync path); a non-UUID client task id falls back to a fresh job_id.
 
-    The A2A ``context_id`` is namespaced under a per-(owner, flow) virtual id and
+    The A2A ``context_id`` is namespaced under a per-(principal, flow) virtual id and
     that becomes the flow ``session_id``, so multi-turn calls sharing a contextId
     share chat memory while a contextId can never address another flow's session.
     The SDK mints a contextId when the client omits one, so each conversation gets
@@ -200,14 +285,23 @@ async def _run_flow(flow_id: UUID, task_id: str, text: str, context_id: str | No
     # module is imported during router assembly.
     from langflow.api.v2.workflow import execute_sync_workflow_with_timeout
 
-    user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
-    flow = await get_flow_by_id_or_endpoint_name(str(flow_id), user.id)
-    flow = await _prepare_a2a_execution_flow(flow)
+    flow = await get_flow_by_id_or_endpoint_name(str(flow_id))
+    is_public_now = await _is_public_a2a_flow(flow)
+    _require_admitted_a2a_principal(
+        flow,
+        is_public_now=is_public_now,
+        admitted_user_id=admitted_user_id,
+    )
+    if is_public_now:
+        user = public_execution_user()
+        flow = await _prepare_a2a_execution_flow(flow, request_host)
+    else:
+        user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
+        flow = await get_flow_by_id_or_endpoint_name(str(flow_id), user.id)
     # context_id is client-controlled on a public endpoint, so namespace it under a
-    # per-(owner, flow) virtual id before it becomes the chat session_id: a contextId
-    # can never address another flow's session, and since the run always executes as the
-    # flow owner (apikey-gated flows admit only the owner's key) the owner id folds the
-    # principal into the key. The namespaced value lands in the indexed
+    # per-(principal, flow) virtual id before it becomes the chat session_id: a contextId
+    # can never address another flow's session. The stable anonymous id or authenticated
+    # owner id folds the admitted principal into the key. The namespaced value lands in the indexed
     # MessageTable.session_id (Postgres btree entries are size-capped), so when the
     # composed key would exceed the bound, hash the contextId rather than truncating
     # (which would collide two long ids) or falling back to the shared per-flow default
@@ -229,17 +323,21 @@ async def _run_flow(flow_id: UUID, task_id: str, text: str, context_id: str | No
         job_id = UUID(task_id)
     except ValueError:
         job_id = uuid4()
-    return await execute_sync_workflow_with_timeout(
-        parsed=parsed,
-        flow=flow,
-        job_id=job_id,
-        current_user=user,
-        background_tasks=BackgroundTasks(),
-        http_request=None,
-        # HITL: a flow with a HumanInput node durably checkpoints and returns a suspended
-        # response instead of running through. Resume happens in _resume_flow.
-        checkpoint_store=A2ACheckpointStore(),
-    )
+    # Bound before the v2 executor underneath binds "v2": this run arrived over A2A, and
+    # outermost wins, so the operator sees the surface rather than the shared implementation.
+    with execution_protocol("a2a"):
+        return await execute_sync_workflow_with_timeout(
+            parsed=parsed,
+            flow=flow,
+            job_id=job_id,
+            current_user=user,
+            background_tasks=BackgroundTasks(),
+            http_request=None,
+            # HITL: a flow with a HumanInput node durably checkpoints and returns a suspended
+            # response instead of running through. Resume happens in _resume_flow.
+            checkpoint_store=A2ACheckpointStore(),
+            expose_error_details=False,
+        )
 
 
 def _resolve_action(text: str, pending: dict[str, Any]) -> str | None:
@@ -269,7 +367,13 @@ def _suspended_response(flow_id: UUID, task_id: str, session_id: str | None, pen
     )
 
 
-async def _resume_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecutionResponse:
+async def _resume_flow(
+    flow_id: UUID,
+    task_id: str,
+    text: str,
+    request_host: str | None = None,
+    admitted_user_id: str | None = None,
+) -> WorkflowExecutionResponse:
     """Resume a HITL run that paused for human input, advancing to the next pause or completion.
 
     The A2A task id is the run id, so the parked checkpoint is loaded by it. The follow-up
@@ -292,7 +396,12 @@ async def _resume_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecut
     if checkpoint.flow_id != str(flow_id):
         msg = f"A2A task {task_id} does not belong to flow {flow_id}"
         raise RuntimeError(msg)
-    checkpoint = await _prepare_a2a_resume_checkpoint(flow_id, checkpoint)
+    checkpoint = await _prepare_a2a_resume_checkpoint(
+        flow_id,
+        checkpoint,
+        request_host,
+        admitted_user_id,
+    )
 
     pending = (checkpoint.pause_context or {}).get("data") or {}
     allowed = pending.get("allowed_decisions") or []
@@ -326,16 +435,18 @@ async def _resume_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecut
         raise ResumeConflictError(msg)
 
     try:
-        run_outputs, session_id = await asyncio.wait_for(
-            run_graph_internal(
-                graph,
-                str(flow_id),
-                session_id=graph.session_id,
-                inputs=[],
-                outputs=graph.get_terminal_nodes(),
-            ),
-            timeout=_resolve_execution_timeout(),
-        )
+        # No flow_execution_span here: run_graph_internal reaches Graph.arun, which opens one.
+        with execution_protocol("a2a"):
+            run_outputs, session_id = await asyncio.wait_for(
+                run_graph_internal(
+                    graph,
+                    str(flow_id),
+                    session_id=graph.session_id,
+                    inputs=[],
+                    outputs=graph.get_terminal_nodes(),
+                ),
+                timeout=_resolve_execution_timeout(),
+            )
     except GraphPausedException as exc:
         # Paused again (multi-step HITL): the new checkpoint is already saved under this run_id.
         return _suspended_response(flow_id, task_id, graph.session_id, exc.data or {})
@@ -357,16 +468,28 @@ async def _resume_flow(flow_id: UUID, task_id: str, text: str) -> WorkflowExecut
     )
 
 
-def _push_config_scope(context: ServerCallContext) -> str:
-    """Key push configs by (owner, flow) so flow B can't read/overwrite/delete flow A's.
+def _admitted_principal_scope(context: ServerCallContext) -> str:
+    """Return the immutable server-admitted principal for a mounted A2A request."""
+    state = getattr(context, "state", None) or {}
+    admitted_user_id = state.get("admitted_user_id")
+    if admitted_user_id is not None:
+        return str(admitted_user_id)
+    if state.get("flow_id"):
+        msg = "A2A request context is missing its admitted principal"
+        raise RuntimeError(msg)
+    # Protocol-store unit uses without a mounted flow retain the SDK's native
+    # owner resolver; real per-flow HTTP requests always take the branch above.
+    return resolve_user_scope(context)
 
-    The endpoint is anonymous, so ``resolve_user_scope`` is the same '' for every flow;
-    the per-request flow_id (carried in call-context state by ``_FlowContextBuilder``) is
-    the real discriminator. Mirrors the flow-ownership defense in ``_resume_flow``. Only
-    the user-callable set/get/list/delete paths are scoped; dispatch fans out by task_id
-    via ``get_info_for_dispatch`` and is unaffected.
+
+def _push_config_scope(context: ServerCallContext) -> str:
+    """Key push configs by (admitted principal, flow) across auth-mode transitions.
+
+    Both values come from server-authenticated call-context state. Only the
+    user-callable set/get/list/delete paths are scoped; dispatch fans out by
+    task_id via ``get_info_for_dispatch`` and is unaffected.
     """
-    return f"{resolve_user_scope(context)}:{context.state.get('flow_id', '')}"
+    return f"{_admitted_principal_scope(context)}:{context.state.get('flow_id', '')}"
 
 
 class _SafePushConfigStore(InMemoryPushNotificationConfigStore):
@@ -485,28 +608,41 @@ def _task_state(blob: dict[str, Any] | None) -> str | None:
 
 
 def _task_scope(context: ServerCallContext) -> str:
-    """Owner key for the durable task store, scoped to the flow.
+    """Principal key for the durable task store, scoped to the flow.
 
-    ``resolve_user_scope`` returns '' for every anonymous public caller, so without the flow it
-    keys all public flows' tasks together and a caller could read or cancel another flow's task by
-    id through a different flow's endpoint. Folding the path ``flow_id`` into the key makes such a
-    cross-flow lookup miss. Falls back to the plain owner scope when no flow_id is on the context.
+    Folding both the canonical path ``flow_id`` and immutable HTTP-gate principal
+    into the key prevents cross-flow and protected/public transition access. Falls
+    back to the SDK owner scope only for protocol-store use without a mounted flow.
 
     Delimited by ':' like ``_push_config_scope``: the flow_id prefix is a UUID (no ':'), so the key
     is unambiguous, and it avoids a NUL byte that Postgres text columns reject at write time.
     """
-    owner = resolve_user_scope(context)
+    owner = _admitted_principal_scope(context)
     flow_id = (getattr(context, "state", None) or {}).get("flow_id")
     return f"{flow_id}:{owner}" if flow_id else owner
 
 
+def _legacy_public_task_scope(context: ServerCallContext) -> str | None:
+    """Return the pre-public-principal task scope for anonymous mounted requests.
+
+    Before public A2A requests received a stable admitted principal, their SDK
+    owner scope was empty and durable rows were stored as ``<flow_id>:``. Keep
+    that read-only compatibility path restricted to the same flow and the
+    anonymous public principal; protected callers must never inherit it.
+    """
+    state = getattr(context, "state", None) or {}
+    flow_id = state.get("flow_id")
+    if flow_id and _admitted_principal_scope(context) == str(PUBLIC_ANONYMOUS_ACTOR_ID):
+        return f"{flow_id}:"
+    return None
+
+
 class DurableTaskStore(TaskStore):
-    """DB-backed A2A task store keyed by ``(task_id, owner)``.
+    """DB-backed A2A task store keyed by ``(task_id, admitted principal + flow)``.
 
     One short session per op, so tasks survive a restart and are shared across workers
-    (unlike the SDK in-memory store). Owner-scoped to match the SDK contract; ``owner``
-    is '' on the anonymous public endpoint. The whole proto Task is stored as one JSON
-    blob since the mounted surface only does point lookups by id.
+    (unlike the SDK in-memory store). The whole proto Task is stored as one JSON blob
+    since the mounted surface only does point lookups by id.
     """
 
     async def save(self, task: pb.Task, context: ServerCallContext) -> None:
@@ -532,6 +668,10 @@ class DurableTaskStore(TaskStore):
         owner = _task_scope(context)
         async with session_scope_readonly() as session:  # pure read, no commit
             row = await session.get(A2ATask, (task_id, owner))
+            if row is None:
+                legacy_public_owner = _legacy_public_task_scope(context)
+                if legacy_public_owner is not None:
+                    row = await session.get(A2ATask, (task_id, legacy_public_owner))
             blob = row.task if row is not None else None
         if blob is None:
             return None
@@ -701,9 +841,33 @@ async def list_a2a_agents(request: Request, session: DbSession, current_user: Cu
     discovery entry point an orchestrator fetches per agent.
     """
     base = str(request.base_url).rstrip("/")
-    flows = (
-        await session.exec(select(Flow).where(Flow.user_id == current_user.id, Flow.flow_type == FlowType.AGENT))
-    ).all()
+    owned_clause = Flow.user_id == current_user.id
+    visibility = await visible_scope_prefilter(current_user, resource_type="flow", act=FlowAction.READ)
+    if visibility is not None:
+        canonical_workspace = case(
+            (col(Flow.folder_id).is_not(None), Folder.workspace_id),
+            else_=Flow.workspace_id,
+        )
+        stmt = restrict_to_owned_or_visible_scope(
+            select(Flow).outerjoin(Folder, Folder.id == Flow.folder_id),
+            id_column=Flow.id,
+            owner_clause=owned_clause if await should_apply_owner_override() else false(),
+            workspace_expression=canonical_workspace,
+            project_column=Flow.folder_id,
+            visibility=visibility,
+        )
+    else:
+        stmt = select(Flow).where(owned_clause)
+    flows = (await session.exec(stmt.where(Flow.flow_type == FlowType.AGENT))).all()
+    if visibility is None:
+        flows = await filter_visible_resources(
+            current_user,
+            resource_type="flow",
+            candidates=list(flows),
+            domain_extractor=lambda flow: _resolve_authz_domain(flow.workspace_id, flow.folder_id),
+            owner_extractor=lambda flow: flow.user_id,
+            act=FlowAction.READ,
+        )
     # a2a_enabled is bool|None; filter truthiness in Python, matching the card route's gate.
     return [
         {
@@ -731,6 +895,19 @@ async def get_agent_card(flow_id: UUID, request: Request, session: DbSession) ->
     flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
     if flow is None or flow.flow_type != FlowType.AGENT or not flow.a2a_enabled:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+    if await folder_auth_type(flow, session) == "none":
+        try:
+            await authorize_public_flow_access(
+                flow=flow,
+                action=PublicResourceAction.READ,
+                request_host=request.url.hostname,
+                compatibility_grant=PublicGrantSource.A2A_AUTH_NONE,
+                session=session,
+            )
+        except HTTPException as exc:
+            if exc.status_code == status.HTTP_404_NOT_FOUND:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found") from exc
+            raise
 
     rpc_url = str(request.base_url).rstrip("/") + f"/api/v1/a2a/{flow_id}/jsonrpc"
     return await build_agent_card(flow, rpc_url=rpc_url, session=session)
@@ -748,14 +925,25 @@ async def a2a_jsonrpc(flow_id: UUID, request: Request) -> Response:
     """
     _require_a2a_enabled()
 
-    # Gate on the flow itself (resolve by PK, owner-agnostic), like the card route.
-    # _run_flow resolves the owner for the actual run.
-    flow = await get_flow_by_id_or_endpoint_name(str(flow_id))
-    if flow.flow_type != FlowType.AGENT or not flow.a2a_enabled:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+    try:
+        # Gate on the flow itself (resolve by PK, owner-agnostic), like the card
+        # route. _run_flow resolves the principal for the actual run.
+        flow = await get_flow_by_id_or_endpoint_name(str(flow_id))
+        if flow.flow_type != FlowType.AGENT or not flow.a2a_enabled:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
 
-    # apikey-folder flows require a valid owner key here (401); "none" stays public.
-    # Runs after the 404 gate, so disabled/non-agent/unknown flows never reach a 401.
-    await _enforce_a2a_auth(flow, request)
+        # apikey-folder flows require a valid owner key here (401); "none" stays
+        # public. Runs after the 404 gate, so disabled/non-agent/unknown flows
+        # never reach a 401.
+        admitted_user = await _enforce_a2a_auth(flow, request)
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_404_NOT_FOUND:
+            # Unknown, unpublished, revoked, plugin-denied, and existing but
+            # non-agent flows must have the exact same transport response.
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found") from exc
+        raise
+    request.state.a2a_admitted_user_id = str(
+        admitted_user.id if admitted_user is not None else PUBLIC_ANONYMOUS_ACTOR_ID
+    )
 
     return await _DISPATCHER.handle_requests(request)

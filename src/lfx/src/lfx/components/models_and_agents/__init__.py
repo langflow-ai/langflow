@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any
 
 from lfx.components._importing import import_mod
@@ -32,9 +33,15 @@ __all__ = [
     "LanguageModelComponent",
     "MCPToolsComponent",
     "MemoryComponent",
-    "PoliciesComponent",
     "PromptComponent",
 ]
+
+# ``lfx.components.models`` re-exports this module with ``import *``. Keep the
+# legacy package-level Policies export available when the extension is
+# installed, but do not make a plain LFX/base import resolve the compatibility
+# shim and fail just because ``lfx-toolguard`` is intentionally absent.
+if find_spec("lfx_toolguard") is not None:
+    __all__ += ["PoliciesComponent"]
 
 
 def __getattr__(attr_name: str) -> Any:

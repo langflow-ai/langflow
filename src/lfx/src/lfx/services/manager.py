@@ -421,6 +421,24 @@ class ServiceManager:
             expected_bases[ServiceType.AUTHORIZATION_SERVICE] = BaseAuthorizationService
         except Exception as exc:  # noqa: BLE001 — optional import, validation just skipped
             logger.debug(f"BaseAuthorizationService unavailable; entry-point validation skipped: {exc}")
+        try:
+            from lfx.services.catalog_policy.base import BaseCatalogPolicyService
+
+            expected_bases[ServiceType.CATALOG_POLICY_SERVICE] = BaseCatalogPolicyService
+        except Exception as exc:  # noqa: BLE001 — optional import, validation just skipped
+            logger.debug(f"BaseCatalogPolicyService unavailable; entry-point validation skipped: {exc}")
+        try:
+            from lfx.services.model_provider_policy.base import BaseModelProviderPolicyService
+
+            expected_bases[ServiceType.MODEL_PROVIDER_POLICY_SERVICE] = BaseModelProviderPolicyService
+        except Exception as exc:  # noqa: BLE001 — optional import, validation just skipped
+            logger.debug(f"BaseModelProviderPolicyService unavailable; entry-point validation skipped: {exc}")
+        try:
+            from lfx.services.policy_bundle.base import BasePolicyBundleService
+
+            expected_bases[ServiceType.POLICY_BUNDLE_SERVICE] = BasePolicyBundleService
+        except Exception as exc:  # noqa: BLE001 — optional import, validation just skipped
+            logger.debug(f"BasePolicyBundleService unavailable; entry-point validation skipped: {exc}")
 
         for ep in eps:
             try:
@@ -492,7 +510,41 @@ class ServiceManager:
             object_key=service_key,
         )
         if service_class is None:
+            if service_type == ServiceType.MODEL_PROVIDER_POLICY_SERVICE:
+                msg = (
+                    "Configured model provider policy service could not be loaded; "
+                    "refusing to start with the OSS allow-all fallback"
+                )
+                raise RuntimeError(msg)
+            if service_type == ServiceType.POLICY_BUNDLE_SERVICE:
+                msg = (
+                    "Configured policy bundle service could not be loaded; "
+                    "refusing to start with the built-in process-local fallback"
+                )
+                raise RuntimeError(msg)
             return
+
+        if service_type == ServiceType.MODEL_PROVIDER_POLICY_SERVICE:
+            from lfx.services.model_provider_policy.base import BaseModelProviderPolicyService
+
+            if not isinstance(service_class, type) or not issubclass(service_class, BaseModelProviderPolicyService):
+                msg = "Configured model provider policy service must subclass BaseModelProviderPolicyService"
+                raise RuntimeError(msg)
+        if service_type == ServiceType.CATALOG_POLICY_SERVICE:
+            from lfx.services.catalog_policy.base import BaseCatalogPolicyService
+
+            if not isinstance(service_class, type) or not issubclass(service_class, BaseCatalogPolicyService):
+                logger.warning(
+                    "Configured catalog policy service must subclass BaseCatalogPolicyService; "
+                    "keeping the built-in fail-open service"
+                )
+                return
+        if service_type == ServiceType.POLICY_BUNDLE_SERVICE:
+            from lfx.services.policy_bundle.base import BasePolicyBundleService
+
+            if not isinstance(service_class, type) or not issubclass(service_class, BasePolicyBundleService):
+                msg = "Configured policy bundle service must subclass BasePolicyBundleService"
+                raise RuntimeError(msg)
 
         self.register_service_class(service_type, service_class, override=True)
         logger.debug(f"Registered service from config: {service_key} -> {service_path}")

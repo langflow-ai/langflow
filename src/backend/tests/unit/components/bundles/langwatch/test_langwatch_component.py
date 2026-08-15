@@ -6,6 +6,9 @@ import httpx
 import pytest
 import respx
 from httpx import Response
+
+pytest.importorskip("lfx_bundles")
+
 from lfx.base.langwatch.utils import get_cached_evaluators
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
