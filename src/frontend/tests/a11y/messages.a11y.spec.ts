@@ -276,7 +276,15 @@ test.describe("Messages settings route accessibility", () => {
       await awaitBootstrapTest(page, { skipModal: true });
       await page.goto("/settings/messages");
 
-      await expect(page.getByRole("status", { name: "Loading" })).toBeVisible();
+      // A full goto reboots the app: after `load` it still has to run
+      // auto_login -> whoami -> config and pull the lazy settings route before
+      // SessionView mounts and this status renders. On Windows CI that chain
+      // takes 7s+ (nightly 31907290063, shard 24: the page mounted the messages
+      // query 1.4s and 1.7s after the default 5s expect gave up), so use the
+      // same budget the knowledge-bases loading scan already uses.
+      await expect(page.getByRole("status", { name: "Loading" })).toBeVisible({
+        timeout: TIMEOUTS.standard,
+      });
       await page.runA11yScan("settings-messages-loading");
       releaseResponse();
     },
