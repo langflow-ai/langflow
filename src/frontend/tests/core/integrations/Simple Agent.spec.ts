@@ -2,12 +2,14 @@ import { expect } from "../../fixtures";
 import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
   "Simple Agent",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
+    await seedLoopbackProvider(page);
     await openStarterProject(page, "Simple Agent");
     await configureLoopbackOpenAI(page);
 

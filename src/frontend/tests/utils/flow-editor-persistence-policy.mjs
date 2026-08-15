@@ -10,6 +10,18 @@ export function isModelRefreshBody(value) {
   return isRecord(modelField) && modelField.type === "model";
 }
 
+/**
+ * The flow a model refresh belongs to. `buildRefreshPayload` stamps the id onto
+ * the template as `_frontend_node_flow_id`; the request URL carries no flow, so
+ * this is the only way to attribute a refresh to the editor that issued it.
+ */
+export function modelRefreshFlowId(value) {
+  if (!isModelRefreshBody(value)) return undefined;
+  const stamped = value.template._frontend_node_flow_id;
+  if (!isRecord(stamped) || typeof stamped.value !== "string") return undefined;
+  return stamped.value || undefined;
+}
+
 export function isMatchingFullFlowAutosavePayload(value, matchesData) {
   if (!isRecord(value) || !isRecord(value.data)) return false;
 

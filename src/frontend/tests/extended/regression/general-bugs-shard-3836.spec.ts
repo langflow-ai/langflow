@@ -8,6 +8,7 @@ import {
   openParametersPanel,
   toggleParameterOnNode,
 } from "../../utils/open-advanced-options";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { uploadFile } from "../../utils/upload-file";
 
 // awaitBootstrapTest creates a default "New Flow (n)" whose suffix comes from a
@@ -21,6 +22,7 @@ test(
   "user must be able to send an image on chat using advanced tool on ChatInputComponent",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
+    await seedLoopbackProvider(page);
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();

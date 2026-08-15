@@ -5,6 +5,7 @@ import {
   isFlowPersistenceBarrierSatisfied,
   isMatchingFullFlowAutosavePayload,
   isModelRefreshBody,
+  modelRefreshFlowId,
   modelRefreshNodeCount,
   requiresPostRefreshAutosave,
 } from "./flow-editor-persistence-policy.mjs";
@@ -103,6 +104,49 @@ test("recognizes refreshes for dynamically named model fields", () => {
       },
     }),
     false,
+  );
+});
+
+test("attributes a refresh to the flow stamped on its template", () => {
+  assert.equal(
+    modelRefreshFlowId({
+      field: "model",
+      template: {
+        model: { type: "model", value: [] },
+        _frontend_node_flow_id: { value: "flow-1" },
+      },
+    }),
+    "flow-1",
+  );
+});
+
+test("has no flow for an unstamped or non-refresh body", () => {
+  assert.equal(
+    modelRefreshFlowId({
+      field: "model",
+      template: { model: { type: "model", value: [] } },
+    }),
+    undefined,
+  );
+  assert.equal(
+    modelRefreshFlowId({
+      field: "model",
+      template: {
+        model: { type: "model", value: [] },
+        _frontend_node_flow_id: { value: "" },
+      },
+    }),
+    undefined,
+  );
+  assert.equal(
+    modelRefreshFlowId({
+      field: "code",
+      template: {
+        code: { type: "code" },
+        _frontend_node_flow_id: { value: "flow-1" },
+      },
+    }),
+    undefined,
   );
 });
 

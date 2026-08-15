@@ -17,6 +17,7 @@ export function isMatchingFullFlowAutosavePayload(
   matchesData: (data: FlowPersistenceData) => boolean,
 ): boolean;
 export function isModelRefreshBody(value: unknown): boolean;
+export function modelRefreshFlowId(value: unknown): string | undefined;
 export function canTrackFullFlowAutosavePayload(
   value: unknown,
   matchesData: (data: FlowPersistenceData) => boolean,
