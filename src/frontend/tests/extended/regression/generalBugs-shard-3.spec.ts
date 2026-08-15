@@ -5,6 +5,7 @@ import { TEXTS } from "../../utils/constants/texts";
 import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 
 test(
   "should copy code from playground modal",
@@ -12,6 +13,7 @@ test(
     tag: ["@release"],
   },
   async ({ page }) => {
+    await seedLoopbackProvider(page);
     await openStarterProject(page, TEXTS.templateBasicPrompting);
     await configureLoopbackOpenAI(page);
     await adjustScreenView(page);

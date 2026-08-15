@@ -5,6 +5,7 @@ import { TEXTS } from "../../utils/constants/texts";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { sendPlaygroundMessage } from "../../utils/playground/send-playground-message";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 type MemoryBaseCreateResponse = {
@@ -61,6 +62,7 @@ withEventDeliveryModes(
   "Memory Chatbot",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
+    await seedLoopbackProvider(page);
     const memoryBaseName = `memory_chatbot_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     let memoryBaseId: string | undefined;
 

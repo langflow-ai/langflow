@@ -3,11 +3,13 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
 import { selectStarterTemplate } from "../../utils/flow/select-starter-template";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 
 test(
   "should delete rows from table message",
   { tag: ["@release"] },
   async ({ page }) => {
+    await seedLoopbackProvider(page);
     await awaitBootstrapTest(page);
 
     await selectStarterTemplate(page, TEXTS.templateBasicPrompting);

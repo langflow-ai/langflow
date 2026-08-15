@@ -5,6 +5,7 @@ import { TID } from "../../utils/constants/testIds";
 import { TIMEOUTS } from "../../utils/constants/timeouts";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 import { sendPlaygroundMessage } from "../../utils/playground/send-playground-message";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 
 const ANTHROPIC_MODEL = "claude-sonnet-4-5-20250929";
 
@@ -55,6 +56,7 @@ test(
   "user can select Anthropic before running Simple Agent through the loopback provider",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
+    await seedLoopbackProvider(page);
     await mockAnthropicModelCatalog(page);
     await openStarterProject(page, "Simple Agent");
 

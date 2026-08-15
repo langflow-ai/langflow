@@ -3,12 +3,14 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "user must be able to see output inspection",
   { tag: ["@release", "@components"] },
   async ({ page }, testInfo) => {
+    await seedLoopbackProvider(page);
     // Flaky on Windows CI runners: the Basic Prompting template canvas
     // intermittently fails to finish rendering the controls in time (even with
     // the 30s adjustScreenView window). The output-inspection behavior is

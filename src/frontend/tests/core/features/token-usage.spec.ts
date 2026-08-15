@@ -2,12 +2,14 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 
 test.describe("Token Usage Tracking", () => {
   test(
     "node badge should show token count after running an LLM flow",
     { tag: ["@release", "@workspace", "@components"] },
     async ({ page }) => {
+      await seedLoopbackProvider(page);
       await awaitBootstrapTest(page);
 
       await page.getByTestId("side_nav_options_all-templates").click();
@@ -53,6 +55,7 @@ test.describe("Token Usage Tracking", () => {
     "chat message should show token count alongside run duration",
     { tag: ["@release", "@workspace", "@components"] },
     async ({ page }) => {
+      await seedLoopbackProvider(page);
       await awaitBootstrapTest(page);
 
       await page.getByTestId("side_nav_options_all-templates").click();
