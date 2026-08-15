@@ -3,9 +3,11 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 
 test.describe("Bulk Delete Sessions", () => {
   test.beforeEach(async ({ page }) => {
+    await seedLoopbackProvider(page);
     await page.route(/\/api\/v1\/store\/tags(\?.*)?$/, async (route) => {
       if (route.request().method() === "GET") {
         await route.fulfill({ json: [] });

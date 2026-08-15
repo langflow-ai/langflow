@@ -6,160 +6,54 @@ import {
   flushPendingFlowAutosave,
   reloadAndWaitForFlowPersistence,
 } from "./flow-editor-persistence";
+import { modelRefreshNodeCount } from "./flow-editor-persistence-policy.mjs";
+import {
+  applyLoopbackToFlowData,
+  isFlowDataLoopbackConfigured,
+  isNodeLoopbackConfigured,
+  type LoopbackFlowData,
+  type LoopbackNode,
+} from "./loopback-provider-policy.mjs";
+import {
+  isLoopbackProviderSeeded,
+  waitForMountModelRefresh,
+} from "./seed-loopback-provider";
 import { updateOldComponents } from "./update-old-components";
 
-export const LOOPBACK_OPENAI_BASE_URL = "http://127.0.0.1:8787/v1";
-export const LOOPBACK_OPENAI_API_KEY = "langflow-loopback-test-key"; // pragma: allowlist secret
-
-const LOOPBACK_MODEL = {
-  id: "gpt-4o-mini",
-  name: "gpt-4o-mini",
-  icon: "OpenAI",
-  provider: "OpenAI",
-  category: "OpenAI",
-  metadata: {
-    api_key_param: "api_key", // pragma: allowlist secret
-    context_length: 128_000,
-    max_tokens_field_name: "max_tokens",
-    model_class: "ChatOpenAI",
-    model_name_param: "model",
-  },
-};
-
-type TemplateField = {
-  _input_type?: string;
-  load_from_db?: boolean;
-  options?: unknown[];
-  value?: unknown;
-};
-
-type FlowNode = {
-  id?: string;
-  type?: string;
-  data?: {
-    node?: {
-      template?: Record<string, TemplateField>;
-    };
-    type?: string;
-  };
-};
+export {
+  LOOPBACK_MODEL,
+  LOOPBACK_OPENAI_API_KEY,
+  LOOPBACK_OPENAI_BASE_URL,
+} from "./loopback-provider-policy.mjs";
 
 type FlowRead = {
-  data?: {
-    nodes?: FlowNode[];
-    edges?: unknown[];
-    [key: string]: unknown;
-  };
+  data?: LoopbackFlowData;
 };
-
-function configureTemplate(node: FlowNode): boolean {
-  const template = node.data?.node?.template;
-  if (!template) return false;
-
-  const modelInput = template.model;
-  const hasUnifiedModel = modelInput?._input_type === "ModelInput";
-  const isOpenAIComponent = /openai/i.test(node.data?.type ?? "");
-  if (!hasUnifiedModel && !isOpenAIComponent) return false;
-
-  if (hasUnifiedModel) {
-    modelInput.value = [LOOPBACK_MODEL];
-    modelInput.options = [
-      LOOPBACK_MODEL,
-      ...(modelInput.options ?? []).filter(
-        (option) =>
-          !(
-            typeof option === "object" &&
-            option !== null &&
-            "name" in option &&
-            option.name === LOOPBACK_MODEL.name &&
-            "provider" in option &&
-            option.provider === LOOPBACK_MODEL.provider
-          ),
-      ),
-    ];
-  }
-
-  for (const fieldName of ["api_key", "openai_api_key"]) {
-    if (template[fieldName]) {
-      template[fieldName].value = LOOPBACK_OPENAI_API_KEY;
-      template[fieldName].load_from_db = false;
-    }
-  }
-  for (const fieldName of ["openai_api_base", "base_url"]) {
-    if (template[fieldName]) {
-      template[fieldName].value = LOOPBACK_OPENAI_BASE_URL;
-    }
-  }
-  if (template.model_name && template.model_name._input_type !== "ModelInput") {
-    template.model_name.value = LOOPBACK_MODEL.name;
-  }
-  if (template.provider) template.provider.value = LOOPBACK_MODEL.provider;
-  return true;
-}
-
-function isLoopbackConfigured(node: FlowNode): boolean {
-  const template = node.data?.node?.template;
-  if (!template) return false;
-
-  const modelInput = template.model;
-  const hasUnifiedModel = modelInput?._input_type === "ModelInput";
-  const isOpenAIComponent = /openai/i.test(node.data?.type ?? "");
-  if (!hasUnifiedModel && !isOpenAIComponent) return false;
-
-  if (hasUnifiedModel) {
-    if (
-      !Array.isArray(modelInput.value) ||
-      !modelInput.value.some(
-        (model) =>
-          typeof model === "object" &&
-          model !== null &&
-          "name" in model &&
-          model.name === LOOPBACK_MODEL.name &&
-          "provider" in model &&
-          model.provider === LOOPBACK_MODEL.provider,
-      )
-    ) {
-      return false;
-    }
-  }
-
-  for (const fieldName of ["api_key", "openai_api_key"]) {
-    if (
-      template[fieldName] &&
-      (template[fieldName].value !== LOOPBACK_OPENAI_API_KEY ||
-        template[fieldName].load_from_db !== false)
-    ) {
-      return false;
-    }
-  }
-  for (const fieldName of ["openai_api_base", "base_url"]) {
-    if (
-      template[fieldName] &&
-      template[fieldName].value !== LOOPBACK_OPENAI_BASE_URL
-    ) {
-      return false;
-    }
-  }
-  if (
-    template.model_name &&
-    template.model_name._input_type !== "ModelInput" &&
-    template.model_name.value !== LOOPBACK_MODEL.name
-  ) {
-    return false;
-  }
-  if (
-    template.provider &&
-    template.provider.value !== LOOPBACK_MODEL.provider
-  ) {
-    return false;
-  }
-  return true;
-}
 
 function currentFlowId(page: Page): string {
   const match = new URL(page.url()).pathname.match(/\/flow\/([^/]+)/);
   if (!match) throw new Error(`Expected a flow URL, received ${page.url()}`);
   return match[1];
+}
+
+async function readFlow(
+  page: Page,
+  flowId: string,
+  description: string,
+): Promise<FlowRead> {
+  const response = await page.request.get(`/api/v1/flows/${flowId}`);
+  expect(response.ok(), `${description} ${flowId}`).toBeTruthy();
+  return (await response.json()) as FlowRead;
+}
+
+function nodesById(
+  data: LoopbackFlowData | undefined,
+): Map<string, LoopbackNode> {
+  return new Map(
+    (data?.nodes ?? []).flatMap((node) =>
+      node.id ? ([[node.id, node]] as [string, LoopbackNode][]) : [],
+    ),
+  );
 }
 
 export async function configureLoopbackOpenAI(
@@ -174,54 +68,62 @@ export async function configureLoopbackOpenAI(
 
   const flowId = currentFlowId(page);
   await flushPendingFlowAutosave(page);
-  const flowResponse = await page.request.get(`/api/v1/flows/${flowId}`);
-  expect(flowResponse.ok(), `GET flow ${flowId}`).toBeTruthy();
-  const flow = (await flowResponse.json()) as FlowRead;
-  const configuredNodes = (flow.data?.nodes ?? []).filter(configureTemplate);
-  if (configuredNodes.length === 0) {
+  const flow = await readFlow(page, flowId, "GET flow");
+  const { data: configuredData, targetNodeIds } = applyLoopbackToFlowData(
+    flow.data ?? {},
+  );
+  if (targetNodeIds.length === 0) {
     throw new Error(`Flow ${flowId} has no OpenAI-compatible model inputs`);
   }
 
-  const updateResponse = await page.request.patch(`/api/v1/flows/${flowId}`, {
-    data: { data: flow.data },
-  });
-  expect(updateResponse.ok(), `PATCH flow ${flowId}`).toBeTruthy();
+  if (
+    isLoopbackProviderSeeded(page) &&
+    isFlowDataLoopbackConfigured(flow.data ?? {})
+  ) {
+    // The starter template was served pre-configured, so the persisted flow and
+    // the editor already agree — there is no out-of-band patch to reload for.
+    // Only the mount refresh can still write these nodes, so wait for it to
+    // land before anything reads them back. Size the wait the way the editor
+    // does: a target node without a `model`-typed field never refreshes.
+    const expectedRefreshes = modelRefreshNodeCount(flow.data ?? {});
+    if (expectedRefreshes > 0) {
+      await waitForMountModelRefresh(page, flowId, expectedRefreshes);
+    }
+    await flushPendingFlowAutosave(page);
+  } else {
+    if (isLoopbackProviderSeeded(page)) {
+      // Correct but slow: the seed did not reach this flow, so we are paying
+      // for the reload this spec opted out of. Say so rather than letting the
+      // optimization rot silently across every seeded spec.
+      console.warn(
+        `Flow ${flowId} was not seeded with the loopback provider; falling back to patch-and-reload`,
+      );
+    }
+    const updateResponse = await page.request.patch(`/api/v1/flows/${flowId}`, {
+      data: { data: configuredData },
+    });
+    expect(updateResponse.ok(), `PATCH flow ${flowId}`).toBeTruthy();
 
-  const configuredNodeIds = configuredNodes.flatMap((node) =>
-    node.id ? [node.id] : [],
-  );
-  if (configuredNodeIds.length !== configuredNodes.length) {
-    throw new Error(`Flow ${flowId} contains a model node without an id`);
+    await reloadAndWaitForFlowPersistence(
+      page,
+      flowId,
+      configuredData,
+      (persistedData) => {
+        const persistedNodes = nodesById(persistedData);
+        return targetNodeIds.every((id) => {
+          const node = persistedNodes.get(id);
+          return node !== undefined && isNodeLoopbackConfigured(node);
+        });
+      },
+    );
   }
 
-  await reloadAndWaitForFlowPersistence(
-    page,
-    flowId,
-    flow.data ?? {},
-    (persistedData) => {
-      const persistedNodes = new Map(
-        (persistedData.nodes ?? []).flatMap((node) =>
-          node.id ? [[node.id, node]] : [],
-        ),
-      );
-      return configuredNodeIds.every((id) => {
-        const node = persistedNodes.get(id) as FlowNode | undefined;
-        return node !== undefined && isLoopbackConfigured(node);
-      });
-    },
-  );
   await waitForFlowEditorReady(page);
-  const verifyResponse = await page.request.get(`/api/v1/flows/${flowId}`);
-  expect(verifyResponse.ok(), `Verify flow ${flowId}`).toBeTruthy();
-  const verifiedFlow = (await verifyResponse.json()) as FlowRead;
-  const verifiedNodes = new Map(
-    (verifiedFlow.data?.nodes ?? []).flatMap((node) =>
-      node.id ? [[node.id, node]] : [],
-    ),
-  );
-  const clobberedNodeIds = configuredNodeIds.filter((id) => {
+  const verifiedFlow = await readFlow(page, flowId, "Verify flow");
+  const verifiedNodes = nodesById(verifiedFlow.data);
+  const clobberedNodeIds = targetNodeIds.filter((id) => {
     const node = verifiedNodes.get(id);
-    return !node || !isLoopbackConfigured(node);
+    return !node || !isNodeLoopbackConfigured(node);
   });
   if (clobberedNodeIds.length > 0) {
     throw new Error(

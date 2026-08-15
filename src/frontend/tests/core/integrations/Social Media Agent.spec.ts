@@ -3,6 +3,7 @@ import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { configureLoopbackWebSearch } from "../../utils/configure-loopback-web-search";
 import { TEXTS } from "../../utils/constants/texts";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 function getRandomSocialMediaQuery(): string {
@@ -57,6 +58,7 @@ withEventDeliveryModes(
   "Social Media Agent",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
+    await seedLoopbackProvider(page);
     await openStarterProject(page, "Social Media Agent");
 
     await configureLoopbackOpenAI(page);

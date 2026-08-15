@@ -5,11 +5,13 @@ import { TID } from "../../utils/constants/testIds";
 import { TEXTS } from "../../utils/constants/texts";
 import { TIMEOUTS } from "../../utils/constants/timeouts";
 import { sendPlaygroundMessage } from "../../utils/playground/send-playground-message";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 
 test(
   "user must not experience message duplication in mathematical expressions with agent component",
   { tag: ["@release", "@components", "@workspace"] },
   async ({ page }) => {
+    await seedLoopbackProvider(page);
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();

@@ -5,6 +5,7 @@ import { TEXTS } from "../../utils/constants/texts";
 import { buildFlowAndWait } from "../../utils/flow/build-flow-and-wait";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import {
   waitForOpenModalWithChatInput,
   waitForOpenModalWithoutChatInput,
@@ -46,6 +47,7 @@ for (const template of TEMPLATES) {
     template.name,
     { tag: ["@release", "@starter-projects"] },
     async ({ page }) => {
+      await seedLoopbackProvider(page);
       await page.goto("/");
 
       if ((template.open ?? "starter") === "heading") {

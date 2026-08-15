@@ -4,12 +4,14 @@ import { TEXTS } from "../../utils/constants/texts";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { sendPlaygroundMessage } from "../../utils/playground/send-playground-message";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
   "SaaS Pricing",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
+    await seedLoopbackProvider(page);
     await page.goto("/");
     await openStarterProject(page, "SaaS Pricing");
 
