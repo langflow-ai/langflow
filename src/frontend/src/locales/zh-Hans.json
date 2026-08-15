@@ -304,6 +304,8 @@
   "canvas.zoomOut": "缩小",
   "canvas.zoomTo100": "放大至100%",
   "canvas.zoomToFit": "缩放以适应画面",
+  "canvasControls.arranging": "排列中…",
+  "canvasControls.autoArrange": "自动排列",
   "canvasControls.expandAll": "全部展开",
   "canvasControls.minimizeAll": "最小化所有窗口",
   "chat.attachFileTooltip": "附加文件（图片、PDF、CSV、DOCX、TXT、MD、JSON、YAML、XML、HTML、代码文件）",

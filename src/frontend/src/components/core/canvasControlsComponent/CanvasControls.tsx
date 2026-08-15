@@ -19,6 +19,7 @@ import { usePlaygroundStore } from "@/stores/playgroundStore";
 import type { AllNodeType } from "@/types/flow";
 import CanvasControlsDropdown from "./CanvasControlsDropdown";
 import HelpDropdown from "./HelpDropdown";
+import useAutoArrange from "./hooks/use-auto-arrange";
 import useMinimizeAllAndAlign from "./hooks/use-minimize-all-and-align";
 import { useDismissOnTabBoundary } from "./utils/use-dismiss-on-tab-boundary";
 
@@ -40,6 +41,7 @@ const CanvasControls = ({
   const reactFlowStoreApi = useStoreApi();
   const { allMinimized, hasGenericNodes, toggleMinimizeAllAndAlign } =
     useMinimizeAllAndAlign();
+  const { isArranging, canArrange, handleAutoArrange } = useAutoArrange();
   const isFlowLocked = useFlowStore(
     useShallow((state) => state.currentFlow?.locked),
   );
@@ -302,6 +304,26 @@ const CanvasControls = ({
                 ? "text-foreground"
                 : "text-muted-foreground group-hover:text-foreground"
             }`}
+          />
+        </Button>
+        <Button
+          unstyled
+          size="icon"
+          data-testid="canvas_controls_auto_arrange"
+          disabled={locked || isArranging || !canArrange}
+          className="group flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+          title={
+            locked
+              ? t("version.readOnly")
+              : isArranging
+                ? t("canvasControls.arranging")
+                : t("canvasControls.autoArrange")
+          }
+          onClick={handleAutoArrange}
+        >
+          <ForwardedIconComponent
+            name="LayoutGrid"
+            className="h-[18px] w-[18px] text-muted-foreground transition-colors group-hover:text-foreground"
           />
         </Button>
         <HelpDropdown />

@@ -304,6 +304,8 @@
   "canvas.zoomOut": "Verkleinern",
   "canvas.zoomTo100": "Auf 100 % vergrößern",
   "canvas.zoomToFit": "Auf Bildschirm anpassen",
+  "canvasControls.arranging": "Wird angeordnet…",
+  "canvasControls.autoArrange": "Automatisch anordnen",
   "canvasControls.expandAll": "Alles einblenden",
   "canvasControls.minimizeAll": "Alle minimieren",
   "chat.attachFileTooltip": "Datei anhängen (Bilder, PDF, CSV, DOCX, TXT, MD, JSON, YAML, XML, HTML, Quellcode-Dateien)",

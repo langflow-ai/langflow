@@ -304,6 +304,8 @@
   "canvas.zoomOut": "Alejar",
   "canvas.zoomTo100": "Ampliar al 100 %",
   "canvas.zoomToFit": "Ajustar a la pantalla",
+  "canvasControls.arranging": "Organizando…",
+  "canvasControls.autoArrange": "Organizar automáticamente",
   "canvasControls.expandAll": "Expandir todo",
   "canvasControls.minimizeAll": "Minimizar todo",
   "chat.attachFileTooltip": "Adjuntar archivo (imágenes, PDF, CSV, DOCX, TXT, MD, JSON, YAML, XML, HTML, archivos de código)",

@@ -304,6 +304,8 @@
   "canvas.zoomOut": "ズームアウト",
   "canvas.zoomTo100": "100%に拡大",
   "canvas.zoomToFit": "画面に合わせる",
+  "canvasControls.arranging": "整列中…",
+  "canvasControls.autoArrange": "自動整列",
   "canvasControls.expandAll": "すべて展開",
   "canvasControls.minimizeAll": "すべてを最小化",
   "chat.attachFileTooltip": "ファイルを添付する（画像、PDF、CSV、DOCX、TXT、MD、JSON、YAML、XML、HTML、コードファイル）",
