@@ -76,10 +76,9 @@ async def update_job_status(
     Returns:
         True if the job was found and updated, False if no such job exists.
 
-        This used to return the updated Job, which cost a SELECT to re-read the row the UPDATE had
-        just written, twice per flow run. No caller ever bound the result -- every one of them
-        awaits this for its effect -- so the row was fetched and discarded. rowcount already carries
-        the only part anyone could have used, which is whether the job existed.
+        Deliberately not the updated Job: returning the row costs a SELECT to re-read what the
+        UPDATE just wrote, and callers await this for its effect rather than for the row. Fetch it
+        with ``get_job_by_job_id`` if you need it.
     """
     values = {"status": status}
     if finished_timestamp is not None:

@@ -46,17 +46,17 @@ TYPE_MAP = {
 
 
 async def _upsert_rows(session, model, rows: list) -> None:
-    """Insert rows, overwriting any that already exist, in one statement.
+    """Insert rows, overwriting any that already exist, in one statement per chunk.
 
-    Replaces a ``session.merge()`` per row. merge() has to SELECT each primary key before it can
-    choose between INSERT and UPDATE, so a flush cost ``2 + 2N`` statements for N spans, and the
-    SELECT missed every time on a normal run because the trace id is minted when the run starts and
-    the span ids are derived from it. This costs one statement regardless of N.
+    Deliberately not ``session.merge()`` per row: merge() has to SELECT each primary key before it
+    can choose between INSERT and UPDATE, which costs two statements per row and misses every time
+    on a normal run, because the trace id is minted when the run starts and the span ids are derived
+    from it. The cost here does not grow with the number of rows.
 
-    The upsert, rather than a plain insert, is what keeps HITL working. A paused run flushes its
-    partial spans (``langflow/api/build.py``), and on resume the run flushes again with the same
-    trace id and the same deterministic uuid5 span ids. Those rows must be overwritten with their
-    finished state, so the conflict clause updates every non-key column, exactly as merge() did.
+    An upsert rather than a plain insert, because HITL writes the same rows twice: a paused run
+    flushes its partial spans (``langflow/api/build.py``) and on resume flushes again with the same
+    trace id and the same deterministic uuid5 span ids. Those rows have to end up holding their
+    finished state, so the conflict clause updates every non-key column.
     """
     if not rows:
         return
@@ -76,13 +76,22 @@ async def _upsert_rows(session, model, rows: list) -> None:
     connection = await session.connection()
     if connection.dialect.name == "postgresql":
         from sqlalchemy.dialects.postgresql import insert as dialect_insert
+
+        # PostgreSQL's wire protocol allows 65535 bind parameters per statement.
+        max_bind_parameters = 30_000
     else:
         from sqlalchemy.dialects.sqlite import insert as dialect_insert
 
-    # PostgreSQL's wire protocol allows 65535 bind parameters per statement, and one statement here
-    # carries len(columns) of them per row, so a big enough trace would fail as a whole. Chunking
-    # keeps the round-trip count proportional to spans/chunk_size instead of to spans.
-    chunk_size = max(1, 30000 // len(values[0]))
+        # SQLite allows 32766 since 3.32, but only 999 before it, and a Python linked against a
+        # distro's older libsqlite3 still enforces the lower one. Staying under 999 costs nothing
+        # for the flows that exist -- anything up to 71 spans is still a single statement -- and
+        # avoids failing outright on a host we cannot detect from here.
+        max_bind_parameters = 900
+
+    # One statement carries len(columns) bind parameters per row, and both backends cap that, so a
+    # big enough trace would fail as a whole rather than degrade. Chunking trades that cliff for a
+    # round-trip count of spans/chunk_size instead of the one-per-span merge() used to pay.
+    chunk_size = max(1, max_bind_parameters // len(values[0]))
     for start in range(0, len(values), chunk_size):
         chunk = values[start : start + chunk_size]
         statement = dialect_insert(model).values(chunk)

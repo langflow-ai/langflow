@@ -30,15 +30,23 @@ import pytest
 from sqlalchemy import event
 from starlette import status
 
-# Ceilings, not targets. A two-component flow measured 13 statements and 11 checkouts when these
-# were set, down from 27 and 11. The headroom absorbs an extra message or span without failing;
-# anything past it means a new query joined the request path and should be justified on purpose.
+# Ceilings, not targets. A two-component flow measured 13 statements and 11 checkouts on SQLite
+# when these were set, down from 27 and 11. The headroom absorbs an extra message or span without
+# failing; anything past it means a new query joined the request path and should be justified.
 #
-# For reference, the floor a run cannot go below: read the api key, read the flow, read the global
-# variables, write the job row and its terminal status, write the messages, write the trace and its
-# spans. That is 8 or so. The gap between 8 and 13 is listed in the plan doc for this work.
+# The floor for this flow is 10, counted from what a run cannot skip: read the api key (1), read the
+# flow (1), read the global variables (1), check memory-base (1), insert the job row (1), write its
+# terminal status (1), write the two messages (2), write the trace and its spans (2).
+#
+# The three above that floor are the `UPDATE job` to in_progress, the pre-update `SELECT message`,
+# and the `UPDATE apikey` usage counter. Each is removable and none is removed here.
 STATEMENT_BUDGET = 16
 CHECKOUT_BUDGET = 12
+
+# A run rejected before execution measured 4 statements and 3 checkouts: the api key read and its
+# usage write, the flow read, and the global-variable read. It reaches none of the run's own work.
+REJECTED_RUN_BUDGET = 6
+REJECTED_RUN_CHECKOUT_BUDGET = 4
 
 
 @pytest.fixture
@@ -141,6 +149,17 @@ async def test_db_calls_for_a_healthy_run(
 
     print(db_ledger.report("healthy run"))  # noqa: T201 - the ledger is the deliverable
 
+    # The totals are a backstop. They are ceilings with headroom, so a single query coming back
+    # would slip under them; these name the specific reads that were removed, so each one is
+    # defended on its own. They are also immune to the trace flush occasionally settling after the
+    # response, which moves the totals but not these counts.
+    counts = db_ledger.by_op_table
+    assert counts[("SELECT", "user")] == 0, "the owning user rides along on the api key lookup"
+    assert counts[("SELECT", "job")] == 0, "update_job_status must not re-read the row it wrote"
+    assert counts[("SELECT", "message")] <= 1, "the post-commit message refresh must not come back"
+    assert counts[("INSERT", "span")] <= 1, "spans are written in one statement, not one per span"
+    assert counts[("SELECT", "span")] == 0, "spans are inserted without a merge() primary-key probe"
+
     assert len(db_ledger.statements) <= STATEMENT_BUDGET, db_ledger.report("over statement budget")
     assert db_ledger.checkouts <= CHECKOUT_BUDGET, db_ledger.report("over checkout budget")
 
@@ -152,14 +171,13 @@ async def test_db_calls_for_a_failing_run(
     created_api_key,
     db_ledger,
 ):
-    """A run that fails must not cost more database work than one that succeeds.
+    """A rejected run must not cost more database work than one that succeeds.
 
-    The original trace behind this work was a failing run. Failure paths are where retry and
-    rollback bookkeeping accumulates unnoticed, so they get their own budget check.
-
-    The failure is induced by blocking a component the flow uses, which rejects the run after
-    authentication and after the flow load. That covers the same setup work a healthy run does,
-    which a 404 or a 401 would not.
+    Blocking a component the flow uses rejects the run after authentication and after the flow
+    load, so this covers the setup work a 404 or a 401 would skip. It stops there, though: the
+    run never reaches the job, message or trace writes, so this does NOT cover the failure mode
+    that motivated the check, which is a run that does all of that work and then fails partway
+    through. Covering that needs a component that raises mid-execution, and is still open.
     """
     from lfx.services.deps import get_catalog_policy_service
 
@@ -184,5 +202,10 @@ async def test_db_calls_for_a_failing_run(
 
     print(run.report(f"failing run (status {response.status_code})"))  # noqa: T201
 
-    assert len(run.statements) <= STATEMENT_BUDGET, run.report("over statement budget")
-    assert run.checkouts <= CHECKOUT_BUDGET, run.report("over checkout budget")
+    # Its own budget, not the healthy run's. A rejected run does a fraction of the work, so reusing
+    # the healthy ceiling here would leave a test that cannot fail.
+    counts = run.by_op_table
+    assert counts[("INSERT", "job")] == 0, "a rejected run must not create a job row"
+    assert counts[("INSERT", "message")] == 0, "a rejected run must not persist messages"
+    assert len(run.statements) <= REJECTED_RUN_BUDGET, run.report("over statement budget")
+    assert run.checkouts <= REJECTED_RUN_CHECKOUT_BUDGET, run.report("over checkout budget")

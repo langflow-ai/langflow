@@ -394,6 +394,29 @@ async def db_flow_id(async_session, monkeypatch) -> str:
     return str(flow.id)
 
 
+def _bound_values(parameters):
+    """The bound values of one executed statement, in the order the driver sends them.
+
+    SQLite binds positionally and hands back a tuple; psycopg binds by name and hands back a dict
+    keyed ``name_m0``, ``name_m1``, .... The dict is ordered row by row, so its values are in the
+    same order the tuple would be.
+    """
+    return list(parameters.values()) if isinstance(parameters, dict) else list(parameters)
+
+
+async def _enforce_foreign_keys(session) -> None:
+    """Make the session enforce foreign keys, whichever backend it is on.
+
+    PostgreSQL always does. SQLite does not unless asked, per connection, and ``PRAGMA`` is a
+    syntax error on PostgreSQL, so the statement has to be guarded rather than issued blindly.
+    """
+    connection = await session.connection()
+    if connection.dialect.name != "sqlite":
+        return
+    await session.execute(text("PRAGMA foreign_keys=ON"))
+    assert (await session.execute(text("PRAGMA foreign_keys"))).scalar() == 1
+
+
 async def _fetch_trace(session, trace_id: UUID):
     """Read the persisted trace row back.
 
@@ -421,14 +444,34 @@ def _span_uuid(trace_id: UUID, component_id: str) -> UUID:
 
 class TestFlushToDatabase:
     async def test_flush_invalid_flow_id_logs_error_and_continues(self, async_session, db_flow_id):  # noqa: ARG002
+        """A malformed flow_id is reported and the trace is filed under a sentinel flow_id.
+
+        The sentinel is a uuid5 that by construction matches no row in `flow`, and `trace.flow_id`
+        carries a foreign key to `flow.id`. So on PostgreSQL, which enforces that immediately, this
+        fallback cannot store anything: the INSERT raises, the session rolls back, and
+        `wait_for_flush` swallows the error, which is the opposite of what the fallback's own
+        comment in native.py claims it achieves. That gap predates this change -- `merge()` hit the
+        same foreign key -- so it is documented here rather than fixed, and the persisted-row half
+        of this test only runs where foreign keys are off.
+        """
         tracer = _make_tracer(flow_id="not-a-uuid")
         tracer.add_trace("comp-1", "Comp (comp-1)", "chain", {})
         tracer.end_trace("comp-1", "Comp")
 
+        connection = await async_session.connection()
+        enforces_foreign_keys = connection.dialect.name != "sqlite"
+
         with patch("langflow.services.tracing.native.logger") as mock_logger:
-            await tracer._flush_to_database()
+            try:
+                await tracer._flush_to_database()
+            except Exception:
+                if not enforces_foreign_keys:
+                    raise
 
         mock_logger.error.assert_called_once()
+
+        if enforces_foreign_keys:
+            return
 
         # It continued: the rows are in the DB, filed under the deterministic sentinel flow_id.
         trace = await _fetch_trace(async_session, tracer.trace_id)
@@ -942,19 +985,21 @@ class TestResolveSpanUuids:
 
 class TestFlushParentChildOrder:
     async def test_flush_inserts_parent_before_child(self, async_session, db_flow_id):
-        """Both spans land and the child's FK resolves to the parent row.
+        """The parent is written ahead of the child, and the child's FK resolves to it.
 
-        This used to assert the order of the ``session.merge()`` calls. The flush now writes every
-        span in one upsert, so call order is no longer observable from the outside; what that
-        assertion existed to protect is the FK on ``span.parent_span_id`` being satisfiable, i.e.
-        the parent row must exist by the time the child row is written. So the test turns SQLite's
-        FK enforcement on (off by default, unlike PostgreSQL) and asserts on the persisted rows: a
-        regression that emits the child first now fails the INSERT outright.
+        This used to assert the order of the ``session.merge()`` calls. Asserting only on the
+        persisted rows would not replace it: the flush writes every span in one multi-row INSERT,
+        both backends check an immediate FK at end of statement rather than per row, so the rows
+        land and the FK resolves whichever order they were written in. Reversing the topological
+        sort would not fail such a test.
+
+        Order still matters, because ``_upsert_rows`` chunks: a parent and child far enough apart
+        go out in separate statements, and then the parent's statement has to come first. So the
+        assertion is on the order the statement itself carries.
         """
         tracer = _make_tracer(flow_id=db_flow_id)
 
-        await async_session.execute(text("PRAGMA foreign_keys=ON"))
-        assert (await async_session.execute(text("PRAGMA foreign_keys"))).scalar() == 1
+        await _enforce_foreign_keys(async_session)
 
         parent_uuid = uuid4()
         child_uuid = uuid4()
@@ -992,7 +1037,24 @@ class TestFlushParentChildOrder:
             },
         ]
 
-        await tracer._flush_to_database()
+        span_inserts = []
+
+        def capture(_conn, _cursor, statement, parameters, _context, _executemany):
+            if "INTO span" in statement:
+                span_inserts.append(parameters)
+
+        event.listen(Engine, "before_cursor_execute", capture)
+        try:
+            await tracer._flush_to_database()
+        finally:
+            event.remove(Engine, "before_cursor_execute", capture)
+
+        # The parent is bound ahead of the child, so a chunk boundary between them still writes the
+        # parent first. Matched on the names rather than the ids, which the driver binds as UUIDs.
+        bound = [str(value) for parameters in span_inserts for value in _bound_values(parameters)]
+        assert "Parent Span" in bound, bound
+        assert "Child Span" in bound, bound
+        assert bound.index("Parent Span") < bound.index("Child Span"), bound
 
         spans = await _fetch_spans(async_session, tracer.trace_id)
         by_id = {span.id: span for span in spans}
@@ -1021,7 +1083,7 @@ class TestFlushParentChildOrder:
             }
         ]
 
-        await async_session.execute(text("PRAGMA foreign_keys=ON"))
+        await _enforce_foreign_keys(async_session)
 
         await tracer._flush_to_database()
 

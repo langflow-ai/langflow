@@ -182,3 +182,22 @@ async def test_sweep_orphans_noop_when_clean():
     await service.update_job_status(job_id, JobStatus.COMPLETED, finished_timestamp=True)
 
     assert await service.sweep_orphans() == []
+
+
+@pytest.mark.usefixtures("client")
+async def test_update_job_status_reports_whether_the_job_existed():
+    """The return value distinguishes a job that was updated from one that does not exist.
+
+    ``update_job_status`` returns a bool rather than the updated Job, so that it does not have to
+    re-read the row it just wrote. That makes the row-found signal the only thing left in the
+    return value, and nothing else asserts on it.
+    """
+    service = JobService()
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+
+    assert await service.update_job_status(job_id, JobStatus.IN_PROGRESS) is True
+    assert await service.update_job_status(uuid4(), JobStatus.IN_PROGRESS) is False
+
+    job = await service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.IN_PROGRESS

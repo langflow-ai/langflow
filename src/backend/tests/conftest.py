@@ -354,9 +354,36 @@ def session_fixture():
         engine.dispose()
 
 
+def _async_db_url(url: str) -> str:
+    """Give a database URL an async driver, since this fixture creates its own engine.
+
+    ``LANGFLOW_TEST_DATABASE_URL`` is written the way the app takes it, which is a sync URL.
+    """
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+psycopg://", 1)
+    if url.startswith("sqlite://"):
+        return url.replace("sqlite://", "sqlite+aiosqlite://", 1)
+    return url
+
+
 @pytest.fixture
 async def async_session():
-    engine = create_async_engine("sqlite+aiosqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    """A session on its own schema, created and dropped per test.
+
+    Honours ``LANGFLOW_TEST_DATABASE_URL`` like the ``client`` fixture does. Without that, tests
+    written against this fixture always run on SQLite whatever the env var says, which quietly
+    exempts them from the backend they are meant to cover: PostgreSQL enforces foreign keys
+    immediately, refuses an ON CONFLICT DO UPDATE that would touch a row twice, and caps a
+    statement at 65535 bind parameters, and SQLite accepts all three.
+    """
+    url = os.getenv("LANGFLOW_TEST_DATABASE_URL")
+    if url:
+        # create_all/drop_all per test keeps the isolation the in-memory engine gives for free.
+        engine = create_async_engine(_async_db_url(url))
+    else:
+        engine = create_async_engine(
+            "sqlite+aiosqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+        )
     try:
         async with engine.begin() as conn:
             await conn.run_sync(SQLModel.metadata.create_all)
@@ -563,6 +590,13 @@ async def client_fixture(
             # PostgreSQL. Some behaviour only exists off SQLite: PostgreSQL enforces foreign keys
             # immediately, rejects an ON CONFLICT DO UPDATE that would touch a row twice, and caps
             # a statement at 65535 bind parameters. Unset, everything below is unchanged.
+            #
+            # Set, it costs the isolation the SQLite path gets for free. Each test otherwise gets
+            # its own temp file; here every test shares one database, the teardown below only
+            # unlinks a SQLite file that was never created, and rows survive into the next test. So
+            # run it serially (no `-n auto`) and expect suites that count rows to need a fresh
+            # database. Tests that take `async_session` instead are unaffected: that fixture
+            # creates and drops the schema per test on whichever backend it is pointed at.
             db_url = os.getenv("LANGFLOW_TEST_DATABASE_URL") or f"sqlite:///{db_path}"
             monkeypatch.setenv("LANGFLOW_DATABASE_URL", db_url)
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
