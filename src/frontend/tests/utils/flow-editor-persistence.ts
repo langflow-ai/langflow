@@ -231,19 +231,25 @@ export async function reloadAndWaitForFlowPersistence(
     page.on("response", onResponse);
   });
   let persistenceTimeout: ReturnType<typeof setTimeout> | undefined;
-  const deadline = new Promise<never>((_, reject) => {
-    persistenceTimeout = setTimeout(() => {
-      reject(
-        new Error(
-          `Flow ${flowId} did not finish model refresh and autosave persistence within ${TIMEOUTS.standard}ms`,
-        ),
-      );
-    }, TIMEOUTS.standard);
-  });
+  // The budget covers the model refresh and its autosave, not the page load
+  // that precedes them. Playwright serves the editor from a Vite dev server, so
+  // a reload replays ~3.5k unbundled module requests; on Windows CI that alone
+  // measures 19-35s. Arming the deadline before the reload spent the entire
+  // budget before the first tracked request was even sent.
+  const deadlineAfterReload = () =>
+    new Promise<never>((_, reject) => {
+      persistenceTimeout = setTimeout(() => {
+        reject(
+          new Error(
+            `Flow ${flowId} did not finish model refresh and autosave persistence within ${TIMEOUTS.long}ms after reload`,
+          ),
+        );
+      }, TIMEOUTS.long);
+    });
 
   try {
     await page.reload();
-    await Promise.race([persistence, deadline]);
+    await Promise.race([persistence, deadlineAfterReload()]);
   } catch (error) {
     failPersistence(error);
     await persistence.catch(() => undefined);
