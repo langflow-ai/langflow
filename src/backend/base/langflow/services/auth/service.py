@@ -135,6 +135,10 @@ class _DirectoryReconcileCache:
       no-op pass that verified the *previous* state cannot re-cache it after
       the change landed.
 
+    One slot per user is deliberate: a user alternating between two different
+    identities (two providers, or two subjects) simply misses on each switch
+    and reconciles - never a stale hit, only less caching for that edge case.
+
     Entries are per-process and expire on their own, so the worst case is that
     an out-of-band directory change (one that arrives with the *same* claim)
     is observed one interval late.
@@ -719,10 +723,10 @@ class AuthService(BaseAuthService):
         # rows, takes the plugin's policy locks and appends an audit entry, so
         # a directory state that was verified unchanged a moment ago is skipped
         # until the configured interval elapses. The cache remembers only the
-        # *last* reconciled state per user, so any difference in the group
-        # set, the claim state or the identity from that state reconciles
-        # immediately - even a group set that was itself cached earlier and
-        # has since been moved past (a promotion followed by a revocation).
+        # *last* reconciled state per user, so a claim whose group set, claim
+        # state or identity differs from that state reconciles immediately -
+        # even a group set that was itself cached earlier and has since been
+        # moved past (a promotion followed by a revocation).
         reconcile_interval = float(self.settings.auth_settings.EXTERNAL_AUTH_GROUP_RECONCILE_INTERVAL_SECONDS)
         cache_user = str(user.id)
         cache_state = (
