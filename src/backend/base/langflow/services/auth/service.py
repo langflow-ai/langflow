@@ -107,45 +107,99 @@ def _is_retryable_backend_failure(exc: BaseException) -> bool:
 
 
 class _DirectoryReconcileCache:
-    """Bounded, short-lived record of directory states already reconciled.
+    """Bounded, short-lived record of the last directory state reconciled per user.
 
     LE-2109: bearer tokens arrive on every request, and reconciliation opens a
     transaction, takes the authorization plugin's policy locks and appends an
     audit row. Repeating all of that for a directory state that has not moved
     is pure overhead, so one successful *no-op* pass is remembered for a short
-    interval, keyed by the exact state it verified. A claim carrying a
-    different group set produces a different key and always reconciles.
+    interval.
+
+    The cache holds at most one entry per user: the exact state the last
+    confirming pass verified. A request is skipped only while that entry is
+    fresh *and* carries the same state, so any claim that differs from the
+    last reconciled state misses by construction - including a state that
+    was cached earlier and has since been moved past. Keying by state alone
+    would let ``[devs]`` cached before a promotion to ``[admins, devs]`` keep
+    serving after the IdP revokes ``admins`` again, holding the admin role
+    until the entry aged out.
+
+    Two rules keep an entry from outliving the state it verified when passes
+    for one user overlap (an old and a new token in flight together):
+
+    * :meth:`begin` records a miss. It drops the user's entry, because the
+      claim being reconciled supersedes it, and hands the pass a ticket. Only
+      the pass holding the user's *latest* ticket may :meth:`remember`.
+    * :meth:`invalidate` is called after a pass changed the stored state. It
+      drops the entry and revokes the outstanding ticket, so a concurrent
+      no-op pass that verified the *previous* state cannot re-cache it after
+      the change landed.
 
     Entries are per-process and expire on their own, so the worst case is that
-    an out-of-band directory change is observed one interval late.
+    an out-of-band directory change (one that arrives with the *same* claim)
+    is observed one interval late.
     """
 
     def __init__(self, *, max_entries: int = _MAX_DIRECTORY_RECONCILE_CACHE_ENTRIES) -> None:
         self._max_entries = max_entries
-        self._deadlines: OrderedDict[tuple[object, ...], float] = OrderedDict()
+        # user key -> (verified state, monotonic deadline)
+        self._entries: OrderedDict[str, tuple[tuple[object, ...], float]] = OrderedDict()
+        # user key -> ticket of the latest pass that began for the user
+        self._tickets: OrderedDict[str, int] = OrderedDict()
+        self._last_ticket = 0
 
-    def is_fresh(self, key: tuple[object, ...], *, now: float) -> bool:
-        deadline = self._deadlines.get(key)
-        if deadline is None:
+    def is_fresh(self, user_key: str, state: tuple[object, ...], *, now: float) -> bool:
+        entry = self._entries.get(user_key)
+        if entry is None:
             return False
+        verified_state, deadline = entry
         if deadline <= now:
-            del self._deadlines[key]
+            del self._entries[user_key]
             return False
-        return True
+        return verified_state == state
 
-    def remember(self, key: tuple[object, ...], *, now: float, ttl_seconds: float) -> None:
+    def begin(self, user_key: str) -> int:
+        """Record a cache miss and return the ticket the pass must present to remember its result."""
+        self._entries.pop(user_key, None)
+        self._last_ticket += 1
+        self._tickets.pop(user_key, None)
+        self._tickets[user_key] = self._last_ticket
+        while len(self._tickets) > self._max_entries:
+            self._tickets.popitem(last=False)
+        return self._last_ticket
+
+    def remember(
+        self,
+        user_key: str,
+        state: tuple[object, ...],
+        *,
+        ticket: int,
+        now: float,
+        ttl_seconds: float,
+    ) -> None:
         if ttl_seconds <= 0:
             return
+        if self._tickets.get(user_key) != ticket:
+            # A newer pass began for this user, or a change landed, after this
+            # pass verified its state: that verdict is stale and must not
+            # become the entry.
+            return
+        del self._tickets[user_key]
         self._purge_expired(now)
-        self._deadlines.pop(key, None)
-        self._deadlines[key] = now + ttl_seconds
-        while len(self._deadlines) > self._max_entries:
-            self._deadlines.popitem(last=False)
+        self._entries.pop(user_key, None)
+        self._entries[user_key] = (state, now + ttl_seconds)
+        while len(self._entries) > self._max_entries:
+            self._entries.popitem(last=False)
+
+    def invalidate(self, user_key: str) -> None:
+        """Forget the user's entry and revoke any in-flight ticket after their stored state changed."""
+        self._entries.pop(user_key, None)
+        self._tickets.pop(user_key, None)
 
     def _purge_expired(self, now: float) -> None:
-        expired = [key for key, deadline in self._deadlines.items() if deadline <= now]
+        expired = [key for key, (_, deadline) in self._entries.items() if deadline <= now]
         for key in expired:
-            del self._deadlines[key]
+            del self._entries[key]
 
 
 def _has_external_group_overage(claims: Mapping[str, object], claim_path: tuple[str, ...]) -> bool:
@@ -664,25 +718,33 @@ class AuthService(BaseAuthService):
         # LE-2109: bearer tokens arrive on every request. Reconciliation writes
         # rows, takes the plugin's policy locks and appends an audit entry, so
         # a directory state that was verified unchanged a moment ago is skipped
-        # until the configured interval elapses. Any difference in the group
-        # set, the claim state or the resolved user changes the key and
-        # reconciles immediately.
+        # until the configured interval elapses. The cache remembers only the
+        # *last* reconciled state per user, so any difference in the group
+        # set, the claim state or the identity from that state reconciles
+        # immediately - even a group set that was itself cached earlier and
+        # has since been moved past (a promotion followed by a revocation).
         reconcile_interval = float(self.settings.auth_settings.EXTERNAL_AUTH_GROUP_RECONCILE_INTERVAL_SECONDS)
-        cache_key = (
+        cache_user = str(user.id)
+        cache_state = (
             identity.provider,
             identity.subject,
-            str(user.id),
             claim_name,
             claim_state.value if claim_state is not None else None,
             complete,
             groups,
         )
         now = time.monotonic()
-        if reconcile_interval > 0 and self._directory_reconcile_cache.is_fresh(cache_key, now=now):
+        if reconcile_interval > 0 and self._directory_reconcile_cache.is_fresh(cache_user, cache_state, now=now):
             # Skipping reconciliation must not skip the JIT/profile bookkeeping
             # that materializing the user staged on this session.
             await db.commit()
             return
+        # This claim is about to be reconciled, so whatever the cache holds
+        # for the user describes a state that is being superseded: begin()
+        # drops it and hands this pass the ticket it must present to be
+        # remembered, so an overlapping pass for the same user can never
+        # re-cache a state a later pass moved past.
+        cache_ticket = self._directory_reconcile_cache.begin(cache_user)
 
         if not complete:
             assert claim_state is not None  # noqa: S101 - internal state-machine invariant
@@ -715,7 +777,9 @@ class AuthService(BaseAuthService):
                     },
                 )
                 self._directory_reconcile_cache.remember(
-                    cache_key,
+                    cache_user,
+                    cache_state,
+                    ticket=cache_ticket,
                     now=now,
                     ttl_seconds=reconcile_interval,
                 )
@@ -760,6 +824,11 @@ class AuthService(BaseAuthService):
             changed = bool(getattr(result, "changed", True))
             added = getattr(result, "added", None)
             removed = getattr(result, "removed", None)
+        if changed:
+            # The stored state just moved. Whatever the cache holds for the
+            # user, and any pass still in flight that verified the previous
+            # state, must not be served or remembered after this commit.
+            self._directory_reconcile_cache.invalidate(cache_user)
 
         if not complete:
             assert claim_state is not None  # noqa: S101 - internal state-machine invariant
@@ -780,7 +849,9 @@ class AuthService(BaseAuthService):
                 )
             else:
                 self._directory_reconcile_cache.remember(
-                    cache_key,
+                    cache_user,
+                    cache_state,
+                    ticket=cache_ticket,
                     now=now,
                     ttl_seconds=reconcile_interval,
                 )
@@ -809,7 +880,9 @@ class AuthService(BaseAuthService):
             # something gets one confirming pass before the interval starts, so
             # a post-commit propagation retry is never hidden by the cache.
             self._directory_reconcile_cache.remember(
-                cache_key,
+                cache_user,
+                cache_state,
+                ticket=cache_ticket,
                 now=now,
                 ttl_seconds=reconcile_interval,
             )
