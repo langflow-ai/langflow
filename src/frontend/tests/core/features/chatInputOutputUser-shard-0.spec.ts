@@ -7,11 +7,13 @@ import {
   closeParametersPanel,
   openParametersPanel,
 } from "../../utils/open-advanced-options";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 
 test(
   "user must be able to send an image on chat",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
+    await seedLoopbackProvider(page);
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();

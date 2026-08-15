@@ -1,12 +1,14 @@
 import { expect } from "../../fixtures";
 import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
   "Content Aggregator",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
+    await seedLoopbackProvider(page);
     await page.goto("/");
     await openStarterProject(page, "Content Aggregator");
 

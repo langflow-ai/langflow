@@ -6,11 +6,13 @@ import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
 import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
 import { sendPlaygroundMessage } from "../../utils/playground/send-playground-message";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 
 test(
   "user should be able to use chat memory as expected",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
+    await seedLoopbackProvider(page);
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();

@@ -3,6 +3,7 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 
 test.describe("Session Deletion Data Leakage Fix", () => {
   // Helper to send a message in the playground
@@ -79,6 +80,7 @@ test.describe("Session Deletion Data Leakage Fix", () => {
     "should prevent data leakage when default session is deleted and recreated",
     { tag: ["@release"] },
     async ({ page }) => {
+      await seedLoopbackProvider(page);
       await awaitBootstrapTest(page);
 
       // Load a starter project
@@ -143,6 +145,7 @@ test.describe("Session Deletion Data Leakage Fix", () => {
     "should clear LLM context when session is deleted",
     { tag: ["@release"] },
     async ({ page }) => {
+      await seedLoopbackProvider(page);
       await awaitBootstrapTest(page);
 
       // Load a starter project with memory

@@ -4,11 +4,13 @@ import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TID } from "../../utils/constants/testIds";
 import { TIMEOUTS } from "../../utils/constants/timeouts";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 
 test(
   "user must be able to send images in the playground with the agent component",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
+    await seedLoopbackProvider(page);
     await openStarterProject(page, "Simple Agent");
     await configureLoopbackOpenAI(page, { skipUpdateOldComponents: true });
 

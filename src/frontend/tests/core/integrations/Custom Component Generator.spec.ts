@@ -3,12 +3,14 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
   "Custom Component Generator",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
+    await seedLoopbackProvider(page);
     await page.goto("/");
 
     await awaitBootstrapTest(page);
