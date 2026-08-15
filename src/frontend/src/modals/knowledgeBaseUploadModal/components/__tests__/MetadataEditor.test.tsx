@@ -39,6 +39,14 @@ describe("MetadataEditor", () => {
     expect(
       screen.getByText(/1-32 lowercase letters, digits, or underscores/i),
     ).toBeInTheDocument();
+    expect(screen.getByTestId("kb-metadata-key-0")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(screen.getByTestId("kb-metadata-error-0")).toHaveAttribute(
+      "role",
+      "alert",
+    );
   });
 
   it("removes a row via the remove button", () => {

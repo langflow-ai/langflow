@@ -11,10 +11,12 @@ from lfx.utils.async_helpers import run_until_complete
 
 from .class_registry import EMBEDDING_PARAM_MAPPINGS, EMBEDDING_PROVIDER_CLASS_MAPPING
 from .credentials import _fetch_enabled_providers_for_user, _get_model_status, model_status_contains
-from .provider_queries import get_models_detailed, model_provider_metadata
+from .provider_queries import get_model_providers, get_models_detailed, model_provider_metadata
 
 if TYPE_CHECKING:
     from uuid import UUID
+
+    from lfx.services.model_provider_policy import ModelProviderPolicySnapshot
 
 
 def get_unified_models_detailed(
@@ -129,10 +131,10 @@ def get_unified_models_detailed(
     # Format as requested
     return [
         {
+            **model_provider_metadata.get(prov, {}),
             "provider": prov,
             "models": models,
             "num_models": len(models),
-            **model_provider_metadata.get(prov, {}),
         }
         for prov, models in provider_map.items()
     ]
@@ -143,6 +145,7 @@ def get_language_model_options(
     *,
     tool_calling: bool | None = None,
     filters: dict[str, Any] | None = None,
+    provider_policy: ModelProviderPolicySnapshot | None = None,
 ) -> list[dict[str, Any]]:
     """Return available language model providers with their configuration.
 
@@ -164,6 +167,16 @@ def get_language_model_options(
         **metadata_filters,
     )
 
+    if provider_policy is None:
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
+
+        provider_policy = resolve_model_provider_policy(
+            user_id=user_id,
+            providers=get_model_providers(),
+            purpose=ModelProviderPolicyPurpose.USE,
+        )
+    all_models = [provider_data for provider_data in all_models if provider_policy.allows(provider_data["provider"])]
+
     # Get disabled and explicitly enabled models for this user if user_id is provided
     disabled_models: set[str] = set()
     explicitly_enabled_models: set[str] = set()
@@ -175,7 +188,10 @@ def get_language_model_options(
     enabled_providers = set()
     if user_id:
         with contextlib.suppress(Exception):
-            enabled_providers = run_until_complete(_fetch_enabled_providers_for_user(user_id))
+            enabled_providers = run_until_complete(
+                _fetch_enabled_providers_for_user(user_id, provider_policy=provider_policy)
+            )
+    enabled_providers = {provider for provider in enabled_providers if provider_policy.allows(provider)}
 
     # Replace static defaults with actual available models from configured instances
     suppressed: dict[str, set[tuple[str, str]]] = {}
@@ -191,6 +207,7 @@ def get_language_model_options(
         metadata_filters=metadata_filters or None,
         suppressed=suppressed or None,
     )
+    all_models = [provider_data for provider_data in all_models if provider_policy.allows(provider_data["provider"])]
 
     options = []
 
@@ -239,6 +256,8 @@ def get_language_model_options(
                 continue
             if model_status_contains(disabled_models, provider, model_name, model_type=row_model_type):
                 continue
+            if not provider_policy.allows_model(provider, model_name, model_type=row_model_type):
+                continue
 
             # Get parameter mapping for this provider
             param_mapping = get_provider_param_mapping(provider)
@@ -285,6 +304,8 @@ def get_language_model_options(
 
 def get_embedding_model_options(
     user_id: UUID | str | None = None,
+    *,
+    provider_policy: ModelProviderPolicySnapshot | None = None,
 ) -> list[dict[str, Any]]:
     """Return available embedding model providers with their configuration."""
     # Get all embedding models (excluding deprecated and unsupported by default)
@@ -293,6 +314,16 @@ def get_embedding_model_options(
         include_deprecated=False,
         include_unsupported=False,
     )
+
+    if provider_policy is None:
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
+
+        provider_policy = resolve_model_provider_policy(
+            user_id=user_id,
+            providers=get_model_providers(),
+            purpose=ModelProviderPolicyPurpose.USE,
+        )
+    all_models = [provider_data for provider_data in all_models if provider_policy.allows(provider_data["provider"])]
 
     # Get disabled and explicitly enabled models for this user if user_id is provided
     disabled_models: set[str] = set()
@@ -305,7 +336,10 @@ def get_embedding_model_options(
     enabled_providers = set()
     if user_id:
         with contextlib.suppress(Exception):
-            enabled_providers = run_until_complete(_fetch_enabled_providers_for_user(user_id))
+            enabled_providers = run_until_complete(
+                _fetch_enabled_providers_for_user(user_id, provider_policy=provider_policy)
+            )
+    enabled_providers = {provider for provider in enabled_providers if provider_policy.allows(provider)}
 
     # Replace static defaults with actual available models from configured instances
     if enabled_providers:
@@ -317,6 +351,7 @@ def get_embedding_model_options(
             model_provider_metadata,
         )
     inject_custom_enabled_models(all_models, explicitly_enabled_models, model_type="embeddings")
+    all_models = [provider_data for provider_data in all_models if provider_policy.allows(provider_data["provider"])]
 
     options = []
 
@@ -370,6 +405,8 @@ def get_embedding_model_options(
             ):
                 continue
             if model_status_contains(disabled_models, provider, model_name, model_type=row_model_type):
+                continue
+            if not provider_policy.allows_model(provider, model_name, model_type=row_model_type):
                 continue
 
             # Build the option dict

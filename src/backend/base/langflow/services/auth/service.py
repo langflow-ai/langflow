@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
+import secrets
+import time
 import warnings
-from collections.abc import Coroutine
+from collections import OrderedDict
+from collections.abc import Awaitable, Callable, Coroutine, Iterable, Mapping
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -12,6 +16,7 @@ from fastapi import HTTPException, Request, WebSocketException, status
 from jwt import InvalidTokenError
 from lfx.log.logger import logger
 from lfx.services.auth.base import BaseAuthService
+from lfx.services.model_provider_policy import set_current_model_provider_policy_context
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, LEGACY_DEFAULT_SUPERUSER_PASSWORD
 from sqlalchemy.exc import IntegrityError
 
@@ -26,6 +31,8 @@ from langflow.services.auth.context import (
     set_current_auth_context,
 )
 from langflow.services.auth.exceptions import (
+    AuthBackendUnavailableError,
+    AuthenticationError,
     InactiveUserError,
     InvalidCredentialsError,
     MissingCredentialsError,
@@ -53,6 +60,179 @@ from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import session_scope
 from langflow.services.schema import ServiceType
 
+_MAX_EXTERNAL_AUTHORIZATION_GROUPS = 500
+_MAX_EXTERNAL_AUTHORIZATION_GROUP_LENGTH = 256
+_MAX_EXTERNAL_GROUP_CLAIM_PATH_DEPTH = 16
+_MAX_DIRECTORY_RECONCILE_CACHE_ENTRIES = 10_000
+_MAX_EXTERNAL_AUTH_ATTEMPTS = 3
+_EXTERNAL_AUTH_RETRY_BACKOFF_SECONDS = 0.02
+
+# SQLSTATE classes that mean "the transaction was rolled back, retry it": the
+# statement never took effect, so nothing the caller sent was rejected.
+_RETRYABLE_SQLSTATES = frozenset(
+    {
+        "40001",  # serialization_failure
+        "40P01",  # deadlock_detected
+        "55P03",  # lock_not_available
+    }
+)
+
+
+def _is_retryable_backend_failure(exc: BaseException) -> bool:
+    """Return whether an exception is a transient backend failure, not a verdict.
+
+    A deadlock victim, a serialization failure or a lost connection all mean the
+    request never got an answer. Reporting those as an authentication failure
+    tells the caller to fix a credential that was never actually rejected.
+    """
+    from sqlalchemy.exc import DBAPIError, InterfaceError, OperationalError
+    from sqlalchemy.exc import TimeoutError as SQLTimeoutError
+
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if isinstance(current, (InterfaceError, OperationalError, SQLTimeoutError)):
+            return True
+        if isinstance(current, DBAPIError):
+            if current.connection_invalidated:
+                return True
+            orig = current.orig
+            # psycopg3 exposes ``sqlstate``; psycopg2 exposes ``pgcode``.
+            sqlstate = getattr(orig, "sqlstate", None) or getattr(orig, "pgcode", None)
+            if isinstance(sqlstate, str) and sqlstate in _RETRYABLE_SQLSTATES:
+                return True
+        current = current.__cause__ or current.__context__
+    return False
+
+
+class _DirectoryReconcileCache:
+    """Bounded, short-lived record of directory states already reconciled.
+
+    LE-2109: bearer tokens arrive on every request, and reconciliation opens a
+    transaction, takes the authorization plugin's policy locks and appends an
+    audit row. Repeating all of that for a directory state that has not moved
+    is pure overhead, so one successful *no-op* pass is remembered for a short
+    interval, keyed by the exact state it verified. A claim carrying a
+    different group set produces a different key and always reconciles.
+
+    Entries are per-process and expire on their own, so the worst case is that
+    an out-of-band directory change is observed one interval late.
+    """
+
+    def __init__(self, *, max_entries: int = _MAX_DIRECTORY_RECONCILE_CACHE_ENTRIES) -> None:
+        self._max_entries = max_entries
+        self._deadlines: OrderedDict[tuple[object, ...], float] = OrderedDict()
+
+    def is_fresh(self, key: tuple[object, ...], *, now: float) -> bool:
+        deadline = self._deadlines.get(key)
+        if deadline is None:
+            return False
+        if deadline <= now:
+            del self._deadlines[key]
+            return False
+        return True
+
+    def remember(self, key: tuple[object, ...], *, now: float, ttl_seconds: float) -> None:
+        if ttl_seconds <= 0:
+            return
+        self._purge_expired(now)
+        self._deadlines.pop(key, None)
+        self._deadlines[key] = now + ttl_seconds
+        while len(self._deadlines) > self._max_entries:
+            self._deadlines.popitem(last=False)
+
+    def _purge_expired(self, now: float) -> None:
+        expired = [key for key, deadline in self._deadlines.items() if deadline <= now]
+        for key in expired:
+            del self._deadlines[key]
+
+
+def _has_external_group_overage(claims: Mapping[str, object], claim_path: tuple[str, ...]) -> bool:
+    """Return whether an Entra-style overage pointer replaces the group claim."""
+    claim_names = claims.get("_claim_names")
+    # ``_claim_names`` identifies top-level JWT claim names. Joining the path
+    # would collapse ("a.b",) and ("a", "b") into the same selector.
+    claim_name = claim_path[0]
+    return isinstance(claim_names, Mapping) and claim_name in claim_names
+
+
+def _validated_external_group_claim_path(value: object) -> tuple[str, ...] | None:
+    """Validate the plugin-selected path before traversing verified claims."""
+    if value is None:
+        return None
+    if not isinstance(value, tuple) or not value or len(value) > _MAX_EXTERNAL_GROUP_CLAIM_PATH_DEPTH:
+        msg = "external groups claim path must contain between 1 and 16 segments"
+        raise ValueError(msg)
+    if any(
+        not isinstance(segment, str)
+        or not segment.strip()
+        or segment != segment.strip()
+        or len(segment) > _MAX_EXTERNAL_AUTHORIZATION_GROUP_LENGTH
+        for segment in value
+    ):
+        msg = "external groups claim path segments must be normalized strings of at most 256 characters"
+        raise ValueError(msg)
+    return value
+
+
+def _claim_value_at_path(claims: Mapping[str, object], claim_path: tuple[str, ...]) -> tuple[bool, object]:
+    """Resolve a claim path without treating dots inside claim names as separators."""
+    current: object = claims
+    for segment in claim_path:
+        if not isinstance(current, Mapping):
+            msg = "external groups claim path traverses a non-object value"
+            raise TypeError(msg)
+        if segment not in current:
+            return False, None
+        current = current[segment]
+    return True, current
+
+
+def _audit_audience(claims: Mapping[str, object]) -> str | list[str] | None:
+    """Normalize a verified audience claim to a JSON-safe audit value."""
+    audience = claims.get("aud")
+    if isinstance(audience, str):
+        return audience
+    if isinstance(audience, (list, tuple)) and all(isinstance(value, str) for value in audience):
+        return list(audience)
+    return None
+
+
+async def _safe_audit_directory_reconciliation(
+    audit: Callable[..., Awaitable[None]],
+    *,
+    identity: ExternalIdentity,
+    user: User,
+    issuer: str | None,
+    result: str,
+    details: dict[str, object],
+) -> None:
+    """Record reconciliation without letting audit outages fail authentication."""
+    try:
+        await audit(
+            user_id=user.id,
+            action="directory_membership:reconcile",
+            obj=f"user:{user.id}",
+            result=result,
+            details={
+                "provider_id": identity.provider,
+                "issuer": issuer,
+                "subject": identity.subject,
+                "audience": _audit_audience(identity.claims),
+                "source": "external_bearer",
+                **details,
+            },
+        )
+    except Exception:  # noqa: BLE001
+        await logger.aexception(
+            "Authorization directory reconciliation audit failed for provider=%s user=%s result=%s",
+            identity.provider,
+            user.id,
+            result,
+        )
+
+
 if TYPE_CHECKING:
     from cryptography.fernet import Fernet, MultiFernet
     from lfx.services.settings.service import SettingsService
@@ -66,6 +246,7 @@ class AuthService(BaseAuthService):
 
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
+        self._directory_reconcile_cache = _DirectoryReconcileCache()
         self.set_ready()
 
     @property
@@ -108,11 +289,46 @@ class AuthService(BaseAuthService):
         """
         clear_current_auth_context()
         clear_current_external_access_context()
+        try:
+            return await self._authenticate_with_credentials_impl(token, api_key, db, external_token=external_token)
+        except Exception:
+            # Exceptional-exit invariant: a failed credential attempt may have
+            # flushed JIT user/profile rows and populated the identity contexts
+            # before a later step (for example an authorization-policy
+            # rejection) raised. Callers that swallow authentication errors and
+            # let the request complete (``get_optional_user``) share this
+            # session, and the request-scoped session auto-commits on clean
+            # completion — so no staged state may survive the raise.
+            await self._discard_failed_credential_state(db)
+            raise
 
+    async def _discard_failed_credential_state(self, db: AsyncSession) -> None:
+        """Roll back staged session state and clear the identity contexts."""
+        try:
+            await db.rollback()
+        except Exception as exc:  # noqa: BLE001 - the original credential error must surface
+            logger.warning(f"Rollback after a failed credential attempt failed: {exc}")
+        finally:
+            clear_current_auth_context()
+            clear_current_external_access_context()
+
+    async def _authenticate_with_credentials_impl(
+        self,
+        token: str | None,
+        api_key: str | None,
+        db: AsyncSession,
+        external_token: str | None = None,
+    ) -> User | UserRead:
         # Try token authentication first (if token provided)
         if token:
             try:
                 return await self._authenticate_with_token(token, db)
+            except AuthBackendUnavailableError:
+                # A backend outage is not a credential verdict, so there is
+                # nothing for the remaining credentials to disambiguate. Retrying
+                # them would only widen the outage's blast radius, and answering
+                # 401 would blame a token that was never rejected.
+                raise
             except (AuthInvalidTokenError, TokenExpiredError, InactiveUserError) as e:
                 # Native auth failed. If a *distinct* external credential was
                 # extracted, try it before surfacing the native error so a present
@@ -120,6 +336,14 @@ class AuthService(BaseAuthService):
                 # one. When external_token is None or identical to the token we
                 # already tried, behavior is unchanged.
                 if external_token and external_token != token:
+                    # A recognized auth failure can still follow external JIT
+                    # materialization (for example, a later authorization-policy
+                    # rejection). Start the distinct credential at a clean
+                    # transaction and context boundary so its commit cannot
+                    # persist state from the rejected attempt.
+                    await db.rollback()
+                    clear_current_auth_context()
+                    clear_current_external_access_context()
                     external_user = await self._authenticate_with_external_token(external_token, db)
                     if external_user is not None:
                         return external_user
@@ -128,12 +352,25 @@ class AuthService(BaseAuthService):
                 # Token auth failed for an unexpected reason; try the distinct
                 # external credential first, then fall back to API key if provided.
                 if external_token and external_token != token:
+                    # Token authentication can delegate to external JIT
+                    # provisioning, which may flush user/profile state before a
+                    # later step fails. Give the distinct external credential a
+                    # clean transaction and authentication context.
+                    await db.rollback()
+                    clear_current_auth_context()
+                    clear_current_external_access_context()
                     external_user = await self._authenticate_with_external_token(external_token, db)
                     if external_user is not None:
                         return external_user
                 if api_key:
+                    # API-key authentication commits its usage bookkeeping. Roll
+                    # back both prior credential attempts immediately before it so
+                    # that commit cannot persist state they left in the session.
+                    await db.rollback()
+                    clear_current_auth_context()
+                    clear_current_external_access_context()
                     try:
-                        user = await self._authenticate_with_api_key(api_key, db)
+                        user = await self._authenticate_with_api_key(api_key)
                         if user:
                             return user
                         msg = "Invalid API key"
@@ -157,8 +394,14 @@ class AuthService(BaseAuthService):
 
         # Try API key authentication
         if api_key:
+            if external_token:
+                # The owned API-key transaction must not coexist with state or
+                # a checked-out connection left by the failed external attempt.
+                await db.rollback()
+                clear_current_auth_context()
+                clear_current_external_access_context()
             try:
-                user = await self._authenticate_with_api_key(api_key, db)
+                user = await self._authenticate_with_api_key(api_key)
                 if user:
                     return user
                 msg = "Invalid API key"
@@ -291,9 +534,287 @@ class AuthService(BaseAuthService):
             AuthCredentialContext(method=AUTH_METHOD_EXTERNAL, external_provider=identity.provider)
         )
         set_current_external_access_context(access_context_from_identity(identity, self.settings.auth_settings))
-        return await self._materialize_external_user(identity, db)
+        # The credential has already verified here. Materialization and group
+        # reconciliation own everything staged on this session, so a conflict
+        # that rolled the transaction back can be replayed from scratch: a
+        # deadlock victim, a serialization failure, or two concurrent logins
+        # racing to create the same row. What must never happen is reporting
+        # any of those as a failed authentication — nothing was rejected.
+        for attempt in range(1, _MAX_EXTERNAL_AUTH_ATTEMPTS + 1):
+            try:
+                user = await self._materialize_external_user(identity, db)
+                await self._reconcile_verified_external_groups(identity=identity, user=user, db=db)
+            except AuthenticationError:
+                raise
+            except Exception as exc:
+                retryable = _is_retryable_backend_failure(exc)
+                if not retryable and not isinstance(exc, IntegrityError):
+                    raise
+                await db.rollback()
+                if attempt >= _MAX_EXTERNAL_AUTH_ATTEMPTS:
+                    logger.warning(
+                        "External identity resolved but its backend work kept failing for provider=%s: %s: %s",
+                        identity.provider,
+                        type(exc).__name__,
+                        exc,
+                    )
+                    if not retryable:
+                        raise
+                    raise AuthBackendUnavailableError from exc
+                # Jitter so two requests that conflicted do not line up again.
+                await asyncio.sleep(_EXTERNAL_AUTH_RETRY_BACKOFF_SECONDS * attempt * (1 + secrets.randbelow(100) / 100))
+            else:
+                return user
+        msg = "unreachable: the final attempt either returns or raises"
+        raise AssertionError(msg)
 
-    async def _authenticate_with_api_key(self, api_key: str, db: AsyncSession) -> UserRead | None:
+    async def _reconcile_verified_external_groups(
+        self,
+        *,
+        identity: ExternalIdentity,
+        user: User,
+        db: AsyncSession,
+    ) -> None:
+        """Send one sanitized verified group-claim state through the authorization seam."""
+        from lfx.services.authorization import (
+            AuthorizationMutationRejected,
+            DirectoryMembershipClaimState,
+            DirectoryMembershipSnapshot,
+        )
+
+        from langflow.services.authorization.audit import AUDIT_ALLOW, AUDIT_SKIP, audit_decision
+        from langflow.services.authorization.lifecycle import safe_directory_membership_committed
+        from langflow.services.deps import get_authorization_service
+
+        authorization_service = get_authorization_service()
+        issuer_value = identity.claims.get("iss")
+        issuer = issuer_value.strip() if isinstance(issuer_value, str) and issuer_value.strip() else None
+        path_selector = getattr(authorization_service, "external_groups_claim_path", None)
+        if path_selector is None:
+            claim_name = await authorization_service.external_groups_claim(
+                provider_id=identity.provider,
+                issuer=issuer,
+            )
+            selected_path: object = (claim_name,) if claim_name else None
+        else:
+            selected_path = await path_selector(provider_id=identity.provider, issuer=issuer)
+        claim_path = _validated_external_group_claim_path(selected_path)
+        if claim_path is None:
+            return
+        claim_name = ".".join(claim_path)
+
+        async def audit_reconciliation(*, result: str, details: dict[str, object]) -> None:
+            await _safe_audit_directory_reconciliation(
+                audit_decision,
+                identity=identity,
+                user=user,
+                issuer=issuer,
+                result=result,
+                details=details,
+            )
+
+        claim_state: DirectoryMembershipClaimState | None = None
+        complete = True
+        normalized_groups: set[str] = set()
+        candidates: Iterable[object] = ()
+        if _has_external_group_overage(identity.claims, claim_path):
+            claim_state = DirectoryMembershipClaimState.OVERAGE
+            complete = False
+        else:
+            try:
+                found, raw_groups = _claim_value_at_path(identity.claims, claim_path)
+            except TypeError:
+                found = False
+                raw_groups = None
+                claim_state = DirectoryMembershipClaimState.MALFORMED
+                complete = False
+            if complete and not found:
+                claim_state = DirectoryMembershipClaimState.ABSENT
+                complete = False
+            elif complete and isinstance(raw_groups, str):
+                candidates = (raw_groups,)
+            elif complete and isinstance(raw_groups, (list, tuple, set, frozenset)):
+                candidates = raw_groups
+            elif complete:
+                candidates = ()
+                claim_state = DirectoryMembershipClaimState.MALFORMED
+                complete = False
+
+            if complete:
+                for candidate in candidates:
+                    if not isinstance(candidate, str):
+                        claim_state = DirectoryMembershipClaimState.MALFORMED
+                        complete = False
+                        break
+                    group = candidate.strip()
+                    if not group or len(group) > _MAX_EXTERNAL_AUTHORIZATION_GROUP_LENGTH:
+                        claim_state = DirectoryMembershipClaimState.MALFORMED
+                        complete = False
+                        break
+                    normalized_groups.add(group)
+
+        groups = tuple(sorted(normalized_groups)) if complete else ()
+        if complete and len(groups) > _MAX_EXTERNAL_AUTHORIZATION_GROUPS:
+            groups = ()
+            claim_state = DirectoryMembershipClaimState.TOO_MANY
+            complete = False
+        elif complete and not groups:
+            claim_state = DirectoryMembershipClaimState.EMPTY
+
+        # LE-2109: bearer tokens arrive on every request. Reconciliation writes
+        # rows, takes the plugin's policy locks and appends an audit entry, so
+        # a directory state that was verified unchanged a moment ago is skipped
+        # until the configured interval elapses. Any difference in the group
+        # set, the claim state or the resolved user changes the key and
+        # reconciles immediately.
+        reconcile_interval = float(self.settings.auth_settings.EXTERNAL_AUTH_GROUP_RECONCILE_INTERVAL_SECONDS)
+        cache_key = (
+            identity.provider,
+            identity.subject,
+            str(user.id),
+            claim_name,
+            claim_state.value if claim_state is not None else None,
+            complete,
+            groups,
+        )
+        now = time.monotonic()
+        if reconcile_interval > 0 and self._directory_reconcile_cache.is_fresh(cache_key, now=now):
+            # Skipping reconciliation must not skip the JIT/profile bookkeeping
+            # that materializing the user staged on this session.
+            await db.commit()
+            return
+
+        if not complete:
+            assert claim_state is not None  # noqa: S101 - internal state-machine invariant
+            logger.warning(
+                "External group claim is incomplete for provider=%s user=%s: claim=%s state=%s",
+                identity.provider,
+                user.id,
+                claim_name,
+                claim_state.value,
+            )
+
+            supports_incomplete = getattr(
+                authorization_service,
+                "supports_incomplete_directory_membership_snapshots",
+                None,
+            )
+            if supports_incomplete is None or not await supports_incomplete():
+                # Preserve the original complete-only plugin contract. Commit
+                # JIT/profile bookkeeping before the independent audit writer
+                # resolves the user's foreign key, but never present a legacy
+                # plugin with an ambiguous empty tuple.
+                await db.commit()
+                await audit_reconciliation(
+                    result=AUDIT_SKIP,
+                    details={
+                        "claim_name": claim_name,
+                        "reason": claim_state.value,
+                        "authoritative": False,
+                        "complete": False,
+                    },
+                )
+                self._directory_reconcile_cache.remember(
+                    cache_key,
+                    now=now,
+                    ttl_seconds=reconcile_interval,
+                )
+                return
+
+        try:
+            result = await authorization_service.ingest_directory_membership_snapshot(
+                session=db,
+                snapshot=DirectoryMembershipSnapshot(
+                    provider_id=identity.provider,
+                    source="external_bearer",
+                    observed_at=datetime.now(timezone.utc),
+                    user_id=user.id,
+                    provider_user_id=identity.subject,
+                    memberships=groups,
+                    authoritative=complete,
+                    complete=complete,
+                    claim_state=claim_state,
+                    claim_path=claim_path,
+                ),
+            )
+        except AuthorizationMutationRejected as exc:
+            raise AuthInvalidTokenError(exc.public_detail) from exc
+        await db.commit()
+        if result is None:
+            # Compatibility with a plugin built against the initial untyped
+            # seam: an unknown result must invalidate, never preserve stale
+            # policy by assuming nothing changed.
+            logger.warning(
+                "Authorization plugin returned no directory ingest result for provider=%s user=%s; "
+                "invalidating conservatively",
+                identity.provider,
+                user.id,
+            )
+            changed = True
+            added = None
+            removed = None
+        else:
+            # The initial seam only documented ``changed`` through caller-side
+            # duck typing. Keep older plugin result objects safe after commit
+            # while the explicit result contract rolls out.
+            changed = bool(getattr(result, "changed", True))
+            added = getattr(result, "added", None)
+            removed = getattr(result, "removed", None)
+
+        if not complete:
+            assert claim_state is not None  # noqa: S101 - internal state-machine invariant
+            await audit_reconciliation(
+                result=AUDIT_SKIP,
+                details={
+                    "claim_name": claim_name,
+                    "reason": claim_state.value,
+                    "authoritative": False,
+                    "complete": False,
+                },
+            )
+            if changed:
+                await safe_directory_membership_committed(
+                    authorization_service,
+                    user_id=user.id,
+                    changed=True,
+                )
+            else:
+                self._directory_reconcile_cache.remember(
+                    cache_key,
+                    now=now,
+                    ttl_seconds=reconcile_interval,
+                )
+            return
+
+        await audit_reconciliation(
+            result=AUDIT_ALLOW,
+            details={
+                "membership_count": len(groups),
+                "membership_sha256": hashlib.sha256("\0".join(groups).encode()).hexdigest(),
+                "changed": changed,
+                "added": added,
+                "removed": removed,
+                "authoritative": True,
+                "complete": True,
+            },
+        )
+        await safe_directory_membership_committed(
+            authorization_service,
+            user_id=user.id,
+            changed=changed,
+        )
+        if not changed:
+            # Only a reconciliation that verified the stored state already
+            # matched the claim is safe to skip next time. A pass that changed
+            # something gets one confirming pass before the interval starts, so
+            # a post-commit propagation retry is never hidden by the cache.
+            self._directory_reconcile_cache.remember(
+                cache_key,
+                now=now,
+                ttl_seconds=reconcile_interval,
+            )
+
+    async def _authenticate_with_api_key(self, api_key: str) -> UserRead | None:
         """Internal method to authenticate with API key (raises generic exceptions).
 
         The EXTERNAL_AUTH access ceiling block for externally-managed users is
@@ -301,7 +822,7 @@ class AuthService(BaseAuthService):
         returns ``None`` for a blocked user so every caller treats it as an auth
         failure. No additional ceiling check is needed here.
         """
-        result = await authenticate_api_key(db, api_key)
+        result = await authenticate_api_key(api_key)
         if not result:
             return None
 
@@ -456,20 +977,13 @@ class AuthService(BaseAuthService):
     async def api_key_security(
         self, query_param: str | None, header_param: str | None, db: AsyncSession | None = None
     ) -> UserRead | None:
-        settings_service = self.settings
-
-        # Use provided session or create a new one
-        if db is not None:
-            return await self._api_key_security_impl(query_param, header_param, db, settings_service)
-
-        async with session_scope() as new_db:
-            return await self._api_key_security_impl(query_param, header_param, new_db, settings_service)
+        return await self._api_key_security_impl(query_param, header_param, db, self.settings)
 
     async def _api_key_security_impl(
         self,
         query_param: str | None,
         header_param: str | None,
-        db: AsyncSession,
+        db: AsyncSession | None,
         settings_service,
     ) -> UserRead | None:
         clear_current_auth_context()
@@ -483,7 +997,11 @@ class AuthService(BaseAuthService):
                 )
             if not query_param and not header_param:
                 if settings_service.auth_settings.skip_auth_auto_login:
-                    result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
+                    if db is not None:
+                        result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
+                    else:
+                        async with session_scope() as auto_login_db:
+                            result = await get_user_by_username(auto_login_db, settings_service.auth_settings.SUPERUSER)
                     if result is None:
                         raise HTTPException(
                             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -505,7 +1023,7 @@ class AuthService(BaseAuthService):
             api_key = query_param or header_param
             if api_key is None:  # pragma: no cover - guaranteed by the if-condition above
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
-            api_key_result = await authenticate_api_key(db, api_key)
+            api_key_result = await authenticate_api_key(api_key)
 
         elif not query_param and not header_param:
             raise HTTPException(
@@ -518,7 +1036,7 @@ class AuthService(BaseAuthService):
             api_key = query_param or header_param
             if api_key is None:  # pragma: no cover - guaranteed by the elif-condition above
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
-            api_key_result = await authenticate_api_key(db, api_key)
+            api_key_result = await authenticate_api_key(api_key)
 
         if not api_key_result:
             raise HTTPException(
@@ -537,57 +1055,57 @@ class AuthService(BaseAuthService):
         settings = self.settings
         clear_current_auth_context()
         clear_current_external_access_context()
-        async with session_scope() as db:
-            api_key_result = None
-            if settings.auth_settings.AUTO_LOGIN:
-                if not settings.auth_settings.SUPERUSER:
-                    raise WebSocketException(
-                        code=status.WS_1011_INTERNAL_ERROR,
-                        reason="Missing first superuser credentials",
-                    )
-                if not api_key:
-                    if settings.auth_settings.skip_auth_auto_login:
+        api_key_result = None
+        if settings.auth_settings.AUTO_LOGIN:
+            if not settings.auth_settings.SUPERUSER:
+                raise WebSocketException(
+                    code=status.WS_1011_INTERNAL_ERROR,
+                    reason="Missing first superuser credentials",
+                )
+            if not api_key:
+                if settings.auth_settings.skip_auth_auto_login:
+                    async with session_scope() as db:
                         result = await get_user_by_username(db, settings.auth_settings.SUPERUSER)
-                        if result is None:
-                            raise WebSocketException(
-                                code=status.WS_1011_INTERNAL_ERROR,
-                                reason="Superuser not found",
-                            )
-                        if not result.is_active:
-                            raise WebSocketException(
-                                code=status.WS_1008_POLICY_VIOLATION,
-                                reason="User account is inactive",
-                            )
-                        logger.warning(AUTO_LOGIN_WARNING)
-                        set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_AUTO_LOGIN))
-                    else:
+                    if result is None:
+                        raise WebSocketException(
+                            code=status.WS_1011_INTERNAL_ERROR,
+                            reason="Superuser not found",
+                        )
+                    if not result.is_active:
                         raise WebSocketException(
                             code=status.WS_1008_POLICY_VIOLATION,
-                            reason=AUTO_LOGIN_ERROR,
+                            reason="User account is inactive",
                         )
+                    logger.warning(AUTO_LOGIN_WARNING)
+                    set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_AUTO_LOGIN))
                 else:
-                    api_key_result = await authenticate_api_key(db, api_key)
-                    result = api_key_result.user if api_key_result is not None else None
-
-            else:
-                if not api_key:
                     raise WebSocketException(
                         code=status.WS_1008_POLICY_VIOLATION,
-                        reason="An API key must be passed as query or header",
+                        reason=AUTO_LOGIN_ERROR,
                     )
-                api_key_result = await authenticate_api_key(db, api_key)
+            else:
+                api_key_result = await authenticate_api_key(api_key)
                 result = api_key_result.user if api_key_result is not None else None
 
-            if not result:
+        else:
+            if not api_key:
                 raise WebSocketException(
                     code=status.WS_1008_POLICY_VIOLATION,
-                    reason="Invalid or missing API key",
+                    reason="An API key must be passed as query or header",
                 )
+            api_key_result = await authenticate_api_key(api_key)
+            result = api_key_result.user if api_key_result is not None else None
 
-            if isinstance(result, User):
-                if api_key_result is not None:
-                    set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
-                return UserRead.model_validate(result, from_attributes=True)
+        if not result:
+            raise WebSocketException(
+                code=status.WS_1008_POLICY_VIOLATION,
+                reason="Invalid or missing API key",
+            )
+
+        if isinstance(result, User):
+            if api_key_result is not None:
+                set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
+            return UserRead.model_validate(result, from_attributes=True)
 
         raise WebSocketException(
             code=status.WS_1011_INTERNAL_ERROR,
@@ -632,7 +1150,21 @@ class AuthService(BaseAuthService):
         """
         clear_current_auth_context()
         clear_current_external_access_context()
+        try:
+            return await self._get_current_user_from_access_token_impl(token, db, external_token=external_token)
+        except Exception:
+            # Same exceptional-exit invariant as authenticate_with_credentials:
+            # no staged session state or populated identity context may survive
+            # the raise (see _discard_failed_credential_state).
+            await self._discard_failed_credential_state(db)
+            raise
 
+    async def _get_current_user_from_access_token_impl(
+        self,
+        token: str | Coroutine | None,
+        db: AsyncSession,
+        external_token: str | None = None,
+    ) -> User:
         # Handle coroutine token (FastAPI dependency injection)
         resolved_token: str | None
         if token is None:
@@ -666,6 +1198,12 @@ class AuthService(BaseAuthService):
             return await self._authenticate_with_token(resolved_token, db)
         except (AuthInvalidTokenError, TokenExpiredError, InactiveUserError, InvalidCredentialsError) as e:
             if external_token and external_token != resolved_token:
+                # Match the framework-agnostic credential path: the failed
+                # attempt may have staged JIT/profile state before a policy
+                # rejection, so the distinct credential needs a clean boundary.
+                await db.rollback()
+                clear_current_auth_context()
+                clear_current_external_access_context()
                 external_user = await self._authenticate_with_external_token(external_token, db)
                 if external_user is not None:
                     return external_user
@@ -694,11 +1232,16 @@ class AuthService(BaseAuthService):
     async def get_current_active_user(self, current_user: User | UserRead) -> User | UserRead | None:
         if not current_user.is_active:
             return None
+        set_current_model_provider_policy_context(
+            user_id=current_user.id,
+            attributes={"is_superuser": bool(current_user.is_superuser)},
+        )
         return current_user
 
     async def get_current_active_superuser(self, current_user: User | UserRead) -> User | UserRead | None:
         if not current_user.is_active or not current_user.is_superuser:
             return None
+        set_current_model_provider_policy_context(user_id=current_user.id, attributes={"is_superuser": True})
         return current_user
 
     async def get_webhook_user(self, flow_id: str, request: Request) -> UserRead:
@@ -726,15 +1269,14 @@ class AuthService(BaseAuthService):
         api_key = api_key_header_val or api_key_query_val
 
         try:
-            async with session_scope() as db:
-                result = await authenticate_api_key(db, api_key)
-                if not result:
-                    logger.warning("Invalid API key provided for webhook")
-                    raise HTTPException(status_code=403, detail="Invalid API key")
+            result = await authenticate_api_key(api_key)
+            if not result:
+                logger.warning("Invalid API key provided for webhook")
+                raise HTTPException(status_code=403, detail="Invalid API key")
 
-                set_current_auth_context(AuthCredentialContext.from_api_key_result(result))
-                authenticated_user = UserRead.model_validate(result.user, from_attributes=True)
-                logger.info("Webhook API key validated successfully")
+            set_current_auth_context(AuthCredentialContext.from_api_key_result(result))
+            authenticated_user = UserRead.model_validate(result.user, from_attributes=True)
+            logger.info("Webhook API key validated successfully")
         except HTTPException:
             raise
         except Exception as exc:
@@ -1084,7 +1626,7 @@ class AuthService(BaseAuthService):
                 api_key = query_param or header_param
                 if api_key is None:  # pragma: no cover - guaranteed by the if-condition above
                     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
-                api_key_result = await authenticate_api_key(db, api_key)
+                api_key_result = await authenticate_api_key(api_key)
                 result = api_key_result.user if api_key_result is not None else None
 
         elif not query_param and not header_param:
@@ -1094,14 +1636,14 @@ class AuthService(BaseAuthService):
             )
 
         elif query_param:
-            api_key_result = await authenticate_api_key(db, query_param)
+            api_key_result = await authenticate_api_key(query_param)
             result = api_key_result.user if api_key_result is not None else None
 
         else:
             # header_param must be truthy here (query_param is falsy, and we passed the not-both-None check)
             if header_param is None:  # pragma: no cover - guaranteed by the elif chain above
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
-            api_key_result = await authenticate_api_key(db, header_param)
+            api_key_result = await authenticate_api_key(header_param)
             result = api_key_result.user if api_key_result is not None else None
 
         if not result:
@@ -1123,6 +1665,10 @@ class AuthService(BaseAuthService):
     async def get_current_active_user_mcp(self, current_user: User | UserRead) -> User | UserRead:
         if not current_user.is_active:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
+        set_current_model_provider_policy_context(
+            user_id=current_user.id,
+            attributes={"is_superuser": bool(current_user.is_superuser)},
+        )
         return current_user
 
     async def teardown(self) -> None:

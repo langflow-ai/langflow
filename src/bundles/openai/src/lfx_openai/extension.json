@@ -1,7 +1,7 @@
 {
   "$schema": "https://schemas.langflow.org/extension/v1.json",
   "id": "lfx-openai",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "name": "OpenAI",
   "description": "OpenAI component(s) as a standalone Langflow Extension Bundle.",
   "lfx": {

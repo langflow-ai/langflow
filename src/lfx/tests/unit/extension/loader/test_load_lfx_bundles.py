@@ -19,15 +19,18 @@ from __future__ import annotations
 import importlib
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 from lfx.extension import SLOT_OFFICIAL, LoadedComponent, LoadResult, load_lfx_bundles_extensions
 from lfx.extension.loader._bundles_root import (
     LFX_BUNDLES_ENTRY_POINT_GROUP,
     _BundleRoot,
     _load_bundle_roots,
+    _optional_dependency_distributions,
     _resolve_bundle_roots,
 )
-from lfx.interface.components import _claimed_official_bundles, _resolve_bundle_shadowing
+from lfx.extension.loader._orchestrator import _load_bundle_directory
+from lfx.interface.components import _claimed_official_bundles, _emit_extension_diagnostics, _resolve_bundle_shadowing
 
 from .conftest import component_source
 
@@ -211,10 +214,11 @@ def test_claimed_bundle_name_is_not_imported(tmp_path: Path) -> None:
     assert set(by_bundle) == {"claimedprov", "freeprov"}
     claimed = by_bundle["claimedprov"]
     assert not claimed.components
-    # Same code AND same severity (errors) as _resolve_bundle_shadowing emits
+    # Same code AND same severity as _resolve_bundle_shadowing emits
     # for every other cross-source shadow pair.
-    assert [e.code for e in claimed.errors] == ["bundle-shadowed"]
-    assert "installed" in claimed.errors[0].message
+    assert [e.code for e in claimed.warnings] == ["bundle-shadowed"]
+    assert "installed" in claimed.warnings[0].message
+    assert claimed.ok
     # The decisive property: nothing was imported for the claimed name, so
     # the winner's live modules cannot have been overwritten.
     assert not [k for k in sys.modules if k.startswith("_lfx_ext.official.claimedprov")]
@@ -230,6 +234,182 @@ def test_provider_results_are_marked_manifestless(tmp_path: Path) -> None:
 
     assert results
     assert all(r.manifestless for r in results if r.bundle)
+
+
+def test_declared_optional_dependency_missing_is_warning_only(tmp_path: Path) -> None:
+    """A missing dependency declared by this provider extra does not fail startup."""
+    root = _make_bundles_root(tmp_path, "composio")
+    (root / "composio" / "thing.py").write_text("import composio_missing_fixture\n", encoding="utf-8")
+    requirements = ('composio-missing-fixture>=1; extra == "composio"',)
+
+    results = _load_bundle_roots([_BundleRoot(root, "lfx-bundles", "1.0.0", requirements)])
+
+    result = next(item for item in results if item.bundle == "composio")
+    assert result.ok
+    assert not result.errors
+    assert [warning.code for warning in result.warnings] == ["optional-dependency-missing"]
+    assert result.warnings[0].content == "composio_missing_fixture"
+
+
+def test_undeclared_missing_dependency_remains_error(tmp_path: Path) -> None:
+    """Manifest-less code cannot downgrade an undeclared import failure."""
+    root = _make_bundles_root(tmp_path, "composio")
+    (root / "composio" / "thing.py").write_text("import unrelated_missing_fixture\n", encoding="utf-8")
+    requirements = ('composio>=1; extra == "composio"',)
+
+    results = _load_bundle_roots([_BundleRoot(root, "lfx-bundles", "1.0.0", requirements)])
+
+    result = next(item for item in results if item.bundle == "composio")
+    assert not result.ok
+    assert [error.code for error in result.errors] == ["module-import-failed"]
+    assert not result.warnings
+
+
+def test_only_module_not_found_is_downgraded_for_manifestless_bundle(tmp_path: Path) -> None:
+    """ImportError, syntax failures, and runtime failures stay hard errors."""
+    root = _make_bundles_root(tmp_path, "composio")
+    provider = root / "composio"
+    (provider / "import_error.py").write_text("raise ImportError('missing symbol')\n", encoding="utf-8")
+    (provider / "syntax_error.py").write_text("if:\n", encoding="utf-8")
+    (provider / "runtime_error.py").write_text("raise RuntimeError('boom')\n", encoding="utf-8")
+    requirements = ('composio>=1; extra == "composio"',)
+
+    results = _load_bundle_roots([_BundleRoot(root, "lfx-bundles", "1.0.0", requirements)])
+
+    result = next(item for item in results if item.bundle == "composio")
+    assert [error.code for error in result.errors] == ["module-import-failed"] * 3
+    assert not [warning for warning in result.warnings if warning.code == "optional-dependency-missing"]
+
+
+def test_declared_missing_dependency_stays_error_outside_manifestless_tier(tmp_path: Path) -> None:
+    """Installed, seed, dev, and inline loaders cannot opt into this downgrade."""
+    provider = tmp_path / "composio"
+    provider.mkdir()
+    (provider / "thing.py").write_text("import composio_missing_fixture\n", encoding="utf-8")
+    result = LoadResult(slot=SLOT_OFFICIAL, source_path=provider, bundle="composio", manifestless=False)
+
+    _load_bundle_directory(
+        bundle_root=provider,
+        bundle_name="composio",
+        extension_id="lfx-composio",
+        extension_version="1.0.0",
+        slot=SLOT_OFFICIAL,
+        distribution="lfx-composio",
+        result=result,
+        optional_dependency_distributions={"composiomissingfixture": "composio-missing-fixture"},
+    )
+
+    assert [error.code for error in result.errors] == ["module-import-failed"]
+    assert not result.warnings
+
+
+def test_optional_dependency_distributions_come_from_matching_extra_metadata() -> None:
+    requirements = (
+        'langchain-mistralai>=1; extra == "mistral"',
+        'opensearch-py>=2; extra == "elastic"',
+        'unrelated>=1; extra == "other"',
+    )
+
+    mistral_distributions = _optional_dependency_distributions(requirements, bundle_name="mistral")
+    assert mistral_distributions == {"langchainmistralai": "langchain-mistralai"}
+    elastic_distributions = _optional_dependency_distributions(requirements, bundle_name="elastic")
+    assert elastic_distributions == {"opensearchpy": "opensearch-py"}
+
+
+def test_shared_lfx_namespace_failure_remains_error(tmp_path: Path) -> None:
+    """A declared lfx-* distribution cannot downgrade arbitrary lfx.* failures."""
+    root = _make_bundles_root(tmp_path, "openai")
+    (root / "openai" / "thing.py").write_text("import lfx.missing_optional_fixture\n", encoding="utf-8")
+    requirements = ('lfx-openai>=1; extra == "openai"',)
+
+    results = _load_bundle_roots([_BundleRoot(root, "lfx-bundles", "1.0.0", requirements)])
+
+    result = next(item for item in results if item.bundle == "openai")
+    assert [error.code for error in result.errors] == ["module-import-failed"]
+    assert not result.warnings
+
+
+def test_shared_langchain_namespace_failure_remains_error(tmp_path: Path) -> None:
+    """A declared langchain-* distribution cannot downgrade arbitrary langchain.* failures."""
+    root = _make_bundles_root(tmp_path, "mistral")
+    (root / "mistral" / "thing.py").write_text("import langchain.missing_optional_fixture\n", encoding="utf-8")
+    requirements = ('langchain-mistralai>=1; extra == "mistral"',)
+
+    results = _load_bundle_roots([_BundleRoot(root, "lfx-bundles", "1.0.0", requirements)])
+
+    result = next(item for item in results if item.bundle == "mistral")
+    assert [error.code for error in result.errors] == ["module-import-failed"]
+    assert not result.warnings
+
+
+def test_installed_but_broken_optional_dependency_remains_error(tmp_path: Path) -> None:
+    """Metadata presence proves the dependency is installed, so a broken import stays hard."""
+    root = _make_bundles_root(tmp_path, "packaging_provider")
+    (root / "packaging_provider" / "thing.py").write_text(
+        "import packaging.missing_optional_fixture\n", encoding="utf-8"
+    )
+    requirements = ('packaging>=1; extra == "packaging-provider"',)
+
+    results = _load_bundle_roots([_BundleRoot(root, "lfx-bundles", "1.0.0", requirements)])
+
+    result = next(item for item in results if item.bundle == "packaging_provider")
+    assert [error.code for error in result.errors] == ["module-import-failed"]
+    assert not result.warnings
+
+
+def test_entry_point_distribution_metadata_drives_optional_warning(tmp_path: Path, monkeypatch) -> None:
+    """The production entry-point path carries Requires-Dist into provider loading."""
+    package_name = "lfx_bundles_optional_metadata_fixture"
+    root = _make_bundles_root(tmp_path, "composio", pkg=package_name)
+    (root / "composio" / "thing.py").write_text("import composio_missing_fixture\n", encoding="utf-8")
+    distribution = SimpleNamespace(
+        name="lfx-bundles",
+        version="1.0.0",
+        requires=['composio-missing-fixture>=1; extra == "composio"'],
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+    importlib.invalidate_caches()
+    try:
+        results = load_lfx_bundles_extensions(entry_points=[_FakeBundlesEntryPoint(package_name, dist=distribution)])
+    finally:
+        importlib.invalidate_caches()
+
+    result = next(item for item in results if item.bundle == "composio")
+    assert result.ok
+    assert [warning.code for warning in result.warnings] == ["optional-dependency-missing"]
+
+
+def test_optional_dependency_diagnostics_are_aggregated(monkeypatch, tmp_path: Path) -> None:
+    """Repeated missing imports produce one operator warning plus debug details."""
+    from lfx.extension.errors import ExtensionError
+    from lfx.interface import components as components_module
+
+    missing_modules = ("composio.foo", "composio.bar", "composio")
+    results = []
+    for index, missing_module in enumerate(missing_modules):
+        result = LoadResult(bundle="composio", manifestless=True)
+        result.warnings.append(
+            ExtensionError(
+                code="optional-dependency-missing",
+                message="ModuleNotFoundError: optional dependency is not installed.",
+                location=str(tmp_path / f"module_{index}.py"),
+                content=missing_module,
+                hint="Install lfx-bundles[composio].",
+            )
+        )
+        results.append(result)
+    warning_calls = []
+    debug_calls = []
+    monkeypatch.setattr(components_module.logger, "warning", lambda *args: warning_calls.append(args))
+    monkeypatch.setattr(components_module.logger, "debug", lambda *args: debug_calls.append(args))
+
+    _emit_extension_diagnostics(results)
+
+    assert len(warning_calls) == 1
+    assert warning_calls[0][2] == "composio"
+    assert warning_calls[0][3] == 3
+    assert str(tmp_path / "module_0.py") == warning_calls[0][4]
+    assert len(debug_calls) == 3
 
 
 def test_claimed_official_bundles_first_wins_and_requires_components(tmp_path: Path) -> None:
@@ -434,7 +614,8 @@ def test_installed_manifest_shadows_manifest_less_provider() -> None:
     # with a typed bundle-shadowed warning.
     assert installed.components
     assert metapackage.components == []
-    assert any(e.code == "bundle-shadowed" for e in metapackage.errors)
+    assert any(e.code == "bundle-shadowed" for e in metapackage.warnings)
+    assert metapackage.ok
 
 
 def test_manifest_less_shadows_loose_inline_source() -> None:
@@ -464,4 +645,5 @@ def test_manifest_less_shadows_loose_inline_source() -> None:
 
     assert metapackage.components  # higher precedence wins
     assert inline.components == []
-    assert any(e.code == "bundle-shadowed" for e in inline.errors)
+    assert any(e.code == "bundle-shadowed" for e in inline.warnings)
+    assert inline.ok

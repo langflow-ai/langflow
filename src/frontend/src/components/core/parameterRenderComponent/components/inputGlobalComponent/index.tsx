@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import GlobalVariableDeleteConfirmation from "@/components/core/globalVariableDeleteConfirmation";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
-import GeneralDeleteConfirmationModal from "@/shared/components/delete-confirmation-modal";
 import { cn } from "../../../../../utils/utils";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { CommandItem } from "../../../../ui/command";
@@ -38,6 +38,7 @@ export default function InputGlobalComponent({
   isToolMode = false,
   hasRefreshButton = false,
   showParameter = true,
+  ariaLabelledBy,
 }: InputProps<string, InputGlobalComponentType> & {
   _input_type?: string;
 }): JSX.Element | null {
@@ -147,7 +148,7 @@ export default function InputGlobalComponent({
 
   // Render delete button for each option
   const renderDeleteButton = (option: string) => (
-    <GeneralDeleteConfirmationModal
+    <GlobalVariableDeleteConfirmation
       option={option}
       onConfirmDelete={() => handlers.handleVariableDelete(option)}
     />
@@ -211,6 +212,7 @@ export default function InputGlobalComponent({
       onChange={handlers.handleInputChange}
       isToolMode={isToolMode}
       hasRefreshButton={hasRefreshButton}
+      ariaLabelledBy={ariaLabelledBy}
     />
   );
 }

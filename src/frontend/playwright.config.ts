@@ -16,12 +16,13 @@ dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 export default defineConfig({
   testDir: "./tests",
+  testIgnore: "**/live/**",
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
-  retries: process.env.CI ? 2 : 3,
+  retries: 1,
   /* Opt out of parallel tests on CI. */
   workers: 2,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
@@ -112,6 +113,11 @@ export default defineConfig({
   ],
   webServer: [
     {
+      command: "node tests/fixtures/openai-compatible-server.mjs",
+      url: "http://127.0.0.1:8787/health",
+      reuseExistingServer: true,
+    },
+    {
       command:
         "uv run uvicorn --factory langflow.main:create_app --host localhost --port 7860 --loop asyncio --log-level error --no-access-log",
       port: 7860,
@@ -122,12 +128,16 @@ export default defineConfig({
         LANGFLOW_SUPERUSER_PASSWORD: "test-superuser-password", // pragma: allowlist secret
         LANGFLOW_DEACTIVATE_TRACING: "true",
         LANGFLOW_LOG_LEVEL: "ERROR",
+        OPENAI_API_KEY: "langflow-loopback-test-key", // pragma: allowlist secret
+        OPENAI_BASE_URL: "http://127.0.0.1:8787/v1",
         DO_NOT_TRACK: "true",
         // Serve the A2A discovery + JSON-RPC endpoints so the Agent tab tests
         // can publish and exercise a live agent.
         LANGFLOW_A2A_ENABLED: "true",
       },
-      stdout: "ignore",
+      stdout:
+        process.env.CI && process.platform === "win32" ? "pipe" : "ignore",
+      stderr: "pipe",
 
       reuseExistingServer: true,
       timeout: 120 * 750,

@@ -105,7 +105,7 @@ class TestGetVersionInfo:
         assert result["version"] == "1.0.0.dev123"
         assert result["main_version"] == "1.0.0"
         # A `.dev` version is labeled a nightly regardless of which package name resolved it.
-        assert result["package"] == "Langflow Base Nightly"
+        assert result["package"] == "Langflow Nightly"
 
     @patch("langflow.utils.version.metadata")
     def test_get_version_info_nightly_package(self, mock_metadata):
@@ -149,7 +149,7 @@ class TestGetVersionInfo:
 
         assert result["version"] == "1.0.0.a1"
         assert result["main_version"] == "1.0.0"
-        assert result["package"] == "Langflow Base Nightly"
+        assert result["package"] == "Langflow Nightly"
 
     @patch("langflow.utils.version.metadata")
     def test_get_version_info_canonical_dev_is_nightly(self, mock_metadata):

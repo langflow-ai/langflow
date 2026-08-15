@@ -590,21 +590,6 @@ export const OPENRAG_FOLDER = "OpenRAG";
 
 export const MAX_MCP_SERVER_NAME_LENGTH = 30;
 
-/**
- * Header text for admin page
- * @constant
- *
- */
-export const ADMIN_HEADER_TITLE = "Admin Page";
-
-/**
- * Header description for admin page
- * @constant
- *
- */
-export const ADMIN_HEADER_DESCRIPTION =
-  "Navigate through this section to efficiently oversee all application users. From here, you can seamlessly manage user accounts.";
-
 export const BASE_URL_API = CUSTOM_BASE_URL_API || "/api/v1/";
 
 export const BASE_URL_API_V2 = CUSTOM_BASE_URL_API_V2 || "/api/v2/";

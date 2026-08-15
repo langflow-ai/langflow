@@ -16,6 +16,7 @@ import {
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
+import { getProjectDisplayName } from "@/utils/project-display-name";
 import HeaderComponent from "../../components/header";
 import ListComponent from "../../components/list";
 import ListSkeleton from "../../components/listSkeleton";
@@ -48,10 +49,13 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   );
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const folders = useFolderStore((state) => state.folders);
-  const folderName =
-    folders.find((folder) => folder.id === folderId)?.name ??
-    folders[0]?.name ??
-    "";
+  const currentFolderId = folderId ?? myCollectionId;
+  const currentFolder =
+    folders.find((folder) => folder.id === currentFolderId) ?? folders[0];
+  const folderName = currentFolder?.name ?? "";
+  const folderDisplayName = currentFolder
+    ? getProjectDisplayName(currentFolder, t)
+    : "";
   const flows = useFlowsManagerStore((state) => state.flows);
   // The primary "New Flow" handler — creates an empty flow, primes the
   // welcome overlay store, and navigates to the canvas. Replaces the old
@@ -308,7 +312,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
             >
               <div className="flex h-full flex-col justify-start">
                 <HeaderComponent
-                  folderName={folderName}
+                  folderName={folderDisplayName}
                   flowType={flowType}
                   setFlowType={setFlowType}
                   view={view}

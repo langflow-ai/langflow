@@ -1,6 +1,6 @@
 [project]
 name = "lfx"
-version = "1.11.3"
+version = "1.12.0"
 description = "Langflow Executor - A lightweight CLI tool for executing and serving Langflow AI flows"
 readme = "README.md"
 authors = [
@@ -16,7 +16,7 @@ dependencies = [
     # xlsx path survives torch/docling becoming opt-in.
     "openpyxl>=3.1.5,<4.0.0",
     "pydantic>=2.0.0,<2.14",
-    "pillow>=11.1.0,<13.0.0",
+    "pillow>=12.3.0,<13.0.0",
     "fastapi>=0.135.0,<1.0.0",
     # [standard] adds uvloop + httptools (fast loop + HTTP parser) for the `lfx serve` worker path.
     "uvicorn[standard]>=0.34.3,<1.0.0",
@@ -28,9 +28,11 @@ dependencies = [
     "platformdirs>=4.3.8,<5.0.0",
     "aiofiles>=24.1.0,<25.0.0",
     "typing-extensions>=4.14.0,<5.0.0",
+    "packaging>=24.1,<25.0",
     "python-dotenv>=1.0.0,<2.0.0",
     "rich>=13.0.0,<14.0.0",
     "httpx[http2]>=0.24.0,<1.0.0",
+    "h2>=4.4.1",
     "aiofile>=3.8.0,<4.0.0",
     "json-repair>=0.30.3,<1.0.0",
     "docstring-parser>=0.16,<1.0.0",
@@ -57,7 +59,7 @@ dependencies = [
     "cryptography>=50.0.0",
     "pyjwt>=2.10.0,<3.0.0",
     "ag-ui-protocol>=0.1.10",
-    "langflow-sdk>=0.3.3",
+    "langflow-sdk>=0.4.0",
     "markitdown>=0.1.4,<2.0.0",
     "setuptools>=83.0.0,<84.0.0",
     "wheel>=0.46.2,<1.0.0",
@@ -71,15 +73,38 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Opt-in hardware-isolated execution backend for the code-execution components
+# (LANGFLOW_SANDBOX_BACKEND=exec-sandbox, issue #12029). exec-sandbox requires
+# Python >= 3.12, so on 3.10/3.11 this extra installs nothing and the backend
+# fails closed at use time with an actionable error. QEMU 8+ must be installed
+# on the host separately (brew install qemu / apt install qemu-system).
+sandbox = [
+    "exec-sandbox>=0.22.0,<1.0.0; python_version >= '3.12'",
+]
 opendsstar = [
     "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
+    # Temporary compatibility valve: newer langchain-litellm releases require cryptography<49.
+    "langchain-litellm==0.5.1; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
 ]
-# Optional deps for lfx-core components that import them lazily (a missing
+# Optional deps for built-in LFX components that import them lazily (a missing
 # install degrades to a clear "pip install ..." error, not an import-time crash).
 # Relocated out of langflow-base[complete], where they were the de-facto provider
-# for these lfx-core components after the bundle split.
-cassandra = ["cassio>=0.1.7"]  # Cassandra vector-store / chat-memory components
-toolguard = ["toolguard>=0.2.20,<1.0.0"]  # ToolGuard Policies component
+# for these components after the bundle split.
+cassandra = ["lfx-datastax>=0.1.3,<1.0.0"]  # Compatibility alias for the Cassandra extension
+toolguard = ["lfx-toolguard>=0.1.0,<1.0.0"]  # Compatibility alias for the Policies extension
+# Application observability: OTLP export of traces, metrics and logs for ``lfx serve`` / ``lfx
+# run``. lfx.observability guards every import, so a bare ``pip install lfx`` skips these and
+# the whole path no-ops; installing this extra turns it on. The full ``langflow`` distribution
+# carries the same packages through langflow-base, so it needs no change here.
+otel = [
+    "opentelemetry-api>=1.30.0,<2.0.0",
+    "opentelemetry-sdk>=1.30.0,<2.0.0",
+    "opentelemetry-exporter-otlp>=1.30.0,<2.0.0",
+    "opentelemetry-exporter-prometheus>=0.50b0,<1.0.0",
+    "opentelemetry-instrumentation-fastapi>=0.50b0,<1.0.0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.50b0,<1.0.0",
+    "opentelemetry-instrumentation-system-metrics>=0.50b0,<1.0.0",
+]
 # Engine-only by default: ``pip install lfx`` ships NO bundles.  This optional
 # extra pulls the long-tail metapackage for users who want the provider
 # components without the full ``langflow`` server install:
@@ -118,7 +143,8 @@ markers = [
     "slow: Slow-running tests",
     "asyncio: Async tests",
     "lfx_env_file(path): path to a .env file loaded before this test's flow execution",
-    "lfx_timeout(seconds): timeout in seconds for this test's flow execution"
+    "lfx_timeout(seconds): timeout in seconds for this test's flow execution",
+    "qemu: live exec-sandbox tests that boot a real QEMU microVM (opt-in via LANGFLOW_SANDBOX_LIVE_TESTS=1)"
 ]
 
 [dependency-groups]
@@ -128,6 +154,10 @@ dev = [
     "coverage>=7.9.2",
     "hypothesis>=6.136.3",
     "langchain-anthropic~=1.4.6",
+    # The otel extra itself, so the observability tests exercise the real exporters. Bare lfx
+    # still ships without them: the tests that assert the no-otel path force the condition by
+    # blocking the import rather than by relying on the extra being absent here.
+    "lfx[otel]",
     "pytest>=9.0.3",
     "pytest-asyncio>=0.26.0",
     "pytest-cov>=7.0.0",

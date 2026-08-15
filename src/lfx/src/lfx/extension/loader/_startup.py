@@ -2,7 +2,7 @@
 
 Extracted from ``_orchestrator.py`` so the orchestration core stays under
 the structural file-size limit and the two startup flows (which both
-delegate to :func:`load_extension` and add cross-source dedupe logic on
+delegate to :func:`load_extension_bundles` and add cross-source dedupe logic on
 top) live in a file dedicated to that concern.
 
 Both functions are re-exported from the loader package so external
@@ -14,7 +14,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from lfx.extension.errors import ExtensionError
-from lfx.extension.loader._orchestrator import load_extension
+from lfx.extension.loader._orchestrator import load_extension_bundles
 from lfx.extension.loader._plugins import _resolve_distribution_roots
 from lfx.extension.loader._types import SLOT_OFFICIAL, LoadResult
 
@@ -31,7 +31,7 @@ def load_installed_extensions(
 
     Startup-time discovery flow: walks every distribution in ``distributions``
     (defaults to the live environment), finds those that ship a v0 manifest,
-    and calls :func:`load_extension` on each of their package roots.
+    and calls :func:`load_extension_bundles` on each of their package roots.
 
     Cross-source bundle-name dedupe across installed distributions: two
     distributions with different canonical names but identical ``bundle.name``
@@ -58,10 +58,14 @@ def load_installed_extensions(
     seen_bundles: dict[str, LoadResult] = {}
     for canonical in sorted(resolved):
         winner_root, manifests = resolved[canonical]
-        result = load_extension(winner_root, slot=SLOT_OFFICIAL, distribution=canonical)
+        distribution_results = load_extension_bundles(
+            winner_root,
+            slot=SLOT_OFFICIAL,
+            distribution=canonical,
+        )
         if len(manifests) > 1:
             paths_csv = ", ".join(str(m) for m in manifests)
-            result.errors.append(
+            distribution_results[0].errors.append(
                 ExtensionError(
                     code="duplicate-distribution",
                     message=(
@@ -76,32 +80,33 @@ def load_installed_extensions(
                     ),
                 )
             )
-        if result.bundle and result.components:
-            existing = seen_bundles.get(result.bundle)
-            if existing is not None:
-                result.errors.append(
-                    ExtensionError(
-                        code="duplicate-bundle-name",
-                        message=(
-                            f"Bundle {result.bundle!r} from distribution {canonical!r} collides "
-                            f"with a bundle of the same name already loaded from "
-                            f"{existing.distribution or existing.source_path}; the second loader "
-                            "is being dropped to prevent silent sys.modules clobber at "
-                            "_lfx_ext.official.<bundle>.*."
-                        ),
-                        location=str(result.source_path) if result.source_path else result.bundle,
-                        content=result.bundle,
-                        hint=(
-                            "Rename one of the bundles so each bundle.name maps to exactly one "
-                            "installed distribution; cross-source @official-slot bundle names "
-                            "must be unique."
-                        ),
+        for result in distribution_results:
+            if result.bundle and result.components:
+                existing = seen_bundles.get(result.bundle)
+                if existing is not None:
+                    result.errors.append(
+                        ExtensionError(
+                            code="duplicate-bundle-name",
+                            message=(
+                                f"Bundle {result.bundle!r} from distribution {canonical!r} collides "
+                                f"with a bundle of the same name already loaded from "
+                                f"{existing.distribution or existing.source_path}; the second loader "
+                                "is being dropped to prevent silent sys.modules clobber at "
+                                "_lfx_ext.official.<bundle>.*."
+                            ),
+                            location=str(result.source_path) if result.source_path else result.bundle,
+                            content=result.bundle,
+                            hint=(
+                                "Rename one of the bundles so each bundle.name maps to exactly one "
+                                "installed distribution; cross-source @official-slot bundle names "
+                                "must be unique."
+                            ),
+                        )
                     )
-                )
-                result.components = []
-            else:
-                seen_bundles[result.bundle] = result
-        results.append(result)
+                    result.components = []
+                else:
+                    seen_bundles[result.bundle] = result
+            results.append(result)
     return results
 
 
@@ -152,11 +157,12 @@ def load_seed_extensions(
         results.append(sentinel)
 
     for record in sorted(discovered, key=lambda r: str(r.extension_root)):
-        result = load_extension(
-            record.extension_root,
-            slot=SLOT_OFFICIAL,
-            distribution=None,
+        results.extend(
+            load_extension_bundles(
+                record.extension_root,
+                slot=SLOT_OFFICIAL,
+                distribution=None,
+            )
         )
-        results.append(result)
 
     return results

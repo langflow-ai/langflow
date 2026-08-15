@@ -8,6 +8,9 @@ from enum import Enum
 class ServiceType(str, Enum):
     AUTH_SERVICE = "auth_service"
     AUTHORIZATION_SERVICE = "authorization_service"
+    CATALOG_POLICY_SERVICE = "catalog_policy_service"
+    MODEL_PROVIDER_POLICY_SERVICE = "model_provider_policy_service"
+    POLICY_BUNDLE_SERVICE = "policy_bundle_service"
     DATABASE_SERVICE = "database_service"
     STORAGE_SERVICE = "storage_service"
     SETTINGS_SERVICE = "settings_service"

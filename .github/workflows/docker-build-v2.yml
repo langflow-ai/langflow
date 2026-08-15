@@ -110,13 +110,14 @@ jobs:
       skipped: ${{ steps.version.outputs.skipped }}
     steps:
       - name: Check out the code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
 
       - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: "3.13"
@@ -171,13 +172,14 @@ jobs:
       skipped: ${{ steps.version.outputs.skipped }}
     steps:
       - name: Check out the code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
 
       - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: "3.13"
@@ -229,6 +231,7 @@ jobs:
     needs: [determine-base-version]
     if: ${{ inputs.release_type == 'base' && needs.determine-base-version.outputs.skipped == 'false' }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - arch: amd64
@@ -239,13 +242,13 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Check out the code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
 
       - name: Download release wheel artifacts
         if: ${{ inputs.release_artifacts }}
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: dist-*
           path: .release-artifacts
@@ -264,52 +267,59 @@ jobs:
           docker buildx prune -af || true
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to Docker Hub
         if: ${{ inputs.push_to_registry }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Login to GitHub Container Registry
         if: ${{ inputs.push_to_registry }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.TEMP_GHCR_TOKEN}}
 
       - name: Build and push to Docker Hub
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
-          file: ./docker/build_and_push_base.Dockerfile
+          build-args: |
+            BASE_VERSION=${{ needs.determine-base-version.outputs.version }}
+          file: ./docker/build_and_push.Dockerfile
+          target: base
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ github.job }}-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,ignore-error=true,scope=${{ github.job }}-${{ matrix.arch }}
 
       - name: Build and push to GitHub Container Registry
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
-          file: ./docker/build_and_push_base.Dockerfile
+          build-args: |
+            BASE_VERSION=${{ needs.determine-base-version.outputs.version }}
+          file: ./docker/build_and_push.Dockerfile
+          target: base
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ github.job }}-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,ignore-error=true,scope=${{ github.job }}-${{ matrix.arch }}
 
   build-main:
     name: Build Main Package
     needs: [determine-main-version]
     if: ${{ inputs.release_type == 'main' && needs.determine-main-version.outputs.skipped == 'false' }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - arch: amd64
@@ -320,13 +330,13 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Check out the code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
 
       - name: Download release wheel artifacts
         if: ${{ inputs.release_artifacts }}
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: dist-*
           path: .release-artifacts
@@ -345,52 +355,61 @@ jobs:
           docker buildx prune -af || true
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to Docker Hub
         if: ${{ inputs.push_to_registry }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Login to GitHub Container Registry
         if: ${{ inputs.push_to_registry }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.TEMP_GHCR_TOKEN}}
 
       - name: Build and push to Docker Hub
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
+          build-args: |
+            MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}
+            BASE_VERSION=${{ needs.determine-main-version.outputs.version }}
           file: ./docker/build_and_push.Dockerfile
+          target: full
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ github.job }}-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,ignore-error=true,scope=${{ github.job }}-${{ matrix.arch }}
 
       - name: Build and push to GitHub Container Registry
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
+          build-args: |
+            MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}
+            BASE_VERSION=${{ needs.determine-main-version.outputs.version }}
           file: ./docker/build_and_push.Dockerfile
+          target: full
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ github.job }}-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,ignore-error=true,scope=${{ github.job }}-${{ matrix.arch }}
 
   build-main-backend:
     name: Build Main Backend Package
     needs: [determine-main-version]
     if: ${{ inputs.release_type == 'main-backend' && needs.determine-main-version.outputs.skipped == 'false' }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - arch: amd64
@@ -401,7 +420,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Check out the code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
 
@@ -418,17 +437,17 @@ jobs:
           docker buildx prune -af || true
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to Docker Hub
         if: ${{ inputs.push_to_registry }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push to Docker Hub
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
@@ -438,19 +457,19 @@ jobs:
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ github.job }}-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,ignore-error=true,scope=${{ github.job }}-${{ matrix.arch }}
 
       - name: Login to GitHub Container Registry
         if: ${{ inputs.push_to_registry }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.TEMP_GHCR_TOKEN}}
 
       - name: Build and push to GitHub Container Registry
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
@@ -460,14 +479,15 @@ jobs:
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ github.job }}-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,ignore-error=true,scope=${{ github.job }}-${{ matrix.arch }}
 
   build-main-frontend:
     name: Build Main Frontend Package
     needs: [determine-main-version]
     if: ${{ inputs.release_type == 'main-frontend' && needs.determine-main-version.outputs.skipped == 'false' }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - arch: amd64
@@ -478,7 +498,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Check out the code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
 
@@ -495,17 +515,17 @@ jobs:
           docker buildx prune -af || true
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to Docker Hub
         if: ${{ inputs.push_to_registry }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push to Docker Hub
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
@@ -513,19 +533,19 @@ jobs:
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ github.job }}-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,ignore-error=true,scope=${{ github.job }}-${{ matrix.arch }}
 
       - name: Login to GitHub Container Registry
         if: ${{ inputs.push_to_registry }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.TEMP_GHCR_TOKEN}}
 
       - name: Build and push to GitHub Container Registry
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
@@ -533,14 +553,15 @@ jobs:
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ github.job }}-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,ignore-error=true,scope=${{ github.job }}-${{ matrix.arch }}
 
   build-main-ep:
     name: Build Main EP Package
     needs: [determine-main-version]
     if: ${{ inputs.release_type == 'main-ep' && needs.determine-main-version.outputs.skipped == 'false' }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - arch: amd64
@@ -551,13 +572,13 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Check out the code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
 
       - name: Download release wheel artifacts
         if: ${{ inputs.release_artifacts }}
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: dist-*
           path: .release-artifacts
@@ -576,52 +597,59 @@ jobs:
           docker buildx prune -af || true
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to Docker Hub
         if: ${{ inputs.push_to_registry }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Login to GitHub Container Registry
         if: ${{ inputs.push_to_registry }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.TEMP_GHCR_TOKEN}}
 
       - name: Build and push to Docker Hub
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
+          build-args: |
+            MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}
+            BASE_VERSION=${{ needs.determine-main-version.outputs.version }}
           file: ./docker/build_and_push_ep.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ github.job }}-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,ignore-error=true,scope=${{ github.job }}-${{ matrix.arch }}
 
       - name: Build and push to GitHub Container Registry
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
+          build-args: |
+            MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}
+            BASE_VERSION=${{ needs.determine-main-version.outputs.version }}
           file: ./docker/build_and_push_ep.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ github.job }}-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,ignore-error=true,scope=${{ github.job }}-${{ matrix.arch }}
 
   build-main-all:
     name: Build Main All Package
     needs: [determine-main-version]
     if: ${{ inputs.release_type == 'main-all' && needs.determine-main-version.outputs.skipped == 'false' }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - arch: amd64
@@ -632,13 +660,13 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Check out the code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
 
       - name: Download release wheel artifacts
         if: ${{ inputs.release_artifacts }}
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: dist-*
           path: .release-artifacts
@@ -657,46 +685,54 @@ jobs:
           docker buildx prune -af || true
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to Docker Hub
         if: ${{ inputs.push_to_registry }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Login to GitHub Container Registry
         if: ${{ inputs.push_to_registry }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.TEMP_GHCR_TOKEN}}
 
       - name: Build and push to Docker Hub
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
-          file: ./docker/build_and_push_with_extras.Dockerfile
+          build-args: |
+            MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}
+            BASE_VERSION=${{ needs.determine-main-version.outputs.version }}
+          file: ./docker/build_and_push.Dockerfile
+          target: full-bundles
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ github.job }}-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,ignore-error=true,scope=${{ github.job }}-${{ matrix.arch }}
 
       - name: Build and push to GitHub Container Registry
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
-          file: ./docker/build_and_push_with_extras.Dockerfile
+          build-args: |
+            MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}
+            BASE_VERSION=${{ needs.determine-main-version.outputs.version }}
+          file: ./docker/build_and_push.Dockerfile
+          target: full-bundles
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ github.job }}-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,ignore-error=true,scope=${{ github.job }}-${{ matrix.arch }}
 
   create-manifest:
     name: Create Multi-Arch Manifest
@@ -715,7 +751,7 @@ jobs:
     if: ${{ always() && inputs.push_to_registry && (needs.build-base.result == 'success' || needs.build-main.result == 'success' || needs.build-main-backend.result == 'success' || needs.build-main-frontend.result == 'success' || needs.build-main-ep.result == 'success' || needs.build-main-all.result == 'success') }}
     steps:
       - name: Check out the code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
 
@@ -805,14 +841,14 @@ jobs:
 
       - name: Login to Docker Hub
         if: ${{ inputs.push_to_registry }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Login to GitHub Container Registry
         if: ${{ inputs.push_to_registry }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}

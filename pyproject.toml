@@ -1,6 +1,6 @@
 [project]
 name = "langflow"
-version = "1.11.3"
+version = "1.12.0"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.15"
 license = "MIT"
@@ -17,38 +17,31 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base[complete]>=0.11.3",
+    "langflow-base~=1.12.0",
     # langflow-extensions:bundle-deps-start
     # Release coordination: langflow declares BOUNDED ranges (>=A,<B) for every
     # curated lfx-* package, never exact pins -- exact pins in reusable library
     # metadata create resolver conflicts for downstreams that depend on a
     # different version. Exact pins for reproducibility live in uv.lock and the
-    # release-build manifests. Bundles follow their own 0.1.x cadence (bound
-    # <1.0.0); lfx-bundles versions with the metapackage contract (bound <2.0).
+    # release-build manifests. Partner bundles follow their own 0.1.x cadence
+    # (bound <1.0.0). The lfx-bundles metapackage stays opt-in and is not a
+    # default langflow dependency.
     # The cross-bundle CI matrix verifies these ranges resolve together across
     # the supported lfx axis.
-    "lfx-duckduckgo>=0.1.0,<1.0.0",
-    "lfx-arxiv>=0.1.0,<1.0.0",
-    "lfx-ibm>=0.1.0,<1.0.0",
+    "lfx-ibm>=0.1.5,<1.0.0",
     "lfx-docling>=0.1.0,<1.0.0",
-    # all-no-torch == all minus the torch-pulling providers (cuga, codeagents),
-    # so the default install is torch-free. Users who want those two components
-    # opt in with: pip install "lfx-bundles[all]" (or the per-provider extra).
-    "lfx-bundles[all-no-torch]>=1.1,<2.0",
-    "lfx-datastax>=0.1.0,<1.0.0",
+    "lfx-datastax>=0.1.3,<1.0.0",
+    "lfx-toolguard>=0.1.1,<1.0.0",
     "lfx-openai>=0.1.0,<1.0.0",
     "lfx-anthropic>=0.1.0,<1.0.0",
+    "lfx-azure>=0.1.0,<1.0.0",
+    "lfx-ollama>=0.1.0,<1.0.0",
     "lfx-amazon>=0.1.0,<1.0.0",
     "lfx-cohere>=0.1.0,<1.0.0",
     "lfx-oracle>=0.1.0,<1.0.0",
-    "lfx-firecrawl>=0.1.0,<1.0.0",
-    "lfx-nextplaid>=0.1.0,<1.0.0",
-    "lfx-paddle>=0.1.0,<1.0.0",
     "lfx-vllm>=0.1.0,<1.0.0",
-    "lfx-empiriolabs>=0.1.0,<1.0.0",
     "lfx-openai-compatible>=0.1.0,<1.0.0",
-    "lfx-exa>=0.1.0,<1.0.0",
-    "lfx-valkey>=0.1.0,<1.0.0",
+    "lfx-google>=0.1.0,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -112,8 +105,11 @@ lfx-ibm = { workspace = true }
 lfx-docling = { workspace = true }
 lfx-bundles = { workspace = true }
 lfx-datastax = { workspace = true }
+lfx-toolguard = { workspace = true }
 lfx-openai = { workspace = true }
 lfx-anthropic = { workspace = true }
+lfx-azure = { workspace = true }
+lfx-ollama = { workspace = true }
 lfx-amazon = { workspace = true }
 lfx-cohere = { workspace = true }
 lfx-oracle = { workspace = true }
@@ -125,6 +121,7 @@ lfx-empiriolabs = { workspace = true }
 lfx-openai-compatible = { workspace = true }
 lfx-exa = { workspace = true }
 lfx-valkey = { workspace = true }
+lfx-google = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -143,8 +140,11 @@ members = [
     "src/bundles/docling",
     "src/bundles/lfx-bundles",
     "src/bundles/datastax",
+    "src/bundles/toolguard",
     "src/bundles/openai",
     "src/bundles/anthropic",
+    "src/bundles/azure",
+    "src/bundles/ollama",
     "src/bundles/amazon",
     "src/bundles/cohere",
     "src/bundles/oracle",
@@ -156,6 +156,7 @@ members = [
     "src/bundles/openai-compatible",
     "src/bundles/exa",
     "src/bundles/valkey",
+    "src/bundles/google",
     # langflow-extensions:bundle-members-end
 ]
 
@@ -167,6 +168,18 @@ Repository = "https://github.com/langflow-ai/langflow"
 Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
+bundles = [
+    "lfx-bundles[all-no-torch]>=1.1.12,<2.0",
+    "lfx-arxiv>=0.1.0,<1.0.0",
+    "lfx-duckduckgo>=0.1.0,<1.0.0",
+    "lfx-empiriolabs>=0.1.0,<1.0.0",
+    "lfx-exa>=0.1.0,<1.0.0",
+    "lfx-firecrawl>=0.1.0,<1.0.0",
+    "lfx-nextplaid>=0.1.2,<1.0.0",
+    "lfx-paddle>=0.1.0,<1.0.0",
+    "lfx-valkey>=0.1.0,<1.0.0",
+]
+
 docling = [
     "lfx-docling[local]>=0.1.0,<1.0.0",
 ]
@@ -180,7 +193,15 @@ docling-image-description = [
 ]
 
 audio = [
-    "webrtcvad>=2.0.10",
+    "langflow-base[audio]~=1.12.0",
+]
+
+# Opt-in microVM sandbox backend for code-execution components
+# (LANGFLOW_SANDBOX_BACKEND=exec-sandbox, issue #12029). Requires Python >= 3.12
+# and QEMU 8+ on the host; on older Pythons the extra installs nothing and the
+# backend fails closed at use time.
+sandbox = [
+    "langflow-base[sandbox]~=1.12.0",
 ]
 
 
@@ -204,8 +225,15 @@ nv-ingest = [
 ]
 
 postgresql = [
-    "sqlalchemy[postgresql_psycopg2binary]>=2.0.38,<3.0.0",
-    "sqlalchemy[postgresql_psycopg]>=2.0.38,<3.0.0",
+    "langflow-base[postgresql]~=1.12.0",
+]
+
+pgvector = [
+    "langflow-base[pgvector]~=1.12.0",
+]
+
+opensearch = [
+    "langflow-base[opensearch]~=1.12.0",
 ]
 
 [tool.uv]
@@ -217,14 +245,18 @@ override-dependencies = [
     # Security: Force upgraded versions to prevent transitive deps from pulling older vulnerable versions
     "orjson>=3.11.6",
     "gunicorn>=25.3.0",
-    "pypdf>=6.15.0",
+    "pypdf>=6.15.0,<7.0.0",  # Force a patched pypdf 6.x release
+    "cryptography>=50.0.0",  # GHSA-g6cj-pr64-35w5 is fixed in 50.0.0
     "nltk>=3.9.4",
     "Markdown>=3.8.0",
     "dynaconf>=3.2.13",
-    "pillow>=12.1.1",  # Force Pillow 12.1.1+ to prevent CVE-vulnerable versions
+    "pillow>=12.3.0",  # Force Pillow 12.3.0+ to prevent CVE-vulnerable versions
     "playwright>=1.59.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
     # Keep uv workspace resolution on the Python 3.14-compatible LiteLLM floor.
     "litellm>=1.93.0,<2.0.0",
+    # Temporary compatibility valve: langchain-litellm 0.6.1-0.7.0 cap
+    # cryptography below 49; 0.5.1 is the newest release without that cap.
+    "langchain-litellm==0.5.1",
     # Transitive dependency CVE fixes
     "lxml>=6.1.0,<7.0.0",  # CVE-2026-41066
     "mako>=1.3.12,<2.0.0",  # CVE-2026-44307
@@ -233,9 +265,6 @@ override-dependencies = [
     "GitPython>=3.1.58",  # GHSA-wvpp-8hx9-p66j, GHSA-jm78-9fvv-mhgr, GHSA-hmq2-w58f-27jc, GHSA-4gmw-gg2m-w46p, GHSA-9rj7-rf2p-w77r, GHSA-hh9p-6wh2-4mfc
     "h2>=4.4.1",  # CVE-2026-71554
 ]
-
-[project.scripts]
-langflow = "langflow.langflow_launcher:main"
 
 [tool.codespell]
 skip = '.git,*.pdf,*.svg,*.pdf,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,package-lock.json,*.trig.,**/node_modules/**,./stuff/*,*.csv'
@@ -251,9 +280,6 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 # 50-min step wall. A 90s cap fires below the ~127s stall, and timeout_method="thread" dumps ALL
 # thread stacks (faulthandler) — naming the exact blocking call even when it is a leaked background
 # task. Revert to timeout=150 / timeout_method="signal" once the stall is identified and bounded.
-# NOTE: the thread method's timer needs the GIL, so a C-level hang that holds the GIL defeats it
-# (observed: release-1.11.3 py3.13 Group 5 froze 25+ min with no dump). A second, GIL-proof
-# faulthandler watchdog (120s, dump + exit) backstops it in src/backend/tests/conftest.py.
 timeout = 90
 timeout_method = "thread"
 minversion = "6.0"
@@ -262,9 +288,6 @@ console_output_style = "progress"
 filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::ResourceWarning",
-    "ignore:Skipped unsupported reflection:sqlalchemy.exc.SAWarning",
-    "ignore:.*SQL-parsed foreign key constraint:sqlalchemy.exc.SAWarning",
-    "ignore:autogenerate skipping metadata-specified expression-based index:UserWarning",
 ]
 log_cli = true
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
@@ -285,13 +308,25 @@ asyncio_default_fixture_loop_scope = "function"
 addopts = "-p no:benchmark"
 
 [tool.coverage.run]
+# Canonical backend coverage configuration. Keep this static and independent
+# of frontend bundle presentation so local and CI reports measure the same code.
 command_line = """
     -m pytest --ignore=tests/integration
     --cov --cov-report=term --cov-report=html
     --instafail -ra -n auto -m "not api_key_required"
 """
 source = ["src/backend/base/langflow/"]
-omit = ["*/alembic/*", "tests/*", "*/__init__.py"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/*test*",
+    "*/alembic/*",
+    "*/migrations/*",
+    "*/__pycache__/*",
+    "*/.*",
+    "*/__init__.py",
+    "*/components/deactivated/*",
+]
 
 
 [tool.coverage.report]

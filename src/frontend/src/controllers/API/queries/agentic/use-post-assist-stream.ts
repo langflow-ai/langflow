@@ -10,6 +10,7 @@ import type {
   AgenticProgressEvent,
   AgenticSSEEvent,
   AgenticTokenEvent,
+  AgenticToolStartEvent,
 } from "./types";
 
 interface StreamCallbacks {
@@ -18,6 +19,7 @@ interface StreamCallbacks {
   onComplete?: (event: AgenticCompleteEvent) => void;
   onFlowPreview?: (event: AgenticFlowPreviewEvent) => void;
   onFlowUpdate?: (event: AgenticFlowUpdateEvent) => void;
+  onToolStart?: (event: AgenticToolStartEvent) => void;
   onFileWritten?: (event: AgenticFileWrittenEvent) => void;
   onError?: (event: AgenticErrorEvent) => void;
   onCancelled?: (event: AgenticCancelledEvent) => void;
@@ -66,6 +68,9 @@ function processSSELine(
       break;
     case "flow_update":
       callbacks.onFlowUpdate?.(event);
+      break;
+    case "tool_start":
+      callbacks.onToolStart?.(event);
       break;
     case "file_written":
       callbacks.onFileWritten?.(event);
@@ -163,11 +168,8 @@ export async function postAssistStream(
       }
     }
 
-    // The reader ended without ever delivering a terminal event
-    // (complete/error/cancelled) — e.g. the connection dropped or the
-    // server crashed mid-build. Surface a terminal error so the caller
-    // clears the spinner and marks the turn failed instead of hanging
-    // forever on a half-applied canvas.
+    // Reader ended without a terminal event (dropped connection, server crash):
+    // surface a terminal error so the caller clears the spinner instead of hanging.
     callbacks.onError?.({
       event: "error",
       message:

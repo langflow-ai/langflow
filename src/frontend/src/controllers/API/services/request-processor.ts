@@ -62,6 +62,20 @@ const retryDelay = (attemptIndex: number) =>
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+function getMutationRetryDelayMs(
+  error: unknown,
+  attempt: number,
+  customRetryDelay: UseMutationOptions["retryDelay"],
+): number {
+  if (typeof customRetryDelay === "function") {
+    return customRetryDelay(attempt, error as Error);
+  }
+  if (typeof customRetryDelay === "number") {
+    return customRetryDelay;
+  }
+  return getRetryAfterMs(error) ?? retryDelay(attempt);
+}
+
 // Mutation retries must run inside the mutation function rather than through
 // react-query's `retry` option: the retryer pauses between attempts whenever
 // the document is hidden or the browser reports offline, so a failing
@@ -73,6 +87,7 @@ const sleep = (ms: number) =>
 export function withTransientErrorRetry<TArgs extends unknown[], TData>(
   mutationFn: (...args: TArgs) => Promise<TData>,
   maxRetries: number = MAX_MUTATION_RETRIES,
+  customRetryDelay?: UseMutationOptions["retryDelay"],
 ): (...args: TArgs) => Promise<TData> {
   return async (...args: TArgs) => {
     for (let attempt = 0; ; attempt++) {
@@ -82,7 +97,7 @@ export function withTransientErrorRetry<TArgs extends unknown[], TData>(
         if (attempt >= maxRetries || !isRetryableServerError(error)) {
           throw error;
         }
-        await sleep(getRetryAfterMs(error) ?? retryDelay(attempt));
+        await sleep(getMutationRetryDelayMs(error, attempt, customRetryDelay));
       }
     }
   };
@@ -121,7 +136,11 @@ export function UseRequestProcessor(): {
     return useMutation({
       mutationKey,
       mutationFn: useInBandRetry
-        ? withTransientErrorRetry(mutationFn)
+        ? withTransientErrorRetry(
+            mutationFn,
+            MAX_MUTATION_RETRIES,
+            options.retryDelay,
+          )
         : mutationFn,
       onSettled: (data, error, variables, onMutateResult, context) => {
         queryClient.invalidateQueries({ queryKey: mutationKey });

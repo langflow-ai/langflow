@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import copy
 import json as _json
 import re
 from datetime import timedelta
 from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any
-from urllib.parse import parse_qsl, quote, urlsplit
+from urllib.parse import quote
 
 from fastapi import Depends, HTTPException, Path, Query
 from fastapi_pagination import Params
@@ -19,32 +18,18 @@ from langflow.services.auth.utils import get_current_active_user, get_current_ac
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.user.model import User
 from langflow.services.store.utils import get_lf_version_from_pypi
+from langflow.utils import flow_secrets as _flow_secrets
 from langflow.utils.constants import LANGFLOW_GLOBAL_VAR_HEADER_PREFIX
 
 if TYPE_CHECKING:
     from langflow.services.store.schema import StoreComponentCreate
 
 
-API_WORDS = ["api", "key", "token"]
-
-_SECRET_NAME_PARTS = frozenset({"credential", "credentials", "passwd", "password", "secret"})
-_SECRET_COMPOUND_NAMES = frozenset(
-    {
-        "access_key",
-        "api_key",
-        "apikey",
-        "authorization",
-        "client_secret",
-        "connection_string",
-        "cookie",
-        "database_uri",
-        "database_url",
-        "dsn",
-        "private_key",
-        "proxy_authorization",
-        "set_cookie",
-    }
-)
+API_WORDS = _flow_secrets.API_WORDS
+has_api_terms = _flow_secrets.has_api_terms
+remove_api_keys = _flow_secrets.remove_api_keys
+strip_secret_field_values = _flow_secrets.strip_secret_field_values
+strip_secret_field_values_in_place = _flow_secrets.strip_secret_field_values_in_place
 
 MAX_PAGE_SIZE = 50
 MIN_PAGE_SIZE = 1
@@ -55,6 +40,21 @@ CurrentActiveMCPUser = Annotated[User, Depends(get_current_active_user_mcp)]
 DbSession = Annotated[AsyncSession, Depends(injectable_session_scope)]
 # DbSessionReadOnly for read-only operations (no auto-commit, reduces lock contention)
 DbSessionReadOnly = Annotated[AsyncSession, Depends(injectable_session_scope_readonly)]
+
+
+async def release_db_transaction(session: AsyncSession) -> None:
+    """End the session's current transaction before long-running work.
+
+    A handler that awaits a model, tool, or workflow after its DB reads must
+    not keep the transaction from those reads open for the wait: the session
+    would pin a pooled connection for the whole run (on Postgres as
+    ``idle in transaction``, which a nonzero
+    ``idle_in_transaction_session_timeout`` kills mid-run). Committing ends
+    the transaction and returns the connection to the pool; any later DB work
+    on the same session begins a fresh short transaction, and the dependency
+    teardown's final commit becomes a no-op.
+    """
+    await session.commit()
 
 
 def _get_validated_path_segment(value: str, *, label: str = "name") -> str:
@@ -88,10 +88,6 @@ class EventDeliveryType(str, Enum):
     POLLING = "polling"
 
 
-def has_api_terms(word: str):
-    return "api" in word and ("key" in word or ("token" in word and "tokens" not in word))
-
-
 def _get_provider_from_template(template: dict) -> str | None:
     """Return provider name from template's model field, if any."""
     model_field = template.get("model")
@@ -101,153 +97,6 @@ def _get_provider_from_template(template: dict) -> str | None:
     if isinstance(raw, list) and len(raw) > 0 and isinstance(raw[0], dict):
         return raw[0].get("provider")
     return None
-
-
-def remove_api_keys(flow: dict):
-    """Remove api keys from flow data."""
-    for node in flow.get("data", {}).get("nodes", []):
-        node_data = node.get("data")
-        if not isinstance(node_data, dict):
-            continue
-        node_inner = node_data.get("node")
-        if not isinstance(node_inner, dict):
-            continue
-        template = node_inner.get("template")
-        if not isinstance(template, dict):
-            continue
-        for value in template.values():
-            if isinstance(value, dict) and "name" in value and has_api_terms(value["name"]) and value.get("password"):
-                value["value"] = None
-
-    return flow
-
-
-def strip_secret_field_values(flow_data: dict | None) -> dict | None:
-    """Return a deep copy of ``flow_data`` with every secret field value removed.
-
-    Unlike :func:`remove_api_keys` (which only nulls password fields whose name
-    looks like an API key), this nulls the value of *every* template field marked
-    ``password`` regardless of its name. It is meant for exposing a flow to
-    unauthenticated callers (e.g. ``GET /flows/public_flow/{id}``), where any
-    stored secret — API key, token, password, connection string — must not leak.
-
-    ``flow_data`` is the flow's ``data`` mapping (``{"nodes": [...], ...}``). The
-    input is not mutated: a deep copy is returned so the caller never persists the
-    nulled values back onto the ORM object.
-
-    This function recursively processes group nodes, which contain nested flows at
-    ``node.data.node.flow.data.nodes[...]``, ensuring secrets are stripped at all
-    nesting levels.
-    """
-    if not flow_data:
-        return flow_data
-
-    scrubbed = copy.deepcopy(flow_data)
-    _strip_secrets_from_nodes(scrubbed.get("nodes", []))
-    return scrubbed
-
-
-def _normalized_secret_name(value: object) -> str:
-    """Normalize snake/kebab/camel-case names for secret-name classification."""
-    name = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", str(value or ""))
-    return re.sub(r"[^a-zA-Z0-9]+", "_", name).strip("_").lower()
-
-
-def _is_secret_name(value: object) -> bool:
-    normalized = _normalized_secret_name(value)
-    if normalized in _SECRET_COMPOUND_NAMES:
-        return True
-    parts = set(normalized.split("_"))
-    is_token_value = normalized == "token" or normalized.endswith("_token")
-    return bool(parts & _SECRET_NAME_PARTS) or is_token_value or {"api", "key"}.issubset(parts)
-
-
-def _contains_url_credentials(value: str) -> bool:
-    """Return whether a URL reference contains userinfo or secret-named parameters."""
-    try:
-        parsed = urlsplit(value)
-    except ValueError:
-        return False
-    if parsed.username is not None or parsed.password is not None:
-        return True
-    return any(
-        _is_secret_name(key)
-        for component in (parsed.query, parsed.fragment)
-        for key, _ in parse_qsl(component, keep_blank_values=True)
-    )
-
-
-def _strip_structured_secret_values(value: object) -> object:
-    """Recursively null secret-named values in dict/list component inputs."""
-    if isinstance(value, dict):
-        scrubbed = copy.deepcopy(value)
-        # Key/value inputs use ``key``; other integrations commonly serialize the same pair
-        # with ``name`` or ``header``. Treat all three as secret-name discriminators.
-        discriminator = next(
-            (scrubbed.get(key) for key in ("key", "name", "header") if _is_secret_name(scrubbed.get(key))),
-            None,
-        )
-        if discriminator is not None and "value" in scrubbed:
-            scrubbed["value"] = None
-        for key, nested_value in scrubbed.items():
-            if key == "value" and discriminator is not None:
-                continue
-            scrubbed[key] = None if _is_secret_name(key) else _strip_structured_secret_values(nested_value)
-        return scrubbed
-    if isinstance(value, list):
-        return [_strip_structured_secret_values(item) for item in value]
-    if isinstance(value, str) and _contains_url_credentials(value):
-        return None
-    return value
-
-
-def _strip_template_field_value(field: dict) -> None:
-    """Strip a template field according to its secret metadata and value shape."""
-    if field.get("password") or _is_secret_name(field.get("name")):
-        field["value"] = None
-        return
-
-    field_type = str(field.get("type") or "").lower()
-    input_type = str(field.get("_input_type") or "").lower()
-    if field_type == "mcp" or input_type == "mcpinput":
-        # The server name is safe and needed to render the public flow; embedded config is not.
-        value = field.get("value")
-        name = value.get("name") if isinstance(value, dict) else None
-        field["value"] = {"name": name} if name else None
-        return
-
-    field["value"] = _strip_structured_secret_values(field.get("value"))
-
-
-def _strip_secrets_from_nodes(nodes: list) -> None:
-    """Recursively strip secret field values from a list of nodes.
-
-    This helper processes both regular nodes and group nodes (which contain nested
-    flows). Group nodes have their nested flows recursively processed to ensure
-    secrets are stripped at all nesting levels.
-
-    Args:
-        nodes: A list of node dictionaries to process in-place.
-    """
-    for node in nodes:
-        if isinstance(node, dict):
-            node_data = node.get("data")
-            if isinstance(node_data, dict):
-                node_inner = node_data.get("node")
-                if isinstance(node_inner, dict):
-                    template = node_inner.get("template")
-                    if isinstance(template, dict):
-                        for value in template.values():
-                            if isinstance(value, dict):
-                                _strip_template_field_value(value)
-
-                    flow = node_inner.get("flow")
-                    if isinstance(flow, dict):
-                        flow_data = flow.get("data")
-                        if isinstance(flow_data, dict):
-                            nested_nodes = flow_data.get("nodes")
-                            if isinstance(nested_nodes, list):
-                                _strip_secrets_from_nodes(nested_nodes)
 
 
 # ---------------------------------------------------------------------------

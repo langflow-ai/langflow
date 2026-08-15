@@ -11,6 +11,12 @@ export interface MemoryApiDTO {
   preproc_instructions?: string;
   kb_name: string;
   created_at: string;
+  // Vector-store backend of the backing knowledge_base row (e.g. "chroma",
+  // "opensearch"). Surfaced in the Memory Base Control Center config dropdown.
+  // ``backend_config`` distinguishes Chroma Local from Cloud (both are
+  // "chroma"; the discriminator is ``backend_config.mode === "cloud"``).
+  backend_type?: string;
+  backend_config?: Record<string, unknown>;
 }
 
 export interface GetMemoriesApiResponse {
@@ -40,6 +46,11 @@ export interface MemoryInfo {
   flow_id: string;
   created_at?: string;
   last_generated_at?: string;
+  // Vector-store backend of the backing knowledge base (e.g. "chroma",
+  // "opensearch"), surfaced in the config dropdown. ``backend_config``
+  // distinguishes Chroma Local vs Cloud via its ``mode`` flag.
+  backend_type?: string;
+  backend_config?: Record<string, unknown>;
 }
 
 export interface MemoryDocumentItem {
@@ -71,6 +82,12 @@ export interface CreateMemoryPayload {
   preprocessing?: boolean;
   preproc_model?: string;
   preproc_instructions?: string;
+  // Vector-store selection for the Memory Base's backing KB. `backend_type` is
+  // the API form (`chroma` for both local and Chroma Cloud — the server
+  // discriminates via `backend_config.mode`); `backend_config` carries the
+  // per-provider settings (variable-name references, index name, etc.).
+  backend_type?: string;
+  backend_config?: Record<string, unknown>;
 }
 
 export interface UpdateMemoryPayload {

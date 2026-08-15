@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
+import { getSidebarProjectButton } from "../../utils/project-sidebar";
 import { renameFlow } from "../../utils/rename-flow";
 
 test(
@@ -48,7 +49,7 @@ test(
     // Confirm we landed on the new (empty) project and the empty-state
     // UI rendered — this guarantees `useGetFolder` has actually fired
     // and cached `total: 0` for the destination.
-    await expect(page.getByTestId("sidebar-nav-New Project")).toBeVisible({
+    await expect(getSidebarProjectButton(page, "New Project")).toBeVisible({
       timeout: 10000,
     });
     await page.waitForTimeout(1000);
@@ -56,7 +57,7 @@ test(
     // Step 2: go back to the source project. The destination's query
     // becomes inactive but stays in the cache with the stale empty
     // payload.
-    await page.getByTestId("sidebar-nav-Starter Project").click();
+    await getSidebarProjectButton(page, "Starter Project").click();
     await expect(page.getByText(flowName).first()).toBeVisible({
       timeout: 10000,
     });
@@ -68,7 +69,7 @@ test(
       .getByTestId("list-card")
       .filter({ hasText: flowName })
       .first()
-      .dragTo(page.getByTestId("sidebar-nav-New Project"));
+      .dragTo(getSidebarProjectButton(page, "New Project"));
 
     // Give the PATCH request time to complete but NOT enough time for a
     // full page refresh to matter. If the fix works, the query cache
@@ -80,7 +81,7 @@ test(
     // short polling timeout — a long `waitForSelector` would mask the
     // bug by giving React Query's implicit `refetchOnMount` enough
     // runway to recover behind the scenes.
-    await page.getByTestId("sidebar-nav-New Project").click();
+    await getSidebarProjectButton(page, "New Project").click();
 
     await expect(
       page.getByTestId("list-card").filter({ hasText: flowName }).first(),

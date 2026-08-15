@@ -22,8 +22,14 @@ import contextlib
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment, AuthzShare
-from lfx.services.authorization.base import BaseAuthorizationService
+from langflow.services.database.models.auth import (
+    AuthzRole,
+    AuthzRoleAssignment,
+    AuthzShare,
+    AuthzTeam,
+    AuthzTeamMember,
+)
+from lfx.services.authorization.base import BaseAuthorizationService, ResourceVisibilityScope
 from sqlmodel import col, select
 
 if TYPE_CHECKING:
@@ -32,14 +38,19 @@ if TYPE_CHECKING:
     from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
 
-# Actions granted by each AuthzShare.permission_level. ``write`` and ``execute``
-# are independent (each grants ``read`` plus itself); ``admin`` grants the lot.
-# Mirrors SharePermissionLevel without baking a questionable write<execute order.
+# Actions granted by each AuthzShare.permission_level, ordered weakest to
+# strongest. This is the canonical share contract enforced by the enterprise
+# Casbin plugin (share_sync.PERMISSION_ACTIONS) and described by the share UI
+# (Viewer/Runner/Editor/Admin): ``execute`` grants ``read`` so a runner can
+# fetch the flow it invokes; ``write`` grants ``read`` + ``execute`` (an editor
+# can also view and run); ``admin`` additionally grants ``delete``. The
+# enterprise repo's check-authz-share-contract.py compares this dict against
+# the plugin's mapping — keep the two in lockstep.
 _SHARE_LEVEL_ACTIONS: dict[str, frozenset[str]] = {
     "read": frozenset({"read"}),
-    "write": frozenset({"read", "write"}),
     "execute": frozenset({"read", "execute"}),
-    "admin": frozenset({"read", "write", "execute", "create", "delete", "deploy", "update", "share"}),
+    "write": frozenset({"read", "write", "execute"}),
+    "admin": frozenset({"read", "write", "execute", "delete"}),
 }
 
 # Built-in role permission sets — mirrors migration 7c8d9e0f1a2b_authz_foundations
@@ -99,6 +110,7 @@ class PolicyTestAuthorizationService(BaseAuthorizationService):
     """
 
     SUPPORTS_CROSS_USER_FETCH = True
+    SUPPORTS_API_KEY_SCOPES = True
 
     def __init__(self, settings_service: SettingsService) -> None:
         super().__init__()
@@ -149,6 +161,58 @@ class PolicyTestAuthorizationService(BaseAuthorizationService):
             for obj, act in requests
         ]
 
+    async def get_resource_visibility(
+        self,
+        *,
+        user_id: UUID,
+        resource_type: str,
+        domain: str = "*",  # noqa: ARG002 - scopes are returned rather than matched here
+        act: str = "read",
+        context: dict[str, Any] | None = None,  # noqa: ARG002
+    ) -> ResourceVisibilityScope:
+        """Return global/scoped role grants plus direct and team share IDs."""
+        from langflow.services.deps import session_scope
+
+        resource_ids: set[UUID] = set()
+        workspace_ids: set[UUID] = set()
+        project_ids: set[UUID] = set()
+        async with session_scope() as session:
+            assignments = (
+                await session.exec(select(AuthzRoleAssignment).where(AuthzRoleAssignment.user_id == user_id))
+            ).all()
+            role_ids = [assignment.role_id for assignment in assignments]
+            roles = (
+                (await session.exec(select(AuthzRole).where(col(AuthzRole.id).in_(role_ids)))).all() if role_ids else []
+            )
+            permissions_by_role = {role.id: set(role.permissions or []) for role in roles}
+            needed = f"{resource_type}:{act}"
+            wildcard = f"{resource_type}:*"
+            for assignment in assignments:
+                permissions = permissions_by_role.get(assignment.role_id, set())
+                if not ({needed, wildcard, "*:*"} & permissions):
+                    continue
+                if assignment.domain_type == "global":
+                    return ResourceVisibilityScope(all_resources=True)
+                if assignment.domain_id is None:
+                    continue
+                if assignment.domain_type == "workspace":
+                    workspace_ids.add(assignment.domain_id)
+                elif assignment.domain_type == "project":
+                    project_ids.add(assignment.domain_id)
+
+            shares = (await session.exec(select(AuthzShare).where(AuthzShare.resource_type == resource_type))).all()
+            for share in shares:
+                if act not in _SHARE_LEVEL_ACTIONS.get(share.permission_level, frozenset()):
+                    continue
+                if await _share_targets_user(session, share, user_id):
+                    resource_ids.add(share.resource_id)
+
+        return ResourceVisibilityScope(
+            resource_ids=tuple(sorted(resource_ids, key=str)),
+            workspace_ids=tuple(sorted(workspace_ids, key=str)),
+            project_ids=tuple(sorted(project_ids, key=str)),
+        )
+
     async def _role_allows(
         self,
         session: AsyncSession,
@@ -190,7 +254,7 @@ class PolicyTestAuthorizationService(BaseAuthorizationService):
             )
         ).all()
         for share in shares:
-            if not _share_targets_user(share, user_id):
+            if not await _share_targets_user(session, share, user_id):
                 continue
             if act in _SHARE_LEVEL_ACTIONS.get(share.permission_level, frozenset()):
                 return True
@@ -212,12 +276,24 @@ def _assignment_covers(assignment: AuthzRoleAssignment, request_domain: str) -> 
     return f"{assignment.domain_type}:{assignment.domain_id}" == request_domain
 
 
-def _share_targets_user(share: AuthzShare, user_id: UUID) -> bool:
+async def _share_targets_user(session: AsyncSession, share: AuthzShare, user_id: UUID) -> bool:
     if share.scope == "public":
         return True
     if share.scope == "user":
         return str(share.target_id) == str(user_id)
-    # team scope would need a membership lookup; unused by the current tests.
+    if share.scope == "team" and share.target_id is not None:
+        team = await session.get(AuthzTeam, share.target_id)
+        if team is None or not team.is_active:
+            return False
+        membership = (
+            await session.exec(
+                select(AuthzTeamMember).where(
+                    AuthzTeamMember.team_id == share.target_id,
+                    AuthzTeamMember.user_id == user_id,
+                )
+            )
+        ).first()
+        return membership is not None
     return False
 
 

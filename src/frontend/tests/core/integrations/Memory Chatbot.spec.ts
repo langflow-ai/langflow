@@ -1,11 +1,9 @@
 import type { Page } from "@playwright/test";
 import { expect } from "../../fixtures";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { sendPlaygroundMessage } from "../../utils/playground/send-playground-message";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
@@ -63,8 +61,6 @@ withEventDeliveryModes(
   "Memory Chatbot",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    skipIfMissing.openAiKey();
-    loadDotenvIfLocal(__dirname);
     const memoryBaseName = `memory_chatbot_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     let memoryBaseId: string | undefined;
 
@@ -80,7 +76,7 @@ withEventDeliveryModes(
         memoryBaseName,
       );
       memoryBaseId = memoryBase.id;
-      await initialGPTsetup(page);
+      await configureLoopbackOpenAI(page);
       await selectMemoryBase(page, memoryBase.name);
 
       await page

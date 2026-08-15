@@ -1,7 +1,13 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { TEXTS } from "../../utils/constants/texts";
+import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { routeTestScopedDefaultFlowNames } from "../../utils/flow/route-test-scoped-default-flow-names";
+
+test.beforeEach(async ({ page }, testInfo) => {
+  await routeTestScopedDefaultFlowNames(page, testInfo, "text-area-modal");
+});
 
 test(
   "TextAreaModalComponent",
@@ -9,57 +15,54 @@ test(
   async ({ page }) => {
     await openBlankFlow(page);
 
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchPrompt);
+    const promptTemplate = "{text}";
+    const textValue =
+      "test test test test test test test test test test test !@#%*)( 123456789101010101010101111111111 !!!!!!!!!!";
 
-    await page.waitForSelector(
-      '[data-testid="models_and_agentsPrompt Template"]',
-      {
-        timeout: 30000,
-      },
-    );
-
-    await page
-      .locator('//*[@id="models_and_agentsPrompt Template"]')
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
+    await addComponentFromSidebar(page, {
+      search: TEXTS.searchPrompt,
+      testId: "models_and_agentsPrompt Template",
+    });
     await adjustScreenView(page);
 
-    await page.getByTestId("promptarea_prompt_template").click();
-
-    await page.getByTestId("promptarea_prompt_template").fill("{text}");
-    await adjustScreenView(page);
     await page.getByTestId("button_open_prompt_modal").click();
-    //NOT SURE WE HAVE IT ON THE PAGE BUT WANT IT TO DOUBLE CHECK BEFORE REMOVING IT
-    const valueBadgeOne = await page.locator(`//*[@id="badge0"]`).innerText();
-    if (valueBadgeOne != "text") {
-      expect(false).toBeTruthy();
-    }
-
-    await page.getByTestId("genericModalBtnSave").click();
-    await page.locator('//*[@id="models_and_agentsPrompt Template"]');
-    await page.getByTestId("textarea_str_text").click();
     await page
-      .getByTestId("textarea_str_text")
-      .fill(
-        "test test test test test test test test test test test !@#%*)( 123456789101010101010101111111111 !!!!!!!!!!",
-      );
+      .getByTestId("modal-promptarea_prompt_template")
+      .fill(promptTemplate);
+    await expect(page.locator("#badge0")).toHaveText("text");
+
+    const promptValidationResponsePromise = page.waitForResponse((response) => {
+      const request = response.request();
+      if (
+        request.method() !== "POST" ||
+        !response.url().endsWith("/api/v1/validate/prompt")
+      ) {
+        return false;
+      }
+
+      const body = request.postDataJSON() as { template?: unknown };
+      return body.template === promptTemplate;
+    });
+    await page.getByTestId("genericModalBtnSave").click();
+    const promptValidationResponse = await promptValidationResponsePromise;
+    expect(promptValidationResponse.status()).toBe(200);
+    await expect(
+      page.getByTestId("modal-promptarea_prompt_template"),
+    ).toBeHidden();
+
+    const textInput = page.getByTestId("textarea_str_text");
+    await expect(textInput).toBeVisible();
+    await textInput.fill(textValue);
 
     // Test cursor position preservation
-    const textInput = page.getByTestId("textarea_str_text");
     await textInput.click();
     await textInput.press("Home"); // Move cursor to start
     await textInput.press("ArrowRight"); // Move cursor to position 1
     await textInput.press("ArrowRight"); // Move cursor to position 2
     await textInput.pressSequentially("Y", { delay: 100 }); // Type at position 2
-    const cursorValue = await textInput.inputValue();
-    if (!cursorValue.startsWith("teY")) {
-      expect(false).toBeTruthy();
-    }
-    await textInput.fill(
-      "test test test test test test test test test test test !@#%*)( 123456789101010101010101111111111 !!!!!!!!!!",
-    );
+    await expect(textInput).toHaveValue(/^teY/);
+    await textInput.fill(textValue);
+    await expect(textInput).toHaveValue(textValue);
 
     await page
       .getByTestId("button_open_text_area_modal_textarea_str_text")
@@ -69,25 +72,12 @@ test(
       timeout: 3000,
     });
 
-    const value = await page.getByTestId("text-area-modal").inputValue();
-
-    if (
-      value !=
-      "test test test test test test test test test test test !@#%*)( 123456789101010101010101111111111 !!!!!!!!!!"
-    ) {
-      expect(false).toBeTruthy();
-    }
+    await expect(page.getByTestId("text-area-modal")).toHaveValue(textValue);
 
     await page.getByTestId("text-area-modal").fill("test123123");
 
     await page.getByTestId("genericModalBtnSave").click();
 
-    const valueTextArea = await page
-      .getByTestId("textarea_str_text")
-      .inputValue();
-
-    if (valueTextArea != "test123123") {
-      expect(false).toBeTruthy();
-    }
+    await expect(textInput).toHaveValue("test123123");
   },
 );

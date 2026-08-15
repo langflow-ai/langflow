@@ -105,6 +105,9 @@ const CanvasControlsDropdown = ({
           className="group flex h-8 items-center justify-center rounded-md px-0.5 hover:bg-muted"
           unstyled
           title={t("canvas.controls")}
+          aria-label={t("canvas.zoomControlAriaLabel", {
+            zoom: formatZoomPercentage(zoom),
+          })}
         >
           <div className="flex items-center justify-center gap-1">
             <span className="w-11 pl-1.5 text-left text-sm tabular-nums text-muted-foreground group-hover:text-foreground">

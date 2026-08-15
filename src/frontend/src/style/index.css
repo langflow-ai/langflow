@@ -13,7 +13,7 @@
     --foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --background: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --muted: 240 5% 96%; /* hsl(240, 5%, 96%) */
-    --muted-foreground: 240 4% 43%; /* hsl(240, 4%, 43%) — darkened from 46% to meet WCAG AA 4.5:1 */
+    --muted-foreground: 0 0% 44%; /* hsl(0, 0%, 44%) */
     --card: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --card-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --popover: 0 0% 100%; /* hsl(0, 0%, 100%) */
@@ -37,7 +37,7 @@
     --canvas: 240 5% 96%; /* hsl(240, 5%, 96%) */
     --canvas-dot: 240 5% 65%; /* hsl(240, 5%, 65%) */
     --accent-emerald: 149 80% 90%; /* hsl(149, 80%, 90%) */
-    --accent-emerald-foreground: 161 94% 23%; /* hsl(161, 94%, 23%) — darkened for ≥4.5:1 on accent-emerald bg */
+    --accent-emerald-foreground: 138 75% 22%; /* hsl(138, 75%, 22%) — #0E6027, forest green for WCAG AA ≥4.5:1 on white and accent-emerald bg */
     --accent-emerald-hover: 152.4 76% 80.4%; /* hsl(152.4, 76%, 80.4%) */
     --accent-indigo: 226 100% 94%; /* hsl(226, 100%, 94%) */
     --accent-indigo-foreground: 243 75% 59%; /* hsl(243, 75%, 59%) */

@@ -162,7 +162,10 @@ describe("useFlowStore", () => {
 
     // Reset store state to basics
     act(() => {
-      useUtilityStore.setState({ allowCustomComponents: true });
+      useUtilityStore.setState({
+        allowCustomComponents: true,
+        substituteOutdatedComponentCode: true,
+      });
       useFlowStore.setState({
         playgroundPage: false,
         positionDictionary: {},
@@ -1204,6 +1207,102 @@ describe("useFlowStore", () => {
       expect(trackFlowBuildMock).toHaveBeenCalledWith("Test Flow", false, {
         flowId: "flow-abc",
       });
+    });
+
+    it("runs a drifted built-in when server-side substitution is enabled", async () => {
+      useUtilityStore.setState({
+        allowCustomComponents: false,
+        substituteOutdatedComponentCode: true,
+      });
+      (checkCodeValidity as jest.Mock).mockReturnValueOnce({
+        outdated: true,
+        blocked: false,
+        breakingChange: false,
+        userEdited: false,
+      });
+      useFlowStore.setState({ nodes: [mockNode] });
+      mockedRunFlow.mockResolvedValue(undefined);
+
+      await useFlowStore.getState().buildFlow({});
+
+      expect(mockedRunFlow).toHaveBeenCalledTimes(1);
+      expect(useFlowStore.getState().componentsToUpdate).toEqual([
+        expect.objectContaining({ outdated: true, blocked: false }),
+      ]);
+    });
+
+    it("keeps blocking drifted built-ins when server-side substitution is disabled", async () => {
+      useUtilityStore.setState({
+        allowCustomComponents: false,
+        substituteOutdatedComponentCode: false,
+      });
+      (checkCodeValidity as jest.Mock).mockReturnValueOnce({
+        outdated: true,
+        blocked: false,
+        breakingChange: false,
+        userEdited: false,
+      });
+      useFlowStore.setState({ nodes: [mockNode] });
+
+      await expect(useFlowStore.getState().buildFlow({})).rejects.toThrow(
+        "Outdated components must be updated",
+      );
+      expect(mockedRunFlow).not.toHaveBeenCalled();
+    });
+
+    it("keeps blocking unknown components when server-side substitution is enabled", async () => {
+      useUtilityStore.setState({
+        allowCustomComponents: false,
+        substituteOutdatedComponentCode: true,
+      });
+      (checkCodeValidity as jest.Mock).mockReturnValueOnce({
+        outdated: false,
+        blocked: true,
+        breakingChange: false,
+        userEdited: false,
+      });
+      useFlowStore.setState({ nodes: [mockNode] });
+
+      await expect(useFlowStore.getState().buildFlow({})).rejects.toThrow(
+        "Custom components are blocked while custom components are disabled",
+      );
+      expect(mockedRunFlow).not.toHaveBeenCalled();
+    });
+
+    it("delegates component policy to the backend on a cold public Playground", async () => {
+      const { checkCodeValidity: realCheckCodeValidity } = jest.requireActual(
+        "@/CustomNodes/helpers/check-code-validity",
+      ) as typeof import("@/CustomNodes/helpers/check-code-validity");
+      useUtilityStore.setState({
+        allowCustomComponents: false,
+        substituteOutdatedComponentCode: false,
+      });
+      (checkCodeValidity as jest.Mock).mockImplementationOnce(
+        realCheckCodeValidity,
+      );
+      const codeBearingNode = {
+        ...mockNode,
+        data: {
+          ...mockNode.data,
+          type: "ChatInput",
+          node: {
+            ...mockNode.data.node,
+            template: { code: { value: "# stored ChatInput code" } },
+          },
+        },
+      } as AllNodeType;
+      useFlowStore.setState({
+        nodes: [codeBearingNode],
+        playgroundPage: true,
+      });
+      mockedRunFlow.mockResolvedValue(undefined);
+
+      await useFlowStore.getState().buildFlow({});
+
+      expect(useFlowStore.getState().componentsToUpdate).toEqual([
+        expect.objectContaining({ blocked: true, outdated: false }),
+      ]);
+      expect(mockedRunFlow).toHaveBeenCalledTimes(1);
     });
 
     it("fires trackFlowBuild with isError=true and the error list after a failure", async () => {
