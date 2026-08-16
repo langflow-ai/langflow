@@ -9,6 +9,21 @@ from lfx.template.field.base import Output
 BASE_URL = "https://api.livetennisapi.com/api/public/v1"
 HTTP_TOO_MANY_REQUESTS = 429
 PLAYERS_PER_MATCH = 2
+MIN_LIMIT = 1
+MAX_LIMIT = 200
+DEFAULT_LIMIT = 50
+
+
+def _validated_items(payload: object) -> list[dict]:
+    """Return the list under ``data``, or raise ``TypeError`` on a malformed 200 payload."""
+    if not isinstance(payload, dict) or not isinstance(payload.get("data"), list):
+        msg = "Live Tennis API returned an unexpected response shape (expected an object with a 'data' list)."
+        raise TypeError(msg)
+    items = payload["data"]
+    if not all(isinstance(item, dict) for item in items):
+        msg = "Live Tennis API returned a malformed 'data' entry (expected objects)."
+        raise TypeError(msg)
+    return items
 
 
 class LiveTennisMatchesComponent(Component):
@@ -53,7 +68,7 @@ class LiveTennisMatchesComponent(Component):
         IntInput(
             name="limit",
             display_name="Max Results",
-            info="Maximum number of matches to return (1-200).",
+            info="Maximum number of matches to return (1-200). Out-of-range values are clamped.",
             value=50,
             advanced=True,
         ),
@@ -63,7 +78,16 @@ class LiveTennisMatchesComponent(Component):
         Output(display_name="Matches", name="matches", method="fetch_matches_dataframe"),
     ]
 
+    def _clamped_limit(self) -> int:
+        """Clamp the limit input to the API's documented 1-200 range."""
+        try:
+            limit = int(self.limit)
+        except (TypeError, ValueError):
+            return DEFAULT_LIMIT
+        return max(MIN_LIMIT, min(MAX_LIMIT, limit))
+
     def _flatten_match(self, match: dict) -> dict:
+        """Flatten one match object into a single-level row for the DataFrame output."""
         players = match.get("players") or {}
         p1 = players.get("p1") or {}
         p2 = players.get("p2") or {}
@@ -102,8 +126,9 @@ class LiveTennisMatchesComponent(Component):
         }
 
     def fetch_matches(self) -> list[Data]:
+        """Call ``GET /matches`` and return one ``Data`` row per match, or a single error row."""
         try:
-            params: dict = {"status": self.match_status, "limit": self.limit}
+            params: dict = {"status": self.match_status, "limit": self._clamped_limit()}
             if self.tour and self.tour != "all":
                 params["tour"] = self.tour
 
@@ -114,10 +139,9 @@ class LiveTennisMatchesComponent(Component):
                     headers={"X-API-Key": self.api_key, "accept": "application/json"},
                 )
             response.raise_for_status()
-            payload = response.json()
 
             results = []
-            for match in payload.get("data", []):
+            for match in _validated_items(response.json()):
                 row = self._flatten_match(match)
                 summary = f"{row.get('player1')} vs {row.get('player2')} — {row.get('tournament')}"
                 results.append(Data(text=summary, data=row))
@@ -131,7 +155,7 @@ class LiveTennisMatchesComponent(Component):
                 error_message = "Rate limited. The free tier allows 30 requests/minute and 100/day."
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
-        except (httpx.RequestError, ValueError) as exc:
+        except (httpx.RequestError, ValueError, TypeError) as exc:
             error_message = f"Request error occurred: {exc}"
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
@@ -140,5 +164,6 @@ class LiveTennisMatchesComponent(Component):
             return results
 
     def fetch_matches_dataframe(self) -> DataFrame:
+        """Return the matches as a ``DataFrame`` (one row per match)."""
         data = self.fetch_matches()
         return DataFrame(data)

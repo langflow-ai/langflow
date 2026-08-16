@@ -11,6 +11,14 @@ HTTP_TOO_MANY_REQUESTS = 429
 PLAYERS_PER_MATCH = 2
 
 
+def _validated_score(payload: object) -> dict:
+    """Return the decoded score object, or raise ``TypeError`` on a malformed 200 payload."""
+    if not isinstance(payload, dict):
+        msg = "Live Tennis API returned an unexpected response shape (expected a score object)."
+        raise TypeError(msg)
+    return payload
+
+
 class LiveTennisMatchScoreComponent(Component):
     display_name = "Match Score"
     description = "Get the current score of one match — sets, games, in-game points and who is serving."
@@ -42,6 +50,7 @@ class LiveTennisMatchScoreComponent(Component):
     ]
 
     def fetch_score(self) -> Data:
+        """Call ``GET /matches/{id}/score`` and return the score snapshot as ``Data``."""
         try:
             match_id = int(str(self.match_id).strip())
         except (TypeError, ValueError):
@@ -56,7 +65,7 @@ class LiveTennisMatchScoreComponent(Component):
                     headers={"X-API-Key": self.api_key, "accept": "application/json"},
                 )
             response.raise_for_status()
-            score = response.json()
+            score = _validated_score(response.json())
 
             games = score.get("games") or []
             games_str = None
@@ -83,7 +92,7 @@ class LiveTennisMatchScoreComponent(Component):
                 error_message = "Rate limited. The free tier allows 30 requests/minute and 100/day."
             logger.error(error_message)
             return Data(text=error_message, data={"error": error_message})
-        except (httpx.RequestError, ValueError) as exc:
+        except (httpx.RequestError, ValueError, TypeError) as exc:
             error_message = f"Request error occurred: {exc}"
             logger.error(error_message)
             return Data(text=error_message, data={"error": error_message})

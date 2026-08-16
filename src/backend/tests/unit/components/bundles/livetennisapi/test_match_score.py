@@ -89,3 +89,12 @@ class TestLiveTennisMatchScoreComponent(ComponentTestBaseWithoutClient):
 
         assert "error" in result.data
         assert "not found" in result.text
+
+    def test_malformed_payload_returns_error_data(self, component_class, default_kwargs, mock_httpx_client):
+        """A 200 response whose body is not a score object yields an error Data result."""
+        component = component_class(**default_kwargs)
+        mock_httpx_client.return_value.__enter__.return_value.get.return_value.json.return_value = [1, 2, 3]
+
+        result = component.fetch_score()
+
+        assert "error" in result.data

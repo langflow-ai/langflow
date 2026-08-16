@@ -8,6 +8,21 @@ from lfx.template.field.base import Output
 
 BASE_URL = "https://api.livetennisapi.com/api/public/v1"
 HTTP_TOO_MANY_REQUESTS = 429
+MIN_LIMIT = 1
+MAX_LIMIT = 200
+DEFAULT_LIMIT = 50
+
+
+def _validated_items(payload: object) -> list[dict]:
+    """Return the list under ``data``, or raise ``TypeError`` on a malformed 200 payload."""
+    if not isinstance(payload, dict) or not isinstance(payload.get("data"), list):
+        msg = "Live Tennis API returned an unexpected response shape (expected an object with a 'data' list)."
+        raise TypeError(msg)
+    items = payload["data"]
+    if not all(isinstance(item, dict) for item in items):
+        msg = "Live Tennis API returned a malformed 'data' entry (expected objects)."
+        raise TypeError(msg)
+    return items
 
 
 class LiveTennisFixturesComponent(Component):
@@ -37,7 +52,7 @@ class LiveTennisFixturesComponent(Component):
         IntInput(
             name="limit",
             display_name="Max Results",
-            info="Maximum number of fixtures to return (1-200).",
+            info="Maximum number of fixtures to return (1-200). Out-of-range values are clamped.",
             value=50,
             advanced=True,
         ),
@@ -47,9 +62,18 @@ class LiveTennisFixturesComponent(Component):
         Output(display_name="Fixtures", name="fixtures", method="fetch_fixtures_dataframe"),
     ]
 
-    def fetch_fixtures(self) -> list[Data]:
+    def _clamped_limit(self) -> int:
+        """Clamp the limit input to the API's documented 1-200 range."""
         try:
-            params: dict = {"limit": self.limit}
+            limit = int(self.limit)
+        except (TypeError, ValueError):
+            return DEFAULT_LIMIT
+        return max(MIN_LIMIT, min(MAX_LIMIT, limit))
+
+    def fetch_fixtures(self) -> list[Data]:
+        """Call ``GET /fixtures`` and return one ``Data`` row per fixture, or a single error row."""
+        try:
+            params: dict = {"limit": self._clamped_limit()}
             if self.tour and self.tour != "all":
                 params["tour"] = self.tour
 
@@ -60,10 +84,9 @@ class LiveTennisFixturesComponent(Component):
                     headers={"X-API-Key": self.api_key, "accept": "application/json"},
                 )
             response.raise_for_status()
-            payload = response.json()
 
             results = []
-            for fixture in payload.get("data", []):
+            for fixture in _validated_items(response.json()):
                 row = {
                     "id": fixture.get("id"),
                     "event_date": fixture.get("event_date"),
@@ -91,7 +114,7 @@ class LiveTennisFixturesComponent(Component):
                 error_message = "Rate limited. The free tier allows 30 requests/minute and 100/day."
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
-        except (httpx.RequestError, ValueError) as exc:
+        except (httpx.RequestError, ValueError, TypeError) as exc:
             error_message = f"Request error occurred: {exc}"
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
@@ -100,5 +123,6 @@ class LiveTennisFixturesComponent(Component):
             return results
 
     def fetch_fixtures_dataframe(self) -> DataFrame:
+        """Return the fixtures as a ``DataFrame`` (one row per fixture)."""
         data = self.fetch_fixtures()
         return DataFrame(data)

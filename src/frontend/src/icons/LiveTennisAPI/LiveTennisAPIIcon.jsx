@@ -1,4 +1,4 @@
-const LiveTennisAPIIcon = (props) => (
+const LiveTennisAPIIcon = ({ isDark, ...props }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={24}
@@ -7,7 +7,7 @@ const LiveTennisAPIIcon = (props) => (
     fill="none"
     {...props}
   >
-    <rect width="24" height="24" rx="6" fill="#0E0E0E" />
+    <rect width="24" height="24" rx="6" fill={isDark ? "#1F2428" : "#0E0E0E"} />
     <circle cx="12" cy="12" r="7" stroke="#00FF41" strokeWidth="1.5" />
     <path
       d="M7.05 7.05 A8 8 0 0 1 7.05 16.95"

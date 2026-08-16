@@ -88,3 +88,37 @@ class TestLiveTennisFixturesComponent(ComponentTestBaseWithoutClient):
 
         assert len(results) == 1
         assert "error" in results[0].data
+
+    def test_http_error_returns_error_data(self, component_class, default_kwargs, mock_httpx_client):
+        """An API error (e.g. 401) comes back as a single error Data row, not an exception."""
+        component = component_class(**default_kwargs)
+        mock_response = mock_httpx_client.return_value.__enter__.return_value.get.return_value
+        mock_response.status_code = 401
+        mock_response.text = '{"error":"unauthorized"}'
+        mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "401", request=MagicMock(), response=mock_response
+        )
+
+        results = component.fetch_fixtures()
+
+        assert len(results) == 1
+        assert "error" in results[0].data
+
+    def test_malformed_payload_returns_error_data(self, component_class, default_kwargs, mock_httpx_client):
+        """A 200 response whose body is not the documented shape yields an error Data row."""
+        component = component_class(**default_kwargs)
+        mock_httpx_client.return_value.__enter__.return_value.get.return_value.json.return_value = None
+
+        results = component.fetch_fixtures()
+
+        assert len(results) == 1
+        assert "error" in results[0].data
+
+    def test_limit_is_clamped_to_api_range(self, component_class, default_kwargs, mock_httpx_client):
+        """Out-of-range limit values are clamped to the API's 1-200 range."""
+        component = component_class(**{**default_kwargs, "limit": 0})
+
+        component.fetch_fixtures()
+
+        _, kwargs = mock_httpx_client.return_value.__enter__.return_value.get.call_args
+        assert kwargs["params"]["limit"] == 1
