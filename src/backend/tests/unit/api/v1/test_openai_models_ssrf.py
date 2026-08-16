@@ -70,8 +70,8 @@ def _patched_model_route(base_url: str):
         return None
 
     with (
-        mock.patch("langflow.api.v1.models.get_enabled_providers", side_effect=configured_openai),
-        mock.patch("langflow.api.v1.models.get_enabled_models", side_effect=no_enabled_models),
+        mock.patch("langflow.api.v1.models._get_enabled_providers_result", side_effect=configured_openai),
+        mock.patch("langflow.api.v1.models._get_enabled_models_result", side_effect=no_enabled_models),
         mock.patch("langflow.api.v1.models.get_default_model", side_effect=no_default_model),
         mock.patch("langflow.api.v1.models._get_enabled_models", side_effect=no_explicit_models),
         mock.patch(

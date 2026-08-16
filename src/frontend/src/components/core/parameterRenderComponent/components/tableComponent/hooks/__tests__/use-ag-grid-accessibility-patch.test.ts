@@ -154,4 +154,45 @@ describe("patchTabbableRow", () => {
     expect(rows[1].getAttribute("tabindex")).toBe("-1");
     expect(rows[2].getAttribute("tabindex")).toBe("-1");
   });
+
+  it("falls back to the first header row when the body is empty", () => {
+    const container = document.createElement("div");
+    const header = document.createElement("div");
+    header.className = "ag-header";
+    const headerRows = [0, 1].map(() => {
+      const row = document.createElement("div");
+      row.setAttribute("role", "row");
+      header.appendChild(row);
+      return row;
+    });
+    const body = document.createElement("div");
+    body.className = "ag-center-cols-container";
+    container.append(header, body);
+
+    patchTabbableRow(container);
+
+    expect(headerRows[0].getAttribute("tabindex")).toBe("0");
+    expect(headerRows[1].getAttribute("tabindex")).toBe("-1");
+  });
+
+  it("keeps header rows out of the tab order when body rows exist", () => {
+    const container = document.createElement("div");
+    const header = document.createElement("div");
+    header.className = "ag-header";
+    const headerRow = document.createElement("div");
+    headerRow.setAttribute("role", "row");
+    headerRow.setAttribute("tabindex", "0");
+    header.appendChild(headerRow);
+    const body = document.createElement("div");
+    body.className = "ag-center-cols-container";
+    const bodyRow = document.createElement("div");
+    bodyRow.setAttribute("role", "row");
+    body.appendChild(bodyRow);
+    container.append(header, body);
+
+    patchTabbableRow(container);
+
+    expect(bodyRow.getAttribute("tabindex")).toBe("0");
+    expect(headerRow.getAttribute("tabindex")).toBe("-1");
+  });
 });

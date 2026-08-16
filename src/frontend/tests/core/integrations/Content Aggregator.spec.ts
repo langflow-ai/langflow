@@ -1,16 +1,14 @@
 import { expect } from "../../fixtures";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
   "Content Aggregator",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    skipIfMissing.openAiKey();
-    loadDotenvIfLocal(__dirname);
+    await seedLoopbackProvider(page);
     await page.goto("/");
     await openStarterProject(page, "Content Aggregator");
 
@@ -18,7 +16,7 @@ withEventDeliveryModes(
       timeout: 100000,
     });
 
-    await initialGPTsetup(page, {
+    await configureLoopbackOpenAI(page, {
       skipAdjustScreenView: true,
     });
 
@@ -44,8 +42,7 @@ withEventDeliveryModes(
 
     const concatAllText = textContents.join(" ").toLowerCase();
 
-    expect(concatAllText.length).toBeGreaterThan(100);
-
-    expect(concatAllText).toContain("langflow");
+    expect(concatAllText.length).toBeGreaterThan(30);
+    expect(concatAllText).toContain("deterministic");
   },
 );

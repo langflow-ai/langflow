@@ -1,6 +1,10 @@
 # syntax=docker/dockerfile:1
 # Keep this syntax directive! It's used to enable Docker BuildKit
 
+ARG UV_VERSION=0.10.4
+ARG PYTHON_IMAGE=registry.access.redhat.com/ubi10/python-314-minimal
+ARG NODE_VERSION=22.23.2
+
 ################################
 # BUILDER-BASE
 # Used to build deps + create our virtual environment
@@ -9,13 +13,11 @@
 # 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
 # 2. do not add --platform=$BUILDPLATFORM because the pydantic binaries must be resolved for the final architecture
 # Use a Python image with uv pre-installed
-# Toolchain versions shared by every stage below. Keeping the Node version here
-# means the build and runtime stages cannot silently resolve different Nodes.
-ARG NODE_VERSION=22.23.2
-
-FROM ghcr.io/astral-sh/uv:latest AS uv_installer
-FROM registry.access.redhat.com/ubi10/python-314-minimal AS builder
+FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv_installer
+FROM ${PYTHON_IMAGE} AS builder
 USER root
+ARG MAIN_VERSION=""
+ARG BASE_VERSION=""
 COPY --from=uv_installer /uv /usr/local/bin/uv
 COPY --from=uv_installer /uvx /usr/local/bin/uvx
 
@@ -51,6 +53,7 @@ COPY ./src/lfx/README.md /app/src/lfx/README.md
 COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
 COPY ./src/sdk/README.md /app/src/sdk/README.md
 COPY ./src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
+COPY ./scripts/ci/rewrite_langflow_base_constraint.sh /tmp/rewrite_langflow_base_constraint.sh
 # Workspace bundles (LE-1023 pilot+): every directory under ``src/bundles``
 # is a uv workspace member, so each bundle's pyproject.toml must be present
 # for ``uv sync --no-install-project`` to resolve the workspace.  Copy the
@@ -72,14 +75,27 @@ WORKDIR /tmp/src/frontend
 RUN --mount=type=cache,target=/root/.npm \
     PUPPETEER_SKIP_DOWNLOAD=true npm ci \
     && ESBUILD_BINARY_PATH="" NODE_OPTIONS="--max-old-space-size=4096" JOBS=1 npm run build \
-    && cp -r build /app/src/backend/langflow/frontend \
+    && cp -r build /app/src/backend/base/langflow/frontend \
     && rm -rf /tmp/src/frontend
 
 WORKDIR /app
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    RUSTFLAGS='--cfg reqwest_unstable' \
-    uv sync --frozen --no-editable --extra nv-ingest --extra postgresql --no-group dev
+    if [ -n "$MAIN_VERSION" ]; then \
+        sed -i "s/^version = .*/version = \"${MAIN_VERSION}\"/" /app/pyproject.toml; \
+    fi \
+    && if [ -n "$BASE_VERSION" ]; then \
+        sed -i "s/^version = .*/version = \"${BASE_VERSION}\"/" /app/src/backend/base/pyproject.toml; \
+        sh /tmp/rewrite_langflow_base_constraint.sh "$BASE_VERSION" /app/pyproject.toml; \
+    fi \
+    && RUSTFLAGS='--cfg reqwest_unstable' \
+        uv sync --frozen --no-editable --extra nv-ingest --extra postgresql --no-group dev \
+    && if [ -n "$MAIN_VERSION" ]; then \
+        MAIN_VERSION="$MAIN_VERSION" /app/.venv/bin/python -c 'import importlib.metadata as m, os; assert m.version("langflow") == os.environ["MAIN_VERSION"]'; \
+    fi \
+    && if [ -n "$BASE_VERSION" ]; then \
+        BASE_VERSION="$BASE_VERSION" /app/.venv/bin/python -c 'import importlib.metadata as m, os; assert m.version("langflow-base") == os.environ["BASE_VERSION"]'; \
+    fi
 
 # Use the release workflow's exact wheels when present, while retaining the
 # frontend compiled specifically for this image. Nightly and local builds leave
@@ -89,18 +105,18 @@ COPY ./scripts/ci/install_release_wheels.py /tmp/install_release_wheels.py
 RUN python3.14 /tmp/install_release_wheels.py /tmp/release-artifacts \
     --python /app/.venv/bin/python \
     --mode main \
-    --frontend-source /app/src/backend/langflow/frontend
+    --frontend-source /app/src/backend/base/langflow/frontend
 
 ################################
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
-FROM registry.access.redhat.com/ubi10/python-314-minimal AS runtime
+FROM ${PYTHON_IMAGE} AS runtime
 USER root
 RUN microdnf update -y \
     && microdnf install -y curl git libpq gnupg xz tar shadow-utils \
     && microdnf clean all
-RUN python3.14 -m pip install --upgrade pip
+RUN python3.14 -m pip install --no-cache-dir --upgrade "pip==26.2.1"
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
 # NODE_VERSION and the npm major below are coupled: npm 12 requires Node
@@ -108,13 +124,15 @@ COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
 # @latest, so the next npm major raising its engines floor cannot break this
 # layer unannounced against a pinned NODE_VERSION.
 ARG NODE_VERSION
+COPY ./docker/install_hardened_npm.sh /tmp/install_hardened_npm.sh
 RUN ARCH=$(uname -m) \
     && if [ "$ARCH" = "x86_64" ]; then NODE_ARCH="x64"; \
        elif [ "$ARCH" = "aarch64" ]; then NODE_ARCH="arm64"; \
        else NODE_ARCH="$ARCH"; fi \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
     | tar -xJ -C /usr/local --strip-components=1 \
-    && npm install -g npm@12
+    && sh /tmp/install_hardened_npm.sh \
+    && rm -f /tmp/install_hardened_npm.sh
 RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv

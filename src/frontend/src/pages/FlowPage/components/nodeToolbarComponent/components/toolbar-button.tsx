@@ -34,6 +34,7 @@ export const ToolbarButton = memo(
       content={shortcut ? <ShortcutDisplay {...shortcut} /> : (label ?? icon)}
       side="top"
       avoidCollisions={true}
+      ariaDescribedBy={undefined}
     >
       <Button
         className={cn(

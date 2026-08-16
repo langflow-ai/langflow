@@ -53,6 +53,16 @@ def _seed_subdir(seed_root: Path, extension_id: str, bundle_name: str, version: 
     )
 
 
+def _seed_multi_bundle_subdir(seed_root: Path) -> None:
+    sub = seed_root / "lfx_datastax"
+    sub.mkdir(parents=True)
+    manifest = _manifest("lfx-datastax", "datastax")
+    manifest["bundles"].append({"name": "cassandra", "path": "cassandra"})  # type: ignore[union-attr]
+    for bundle in manifest["bundles"]:  # type: ignore[union-attr]
+        (sub / bundle["path"]).mkdir()  # type: ignore[index]
+    (sub / "extension.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+
 def test_list_text_output_with_three_seed_bundles(runner: CliRunner, tmp_path: Path) -> None:
     """Acceptance: three seed bundles all show at @official."""
     seed = tmp_path / "seed"
@@ -93,6 +103,22 @@ def test_list_json_output_with_three_seed_bundles(runner: CliRunner, tmp_path: P
         assert ext["source_kind"] == "seed"
         assert ext["auto_update"] is False
         assert ext["load_status"] == "discovered"
+
+
+def test_list_surfaces_every_bundle_from_one_extension(runner: CliRunner, tmp_path: Path) -> None:
+    seed = tmp_path / "seed"
+    seed.mkdir()
+    _seed_multi_bundle_subdir(seed)
+
+    text_result = runner.invoke(app, ["extension", "list", "--seed-dir", str(seed)])
+    json_result = runner.invoke(app, ["extension", "list", "--seed-dir", str(seed), "--format", "json"])
+
+    assert text_result.exit_code == 0, text_result.stderr
+    assert "datastax, cassandra" in text_result.stdout
+    assert json_result.exit_code == 0, json_result.stderr
+    extension = next(item for item in json.loads(json_result.stdout)["extensions"] if item["id"] == "lfx-datastax")
+    assert extension["bundle"] == "datastax"
+    assert extension["bundles"] == ["datastax", "cassandra"]
 
 
 def test_list_empty_when_no_extensions(runner: CliRunner, tmp_path: Path) -> None:

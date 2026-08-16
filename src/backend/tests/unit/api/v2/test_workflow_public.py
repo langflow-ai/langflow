@@ -3,7 +3,7 @@
 Mirrors the v1 ``build_public_tmp`` security suite. Each test pins one of
 the mitigations the v2 public endpoint is supposed to inherit from v1:
 
-- access_type == PUBLIC gate (403 for private flows).
+- access_type == PUBLIC compatibility grant (private flows are hidden as 404).
 - per-visitor virtual_flow_id propagated to the graph builder.
 - session id namespaced under the visitor's virtual flow id
   (CVE-2026-33017).
@@ -12,17 +12,18 @@ the mitigations the v2 public endpoint is supposed to inherit from v1:
   override the stored flow definition).
 - AUTO_LOGIN parity: authenticated_user_id is ignored when AUTO_LOGIN is
   on so the backend's virtual_flow_id matches the frontend's.
-- Owner impersonation: the flow runs under the flow owner's user, not
-  the visitor's.
+- Anonymous principal isolation: the flow never runs under the owner's user.
 """
 
 from __future__ import annotations
 
+import copy
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient, codes
+from langflow.services.database.models.auth import AuthzShare, SharePermissionLevel, ShareScope
 from langflow.services.database.models.flow.model import Flow
 from lfx.services.deps import session_scope
 from sqlmodel import select
@@ -92,7 +93,7 @@ async def public_flow_id(client: AsyncClient, json_memory_chatbot_no_llm, logged
 async def test_public_endpoint_rejects_non_public_flow(
     client: AsyncClient, json_memory_chatbot_no_llm, logged_in_headers
 ):
-    """Private flows return 403 before any policy validation runs (info-leak guard)."""
+    """Private and missing flows share the same privacy-preserving 404 contract."""
     from tests.unit.build_utils import create_flow
 
     flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
@@ -104,7 +105,69 @@ async def test_public_endpoint_rejects_non_public_flow(
         json={"flow_id": str(flow_id), "input_value": "Hi"},
         headers={"Content-Type": "application/json"},
     )
-    assert response.status_code == codes.FORBIDDEN
+    assert response.status_code == codes.NOT_FOUND
+    denied_body = response.content
+
+    missing_response = await client.post(
+        "api/v2/workflows/public",
+        json={"flow_id": str(uuid4()), "input_value": "Hi"},
+        headers={"Content-Type": "application/json"},
+    )
+    assert missing_response.status_code == codes.NOT_FOUND
+    assert missing_response.content == denied_body
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_public_execute_share_grants_direct_link_and_revoke_blocks_next_start(
+    client: AsyncClient,
+    json_memory_chatbot_no_llm,
+    logged_in_headers,
+    monkeypatch,
+):
+    """Canonical PUBLIC shares admit direct execution; deleting the row blocks the next run."""
+    from tests.unit.build_utils import create_flow
+
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    async with session_scope() as session:
+        flow = await session.get(Flow, flow_id)
+        assert flow is not None
+        share = AuthzShare(
+            resource_type="flow",
+            resource_id=flow_id,
+            scope=ShareScope.PUBLIC.value,
+            permission_level=SharePermissionLevel.EXECUTE.value,
+            created_by=flow.user_id,
+        )
+        session.add(share)
+        await session.commit()
+        await session.refresh(share)
+        share_id = share.id
+
+    captured: dict = {}
+    _stub_generate_flow_events(monkeypatch, captured)
+    _send_unauthenticated(client, "public-share-client")
+    async with client.stream(
+        "POST",
+        "api/v2/workflows/public",
+        json={"flow_id": str(flow_id), "input_value": "Hi"},
+        headers={"Content-Type": "application/json"},
+    ) as response:
+        assert response.status_code == codes.OK
+        await _read_stream(response)
+
+    async with session_scope() as session:
+        stored_share = await session.get(AuthzShare, share_id)
+        assert stored_share is not None
+        await session.delete(stored_share)
+        await session.commit()
+
+    response = await client.post(
+        "api/v2/workflows/public",
+        json={"flow_id": str(flow_id), "input_value": "Hi"},
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == codes.NOT_FOUND
 
 
 @pytest.mark.benchmark
@@ -316,8 +379,8 @@ async def test_public_endpoint_isolates_disjoint_clients(client: AsyncClient, pu
 
 @pytest.mark.benchmark
 @pytest.mark.security
-async def test_public_endpoint_runs_as_flow_owner(client: AsyncClient, public_flow_id, monkeypatch):
-    """Owner impersonation: ``current_user`` passed to the build is the flow's owner."""
+async def test_public_endpoint_runs_as_stable_non_owner_principal(client: AsyncClient, public_flow_id, monkeypatch):
+    """Anonymous execution never inherits the owner's dependency principal."""
     captured: dict = {}
     _stub_generate_flow_events(monkeypatch, captured)
 
@@ -337,24 +400,90 @@ async def test_public_endpoint_runs_as_flow_owner(client: AsyncClient, public_fl
         assert flow is not None
         owner_id = flow.user_id
 
-    assert captured["current_user"].id == owner_id
+    execution_principal = captured["current_user"]
+    from langflow.services.authorization.public_access import PUBLIC_ANONYMOUS_ACTOR_ID
+
+    assert execution_principal.id == PUBLIC_ANONYMOUS_ACTOR_ID
+    assert execution_principal.id != owner_id
+    assert execution_principal.username == "anonymous-public"
+    assert execution_principal.is_superuser is False
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_public_endpoint_reauthorizes_reloaded_flow_after_grant_transition(
+    client: AsyncClient,
+    public_flow_id,
+    monkeypatch,
+):
+    """The exact DB snapshot detached for streaming must still hold a public grant."""
+    import langflow.api.v2.workflow_public as workflow_public_module
+    from langflow.api.utils.flow_utils import compute_virtual_flow_id
+    from langflow.services.authorization.public_access import public_execution_user
+    from langflow.services.database.models.flow.model import AccessTypeEnum
+
+    client_id = "v2-reload-revocation-client"
+
+    async def _admit_first_snapshot_then_revoke(**_kwargs):
+        async with session_scope() as session:
+            flow = await session.get(Flow, public_flow_id)
+            assert flow is not None
+            flow.access_type = AccessTypeEnum.PRIVATE
+            session.add(flow)
+            await session.commit()
+        return public_execution_user(), compute_virtual_flow_id(client_id, public_flow_id, principal_type="client")
+
+    captured: dict = {}
+    monkeypatch.setattr(
+        workflow_public_module,
+        "verify_public_flow_and_get_user",
+        _admit_first_snapshot_then_revoke,
+    )
+    _stub_generate_flow_events(monkeypatch, captured)
+    _send_unauthenticated(client, client_id)
+
+    response = await client.post(
+        "api/v2/workflows/public",
+        json={"flow_id": str(public_flow_id), "input_value": "Hi"},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.NOT_FOUND
+    assert response.json() == {"detail": "Flow not found"}
+    assert captured == {}
 
 
 @pytest.mark.benchmark
 @pytest.mark.security
 async def test_public_endpoint_builds_from_server_sanitized_flow_data(client: AsyncClient, public_flow_id, monkeypatch):
-    """Stored component code is replaced before the anonymous v2 run starts."""
+    """Stored component code is replaced and persisted secrets are stripped before an anonymous v2 run."""
     import langflow.api.v2.workflow_public as workflow_public_module
 
     captured: dict = {}
     _stub_generate_flow_events(monkeypatch, captured)
-    sanitized = {
-        "nodes": [{"id": "trusted-node", "data": {"type": "TrustedComponent"}}],
+    prepared = {
+        "nodes": [
+            {
+                "id": "trusted-node",
+                "data": {
+                    "type": "TrustedComponent",
+                    "node": {
+                        "template": {
+                            "api_key": {
+                                "name": "api_key",
+                                "password": True,
+                                "value": "sk-owner-secret",  # pragma: allowlist secret
+                            }
+                        }
+                    },
+                },
+            }
+        ],
         "edges": [],
     }
 
     async def _prepare(_flow_data):
-        return sanitized
+        return prepared
 
     monkeypatch.setattr(workflow_public_module, "prepare_public_flow_build", _prepare)
 
@@ -369,8 +498,52 @@ async def test_public_endpoint_builds_from_server_sanitized_flow_data(client: As
         await _read_stream(response)
 
     assert captured["data"] is not None
-    assert captured["data"].nodes == sanitized["nodes"]
-    assert captured["data"].edges == sanitized["edges"]
+    assert captured["data"].nodes[0]["id"] == "trusted-node"
+    assert captured["data"].nodes[0]["data"]["node"]["template"]["api_key"]["value"] is None
+    assert captured["data"].edges == prepared["edges"]
+    assert prepared["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] == "sk-owner-secret"
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_public_endpoint_sanitizes_before_global_outdated_code_gate(
+    client: AsyncClient, public_flow_id, monkeypatch
+):
+    """Default public builds must reach trusted sanitization even when strict global drift policy is off."""
+    import langflow.api.v2.workflow_public as workflow_public_module
+
+    settings = workflow_public_module.get_settings_service().settings
+    monkeypatch.setattr(settings, "allow_custom_components", False)
+    monkeypatch.setattr(settings, "substitute_outdated_component_code", False)
+    monkeypatch.setattr(settings, "allow_public_custom_components", False)
+
+    stale_code = "# deliberately stale client-stored ChatInput source"
+    async with session_scope() as session:
+        flow = await session.get(Flow, public_flow_id)
+        assert flow is not None
+        assert flow.data is not None
+        updated_data = copy.deepcopy(flow.data)
+        chat_input = next(node for node in updated_data["nodes"] if node["data"]["type"] == "ChatInput")
+        chat_input["data"]["node"]["template"]["code"]["value"] = stale_code
+        flow.data = updated_data
+        session.add(flow)
+        await session.commit()
+
+    captured: dict = {}
+    _stub_generate_flow_events(monkeypatch, captured)
+
+    _send_unauthenticated(client, "outdated-public-code-client")
+    async with client.stream(
+        "POST",
+        "api/v2/workflows/public",
+        json={"flow_id": str(public_flow_id), "input_value": "Hi"},
+        headers={"Content-Type": "application/json"},
+    ) as response:
+        assert response.status_code == codes.OK
+        await _read_stream(response)
+
+    sanitized_chat_input = next(node for node in captured["data"].nodes if node["data"]["type"] == "ChatInput")
+    assert sanitized_chat_input["data"]["node"]["template"]["code"]["value"] != stale_code
 
 
 @pytest.mark.benchmark
@@ -399,12 +572,12 @@ async def test_public_endpoint_sanitizes_component_validation_error(client: Asyn
 
     raw_message = "Flow build blocked: custom components are not allowed: SecretInternalComponent"
 
-    def _raise(*_args, **_kwargs):
+    async def _raise(*_args, **_kwargs):
         raise CustomComponentValidationError(raw_message)
 
     import langflow.api.v2.workflow_public as workflow_public_module
 
-    monkeypatch.setattr(workflow_public_module, "validate_flow_for_current_settings", _raise)
+    monkeypatch.setattr(workflow_public_module, "prepare_public_flow_build", _raise)
 
     _send_unauthenticated(client, "component-validation-client")
     response = await client.post(
@@ -417,6 +590,37 @@ async def test_public_endpoint_sanitizes_component_validation_error(client: Asyn
     detail = response.json().get("detail", "")
     assert detail == "This flow cannot be executed."
     assert "SecretInternalComponent" not in detail
+    assert raw_message not in response.text
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_public_endpoint_sanitizes_catalog_identity_unavailable_response(
+    client: AsyncClient, public_flow_id, monkeypatch
+):
+    from lfx.utils.flow_validation import (
+        PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE,
+        CatalogPolicyIdentityUnavailableError,
+    )
+
+    raw_message = "Catalog identities unavailable: internal generation 42"
+
+    def _raise(*_args, **_kwargs):
+        raise CatalogPolicyIdentityUnavailableError(raw_message)
+
+    import langflow.api.v2.workflow_public as workflow_public_module
+
+    monkeypatch.setattr(workflow_public_module, "validate_catalog_policy_for_flow", _raise)
+
+    _send_unauthenticated(client, "catalog-identity-unavailable-client")
+    response = await client.post(
+        "api/v2/workflows/public",
+        json={"flow_id": str(public_flow_id), "input_value": "Hi"},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.SERVICE_UNAVAILABLE
+    assert response.json()["detail"] == PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE
     assert raw_message not in response.text
 
 
@@ -466,19 +670,15 @@ async def test_public_endpoint_rejects_code_execution_components(
 @pytest.mark.benchmark
 @pytest.mark.security
 async def test_public_endpoint_surfaces_value_error_as_400(client: AsyncClient, public_flow_id, monkeypatch):
-    """Other ``ValueError``s from the gate sequence become 400 with the message preserved.
-
-    Mirrors v1 ``build_public_tmp``'s ``except ValueError -> HTTP 400``.
-    Without the wrapper the same path returns a 500 with a stack trace.
-    """
+    """Other gate ``ValueError``s become a sanitized 400."""
     import langflow.api.v2.workflow_public as workflow_public_module
 
     gate_error_message = "custom gate failure"
 
-    def _raise(*_args, **_kwargs):
+    async def _raise(*_args, **_kwargs):
         raise ValueError(gate_error_message)
 
-    monkeypatch.setattr(workflow_public_module, "validate_flow_for_current_settings", _raise)
+    monkeypatch.setattr(workflow_public_module, "prepare_public_flow_build", _raise)
 
     _send_unauthenticated(client, "value-error-client")
     response = await client.post(
@@ -488,7 +688,8 @@ async def test_public_endpoint_surfaces_value_error_as_400(client: AsyncClient, 
     )
 
     assert response.status_code == codes.BAD_REQUEST
-    assert response.json().get("detail") == "custom gate failure"
+    assert response.json().get("detail") == "This flow cannot be executed."
+    assert gate_error_message not in response.text
 
 
 @pytest.fixture
@@ -507,7 +708,7 @@ def _fresh_limiter():
 def test_public_endpoint_throttles_per_ip(monkeypatch):
     """The unauthenticated public endpoint throttles per client IP.
 
-    Each run executes as the flow owner (real cost), so an anonymous caller must
+    Each run has real cost, so an anonymous caller must
     not be able to spin up unbounded runs. With the limit set to 2/min, the third
     request from the same IP is rejected at the throttle (429) before any flow work.
     """

@@ -941,7 +941,9 @@ class TestWebhookEventsStreamAuth:
         ):
             request_stub = SimpleNamespace()
             with pytest.raises(HTTPException) as exc_info:
-                await endpoints_module.webhook_events_stream(auth=auth, request=request_stub)
+                # The deny raises before the session is touched; a mock satisfies
+                # the transaction-release parameter added for #14445.
+                await endpoints_module.webhook_events_stream(auth=auth, request=request_stub, session=AsyncMock())
 
         assert exc_info.value.status_code == 403
         subscribe_mock.assert_not_awaited()

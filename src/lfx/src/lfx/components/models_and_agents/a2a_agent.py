@@ -24,6 +24,7 @@ from lfx.io import (
     SecretStrInput,
     TabInput,
 )
+from lfx.observability import outbound_call_span
 from lfx.schema.message import Message
 from lfx.utils.ssrf_protection import (
     SSRFProtectionError,
@@ -44,6 +45,8 @@ DEFAULT_TIMEOUT = 60.0
 # read-layer byte cap; tracked as a follow-up.
 MAX_A2A_RESPONSE_CHARS = 100_000
 _CARD_SUFFIX = "/.well-known/agent-card.json"
+# One application span per outbound A2A call, covering the card resolve and the message/send.
+A2A_CALL_SPAN_NAME = "a2a.message.send"
 # A spec-compliant agent card is a few KB. Refuse to buffer or parse anything pathological: the
 # card comes from a remote server we don't trust.
 _MAX_CARD_BYTES = 256 * 1024
@@ -84,6 +87,19 @@ def _pin_host(url: httpx.URL | str) -> str:
     """
     parsed = url if isinstance(url, httpx.URL) else httpx.URL(url)
     return parsed.raw_host.decode("ascii")
+
+
+def _authority(url: httpx.URL) -> str:
+    """``host`` or ``host:port`` in the representation the transport actually connects to.
+
+    Uses ``raw_host`` for the same reason :func:`_pin_host` does: httpx connects on the
+    IDNA/punycode form, so a unicode host here would not match what an operator sees anywhere
+    else. Returns "" for a URL with no authority, which the caller treats as nothing to say.
+    """
+    host = _pin_host(url)
+    if not host:
+        return ""
+    return f"{host}:{url.port}" if url.port else host
 
 
 def _ssrf_floor_ips(url: httpx.URL | str) -> list[str]:
@@ -243,33 +259,67 @@ async def call_a2a_agent(
     (falling back to the task's status message). The same ``httpx_client`` fetches the card
     and posts the message; it must be built with :func:`build_a2a_client` so the api key is
     pinned to the ``agent_url`` origin. Factored out from the component so a test can drive it.
+
+    Emits one application span for the operator's APM, covering the card resolve and the send.
+    Identifiers only: the host we called and the name the card gave, never the URL (it can carry
+    credentials in its query string) and never the message or the reply.
     """
     from a2a.client.client import ClientConfig
     from a2a.client.client_factory import create_client
     from a2a.helpers.proto_helpers import new_text_part
     from a2a.types import a2a_pb2 as pb
 
-    # Resolve the card ourselves with a bounded read, then hand it to create_client so the SDK
-    # skips its own unbounded fetch. create_client(url) delegates to A2ACardResolver, which buffers
-    # the whole card body with no cap; a hostile server streaming an endless card would OOM the
-    # worker. Same 256KB cap as the editor preview, but here a bad card raises (fails the call).
-    card = await _resolve_card_bounded(httpx_client, agent_url)
-    client = await create_client(
-        card,
-        client_config=ClientConfig(
-            streaming=False,
-            httpx_client=httpx_client,
-            accepted_output_modes=accepted_output_modes or ["application/json"],
-        ),
-    )
-    request = pb.SendMessageRequest(
-        message=pb.Message(
-            message_id=uuid.uuid4().hex,
-            role=pb.Role.ROLE_USER,
-            parts=[new_text_part(message)],
+    # The discovery host, which is only where the card was fetched from. The card selects the
+    # RPC interface, and this path deliberately supports one on another origin, so the host that
+    # actually serves the call is set below once the client exists. Recording both means an
+    # operator can see a directory and its agent are different machines instead of having the
+    # latency of one blamed on the other.
+    #
+    # httpx accepts a URL with no authority, and a user typing "agent.example.com/path" without
+    # a scheme produces exactly that, so raw_host comes back empty. Omit the attribute rather
+    # than export "" or a placeholder: the same rule protocol and client follow, where a missing
+    # attribute is an honest "nobody said" and an invented one is a lie an operator would filter
+    # a dashboard on.
+    attributes = {}
+    discovery_host = _authority(httpx.URL(agent_url))
+    if discovery_host:
+        attributes["a2a.agent.discovery_host"] = discovery_host
+    with outbound_call_span(A2A_CALL_SPAN_NAME, attributes) as span:
+        # Resolve the card ourselves with a bounded read, then hand it to create_client so the SDK
+        # skips its own unbounded fetch. create_client(url) delegates to A2ACardResolver, which
+        # buffers the whole card body with no cap; a hostile server streaming an endless card would
+        # OOM the worker. Same 256KB cap as the editor preview, but a bad card raises (fails the
+        # call).
+        card = await _resolve_card_bounded(httpx_client, agent_url)
+        # The card is remote content, so clip it like every other card string we surface.
+        if getattr(card, "name", None):
+            span.set_attribute("a2a.agent.name", _clip(card.name))
+        client = await create_client(
+            card,
+            client_config=ClientConfig(
+                streaming=False,
+                httpx_client=httpx_client,
+                accepted_output_modes=accepted_output_modes or ["application/json"],
+            ),
         )
-    )
-    return await _reply_or_raise(client.send_message(request))
+        # Read the URL the SDK settled on rather than reimplementing its interface selection,
+        # which weighs client preference and protocol bindings and would drift from the SDK the
+        # moment either changes. The transport's ``url`` is a public attribute; the client
+        # attribute holding it is not, so this degrades to the discovery host if the SDK
+        # rearranges itself.
+        call_host = _authority(httpx.URL(str(getattr(getattr(client, "_transport", None), "url", "") or agent_url)))
+        if call_host:
+            span.set_attribute("a2a.agent.host", call_host)
+        request = pb.SendMessageRequest(
+            message=pb.Message(
+                message_id=uuid.uuid4().hex,
+                role=pb.Role.ROLE_USER,
+                parts=[new_text_part(message)],
+            )
+        )
+        # A remote task that ends in any non-completed state raises out of _reply_or_raise, so the
+        # span's except arm records it. Nothing to report by hand the way MCP's isError needs.
+        return await _reply_or_raise(client.send_message(request))
 
 
 class A2AAgentComponent(Component):

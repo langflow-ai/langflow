@@ -500,6 +500,7 @@ export default function NodeStatus({
                   )}
                   onClick={handleClickConnect}
                   data-testid={getDataTestId()}
+                  aria-label={nodeAuth.auth_tooltip || "Connect"}
                 >
                   <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                     <IconComponent
@@ -551,6 +552,7 @@ export default function NodeStatus({
                 unstyled
                 className="nodrag button-run-bg group disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={executeDenied && buildStatus !== BuildStatus.BUILDING}
+                aria-label={getTooltipContent()}
               >
                 <div data-testid={`button_run_` + display_name.toLowerCase()}>
                   <IconComponent

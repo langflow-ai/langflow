@@ -1,12 +1,32 @@
 import type { UseMutationResult } from "@tanstack/react-query";
 import { cloneDeep, debounce } from "lodash";
 import { SAVE_DEBOUNCE_TIME } from "@/constants/constants";
+import useFlowStore from "@/stores/flowStore";
 import type { APIClassType, ResponseErrorDetailAPI } from "@/types/api";
 import i18n from "../../i18n";
 import { updateHiddenOutputs } from "./update-hidden-outputs";
 
-// Map to store debounced functions for each node ID + parameter combination
 const debouncedFunctions = new Map<string, ReturnType<typeof debounce>>();
+
+const getNodeCode = (nodeId: string): unknown => {
+  const currentNode = useFlowStore
+    .getState()
+    .nodes.find((flowNode) => flowNode.id === nodeId);
+  return currentNode?.data?.node?.template?.code?.value;
+};
+
+// A refresh answers for the code that was current when it left, and applying it
+// replaces the whole template — a code save landing meanwhile would be reverted.
+const isStaleForNode = (
+  nodeId: string,
+  requestedNode: APIClassType,
+): boolean => {
+  const requestedCode = requestedNode.template?.code?.value;
+  if (requestedCode === undefined) return false;
+  const currentCode = getNodeCode(nodeId);
+  if (currentCode === undefined) return false;
+  return currentCode !== requestedCode;
+};
 
 export const mutateTemplate = async (
   newValue,
@@ -25,8 +45,7 @@ export const mutateTemplate = async (
   toolMode?: boolean,
   isRefresh?: boolean,
 ) => {
-  // Different parameters must debounce independently to avoid one field's
-  // refresh cancelling another's during concurrent mount calls.
+  // Per-parameter keys keep one field's refresh from cancelling another's on mount.
   const debounceKey = parameterName ? `${nodeId}-${parameterName}` : nodeId;
   if (!debouncedFunctions.has(debounceKey)) {
     debouncedFunctions.set(
@@ -56,7 +75,7 @@ export const mutateTemplate = async (
               tool_mode: toolMode ?? node.tool_mode,
               is_refresh: isRefresh ?? false,
             });
-            if (newTemplate) {
+            if (newTemplate && !isStaleForNode(nodeId, node)) {
               newNode.template = newTemplate.template;
               newNode.outputs = updateHiddenOutputs(
                 newNode.outputs ?? [],
@@ -97,11 +116,8 @@ export const mutateTemplate = async (
     );
   }
 
-  // Enabling Tool Mode mounts the tools_metadata field, which queues its own
-  // debounced refresh. If the user turns Tool Mode off before that refresh
-  // runs, the queued request still carries tool_mode=true and can restore the
-  // Toolset output after the off response. The explicit toggle supersedes that
-  // pending metadata refresh.
+  // A queued tools_metadata refresh still carries tool_mode=true and would restore
+  // the Toolset output after an off response, so the explicit toggle supersedes it.
   if (parameterName === "tool_mode") {
     debouncedFunctions.get(`${nodeId}-tools_metadata`)?.cancel();
   }
@@ -119,9 +135,8 @@ export const mutateTemplate = async (
     isRefresh,
   );
 
-  // Tool Mode is a discrete toggle, so delaying it like a text input leaves
-  // the node in its previous output shape and gives slower refresh responses
-  // a chance to repaint the toggle with stale state.
+  // Debouncing a discrete toggle like a text input lets slower refresh responses
+  // repaint it with stale state, so Tool Mode is flushed immediately.
   if (parameterName === "tool_mode") {
     await debouncedFunction?.flush();
   }

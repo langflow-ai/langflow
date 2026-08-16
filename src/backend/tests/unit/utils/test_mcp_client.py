@@ -229,13 +229,16 @@ class TestDescribeComponent:
         output_names = {o["name"] for o in info["outputs"]}
         assert output_names == {"text_output", "model_output"}
 
-    def test_describe_component_as_tool_output(self):
+    def test_describe_ignores_output_side_tool_mode(self):
+        """ChatOutput's message output carries tool_mode; the component has no toolset.
+
+        Output-side tool_mode marks which outputs a toolset exposes, so it must
+        not be read as the component's capability — Component._handle_tool_mode
+        creates component_as_tool only for a tool_mode input or add_tool_output.
+        """
         info = describe_component(SAMPLE_REGISTRY, "ChatOutput")
         output_names = {o["name"] for o in info["outputs"]}
-        assert "component_as_tool" in output_names
-        tool_out = next(o for o in info["outputs"] if o["name"] == "component_as_tool")
-        assert tool_out["types"] == ["Tool"]
-        assert "message" in tool_out["description"]
+        assert "component_as_tool" not in output_names
 
     def test_describe_no_tool_output_without_tool_mode(self):
         info = describe_component(SAMPLE_REGISTRY, "OpenAIModel")

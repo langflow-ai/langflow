@@ -36,7 +36,7 @@ export type DBProviderId =
 
 export type AvailableDBProviderId = Extract<
   DBProviderId,
-  "chroma" | "chroma_cloud" | "opensearch"
+  "chroma" | "chroma_cloud" | "opensearch" | "postgres"
 >;
 
 export interface DBProviderTextField {
@@ -158,9 +158,13 @@ export const DB_PROVIDER_OPTIONS: DBProviderOption[] = [
         placeholder: "Enter OpenSearch password",
       },
       {
-        label: "Default index name",
+        // Optional. Knowledge Bases / Memory Bases now derive a unique index
+        // per base from its name, so this is no longer required and is not used
+        // to route KB/MB storage. Kept for operators who want a shared default
+        // index for other (non-KB) OpenSearch usage.
+        label: "Default index name (optional)",
         variableKey: OPENSEARCH_VARIABLES.INDEX_NAME,
-        required: true,
+        required: false,
         isSecret: false,
         placeholder: "langflow_knowledge",
       },
@@ -219,11 +223,16 @@ export const DB_PROVIDER_OPTIONS: DBProviderOption[] = [
     configFields: [],
   },
   {
+    // Environment-driven: pgVector is configured from the server's
+    // PGVECTOR_CONNECTION_STRING, not from the UI. No editable fields — the
+    // card only reflects whether it's reachable (via test-connection) and lets
+    // the user make it active, exactly like Chroma Local.
     id: "postgres",
-    label: "Postgres pgvector",
-    description: "Postgres-backed vector storage.",
+    label: "Postgres pgVector",
+    description:
+      "Postgres pgVector is set up automatically from your server's environment configuration — there's nothing to enter here. When it's available, your knowledge bases and memory bases use it automatically.",
     icon: "Postgres",
-    status: "coming_soon",
+    status: "available",
     configFields: [],
   },
 ];
@@ -242,6 +251,19 @@ export function getGlobalVariableValue(
 ): string | undefined {
   const value = variables.find((variable) => variable.name === name)?.value;
   return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+export function hasGlobalVariableValue(
+  variables: GlobalVariable[],
+  name: string,
+): boolean {
+  const variable = variables.find((entry) => entry.name === name);
+  if (!variable) return false;
+  if (variable.has_value !== undefined) return variable.has_value;
+  // Credential values are masked in API responses, so without an explicit
+  // `has_value` signal we fail closed rather than assume a secret is stored —
+  // a stale empty row must never enable a remote provider.
+  return Boolean(getGlobalVariableValue(variables, name));
 }
 
 /**
@@ -274,8 +296,13 @@ export function getActiveDBProvider(
     variables,
     ACTIVE_DB_PROVIDER_VARIABLE,
   );
-  if (configuredProvider === "opensearch") return "opensearch";
-  if (configuredProvider === "chroma_cloud") return "chroma_cloud";
+  if (
+    (configuredProvider === "opensearch" ||
+      configuredProvider === "chroma_cloud" ||
+      configuredProvider === "postgres") &&
+    isDBProviderConfigured(configuredProvider, variables)
+  )
+    return configuredProvider;
   return "chroma";
 }
 
@@ -314,8 +341,13 @@ export function getDBProviderConfig(
     url_variable: OPENSEARCH_VARIABLES.URL,
     username_variable: OPENSEARCH_VARIABLES.USERNAME,
     password_variable: OPENSEARCH_VARIABLES.PASSWORD,
-    index_name:
-      getGlobalVariableValue(variables, OPENSEARCH_VARIABLES.INDEX_NAME) ?? "",
+    // Intentionally NOT setting ``index_name``: pinning the single global
+    // OPENSEARCH_INDEX_NAME into every base's config made all Knowledge Bases /
+    // Memory Bases share one index (cross-base retrieval + collection-level
+    // deletion). The backend now derives a unique index per KB from its name
+    // when ``index_name`` is absent, mirroring how the Chroma backends use
+    // ``collection_name=kb_name``. Operators pointing a base at a pre-existing
+    // external index can still set ``index_name`` explicitly downstream.
     vector_field:
       getGlobalVariableValue(variables, OPENSEARCH_VARIABLES.VECTOR_FIELD) ??
       "vector_field",
@@ -358,6 +390,7 @@ export function resolveUIBackendType(
   backendConfig: Record<string, unknown> | undefined,
 ): AvailableDBProviderId {
   if (backendType === "opensearch") return "opensearch";
+  if (backendType === "postgres") return "postgres";
   // Already a frontend UI ID — pass through directly.
   if (backendType === "chroma_cloud") return "chroma_cloud";
   // Server always stores "chroma" for both modes; mode discriminates.
@@ -374,6 +407,16 @@ export function isDBProviderConfigured(
     return true;
   }
 
+  // pgVector has no UI fields. It becomes explicitly selectable only after the
+  // DB Providers panel has successfully tested and activated it; the server
+  // still re-validates connectivity during creation.
+  if (providerType === "postgres") {
+    return (
+      getGlobalVariableValue(variables, ACTIVE_DB_PROVIDER_VARIABLE) ===
+      "postgres"
+    );
+  }
+
   const provider = getDBProviderOption(providerType);
   // Boolean fields always have a defined default, so they don't gate
   // "configured" status — only required text fields do.
@@ -384,10 +427,7 @@ export function isDBProviderConfigured(
     )
     .every((field) => {
       if (field.isSecret) {
-        // Credential-type variables have their values masked (empty) in the
-        // global-variables API response, so checking the value would always
-        // return false even when the secret is saved. Check existence instead.
-        return variables.some((v) => v.name === field.variableKey);
+        return hasGlobalVariableValue(variables, field.variableKey);
       }
       return Boolean(getGlobalVariableValue(variables, field.variableKey));
     });

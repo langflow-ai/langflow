@@ -174,8 +174,10 @@ def _registry_supports_tool_mode(registry_entry: Mapping[str, Any]) -> bool:
     Two signals are deliberately not used. The ``tool_mode`` flag on *outputs* marks which
     outputs a toolset exposes rather than the component's capability (124 of the 127 bundled
     components set it, ``ChatInput`` included). And ``add_tool_output``, the other half of the
-    runtime rule, is not serialized into the component index, so components that rely on it
-    alone keep being reported ``outdated_breaking``. Both omissions err the same way: a node is
+    runtime rule, is read by neither this checker nor its frontend mirror in
+    ``check-code-validity.ts``, so components that rely on it alone keep being reported
+    ``outdated_breaking``; the flag is serialized into the index now, so consuming it here is a
+    follow-up that has to land on both sides at once. Both omissions err the same way: a node is
     only called safe when re-stamping is known to preserve its toolset output.
     """
     template = registry_entry.get("template") or {}

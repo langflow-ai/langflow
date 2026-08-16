@@ -8,6 +8,8 @@ import {
   useUpdateUser,
 } from "@/controllers/API/queries/auth";
 import { useGetProfilePicturesQuery } from "@/controllers/API/queries/files";
+import { CustomRegistrationData } from "@/customization/components/custom-registration-data";
+import { CustomTelemetryToggle } from "@/customization/components/custom-telemetry-toggle";
 import { CustomTermsLinks } from "@/customization/components/custom-terms-links";
 import { ENABLE_PROFILE_ICONS } from "@/customization/feature-flags";
 import useAuthStore from "@/stores/authStore";
@@ -168,6 +170,10 @@ export const GeneralPage = () => {
           />
         )}
       </div>
+
+      <CustomTelemetryToggle />
+
+      <CustomRegistrationData />
 
       <CustomTermsLinks />
     </div>

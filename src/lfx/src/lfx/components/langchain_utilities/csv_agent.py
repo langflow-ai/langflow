@@ -82,6 +82,12 @@ class CSVAgentComponent(LCAgentComponent):
             display_name="Text",
             info="Text to be passed as input and extract info from the CSV File.",
             required=True,
+            # Redeclared here because this input shadows LCAgentComponent's
+            # `input_value`, which carries tool_mode=True. The runtime scans the
+            # inputs list and still sees the base one, but the serialized template
+            # is keyed by name and keeps only this one — so without the flag the
+            # index reports CSVAgent as not tool-capable when it is.
+            tool_mode=True,
         ),
         DictInput(
             name="pandas_kwargs",

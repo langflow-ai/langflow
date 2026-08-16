@@ -2,6 +2,9 @@ from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
+
+pytest.importorskip("lfx_bundles")
+
 from lfx.components.litellm.litellm_proxy import LiteLLMProxyComponent
 from lfx.inputs.inputs import IntInput, SecretStrInput, SliderInput, StrInput
 from pydantic.v1 import SecretStr

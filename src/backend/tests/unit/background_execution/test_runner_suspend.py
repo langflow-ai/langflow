@@ -8,6 +8,8 @@ The scripted frame source emits the pause sentinel the real build path raises.
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import json
 from uuid import uuid4
 
@@ -91,6 +93,126 @@ async def test_suspend_records_pending_request_id(real_services_job_service) -> 
 
 @pytest.mark.real_services
 @pytest.mark.no_blockbuster
+async def test_suspend_status_and_metadata_commit_atomically(real_services_job_service, monkeypatch) -> None:
+    """SUSPENDED is never visible without its resume-critical metadata."""
+    import langflow.services.jobs.service as jobs_service_module
+    from langflow.services.database.models.jobs.model import Job
+    from langflow.services.deps import session_scope as real_session_scope
+
+    job_service = real_services_job_service
+    job_id, flow_id = uuid4(), uuid4()
+    await job_service.create_job(job_id=job_id, flow_id=flow_id, user_id=uuid4())
+    await job_service.update_job_metadata(job_id, {"existing": "preserved"})
+
+    writer_flushed: asyncio.Queue[None] = asyncio.Queue()
+    allow_commit: asyncio.Queue[None] = asyncio.Queue()
+    writer_committed: asyncio.Queue[None] = asyncio.Queue()
+
+    @contextlib.asynccontextmanager
+    async def _session_scope_with_commit_barrier():
+        async with real_session_scope() as session:
+            yield session
+            writer_flushed.put_nowait(None)
+            await allow_commit.get()
+        writer_committed.put_nowait(None)
+
+    monkeypatch.setattr(jobs_service_module, "session_scope", _session_scope_with_commit_barrier)
+    metadata = {
+        "pending_request_id": "req-atomic",
+        "pre_pause_outputs": [{"component_id": "comp-A", "value": "before pause"}],
+    }
+    suspend_task = asyncio.create_task(job_service.suspend_job(job_id, metadata))
+
+    try:
+        # The writer has flushed both mutations but is still behind the commit barrier.
+        await asyncio.wait_for(writer_flushed.get(), timeout=5)
+        async with real_session_scope() as observer_session:
+            before_commit = await observer_session.get(Job, job_id)
+            assert before_commit is not None
+            assert before_commit.status == JobStatus.QUEUED
+            assert before_commit.job_metadata == {"existing": "preserved"}
+
+        allow_commit.put_nowait(None)
+        await asyncio.wait_for(writer_committed.get(), timeout=5)
+        # If suspend_job ever splits this into two transactions, its second
+        # transaction stops at the same barrier and this read exposes the gap.
+        await asyncio.sleep(0)
+        async with real_session_scope() as observer_session:
+            after_commit = await observer_session.get(Job, job_id)
+            assert after_commit is not None
+            assert after_commit.status == JobStatus.SUSPENDED
+            assert after_commit.job_metadata == {"existing": "preserved", **metadata}
+    finally:
+        if not suspend_task.done():
+            suspend_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await suspend_task
+
+
+@pytest.mark.real_services
+@pytest.mark.no_blockbuster
+async def test_racing_resume_cannot_claim_before_suspend_metadata_is_ready(
+    real_services_job_service, monkeypatch
+) -> None:
+    """A resume arriving while suspend is staged cannot run without the output stash."""
+    from langflow.services.background_execution.service import BackgroundExecutionService
+    from langflow.services.deps import get_settings_service
+    from lfx.workflow.adapters.langflow import WORKFLOW_OUTPUT_CAPTURE_EVENT
+
+    job_service = real_services_job_service
+    job_id, flow_id, user_id = uuid4(), uuid4(), uuid4()
+    await job_service.create_job(job_id=job_id, flow_id=flow_id, user_id=user_id)
+
+    entered_suspend = asyncio.Event()
+    allow_suspend = asyncio.Event()
+    original_suspend = job_service.suspend_job
+
+    async def _gated_suspend(gated_job_id, metadata):
+        entered_suspend.set()
+        await allow_suspend.wait()
+        return await original_suspend(gated_job_id, metadata)
+
+    monkeypatch.setattr(job_service, "suspend_job", _gated_suspend)
+    output = {
+        "component_id": "comp-A",
+        "type": "message",
+        "status": "completed",
+        "content": "before pause",
+    }
+    pause = {"reason": "human_input_required", "request_id": "req-race"}
+
+    async def _source(**_kwargs):
+        yield (json.dumps({"data": output}).encode(), WORKFLOW_OUTPUT_CAPTURE_EVENT)
+        yield (json.dumps(pause).encode(), HUMAN_INPUT_REQUIRED_EVENT)
+
+    run_task = asyncio.create_task(_runner(job_service, job_id, _source).run(job_id=job_id, source_kwargs={}))
+    try:
+        await asyncio.wait_for(entered_suspend.wait(), timeout=5)
+        service = BackgroundExecutionService(settings_service=get_settings_service())
+        accepted = await service.resume_job(
+            job_id,
+            _StubUser(user_id),
+            request_id="req-race",
+            decision={"action_id": "approve"},
+        )
+        assert accepted is False
+
+        allow_suspend.set()
+        await asyncio.wait_for(run_task, timeout=5)
+        job = await job_service.get_job_by_job_id(job_id)
+        assert job.status == JobStatus.SUSPENDED
+        assert (job.job_metadata or {}).get("pending_request_id") == "req-race"
+        assert (job.job_metadata or {}).get("pre_pause_outputs") == [output]
+    finally:
+        allow_suspend.set()
+        if not run_task.done():
+            run_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await run_task
+
+
+@pytest.mark.real_services
+@pytest.mark.no_blockbuster
 async def test_suspend_records_pending_request_id_from_wrapped_wire_frame(real_services_job_service) -> None:
     """The real build seam emits the pause wrapped in the adapter envelope.
 
@@ -161,8 +283,6 @@ async def _suspend_a_job(job_service, *, request_id="req-evt"):
 @pytest.mark.no_blockbuster
 async def test_events_replays_suspended_job_and_returns(real_services_job_service) -> None:
     """A fresh facade (empty live bus) replays the suspended job's durable rows and RETURNS."""
-    import asyncio
-
     from langflow.services.background_execution.service import BackgroundExecutionService
     from langflow.services.deps import get_settings_service
 

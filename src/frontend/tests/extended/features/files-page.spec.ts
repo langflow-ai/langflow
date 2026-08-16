@@ -1,50 +1,78 @@
+import type { Page, Response } from "@playwright/test";
 import fs from "fs";
 import path from "path";
 import { expect, test } from "../../fixtures";
-import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
+import { TIMEOUTS } from "../../utils/constants/timeouts";
 import { generateRandomFilename } from "../../utils/generate-filename";
 
-// Configure tests to run serially with a delay between each test
+test.describe.configure({ mode: "serial" });
+
+async function openFilesPage(page: Page) {
+  await awaitBootstrapTest(page, {
+    skipModal: true,
+  });
+  const filesResponsePromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === "GET" &&
+      new URL(response.url()).pathname === "/api/v2/files",
+  );
+  await page.getByText(TEXTS.labelMyFiles, { exact: true }).first().click();
+  await page.waitForURL(/\/assets\/files\/?$/);
+  const filesResponse = await filesResponsePromise;
+  expect(filesResponse.ok()).toBe(true);
+  expect(await filesResponse.finished()).toBeNull();
+  await expect(page.getByTestId("mainpage_title")).toContainText("Files");
+  await expect(page.getByTestId("drag-wrap-component")).toBeVisible();
+}
+
+const fileRow = (page: Page, filename: string) =>
+  page.locator(".ag-row").filter({
+    has: page.getByText(filename, { exact: true }),
+  });
+
+async function runAndWaitForUploads(
+  page: Page,
+  count: number,
+  action: () => Promise<void>,
+) {
+  const responses: Response[] = [];
+  const collectUpload = (response: Response) => {
+    if (
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname === "/api/v2/files"
+    ) {
+      responses.push(response);
+    }
+  };
+  page.on("response", collectUpload);
+
+  try {
+    await action();
+    await expect
+      .poll(() => responses.length, { timeout: TIMEOUTS.standard })
+      .toBe(count);
+    for (const response of responses) {
+      expect(response.ok()).toBe(true);
+    }
+  } finally {
+    page.off("response", collectUpload);
+  }
+}
+
 test(
   "should navigate to files page and show empty state",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page, { skipModal: true });
-
-    const firstRunLangflow = await page
-      .getByTestId("empty-project-description")
-      .count();
-
-    if (firstRunLangflow > 0) {
-      await addFlowToTestOnEmptyLangflow(page);
-    }
-
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
-
-    // Click on the files button
-    await page.getByText(TEXTS.labelMyFiles).first().click();
-
-    // Check if we're on the files page
-    await page.waitForSelector('[data-testid="mainpage_title"]');
-    const title = await page.getByTestId("mainpage_title");
-    expect(await title.textContent()).toContain("Files");
+    await openFilesPage(page);
 
     // Check for empty state when no files are present
-    const noFilesText = await page.getByText("No files");
-    expect(noFilesText).toBeTruthy();
-
-    const uploadMessage = await page.getByText(
-      "Upload files or import from your preferred cloud.",
-    );
-    expect(uploadMessage).toBeTruthy();
-
-    // Check if upload buttons are present
-    const uploadButton = await page.getByText("Upload");
-    expect(uploadButton).toBeTruthy();
+    await expect(page.getByText("No files")).toBeVisible();
+    await expect(
+      page.getByText("Upload files or import from your preferred cloud."),
+    ).toBeVisible();
+    await expect(page.getByTestId("upload-file-btn")).toBeVisible();
   },
 );
 
@@ -56,40 +84,26 @@ test(
     const testFilePath = path.join(__dirname, "../../assets/test-file.txt");
     const fileContent = fs.readFileSync(testFilePath);
 
-    await awaitBootstrapTest(page, { skipModal: true });
-
-    const firstRunLangflow = await page
-      .getByTestId("empty-project-description")
-      .count();
-
-    if (firstRunLangflow > 0) {
-      await addFlowToTestOnEmptyLangflow(page);
-    }
-
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
-
-    await page.getByText(TEXTS.labelMyFiles).first().click();
+    await openFilesPage(page);
     const fileChooserPromise = page.waitForEvent("filechooser");
     await page.getByTestId("upload-file-btn").click();
 
     const fileChooser = await fileChooserPromise;
-    await fileChooser.setFiles([
-      {
-        name: `${fileName}.txt`,
-        mimeType: "text/plain",
-        buffer: fileContent,
-      },
-    ]);
+    await runAndWaitForUploads(page, 1, () =>
+      fileChooser.setFiles([
+        {
+          name: `${fileName}.txt`,
+          mimeType: "text/plain",
+          buffer: fileContent,
+        },
+      ]),
+    );
 
     // Wait for upload success message
-    const successMessage = await page.getByText("File uploaded successfully");
-    expect(successMessage).toBeTruthy();
+    await expect(page.getByText("File uploaded successfully")).toBeVisible();
 
     // Verify file appears in the list
-    const uploadedFileName = await page.getByText(fileName + ".txt");
-    expect(await uploadedFileName.isVisible()).toBeTruthy();
+    await expect(fileRow(page, `${fileName}.txt`)).toBeVisible();
   },
 );
 
@@ -99,21 +113,7 @@ test(
   async ({ page }) => {
     const fileName = generateRandomFilename();
 
-    await awaitBootstrapTest(page, { skipModal: true });
-
-    const firstRunLangflow = await page
-      .getByTestId("empty-project-description")
-      .count();
-
-    if (firstRunLangflow > 0) {
-      await addFlowToTestOnEmptyLangflow(page);
-    }
-
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
-
-    await page.getByText(TEXTS.labelMyFiles).first().click();
+    await openFilesPage(page);
 
     // Create DataTransfer object and file
     const dataTransfer = await page.evaluateHandle((fileName) => {
@@ -126,26 +126,24 @@ test(
     }, fileName);
 
     // Trigger drag events
-    await page.dispatchEvent(
-      '[data-testid="drag-wrap-component"]',
-      "dragover",
-      {
+    await runAndWaitForUploads(page, 1, async () => {
+      await page.dispatchEvent(
+        '[data-testid="drag-wrap-component"]',
+        "dragover",
+        {
+          dataTransfer,
+        },
+      );
+      await page.dispatchEvent('[data-testid="drag-wrap-component"]', "drop", {
         dataTransfer,
-      },
-    );
-    await page.dispatchEvent('[data-testid="drag-wrap-component"]', "drop", {
-      dataTransfer,
+      });
     });
 
     // Wait for upload success message
-    const successMessage = await page.getByText("File uploaded successfully");
-    expect(successMessage).toBeTruthy();
+    await expect(page.getByText("File uploaded successfully")).toBeVisible();
 
     // Verify file appears in the list
-    const uploadedFileName = await page.getByText(fileName + ".txt").last();
-    await expect(uploadedFileName).toBeVisible({
-      timeout: 1000,
-    });
+    await expect(fileRow(page, `${fileName}.txt`)).toBeVisible();
   },
 );
 
@@ -167,21 +165,7 @@ test(
 
     const fileContents = testFiles.map((file) => fs.readFileSync(file));
 
-    await awaitBootstrapTest(page, { skipModal: true });
-
-    const firstRunLangflow = await page
-      .getByTestId("empty-project-description")
-      .count();
-
-    if (firstRunLangflow > 0) {
-      await addFlowToTestOnEmptyLangflow(page);
-    }
-
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
-
-    await page.getByText(TEXTS.labelMyFiles).first().click();
+    await openFilesPage(page);
     const fileChooserPromise = page.waitForEvent("filechooser");
     await page.getByTestId("upload-file-btn").click();
 
@@ -189,34 +173,32 @@ test(
     const fileChooser = await fileChooserPromise;
 
     // Upload multiple test files
-    await fileChooser.setFiles([
-      {
-        name: `${fileNames.txt}.txt`,
-        mimeType: "text/plain",
-        buffer: fileContents[0],
-      },
-      {
-        name: `${fileNames.json}.json`,
-        mimeType: "application/json",
-        buffer: fileContents[1],
-      },
-      {
-        name: `${fileNames.py}.py`,
-        mimeType: "text/x-python",
-        buffer: fileContents[2],
-      },
-    ]);
+    await runAndWaitForUploads(page, 3, () =>
+      fileChooser.setFiles([
+        {
+          name: `${fileNames.txt}.txt`,
+          mimeType: "text/plain",
+          buffer: fileContents[0],
+        },
+        {
+          name: `${fileNames.json}.json`,
+          mimeType: "application/json",
+          buffer: fileContents[1],
+        },
+        {
+          name: `${fileNames.py}.py`,
+          mimeType: "text/x-python",
+          buffer: fileContents[2],
+        },
+      ]),
+    );
 
     // Wait for upload success message
-    const successMessage = await page.getByText("Files uploaded successfully");
-    expect(successMessage).toBeTruthy();
+    await expect(page.getByText("Files uploaded successfully")).toBeVisible();
 
     // Verify all files appear in the list
-    for (const name of Object.values(fileNames)) {
-      const file = await page.getByText(name).last();
-      await expect(file).toBeVisible({
-        timeout: 1000,
-      });
+    for (const [extension, name] of Object.entries(fileNames)) {
+      await expect(fileRow(page, `${name}.${extension}`)).toBeVisible();
     }
   },
 );
@@ -239,84 +221,60 @@ test(
 
     const fileContents = testFiles.map((file) => fs.readFileSync(file));
 
-    await awaitBootstrapTest(page, { skipModal: true });
-
-    const firstRunLangflow = await page
-      .getByTestId("empty-project-description")
-      .count();
-
-    if (firstRunLangflow > 0) {
-      await addFlowToTestOnEmptyLangflow(page);
-    }
-
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
-
-    await page.getByText(TEXTS.labelMyFiles).first().click();
+    await openFilesPage(page);
     const fileChooserPromise = page.waitForEvent("filechooser");
     await page.getByTestId("upload-file-btn").click();
 
     const fileChooser = await fileChooserPromise;
 
-    await fileChooser.setFiles([
-      {
-        name: `${fileNames.txt}.txt`,
-        mimeType: "text/plain",
-        buffer: fileContents[0],
-      },
-      {
-        name: `${fileNames.json}.json`,
-        mimeType: "application/json",
-        buffer: fileContents[1],
-      },
-      {
-        name: `${fileNames.py}.py`,
-        mimeType: "text/x-python",
-        buffer: fileContents[2],
-      },
-    ]);
+    await runAndWaitForUploads(page, 3, () =>
+      fileChooser.setFiles([
+        {
+          name: `${fileNames.txt}.txt`,
+          mimeType: "text/plain",
+          buffer: fileContents[0],
+        },
+        {
+          name: `${fileNames.json}.json`,
+          mimeType: "application/json",
+          buffer: fileContents[1],
+        },
+        {
+          name: `${fileNames.py}.py`,
+          mimeType: "text/x-python",
+          buffer: fileContents[2],
+        },
+      ]),
+    );
 
-    const successMessage = await page.getByText("Files uploaded successfully");
-    expect(successMessage).toBeTruthy();
+    await expect(page.getByText("Files uploaded successfully")).toBeVisible();
+
+    const txtRow = fileRow(page, `${fileNames.txt}.txt`);
+    const jsonRow = fileRow(page, `${fileNames.json}.json`);
+    const pyRow = fileRow(page, `${fileNames.py}.py`);
 
     // Test search by file name
     const searchInput = await page.getByTestId("search-store-input");
     await searchInput.fill(fileNames.json);
-    await page.waitForTimeout(100);
 
     // Verify only JSON file is visible
-    expect(
-      await page.getByText(fileNames.json + ".json").isVisible(),
-    ).toBeTruthy();
-
-    // Verify other files are not visible
-    expect(
-      await page.getByText(fileNames.txt + ".txt").isVisible(),
-    ).toBeFalsy();
-    expect(await page.getByText(fileNames.py + ".py").isVisible()).toBeFalsy();
+    await expect(jsonRow).toBeVisible();
+    await expect(txtRow).toHaveCount(0);
+    await expect(pyRow).toHaveCount(0);
 
     // Test search by file type
-    await searchInput.fill("py");
-    await page.waitForTimeout(100);
+    await searchInput.fill(".py");
 
     // Verify only Python file is visible
-    expect(await page.getByText(fileNames.py + ".py").isVisible()).toBeTruthy();
-
-    expect(
-      await page.getByText(fileNames.json + ".json").isVisible(),
-    ).toBeFalsy();
-    expect(
-      await page.getByText(fileNames.txt + ".txt").isVisible(),
-    ).toBeFalsy();
+    await expect(pyRow).toBeVisible();
+    await expect(jsonRow).toHaveCount(0);
+    await expect(txtRow).toHaveCount(0);
 
     // Clear search and verify all files are visible again
     await searchInput.fill("");
-    await page.waitForTimeout(100);
-
-    for (const name of Object.values(fileNames)) {
-      expect(await page.getByText(name).isVisible()).toBeTruthy();
-    }
+    await expect(txtRow).toBeVisible();
+    await expect(jsonRow).toBeVisible();
+    await expect(pyRow).toBeVisible();
   },
 );
 
@@ -338,68 +296,46 @@ test(
 
     const fileContents = testFiles.map((file) => fs.readFileSync(file));
 
-    await awaitBootstrapTest(page, { skipModal: true });
-
-    const firstRunLangflow = await page
-      .getByTestId("empty-project-description")
-      .count();
-
-    if (firstRunLangflow > 0) {
-      await addFlowToTestOnEmptyLangflow(page);
-    }
-
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
-
-    await page.getByText(TEXTS.labelMyFiles).first().click();
+    await openFilesPage(page);
     const fileChooserPromise = page.waitForEvent("filechooser");
     await page.getByTestId("upload-file-btn").click();
 
     const fileChooser = await fileChooserPromise;
-    await fileChooser.setFiles([
-      {
-        name: `${fileNames.txt}.txt`,
-        mimeType: "text/plain",
-        buffer: fileContents[0],
-      },
-      {
-        name: `${fileNames.json}.json`,
-        mimeType: "application/json",
-        buffer: fileContents[1],
-      },
-      {
-        name: `${fileNames.py}.py`,
-        mimeType: "text/x-python",
-        buffer: fileContents[2],
-      },
-    ]);
+    await runAndWaitForUploads(page, 3, () =>
+      fileChooser.setFiles([
+        {
+          name: `${fileNames.txt}.txt`,
+          mimeType: "text/plain",
+          buffer: fileContents[0],
+        },
+        {
+          name: `${fileNames.json}.json`,
+          mimeType: "application/json",
+          buffer: fileContents[1],
+        },
+        {
+          name: `${fileNames.py}.py`,
+          mimeType: "text/x-python",
+          buffer: fileContents[2],
+        },
+      ]),
+    );
 
     // Wait for upload success message
-    const successMessage = await page.getByText("Files uploaded successfully");
-    expect(successMessage).toBeTruthy();
+    await expect(page.getByText("Files uploaded successfully")).toBeVisible();
 
     // Verify all files appear in the list
-    for (const name of Object.values(fileNames)) {
-      const file = await page.getByText(name).last();
-      await expect(file).toBeVisible({
-        timeout: 1000,
-      });
+    for (const [extension, name] of Object.entries(fileNames)) {
+      await expect(fileRow(page, `${name}.${extension}`)).toBeVisible();
     }
 
     // Select files using their specific row checkboxes
-    const txtCheckbox = page
-      .locator(".ag-row")
-      .filter({ hasText: fileNames.txt })
-      .locator('input[data-ref="eInput"]');
-    const jsonCheckbox = page
-      .locator(".ag-row")
-      .filter({ hasText: fileNames.json })
-      .locator('input[data-ref="eInput"]');
-    const pyCheckbox = page
-      .locator(".ag-row")
-      .filter({ hasText: fileNames.py })
-      .locator('input[data-ref="eInput"]');
+    const txtRow = fileRow(page, `${fileNames.txt}.txt`);
+    const jsonRow = fileRow(page, `${fileNames.json}.json`);
+    const pyRow = fileRow(page, `${fileNames.py}.py`);
+    const txtCheckbox = txtRow.locator('input[data-ref="eInput"]');
+    const jsonCheckbox = jsonRow.locator('input[data-ref="eInput"]');
+    const pyCheckbox = pyRow.locator('input[data-ref="eInput"]');
 
     await txtCheckbox.click();
     await jsonCheckbox.click();
@@ -414,15 +350,11 @@ test(
     await expect(deleteButton).toBeVisible();
 
     // Deselect one file (checkbox on the grid)
-
     await pyCheckbox.click();
-
-    await page.waitForTimeout(500);
+    await expect(pyCheckbox).not.toBeChecked();
 
     // Check if the bulk actions toolbar still appears
     await expect(deleteButton).toBeVisible();
-
-    await page.waitForTimeout(500);
 
     // Test delete functionality
     await deleteButton.click();
@@ -431,20 +363,20 @@ test(
     const confirmDeleteButton = await page.getByRole("button", {
       name: TEXTS.delete,
     });
-    await confirmDeleteButton.click();
+    const [deleteResponse] = await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.request().method() === "DELETE" &&
+          new URL(response.url()).pathname === "/api/v2/files/batch/",
+      ),
+      confirmDeleteButton.click(),
+    ]);
+    expect(deleteResponse.ok()).toBe(true);
 
     // Check for success message
-    const deleteSuccessMessage = await page.getByText(
-      "Files deleted successfully",
-    );
-    await expect(deleteSuccessMessage).toBeTruthy();
-    await page.waitForTimeout(500);
-
-    // Verify the deleted files are no longer visible
-    const remainingFileCount =
-      (await page.getByText(fileNames.py + ".py").count()) +
-      (await page.getByText(fileNames.txt + ".txt").count()) +
-      (await page.getByText(fileNames.json + ".json").count());
-    await expect(remainingFileCount).toBe(1);
+    await expect(page.getByText("Files deleted successfully")).toBeVisible();
+    await expect(txtRow).toHaveCount(0);
+    await expect(jsonRow).toHaveCount(0);
+    await expect(pyRow).toBeVisible();
   },
 );
