@@ -245,6 +245,55 @@ class TestBuildWhereClause:
         component.filter_by_session = ""  # falsy non-bool
         assert component._build_where_clause(session_id="s1") is None
 
+    def test_session_filter_off_with_end_user_scopes_to_end_user(self):
+        # Serving-plane cross-session recall stays within one end user instead of spanning
+        # every end user's chunks in the shared service-account store.
+        component = _make_component(flow_id=uuid.uuid4(), session_id="alice::s1", filter_by_session=False)
+        assert component._build_where_clause(session_id="alice::s1", end_user_id="alice") == {"end_user_id": "alice"}
+
+    def test_session_filter_on_ignores_end_user(self):
+        # The session-id prefix already scopes to the end user, so the session predicate wins.
+        component = _make_component(flow_id=uuid.uuid4(), session_id="alice::s1", filter_by_session=True)
+        assert component._build_where_clause(session_id="alice::s1", end_user_id="alice") == {"session_id": "alice::s1"}
+
+    def test_session_filter_off_without_end_user_returns_none(self):
+        # Editor / feature off: no end user, so cross-session recall spans all sessions (unchanged).
+        component = _make_component(flow_id=uuid.uuid4(), session_id="s1", filter_by_session=False)
+        assert component._build_where_clause(session_id="s1", end_user_id=None) is None
+
+
+# ---------------------------------------------------------------------------
+# Serving-plane fail-closed: anonymous caller cannot do cross-session recall
+# ---------------------------------------------------------------------------
+
+MR_MODULE = "lfx.components.files_and_knowledge.memory_retrieval"
+
+
+class TestServingFailClosed:
+    async def test_anonymous_cross_session_recall_returns_empty(self):
+        # Serving on + filter_by_session off + no derivable end user (anonymous) must NOT
+        # run an unfiltered search over the shared store — it would return every end user's
+        # memory. It short-circuits to empty before any owner lookup / backend construction.
+        component = _make_component(flow_id=uuid.uuid4(), session_id="anon::deadbeef", filter_by_session=False)
+        with (
+            patch(f"{MR_MODULE}.serving_end_user_enabled", return_value=True),
+            patch(f"{MR_MODULE}.end_user_id_from_scoped_session", return_value=None),
+        ):
+            result = await component.retrieve_memory()
+        assert len(result) == 0
+
+    async def test_feature_off_cross_session_recall_not_blocked(self):
+        # Feature off: the fail-closed guard must not fire — cross-session recall stays
+        # available exactly as before (proven by reaching the flow_id validation, not the
+        # early empty return). end_user_id_from_scoped_session returns None when off.
+        component = _make_component(flow_id=None, session_id="s1", filter_by_session=False)
+        with (
+            patch(f"{MR_MODULE}.serving_end_user_enabled", return_value=False),
+            patch(f"{MR_MODULE}.end_user_id_from_scoped_session", return_value=None),
+            pytest.raises(ValueError, match="flow_id is not available"),
+        ):
+            await component.retrieve_memory()
+
 
 # ---------------------------------------------------------------------------
 # load_kb_metadata branches (shared helper)

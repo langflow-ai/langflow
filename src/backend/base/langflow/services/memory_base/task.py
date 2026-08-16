@@ -34,6 +34,7 @@ from typing import TYPE_CHECKING
 
 from lfx.base.knowledge_bases.backends import create_backend
 from lfx.log.logger import logger
+from lfx.workflow.end_user_identity import end_user_id_from_scoped_session
 from sqlalchemy import text
 from sqlmodel import Session, col, select
 
@@ -219,6 +220,11 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
     preproc_instructions = request.preproc_instructions
     preproc_kill_phrase = request.preproc_kill_phrase or DEFAULT_KILL_PHRASE
 
+    # Serving plane: recover the end-user id from the scoped session id (the one identity
+    # signal every ingestion path carries — live run, regenerate, manual trigger — since a
+    # graph is not available here). None off / editor / anonymous, so nothing is stamped.
+    end_user_id = end_user_id_from_scoped_session(session_id)
+
     hashed_sid = hash_session_id(session_id)
     await logger.adebug(
         "Ingestion job started | memory_base=%s session=%s dispatch_cursor=%s job=%s",
@@ -370,10 +376,11 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
                     flow_id=str(flow_id),
                     job_id=job_id_str,
                     preproc_output_id=str(preproc_row.id),
+                    end_user_id=end_user_id,
                 )
             else:
                 documents = build_documents_from_messages(
-                    messages, session_id=session_id, flow_id=str(flow_id), job_id=job_id_str
+                    messages, session_id=session_id, flow_id=str(flow_id), job_id=job_id_str, end_user_id=end_user_id
                 )
 
             if not documents:

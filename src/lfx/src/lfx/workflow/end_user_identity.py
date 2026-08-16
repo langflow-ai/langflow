@@ -202,6 +202,35 @@ def serving_end_user_enabled() -> bool:
     return bool(settings.serving_end_user_header) if settings is not None else False
 
 
+def end_user_id_from_scoped_session(session_id: str | None) -> str | None:
+    """The end-user id embedded in a serving-scoped session id, or ``None``.
+
+    Serving scoping (:func:`scope_session_for_identity`) produces ``<end_user>::<base>``
+    for an identified run and ``anon::<uuid>`` for an anonymous one. This recovers the
+    end-user id from that already-scoped session id — the one value **every** ingestion
+    path carries (live run, ``regenerate`` reconcile, manual trigger), unlike
+    ``graph.end_user_id`` which only the live run path has.
+
+    Memory Base ingestion stamps this onto each chunk and retrieval filters on it, so a
+    query with ``filter_by_session`` off still stays within one end user instead of
+    spanning the whole SID-owned store. Both sides key off this one helper, so a chunk's
+    stamped owner and the query predicate are identical by construction.
+
+    Returns ``None`` when the feature is off, the session is anonymous, or it carries no
+    scope prefix — so feature-off / editor sessions stamp and filter nothing (byte-for-byte
+    unchanged). The split is on the first separator, so an end-user id that itself contains
+    ``::`` collapses to its leading segment; harmless because both sides derive identically
+    (no leak, no relative recall loss) and gateway ids are opaque strings, typically UUIDs
+    with no separator.
+    """
+    if not session_id or not serving_end_user_enabled():
+        return None
+    prefix, sep, _ = session_id.partition(SCOPE_SEPARATOR)
+    if not sep or not prefix or f"{prefix}{SCOPE_SEPARATOR}" == ANONYMOUS_SESSION_PREFIX:
+        return None
+    return prefix
+
+
 def resolve_serving_end_user_id(*, http_request: Any) -> str | None:
     """The raw trusted end-user id for a serving request, or ``None`` when off / anonymous.
 

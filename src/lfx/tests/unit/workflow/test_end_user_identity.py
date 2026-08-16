@@ -13,10 +13,12 @@ from lfx.workflow.end_user_identity import (
     ANONYMOUS_SESSION_PREFIX,
     EndUserIdentity,
     EndUserIdentityRequiredError,
+    end_user_id_from_scoped_session,
     resolve_end_user_identity,
     resolve_serving_end_user_id,
     resolve_serving_scope,
     scope_session_for_identity,
+    serving_end_user_enabled,
 )
 
 HEADER = "X-End-User-Id"
@@ -389,3 +391,53 @@ def test_serving_scope_returns_raw_end_user_id(monkeypatch):
     )
     assert scoped is not None
     assert scoped.end_user_id == "alice"
+
+
+# --- serving_end_user_enabled: the deployment-level switch ----------------------------
+
+
+def test_serving_enabled_true_when_header_configured(monkeypatch):
+    _stub_settings(monkeypatch, serving_end_user_header=HEADER)
+    assert serving_end_user_enabled() is True
+
+
+def test_serving_enabled_false_when_header_absent(monkeypatch):
+    _stub_settings(monkeypatch, serving_end_user_header=None)
+    assert serving_end_user_enabled() is False
+
+
+# --- end_user_id_from_scoped_session: recover the id ingestion + retrieval both key on --
+
+
+def test_scoped_session_recovers_identified_id(monkeypatch):
+    _stub_settings(monkeypatch, serving_end_user_header=HEADER)
+    assert end_user_id_from_scoped_session("alice::chat-1") == "alice"
+
+
+def test_scoped_session_first_separator_wins_when_base_has_separator(monkeypatch):
+    # base itself may contain "::"; the split is on the FIRST separator so the id is exact.
+    _stub_settings(monkeypatch, serving_end_user_header=HEADER)
+    assert end_user_id_from_scoped_session("alice::chat::1") == "alice"
+
+
+def test_scoped_session_anonymous_is_none(monkeypatch):
+    _stub_settings(monkeypatch, serving_end_user_header=HEADER)
+    assert end_user_id_from_scoped_session(f"{ANONYMOUS_SESSION_PREFIX}deadbeef") is None
+
+
+def test_scoped_session_unprefixed_is_none(monkeypatch):
+    # A serving-on session with no scope prefix carries no end user.
+    _stub_settings(monkeypatch, serving_end_user_header=HEADER)
+    assert end_user_id_from_scoped_session("plain-session") is None
+
+
+def test_scoped_session_none_input_is_none(monkeypatch):
+    _stub_settings(monkeypatch, serving_end_user_header=HEADER)
+    assert end_user_id_from_scoped_session(None) is None
+
+
+def test_scoped_session_feature_off_never_derives(monkeypatch):
+    # Feature off: even a value that looks prefixed must not be parsed — an editor-plane
+    # session could legitimately contain "::" and there is no end user to scope to.
+    _stub_settings(monkeypatch, serving_end_user_header=None)
+    assert end_user_id_from_scoped_session("alice::chat-1") is None

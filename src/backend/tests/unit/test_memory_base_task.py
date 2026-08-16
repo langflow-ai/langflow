@@ -520,7 +520,7 @@ class TestExtractContentBlockText:
 
 
 class TestBuildDocumentsFromMessages:
-    def _call(self, messages, *, session_id="s1", flow_id=None, job_id="test-job-id"):
+    def _call(self, messages, *, session_id="s1", flow_id=None, job_id="test-job-id", end_user_id=None):
         from langflow.services.memory_base.document_builders import build_documents_from_messages
 
         return build_documents_from_messages(
@@ -528,7 +528,24 @@ class TestBuildDocumentsFromMessages:
             session_id=session_id,
             flow_id=flow_id or str(uuid.uuid4()),
             job_id=job_id,
+            end_user_id=end_user_id,
         )
+
+    def test_end_user_id_stamped_when_present(self):
+        # Serving plane: the end-user id becomes its own metadata field so cross-session
+        # recall can filter on it (the session-id prefix is dropped when filter_by_session off).
+        flow_id = uuid.uuid4()
+        msg = _make_message(flow_id=flow_id, text="hello")
+        docs = self._call([msg], flow_id=str(flow_id), end_user_id="alice")
+        assert docs[0].metadata["end_user_id"] == "alice"
+
+    def test_no_end_user_id_stamps_no_key(self):
+        # Off / editor / anonymous: no key at all, so the retrieval exact-match filter never
+        # falsely excludes these chunks (and metadata is byte-for-byte unchanged).
+        flow_id = uuid.uuid4()
+        msg = _make_message(flow_id=flow_id, text="hello")
+        docs = self._call([msg], flow_id=str(flow_id))
+        assert "end_user_id" not in docs[0].metadata
 
     def test_content_blocks_contribute_to_doc_text(self):
         flow_id = uuid.uuid4()
@@ -1037,6 +1054,7 @@ class TestBuildPreprocessedDocument:
         flow_id: str | None = None,
         job_id: str = "job-1",
         preproc_output_id: str = "preproc-1",
+        end_user_id: str | None = None,
     ):
         from langflow.services.memory_base.document_builders import build_preprocessed_document
 
@@ -1047,7 +1065,18 @@ class TestBuildPreprocessedDocument:
             flow_id=flow_id or str(uuid.uuid4()),
             job_id=job_id,
             preproc_output_id=preproc_output_id,
+            end_user_id=end_user_id,
         )
+
+    def test_end_user_id_stamped_when_present(self):
+        # Preprocessed chunks are scoped identically to the raw-message path — otherwise they
+        # would leak across end users under the filter_by_session off toggle.
+        docs = self._call(end_user_id="alice")
+        assert docs[0].metadata["end_user_id"] == "alice"
+
+    def test_no_end_user_id_stamps_no_key(self):
+        docs = self._call()
+        assert "end_user_id" not in docs[0].metadata
 
     def test_empty_output_text_returns_empty_list(self):
         assert self._call(output_text="") == []
