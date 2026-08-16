@@ -86,6 +86,55 @@ async def test_required_but_absent_is_rejected(client, simple_api_test, created_
     assert resp.json()["detail"]["code"] == "END_USER_IDENTITY_REQUIRED"
 
 
+async def _run_stream(client, flow_id, api_key, *, end_user=None):
+    headers = {"x-api-key": api_key}
+    if end_user is not None:
+        headers[HEADER] = end_user
+    return await client.post(f"/api/v1/run/{flow_id}?stream=true", headers=headers, json={"input_value": "hi"})
+
+
+async def _responses(client, flow_id, api_key, *, stream=False, end_user=None):
+    headers = {"x-api-key": api_key}
+    if end_user is not None:
+        headers[HEADER] = end_user
+    body = {"model": flow_id, "input": "hi", "stream": stream}
+    return await client.post("/api/v1/responses", headers=headers, json=body)
+
+
+async def test_required_but_absent_rejected_on_streaming_run(client, simple_api_test, created_api_key, monkeypatch):
+    # BUG-01: the stream branch returns a StreamingResponse (200 headers) before simple_run_flow
+    # runs, so the 401 must come from a synchronous pre-check, not leak as an in-stream event.
+    _enable_serving(monkeypatch, required=True)
+    resp = await _run_stream(client, simple_api_test["id"], created_api_key.api_key)  # no header
+    assert resp.status_code == status.HTTP_401_UNAUTHORIZED, resp.text
+    assert resp.json()["detail"]["code"] == "END_USER_IDENTITY_REQUIRED"
+
+
+async def test_required_but_absent_rejected_on_responses(client, simple_api_test, created_api_key, monkeypatch):
+    # BUG-01: create_response's blanket ``except Exception`` must not convert the 401 into an
+    # OpenAIErrorResponse returned at the route's default 200.
+    _enable_serving(monkeypatch, required=True)
+    resp = await _responses(client, simple_api_test["id"], created_api_key.api_key)  # no header, sync
+    assert resp.status_code == status.HTTP_401_UNAUTHORIZED, resp.text
+    assert resp.json()["detail"]["code"] == "END_USER_IDENTITY_REQUIRED"
+
+
+async def test_required_but_absent_rejected_on_streaming_responses(
+    client, simple_api_test, created_api_key, monkeypatch
+):
+    _enable_serving(monkeypatch, required=True)
+    resp = await _responses(client, simple_api_test["id"], created_api_key.api_key, stream=True)  # no header
+    assert resp.status_code == status.HTTP_401_UNAUTHORIZED, resp.text
+    assert resp.json()["detail"]["code"] == "END_USER_IDENTITY_REQUIRED"
+
+
+async def test_streaming_run_with_identity_is_not_rejected(client, simple_api_test, created_api_key, monkeypatch):
+    # Feature on + identity present: the pre-check is a no-op and the stream proceeds (BC).
+    _enable_serving(monkeypatch, required=True)
+    resp = await _run_stream(client, simple_api_test["id"], created_api_key.api_key, end_user="alice")
+    assert resp.status_code == status.HTTP_200_OK, resp.text
+
+
 async def test_identified_run_stamps_message_user_id_over_http(
     client, simple_api_test, created_api_key, active_user, monkeypatch
 ):

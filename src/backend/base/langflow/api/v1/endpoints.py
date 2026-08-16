@@ -904,6 +904,24 @@ async def _run_flow_internal(
 
     start_time = time.perf_counter()
 
+    # Required-identity gate must fire BEFORE the streaming branch: that branch returns a
+    # StreamingResponse with 200 headers before simple_run_flow runs, so its 401 would only ever
+    # arrive as an in-stream error event. Enforce it synchronously here (idempotent with the scope
+    # simple_run_flow applies again on the same http_request). The non-stream path also flows
+    # through this — harmless, it already surfaced the 401 by propagation. Mirrors the webhook
+    # pre-check (I3); kept outside any try so the 401 is not rewritten. See BUG-01.
+    try:
+        resolve_serving_scope(
+            http_request=http_request,
+            requested_session_id=input_request.session_id,
+            default_session_id=str(flow.id),
+        )
+    except EndUserIdentityRequiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=end_user_required_detail(exc),
+        ) from exc
+
     if stream:
         asyncio_queue: asyncio.Queue = asyncio.Queue()
         asyncio_queue_client_consumed: asyncio.Queue = asyncio.Queue()

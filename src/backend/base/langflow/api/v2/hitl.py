@@ -124,9 +124,11 @@ async def persist_human_input_card(data: dict, flow_id: uuid.UUID, session_id: s
     The card carries request_id + job_id, so a reloaded session can resume the run.
     Records the card's message id in job metadata so resume can mark it answered.
     """
+    from lfx.memory.flow_context import derive_message_owner_uuid
     from lfx.schema.content_block import ContentBlock
     from lfx.schema.content_types import HumanInputContent
     from lfx.schema.message import Message
+    from lfx.workflow.end_user_identity import end_user_id_from_scoped_session
 
     from langflow.memory import astore_message
 
@@ -148,8 +150,19 @@ async def persist_human_input_card(data: dict, flow_id: uuid.UUID, session_id: s
         flow_id=flow_id,
         content_blocks=[block],
     )
+    # Stamp the serving-plane owner so this card is retrievable through the per-user monitor pull
+    # (GET /monitor/messages?end_user_id=...). The card is built by hand and bypasses
+    # Component._store_message, so without this it persists user_id=NULL and the owner's own pull
+    # misses it (the pull's predicate is an exact owner match, so NULL never returns). The scoped
+    # session carries the end user (<end_user>::<base>); resolve it through the same helpers the
+    # component write path and the monitor read path use so write == read. None off / editor /
+    # anonymous -> NULL, unchanged. See BUG-02.
+    owner_end_user = end_user_id_from_scoped_session(session_id)
+    owner_user_id = derive_message_owner_uuid(owner_end_user) if owner_end_user else None
     try:
-        stored = await astore_message(message, flow_id=flow_id, run_id=str(job_id) if job_id else None)
+        stored = await astore_message(
+            message, flow_id=flow_id, run_id=str(job_id) if job_id else None, user_id=owner_user_id
+        )
         if stored and job_id is not None:
             await get_job_service().update_job_metadata(uuid.UUID(str(job_id)), {"card_message_id": str(stored[0].id)})
     except Exception:  # noqa: BLE001
