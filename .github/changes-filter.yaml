@@ -3,6 +3,10 @@ python:
   - "src/backend/**"
   - "src/backend/**.py"
   - "src/lfx/**"
+  # Provider bundles are first-class Python sources since the metapackage
+  # split; without this a bundle-only PR reports python=false and skips the
+  # backend suite entirely, including the bundle's own tests.
+  - "src/bundles/**"
   - "pyproject.toml"
   - "uv.lock"
   - "src/backend/base/pyproject.toml"
