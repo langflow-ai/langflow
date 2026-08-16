@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
@@ -1886,6 +1887,255 @@ async def test_incomplete_claim_skip_is_not_audited_on_every_request(
     authz.ingest_directory_membership_snapshot.assert_not_awaited()
     assert audit.await_count == 1
     assert db.commit.await_count == 4
+
+
+@pytest.mark.anyio
+async def test_group_revoked_after_promotion_reconciles_immediately(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """A group set the user moved past must not be served from an earlier cache entry.
+
+    LE-2099 QA follow-up: ``[devs]`` reconciled and cached, then a promotion to
+    ``[admins, devs]``, then the IdP revokes ``admins``. The claim now differs
+    from the last reconciled state, so it must reconcile on the next request
+    rather than after the interval expires - privilege removal is the case
+    that must not be delayed.
+    """
+    from lfx.services.authorization import DirectoryMembershipIngestResult
+
+    auth_settings.EXTERNAL_AUTH_GROUP_RECONCILE_INTERVAL_SECONDS = 3600
+    user = _dummy_user(uuid4())
+    db = AsyncMock()
+    authz = _DirectoryAuthorizationStub(result=DirectoryMembershipIngestResult(changed=True, added=1))
+    audit = AsyncMock()
+    developer = _external_identity({"groups": ["lf-devs"]})
+    promoted = _external_identity({"groups": ["lf-admins", "lf-devs"]})
+    ingest = authz.ingest_directory_membership_snapshot
+
+    async def reconcile(identity, *, changed: bool) -> None:
+        ingest.return_value = DirectoryMembershipIngestResult(changed=changed, added=int(changed))
+        await auth_service._reconcile_verified_external_groups(identity=identity, user=user, db=db)
+
+    def memberships_seen() -> list[tuple[str, ...]]:
+        return [call.kwargs["snapshot"].memberships for call in ingest.await_args_list]
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        patch("langflow.services.authorization.audit.audit_decision", new=audit),
+    ):
+        # 1) first login grants developer, 2) the confirming pass caches [devs]
+        await reconcile(developer, changed=True)
+        await reconcile(developer, changed=False)
+        await reconcile(developer, changed=False)
+        assert ingest.await_count == 2, "the confirming pass must be cached"
+
+        # 3) promotion: a group set never seen before reconciles at once
+        await reconcile(promoted, changed=True)
+        assert ingest.await_count == 3
+
+        # 4) revocation back to the earlier group set must reconcile immediately,
+        #    even though [devs] was cached in step 2 and its TTL has not expired.
+        await reconcile(developer, changed=True)
+        assert ingest.await_count == 4, "a revoked group kept its role from a stale cache entry"
+        assert memberships_seen()[-1] == ("lf-devs",)
+
+        # The confirming pass caches the reconciled state again and later
+        # identical requests are still skipped: the cache keeps working.
+        await reconcile(developer, changed=False)
+        await reconcile(developer, changed=False)
+        await reconcile(developer, changed=False)
+        assert ingest.await_count == 5
+
+        # A later promotion is again a change from the last reconciled state.
+        await reconcile(promoted, changed=True)
+        assert ingest.await_count == 6
+
+    assert memberships_seen() == [
+        ("lf-devs",),
+        ("lf-devs",),
+        ("lf-admins", "lf-devs"),
+        ("lf-devs",),
+        ("lf-devs",),
+        ("lf-admins", "lf-devs"),
+    ]
+
+
+@pytest.mark.anyio
+async def test_revocation_reconciles_even_after_the_promotion_was_confirmed_and_cached(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """Both the promoted and the earlier state were cached; the older one must not win."""
+    from lfx.services.authorization import DirectoryMembershipIngestResult
+
+    auth_settings.EXTERNAL_AUTH_GROUP_RECONCILE_INTERVAL_SECONDS = 3600
+    user = _dummy_user(uuid4())
+    db = AsyncMock()
+    authz = _DirectoryAuthorizationStub(result=DirectoryMembershipIngestResult(changed=False))
+    audit = AsyncMock()
+    developer = _external_identity({"groups": ["lf-devs"]})
+    promoted = _external_identity({"groups": ["lf-admins", "lf-devs"]})
+    ingest = authz.ingest_directory_membership_snapshot
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        patch("langflow.services.authorization.audit.audit_decision", new=audit),
+    ):
+        await auth_service._reconcile_verified_external_groups(identity=developer, user=user, db=db)
+        ingest.return_value = DirectoryMembershipIngestResult(changed=True, added=1)
+        await auth_service._reconcile_verified_external_groups(identity=promoted, user=user, db=db)
+        ingest.return_value = DirectoryMembershipIngestResult(changed=False)
+        await auth_service._reconcile_verified_external_groups(identity=promoted, user=user, db=db)
+        assert ingest.await_count == 3
+
+        # Revocation: [devs] is the state cached first, [admins, devs] the one
+        # cached last. Neither may hide the change.
+        ingest.return_value = DirectoryMembershipIngestResult(changed=True, removed=1)
+        await auth_service._reconcile_verified_external_groups(identity=developer, user=user, db=db)
+
+    assert ingest.await_count == 4
+    assert ingest.await_args_list[-1].kwargs["snapshot"].memberships == ("lf-devs",)
+
+
+@pytest.mark.anyio
+async def test_reconcile_cache_is_scoped_per_user(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """Remembering one user's state must not evict or leak into another user's entry."""
+    from lfx.services.authorization import DirectoryMembershipIngestResult
+
+    auth_settings.EXTERNAL_AUTH_GROUP_RECONCILE_INTERVAL_SECONDS = 3600
+    first_user = _dummy_user(uuid4())
+    second_user = _dummy_user(uuid4())
+    db = AsyncMock()
+    authz = _DirectoryAuthorizationStub(result=DirectoryMembershipIngestResult(changed=False))
+    audit = AsyncMock()
+    identity = _external_identity({"groups": ["engineering"]})
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        patch("langflow.services.authorization.audit.audit_decision", new=audit),
+    ):
+        await auth_service._reconcile_verified_external_groups(identity=identity, user=first_user, db=db)
+        await auth_service._reconcile_verified_external_groups(identity=identity, user=second_user, db=db)
+        await auth_service._reconcile_verified_external_groups(identity=identity, user=first_user, db=db)
+        await auth_service._reconcile_verified_external_groups(identity=identity, user=second_user, db=db)
+
+    assert authz.ingest_directory_membership_snapshot.await_count == 2
+
+
+@pytest.mark.anyio
+async def test_change_landing_after_a_concurrent_noop_pass_evicts_its_entry(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """An old-token no-op pass must not keep serving once an overlapping pass changed the state.
+
+    The promotion pass begins first and is held inside the plugin. Meanwhile
+    the old token's ``[devs]`` pass verifies the still-unchanged state and is
+    remembered. When the promotion commits, that entry must be evicted, or
+    the next ``[devs]`` request would be skipped while the user holds admin.
+    """
+    from lfx.services.authorization import DirectoryMembershipIngestResult
+
+    auth_settings.EXTERNAL_AUTH_GROUP_RECONCILE_INTERVAL_SECONDS = 3600
+    user = _dummy_user(uuid4())
+    db = AsyncMock()
+    audit = AsyncMock()
+    developer = _external_identity({"groups": ["lf-devs"]})
+    promoted = _external_identity({"groups": ["lf-admins", "lf-devs"]})
+    promotion_in_plugin = asyncio.Event()
+    release_promotion = asyncio.Event()
+
+    async def ingest(*, session, snapshot):  # noqa: ARG001
+        if snapshot.memberships == ("lf-admins", "lf-devs"):
+            promotion_in_plugin.set()
+            await release_promotion.wait()
+            return DirectoryMembershipIngestResult(changed=True, added=1)
+        return DirectoryMembershipIngestResult(changed=False)
+
+    authz = _DirectoryAuthorizationStub(result=None)
+    authz.ingest_directory_membership_snapshot = AsyncMock(side_effect=ingest)
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        patch("langflow.services.authorization.audit.audit_decision", new=audit),
+    ):
+        promotion = asyncio.create_task(
+            auth_service._reconcile_verified_external_groups(identity=promoted, user=user, db=db)
+        )
+        await promotion_in_plugin.wait()
+        await auth_service._reconcile_verified_external_groups(identity=developer, user=user, db=db)
+        assert authz.ingest_directory_membership_snapshot.await_count == 2
+        release_promotion.set()
+        await promotion
+
+        await auth_service._reconcile_verified_external_groups(identity=developer, user=user, db=db)
+
+    assert authz.ingest_directory_membership_snapshot.await_count == 3, (
+        "the [devs] verdict cached before the promotion landed was served after it"
+    )
+    assert authz.ingest_directory_membership_snapshot.await_args_list[-1].kwargs["snapshot"].memberships == ("lf-devs",)
+
+
+@pytest.mark.anyio
+async def test_noop_pass_that_verified_a_superseded_state_is_not_remembered(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """A no-op verdict reached before a change landed must be discarded, not cached after it.
+
+    The old token's ``[devs]`` pass verifies the state and is held at commit.
+    The promotion then begins, changes the state and commits. When the held
+    pass resumes and tries to remember ``[devs]``, its verdict describes a
+    state the user has moved past and must be dropped.
+    """
+    from lfx.services.authorization import DirectoryMembershipIngestResult
+
+    auth_settings.EXTERNAL_AUTH_GROUP_RECONCILE_INTERVAL_SECONDS = 3600
+    user = _dummy_user(uuid4())
+    audit = AsyncMock()
+    developer = _external_identity({"groups": ["lf-devs"]})
+    promoted = _external_identity({"groups": ["lf-admins", "lf-devs"]})
+    developer_at_commit = asyncio.Event()
+    release_developer = asyncio.Event()
+
+    async def held_commit() -> None:
+        developer_at_commit.set()
+        await release_developer.wait()
+
+    held_db = AsyncMock()
+    held_db.commit = AsyncMock(side_effect=held_commit)
+    db = AsyncMock()
+
+    async def ingest(*, session, snapshot):  # noqa: ARG001
+        if snapshot.memberships == ("lf-admins", "lf-devs"):
+            return DirectoryMembershipIngestResult(changed=True, added=1)
+        return DirectoryMembershipIngestResult(changed=False)
+
+    authz = _DirectoryAuthorizationStub(result=None)
+    authz.ingest_directory_membership_snapshot = AsyncMock(side_effect=ingest)
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        patch("langflow.services.authorization.audit.audit_decision", new=audit),
+    ):
+        held = asyncio.create_task(
+            auth_service._reconcile_verified_external_groups(identity=developer, user=user, db=held_db)
+        )
+        await developer_at_commit.wait()
+        await auth_service._reconcile_verified_external_groups(identity=promoted, user=user, db=db)
+        assert authz.ingest_directory_membership_snapshot.await_count == 2
+        release_developer.set()
+        await held
+
+        await auth_service._reconcile_verified_external_groups(identity=developer, user=user, db=db)
+
+    assert authz.ingest_directory_membership_snapshot.await_count == 3, (
+        "a stale [devs] verdict was cached after the promotion had already landed"
+    )
 
 
 # =============================================================================
