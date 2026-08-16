@@ -432,6 +432,7 @@ if _OTEL_AVAILABLE:
             scope = span.instrumentation_scope.name if span.instrumentation_scope else ""
             if scope in self._scopes:
                 _redact_url_attributes(span)
+                _redact_db_path_attributes(span)
                 super().on_end(span)
                 return
             if scope not in self._dropped_scopes:
@@ -849,6 +850,84 @@ def _redact_url_attributes(span) -> None:
     )
     redacted_attributes.dropped = original_attributes.dropped
     span._attributes = redacted_attributes  # noqa: SLF001
+
+
+# Attributes a database instrumentor derives from the database name. For SQLite the "name" is
+# the file path, so each of these carries it: db.operation is built as "<operation> <db.name>",
+# and the span name is that same string.
+_DB_NAME_DERIVED_ATTRIBUTES = ("db.name", "db.operation")
+
+
+def _shorten_db_path(value: str) -> str:
+    """Return the final path segment, or the value unchanged when it is not a path.
+
+    Split on both separators rather than using os.path, because the exporting host and the host
+    that wrote the path are not necessarily the same platform: a Windows deployment's backslash
+    path must still be shortened when this runs anywhere else.
+    """
+    return value.replace("\\", "/").rsplit("/", maxsplit=1)[-1]
+
+
+def _redact_db_path_attributes(span) -> None:
+    """Replace a SQLite database file path with its file name, in place.
+
+    SQLAlchemy's instrumentation sets ``db.name`` from the database name, and for SQLite that
+    name is the file path. It then builds ``db.operation`` and the span name as
+    ``"<operation> <db.name>"``, so a span arrives at the APM named
+    ``SELECT /home/alice/langflow/langflow.db``. Confirmed present in a commercial APM, not only
+    locally, so it survives export to a third party.
+
+    SQLite is the default database, so this is the default configuration rather than an edge
+    case. The path is not a credential, but it is host detail the operator did not choose to
+    send: install directory, the account name on a typical unix path, and whatever their
+    directory naming gives away.
+
+    It is also a cardinality problem. Every deployment path is a distinct span name, so
+    dashboards written against one environment do not port to another.
+
+    The file name is kept rather than dropping the value, because an operator running more than
+    one SQLite database still needs to tell them apart.
+
+    Only SQLite spans are touched, and the gate is ``db.system`` rather than "does this value
+    look like a path". A separator is legal inside a Postgres or MySQL database name, so a
+    shape-based test would silently rename a logical database in the operator's dashboards.
+    """
+    attributes = span.attributes
+    if not attributes or attributes.get("db.system") != "sqlite":
+        # Gated on the system rather than on "does this look like a path", because a
+        # separator is legal inside a Postgres or MySQL database name. Shortening one of
+        # those would silently rename a logical database in the operator's dashboards.
+        return
+
+    db_name = attributes.get("db.name")
+    if not isinstance(db_name, str):
+        return
+    shortened = _shorten_db_path(db_name)
+    if shortened == db_name:
+        # An in-memory database, or a bare file name that is already its final segment.
+        return
+
+    updated = dict(attributes)
+    for key in _DB_NAME_DERIVED_ATTRIBUTES:
+        value = attributes.get(key)
+        if isinstance(value, str):
+            updated[key] = value.replace(db_name, shortened)
+
+    from opentelemetry.attributes import BoundedAttributes
+
+    original_attributes = span._attributes  # noqa: SLF001
+    shortened_attributes = BoundedAttributes(
+        maxlen=original_attributes.maxlen,
+        attributes=updated,
+        max_value_len=original_attributes.max_value_len,
+    )
+    shortened_attributes.dropped = original_attributes.dropped
+    span._attributes = shortened_attributes  # noqa: SLF001
+
+    # The span name is the other carrier, and the one an operator actually reads. ReadableSpan
+    # exposes name as a read-only property over this attribute, the same shape as _attributes.
+    if isinstance(span.name, str) and db_name in span.name:
+        span._name = span.name.replace(db_name, shortened)  # noqa: SLF001
 
 
 def bootstrap_application_telemetry(*, prometheus_enabled: bool = False) -> ApplicationTelemetry:
