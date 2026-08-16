@@ -524,9 +524,15 @@ class MCPToolsComponent(ComponentWithCache):
                     request_variables = self.graph.context.get("request_variables")
 
                 # Only load global variables from database if we have headers that might use them
-                # This avoids unnecessary database queries when headers are empty
+                # This avoids unnecessary database queries when headers are empty.
+                #
+                # The database load must NOT be skipped just because the request carried
+                # overrides: a request that overrides one variable still needs every other
+                # header variable resolved from the database. Skipping the load there sends
+                # the unresolved variable *name* upstream as the header value. Per-request
+                # values win on conflict, matching ``CustomComponent.get_variable``.
                 has_headers = server_config.get("headers") and len(server_config.get("headers", {})) > 0
-                if not request_variables and has_headers:
+                if has_headers:
                     try:
                         from lfx.services.deps import get_variable_service
 
@@ -536,9 +542,10 @@ class MCPToolsComponent(ComponentWithCache):
                         # skip cleanly rather than raising into the broad except below.
                         if variable_service and hasattr(variable_service, "get_all_decrypted_variables"):
                             async with session_scope() as db:
-                                request_variables = await variable_service.get_all_decrypted_variables(
+                                db_variables = await variable_service.get_all_decrypted_variables(
                                     user_id=self.user_id, session=db
                                 )
+                            request_variables = {**(db_variables or {}), **(request_variables or {})}
                     except Exception as e:  # noqa: BLE001
                         await logger.awarning(f"Failed to load global variables for MCP component: {e}")
 
