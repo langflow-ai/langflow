@@ -4,16 +4,20 @@ Design principles enforced here:
 - Cursor atomicity: cursor_id is NEVER updated before ingestion confirms success.
 - Retry safety: If a job fails, cursor_id remains at the last known good position.
 - Serialization: A per-(memory_base_id, session_id) distributed lock prevents concurrent
-  jobs from racing to write the same messages into Chroma. Uses PostgreSQL advisory locks
-  for cross-worker safety, with an in-process asyncio.Lock fallback for SQLite (dev/test).
-  The lock is acquired before any DB or Chroma access and released in a finally block.
+  jobs from racing to write the same messages into the vector store. Uses PostgreSQL
+  advisory locks for cross-worker safety, with an in-process asyncio.Lock fallback for
+  SQLite (dev/test). The lock is acquired before any DB or vector-store access and
+  released in a finally block.
 - Live cursor: After acquiring the lock, the current cursor_id is re-read from the DB
   (not the dispatch-time snapshot) so the pending message fetch always starts from the
   true latest position, even if a prior job advanced the cursor while this job waited.
 - Path safety: kb_path is validated against kb_root before any filesystem operation.
 
-The actual Chroma write logic is shared with KB file ingestion via
-``KBIngestionHelper.write_documents_to_chroma`` — no duplicate batching/retry code here.
+The write goes through whichever backend the KB is configured with, resolved from the
+``knowledge_base`` row — so a Memory Base on OpenSearch or Chroma Cloud ingests to that
+store rather than to a local directory on whichever replica happened to run the job. The
+batching/retry logic is shared with KB file ingestion via
+``KBIngestionHelper.write_documents_to_backend`` — no duplicate code here.
 
 Document building and KB metadata sync live in ``document_builders.py``.
 """
@@ -28,13 +32,12 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from langchain_chroma import Chroma
-from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
+from lfx.base.knowledge_bases.backends import create_backend
 from lfx.log.logger import logger
 from sqlalchemy import text
 from sqlmodel import Session, col, select
 
-from langflow.api.utils.kb_helpers import KBIngestionHelper, KBStorageHelper
+from langflow.api.utils.kb_helpers import KBIngestionHelper, KBStorageHelper, resolve_backend_selection
 from langflow.services.database.models.memory_base.model import (
     MemoryBasePreprocessingOutput,
     MemoryBaseSession,
@@ -45,7 +48,7 @@ from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.memory_base.document_builders import (
     build_documents_from_messages,
     build_preprocessed_document,
-    sync_kb_metadata,
+    sync_kb_stats_to_record,
 )
 from langflow.services.memory_base.kb_path_helpers import hash_session_id, validate_kb_path
 from langflow.services.memory_base.preprocessing import DEFAULT_KILL_PHRASE, run_preprocessing
@@ -380,29 +383,38 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
             if await KBIngestionHelper.is_job_cancelled(job_service, task_job_id):
                 return {"message": "Job cancelled before ingestion", "ingested": 0}
 
-            # ---- 4. Open Chroma, write, then sync KB metadata ----
+            # ---- 4. Open the KB's vector-store backend, write, then sync metadata ----
             user_stub = types.SimpleNamespace(id=user_id)
             embeddings = await KBIngestionHelper.build_embeddings(embedding_provider, embedding_model, user_stub)
 
-            client = KBStorageHelper.get_fresh_chroma_client(kb_path)
+            # Resolved from the knowledge_base row (sidecar only as legacy
+            # fallback), so an ingestion running on a replica that has never
+            # touched this KB's directory still writes to the configured store
+            # instead of silently creating a local one.
+            backend_type, backend_config = await resolve_backend_selection(
+                user_id=user_id, kb_name=kb_name, kb_path=kb_path
+            )
+            backend = create_backend(
+                backend_type,
+                kb_name=kb_name,
+                kb_path=kb_path,
+                backend_config=backend_config,
+                embedding_function=embeddings,
+                user_id=user_id,
+            )
             written = 0
             try:
-                chroma = Chroma(
-                    client=client,
-                    embedding_function=embeddings,
-                    collection_name=kb_name,
-                    **chroma_langchain_collection_kwargs(),
-                )
+                await backend.ensure_ready()
 
-                written = await KBIngestionHelper.write_documents_to_chroma(
+                written = await KBIngestionHelper.write_documents_to_backend(
                     documents=documents,
-                    chroma=chroma,
+                    backend=backend,
                     task_job_id=task_job_id,
                     job_service=job_service,
                 )
 
                 if written == len(documents):
-                    await asyncio.to_thread(sync_kb_metadata, kb_path=kb_path, chroma=chroma)
+                    await sync_kb_stats_to_record(user_id=user_id, kb_name=kb_name, backend=backend)
             except Exception:
                 await logger.aerror(
                     "Ingestion write failed | memory_base=%s session=%s job=%s. Rolling back partial writes...",
@@ -410,14 +422,28 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
                     hashed_sid,
                     task_job_id,
                 )
-                await KBIngestionHelper.cleanup_chroma_chunks_by_job(task_job_id, kb_path, kb_name)
+                await KBIngestionHelper.cleanup_chroma_chunks_by_job(
+                    task_job_id,
+                    kb_path,
+                    kb_name,
+                    backend_type=backend_type,
+                    backend_config=backend_config,
+                    user_id=user_id,
+                )
                 raise
             finally:
-                KBStorageHelper.release_chroma_resources(kb_path)
+                await backend.teardown()
 
             if written < len(documents):
                 await logger.awarning("Ingestion job %s was cancelled. Cleaning up partial data...", task_job_id)
-                await KBIngestionHelper.cleanup_chroma_chunks_by_job(task_job_id, kb_path, kb_name)
+                await KBIngestionHelper.cleanup_chroma_chunks_by_job(
+                    task_job_id,
+                    kb_path,
+                    kb_name,
+                    backend_type=backend_type,
+                    backend_config=backend_config,
+                    user_id=user_id,
+                )
                 return {"message": "Job cancelled during ingestion", "ingested": 0}
 
             # ---- 5. Phase B (preprocessing only) — flip preproc row to ingested ----

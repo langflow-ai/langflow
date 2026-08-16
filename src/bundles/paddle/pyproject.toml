@@ -23,7 +23,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "paddle", "paddleocr", "oc
 # Fine-grained BUNDLE_API compatibility is enforced via extension.json's
 # lfx.compat list against BUNDLE_API_VERSION.
 dependencies = [
-    "lfx>=1.11.0.dev0,<2.0.0",
+    "lfx>=1.12.0.dev0,<2.0.0",
     "httpx>=0.24.0,<1.0.0",
 ]
 
@@ -40,7 +40,7 @@ Repository = "https://github.com/langflow-ai/langflow"
 lfx-paddle = "lfx_paddle"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling==1.31.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]

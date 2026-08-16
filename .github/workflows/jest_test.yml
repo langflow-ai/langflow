@@ -30,12 +30,13 @@ jobs:
       checks: write
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
+          persist-credentials: false
           ref: ${{ inputs.ref || github.ref }}
 
       - name: Setup Node.js Environment
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         id: setup-node
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -46,7 +47,7 @@ jobs:
         run: make test_frontend_ci
 
       - name: Publish Jest Test Results
-        uses: mikepenz/action-junit-report@v5
+        uses: mikepenz/action-junit-report@v6
         if: always()
         with:
           report_paths: "src/frontend/test-results/junit.xml"
@@ -55,7 +56,7 @@ jobs:
           require_tests: true
 
       - name: Add Jest Coverage PR Comment
-        uses: MishaKav/jest-coverage-comment@main
+        uses: MishaKav/jest-coverage-comment@v1.0.36
         if: github.event_name == 'pull_request'
         with:
           coverage-summary-path: src/frontend/coverage/jest/coverage-summary.json
@@ -69,7 +70,7 @@ jobs:
           junitxml-path: src/frontend/test-results/junit.xml
 
       - name: Upload Jest Coverage Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: jest-coverage

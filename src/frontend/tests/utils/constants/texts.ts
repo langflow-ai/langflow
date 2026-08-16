@@ -23,8 +23,8 @@ export const TEXTS = {
   checkAndSave: "Check & Save",
   /** "Edit Prompt" trigger on Prompt template node. */
   editPrompt: "Edit Prompt",
-  /** Sign-in form submit button (role=button, name="Sign In"). */
-  signIn: "Sign In",
+  /** Sign-in form submit button (role=button, name="Sign in"). */
+  signIn: "Sign in",
   /** Build-cancel button (role=button, name="Stop"). */
   stop: "Stop",
   /** App header / user menu items. */
@@ -62,8 +62,6 @@ export const TEXTS = {
   toastBuiltSuccessfully: "built successfully",
 
   // ─── Auth / login screen ────────────────────────────────────────────
-  /** Visible on the sign-in route when LANGFLOW_AUTO_LOGIN=false. */
-  authSignInHeader: "sign in to langflow",
   /** Default seeded username. */
   authDefaultCredential: "langflow",
   /** Explicit Playwright-only superuser password seeded in playwright.config.ts. */

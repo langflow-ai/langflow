@@ -23,7 +23,10 @@ from lfx.base.knowledge_bases.backends import OpenSearchBackend
 from lfx.base.knowledge_bases.backends.opensearch import (
     DEFAULT_TEXT_FIELD,
     DEFAULT_VECTOR_FIELD,
+    derive_index_name,
 )
+
+pytestmark = pytest.mark.usefixtures("fake_opensearchpy")
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -49,6 +52,10 @@ def _make_backend(
 
 class TestOpenSearchBackendVectorFieldDefault:
     """Default field names must match LangChain's write field (``vector_field``)."""
+
+    def test_relevance_score_remains_higher_is_better(self, tmp_path: Path) -> None:
+        backend = _make_backend(tmp_path)
+        assert backend.normalize_score(0.75) == 0.75
 
     def test_default_vector_field_is_vector_field(self) -> None:
         # LangChain's OpenSearchVectorSearch writes embeddings under
@@ -98,6 +105,73 @@ class TestOpenSearchBackendVectorFieldDefault:
         kwargs = fake_wrapper.call_args.kwargs
         assert kwargs["vector_field"] == "embedding"
         assert backend._os_vector_field == "embedding"
+
+
+class TestOpenSearchIndexIsolation:
+    """Each KB / Memory Base must get its own index.
+
+    Before this, every base copied the single global ``OPENSEARCH_INDEX_NAME``
+    into ``backend_config`` and shared one index — mixing vectors across bases
+    and making collection-level deletion drop everyone's data. The index is now
+    derived from ``kb_name`` (mirroring the Chroma backends' ``collection_name``)
+    unless an explicit ``index_name`` override is configured.
+    """
+
+    def _make(self, kb_path: Path, kb_name: str, backend_config: dict) -> OpenSearchBackend:
+        backend = OpenSearchBackend(kb_name=kb_name, kb_path=kb_path, backend_config=backend_config)
+        backend._resolved_url = "https://example.local:9200"
+        backend._resolved_username = "admin"
+        backend._resolved_password = "secret"  # noqa: S105 — test fixture  # pragma: allowlist secret
+        backend._secrets_resolved = True
+        return backend
+
+    def _built_index(self, backend: OpenSearchBackend) -> str:
+        fake_wrapper = MagicMock(name="OpenSearchVectorSearch")
+        with (
+            patch("opensearchpy.OpenSearch", return_value=MagicMock()),
+            patch("langchain_community.vectorstores.OpenSearchVectorSearch", fake_wrapper),
+        ):
+            _ = backend.vector_store
+        return fake_wrapper.call_args.kwargs["index_name"]
+
+    def test_index_derived_from_kb_name_when_unset(self, tmp_path: Path) -> None:
+        # No ``index_name`` in config → derive from kb_name so the base is
+        # isolated in its own index rather than the shared global one.
+        backend = self._make(tmp_path, "chat_memory_a1b2c3d4", {"url_variable": "OPENSEARCH_URL"})
+        assert self._built_index(backend) == "chat_memory_a1b2c3d4"
+        assert backend._os_index == "chat_memory_a1b2c3d4"
+
+    def test_distinct_kb_names_get_distinct_indexes(self, tmp_path: Path) -> None:
+        idx_a = self._built_index(self._make(tmp_path, "mem_aaaa1111", {}))
+        idx_b = self._built_index(self._make(tmp_path, "mem_bbbb2222", {}))
+        assert idx_a != idx_b
+
+    def test_uppercase_kb_name_is_sanitized(self, tmp_path: Path) -> None:
+        # OpenSearch index names must be lowercase; a user-supplied KB name
+        # ("My KB" → "My_KB") would otherwise be an invalid index.
+        backend = self._make(tmp_path, "My_KB", {})
+        assert self._built_index(backend) == "my_kb"
+
+    def test_explicit_index_name_overrides_derivation(self, tmp_path: Path) -> None:
+        # Operators pointing a KB at an externally-managed index keep control.
+        backend = _make_backend(tmp_path, backend_config={"index_name": "external_index"})
+        assert self._built_index(backend) == "external_index"
+        assert backend._os_index == "external_index"
+
+
+@pytest.mark.parametrize(
+    ("kb_name", "expected"),
+    [
+        ("chat_memory_a1b2c3d4", "chat_memory_a1b2c3d4"),
+        ("My-KB!", "my-kb_"),
+        ("  Docs 2024  ", "docs_2024"),
+        ("_leading", "leading"),
+        ("", "kb"),
+        ("..", "kb"),
+    ],
+)
+def test_derive_index_name_table(kb_name: str, expected: str) -> None:
+    assert derive_index_name(kb_name) == expected
 
 
 @pytest.mark.parametrize(
@@ -340,17 +414,39 @@ class TestOpenSearchSimilaritySearchFilterHandling:
         assert "filter" not in fake_vs.asimilarity_search.call_args.kwargs
 
     @pytest.mark.asyncio
-    async def test_filter_truthy_is_forwarded(self, tmp_path: Path) -> None:
+    async def test_flat_filter_is_translated_to_bool_dsl(self, tmp_path: Path) -> None:
+        # Callers hand the backend the portable flat ``{key: value}`` shape
+        # (the same contract Chroma reads as ``$eq``). The backend must
+        # translate it into OpenSearch bool DSL — LangChain injects a
+        # non-empty ``filter`` into the k-NN query and a flat dict would be
+        # rejected / silently match nothing. Regressing this breaks the
+        # default session-filtered Memory Base retrieval path.
         backend = _make_backend(tmp_path)
         fake_vs = MagicMock()
         fake_vs.asimilarity_search = AsyncMock(return_value=[])
         backend._vector_store = fake_vs
 
-        clause = {"bool": {"must": [{"term": {"metadata.session_id": "s1"}}]}}
-        await backend.similarity_search(query="hi", k=3, filter=clause)
+        await backend.similarity_search(query="hi", k=3, filter={"session_id": "s1"})
 
-        kwargs = fake_vs.asimilarity_search.call_args.kwargs
-        assert kwargs["filter"] == clause
+        forwarded = fake_vs.asimilarity_search.call_args.kwargs["filter"]
+        assert forwarded == {
+            "bool": {
+                "must": [
+                    {
+                        "bool": {
+                            "should": [
+                                {"match": {"session_id": "s1"}},
+                                {"match": {"metadata.session_id": "s1"}},
+                            ],
+                            "minimum_should_match": 1,
+                        }
+                    }
+                ]
+            }
+        }
+        # The retrieval filter and the delete rollback path must produce the
+        # exact same translation so they can never drift.
+        assert forwarded == backend._translate_where({"session_id": "s1"})
 
     @pytest.mark.asyncio
     async def test_with_scores_routes_to_score_method_and_drops_none_filter(self, tmp_path: Path) -> None:

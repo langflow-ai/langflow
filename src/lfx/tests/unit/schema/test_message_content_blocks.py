@@ -496,6 +496,22 @@ class TestBackwardsCompatibility:
         error_contents = [c for c in error_blocks[0].contents if isinstance(c, ErrorContent)]
         assert len(error_contents) == 1
 
+    def test_error_message_can_omit_active_exception_traceback(self):
+        """Public/delegated errors keep a generic reason without the caught traceback."""
+        sensitive_detail = "owner-provider-secret"
+        try:
+            raise RuntimeError(sensitive_detail)
+        except RuntimeError:
+            err_msg = ErrorMessage(
+                exception=RuntimeError("Workflow execution failed."),
+                include_traceback=False,
+            )
+
+        [error_block] = [block for block in err_msg.content_blocks if isinstance(block, ContentBlock)]
+        [error_content] = [content for content in error_block.contents if isinstance(content, ErrorContent)]
+        assert error_content.traceback == ""
+        assert sensitive_detail not in err_msg.model_dump_json()
+
     def test_message_from_data(self):
         """Message.from_data should preserve text through content_blocks."""
         data = Data(text="data text")

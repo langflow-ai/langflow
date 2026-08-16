@@ -6,12 +6,14 @@ from uuid import UUID
 
 from lfx.base.models.model_metadata import CONDITIONAL_LIVE_MODEL_PROVIDERS, LIVE_MODEL_PROVIDERS
 from lfx.base.models.model_utils import get_live_models_for_provider
+from lfx.base.models.provider_registry import get_registry_snapshot, is_api_key_optional
 from lfx.base.models.unified_models import (
     get_model_provider_variable_mapping,
     get_provider_required_variable_keys,
     get_unified_models_detailed,
 )
 from lfx.log.logger import logger
+from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
 from lfx.utils.secrets import secret_value_to_str
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,6 +44,11 @@ no longer exist — fall back to the catalog default.
 """
 
 
+def _get_registered_provider_names() -> list[str]:
+    """Return provider names without executing extension catalog loaders."""
+    return sorted(descriptor.name for descriptor in get_registry_snapshot().descriptors_by_id.values())
+
+
 async def get_enabled_providers_for_user(
     user_id: UUID | str,
     session: AsyncSession,
@@ -61,15 +68,36 @@ async def get_enabled_providers_for_user(
     all_variable_names = {var.name for var in all_variables}
 
     provider_variable_map = get_model_provider_variable_mapping()
+    registered_providers = _get_registered_provider_names()
+    provider_candidates = [
+        *provider_variable_map,
+        *(
+            provider
+            for provider in registered_providers
+            if provider not in provider_variable_map and is_api_key_optional(provider)
+        ),
+    ]
+    provider_policy = resolve_model_provider_policy(
+        user_id=user_id,
+        providers=[*registered_providers, *provider_candidates],
+        purpose=ModelProviderPolicyPurpose.CONFIGURE,
+    )
 
     enabled_providers = []
     provider_status = {}
 
-    for provider in provider_variable_map:
+    for provider in provider_candidates:
+        if not provider_policy.allows(provider):
+            continue
         # Check if ALL required variables for this provider are present
         # in either database variables or environment variables
         required_keys = get_provider_required_variable_keys(provider)
-        is_enabled = all(key in all_variable_names or os.getenv(key) for key in required_keys)
+        provider_has_variables = provider in provider_variable_map
+        is_enabled = (
+            is_api_key_optional(provider)
+            if not provider_has_variables
+            else all(key in all_variable_names or os.getenv(key) for key in required_keys)
+        )
 
         provider_status[provider] = is_enabled
         if is_enabled:
@@ -224,6 +252,42 @@ def get_default_model(provider: str, user_id: UUID | str | None = None) -> str |
             catalog_default if catalog_default in installed else installed[0]
         )
     return _preferred_model(provider, _catalog_model_names(provider)) or catalog_default
+
+
+def build_live_only_provider_entries(
+    enabled_providers: list[str],
+    existing_provider_names: set[str],
+    user_id: UUID | str | None,
+) -> list[dict]:
+    """Config entries for enabled live providers the static-catalog filter dropped.
+
+    ``get_unified_models_detailed(include_deprecated=False)`` omits a provider whose
+    static catalog is empty or all-deprecated (e.g. IBM WatsonX, whose bundled
+    models are all deprecated), so the check-config loop never reaches that
+    provider's live fetch. Those providers still expose live, currently-available
+    tool-calling models — fetch them directly here so the assistant offers them
+    instead of hiding the provider.
+    """
+    entries: list[dict] = []
+    for provider in LIVE_MODEL_PROVIDERS:
+        if provider not in enabled_providers or provider in existing_provider_names:
+            continue
+        installed = list_installed_tool_calling_models(provider, user_id)
+        if not installed:
+            continue
+        model_list = [{"name": name, "display_name": name} for name in installed]
+        default_model = get_default_model(provider, user_id)
+        if default_model not in {m["name"] for m in model_list}:
+            default_model = model_list[0]["name"]
+        entries.append(
+            {
+                "name": provider,
+                "configured": True,
+                "default_model": default_model,
+                "models": model_list,
+            }
+        )
+    return entries
 
 
 def get_provider_model_candidates(provider: str, user_id: UUID | str | None = None) -> list[str]:

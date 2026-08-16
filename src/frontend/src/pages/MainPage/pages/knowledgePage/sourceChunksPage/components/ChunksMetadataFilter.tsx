@@ -104,6 +104,7 @@ export const ChunksMetadataFilter = ({
                   : t("knowledge.chunksMetadataKeyEmpty")
             }
             testId="chunks-metadata-filter-key"
+            aria-label={t("knowledge.chunksMetadataKeyLabel")}
           />
           <MetadataCombobox
             value={value}
@@ -125,6 +126,7 @@ export const ChunksMetadataFilter = ({
             testId="chunks-metadata-filter-value"
             disabled={!key.trim()}
             onEnter={submit}
+            aria-label={t("knowledge.chunksMetadataValueLabel")}
           />
           {!isLoading && !hasKeys && (
             <span

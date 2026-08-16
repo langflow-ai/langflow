@@ -1,6 +1,9 @@
 from unittest.mock import Mock, patch
 
 import pytest
+
+pytest.importorskip("lfx_bundles")
+
 from lfx.components.youtube.youtube_transcripts import YouTubeTranscriptsComponent
 from lfx.schema import Data, DataFrame, Message
 from youtube_transcript_api import NoTranscriptFound, TranscriptsDisabled

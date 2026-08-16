@@ -70,7 +70,7 @@ async def test_should_validate_with_owner_provider_vars_not_caller_in_share_awar
 
     caller = SimpleNamespace(id=uuid4())
     owner_id = uuid4()
-    existing = SimpleNamespace(id=uuid4(), name="OPENAI_API_KEY", user_id=owner_id)
+    existing = SimpleNamespace(id=uuid4(), name="OPENAI_API_KEY", user_id=owner_id, value=None, type=CREDENTIAL_TYPE)
 
     svc = SimpleNamespace(update_variable_fields=AsyncMock(return_value=existing))
     captured = {}

@@ -551,6 +551,12 @@ class TracingService(Service):
         trace_context.all_outputs[trace_name] |= outputs or {}
 
     def get_tracer(self, tracer_name: str) -> BaseTracer | None:
+        # When tracing is deactivated there is no trace context by construction, so the warning
+        # below is guaranteed noise: it fired once per component per run and accounted for the
+        # majority of the log volume on a box with LANGFLOW_DEACTIVATE_TRACING=true. Every other
+        # public method here already guards this way.
+        if self.deactivated:
+            return None
         trace_context = trace_context_var.get()
         if trace_context is None:
             msg = "called get_tracer but no trace context found"
@@ -570,7 +576,12 @@ class TracingService(Service):
         for tracer in trace_context.tracers.values():
             if not tracer.ready:  # type: ignore[truthy-function]
                 continue
-            langchain_callback = tracer.get_langchain_callback()
+            try:
+                # A broken tracer (e.g. partial Langfuse creds) must never fail the run.
+                langchain_callback = tracer.get_langchain_callback()
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"Tracer {type(tracer).__name__} failed to provide a callback; skipping: {e}")
+                continue
             if langchain_callback:
                 callbacks.append(langchain_callback)
         return callbacks

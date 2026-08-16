@@ -72,6 +72,7 @@ async def test_list_deployments_page_filters_by_project_id(async_session: AsyncS
     rows = await list_deployments_page(
         async_session,
         user_id=user.id,
+        row_owner_id=user.id,
         deployment_provider_account_id=provider_account.id,
         offset=0,
         limit=20,
@@ -112,12 +113,14 @@ async def test_count_deployments_by_provider_filters_by_project_id(async_session
     filtered_total = await count_deployments_by_provider(
         async_session,
         user_id=user.id,
+        row_owner_id=user.id,
         deployment_provider_account_id=provider_account.id,
         project_id=project_a.id,
     )
     unfiltered_total = await count_deployments_by_provider(
         async_session,
         user_id=user.id,
+        row_owner_id=user.id,
         deployment_provider_account_id=provider_account.id,
     )
 

@@ -253,23 +253,6 @@ def _validate_manifest_phase(root: Path, report: ValidateReport) -> ManifestSour
         msg = "manifest discovery returned an inconsistent result"
         raise RuntimeError(msg)
 
-    # Detect multi-bundle BEFORE model_validate so the dedicated discriminant
-    # fires reliably even if other manifest fields are also wrong.
-    bundles = raw_data.get("bundles") if isinstance(raw_data, dict) else None
-    if isinstance(bundles, list) and len(bundles) > 1:
-        report.errors.add_error(
-            ExtensionError(
-                code="multi-bundle-unsupported",
-                message=(
-                    f"Manifest declares {len(bundles)} bundles; v0 accepts exactly one. "
-                    "Multi-bundle support is deferred to a future milestone."
-                ),
-                location=f"{source_path}:bundles",
-                hint=("Split each bundle into its own Extension distribution until multi-bundle support ships."),
-            )
-        )
-        return None
-
     # Detect deferred fields BEFORE model_validate so that authors get a clean
     # discriminant rather than a generic schema error wall.
     deferred_present: list[str] = []
@@ -880,9 +863,7 @@ def validate_extension(
 
     manifest = source.manifest
 
-    # Pass 2 + 3 per bundle.  v0 schema-validates length<=1 already, so this
-    # loop runs once in practice; written generically so the plumbing is in
-    # place when multi-bundle ships.
+    # Pass 2 + 3 independently for every declared bundle.
     for bundle in manifest.bundles:
         resolved, path_error = _resolve_bundle_path(root_path, bundle.path)
         if path_error is not None or resolved is None:

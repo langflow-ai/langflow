@@ -35,6 +35,7 @@ docker:
   - "src/frontend/**"
   - "src/lfx/**"
   - ".dockerignore"
+  - ".github/workflows/docker-build-v2.yml"
   - ".github/workflows/docker_test.yml"
 
 # Test categories and their associated paths

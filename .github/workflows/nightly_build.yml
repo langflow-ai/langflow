@@ -49,9 +49,31 @@ jobs:
         run: |
           echo "Cannot skip tests while push_to_registry is true."
           exit 1
+  resolve-release-branch:
+    runs-on: ubuntu-latest
+    outputs:
+      branch: ${{ steps.get_branch.outputs.branch }}
+    steps:
+      - name: Find latest release branch
+        id: get_branch
+        run: |
+          git ls-remote --heads https://github.com/${{ github.repository }} 'refs/heads/release-*' \
+          | awk '{print $2}' \
+          | sed 's|refs/heads/||' \
+          | grep -E '^release-[0-9]+\.[0-9]+\.[0-9]+$' \
+          | sort -V \
+          | tail -n 1 > branch.txt
+
+          BRANCH=$(cat branch.txt)
+          if [ -z "$BRANCH" ]; then
+            echo "No release-* branch found in ${{ github.repository }}"
+            exit 1
+          fi
+           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+           echo "Using release branch: $BRANCH"
   create-nightly-tag:
     if: github.repository == 'langflow-ai/langflow'
-    needs: [validate-inputs]
+    needs: [validate-inputs, resolve-release-branch]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -66,15 +88,16 @@ jobs:
       sdk_tag: ${{ steps.generate_sdk_tag.outputs.sdk_tag }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
-          ref: release-1.12.0
+          ref: ${{ needs.resolve-release-branch.outputs.branch }}
           persist-credentials: true
       - name: Confirm branch
         run: git branch --show-current
       - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ env.PYTHON_VERSION }}
@@ -168,7 +191,7 @@ jobs:
           # TODO: notify on failure
 
       - name: Checkout main nightly tag
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ steps.generate_shared_tag.outputs.release_tag }}
           persist-credentials: true
@@ -201,27 +224,23 @@ jobs:
   frontend-tests-linux:
     if: github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests
     name: Run Frontend Tests - Linux
-    needs: [create-nightly-tag]
-    permissions:
-      contents: read
+    needs: [resolve-release-branch, create-nightly-tag]
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: "tests"
       release: true
       runs-on: ubuntu-latest
-      ref: release-1.12.0
+      ref: ${{ needs.resolve-release-branch.outputs.branch }}
+      run_live_provider_smoke: true
+      run_live_store_smoke: true
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
 
   frontend-tests-windows:
     if: github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests
     name: Run Frontend Tests - Windows
-    needs: [create-nightly-tag]
-    permissions:
-      contents: read
+    needs: [resolve-release-branch, create-nightly-tag]
     # Windows tests are non-blocking - the release-nightly-build job only checks
     # frontend-tests-linux.result, allowing Windows tests to fail without blocking the build.
     # This gives us visibility into Windows-specific issues while we stabilize the tests.
@@ -230,24 +249,17 @@ jobs:
       tests_folder: "tests"
       release: true
       runs-on: windows-latest
-      ref: release-1.12.0
-    secrets:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+      ref: ${{ needs.resolve-release-branch.outputs.branch }}
 
   backend-unit-tests:
     if: github.repository == 'langflow-ai/langflow' && !inputs.skip_backend_tests
     name: Run Backend Unit Tests
-    needs: [create-nightly-tag]
-    permissions:
-      contents: read
+    needs: [resolve-release-branch, create-nightly-tag]
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: '["3.10", "3.11", "3.12", "3.13", "3.14"]'
       runs-on: ${{ inputs['runs_on'] || github.event.inputs['runs_on'] || 'ubuntu-latest' }}
-      ref: release-1.12.0
+      ref: ${{ needs.resolve-release-branch.outputs.branch }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -266,15 +278,28 @@ jobs:
   stress-tests:
     if: github.repository == 'langflow-ai/langflow' && !inputs.skip_backend_tests
     name: Run Stress Tests
-    needs: [create-nightly-tag]
-    permissions:
-      contents: read
+    needs: [resolve-release-branch, create-nightly-tag]
     uses: ./.github/workflows/stress-tests.yml
     with:
-      ref: release-1.12.0
+      ref: ${{ needs.resolve-release-branch.outputs.branch }}
 
   release-nightly-build:
-    if: github.repository == 'langflow-ai/langflow' && always() && needs.create-nightly-tag.result == 'success' && needs.frontend-tests-linux.result != 'failure' && needs.backend-unit-tests.result != 'failure'
+    if: >-
+      ${{
+        github.repository == 'langflow-ai/langflow' &&
+        always() &&
+        !cancelled() &&
+        needs.validate-inputs.result == 'success' &&
+        needs.create-nightly-tag.result == 'success' &&
+        (
+          needs.frontend-tests-linux.result == 'success' ||
+          (inputs.skip_frontend_tests && needs.frontend-tests-linux.result == 'skipped')
+        ) &&
+        (
+          needs.backend-unit-tests.result == 'success' ||
+          (inputs.skip_backend_tests && needs.backend-unit-tests.result == 'skipped')
+        )
+      }}
     name: Run Nightly Langflow Build
     needs:
       [validate-inputs, create-nightly-tag, frontend-tests-linux, frontend-tests-windows, backend-unit-tests, stress-tests]
@@ -307,37 +332,59 @@ jobs:
 
   slack-notification:
     name: Send Slack Notification
-    needs: [frontend-tests-linux, frontend-tests-windows, backend-unit-tests, stress-tests, release-nightly-build, db-migration-validation]
-    if: ${{ github.repository == 'langflow-ai/langflow' && !inputs.skip_slack && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests-linux.result == 'failure' || needs.frontend-tests-windows.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.stress-tests.result == 'failure' || needs.db-migration-validation.result == 'failure' || needs.release-nightly-build.result == 'success') }}
+    needs: [validate-inputs, create-nightly-tag, frontend-tests-linux, frontend-tests-windows, backend-unit-tests, stress-tests, release-nightly-build, db-migration-validation]
+    if: ${{ github.repository == 'langflow-ai/langflow' && !inputs.skip_slack && always() }}
     runs-on: ubuntu-latest
     steps:
       - name: Send failure notification to Slack
-        if: ${{ needs.release-nightly-build.result == 'failure' || needs.frontend-tests-linux.result == 'failure' || needs.frontend-tests-windows.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.stress-tests.result == 'failure' || needs.db-migration-validation.result == 'failure' }}
+        if: >-
+          ${{
+            contains(fromJSON('["failure","cancelled"]'), needs.validate-inputs.result) ||
+            contains(fromJSON('["failure","cancelled"]'), needs.create-nightly-tag.result) ||
+            contains(fromJSON('["failure","cancelled"]'), needs.frontend-tests-linux.result) ||
+            contains(fromJSON('["failure","cancelled"]'), needs.backend-unit-tests.result) ||
+            contains(fromJSON('["failure","cancelled"]'), needs.release-nightly-build.result) ||
+            contains(fromJSON('["failure","cancelled"]'), needs.db-migration-validation.result)
+          }}
         run: |
-          # Determine which job failed
+          # Determine the first blocking job and preserve cancellation as a
+          # distinct operator signal instead of reporting every stop as a test failure.
           FAILED_JOB="unknown"
-          if [ "${{ needs.release-nightly-build.result }}" == "failure" ]; then
+          FAILED_STATUS="failure"
+          if [[ "${{ needs.validate-inputs.result }}" =~ ^(failure|cancelled)$ ]]; then
+            FAILED_JOB="validate-inputs"
+            FAILED_STATUS="${{ needs.validate-inputs.result }}"
+          elif [[ "${{ needs.create-nightly-tag.result }}" =~ ^(failure|cancelled)$ ]]; then
+            FAILED_JOB="create-nightly-tag"
+            FAILED_STATUS="${{ needs.create-nightly-tag.result }}"
+          elif [[ "${{ needs.release-nightly-build.result }}" =~ ^(failure|cancelled)$ ]]; then
             FAILED_JOB="release-nightly-build"
-          elif [ "${{ needs.frontend-tests-linux.result }}" == "failure" ]; then
+            FAILED_STATUS="${{ needs.release-nightly-build.result }}"
+          elif [[ "${{ needs.frontend-tests-linux.result }}" =~ ^(failure|cancelled)$ ]]; then
             FAILED_JOB="frontend-tests-linux"
-          elif [ "${{ needs.frontend-tests-windows.result }}" == "failure" ]; then
-            FAILED_JOB="frontend-tests-windows (non-blocking)"
-          elif [ "${{ needs.backend-unit-tests.result }}" == "failure" ]; then
+            FAILED_STATUS="${{ needs.frontend-tests-linux.result }}"
+          elif [[ "${{ needs.backend-unit-tests.result }}" =~ ^(failure|cancelled)$ ]]; then
             FAILED_JOB="backend-unit-tests"
-          elif [ "${{ needs.stress-tests.result }}" == "failure" ]; then
-            FAILED_JOB="stress-tests (non-blocking)"
-          elif [ "${{ needs.db-migration-validation.result }}" == "failure" ]; then
+            FAILED_STATUS="${{ needs.backend-unit-tests.result }}"
+          elif [[ "${{ needs.db-migration-validation.result }}" =~ ^(failure|cancelled)$ ]]; then
             FAILED_JOB="db-migration-validation"
+            FAILED_STATUS="${{ needs.db-migration-validation.result }}"
           fi
 
-          curl -X POST -H 'Content-type: application/json' \
+          if [[ "$FAILED_STATUS" == "cancelled" ]]; then
+            HEADLINE="⏹️ *Nightly Build Cancelled*"
+          else
+            HEADLINE="❌ *Nightly Build Failed*"
+          fi
+
+          curl --fail-with-body -X POST -H 'Content-type: application/json' \
           --data "{
             \"blocks\": [
               {
                 \"type\": \"section\",
                 \"text\": {
                   \"type\": \"mrkdwn\",
-                  \"text\": \"❌ *Nightly Build Failed*\"
+                  \"text\": \"$HEADLINE\"
                 }
               },
               {
@@ -349,16 +396,9 @@ jobs:
                   },
                   {
                     \"type\": \"mrkdwn\",
-                    \"text\": \"*Status:*\\nfailure\"
+                    \"text\": \"*Status:*\\n$FAILED_STATUS\"
                   }
                 ]
-              },
-              {
-                \"type\": \"section\",
-                \"text\": {
-                  \"type\": \"mrkdwn\",
-                  \"text\": \"*Note:* Frontend tests now run on both Linux and Windows\"
-                }
               },
               {
                 \"type\": \"context\",
@@ -370,12 +410,25 @@ jobs:
                 ]
               }
             ]
-          }" ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
+          }" "${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}"
+
+      - name: Send non-blocking test warning to Slack
+        if: ${{ needs.frontend-tests-windows.outputs.test_status == 'failed' || contains(fromJSON('["failure","cancelled"]'), needs.frontend-tests-windows.result) || contains(fromJSON('["failure","cancelled"]'), needs.stress-tests.result) }}
+        env:
+          WEBHOOK_URL: ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
+        run: |
+          curl --fail-with-body -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"⚠️ Nightly non-blocking checks need attention. Windows workflow: ${{ needs.frontend-tests-windows.result }}; Windows report: ${{ needs.frontend-tests-windows.outputs.test_status }}; stress: ${{ needs.stress-tests.result }}. <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>\"}" \
+            "$WEBHOOK_URL"
 
       - name: Send success notification to Slack
-        if: ${{ !inputs.skip_slack && needs.release-nightly-build.result == 'success' && needs.db-migration-validation.result != 'failure' }}
+        if: >-
+          ${{
+            needs.release-nightly-build.result == 'success' &&
+            needs.db-migration-validation.result == 'success'
+          }}
         run: |
-          curl -X POST -H 'Content-type: application/json' \
+          curl --fail-with-body -X POST -H 'Content-type: application/json' \
           --data '{
             "blocks": [
               {
@@ -400,10 +453,16 @@ jobs:
               },
               {
                 "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "*Platforms:* Linux & Windows Playwright tests passed"
-                }
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Windows report:*\n`${{ needs.frontend-tests-windows.outputs.test_status || needs.frontend-tests-windows.result }}`"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Stress tests:*\n`${{ needs.stress-tests.result }}`"
+                  }
+                ]
               },
               {
                 "type": "context",
@@ -415,4 +474,4 @@ jobs:
                 ]
               }
             ]
-          }' ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
+          }' "${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}"

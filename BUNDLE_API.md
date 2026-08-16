@@ -69,7 +69,7 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | Symbol | Source |
 | --- | --- |
 | Manifest schema (`extension.json` / `[tool.langflow.extension]`) | `lfx.extension.manifest.ExtensionManifest` |
-| `BundleRef` (one entry in `bundles[]`; `bundles[]` is optional, 0-or-1) | `lfx.extension.manifest.BundleRef` |
+| `BundleRef` (one entry in optional `bundles[]`; bundle names must be unique) | `lfx.extension.manifest.BundleRef` |
 | `ProviderManifestEntry` (one entry in the optional `providers[]`) | `lfx.extension.manifest.ProviderManifestEntry` |
 | `LfxCompat` (declared as `manifest.lfx`) | `lfx.extension.manifest.LfxCompat` |
 | `BUNDLE_API_VERSION` (the integer this lfx ships) | `lfx.extension.manifest` |
@@ -83,7 +83,8 @@ Component IDs at runtime are `ext:<bundle>:<Class>@<slot>`.
 
 | Symbol | Source |
 | --- | --- |
-| `load_extension(root)` | `lfx.extension.loader` |
+| `load_extension(root, *, bundle_name=None)` | `lfx.extension.loader` |
+| `load_extension_bundles(root)` | `lfx.extension.loader` |
 | `load_installed_extensions()` | `lfx.extension.loader` |
 | `discover_inline_bundles()` | `lfx.extension.loader` |
 | `discover_installed_extensions()` / `discover_seed_extensions()` / `discover_all_extensions()` | `lfx.extension.discovery` |
@@ -189,6 +190,19 @@ the deserialize half is covered by
 ### v0 (this release)
 
 - Initial surface enumerated above.  Frozen as `BUNDLE_API_VERSION = 1`.
+- Typed loader diagnostics now distinguish unavailable optional providers from
+  broken bundle imports.  `optional-dependency-missing` is added to
+  `ERROR_CODES`; a manifest-less `lfx-bundles` module emits this warning only
+  when its declared provider distribution is genuinely absent, allowing the
+  remaining bundle components to load.  Undeclared imports and installed but
+  broken distributions remain `module-import-failed` errors.  Expected
+  `bundle-shadowed` / `seed-bundle-shadowed` precedence outcomes are warnings;
+  winner selection is unchanged.
+- Extension manifests may now declare multiple component bundles.  Startup
+  discovery loads every declared bundle through `load_extension_bundles()`;
+  direct callers may select one with `load_extension(..., bundle_name=...)`.
+  Single-bundle and provider-only manifests retain their existing behavior,
+  so this is additive and does not change `BUNDLE_API_VERSION`.
 - Inline bundle discovery now skips Langflow-owned component compatibility
   shims marked with `# lfx-bundles-shim` or `# lfx-compat-shim`.  These
   packages remain importable, but are not treated as user inline bundles
@@ -493,6 +507,28 @@ the deserialize half is covered by
   provider-only extension with `DiscoveredExtension.bundle_name = None`, and
   `registry.Extension.bundle_name` is likewise now `str | None` (the
   `lfx extension list` BUNDLE column shows `—` for such extensions).
+- **Provider identity and static catalogs (additive).**  A `providers[]` entry
+  may now declare a stable lowercase `provider_id`, an independent
+  `display_name`, legacy `aliases`, and a dotted-path `catalog_loader`.  The
+  loader must return a flat list of model metadata rows; Langflow validates
+  model identities and stamps provider ownership before merging those rows
+  into the unified catalog.  Manifests that omit `provider_id` retain their
+  existing behavior through a deterministic ID derived from `name`.
+  `ProviderDescriptor` is the preferred public registry type and
+  `ProviderSpec` remains an alias for source compatibility.  The registry also
+  exposes an immutable generation-tagged snapshot plus an eager catalog
+  validation hook for deployment readiness.  Existing provider manifests are
+  unaffected and `BUNDLE_API_VERSION` remains `1`.
+- **Provider identity resolution and policy snapshots (additive).**
+  `resolve_provider_id()` is the canonical resolver for registered names,
+  display names, aliases, stable IDs, and deterministic legacy fallbacks.
+  Model-provider policy services now expose cached synchronous `resolve()`,
+  async `aresolve()`, single-provider `is_allowed()`, and `invalidate()`
+  hooks while preserving the existing immutable snapshot and allow-all OSS
+  behavior. The process-local snapshot cache has a bounded TTL, and async
+  implementations can override `aget_allowed_provider_ids()` without
+  bypassing it. Existing synchronous policy subclasses, including subclasses
+  that did not call `super().__init__()`, remain source-compatible.
 - **New typed error codes (additive): `provider-invalid`, `provider-skipped`.**
   A malformed provider spec surfaces `provider-invalid`; a provider whose name
   collides with a built-in or already-loaded provider surfaces

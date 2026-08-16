@@ -1,16 +1,16 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "user must be able to see output inspection",
   { tag: ["@release", "@components"] },
   async ({ page }, testInfo) => {
+    await seedLoopbackProvider(page);
     // Flaky on Windows CI runners: the Basic Prompting template canvas
     // intermittently fails to finish rendering the controls in time (even with
     // the 30s adjustScreenView window). The output-inspection behavior is
@@ -19,8 +19,6 @@ test(
       testInfo.project.name.includes("win") || process.platform === "win32",
       "Template canvas render is flaky on Windows CI; covered on Linux/macOS",
     );
-    skipIfMissing.openAiKey();
-    loadDotenvIfLocal(__dirname);
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
@@ -29,7 +27,7 @@ test(
       .click();
     await adjustScreenView(page);
 
-    await initialGPTsetup(page);
+    await configureLoopbackOpenAI(page);
 
     await page.getByTestId("button_run_chat output").last().click();
 

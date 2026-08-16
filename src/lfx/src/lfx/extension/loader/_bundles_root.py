@@ -53,6 +53,9 @@ import importlib.util
 from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
 
+from packaging.requirements import InvalidRequirement, Requirement
+from packaging.utils import canonicalize_name
+
 from lfx.extension._paths import SKIP_DIR_NAMES, is_within
 from lfx.extension.errors import ExtensionError
 from lfx.extension.loader._orchestrator import _load_bundle_directory
@@ -89,6 +92,7 @@ class _BundleRoot(NamedTuple):
     path: Path
     extension_id: str
     extension_version: str
+    optional_requirements: tuple[str, ...] = ()
 
 
 def load_lfx_bundles_extensions(
@@ -108,7 +112,7 @@ def load_lfx_bundles_extensions(
     ``claimed_bundles`` maps bundle names already won by a higher-precedence
     @official source (installed > seed) to ``(source_kind, source_path)``.
     A provider directory whose name is claimed is **never imported** -- its
-    result carries the same typed ``bundle-shadowed`` error the cross-source
+    result carries the same typed ``bundle-shadowed`` warning the cross-source
     resolver emits for every other shadow pair.  Skipping the
     import (rather than letting :func:`_resolve_bundle_shadowing` drop the
     components afterwards) matters because all @official sources share the
@@ -186,12 +190,20 @@ def _resolve_bundle_roots(
             )
             continue
         extension_id, extension_version = _distribution_identity(ep, fallback_id=module_name)
+        optional_requirements = _distribution_requirements(ep)
         for package_dir in package_dirs:
             resolved = package_dir.resolve()
             if resolved in seen_root_paths:
                 continue
             seen_root_paths.add(resolved)
-            roots.append(_BundleRoot(path=package_dir, extension_id=extension_id, extension_version=extension_version))
+            roots.append(
+                _BundleRoot(
+                    path=package_dir,
+                    extension_id=extension_id,
+                    extension_version=extension_version,
+                    optional_requirements=optional_requirements,
+                )
+            )
     return roots, sentinels
 
 
@@ -205,7 +217,7 @@ def _load_bundle_roots(
     First-wins on duplicate bundle names across roots (the loser emits a typed
     ``duplicate-lfx-bundles-provider`` warning); names in ``claimed_bundles``
     (already won by a higher-precedence installed/seed source) are skipped
-    *without importing* -- carrying the same ``bundle-shadowed`` error the
+    *without importing* -- carrying the same ``bundle-shadowed`` warning the
     cross-source resolver emits -- so the winner's
     ``_lfx_ext.official.<bundle>.*`` sys.modules entries are never
     overwritten.  Subdirectories whose name is not a valid bundle name emit
@@ -285,12 +297,12 @@ def _load_bundle_roots(
                 continue
 
             if name in claimed:
-                # Cross-source shadow: same code AND same severity (errors)
+                # Cross-source shadow: same code AND same warning severity
                 # as _resolve_bundle_shadowing emits for every other shadow
                 # pair, so filtering by code never mixes semantics.
                 winner_kind, winner_path = claimed[name]
                 result.bundle = name
-                result.errors.append(
+                result.warnings.append(
                     ExtensionError(
                         code="bundle-shadowed",
                         message=(
@@ -352,6 +364,9 @@ def _load_bundle_roots(
                 # distribution=None is permitted (see LoadedComponent).
                 distribution=None,
                 result=result,
+                optional_dependency_distributions=_optional_dependency_distributions(
+                    root.optional_requirements, bundle_name=name
+                ),
             )
             results.append(result)
 
@@ -397,6 +412,56 @@ def _distribution_identity(
             name = None
     version = getattr(dist, "version", None)
     return name or fallback_id, version or _DEFAULT_BUNDLE_VERSION
+
+
+def _distribution_requirements(ep: importlib_metadata.EntryPoint) -> tuple[str, ...]:
+    """Return the providing distribution's ``Requires-Dist`` entries."""
+    dist = getattr(ep, "dist", None)
+    if dist is None:
+        return ()
+    try:
+        requirements = dist.requires
+    except (AttributeError, KeyError, TypeError):
+        requirements = None
+    if requirements is None:
+        try:
+            requirements = dist.metadata.get_all("Requires-Dist")
+        except (AttributeError, KeyError, TypeError):
+            requirements = None
+    return tuple(requirements or ())
+
+
+def _dependency_key(value: str) -> str:
+    """Normalize a distribution/import root for conservative comparison."""
+    return "".join(char for char in value.casefold() if char.isalnum())
+
+
+def _optional_dependency_distributions(requirements: tuple[str, ...], *, bundle_name: str) -> dict[str, str]:
+    """Map conservative import-root candidates to declared distributions.
+
+    Python distribution names do not formally map to import roots, so this
+    intentionally recognizes only the complete normalized requirement name
+    (for example, ``langchain-mistralai`` -> ``langchain_mistralai``). It does
+    not infer broad first segments such as ``langchain`` or ``lfx``: those are
+    shared namespaces whose missing submodules can indicate a broken install
+    or a Langflow defect rather than an absent provider dependency.
+
+    Only requirements whose marker applies to this exact extra are included.
+    The distribution value lets the importer verify its actual absence with
+    :mod:`importlib.metadata` before downgrading a ``ModuleNotFoundError``.
+    """
+    extra = canonicalize_name(bundle_name)
+    distributions: dict[str, str] = {}
+    for raw_requirement in requirements:
+        try:
+            requirement = Requirement(raw_requirement)
+        except InvalidRequirement:
+            continue
+        if requirement.marker is None or not requirement.marker.evaluate({"extra": extra}):
+            continue
+        canonical = canonicalize_name(requirement.name)
+        distributions[_dependency_key(canonical)] = canonical
+    return distributions
 
 
 def _malformed_error(content: str, message: str) -> ExtensionError:

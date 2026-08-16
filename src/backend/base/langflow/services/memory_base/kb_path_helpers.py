@@ -7,23 +7,36 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import json
 import re
-import uuid
-from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from lfx.base.vectorstores.chroma_security import chroma_client_create_collection_kwargs
+from lfx.base.knowledge_bases.backends import BackendType, create_backend
 from lfx.log.logger import logger
 from sqlmodel import select
 
-from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBStorageHelper
+from langflow.api.utils.kb_helpers import KBStorageHelper
 from langflow.services.deps import session_scope
 
 if TYPE_CHECKING:
+    import uuid
     from pathlib import Path
 
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+
+class BackendProvisioningError(ValueError):
+    """Raised when a non-local vector-store backend fails its create-time check.
+
+    A remote backend (OpenSearch / Chroma Cloud / Mongo / Astra / Postgres) with
+    a bad URL or wrong credentials would otherwise be swallowed and produce a
+    Memory Base that only errors later on every ingest and retrieval. Surfacing
+    it here lets the create path reject the misconfiguration up front.
+    """
+
+
+def _is_local_chroma(backend_type: str, backend_config: dict | None) -> bool:
+    """True for the default local-Chroma backend (on-disk, lazily created)."""
+    return backend_type == BackendType.CHROMA.value and (backend_config or {}).get("mode") != "cloud"
 
 
 def validate_kb_path(kb_root: Path, kb_path: Path) -> None:
@@ -71,68 +84,135 @@ async def resolve_kb_username_by_user_id(user_id: uuid.UUID) -> str:
         return await resolve_kb_username(db, user_id)
 
 
-def resolve_embedding(kb_name: str, kb_username: str) -> tuple[str, str]:
-    """Read embedding provider/model from KB metadata.json, with sane defaults."""
-    kb_root = KBStorageHelper.get_root_path()
-    if not kb_root:
-        return "OpenAI", "text-embedding-3-small"
-    kb_path: Path = kb_root / kb_username / kb_name
-    metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
-    provider = metadata.get("embedding_provider") or "OpenAI"
-    model = metadata.get("embedding_model") or "text-embedding-3-small"
-    return provider, model
-
-
 async def initialize_kb(
     *,
     kb_name: str,
     kb_username: str,
-    embedding_provider: str,
-    embedding_model: str,
+    user_id: uuid.UUID | None = None,
+    backend_type: str = "chroma",
+    backend_config: dict | None = None,
 ) -> None:
-    """Create KB directory, initialize Chroma, and write embedding_metadata.json.
+    """Provision a Memory Base's vector-store collection.
 
-    Mirrors the logic in knowledge_bases.py:create_knowledge_base so Memory Base
-    KBs are immediately visible with the correct metadata (including is_memory_base: true).
+    Memory Bases are DB-driven: their identity, embedding config, backend, and
+    cached stats all live on the ``knowledge_base`` row (written by the caller via
+    ``_create_kb_record_for_memory_base``). This function only touches the vector
+    store — it no longer writes an on-disk ``embedding_metadata.json`` sidecar, so
+    a Memory Base provisioned on a remote backend needs no local disk at all and
+    works identically across replicas.
+
+    Collection setup goes through ``create_backend`` so a Memory Base can be
+    provisioned on any registered backend.
+
+    Failure handling depends on the backend:
+
+    * **Local Chroma (default):** best-effort. The Chroma client creates its own
+      persistence directory and the collection is created lazily on first write,
+      so a provisioning hiccup here must not block Memory Base creation — it is
+      logged and swallowed.
+    * **Remote backends (OpenSearch / Chroma Cloud / Mongo / Astra / Postgres):**
+      a bad URL or wrong credentials is a real misconfiguration that would make
+      the Memory Base silently dead — every later ingest and retrieval would
+      fail with no link back to create. So an explicit connectivity check runs
+      here and a failure raises :class:`BackendProvisioningError`, rejecting the
+      create up front.
     """
-    import chromadb
-
     kb_root = KBStorageHelper.get_root_path()
     if not kb_root:
-        await logger.awarning("KB root path not configured — Memory Base KB will not be initialized on disk.")
+        await logger.awarning("KB root path not configured — Memory Base collection will not be pre-provisioned.")
         return
 
     kb_path: Path = kb_root / kb_username / kb_name
     validate_kb_path(kb_root, kb_path)
-    await asyncio.to_thread(kb_path.mkdir, parents=True, exist_ok=True)
 
-    # Initialize Chroma collection so the directory is non-empty and readable
-    try:
-        client = KBStorageHelper.get_fresh_chroma_client(kb_path)
-        client.create_collection(name=kb_name, **chroma_client_create_collection_kwargs())
-    except (OSError, ValueError, chromadb.errors.ChromaError) as exc:
-        await logger.awarning("Initial Chroma setup for %s failed: %s", kb_name, exc)
-    finally:
-        client = None  # type: ignore[assignment]
-        KBStorageHelper.release_chroma_resources(kb_path)
-
-    embedding_metadata = {
-        "id": str(uuid.uuid4()),
-        "embedding_provider": embedding_provider,
-        "embedding_model": embedding_model,
-        "is_memory_base": True,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "chunks": 0,
-        "words": 0,
-        "characters": 0,
-        "avg_chunk_size": 0.0,
-        "size": 0,
-        "source_types": ["memory"],
-    }
-    await asyncio.to_thread(
-        (kb_path / "embedding_metadata.json").write_text,
-        json.dumps(embedding_metadata, indent=2),
+    is_local_chroma = _is_local_chroma(backend_type, backend_config)
+    backend = create_backend(
+        backend_type,
+        kb_name=kb_name,
+        kb_path=kb_path,
+        backend_config=backend_config or {},
+        user_id=user_id,
     )
+    try:
+        if is_local_chroma:
+            # Touch the collection so it exists before the first ingestion.
+            # Best-effort: it is created lazily on write anyway.
+            await backend.ensure_ready()
+            _ = backend.vector_store
+        else:
+            # Validate connectivity up front so a bad remote config fails the
+            # create instead of producing a Memory Base that only errors later.
+            result = await backend.test_connection()
+            if not result.ok:
+                msg = f"Could not connect to the '{backend_type}' vector store: {result.message}"
+                raise BackendProvisioningError(msg)
+    except BackendProvisioningError:
+        raise
+    except Exception as exc:
+        await logger.awarning("Initial %s setup for %s failed: %s", backend_type, kb_name, exc)
+        if not is_local_chroma:
+            msg = f"Could not initialize the '{backend_type}' vector store for this Memory Base: {exc}"
+            raise BackendProvisioningError(msg) from exc
+    finally:
+        await backend.teardown()
+
+
+async def delete_kb_remote_collection(*, kb_name: str, kb_username: str, user_id: uuid.UUID) -> None:
+    """Drop the remote vector-store collection backing a Memory Base.
+
+    Must run *before* the ``knowledge_base`` row is deleted: the row holds the
+    ``backend_type`` / ``backend_config`` needed to reach the remote store, so
+    dropping the row first would strand the OpenSearch index / Chroma Cloud
+    collection with no way to clean it up. Best-effort — a stale credential or
+    an unreachable cluster must not block Memory Base deletion, so failures are
+    logged and swallowed.
+
+    Local Chroma is skipped: its vectors live inside the KB directory and are
+    removed by :func:`delete_kb`. Every other backend (OpenSearch, Chroma Cloud,
+    Astra, Mongo, Postgres) stores off-box and needs an explicit
+    ``delete_collection`` call.
+    """
+    from lfx.base.knowledge_bases.backends import BackendType, create_backend
+
+    from langflow.api.utils.kb_helpers import resolve_backend_selection
+
+    kb_root = KBStorageHelper.get_root_path()
+    if not kb_root:
+        return
+    kb_path = kb_root / kb_username / kb_name  # only consumed by local backends
+    try:
+        backend_type, backend_config = await resolve_backend_selection(
+            user_id=user_id, kb_name=kb_name, kb_path=kb_path
+        )
+    except ValueError as exc:
+        # No row and no sidecar — nothing we can resolve a backend from.
+        await logger.awarning("Could not resolve backend for Memory Base kb_name=%s: %s", kb_name, exc)
+        return
+
+    # Local Chroma keeps everything on disk; ``delete_kb`` handles it.
+    if backend_type == BackendType.CHROMA.value and (backend_config or {}).get("mode") != "cloud":
+        return
+
+    backend = create_backend(
+        backend_type,
+        kb_name=kb_name,
+        kb_path=kb_path,
+        backend_config=backend_config,
+        user_id=user_id,
+    )
+    try:
+        await backend.ensure_ready()
+        await backend.delete_collection()
+    except Exception as exc:  # noqa: BLE001 — best-effort remote cleanup
+        await logger.awarning(
+            "Could not delete remote %s collection for Memory Base kb_name=%s: %s — "
+            "the remote collection may need manual cleanup.",
+            backend_type,
+            kb_name,
+            exc,
+        )
+    finally:
+        await backend.teardown()
 
 
 async def delete_kb(*, kb_name: str, kb_username: str) -> None:

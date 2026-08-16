@@ -25,9 +25,9 @@ def _get_version_info():
     """
     package_options = [
         ("langflow", "Langflow"),
-        ("langflow-base", "Langflow Base"),
+        ("langflow-base", "Langflow"),
         ("langflow-nightly", "Langflow Nightly"),
-        ("langflow-base-nightly", "Langflow Base Nightly"),
+        ("langflow-base-nightly", "Langflow Nightly"),
     ]
     __version__ = None
     for pkg_name, display_name in package_options:

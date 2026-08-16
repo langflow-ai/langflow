@@ -13,8 +13,7 @@ import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import {
   useGetGlobalVariables,
-  usePatchGlobalVariables,
-  usePostGlobalVariables,
+  useGlobalVariableUpsert,
 } from "@/controllers/API/queries/variables";
 import BaseModal from "@/modals/baseModal";
 import useAlertStore from "@/stores/alertStore";
@@ -59,8 +58,8 @@ export default function GlobalVariableModal({
       : useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const componentFields = useTypesStore((state) => state.ComponentFields);
-  const { mutate: mutateAddGlobalVariable } = usePostGlobalVariables();
-  const { mutate: updateVariable } = usePatchGlobalVariables();
+  const { upsertGlobalVariable, updateGlobalVariable } =
+    useGlobalVariableUpsert();
   const { data: globalVariables } = useGetGlobalVariables();
   const [availableFields, setAvailableFields] = useState<string[]>([]);
   useGetTypes({ checkCache: true, enabled: !!globalVariables });
@@ -98,43 +97,43 @@ export default function GlobalVariableModal({
     setType(assignTab(value));
   };
 
-  function handleSaveVariable() {
-    const data: {
-      name: string;
-      value: string;
-      type?: TAB_TYPES;
-      default_fields?: string[];
-    } = {
-      name: key,
-      type,
-      value,
-      default_fields: fields,
-    };
+  async function handleSaveVariable() {
+    try {
+      const { action, name } = await upsertGlobalVariable({
+        name: key,
+        type,
+        value,
+        default_fields: fields,
+      });
+      setKey("");
+      setValue("");
+      setType("Credential");
+      setFields([]);
+      setOpen(false);
 
-    mutateAddGlobalVariable(data, {
-      onSuccess: (res) => {
-        const { name } = res;
-        setKey("");
-        setValue("");
-        setType("Credential");
-        setFields([]);
-        setOpen(false);
-
-        setSuccessData({
-          title: t("globalVars.modal.successCreated", { name }),
-        });
-      },
-      onError: (error) => {
-        const responseError = error as ResponseErrorDetailAPI;
-        setErrorData({
-          title: t("globalVars.modal.errorCreating"),
-          list: [
-            responseError?.response?.data?.detail ??
-              t("globalVars.modal.errorUnexpectedCreate"),
-          ],
-        });
-      },
-    });
+      setSuccessData({
+        title:
+          action === "updated"
+            ? t("globalVars.modal.successUpdated", { name })
+            : t("globalVars.modal.successCreated", { name }),
+      });
+    } catch (error) {
+      const responseError = error as ResponseErrorDetailAPI & {
+        action?: "created" | "updated";
+      };
+      const didUpdate = responseError?.action === "updated";
+      setErrorData({
+        title: didUpdate
+          ? t("globalVars.modal.errorUpdating")
+          : t("globalVars.modal.errorCreating"),
+        list: [
+          responseError?.response?.data?.detail ??
+            (didUpdate
+              ? t("globalVars.modal.errorUnexpectedUpdate")
+              : t("globalVars.modal.errorUnexpectedCreate")),
+        ],
+      });
+    }
   }
 
   function submitForm() {
@@ -164,7 +163,7 @@ export default function GlobalVariableModal({
         updateData.value = value;
       }
 
-      updateVariable(updateData, {
+      updateGlobalVariable(updateData, {
         onSuccess: (res) => {
           const { name } = res;
           setKey("");

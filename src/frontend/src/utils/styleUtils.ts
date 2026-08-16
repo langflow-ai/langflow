@@ -511,6 +511,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Spider", name: "spider", icon: "Spider" },
   { display_name: "Supabase", name: "supabase", icon: "Supabase" },
   { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },
+  { display_name: "ToolGuard", name: "toolguard", icon: "ShieldCheck" },
   { display_name: "TwelveLabs", name: "twelvelabs", icon: "TwelveLabs" },
   { display_name: "Unstructured", name: "unstructured", icon: "Unstructured" },
   { display_name: "Upstash", name: "upstash", icon: "Upstash" },

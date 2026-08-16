@@ -58,12 +58,12 @@ jobs:
           echo "Scanning ref: $REF"
 
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ steps.resolve_ref.outputs.ref }}
 
       - name: Setup Node.js Environment
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -73,7 +73,7 @@ jobs:
         run: echo "dir=$(npm config get cache)" >> "$GITHUB_OUTPUT"
 
       - name: Cache npm dependencies
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         continue-on-error: true
         with:
           path: ${{ steps.npm-cache-dir.outputs.dir }}
@@ -87,7 +87,7 @@ jobs:
 
       - name: Cache Playwright Browsers
         id: cache-playwright
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         continue-on-error: true
         with:
           path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
@@ -103,8 +103,9 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ env.PYTHON_VERSION }}
@@ -149,7 +150,7 @@ jobs:
 
       - name: Upload Accessibility Reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ibm-a11y-reports-${{ github.run_attempt }}
           path: src/frontend/coverage/accessibility-reports

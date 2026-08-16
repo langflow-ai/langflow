@@ -1,5 +1,9 @@
 import importlib
 
+import pytest
+
+pytest.importorskip("lfx_bundles")
+
 
 def test_codeagents_bundle_exposed_via_components_package():
     components = importlib.import_module("lfx.components")

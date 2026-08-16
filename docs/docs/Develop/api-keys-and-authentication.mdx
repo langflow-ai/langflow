@@ -466,6 +466,18 @@ Set both `LANGFLOW_ACCESS_SECURE` and `LANGFLOW_REFRESH_SECURE` to `True` for HT
 | `LANGFLOW_REFRESH_HTTPONLY` | Boolean | `True` | When `true`, the `refresh_token_lf` cookie is not readable by JavaScript. |
 | `LANGFLOW_REFRESH_SAME_SITE` | String | `lax` | The `SameSite` attribute of the refresh-token cookie (`lax`, `strict`, or `none`). |
 
+### Anonymous public-flow authorization
+
+Anonymous public-flow links are direct-link capabilities, not discovery grants. Langflow accepts a canonical `PUBLIC` authorization share and preserves existing links derived from `Flow.access_type=PUBLIC` or an A2A folder with `auth_type=none`. Public shares never appear in general flow or shared-with-me listings.
+
+A canonical `PUBLIC` share takes precedence over both compatibility grants. For flows, the shares API accepts only `permission_level=execute` at `PUBLIC` scope; execution includes the scrubbed direct-link read needed to load the playground. The API rejects `read`, `write`, and `admin` because there is no read-only, writable, or administrative anonymous flow surface. Deleting the share row removes the canonical grant and any still-set legacy setting becomes the effective grant again, so revoke access entirely by clearing the legacy setting as well.
+
+An anonymous link grants only resource read and flow execution. It never grants create, write, delete, deploy, or administration actions, and callers cannot submit flow data or component tweaks. Public execution uses a stable non-user principal, so owner credentials, variables, files, and knowledge bases are unavailable unless a dependency has its own public authorization path. Errors are sanitized, and A2A HITL resumes recheck the current grant. Revocation blocks subsequent starts and resumes; it does not terminate work that is already running.
+
+When `LANGFLOW_AUTHZ_ENABLED=true`, anonymous access also requires an authorization plugin that opts into public principals, maps request hosts through a deployment-owned allowlist, resolves a tenant from that mapping and server-derived domain context, and allows the action. The OSS public-principal plugin seam defaults to deny and never performs cross-tenant discovery. Plugins must not treat the raw `Host` header as a trusted tenant identity.
+
+For A2A, `auth_type=none` applies this contract to both the direct agent card and execution routes. API-key and OAuth agent cards remain anonymously readable by direct link for A2A protocol discovery, but their JSON-RPC execution routes retain owner-key admission and owner execution.
+
 ### LANGFLOW_RATE_LIMIT_* {#login-rate-limiting}
 
 The following environment variables configure IP-based rate limiting to protect against brute-force attacks on the `/login` endpoint and abuse of public flow endpoints.
@@ -477,7 +489,7 @@ When the limit is exceeded, Langflow returns HTTP 429 with a `Retry-After: 60` h
 | `LANGFLOW_RATE_LIMIT_PER_MINUTE` | Integer | `5` | Maximum number of login attempts allowed per minute from a single IP address. |
 | `LANGFLOW_RATE_LIMIT_STORAGE_URI` | String | `memory://` | Storage backend for rate limit counters. Use `memory://` for single-server deployments or `redis://host:port` for multi-server deployments where the limit should be shared across instances. |
 | `LANGFLOW_RATE_LIMIT_TRUST_PROXY` | Boolean | `False` | When `true`, Langflow reads the client IP from the rightmost `X-Forwarded-For` header entry instead of the direct connection IP. Enable only when Langflow is behind a trusted reverse proxy or load balancer. Do not enable if users can reach Langflow directly, as this allows header spoofing. |
-| `LANGFLOW_PUBLIC_FLOW_RATE_LIMIT_PER_MINUTE` | Integer | `20` | Maximum number of unauthenticated public-flow runs allowed per minute from a single IP address. Public flows run as the flow owner and consume resources, so anonymous callers are rate-limited separately from the `/login` endpoint. |
+| `LANGFLOW_PUBLIC_FLOW_RATE_LIMIT_PER_MINUTE` | Integer | `20` | Maximum number of unauthenticated public-flow runs allowed per minute from a single IP address. Public flows consume resources under an isolated anonymous principal, so they are rate-limited separately from the `/login` endpoint. |
 
 ### LANGFLOW_SSRF_* and LANGFLOW_CONNECTOR_SSRF_* {#ssrf-protection}
 
