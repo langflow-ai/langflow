@@ -59,7 +59,7 @@ from lfx.workflow.converters import (
     parse_workflow_run_request,
     workflow_response_from_output_events,
 )
-from lfx.workflow.end_user_identity import resolve_serving_end_user_id
+from lfx.workflow.end_user_identity import resolve_serving_end_user_id, serving_end_user_enabled
 from pydantic_core import ValidationError as PydanticValidationError
 from sqlalchemy.exc import OperationalError
 
@@ -475,7 +475,11 @@ def _caller_owns_job_end_user(job: Job, http_request: Request, current_user: Use
     flow — F8), the end-user identity lives only in ``job_metadata``; this is the sole place
     it gates access. Decisions:
 
-    * Superuser always passes (editor/admin bypass, unchanged).
+    * Superuser bypass applies ONLY when the serving feature is off. On the serving plane the
+      shared service account (SID) is itself a superuser, so an unconditional bypass would let
+      any end user (all riding that one SID) read/stop/resume any other's run — defeating the
+      whole isolation layer for the exact deployment it exists for. When serving is on the
+      bypass is suppressed and even the SID is scoped to the request's end user.
     * Feature off / anonymous request (``resolve_serving_end_user_id`` -> None): there is no
       end-user scope to enforce, so a job created without an end user passes and one created
       under an end user does not (an anonymous caller must not reach an identified run).
@@ -483,7 +487,7 @@ def _caller_owns_job_end_user(job: Job, http_request: Request, current_user: Use
       sides derive through :func:`derive_message_owner_uuid` so the raw-string vs UUID-form
       gateway id compares canonically, exactly as message ownership keys it.
     """
-    if current_user.is_superuser:
+    if current_user.is_superuser and not serving_end_user_enabled():
         return True
     return _end_user_matches(resolve_serving_end_user_id(http_request=http_request), job.job_metadata)
 
@@ -1036,13 +1040,15 @@ async def list_pending_workflows(
 
     # Serving-plane end-user isolation: this endpoint ENUMERATES suspended runs by flow_id (no job
     # id needed), and each row exposes the merged session_id + the HITL prompt — so a scope check is
-    # even more load-bearing here than on status/stop/resume. Filter to the caller's own end user;
-    # superuser sees all. Feature off / anonymous -> only end-user-less jobs, unchanged. See F8 / B1.
+    # even more load-bearing here than on status/stop/resume. Filter to the caller's own end user.
+    # The superuser "see all" bypass applies only when serving is off; on the serving plane the SID
+    # is a superuser, so an unconditional bypass would leak every end user's suspended run to every
+    # other. Feature off / anonymous -> only end-user-less jobs, unchanged. See F8 / B1.
     return await list_pending_human_requests(
         flow_id,
         current_user.id,
         request_end_user_id=resolve_serving_end_user_id(http_request=http_request),
-        include_all_end_users=current_user.is_superuser,
+        include_all_end_users=current_user.is_superuser and not serving_end_user_enabled(),
     )
 
 

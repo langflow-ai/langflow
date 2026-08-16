@@ -63,9 +63,18 @@ def _enable(monkeypatch):
 # --- pure decision matrix ----------------------------------------------------------
 
 
-def test_superuser_always_authorized(monkeypatch):
+def test_superuser_bypass_suppressed_when_serving_on(monkeypatch):
     _enable(monkeypatch)
-    # Even for another end user's job, the admin/editor bypass holds.
+    # On the serving plane the SID is itself a superuser; the bypass must NOT let it (as "bob")
+    # reach another end user's ("alice") job. With serving on, the superuser is scoped like anyone.
+    assert _caller_owns_job_end_user(_job("alice"), _req(**{HEADER: "bob"}), _user(superuser=True)) is False
+    # ...and it CAN reach a job that is actually its own end user's.
+    assert _caller_owns_job_end_user(_job("alice"), _req(**{HEADER: "alice"}), _user(superuser=True)) is True
+
+
+def test_superuser_bypass_holds_when_feature_off(monkeypatch):
+    # Editor plane (feature off): the admin/editor superuser bypass is unchanged.
+    _stub_settings(monkeypatch, serving_end_user_header=None)
     assert _caller_owns_job_end_user(_job("alice"), _req(**{HEADER: "bob"}), _user(superuser=True)) is True
 
 

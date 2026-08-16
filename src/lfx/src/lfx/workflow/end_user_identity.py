@@ -183,6 +183,25 @@ def resolve_end_user_identity(
     return EndUserIdentity(id=value)
 
 
+def serving_end_user_enabled() -> bool:
+    """Whether the serving-plane end-user identity feature is configured on.
+
+    True iff an end-user header name is set (``LANGFLOW_SERVING_END_USER_HEADER``). This is
+    the *deployment-level* switch, independent of whether any single request carries the
+    header — so an anonymous serving request (no header) still reports the feature as on.
+
+    Security gates use this to decide whether the shared service account (the SID, which is a
+    superuser) must be subject to end-user scoping: on the serving plane the SID is the only
+    principal, so its superuser bypass has to be suppressed whenever the feature is on, even
+    for header-less requests. Off (the default) -> byte-for-byte pre-feature behavior.
+    """
+    from lfx.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    settings = settings_service.settings if settings_service is not None else None
+    return bool(settings.serving_end_user_header) if settings is not None else False
+
+
 def resolve_serving_end_user_id(*, http_request: Any) -> str | None:
     """The raw trusted end-user id for a serving request, or ``None`` when off / anonymous.
 
