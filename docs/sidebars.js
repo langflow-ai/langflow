@@ -544,6 +544,7 @@ module.exports = {
             "Components/bundles-openai-compatible",
             "Components/bundles-openrouter",
             "Components/bundles-oracle",
+            "Components/bundles-orcarouter",
             "Components/bundles-paddle",
             "Components/bundles-perplexity",
             "Components/bundles-pgvector",
