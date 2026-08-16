@@ -4910,6 +4910,26 @@
       "legacy_slot": "ext:valkey:ValkeyIndexChatMemory@official-pre-a",
       "target": "ext:valkey:ValkeyIndexChatMemory@official",
       "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "LiveTennisMatchesComponent",
+      "target": "ext:livetennisapi:LiveTennisMatchesComponent@official",
+      "added_in": "1.12.0"
+    },
+    {
+      "bare_class_name": "LiveTennisFixturesComponent",
+      "target": "ext:livetennisapi:LiveTennisFixturesComponent@official",
+      "added_in": "1.12.0"
+    },
+    {
+      "bare_class_name": "LiveTennisPlayerSearchComponent",
+      "target": "ext:livetennisapi:LiveTennisPlayerSearchComponent@official",
+      "added_in": "1.12.0"
+    },
+    {
+      "bare_class_name": "LiveTennisMatchScoreComponent",
+      "target": "ext:livetennisapi:LiveTennisMatchScoreComponent@official",
+      "added_in": "1.12.0"
     }
   ],
   "ambiguous_bare_names": [

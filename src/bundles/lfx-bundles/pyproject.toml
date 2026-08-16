@@ -1,6 +1,6 @@
 [project]
 name = "lfx-bundles"
-version = "1.1.12"
+version = "1.1.13"
 description = "Langflow's long-tail provider bundles as a single manifest-less metapackage (the langchain-community model)."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -59,6 +59,7 @@ icosacomputing = ["requests>=2.32.0"]
 jigsawstack = ["jigsawstack==0.2.7"]
 langwatch = []
 litellm = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
+livetennisapi = []
 lmstudio = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "langchain-nvidia-ai-endpoints~=1.0.0"]
 maritalk = ["langchain-community>=0.4.1,<1.0.0"]
 mem0 = ["mem0ai>=2.0.2,<3.0.0"]
@@ -128,6 +129,7 @@ all = [
     "lfx-bundles[jigsawstack]",
     "lfx-bundles[langwatch]",
     "lfx-bundles[litellm]",
+    "lfx-bundles[livetennisapi]",
     "lfx-bundles[lmstudio]",
     "lfx-bundles[maritalk]",
     "lfx-bundles[mem0]",
@@ -195,6 +197,7 @@ all-no-torch = [
     "lfx-bundles[jigsawstack]",
     "lfx-bundles[langwatch]",
     "lfx-bundles[litellm]",
+    "lfx-bundles[livetennisapi]",
     "lfx-bundles[lmstudio]",
     "lfx-bundles[maritalk]",
     "lfx-bundles[mem0]",
