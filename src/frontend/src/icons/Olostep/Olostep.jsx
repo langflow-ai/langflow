@@ -1,9 +1,9 @@
-export const SvgOlostep = (props) => (
+export const SvgOlostep = ({ isdark, ...props }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 194 194"
-    width="24"
-    height="24"
+    width={24}
+    height={24}
     {...props}
   >
     <path fill="#635BFF" d="M0 0h194v194H0z" />
