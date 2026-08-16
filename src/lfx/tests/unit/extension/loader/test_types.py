@@ -27,6 +27,7 @@ from lfx.extension.errors import ERROR_CODES
 LOADER_CODES = frozenset(
     {
         "module-import-failed",
+        "optional-dependency-missing",
         "duplicate-component-name",
         "duplicate-inline-bundle",
         "inline-bundle-name-invalid",

@@ -21,6 +21,7 @@ const TextEditorArea = ({
   }
   return (
     <Textarea
+      aria-label={t("modal.viewText")}
       readOnly={readonly}
       className={`w-full custom-scroll ${left ? "min-h-32" : "h-full"} ${
         resizable ? "resize-y" : "resize-none"

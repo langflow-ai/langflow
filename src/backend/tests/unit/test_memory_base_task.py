@@ -100,11 +100,11 @@ class TestIngestMemoryTaskEdgeCases:
 
         flow_id = uuid.uuid4()
         msg = _make_message(flow_id=flow_id)
-        chroma_client_called = False
+        backend_created = False
 
-        def fake_get_client(_path):
-            nonlocal chroma_client_called
-            chroma_client_called = True
+        def fake_create_backend(*_args, **_kwargs):
+            nonlocal backend_created
+            backend_created = True
             return MagicMock()
 
         with (
@@ -127,8 +127,8 @@ class TestIngestMemoryTaskEdgeCases:
                 AsyncMock(return_value=True),
             ),
             patch(
-                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
-                side_effect=fake_get_client,
+                "langflow.services.memory_base.task.create_backend",
+                side_effect=fake_create_backend,
             ),
             patch(
                 "langflow.services.memory_base.task.KBStorageHelper.get_root_path",
@@ -152,7 +152,7 @@ class TestIngestMemoryTaskEdgeCases:
             )
 
         assert result == {"message": "Job cancelled before ingestion", "ingested": 0}
-        assert not chroma_client_called
+        assert not backend_created
 
     @pytest.mark.asyncio
     async def test_returns_early_when_documents_list_is_empty(self, tmp_path):
@@ -230,22 +230,24 @@ class TestIngestMemoryTaskEdgeCases:
                 AsyncMock(return_value=MagicMock()),
             ),
             patch(
-                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
-                return_value=MagicMock(),
+                "langflow.services.memory_base.task.resolve_backend_selection",
+                AsyncMock(return_value=("chroma", {})),
             ),
-            patch("langflow.services.memory_base.task.Chroma"),
             patch(
-                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_chroma",
+                "langflow.services.memory_base.task.create_backend",
+                return_value=AsyncMock(),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
                 AsyncMock(return_value=1),
             ),
-            patch("langflow.services.memory_base.task.sync_kb_metadata"),
+            patch("langflow.services.memory_base.task.sync_kb_stats_to_record", AsyncMock()),
             patch("langflow.services.memory_base.task._mark_messages_ingested", mark_ingested_mock),
             patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
             patch(
                 "langflow.services.memory_base.task.KBStorageHelper.get_root_path",
                 return_value=tmp_path,
             ),
-            patch("langflow.services.memory_base.task.KBStorageHelper.release_chroma_resources"),
         ):
             await ingest_memory_task(
                 request=IngestionRequest(
@@ -299,23 +301,25 @@ class TestIngestMemoryTaskEdgeCases:
                 AsyncMock(return_value=MagicMock()),
             ),
             patch(
-                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
-                return_value=MagicMock(),
+                "langflow.services.memory_base.task.resolve_backend_selection",
+                AsyncMock(return_value=("chroma", {})),
             ),
-            patch("langflow.services.memory_base.task.Chroma"),
+            patch(
+                "langflow.services.memory_base.task.create_backend",
+                return_value=AsyncMock(),
+            ),
             # Partial write simulates mid-run cancellation
             patch(
-                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_chroma",
+                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
                 AsyncMock(return_value=0),
             ),
-            patch("langflow.services.memory_base.task.sync_kb_metadata"),
+            patch("langflow.services.memory_base.task.sync_kb_stats_to_record", AsyncMock()),
             patch("langflow.services.memory_base.task._mark_messages_ingested", mark_ingested_mock),
             patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
             patch(
                 "langflow.services.memory_base.task.KBStorageHelper.get_root_path",
                 return_value=tmp_path,
             ),
-            patch("langflow.services.memory_base.task.KBStorageHelper.release_chroma_resources"),
             patch(
                 "langflow.services.memory_base.task.KBIngestionHelper.cleanup_chroma_chunks_by_job",
                 AsyncMock(),
@@ -343,7 +347,7 @@ class TestIngestMemoryTaskEdgeCases:
 
     @pytest.mark.asyncio
     async def test_cleanup_called_on_write_exception(self, tmp_path):
-        """When write_documents_to_chroma raises, partial chunks must be cleaned up."""
+        """When write_documents_to_backend raises, partial chunks must be cleaned up."""
         from langflow.services.memory_base.task import IngestionRequest, ingest_memory_task
 
         flow_id = uuid.uuid4()
@@ -373,19 +377,21 @@ class TestIngestMemoryTaskEdgeCases:
                 AsyncMock(return_value=MagicMock()),
             ),
             patch(
-                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
-                return_value=MagicMock(),
+                "langflow.services.memory_base.task.resolve_backend_selection",
+                AsyncMock(return_value=("chroma", {})),
             ),
-            patch("langflow.services.memory_base.task.Chroma"),
             patch(
-                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_chroma",
+                "langflow.services.memory_base.task.create_backend",
+                return_value=AsyncMock(),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
                 AsyncMock(side_effect=RuntimeError("Chroma write failed")),
             ),
             patch(
                 "langflow.services.memory_base.task.KBStorageHelper.get_root_path",
                 return_value=tmp_path,
             ),
-            patch("langflow.services.memory_base.task.KBStorageHelper.release_chroma_resources"),
             patch(
                 "langflow.services.memory_base.task.KBIngestionHelper.cleanup_chroma_chunks_by_job",
                 AsyncMock(),
@@ -1217,7 +1223,7 @@ class TestIngestMemoryTaskPreprocessing:
         flow_id = uuid.uuid4()
         msg = _make_message(flow_id=flow_id)
         kill_result = PreprocessingResult(status="skipped", output_text="", raw_response="NO_INGEST")
-        chroma_client_mock = MagicMock()
+        create_backend_mock = MagicMock()
 
         with (
             patch("langflow.services.memory_base.task.KBStorageHelper.get_root_path", return_value=tmp_path),
@@ -1231,13 +1237,13 @@ class TestIngestMemoryTaskPreprocessing:
             patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
             patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
             patch(
-                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
-                chroma_client_mock,
+                "langflow.services.memory_base.task.create_backend",
+                create_backend_mock,
             ),
         ):
             await ingest_memory_task(request=self._make_request(flow_id))
 
-        chroma_client_mock.assert_not_called()
+        create_backend_mock.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_kill_phrase_does_not_call_build_preprocessed_document(self, tmp_path):
@@ -1375,19 +1381,21 @@ class TestIngestMemoryTaskPreprocessing:
                 AsyncMock(return_value=MagicMock()),
             ),
             patch(
-                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
-                return_value=MagicMock(),
+                "langflow.services.memory_base.task.resolve_backend_selection",
+                AsyncMock(return_value=("chroma", {})),
             ),
-            patch("langflow.services.memory_base.task.Chroma"),
             patch(
-                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_chroma",
+                "langflow.services.memory_base.task.create_backend",
+                return_value=AsyncMock(),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
                 AsyncMock(return_value=1),
             ),
-            patch("langflow.services.memory_base.task.sync_kb_metadata"),
+            patch("langflow.services.memory_base.task.sync_kb_stats_to_record", AsyncMock()),
             patch("langflow.services.memory_base.task._update_preproc_row_status", AsyncMock()),
             patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
             patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
-            patch("langflow.services.memory_base.task.KBStorageHelper.release_chroma_resources"),
         ):
             result = await ingest_memory_task(request=self._make_request(flow_id))
 
@@ -1423,19 +1431,21 @@ class TestIngestMemoryTaskPreprocessing:
                 AsyncMock(return_value=MagicMock()),
             ),
             patch(
-                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
-                return_value=MagicMock(),
+                "langflow.services.memory_base.task.resolve_backend_selection",
+                AsyncMock(return_value=("chroma", {})),
             ),
-            patch("langflow.services.memory_base.task.Chroma"),
             patch(
-                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_chroma",
+                "langflow.services.memory_base.task.create_backend",
+                return_value=AsyncMock(),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
                 AsyncMock(return_value=1),
             ),
-            patch("langflow.services.memory_base.task.sync_kb_metadata"),
+            patch("langflow.services.memory_base.task.sync_kb_stats_to_record", AsyncMock()),
             patch("langflow.services.memory_base.task._update_preproc_row_status", AsyncMock()),
             patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
             patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
-            patch("langflow.services.memory_base.task.KBStorageHelper.release_chroma_resources"),
         ):
             await ingest_memory_task(request=self._make_request(flow_id))
 
@@ -1472,19 +1482,21 @@ class TestIngestMemoryTaskPreprocessing:
                 AsyncMock(return_value=MagicMock()),
             ),
             patch(
-                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
-                return_value=MagicMock(),
+                "langflow.services.memory_base.task.resolve_backend_selection",
+                AsyncMock(return_value=("chroma", {})),
             ),
-            patch("langflow.services.memory_base.task.Chroma"),
             patch(
-                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_chroma",
+                "langflow.services.memory_base.task.create_backend",
+                return_value=AsyncMock(),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
                 AsyncMock(return_value=1),
             ),
-            patch("langflow.services.memory_base.task.sync_kb_metadata"),
+            patch("langflow.services.memory_base.task.sync_kb_stats_to_record", AsyncMock()),
             patch("langflow.services.memory_base.task._update_preproc_row_status", update_mock),
             patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
             patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
-            patch("langflow.services.memory_base.task.KBStorageHelper.release_chroma_resources"),
         ):
             await ingest_memory_task(request=self._make_request(flow_id))
 
@@ -1521,19 +1533,21 @@ class TestIngestMemoryTaskPreprocessing:
                 AsyncMock(return_value=MagicMock()),
             ),
             patch(
-                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
-                return_value=MagicMock(),
+                "langflow.services.memory_base.task.resolve_backend_selection",
+                AsyncMock(return_value=("chroma", {})),
             ),
-            patch("langflow.services.memory_base.task.Chroma"),
             patch(
-                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_chroma",
+                "langflow.services.memory_base.task.create_backend",
+                return_value=AsyncMock(),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
                 AsyncMock(return_value=1),
             ),
-            patch("langflow.services.memory_base.task.sync_kb_metadata"),
+            patch("langflow.services.memory_base.task.sync_kb_stats_to_record", AsyncMock()),
             patch("langflow.services.memory_base.task._update_preproc_row_status", AsyncMock()),
             patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
             patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
-            patch("langflow.services.memory_base.task.KBStorageHelper.release_chroma_resources"),
         ):
             await ingest_memory_task(request=self._make_request(flow_id))
 
@@ -1589,19 +1603,21 @@ class TestIngestMemoryTaskPreprocessing:
                 AsyncMock(return_value=MagicMock()),
             ),
             patch(
-                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
-                return_value=MagicMock(),
+                "langflow.services.memory_base.task.resolve_backend_selection",
+                AsyncMock(return_value=("chroma", {})),
             ),
-            patch("langflow.services.memory_base.task.Chroma"),
             patch(
-                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_chroma",
+                "langflow.services.memory_base.task.create_backend",
+                return_value=AsyncMock(),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
                 AsyncMock(return_value=1),
             ),
-            patch("langflow.services.memory_base.task.sync_kb_metadata"),
+            patch("langflow.services.memory_base.task.sync_kb_stats_to_record", AsyncMock()),
             patch("langflow.services.memory_base.task._update_preproc_row_status", AsyncMock()),
             patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
             patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
-            patch("langflow.services.memory_base.task.KBStorageHelper.release_chroma_resources"),
         ):
             await ingest_memory_task(request=self._make_request(flow_id))
 
@@ -1634,19 +1650,21 @@ class TestIngestMemoryTaskPreprocessing:
                 AsyncMock(return_value=MagicMock()),
             ),
             patch(
-                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
-                return_value=MagicMock(),
+                "langflow.services.memory_base.task.resolve_backend_selection",
+                AsyncMock(return_value=("chroma", {})),
             ),
-            patch("langflow.services.memory_base.task.Chroma"),
             patch(
-                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_chroma",
+                "langflow.services.memory_base.task.create_backend",
+                return_value=AsyncMock(),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
                 AsyncMock(return_value=1),
             ),
-            patch("langflow.services.memory_base.task.sync_kb_metadata"),
+            patch("langflow.services.memory_base.task.sync_kb_stats_to_record", AsyncMock()),
             patch("langflow.services.memory_base.task._update_preproc_row_status", AsyncMock()),
             patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
             patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
-            patch("langflow.services.memory_base.task.KBStorageHelper.release_chroma_resources"),
         ):
             await ingest_memory_task(request=self._make_request(flow_id))
 
@@ -1679,19 +1697,21 @@ class TestIngestMemoryTaskPreprocessing:
                 AsyncMock(return_value=MagicMock()),
             ),
             patch(
-                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
-                return_value=MagicMock(),
+                "langflow.services.memory_base.task.resolve_backend_selection",
+                AsyncMock(return_value=("chroma", {})),
             ),
-            patch("langflow.services.memory_base.task.Chroma"),
             patch(
-                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_chroma",
+                "langflow.services.memory_base.task.create_backend",
+                return_value=AsyncMock(),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
                 AsyncMock(return_value=1),
             ),
-            patch("langflow.services.memory_base.task.sync_kb_metadata"),
+            patch("langflow.services.memory_base.task.sync_kb_stats_to_record", AsyncMock()),
             patch("langflow.services.memory_base.task._update_preproc_row_status", AsyncMock()),
             patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
             patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
-            patch("langflow.services.memory_base.task.KBStorageHelper.release_chroma_resources"),
         ):
             await ingest_memory_task(request=self._make_request(flow_id))
 
@@ -1780,7 +1800,7 @@ class TestIngestMemoryTaskPreprocessing:
         msg = _make_message(flow_id=flow_id)
         ok_result = PreprocessingResult(status="ingested", output_text="Summary.", raw_response="Summary.")
         preproc_row = self._make_preproc_row_mock()
-        chroma_client_mock = MagicMock()
+        create_backend_mock = MagicMock()
 
         with (
             patch("langflow.services.memory_base.task.KBStorageHelper.get_root_path", return_value=tmp_path),
@@ -1797,14 +1817,14 @@ class TestIngestMemoryTaskPreprocessing:
                 AsyncMock(return_value=True),
             ),
             patch(
-                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
-                chroma_client_mock,
+                "langflow.services.memory_base.task.create_backend",
+                create_backend_mock,
             ),
         ):
             result = await ingest_memory_task(request=self._make_request(flow_id))
 
         assert result == {"message": "Job cancelled before ingestion", "ingested": 0}
-        chroma_client_mock.assert_not_called()
+        create_backend_mock.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_preprocessing_chroma_write_failure_raises_and_cleans_up(self, tmp_path):
@@ -1836,16 +1856,18 @@ class TestIngestMemoryTaskPreprocessing:
                 AsyncMock(return_value=MagicMock()),
             ),
             patch(
-                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
-                return_value=MagicMock(),
+                "langflow.services.memory_base.task.resolve_backend_selection",
+                AsyncMock(return_value=("chroma", {})),
             ),
-            patch("langflow.services.memory_base.task.Chroma"),
             patch(
-                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_chroma",
+                "langflow.services.memory_base.task.create_backend",
+                return_value=AsyncMock(),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
                 AsyncMock(side_effect=RuntimeError("Chroma write failed")),
             ),
             patch("langflow.services.memory_base.task.KBIngestionHelper.cleanup_chroma_chunks_by_job", cleanup_mock),
-            patch("langflow.services.memory_base.task.KBStorageHelper.release_chroma_resources"),
             pytest.raises(RuntimeError, match="Chroma write failed"),
         ):
             await ingest_memory_task(request=self._make_request(flow_id))

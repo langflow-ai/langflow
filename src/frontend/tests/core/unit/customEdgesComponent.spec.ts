@@ -14,15 +14,15 @@ test(
     //first component
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("search api");
-    await page.waitForSelector('[data-testid="searchapiSearchApi"]', {
+    await page.getByTestId("sidebar-search-input").fill("url");
+    await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 10000,
     });
 
     await zoomOut(page, 3);
 
     await page
-      .getByTestId("searchapiSearchApi")
+      .getByTestId("data_sourceURL")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
@@ -44,15 +44,15 @@ test(
 
     await adjustScreenView(page);
 
-    await page.getByTestId("title-SearchApi").first().click();
+    await page.getByTestId("title-URL").first().click();
     await page.getByTestId("tool-mode-button").click();
 
     //connection
-    const searchApiOutput = await page
-      .getByTestId("handle-searchcomponent-shownode-toolset-right")
+    const urlOutput = await page
+      .getByTestId("handle-urlcomponent-shownode-toolset-right")
       .first();
 
-    await searchApiOutput.hover();
+    await urlOutput.hover();
     await page.mouse.down();
     const toolCallingAgentInput = await page
       .getByTestId("handle-toolcallingagent-shownode-tools-left")
@@ -73,15 +73,15 @@ test(
     await page.getByTestId("blank-flow").click();
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("search api");
-    await page.waitForSelector('[data-testid="searchapiSearchApi"]', {
+    await page.getByTestId("sidebar-search-input").fill("url");
+    await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 10000,
     });
 
     await zoomOut(page, 3);
 
     await page
-      .getByTestId("searchapiSearchApi")
+      .getByTestId("data_sourceURL")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
@@ -103,15 +103,15 @@ test(
 
     await adjustScreenView(page);
 
-    await page.getByTestId("title-SearchApi").first().click();
+    await page.getByTestId("title-URL").first().click();
     await page.getByTestId("tool-mode-button").click();
 
     //connection
-    const searchApiOutput = page
-      .getByTestId("handle-searchcomponent-shownode-toolset-right")
+    const urlOutput = page
+      .getByTestId("handle-urlcomponent-shownode-toolset-right")
       .first();
 
-    await searchApiOutput.hover();
+    await urlOutput.hover();
     await page.mouse.down();
     const toolCallingAgentInput = page
       .getByTestId("handle-toolcallingagent-shownode-tools-left")

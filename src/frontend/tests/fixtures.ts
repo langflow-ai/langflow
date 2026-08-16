@@ -1,6 +1,12 @@
 // tests/fixtures.ts
 
-import { test as base, expect, Page } from "@playwright/test";
+import {
+  test as base,
+  expect,
+  type Page,
+  type Request,
+  type Response,
+} from "@playwright/test";
 import type { ICheckerResult } from "accessibility-checker";
 import * as aChecker from "accessibility-checker";
 import "./playwrightCoverage";
@@ -11,10 +17,57 @@ import {
   formatA11yFailure,
   isCheckerReport,
 } from "./utils/accessibility-checker";
-import type { A11yScanOptions, LangflowPage } from "./utils/types";
+import {
+  createPendingRequestTracker,
+  createServerErrorContract,
+  expectServerError,
+  getServerErrorContractFailures,
+  observeServerError,
+  readResponseBodyWithTimeout,
+  sanitizeResponseExcerpt,
+  shouldSettleApiRequestOnResponse,
+  shouldTrackApiRequest,
+} from "./utils/server-error-contract.mjs";
+import type {
+  A11yScanOptions,
+  ExpectedServerError,
+  LangflowPage,
+} from "./utils/types";
+
+export type { A11yScanOptions, LangflowPage } from "./utils/types";
 
 const RUN_A11Y = process.env.RUN_A11Y === "true";
 const RUN_A11Y_ASSERT = process.env.RUN_A11Y_ASSERT === "true";
+const MAX_FLOW_ERROR_DIAGNOSTICS = 20;
+const API_REQUEST_DRAIN_TIMEOUT_MS = 2000;
+const RESPONSE_BODY_READ_TIMEOUT_MS = API_REQUEST_DRAIN_TIMEOUT_MS;
+const RESPONSE_INSPECTION_DRAIN_TIMEOUT_MS = API_REQUEST_DRAIN_TIMEOUT_MS;
+const MAX_PENDING_REQUEST_DIAGNOSTICS = 20;
+
+type ObservedHttpError = {
+  method: string;
+  path: string;
+  status: number;
+  statusText: string;
+  responseBody?: string;
+};
+const MAX_CLIENT_ERROR_DIAGNOSTICS = 20;
+
+const getResponseBody = async (
+  response: {
+    text: () => Promise<string>;
+  },
+  label: string,
+): Promise<string> => {
+  const result = await readResponseBodyWithTimeout(response, {
+    timeoutMs: RESPONSE_BODY_READ_TIMEOUT_MS,
+    label,
+  });
+  if (result.status === "success") {
+    return sanitizeResponseExcerpt(result.body);
+  }
+  return result.diagnostic;
+};
 
 type A11yFixtures = {
   _a11ySession: void;
@@ -55,12 +108,18 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
     }
 
     const errors: Array<{
-      url: string;
+      path: string;
       status: number;
       statusText: string;
       responseBody?: string;
       type?: string;
     }> = [];
+    const clientErrors: ObservedHttpError[] = [];
+    const serverErrorContract = createServerErrorContract();
+    const pendingApiResponseStatuses = createPendingRequestTracker<Request>();
+    const pendingApiRequestLifecycles = createPendingRequestTracker<Request>();
+    const pendingResponseInspections = new Set<Promise<void>>();
+    const responseInspectionErrors: Error[] = [];
 
     // Flag to allow flow errors (for tests that expect errors)
     let allowFlowErrors = false;
@@ -68,6 +127,13 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
     // Add helper method to page context — see LangflowPage type in utils/types.ts
     (page as Page & { allowFlowErrors?: () => void }).allowFlowErrors = () => {
       allowFlowErrors = true;
+    };
+    (
+      page as Page & {
+        expectServerError?: (expectation: ExpectedServerError) => void;
+      }
+    ).expectServerError = (expectation) => {
+      expectServerError(serverErrorContract, expectation);
     };
 
     let a11yScanIndex = 0;
@@ -117,34 +183,27 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
     };
 
     // Monitor API responses for errors
-    page.on("response", async (response) => {
+    const inspectResponse = async (response: Response) => {
       const url = response.url();
       const status = response.status();
 
-      // Log 400/404/422/500 API errors (ignore auth endpoints)
-      if (
-        url.includes("/api/") &&
-        (status === 400 || status === 404 || status === 422 || status === 500)
-      ) {
-        const isAuth =
-          url.includes("/login") ||
-          url.includes("/refresh") ||
-          url.includes("/auto_login") ||
-          url.includes("/logout");
-        if (!isAuth) {
-          let responseBody: string | undefined;
-          try {
-            responseBody = await response.text();
-          } catch (_e) {
-            responseBody = "Could not read response";
+      if (url.includes("/api/") && status >= 400) {
+        const method = response.request().method().toUpperCase();
+        const path = new URL(url).pathname;
+        const observed: ObservedHttpError = {
+          method,
+          path,
+          status,
+          statusText: response.statusText(),
+          responseBody: await getResponseBody(response, `${method} ${path}`),
+        };
+
+        if (status < 500) {
+          if (clientErrors.length < MAX_CLIENT_ERROR_DIAGNOSTICS) {
+            clientErrors.push(observed);
           }
-          errors.push({
-            url,
-            status,
-            statusText: response.statusText(),
-            responseBody,
-            type: "http_error",
-          });
+        } else {
+          observeServerError(serverErrorContract, observed);
         }
       }
 
@@ -171,51 +230,17 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
             return;
           }
 
-          const READ_BODY_TIMEOUT_MS = 2000;
-          const bodyTimeoutToken = Symbol("response-body-timeout");
-          let responseBody: string | undefined;
-          let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
-          try {
-            const bodyResult = await Promise.race([
-              response.text(),
-              new Promise<symbol>((resolve) => {
-                timeoutId = setTimeout(
-                  () => resolve(bodyTimeoutToken),
-                  READ_BODY_TIMEOUT_MS,
-                );
-              }),
-            ]);
-
-            if (timeoutId) {
-              clearTimeout(timeoutId);
-              timeoutId = undefined;
-            }
-
-            if (bodyResult === bodyTimeoutToken) {
-              console.warn(
-                `Timed out reading response body for ${url}; skipping body inspection.`,
-              );
-              return;
-            }
-
-            if (typeof bodyResult !== "string") {
-              return;
-            }
-
-            responseBody = bodyResult;
-          } catch (bodyReadErr) {
-            if (timeoutId) {
-              clearTimeout(timeoutId);
-              timeoutId = undefined;
-            }
-            console.warn(
-              `Failed to read response body for ${url}; skipping body inspection.`,
-              bodyReadErr,
-            );
+          const method = response.request().method().toUpperCase();
+          const path = new URL(url).pathname;
+          const bodyResult = await readResponseBodyWithTimeout(response, {
+            timeoutMs: RESPONSE_BODY_READ_TIMEOUT_MS,
+            label: `${method} ${path}`,
+          });
+          if (bodyResult.status !== "success") {
+            console.warn(`${bodyResult.diagnostic} Skipping body inspection.`);
             return;
           }
-
+          const responseBody = bodyResult.body;
           if (!responseBody) {
             return;
           }
@@ -280,25 +305,21 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
           }
 
           if (hasError && errorPreview) {
+            const sanitizedErrorPreview = sanitizeResponseExcerpt(errorPreview);
             const error = {
-              url,
+              path: new URL(url).pathname,
               status: 200,
               statusText: "Flow Error",
-              responseBody: errorPreview,
+              responseBody: sanitizedErrorPreview,
               type: "flow_error",
             };
-            errors.push(error);
-
-            // Fail immediately if flow errors are not allowed
-            if (!allowFlowErrors) {
-              const errorMessage =
-                `Flow execution error detected during test:\n\n` +
-                `URL: ${url}\n` +
-                `Error: ${errorPreview}\n\n` +
-                `If this error is expected, call page.allowFlowErrors() at the start of your test.`;
-
-              throw new Error(errorMessage);
+            if (errors.length < MAX_FLOW_ERROR_DIAGNOSTICS) {
+              errors.push(error);
             }
+
+            // Event listeners are not awaited by Playwright. Record the error
+            // here and fail deterministically after all response inspections
+            // settle during fixture teardown.
           }
         } catch (e) {
           // Only ignore parsing errors, not our intentional throws
@@ -311,9 +332,174 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
           // Ignore parsing errors for event streams
         }
       }
-    });
+    };
+
+    const requestListener = (request: Request) => {
+      if (shouldTrackApiRequest(request.url())) {
+        pendingApiResponseStatuses.start(request);
+        pendingApiRequestLifecycles.start(request);
+      }
+    };
+    const responseListener = (response: Response) => {
+      if (shouldTrackApiRequest(response.url())) {
+        // HTTP status is final as soon as Playwright emits `response`; body
+        // completion is tracked separately so a valid long-lived stream is not
+        // mistaken for a request whose eventual 5xx status is still unknown.
+        pendingApiResponseStatuses.finish(response.request());
+      }
+      if (
+        shouldSettleApiRequestOnResponse(
+          response.url(),
+          response.headers()["content-type"] ?? "",
+        )
+      ) {
+        // A genuine long-lived stream can remain open after its terminal event
+        // has rendered. Its status is already final and inspectResponse below
+        // still owns bounded error-body inspection. Finite API responses stay
+        // tracked until requestfinished/requestfailed so body-triggered follow-
+        // up requests remain visible to teardown.
+        pendingApiRequestLifecycles.finish(response.request());
+      }
+      const inspection = inspectResponse(response)
+        .catch((error: unknown) => {
+          responseInspectionErrors.push(
+            error instanceof Error
+              ? error
+              : new Error("Unknown response inspection failure"),
+          );
+        })
+        .finally(() => {
+          pendingResponseInspections.delete(inspection);
+        });
+      pendingResponseInspections.add(inspection);
+    };
+    const requestFinishedListener = (request: Request) => {
+      if (shouldTrackApiRequest(request.url())) {
+        pendingApiResponseStatuses.finish(request);
+        pendingApiRequestLifecycles.finish(request);
+      }
+    };
+    const requestFailedListener = (request: Request) => {
+      if (shouldTrackApiRequest(request.url())) {
+        pendingApiResponseStatuses.finish(request);
+        pendingApiRequestLifecycles.finish(request);
+      }
+    };
+    page.on("request", requestListener);
+    page.on("response", responseListener);
+    page.on("requestfinished", requestFinishedListener);
+    page.on("requestfailed", requestFailedListener);
 
     await use(page as LangflowPage);
+    // Freeze only the finite lifecycle set at the test boundary. Existing
+    // requests must still finish, while teardown polling must not continually
+    // extend this drain. Keep request/status observation active through the
+    // tracker's quiet period so a causal follow-up request is still admitted.
+    pendingApiRequestLifecycles.stop();
+    await pendingApiRequestLifecycles.drain(API_REQUEST_DRAIN_TIMEOUT_MS);
+
+    // The lifecycle quiet period has admitted any immediate follow-up request
+    // into the status tracker. Close that admission boundary now, then drain
+    // the already-admitted statuses while response listeners remain attached;
+    // this preserves late 5xx inspection without admitting later polling.
+    pendingApiResponseStatuses.stop();
+    page.off("request", requestListener);
+    await pendingApiResponseStatuses.drain(API_REQUEST_DRAIN_TIMEOUT_MS);
+    const unresolvedApiRequests = pendingApiResponseStatuses.snapshot();
+    page.off("response", responseListener);
+    page.off("requestfinished", requestFinishedListener);
+    page.off("requestfailed", requestFailedListener);
+    let responseInspectionDrainTimeoutId:
+      | ReturnType<typeof setTimeout>
+      | undefined;
+    const responseInspectionDrainTimedOut = await Promise.race([
+      Promise.allSettled([...pendingResponseInspections]).then(() => false),
+      new Promise<true>((resolve) => {
+        responseInspectionDrainTimeoutId = setTimeout(
+          () => resolve(true),
+          RESPONSE_INSPECTION_DRAIN_TIMEOUT_MS,
+        );
+      }),
+    ]);
+    if (responseInspectionDrainTimeoutId !== undefined) {
+      clearTimeout(responseInspectionDrainTimeoutId);
+    }
+    if (responseInspectionDrainTimedOut) {
+      responseInspectionErrors.push(
+        new Error(
+          `${pendingResponseInspections.size} response inspection(s) remained unresolved after ${RESPONSE_INSPECTION_DRAIN_TIMEOUT_MS}ms`,
+        ),
+      );
+    }
+
+    if (responseInspectionErrors.length > 0) {
+      throw new Error(
+        `Response inspection failed ${responseInspectionErrors.length} time(s): ${responseInspectionErrors[0].message}`,
+      );
+    }
+
+    if (clientErrors.length > 0) {
+      await testInfo.attach("api-4xx-responses", {
+        body: Buffer.from(JSON.stringify(clientErrors, null, 2)),
+        contentType: "application/json",
+      });
+    }
+
+    const {
+      unexpected: unexpectedServerErrors,
+      missing: missingServerErrors,
+      droppedUnexpected,
+    } = getServerErrorContractFailures(serverErrorContract);
+    if (
+      unexpectedServerErrors.length > 0 ||
+      missingServerErrors.length > 0 ||
+      unresolvedApiRequests.length > 0
+    ) {
+      const unexpected = unexpectedServerErrors
+        .map(
+          ({ method, path, status, responseBody }) =>
+            `  - unexpected ${method} ${path} -> ${status}: ${responseBody ?? "No response body"}`,
+        )
+        .join("\n");
+      const missing = missingServerErrors
+        .map(
+          ({ method, path, status, count, observed }) =>
+            `  - expected ${method} ${path} -> ${status} exactly ${count} time(s), observed ${observed}`,
+        )
+        .join("\n");
+      const dropped =
+        droppedUnexpected > 0
+          ? `  - ${droppedUnexpected} additional unexpected 5xx response(s) omitted`
+          : "";
+      const unresolved = unresolvedApiRequests.length
+        ? [
+            `  - ${unresolvedApiRequests.length} API request(s) remained unresolved after ${API_REQUEST_DRAIN_TIMEOUT_MS}ms:`,
+            ...unresolvedApiRequests
+              .slice(0, MAX_PENDING_REQUEST_DIAGNOSTICS)
+              .map(
+                (request) =>
+                  `    ${request.method().toUpperCase()} ${new URL(request.url()).pathname}`,
+              ),
+            unresolvedApiRequests.length > MAX_PENDING_REQUEST_DIAGNOSTICS
+              ? `    ${unresolvedApiRequests.length - MAX_PENDING_REQUEST_DIAGNOSTICS} additional request(s) omitted`
+              : "",
+          ]
+            .filter(Boolean)
+            .join("\n")
+        : "";
+      throw new Error(
+        [
+          "Server-error contract failed:",
+          unexpected,
+          dropped,
+          missing,
+          unresolved,
+          "Register intentional failures with page.expectServerError({ method, path, status, count }).",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      );
+    }
 
     // Check for errors and fail test if not allowed
     if (errors.length > 0) {
@@ -326,7 +512,7 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
             const bodyPreview = e.responseBody
               ? e.responseBody.substring(0, 300)
               : "No response body";
-            return `\n  - ${e.url}\n    ${bodyPreview}`;
+            return `\n  - ${e.path}\n    ${bodyPreview}`;
           })
           .join("\n");
 

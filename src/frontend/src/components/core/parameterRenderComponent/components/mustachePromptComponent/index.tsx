@@ -1,6 +1,7 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "@/components/common/sanitizedHTMLWrapper";
 import MustachePromptModal from "@/modals/mustachePromptModal";
+import { variableHighlightClass } from "@/utils/promptVariables";
 import { cn } from "../../../../../utils/utils";
 import { Button } from "../../../../ui/button";
 import { getNodeScopedDomId } from "../../helpers/get-node-scoped-dom-id";
@@ -26,14 +27,15 @@ export default function MustachePromptAreaComponent({
   nodeId,
   readonly = false,
   showParameter = true,
+  ariaLabelledBy,
 }: InputProps<string, PromptAreaComponentType>): JSX.Element | null {
   const coloredContent = (typeof value === "string" ? value : "")
     // escape HTML first
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     // highlight only simple mustache variables {{variable_name}} - no complex syntax
-    .replace(/\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g, (match, varName) => {
-      return `<span class="chat-message-highlight">{{${varName}}}</span>`;
+    .replace(/\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g, (_match, varName) => {
+      return `<span class="${variableHighlightClass(varName)}">{{${varName}}}</span>`;
     })
     // preserve new-lines
     .replace(/\n/g, "<br />");
@@ -94,6 +96,7 @@ export default function MustachePromptAreaComponent({
           unstyled
           className="w-full"
           data-testid="button_open_mustache_prompt_modal"
+          aria-labelledby={ariaLabelledBy}
         >
           <div className="relative w-full">
             {renderPromptText()}

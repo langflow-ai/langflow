@@ -432,7 +432,7 @@ export default function ChatMessage({
             )}
           </div>
           {!editMessage && (
-            <div className="invisible absolute bottom-full right-0 group-hover:visible">
+            <div className="pointer-events-none absolute bottom-full right-0 opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
               <div>
                 <EditMessageButton
                   onCopy={() => {
@@ -441,7 +441,7 @@ export default function ChatMessage({
                   onEdit={
                     playgroundPage ? undefined : () => setEditMessage(true)
                   }
-                  className="h-fit group-hover:visible"
+                  className="h-fit"
                   isBotMessage={!chat.isSend}
                   onEvaluate={handleEvaluateAnswer}
                   evaluation={chat.properties?.positive_feedback}

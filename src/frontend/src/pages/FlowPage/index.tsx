@@ -38,6 +38,7 @@ import MemoriesMainContent from "./components/MemoriesMainContent";
 import Page from "./components/PageComponent";
 import { FlowInsightsContent } from "./components/TraceComponent/FlowInsightsContent";
 import useLoadFlowForRoute from "./hooks/use-load-flow-for-route";
+import { saveBeforeLeaving } from "./save-before-leaving";
 
 function FlowPageMainContent({
   flowId,
@@ -133,25 +134,16 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   useWebhookEvents();
 
   const handleSave = () => {
-    let saving = true;
-    let proceed = false;
-    setTimeout(() => {
-      saving = false;
-      if (proceed) {
-        blocker.proceed && blocker.proceed();
+    void saveBeforeLeaving({
+      saveFlow,
+      autoSaving,
+      proceed: () => blocker.proceed?.(),
+      reset: () => blocker.reset?.(),
+      onSaved: () => {
         setSuccessData({
           title: t("flow.savedSuccessfully"),
         });
-      }
-    }, 1200);
-    saveFlow().then(() => {
-      if (!autoSaving || saving === false) {
-        blocker.proceed && blocker.proceed();
-        setSuccessData({
-          title: t("flow.savedSuccessfully"),
-        });
-      }
-      proceed = true;
+      },
     });
   };
 

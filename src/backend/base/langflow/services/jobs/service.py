@@ -248,6 +248,26 @@ class JobService(Service):
             await session.flush()
             return job
 
+    async def suspend_job(self, job_id: UUID, metadata: dict) -> Job | None:
+        """Atomically merge pause metadata and transition a job to ``SUSPENDED``.
+
+        Resume-critical metadata must become visible in the same transaction as
+        the status transition. Otherwise a status reader can observe
+        ``SUSPENDED`` before ``pending_request_id`` or ``pre_pause_outputs`` is
+        committed and return an incomplete pause response.
+
+        Returns the updated Job, or ``None`` if the row does not exist.
+        """
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None:
+                return None
+            job.job_metadata = {**(job.job_metadata or {}), **metadata}
+            job.status = JobStatus.SUSPENDED
+            session.add(job)
+            await session.flush()
+            return job
+
     async def set_result(self, job_id: UUID, result: dict | None) -> Job | None:
         """Persist the durable terminal result blob for a job.
 

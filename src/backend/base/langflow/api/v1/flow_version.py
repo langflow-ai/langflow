@@ -12,6 +12,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.utils.core import remove_api_keys
+from langflow.api.v1.flows import _validate_catalog_policy_for_write
 from langflow.api.v1.mappers.deployments.helpers import get_owned_provider_account_or_404
 from langflow.api.v1.mappers.deployments.sync import sync_flow_version_attachments
 from langflow.services.authorization import FlowAction, ensure_flow_permission
@@ -37,7 +38,7 @@ from langflow.services.database.models.flow_version.model import (
     FlowVersionRead,
     FlowVersionReadWithData,
 )
-from langflow.services.deps import get_settings_service
+from langflow.services.deps import get_catalog_policy_service, get_settings_service
 
 router = APIRouter(prefix="/flows/{flow_id}/versions", tags=["Flow Versions"], include_in_schema=False)
 
@@ -272,6 +273,11 @@ async def activate_version(
             status_code=422,
             detail="Flow data could not be copied. The data may be corrupted.",
         ) from exc
+
+    _validate_catalog_policy_for_write(
+        target_data,
+        snapshot=get_catalog_policy_service().snapshot,
+    )
 
     # Wrap auto-snapshot + flow overwrite in a single savepoint for atomicity.
     # If the flow update fails, the auto-snapshot is also rolled back.

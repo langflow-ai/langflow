@@ -537,13 +537,14 @@ class TestDeploymentCRUD:
         await db.commit()
 
         total = await count_deployments_by_provider(
-            db, user_id=user.id, deployment_provider_account_id=provider_account.id
+            db, user_id=user.id, row_owner_id=user.id, deployment_provider_account_id=provider_account.id
         )
         assert total == 5
 
         page = await list_deployments_page(
             db,
             user_id=user.id,
+            row_owner_id=user.id,
             deployment_provider_account_id=provider_account.id,
             offset=0,
             limit=3,
@@ -553,6 +554,7 @@ class TestDeploymentCRUD:
         page2 = await list_deployments_page(
             db,
             user_id=user.id,
+            row_owner_id=user.id,
             deployment_provider_account_id=provider_account.id,
             offset=3,
             limit=3,

@@ -15,6 +15,7 @@ from lfx.utils.env_var_security import is_protected_env_var, safe_getenv
         "DATABASE_URL",
         "SECRET_KEY",
         "POSTGRES_PASSWORD",
+        "PGVECTOR_CONNECTION_STRING",
         "AWS_SECRET_ACCESS_KEY",
         "AWS_ACCESS_KEY_ID",
         "PGPASSWORD",

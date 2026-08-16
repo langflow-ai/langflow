@@ -2,6 +2,9 @@ import tempfile
 from pathlib import Path
 
 import pytest
+
+pytest.importorskip("lfx_bundles")
+
 from lfx.components.git import GitLoaderComponent
 
 

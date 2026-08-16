@@ -12,16 +12,20 @@ export default function CrashErrorComponent({
   return (
     <div className="z-50 flex h-screen w-screen items-center justify-center bg-foreground bg-opacity-50">
       <div className="flex h-screen w-screen flex-col bg-background text-start shadow-lg">
-        <div className="m-auto grid w-1/2 justify-center gap-5 text-center">
-          <Card className="p-8">
+        <main className="m-auto grid w-1/2 justify-center gap-5 text-center">
+          <Card className="p-8" role="alert">
             <CardHeader>
               <div className="m-auto">
-                <XCircle strokeWidth={1.5} className="h-16 w-16" />
+                <XCircle
+                  strokeWidth={1.5}
+                  className="h-16 w-16"
+                  aria-hidden="true"
+                />
               </div>
               <div>
-                <p className="mb-4 text-xl text-foreground">
+                <h1 className="mb-4 text-xl text-foreground">
                   {t("crash.title")}
-                </p>
+                </h1>
               </div>
             </CardHeader>
 
@@ -50,19 +54,19 @@ export default function CrashErrorComponent({
                   {t("crash.restartButton")}
                 </Button>
 
-                <a
-                  href="https://github.com/langflow-ai/langflow/issues/new"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Button className="ml-3" ignoreTitleCase variant={"outline"}>
+                <Button className="ml-3" variant="outline" asChild>
+                  <a
+                    href="https://github.com/langflow-ai/langflow/issues/new"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     {t("crash.reportButton")}
-                  </Button>
-                </a>
+                  </a>
+                </Button>
               </div>
             </CardFooter>
           </Card>
-        </div>
+        </main>
       </div>
     </div>
   );

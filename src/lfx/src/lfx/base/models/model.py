@@ -49,6 +49,13 @@ def _normalize_message_content(content: Any) -> Any:
 
 
 class LCModelComponent(Component):
+    # ``standalone`` gates this component at the outer build/config boundary.
+    # Unified provider selectors override this with ``delegate`` and enforce
+    # the concrete provider inside get_llm/get_embeddings.
+    model_provider_policy_mode: str = "standalone"
+    # Optional explicit override for policy identity. Most subclasses are
+    # classified systemically from their provider package/module.
+    model_provider_id: str | None = None
     display_name: str = "Model Name"
     description: str = "Model Description"
     trace_type = "llm"

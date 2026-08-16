@@ -1,3 +1,5 @@
+import type { RefObject } from "react";
+
 export interface ChatHeaderProps {
   sessions: string[];
   onNewChat?: () => void;
@@ -11,6 +13,7 @@ export interface ChatHeaderProps {
   className?: string;
   openLogsModal?: boolean;
   setOpenLogsModal?: (open: boolean) => void;
+  logsModalTriggerRef?: RefObject<HTMLElement | null>;
   onRenameSession?: (oldId: string, newId: string) => Promise<void>;
   onClearChat?: () => void;
 }

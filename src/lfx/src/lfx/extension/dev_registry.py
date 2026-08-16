@@ -4,7 +4,8 @@ When an author types ``lfx extension dev <path>``, we don't ship the
 Extension via pip; instead we record the absolute path in a small JSON
 state file, then hand off to ``langflow run``.  At server startup, the
 loader reads this state file and registers each surviving directory at
-the ``official`` slot via :func:`lfx.extension.loader.load_extension`.
+the ``official`` slot via
+:func:`lfx.extension.loader.load_extension_bundles`.
 Paths that have moved or been deleted surface as
 ``local-extension-missing`` warnings rather than aborting startup.
 
@@ -53,7 +54,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from lfx.extension.errors import ExtensionError
-from lfx.extension.loader import load_extension
+from lfx.extension.loader import load_extension_bundles
 from lfx.extension.loader._types import LoadResult
 
 if TYPE_CHECKING:
@@ -309,9 +310,9 @@ def unregister_dev_extension(path: Path | str, *, state_dir: Path | None = None)
 def load_dev_extensions(*, state_dir: Path | None = None) -> list[LoadResult]:
     """Load every registered dev Extension.
 
-    Reads the state file, calls :func:`load_extension` for each entry
-    that still resolves to a directory, and returns the resulting list of
-    :class:`LoadResult`s in registration order.
+    Reads the state file, calls :func:`load_extension_bundles` for each
+    entry that still resolves to a directory, and returns every resulting
+    :class:`LoadResult` in manifest and registration order.
 
     Missing entries (the directory was renamed, deleted, or moved) are
     surfaced as :class:`LoadResult` instances containing a single
@@ -342,7 +343,7 @@ def load_dev_extensions(*, state_dir: Path | None = None) -> list[LoadResult]:
             )
             results.append(result)
             continue
-        results.append(load_extension(entry.path))
+        results.extend(load_extension_bundles(entry.path))
     return results
 
 

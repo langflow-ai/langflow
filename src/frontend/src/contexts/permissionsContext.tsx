@@ -12,6 +12,7 @@
  * graceful default.
  */
 
+import { keepPreviousData } from "@tanstack/react-query";
 import { createContext, type ReactNode, useContext, useMemo } from "react";
 import { useGetEffectivePermissions } from "@/controllers/API/queries/permissions";
 import type {
@@ -63,6 +64,23 @@ export function useIsFlowReadOnly(flowId: string | undefined | null): boolean {
   return Boolean(flowId) && (isLoading || !can(flowId, "write"));
 }
 
+/**
+ * Returns whether the read-only verdict for `flowId` is still unresolved.
+ *
+ * This is the transient half of `useIsFlowReadOnly`: both are true while the
+ * provider resolves, but only this one clears once the answer arrives. Controls
+ * that invoke a gated mutation read it to disable themselves for the same
+ * window the gate rejects them, so the click is refused visibly instead of
+ * being discarded, and to tell "checking" apart from "not allowed" in the
+ * reason they surface.
+ */
+export function useIsFlowPermissionPending(
+  flowId: string | undefined | null,
+): boolean {
+  const { isLoading } = usePermissions();
+  return Boolean(flowId) && isLoading;
+}
+
 export interface PermissionsProviderProps {
   resourceType: PermissionResourceType;
   resourceIds: string[];
@@ -70,6 +88,8 @@ export interface PermissionsProviderProps {
   actions?: string[];
   /** Authorization domain — e.g. `project:{folderId}`. Defaults to `*`. */
   domain?: string;
+  /** Keep the prior permission map while a changed resource set resolves. */
+  preservePreviousPermissions?: boolean;
   children: ReactNode;
 }
 
@@ -78,14 +98,20 @@ export function PermissionsProvider({
   resourceIds,
   actions,
   domain,
+  preservePreviousPermissions = false,
   children,
 }: PermissionsProviderProps) {
-  const { data, isLoading, isError } = useGetEffectivePermissions({
-    resourceType,
-    resourceIds,
-    actions,
-    domain,
-  });
+  const { data, isLoading, isError } = useGetEffectivePermissions(
+    {
+      resourceType,
+      resourceIds,
+      actions,
+      domain,
+    },
+    preservePreviousPermissions
+      ? { placeholderData: keepPreviousData }
+      : undefined,
+  );
 
   const value = useMemo<PermissionsContextValue>(() => {
     const permissions = buildPermissionMap(data);

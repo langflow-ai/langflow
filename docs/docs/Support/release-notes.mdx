@@ -46,6 +46,72 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
     If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
 
+## 1.12.x
+
+Langflow 1.12 consolidates the runnable application on `langflow-base`.
+`pip install langflow-base` now provides the UI, API, platform services, built-in
+components, and the `langflow` command without provider extension
+distributions. `pip install langflow` installs that same base version and adds
+the curated standalone `lfx-*` extensions.
+
+### Breaking changes
+
+- `langflow-base` version alignment
+
+    The runnable package starts at `langflow-base==1.12.0` and remains
+    version-aligned with `langflow` through stable, release-candidate, patch,
+    and nightly releases. A dependency such as `langflow-base~=0.12` remains on
+    the old package line and must be updated explicitly to select 1.12.
+    Before upgrading an existing environment, remove the retired package with
+    `pip uninstall langflow-core`; leaving an older `langflow-core` installed
+    can create conflicting dependency requirements.
+
+- Base command and image tags
+
+    The base package provides the `langflow` executable, not a
+    `langflow-base` executable. The canonical bundle-free container is
+    `langflowai/langflow:base-VERSION`; normal `langflowai/langflow:VERSION`
+    tags contain the curated distribution. The previous `core-*` image profile
+    is no longer published.
+
+- Cassandra and Policies components are extensions
+
+    Cassandra components now ship in `lfx-datastax`, and the
+    `PoliciesComponent` ships in `lfx-toolguard`. The full `langflow` package
+    includes both. Existing component class names and legacy Python import
+    paths remain compatible. For a base-only environment, add the extensions
+    with `pip install "lfx[cassandra,toolguard]"`.
+    Policies guard caches are now isolated under
+    `tmp_toolguard/{user}/{flow}/{component}/{project}`. Existing project-only
+    caches are not reused after upgrading; run **Generate** once before using
+    **Guard** in an upgraded flow.
+
+- The default `langflow` provider set is smaller
+
+    arXiv, DuckDuckGo, EmpirioLabs, Exa, Firecrawl, NextPlaid, Paddle, and
+    Valkey are no longer installed by plain `pip install langflow`. Use
+    `pip install "langflow[bundles]"` to add those standalone extensions
+    together with every no-Torch long-tail bundle.
+
+- PyTorch remains opt-in
+
+    The default base and curated Langflow installations do not install PyTorch
+    or TorchVision. Components that require them must be installed through an
+    explicit opt-in profile.
+
+- IBM watsonx Orchestrate clients move to the IBM extension
+
+    The base deployment adapter remains feature-flagged, but its client
+    dependencies now ship with `lfx-ibm`. Install `lfx-ibm` or use the
+    compatibility extra `langflow-base[ibm-watsonx-clients]` before enabling
+    the adapter in a base-only environment.
+
+- LiteLLM remains optional in base-only environments
+
+    `langflow-base` no longer imports LiteLLM by default. Install
+    `langflow-base[litellm]` when custom components or IDE tooling depend on
+    the LiteLLM compatibility surface.
+
 ## 1.11.x
 
 Highlights of this release include the following changes.
@@ -104,28 +170,26 @@ If Langflow fails to start with a `get_body_field` error after installing versio
 
     For more information, see [Docker image defaults](/deployment-docker#docker-image-security-defaults).
 
-- Docker runtime home moved to `/app/data`
+ - Docker runtime home moved to `/app/data`
 
     Patched 1.11 Docker images set `HOME=/app/data` so the non-root runtime user has a writable home directory.
     When `LANGFLOW_CONFIG_DIR` isn't set, the default config directory therefore changes from `/opt/app-root/src/.cache/langflow` to `/app/data/.cache/langflow`; SQLite follows that directory when `LANGFLOW_SAVE_DB_IN_CONFIG_DIR=true`.
     Persist `/app/data` or set `LANGFLOW_CONFIG_DIR` to your existing writable data directory before upgrading to preserve existing data.
 
-- Ongoing breaking changes: bundle separation
+ - Long-tail component bundles are now opt-in
 
-    Langflow 1.10.x introduced the Extension bundles model.
-    In Langflow 1.11.x, many third-party provider integrations are now shipped as *long-tail bundles* inside the `lfx-bundles` package, instead of in the core `langflow` installation.
-
-    `uv pip install langflow` still includes these bundles automatically, but if you install standalone `lfx`, you will need to install the providers your flows require:
+    Starting in Langflow 1.11.x, `pip install langflow` no longer installs the long-tail providers in the `lfx-bundles` metapackage.
+    If an existing flow uses components such as Chroma, Ollama, Qdrant, Redis, PGVector, Tavily, Wikipedia, MongoDB, Weaviate, or Milvus, install the metapackage in the same environment after upgrading:
 
     ```bash
-    # Install one third party provider
-    uv pip install "lfx-bundles[<bundle-name>]"
-
-    # Install all third party providers
-    uv pip install "lfx[bundles]"
+    pip install lfx-bundles
     ```
 
-    For more information, see [Langflow Extensions overview](./extensions-overview).
+    You can instead install one provider and its dependencies, for example `pip install "lfx-bundles[qdrant]"`.
+    Missing-provider errors use the same install guidance.
+    Graduated providers such as OpenAI, Anthropic, Cohere, and Exa remain part of the default Langflow installation through their standalone `lfx-*` packages.
+
+    For the complete package list and provider-specific commands, see [Extension bundle list](./extensions-bundle-list).
 
 - PyTorch components are opt-in by default
 
@@ -258,11 +322,15 @@ If Langflow fails to start with a `get_body_field` error after installing versio
 - LFX is now engine-only
 
     `uv pip install lfx` now installs the LFX executor only, with no bundle components included.
-    `uv pip install langflow` is unchanged.
-    This only affects users who install `lfx` directly.
+    `uv pip install langflow` installs the server and curated standalone providers, but not the long-tail `lfx-bundles` metapackage.
 
-    If you install `lfx` directly and your flows use bundle components, install the required packages in the same environment.
+    If your flows use long-tail bundle components, install the required packages in the same environment.
 
+    About 70 long-tail providers ship in the `lfx-bundles` metapackage.
+    Install one provider with `uv pip install "lfx-bundles[<bundle-name>]"`, or install every long-tail provider with `uv pip install "lfx[bundles]"`.
+    Graduated providers, such as OpenAI, Anthropic, Cohere, and Exa, ship as individual packages and are installed separately with `uv pip install lfx-<provider>`.
+
+    The `lfx-bundles` long tail is opt-in for both `lfx` and `langflow` installations.
     For more information, see [Extensions overview](./extensions-overview).
 
 ## 1.10.x
