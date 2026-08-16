@@ -1,16 +1,23 @@
 #!/usr/bin/env python3
 """CI guard: a log call must not render the caught exception into its message.
 
-``logger.error(f"failed: {e}")`` is wrong twice over.
+``logger.error(f"failed: {e}")`` puts the exception text in the *message*, and the message
+is the one field that crosses the export boundary.
 
-The exception text reaches container stdout and the local log file no matter how OTLP
-export is configured, and provider errors routinely embed the prompt, the completion, or
-the API key that was rejected. Withholding log bodies from the OTLP export does not help
-here, because this text never needed the export to leak.
+``_OTEL_LOG_SKIP_KEYS`` in ``lfx/log/logger.py`` drops ``exc_info`` on the way out and
+derives ``error.type`` and ``error.chain`` from it instead. So an exception attached as
+``exc_info`` stays local, while the same exception interpolated into the message is
+exported verbatim -- and provider errors routinely embed the prompt, the completion, or
+the API key that was rejected.
 
-It also destroys the triage signal. ``error()`` sets no ``exc_info``, so the exported
-record carries no ``error.type`` -- which is the only thing an operator has left once
-bodies are withheld. The call site trades the one safe field for the one unsafe one.
+It also costs the triage signal. ``error()`` sets no ``exc_info`` of its own, so a record
+written this way carries no ``error.type`` at all: the call site trades the one field an
+operator can act on for the one they must not receive.
+
+To be clear about what this does *not* buy: ``exc_info=e`` still renders the full
+traceback, message included, to stdout and the log file, because ``format_exc_info`` and
+``ConsoleRenderer`` are in the console chain. The console is the developer's and the APM
+is the operator's; this guard is about the second one.
 
 Write ``logger.error("failed", exc_info=e)``, or interpolate the type alone with
 ``type(e).__name__``. Both are accepted here.
@@ -29,6 +36,16 @@ statements the logs-boundary work fixed by hand:
 
 This check keys on the name bound by ``except ... as NAME`` instead of on formatting
 style, so a flow id in an f-string is not a finding and a bare ``aerror`` is.
+
+Known gap: only the log call's own arguments are inspected. Binding the text first::
+
+    msg = f"failed: {e}"
+    logger.error(msg)
+
+passes. Catching that needs dataflow within the handler, which is a different and much
+larger check. The direct form is what the fixed call sites looked like and what a new one
+is most likely to look like, so this is a deliberate stopping point rather than an
+oversight.
 
 Usage::
 
