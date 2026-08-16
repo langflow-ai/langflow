@@ -31,6 +31,8 @@ interface ModelTriggerProps {
   id: string;
   refButton: RefObject<HTMLButtonElement | null>;
   showEmptyState?: boolean;
+  "aria-label"?: string;
+  ariaLabelledBy?: string;
 }
 
 const ModelTrigger = ({
@@ -44,6 +46,8 @@ const ModelTrigger = ({
   id,
   refButton,
   showEmptyState = false,
+  "aria-label": ariaLabel,
+  ariaLabelledBy,
 }: ModelTriggerProps) => {
   const { t } = useTranslation();
   const renderSelectedIcon = () => {
@@ -75,6 +79,8 @@ const ModelTrigger = ({
         size="xs"
         className="dropdown-component-false-outline w-full justify-start gap-2 py-2 font-normal"
         onClick={onOpenManageProviders}
+        aria-label={!ariaLabelledBy ? ariaLabel : undefined}
+        aria-labelledby={ariaLabelledBy}
       >
         <ForwardedIconComponent
           name="BrainCircuit"
@@ -93,12 +99,15 @@ const ModelTrigger = ({
     <div className="flex w-full flex-col">
       <PopoverTrigger asChild>
         <Button
+          id={id}
           disabled={disabled}
           variant="primary"
           size="xs"
           role="combobox"
           ref={refButton}
           aria-expanded={open}
+          aria-label={!ariaLabelledBy ? ariaLabel : undefined}
+          aria-labelledby={ariaLabelledBy}
           data-testid={id}
           className={cn(
             "dropdown-component-false-outline py-2",

@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useDeleteFileV2 } from "@/controllers/API/queries/file-management/use-delete-file";
+import CustomResourceShareAction from "@/customization/components/custom-resource-share-action";
 import { useDuplicateFileV2 } from "@/customization/hooks/use-custom-duplicate-file";
 import { useCustomHandleSingleFileDownload } from "@/customization/hooks/use-custom-handle-single-file-download";
 import ConfirmationModal from "@/modals/confirmationModal";
@@ -116,6 +117,12 @@ export default function FilesContextMenuComponent({
               {t("files.duplicate")}
             </DropdownMenuItem>
           )}
+          <CustomResourceShareAction
+            resourceId={file.id}
+            resourceType="file"
+            resourceName={file.name}
+            display="menu"
+          />
           <DropdownMenuItem
             onClick={(e) => {
               e.stopPropagation();

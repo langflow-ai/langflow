@@ -53,18 +53,26 @@ const _HiddenOutputsButton = memo(
   }: {
     showHiddenOutputs: boolean;
     onClick: () => void;
-  }) => (
-    <Button
-      unstyled
-      className="group flex h-[1.25rem] w-[1.25rem] items-center justify-center rounded-full border bg-muted hover:text-foreground"
-      onClick={onClick}
-    >
-      <ForwardedIconComponent
-        name={showHiddenOutputs ? "ChevronsDownUp" : "ChevronsUpDown"}
-        className="h-3 w-3 text-placeholder-foreground group-hover:text-foreground"
-      />
-    </Button>
-  ),
+  }) => {
+    const { t } = useTranslation();
+    return (
+      <Button
+        unstyled
+        className="group flex h-[1.25rem] w-[1.25rem] items-center justify-center rounded-full border bg-muted hover:text-foreground"
+        onClick={onClick}
+        aria-label={
+          showHiddenOutputs
+            ? t("flow.tooltipHiddenOutputsCollapse")
+            : t("flow.tooltipHiddenOutputsExpand")
+        }
+      >
+        <ForwardedIconComponent
+          name={showHiddenOutputs ? "ChevronsDownUp" : "ChevronsUpDown"}
+          className="h-3 w-3 text-placeholder-foreground group-hover:text-foreground"
+        />
+      </Button>
+    );
+  },
 );
 
 function GenericNode({
@@ -130,7 +138,7 @@ function GenericNode({
     return null;
   }, []);
 
-  const { mutate: validateComponentCode } = usePostValidateComponentCode();
+  const { mutateAsync: validateComponentCode } = usePostValidateComponentCode();
 
   const [editNameDescription, toggleEditNameDescription, set] =
     useAlternate(false);
@@ -197,51 +205,55 @@ function GenericNode({
   ]);
 
   const handleUpdateCode = useCallback(
-    (confirmed: boolean = false) => {
+    async (confirmed: boolean = false): Promise<void> => {
       if (isReadOnly) return;
       if (!confirmed && hasBreakingChange) {
         setOpenUpdateModal(true);
         return;
       }
-      setLoadingUpdate(true);
-      takeSnapshot();
 
       const thisNodeTemplate = templates[data.type]?.template;
-      if (!thisNodeTemplate?.code) return;
+      if (!thisNodeTemplate?.code || !data.node) {
+        setErrorData({
+          title: t("node.errorUpdatingCode"),
+          list: [
+            t("node.errorUpdatingCodeDetail"),
+            t("node.errorUpdatingCodeReport"),
+          ],
+        });
+        throw new Error(`Unable to update component ${data.id}`);
+      }
 
       const currentCode = thisNodeTemplate.code.value;
-      if (data.node) {
-        registerNodeUpdate(data.id);
-        validateComponentCode(
-          { code: currentCode, frontend_node: data.node },
-          {
-            onSuccess: ({ data: resData, type }) => {
-              if (resData && type && updateNodeCode) {
-                const newNode = processNodeAdvancedFields(
-                  resData,
-                  edges,
-                  data.id,
-                );
-                updateNodeCode(newNode, currentCode, "code", type);
-                removeDismissedNodes([data.id]);
-                setLoadingUpdate(false);
-              }
-              completeNodeUpdate(data.id);
-            },
-            onError: (error) => {
-              setErrorData({
-                title: t("node.errorUpdatingCode"),
-                list: [
-                  t("node.errorUpdatingCodeDetail"),
-                  t("node.errorUpdatingCodeReport"),
-                ],
-              });
-              console.error(error);
-              setLoadingUpdate(false);
-              completeNodeUpdate(data.id);
-            },
-          },
-        );
+      setLoadingUpdate(true);
+      takeSnapshot();
+      registerNodeUpdate(data.id);
+
+      try {
+        const { data: resData, type } = await validateComponentCode({
+          code: currentCode,
+          frontend_node: data.node,
+        });
+        if (!resData || !type) {
+          throw new Error(`Validation returned no update for ${data.id}`);
+        }
+
+        const newNode = processNodeAdvancedFields(resData, edges, data.id);
+        updateNodeCode(newNode, currentCode, "code", type);
+        removeDismissedNodes([data.id]);
+      } catch (error) {
+        setErrorData({
+          title: t("node.errorUpdatingCode"),
+          list: [
+            t("node.errorUpdatingCodeDetail"),
+            t("node.errorUpdatingCodeReport"),
+          ],
+        });
+        console.error(error);
+        throw error;
+      } finally {
+        setLoadingUpdate(false);
+        completeNodeUpdate(data.id);
       }
     },
     [
@@ -254,12 +266,14 @@ function GenericNode({
       setErrorData,
       takeSnapshot,
       isReadOnly,
+      removeDismissedNodes,
+      t,
     ],
   );
 
   const handleUpdateCodeWShortcut = useCallback(() => {
     if (isOutdated && selected) {
-      handleUpdateCode();
+      void handleUpdateCode().catch(() => undefined);
     }
   }, [isOutdated, selected, handleUpdateCode]);
 
@@ -465,7 +479,7 @@ function GenericNode({
             }}
             numberOfOutputHandles={shownOutputs.length ?? 0}
             showNode={showNode}
-            updateNode={() => handleUpdateCode()}
+            updateNode={() => void handleUpdateCode().catch(() => undefined)}
             isOutdated={isOutdated && (dismissAll || isUserEdited)}
             isUserEdited={isUserEdited}
             hasBreakingChange={hasBreakingChange}
@@ -522,7 +536,7 @@ function GenericNode({
     takeSnapshot,
     setNode,
     showNode,
-    updateNodeCode,
+    handleUpdateCode,
     isOutdated,
     isUserEdited,
     selected,
@@ -582,7 +596,9 @@ function GenericNode({
             hasBreakingChange={hasBreakingChange}
             blocked={isBlocked}
             showNode={showNode}
-            handleUpdateCode={() => handleUpdateCode()}
+            handleUpdateCode={() =>
+              void handleUpdateCode().catch(() => undefined)
+            }
             loadingUpdate={loadingUpdate}
             setDismissAll={memoizedSetDismissAll}
             dismissed={dismissAll}

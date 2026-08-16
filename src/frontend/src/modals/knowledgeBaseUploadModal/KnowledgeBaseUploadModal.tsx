@@ -26,6 +26,7 @@ export default function KnowledgeBaseUploadModal({
   existingKnowledgeBase,
   hideAdvanced,
   existingKnowledgeBaseNames,
+  onCloseAutoFocus,
 }: KnowledgeBaseUploadModalProps) {
   const { t } = useTranslation();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -116,6 +117,7 @@ export default function KnowledgeBaseUploadModal({
         setOpen(isOpen);
         if (!isOpen) form.resetForm();
       }}
+      onCloseAutoFocus={onCloseAutoFocus}
       className="bg-background"
       contentClassName="bg-muted"
       currentStep={form.currentStep}

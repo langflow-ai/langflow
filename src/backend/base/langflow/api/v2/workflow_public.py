@@ -8,7 +8,7 @@ The body is intentionally narrower than ``/api/v2/workflows`` (no
 ``data``, no ``tweaks``): visitors must never override the stored flow
 definition. The handler also enforces the public-access mitigations:
 
-- ``access_type == PUBLIC`` (others 403, checked before any policy
+- A canonical PUBLIC share or compatibility grant (others 404, checked before any policy
   validation so private flows leak nothing about themselves).
 - Per-visitor ``virtual_flow_id = uuid5(identifier, flow_id)`` used as
   the storage flow_id, mirroring v1's build_public_tmp.
@@ -19,8 +19,8 @@ definition. The handler also enforces the public-access mitigations:
   ``authenticated_user.id`` and uses ``client_id`` for the UUID v5
   derivation, matching the frontend's ``useGetFlowId`` so the popup's
   chat-view filter actually matches what the backend stores.
-- Owner impersonation: the run executes under the flow owner's
-  permissions, never the visitor's.
+- Anonymous principal isolation: the run never inherits the flow owner's
+  variables, credentials, files, or knowledge bases.
 """
 
 from __future__ import annotations
@@ -31,14 +31,17 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.responses import EventSourceResponse
+from lfx.log.logger import logger
 from lfx.schema.workflow import (
     WORKFLOW_EXECUTION_RESPONSES,
     PublicWorkflowRunRequest,
 )
 from lfx.utils.flow_validation import (
+    PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE,
+    CatalogPolicyIdentityUnavailableError,
     CustomComponentValidationError,
     prepare_public_flow_build,
-    validate_flow_for_current_settings,
+    validate_catalog_policy_for_flow,
     validate_public_flow_no_code_execution,
 )
 from lfx.workflow.adapters import (
@@ -51,14 +54,20 @@ from lfx.workflow.adapters import (
 from lfx.workflow.converters import ParsedWorkflowRun
 from limits import parse
 
+from langflow.api.utils.core import strip_secret_field_values
 from langflow.api.utils.flow_utils import (
     scope_session_to_namespace,
     validate_public_files,
     verify_public_flow_and_get_user,
 )
 from langflow.services.auth.utils import get_current_user_optional
+from langflow.services.authorization.public_access import (
+    PUBLIC_FLOW_NOT_FOUND_DETAIL,
+    PublicResourceAction,
+    authorize_public_flow_access,
+)
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.user.model import User, UserRead
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
 
 router = APIRouter(prefix="/workflows/public", tags=["Workflow (public)"])
@@ -67,7 +76,7 @@ router = APIRouter(prefix="/workflows/public", tags=["Workflow (public)"])
 def _enforce_public_rate_limit(http_request: Request) -> None:
     """Throttle anonymous public-flow runs per client IP.
 
-    Each run executes as the flow owner (real CPU/DB/LLM-credit cost), so an
+    Each run consumes real CPU/DB/provider capacity, so an
     unauthenticated caller must not be able to spin up unbounded concurrent
     executions. Mirrors the manual limiter check the login endpoint uses, but
     keyed to its own configurable per-minute limit under a dedicated namespace so
@@ -137,14 +146,17 @@ async def execute_public_workflow(
         # so the backend must match here or the popup's chat-view filter
         # would drop every broadcast message.
         client_id = http_request.cookies.get("client_id")
-        auth_settings = get_settings_service().auth_settings
+        settings_service = get_settings_service()
+        settings = settings_service.settings
+        auth_settings = settings_service.auth_settings
         authenticated_user_id = authenticated_user.id if authenticated_user and not auth_settings.AUTO_LOGIN else None
 
-        # access_type == PUBLIC + virtual_flow_id, run as the flow owner.
-        owner_user, virtual_flow_id = await verify_public_flow_and_get_user(
+        # Direct-link grant + virtual flow id + stable anonymous runtime principal.
+        public_user, virtual_flow_id = await verify_public_flow_and_get_user(
             flow_id=real_flow_id,
             client_id=client_id,
             authenticated_user_id=authenticated_user_id,
+            request_host=http_request.url.hostname,
         )
 
         # Defends CVE-2026-33017: scope caller's session into the (identifier, flow_id) namespace.
@@ -159,25 +171,55 @@ async def execute_public_workflow(
         sanitized_public_data: dict | None = None
         async with session_scope() as session:
             flow = await session.get(Flow, real_flow_id)
-            if flow and flow.data:
-                validate_flow_for_current_settings(flow.data)
-                # Block unauthenticated execution of flows that run arbitrary code
-                # (Python interpreter/REPL, legacy Python Code Structured tool,
-                # Smart Transform lambda). Without this, any public flow containing
-                # such a component is an unauthenticated code-execution primitive.
-                validate_public_flow_no_code_execution(flow.data)
-                # Mirror v1's public build: substitute trusted server component
-                # source and reject unknown custom components before the graph is
-                # built. Without this, the v2 path falls back to the database copy
-                # and can execute altered stored component code as the flow owner.
-                sanitized_public_data = await prepare_public_flow_build(flow.data)
-            flow_name = flow.name if flow else None
+            if flow is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=PUBLIC_FLOW_NOT_FOUND_DETAIL)
+            # Authorize the same snapshot that is validated, scrubbed, detached,
+            # and streamed below; the admission helper used a separate session and
+            # its earlier snapshot may have been revoked in the meantime.
+            await authorize_public_flow_access(
+                flow=flow,
+                action=PublicResourceAction.EXECUTE,
+                request_host=http_request.url.hostname,
+                session=session,
+            )
+            if flow.data is None:
+                msg = "Public flow has no executable data"
+                raise ValueError(msg)
+
+            # The default public path sanitizes code directly and must not apply the global
+            # stored-code hash gate first: that would reject drifted built-ins before their code
+            # can be replaced. Enforce catalog policy explicitly, matching v1. The public custom-
+            # code opt-in delegates to the unified validator inside prepare_public_flow_build.
+            if not settings.allow_public_custom_components:
+                validate_catalog_policy_for_flow(flow.data)
+            # Block unauthenticated execution of flows that run arbitrary code
+            # (Python interpreter/REPL, legacy Python Code Structured tool,
+            # Smart Transform lambda). Without this, any public flow containing
+            # such a component is an unauthenticated code-execution primitive.
+            validate_public_flow_no_code_execution(flow.data)
+            # Mirror v1's public build: substitute trusted server component
+            # source and reject unknown custom components before the graph is
+            # built. The explicit custom-code opt-in may preserve approved code,
+            # but the detached graph is always secret-scrubbed below.
+            prepared_public_data = await prepare_public_flow_build(flow.data)
+            sanitized_public_data = strip_secret_field_values(
+                prepared_public_data if prepared_public_data is not None else flow.data
+            )
+            flow_name = flow.name
+            source_flow_owner_id = flow.user_id
+    except CatalogPolicyIdentityUnavailableError as exc:
+        await logger.awarning("Public workflow component identities are temporarily unavailable: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE,
+        ) from exc
     except CustomComponentValidationError as exc:
         # The raw message embeds the blocked component class names; do
         # not leak it to an anonymous visitor.
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This flow cannot be executed.") from exc
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        await logger.awarning("Public workflow validation failed: %s", exc)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This flow cannot be executed.") from exc
 
     if request.stream_protocol not in STREAM_ADAPTERS:
         raise _unknown_protocol_http_exception(
@@ -203,14 +245,12 @@ async def execute_public_workflow(
         mode="stream",
         start_component_id=request.start_component_id,
         stop_component_id=request.stop_component_id,
-        # The default public policy builds from the server-sanitized graph. The
-        # explicit allow_public_custom_components opt-in returns None and keeps
-        # the historical database-loaded behavior.
+        # Always build from a detached secret-scrubbed graph. The default policy
+        # additionally substitutes trusted server code; the explicit custom-code
+        # opt-in preserves approved code without restoring owner credentials.
         data=sanitized_public_data,
         files=request.files,
     )
-
-    owner_user_read = UserRead.model_validate(owner_user, from_attributes=True)
 
     async def _frames_only() -> AsyncIterator[bytes]:
         async for frame, _event_type in _stream_event_frames(
@@ -219,8 +259,13 @@ async def execute_public_workflow(
             flow_name=flow_name,
             background_tasks=background_tasks,
             parsed=parsed,
-            current_user=owner_user_read,
+            current_user=public_user,
             source_flow_id=real_flow_id,
+            source_flow_owner_id=source_flow_owner_id,
+            # Anonymous shared-link traffic, kept apart from signed-in v2 runs the same way
+            # playground.public is kept apart from playground.
+            protocol="v2.public",
+            expose_error_details=False,
         ):
             yield frame
 

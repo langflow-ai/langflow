@@ -56,13 +56,16 @@ const SidebarSegmentedNav = ({
           <Fragment key={item.id}>
             {index === firstFeatureIndex && (
               <li
-                role="separator"
                 aria-hidden="true"
                 className="mx-auto my-1 w-5 border-t border-border"
               />
             )}
             <SidebarMenuItem className="px-1 pt-1">
-              <ShadTooltip content={t(item.tooltip)} side="right">
+              <ShadTooltip
+                content={t(item.tooltip)}
+                side="right"
+                ariaDescribedBy={undefined}
+              >
                 <SidebarMenuButton
                   size="md"
                   onClick={() => {

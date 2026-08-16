@@ -1,5 +1,6 @@
 import { Transition } from "@headlessui/react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import IconComponent from "../../components/common/genericIconComponent";
@@ -11,7 +12,14 @@ export default function ErrorAlert({
   id,
   removeAlert,
 }: ErrorAlertType): JSX.Element {
+  const { t } = useTranslation();
   const [show, setShow] = useState(true);
+  const handleDismiss = () => {
+    setShow(false);
+    setTimeout(() => {
+      removeAlert(id);
+    }, 500);
+  };
   useEffect(() => {
     if (show) {
       setTimeout(() => {
@@ -35,12 +43,7 @@ export default function ErrorAlert({
       leaveTo={"transform translate-x-[-100%]"}
     >
       <div
-        onClick={() => {
-          setShow(false);
-          setTimeout(() => {
-            removeAlert(id);
-          }, 500);
-        }}
+        onClick={handleDismiss}
         className="error-build-message noflow nowheel nopan nodelete nodrag"
       >
         <div className="flex">
@@ -94,6 +97,17 @@ export default function ErrorAlert({
               <></>
             )}
           </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDismiss();
+            }}
+            aria-label={t("alerts.dismissAlert")}
+            className="ml-auto flex-shrink-0 self-start"
+          >
+            <IconComponent name="X" className="h-4 w-4" aria-hidden="true" />
+          </button>
         </div>
       </div>
     </Transition>

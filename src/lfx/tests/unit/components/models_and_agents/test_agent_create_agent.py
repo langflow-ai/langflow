@@ -1199,13 +1199,41 @@ def test_should_return_none_when_system_prompt_is_none() -> None:
     assert component._inject_dynamic_prompt_values(None) is None
 
 
-def test_should_still_replace_placeholders_when_system_prompt_is_plain_string() -> None:
-    """Regression guard: the plain-string path must keep working unchanged."""
-    component = _build_component()
-    with patch.object(type(component), "_get_resolved_model_name", return_value="m1"):
-        result = component._inject_dynamic_prompt_values("hello {model_name}")
+def test_should_render_default_system_prompt_at_agent_runtime_seam() -> None:
+    """The component must resolve the default prompt's runtime environment fields."""
+    from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
 
-    assert result == "hello m1"
+    component = _build_component()
+    with patch.object(type(component), "_get_resolved_model_name", return_value="loopback-model"):
+        result = component._inject_dynamic_prompt_values(DEFAULT_SYSTEM_PROMPT_TEMPLATE)
+
+    assert result is not None
+    assert "{current_date}" not in result
+    assert "{model_name}" not in result
+    assert "loopback-model" in result
+    assert "# Environment" in result
+
+
+def test_should_pass_custom_system_prompt_through_unchanged_without_opt_in_placeholders() -> None:
+    """Custom prompts are byte-preserved unless they opt in with a known placeholder."""
+    component = _build_component()
+    custom = 'Keep this JSON literal unchanged: {"answer": 42}.'
+
+    assert component._inject_dynamic_prompt_values(custom) == custom
+
+
+def test_should_replace_known_placeholders_in_opted_in_custom_system_prompt() -> None:
+    """A custom prompt can independently opt into date/model substitution."""
+    component = _build_component()
+    custom = 'Model {model_name} on {current_date}; JSON: {"answer": 42}.'
+    with patch.object(type(component), "_get_resolved_model_name", return_value="m1"):
+        result = component._inject_dynamic_prompt_values(custom)
+
+    assert result is not None
+    assert "{model_name}" not in result
+    assert "{current_date}" not in result
+    assert "Model m1 on " in result
+    assert '{"answer": 42}' in result
 
 
 # ===== max_iterations must never silently disable the call cap =================

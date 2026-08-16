@@ -7,18 +7,23 @@ This page lists every official Langflow bundle and the pip **extension** package
 Bundle names are stable identifiers used in saved flows (`ext:<bundle>:<Class>@official`).
 The pip install command is what you run when a bundle is missing from your environment.
 
-This list reflects the bundles included with Langflow 1.11.0.
+This list reflects the bundles included with Langflow 1.12.0.
 Providers can graduate from `lfx-bundles` to a standalone `lfx-<provider>` package without changing the bundle name in your flows.
 
 ## Standalone packages
 
 These providers ship as their own pip packages, each on its own release cadence.
+The default `uv pip install langflow` includes the curated standalone packages
+except arXiv, DuckDuckGo, EmpirioLabs, Exa, Firecrawl, NextPlaid, Paddle, and
+Valkey. Install those eight together with every no-Torch long-tail bundle by
+using `uv pip install "langflow[bundles]"`.
 
 | Bundle | Install command |
 | --- | --- |
 | [`amazon`](/bundles-amazon) (Amazon) | `uv pip install lfx-amazon` |
 | [`anthropic`](/bundles-anthropic) (Anthropic) | `uv pip install lfx-anthropic` |
 | [`arxiv`](/bundles-arxiv) (arXiv) | `uv pip install lfx-arxiv` |
+| [`azure`](/bundles-azure) (Azure) | `uv pip install lfx-azure` |
 | [`cohere`](/bundles-cohere) (Cohere) | `uv pip install lfx-cohere` |
 | [`datastax`](/bundles-datastax) (DataStax) | `uv pip install lfx-datastax` |
 | [`docling`](/bundles-docling) (Docling) | `uv pip install lfx-docling` |
@@ -26,8 +31,10 @@ These providers ship as their own pip packages, each on its own release cadence.
 | [`empiriolabs`](./bundles-empiriolabs) (EmpirioLabs) | `uv pip install lfx-empiriolabs` |
 | [`exa`](/bundles-exa) (Exa) | `uv pip install lfx-exa` |
 | [`firecrawl`](/bundles-firecrawl) (Firecrawl) | `uv pip install lfx-firecrawl` |
+| [`google`](/bundles-google) (Google components) | `uv pip install lfx-google` |
 | [`ibm`](/bundles-ibm) (IBM) | `uv pip install lfx-ibm` |
 | [`nextplaid`](./bundles-nextplaid) (NextPlaid) | `uv pip install lfx-nextplaid` |
+| [`ollama`](/bundles-ollama) (Ollama) | `uv pip install lfx-ollama` |
 | [`openai`](/bundles-openai) (OpenAI) | `uv pip install lfx-openai` |
 | [`openai-compatible`](./bundles-openai-compatible) (OpenAI Compatible) | `uv pip install lfx-openai-compatible` |
 | [`oracle`](./bundles-oracle) (Oracle) | `uv pip install lfx-oracle` |
@@ -40,6 +47,7 @@ These providers ship as their own pip packages, each on its own release cadence.
 These providers ship inside the `lfx-bundles` metapackage.
 Install one provider (with its SDK dependencies) with `uv pip install "lfx-bundles[<bundle>]"`.
 Install every long-tail provider with `uv pip install "lfx[bundles]"` or `uv pip install "lfx-bundles[all]"`.
+Install every no-Torch long-tail provider plus the eight opt-in standalone packages listed above with `uv pip install "langflow[bundles]"`.
 Bare `uv pip install lfx-bundles` registers the provider code only; add a per-provider extra when you need that provider's third-party SDK.
 
 | Bundle | Install command |
@@ -49,7 +57,6 @@ Bare `uv pip install lfx-bundles` registers the provider code only; add a per-pr
 | [`altk`](/bundles-altk) (ALTK) | `uv pip install "lfx-bundles[altk]"` |
 | [`apify`](/bundles-apify) (Apify) | `uv pip install "lfx-bundles[apify]"` |
 | [`assemblyai`](/bundles-assemblyai) (AssemblyAI) | `uv pip install "lfx-bundles[assemblyai]"` |
-| [`azure`](/bundles-azure) (Azure) | `uv pip install "lfx-bundles[azure]"` |
 | [`baidu`](/bundles-baidu) (Baidu) | `uv pip install "lfx-bundles[baidu]"` |
 | [`bing`](/bundles-bing) (Bing) | `uv pip install "lfx-bundles[bing]"` |
 | [`chroma`](/bundles-chroma) (Chroma) | `uv pip install "lfx-bundles[chroma]"` |
@@ -67,7 +74,6 @@ Bare `uv pip install lfx-bundles` registers the provider code only; add a per-pr
 | [`faiss`](/bundles-faiss) (FAISS) | `uv pip install "lfx-bundles[faiss]"` |
 | `git` | `uv pip install "lfx-bundles[git]"` |
 | [`glean`](/bundles-glean) (Glean) | `uv pip install "lfx-bundles[glean]"` |
-| [`google`](/bundles-google) (Google components) | `uv pip install "lfx-bundles[google]"` |
 | [`groq`](/bundles-groq) (Groq) | `uv pip install "lfx-bundles[groq]"` |
 | `homeassistant` | `uv pip install "lfx-bundles[homeassistant]"` |
 | [`huggingface`](/bundles-huggingface) (Hugging Face) | `uv pip install "lfx-bundles[huggingface]"` |
@@ -87,7 +93,6 @@ Bare `uv pip install lfx-bundles` registers the provider code only; add a per-pr
 | [`novita`](/bundles-novita) (Novita) | `uv pip install "lfx-bundles[novita]"` |
 | [`nvidia`](/bundles-nvidia) (NVIDIA) | `uv pip install "lfx-bundles[nvidia]"` |
 | `olivya` | `uv pip install "lfx-bundles[olivya]"` |
-| [`ollama`](/bundles-ollama) (Ollama) | `uv pip install "lfx-bundles[ollama]"` |
 | [`openrouter`](/bundles-openrouter) (OpenRouter) | `uv pip install "lfx-bundles[openrouter]"` |
 | [`perplexity`](/bundles-perplexity) (Perplexity) | `uv pip install "lfx-bundles[perplexity]"` |
 | [`pgvector`](/bundles-pgvector) (pgvector) | `uv pip install "lfx-bundles[pgvector]"` |

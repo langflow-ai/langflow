@@ -1,16 +1,14 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
 import {
   closeParametersPanel,
   openParametersPanel,
   toggleParameterOnNode,
 } from "../../utils/open-advanced-options";
-import { selectGptModel } from "../../utils/select-gpt-model";
 import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -19,13 +17,6 @@ test(
   { tag: ["@release", "@components"] },
 
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
     await awaitBootstrapTest(page);
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -367,12 +358,7 @@ test(
       .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .nth(1)
       .click();
-    const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
-    const isApiKeyInputVisible = await apiKeyInput.isVisible();
-    if (isApiKeyInputVisible) {
-      await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
-    }
-    await selectGptModel(page);
+    await configureLoopbackOpenAI(page);
 
     await adjustScreenView(page);
 

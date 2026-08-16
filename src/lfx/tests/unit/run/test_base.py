@@ -227,7 +227,7 @@ class TestRunFlowJsonInput:
                 return_value=settings_service,
             ),
             patch(
-                "lfx.utils.flow_validation.ensure_component_hash_lookups_loaded",
+                "lfx.load.load.ensure_component_hash_lookups_loaded",
                 new=AsyncMock(return_value={"ChatInput": {"knownhash1234"}}),
             ),
             patch.object(component_cache, "type_to_current_hash", {"ChatInput": {"knownhash1234"}}),
@@ -1643,7 +1643,7 @@ class TestUpgradeFlowOption:
 
     @pytest.mark.asyncio
     async def test_upgrade_flow_check_passes_clean_real_flow_without_registry_mock(self):
-        """Regression: a known-clean real starter flow must PASS --upgrade-flow=check.
+        """Regression: the current clean real starter flow must PASS --upgrade-flow=check.
 
         Deliberately does NOT mock the registry. The original bug was that the gate read
         component_cache.all_types_dict (empty at gate time) instead of the bundled component

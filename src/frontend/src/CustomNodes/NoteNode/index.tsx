@@ -213,14 +213,14 @@ function NoteNode({
                 ? getTextColorClass()
                 : COLOR_OPTIONS[bgColorKey] === null
                   ? ""
-                  : "dark:!ring-background dark:text-background",
+                  : "text-foreground dark:!ring-background dark:text-background",
             )}
             mdClassName={cn(
               hasCustomColor
                 ? getTextColorClass()
                 : COLOR_OPTIONS[bgColorKey] === null
                   ? "dark:prose-invert"
-                  : "dark:!text-background",
+                  : "text-foreground dark:!text-background",
               "min-w-full max-h-full overflow-auto pr-4 sticky-note-scroll",
             )}
             style={{ backgroundColor: resolvedBgColor }}
@@ -236,7 +236,7 @@ function NoteNode({
                   : "!text-black/70"
                 : COLOR_OPTIONS[bgColorKey] === null
                   ? ""
-                  : "dark:!text-background",
+                  : "text-foreground/70 dark:!text-background",
               "px-2",
             )}
             editNameDescription={isEditingDescription}

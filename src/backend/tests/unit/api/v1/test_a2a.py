@@ -19,9 +19,18 @@ from httpx import AsyncClient
 from langflow.api.v1 import a2a_utils
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.services.database.models import Folder
+from langflow.services.database.models.auth import (
+    AuthzRole,
+    AuthzRoleAssignment,
+    AuthzShare,
+    AuthzTeam,
+    AuthzTeamMember,
+)
 from langflow.services.database.models.flow.model import Flow, FlowType
 from langflow.services.deps import session_scope
 from lfx.services.deps import get_settings_service
+
+from tests.unit.services.authorization._policy_double import install_policy_authz
 
 _STARTERS = Path(langflow.__file__).parent / "initial_setup" / "starter_projects"
 
@@ -159,6 +168,27 @@ async def test_missing_flow_returns_404(client: AsyncClient):
     response = await client.get(_card_url(uuid.uuid4()))
 
     assert response.status_code == 404
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_agent_card_plugin_denial_matches_unknown_flow_exactly(
+    client: AsyncClient, active_user, flow_data, monkeypatch
+):
+    """A plugin-denied/revoked card must not expose a distinct 404 detail oracle."""
+    from fastapi import HTTPException
+    from langflow.api.v1 import a2a as a2a_module
+
+    flow_id = await _create_flow(active_user.id, data=flow_data)
+    unknown = await client.get(_card_url(uuid.uuid4()))
+
+    async def _deny_with_sensitive_detail(**_kwargs):
+        raise HTTPException(status_code=404, detail=f"tenant policy revoked flow {flow_id}")
+
+    monkeypatch.setattr(a2a_module, "authorize_public_flow_access", _deny_with_sensitive_detail)
+    denied = await client.get(_card_url(flow_id))
+
+    assert unknown.status_code == denied.status_code == 404
+    assert unknown.json() == denied.json() == {"detail": "Not Found"}
 
 
 async def test_flag_off_returns_404(client: AsyncClient, active_user, flow_data):
@@ -366,6 +396,117 @@ async def test_list_agents_is_owner_scoped(client: AsyncClient, active_user, log
     assert agents[0]["cardUrl"].endswith(f"/api/v1/a2a/{enabled}/.well-known/agent-card.json")
 
 
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_list_agents_includes_direct_team_and_scoped_grants(
+    client: AsyncClient,
+    active_user,
+    logged_in_headers,
+    flow_data,
+):
+    """The catalog widens before serialization for direct, team, and scoped-role grants."""
+    owner_id = await _create_other_user()
+    direct_flow = await _create_flow(owner_id, data=flow_data)
+    team_flow = await _create_flow(owner_id, data=flow_data)
+    scoped_folder_id = await _create_folder(owner_id, auth_settings={"auth_type": "none"})
+    scoped_flow = await _create_flow(owner_id, data=flow_data, folder_id=scoped_folder_id)
+    denied_flow = await _create_flow(owner_id, data=flow_data)
+
+    async with session_scope() as session:
+        team = AuthzTeam(
+            team_name=f"a2a-team-{uuid.uuid4().hex[:8]}",
+            adom_name=f"a2a-team-{uuid.uuid4().hex}",
+            is_active=True,
+        )
+        role = AuthzRole(
+            name=f"a2a-project-reader-{uuid.uuid4().hex}",
+            permissions=["flow:read"],
+            is_system=False,
+        )
+        session.add(team)
+        session.add(role)
+        await session.flush()
+        session.add(AuthzTeamMember(team_id=team.id, user_id=active_user.id, source="manual"))
+        session.add(
+            AuthzShare(
+                resource_type="flow",
+                resource_id=direct_flow,
+                scope="user",
+                target_id=active_user.id,
+                permission_level="read",
+                created_by=owner_id,
+            )
+        )
+        session.add(
+            AuthzShare(
+                resource_type="flow",
+                resource_id=team_flow,
+                scope="team",
+                target_id=team.id,
+                permission_level="read",
+                created_by=owner_id,
+            )
+        )
+        session.add(
+            AuthzRoleAssignment(
+                user_id=active_user.id,
+                role_id=role.id,
+                domain_type="project",
+                domain_id=scoped_folder_id,
+            )
+        )
+        await session.commit()
+
+    with install_policy_authz(get_settings_service()):
+        response = await client.get("api/v1/a2a/agents", headers=logged_in_headers)
+
+    assert response.status_code == 200
+    visible_ids = {agent["id"] for agent in response.json()}
+    assert {str(direct_flow), str(team_flow), str(scoped_flow)} <= visible_ids
+    assert str(denied_flow) not in visible_ids
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_list_agents_scoped_api_key_does_not_inherit_owner_override(
+    client: AsyncClient,
+    active_user,
+    created_api_key,
+    flow_data,
+):
+    """An API-key scope remains authoritative even for resources owned by the key's user."""
+    scoped_folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "none"})
+    scoped_flow = await _create_flow(active_user.id, data=flow_data, folder_id=scoped_folder_id)
+    unscoped_flow = await _create_flow(active_user.id, data=flow_data)
+
+    async with session_scope() as session:
+        role = AuthzRole(
+            name=f"a2a-scoped-key-reader-{uuid.uuid4().hex[:8]}",
+            permissions=["flow:read"],
+            is_system=False,
+        )
+        session.add(role)
+        await session.flush()
+        session.add(
+            AuthzRoleAssignment(
+                user_id=active_user.id,
+                role_id=role.id,
+                domain_type="project",
+                domain_id=scoped_folder_id,
+            )
+        )
+        await session.commit()
+
+    with install_policy_authz(get_settings_service()):
+        response = await client.get(
+            "api/v1/a2a/agents",
+            headers={"x-api-key": created_api_key.api_key},
+        )
+
+    assert response.status_code == 200
+    visible_ids = {agent["id"] for agent in response.json()}
+    assert str(scoped_flow) in visible_ids
+    assert str(unscoped_flow) not in visible_ids
+
+
 async def test_list_agents_flag_off_returns_404(client: AsyncClient):
     """The registry looks unmounted (404) when the flag is off, before auth runs (no 403 leak)."""
     response = await client.get("api/v1/a2a/agents")
@@ -448,12 +589,30 @@ async def test_message_send_runs_flow_and_returns_completed_task(client: AsyncCl
 
 
 async def test_public_a2a_run_uses_server_sanitized_flow_data(active_user, echo_flow_data, monkeypatch):
-    """Anonymous A2A runs build from trusted server code, not stored component code."""
+    """Anonymous A2A runs build from trusted server code without stored secrets."""
     from langflow.api.v1 import a2a as a2a_module
     from langflow.api.v2 import workflow as workflow_module
 
     flow_id = await _create_flow(active_user.id, data=echo_flow_data)
-    sanitized_data = {"nodes": [{"id": "server-sanitized"}], "edges": []}
+    prepared_data = {
+        "nodes": [
+            {
+                "id": "server-sanitized",
+                "data": {
+                    "node": {
+                        "template": {
+                            "api_key": {
+                                "name": "api_key",
+                                "password": True,
+                                "value": "sk-owner-secret",  # pragma: allowlist secret
+                            }
+                        }
+                    }
+                },
+            }
+        ],
+        "edges": [],
+    }
     captured = {}
     expected_response = object()
 
@@ -462,35 +621,66 @@ async def test_public_a2a_run_uses_server_sanitized_flow_data(active_user, echo_
 
     async def fake_prepare(data):
         captured["prepared"] = data
-        return sanitized_data
+        return prepared_data
 
     async def fake_execute(**kwargs):
         captured["executed_flow_data"] = kwargs["flow"].data
+        captured["execution_principal"] = kwargs["current_user"]
         return expected_response
 
     monkeypatch.setattr(a2a_module, "validate_public_flow_no_code_execution", fake_validate)
     monkeypatch.setattr(a2a_module, "prepare_public_flow_build", fake_prepare)
     monkeypatch.setattr(workflow_module, "execute_sync_workflow_with_timeout", fake_execute)
 
-    response = await a2a_module._run_flow(flow_id, str(uuid.uuid4()), "hello", "context")
+    response = await a2a_module._run_flow(
+        flow_id,
+        str(uuid.uuid4()),
+        "hello",
+        "context",
+        admitted_user_id=str(a2a_module.PUBLIC_ANONYMOUS_ACTOR_ID),
+    )
 
     assert response is expected_response
     assert captured["validated"] == echo_flow_data
     assert captured["prepared"] == echo_flow_data
-    assert captured["executed_flow_data"] == sanitized_data
+    executed_secret = captured["executed_flow_data"]["nodes"][0]["data"]["node"]["template"]["api_key"]
+    assert executed_secret["value"] is None
+    assert prepared_data["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] == "sk-owner-secret"
+    assert captured["execution_principal"].id == a2a_module.PUBLIC_ANONYMOUS_ACTOR_ID
+    assert captured["execution_principal"].id != active_user.id
+    assert captured["execution_principal"].username == "anonymous-public"
 
 
 async def test_public_a2a_resume_sanitizes_checkpoint_payload(active_user, echo_flow_data, monkeypatch):
-    """A public HITL continuation cannot restore stored component code around the initial-run gate."""
+    """A public HITL continuation cannot restore stored component code or secrets around the gate."""
     from langflow.api.v1 import a2a as a2a_module
     from lfx.graph.checkpoint.schema import GraphCheckpoint
 
     flow_id = await _create_flow(active_user.id, data=echo_flow_data)
     task_id = str(uuid.uuid4())
-    sanitized_data = {"nodes": [{"id": "server-sanitized"}], "edges": []}
+    prepared_data = {
+        "nodes": [
+            {
+                "id": "server-sanitized",
+                "data": {
+                    "node": {
+                        "template": {
+                            "api_key": {
+                                "name": "api_key",
+                                "password": True,
+                                "value": "sk-owner-secret",  # pragma: allowlist secret
+                            }
+                        }
+                    }
+                },
+            }
+        ],
+        "edges": [],
+    }
     checkpoint = GraphCheckpoint(
         run_id=task_id,
         flow_id=str(flow_id),
+        user_id=str(a2a_module.PUBLIC_ANONYMOUS_ACTOR_ID),
         flow_payload=echo_flow_data,
         pause_context={"data": {"request_id": "node:run"}},
     )
@@ -509,10 +699,11 @@ async def test_public_a2a_resume_sanitizes_checkpoint_payload(active_user, echo_
 
     async def fake_prepare(data):
         captured["prepared"] = data
-        return sanitized_data
+        return prepared_data
 
     def fake_resume(sanitized_checkpoint, *_args):
         captured["resumed_payload"] = sanitized_checkpoint.flow_payload
+        captured["resumed_user_id"] = sanitized_checkpoint.user_id
         raise StopAfterPolicyCheckError
 
     monkeypatch.setattr(a2a_module, "A2ACheckpointStore", FakeStore)
@@ -521,11 +712,276 @@ async def test_public_a2a_resume_sanitizes_checkpoint_payload(active_user, echo_
     monkeypatch.setattr(a2a_module, "resume_graph_with_decision", fake_resume)
 
     with pytest.raises(StopAfterPolicyCheckError):
-        await a2a_module._resume_flow(flow_id, task_id, "Approve")
+        await a2a_module._resume_flow(
+            flow_id,
+            task_id,
+            "Approve",
+            admitted_user_id=str(a2a_module.PUBLIC_ANONYMOUS_ACTOR_ID),
+        )
 
     assert captured["validated"] == echo_flow_data
     assert captured["prepared"] == echo_flow_data
-    assert captured["resumed_payload"] == sanitized_data
+    resumed_secret = captured["resumed_payload"]["nodes"][0]["data"]["node"]["template"]["api_key"]
+    assert resumed_secret["value"] is None
+    assert captured["resumed_user_id"] == str(a2a_module.PUBLIC_ANONYMOUS_ACTOR_ID)
+    assert prepared_data["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] == "sk-owner-secret"
+
+
+async def test_public_a2a_resume_rechecks_compatibility_grant(active_user, echo_flow_data, monkeypatch):
+    """A resumed anonymous run re-evaluates the current auth_type=none grant before restoring the graph."""
+    from fastapi import HTTPException
+    from langflow.api.v1 import a2a as a2a_module
+    from lfx.graph.checkpoint.schema import GraphCheckpoint
+
+    folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "none"})
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
+    checkpoint = GraphCheckpoint(
+        run_id=str(uuid.uuid4()),
+        flow_id=str(flow_id),
+        user_id=str(a2a_module.PUBLIC_ANONYMOUS_ACTOR_ID),
+        flow_payload=echo_flow_data,
+    )
+    calls = []
+
+    async def deny_revoked(*_args, **kwargs):
+        calls.append(kwargs)
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    monkeypatch.setattr(a2a_module, "authorize_public_flow_access", deny_revoked)
+
+    with pytest.raises(HTTPException) as excinfo:
+        await a2a_module._prepare_a2a_resume_checkpoint(
+            flow_id,
+            checkpoint,
+            admitted_user_id=str(a2a_module.PUBLIC_ANONYMOUS_ACTOR_ID),
+        )
+
+    assert excinfo.value.status_code == 404
+    assert calls
+    assert str(calls[0]["flow"].id) == str(flow_id)
+
+
+async def test_public_a2a_resume_rejects_owner_checkpoint_after_auth_transition(active_user, echo_flow_data):
+    """Changing a protected folder to public must not make its owner checkpoint anonymous-resumable."""
+    from fastapi import HTTPException
+    from langflow.api.v1 import a2a as a2a_module
+    from lfx.graph.checkpoint.schema import GraphCheckpoint
+
+    folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "none"})
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
+    checkpoint = GraphCheckpoint(
+        run_id=str(uuid.uuid4()),
+        flow_id=str(flow_id),
+        user_id=str(active_user.id),
+        flow_payload=echo_flow_data,
+    )
+
+    with pytest.raises(HTTPException) as excinfo:
+        await a2a_module._prepare_a2a_resume_checkpoint(
+            flow_id,
+            checkpoint,
+            admitted_user_id=str(a2a_module.PUBLIC_ANONYMOUS_ACTOR_ID),
+        )
+
+    assert excinfo.value.status_code == 404
+
+
+async def test_protected_a2a_resume_rejects_anonymous_checkpoint_after_auth_transition(active_user, echo_flow_data):
+    """Changing a public folder to protected must not restore an anonymous checkpoint as its owner."""
+    from fastapi import HTTPException
+    from langflow.api.v1 import a2a as a2a_module
+    from lfx.graph.checkpoint.schema import GraphCheckpoint
+
+    folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "apikey"})
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
+    checkpoint = GraphCheckpoint(
+        run_id=str(uuid.uuid4()),
+        flow_id=str(flow_id),
+        user_id=str(a2a_module.PUBLIC_ANONYMOUS_ACTOR_ID),
+        flow_payload=echo_flow_data,
+    )
+
+    with pytest.raises(HTTPException) as excinfo:
+        await a2a_module._prepare_a2a_resume_checkpoint(
+            flow_id,
+            checkpoint,
+            admitted_user_id=str(active_user.id),
+        )
+
+    assert excinfo.value.status_code == 404
+
+
+async def test_a2a_run_rejects_public_gate_principal_after_folder_becomes_protected(active_user, echo_flow_data):
+    """A public request cannot switch to owner execution if auth changes before SDK dispatch."""
+    from fastapi import HTTPException
+    from langflow.api.v1 import a2a as a2a_module
+
+    folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "apikey"})
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
+
+    with pytest.raises(HTTPException) as excinfo:
+        await a2a_module._run_flow(
+            flow_id,
+            str(uuid.uuid4()),
+            "hello",
+            "context",
+            admitted_user_id=str(a2a_module.PUBLIC_ANONYMOUS_ACTOR_ID),
+        )
+
+    assert excinfo.value.status_code == 404
+
+
+async def test_a2a_run_rejects_owner_gate_principal_after_folder_becomes_public(active_user, echo_flow_data):
+    """A protected request cannot silently switch to anonymous execution after admission."""
+    from fastapi import HTTPException
+    from langflow.api.v1 import a2a as a2a_module
+
+    folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "none"})
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
+
+    with pytest.raises(HTTPException) as excinfo:
+        await a2a_module._run_flow(
+            flow_id,
+            str(uuid.uuid4()),
+            "hello",
+            "context",
+            admitted_user_id=str(active_user.id),
+        )
+
+    assert excinfo.value.status_code == 404
+
+
+async def test_a2a_jsonrpc_records_the_server_admitted_principal_before_dispatch(active_user, monkeypatch):
+    """The SDK context must inherit the gate result, never re-derive identity from mutable folder state."""
+    from types import SimpleNamespace
+
+    from langflow.api.v1 import a2a as a2a_module
+    from starlette.requests import Request
+    from starlette.responses import Response
+
+    flow_id = uuid.uuid4()
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "scheme": "https",
+            "server": ("tenant.example", 443),
+            "client": ("127.0.0.1", 12345),
+            "root_path": "",
+            "path": f"/api/v1/a2a/{flow_id}/jsonrpc",
+            "raw_path": f"/api/v1/a2a/{flow_id}/jsonrpc".encode(),
+            "query_string": b"",
+            "headers": [],
+            "path_params": {"flow_id": str(flow_id)},
+            "state": {},
+        }
+    )
+    flow = SimpleNamespace(flow_type=FlowType.AGENT, a2a_enabled=True)
+    captured = {}
+
+    async def fake_get_flow(_identifier):
+        return flow
+
+    async def fake_enforce(_flow, _request):
+        return active_user
+
+    class FakeDispatcher:
+        async def handle_requests(self, dispatched_request):
+            captured["admitted_user_id"] = dispatched_request.state.a2a_admitted_user_id
+            return Response(status_code=204)
+
+    monkeypatch.setattr(a2a_module, "_require_a2a_enabled", lambda: None)
+    monkeypatch.setattr(a2a_module, "get_flow_by_id_or_endpoint_name", fake_get_flow)
+    monkeypatch.setattr(a2a_module, "_enforce_a2a_auth", fake_enforce)
+    monkeypatch.setattr(a2a_module, "_DISPATCHER", FakeDispatcher())
+
+    response = await a2a_module.a2a_jsonrpc(flow_id, request)
+
+    assert response.status_code == 204
+    assert captured["admitted_user_id"] == str(active_user.id)
+
+
+def test_a2a_context_builder_carries_only_the_server_admitted_principal():
+    """The dispatcher receives the server-side gate identity through its call context."""
+    from langflow.api.v1 import a2a as a2a_module
+    from starlette.requests import Request
+
+    flow_id = uuid.uuid4()
+    admitted_user_id = str(uuid.uuid4())
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "scheme": "https",
+            "server": ("tenant.example", 443),
+            "client": ("127.0.0.1", 12345),
+            "root_path": "",
+            "path": f"/api/v1/a2a/{flow_id}/jsonrpc",
+            "raw_path": f"/api/v1/a2a/{flow_id}/jsonrpc".encode(),
+            "query_string": b"",
+            "headers": [],
+            "path_params": {"flow_id": str(flow_id)},
+            "state": {"a2a_admitted_user_id": admitted_user_id},
+        }
+    )
+
+    context = a2a_module._FlowContextBuilder().build(request)
+
+    assert context.state["admitted_user_id"] == admitted_user_id
+
+
+@pytest.mark.parametrize("is_public_now", [False, True])
+def test_a2a_execution_rejects_missing_admitted_principal(is_public_now):
+    """The SDK execution seam must never infer a principal when the HTTP gate did not record one."""
+    from fastapi import HTTPException
+    from langflow.api.v1 import a2a as a2a_module
+
+    flow = Flow(id=uuid.uuid4(), user_id=uuid.uuid4(), name="agent", data={"nodes": [], "edges": []})
+
+    with pytest.raises(HTTPException) as exc_info:
+        a2a_module._require_admitted_a2a_principal(
+            flow,
+            is_public_now=is_public_now,
+            admitted_user_id=None,
+        )
+
+    assert exc_info.value.status_code == 404
+
+
+async def test_a2a_executor_forwards_admitted_principal_to_run():
+    """The SDK producer cannot lose the principal captured by the HTTP gate."""
+    from a2a.server.agent_execution import RequestContext
+    from a2a.server.context import ServerCallContext
+    from a2a.server.events import EventQueue
+    from langflow.api.v1.a2a_executor import FlowAgentExecutor
+
+    admitted_user_id = str(uuid.uuid4())
+    captured = {}
+
+    async def capture_run(_flow_id, _task_id, _text, _context_id, _request_host, admitted_principal):
+        captured["admitted_user_id"] = admitted_principal
+        message = "stop after argument capture"
+        raise RuntimeError(message)
+
+    async def no_resume(*_args):
+        pytest.fail("resume must not be called")
+
+    executor = FlowAgentExecutor(capture_run, no_resume)
+    context = RequestContext(
+        call_context=ServerCallContext(
+            state={
+                "flow_id": str(uuid.uuid4()),
+                "request_host": "tenant.example",
+                "admitted_user_id": admitted_user_id,
+            }
+        ),
+        task_id=uuid.uuid4().hex,
+        context_id="context",
+    )
+
+    await executor.execute(context, EventQueue())
+
+    assert captured["admitted_user_id"] == admitted_user_id
 
 
 # --- DataPart (structured application/json I/O) ----------------------------
@@ -716,10 +1172,10 @@ async def test_resubscribe_to_working_task_without_local_producer_does_not_hang(
     from a2a.server.context import ServerCallContext
     from a2a.types import a2a_pb2 as pb
     from a2a.utils.errors import UnsupportedOperationError
-    from langflow.api.v1.a2a import _HANDLER, _TASK_STORE
+    from langflow.api.v1.a2a import _HANDLER, _TASK_STORE, PUBLIC_ANONYMOUS_ACTOR_ID
 
     task_id = uuid.uuid4().hex
-    ctx = ServerCallContext(state={"flow_id": str(uuid.uuid4())})
+    ctx = ServerCallContext(state={"flow_id": str(uuid.uuid4()), "admitted_user_id": str(PUBLIC_ANONYMOUS_ACTOR_ID)})
     await _TASK_STORE.save(
         pb.Task(id=task_id, context_id="c", status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_WORKING)), ctx
     )
@@ -818,13 +1274,18 @@ async def test_jsonrpc_flag_off_returns_404(client: AsyncClient, active_user, ec
 
 @pytest.mark.usefixtures("a2a_flag_on")
 async def test_jsonrpc_non_agent_or_disabled_returns_404(client: AsyncClient, active_user, echo_flow_data):
-    """Workflow-typed and a2a-disabled flows 404 on the JSON-RPC route, like the card route."""
+    """Unknown and existing private flows have an identical JSON-RPC transport-level 404."""
     workflow_id = await _create_flow(active_user.id, data=echo_flow_data, flow_type=FlowType.WORKFLOW)
     disabled_id = await _create_flow(active_user.id, data=echo_flow_data, a2a_enabled=False)
 
-    assert (await _jsonrpc(client, workflow_id, "message/send", _text_message("hi"))).status_code == 404
-    assert (await _jsonrpc(client, disabled_id, "message/send", _text_message("hi"))).status_code == 404
-    assert (await _jsonrpc(client, uuid.uuid4(), "message/send", _text_message("hi"))).status_code == 404
+    responses = [
+        await _jsonrpc(client, workflow_id, "message/send", _text_message("hi")),
+        await _jsonrpc(client, disabled_id, "message/send", _text_message("hi")),
+        await _jsonrpc(client, uuid.uuid4(), "message/send", _text_message("hi")),
+    ]
+
+    assert [response.status_code for response in responses] == [404, 404, 404]
+    assert [response.json() for response in responses] == [{"detail": "Not Found"}] * 3
 
 
 # --- multi-turn / contextId ------------------------------------------------
@@ -840,10 +1301,10 @@ async def _session_texts(session_id) -> set[str]:
     return {row.text for row in rows}
 
 
-def _derive_session(owner_id, flow_id, context_id) -> str | None:
+def _derive_session(principal_id, flow_id, context_id) -> str | None:
     """The internal chat session_id the A2A run derives from a client contextId.
 
-    Mirrors ``_run_flow`` exactly: the contextId is namespaced under a per-(owner, flow)
+    Mirrors ``_run_flow`` exactly: the contextId is namespaced under a per-(principal, flow)
     virtual id, and an over-bound composed key is hashed (never collapsed to the shared
     per-flow default), so stored messages never sit under the bare, client-controlled
     contextId.
@@ -855,11 +1316,18 @@ def _derive_session(owner_id, flow_id, context_id) -> str | None:
 
     if not context_id:
         return None
-    namespace = str(compute_virtual_flow_id(owner_id, flow_id))
+    namespace = str(compute_virtual_flow_id(principal_id, flow_id))
     scoped = scope_session_to_namespace(context_id, namespace)
     if scoped and len(scoped) <= GLOBAL_KEY_MAX_LEN:
         return scoped
     return f"{namespace}:{hashlib.sha256(context_id.encode()).hexdigest()}"
+
+
+def _derive_public_session(flow_id, context_id) -> str | None:
+    """Derive the session used by an anonymous, direct-link A2A execution."""
+    from langflow.api.v1.a2a import PUBLIC_ANONYMOUS_ACTOR_ID
+
+    return _derive_session(PUBLIC_ANONYMOUS_ACTOR_ID, flow_id, context_id)
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
@@ -882,7 +1350,7 @@ async def test_context_id_threads_into_flow_session(client: AsyncClient, active_
 
     # The run persists its output under the namespaced session, not the bare contextId
     # (and not the default str(flow.id) fallback).
-    scoped_texts = await _session_texts(_derive_session(active_user.id, flow_id, context_id))
+    scoped_texts = await _session_texts(_derive_public_session(flow_id, context_id))
     assert "hello a2a" in scoped_texts, "the run's messages were not stored under the namespaced session"
     assert await _session_texts(context_id) == set(), "messages must not be addressable by the bare client contextId"
 
@@ -897,8 +1365,8 @@ async def test_distinct_context_ids_get_distinct_sessions(client: AsyncClient, a
     await _jsonrpc(client, flow_id, "message/send", _text_message("from a", context_id=ctx_a))
     await _jsonrpc(client, flow_id, "message/send", _text_message("from b", context_id=ctx_b))
 
-    a_texts = await _session_texts(_derive_session(active_user.id, flow_id, ctx_a))
-    b_texts = await _session_texts(_derive_session(active_user.id, flow_id, ctx_b))
+    a_texts = await _session_texts(_derive_public_session(flow_id, ctx_a))
+    b_texts = await _session_texts(_derive_public_session(flow_id, ctx_b))
 
     assert "from a" in a_texts
     assert "from b" in b_texts
@@ -909,7 +1377,7 @@ async def test_distinct_context_ids_get_distinct_sessions(client: AsyncClient, a
 async def test_same_context_id_across_flows_does_not_share_session(client: AsyncClient, active_user, echo_flow_data):
     """The same contextId on two different flows does NOT share chat memory (cross-flow hijack fix).
 
-    The contextId is namespaced under a per-(owner, flow) virtual id, so an identical client
+    The contextId is namespaced under a per-(principal, flow) virtual id, so an identical client
     contextId resolves to a different session per flow. Multi-turn on the same flow with the same
     contextId still shares one session.
     """
@@ -923,8 +1391,8 @@ async def test_same_context_id_across_flows_does_not_share_session(client: Async
     # One turn on flow_b reusing the same contextId must not bleed into flow_a's session.
     await _jsonrpc(client, flow_b, "message/send", _text_message("b turn 1", context_id=shared_ctx))
 
-    session_a = _derive_session(active_user.id, flow_a, shared_ctx)
-    session_b = _derive_session(active_user.id, flow_b, shared_ctx)
+    session_a = _derive_public_session(flow_a, shared_ctx)
+    session_b = _derive_public_session(flow_b, shared_ctx)
     assert session_a != session_b
 
     a_texts = await _session_texts(session_a)
@@ -962,8 +1430,8 @@ async def test_oversized_context_ids_get_distinct_hashed_sessions(client: AsyncC
     assert result_a["result"]["status"]["state"] == "completed"
     assert result_a["result"]["contextId"] == huge_a  # protocol value preserved, just not used verbatim as session_id
 
-    session_a = _derive_session(active_user.id, flow_id, huge_a)
-    session_b = _derive_session(active_user.id, flow_id, huge_b)
+    session_a = _derive_public_session(flow_id, huge_a)
+    session_b = _derive_public_session(flow_id, huge_b)
 
     # Two different long contextIds get two different (bounded, hashed) sessions.
     assert session_a != session_b
@@ -1165,6 +1633,58 @@ async def test_apikey_folder_accepts_owner_key(client: AsyncClient, active_user,
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
+async def test_apikey_folder_enforces_scoped_execute_permission(
+    client: AsyncClient,
+    active_user,
+    echo_flow_data,
+):
+    """An owner key is still subject to plugin API-key scope policy before dispatch."""
+    folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "apikey"})
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
+    key = await _create_api_key(active_user.id)
+    settings_service = get_settings_service()
+
+    with install_policy_authz(settings_service):
+        denied = await _jsonrpc(
+            client,
+            flow_id,
+            "message/send",
+            _text_message("denied"),
+            headers={"x-api-key": key},
+        )
+    assert denied.status_code == 404
+
+    async with session_scope() as session:
+        role = AuthzRole(
+            name=f"a2a-executor-{uuid.uuid4().hex}",
+            permissions=["flow:execute"],
+            is_system=False,
+        )
+        session.add(role)
+        await session.flush()
+        session.add(
+            AuthzRoleAssignment(
+                user_id=active_user.id,
+                role_id=role.id,
+                domain_type="project",
+                domain_id=folder_id,
+            )
+        )
+        await session.commit()
+
+    with install_policy_authz(settings_service):
+        allowed = await _jsonrpc(
+            client,
+            flow_id,
+            "message/send",
+            _text_message("allowed"),
+            headers={"x-api-key": key},
+        )
+    assert allowed.status_code == 200
+    assert allowed.json()["result"]["status"]["state"] == "completed"
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
 async def test_apikey_folder_rejects_other_user_key(client: AsyncClient, active_user, echo_flow_data):
     """A valid key owned by a different user 401s (owner-scoped; no privilege escalation)."""
     flow_id = await _apikey_flow(active_user, echo_flow_data)
@@ -1186,6 +1706,37 @@ async def test_none_folder_stays_public(client: AsyncClient, active_user, echo_f
 
     assert resp.status_code == 200
     assert resp.json()["result"]["status"]["state"] == "completed"
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_public_tasks_get_reads_legacy_anonymous_scope(client: AsyncClient, active_user, echo_flow_data):
+    """A pre-stable-principal public task remains readable after upgrading."""
+    from a2a.server.context import ServerCallContext
+    from a2a.types import a2a_pb2 as pb
+    from google.protobuf.json_format import MessageToDict
+    from langflow.api.v1.a2a import DurableTaskStore
+    from langflow.services.database.models import A2ATask
+
+    folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "none"})
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
+    task_id = uuid.uuid4().hex
+    task = pb.Task(
+        id=task_id,
+        context_id="legacy-public-context",
+        status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_COMPLETED),
+    )
+
+    async with session_scope() as session:
+        session.add(A2ATask(id=task_id, owner=f"{flow_id}:", task=MessageToDict(task)))
+        await session.commit()
+
+    response = await _jsonrpc(client, flow_id, "tasks/get", {"id": task_id})
+
+    assert response.status_code == 200
+    assert response.json()["result"]["id"] == task_id
+
+    protected_context = ServerCallContext(state={"flow_id": str(flow_id), "admitted_user_id": str(active_user.id)})
+    assert await DurableTaskStore().get(task_id, protected_context) is None
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
@@ -1990,9 +2541,53 @@ async def test_task_scope_key_is_postgres_safe():
     from langflow.api.v1.a2a import _task_scope
 
     flow_id = uuid.uuid4().hex
-    key = _task_scope(ServerCallContext(state={"flow_id": flow_id}))
+    key = _task_scope(ServerCallContext(state={"flow_id": flow_id, "admitted_user_id": str(uuid.uuid4())}))
     assert "\x00" not in key
     assert flow_id in key
+
+
+def test_task_scope_requires_server_admitted_principal():
+    from a2a.server.context import ServerCallContext
+    from langflow.api.v1.a2a import _task_scope
+
+    with pytest.raises(RuntimeError, match="admitted principal"):
+        _task_scope(ServerCallContext(state={"flow_id": str(uuid.uuid4())}))
+
+
+async def test_task_and_push_scopes_bind_the_server_admitted_principal():
+    """Changing a folder's auth mode cannot cross-read tasks or push configs for the prior principal."""
+    from a2a.server.context import ServerCallContext
+    from langflow.api.v1.a2a import PUBLIC_ANONYMOUS_ACTOR_ID, _push_config_scope, _task_scope
+
+    flow_id = str(uuid.uuid4())
+    owner_id = str(uuid.uuid4())
+    owner_context = ServerCallContext(state={"flow_id": flow_id, "admitted_user_id": owner_id})
+    public_context = ServerCallContext(state={"flow_id": flow_id, "admitted_user_id": str(PUBLIC_ANONYMOUS_ACTOR_ID)})
+
+    assert _task_scope(owner_context) != _task_scope(public_context)
+    assert _push_config_scope(owner_context) != _push_config_scope(public_context)
+    assert owner_id in _task_scope(owner_context)
+    assert str(PUBLIC_ANONYMOUS_ACTOR_ID) in _push_config_scope(public_context)
+
+
+@pytest.mark.usefixtures("client")
+async def test_durable_task_store_isolates_public_and_protected_admission_principals():
+    """A task admitted while protected is not readable after the same flow becomes public, or vice versa."""
+    from a2a.server.context import ServerCallContext
+    from a2a.types import a2a_pb2 as pb
+    from langflow.api.v1.a2a import PUBLIC_ANONYMOUS_ACTOR_ID, DurableTaskStore
+
+    flow_id = str(uuid.uuid4())
+    owner_context = ServerCallContext(state={"flow_id": flow_id, "admitted_user_id": str(uuid.uuid4())})
+    public_context = ServerCallContext(state={"flow_id": flow_id, "admitted_user_id": str(PUBLIC_ANONYMOUS_ACTOR_ID)})
+    task_id = uuid.uuid4().hex
+    task = pb.Task(id=task_id, status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_COMPLETED))
+    store = DurableTaskStore()
+
+    await store.save(task, owner_context)
+
+    assert await store.get(task_id, owner_context) is not None
+    assert await store.get(task_id, public_context) is None
 
 
 @pytest.mark.usefixtures("a2a_flag_on")

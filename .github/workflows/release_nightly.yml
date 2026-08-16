@@ -59,13 +59,14 @@ jobs:
         shell: bash
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.nightly_tag_release }}
           persist-credentials: true
       - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ env.PYTHON_VERSION }}
@@ -129,13 +130,13 @@ jobs:
       # PyPI publishing moved to after cross-platform testing
 
       - name: Upload langflow-sdk Artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: dist-nightly-sdk
           path: src/sdk/dist
 
       - name: Upload LFX Artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: dist-nightly-lfx
           path: src/lfx/dist
@@ -153,13 +154,14 @@ jobs:
       skipped: ${{ steps.verify.outputs.skipped }}
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.nightly_tag_release }}
           persist-credentials: true
       - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ env.PYTHON_VERSION }}
@@ -167,7 +169,7 @@ jobs:
 
       - name: Download LFX artifact
         if: inputs.build_lfx
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-nightly-lfx
           path: lfx-dist
@@ -239,7 +241,7 @@ jobs:
       # PyPI publishing moved to after cross-platform testing
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: dist-nightly-base
           path: src/backend/base/dist
@@ -256,13 +258,14 @@ jobs:
         shell: bash
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.nightly_tag_release}}
           persist-credentials: true
       - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ env.PYTHON_VERSION }}
@@ -270,13 +273,13 @@ jobs:
 
       - name: Download LFX artifact
         if: inputs.build_lfx
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-nightly-lfx
           path: lfx-dist
 
       - name: Download base artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-nightly-base
           path: base-dist
@@ -366,7 +369,7 @@ jobs:
 
       - name: Upload Bundles Artifact
         if: steps.build-bundles.outputs.bundles-found == '1'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: dist-nightly-bundles
           path: bundles-dist
@@ -374,7 +377,7 @@ jobs:
       # PyPI publishing moved to after cross-platform testing
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: dist-nightly-main
           path: main-dist
@@ -398,18 +401,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.nightly_tag_release }}
           persist-credentials: true
       - name: Download LFX artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-nightly-lfx
           path: src/lfx/dist
       - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: false
           python-version: "3.13"
       - name: Publish LFX to PyPI
@@ -426,18 +430,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.nightly_tag_release }}
           persist-credentials: true
       - name: Download langflow-sdk artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-nightly-sdk
           path: src/sdk/dist
       - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: false
           python-version: "3.13"
       - name: Publish SDK to PyPI
@@ -454,18 +459,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.nightly_tag_release }}
           persist-credentials: true
       - name: Download base artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-nightly-base
           path: src/backend/base/dist
       - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: false
           python-version: "3.13"
       - name: Publish base to PyPI
@@ -483,18 +489,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.nightly_tag_release }}
           persist-credentials: true
       - name: Download bundles artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-nightly-bundles
           path: bundles-dist
       - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: false
           python-version: "3.13"
       - name: Publish bundle dependencies to PyPI
@@ -628,13 +635,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.nightly_tag_release }}
           persist-credentials: true
       - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: false
           python-version: "3.13"
       - name: Wait for direct base and bundle dependencies on PyPI
@@ -745,18 +753,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.nightly_tag_release }}
           persist-credentials: true
       - name: Download main artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-nightly-main
           path: dist
       - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: false
           python-version: "3.13"
       - name: Publish to PyPI
@@ -775,7 +784,10 @@ jobs:
       ref: ${{ inputs.nightly_tag_release }}
       release_type: nightly-base
       push_to_registry: ${{ inputs.push_to_registry }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      TEMP_GHCR_TOKEN: ${{ secrets.TEMP_GHCR_TOKEN }}
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
@@ -786,7 +798,10 @@ jobs:
       ref: ${{ inputs.nightly_tag_release }}
       release_type: nightly-main
       push_to_registry: ${{ inputs.push_to_registry }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      TEMP_GHCR_TOKEN: ${{ secrets.TEMP_GHCR_TOKEN }}
 
   # TODO: Uncomment this when our runner can fit the builds that contain pytorch (and other large dependencies)
   # call_docker_build_main_all:

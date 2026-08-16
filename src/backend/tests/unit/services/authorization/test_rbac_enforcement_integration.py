@@ -19,13 +19,20 @@ Everything runs against the OSS package only — no EE Casbin enforcer required.
 
 from __future__ import annotations
 
+import json
 from unittest.mock import MagicMock
 from uuid import UUID, uuid4
 
 from langflow.api.v1.knowledge_bases import KBStorageHelper
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_auth_service, get_settings_service, session_scope
+from langflow.services.deps import (
+    get_auth_service,
+    get_authorization_service,
+    get_settings_service,
+    session_scope,
+)
 
 from ._policy_double import (
     assign_role,
@@ -64,6 +71,18 @@ async def _make_flow(owner_id: UUID, name: str, *, workspace_id: UUID | None = N
         flow_id = flow.id
         await session.commit()
     return flow_id
+
+
+async def _make_project(owner_id: UUID, name: str, *, workspace_id: UUID | None = None) -> UUID:
+    """Insert a project owned by ``owner_id`` and return its id."""
+    async with session_scope() as session:
+        project = Folder(name=name, user_id=owner_id, workspace_id=workspace_id)
+        session.add(project)
+        await session.flush()
+        assert project.id is not None
+        project_id = project.id
+        await session.commit()
+    return project_id
 
 
 async def _seed_roles() -> dict[str, UUID]:
@@ -248,6 +267,139 @@ async def test_read_only_share_allows_get_but_denies_write_and_execute(client):
         # not grant build either -> deny -> 404
         build = await client.post(f"api/v1/build/{flow_id}/flow", headers=bob_headers, json={})
         assert build.status_code == 404
+
+
+# --------------------------------------------------------------------------- #
+# Flow create destinations: plugin grants may target a foreign-owned project,
+# while the OSS pass-through must keep its existing owner-scoped fallback.
+# --------------------------------------------------------------------------- #
+
+
+async def test_project_scoped_developer_can_create_flow_in_foreign_project(client):
+    """A plugin-authorized non-owner must retain the project destination it was granted."""
+    role_ids = await _seed_roles()
+    project_owner_id = await _make_user(f"project_owner_{uuid4().hex}")
+    workspace_id = uuid4()
+    project_id = await _make_project(
+        project_owner_id,
+        f"shared_project_{uuid4().hex}",
+        workspace_id=workspace_id,
+    )
+    developer_id, headers = await _role_user(
+        client,
+        "developer",
+        role_ids,
+        domain_type="project",
+        domain_id=project_id,
+    )
+
+    with install_policy_authz(get_settings_service()):
+        response = await client.post(
+            "api/v1/flows/",
+            headers=headers,
+            json={
+                "name": f"shared_project_flow_{uuid4().hex}",
+                "folder_id": str(project_id),
+                "data": {"nodes": [], "edges": []},
+            },
+        )
+        assert response.status_code == 201, response.text
+        created = response.json()
+        edit = await client.patch(
+            f"api/v1/flows/{created['id']}",
+            headers=headers,
+            json={"name": f"edited_shared_project_flow_{uuid4().hex}"},
+        )
+        upload = await client.post(
+            "api/v1/flows/upload/",
+            headers=headers,
+            files={
+                "file": (
+                    "shared-project-flow.json",
+                    json.dumps(
+                        {
+                            "id": created["id"],
+                            "name": f"uploaded_shared_project_flow_{uuid4().hex}",
+                        }
+                    ),
+                    "application/json",
+                )
+            },
+        )
+
+    assert created["user_id"] == str(developer_id)
+    assert created["folder_id"] == str(project_id)
+    assert created["workspace_id"] == str(workspace_id)
+    assert edit.status_code == 200, edit.text
+    assert edit.json()["folder_id"] == str(project_id)
+    assert edit.json()["workspace_id"] == str(workspace_id)
+    assert upload.status_code == 201, upload.text
+    assert upload.json()[0]["id"] == created["id"]
+    assert upload.json()[0]["folder_id"] == str(project_id)
+    assert upload.json()[0]["workspace_id"] == str(workspace_id)
+
+
+async def test_oss_create_flow_keeps_foreign_project_owner_scoped(client):
+    """The OSS service must not widen a foreign project merely because authz is enabled."""
+    project_owner_id = await _make_user(f"project_owner_{uuid4().hex}")
+    foreign_project_id = await _make_project(project_owner_id, f"foreign_project_{uuid4().hex}")
+    creator_username = f"creator_{uuid4().hex}"
+    creator_id = await _make_user(creator_username)
+    headers = await _login(client, creator_username)
+
+    settings = get_settings_service()
+    authz = get_authorization_service()
+    assert await authz.supports_cross_user_fetch() is False
+    saved_authz_enabled = settings.auth_settings.AUTHZ_ENABLED
+    settings.auth_settings.AUTHZ_ENABLED = True
+    try:
+        response = await client.post(
+            "api/v1/flows/",
+            headers=headers,
+            json={
+                "name": f"oss_owner_scoped_flow_{uuid4().hex}",
+                "folder_id": str(foreign_project_id),
+                "data": {"nodes": [], "edges": []},
+            },
+        )
+    finally:
+        settings.auth_settings.AUTHZ_ENABLED = saved_authz_enabled
+
+    assert response.status_code == 201, response.text
+    created = response.json()
+    assert created["folder_id"] != str(foreign_project_id)
+    async with session_scope() as session:
+        destination = await session.get(Folder, UUID(created["folder_id"]))
+    assert destination is not None
+    assert destination.user_id == creator_id
+
+
+async def test_cross_user_destination_resolution_does_not_widen_flow_moves(client):
+    """Cross-user destination fetch is limited to CREATE and cannot bypass move authorization."""
+    project_owner_id = await _make_user(f"move_project_owner_{uuid4().hex}")
+    foreign_project_id = await _make_project(project_owner_id, f"move_target_{uuid4().hex}")
+    creator_username = f"move_creator_{uuid4().hex}"
+    await _make_user(creator_username)
+    headers = await _login(client, creator_username)
+
+    create = await client.post(
+        "api/v1/flows/",
+        headers=headers,
+        json={"name": f"move_source_{uuid4().hex}", "data": {"nodes": [], "edges": []}},
+    )
+    assert create.status_code == 201, create.text
+    original_folder_id = create.json()["folder_id"]
+
+    with install_policy_authz(get_settings_service()):
+        move = await client.patch(
+            f"api/v1/flows/{create.json()['id']}",
+            headers=headers,
+            json={"folder_id": str(foreign_project_id)},
+        )
+
+    assert move.status_code == 200, move.text
+    assert move.json()["folder_id"] == original_folder_id
+    assert move.json()["folder_id"] != str(foreign_project_id)
 
 
 # --------------------------------------------------------------------------- #

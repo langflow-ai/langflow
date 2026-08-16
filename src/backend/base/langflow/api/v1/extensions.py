@@ -181,7 +181,7 @@ async def reload_extension_bundle(
             primary.code,
         )
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 **primary.to_dict(),
                 "result": result.to_dict(),
@@ -223,7 +223,7 @@ async def get_extension_events(
     """
     if keyspace is not None:
         raise _typed_http_exception(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             error=ExtensionError(
                 code="extension-events-keyspace-forbidden",
                 message=(

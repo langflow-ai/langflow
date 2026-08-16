@@ -902,6 +902,8 @@ class ErrorMessage(Message):
         trace_name: str | None = None,
         flow_id: UUID | str | None = None,
         session_metadata: dict | None = None,
+        *,
+        include_traceback: bool = True,
     ) -> None:
         # This is done to avoid circular imports
         if exception.__class__.__name__ == "ExceptionWithMessageError" and exception.__cause__ is not None:
@@ -942,7 +944,7 @@ class ErrorMessage(Message):
                             field=str(exception.field) if hasattr(exception, "field") else None,
                             reason=markdown_reason,
                             solution=str(exception.solution) if hasattr(exception, "solution") else None,
-                            traceback=traceback.format_exc(),
+                            traceback=traceback.format_exc() if include_traceback else "",
                         )
                     ],
                 ),

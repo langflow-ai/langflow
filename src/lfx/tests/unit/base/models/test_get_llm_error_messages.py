@@ -57,7 +57,7 @@ def _model(provider: str | None, *, name: str = "gemini-3.5-flash") -> list[dict
 class TestGetLlmInvalidProviderMessage:
     """Bug 2 — provider arriving as 'Unknown'/empty/None must NOT yield the broken template."""
 
-    @pytest.mark.parametrize("invalid_provider", ["Unknown", "", None])
+    @pytest.mark.parametrize("invalid_provider", ["Unknown", "", "   ", None])
     def test_should_point_user_to_reselect_when_provider_is_invalid(self, invalid_provider):
         """Post-fix message must instruct the user to reselect the model in the dropdown."""
         with (
@@ -70,7 +70,7 @@ class TestGetLlmInvalidProviderMessage:
 class TestGetLlmInvalidProviderMessageStrings:
     """Companion suite that asserts pre-fix template markers are gone from the message."""
 
-    @pytest.mark.parametrize("invalid_provider", ["Unknown", "", None])
+    @pytest.mark.parametrize("invalid_provider", ["Unknown", "", "   ", None])
     def test_message_strips_pre_fix_template_markers(self, invalid_provider):
         """Regression-marker assertions on the captured error string."""
         with patch.object(unified_models_module, "get_api_key_for_provider", return_value=None):

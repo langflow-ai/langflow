@@ -24,6 +24,7 @@ import secrets
 import time
 import traceback
 import uuid
+from contextlib import asynccontextmanager
 from copy import deepcopy
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
@@ -44,6 +45,13 @@ from lfx.cli.serve_identity import IdentityConfig, build_identity_verifier
 from lfx.cli.serve_workflow import ServeWorkflowHost
 from lfx.load import load_flow_from_json
 from lfx.log.logger import logger
+from lfx.observability import (
+    bootstrap_application_telemetry,
+    execution_protocol,
+    instrument_fastapi_app,
+    start_event_loop_lag_monitor,
+    stop_event_loop_lag_monitor,
+)
 from lfx.utils.flow_validation import validate_flow_for_current_settings
 from lfx.workflow.router import create_workflow_router
 
@@ -101,7 +109,11 @@ async def guarded_execute(graph_copy, input_value, session_id=None, user_id=None
         reset_environ = os.environ.get(_SERVE_RESET_ENVIRON_ENV) == "1"
         env_snapshot = dict(os.environ) if reset_environ else None
         try:
-            return await execute_graph_with_capture(graph_copy, input_value, session_id=session_id, user_id=user_id)
+            # Both native serve routes (/flows/{id}/run and /flows/{id}/stream) funnel through
+            # here, so the flow span gets its label once. The v2 workflow router mounted on the
+            # same app binds its own, and binding is outermost-wins, so the two never fight.
+            with execution_protocol("lfx.serve"):
+                return await execute_graph_with_capture(graph_copy, input_value, session_id=session_id, user_id=user_id)
         finally:
             if env_snapshot is not None and os.environ != env_snapshot:
                 # Restore by diff — never os.environ.clear(). clear() empties the mapping key
@@ -665,6 +677,29 @@ def create_multi_serve_app(
     :mod:`lfx.cli.serve_identity`). ``None`` (the default) means ``off`` mode —
     no identity is read and execution behaves exactly as before.
     """
+    # Application observability. lfx serve is the production HTTP surface, so it installs the
+    # same OTLP providers and HTTP instrumentation the full langflow app does, driven entirely
+    # by the standard OTEL_* environment variables. No-op unless an endpoint is set (and unless
+    # lfx was installed with the ``otel`` extra), so this costs nothing by default.
+    telemetry = bootstrap_application_telemetry()
+
+    @asynccontextmanager
+    async def _lifespan(_app: FastAPI):
+        # Started here rather than at app construction because it needs the running loop, and
+        # under ``--workers`` the app is built in the gunicorn master before the fork.
+        # Best-effort: optional instrumentation must never keep the server from starting.
+        lag_monitor = None
+        try:
+            lag_monitor = start_event_loop_lag_monitor(telemetry.meter_provider)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Event loop lag monitor failed to start: {e}")
+        # Flush the OTLP buffers on shutdown. uvicorn dies by signal and never runs the SDK's
+        # atexit flush, so without this the last batch of spans, metrics and logs drops on every
+        # restart and pod eviction. Off the event loop: the final export can block on the network.
+        yield
+        await stop_event_loop_lag_monitor(lag_monitor)
+        await asyncio.to_thread(telemetry.shutdown)
+
     app = FastAPI(
         title=f"LFX Multi-Flow Server ({len(registry)})",
         description=(
@@ -673,7 +708,11 @@ def create_multi_serve_app(
             "Use `POST /flows/upload/` to register new flows at runtime."
         ),
         version="1.0.0",
+        lifespan=_lifespan,
     )
+
+    instrument_fastapi_app(app)
+
     app.state.registry = registry
     # Snapshot the API key once so per-request auth (verify_api_key, run on a threadpool
     # thread) never reads live os.environ — see verify_api_key. Stays None until first use

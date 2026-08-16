@@ -80,6 +80,10 @@ class ParsedWorkflowRun:
     globals: dict[str, str] = field(default_factory=dict)
     # Client-supplied dedupe key for background submits (ignored by sync/stream).
     idempotency_key: str | None = None
+    # Whether this run may persist chat memory. Set False by the serving-plane
+    # end-user scoping for anonymous requests (ephemeral, no persisted memory);
+    # True for every other run so existing behavior is unchanged.
+    persist_messages: bool = True
 
 
 def parse_workflow_run_request(request: WorkflowRunRequest) -> ParsedWorkflowRun:
@@ -487,23 +491,39 @@ def workflow_response_from_output_events(
     *,
     flow_id: str,
     job_id: str,
+    session_id: str | None = None,
+    fail_on_rejected: bool = False,
 ) -> WorkflowExecutionResponse:
     """Rebuild a completed-run response from durable ``output`` event payloads.
 
-    Background runs do not persist ``vertex_builds`` keyed by ``job_id``, so the
-    vertex-build reconstruction path finds nothing. The durable runner instead
-    captures each terminal ``output`` event the langflow adapter emits (an
-    ``OutputEvent``: a ``ComponentOutput`` plus its ``component_id``) into
+    The durable runner captures protocol-neutral terminal ``OutputEvent``
+    payloads (a ``ComponentOutput`` plus its ``component_id``) into
     ``Job.result``. Re-keying those by component id reproduces the same
     ``outputs`` map and resolved ``output`` that sync returns, so a completed
-    background run's GET status carries its result without a /events re-attach.
+    background run's GET status carries its result without a /events re-attach
+    or any ``vertex_build`` rows. Vertex-build reconstruction remains the
+    fallback for legacy, missing, or incomplete captures.
+
+    ``session_id`` is the session the run executed under, supplied by the caller
+    (the terminal output's ``content`` is a rendered string here, so it can't be
+    searched structurally the way the vertex-build path can). Passing it keeps
+    the completed background GET echoing the same chat/memory thread sync does; a
+    data-only flow correctly stays None.
+
+    Legacy callers remain tolerant of malformed stored entries and receive every
+    output that can be decoded. Callers with a secondary recovery source can set
+    ``fail_on_rejected`` to detect an incomplete conversion and fall back instead
+    of silently treating a partial result as authoritative.
     """
     outputs: dict[str, ComponentOutput] = {}
+    rejected = 0
     for item in output_events:
         if not isinstance(item, dict):
+            rejected += 1
             continue
         component_id = item.get("component_id")
-        if not component_id:
+        if not isinstance(component_id, str) or not component_id:
+            rejected += 1
             continue
         fields = {key: value for key, value in item.items() if key != "component_id"}
         try:
@@ -511,11 +531,16 @@ def workflow_response_from_output_events(
         except ValueError:
             # A malformed stored payload should not 500 the status read; skip it
             # and report whatever outputs did rebuild cleanly.
+            rejected += 1
             continue
+    if fail_on_rejected and rejected:
+        msg = f"Output conversion rejected {rejected} of {len(output_events)} stored events"
+        raise ValueError(msg)
     return WorkflowExecutionResponse(
         flow_id=flow_id,
         job_id=job_id,
         status=JobStatus.COMPLETED,
+        session_id=session_id,
         output=_resolve_output(outputs),
         outputs=outputs,
     )

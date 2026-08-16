@@ -16,11 +16,11 @@ import contextlib
 import json
 import time
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import ANY, AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from fastapi import HTTPException
+from fastapi import BackgroundTasks, HTTPException, Request
 from httpx import AsyncClient
 from langflow.services.database.models.flow.model import Flow
 from lfx.services.deps import session_scope
@@ -333,6 +333,264 @@ class TestV2WorkflowAdmission:
         assert exc_info.value.status_code == 404
         assert exc_info.value.detail["code"] == "FLOW_NOT_FOUND"
 
+    @pytest.mark.parametrize("mode", ["sync", "stream"])
+    def test_non_owner_tweaks_are_hidden_as_404(self, mode: str):
+        """Execute-only sharees must not override stored component parameters."""
+        from langflow.api.v2 import workflow as workflow_module
+        from lfx.schema.workflow import WorkflowRunRequest
+        from lfx.workflow.converters import parse_workflow_run_request
+
+        flow_id = uuid4()
+        flow = SimpleNamespace(
+            id=flow_id,
+            user_id=uuid4(),
+            workspace_id=None,
+            folder_id=None,
+            data={"nodes": [], "edges": []},
+            name="shared",
+        )
+        parsed = parse_workflow_run_request(
+            WorkflowRunRequest(
+                flow_id=str(flow_id),
+                input_value="hi",
+                mode=mode,
+                tweaks={"component-id": {"model_name": "owner-only-model"}},
+            )
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            workflow_module._apply_execution_gates(parsed, flow, SimpleNamespace(id=uuid4()))
+
+        assert exc_info.value.status_code == 404
+        assert exc_info.value.detail["code"] == "FLOW_NOT_FOUND"
+
+    @pytest.mark.parametrize("mode", ["sync", "stream"])
+    def test_owner_tweaks_remain_supported(self, mode: str):
+        """The owner keeps the existing debugging and parameter-override workflow."""
+        from langflow.api.v2 import workflow as workflow_module
+        from lfx.schema.workflow import WorkflowRunRequest
+        from lfx.workflow.converters import parse_workflow_run_request
+
+        owner_id = uuid4()
+        flow_id = uuid4()
+        flow = SimpleNamespace(
+            id=flow_id,
+            user_id=owner_id,
+            workspace_id=None,
+            folder_id=None,
+            data={"nodes": [], "edges": []},
+            name="owned",
+        )
+        parsed = parse_workflow_run_request(
+            WorkflowRunRequest(
+                flow_id=str(flow_id),
+                input_value="hi",
+                mode=mode,
+                tweaks={"component-id": {"input_value": "owner override"}},
+            )
+        )
+
+        gated = workflow_module._apply_execution_gates(parsed, flow, SimpleNamespace(id=owner_id))
+
+        assert gated.tweaks == parsed.tweaks
+
+
+class TestV2WorkflowDelegatedErrorPolicy:
+    """Delegated execution hides internals while owner debugging stays intact."""
+
+    @pytest.mark.parametrize("caller_kind", ["delegate", "owner"])
+    def test_stored_flow_validation_detail_depends_on_flow_ownership(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        caller_kind: str,
+    ):
+        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_validation
+        from lfx.schema.workflow import WorkflowRunRequest
+        from lfx.utils.flow_validation import CustomComponentValidationError
+        from lfx.workflow.converters import parse_workflow_run_request
+
+        sensitive_detail = "blocked owner component SecretProviderNode-1"
+        owner_id = uuid4()
+        caller_id = owner_id if caller_kind == "owner" else uuid4()
+        flow = SimpleNamespace(
+            id=uuid4(),
+            user_id=owner_id,
+            data={"nodes": [{"id": "SecretProviderNode-1"}], "edges": []},
+            name="shared",
+        )
+        parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=str(flow.id), input_value="hi", mode="sync"))
+        monkeypatch.setattr(
+            workflow_validation,
+            "validate_flow_for_current_settings",
+            MagicMock(side_effect=CustomComponentValidationError(sensitive_detail)),
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            workflow_module._apply_execution_gates(
+                parsed,
+                flow,
+                SimpleNamespace(id=caller_id, is_superuser=False),
+            )
+
+        assert exc_info.value.status_code == 400
+        if caller_kind == "owner":
+            assert sensitive_detail in str(exc_info.value.detail)
+        else:
+            assert exc_info.value.detail == "Workflow execution failed."
+            assert sensitive_detail not in str(exc_info.value.detail)
+
+    @pytest.mark.parametrize("caller_kind", ["delegate", "owner"])
+    async def test_sync_missing_data_detail_depends_on_flow_ownership(
+        self,
+        caller_kind: str,
+    ):
+        from langflow.api.v2 import workflow as workflow_module
+        from lfx.workflow.converters import ParsedWorkflowRun
+
+        owner_id = uuid4()
+        caller_id = owner_id if caller_kind == "owner" else uuid4()
+        private_flow_id = uuid4()
+        requested_endpoint_name = "shared-flow-endpoint"
+        flow = SimpleNamespace(
+            id=private_flow_id,
+            user_id=owner_id,
+            data=None,
+            name="shared",
+        )
+        parsed = ParsedWorkflowRun(
+            flow_id=requested_endpoint_name,
+            input_value="hi",
+            mode="sync",
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await workflow_module.run_sync_with_mapping(
+                parsed,
+                flow,
+                SimpleNamespace(id=caller_id, is_superuser=False),
+                http_request=Request({"type": "http", "headers": []}),
+                background_tasks=BackgroundTasks(),
+            )
+
+        assert exc_info.value.status_code == 400
+        assert exc_info.value.detail["flow_id"] == requested_endpoint_name
+        message = exc_info.value.detail["message"]
+        if caller_kind == "owner":
+            assert str(private_flow_id) in message
+        else:
+            assert message == "Workflow execution failed."
+            assert str(private_flow_id) not in str(exc_info.value.detail)
+
+    @pytest.mark.parametrize("caller_kind", ["delegate", "owner"])
+    async def test_sync_error_detail_depends_on_flow_ownership(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        caller_kind: str,
+    ):
+        from langflow.api.v2 import workflow_execution as wf_exec
+        from lfx.workflow.converters import ParsedWorkflowRun
+
+        sensitive_detail = "sensitive-owner-runtime-detail"
+        owner_id = uuid4()
+        is_owner = caller_kind == "owner"
+        caller_id = owner_id if is_owner else uuid4()
+        flow = SimpleNamespace(
+            id=uuid4(),
+            user_id=owner_id,
+            updated_at=None,
+            data={"nodes": [], "edges": []},
+            name="shared",
+        )
+        graph = MagicMock()
+        graph.get_terminal_nodes.return_value = []
+        monkeypatch.setattr(wf_exec.Graph, "from_payload", MagicMock(return_value=graph))
+        job_service = SimpleNamespace(
+            create_job=AsyncMock(),
+            execute_with_status=AsyncMock(side_effect=RuntimeError(sensitive_detail)),
+        )
+        monkeypatch.setattr(wf_exec, "get_job_service", lambda: job_service)
+
+        response = await wf_exec.execute_sync_workflow(
+            parsed=ParsedWorkflowRun(flow_id=str(flow.id), input_value="hi", mode="sync"),
+            flow=flow,
+            job_id=uuid4(),
+            current_user=SimpleNamespace(id=caller_id),
+            background_tasks=SimpleNamespace(),
+            http_request=None,
+        )
+
+        error_text = response.errors[0].error
+        if is_owner:
+            assert sensitive_detail in error_text
+        else:
+            assert sensitive_detail not in error_text
+            assert error_text == "Workflow execution failed."
+
+    @pytest.mark.parametrize("caller_kind", ["owner", "delegate", "public"])
+    async def test_sync_memory_auto_capture_requires_owner_execution_principal(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        caller_kind: str,
+    ):
+        """The shared executor must not spend an owner's MemoryBase credentials for another principal."""
+        from langflow.api.v2 import workflow_execution as wf_exec
+        from langflow.services.authorization.public_access import PUBLIC_ANONYMOUS_ACTOR_ID
+        from lfx.workflow.converters import ParsedWorkflowRun
+
+        owner_id = uuid4()
+        caller_id = {
+            "owner": owner_id,
+            "delegate": uuid4(),
+            "public": PUBLIC_ANONYMOUS_ACTOR_ID,
+        }[caller_kind]
+        flow = SimpleNamespace(
+            id=uuid4(),
+            user_id=owner_id,
+            updated_at=None,
+            data={"nodes": [], "edges": []},
+            name="shared",
+        )
+        job_id = uuid4()
+        graph = MagicMock(run_id=str(job_id))
+        graph.get_terminal_nodes.return_value = []
+        graph_factory = MagicMock(return_value=graph)
+        monkeypatch.setattr(wf_exec.Graph, "from_payload", graph_factory)
+
+        expected_response = SimpleNamespace(outputs={})
+        monkeypatch.setattr(wf_exec, "run_response_to_workflow_response", MagicMock(return_value=expected_response))
+        job_service = SimpleNamespace(
+            create_job=AsyncMock(),
+            execute_with_status=AsyncMock(return_value=([], "effective-session")),
+            set_result=AsyncMock(),
+        )
+        hook = AsyncMock()
+        task_service = SimpleNamespace(fire_and_forget_task=AsyncMock())
+        monkeypatch.setattr(wf_exec, "get_job_service", lambda: job_service)
+        monkeypatch.setattr(wf_exec, "get_memory_base_service", lambda: SimpleNamespace(on_flow_output=hook))
+        monkeypatch.setattr(wf_exec, "get_task_service", lambda: task_service)
+
+        response = await wf_exec.execute_sync_workflow(
+            parsed=ParsedWorkflowRun(flow_id=str(flow.id), input_value="hi", mode="sync"),
+            flow=flow,
+            job_id=job_id,
+            current_user=SimpleNamespace(id=caller_id),
+            background_tasks=SimpleNamespace(),
+            http_request=None,
+        )
+
+        assert response is expected_response
+        assert graph_factory.call_args.kwargs["user_id"] == str(caller_id)
+        if caller_kind == "owner":
+            task_service.fire_and_forget_task.assert_awaited_once_with(
+                hook,
+                flow_id=flow.id,
+                session_id="effective-session",
+                job_id=job_id,
+            )
+        else:
+            task_service.fire_and_forget_task.assert_not_awaited()
+
     async def test_execute_permission_denial_is_hidden_as_404(self, monkeypatch: pytest.MonkeyPatch):
         """A denied share-aware fetch must not leak flow existence as a raw 403."""
         from langflow.api.v2 import workflow as workflow_module
@@ -384,6 +642,27 @@ class TestV2WorkflowAdmission:
         assert exc_info.value.detail["code"] == "FLOW_NOT_FOUND"
         assert exc_info.value.detail["flow_id"] == "my-endpoint"
         assert str(resolved_uuid) not in str(exc_info.value.detail)
+
+    async def test_workflow_host_always_enforces_authorization(self, monkeypatch: pytest.MonkeyPatch):
+        """Enabling the warm registry must not bypass the normal per-flow guard."""
+        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2.workflow_host import LangflowWorkflowHost
+        from lfx.workflow.actions import WorkflowAction
+        from lfx.workflow.host import ResolvedFlow
+
+        flow = SimpleNamespace(id=uuid4(), user_id=uuid4(), workspace_id=None, folder_id=None)
+        resolved = ResolvedFlow(flow_id=str(flow.id), graph=flow)
+        authorize = AsyncMock()
+        monkeypatch.setattr(workflow_module, "authorize_flow_action", authorize)
+
+        await LangflowWorkflowHost().authorize(SimpleNamespace(id=uuid4()), resolved, WorkflowAction.EXECUTE)
+
+        authorize.assert_awaited_once_with(
+            ANY,
+            flow,
+            WorkflowAction.EXECUTE,
+            requested_id=str(flow.id),
+        )
 
     async def test_db_lock_during_authorize_yields_503_contract(self, monkeypatch: pytest.MonkeyPatch):
         """A transient DB lock during permission enforcement must surface as 503 DATABASE_ERROR."""
@@ -446,6 +725,43 @@ class TestV2WorkflowAdmission:
         assert exc_info.value.status_code == 400
         assert exc_info.value.detail == "custom components are disabled"
 
+    def test_private_route_maps_catalog_identity_unavailable_to_503(self, monkeypatch: pytest.MonkeyPatch):
+        """Authenticated callers retain the retryable identity-initialization detail."""
+        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2 import workflow_validation as wf_val
+        from lfx.schema.workflow import WorkflowRunRequest
+        from lfx.utils.flow_validation import CatalogPolicyIdentityUnavailableError
+        from lfx.workflow.converters import parse_workflow_run_request
+
+        flow_id = uuid4()
+        flow = SimpleNamespace(
+            id=flow_id,
+            user_id=uuid4(),
+            workspace_id=None,
+            folder_id=None,
+            data={"nodes": [], "edges": []},
+            name="private",
+        )
+        detail = "Catalog policy component identities are still initializing. Please try again in a few seconds."
+
+        def _retry(_flow_data):
+            raise CatalogPolicyIdentityUnavailableError(detail)
+
+        monkeypatch.setattr(wf_val, "validate_flow_for_current_settings", _retry)
+        parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=str(flow_id), input_value="hi", mode="stream"))
+
+        with pytest.raises(HTTPException) as exc_info:
+            workflow_module.build_stream_response(
+                parsed,
+                flow,
+                SimpleNamespace(id=flow.user_id),
+                stream_protocol="langflow",
+                background_tasks=SimpleNamespace(),
+            )
+
+        assert exc_info.value.status_code == 503
+        assert exc_info.value.detail == detail
+
 
 class TestAGUIStreaming:
     """mode=stream returns an AG-UI server-sent event stream."""
@@ -504,6 +820,8 @@ class TestAGUIStreaming:
                 background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
+                protocol="v2",
+                expose_error_details=True,
             )
         ]
 
@@ -511,11 +829,13 @@ class TestAGUIStreaming:
         assert event_types == ["token", "token", "error"]
 
     @pytest.mark.parametrize(("stream_protocol", "terminal_type"), [("agui", "RUN_ERROR"), ("langflow", "error")])
+    @pytest.mark.parametrize("expose_error_details", [False, True])
     async def test_stream_enforces_execution_timeout(
         self,
         monkeypatch: pytest.MonkeyPatch,
         stream_protocol: str,
         terminal_type: str,
+        expose_error_details,
     ):
         """A run that exceeds the wall-clock ceiling ends in a sanitized terminal error, not a hang."""
         from langflow.api.v2 import workflow_execution as wf_exec
@@ -540,6 +860,8 @@ class TestAGUIStreaming:
                 background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
+                protocol="v2",
+                expose_error_details=expose_error_details,
             )
         ]
 
@@ -581,6 +903,8 @@ class TestAGUIStreaming:
                 background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
+                protocol="v2",
+                expose_error_details=True,
             )
         ]
 
@@ -618,6 +942,8 @@ class TestAGUIStreaming:
                 background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
+                protocol="v2",
+                expose_error_details=True,
             )
         ]
 
@@ -626,6 +952,49 @@ class TestAGUIStreaming:
         assert payload_types.count(terminal_type) == 1
         assert payload_types[-1] == terminal_type
         assert "early boom" in json.dumps(payloads[-1])
+
+    @pytest.mark.parametrize("expose_error_details", [False, True])
+    async def test_stream_fallback_error_detail_depends_on_execution_policy(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        *,
+        expose_error_details: bool,
+    ):
+        """Delegated streams hide runtime detail while owner streams retain it."""
+        from langflow.api.v2 import workflow_execution as wf_exec
+        from lfx.workflow.adapters import StreamAdapterContext, get_stream_adapter
+        from lfx.workflow.converters import ParsedWorkflowRun
+
+        sensitive_detail = "sensitive-stream-provider-detail"
+
+        async def fake_generate_flow_events(**_kwargs):
+            raise RuntimeError(sensitive_detail)
+
+        monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
+        adapter = get_stream_adapter(
+            "langflow",
+            StreamAdapterContext(run_id="run-1", thread_id="thread-1"),
+        )
+        frames = [
+            frame
+            async for frame, _event_type in wf_exec._stream_event_frames(
+                adapter=adapter,
+                flow_id=uuid4(),
+                flow_name="flow",
+                background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
+                parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
+                current_user=SimpleNamespace(id=uuid4()),
+                protocol="v2",
+                expose_error_details=expose_error_details,
+            )
+        ]
+
+        body = json.dumps(_sse_payloads(frames))
+        if expose_error_details:
+            assert sensitive_detail in body
+        else:
+            assert sensitive_detail not in body
+            assert "Workflow execution failed." in body
 
     async def test_agui_stream_emits_end_side_channel_for_build_duration(self, monkeypatch: pytest.MonkeyPatch):
         """The AG-UI stream must preserve v1 end payloads for chat build-duration persistence."""
@@ -661,6 +1030,7 @@ class TestAGUIStreaming:
                 background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
+                protocol="v2",
             )
         ]
 
@@ -1126,13 +1496,14 @@ class TestAGUIBackgroundJobStatus:
         monkeypatch.setattr(wf_bg, "_stream_event_frames", fake_stream_event_frames)
         monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
 
+        owner_id = uuid4()
         bg_run = wf_bg._BackgroundRun(user_id=str(uuid4()))
         await wf_bg._buffer_background_run(
             bg_run=bg_run,
-            flow=SimpleNamespace(id=uuid4(), name="flow"),
+            flow=SimpleNamespace(id=uuid4(), user_id=owner_id, name="flow"),
             parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="background"),
             job_id=str(job_id),
-            current_user=SimpleNamespace(id=uuid4()),
+            current_user=SimpleNamespace(id=owner_id),
             stream_protocol="agui",
         )
 
@@ -1167,10 +1538,11 @@ class TestAGUIBackgroundJobStatus:
         monkeypatch.setattr(wf_bg, "_stream_event_frames", fake_stream_event_frames)
         monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
 
+        owner_id = uuid4()
         bg_run = wf_bg._BackgroundRun(user_id=str(uuid4()))
         await wf_bg._buffer_background_run(
             bg_run=bg_run,
-            flow=SimpleNamespace(id=uuid4(), name="flow"),
+            flow=SimpleNamespace(id=uuid4(), user_id=owner_id, name="flow"),
             parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="background"),
             job_id=str(job_id),
             current_user=SimpleNamespace(id=uuid4()),
@@ -1178,6 +1550,45 @@ class TestAGUIBackgroundJobStatus:
         )
 
         assert (job_id, workflow_module.JobStatus.IN_PROGRESS, False) in updates
+
+    @pytest.mark.parametrize("caller_kind", ["delegate", "owner"])
+    async def test_background_buffer_error_exposure_follows_flow_ownership(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        caller_kind: str,
+    ):
+        """Only the flow owner may see runtime error detail in a background run."""
+        from langflow.api.v2 import workflow_background as wf_bg
+        from lfx.workflow.converters import ParsedWorkflowRun
+
+        captured: dict = {}
+
+        class FakeAdapter:
+            terminal_error_type = "RUN_ERROR"
+
+            def cancel_events(self, _reason):
+                return []
+
+        async def fake_stream_event_frames(**kwargs):
+            captured.update(kwargs)
+            yield b"data: {}\n\n", "RUN_FINISHED"
+
+        monkeypatch.setattr(wf_bg, "get_stream_adapter", lambda *_args, **_kwargs: FakeAdapter())
+        monkeypatch.setattr(wf_bg, "_stream_event_frames", fake_stream_event_frames)
+        monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
+
+        owner_id = uuid4()
+        caller_id = owner_id if caller_kind == "owner" else uuid4()
+        await wf_bg._buffer_background_run(
+            bg_run=wf_bg._BackgroundRun(user_id=str(caller_id)),
+            flow=SimpleNamespace(id=uuid4(), user_id=owner_id, name="flow"),
+            parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="background"),
+            job_id=str(uuid4()),
+            current_user=SimpleNamespace(id=caller_id),
+            stream_protocol="agui",
+        )
+
+        assert captured["expose_error_details"] is (caller_kind == "owner")
 
     async def test_cancelled_agui_buffer_wakes_tail_reader_with_closed_text_and_run_finished(
         self, monkeypatch: pytest.MonkeyPatch
@@ -1188,12 +1599,14 @@ class TestAGUIBackgroundJobStatus:
         from lfx.workflow.converters import ParsedWorkflowRun
 
         started = asyncio.Event()
+        captured: dict = {}
 
         class FakeJobService:
             async def update_job_status(self, *_args, **_kwargs):
                 return None
 
         async def fake_generate_flow_events(**kwargs):
+            captured.update(kwargs)
             kwargs["event_manager"].on_token(data={"id": "m1", "chunk": "partial"})
             started.set()
             await asyncio.Event().wait()
@@ -1206,14 +1619,15 @@ class TestAGUIBackgroundJobStatus:
         monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
         monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
 
+        owner_id = uuid4()
         bg_run = wf_bg._BackgroundRun(user_id=str(uuid4()), stream_protocol="agui")
         buffer_task = asyncio.create_task(
             wf_bg._buffer_background_run(
                 bg_run=bg_run,
-                flow=SimpleNamespace(id=uuid4(), name="flow"),
+                flow=SimpleNamespace(id=uuid4(), user_id=owner_id, name="flow"),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="background"),
                 job_id=str(uuid4()),
-                current_user=SimpleNamespace(id=uuid4()),
+                current_user=SimpleNamespace(id=owner_id),
                 stream_protocol="agui",
             )
         )
@@ -1243,6 +1657,7 @@ class TestAGUIBackgroundJobStatus:
         assert tail_payloads[0]["messageId"] == "m1"
         assert tail_payloads[1]["name"] == "langflow.run.cancelled"
         assert tail_payloads[1]["value"]["reason"] == "Workflow run cancelled."
+        assert captured["expose_error_details"] is True
 
     async def test_cancelled_langflow_buffer_wakes_tail_reader_with_langflow_cancelled(
         self, monkeypatch: pytest.MonkeyPatch
@@ -1253,12 +1668,14 @@ class TestAGUIBackgroundJobStatus:
         from lfx.workflow.converters import ParsedWorkflowRun
 
         started = asyncio.Event()
+        captured: dict = {}
 
         class FakeJobService:
             async def update_job_status(self, *_args, **_kwargs):
                 return None
 
         async def fake_generate_flow_events(**kwargs):
+            captured.update(kwargs)
             kwargs["event_manager"].on_token(data={"id": "m1", "chunk": "partial"})
             started.set()
             await asyncio.Event().wait()
@@ -1271,11 +1688,12 @@ class TestAGUIBackgroundJobStatus:
         monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
         monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
 
+        owner_id = uuid4()
         bg_run = wf_bg._BackgroundRun(user_id=str(uuid4()), stream_protocol="langflow")
         buffer_task = asyncio.create_task(
             wf_bg._buffer_background_run(
                 bg_run=bg_run,
-                flow=SimpleNamespace(id=uuid4(), name="flow"),
+                flow=SimpleNamespace(id=uuid4(), user_id=owner_id, name="flow"),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="background"),
                 job_id=str(uuid4()),
                 current_user=SimpleNamespace(id=uuid4()),
@@ -1301,6 +1719,7 @@ class TestAGUIBackgroundJobStatus:
 
         [payload] = _sse_payloads(tail_frames)
         assert payload == {"event": "cancelled", "data": {"reason": "Workflow run cancelled."}}
+        assert captured["expose_error_details"] is False
 
     async def test_finish_cancelled_background_run_appends_terminal_before_waking_replay(
         self, monkeypatch: pytest.MonkeyPatch
@@ -1312,12 +1731,14 @@ class TestAGUIBackgroundJobStatus:
 
         job_id = str(uuid4())
         started = asyncio.Event()
+        captured: dict = {}
 
         class FakeJobService:
             async def update_job_status(self, *_args, **_kwargs):
                 return None
 
         async def fake_generate_flow_events(**kwargs):
+            captured.update(kwargs)
             kwargs["event_manager"].on_token(data={"id": "m1", "chunk": "partial"})
             started.set()
             await asyncio.Event().wait()
@@ -1331,12 +1752,13 @@ class TestAGUIBackgroundJobStatus:
         monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
         monkeypatch.setattr(wf_bg, "_BACKGROUND_RUNS", {})
 
+        owner_id = uuid4()
         bg_run = wf_bg._BackgroundRun(user_id=str(uuid4()), stream_protocol="agui")
         wf_bg._BACKGROUND_RUNS[job_id] = bg_run
         buffer_task = asyncio.create_task(
             wf_bg._buffer_background_run(
                 bg_run=bg_run,
-                flow=SimpleNamespace(id=uuid4(), name="flow"),
+                flow=SimpleNamespace(id=uuid4(), user_id=owner_id, name="flow"),
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="background"),
                 job_id=job_id,
                 current_user=SimpleNamespace(id=uuid4()),
@@ -1368,6 +1790,7 @@ class TestAGUIBackgroundJobStatus:
             assert tail_payloads[0]["messageId"] == "m1"
             assert tail_payloads[1]["name"] == "langflow.run.cancelled"
             assert tail_payloads[1]["value"]["reason"] == "Workflow run cancelled."
+            assert captured["expose_error_details"] is False
 
             frames_after_fallback = list(bg_run.frames)
             buffer_task.cancel()

@@ -1,6 +1,6 @@
 [project]
 name = "langflow-base"
-version = "0.11.3"
+version = "1.12.0"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.15"
 license = "MIT"
@@ -17,10 +17,11 @@ maintainers = [
 ]
 
 dependencies = [
-    "lfx~=1.11.3",
+    "lfx~=1.12.0",
     "fastapi>=0.139.0,<1.0.0",
     "slowapi>=0.1.9,<1.0.0",
     "httpx[http2]>=0.27,<1.0.0",
+    "h2>=4.4.1",
     "aiofile>=3.9.0,<4.0.0",
     "uvicorn>=0.30.0,<1.0.0",
     "gunicorn>=25.3.0,<27.0.0",
@@ -45,10 +46,10 @@ dependencies = [
     "platformdirs>=4.2.0,<5.0.0",
     "python-multipart>=0.0.12,<1.0.0",
     "orjson>=3.11.6,<4.0.0",
-    "alembic>=1.13.0,<2.0.0",
+    "alembic>=1.13.0,<1.19.0",
     "passlib>=1.7.4,<2.0.0",
     "bcrypt==4.0.1",
-    "pillow>=12.1.1,<13.0.0",
+    "pillow>=12.3.0,<13.0.0",
     "docstring-parser>=0.16,<1.0.0",
     "PyJWT>=2.12.1",
     "pandas>=2.2.3",
@@ -69,11 +70,15 @@ dependencies = [
     "opentelemetry-exporter-prometheus>=0.50b0,<1.0.0",
     "opentelemetry-exporter-otlp>=1.30.0,<2.0.0",
     "opentelemetry-instrumentation-fastapi>=0.50b0,<1.0.0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.50b0,<1.0.0",
     "opentelemetry-instrumentation-requests>=0.50b0,<1.0.0",
     "opentelemetry-instrumentation-urllib3>=0.50b0,<1.0.0",
+    # Process CPU, memory, GC and thread counts. Without it the only metrics the APM gets are
+    # request-shaped, so "is the service healthy" cannot be answered when nothing is failing yet.
+    "opentelemetry-instrumentation-system-metrics>=0.50b0,<1.0.0",
     "prometheus-client>=0.20.0,<1.0.0",
     "aiofiles>=24.1.0,<25.0.0",
-    "pip>=26.0.0,<27.0.0",
+    "pip>=26.2.1,<27.0.0",
     "setuptools>=83.0.0,<84.0.0",
     "nanoid>=2.0.0,<3.0.0",
     "filelock>=3.20.1,<4.0.0",
@@ -108,7 +113,24 @@ dependencies = [
     "dynaconf>=3.2.13,<4.0.0",
     "pyasn1>=0.6.3,<0.7.0",
     "langgraph-checkpoint>4.0.0,<5.0.0",
+    # 5.6.0 already clears every published transformers advisory (highest patched version is 5.5.0).
+    # Do not raise past 5.9.0: docling-ibm-models>=3.13.3 caps transformers<5.9.0 on macOS, and a
+    # higher floor silently backtracks the whole docling stack to older releases on darwin only.
     "transformers>=5.6.0,<6.0.0",
+    # Service-complete runtime dependencies. Provider component SDKs remain
+    # owned by lfx-* extension distributions.
+    "redis>=7.4.0,<8.0.0",
+    "chromadb>=1.0.0,<2.0.0",
+    "langfuse~=3.8",
+    "langwatch~=0.10.0; python_version < '3.14'",
+    "langsmith>=0.3.42,<1.0.0",
+    "arize-phoenix-otel>=0.6.1",
+    "openinference-instrumentation-langchain>=0.1.29",
+    "opik>=2.0.0,<3.0.0",
+    "traceloop-sdk>=0.43.1,<1.0.0",
+    "openlayer>=0.9.0,<1.0.0",
+    "kubernetes>=31.0.0,<33.0.0",
+    "aiobotocore>=3.7.0,<4.0.0",
 ]
 
 [dependency-groups]
@@ -190,9 +212,12 @@ local = [
     "ctransformers>=0.2"
 ]
 
+# Opt-in microVM sandbox backend for code-execution components (issue #12029).
+sandbox = ["lfx[sandbox]~=1.12.0"]
+
 # Individual database providers
 couchbase = ["couchbase>=4.2.1"]
-cassandra = ["lfx[cassandra]~=1.11.3"]  # cassio relocated to lfx (lfx-core Cassandra components)
+cassandra = ["lfx[cassandra]~=1.12.0"]  # Compatibility spelling for the lfx-datastax extension.
 clickhouse = ["clickhouse-connect==0.7.19"]
 
 
@@ -260,22 +285,19 @@ pytube = ["pytube==15.0.0"]
 smolagents = ["smolagents>=1.8.0"]
 opendsstar = [
     "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
+    # Temporary compatibility valve: newer langchain-litellm releases require cryptography<49.
+    "langchain-litellm==0.5.1; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
 ]
 
 # Individual tools
-beautifulsoup = ["lfx~=1.11.3"]  # beautifulsoup4 is now a hard lfx dependency
+beautifulsoup = ["lfx~=1.12.0"]  # beautifulsoup4 is now a hard lfx dependency
 serpapi = ["google-search-results>=2.4.1,<3.0.0"]
 google-api = ["google-api-python-client~=2.161"]
 wikipedia = ["wikipedia==1.4.0"]
 fake-useragent = ["fake-useragent>=2.0.0"]
 # duckduckgo: the runtime dep for the extracted lfx-duckduckgo bundle.
-# Public consumers should install lfx-duckduckgo directly (pip-installing
-# langflow-base no longer pulls in ddgs by default).  The extra remains
-# defined here so docker/build_and_push_base.Dockerfile can route ddgs
-# through the locked sync (``uv sync --extra duckduckgo``) instead of an
-# unpinned ``uv pip install ddgs`` that would silently drift across
-# rebuilds.  Keep the version range in lockstep with the bundle's
-# pyproject so the lockfile resolves a single ddgs version.
+# Public consumers should install lfx-duckduckgo directly. The compatibility
+# extra remains so older explicit langflow-base[duckduckgo] installs still work.
 duckduckgo = ["ddgs>=9.0.0"]
 yfinance = ["yfinance==0.2.50"]
 wolframalpha = ["wolframalpha==5.1.3"]
@@ -291,7 +313,7 @@ nltk = ["nltk>=3.9.4"]
 lark = ["lark==1.2.2"]
 
 # Additional dependencies from requirements
-huggingface = ["huggingface-hub[inference]>=1.0.0,<2.0.0"]
+huggingface = ["huggingface-hub>=1.0.0,<2.0.0"]
 # Backwards-compatible alias: the Exa Search component moved to the lfx-exa
 # bundle and now uses exa-py; metaphor-python is deprecated and unused.
 metaphor = ["exa-py>=1.14,<3"]
@@ -302,7 +324,10 @@ markup = ["MarkupSafe==3.0.2"]
 aws = ["boto3>=1.34.162,<2.0.0"]
 numexpr = ["numexpr>=2.10.2"]
 qianfan = ["qianfan==0.3.5"]
-pgvector = ["pgvector>=0.4.2"]
+pgvector = [
+    "pgvector>=0.4.2",
+    "psycopg[binary]>=3.1,<4.0",
+]
 litellm = [
     "litellm>=1.93.0,<2.0.0",
     # Runtime deps from litellm[proxy] that langflow-ide hits when logging
@@ -341,7 +366,7 @@ spider = ["spider-client>=0.0.27,<1.0.0"]
 altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
 
 # Toolguard Integration
-toolguard = ["lfx[toolguard]~=1.11.3"]  # toolguard relocated to lfx
+toolguard = ["lfx[toolguard]~=1.12.0"]  # toolguard relocated to lfx
 
 # Additional LangChain integrations
 # Excluded on macOS x86_64: transitive torch dependency (via sentence-transformers) has no Intel Mac wheels
@@ -380,7 +405,7 @@ jigsawstack = ["jigsawstack==0.2.7"]
 assemblyai = ["assemblyai==0.35.1"]
 
 # Data processing
-datasets = ["datasets>2.14.7,<5.0.0"]
+datasets = ["datasets>2.14.7,<6.0.0"]
 fastparquet = ["fastparquet>=2024.11.0,<2025.0.0"]
 
 # Vision / ML
@@ -388,6 +413,9 @@ vlmrun = ["vlmrun[all]>=0.2.0"]
 cuga = [
     "cuga>=0.2.20,<0.3.0; sys_platform != 'darwin' and python_version < '3.14'",
     "cuga>=0.2.20,<0.3.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
+    # Temporary compatibility valve: newer langchain-litellm releases require cryptography<49.
+    "langchain-litellm==0.5.1; sys_platform != 'darwin' and python_version < '3.14'",
+    "langchain-litellm==0.5.1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
 ]
 mlx = [
     "mlx>=0.29.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
@@ -417,56 +445,11 @@ ibm-watsonx-clients = [
     "ibm-watsonx-orchestrate-clients~=2.12.0; python_version >= '3.11'",
 ]
 
-complete = [
-    # langflow-base[complete] pulls the third-party libraries that
-    # langflow-base's OWN code imports -- service backends (cache, knowledge
-    # base), the tracing/observability backends in langflow.services.tracing.*,
-    # MCP, and deployment adapters. Provider *component* dependencies now live in
-    # the lfx-* bundles (installed via langflow's "lfx-bundles[all-no-torch]"
-    # default plus explicit bundle deps), so they are intentionally NOT
-    # re-declared here -- doing so re-pulled large, already-bundled stacks (and
-    # torch) into every install. When adding a base extra, only list it here if
-    # langflow-base itself imports it.
-
-    # Cache / state
-    "langflow-base[redis]",
-    # Knowledge-base vector store
-    "langflow-base[chroma]",
-    # Observability / tracing backends (langflow.services.tracing.*)
-    "langflow-base[langfuse]",
-    "langflow-base[langwatch]",
-    "langflow-base[langsmith]",
-    "langflow-base[arize]",
-    "langflow-base[openinference]",
-    "langflow-base[opik]",
-    "langflow-base[traceloop]",
-    "langflow-base[openlayer]",
-    # Document processing / OCR: docling and easyocr are now OPT-IN -- both pull
-    # torch, which is no longer shipped by default. The File component's docling
-    # path degrades gracefully and is enabled with: pip install "langflow[docling]".
-    # Both extra definitions remain, so langflow-base[docling] / [easyocr] still
-    # install on demand.
-    # MCP
-    "langflow-base[mcp]",
-    # Orchestration / deployment adapters
-    "langflow-base[kubernetes]",
-    "langflow-base[aiobotocore]",
-    "langflow-base[ibm-watsonx-clients]",
-    # lfx-core component features: the dependency now lives in lfx (these base
-    # extras re-export the matching lfx extra), keeping a single source of truth
-    # while the default install still ships these components working.
-    "langflow-base[cassandra]",  # -> lfx[cassandra] (cassio; Cassandra components)
-    "langflow-base[toolguard]",  # -> lfx[toolguard] (Policies component)
-    # Deliberately retained in langflow-base (not bundled):
-    #   litellm -- langfuse logging via litellm.proxy.proxy_server (#12228);
-    #              the lfx-bundles litellm component uses the langchain-openai
-    #              client and does not import the litellm package.
-    "langflow-base[litellm]",
-]
-
-all = [
-    "langflow-base[complete]",
-]
+# Deprecated compatibility spellings for the 1.12 line. The base distribution
+# is service-complete without extras; retain these names so existing install
+# commands continue to resolve without changing the installed dependency set.
+complete = []
+all = []
 
 [project.scripts]
-langflow-base = "langflow.langflow_launcher:main"
+langflow = "langflow.langflow_launcher:main"

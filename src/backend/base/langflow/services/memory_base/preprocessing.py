@@ -155,6 +155,9 @@ async def run_preprocessing(
         return PreprocessingResult(status="skipped", output_text="", raw_response="")
 
     provider = infer_llm_provider(preproc_model)
+    from lfx.services.model_provider_policy import require_model_provider
+
+    require_model_provider(user_id=user_id, provider=provider)
 
     # Resolve the provider's API key from the user's globally-configured
     # variables (or env). Required because we instantiate the component outside

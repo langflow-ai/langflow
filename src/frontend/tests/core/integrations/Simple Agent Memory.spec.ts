@@ -1,17 +1,15 @@
 import { expect } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
   "Simple Agent Memory",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    skipIfMissing.openAiKey();
-    loadDotenvIfLocal(__dirname);
+    await seedLoopbackProvider(page);
     await awaitBootstrapTest(page);
 
     // Open Simple Agent template
@@ -20,7 +18,7 @@ withEventDeliveryModes(
       .getByRole("heading", { name: TEXTS.templateSimpleAgent })
       .first()
       .click();
-    await initialGPTsetup(page);
+    await configureLoopbackOpenAI(page);
 
     // Open Playground
     await page.getByTestId("playground-btn-flow-io").click();

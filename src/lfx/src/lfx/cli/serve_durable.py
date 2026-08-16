@@ -29,6 +29,7 @@ from lfx.graph.checkpoint.store import set_default_checkpoint_store
 from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
+from lfx.observability import execution_protocol
 from lfx.run._defaults import apply_run_defaults
 from lfx.run.hitl import request_id_targets_vertex, reroute_decision_on_timeout
 from lfx.schema.schema import INPUT_FIELD_NAME
@@ -244,7 +245,7 @@ class DurableServeWorkflowHost(ServeWorkflowHost):
         allowed = pending.get("allowed_decisions") or []
         if allowed and (request.decision or {}).get("action_id") not in allowed:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail={
                     "error": "Invalid decision",
                     "code": "INVALID_DECISION",
@@ -326,7 +327,11 @@ class DurableServeWorkflowHost(ServeWorkflowHost):
         scope_token = activate_request_variables(scope_vars or None)
         no_env_token = activate_no_env_fallback(disabled=bool(graph.context.get("no_env_fallback")))
         try:
-            await graph.process(fallback_to_env_vars=False)
+            # Graph.process is a third entry point alongside async_start and arun, and the one the
+            # durable/background path uses, so it needs its own application span or every job run
+            # here is invisible to the operator's APM.
+            with execution_protocol("lfx.serve"), graph.flow_execution_span():
+                await graph.process(fallback_to_env_vars=False)
         except GraphPausedException as pause:
             data = pause.data or {}
             await self.jobs.update_metadata(job_id, {"run_id": str(graph.run_id), "pending": data})

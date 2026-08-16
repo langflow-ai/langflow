@@ -1,6 +1,6 @@
 [project]
 name = "lfx-nextplaid"
-version = "0.1.0"
+version = "0.1.2"
 description = "NextPlaid multi-vector vector store (+ vLLM multivector embeddings) as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -26,9 +26,9 @@ keywords = ["langflow", "lfx", "extension", "bundle", "nextplaid", "colbert", "p
 # scripts/ci/sync_bundle_lfx_pin.py.  Fine-grained BUNDLE_API compatibility is
 # enforced via extension.json's "lfx": {"compat": [...]} contract.
 dependencies = [
-    "lfx>=1.11.0.dev0,<2.0.0",
+    "lfx>=1.12.0.dev0,<2.0.0",
     "langchain-plaid>=0.1.0,<1.0.0",
-    "pillow>=10.0.0",
+    "pillow>=12.3.0,<13.0.0",
 ]
 
 [project.urls]
@@ -46,7 +46,7 @@ Repository = "https://github.com/langflow-ai/langflow"
 lfx-nextplaid = "lfx_nextplaid"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling==1.31.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]

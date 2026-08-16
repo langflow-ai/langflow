@@ -40,6 +40,7 @@ from dotenv import load_dotenv
 from fastapi import HTTPException
 from httpx import HTTPError
 from jwt import InvalidTokenError
+from lfx.cli.command_plugins import register_cli_command_plugins
 from lfx.log.logger import configure, logger
 from lfx.services.settings.constants import DEFAULT_SUPERUSER
 from multiprocess import cpu_count
@@ -80,6 +81,17 @@ try:
 except ImportError:
     # LFX not available, skip adding the sub-app
     pass
+
+# Mounted at the top level, not under `lfx`: the OTLP pipeline it checks is langflow's own
+# (langflow's telemetry service calls the same bootstrap), so `langflow observability doctor` is
+# the command an operator running langflow would look for.
+#
+# Deliberately outside the try/except above: lfx is already imported unguarded at module scope,
+# so an ImportError here means this module is broken, not that lfx is absent. Swallowing it
+# would make the command vanish from `langflow --help` with nothing said.
+from lfx.cli._observability_commands import observability_app  # noqa: E402
+
+app.add_typer(observability_app, name="observability")
 
 
 class ProcessManager:
@@ -402,6 +414,13 @@ def run(
         None, help="Defines the SSL certificate file path.", show_default=False
     ),
     ssl_key_file_path: str | None = typer.Option(None, help="Defines the SSL key file path.", show_default=False),
+    deployment_profile: str | None = typer.Option(  # noqa: ARG001 — applied to settings via the CLI-arg loop below
+        None,
+        help="Deployment profile: 'dev' (default) or 'prod'. 'prod' runs fail-loud "
+        "production infrastructure checks before starting and aborts boot if a required "
+        "service is missing. Can also be set via LANGFLOW_DEPLOYMENT_PROFILE.",
+        show_default=False,
+    ),
 ) -> None:
     """Run Langflow."""
     if env_file:
@@ -469,6 +488,24 @@ def run(
 
         # create path object if frontend_path is provided
         static_files_dir: Path | None = Path(frontend_path) if frontend_path else None
+
+    # Propagate the resolved profile to the environment so forked Gunicorn workers
+    # and factory-based entrypoints (which rebuild settings from env) observe it —
+    # this carries a --deployment-profile CLI flag through to the app factory.
+    resolved_profile = get_settings_service().settings.deployment_profile
+    os.environ["LANGFLOW_DEPLOYMENT_PROFILE"] = resolved_profile
+
+    # Production preflight: fail-loud infrastructure checks. Runs once here in the
+    # parent process, before any worker is spawned, so a misconfigured prod
+    # deployment aborts cleanly instead of coming up half-working. The FastAPI
+    # lifespan runs the same check as a safety net for entrypoints that bypass this
+    # CLI (e.g. `make backend`); a sentinel env var keeps it from running twice.
+    # No-op in dev.
+    if resolved_profile == "prod":
+        from langflow.cli.preflight import run_production_preflight
+
+        if not run_production_preflight(get_settings_service(), verbose=verbose):
+            raise typer.Exit(code=1)
 
     # Step 2: Starting Core Services
     app = None
@@ -918,17 +955,13 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
         # Validate the auth token
         try:
             auth_user = None
-            async with session_scope() as session:
-                # Try JWT first
-                user = None
-                try:
-                    user = await get_current_user_from_access_token(auth_token, session)
-                except (InvalidTokenError, HTTPException):
-                    # Try API key
-                    api_key_result = await check_key(session, auth_token)
-                    if api_key_result and hasattr(api_key_result, "is_superuser"):
-                        user = api_key_result
-                auth_user = user
+            # Try JWT first, closing its session before falling back to API-key
+            # authentication, which owns a separate database transaction.
+            try:
+                async with session_scope() as session:
+                    auth_user = await get_current_user_from_access_token(auth_token, session)
+            except (InvalidTokenError, HTTPException):
+                auth_user = await check_key(auth_token)
 
             if not auth_user or not auth_user.is_superuser:
                 typer.echo(
@@ -1139,6 +1172,9 @@ def version_option(
     ),
 ):
     pass
+
+
+register_cli_command_plugins(app)
 
 
 def api_key_banner(unmasked_api_key) -> None:

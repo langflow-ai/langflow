@@ -15,7 +15,7 @@ from lfx.cli.script_loader import (
     load_graph_from_script,
 )
 from lfx.cli.validation import validate_global_variables_for_env
-from lfx.execution import get_default_coordinator
+from lfx.execution import aget_default_coordinator
 from lfx.log.logger import logger
 from lfx.run._defaults import apply_run_defaults, resolve_fallback_to_env_vars, validate_provided_id
 from lfx.schema.schema import InputValueRequest
@@ -538,37 +538,41 @@ async def run_flow(
                     "interactive-session only (in-memory, no durable resume). Run in a "
                     "terminal or pass --human-input to enable the interactive prompts.\n"
                 )
-            async for result in get_default_coordinator().stream(
-                graph,
-                initial_inputs=inputs,
-                event_manager=event_manager,
-                fallback_to_env_vars=fallback_to_env_vars,
-            ):
-                result_count += 1
-                if verbosity > 0:
-                    logger.debug(f"Processing result #{result_count}")
-                    if hasattr(result, "vertex") and hasattr(result.vertex, "display_name"):
-                        logger.debug(f"Component: {result.vertex.display_name}")
-                if timing:
-                    step_end_time = time.monotonic()
-                    step_duration = step_end_time - execution_step_start
+            coordinator = await aget_default_coordinator()
+            # See Graph.async_start: the span belongs to this coroutine, not the generator.
+            with graph.flow_execution_span():
+                async for result in coordinator.stream(
+                    graph,
+                    initial_inputs=inputs,
+                    event_manager=event_manager,
+                    fallback_to_env_vars=fallback_to_env_vars,
+                    open_flow_span=False,
+                ):
+                    result_count += 1
+                    if verbosity > 0:
+                        logger.debug(f"Processing result #{result_count}")
+                        if hasattr(result, "vertex") and hasattr(result.vertex, "display_name"):
+                            logger.debug(f"Component: {result.vertex.display_name}")
+                    if timing:
+                        step_end_time = time.monotonic()
+                        step_duration = step_end_time - execution_step_start
 
-                    # Extract component information
-                    if hasattr(result, "vertex"):
-                        component_name = getattr(result.vertex, "display_name", "Unknown")
-                        component_id = getattr(result.vertex, "id", "Unknown")
-                        component_timings.append(
-                            {
-                                "component": component_name,
-                                "component_id": component_id,
-                                "duration": step_duration,
-                                "cumulative_time": step_end_time - execution_start_time,
-                            }
-                        )
+                        # Extract component information
+                        if hasattr(result, "vertex"):
+                            component_name = getattr(result.vertex, "display_name", "Unknown")
+                            component_id = getattr(result.vertex, "id", "Unknown")
+                            component_timings.append(
+                                {
+                                    "component": component_name,
+                                    "component_id": component_id,
+                                    "duration": step_duration,
+                                    "cumulative_time": step_end_time - execution_start_time,
+                                }
+                            )
 
-                    execution_step_start = step_end_time
+                        execution_step_start = step_end_time
 
-                results.append(result)
+                    results.append(result)
 
         logger.info(f"Graph execution completed. Processed {result_count} results")
 

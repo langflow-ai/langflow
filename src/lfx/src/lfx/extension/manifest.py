@@ -1,10 +1,10 @@
 """Pydantic models for the v0 Extension manifest schema.
 
-A Langflow Extension is the distribution unit that gets pip-installed.  In v0
-it ships exactly one Bundle (a named group of components) plus a manifest at
-the distribution root.  The manifest tells Langflow:
+A Langflow Extension is the distribution unit that gets pip-installed. It
+ships Bundles (named groups of components) and/or model providers, plus a
+manifest at the distribution root. The manifest tells Langflow:
 
-    - which Bundle to register (``bundles[0]``),
+    - which Bundles to register (``bundles``),
     - what component-base-class API surface the Bundle was built against
       (``lfx.compat``),
     - what optional capabilities the Bundle declares
@@ -22,12 +22,8 @@ Deferred fields (``services``, ``routes``, ``hooks``, ``starter_projects``,
 presence and emit ``field-deferred-in-this-milestone`` rather than silently
 dropping them.
 
-Multi-bundle is similarly reserved: ``bundles`` is a list, but v0 rejects
-length > 1 with ``multi-bundle-deferred-in-this-milestone``.  This is enforced
-in two places:
-
-    - here, by :class:`ExtensionManifest` (validator-side).
-    - in the loader at install/discovery time.
+Each declared bundle is validated and loaded independently while sharing the
+extension's identity, compatibility declaration, and distribution.
 """
 
 from __future__ import annotations
@@ -85,6 +81,8 @@ Mirrors the npm-package / PyPI normalization rules."""
 BUNDLE_NAME_RE: re.Pattern[str] = re.compile(r"^[a-z][a-z0-9_]{1,63}$")
 """Bundle names use snake_case so they can be addressed in the registry as
 ``ext:<bundle>:<Class>@<slot>`` without quoting."""
+
+_PROVIDER_ID_RE: re.Pattern[str] = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 
 _SEMVER_RE: re.Pattern[str] = re.compile(
     r"^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)"
@@ -299,6 +297,26 @@ class ProviderManifestEntry(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, protected_namespaces=())
 
     name: StrictStr = Field(..., min_length=1, max_length=120, description="Canonical provider name, e.g. 'vLLM'.")
+    provider_id: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        max_length=120,
+        pattern=_PROVIDER_ID_RE.pattern,
+        description=(
+            "Stable machine identity used by policy, e.g. 'openai' or 'acme.watsonx'. "
+            "Omit only for legacy manifests; Langflow then derives an ID from name."
+        ),
+    )
+    display_name: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        max_length=120,
+        description="Optional user-facing label; changing it does not change provider_id or saved-flow identity.",
+    )
+    aliases: tuple[StrictStr, ...] = Field(
+        default=(),
+        description="Legacy provider names accepted when resolving stable provider identity.",
+    )
     metadata: dict[str, Any] = Field(
         ...,
         description="MODEL_PROVIDER_METADATA value: icon, variables, mapping (with model_class), api_docs_url, etc.",
@@ -327,6 +345,29 @@ class ProviderManifestEntry(BaseModel):
         min_length=1,
         description="Dotted-path callable 'module:attr' validating credentials: (provider, variables, model) -> None.",
     )
+    catalog_loader: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        description=(
+            "Dotted-path callable 'module:attr' returning a flat list of static model metadata rows. "
+            "Langflow stamps provider ownership and validates model identities."
+        ),
+    )
+
+    @field_validator("aliases")
+    @classmethod
+    def _aliases_are_unique_and_non_empty(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        normalized: set[str] = set()
+        for alias in value:
+            if not alias.strip():
+                msg = "provider.aliases must contain non-empty strings"
+                raise ValueError(msg)
+            folded = alias.casefold()
+            if folded in normalized:
+                msg = f"provider.aliases contains duplicate alias {alias!r}"
+                raise ValueError(msg)
+            normalized.add(folded)
+        return value
 
     @field_validator("metadata")
     @classmethod
@@ -403,12 +444,11 @@ class ExtensionManifest(BaseModel):
 
     bundles: list[BundleRef] = Field(
         default_factory=list,
-        max_length=1,
         description=(
-            "Bundles (component groups) shipped by this extension. At most one in "
-            "v0. May be empty for a provider-only extension that ships model "
-            "providers but no components; an extension must declare at least one "
-            "of ``bundles`` or ``providers``."
+            "Bundles (component groups) shipped by this extension. May be empty "
+            "for a provider-only extension that ships model providers but no "
+            "components; an extension must declare at least one of ``bundles`` "
+            "or ``providers``."
         ),
     )
 
@@ -479,11 +519,8 @@ class ExtensionManifest(BaseModel):
 
     @model_validator(mode="after")
     def _validate_bundle_uniqueness(self) -> ExtensionManifest:
-        # The list-length constraint (exactly one bundle in v0) is encoded on
-        # the field above so it lands in the JSON Schema.  This validator covers
-        # what Field constraints can't express: bundle names must be unique
-        # within an extension.  The check is cheap and forward-compatible -- the
-        # loader uses this list directly when multi-bundle ships.
+        # Bundle names are public registry and saved-flow namespaces, so they
+        # must be unique within one extension.
         names = [bundle.name for bundle in self.bundles]
         if len(set(names)) != len(names):
             msg = "Bundle names must be unique within an extension"

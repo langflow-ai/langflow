@@ -1,7 +1,7 @@
 [project]
 name = "lfx-datastax"
-version = "0.1.1"
-description = "DataStax component(s) as a standalone Langflow Extension Bundle."
+version = "0.1.3"
+description = "DataStax and Cassandra components as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
 license = { text = "MIT" }
@@ -19,8 +19,9 @@ keywords = ["langflow", "lfx", "extension", "bundle", "datastax"]
 # scripts/ci/sync_bundle_lfx_pin.py.  Fine-grained BUNDLE_API compatibility
 # is enforced via extension.json's lfx.compat list against BUNDLE_API_VERSION.
 dependencies = [
-    "lfx>=1.11.0.dev0,<2.0.0",
+    "lfx>=1.12.0.dev0,<2.0.0",
     "langchain-astradb~=1.0.0",
+    "langchain-community>=0.4.1,<1.0.0",
     # Imported directly (astrapy.DataAPIClient/Database) by the astra components,
     # not just transitively via langchain-astradb; pin matches langflow-base's
     # astrapy extra.
@@ -28,6 +29,7 @@ dependencies = [
     "langchain-graph-retriever==0.8.0",
     "graph-retriever==0.8.0",
     "requests>=2.32.0",
+    "cassio>=0.1.7",
 ]
 
 [project.urls]
@@ -43,7 +45,7 @@ Repository = "https://github.com/langflow-ai/langflow"
 lfx-datastax = "lfx_datastax"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling==1.31.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]

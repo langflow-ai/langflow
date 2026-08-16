@@ -440,6 +440,25 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       get().autoSaveFlow!();
     }
   },
+  setNodesAndEdges: (nodes, edges) => {
+    // Atomic single-render replace mirroring resetFlow (the F5 load path); a
+    // split setNodes+setEdges draws loop/dynamic-handle edges only after refresh.
+    const { edges: newEdges } = cleanEdges(nodes, edges);
+    const { inputs, outputs } = getInputsAndOutputs(nodes);
+    get().updateComponentsToUpdate(nodes);
+    set({
+      nodes,
+      edges: newEdges,
+      flowState: undefined,
+      inputs,
+      outputs,
+      hasIO: inputs.length > 0 || outputs.length > 0,
+    });
+    get().updateCurrentFlow({ nodes, edges: newEdges });
+    if (get().autoSaveFlow) {
+      get().autoSaveFlow!();
+    }
+  },
   setNode: (
     id: string,
     change: AllNodeType | ((oldState: AllNodeType) => AllNodeType),
@@ -869,49 +888,62 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     // then immediately clicked "Run") before checking outdated state.
     await waitForNodeUpdates();
 
-    // Block build when custom components are disabled and outdated components exist;
-    // recalculate from current nodes (setNode does not run updateComponentsToUpdate).
+    // Recalculate from current nodes (setNode does not run updateComponentsToUpdate).
+    // Unknown code-bearing types always block in restricted mode; known drift only blocks when
+    // the server-side trusted-code substitution policy is disabled.
     get().updateComponentsToUpdate(get().nodes);
-    const allowCustomComponents =
-      useUtilityStore.getState().allowCustomComponents;
-    if (!allowCustomComponents && get().componentsToUpdate.length > 0) {
+    const { allowCustomComponents, substituteOutdatedComponentCode } =
+      useUtilityStore.getState();
+    // A cold shareable Playground intentionally has no component-template registry, so it cannot
+    // distinguish a known server component from an unknown custom type. Its public endpoint owns
+    // that decision and sanitizes the stored graph before execution. Keep this client preflight
+    // for editor runs, where the template registry is loaded and its classification is reliable.
+    if (
+      !get().playgroundPage &&
+      !allowCustomComponents &&
+      get().componentsToUpdate.length > 0
+    ) {
       const blockedComponents = get().componentsToUpdate.filter(
         (component) => component.blocked,
       );
-      const outdatedComponents = get().componentsToUpdate.filter(
-        (component) => component.outdated,
-      );
-      const errorList: string[] = [];
+      const outdatedComponents = substituteOutdatedComponentCode
+        ? []
+        : get().componentsToUpdate.filter((component) => component.outdated);
+      const mustBlockBuild =
+        blockedComponents.length > 0 || outdatedComponents.length > 0;
+      if (mustBlockBuild) {
+        const errorList: string[] = [];
 
-      if (blockedComponents.length > 0) {
-        errorList.push(
-          `The following custom components cannot run while custom components are disabled: ${blockedComponents
-            .map((component) => component.display_name ?? component.id)
-            .join(", ")}`,
-        );
-      }
+        if (blockedComponents.length > 0) {
+          errorList.push(
+            `The following custom components cannot run while custom components are disabled: ${blockedComponents
+              .map((component) => component.display_name ?? component.id)
+              .join(", ")}`,
+          );
+        }
 
-      if (outdatedComponents.length > 0) {
-        errorList.push(
-          `The following components are outdated and must be updated: ${outdatedComponents
-            .map((component) => component.display_name ?? component.id)
-            .join(", ")}`,
-        );
-      }
+        if (outdatedComponents.length > 0) {
+          errorList.push(
+            `The following components are outdated and must be updated: ${outdatedComponents
+              .map((component) => component.display_name ?? component.id)
+              .join(", ")}`,
+          );
+        }
 
-      setErrorData({
-        title:
+        setErrorData({
+          title:
+            blockedComponents.length > 0
+              ? "Custom components are blocked while custom components are disabled"
+              : "Outdated components must be updated before building",
+          list: errorList,
+        });
+        get().setIsBuilding(false);
+        throw new Error(
           blockedComponents.length > 0
             ? "Custom components are blocked while custom components are disabled"
-            : "Outdated components must be updated before building",
-        list: errorList,
-      });
-      get().setIsBuilding(false);
-      throw new Error(
-        blockedComponents.length > 0
-          ? "Custom components are blocked while custom components are disabled"
-          : "Outdated components must be updated",
-      );
+            : "Outdated components must be updated",
+        );
+      }
     }
 
     // One AbortController per build so stopBuilding cancels only the in-flight run;
