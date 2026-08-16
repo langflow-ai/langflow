@@ -1834,7 +1834,7 @@ class Graph:
             graph.add_nodes_and_edges(vertices, edges)
             graph.requires_extension_event_replay = bool(migration_report.any_rewritten or migration_report.errors)
         except KeyError as exc:
-            logger.exception(exc)
+            logger.exception("Extension migration replay failed while reading the payload")
             if "nodes" not in payload and "edges" not in payload:
                 msg = f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
                 raise ValueError(msg) from exc
