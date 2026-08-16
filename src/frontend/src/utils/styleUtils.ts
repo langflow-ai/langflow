@@ -494,6 +494,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "NVIDIA", name: "nvidia", icon: "NVIDIA" },
   { display_name: "Olivya", name: "olivya", icon: "Olivya" },
   { display_name: "Ollama", name: "ollama", icon: "Ollama" },
+  { display_name: "Olostep", name: "olostep", icon: "Olostep" },
   { display_name: "OpenAI", name: "openai", icon: "OpenAI" },
   { display_name: "OpenRouter", name: "openrouter", icon: "OpenRouter" },
   { display_name: "Oracle", name: "oracle", icon: "Oracle" },
