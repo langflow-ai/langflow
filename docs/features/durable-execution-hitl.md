@@ -133,7 +133,7 @@ The pause probe is a no-op unless a component requests it, so normal flows are b
 - **When** the same user submits a new background run of that flow
 - **Then** the stale suspended run is cancelled (`CANCELLED`, pending request cleared) before the new run starts, so only the new pause is offered on every surface
 - **And** the persisted chat card of the superseded pause is stamped `superseded` — after a history reload it renders closed ("Superseded by a new run") instead of turning interactive again and 409ing on every click
-- **And** the scope is flow + user on the langflow backend (another user's pause on the same flow is untouched) and flow on `lfx serve` (single API-key identity); running jobs are never superseded, so parallel runs stay supported
+- **And** the scope is flow + user + effective session on the langflow backend (the submitting run's `session_id`, falling back to the flow id) — a rerun replaces stale pauses of the SAME session/thread, while SUSPENDED runs of other sessions stay untouched; the scope is flow on `lfx serve` (single API-key identity); running jobs are never superseded, so parallel runs stay supported
 
 ### Scenario: Supersede loses the race to a resume
 - **Given** a `SUSPENDED` run whose resume arrives while a rerun's supersede is in flight
@@ -242,7 +242,7 @@ Drain the queue **inline** after cancelling the worker (`service.py::_stop`), an
 ## 6. Technical Specification
 
 ### 6.1 Submit supersedes stale pauses
-- `BackgroundExecutionService.submit` calls `supersede_suspended_runs(flow_id, user_id)` after `create_job` (so idempotent retries still return the existing job) and before enqueue: every `SUSPENDED` workflow job of the same flow + user is cancelled through the `_cancel_suspended` path (status `CANCELLED`, card stamped superseded, checkpoint deleted, pending cleared, `run_cancelled` event, bus closed).
+- `BackgroundExecutionService.submit` calls `supersede_suspended_runs(flow_id, user_id, session_id)` after `create_job` (so idempotent retries still return the existing job) and before enqueue: every `SUSPENDED` workflow job of the same flow + user **+ effective session** (`session_id` from the submit request, falling back to the flow id) is cancelled through the `_cancel_suspended` path (status `CANCELLED`, card stamped superseded, checkpoint deleted, pending cleared, `run_cancelled` event, bus closed). SUSPENDED jobs of other sessions — or legacy jobs whose effective session is the flow id — are left untouched.
 - The cancel is an **atomic claim**: `JobService.claim_suspended_for_cancel` (a conditional `UPDATE … WHERE status = SUSPENDED`, the mirror of `claim_suspended_for_resume`) flips the row, and cleanup runs only for rows this caller actually claimed. A resume that won the flip first keeps its run — supersede can never cancel a resumed job or destroy its checkpoint mid-flight. `stop_job` uses the same claim and falls through to the running-job STOP path when it loses.
 - Before metadata is cleared, `mark_card_superseded` (`api/v2/hitl.py`) patches the persisted card's `human_input` content with `superseded: true` (skipping already-answered cards); `HumanInputCard` renders that state closed, so a reloaded history cannot re-offer a decision that would only 409.
 - `DurableServeWorkflowHost.submit_background` mirrors it flow-scoped: `SqliteDurableJobStore.claim_suspended_for_cancel` first, then (only for claimed rows) STOP signal, task cancel, pending metadata cleared — a lost claim also means no stray STOP signal for the resumed continuation to consume.

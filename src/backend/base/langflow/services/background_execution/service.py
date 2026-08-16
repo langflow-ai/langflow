@@ -162,37 +162,46 @@ class BackgroundExecutionService(Service):
 
     # ------------------------------------------------------------------ submit
 
-    async def supersede_suspended_runs(self, *, flow_id: UUID, user_id: UUID) -> list[UUID]:
+    async def supersede_suspended_runs(
+        self, *, flow_id: UUID, user_id: UUID, session_id: str | None = None
+    ) -> list[UUID]:
         """Cancel this user's SUSPENDED runs of the flow so a rerun replaces the stale pause.
 
         A suspended run holds a pause nobody will answer once its owner reruns the flow;
         left alive it piles up in every pending surface (badge, cards, trace bar). Scope is
-        flow + user: another user's pause on the same flow is never touched, and running
-        jobs are untouched so parallel runs stay supported.
+        flow + user + effective session: a rerun replaces stale pauses of the SAME
+        session/thread (``session_id`` falling back to the flow id), while SUSPENDED runs
+        of other sessions stay untouched, another user's pause on the same flow is never
+        touched, and running jobs are never superseded so parallel runs stay supported.
         """
         from sqlmodel import select
 
         from langflow.services.database.models.jobs.model import Job
         from langflow.services.deps import session_scope
 
+        effective_session = session_id or str(flow_id)
         job_service = get_job_service()
         async with session_scope() as session:
             result = await session.exec(
-                select(Job.job_id).where(
+                select(Job).where(
                     Job.flow_id == flow_id,
                     Job.user_id == user_id,
                     Job.status == JobStatus.SUSPENDED,
                     Job.type == JobType.WORKFLOW,
                 )
             )
-            stale_job_ids = list(result.all())
+            stale_jobs = list(result.all())
         cancelled: list[UUID] = []
-        for stale_job_id in stale_job_ids:
+        for stale_job in stale_jobs:
+            persisted = (stale_job.job_metadata or {}).get("request") or {}
+            job_session = persisted.get("session_id") or str(stale_job.flow_id)
+            if job_session != effective_session:
+                continue
             if self._scaled:
-                await self._backend.stop(str(stale_job_id))
-                cancelled.append(stale_job_id)
-            elif await self._cancel_suspended(stale_job_id, job_service):
-                cancelled.append(stale_job_id)
+                await self._backend.stop(str(stale_job.job_id))
+                cancelled.append(stale_job.job_id)
+            elif await self._cancel_suspended(stale_job.job_id, job_service):
+                cancelled.append(stale_job.job_id)
         return cancelled
 
     async def submit(self, *, flow_id: UUID, request: dict[str, Any], user: UserRead) -> UUID:
@@ -234,7 +243,7 @@ class BackgroundExecutionService(Service):
         await job_service.update_job_metadata(job_id, {"request": self._redact_request(request)})
         # After create_job so an idempotent retry returns the existing job instead of
         # cancelling it; the new job is QUEUED, so the suspended-only query skips it.
-        await self.supersede_suspended_runs(flow_id=flow_id, user_id=user.id)
+        await self.supersede_suspended_runs(flow_id=flow_id, user_id=user.id, session_id=request.get("session_id"))
         if self._scaled:
             # Scaled mode: hand the QUEUED job id to a worker via the redis claim
             # queue; the worker hydrates the request from the job row.
