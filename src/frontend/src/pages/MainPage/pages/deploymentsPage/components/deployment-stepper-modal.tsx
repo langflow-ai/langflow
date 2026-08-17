@@ -149,6 +149,8 @@ export default function DeploymentStepperModal({
       <DialogContent
         className="flex h-[85vh] w-[900px] !max-w-none flex-col gap-0 overflow-hidden border-none bg-transparent p-0 shadow-none"
         hideCloseButton
+        hideTitle
+        hideDescription
         overlayClassName="bg-black/30 dark:bg-black/50 backdrop-blur"
       >
         <DeploymentStepperProvider
@@ -172,11 +174,16 @@ export default function DeploymentStepperModal({
           }}
         >
           {isLoadingEditData ? (
-            <div className="flex flex-1 items-center justify-center">
-              <span className="text-sm text-muted-foreground">
+            <>
+              <DialogTitle className="sr-only">
                 {t("deployments.loadingDeploymentData")}
-              </span>
-            </div>
+              </DialogTitle>
+              <div className="flex flex-1 items-center justify-center">
+                <span className="text-sm text-muted-foreground">
+                  {t("deployments.loadingDeploymentData")}
+                </span>
+              </div>
+            </>
           ) : (
             <DeploymentStepperModalContent
               setOpen={setOpen}
