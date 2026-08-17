@@ -2,6 +2,7 @@ import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { TEXTS } from "../../utils/constants/texts";
+import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { uploadFile } from "../../utils/upload-file";
 import { zoomOut } from "../../utils/zoom-out";
@@ -102,24 +103,14 @@ test(
         targetPosition: { x: 600, y: 400 },
       });
 
-    const _loopItemInput = await page
-      .getByTestId("handle-loopcomponent-shownode-item-left")
-      .first()
-      .click();
-
-    // Add Chat Output component
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatOutput);
-
-    await page.locator(".react-flow__renderer").click();
-
-    await page.waitForTimeout(1000);
-
-    await page
-      .getByTestId("input_outputChat Output")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 200, y: 100 },
-      });
+    // Add Chat Output through the verified sidebar path so the wiring below
+    // cannot race a dropped drag event.
+    await addComponentFromSidebar(page, {
+      search: TEXTS.searchChatOutput,
+      testId: "input_outputChat Output",
+      position: { x: 200, y: 100 },
+    });
+    await expect(page.getByTestId("title-Chat Output")).toBeVisible();
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
 

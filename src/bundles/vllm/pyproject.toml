@@ -37,7 +37,7 @@ Repository = "https://github.com/langflow-ai/langflow"
 lfx-vllm = "lfx_vllm"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling==1.31.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]

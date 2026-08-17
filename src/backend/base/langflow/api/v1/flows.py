@@ -33,6 +33,12 @@ from langflow.api.utils import (
     validate_is_component,
 )
 from langflow.api.utils.core import strip_secret_field_values
+from langflow.api.utils.mcp.flow_secrets import (
+    extract_and_strip_mcp_secrets,
+    mcp_server_names,
+    persist_and_strip_mcp_secrets,
+    stage_mcp_secrets,
+)
 from langflow.api.utils.zip_utils import extract_flows_from_zip
 from langflow.api.v1.authz_route_dependencies import (
     AuthorizedDeleteFlow,
@@ -76,6 +82,7 @@ from langflow.services.cache.service import ThreadingInMemoryCache
 from langflow.services.database.lock_retry import (
     is_database_lock_error,
     run_with_lock_retry,
+    sanitize_database_error,
 )
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
@@ -110,15 +117,146 @@ __all__ = [
     "_verify_fs_path",
 ]
 
+_SQLITE_UNIQUE_MARKER = "UNIQUE constraint failed: "
+_POSTGRES_UNIQUE_VIOLATION_SQLSTATE = "23505"
+_SQLITE_FLOW_UNIQUE_COLUMNS = {
+    ("id",): "id",
+    ("user_id", "name"): "name",
+    ("user_id", "endpoint_name"): "endpoint_name",
+}
+_POSTGRES_FLOW_UNIQUE_COLUMNS = {
+    "flow_pkey": "id",
+    "pk_flow": "id",
+    "uq_flow_id": "id",
+    "unique_flow_name": "name",
+    "unique_flow_endpoint_name": "endpoint_name",
+}
+
+
+def _postgres_unique_column(exc: BaseException) -> str | None:
+    """Return a safe flow column for a PostgreSQL unique violation."""
+    current: BaseException | None = exc
+    constraint_name: str | None = None
+    is_unique_violation = False
+    seen: set[int] = set()
+
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        sqlstate = getattr(current, "sqlstate", None) or getattr(current, "pgcode", None)
+        is_unique_violation = is_unique_violation or sqlstate == _POSTGRES_UNIQUE_VIOLATION_SQLSTATE
+        diagnostic = getattr(current, "diag", None)
+        candidate = getattr(diagnostic, "constraint_name", None) or getattr(current, "constraint_name", None)
+        if candidate:
+            constraint_name = str(candidate)
+        current = getattr(current, "orig", None) or current.__cause__
+
+    if not is_unique_violation or constraint_name is None:
+        return None
+    return _POSTGRES_FLOW_UNIQUE_COLUMNS.get(constraint_name)
+
+
+DB_OPERATION_FAILED = "The database rejected the request."
+FLOW_PERSIST_FAILED = "Could not persist the flow."
+
+# SQLite and PostgreSQL report a violation differently: SQLite names the columns
+# ("UNIQUE constraint failed: flow.user_id, flow.name") while PostgreSQL names the constraint
+# ('... violates unique constraint "unique_flow_name"'). Match whichever marker is present so both
+# backends produce the same client-facing detail. Every constraint below is named in the models.
+_UNIQUE_VIOLATION_DETAILS: tuple[tuple[str, str], ...] = (
+    ("unique_flow_endpoint_name", "Endpoint name must be unique"),
+    ("flow.endpoint_name", "Endpoint name must be unique"),
+    ("unique_flow_name", "Name must be unique"),
+    ("flow.name", "Name must be unique"),
+    ("unique_folder_name", "Project name must be unique"),
+    ("folder.name", "Project name must be unique"),
+    ("flow_pkey", "A flow with this ID already exists"),
+    ("flow.id", "A flow with this ID already exists"),
+    ("folder_pkey", "A project with this ID already exists"),
+    ("folder.id", "A project with this ID already exists"),
+)
+_UNIQUE_VIOLATION_TEXT = ("UNIQUE constraint failed", "duplicate key value violates unique constraint")
+_UNIQUE_VIOLATION_SQLSTATE = "23505"
+
+
+def _is_unique_violation(exc: Exception, msg: str) -> bool:
+    """Detect a unique violation on any backend.
+
+    Prefers the SQLSTATE on the driver exception (23505 on PostgreSQL, exposed as ``sqlstate`` by
+    psycopg3 and ``pgcode`` by psycopg2) and falls back to the message text, which is all SQLite
+    offers.
+
+    Only database errors are considered. SQLAlchemy hangs the driver exception off ``.orig``, so
+    that attribute is what separates a real DBAPI failure from an unrelated exception whose text
+    merely contains the SQLite marker — a flow name can carry that string, and text alone must not
+    be enough to launder it into a 4xx conflict.
+    """
+    if not hasattr(exc, "orig"):
+        return False
+    orig = exc.orig
+    sqlstate = getattr(orig, "sqlstate", None) or getattr(orig, "pgcode", None)
+    if sqlstate == _UNIQUE_VIOLATION_SQLSTATE:
+        return True
+    return any(marker in msg for marker in _UNIQUE_VIOLATION_TEXT)
+
+
+def _sqlite_unique_detail(msg: str, *, status_code: int) -> HTTPException:
+    """Map a SQLite ``UNIQUE constraint failed: <cols>`` message to a client-facing detail.
+
+    SQLite names columns rather than the constraint, so the column tuple is the only signal.
+    On ``flow`` only the exact shapes in ``_SQLITE_FLOW_UNIQUE_COLUMNS`` are named; any other
+    shape is a 500 rather than a guess. Other tables fall through to the qualified-name markers,
+    which is how a project (``folder``) collision keeps its own wording.
+    """
+    constraint = msg.split(_SQLITE_UNIQUE_MARKER, maxsplit=1)[1].splitlines()[0]
+    tables: set[str] = set()
+    columns: list[str] = []
+    for qualified in constraint.split(","):
+        table, separator, candidate = qualified.strip().rpartition(".")
+        if not separator:
+            return HTTPException(status_code=500, detail=FLOW_PERSIST_FAILED)
+        tables.add(table.rsplit(".", maxsplit=1)[-1])
+        columns.append(candidate)
+
+    if tables == {"flow"}:
+        column = _SQLITE_FLOW_UNIQUE_COLUMNS.get(tuple(columns))
+        if column is None:
+            return HTTPException(status_code=500, detail=FLOW_PERSIST_FAILED)
+        return HTTPException(status_code=status_code, detail=f"{column.capitalize().replace('_', ' ')} must be unique")
+
+    for marker, detail in _UNIQUE_VIOLATION_DETAILS:
+        if marker in constraint:
+            return HTTPException(status_code=status_code, detail=detail)
+    return HTTPException(status_code=500, detail=FLOW_PERSIST_FAILED)
+
 
 def _handle_unique_constraint_error(exc: Exception, *, status_code: int = 400) -> HTTPException:
-    """Parse a UNIQUE constraint error and return an appropriate HTTPException."""
+    """Map a unique-constraint violation to *status_code*; map anything else to a sanitized 500.
+
+    Callers either raise the result directly or read a 500 as "not a conflict" (see update_flow),
+    so the 500 branch stays — but its detail is sanitized, because SQLAlchemy's ``str()`` embeds
+    the failing statement and its bound parameters.
+
+    The three signals are tried strongest first. PostgreSQL's ``diag.constraint_name`` is
+    authoritative and comes from the driver, so it wins over the message text, which can carry a
+    user-supplied value that imitates a marker. SQLite offers no constraint name, so its message
+    is parsed structurally. Only then does the marker table run, and an unrecognized violation is
+    a 500 rather than a conflict invented from driver text.
+    """
     msg = str(exc)
-    if "UNIQUE constraint failed" not in msg:
-        return HTTPException(status_code=500, detail=msg)
-    columns = msg.split("UNIQUE constraint failed: ")[1].split(".")[1].split("\n")[0]
-    column = columns.split(",")[1] if "id" in columns.split(",")[0] else columns.split(",")[0]
-    return HTTPException(status_code=status_code, detail=f"{column.capitalize().replace('_', ' ')} must be unique")
+    if not _is_unique_violation(exc, msg):
+        return HTTPException(status_code=500, detail=sanitize_database_error(exc, DB_OPERATION_FAILED))
+
+    column = _postgres_unique_column(getattr(exc, "orig", None) or exc)
+    if column is not None:
+        return HTTPException(status_code=status_code, detail=f"{column.capitalize().replace('_', ' ')} must be unique")
+
+    if _SQLITE_UNIQUE_MARKER in msg:
+        return _sqlite_unique_detail(msg, status_code=status_code)
+
+    for marker, detail in _UNIQUE_VIOLATION_DETAILS:
+        if marker in msg:
+            return HTTPException(status_code=status_code, detail=detail)
+    return HTTPException(status_code=500, detail=FLOW_PERSIST_FAILED)
 
 
 def _validate_catalog_policy_for_write(
@@ -140,6 +278,10 @@ router = APIRouter(prefix="/flows", tags=["Flows"])
 
 FLOW_UPDATE_FAILED = "Could not update the flow."
 FLOW_UPDATE_BUSY = "The database is busy. Please retry the request."
+FLOW_CREATE_FAILED = "Could not create the flow."
+FLOW_CREATE_BUSY = "The database is busy. Please retry the request."
+FLOW_DELETE_FAILED = "Could not delete the flow."
+FLOW_DELETE_BUSY = "The database is busy. Please retry the request."
 
 
 @router.post("/", response_model=FlowRead, status_code=201)
@@ -154,22 +296,53 @@ async def create_flow(
     try:
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
         _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
+        await persist_and_strip_mcp_secrets(flow.data, current_user.id, session)
         # FastAPI builds the dependency's body model independently from the
         # handler's body model. Carry the exact destination that was authorized
         # into the row we persist so stale caller scope fields cannot retarget
         # the write after the guard has run.
         flow.workspace_id, flow.folder_id = _create
-        return await _new_flow(
+        stable_flow = flow.model_copy(deep=True)
+        user_id = current_user.id
+
+        async def create_attempt(_attempt: int) -> FlowRead:
+            # _new_flow mutates its input while normalizing ownership, name,
+            # endpoint and destination. Rebuild it for every transaction so a
+            # rollback never leaves the retry with partially normalized state.
+            return await _new_flow(
+                session=session,
+                flow=stable_flow.model_copy(deep=True),
+                user_id=user_id,
+                storage_service=storage_service,
+                widen_for_authz=True,
+                propagate_unhandled_errors=True,
+            )
+
+        return await run_with_lock_retry(
+            create_attempt,
             session=session,
-            flow=flow,
-            user_id=current_user.id,
-            storage_service=storage_service,
-            widen_for_authz=True,
+            description="flow creation",
         )
-    except HTTPException:
-        raise
+    except HTTPException as exc:
+        if exc.status_code != status.HTTP_500_INTERNAL_SERVER_ERROR:
+            raise
+        await logger.aerror("Flow creation failed", error_type=type(exc).__name__)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=FLOW_CREATE_FAILED) from exc
     except Exception as e:
-        raise _handle_unique_constraint_error(e) from e
+        if is_database_lock_error(e):
+            await logger.aerror("Flow creation remained locked after retries", error_type=type(e).__name__)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=FLOW_CREATE_BUSY,
+                headers={"Retry-After": "1"},
+            ) from e
+        await logger.aerror("Flow creation failed", error_type=type(e).__name__)
+        # Do not expose SQLAlchemy statements, bound parameters, database URLs
+        # or user-provided flow identifiers through the API response.
+        handled_error = _handle_unique_constraint_error(e)
+        if handled_error.status_code != status.HTTP_500_INTERNAL_SERVER_ERROR:
+            raise handled_error from e
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=FLOW_CREATE_FAILED) from e
 
 
 @router.get("/", response_model=list[FlowRead] | Page[FlowRead] | list[FlowHeader], status_code=200)
@@ -441,6 +614,12 @@ async def update_flow(
         folder_id_will_change = target_folder_id != db_flow.folder_id
         flow_owner_ids = {flow_id: db_flow.user_id}
 
+        # Extract once, outside the retry loop. The in-place rewrite of flow.data survives a
+        # rollback while the staged rows do not, so re-extracting on attempt 2 would find
+        # only the reference it wrote itself and stage nothing. actor.id rather than
+        # current_user.id: the rollback expires the ORM User.
+        carried_secrets, secret_variables = extract_and_strip_mcp_secrets(flow.data)
+
         async def operation() -> FlowRead:
             # Re-load inside each attempt so retry after nested rollback never uses an expired ORM instance.
             db_flow_for_attempt = await _read_flow(
@@ -491,6 +670,16 @@ async def update_flow(
                     raise deny_to_404(exc, detail="Flow not found") from exc
             effective_flow_data = flow.data if flow.data is not None else db_flow_for_attempt.data
             _validate_catalog_policy_for_write(effective_flow_data, snapshot=catalog_policy_snapshot)
+            # The only write path where a literal is the user editing a key rather than a
+            # file arriving. Scoped to servers this flow already referenced, so saving a
+            # freshly imported flow cannot adopt its credential either.
+            await stage_mcp_secrets(
+                carried_secrets,
+                secret_variables,
+                actor.id,
+                session,
+                rotatable_servers=mcp_server_names(db_flow_for_attempt.data),
+            )
             return await _patch_flow(
                 session=session,
                 db_flow=db_flow_for_attempt,
@@ -551,6 +740,13 @@ async def upsert_flow(
     Returns 201 for creation, 200 for update.  Returns 404 if owned by another user.
     """
     from fastapi.responses import JSONResponse
+
+    # Read once, outside the retry loop: a rollback between attempts expires the ORM User
+    # and a later attribute read would lazy-load outside the greenlet.
+    writer_id = current_user.id
+    # Extract once: a rollback between retry attempts discards the staged rows but not the
+    # in-place rewrite, so a second extraction would find only its own reference.
+    carried_secrets, secret_variables = extract_and_strip_mcp_secrets(flow.data)
 
     try:
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
@@ -667,6 +863,7 @@ async def upsert_flow(
                         raise deny_to_404(exc, detail="Flow not found") from exc
                 effective_flow_data = flow.data if flow.data is not None else existing_flow_for_attempt.data
                 _validate_catalog_policy_for_write(effective_flow_data, snapshot=catalog_policy_snapshot)
+                await stage_mcp_secrets(carried_secrets, secret_variables, writer_id, session)
                 return await _update_existing_flow(
                     session=session,
                     existing_flow=existing_flow_for_attempt,
@@ -691,6 +888,7 @@ async def upsert_flow(
                 current_user, FlowAction.CREATE, workspace_id=flow.workspace_id, folder_id=flow.folder_id
             )
             _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
+            await stage_mcp_secrets(carried_secrets, secret_variables, writer_id, session)
             flow_read = await _new_flow(
                 session=session,
                 flow=flow,
@@ -718,16 +916,56 @@ async def upsert_flow(
 async def delete_flow(
     *,
     session: DbSession,
-    flow_id: UUID,  # noqa: ARG001
+    flow_id: UUID,
     flow: AuthorizedDeleteFlow,
-    current_user: CurrentActiveUser,  # noqa: ARG001
+    current_user: CurrentActiveUser,
 ):
     """Delete a flow."""
-    await retry_flow_operation_on_deployment_guard(
-        db=session,
-        flow_owner_ids={flow.id: flow.user_id},
-        operation=lambda: cascade_delete_flow(session, flow.id),
-    )
+    actor = UserRead.model_validate(current_user, from_attributes=True)
+    target_flow_id = flow_id
+    flow_owner_ids: dict[UUID, UUID] = {target_flow_id: flow.user_id}
+
+    async def _delete_attempt(_attempt: int) -> None:
+        async def _delete_operation() -> None:
+            flow_owner_ids.clear()
+            retry_target = await _read_flow(session, target_flow_id, actor.id)
+            if retry_target is None:
+                return
+            await ensure_flow_permission(
+                actor,
+                FlowAction.DELETE,
+                flow_id=retry_target.id,
+                flow_user_id=retry_target.user_id,
+                workspace_id=retry_target.workspace_id,
+                folder_id=retry_target.folder_id,
+            )
+            flow_owner_ids[retry_target.id] = retry_target.user_id
+            await cascade_delete_flow(session, target_flow_id)
+
+        await retry_flow_operation_on_deployment_guard(
+            db=session,
+            flow_owner_ids=flow_owner_ids,
+            operation=_delete_operation,
+        )
+
+    try:
+        await run_with_lock_retry(_delete_attempt, session=session, description=f"delete_flow {target_flow_id}")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        await araise_if_deployment_guard_error_or_skip(
+            exc,
+            log_message=f"op=delete_flow flow_id={target_flow_id}",
+        )
+        if is_database_lock_error(exc):
+            await logger.awarning("op=delete_flow flow_id=%s exhausted lock retries", target_flow_id)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=FLOW_DELETE_BUSY,
+                headers={"Retry-After": "1"},
+            ) from exc
+        await logger.aerror("op=delete_flow failed with %s", type(exc).__name__)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=FLOW_DELETE_FAILED) from exc
     return {"message": "Flow deleted successfully"}
 
 
@@ -744,6 +982,7 @@ async def create_flows(
     # keeps a denial in a later item from partially applying an earlier item.
     for flow in flow_list.flows:
         _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
+        await persist_and_strip_mcp_secrets(flow.data, current_user.id, session)
 
     # Resolve and authorize every flow's canonical project/workspace instead of
     # trusting caller-supplied denormalized scope fields.
@@ -914,6 +1153,7 @@ async def upload_file(
         if effective_flow_data is None and existing_flow is not None and existing_flow.user_id == current_user.id:
             effective_flow_data = existing_flow.data
         _validate_catalog_policy_for_write(effective_flow_data, snapshot=catalog_policy_snapshot)
+        await persist_and_strip_mcp_secrets(flow.data, current_user.id, session)
 
     try:
         flow_reads: list[FlowRead] = []
@@ -961,10 +1201,12 @@ async def delete_multiple_flows(
     db: DbSession,
 ):
     """Delete multiple flows by their IDs."""
+    actor = UserRead.model_validate(user, from_attributes=True)
     try:
         authorized_flow_owner_ids: dict[UUID, UUID] = {}
 
         async def _delete_operation() -> int:
+            authorized_flow_owner_ids.clear()
             if not flow_ids:
                 return 0
             # Widen fetch when cross-user DELETE is supported; else owner-scoped.
@@ -975,12 +1217,12 @@ async def delete_multiple_flows(
             if await authz.supports_cross_user_fetch() and await authz.is_enabled():
                 stmt = base_stmt
             else:
-                stmt = base_stmt.where(Flow.user_id == user.id)
+                stmt = base_stmt.where(Flow.user_id == actor.id)
             flows_to_delete = (await db.exec(stmt)).all()
             for flow in flows_to_delete:
                 # Propagate plugin deny (403) so bulk delete fails audibly.
                 await ensure_flow_permission(
-                    user,
+                    actor,
                     FlowAction.DELETE,
                     flow_id=flow.id,
                     flow_user_id=flow.user_id,
@@ -993,20 +1235,36 @@ async def delete_multiple_flows(
             await db.flush()
             return len(flows_to_delete)
 
-        deleted_count = await retry_flow_operation_on_deployment_guard(
-            db=db,
-            flow_owner_ids=authorized_flow_owner_ids,
-            operation=_delete_operation,
+        async def _delete_attempt(_attempt: int) -> int:
+            return await retry_flow_operation_on_deployment_guard(
+                db=db,
+                flow_owner_ids=authorized_flow_owner_ids,
+                operation=_delete_operation,
+            )
+
+        deleted_count = await run_with_lock_retry(
+            _delete_attempt,
+            session=db,
+            description=f"delete_multiple_flows count={len(flow_ids)}",
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         await araise_if_deployment_guard_error_or_skip(
             exc,
             log_message=f"op=delete_multiple_flows flow_ids_count={len(flow_ids)}",
         )
-        import logging as _logging
-
-        _logging.getLogger(__name__).exception("Error deleting multiple flows")
-        raise HTTPException(status_code=500, detail="An internal error occurred while deleting flows.") from exc
+        if is_database_lock_error(exc):
+            await logger.awarning("op=delete_multiple_flows flow_ids_count=%s exhausted lock retries", len(flow_ids))
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=FLOW_DELETE_BUSY,
+                headers={"Retry-After": "1"},
+            ) from exc
+        await logger.aerror(
+            "op=delete_multiple_flows flow_ids_count=%s failed with %s", len(flow_ids), type(exc).__name__
+        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=FLOW_DELETE_FAILED) from exc
 
     return {"deleted": deleted_count}
 

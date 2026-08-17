@@ -196,6 +196,17 @@ body:has([data-radix-popper-content-wrapper]) .react-flow__pane {
   stroke-width: 2px !important;
 }
 
+/* WCAG 2.4.7 — edges are tab stops, and React Flow clears their outline. A
+   bounding-box outline around a curve reads as noise, so the path itself is the
+   indicator: the app-wide focus color at double the resting width, which stays
+   distinct from both the default stroke and the blue selected state. Needs
+   !important to beat the base rule above, and sits after it so it wins among
+   equally-important declarations. */
+.react-flow .react-flow__edge.selectable:focus-visible .react-flow__edge-path {
+  stroke: hsl(var(--ring)) !important;
+  stroke-width: 4px !important;
+}
+
 .react-flow__edge.running .react-flow__edge-path {
   stroke: hsl(var(--foreground)) !important;
   stroke-width: 2px !important;

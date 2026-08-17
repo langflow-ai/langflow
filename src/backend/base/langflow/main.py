@@ -908,7 +908,7 @@ def create_app():
 
             if not content_type or "multipart/form-data" not in content_type or "boundary=" not in content_type:
                 return JSONResponse(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     content={"detail": "Content-Type header must be 'multipart/form-data' with a boundary parameter."},
                 )
 
@@ -916,7 +916,7 @@ def create_app():
 
             if not re.match(r"^[\w\-]{1,70}$", boundary):
                 return JSONResponse(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     content={"detail": "Invalid boundary format"},
                 )
 
@@ -930,7 +930,7 @@ def create_app():
 
             if not body.startswith(boundary_start) or not body.endswith((boundary_end, boundary_end_no_newline)):
                 return JSONResponse(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     content={"detail": "Invalid multipart formatting"},
                 )
 

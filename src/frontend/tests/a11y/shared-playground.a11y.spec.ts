@@ -2,7 +2,7 @@ import { expect, type LangflowPage, test } from "../fixtures";
 import { adjustScreenView } from "../utils/adjust-screen-view";
 import { TID } from "../utils/constants/testIds";
 import { TEXTS } from "../utils/constants/texts";
-import { ANIMATIONS, TIMEOUTS } from "../utils/constants/timeouts";
+import { TIMEOUTS } from "../utils/constants/timeouts";
 import { addComponentFromSidebar } from "../utils/flow/add-component-from-sidebar";
 import { openBlankFlow } from "../utils/flow/open-blank-flow";
 
@@ -71,23 +71,74 @@ async function publishChatFlowAndGetId(page: LangflowPage): Promise<string> {
     .getByTestId("handle-chatinput-noshownode-chat message-source")
     .click();
   await page.getByTestId("handle-chatoutput-noshownode-inputs-target").click();
+  await expect(page.locator(".react-flow__edge")).toHaveCount(1);
 
   const flowId = new URL(page.url()).pathname.match(/\/flow\/([^/?#]+)/)?.[1];
   if (!flowId) {
     throw new Error(`Expected a /flow/:id editor URL, got ${page.url()}`);
   }
 
+  // Persist the graph before publishing. In auto-save-off configurations the
+  // save button owns this request; with auto-save enabled it may already be
+  // disabled because the same graph has reached the backend.
+  const saveButton = page.getByTestId("save-flow-button");
+  if ((await saveButton.count()) > 0) {
+    await expect(saveButton).toBeEnabled({ timeout: TIMEOUTS.medium });
+    const saveResponsePromise = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return (
+        response.request().method() === "PATCH" &&
+        url.pathname === `/api/v1/flows/${flowId}`
+      );
+    });
+    await saveButton.click();
+    const saveResponse = await saveResponsePromise;
+    expect(
+      saveResponse.ok(),
+      `Saving flow ${flowId} returned ${saveResponse.status()}`,
+    ).toBeTruthy();
+  }
+
+  await expect
+    .poll(
+      async () => {
+        const response = await page.request.get(`/api/v1/flows/${flowId}`);
+        if (!response.ok()) {
+          return { status: response.status(), nodes: 0, edges: 0 };
+        }
+        const flow = (await response.json()) as {
+          data?: { nodes?: unknown[]; edges?: unknown[] };
+        };
+        return {
+          status: response.status(),
+          nodes: flow.data?.nodes?.length ?? 0,
+          edges: flow.data?.edges?.length ?? 0,
+        };
+      },
+      { message: `Flow ${flowId} graph was not persisted before publish` },
+    )
+    .toEqual({ status: 200, nodes: 2, edges: 1 });
+
   await page.getByTestId(TID.publishButton).click();
   await expect(page.getByTestId(TID.publishSwitch)).toBeVisible({
     timeout: TIMEOUTS.medium,
   });
+  const publishResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      response.request().method() === "PATCH" &&
+      url.pathname === `/api/v1/flows/${flowId}`
+    );
+  });
   await page.getByTestId(TID.publishSwitch).click();
+  const publishResponse = await publishResponsePromise;
+  expect(
+    publishResponse.ok(),
+    `Publishing flow ${flowId} returned ${publishResponse.status()}`,
+  ).toBeTruthy();
   await expect(page.getByTestId(TID.publishSwitch)).toBeChecked({
     timeout: TIMEOUTS.medium,
   });
-  // The switch flips optimistically; the shared URL only resolves once the
-  // access_type change has reached the backend.
-  await page.waitForTimeout(ANIMATIONS.publishTogglePropagation);
 
   return flowId;
 }

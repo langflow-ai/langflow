@@ -1,8 +1,9 @@
-import { expect, test } from "../../fixtures";
+import { expect } from "../../fixtures";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
+import { configureLoopbackWebSearch } from "../../utils/configure-loopback-web-search";
 import { TEXTS } from "../../utils/constants/texts";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 function getRandomSocialMediaQuery(): string {
@@ -57,30 +58,11 @@ withEventDeliveryModes(
   "Social Media Agent",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.APIFY_API_TOKEN,
-      "APIFY_API_TOKEN required to run this test",
-    );
-    loadDotenvIfLocal(__dirname);
+    await seedLoopbackProvider(page);
     await openStarterProject(page, "Social Media Agent");
 
-    await initialGPTsetup(page);
-
-    const apifyApiTokenInputCount = await page
-      .getByTestId("popover-anchor-input-apify_token")
-      .count();
-
-    for (let i = 0; i < apifyApiTokenInputCount; i++) {
-      await page
-        .getByTestId("popover-anchor-input-apify_token")
-        .nth(i)
-        .fill(process.env.APIFY_API_TOKEN ?? "");
-    }
-
-    await page
-      .getByTestId("popover-anchor-input-apify_token")
-      .nth(apifyApiTokenInputCount - 1)
-      .fill(process.env.APIFY_API_TOKEN ?? "");
+    await configureLoopbackOpenAI(page);
+    await configureLoopbackWebSearch(page);
 
     await page.getByTestId("playground-btn-flow-io").click();
 
@@ -104,5 +86,6 @@ withEventDeliveryModes(
       .innerText();
 
     expect(output.length).toBeGreaterThan(100);
+    expect(output).toContain("LOOPBACK_WEB_SEARCH_USED");
   },
 );

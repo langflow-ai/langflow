@@ -9,9 +9,12 @@ class McpSettings(BaseModel):
     """MCP server, session manager, and composer settings, plus the A2A protocol toggle."""
 
     mcp_base_url: str = ""
-    """External base URL used to build MCP server URLs in the UI configuration JSON
-    (e.g. 'https://langflow.example.com'). When empty, the frontend falls back to
-    the browser's window.location.origin."""
+    """External base URL (scheme + host + optional path) used to build MCP server URLs.
+    Set it to the externally reachable origin (e.g. 'https://langflow.example.com'); this is
+    required in multi-pod deployments where the pod binds 0.0.0.0 but must advertise a routable
+    gateway/service address, since the bind host cannot also serve as the advertised host.
+    When empty (default): the backend builds URLs from host/port (0.0.0.0 -> localhost) and the
+    frontend falls back to the browser's window.location.origin."""
 
     mcp_server_timeout: int = 20
     """The number of seconds to wait before giving up on establishing a connection to the MCP server."""
@@ -51,6 +54,16 @@ class McpSettings(BaseModel):
     # MCP Server
     mcp_server_enabled: bool = True
     """If set to False, Langflow will not enable the MCP server."""
+
+    mcp_sse_enabled: bool = True
+    """If set to False, the legacy SSE transport and its message endpoint answer 404.
+
+    ``mcp_server_enabled`` mounts both transports and there is no way to serve only the
+    modern one. SSE holds a stream open for the life of the connection and keeps a
+    never-evicted ``SseServerTransport`` per project, which is a poor fit for a shared
+    multi-tenant serving tier. Default True preserves compatibility for clients that
+    still speak SSE; Streamable HTTP is unaffected either way.
+    Env var: LANGFLOW_MCP_SSE_ENABLED."""
     mcp_server_enable_progress_notifications: bool = False
     """If set to False, Langflow will not send progress notifications in the MCP server."""
 

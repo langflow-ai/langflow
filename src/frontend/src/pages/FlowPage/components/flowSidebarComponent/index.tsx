@@ -341,7 +341,11 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     }
   }, [debouncedSearch, getFilterEdge, getFilterComponent]);
 
-  useSidebarHotkeys({ searchInputRef, setOpen, isSearchFocused });
+  const isSearchHotkeyReady = useSidebarHotkeys({
+    searchInputRef,
+    setOpen,
+    isSearchFocused,
+  });
 
   const onDragStart = useCallback(
     (
@@ -460,6 +464,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     <Sidebar
       collapsible="offcanvas"
       data-testid="shad-sidebar"
+      data-search-hotkey-ready={isSearchHotkeyReady ? "true" : "false"}
       className="noflow select-none"
       role="navigation"
       aria-label={t("sidebar.componentsPanel")}
