@@ -18,6 +18,7 @@ from anyio import Path
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
 from lfx.log import logger
+from pydantic import ValidationError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -393,6 +394,7 @@ async def _new_flow(
     fail_on_endpoint_conflict: bool = False,
     validate_folder: bool = False,
     widen_for_authz: bool = False,
+    propagate_unhandled_errors: bool = False,
 ):
     """Create or upsert a flow.
 
@@ -405,6 +407,7 @@ async def _new_flow(
         fail_on_endpoint_conflict: PUT should fail predictably on conflicts rather than silently renaming.
         validate_folder: Validates folder_id under the active authorization fetch mode for external upserts.
         widen_for_authz: Preserve a cross-user destination that the route already authorized.
+        propagate_unhandled_errors: Let the caller own retry and sanitization of unexpected failures.
     """
     try:
         await _verify_fs_path(flow.fs_path, user_id, storage_service)
@@ -447,13 +450,15 @@ async def _new_flow(
         await _save_flow_to_fs(db_flow, user_id, storage_service)
 
         return FlowRead.model_validate(db_flow, from_attributes=True)
-    except Exception as e:
-        if hasattr(e, "errors"):
-            raise HTTPException(status_code=400, detail=str(e)) from e
-        if isinstance(e, HTTPException):
+    except ValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        if propagate_unhandled_errors:
             raise
-        logger.exception("Error creating flow")
-        raise HTTPException(status_code=500, detail="An internal error occurred while creating the flow.") from e
+        await logger.aerror("Error creating flow", error_type=type(exc).__name__)
+        raise HTTPException(status_code=500, detail="An internal error occurred while creating the flow.") from exc
 
 
 async def _read_flow(

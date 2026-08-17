@@ -142,6 +142,8 @@ async def test_handle_list_tools_skips_blocked_custom_flows(monkeypatch):
     finally:
         mcp_utils.current_user_ctx.reset(token)
 
+    # The global server is the editor-plane surface, where an empty list is a normal
+    # state; only the project endpoint raises. See test_mcp_failure_reporting.py.
     assert tools == []
 
 
@@ -434,8 +436,14 @@ def _build_fake_server() -> SimpleNamespace:
     )
 
 
-async def _invoke_handle_call_tool(monkeypatch, arguments: dict) -> AsyncMock:
-    """Run handle_call_tool with all external deps stubbed; return the simple_run_flow mock."""
+async def _invoke_handle_call_tool(monkeypatch, arguments: dict, *, authenticated_caller="user-1") -> AsyncMock:
+    """Run handle_call_tool with all external deps stubbed; return the simple_run_flow mock.
+
+    ``authenticated_caller`` is the principal that presented a credential, which the auth
+    dependency establishes before the handler runs. It is not the same as the principal the
+    flow executes as: a project with ``auth_type="none"`` executes as its owner for an
+    anonymous caller, so the handler cannot read ownership off the execution principal.
+    """
     # ``user_id`` matches the current user (see ``current_user_ctx`` below) so the
     # owner-override path in ``ensure_flow_permission`` is exercised; ``workspace_id``
     # is read by the same guard. ``data`` feeds the HITL support gate.
@@ -461,6 +469,7 @@ async def _invoke_handle_call_tool(monkeypatch, arguments: dict) -> AsyncMock:
     mcp_utils.get_mcp_config().enable_progress_notifications = False
 
     token = mcp_utils.current_user_ctx.set(SimpleNamespace(id="user-1"))
+    caller_token = mcp_utils.authenticated_caller_ctx.set(authenticated_caller)
     try:
         await mcp_utils.handle_call_tool(
             name="my_flow",
@@ -468,6 +477,7 @@ async def _invoke_handle_call_tool(monkeypatch, arguments: dict) -> AsyncMock:
             server=_build_fake_server(),
         )
     finally:
+        mcp_utils.authenticated_caller_ctx.reset(caller_token)
         mcp_utils.current_user_ctx.reset(token)
 
     return simple_run_flow_mock
@@ -486,6 +496,35 @@ async def test_handle_call_tool_uses_provided_session_id(monkeypatch):
     assert forwarded_request.session_id == "user-1-thread-7"
     assert forwarded_request.input_value == "hello"
     assert simple_run_flow_mock.await_args.kwargs["expose_error_details"] is True
+
+
+@pytest.mark.asyncio
+async def test_handle_call_tool_hides_error_details_from_an_anonymous_caller(monkeypatch):
+    """A public project runs as its owner, so ownership cannot be read off the executor.
+
+    ``auth_type="none"`` establishes no caller. Comparing the execution principal to the
+    flow owner answered yes for everyone and handed anonymous callers the owner's raw
+    component errors, so the absence of a caller has to read as anonymous.
+    """
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello"},
+        authenticated_caller=None,
+    )
+
+    assert simple_run_flow_mock.await_args.kwargs["expose_error_details"] is False
+
+
+@pytest.mark.asyncio
+async def test_handle_call_tool_hides_error_details_from_a_different_user(monkeypatch):
+    """Authenticating as somebody else must not disclose the owner's internals either."""
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello"},
+        authenticated_caller="user-2",
+    )
+
+    assert simple_run_flow_mock.await_args.kwargs["expose_error_details"] is False
 
 
 @pytest.mark.asyncio

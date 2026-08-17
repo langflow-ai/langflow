@@ -5,6 +5,13 @@ export type A11yScanOptions = {
   colorScheme?: "light" | "dark";
 };
 
+export type ExpectedServerError = {
+  method: string;
+  path: string;
+  status: number;
+  count: number;
+};
+
 /**
  * Page augmented with the `allowFlowErrors()` helper attached by
  * `fixtures.ts`. Call this to opt out of the per-test flow-error
@@ -13,6 +20,7 @@ export type A11yScanOptions = {
  */
 export type LangflowPage = Page & {
   allowFlowErrors: () => void;
+  expectServerError: (expectation: ExpectedServerError) => void;
   runA11yScan: (
     label: string,
     options?: A11yScanOptions,

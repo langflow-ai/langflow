@@ -9,10 +9,10 @@ from alembic import context
 from lfx.log.logger import logger
 from sqlalchemy import pool, text
 from sqlalchemy.event import listen
-from sqlalchemy.exc import SAWarning
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from langflow.alembic.expand_compat import filter_expand_revision_directives
+from langflow.alembic.warning_filters import filter_known_sqlite_reflection_warnings
 from langflow.services.database.service import SQLModel
 
 # this is the Alembic Config object, which provides
@@ -145,19 +145,7 @@ def _do_run_migrations(connection):
             connection.execute(text(f"SELECT pg_advisory_xact_lock({lock_key});"))
         if connection.dialect.name == "sqlite":
             with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore",
-                    message=".*SQL-parsed foreign key constraint.*could not be located in PRAGMA foreign_keys.*",
-                    category=SAWarning,
-                )
-                warnings.filterwarnings(
-                    "ignore",
-                    message=(
-                        "autogenerate skipping metadata-specified expression-based index "
-                        "'ix_message_session_metadata_(tenant|user)'; dialect 'sqlite'.*"
-                    ),
-                    category=UserWarning,
-                )
+                filter_known_sqlite_reflection_warnings()
                 context.run_migrations()
         else:
             context.run_migrations()

@@ -3,6 +3,8 @@ import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
+import { TIMEOUTS } from "../../utils/constants/timeouts";
+import { replaceComponentCode } from "../../utils/flow/replace-component-code";
 import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
 import { updateOldComponents } from "../../utils/update-old-components";
 import { zoomOut } from "../../utils/zoom-out";
@@ -151,21 +153,22 @@ class CustomComponent(Component):
 
     await page.getByTestId("title-Custom Component").first().click();
 
-    await expect(page.getByTestId("code-button-modal").last()).toBeVisible({
-      timeout: 3000,
-    });
-
-    await page.getByTestId("code-button-modal").last().click();
-
-    await page.waitForSelector('[id="checkAndSaveBtn"]', {
-      timeout: 3000,
-    });
-
-    await page.locator("textarea").last().press(`ControlOrMeta+a`);
-    await page.keyboard.press("Backspace");
-    await page.locator("textarea").last().fill(timerCode);
-    await page.locator('//*[@id="checkAndSaveBtn"]').click();
-    await page.waitForTimeout(500);
+    const componentFlowRefresh = page.waitForResponse(
+      (response) => {
+        const url = new URL(response.url());
+        return (
+          response.request().method() === "GET" &&
+          url.pathname === "/api/v1/flows/" &&
+          url.searchParams.get("components_only") === "true" &&
+          url.searchParams.get("get_all") === "true"
+        );
+      },
+      { timeout: TIMEOUTS.standard },
+    );
+    await replaceComponentCode(page, timerCode);
+    const refreshResponse = await componentFlowRefresh;
+    expect(refreshResponse.ok()).toBeTruthy();
+    expect(await refreshResponse.finished()).toBeNull();
 
     await page.getByTestId("button_run_custom component").click();
 

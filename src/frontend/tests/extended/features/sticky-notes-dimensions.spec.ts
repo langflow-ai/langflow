@@ -1,6 +1,15 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { routeTestScopedDefaultFlowNames } from "../../utils/flow/route-test-scoped-default-flow-names";
+
+test.beforeEach(async ({ page }, testInfo) => {
+  await routeTestScopedDefaultFlowNames(
+    page,
+    testInfo,
+    "sticky-notes-dimensions",
+  );
+});
 
 test(
   "sticky notes should have consistent 280x140px dimensions",

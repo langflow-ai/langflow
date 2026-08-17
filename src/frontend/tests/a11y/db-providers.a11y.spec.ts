@@ -107,6 +107,14 @@ async function mockGlobalVariables(
   variables: GlobalVariableFixture[],
   writeBehavior: WriteBehavior = {},
 ) {
+  if (writeBehavior.fail) {
+    page.expectServerError({
+      method: "POST",
+      path: "/api/v1/variables/",
+      status: 500,
+      count: 1,
+    });
+  }
   await page.route(/\/api\/v1\/variables\/?.*/, async (route: Route) => {
     const request = route.request();
     const method = request.method();

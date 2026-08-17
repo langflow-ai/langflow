@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { SELECTORS, TID } from "../constants/testIds";
 import { TIMEOUTS } from "../constants/timeouts";
 
@@ -61,6 +61,7 @@ export async function addComponentFromSidebar(
   });
 
   if (hoverAdd) {
+    const nodes = page.locator(".react-flow__node");
     const slug = addButtonSlug ?? rowTestIdToAddButtonSlug(testId);
     // Scope the "+" button query to the targeted row — the sidebar can
     // surface the same `add-component-button-<slug>` testid on multiple
@@ -70,13 +71,27 @@ export async function addComponentFromSidebar(
     const row = page.getByTestId(testId);
     await row.hover();
     const rowContainer = row.locator("xpath=..");
-    await rowContainer.getByTestId(`add-component-button-${slug}`).click();
+    await expect(page.getByTestId("canvas-add-note-button")).toBeEnabled({
+      timeout: TIMEOUTS.standard,
+    });
+    const addButton = rowContainer.getByTestId(`add-component-button-${slug}`);
+    await expect(addButton).toBeVisible({ timeout: TIMEOUTS.standard });
+    const previousNodeCount = await nodes.count();
+    await addButton.click();
+    await expect(nodes).toHaveCount(previousNodeCount + 1, {
+      timeout: TIMEOUTS.standard,
+    });
     return;
   }
 
+  const nodes = page.locator(".react-flow__node");
+  const previousNodeCount = await nodes.count();
   await page
     .getByTestId(testId)
     .dragTo(page.locator(SELECTORS.reactFlowCanvasXPath), {
       targetPosition: position ?? { x: 200, y: 200 },
     });
+  await expect(nodes).toHaveCount(previousNodeCount + 1, {
+    timeout: TIMEOUTS.standard,
+  });
 }

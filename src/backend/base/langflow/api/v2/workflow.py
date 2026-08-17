@@ -429,7 +429,7 @@ def _unknown_protocol_http_exception(exc: UnknownStreamProtocolError) -> HTTPExc
     names so clients can self-correct.
     """
     return HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         detail={
             "error": "Unknown stream_protocol",
             "code": "UNKNOWN_STREAM_PROTOCOL",
@@ -1098,7 +1098,7 @@ async def resume_workflow(
 
     if not await is_decision_allowed(parsed_job_id, request.decision or {}):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "error": "Invalid decision",
                 "code": "INVALID_DECISION",

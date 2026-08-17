@@ -57,8 +57,8 @@ export default function FileManagerModal({
   }, [internalOpen]);
 
   const handleUpload = (filesPaths: string[]) => {
-    setInternalSelectedFiles(
-      isList ? [...internalSelectedFiles, ...filesPaths] : [filesPaths[0]],
+    setInternalSelectedFiles((currentSelection) =>
+      isList ? [...currentSelection, ...filesPaths] : [filesPaths[0]],
     );
   };
 

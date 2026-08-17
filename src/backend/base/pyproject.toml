@@ -313,7 +313,7 @@ nltk = ["nltk>=3.9.4"]
 lark = ["lark==1.2.2"]
 
 # Additional dependencies from requirements
-huggingface = ["huggingface-hub[inference]>=1.0.0,<2.0.0"]
+huggingface = ["huggingface-hub>=1.0.0,<2.0.0"]
 # Backwards-compatible alias: the Exa Search component moved to the lfx-exa
 # bundle and now uses exa-py; metaphor-python is deprecated and unused.
 metaphor = ["exa-py>=1.14,<3"]
