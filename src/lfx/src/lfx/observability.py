@@ -35,7 +35,7 @@ import importlib
 import os
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlsplit, urlunsplit
 
 from lfx.log.logger import logger, operator_logger, otel_log_bodies_exported
@@ -1007,6 +1007,108 @@ def _instrument_sqlalchemy(engine: object) -> None:
         )
     except Exception:  # noqa: BLE001 - see above
         logger.debug("sqlalchemy instrumentation unavailable; DB spans will be missing", exc_info=True)
+
+
+# The key a queued job carries its originating trace context under, inside the job's own
+# metadata dict. Prefixed because that dict is shared with application keys (``request``,
+# ``pending_request_id``, ``pre_pause_outputs``) and this one is machine-owned.
+JOB_TRACE_CARRIER_KEY = "otel_traceparent"
+
+
+def inject_trace_carrier(metadata: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Return *metadata* with the current trace context added, if there is one.
+
+    A queued run happens after its request has returned, in a worker that may be a different
+    process. ``contextvars`` do not survive that, so the context has to travel with the job
+    row. This writes it in W3C ``traceparent`` form rather than as a bare trace id: the
+    standard form carries the sampled flag, and a bare id would let a linked run be dropped by
+    a sampler that kept the request it came from.
+
+    Writes nothing when no valid span is current. A missing carrier is an honest "nobody was
+    tracing"; a synthesised one renders in the APM as a real relationship that never existed.
+    Same rule the ``protocol`` attribute follows.
+
+    Call this once, at enqueue. Nothing rewrites it afterwards, which is deliberate: the job
+    metadata blob is written back whole, and a second writer on the pause path would race the
+    one that is already there.
+    """
+    carrier: dict[str, Any] = dict(metadata or {})
+    if not _OTEL_AVAILABLE:
+        return carrier
+    try:
+        from opentelemetry import trace as _trace
+        from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
+
+        if not _trace.get_current_span().get_span_context().is_valid:
+            return carrier
+        headers: dict[str, str] = {}
+        TraceContextTextMapPropagator().inject(headers)
+        traceparent = headers.get("traceparent")
+        if traceparent:
+            carrier[JOB_TRACE_CARRIER_KEY] = traceparent
+    except Exception:  # noqa: BLE001
+        # Telemetry must never fail an enqueue. A job that runs untraced beats a job that
+        # does not run.
+        logger.debug("could not inject the trace carrier into job metadata", exc_info=True)
+    return carrier
+
+
+# The link a queued run carries back to the request that enqueued it. Ambient for the same
+# reason ``protocol`` is: the graph that opens the flow span sits several layers below the
+# runner that reads the job row, and two of those layers hand the run to a fresh asyncio task,
+# which copies the context.
+_current_queued_trace_link: contextvars.ContextVar[Any] = contextvars.ContextVar(
+    "lfx_queued_trace_link",
+    default=None,
+)
+
+
+def get_queued_trace_link() -> Any:
+    """Return the link to the request that queued this run, or None outside a queued run."""
+    return _current_queued_trace_link.get()
+
+
+@contextlib.contextmanager
+def queued_trace_link(link: Any) -> Iterator[None]:
+    """Bind *link* for runs started in this context, and reset it on exit.
+
+    Reset matters: a worker serves many jobs on one task, so a link left bound would attach
+    one job's originating request to the next job's run.
+    """
+    if link is None:
+        yield
+        return
+    token = _current_queued_trace_link.set(link)
+    try:
+        yield
+    finally:
+        _current_queued_trace_link.reset(token)
+
+
+def extract_trace_link(metadata: dict[str, Any] | None):
+    """Return a ``Link`` to the request that queued this job, or None.
+
+    None covers every honest case: OpenTelemetry absent, the job enqueued while nothing was
+    tracing, or a carrier that will not parse. The caller starts an unlinked root span, which
+    is what happens today.
+    """
+    if not _OTEL_AVAILABLE or not metadata:
+        return None
+    traceparent = metadata.get(JOB_TRACE_CARRIER_KEY)
+    if not isinstance(traceparent, str) or not traceparent:
+        return None
+    try:
+        from opentelemetry import trace as _trace
+        from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
+
+        context = TraceContextTextMapPropagator().extract({"traceparent": traceparent})
+        span_context = _trace.get_current_span(context).get_span_context()
+        if not span_context.is_valid:
+            return None
+        return _trace.Link(span_context)
+    except Exception:  # noqa: BLE001
+        logger.debug("could not extract the trace carrier from job metadata", exc_info=True)
+        return None
 
 
 class OutboundCallScope:

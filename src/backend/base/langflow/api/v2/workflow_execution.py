@@ -34,7 +34,7 @@ from lfx.graph.checkpoint.store import CheckpointStore
 from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
-from lfx.observability import execution_protocol
+from lfx.observability import execution_protocol, extract_trace_link, queued_trace_link
 from lfx.schema.schema import InputValueRequest
 from lfx.schema.workflow import JobStatus, WorkflowExecutionResponse
 from lfx.workflow.adapters import StreamAdapter, StreamEvent
@@ -177,6 +177,22 @@ class _WorkflowEventQueue:
                 await self._overflow_task
 
 
+async def _queued_trace_link_for(job_id: UUID | None):
+    """Return a link to the request that enqueued *job_id*, or None.
+
+    None for a synchronous run, which has no job row, and for a job enqueued while nothing was
+    tracing. Never raises: a run must not fail because its telemetry could not be looked up.
+    """
+    if job_id is None:
+        return None
+    try:
+        job = await get_job_service().get_job_by_job_id(job_id)
+    except Exception:  # noqa: BLE001
+        await logger.adebug("could not read the job row for its trace carrier", exc_info=True)
+        return None
+    return extract_trace_link(job.job_metadata if job else None)
+
+
 async def _stream_event_frames(
     *,
     adapter: StreamAdapter,
@@ -248,7 +264,11 @@ async def _stream_event_frames(
             # Bound here rather than in the enclosing generator: drive() runs as its own task, so
             # the set/reset pair cannot straddle a generator suspension point and leak into the
             # consumer task that resumes it.
-            with execution_protocol(protocol):
+            #
+            # The queued-run link rides alongside for the same reason and in the same place. It
+            # is None for a run with a live request above it, and the context manager is a no-op
+            # then, so this costs a synchronous path nothing.
+            with execution_protocol(protocol), queued_trace_link(await _queued_trace_link_for(job_id)):
                 await asyncio.wait_for(
                     generate_flow_events(
                         flow_id=flow_id,

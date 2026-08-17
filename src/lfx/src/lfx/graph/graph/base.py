@@ -39,7 +39,12 @@ from lfx.graph.vertex.base import Vertex, VertexStates
 from lfx.graph.vertex.schema import NodeData, NodeTypeEnum
 from lfx.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
 from lfx.log.logger import LogConfig, configure, logger
-from lfx.observability import APPLICATION_TRACER_NAME, get_execution_client, get_execution_protocol
+from lfx.observability import (
+    APPLICATION_TRACER_NAME,
+    get_execution_client,
+    get_execution_protocol,
+    get_queued_trace_link,
+)
 from lfx.schema.dotdict import dotdict
 from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
 from lfx.services.cache.utils import CacheMiss
@@ -994,6 +999,19 @@ class Graph:
                 FLOW_EXECUTION_SPAN_NAME,
                 context=OtelContext(),
                 links=[otel_trace.Link(parent_context)],
+            )
+        elif (queued_link := get_queued_trace_link()) is not None and not parent_context.is_valid:
+            # A run picked off a queue. Nothing is current here, because the request that
+            # queued it finished in another task and possibly another process, so the branch
+            # above cannot fire. The link travelled on the job row instead.
+            #
+            # Only when no span is current: an in-process parent is better evidence than a
+            # stamped one, and preferring the carrier would relabel a run that really is
+            # nested inside a live request.
+            span = tracer.start_span(
+                FLOW_EXECUTION_SPAN_NAME,
+                context=OtelContext(),
+                links=[queued_link],
             )
         else:
             span = tracer.start_span(FLOW_EXECUTION_SPAN_NAME)
