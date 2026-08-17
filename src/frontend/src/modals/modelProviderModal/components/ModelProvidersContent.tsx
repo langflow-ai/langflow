@@ -7,7 +7,7 @@ import { Provider } from "@/modals/modelProviderModal/components/types";
 import type { ModelTypeFilter } from "@/types/models";
 import { cn } from "@/utils/utils";
 import { useProviderConfiguration } from "../hooks/useProviderConfiguration";
-import ModelSelection from "./ModelSelection";
+import ModelSelection, { hasProviderOwnedEmptyState } from "./ModelSelection";
 import ProviderConfigurationForm from "./ProviderConfigurationForm";
 
 interface ModelProvidersContentProps {
@@ -81,13 +81,13 @@ const ModelProvidersContent = ({
     );
   };
 
-  const selectedProviderName =
-    syncedSelectedProvider?.provider.toLowerCase() ?? "";
-  const showNoEnabledModels =
+  const typedModelCount = (syncedSelectedProvider?.models ?? []).filter(
+    (model) => modelType === "all" || model.metadata?.model_type === modelType,
+  ).length;
+  const showNoAvailableModels =
     !!syncedSelectedProvider &&
-    syncedSelectedProvider.models.length === 0 &&
-    selectedProviderName !== "ollama" &&
-    selectedProviderName !== "azure ai foundry";
+    typedModelCount === 0 &&
+    !hasProviderOwnedEmptyState(syncedSelectedProvider.provider);
 
   return (
     <div className="flex flex-row w-full h-full overflow-hidden">
@@ -153,7 +153,7 @@ const ModelProvidersContent = ({
           <div className="flex h-full flex-col gap-3 overflow-y-auto px-4 pt-4 pb-6 transition-all duration-300 ease-in-out">
             <CustomModelProvidersEmptyState
               kind="models"
-              show={showNoEnabledModels}
+              show={showNoAvailableModels}
             >
               <ModelSelection
                 modelType={modelType}

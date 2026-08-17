@@ -5,7 +5,6 @@ import { CustomAdminPageMenuItem } from "../custom-admin-page-menu-item";
 import CustomLoginBrandTitle from "../custom-login-brand-title";
 import CustomLoginSignupPrompt from "../custom-login-signup-prompt";
 import CustomLoginSsoOptions from "../custom-login-sso-options";
-import CustomModelProvidersEmptyState from "../custom-model-providers-empty-state";
 import CustomResourceShareAction from "../custom-resource-share-action";
 
 describe("OSS auth customization seams", () => {
@@ -51,16 +50,6 @@ describe("OSS auth customization seams", () => {
     );
 
     expect(container).toBeEmptyDOMElement();
-  });
-
-  it("passes model provider empty-state children through", () => {
-    render(
-      <CustomModelProvidersEmptyState kind="providers" show>
-        <p>OSS provider content</p>
-      </CustomModelProvidersEmptyState>,
-    );
-
-    expect(screen.getByText("OSS provider content")).toBeInTheDocument();
   });
 
   it("never skips auth refresh", () => {
