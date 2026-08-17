@@ -53,6 +53,7 @@ from lfx.observability import (
     stop_event_loop_lag_monitor,
 )
 from lfx.utils.flow_validation import validate_flow_for_current_settings
+from lfx.utils.url_redaction import redact_urls_in_text
 from lfx.workflow.router import create_workflow_router
 
 if TYPE_CHECKING:
@@ -946,9 +947,12 @@ def create_multi_serve_app(
                 component=result_data.get("component", ""),
             )
         except Exception as exc:  # noqa: BLE001
-            error_traceback = traceback.format_exc()
-            error_message = f"Flow execution failed: {exc!s}"
-            logger.error(f"Error running flow {flow_id}: {exc}")
+            # A failing outbound call puts its request URL in the exception text, and the
+            # traceback reproduces that verbatim — so a 401 arrives carrying the credential
+            # it just rejected, on its way to the response body and the log aggregator.
+            error_traceback = redact_urls_in_text(traceback.format_exc())
+            error_message = redact_urls_in_text(f"Flow execution failed: {exc!s}")
+            logger.error(f"Error running flow {flow_id}: {redact_urls_in_text(str(exc))}")
             logger.debug(f"Full traceback for flow {flow_id}:\n{error_traceback}")
             return JSONResponse(
                 status_code=500,
