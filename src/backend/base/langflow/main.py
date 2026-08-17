@@ -321,23 +321,36 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await copy_profile_pictures()
                 await logger.adebug(f"Profile pictures copied in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
-            current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Reconciling knowledge base rows from disk")
-            try:
-                from langflow.api.utils import knowledge_base_service
+            # Disk reconciliation is opt-in. The ``knowledge_base`` row is the sole
+            # authority for KB metadata, so this scan exists only to adopt directories
+            # left behind by a version that still wrote the on-disk sidecar. Operators
+            # who need it can flip LANGFLOW_KB_DISK_RECONCILE_ENABLED or run
+            # ``langflow reconcile-kb-from-disk`` once, instead of paying a filesystem
+            # walk on every boot forever.
+            if get_settings_service().settings.kb_disk_reconcile_enabled:
+                current_time = asyncio.get_event_loop().time()
+                await logger.adebug("Reconciling knowledge base rows from disk")
+                try:
+                    from langflow.api.utils import knowledge_base_service
 
-                inserted = await knowledge_base_service.backfill_all_users_from_disk()
-                elapsed = asyncio.get_event_loop().time() - current_time
-                await logger.adebug(
-                    f"Knowledge base reconciliation completed in {elapsed:.2f}s ({inserted} rows inserted)"
-                )
-            except Exception as exc:  # noqa: BLE001
-                await logger.awarning("Knowledge base reconciliation skipped after startup error: %s", exc)
+                    inserted = await knowledge_base_service.backfill_all_users_from_disk()
+                    elapsed = asyncio.get_event_loop().time() - current_time
+                    await logger.adebug(
+                        f"Knowledge base reconciliation completed in {elapsed:.2f}s ({inserted} rows inserted)"
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    await logger.awarning("Knowledge base reconciliation skipped after startup error: %s", exc)
 
             # Memory Bases resolve their backend + embedding purely from the
             # knowledge_base row (no on-disk sidecar), so ensure every Memory Base
             # has one. Sourced from the memory_base table, not disk, so it's
             # replica-safe; only Memory Bases missing a row are touched.
+            #
+            # Deliberately NOT gated behind kb_disk_reconcile_enabled: this is a
+            # DB->DB reconcile that reads no filesystem. Skipping it would leave a
+            # legacy Memory Base with no knowledge_base row, which makes backend and
+            # embedding resolution raise and makes ``check_mismatch`` report a false
+            # mismatch — prompting a regenerate that resets every session cursor.
             try:
                 from langflow.api.utils import knowledge_base_service
 

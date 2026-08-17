@@ -1,8 +1,11 @@
 """Memory Base retrieval component.
 
-Queries the auto-provisioned Chroma KB backing a Memory Base, scoped to the
-current flow's request session. Additional option to filter by session_id if the
-developer wants to turn that on. The component will auto filter based on session_id then.
+Queries the vector store backing a Memory Base, scoped to the current flow's
+request session. Additional option to filter by session_id if the developer wants
+to turn that on. The component will auto filter based on session_id then.
+
+Where that store lives comes from the Memory Base's ``knowledge_base`` row, not
+from disk: only a local-Chroma Memory Base resolves a filesystem path at all.
 """
 
 from __future__ import annotations
@@ -11,16 +14,18 @@ import uuid
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
-from langflow.api.utils.kb_helpers import KBIngestionHelper, resolve_backend_selection, resolve_embedding_selection
+from langflow.api.utils.kb_helpers import (
+    KBIngestionHelper,
+    resolve_backend_selection,
+    resolve_embedding_selection,
+    resolve_local_store_path,
+)
 from langflow.services.database.models.memory_base.model import MemoryBase
 from langflow.services.database.models.user.crud import get_user_by_id
-from langflow.services.memory_base.kb_path_helpers import hash_session_id, validate_kb_path
+from langflow.services.memory_base.kb_path_helpers import hash_session_id
 from sqlmodel import select
 
 from lfx.base.knowledge_bases.backends import create_backend
-from lfx.components.files_and_knowledge._kb_paths import (
-    get_knowledge_bases_root_path,
-)
 from lfx.custom import Component
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output
 from lfx.log.logger import logger
@@ -29,8 +34,6 @@ from lfx.schema.dataframe import DataFrame
 from lfx.services.deps import session_scope
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from langflow.services.database.models.user.model import User
     from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -203,39 +206,40 @@ class MemoryBaseComponent(Component):
             raise ValueError(msg)
         return mb, owner
 
-    def _resolve_kb_location(self, owner_username: str, kb_name: str) -> Path:
-        """Build and validate the on-disk KB path for the given owner."""
-        kb_root = get_knowledge_bases_root_path()
-        kb_path = kb_root / owner_username / kb_name
-        try:
-            validate_kb_path(kb_root, kb_path)
-        except ValueError as exc:
-            msg = "Memory Base path is not accessible."
-            raise ValueError(msg) from exc
-        return kb_path
-
     async def _build_backend(
         self,
-        kb_path: Path,
         owner: User,
+        owner_username: str,
         kb_name: str,
     ) -> BaseVectorStoreBackend:
         """Construct the KB's configured backend, wired to its embedding function.
 
-        Both the embedding config and the backend are resolved from the
-        ``knowledge_base`` row — no ``kb_path`` is passed to either resolver, so
-        the on-disk sidecar (``embedding_metadata.json``) is never consulted for
-        a Memory Base. A Memory Base always has a row (created at MB-create and
-        backfilled for pre-existing ones), so a disk fallback here would only
-        ever mask a real DB problem, not recover from a missing sidecar — and a
-        Memory Base provisioned on OpenSearch or Chroma Cloud is queried there —
-        with the right embedding model — even on a replica whose local disk
-        never held the KB directory.
+        The embedding config and the backend both resolve from the
+        ``knowledge_base`` row, so nothing on disk is consulted to decide *where*
+        this Memory Base lives. A local path is then derived only when that row
+        says local Chroma; for OpenSearch, pgVector, or Chroma Cloud it stays
+        ``None`` and the filesystem is never touched. That is what lets a
+        Memory Base be queried — with the right embedding model — from a replica
+        whose local disk never held the KB directory.
         """
+        # Resolve where this Memory Base lives first: containment is a cheap
+        # local check, and a request that will be refused shouldn't first pay for
+        # a credential lookup and a provider client.
+        backend_type, backend_config = await resolve_backend_selection(user_id=owner.id, kb_name=kb_name)
+        try:
+            kb_path = resolve_local_store_path(
+                kb_name,
+                owner_username,
+                backend_type=backend_type,
+                backend_config=backend_config,
+            )
+        except ValueError as exc:
+            msg = "Memory Base path is not accessible."
+            raise ValueError(msg) from exc
+
         provider, model = await resolve_embedding_selection(user_id=owner.id, kb_name=kb_name)
         embedding_function = await KBIngestionHelper.build_embeddings(provider, model, owner)
 
-        backend_type, backend_config = await resolve_backend_selection(user_id=owner.id, kb_name=kb_name)
         backend = create_backend(
             backend_type,
             kb_name=kb_name,
@@ -301,13 +305,6 @@ class MemoryBaseComponent(Component):
             owner_username = owner.username
             kb_name = mb.kb_name
 
-        # ``kb_path`` is still needed for a local-Chroma backend (that's where its
-        # vectors live), but embedding + backend now resolve from the DB row, so a
-        # missing on-disk ``embedding_metadata.json`` is no longer fatal — a
-        # remote-backed Memory Base is fully queryable on a replica with no local
-        # KB directory.
-        kb_path = self._resolve_kb_location(owner_username, kb_name)
-
         where = self._build_where_clause(session_id=session_id)
 
         logger.debug(
@@ -322,7 +319,7 @@ class MemoryBaseComponent(Component):
             # Embedding providers may reject empty input; skip the round-trip entirely.
             return DataFrame(data=[])
 
-        backend = await self._build_backend(kb_path, owner, kb_name)
+        backend = await self._build_backend(owner, owner_username, kb_name)
         try:
             results = await backend.similarity_search(
                 query=self.search_query,
