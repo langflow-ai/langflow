@@ -162,30 +162,44 @@ class BackgroundExecutionService(Service):
 
     # ------------------------------------------------------------------ submit
 
-    async def supersede_suspended_runs(self, *, flow_id: UUID, user_id: UUID) -> list[UUID]:
-        """Cancel this user's SUSPENDED runs of the flow so a rerun replaces the stale pause.
+    async def supersede_suspended_runs(self, *, flow_id: UUID, user_id: UUID, session_id: str) -> list[UUID]:
+        """Cancel this session's SUSPENDED runs of the flow so a rerun replaces the stale pause.
 
         A suspended run holds a pause nobody will answer once its owner reruns the flow;
         left alive it piles up in every pending surface (badge, cards, trace bar). Scope is
-        flow + user: another user's pause on the same flow is never touched, and running
-        jobs are untouched so parallel runs stay supported.
+        flow + user + session: only the SAME conversation's stale pause is replaced. Another
+        end user's pause — or the same user's OTHER session — on the same flow is never
+        touched, and running jobs are untouched so parallel runs stay supported.
+
+        Session, not just user, because on the serving plane one service-account ``user_id``
+        owns every end user's runs, so ``session_id`` (``<end_user>::<base>``) is the only thing
+        separating alice's pause from bob's; without it a new run would cancel across end users.
+        ``session_id`` is the caller-normalized effective session (``request['session_id'] or
+        str(flow_id)``); each candidate is matched on the same normalization read from its
+        persisted ``job_metadata['request']`` — a background job always wrote that blob at submit,
+        and a legacy row missing it falls back to the flow id so it matches only a no-session rerun.
         """
         from sqlmodel import select
 
         from langflow.services.database.models.jobs.model import Job
         from langflow.services.deps import session_scope
 
+        flow_id_str = str(flow_id)
         job_service = get_job_service()
         async with session_scope() as session:
             result = await session.exec(
-                select(Job.job_id).where(
+                select(Job).where(
                     Job.flow_id == flow_id,
                     Job.user_id == user_id,
                     Job.status == JobStatus.SUSPENDED,
                     Job.type == JobType.WORKFLOW,
                 )
             )
-            stale_job_ids = list(result.all())
+            stale_job_ids = [
+                job.job_id
+                for job in result.all()
+                if (((job.job_metadata or {}).get("request") or {}).get("session_id") or flow_id_str) == session_id
+            ]
         cancelled: list[UUID] = []
         for stale_job_id in stale_job_ids:
             if self._scaled:
@@ -238,7 +252,12 @@ class BackgroundExecutionService(Service):
         await job_service.update_job_metadata(job_id, {"request": self._redact_request(request)})
         # After create_job so an idempotent retry returns the existing job instead of
         # cancelling it; the new job is QUEUED, so the suspended-only query skips it.
-        await self.supersede_suspended_runs(flow_id=flow_id, user_id=user.id)
+        # Scope the supersede to THIS run's effective session so a rerun replaces only the
+        # same conversation's stale pause — not another end user's (every end user shares the
+        # SID ``user_id`` on serving) nor this user's other sessions. Normalize session_id ->
+        # flow id to match the runner/status endpoints and supersede's per-candidate read.
+        effective_session = request.get("session_id") or str(flow_id)
+        await self.supersede_suspended_runs(flow_id=flow_id, user_id=user.id, session_id=effective_session)
         if self._scaled:
             # Scaled mode: hand the QUEUED job id to a worker via the redis claim
             # queue; the worker hydrates the request from the job row.
