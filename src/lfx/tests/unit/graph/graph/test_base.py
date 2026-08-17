@@ -467,3 +467,28 @@ async def test_end_all_traces_in_context_runs_on_python_3_10():
     await callable_()
 
     assert seen["marker"] == "captured_value"
+
+
+def test_the_sync_start_forwards_an_event_manager_to_the_right_parameter():
+    """``async_start`` takes (inputs, max_iterations, config, event_manager) in that order.
+
+    Passed positionally, the event manager lands in ``config`` and ``__apply_config`` subscripts
+    it. That happens on the worker thread ``start`` spawns, so nothing propagates to the caller:
+    the exception is logged there and the generator simply finishes empty. A run that produces
+    no results and no error is the worst shape for this to fail in, which is why the assertion
+    is on the results rather than on not raising.
+    """
+    import asyncio
+
+    from lfx.events.event_manager import create_default_event_manager
+
+    chat_input = ChatInput(_id="chat-input")
+    chat_input.set(input_value="hello")
+    chat_output = ChatOutput(_id="chat-output")
+    chat_output.set(input_value=chat_input.message_response)
+    graph = Graph(chat_input, chat_output, flow_id="11111111-1111-1111-1111-111111111111")
+
+    results = list(graph.start(event_manager=create_default_event_manager(asyncio.Queue())))
+
+    assert results, "the run produced nothing; the event manager was interpreted as config"
+    assert any(result is Finish for result in results) or len(results) > 1, results

@@ -359,7 +359,7 @@ class Vertex:
         self.load_from_db_fields = load_from_db_fields
         self.raw_params = self.params.copy()
 
-    def update_raw_params(self, new_params: Mapping[str, str | list[str]], *, overwrite: bool = False) -> None:
+    def update_raw_params(self, new_params: Mapping[str, Any], *, overwrite: bool = False) -> None:
         """Update the raw parameters of the vertex with the given new parameters.
 
         Args:
@@ -375,11 +375,13 @@ class Vertex:
             return
         if any(isinstance(self.raw_params.get(key), Vertex) for key in new_params):
             return
+        params_to_update = dict(new_params)
         if not overwrite:
-            for key in new_params.copy():  # type: ignore[attr-defined]
+            for key in params_to_update.copy():
                 if key not in self.raw_params:
-                    new_params.pop(key)  # type: ignore[attr-defined]
-        self.raw_params.update(new_params)
+                    params_to_update.pop(key)
+        params_to_update = ParameterHandler(self, storage_service=None).process_runtime_params(params_to_update)
+        self.raw_params.update(params_to_update)
         self.params = self.raw_params.copy()
         self.updated_raw_params = True
 
@@ -643,7 +645,7 @@ class Vertex:
         try:
             await log_transaction(flow_id, source, status, target, error, outputs)
         except Exception as exc:  # noqa: BLE001
-            logger.debug(f"Error logging transaction: {exc!s}")
+            logger.debug("Error logging transaction", exc_info=exc)
 
     async def _get_result(
         self,
@@ -701,7 +703,7 @@ class Vertex:
 
                     self.params[key].append(result)
                 except AttributeError as e:
-                    await logger.aexception(e)
+                    await logger.aexception("Failed to append a result to a list parameter")
                     msg = (
                         f"Params {key} ({self.params[key]}) is not a list and cannot be extended with {result}"
                         f"Error building Component {self.display_name}: \n\n{e}"
@@ -748,7 +750,7 @@ class Vertex:
             self._update_built_object_and_artifacts(result)
         except Exception as exc:
             tb = traceback.format_exc()
-            await logger.aexception(exc)
+            await logger.aexception("Vertex build failed")
             # Log transaction error
             flow_id = self.graph.flow_id
             if flow_id:

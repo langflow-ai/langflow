@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class SecuritySettings(BaseModel):
@@ -109,6 +109,28 @@ class SecuritySettings(BaseModel):
     owner (report H1-3754930 follow-up). Enable this only if you knowingly want public flows to
     run custom component code permitted by allow_custom_components."""
 
+    substitute_outdated_component_code: bool = True
+    """Whether a built-in component whose stored code has drifted from this server's copy is
+    rebuilt with this server's code instead of being refused. Only consulted when
+    ``allow_custom_components`` is False (with the default True nothing is gated, so nothing is
+    substituted).
+
+    With ``allow_custom_components=False`` the node's stored code never runs anyway — the build
+    already substitutes the server's copy keyed by code hash (``resolve_trusted_code_for_build``).
+    The hash check therefore refuses flows over code it was not going to execute, which makes every
+    upgrade that touches a built-in component break every saved flow using it until each node is
+    updated by hand.
+
+    Default is True: a node whose ``type`` is a known server component is rebuilt with that
+    component's current server code, matching what the unauthenticated public build path already
+    does by default (see ``prepare_public_flow_build``). Nothing new becomes runnable — the code
+    that runs is always this server's own, selected by component type, and a node whose type is
+    not a known server component is still refused. Substitutions are logged, and the stored flow is
+    left untouched so the editor keeps flagging the node as outdated.
+
+    Set to False to keep the strict behavior: refuse the build whenever a node's stored code does
+    not match the current server template. Has no effect when ``allow_custom_components`` is True."""
+
     block_code_interpreter_components: bool = False
     """If set to True, blocks built-in components that execute user- or model-supplied
     Python, including Python Interpreter/REPL/Function, Smart Transform, CSV Agent,
@@ -121,6 +143,65 @@ class SecuritySettings(BaseModel):
     should not.
 
     Defaults to False to preserve existing single-tenant behavior."""
+
+    sandbox_backend: str = "none"
+    """Execution backend for user-authored code in the code-execution components
+    (Python Interpreter and the legacy Python REPL tool).
+
+    - "none" (default): code runs in-process via ``exec`` with the best-effort
+      Python-level hardening (restricted builtins + AST checks). Preserves existing
+      behavior; nothing extra to install.
+    - "exec-sandbox": each execution runs in a dedicated QEMU microVM via the
+      optional ``exec-sandbox`` package (``pip install 'langflow[sandbox]'``;
+      requires Python >= 3.12 and QEMU 8+ with KVM/HVF hardware acceleration —
+      hosts without a hardware hypervisor are refused unless
+      ``sandbox_allow_software_emulation`` is enabled). The VM has a read-only
+      rootfs, no host filesystem access, and no network unless
+      ``sandbox_allow_network`` is enabled. In this mode the Python-level import
+      allow-list and AST escape-gadget restrictions are not applied — the VM
+      boundary replaces them — so sandboxed code may import any module available
+      in the guest image. If the backend is configured but unusable, execution
+      fails closed with an error instead of silently running in-process.
+
+    See https://github.com/langflow-ai/langflow/issues/12029."""
+
+    sandbox_timeout_seconds: int = Field(default=30, ge=1, le=300)
+    """Wall-clock limit for one sandboxed execution, in seconds (1-300).
+    Only used when sandbox_backend is not "none"."""
+
+    sandbox_memory_mb: int = Field(default=192, ge=128)
+    """Guest VM memory for sandboxed executions, in MB (minimum 128).
+    Only used when sandbox_backend is not "none"."""
+
+    sandbox_allow_network: bool = False
+    """Whether sandboxed code may access the network. Default False: the microVM
+    runs fully offline, which is the strongest isolation. Note the in-process
+    backend has full server-side network access, so enabling the sandbox with the
+    default here is a behavior change for code that fetches URLs.
+
+    When enabled WITHOUT ``sandbox_allowed_domains``, exec-sandbox's DNS filter
+    still only permits its package-registry defaults (PyPI /
+    files.pythonhosted.org) — ordinary APIs stay unreachable until their domains
+    are listed explicitly. Only used when sandbox_backend is not "none"."""
+
+    sandbox_allowed_domains: list[str] = []
+    """Comma-separated list of domains sandboxed code may reach when
+    ``sandbox_allow_network`` is enabled (forwarded to exec-sandbox's DNS
+    filter). Empty (default) keeps exec-sandbox's package-registry-only
+    default. Listing a domain here permits guest egress to it, so treat this
+    like an SSRF allow-list: prefer narrow, fully-qualified domains.
+    Only used when sandbox_backend is not "none"."""
+
+    sandbox_allow_software_emulation: bool = False
+    """Permit the sandbox to run without a hardware hypervisor (KVM on Linux,
+    HVF on macOS), letting QEMU fall back to TCG software emulation.
+
+    Default False and strongly recommended to keep it that way: upstream
+    exec-sandbox documents TCG as NOT security-supported (and ~5-8x slower),
+    while sandbox mode disables the in-process Python defenses on the
+    assumption of a hardware boundary. Enable only for trusted/development
+    workloads, e.g. CI smoke tests or containers without /dev/kvm passthrough.
+    Only used when sandbox_backend is not "none"."""
 
     restrict_local_file_access: bool = False
     """If set to True, the built-in file-reading components (File, Directory, JSON/CSV-to-Data)
@@ -155,6 +236,38 @@ class SecuritySettings(BaseModel):
     ``--security-opt`` is rejected only when it disables the sandbox. Benign forms (no flags,
     ``--user``, ``--network none``/``bridge``, ``--security-opt no-new-privileges``) stay allowed."""
 
+    # Serving-plane end-user identity
+    serving_end_user_header: str | None = None
+    """Name of the trusted request header that carries the end-user identity on the serving plane
+    (e.g. ``X-End-User-Id``). The value is an opaque, deterministic per-user string minted and
+    injected by the authenticated gateway; Langflow does not parse or validate it, it only uses it
+    as the per-user memory/state scope key.
+
+    UNSET (the default) means the feature is OFF: no end-user identity is read and every serving
+    request is fully anonymous (ephemeral, no persisted per-user memory). Setting a header name
+    turns the feature on, but the header is still only trusted when
+    ``serving_trust_proxy_headers`` is True.
+
+    Security: an unverified client-supplied header would let any caller read another user's memory,
+    so the header must be injected/validated by the authenticated gateway and the serving pods must
+    be reachable only through that gateway (network policy). See ``serving_trust_proxy_headers``."""
+    serving_trust_proxy_headers: bool = False
+    """Fail-closed opt-in for the serving-plane end-user identity header. The header named by
+    ``serving_end_user_header`` is trusted ONLY when this is True.
+
+    Default False: even with a header name configured, the header is ignored and every request is
+    anonymous until an operator explicitly opts in. Enable this only when the deployment guarantees
+    (a) the authenticated gateway injects/overwrites the header from a validated identity and
+    (b) network policy makes the gateway the only caller able to reach the serving pods. Without
+    those two guarantees a client can spoof the header and read another user's memory."""
+    serving_end_user_required: bool = False
+    """Whether a serving request with no end-user identity is rejected. Only meaningful when the
+    feature is on (``serving_end_user_header`` set and ``serving_trust_proxy_headers`` True).
+
+    Default False: a request with no identity is allowed and runs as an anonymous, ephemeral
+    session with no persisted memory. Set True to reject identity-less requests instead (e.g. a
+    deployment that must attribute every run to an end user)."""
+
     # Rate Limiting
     rate_limit_enabled: bool = True
     """Enable rate limiting for login and public-flow endpoints. Set to False to disable."""
@@ -168,6 +281,29 @@ class SecuritySettings(BaseModel):
     """Public-flow runs allowed per minute per IP on the unauthenticated v1 build and v2 workflow endpoints.
     V1 uses one bucket per flow; v2 uses its public-workflow bucket. Each run executes as the flow owner, so
     anonymous callers are throttled separately from and more generously than login. Gated by rate_limit_enabled."""
+
+    @field_validator("sandbox_allowed_domains", mode="after")
+    @classmethod
+    def normalize_sandbox_allowed_domains(cls, value: list[str]) -> list[str]:
+        """Strip whitespace and drop empty entries.
+
+        The env parser splits ``LANGFLOW_SANDBOX_ALLOWED_DOMAINS=a.com, b.com``
+        on commas without trimming, and exec-sandbox's DNS filter rejects
+        entries with leading/trailing whitespace — normalize here so the
+        natural comma-and-space spelling works.
+        """
+        return [domain.strip() for domain in value if domain and domain.strip()]
+
+    @field_validator("sandbox_backend", mode="before")
+    @classmethod
+    def validate_sandbox_backend(cls, value):
+        """Reject unknown backends at startup so a typo cannot silently disable sandboxing."""
+        normalized = str(value).strip().lower() if value is not None else "none"
+        allowed = {"none", "exec-sandbox"}
+        if normalized not in allowed:
+            msg = f"sandbox_backend must be one of {sorted(allowed)}, got {value!r}"
+            raise ValueError(msg)
+        return normalized
 
     @field_validator("cors_origins", mode="before")
     @classmethod

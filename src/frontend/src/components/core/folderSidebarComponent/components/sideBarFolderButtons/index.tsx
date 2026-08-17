@@ -116,6 +116,27 @@ const SideBarFoldersButtonsComponent = ({
     folders.map((obj) => ({ id: obj.id!, edit: false })) ?? [],
   );
 
+  // Committing or cancelling a rename unmounts the input while it still holds
+  // focus, dropping focus to <body> and forcing a keyboard user to tab from the
+  // top of the page. Hand focus back to the project's nav item instead — but
+  // only when focus was actually lost, so clicking straight to another control
+  // isn't yanked back here.
+  const renamingFolderId =
+    editFolders.find((folder) => folder.edit)?.id ?? null;
+  const previousRenamingFolderId = useRef<string | null>(null);
+
+  useEffect(() => {
+    const justFinished = previousRenamingFolderId.current;
+    previousRenamingFolderId.current = renamingFolderId;
+
+    if (!justFinished || renamingFolderId) return;
+    if (document.activeElement && document.activeElement !== document.body) {
+      return;
+    }
+
+    document.getElementById(`sidebar-nav-${justFinished}`)?.focus();
+  }, [renamingFolderId]);
+
   const isFetchingFolders = !!useIsFetching({
     queryKey: ["useGetFolders"],
     exact: false,
@@ -464,7 +485,7 @@ const SideBarFoldersButtonsComponent = ({
                                     }
                                   }}
                                   className={cn(
-                                    "flex-grow pr-8",
+                                    "flex-grow pr-16",
                                     hoveredFolderId === item.id && "bg-accent",
                                     checkHoveringFolder(item.id!),
                                   )}

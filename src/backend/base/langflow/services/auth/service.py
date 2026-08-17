@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
+import secrets
+import time
 import warnings
-from collections.abc import Awaitable, Callable, Coroutine, Mapping
+from collections import OrderedDict
+from collections.abc import Awaitable, Callable, Coroutine, Iterable, Mapping
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -27,6 +31,8 @@ from langflow.services.auth.context import (
     set_current_auth_context,
 )
 from langflow.services.auth.exceptions import (
+    AuthBackendUnavailableError,
+    AuthenticationError,
     InactiveUserError,
     InvalidCredentialsError,
     MissingCredentialsError,
@@ -56,12 +62,189 @@ from langflow.services.schema import ServiceType
 
 _MAX_EXTERNAL_AUTHORIZATION_GROUPS = 500
 _MAX_EXTERNAL_AUTHORIZATION_GROUP_LENGTH = 256
+_MAX_EXTERNAL_GROUP_CLAIM_PATH_DEPTH = 16
+_MAX_DIRECTORY_RECONCILE_CACHE_ENTRIES = 10_000
+_MAX_EXTERNAL_AUTH_ATTEMPTS = 3
+_EXTERNAL_AUTH_RETRY_BACKOFF_SECONDS = 0.02
+
+# SQLSTATE classes that mean "the transaction was rolled back, retry it": the
+# statement never took effect, so nothing the caller sent was rejected.
+_RETRYABLE_SQLSTATES = frozenset(
+    {
+        "40001",  # serialization_failure
+        "40P01",  # deadlock_detected
+        "55P03",  # lock_not_available
+    }
+)
 
 
-def _has_external_group_overage(claims: Mapping[str, object], claim_name: str) -> bool:
+def _is_retryable_backend_failure(exc: BaseException) -> bool:
+    """Return whether an exception is a transient backend failure, not a verdict.
+
+    A deadlock victim, a serialization failure or a lost connection all mean the
+    request never got an answer. Reporting those as an authentication failure
+    tells the caller to fix a credential that was never actually rejected.
+    """
+    from sqlalchemy.exc import DBAPIError, InterfaceError, OperationalError
+    from sqlalchemy.exc import TimeoutError as SQLTimeoutError
+
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if isinstance(current, (InterfaceError, OperationalError, SQLTimeoutError)):
+            return True
+        if isinstance(current, DBAPIError):
+            if current.connection_invalidated:
+                return True
+            orig = current.orig
+            # psycopg3 exposes ``sqlstate``; psycopg2 exposes ``pgcode``.
+            sqlstate = getattr(orig, "sqlstate", None) or getattr(orig, "pgcode", None)
+            if isinstance(sqlstate, str) and sqlstate in _RETRYABLE_SQLSTATES:
+                return True
+        current = current.__cause__ or current.__context__
+    return False
+
+
+class _DirectoryReconcileCache:
+    """Bounded, short-lived record of the last directory state reconciled per user.
+
+    LE-2109: bearer tokens arrive on every request, and reconciliation opens a
+    transaction, takes the authorization plugin's policy locks and appends an
+    audit row. Repeating all of that for a directory state that has not moved
+    is pure overhead, so one successful *no-op* pass is remembered for a short
+    interval.
+
+    The cache holds at most one entry per user: the exact state the last
+    confirming pass verified. A request is skipped only while that entry is
+    fresh *and* carries the same state, so any claim that differs from the
+    last reconciled state misses by construction - including a state that
+    was cached earlier and has since been moved past. Keying by state alone
+    would let ``[devs]`` cached before a promotion to ``[admins, devs]`` keep
+    serving after the IdP revokes ``admins`` again, holding the admin role
+    until the entry aged out.
+
+    Two rules keep an entry from outliving the state it verified when passes
+    for one user overlap (an old and a new token in flight together):
+
+    * :meth:`begin` records a miss. It drops the user's entry, because the
+      claim being reconciled supersedes it, and hands the pass a ticket. Only
+      the pass holding the user's *latest* ticket may :meth:`remember`.
+    * :meth:`invalidate` is called after a pass changed the stored state. It
+      drops the entry and revokes the outstanding ticket, so a concurrent
+      no-op pass that verified the *previous* state cannot re-cache it after
+      the change landed.
+
+    One slot per user is deliberate: a user alternating between two different
+    identities (two providers, or two subjects) simply misses on each switch
+    and reconciles - never a stale hit, only less caching for that edge case.
+
+    Entries are per-process and expire on their own, so the worst case is that
+    an out-of-band directory change (one that arrives with the *same* claim)
+    is observed one interval late.
+    """
+
+    def __init__(self, *, max_entries: int = _MAX_DIRECTORY_RECONCILE_CACHE_ENTRIES) -> None:
+        self._max_entries = max_entries
+        # user key -> (verified state, monotonic deadline)
+        self._entries: OrderedDict[str, tuple[tuple[object, ...], float]] = OrderedDict()
+        # user key -> ticket of the latest pass that began for the user
+        self._tickets: OrderedDict[str, int] = OrderedDict()
+        self._last_ticket = 0
+
+    def is_fresh(self, user_key: str, state: tuple[object, ...], *, now: float) -> bool:
+        entry = self._entries.get(user_key)
+        if entry is None:
+            return False
+        verified_state, deadline = entry
+        if deadline <= now:
+            del self._entries[user_key]
+            return False
+        return verified_state == state
+
+    def begin(self, user_key: str) -> int:
+        """Record a cache miss and return the ticket the pass must present to remember its result."""
+        self._entries.pop(user_key, None)
+        self._last_ticket += 1
+        self._tickets.pop(user_key, None)
+        self._tickets[user_key] = self._last_ticket
+        while len(self._tickets) > self._max_entries:
+            self._tickets.popitem(last=False)
+        return self._last_ticket
+
+    def remember(
+        self,
+        user_key: str,
+        state: tuple[object, ...],
+        *,
+        ticket: int,
+        now: float,
+        ttl_seconds: float,
+    ) -> None:
+        if ttl_seconds <= 0:
+            return
+        if self._tickets.get(user_key) != ticket:
+            # A newer pass began for this user, or a change landed, after this
+            # pass verified its state: that verdict is stale and must not
+            # become the entry.
+            return
+        del self._tickets[user_key]
+        self._purge_expired(now)
+        self._entries.pop(user_key, None)
+        self._entries[user_key] = (state, now + ttl_seconds)
+        while len(self._entries) > self._max_entries:
+            self._entries.popitem(last=False)
+
+    def invalidate(self, user_key: str) -> None:
+        """Forget the user's entry and revoke any in-flight ticket after their stored state changed."""
+        self._entries.pop(user_key, None)
+        self._tickets.pop(user_key, None)
+
+    def _purge_expired(self, now: float) -> None:
+        expired = [key for key, (_, deadline) in self._entries.items() if deadline <= now]
+        for key in expired:
+            del self._entries[key]
+
+
+def _has_external_group_overage(claims: Mapping[str, object], claim_path: tuple[str, ...]) -> bool:
     """Return whether an Entra-style overage pointer replaces the group claim."""
     claim_names = claims.get("_claim_names")
+    # ``_claim_names`` identifies top-level JWT claim names. Joining the path
+    # would collapse ("a.b",) and ("a", "b") into the same selector.
+    claim_name = claim_path[0]
     return isinstance(claim_names, Mapping) and claim_name in claim_names
+
+
+def _validated_external_group_claim_path(value: object) -> tuple[str, ...] | None:
+    """Validate the plugin-selected path before traversing verified claims."""
+    if value is None:
+        return None
+    if not isinstance(value, tuple) or not value or len(value) > _MAX_EXTERNAL_GROUP_CLAIM_PATH_DEPTH:
+        msg = "external groups claim path must contain between 1 and 16 segments"
+        raise ValueError(msg)
+    if any(
+        not isinstance(segment, str)
+        or not segment.strip()
+        or segment != segment.strip()
+        or len(segment) > _MAX_EXTERNAL_AUTHORIZATION_GROUP_LENGTH
+        for segment in value
+    ):
+        msg = "external groups claim path segments must be normalized strings of at most 256 characters"
+        raise ValueError(msg)
+    return value
+
+
+def _claim_value_at_path(claims: Mapping[str, object], claim_path: tuple[str, ...]) -> tuple[bool, object]:
+    """Resolve a claim path without treating dots inside claim names as separators."""
+    current: object = claims
+    for segment in claim_path:
+        if not isinstance(current, Mapping):
+            msg = "external groups claim path traverses a non-object value"
+            raise TypeError(msg)
+        if segment not in current:
+            return False, None
+        current = current[segment]
+    return True, current
 
 
 def _audit_audience(claims: Mapping[str, object]) -> str | list[str] | None:
@@ -121,6 +304,7 @@ class AuthService(BaseAuthService):
 
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
+        self._directory_reconcile_cache = _DirectoryReconcileCache()
         self.set_ready()
 
     @property
@@ -163,11 +347,46 @@ class AuthService(BaseAuthService):
         """
         clear_current_auth_context()
         clear_current_external_access_context()
+        try:
+            return await self._authenticate_with_credentials_impl(token, api_key, db, external_token=external_token)
+        except Exception:
+            # Exceptional-exit invariant: a failed credential attempt may have
+            # flushed JIT user/profile rows and populated the identity contexts
+            # before a later step (for example an authorization-policy
+            # rejection) raised. Callers that swallow authentication errors and
+            # let the request complete (``get_optional_user``) share this
+            # session, and the request-scoped session auto-commits on clean
+            # completion — so no staged state may survive the raise.
+            await self._discard_failed_credential_state(db)
+            raise
 
+    async def _discard_failed_credential_state(self, db: AsyncSession) -> None:
+        """Roll back staged session state and clear the identity contexts."""
+        try:
+            await db.rollback()
+        except Exception as exc:  # noqa: BLE001 - the original credential error must surface
+            logger.warning(f"Rollback after a failed credential attempt failed: {exc}")
+        finally:
+            clear_current_auth_context()
+            clear_current_external_access_context()
+
+    async def _authenticate_with_credentials_impl(
+        self,
+        token: str | None,
+        api_key: str | None,
+        db: AsyncSession,
+        external_token: str | None = None,
+    ) -> User | UserRead:
         # Try token authentication first (if token provided)
         if token:
             try:
                 return await self._authenticate_with_token(token, db)
+            except AuthBackendUnavailableError:
+                # A backend outage is not a credential verdict, so there is
+                # nothing for the remaining credentials to disambiguate. Retrying
+                # them would only widen the outage's blast radius, and answering
+                # 401 would blame a token that was never rejected.
+                raise
             except (AuthInvalidTokenError, TokenExpiredError, InactiveUserError) as e:
                 # Native auth failed. If a *distinct* external credential was
                 # extracted, try it before surfacing the native error so a present
@@ -175,6 +394,14 @@ class AuthService(BaseAuthService):
                 # one. When external_token is None or identical to the token we
                 # already tried, behavior is unchanged.
                 if external_token and external_token != token:
+                    # A recognized auth failure can still follow external JIT
+                    # materialization (for example, a later authorization-policy
+                    # rejection). Start the distinct credential at a clean
+                    # transaction and context boundary so its commit cannot
+                    # persist state from the rejected attempt.
+                    await db.rollback()
+                    clear_current_auth_context()
+                    clear_current_external_access_context()
                     external_user = await self._authenticate_with_external_token(external_token, db)
                     if external_user is not None:
                         return external_user
@@ -365,9 +592,39 @@ class AuthService(BaseAuthService):
             AuthCredentialContext(method=AUTH_METHOD_EXTERNAL, external_provider=identity.provider)
         )
         set_current_external_access_context(access_context_from_identity(identity, self.settings.auth_settings))
-        user = await self._materialize_external_user(identity, db)
-        await self._reconcile_verified_external_groups(identity=identity, user=user, db=db)
-        return user
+        # The credential has already verified here. Materialization and group
+        # reconciliation own everything staged on this session, so a conflict
+        # that rolled the transaction back can be replayed from scratch: a
+        # deadlock victim, a serialization failure, or two concurrent logins
+        # racing to create the same row. What must never happen is reporting
+        # any of those as a failed authentication — nothing was rejected.
+        for attempt in range(1, _MAX_EXTERNAL_AUTH_ATTEMPTS + 1):
+            try:
+                user = await self._materialize_external_user(identity, db)
+                await self._reconcile_verified_external_groups(identity=identity, user=user, db=db)
+            except AuthenticationError:
+                raise
+            except Exception as exc:
+                retryable = _is_retryable_backend_failure(exc)
+                if not retryable and not isinstance(exc, IntegrityError):
+                    raise
+                await db.rollback()
+                if attempt >= _MAX_EXTERNAL_AUTH_ATTEMPTS:
+                    logger.warning(
+                        "External identity resolved but its backend work kept failing for provider=%s: %s: %s",
+                        identity.provider,
+                        type(exc).__name__,
+                        exc,
+                    )
+                    if not retryable:
+                        raise
+                    raise AuthBackendUnavailableError from exc
+                # Jitter so two requests that conflicted do not line up again.
+                await asyncio.sleep(_EXTERNAL_AUTH_RETRY_BACKOFF_SECONDS * attempt * (1 + secrets.randbelow(100) / 100))
+            else:
+                return user
+        msg = "unreachable: the final attempt either returns or raises"
+        raise AssertionError(msg)
 
     async def _reconcile_verified_external_groups(
         self,
@@ -376,14 +633,12 @@ class AuthService(BaseAuthService):
         user: User,
         db: AsyncSession,
     ) -> None:
-        """Send a complete verified group claim through the authorization seam.
-
-        Missing, overage, or malformed claims are not authoritative zero-group
-        snapshots and therefore skip reconciliation. Provider configuration and
-        transactional ingest failures intentionally remain fail-closed; audit
-        enqueue and post-commit publication are isolated from authentication.
-        """
-        from lfx.services.authorization import DirectoryMembershipSnapshot
+        """Send one sanitized verified group-claim state through the authorization seam."""
+        from lfx.services.authorization import (
+            AuthorizationMutationRejected,
+            DirectoryMembershipClaimState,
+            DirectoryMembershipSnapshot,
+        )
 
         from langflow.services.authorization.audit import AUDIT_ALLOW, AUDIT_SKIP, audit_decision
         from langflow.services.authorization.lifecycle import safe_directory_membership_committed
@@ -392,12 +647,19 @@ class AuthService(BaseAuthService):
         authorization_service = get_authorization_service()
         issuer_value = identity.claims.get("iss")
         issuer = issuer_value.strip() if isinstance(issuer_value, str) and issuer_value.strip() else None
-        claim_name = await authorization_service.external_groups_claim(
-            provider_id=identity.provider,
-            issuer=issuer,
-        )
-        if not claim_name:
+        path_selector = getattr(authorization_service, "external_groups_claim_path", None)
+        if path_selector is None:
+            claim_name = await authorization_service.external_groups_claim(
+                provider_id=identity.provider,
+                issuer=issuer,
+            )
+            selected_path: object = (claim_name,) if claim_name else None
+        else:
+            selected_path = await path_selector(provider_id=identity.provider, issuer=issuer)
+        claim_path = _validated_external_group_claim_path(selected_path)
+        if claim_path is None:
             return
+        claim_name = ".".join(claim_path)
 
         async def audit_reconciliation(*, result: str, details: dict[str, object]) -> None:
             await _safe_audit_directory_reconciliation(
@@ -409,105 +671,142 @@ class AuthService(BaseAuthService):
                 details=details,
             )
 
-        async def audit_skip(reason: str) -> None:
-            # JIT user/profile and last-login updates share this transaction.
-            # Commit them before the independent audit writer resolves the
-            # audit row's user foreign key.
-            await db.commit()
-            await audit_reconciliation(
-                result=AUDIT_SKIP,
-                details={
-                    "claim_name": claim_name,
-                    "reason": reason,
-                    "authoritative": False,
-                    "complete": False,
-                },
-            )
-
-        if _has_external_group_overage(identity.claims, claim_name):
-            logger.warning(
-                "Skipping external group reconciliation for provider=%s user=%s: claim=%s uses an overage pointer",
-                identity.provider,
-                user.id,
-                claim_name,
-            )
-            await audit_skip("overage")
-            return
-        if claim_name not in identity.claims:
-            logger.warning(
-                "Skipping external group reconciliation for provider=%s user=%s: claim=%s is absent",
-                identity.provider,
-                user.id,
-                claim_name,
-            )
-            await audit_skip("absent")
-            return
-
-        raw_groups = identity.claims[claim_name]
-        if isinstance(raw_groups, str):
-            candidates = (raw_groups,)
-        elif isinstance(raw_groups, (list, tuple, set, frozenset)):
-            candidates = raw_groups
-        else:
-            logger.warning(
-                "Skipping external group reconciliation for provider=%s user=%s: claim=%s has an invalid type",
-                identity.provider,
-                user.id,
-                claim_name,
-            )
-            await audit_skip("malformed")
-            return
-
+        claim_state: DirectoryMembershipClaimState | None = None
+        complete = True
         normalized_groups: set[str] = set()
-        for candidate in candidates:
-            if not isinstance(candidate, str):
-                logger.warning(
-                    "Skipping external group reconciliation for provider=%s user=%s: "
-                    "claim=%s contains a non-string entry",
-                    identity.provider,
-                    user.id,
-                    claim_name,
-                )
-                await audit_skip("malformed")
-                return
-            group = candidate.strip()
-            if not group or len(group) > _MAX_EXTERNAL_AUTHORIZATION_GROUP_LENGTH:
-                logger.warning(
-                    "Skipping external group reconciliation for provider=%s user=%s: "
-                    "claim=%s contains an invalid group identifier",
-                    identity.provider,
-                    user.id,
-                    claim_name,
-                )
-                await audit_skip("malformed")
-                return
-            normalized_groups.add(group)
+        candidates: Iterable[object] = ()
+        if _has_external_group_overage(identity.claims, claim_path):
+            claim_state = DirectoryMembershipClaimState.OVERAGE
+            complete = False
+        else:
+            try:
+                found, raw_groups = _claim_value_at_path(identity.claims, claim_path)
+            except TypeError:
+                found = False
+                raw_groups = None
+                claim_state = DirectoryMembershipClaimState.MALFORMED
+                complete = False
+            if complete and not found:
+                claim_state = DirectoryMembershipClaimState.ABSENT
+                complete = False
+            elif complete and isinstance(raw_groups, str):
+                candidates = (raw_groups,)
+            elif complete and isinstance(raw_groups, (list, tuple, set, frozenset)):
+                candidates = raw_groups
+            elif complete:
+                candidates = ()
+                claim_state = DirectoryMembershipClaimState.MALFORMED
+                complete = False
 
-        groups = tuple(sorted(normalized_groups))
-        if len(groups) > _MAX_EXTERNAL_AUTHORIZATION_GROUPS:
+            if complete:
+                for candidate in candidates:
+                    if not isinstance(candidate, str):
+                        claim_state = DirectoryMembershipClaimState.MALFORMED
+                        complete = False
+                        break
+                    group = candidate.strip()
+                    if not group or len(group) > _MAX_EXTERNAL_AUTHORIZATION_GROUP_LENGTH:
+                        claim_state = DirectoryMembershipClaimState.MALFORMED
+                        complete = False
+                        break
+                    normalized_groups.add(group)
+
+        groups = tuple(sorted(normalized_groups)) if complete else ()
+        if complete and len(groups) > _MAX_EXTERNAL_AUTHORIZATION_GROUPS:
+            groups = ()
+            claim_state = DirectoryMembershipClaimState.TOO_MANY
+            complete = False
+        elif complete and not groups:
+            claim_state = DirectoryMembershipClaimState.EMPTY
+
+        # LE-2109: bearer tokens arrive on every request. Reconciliation writes
+        # rows, takes the plugin's policy locks and appends an audit entry, so
+        # a directory state that was verified unchanged a moment ago is skipped
+        # until the configured interval elapses. The cache remembers only the
+        # *last* reconciled state per user, so a claim whose group set, claim
+        # state or identity differs from that state reconciles immediately -
+        # even a group set that was itself cached earlier and has since been
+        # moved past (a promotion followed by a revocation).
+        reconcile_interval = float(self.settings.auth_settings.EXTERNAL_AUTH_GROUP_RECONCILE_INTERVAL_SECONDS)
+        cache_user = str(user.id)
+        cache_state = (
+            identity.provider,
+            identity.subject,
+            claim_name,
+            claim_state.value if claim_state is not None else None,
+            complete,
+            groups,
+        )
+        now = time.monotonic()
+        if reconcile_interval > 0 and self._directory_reconcile_cache.is_fresh(cache_user, cache_state, now=now):
+            # Skipping reconciliation must not skip the JIT/profile bookkeeping
+            # that materializing the user staged on this session.
+            await db.commit()
+            return
+        # This claim is about to be reconciled, so whatever the cache holds
+        # for the user describes a state that is being superseded: begin()
+        # drops it and hands this pass the ticket it must present to be
+        # remembered, so an overlapping pass for the same user can never
+        # re-cache a state a later pass moved past.
+        cache_ticket = self._directory_reconcile_cache.begin(cache_user)
+
+        if not complete:
+            assert claim_state is not None  # noqa: S101 - internal state-machine invariant
             logger.warning(
-                "Skipping external group reconciliation for provider=%s user=%s: claim=%s exceeds the %d-group limit",
+                "External group claim is incomplete for provider=%s user=%s: claim=%s state=%s",
                 identity.provider,
                 user.id,
                 claim_name,
-                _MAX_EXTERNAL_AUTHORIZATION_GROUPS,
+                claim_state.value,
             )
-            await audit_skip("too_many")
-            return
 
-        result = await authorization_service.ingest_directory_membership_snapshot(
-            session=db,
-            snapshot=DirectoryMembershipSnapshot(
-                provider_id=identity.provider,
-                source="external_bearer",
-                observed_at=datetime.now(timezone.utc),
-                user_id=user.id,
-                provider_user_id=identity.subject,
-                memberships=groups,
-                authoritative=True,
-                complete=True,
-            ),
-        )
+            supports_incomplete = getattr(
+                authorization_service,
+                "supports_incomplete_directory_membership_snapshots",
+                None,
+            )
+            if supports_incomplete is None or not await supports_incomplete():
+                # Preserve the original complete-only plugin contract. Commit
+                # JIT/profile bookkeeping before the independent audit writer
+                # resolves the user's foreign key, but never present a legacy
+                # plugin with an ambiguous empty tuple.
+                await db.commit()
+                await audit_reconciliation(
+                    result=AUDIT_SKIP,
+                    details={
+                        "claim_name": claim_name,
+                        "reason": claim_state.value,
+                        "authoritative": False,
+                        "complete": False,
+                    },
+                )
+                self._directory_reconcile_cache.remember(
+                    cache_user,
+                    cache_state,
+                    ticket=cache_ticket,
+                    now=now,
+                    ttl_seconds=reconcile_interval,
+                )
+                return
+
+        try:
+            result = await authorization_service.ingest_directory_membership_snapshot(
+                session=db,
+                snapshot=DirectoryMembershipSnapshot(
+                    provider_id=identity.provider,
+                    source="external_bearer",
+                    observed_at=datetime.now(timezone.utc),
+                    user_id=user.id,
+                    provider_user_id=identity.subject,
+                    memberships=groups,
+                    authoritative=complete,
+                    complete=complete,
+                    claim_state=claim_state,
+                    claim_path=claim_path,
+                ),
+            )
+        except AuthorizationMutationRejected as exc:
+            raise AuthInvalidTokenError(exc.public_detail) from exc
         await db.commit()
         if result is None:
             # Compatibility with a plugin built against the initial untyped
@@ -529,6 +828,38 @@ class AuthService(BaseAuthService):
             changed = bool(getattr(result, "changed", True))
             added = getattr(result, "added", None)
             removed = getattr(result, "removed", None)
+        if changed:
+            # The stored state just moved. Whatever the cache holds for the
+            # user, and any pass still in flight that verified the previous
+            # state, must not be served or remembered after this commit.
+            self._directory_reconcile_cache.invalidate(cache_user)
+
+        if not complete:
+            assert claim_state is not None  # noqa: S101 - internal state-machine invariant
+            await audit_reconciliation(
+                result=AUDIT_SKIP,
+                details={
+                    "claim_name": claim_name,
+                    "reason": claim_state.value,
+                    "authoritative": False,
+                    "complete": False,
+                },
+            )
+            if changed:
+                await safe_directory_membership_committed(
+                    authorization_service,
+                    user_id=user.id,
+                    changed=True,
+                )
+            else:
+                self._directory_reconcile_cache.remember(
+                    cache_user,
+                    cache_state,
+                    ticket=cache_ticket,
+                    now=now,
+                    ttl_seconds=reconcile_interval,
+                )
+            return
 
         await audit_reconciliation(
             result=AUDIT_ALLOW,
@@ -547,6 +878,18 @@ class AuthService(BaseAuthService):
             user_id=user.id,
             changed=changed,
         )
+        if not changed:
+            # Only a reconciliation that verified the stored state already
+            # matched the claim is safe to skip next time. A pass that changed
+            # something gets one confirming pass before the interval starts, so
+            # a post-commit propagation retry is never hidden by the cache.
+            self._directory_reconcile_cache.remember(
+                cache_user,
+                cache_state,
+                ticket=cache_ticket,
+                now=now,
+                ttl_seconds=reconcile_interval,
+            )
 
     async def _authenticate_with_api_key(self, api_key: str) -> UserRead | None:
         """Internal method to authenticate with API key (raises generic exceptions).
@@ -884,7 +1227,21 @@ class AuthService(BaseAuthService):
         """
         clear_current_auth_context()
         clear_current_external_access_context()
+        try:
+            return await self._get_current_user_from_access_token_impl(token, db, external_token=external_token)
+        except Exception:
+            # Same exceptional-exit invariant as authenticate_with_credentials:
+            # no staged session state or populated identity context may survive
+            # the raise (see _discard_failed_credential_state).
+            await self._discard_failed_credential_state(db)
+            raise
 
+    async def _get_current_user_from_access_token_impl(
+        self,
+        token: str | Coroutine | None,
+        db: AsyncSession,
+        external_token: str | None = None,
+    ) -> User:
         # Handle coroutine token (FastAPI dependency injection)
         resolved_token: str | None
         if token is None:
@@ -918,6 +1275,12 @@ class AuthService(BaseAuthService):
             return await self._authenticate_with_token(resolved_token, db)
         except (AuthInvalidTokenError, TokenExpiredError, InactiveUserError, InvalidCredentialsError) as e:
             if external_token and external_token != resolved_token:
+                # Match the framework-agnostic credential path: the failed
+                # attempt may have staged JIT/profile state before a policy
+                # rejection, so the distinct credential needs a clean boundary.
+                await db.rollback()
+                clear_current_auth_context()
+                clear_current_external_access_context()
                 external_user = await self._authenticate_with_external_token(external_token, db)
                 if external_user is not None:
                     return external_user

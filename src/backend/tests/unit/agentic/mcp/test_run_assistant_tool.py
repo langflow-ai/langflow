@@ -21,12 +21,14 @@ DB session, mirroring ``test_template_create.py``.
 """
 
 import json
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
+from lfx.base.mcp.security import AGENTIC_USER_ID_ENV_VAR
 from lfx.services.catalog_policy import CatalogPolicySnapshot
 
 RUNNER_MODULE = "langflow.agentic.utils.assistant_runner"
@@ -78,6 +80,13 @@ def _context_stub() -> SimpleNamespace:
     )
 
 
+def _session_mock() -> AsyncMock:
+    session = AsyncMock()
+    # SQLAlchemy's add() API is synchronous even on AsyncSession.
+    session.add = MagicMock()
+    return session
+
+
 class TestRunAssistantToolRegistration:
     @pytest.mark.asyncio
     async def test_should_expose_run_assistant_tool_on_the_agentic_mcp_server(self):
@@ -96,7 +105,7 @@ class TestRunAssistantAndPersist:
 
         user_id = uuid4()
         created_flow = SimpleNamespace(id=uuid4(), name="Assistant Flow", data=None, user_id=user_id)
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=created_flow)
         with (
             patch(f"{RUNNER_MODULE}._new_flow", new_callable=AsyncMock, return_value=created_flow) as new_flow,
@@ -133,8 +142,16 @@ class TestRunAssistantAndPersist:
         from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
 
         user_id = uuid4()
-        flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
-        session = AsyncMock()
+        previous_updated_at = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        flow = SimpleNamespace(
+            id=uuid4(),
+            name="My Flow",
+            data={"nodes": [], "edges": []},
+            user_id=user_id,
+            updated_at=previous_updated_at,
+        )
+        session = _session_mock()
+        session.add = MagicMock()
         session.get = AsyncMock(return_value=flow)
         with (
             patch(
@@ -157,6 +174,8 @@ class TestRunAssistantAndPersist:
             )
 
         assert flow.data == NEW_FLOW_DATA
+        assert flow.updated_at > previous_updated_at
+        assert flow.updated_at.tzinfo is timezone.utc
         session.commit.assert_awaited()
         assert result["flow_changed"] is True
         assert result["result"] == "Built a simple chat flow."
@@ -173,7 +192,7 @@ class TestRunAssistantAndPersist:
             user_id=user_id,
             locked=True,
         )
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
         with (
@@ -203,7 +222,7 @@ class TestRunAssistantAndPersist:
             user_id=user_id,
             locked=False,
         )
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
         async def acquire_lock(*_args, **_kwargs):
@@ -245,7 +264,7 @@ class TestRunAssistantAndPersist:
         user_id = uuid4()
         original_data = {"nodes": [], "edges": []}
         flow = SimpleNamespace(id=uuid4(), name="My Flow", data=original_data, user_id=user_id)
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
         with (
             patch(
@@ -276,7 +295,7 @@ class TestRunAssistantAndPersist:
 
         user_id = uuid4()
         flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
         with (
             patch(
@@ -311,7 +330,7 @@ class TestRunAssistantAndPersist:
         flow = SimpleNamespace(
             id=uuid4(), name="My Flow", data={"nodes": [existing_node], "edges": []}, user_id=user_id
         )
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
         with (
             patch(
@@ -342,7 +361,7 @@ class TestRunAssistantAndPersist:
         from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
 
         flow = SimpleNamespace(id=uuid4(), name="Not yours", data=None, user_id=uuid4())
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
         with pytest.raises(HTTPException) as exc_info:
@@ -364,7 +383,7 @@ class TestRunAssistantAndPersist:
 
         user_id = uuid4()
         flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
         captured_kwargs: dict = {}
@@ -394,7 +413,7 @@ class TestRunAssistantAndPersist:
         user_id = uuid4()
         original_data = {"nodes": [], "edges": []}
         flow = SimpleNamespace(id=uuid4(), name="My Flow", data=original_data, user_id=user_id)
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
         blocked_data = {
             "nodes": [{"id": "Blocked-1", "data": {"id": "Blocked-1", "type": "BlockedComponent"}}],
@@ -426,7 +445,10 @@ class TestRunAssistantAndPersist:
         assert exc_info.value.status_code == 400
         assert "BlockedComponent" in exc_info.value.detail
         assert flow.data is original_data
-        session.commit.assert_not_awaited()
+        session.add.assert_not_called()
+        # Exactly one commit: the pre-run transaction release (#14445). The
+        # blocked write itself must not be committed.
+        assert session.commit.await_count == 1
         save_flow.assert_not_awaited()
 
     @pytest.mark.asyncio
@@ -435,7 +457,7 @@ class TestRunAssistantAndPersist:
 
         user_id = uuid4()
         created_flow = SimpleNamespace(id=uuid4(), name="Assistant Flow", data=None, user_id=user_id)
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=created_flow)
         blocked_data = {
             "nodes": [{"id": "Blocked-1", "data": {"id": "Blocked-1", "type": "BlockedComponent"}}],
@@ -472,7 +494,9 @@ class TestRunAssistantAndPersist:
 
         assert exc_info.value.status_code == 400
         session.delete.assert_awaited_once_with(created_flow)
-        assert session.commit.await_count == 2
+        # Three commits: the provisional-flow create, the pre-run transaction
+        # release (#14445), and the delete that cleans the provisional row up.
+        assert session.commit.await_count == 3
         save_flow.assert_not_awaited()
 
 
@@ -491,7 +515,7 @@ class TestRunAssistantReleasesTransactionBeforeRun:
 
         user_id = uuid4()
         flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
         commits_when_stream_created: list[int] = []
@@ -524,6 +548,228 @@ class TestRunAssistantReleasesTransactionBeforeRun:
         assert session.commit.await_count == 2
         session.refresh.assert_awaited_once_with(flow, with_for_update=True)
         assert result["flow_changed"] is True
+
+
+class TestRunAssistantProgressForwarding:
+    """run_assistant is a black box for external callers — forward progress.
+
+    Each ``progress`` SSE event must reach the MCP caller as a progress/log
+    notification, and any forwarding failure must be swallowed so it can
+    never break the run (stdio clients without progress support included).
+    """
+
+    PROGRESS_EVENTS = [
+        {"event": "progress", "step": "analyzing", "message": "Analyzing your request"},
+        {"event": "progress", "step": "generating_flow"},
+        {"event": "complete", "data": {"result": "Done."}},
+    ]
+
+    @pytest.mark.asyncio
+    async def test_should_forward_each_progress_event_to_the_callback(self):
+        from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
+
+        user_id = uuid4()
+        flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
+        session = _session_mock()
+        session.get = AsyncMock(return_value=flow)
+        received: list[dict] = []
+
+        async def on_progress(event: dict) -> None:
+            received.append(event)
+
+        with (
+            patch(f"{RUNNER_MODULE}._resolve_assistant_context", new_callable=AsyncMock, return_value=_context_stub()),
+            patch(
+                f"{RUNNER_MODULE}.execute_flow_with_validation_streaming",
+                side_effect=_stream_of(self.PROGRESS_EVENTS),
+            ),
+        ):
+            result = await run_assistant_and_persist(
+                session=session,
+                user_id=user_id,
+                instruction="Build something",
+                flow_id=str(flow.id),
+                on_progress=on_progress,
+            )
+
+        assert [e["step"] for e in received] == ["analyzing", "generating_flow"]
+        assert result["result"] == "Done."
+
+    @pytest.mark.asyncio
+    async def test_should_swallow_callback_failures_and_finish_the_run(self):
+        from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
+
+        user_id = uuid4()
+        flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
+        session = _session_mock()
+        session.get = AsyncMock(return_value=flow)
+
+        async def broken_callback(_event: dict) -> None:
+            msg = "notification channel is gone"
+            raise RuntimeError(msg)
+
+        with (
+            patch(f"{RUNNER_MODULE}._resolve_assistant_context", new_callable=AsyncMock, return_value=_context_stub()),
+            patch(
+                f"{RUNNER_MODULE}.execute_flow_with_validation_streaming",
+                side_effect=_stream_of(self.PROGRESS_EVENTS),
+            ),
+        ):
+            result = await run_assistant_and_persist(
+                session=session,
+                user_id=user_id,
+                instruction="Build something",
+                flow_id=str(flow.id),
+                on_progress=broken_callback,
+            )
+
+        assert result["result"] == "Done."
+
+    @pytest.mark.asyncio
+    async def test_should_run_unchanged_without_a_progress_callback(self):
+        from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
+
+        user_id = uuid4()
+        flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
+        session = _session_mock()
+        session.get = AsyncMock(return_value=flow)
+        with (
+            patch(f"{RUNNER_MODULE}._resolve_assistant_context", new_callable=AsyncMock, return_value=_context_stub()),
+            patch(
+                f"{RUNNER_MODULE}.execute_flow_with_validation_streaming",
+                side_effect=_stream_of(self.PROGRESS_EVENTS),
+            ),
+        ):
+            result = await run_assistant_and_persist(
+                session=session,
+                user_id=user_id,
+                instruction="Build something",
+                flow_id=str(flow.id),
+            )
+
+        assert result["result"] == "Done."
+
+
+class TestRunAssistantToolContextBridge:
+    """The MCP tool must translate progress events into ctx notifications.
+
+    Progress is sent via session.send_progress_notification WITH
+    related_request_id — ctx.report_progress omits it and the stateless
+    streamable-http transport then drops the notification (observed live,
+    2026-07-08, on /api/v1/agentic/mcp: logs arrived, progress did not).
+    """
+
+    def _ctx_stub(self, progress_token: str | None = "prog-1") -> SimpleNamespace:  # noqa: S107 — MCP token, not a secret
+        session = SimpleNamespace(send_progress_notification=AsyncMock())
+        request_context = SimpleNamespace(
+            meta=SimpleNamespace(progressToken=progress_token) if progress_token else None,
+            session=session,
+        )
+        return SimpleNamespace(request_context=request_context, request_id="req-1", info=AsyncMock())
+
+    @pytest.mark.asyncio
+    async def test_should_emit_mcp_progress_and_log_for_each_event(self):
+        from langflow.agentic.mcp.server import _make_progress_forwarder
+
+        ctx = self._ctx_stub()
+        forward = _make_progress_forwarder(ctx)
+        assert forward is not None
+
+        await forward({"event": "progress", "step": "analyzing", "message": "Analyzing your request"})
+        await forward({"event": "progress", "step": "generating_flow"})
+
+        send = ctx.request_context.session.send_progress_notification
+        assert send.await_count == 2
+        first_call = send.await_args_list[0].kwargs
+        assert first_call["progress"] == 1.0
+        assert first_call["message"] == "Analyzing your request"
+        assert first_call["progress_token"] == "prog-1"  # noqa: S105 — MCP token, not a secret
+        assert first_call["related_request_id"] == "req-1"
+        second_call = send.await_args_list[1].kwargs
+        assert second_call["progress"] == 2.0
+        assert second_call["message"] == "generating_flow"
+        assert ctx.info.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_should_only_log_when_the_caller_sent_no_progress_token(self):
+        from langflow.agentic.mcp.server import _make_progress_forwarder
+
+        ctx = self._ctx_stub(progress_token=None)
+        forward = _make_progress_forwarder(ctx)
+
+        await forward({"event": "progress", "step": "analyzing"})
+
+        ctx.request_context.session.send_progress_notification.assert_not_awaited()
+        assert ctx.info.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_should_return_none_without_a_context(self):
+        from langflow.agentic.mcp.server import _make_progress_forwarder
+
+        assert _make_progress_forwarder(None) is None
+
+    @pytest.mark.asyncio
+    async def test_should_swallow_context_notification_failures(self):
+        from langflow.agentic.mcp.server import _make_progress_forwarder
+
+        ctx = self._ctx_stub()
+        ctx.request_context.session.send_progress_notification.side_effect = RuntimeError("client went away")
+        forward = _make_progress_forwarder(ctx)
+
+        await forward({"event": "progress", "step": "analyzing"})
+
+    @pytest.mark.asyncio
+    async def test_should_pass_a_forwarder_into_the_runner_when_ctx_is_present(self):
+        from langflow.agentic.mcp import server as mcp_server
+
+        captured_kwargs: dict = {}
+
+        async def capture(**kwargs):
+            captured_kwargs.update(kwargs)
+            return {"flow_id": "x", "link": "/flow/x", "result": "ok", "flow_changed": False}
+
+        session_ctx = AsyncMock()
+        session_ctx.__aenter__ = AsyncMock(return_value=AsyncMock())
+        session_ctx.__aexit__ = AsyncMock(return_value=False)
+
+        with (
+            patch.object(mcp_server, "_ensure_services", new_callable=AsyncMock),
+            patch.object(mcp_server, "session_scope", return_value=session_ctx),
+            patch.object(mcp_server, "run_assistant_and_persist", side_effect=capture),
+            patch.dict("os.environ", {AGENTIC_USER_ID_ENV_VAR: str(uuid4())}),
+        ):
+            await mcp_server.run_assistant(
+                instruction="Build a chat flow",
+                ctx=self._ctx_stub(),
+            )
+
+        assert callable(captured_kwargs.get("on_progress")), "ctx must be bridged into on_progress"
+
+        await captured_kwargs["on_progress"]({"event": "progress", "step": "analyzing"})
+
+    @pytest.mark.asyncio
+    async def test_should_pass_no_forwarder_when_ctx_is_absent(self):
+        from langflow.agentic.mcp import server as mcp_server
+
+        captured_kwargs: dict = {}
+
+        async def capture(**kwargs):
+            captured_kwargs.update(kwargs)
+            return {"flow_id": "x", "link": "/flow/x", "result": "ok", "flow_changed": False}
+
+        session_ctx = AsyncMock()
+        session_ctx.__aenter__ = AsyncMock(return_value=AsyncMock())
+        session_ctx.__aexit__ = AsyncMock(return_value=False)
+
+        with (
+            patch.object(mcp_server, "_ensure_services", new_callable=AsyncMock),
+            patch.object(mcp_server, "session_scope", return_value=session_ctx),
+            patch.object(mcp_server, "run_assistant_and_persist", side_effect=capture),
+            patch.dict("os.environ", {AGENTIC_USER_ID_ENV_VAR: str(uuid4())}),
+        ):
+            await mcp_server.run_assistant(instruction="Build a chat flow")
+
+        assert captured_kwargs.get("on_progress") is None
 
 
 class TestRunAssistantAppliesProposedFieldEdits:
@@ -582,7 +828,7 @@ class TestRunAssistantAppliesProposedFieldEdits:
         flow = SimpleNamespace(
             id=uuid4(), name="My Flow", data=self._agent_data("You are a Langflow Agent."), user_id=user_id
         )
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
         # The working flow snapshot still holds the OLD prompt — the proposal was
@@ -623,7 +869,7 @@ class TestRunAssistantAppliesProposedFieldEdits:
         flow = SimpleNamespace(
             id=uuid4(), name="My Flow", data=self._agent_data("You are a Langflow Agent."), user_id=user_id
         )
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
         with (
@@ -680,7 +926,7 @@ class TestRunAssistantPersistsAuthoritativeWorkingFlow:
             data={"nodes": [{"id": "Agent-1"}, {"id": "Old-1"}], "edges": []},
             user_id=user_id,
         )
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
         events = [
@@ -727,7 +973,7 @@ class TestRunAssistantPersistsAuthoritativeWorkingFlow:
             data={"nodes": [blocked_node], "edges": []},
             user_id=user_id,
         )
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
         events = [
             {"event": "flow_update", "action": "remove_component", "component_id": "Blocked-1"},
@@ -758,7 +1004,9 @@ class TestRunAssistantPersistsAuthoritativeWorkingFlow:
 
         assert result["flow_changed"] is True
         assert flow.data == {"nodes": [], "edges": []}
-        session.commit.assert_awaited_once()
+        # Two commits: the pre-run transaction release (#14445) and the
+        # persistence write after the FOR UPDATE re-read.
+        assert session.commit.await_count == 2
 
     @pytest.mark.asyncio
     async def test_should_fall_back_to_event_replay_when_working_flow_is_empty(self):
@@ -766,7 +1014,7 @@ class TestRunAssistantPersistsAuthoritativeWorkingFlow:
 
         user_id = uuid4()
         flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
         node = {"id": "ChatInput-x", "data": {"id": "ChatInput-x", "type": "ChatInput"}}

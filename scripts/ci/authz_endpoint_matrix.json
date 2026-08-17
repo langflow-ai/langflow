@@ -238,6 +238,7 @@
         "GET|/|read_projects|read|authenticated",
         "GET|/{project_id}|read_project|read|authenticated",
         "PATCH|/{project_id}|update_project|write|authenticated",
+        "PUT|/{project_id}|upsert_project|write|authenticated",
         "DELETE|/{project_id}|delete_project|delete|authenticated",
         "GET|/download/{project_id}|download_file|read|authenticated",
         "POST|/upload/|upload_file|create|authenticated"

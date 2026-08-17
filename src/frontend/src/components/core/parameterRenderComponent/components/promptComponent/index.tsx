@@ -2,6 +2,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "@/components/common/sanitizedHTMLWrapper";
 import { regexHighlight } from "@/constants/constants";
 import PromptModal from "@/modals/promptModal";
+import { variableHighlightClass } from "@/utils/promptVariables";
 import { cn } from "../../../../../utils/utils";
 import { Button } from "../../../../ui/button";
 import { getNodeScopedDomId } from "../../helpers/get-node-scoped-dom-id";
@@ -27,6 +28,7 @@ export default function PromptAreaComponent({
   nodeId,
   readonly = false,
   showParameter = true,
+  ariaLabelledBy,
 }: InputProps<string, PromptAreaComponentType>): JSX.Element | null {
   const coloredContent = (typeof value === "string" ? value : "")
     // escape HTML first
@@ -51,7 +53,7 @@ export default function PromptAreaComponent({
 
       return (
         `${outerLeft}` +
-        `<span class="chat-message-highlight">{${varName}}</span>` +
+        `<span class="${variableHighlightClass(varName)}">{${varName}}</span>` +
         `${outerRight}`
       );
     })
@@ -119,6 +121,7 @@ export default function PromptAreaComponent({
           unstyled
           className="w-full"
           data-testid="button_open_prompt_modal"
+          aria-labelledby={ariaLabelledBy}
         >
           <div className="relative w-full">
             {renderPromptText()}

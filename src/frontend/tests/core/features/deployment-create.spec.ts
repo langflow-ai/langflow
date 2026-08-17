@@ -8,6 +8,7 @@ import {
   SNAPSHOTS_EMPTY_MOCK,
   setupDeploymentMocks,
 } from "../../utils/deployment-mocks";
+import { getDefaultProjectIdForTest } from "../../utils/get-default-project-id-for-test.mjs";
 
 test.skip(
   process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
@@ -22,29 +23,8 @@ async function openDeploymentStepper(
   snapshotsMock: object = SNAPSHOTS_EMPTY_MOCK,
   flowsMock: typeof FLOWS_MOCK = FLOWS_MOCK,
 ) {
-  // Listen for the folders/projects API response BEFORE bootstrap to capture
-  // the real myCollectionId. The step-attach-flows component filters flows by
-  // folder_id === myCollectionId, so mock flows must carry the same id.
-  const projectsResponsePromise = page.waitForResponse(
-    (resp) => resp.url().includes("/api/v1/projects") && resp.status() === 200,
-    { timeout: 30000 },
-  );
-
   await awaitBootstrapTest(page, { skipModal: true });
-
-  let myCollectionId = "";
-  try {
-    const projectsResp = await projectsResponsePromise;
-    const folders = await projectsResp.json();
-    const match = Array.isArray(folders)
-      ? (folders.find(
-          (f: { name: string; id: string }) => f.name === "Starter Project",
-        ) ?? folders[0])
-      : null;
-    myCollectionId = (match as { id: string } | null)?.id ?? "";
-  } catch {
-    // proceed with empty id — test will likely fail at flow-item assertion
-  }
+  const myCollectionId = await getDefaultProjectIdForTest(page);
 
   await setupDeploymentMocks(page, myCollectionId, snapshotsMock, flowsMock);
   await page.getByTestId("deployments-btn").click();

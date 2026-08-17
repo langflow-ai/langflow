@@ -123,7 +123,8 @@ def _share_visible(
         return True
     scope = row.scope
     if scope == ShareScope.PUBLIC.value:
-        return True
+        # PUBLIC is a direct-link grant, not a discovery/listing grant.
+        return False
     if scope == ShareScope.USER.value and row.target_id == user_id:
         return True
     if scope == ShareScope.TEAM.value and row.target_id is not None:
@@ -287,6 +288,18 @@ async def _ensure_can_administer_share(
     )
 
 
+def _ensure_supported_share_permission(*, resource_type: str, scope: str, permission_level: str) -> None:
+    """Reject share levels that have no matching public flow product behavior."""
+    if resource_type != "flow" or scope != ShareScope.PUBLIC.value:
+        return
+    if permission_level == SharePermissionLevel.EXECUTE.value:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        detail="PUBLIC flow shares require permission_level 'execute'.",
+    )
+
+
 @router.post("", response_model=ShareRead, status_code=status.HTTP_201_CREATED)
 @router.post("/", response_model=ShareRead, status_code=status.HTTP_201_CREATED)
 async def create_share(
@@ -314,6 +327,11 @@ async def create_share(
             current_user,
             ShareAction.CREATE,
             share_user_id=owner_id,
+        )
+        _ensure_supported_share_permission(
+            resource_type=payload.resource_type,
+            scope=payload.scope,
+            permission_level=payload.permission_level,
         )
     except HTTPException as exc:
         raise deny_to_404(exc, detail="Resource not found") from exc
@@ -512,6 +530,11 @@ async def update_share(
         ShareAction.UPDATE,
         share_id=share_id,
         share_user_id=owner_id,
+    )
+    _ensure_supported_share_permission(
+        resource_type=row.resource_type,
+        scope=row.scope,
+        permission_level=payload.permission_level,
     )
 
     # Validate permission_level (422 before DB CHECK).

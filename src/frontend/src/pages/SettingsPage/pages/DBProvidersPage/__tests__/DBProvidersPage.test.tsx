@@ -114,15 +114,29 @@ const variable = (
   name: string,
   value: string | undefined,
   id = `id-${name}`,
+  type: "Credential" | "Generic" = "Generic",
+  hasValue?: boolean,
 ): GlobalVariable =>
-  ({ id, name, value, type: "Generic" }) as unknown as GlobalVariable;
+  ({
+    id,
+    name,
+    value,
+    type,
+    has_value: hasValue,
+  }) as unknown as GlobalVariable;
 
 const openSearchRequiredSaved = (): GlobalVariable[] => [
   variable("OPENSEARCH_URL", "https://localhost:9200"),
   variable("OPENSEARCH_USERNAME", "admin"),
-  // Credential values come back masked/absent from the API — existence
-  // of the variable is what the page keys off for secrets.
-  variable("OPENSEARCH_PASSWORD", undefined),
+  // Credential values come back masked/absent from the API. `has_value`
+  // distinguishes a stored credential from an empty row.
+  variable(
+    "OPENSEARCH_PASSWORD",
+    undefined,
+    "id-OPENSEARCH_PASSWORD",
+    "Credential",
+    true,
+  ),
   variable("OPENSEARCH_INDEX_NAME", "langflow"),
 ];
 
@@ -192,6 +206,27 @@ describe("DBProvidersPage characterization", () => {
     });
   });
 
+  describe("chroma cloud panel", () => {
+    it("does not treat an empty masked credential as configured", async () => {
+      mockGlobalVariables = [
+        variable(
+          "CHROMA_API_KEY",
+          undefined,
+          "id-CHROMA_API_KEY",
+          "Credential",
+          false,
+        ),
+      ];
+      const user = userEvent.setup();
+      render(<DBProvidersPage />);
+
+      await user.click(screen.getByTestId("db-provider-item-chroma_cloud"));
+
+      expect(document.querySelector('input[type="password"]')).toHaveValue("");
+      expect(getSaveButton(/save and use chroma cloud/i)).toBeDisabled();
+    });
+  });
+
   describe("postgres pgvector panel", () => {
     it("renders the environment-driven panel with test and use actions and no config fields", async () => {
       const user = userEvent.setup();
@@ -206,6 +241,10 @@ describe("DBProvidersPage characterization", () => {
       ).toBeInTheDocument();
       const useButton = getSaveButton(/use postgres pgvector/i);
       await waitFor(() => expect(useButton).toBeEnabled());
+      // The Button must preserve the "pgVector" brand casing (ignoreTitleCase);
+      // without it the label auto-title-cases to "Pgvector".
+      expect(useButton.textContent).toContain("pgVector");
+      expect(useButton.textContent).not.toContain("Pgvector");
       expect(screen.queryByRole("textbox")).toBeNull();
     });
   });

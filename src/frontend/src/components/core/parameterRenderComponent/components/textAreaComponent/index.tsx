@@ -78,6 +78,7 @@ export default function TextAreaComponent({
   isToolMode = false,
   nodeInformationMetadata,
   showParameter = true,
+  ariaLabelledBy,
 }: InputProps<string, TextAreaComponentType>): JSX.Element | null {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -211,7 +212,8 @@ export default function TextAreaComponent({
         disabled={disabled}
         className={getInputClassName()}
         placeholder={getPlaceholder(disabled, placeholder)}
-        aria-label={disabled ? displayValue : undefined}
+        aria-label={disabled && !ariaLabelledBy ? displayValue : undefined}
+        aria-labelledby={ariaLabelledBy}
         ref={inputRef}
         // Keyed on the secret-ness, not the live type, so revealing a masked
         // value doesn't re-arm autofill.
@@ -250,11 +252,19 @@ export default function TextAreaComponent({
           </Button>
         </ComponentTextModal>
       </div>
-      {password && !isFocused && (
-        <div
+      {password && (
+        <button
+          type="button"
+          aria-label={
+            passwordVisible ? t("input.hidePassword") : t("input.showPassword")
+          }
           onClick={() => {
             setPasswordVisible(!passwordVisible);
           }}
+          // Hidden visually while the input is being edited, but kept mounted
+          // so forward Tab from the input still reaches it; once it receives
+          // focus the input blurs and the toggle becomes visible again.
+          className={cn(isFocused && "pointer-events-none opacity-0")}
         >
           <IconComponent
             name={passwordVisible ? "eye" : "eye-off"}
@@ -267,7 +277,7 @@ export default function TextAreaComponent({
               "right-10",
             )}
           />
-        </div>
+        </button>
       )}
     </div>
   );

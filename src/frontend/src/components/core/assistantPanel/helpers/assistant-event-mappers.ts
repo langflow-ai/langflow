@@ -5,8 +5,11 @@
  * trivially unit-testable.
  */
 
-import type { AgenticFlowUpdateEvent } from "@/controllers/API/queries/agentic";
-import type { BuildTask } from "../assistant-panel.types";
+import type {
+  AgenticFlowUpdateEvent,
+  AgenticToolStartEvent,
+} from "@/controllers/API/queries/agentic";
+import type { BuildTask, InProgressBuildTask } from "../assistant-panel.types";
 
 /**
  * Map a canvas SSE event onto a structured ``BuildTask`` for the inline
@@ -55,6 +58,24 @@ export function buildTaskFromEvent(
     default:
       return null;
   }
+}
+
+/**
+ * Map a ``tool_start`` SSE event onto the in-progress row shown at the
+ * bottom of the build-task checklist while the tool executes.
+ */
+export function inProgressTaskFromEvent(
+  event: AgenticToolStartEvent,
+): InProgressBuildTask {
+  return {
+    tool: event.tool,
+    label: event.label,
+    componentType: event.component_type,
+    componentId: event.component_id,
+    sourceId: event.source_id,
+    targetId: event.target_id,
+    receivedAt: Date.now(),
+  };
 }
 
 /**

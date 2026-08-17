@@ -211,7 +211,7 @@ class ValidatedTool(ALTKBaseTool):
             return self._format_sparc_rejection(result.output.reflection_result)
 
         except (AttributeError, TypeError, ValueError, RuntimeError) as e:
-            logger.error(f"Error during SPARC validation: {e}")
+            logger.error("Error during SPARC validation", exc_info=e)
             # Execute directly on error
             return self._execute_tool(*args, **kwargs)
 
@@ -394,7 +394,7 @@ class PreToolValidationWrapper(BaseToolWrapper):
                 # RuntimeError covers RecursionError, which langchain_core's
                 # get_all_basemodel_annotations can raise on Python 3.14 when a tool's
                 # args_schema is not a usable model (e.g. a shadowing property object).
-                logger.warning(f"Could not convert tool {getattr(tool, 'name', 'unknown')} to spec: {e}")
+                logger.warning(f"Could not convert tool {getattr(tool, 'name', 'unknown')} to spec", exc_info=e)
                 # Create minimal spec
                 minimal_spec = {
                     "type": "function",
@@ -457,7 +457,7 @@ class PostToolProcessor(ALTKBaseTool):
             return self.process_tool_response(result)
         except (AttributeError, TypeError, ValueError, RuntimeError) as e:
             # If post-processing fails, log the error and return the original result
-            logger.error(f"Error in post-processing tool response: {e}")
+            logger.error("Error in post-processing tool response", exc_info=e)
             return result
 
     def _get_tool_response_str(self, tool_response) -> str:
@@ -498,7 +498,8 @@ class PostToolProcessor(ALTKBaseTool):
                 tool_response_json = None
         except (json.JSONDecodeError, TypeError, SyntaxError, ValueError) as e:
             logger.info(
-                f"An error in converting the tool response to json, this will skip the code generation component: {e}"
+                "An error converting the tool response to json; skipping the code generation component",
+                exc_info=e,
             )
             tool_response_json = None
 
@@ -517,7 +518,7 @@ class PostToolProcessor(ALTKBaseTool):
                 try:
                     output = middleware.process(input_data, AgentPhase.RUNTIME)
                 except Exception as e:  # noqa: BLE001
-                    logger.error(f"Exception in executing CodeGenerationComponent: {e}")
+                    logger.error("Exception in executing CodeGenerationComponent", exc_info=e)
                 if output is not None and hasattr(output, "result"):
                     logger.info(f"Output of CodeGenerationComponent: {output.result}")
                     return output.result

@@ -50,7 +50,7 @@ Repository = "https://github.com/langflow-ai/langflow"
 lfx-valkey = "lfx_valkey"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling==1.31.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]

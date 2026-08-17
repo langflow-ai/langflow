@@ -1,12 +1,17 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { cleanOldFolders } from "../../utils/clean-old-folders";
 import { TEXTS } from "../../utils/constants/texts";
 import { navigateSettingsPages } from "../../utils/go-to-settings";
+import { useMcpServerListWithoutToolCounts } from "../../utils/mcp-server-list-without-tool-counts";
 import {
   getSidebarProjectButton,
   getSidebarProjectOptionsButton,
 } from "../../utils/project-sidebar";
+
+test.beforeEach(async ({ page }) => {
+  await useMcpServerListWithoutToolCounts(page);
+});
 
 test(
   "user must be able to see starter projects for mcp servers",
@@ -41,12 +46,12 @@ test(
       page.getByText("lf-starter_project", { exact: true }),
     ).toBeVisible();
 
-    expect(
-      await page.getByText("lf-new_project", { exact: true }).count(),
-    ).toBe(1);
-    expect(
-      await page.getByText("lf-new_project_1", { exact: true }).count(),
-    ).toBe(1);
+    await expect(page.getByText("lf-new_project", { exact: true })).toHaveCount(
+      1,
+    );
+    await expect(
+      page.getByText("lf-new_project_1", { exact: true }),
+    ).toHaveCount(1);
 
     await page.getByTestId("icon-ChevronLeft").first().click();
 
@@ -67,8 +72,16 @@ test(
           .click();
         await page.getByText("Rename", { exact: true }).last().click();
         await page.getByTestId("input-project").last().fill("renamed_project");
+        const renameResponsePromise = page.waitForResponse(
+          (response) =>
+            response.request().method() === "PATCH" &&
+            /\/api\/v1\/projects\/[^/]+$/.test(
+              new URL(response.url()).pathname,
+            ),
+        );
         await page.keyboard.press("Enter");
-        await page.waitForTimeout(1000);
+        const renameResponse = await renameResponsePromise;
+        expect(renameResponse.ok()).toBeTruthy();
       });
 
     await navigateSettingsPages(page, "Settings", "MCP Servers");
@@ -77,9 +90,9 @@ test(
       page.getByText("lf-starter_project", { exact: true }),
     ).toBeVisible();
 
-    expect(
-      await page.getByText("lf-renamed_project", { exact: true }).count(),
-    ).toBe(1);
+    await expect(
+      page.getByText("lf-renamed_project", { exact: true }),
+    ).toHaveCount(1);
 
     //delete a folder
 
@@ -91,8 +104,16 @@ test(
           .last()
           .click();
         await page.getByText(TEXTS.delete, { exact: true }).last().click();
+        const deleteResponsePromise = page.waitForResponse(
+          (response) =>
+            response.request().method() === "DELETE" &&
+            /\/api\/v1\/projects\/[^/]+$/.test(
+              new URL(response.url()).pathname,
+            ),
+        );
         await page.getByText(TEXTS.delete, { exact: true }).last().click();
-        await page.waitForTimeout(1000);
+        const deleteResponse = await deleteResponsePromise;
+        expect(deleteResponse.ok()).toBeTruthy();
       });
 
     await navigateSettingsPages(page, "Settings", "MCP Servers");
@@ -100,9 +121,9 @@ test(
     await expect(
       page.getByText("lf-starter_project", { exact: true }),
     ).toBeVisible();
-    expect(
-      await page.getByText("lf-renamed_project", { exact: true }).count(),
-    ).toBe(0);
+    await expect(
+      page.getByText("lf-renamed_project", { exact: true }),
+    ).toHaveCount(0);
   },
 );
 

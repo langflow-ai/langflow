@@ -197,7 +197,7 @@ async def test_post_validate_prompt_with_invalid_data(client: AsyncClient, logge
         "frontend_node": {"template": {}, "is_input": True},
     }
     response = await client.post("api/v1/validate/prompt", json=invalid_case, headers=logged_in_headers)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 async def test_post_validate_code_with_unauthenticated_user(client: AsyncClient):

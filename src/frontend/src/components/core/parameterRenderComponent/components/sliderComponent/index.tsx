@@ -243,16 +243,20 @@ export default function SliderComponent({
                 data-testid="slider_input"
               />
             ) : (
-              <span
+              <button
+                type="button"
                 onClick={() => {
                   setIsEditing(true);
                   setInputValue(valueAsNumber.toFixed(2));
                 }}
+                aria-label={t("paramRender.editSliderValue", {
+                  value: valueAsNumber.toFixed(2),
+                })}
                 data-testid={`default_slider_display_value${editNode ? "_advanced" : ""}`}
                 className="relative bottom-[1px] font-mono text-sm hover:cursor-text"
               >
                 {valueAsNumber.toFixed(2)}
-              </span>
+              </button>
             )}
           </div>
         </div>

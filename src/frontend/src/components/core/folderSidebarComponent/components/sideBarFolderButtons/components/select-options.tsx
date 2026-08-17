@@ -8,6 +8,7 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import { usePermissions } from "@/contexts/permissionsContext";
+import CustomResourceShareAction from "@/customization/components/custom-resource-share-action";
 import type { FolderType } from "@/pages/MainPage/entities";
 import { getProjectDisplayName } from "@/utils/project-display-name";
 import { cn } from "@/utils/utils";
@@ -34,7 +35,12 @@ export const SelectOptions = ({
   const canDelete = can(item.id, "delete");
   const displayName = getProjectDisplayName(item, t);
   return (
-    <div>
+    <div className="flex items-center gap-1">
+      <CustomResourceShareAction
+        resourceId={item.id!}
+        resourceType="project"
+        resourceName={displayName}
+      />
       <Select
         onValueChange={(value) =>
           handleSelectChange(

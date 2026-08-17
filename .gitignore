@@ -276,6 +276,7 @@ src/frontend/playwright-report/index.html
 prof/*
 
 src/frontend/temp
+src/frontend/temp-live
 *-shm
 *-wal
 .history
@@ -305,6 +306,12 @@ whitesource/
 
 #ai folders
 .bob/
+_context
 
 # Cursor local (personal) settings
 .cursor/settings.local.json
+
+# Mend
+requirements-mend.txt
+requirements-workspace-mend.txt
+requirements-gp-mend.txt

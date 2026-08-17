@@ -54,6 +54,10 @@ class VariableRead(SQLModel):
     name: str | None = Field(None, description="Name of the variable")
     type: str | None = Field(None, description="Type of the variable")
     value: str | None = Field(None, description="Encrypted value of the variable")
+    has_value: bool = Field(
+        default=False,
+        description="Whether the variable has a non-empty stored value without exposing credential contents",
+    )
     default_fields: list[str] | None = Field(None, description="Default fields for the variable")
     is_owner: bool = Field(default=False, description="Whether the caller owns this variable")
     can_manage_shares: bool = Field(

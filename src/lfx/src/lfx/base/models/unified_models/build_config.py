@@ -314,6 +314,7 @@ def update_model_options_in_build_config(
     # The frontend surfaces a "configure" wrench next to the trigger when it
     # sees this flag so the user can enable the provider without silently
     # losing their selection.
+    replaced_unusable_selection = False
     if (
         isinstance(current_value, list)
         and current_value
@@ -330,6 +331,7 @@ def update_model_options_in_build_config(
         if not saved_provider_allowed:
             logger.debug("Dropping saved model from policy-hidden provider %s", saved_provider)
             build_config[model_field_name]["value"] = None
+            replaced_unusable_selection = True
         elif not already_present:
             # When the ModelInput declares filters (e.g. Agent passes
             # ``filters={"tool_calling": True}``) and the saved selection
@@ -350,6 +352,7 @@ def update_model_options_in_build_config(
                     filters,
                 )
                 build_config[model_field_name]["value"] = None
+                replaced_unusable_selection = True
             else:
                 injected = {**saved, "metadata": {**(saved.get("metadata") or {}), "not_enabled_locally": True}}
                 build_config[model_field_name]["options"] = [*options_list, injected]
@@ -359,8 +362,13 @@ def update_model_options_in_build_config(
     # of whatever field triggered the update — e.g. api_key text).  Using
     # field_value here would incorrectly reset the model selection whenever a
     # non-model field (like api_key) is cleared or set to a global variable.
+    # An explicit model-field update carrying an empty value must NOT be
+    # auto-filled: ``options`` spans every enabled provider, so ``options[0]``
+    # would silently substitute a model from whichever provider iterates
+    # first — one the node was never configured for.
+    explicit_model_clear = field_name == model_field_name and not field_value
     current_model_value = build_config.get(model_field_name, {}).get("value")
-    if not current_model_value:
+    if not current_model_value and not explicit_model_clear:
         options = visible_options
         if options:
             # Determine model type based on cache_key_prefix
@@ -427,11 +435,14 @@ def update_model_options_in_build_config(
                         default_model = opt
                         break
 
-            # If user's default not found, fallback to first option
-            if not default_model and options:
+            # A bare initial load is not a configuration act, and an unvalidated credential
+            # harvested from the environment already marks a provider enabled, so falling
+            # back to ``options[0]`` there pre-selects a provider the user never set up
+            # (LE-2168). A user-triggered update or a just-replaced selection still fills.
+            user_triggered = field_name is not None
+            if not default_model and options and (user_triggered or replaced_unusable_selection):
                 default_model = options[0]
 
-            # Set the value
             if default_model:
                 build_config[model_field_name]["value"] = [default_model]
 
@@ -568,8 +579,18 @@ def handle_model_input_update(
                 for option in options
             )
 
-            # If the value is invalid, reset to the first option if available, otherwise empty.
-            build_config[model_field_name]["value"] = field_value if value_is_valid else [options[0]] if options else ""
+            if value_is_valid:
+                build_config[model_field_name]["value"] = field_value
+            elif not field_value:
+                # Explicitly cleared: stay empty. ``options`` is one flat list
+                # across every enabled provider, so ``options[0]`` would pick a
+                # model from an arbitrary provider the node never selected.
+                build_config[model_field_name]["value"] = []
+            else:
+                # A non-empty invalid value resets to the first option so the
+                # user can pick a valid one (e.g. the Agent filters flow that
+                # drops a tool-incompatible model for a compatible default).
+                build_config[model_field_name]["value"] = [options[0]] if options else ""
             field_value = build_config[model_field_name]["value"]
 
     # Step 2: Reset provider-specific visibility without changing values.
