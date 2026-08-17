@@ -135,11 +135,11 @@ def _parse_revision_values(line: str) -> list[str]:
     return re.findall(r"""["']([a-f0-9]+)["']""", raw)
 
 
-def _get_main_branch_head() -> str | None:
-    """Get the alembic head revision that origin/main is at.
+def _head_revision_at(ref: str) -> str | None:
+    """Get the alembic head revision of the migration files at ``ref``.
 
     Uses ``git grep`` to read the ``revision`` and ``down_revision`` variables
-    directly from migration files on origin/main, then walks the chain to find
+    directly from the migration files at that ref, then walks the chain to find
     the head revision.  This avoids relying on filename conventions (which may
     not match the actual revision IDs inside the files) and works regardless of
     whether the branch adds, modifies, or deletes migration files.
@@ -158,7 +158,7 @@ def _get_main_branch_head() -> str | None:
                     "grep",
                     "-h",
                     pattern,
-                    "origin/main",
+                    ref,
                     "--",
                     "src/backend/base/langflow/alembic/versions/",
                 ],
@@ -175,16 +175,16 @@ def _get_main_branch_head() -> str | None:
             raise
         return result.stdout
 
-    # Extract all revision IDs from origin/main's migration files
+    # Extract all revision IDs from the ref's migration files
     rev_output = _git_grep("^revision:")
     if not rev_output:
         return None
 
-    main_rev_ids: set[str] = set()
+    rev_ids: set[str] = set()
     for line in rev_output.strip().splitlines():
-        main_rev_ids.update(_parse_revision_values(line))
+        rev_ids.update(_parse_revision_values(line))
 
-    if not main_rev_ids:
+    if not rev_ids:
         return None
 
     # Extract all down_revision IDs to determine the chain
@@ -195,13 +195,57 @@ def _get_main_branch_head() -> str | None:
             referenced.update(_parse_revision_values(line))
 
     # Head = revisions not referenced as down_revision by any other revision
-    heads = main_rev_ids - referenced
+    heads = rev_ids - referenced
 
     if len(heads) == 1:
         return heads.pop()
     if len(heads) > 1:
-        pytest.fail(f"origin/main has {len(heads)} head revisions — migration branches need merging: {heads}")
+        pytest.fail(f"{ref} has {len(heads)} head revisions — migration branches need merging: {heads}")
     return None
+
+
+def _fork_point_with_main() -> str | None:
+    """The commit this branch forked from ``origin/main`` (None if git cannot tell)."""
+    git = shutil.which("git")
+    if git is None:
+        return None
+    try:
+        result = subprocess.run(  # noqa: S603
+            [git, "merge-base", "HEAD", "origin/main"],
+            capture_output=True,
+            text=True,
+            check=True,
+            cwd=_WORKSPACE_ROOT,
+        )
+    except subprocess.CalledProcessError:
+        return None
+    except OSError as exc:
+        if exc.errno == errno.ENOENT:
+            return None
+        raise
+    return result.stdout.strip() or None
+
+
+def _get_main_branch_head(branch_revisions: set[str] | None = None) -> str | None:
+    """The revision an existing user's DB sits at before upgrading to this branch.
+
+    Normally ``origin/main``'s alembic head. A PR based on a RELEASE branch, though,
+    forked before some of main's migrations, so main's head is not in this branch's
+    version directory at all and ``upgrade(main_head)`` can only raise "Can't locate
+    revision". Pass ``branch_revisions`` to get the release-branch-aware answer: main's
+    head AT THE FORK POINT (``git merge-base HEAD origin/main``), which is by
+    construction reachable from this branch.
+
+    This does not weaken the check for a branch that DELETES a migration main has: that
+    revision exists at the fork point too, so the deletion still fails the upgrade.
+    """
+    main_head = _head_revision_at("origin/main")
+    if main_head is None or branch_revisions is None or main_head in branch_revisions:
+        return main_head
+    fork_point = _fork_point_with_main()
+    if fork_point is None:
+        return main_head
+    return _head_revision_at(fork_point) or main_head
 
 
 def _filter_sqlite_noise(diffs: list) -> list:
@@ -458,7 +502,15 @@ def test_upgrade_from_main_branch(db_url):
     """
     from alembic.script import ScriptDirectory
 
-    main_head = _get_main_branch_head()
+    branch_cfg = Config()
+    branch_cfg.set_main_option("script_location", str(_SCRIPT_LOCATION))
+    branch_script = ScriptDirectory.from_config(branch_cfg)
+    # The branch's own revisions decide whether main's head is even reachable here:
+    # a release branch forked before main's latest migrations, so the upgrade has to
+    # start from main's head AT THE FORK POINT instead. See _get_main_branch_head.
+    branch_revisions = {script.revision for script in branch_script.walk_revisions()}
+
+    main_head = _get_main_branch_head(branch_revisions)
     if main_head is None:
         if os.environ.get("MIGRATION_VALIDATION_CI"):
             pytest.fail("Could not determine main branch head revision — ensure fetch-depth: 0 and origin/main exists")
@@ -468,9 +520,6 @@ def test_upgrade_from_main_branch(db_url):
     # In that case this test is a no-op — alembic won't re-run already-applied
     # migrations, so upgrade(main_head) -> upgrade(head) does nothing.
     # Modified migrations are exercised by test_no_phantom_migrations instead.
-    branch_cfg = Config()
-    branch_cfg.set_main_option("script_location", str(_SCRIPT_LOCATION))
-    branch_script = ScriptDirectory.from_config(branch_cfg)
     branch_heads = branch_script.get_heads()
     if len(branch_heads) == 1 and branch_heads[0] == main_head:
         pytest.skip(
