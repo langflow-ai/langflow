@@ -143,11 +143,15 @@ class BaseVectorStoreBackend(ABC):
     def __init__(
         self,
         kb_name: str,
-        kb_path: Path,
+        kb_path: Path | None = None,
         backend_config: dict[str, Any] | None = None,
         embedding_function: Embeddings | None = None,
         user_id: UUID | str | None = None,
     ) -> None:
+        # ``kb_path`` is meaningful only to local Chroma, the one backend that
+        # persists to this box's filesystem. Every other backend ignores it, so
+        # callers that resolved a non-local backend pass ``None`` rather than
+        # inventing a throwaway directory just to satisfy the signature.
         self.kb_name = kb_name
         self.kb_path = kb_path
         self.backend_config = backend_config or {}

@@ -186,6 +186,7 @@ EXPECTED_FIELDS = {
     "developer_api_enabled",
     # ---- Added after the original Settings split and folded into the mixins ----
     # PathSettings
+    "kb_disk_reconcile_enabled",
     "kb_allowed_folder_roots",
     "kb_folder_max_file_size_bytes",
     "directory_component_allowed_roots",

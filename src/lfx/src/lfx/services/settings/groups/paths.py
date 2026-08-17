@@ -13,6 +13,18 @@ class PathSettings(BaseModel):
     knowledge_bases_dir: str | None = "~/.langflow/knowledge_bases"
     """The directory to store knowledge bases."""
 
+    kb_disk_reconcile_enabled: bool = False
+    """Whether startup scans ``knowledge_bases_dir`` for KB directories lacking a DB row.
+
+    The ``knowledge_base`` table is the sole authority for KB metadata; the on-disk
+    ``embedding_metadata.json`` sidecar is no longer written or read by any steady-state
+    code path. This reconcile exists only to adopt directories left by a Langflow version
+    that predates that change, so it is off by default and pays no boot cost.
+
+    Set ``LANGFLOW_KB_DISK_RECONCILE_ENABLED=true`` to re-enable it at startup, or run it
+    once on demand with ``langflow reconcile-kb-from-disk`` (which also accepts
+    ``--dry-run``). It never deletes anything and is idempotent."""
+
     kb_allowed_folder_roots: list[str] = []
     """Allow-list of directories the folder-ingestion endpoint may read from.
 
