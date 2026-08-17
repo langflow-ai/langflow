@@ -235,6 +235,17 @@ class AuthSettings(BaseSettings):
         default="name",
         description="JWT claim containing the user's display name.",
     )
+    EXTERNAL_AUTH_GROUP_RECONCILE_INTERVAL_SECONDS: int = Field(
+        default=60,
+        ge=0,
+        description=(
+            "Minimum seconds between external group reconciliations for one unchanged directory state. "
+            "Bearer tokens arrive on every request, and reconciliation writes rows, takes policy locks and "
+            "appends an audit entry, so an unchanged (provider, subject, group set) is only reconciled once "
+            "per interval. A group set that differs from the last reconciled one always reconciles "
+            "immediately. Set to 0 to reconcile on every request."
+        ),
+    )
     EXTERNAL_AUTH_ACCESS_CEILING_ENABLED: bool = Field(
         default=False,
         description=(

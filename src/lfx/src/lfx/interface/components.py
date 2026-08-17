@@ -923,11 +923,28 @@ def _emit_extension_diagnostics(results: list[LoadResult]) -> None:
     emission; until then we want operators to see what the loader
     rejected without silently dropping the typed payload.
     """
+    optional_missing: dict[tuple[str, str], list[ExtensionError]] = {}
     for result in results:
         for err in result.errors:
             logger.error("Extension load error: %s", format_extension_error(err))
         for warn in result.warnings:
+            if warn.code == "optional-dependency-missing":
+                bundle = result.bundle or "<unknown>"
+                missing_module = warn.content or "<unknown>"
+                missing_root = missing_module.split(".", 1)[0]
+                optional_missing.setdefault((bundle, missing_root), []).append(warn)
+                logger.debug("Suppressed extension optional-dependency detail: %s", format_extension_error(warn))
+                continue
             logger.warning("Extension load warning: %s", format_extension_error(warn))
+    for (bundle, missing_module), warnings_for_dependency in sorted(optional_missing.items()):
+        representative = warnings_for_dependency[0].location or "<unknown>"
+        logger.warning(
+            "Extension optional dependency missing: bundle=%r module=%r skipped_modules=%s representative=%s",
+            bundle,
+            missing_module,
+            len(warnings_for_dependency),
+            representative,
+        )
 
 
 # Discovery-source precedence for cross-source bundle-name collisions.
@@ -1030,9 +1047,8 @@ def _resolve_bundle_shadowing(
             winner_for_bundle.setdefault(result.bundle, (kind, result))
 
     # Second pass: for each result that is NOT the winner, drop its components
-    # and append the typed warning to the result's errors list (mirroring the
-    # original ``seed-bundle-shadowed`` flow so CLI exit-code logic keeps
-    # treating it as a non-fatal diagnostic that stays attached to the loser).
+    # and append a typed warning to the losing result. Shadowing is expected
+    # during bundle graduation and therefore never flips ``LoadResult.ok``.
     for kind in _DISCOVERY_PRECEDENCE:
         for result in sources[kind]:
             if not result.bundle or not result.components:
@@ -1045,7 +1061,7 @@ def _resolve_bundle_shadowing(
             if winner_kind == "installed" and kind == "seed":
                 # Preserve the documented code for the documented pair so the
                 # existing CLI warn-only set and snapshot tests keep working.
-                result.errors.append(
+                result.warnings.append(
                     ExtensionError(
                         code="seed-bundle-shadowed",
                         message=(
@@ -1062,7 +1078,7 @@ def _resolve_bundle_shadowing(
                     )
                 )
             else:
-                result.errors.append(
+                result.warnings.append(
                     ExtensionError(
                         code="bundle-shadowed",
                         message=(

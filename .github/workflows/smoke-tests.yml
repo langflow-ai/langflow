@@ -22,20 +22,20 @@ jobs:
 
     steps:
       - name: Checkout PR
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.ref || github.ref }}
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
-          version: "latest"
+          version: latest-known
 
       - name: Install backend dependencies
         run: |
@@ -71,20 +71,20 @@ jobs:
 
     steps:
       - name: Checkout PR
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.ref || github.ref }}
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
-          version: "latest"
+          version: latest-known
 
       - name: Install lfx dependencies (isolated)
         run: |
@@ -114,13 +114,13 @@ jobs:
 
     steps:
       - name: Checkout PR
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.ref || github.ref }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: "npm"
@@ -146,17 +146,17 @@ jobs:
 
     steps:
       - name: Comment on PR with results
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const backendStatus = '${{ needs.backend-smoke-tests.result }}';
             const lfxStatus = '${{ needs.lfx-smoke-tests.result }}';
             const frontendStatus = '${{ needs.frontend-smoke-tests.result }}';
-            
+
             const overallSuccess = backendStatus === 'success' && lfxStatus === 'success' && frontendStatus === 'success';
             const emoji = overallSuccess ? '✅' : '❌';
             const status = overallSuccess ? 'passed' : 'failed';
-            
+
             const backendEmoji = backendStatus === 'success' ? '✅' : '❌';
             const lfxEmoji = lfxStatus === 'success' ? '✅' : '❌';
             const frontendEmoji = frontendStatus === 'success' ? '✅' : '❌';
@@ -168,7 +168,7 @@ jobs:
             - ${backendEmoji} **Backend**: 11 essential test files (database, auth, API endpoints, flows, components)
             - ${lfxEmoji} **LFX**: Graph tests (langflow execution) - runs in isolation
             - ${frontendEmoji} **Frontend**: Unit tests only (components, utilities)
-            
+
             **Coverage**: Core functionality without external dependencies
 
             View details in the [Actions tab](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).`;

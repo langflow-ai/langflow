@@ -23,7 +23,7 @@ from sqlalchemy.dialects import sqlite as dialect_sqlite
 from sqlalchemy.engine import Engine, make_url
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
-from sqlmodel import SQLModel, select, text
+from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 from tenacity import retry, stop_after_attempt, wait_fixed
 
@@ -35,6 +35,7 @@ from langflow.services.database.constants import (
     MIN_POSTGRESQL_MAJOR_VERSION,
     POSTGRESQL_VERSION_REQUIRED_MESSAGE,
 )
+from langflow.services.database.migration import get_current_alembic_heads
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.session import NoopSession
 from langflow.services.database.utils import Result, TableResults
@@ -680,15 +681,10 @@ class DatabaseService(Service):
                 self.try_downgrade_upgrade_until_success(alembic_cfg)
 
     async def run_migrations(self, *, fix=False) -> None:
-        should_initialize_alembic = False
         async with session_scope() as session:
-            # If the table does not exist it throws an error
-            # so we need to catch it
-            try:
-                await session.exec(text("SELECT * FROM alembic_version"))
-            except Exception:  # noqa: BLE001
+            should_initialize_alembic = not await get_current_alembic_heads(session)
+            if should_initialize_alembic:
                 await logger.adebug("Alembic not initialized")
-                should_initialize_alembic = True
         await asyncio.to_thread(self._run_migrations, should_initialize_alembic, fix)
 
     def _current_alembic_revisions(self) -> set[str]:

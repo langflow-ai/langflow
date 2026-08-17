@@ -35,6 +35,7 @@ ROOT_PYPROJECT = BASE_DIR / "pyproject.toml"
 LFX_PYPROJECT = BASE_DIR / "src" / "lfx" / "pyproject.toml"
 LOCK_FILE = BASE_DIR / "uv.lock"
 PYPI_BASE_URL = "https://pypi.org/pypi"
+REPRODUCIBLE_HATCHLING_REQUIREMENT = "hatchling==1.31.0"
 
 _VERSION_RE = re.compile(
     r"^(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)"
@@ -287,6 +288,29 @@ def _release_relevant(path: str, bundle_dir: str) -> bool:
     return relative == "pyproject.toml" or relative.startswith("src/")
 
 
+def _pyproject_release_relevant(base_content: str | None, current_content: str) -> bool:
+    """Treat the one-time reproducible Hatchling pin as build-only metadata."""
+    if base_content is None:
+        return True
+    base_data = tomllib.loads(base_content)
+    current_data = tomllib.loads(current_content)
+    base_build = base_data.get("build-system")
+    current_build = current_data.get("build-system")
+    if not isinstance(base_build, dict) or not isinstance(current_build, dict):
+        return True
+    if (
+        base_build.get("build-backend") != "hatchling.build"
+        or current_build.get("build-backend") != "hatchling.build"
+        or base_build.get("requires") != ["hatchling"]
+        or current_build.get("requires") != [REPRODUCIBLE_HATCHLING_REQUIREMENT]
+    ):
+        return True
+
+    normalized_base = dict(base_data)
+    normalized_base["build-system"] = {**base_build, "requires": [REPRODUCIBLE_HATCHLING_REQUIREMENT]}
+    return normalized_base != current_data
+
+
 def _root_requirements(bundle_name: str, base_dir: Path = BASE_DIR) -> tuple[str, ...]:
     data = _read_toml(base_dir / "pyproject.toml")
     project = data["project"]
@@ -391,9 +415,16 @@ def build_change_plan(
                 f"src/bundles/{directory}: changed bundle has no pyproject.toml; add package metadata before release"
             )
         bundle_files = tuple(path for path in changed if path.startswith(f"src/bundles/{directory}/"))
-        source_changed = any(_release_relevant(path, directory) for path in bundle_files)
         relative_pyproject = str(bundle.pyproject.relative_to(base_dir))
         base_content = _git_file(base_ref, relative_pyproject, base_dir)
+        source_changed = any(
+            _release_relevant(path, directory)
+            and (
+                path != relative_pyproject
+                or _pyproject_release_relevant(base_content, bundle.pyproject.read_text(encoding="utf-8"))
+            )
+            for path in bundle_files
+        )
         base_version = _project_version(base_content, f"{base_ref}:{relative_pyproject}") if base_content else None
         version_changed = base_version != bundle.version
         if not source_changed and not version_changed:
@@ -448,13 +479,98 @@ def _replace_bundle_floor(content: str, bundle_name: str, version: str) -> str:
     return updated
 
 
+def _toml_string_spans(content: str) -> Iterable[tuple[int, int]]:
+    """Yield TOML string spans while ignoring quoted text in comments."""
+    index = 0
+    while index < len(content):
+        if content[index] == "#":
+            newline = content.find("\n", index)
+            index = len(content) if newline == -1 else newline + 1
+            continue
+        if content[index] not in {'"', "'"}:
+            index += 1
+            continue
+
+        start = index
+        quote = content[index]
+        delimiter = quote * 3 if content.startswith(quote * 3, index) else quote
+        index += len(delimiter)
+        while index < len(content):
+            if delimiter == '"""' and content[index] == "\\":
+                index += 2
+                continue
+            if content.startswith(delimiter, index):
+                index += len(delimiter)
+                yield start, index
+                break
+            if len(delimiter) == 1 and content[index] in "\r\n":
+                break
+            index += 1
+
+
+def _restamped_lfx_requirement(requirement: str, expected: str) -> str:
+    marker_match = re.search(r"\s*;", requirement)
+    if marker_match:
+        requirement_without_marker = requirement[: marker_match.start()]
+        marker = requirement[marker_match.start() :]
+    else:
+        requirement_without_marker = requirement
+        marker = ""
+    match = re.fullmatch(
+        r"(?P<name>[A-Za-z0-9_.-]+)(?P<extras>\[[^]]+\])?(?P<spacing>\s*)(?P<specifier>.*)",
+        requirement_without_marker,
+    )
+    if (
+        match is None
+        or canonicalize_name(match["name"]) != "lfx"
+        or not match["specifier"].strip().startswith(("<", ">", "=", "!", "~"))
+    ):
+        raise PlanError(f"Unsupported bundle runtime lfx requirement {requirement!r}")
+    extras = match["extras"] or ""
+    return f"{match['name']}{extras}{match['spacing']}{expected}{marker}"
+
+
 def _replace_lfx_floor(content: str, lfx_version: str, *, exact: bool = False) -> str:
     major = parse_version(lfx_version)[0]
     expected = f">={lfx_version},<{major + 1}.0.0" if exact else _lfx_floor_spec(lfx_version)
-    updated, count = re.subn(r'"lfx(?:>=|~=|==)[^"]+"', f'"lfx{expected}"', content, count=1)
-    if count != 1:
-        raise PlanError("Unable to locate the bundle runtime lfx requirement")
-    return updated
+    data = tomllib.loads(content)
+    project = data.get("project", {})
+    dependencies = project.get("dependencies", [])
+    requirements = [
+        (index, requirement)
+        for index, requirement in enumerate(dependencies)
+        if isinstance(requirement, str) and _requirement_parts(requirement)[0] == "lfx"
+    ]
+    if len(requirements) != 1:
+        raise PlanError(f"Expected exactly one bundle runtime lfx requirement, found {requirements}")
+    dependency_index, observed = requirements[0]
+    replacement = _restamped_lfx_requirement(observed, expected)
+
+    expected_dependencies = list(dependencies)
+    expected_dependencies[dependency_index] = replacement
+    expected_project = dict(project)
+    expected_project["dependencies"] = expected_dependencies
+    expected_data = dict(data)
+    expected_data["project"] = expected_project
+
+    candidates: list[str] = []
+    for start, end in _toml_string_spans(content):
+        token = content[start:end]
+        try:
+            value = tomllib.loads(f"value = {token}")["value"]
+        except tomllib.TOMLDecodeError:
+            continue
+        if value != observed:
+            continue
+        candidate = f"{content[:start]}{json.dumps(replacement, ensure_ascii=False)}{content[end:]}"
+        if tomllib.loads(candidate) == expected_data:
+            candidates.append(candidate)
+    if len(candidates) != 1:
+        raise PlanError(
+            "Unable to unambiguously locate the parsed [project].dependencies lfx requirement; "
+            f"found {len(candidates)} matching source elements"
+        )
+    return candidates[0]
 
 
 def _replace_manifest_version(content: str, version: str) -> str:
@@ -580,7 +696,7 @@ def restamp_unpublished_bundles(
 
 
 def wheel_content_digest(source: Path | bytes) -> str:
-    """Hash wheel payload and METADATA while ignoring build-tool bookkeeping."""
+    """Hash semantic wheel payload while ignoring build-tool bookkeeping."""
     if isinstance(source, Path):
         wheel: zipfile.ZipFile[Any] = zipfile.ZipFile(source)
     else:
@@ -593,6 +709,13 @@ def wheel_content_digest(source: Path | bytes) -> str:
             if name.endswith((".dist-info/RECORD", ".dist-info/WHEEL")) or name.endswith("/"):
                 continue
             payload = wheel.read(name)
+            if name.endswith(".dist-info/METADATA"):
+                payload = re.sub(
+                    rb"\AMetadata-Version:[^\r\n]*(?:\r?\n)",
+                    b"Metadata-Version: normalized\n",
+                    payload,
+                    count=1,
+                )
             digest.update(name.encode())
             digest.update(b"\0")
             digest.update(str(len(payload)).encode())

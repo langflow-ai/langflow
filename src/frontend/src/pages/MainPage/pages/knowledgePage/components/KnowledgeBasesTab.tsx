@@ -267,7 +267,8 @@ const KnowledgeBasesTab = ({
         return;
       }
       keyboardEvent.preventDefault();
-      actionsButton.focus();
+      // Focusing an AG Grid cell renderer can synchronously remount it. Dispatch
+      // to the live Radix trigger first so Enter/Space is not sent to a stale ref.
       actionsButton.dispatchEvent(
         new KeyboardEvent("keydown", {
           key: keyboardEvent.key,

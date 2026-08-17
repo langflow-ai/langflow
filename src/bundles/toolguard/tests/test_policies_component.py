@@ -1,4 +1,5 @@
 import json
+from importlib.metadata import version
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -17,7 +18,7 @@ def test_toolguard_manifest_contract():
     manifest_path = Path(__file__).parents[1] / "src" / "lfx_toolguard" / "extension.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
-    assert manifest["version"] == "0.1.0"
+    assert manifest["version"] == version("lfx-toolguard")
     assert manifest["bundles"] == [
         {"name": "toolguard", "path": "components/models_and_agents"},
     ]

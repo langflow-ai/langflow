@@ -3,6 +3,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { waitForFlowEditorReady } from "../../utils/flow/wait-for-flow-editor-ready";
 import { loginLangflow } from "../../utils/login-langflow";
 import {
   addParameterToNode,
@@ -15,10 +16,13 @@ test(
   async ({ page }) => {
     await page.route("**/api/v1/auto_login", (route) => {
       route.fulfill({
-        status: 500,
+        status: 403,
         contentType: "application/json",
         body: JSON.stringify({
-          detail: { auto_login: false },
+          detail: {
+            message: "Auto login is disabled.",
+            auto_login: false,
+          },
         }),
       });
     });
@@ -46,6 +50,7 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
+    await waitForFlowEditorReady(page);
     await page.getByTestId("sidebar-search-input").click();
 
     await page.getByTestId("sidebar-search-input").fill("webhook");

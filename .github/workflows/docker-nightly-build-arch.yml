@@ -1,0 +1,209 @@
+name: Build Nightly Docker Architecture
+
+on:
+  workflow_call:
+    inputs:
+      release_type:
+        required: true
+        type: string
+      ref:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+      arch:
+        required: true
+        type: string
+      runner:
+        required: true
+        type: string
+      push_to_registry:
+        required: true
+        type: boolean
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: true
+      DOCKERHUB_TOKEN:
+        required: true
+      TEMP_GHCR_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  attempt-1:
+    name: First attempt
+    runs-on: ${{ fromJSON(inputs.runner) }}
+    continue-on-error: true
+    outputs:
+      succeeded: ${{ steps.success.outputs.succeeded }}
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - name: Set immutable architecture tags
+        id: tags
+        shell: bash
+        env:
+          ARCH: ${{ inputs.arch }}
+          RELEASE_TYPE: ${{ inputs.release_type }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          case "$RELEASE_TYPE" in
+            nightly-base)
+              target=base
+              tags="langflowai/langflow-nightly:base-${VERSION}-${ARCH},langflowai/langflow:base-${VERSION}-${ARCH},ghcr.io/langflow-ai/langflow-nightly:base-${VERSION}-${ARCH},ghcr.io/langflow-ai/langflow:base-${VERSION}-${ARCH}"
+              ;;
+            nightly-main)
+              target=full
+              tags="langflowai/langflow-nightly:${VERSION}-${ARCH},langflowai/langflow:${VERSION}-${ARCH},ghcr.io/langflow-ai/langflow-nightly:${VERSION}-${ARCH},ghcr.io/langflow-ai/langflow:${VERSION}-${ARCH}"
+              ;;
+            nightly-main-all)
+              target=full-bundles
+              tags="langflowai/langflow-nightly-all:${VERSION}-${ARCH},langflowai/langflow-all:${VERSION}-${ARCH},ghcr.io/langflow-ai/langflow-nightly-all:${VERSION}-${ARCH},ghcr.io/langflow-ai/langflow-all:${VERSION}-${ARCH}"
+              ;;
+            *) exit 1 ;;
+          esac
+          echo "target=$target" >> "$GITHUB_OUTPUT"
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+
+      - name: Clean Docker state before build
+        continue-on-error: true
+        run: |
+          docker system prune -af --volumes || true
+          docker buildx prune -af || true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to Docker Hub
+        if: ${{ inputs.push_to_registry }}
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        if: ${{ inputs.push_to_registry }}
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.TEMP_GHCR_TOKEN }}
+
+      - name: Build immutable architecture image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./docker/build_and_push.Dockerfile
+          target: ${{ steps.tags.outputs.target }}
+          tags: ${{ steps.tags.outputs.tags }}
+          platforms: linux/${{ inputs.arch }}
+          pull: true
+          push: ${{ inputs.push_to_registry }}
+          load: ${{ !inputs.push_to_registry }}
+          provenance: false
+          cache-from: type=gha,scope=nightly-${{ inputs.release_type }}-${{ inputs.arch }}
+          cache-to: type=gha,mode=max,ignore-error=true,scope=nightly-${{ inputs.release_type }}-${{ inputs.arch }}
+
+      - name: Mark first attempt successful
+        id: success
+        run: echo "succeeded=true" >> "$GITHUB_OUTPUT"
+
+      - name: Clean Docker state after build
+        if: ${{ always() }}
+        continue-on-error: true
+        run: |
+          docker system prune -af --volumes || true
+          docker buildx prune -af || true
+
+  attempt-2:
+    name: Retry after failure
+    needs: attempt-1
+    if: ${{ always() && !cancelled() && needs.attempt-1.outputs.succeeded != 'true' }}
+    runs-on: ${{ fromJSON(inputs.runner) }}
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - name: Set immutable architecture tags
+        id: tags
+        shell: bash
+        env:
+          ARCH: ${{ inputs.arch }}
+          RELEASE_TYPE: ${{ inputs.release_type }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          case "$RELEASE_TYPE" in
+            nightly-base)
+              target=base
+              tags="langflowai/langflow-nightly:base-${VERSION}-${ARCH},langflowai/langflow:base-${VERSION}-${ARCH},ghcr.io/langflow-ai/langflow-nightly:base-${VERSION}-${ARCH},ghcr.io/langflow-ai/langflow:base-${VERSION}-${ARCH}"
+              ;;
+            nightly-main)
+              target=full
+              tags="langflowai/langflow-nightly:${VERSION}-${ARCH},langflowai/langflow:${VERSION}-${ARCH},ghcr.io/langflow-ai/langflow-nightly:${VERSION}-${ARCH},ghcr.io/langflow-ai/langflow:${VERSION}-${ARCH}"
+              ;;
+            nightly-main-all)
+              target=full-bundles
+              tags="langflowai/langflow-nightly-all:${VERSION}-${ARCH},langflowai/langflow-all:${VERSION}-${ARCH},ghcr.io/langflow-ai/langflow-nightly-all:${VERSION}-${ARCH},ghcr.io/langflow-ai/langflow-all:${VERSION}-${ARCH}"
+              ;;
+            *) exit 1 ;;
+          esac
+          echo "target=$target" >> "$GITHUB_OUTPUT"
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+
+      - name: Clean Docker state before retry
+        continue-on-error: true
+        run: |
+          docker system prune -af --volumes || true
+          docker buildx prune -af || true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to Docker Hub
+        if: ${{ inputs.push_to_registry }}
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        if: ${{ inputs.push_to_registry }}
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.TEMP_GHCR_TOKEN }}
+
+      - name: Retry immutable architecture image build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./docker/build_and_push.Dockerfile
+          target: ${{ steps.tags.outputs.target }}
+          tags: ${{ steps.tags.outputs.tags }}
+          platforms: linux/${{ inputs.arch }}
+          pull: true
+          push: ${{ inputs.push_to_registry }}
+          load: ${{ !inputs.push_to_registry }}
+          provenance: false
+          cache-from: type=gha,scope=nightly-${{ inputs.release_type }}-${{ inputs.arch }}
+          cache-to: type=gha,mode=max,ignore-error=true,scope=nightly-${{ inputs.release_type }}-${{ inputs.arch }}
+
+      - name: Clean Docker state after retry
+        if: ${{ always() }}
+        continue-on-error: true
+        run: |
+          docker system prune -af --volumes || true
+          docker buildx prune -af || true
