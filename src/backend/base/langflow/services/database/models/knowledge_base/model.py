@@ -1,10 +1,14 @@
 """Persistent KB identity + configuration.
 
 One row per Knowledge Base. Replaces the long-running
-``embedding_metadata.json`` + ``schema.json`` files as the source of
-truth — those files stay on disk indefinitely as a fallback (older
-service versions read them; a cold-boot backfill upserts rows for any
-KB that still lacks one).
+``embedding_metadata.json`` sidecar as the source of truth. The sidecar
+is still written beside a *local Chroma* KB's vectors and read as a
+fallback (older service versions read it; a cold-boot backfill upserts
+rows for any KB that still lacks one), but a remote-backed KB
+(pgvector / OpenSearch / Chroma Cloud) writes nothing to local disk —
+this row is its only description, which is what lets any replica serve
+it without a shared filesystem. The companion ``schema.json`` had no
+reader left and is no longer written.
 
 Cached statistics (chunk / word / character counts, on-disk size,
 file-extension list) live alongside the config so list endpoints can

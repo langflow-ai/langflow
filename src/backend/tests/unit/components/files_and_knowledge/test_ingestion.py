@@ -299,7 +299,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         mock_get_embeddings.return_value = mock_embedding_fn
 
         # Mock vector store creation
-        with patch.object(component, "_create_vector_store"), patch.object(component, "_save_kb_files"):
+        with patch.object(component, "_create_vector_store"):
             result = await component.build_kb_info()
 
         assert isinstance(result, Data)
@@ -406,7 +406,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         mock_embedding_fn = MagicMock()
         mock_get_embeddings.return_value = mock_embedding_fn
 
-        with patch.object(component, "_create_vector_store"), patch.object(component, "_save_kb_files"):
+        with patch.object(component, "_create_vector_store"):
             result = await component.build_kb_info()
 
         assert isinstance(result, Data)
@@ -454,7 +454,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         component = component_class(**default_kwargs)
         mock_get_embeddings.return_value = MagicMock()
 
-        with patch.object(component, "_create_vector_store"), patch.object(component, "_save_kb_files"):
+        with patch.object(component, "_create_vector_store"):
             result = await component.build_kb_info()
 
         assert isinstance(result, Data)

@@ -26,6 +26,11 @@ from lfx.services.deps import get_settings_service
 
 _KNOWLEDGE_BASES_ROOT_PATH: Path | None = None
 
+# Sidecar file each Knowledge Base directory carries. Legacy for anything but
+# local Chroma — the ``knowledge_base`` row is authoritative — but still the
+# only home for a KB's per-KB encrypted embedding API key.
+EMBEDDING_METADATA_FILENAME = "embedding_metadata.json"
+
 
 class KBKeyDecryptError(Exception):
     """The stored embedding API key could not be decrypted.
@@ -73,7 +78,7 @@ def load_kb_metadata(
     non-secret metadata (listing, inspection) should leave it ``False``.
     """
     metadata: dict[str, Any] = {}
-    metadata_file = kb_path / "embedding_metadata.json"
+    metadata_file = kb_path / EMBEDDING_METADATA_FILENAME
     if not metadata_file.exists():
         logger.warning("Embedding metadata file not found for %s", log_label)
         return metadata
