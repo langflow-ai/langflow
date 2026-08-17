@@ -431,11 +431,16 @@ function GenericNode({
 
   const rightClickedNodeId = useFlowStore((state) => state.rightClickedNodeId);
 
+  // A node whose template has gone missing is always surfaced. Previously this
+  // only happened while custom components were disabled, so a component an
+  // administrator removed from the catalog left the node looking healthy until
+  // the flow was run.
   const shouldShowUpdateComponent = useMemo(
     () =>
-      !allowCustomComponents
-        ? isBlocked || isOutdated || hasBreakingChange
-        : (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll,
+      isBlocked ||
+      (!allowCustomComponents
+        ? isOutdated || hasBreakingChange
+        : (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll),
     [
       isBlocked,
       isOutdated,
@@ -595,6 +600,7 @@ function GenericNode({
           <NodeUpdateComponent
             hasBreakingChange={hasBreakingChange}
             blocked={isBlocked}
+            blockedByCatalogPolicy={isBlocked && allowCustomComponents}
             showNode={showNode}
             handleUpdateCode={() =>
               void handleUpdateCode().catch(() => undefined)

@@ -5,6 +5,7 @@ import { cn } from "@/utils/utils";
 export default function NodeUpdateComponent({
   hasBreakingChange,
   blocked = false,
+  blockedByCatalogPolicy = false,
   showNode,
   handleUpdateCode,
   loadingUpdate,
@@ -15,6 +16,7 @@ export default function NodeUpdateComponent({
 }: {
   hasBreakingChange: boolean;
   blocked?: boolean;
+  blockedByCatalogPolicy?: boolean;
   showNode: boolean;
   handleUpdateCode: () => void;
   loadingUpdate: boolean;
@@ -25,6 +27,14 @@ export default function NodeUpdateComponent({
 }) {
   const { t } = useTranslation();
   const showUpdateAction = !blocked;
+  // The same missing template means different things: an administrator removed
+  // the component from the approved catalog, or custom components are off.
+  const blockedMessage = blockedByCatalogPolicy
+    ? t("node.updateBlockedByPolicyMessage")
+    : t("node.updateBlockedMessage");
+  const blockedLabel = blockedByCatalogPolicy
+    ? t("node.updateBlockedByPolicyLabel")
+    : t("node.updateBlockedLabel");
 
   if (dismissed && isRequired) {
     return (
@@ -36,9 +46,7 @@ export default function NodeUpdateComponent({
         <div className={cn("h-2.5 w-2.5 rounded-full", "bg-accent-amber")} />
         <div className="mb-px flex-1 truncate text-mmd font-medium">
           {showNode &&
-            (blocked
-              ? t("node.updateBlockedMessage")
-              : t("node.upgradeRequiredMessage"))}
+            (blocked ? blockedMessage : t("node.upgradeRequiredMessage"))}
         </div>
         {showUpdateAction && (
           <Button
@@ -69,7 +77,7 @@ export default function NodeUpdateComponent({
         : "bg-status-green";
 
   const label = blocked
-    ? t("node.updateBlockedLabel")
+    ? blockedLabel
     : isRequired
       ? t("node.updateRequiredLabel")
       : hasBreakingChange

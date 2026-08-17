@@ -898,27 +898,29 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     // distinguish a known server component from an unknown custom type. Its public endpoint owns
     // that decision and sanitizes the stored graph before execution. Keep this client preflight
     // for editor runs, where the template registry is loaded and its classification is reliable.
-    if (
-      !get().playgroundPage &&
-      !allowCustomComponents &&
-      get().componentsToUpdate.length > 0
-    ) {
+    if (!get().playgroundPage && get().componentsToUpdate.length > 0) {
+      // A missing template blocks the run either way. Outdated components are
+      // only enforced in restricted mode, as before.
       const blockedComponents = get().componentsToUpdate.filter(
         (component) => component.blocked,
       );
-      const outdatedComponents = substituteOutdatedComponentCode
-        ? []
-        : get().componentsToUpdate.filter((component) => component.outdated);
+      const outdatedComponents =
+        substituteOutdatedComponentCode || allowCustomComponents
+          ? []
+          : get().componentsToUpdate.filter((component) => component.outdated);
       const mustBlockBuild =
         blockedComponents.length > 0 || outdatedComponents.length > 0;
       if (mustBlockBuild) {
         const errorList: string[] = [];
 
         if (blockedComponents.length > 0) {
+          const names = blockedComponents
+            .map((component) => component.display_name ?? component.id)
+            .join(", ");
           errorList.push(
-            `The following custom components cannot run while custom components are disabled: ${blockedComponents
-              .map((component) => component.display_name ?? component.id)
-              .join(", ")}`,
+            allowCustomComponents
+              ? `The following components are no longer available in the approved catalog: ${names}`
+              : `The following custom components cannot run while custom components are disabled: ${names}`,
           );
         }
 
@@ -930,17 +932,21 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           );
         }
 
+        const blockedTitle = allowCustomComponents
+          ? "Components disabled by an administrator must be removed before building"
+          : "Custom components are blocked while custom components are disabled";
+
         setErrorData({
           title:
             blockedComponents.length > 0
-              ? "Custom components are blocked while custom components are disabled"
+              ? blockedTitle
               : "Outdated components must be updated before building",
           list: errorList,
         });
         get().setIsBuilding(false);
         throw new Error(
           blockedComponents.length > 0
-            ? "Custom components are blocked while custom components are disabled"
+            ? blockedTitle
             : "Outdated components must be updated",
         );
       }

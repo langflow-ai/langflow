@@ -1250,6 +1250,47 @@ describe("useFlowStore", () => {
       expect(mockedRunFlow).not.toHaveBeenCalled();
     });
 
+    it("blocks a run when a component was disabled by an administrator", async () => {
+      // The catalog drops a blocked component from /all, so its node loses its
+      // template. That used to be ignored unless custom components were off,
+      // leaving the run to fail server side with a generic error.
+      useUtilityStore.setState({
+        allowCustomComponents: true,
+        substituteOutdatedComponentCode: true,
+      });
+      (checkCodeValidity as jest.Mock).mockReturnValueOnce({
+        outdated: false,
+        blocked: true,
+        breakingChange: false,
+        userEdited: false,
+      });
+      useFlowStore.setState({ nodes: [mockNode] });
+
+      await expect(useFlowStore.getState().buildFlow({})).rejects.toThrow(
+        "Components disabled by an administrator must be removed before building",
+      );
+      expect(mockedRunFlow).not.toHaveBeenCalled();
+    });
+
+    it("still runs an outdated component while custom components are allowed", async () => {
+      // Only a missing template is newly enforced; drift keeps its old behavior.
+      useUtilityStore.setState({
+        allowCustomComponents: true,
+        substituteOutdatedComponentCode: false,
+      });
+      (checkCodeValidity as jest.Mock).mockReturnValueOnce({
+        outdated: true,
+        blocked: false,
+        breakingChange: false,
+        userEdited: false,
+      });
+      useFlowStore.setState({ nodes: [mockNode] });
+
+      await useFlowStore.getState().buildFlow({});
+
+      expect(mockedRunFlow).toHaveBeenCalledTimes(1);
+    });
+
     it("keeps blocking unknown components when server-side substitution is enabled", async () => {
       useUtilityStore.setState({
         allowCustomComponents: false,
