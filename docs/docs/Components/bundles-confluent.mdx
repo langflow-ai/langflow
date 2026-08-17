@@ -206,7 +206,11 @@ WITH (
 );
 ```
 
-Reference `langflow_flows` in `CREATE AGENT`, and the agent can invoke your flows on every event it processes. When your Langflow deployment fronts the MCP server with OAuth (MCP Composer), use the connection's OAuth options instead of the API key in the URL.
+Reference `langflow_flows` in `CREATE AGENT`, and the agent can invoke your flows on every event it processes.
+
+:::warning
+Langflow's MCP endpoint accepts the API key as an `x-api-key` header or query parameter, and Confluent's `mcp_server` connection sends only the credential form it defines, so the example puts the key in the URL. Confluent stores connection secrets in its secret store, but query-string credentials can still surface in proxy and server access logs. Scope the key to the project, rotate it regularly, and prefer the connection's OAuth options when your Langflow deployment fronts the MCP server with OAuth (MCP Composer).
+:::
 
 ### Query Tableflow tables from watsonx.data
 

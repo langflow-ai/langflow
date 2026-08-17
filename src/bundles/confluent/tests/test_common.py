@@ -85,6 +85,30 @@ def test_kafka_client_config_rejects_half_credentials():
         _common.kafka_client_config("h:9092", "k", "")
 
 
+@pytest.mark.parametrize(
+    "protected",
+    [
+        {"bootstrap.servers": "169.254.169.254:9092"},
+        {"metadata.broker.list": "10.0.0.5:9092"},
+        {"security.protocol": "PLAINTEXT"},
+        {"sasl.username": "someone-else"},
+        {"SASL.Password": "swapped"},  # pragma: allowlist secret -- case-insensitive key match
+        {"ssl.ca.location": "/tmp/attacker.pem"},
+    ],
+)
+def test_kafka_client_config_rejects_protected_extra_keys(protected):
+    """``extra`` must not re-point the client, downgrade TLS, or swap the credentials."""
+    with pytest.raises(ValueError, match="cannot override"):
+        _common.kafka_client_config("h:9092", "k", "s", extra=protected)
+
+
+def test_kafka_client_config_extra_cannot_bypass_bootstrap_ssrf_validation():
+    """The SSRF-gated bootstrap list survives an ``extra`` that points at a private host."""
+    validated = _common.validate_bootstrap_servers("pkc-1.us-east-1.aws.confluent.cloud:9092")
+    with pytest.raises(ValueError, match=r"bootstrap\.servers"):
+        _common.kafka_client_config(validated, "k", "s", extra={"bootstrap.servers": "10.0.0.5:9092"})
+
+
 def test_ensure_url_allowed_blocks_private_ip():
     with pytest.raises(SSRFProtectionError):
         _common.ensure_url_allowed("https://10.0.0.5/mcp")

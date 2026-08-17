@@ -152,6 +152,18 @@ async def test_run_query_returns_dataframe_and_respects_max_rows(component):
     assert frame.to_dict(orient="records") == [{"id": 1, "name": "a"}, {"id": 2, "name": "b"}]
 
 
+async def test_run_query_preserves_duplicate_column_names(component):
+    """``SELECT a.id, b.id`` must not collapse into one key and drop the second value."""
+    component.max_rows = 1
+
+    def _connect_with_duplicates(**kwargs):
+        return _FakeConnection(rows=[(1, 2, 3)], columns=["id", "id", "id"], **kwargs)
+
+    with patch(CONNECT_TARGET, side_effect=_connect_with_duplicates):
+        frame = await component.run_query()
+    assert frame.to_dict(orient="records") == [{"id": 1, "id_1": 2, "id_2": 3}]
+
+
 async def test_run_query_disables_tls_verification_when_asked(component):
     component.verify_ssl = False
     with patch(CONNECT_TARGET, side_effect=_fake_connect):

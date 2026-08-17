@@ -143,7 +143,7 @@ async def test_read_table_scans_with_filter_projection_limit_and_snapshot(compon
         frame = await component.read_table()
     catalog = _FakeCatalog.last
     assert catalog.name == "tableflow"
-    assert catalog.loaded == "lkc-xyz.orders"
+    assert catalog.loaded == ("lkc-xyz", "orders")
     assert catalog.table.scan_kwargs == {
         "selected_fields": ("id", "status"),
         "limit": 50,
@@ -157,8 +157,19 @@ async def test_read_table_uses_namespace_override_and_default_projection(compone
     component.namespace = "custom_ns"
     with patch(LOAD_CATALOG_TARGET, side_effect=_fake_load_catalog):
         await component.read_table()
-    assert _FakeCatalog.last.loaded == "custom_ns.orders"
+    assert _FakeCatalog.last.loaded == ("custom_ns", "orders")
     assert _FakeCatalog.last.table.scan_kwargs["selected_fields"] == ("*",)
+
+
+async def test_read_table_keeps_dots_in_the_table_name(component):
+    """A Tableflow table is named after its Kafka topic, and topics routinely contain dots.
+
+    A string identifier would be split by PyIceberg into extra namespace levels.
+    """
+    component.table_name = "orders.v1"
+    with patch(LOAD_CATALOG_TARGET, side_effect=_fake_load_catalog):
+        await component.read_table()
+    assert _FakeCatalog.last.loaded == ("lkc-xyz", "orders.v1")
 
 
 async def test_read_table_requires_table_name(component):
@@ -196,7 +207,9 @@ def test_limit_is_clamped(component):
     component.limit = 10_000_000
     assert component._limit() == 100_000
     component.limit = 0
-    assert component._limit() == 1000  # falsy falls back to the default
+    assert component._limit() == 1  # an explicit zero clamps to the minimum, not the default
+    component.limit = None
+    assert component._limit() == 1000  # only a missing value falls back to the default
 
 
 def test_selected_fields_parsing(component):

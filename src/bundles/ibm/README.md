@@ -62,6 +62,8 @@ canonical namespaced IDs:
 * `ext:ibm:DB2VectorStoreComponent@official`
 * `ext:ibm:WatsonxAIComponent@official`
 * `ext:ibm:WatsonxEmbeddingsComponent@official`
+* `ext:ibm:WatsonxDataPrestoComponent@official`
+* `ext:ibm:WatsonxDataMCPComponent@official`
 
 ## Migration
 

@@ -142,6 +142,19 @@ async def test_produce_publishes_each_row_and_reports_delivery(component):
     assert result.data["reports"][0]["offset"] == 1
 
 
+@pytest.mark.parametrize(
+    ("configured", "expected"),
+    [(-1, 1.0), (0, 10.0), (0.2, 1.0), (10, 10.0), (10_000, 300.0)],
+)
+async def test_flush_timeout_is_clamped(component, configured, expected):
+    """A negative timeout would make ``Producer.flush`` block forever and pin the worker."""
+    component.message = DataFrame([{"id": 1}])
+    component.flush_timeout = configured
+    with patch(PRODUCER_TARGET, _FakeProducer):
+        await component.produce()
+    assert _FakeProducer.instances[-1].flushed_with == expected
+
+
 async def test_produce_reports_partial_failures(component):
     component.message = DataFrame([{"id": 1}, {"id": 2}])
 

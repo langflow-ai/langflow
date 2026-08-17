@@ -13,7 +13,11 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from lfx.utils.ssrf_protection import SSRFProtectionError
 from lfx_ibm import WatsonxDataMCPComponent
-from lfx_ibm.components.ibm.watsonx_data_mcp import WATSONX_DATA_MCP_TOOLS, watsonx_data_mcp_url
+from lfx_ibm.components.ibm.watsonx_data_mcp import (
+    WATSONX_DATA_MCP_TOOLS,
+    iam_bearer_token,
+    watsonx_data_mcp_url,
+)
 
 UPDATE_TOOLS_TARGET = "lfx.base.mcp.preset.update_tools"
 IAM_TARGET = "lfx_ibm.components.ibm.watsonx_data_mcp.iam_bearer_token"
@@ -72,11 +76,30 @@ def test_watsonx_data_mcp_url_requires_value():
         watsonx_data_mcp_url("  ")
 
 
+@pytest.mark.parametrize("raw", ["http://host.example.com", "http://host.example.com/api/v2/mcp/"])
+def test_watsonx_data_mcp_url_rejects_plaintext_http(raw):
+    """A public HTTP host passes SSRF validation but would carry the bearer token in clear."""
+    with pytest.raises(ValueError, match="must use https"):
+        watsonx_data_mcp_url(raw)
+
+
+def test_endpoint_override_rejects_plaintext_http(component):
+    component.endpoint_override = "http://host.example.com/api/v2/mcp/"
+    with pytest.raises(ValueError, match="must use https"):
+        component.endpoint_url()
+
+
+def test_iam_bearer_token_rejects_plaintext_iam_url():
+    """The IAM exchange posts the IBM Cloud API key; a public HTTP IAM URL must be refused."""
+    with pytest.raises(ValueError, match="must use https"):
+        iam_bearer_token("iam-key", "http://iam.example.com")
+
+
 def test_endpoint_url_and_override_are_ssrf_checked(component):
     assert component.endpoint_url() == "https://my-instance.lakehouse.cloud.ibm.com/api/v2/mcp/"
     component.endpoint_override = "https://other.example.com/api/v2/mcp/"
     assert component.endpoint_url() == "https://other.example.com/api/v2/mcp/"
-    component.endpoint_override = "http://10.0.0.5/api/v2/mcp/"
+    component.endpoint_override = "https://10.0.0.5/api/v2/mcp/"
     with pytest.raises(SSRFProtectionError):
         component.endpoint_url()
 

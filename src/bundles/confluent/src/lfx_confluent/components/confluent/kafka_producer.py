@@ -15,6 +15,7 @@ from lfx_confluent.components.confluent._common import kafka_client_config, vali
 
 SERIALIZATION_JSON = "json"
 SERIALIZATION_STRING = "string"
+MIN_FLUSH_TIMEOUT_SECONDS = 1
 MAX_FLUSH_TIMEOUT_SECONDS = 300
 
 
@@ -89,9 +90,12 @@ class ConfluentKafkaProducerComponent(Component):
         IntInput(
             name="flush_timeout",
             display_name="Flush Timeout (seconds)",
-            info="How long to wait for the broker to acknowledge the records.",
+            info=(
+                "How long to wait for the broker to acknowledge the records "
+                f"(clamped to {MIN_FLUSH_TIMEOUT_SECONDS}-{MAX_FLUSH_TIMEOUT_SECONDS}s)."
+            ),
             value=10,
-            range_spec={"min": 1, "max": MAX_FLUSH_TIMEOUT_SECONDS, "step": 1},
+            range_spec={"min": MIN_FLUSH_TIMEOUT_SECONDS, "max": MAX_FLUSH_TIMEOUT_SECONDS, "step": 1},
             advanced=True,
         ),
         DictInput(
@@ -199,6 +203,17 @@ class ConfluentKafkaProducerComponent(Component):
             )
         return reports
 
+    def _flush_timeout(self) -> float:
+        """Return the flush timeout, clamped so it can never ask ``flush`` to wait forever.
+
+        ``Producer.flush`` treats a negative timeout as "block until every record is
+        acknowledged", which would pin the ``asyncio.to_thread`` worker indefinitely when
+        a broker is unreachable. ``range_spec`` only bounds the UI slider, not a value
+        arriving from Tool Mode or the API.
+        """
+        timeout = float(getattr(self, "flush_timeout", 10) or 10)
+        return max(float(MIN_FLUSH_TIMEOUT_SECONDS), min(timeout, float(MAX_FLUSH_TIMEOUT_SECONDS)))
+
     async def produce(self) -> Data:
         bootstrap = validate_bootstrap_servers(self.bootstrap_servers)
         topic = (self.topic or "").strip()
@@ -214,7 +229,7 @@ class ConfluentKafkaProducerComponent(Component):
                     merged.update(item)
             extra = merged
         config = kafka_client_config(bootstrap, self.api_key, self.api_secret, extra=extra)
-        flush_timeout = float(getattr(self, "flush_timeout", 10) or 10)
+        flush_timeout = self._flush_timeout()
         reports = await asyncio.to_thread(self._produce_sync, config, topic, records, flush_timeout)
         delivered = sum(1 for r in reports if r.get("delivered"))
         failed = len(reports) - delivered

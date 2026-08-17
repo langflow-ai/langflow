@@ -29,6 +29,31 @@ MAX_ROWS_CAP = 1_000_000
 DEFAULT_REQUEST_TIMEOUT = 60.0
 
 
+def _unique_columns(columns: list[str]) -> list[str]:
+    """Return ``columns`` with duplicates suffixed, so no row value is lost.
+
+    A row is turned into a dict, and SQL happily returns the same column name twice
+    (``SELECT a.id, b.id FROM ...``); without renaming, the later value would silently
+    overwrite the earlier one.
+    """
+    seen: dict[str, int] = {}
+    unique: list[str] = []
+    for column in columns:
+        count = seen.get(column, 0)
+        seen[column] = count + 1
+        if count:
+            name = f"{column}_{count}"
+            while name in seen:
+                count += 1
+                seen[column] = count + 1
+                name = f"{column}_{count}"
+            seen[name] = 1
+            unique.append(name)
+        else:
+            unique.append(column)
+    return unique
+
+
 class WatsonxDataPrestoComponent(Component):
     """Run SQL against watsonx.data Presto (Java or C++) and return the rows as a table.
 
@@ -86,7 +111,10 @@ class WatsonxDataPrestoComponent(Component):
         StrInput(
             name="username",
             display_name="User Name",
-            info="Presto user. Defaults to ibmlhapikey for api_key authentication.",
+            info=(
+                "Presto user. For api_key authentication use ibmlhapikey (instance owner) or "
+                "ibmlhapikey_<IBM Cloud account email> for a specific user."
+            ),
             value=DEFAULT_API_KEY_USERNAME,
         ),
         SecretStrInput(
@@ -229,7 +257,7 @@ class WatsonxDataPrestoComponent(Component):
             cursor = connection.cursor()
             cursor.execute(query)
             rows = cursor.fetchmany(max_rows)
-            columns = [d[0] for d in (cursor.description or [])]
+            columns = _unique_columns([d[0] for d in (cursor.description or [])])
         finally:
             connection.close()
         return [dict(zip(columns, row, strict=False)) for row in rows]

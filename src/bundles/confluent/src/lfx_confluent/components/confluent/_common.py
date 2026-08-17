@@ -105,6 +105,25 @@ def tableflow_catalog_url(
     )
 
 
+# ``extra`` client settings are tenant-supplied (and reachable from Tool Mode), so they
+# must not be able to re-point the client at another broker after the bootstrap list has
+# been SSRF-gated, nor downgrade the transport or swap the SASL credentials.
+PROTECTED_KAFKA_CONFIG_KEYS = frozenset(
+    {
+        "bootstrap.servers",
+        "metadata.broker.list",
+        "security.protocol",
+    }
+)
+_PROTECTED_KAFKA_CONFIG_PREFIXES = ("sasl.", "ssl.")
+
+
+def _is_protected_kafka_key(key: str) -> bool:
+    """Return True for connection / transport / credential settings ``extra`` may not set."""
+    name = (key or "").strip().lower()
+    return name in PROTECTED_KAFKA_CONFIG_KEYS or name.startswith(_PROTECTED_KAFKA_CONFIG_PREFIXES)
+
+
 def parse_bootstrap_servers(bootstrap_servers: str) -> list[tuple[str, int]]:
     """Split ``host:port,host:port`` into validated ``(host, port)`` pairs."""
     text = (bootstrap_servers or "").strip()
@@ -157,6 +176,8 @@ def kafka_client_config(
     """Return a ``confluent_kafka`` client config for Confluent Cloud (SASL_SSL / PLAIN).
 
     ``bootstrap_servers`` must already have passed :func:`validate_bootstrap_servers`.
+    ``extra`` may tune the client (batching, timeouts, ...) but never the connection,
+    transport or credentials -- see :data:`PROTECTED_KAFKA_CONFIG_KEYS`.
     """
     key = (api_key or "").strip()
     secret = (api_secret or "").strip()
@@ -174,5 +195,12 @@ def kafka_client_config(
             }
         )
     if extra:
+        protected = sorted(k for k in extra if _is_protected_kafka_key(k))
+        if protected:
+            msg = (
+                "Extra Client Config cannot override the connection, transport or credential settings: "
+                f"{', '.join(protected)}."
+            )
+            raise ValueError(msg)
         config.update({k: v for k, v in extra.items() if k and v is not None})
     return config

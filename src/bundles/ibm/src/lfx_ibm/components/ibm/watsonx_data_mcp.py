@@ -27,14 +27,28 @@ DEFAULT_IAM_URL = "https://iam.cloud.ibm.com"
 MCP_PATH = "/api/v2/mcp/"
 
 
+def require_https(url: str, label: str) -> str:
+    """Return ``url`` if it is HTTPS, else raise.
+
+    Every request this component makes carries a credential -- a bearer token to the MCP
+    server, the IBM Cloud API key to IAM -- so plaintext HTTP is refused. SSRF validation
+    gates *where* a request goes; it says nothing about protecting it in transit.
+    """
+    if not url.lower().startswith("https://"):
+        msg = f"{label} must use https:// -- credentials are sent on every request. Got {url!r}."
+        raise ValueError(msg)
+    return url
+
+
 def watsonx_data_mcp_url(instance_url: str) -> str:
     """Return ``https://<instance>/api/v2/mcp/`` for a watsonx.data instance URL."""
     base = (instance_url or "").strip()
     if not base:
         msg = "watsonx.data instance URL is required."
         raise ValueError(msg)
-    if not base.startswith(("https://", "http://")):
+    if "://" not in base:
         base = f"https://{base}"
+    require_https(base, "watsonx.data instance URL")
     base = base.rstrip("/")
     if base.endswith("/api/v2/mcp"):
         return base + "/"
@@ -48,6 +62,7 @@ def iam_bearer_token(api_key: str, iam_url: str = DEFAULT_IAM_URL) -> str:
         msg = "IBM Cloud API Key is required for ibm_iam_apikey authentication."
         raise ValueError(msg)
     url = (iam_url or DEFAULT_IAM_URL).strip() or DEFAULT_IAM_URL
+    require_https(url, "IBM Cloud IAM URL")
     validate_connector_url_for_ssrf(url)
     from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 
@@ -146,6 +161,7 @@ class WatsonxDataMCPComponent(MCPPresetComponent):
     def endpoint_url(self) -> str:
         override = (getattr(self, "endpoint_override", "") or "").strip()
         url = override or watsonx_data_mcp_url(self.instance_url)
+        require_https(url, "MCP endpoint")
         validate_connector_url_for_ssrf(url)
         return url
 

@@ -15,7 +15,7 @@ export const WatsonxAiIcon = forwardRef<
 // the palette can style / swap it independently later.
 export const WatsonxDataIcon = forwardRef<
   SVGSVGElement,
-  React.PropsWithChildren<{}>
+  React.PropsWithChildren<{ isDark?: boolean }>
 >((props, ref) => {
   return <SvgWatsonxAI ref={ref} {...props} />;
 });

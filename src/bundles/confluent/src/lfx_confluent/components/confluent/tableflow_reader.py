@@ -242,7 +242,10 @@ class ConfluentTableflowReaderComponent(Component):
         return fields or ("*",)
 
     def _limit(self) -> int:
-        limit = int(getattr(self, "limit", DEFAULT_LIMIT) or DEFAULT_LIMIT)
+        # Only a missing / blank limit falls back to the default: an explicit 0 from a tool
+        # or API caller means "as few as possible", not "give me DEFAULT_LIMIT rows".
+        raw = getattr(self, "limit", None)
+        limit = DEFAULT_LIMIT if raw is None or raw == "" else int(raw)
         return max(1, min(limit, MAX_LIMIT))
 
     @staticmethod
@@ -257,7 +260,10 @@ class ConfluentTableflowReaderComponent(Component):
     # --------------------------------------------------------------- reads
     def _read_sync(self, properties: dict[str, str], namespace: str, table: str) -> Any:
         catalog = self._load_catalog(properties)
-        iceberg_table = catalog.load_table(f"{namespace}.{table}")
+        # Tuple identifier, not "<namespace>.<table>": PyIceberg splits a string identifier
+        # on ".", and a Tableflow table is named after its Kafka topic, which routinely
+        # contains dots ("orders.v1").
+        iceberg_table = catalog.load_table((*namespace.split("."), table))
         scan_kwargs: dict[str, Any] = {"selected_fields": self._selected_fields(), "limit": self._limit()}
         row_filter = (getattr(self, "row_filter", "") or "").strip()
         if row_filter:
