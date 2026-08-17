@@ -28,17 +28,10 @@ const deferred = <T>(): Deferred<T> => {
   return { promise, resolve, reject };
 };
 
+// react-router v7 makes the former v7_relativeSplatPath / v7_startTransition
+// opt-ins the default behavior, so the `future` prop no longer exists.
 const RouterWrapper = ({ children }: PropsWithChildren) =>
-  createElement(
-    MemoryRouter,
-    {
-      future: {
-        v7_relativeSplatPath: true,
-        v7_startTransition: true,
-      },
-    },
-    children,
-  );
+  createElement(MemoryRouter, null, children);
 
 const renderRouteLoader = (
   options: {

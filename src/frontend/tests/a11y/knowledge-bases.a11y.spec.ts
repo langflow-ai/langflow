@@ -722,6 +722,11 @@ test.describe("knowledge bases route accessibility", () => {
         )
         .toBe("actions");
 
+      // A non-activation key may move grid focus, but must not open actions.
+      await page.keyboard.press("ArrowDown");
+      await expect(page.getByRole("menu")).toBeHidden();
+      await actionsCell.focus();
+
       // Enter on the actions cell opens the dropdown (WCAG 2.1.1).
       await page.keyboard.press("Enter");
       await expect(page.getByRole("menu")).toBeVisible({
@@ -737,6 +742,18 @@ test.describe("knowledge bases route accessibility", () => {
         () => document.activeElement?.getAttribute("aria-label") ?? "",
       );
       expect(focusedName).toMatch(/Actions for/);
+
+      // Space is the equivalent keyboard activation and Escape restores focus.
+      await actionsCell.focus();
+      await page.keyboard.press("Space");
+      await expect(page.getByRole("menu")).toBeVisible({
+        timeout: TIMEOUTS.standard,
+      });
+      await page.keyboard.press("Escape");
+      await expect(page.getByRole("menu")).toBeHidden();
+      await expect(
+        actionsCell.getByRole("button", { name: /Actions for/ }),
+      ).toBeFocused();
     },
   );
 

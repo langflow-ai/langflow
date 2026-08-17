@@ -716,7 +716,7 @@ async def test_list_versions_invalid_limit_zero(client: AsyncClient, logged_in_h
         params={"limit": 0},
         headers=logged_in_headers,
     )
-    assert resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert resp.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 async def test_list_versions_limit_exceeds_max(client: AsyncClient, logged_in_headers):
@@ -727,7 +727,7 @@ async def test_list_versions_limit_exceeds_max(client: AsyncClient, logged_in_he
         params={"limit": 101},
         headers=logged_in_headers,
     )
-    assert resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert resp.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 async def test_get_single_entry_strips_api_keys(client: AsyncClient, logged_in_headers):
@@ -789,7 +789,7 @@ async def test_create_snapshot_rejects_long_description(client: AsyncClient, log
         json={"description": long_description},
         headers=logged_in_headers,
     )
-    assert resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert resp.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 async def test_create_snapshot_accepts_max_description(client: AsyncClient, logged_in_headers):

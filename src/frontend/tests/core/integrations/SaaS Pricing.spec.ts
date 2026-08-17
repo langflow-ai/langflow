@@ -1,19 +1,17 @@
 import { expect } from "../../fixtures";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { sendPlaygroundMessage } from "../../utils/playground/send-playground-message";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
   "SaaS Pricing",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    skipIfMissing.openAiKey();
-    loadDotenvIfLocal(__dirname);
+    await seedLoopbackProvider(page);
     await page.goto("/");
     await openStarterProject(page, "SaaS Pricing");
 
@@ -21,7 +19,7 @@ withEventDeliveryModes(
       timeout: 100000,
     });
 
-    await initialGPTsetup(page);
+    await configureLoopbackOpenAI(page);
 
     await page
       .getByRole("button", { name: TEXTS.playground, exact: true })

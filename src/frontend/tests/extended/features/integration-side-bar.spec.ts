@@ -1,5 +1,10 @@
 import { expect, test } from "../../fixtures";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { routeTestScopedDefaultFlowNames } from "../../utils/flow/route-test-scoped-default-flow-names";
+
+test.beforeEach(async ({ page }, testInfo) => {
+  await routeTestScopedDefaultFlowNames(page, testInfo, "integration-sidebar");
+});
 
 test(
   "user should be able to see integrations in the sidebar when bundles is selected",

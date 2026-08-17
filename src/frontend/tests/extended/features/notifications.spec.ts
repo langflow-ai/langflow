@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { TEXTS } from "../../utils/constants/texts";
+import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
 
 const waitForNotificationFlowEditor = async (page: Page) => {
   const welcomeBackdrop = page.getByTestId("flow-builder-welcome-backdrop");
@@ -60,23 +61,13 @@ test(
 
     await addLegacyComponents(page);
 
-    await page.waitForSelector('[data-testid="disclosure-input & output"]', {
-      timeout: 30000,
-      state: "visible",
+    await addComponentFromSidebar(page, {
+      search: TEXTS.searchTextInput,
+      testId: "input_outputText Input",
+      hoverAdd: true,
+      addButtonSlug: "text-input",
     });
-
-    await page.getByTestId("disclosure-input & output").click();
-    await page.waitForSelector('[data-testid="input_outputText Input"]', {
-      timeout: 30000,
-      state: "visible",
-    });
-    await page
-      .getByTestId("input_outputText Input")
-      .hover()
-      .then(async () => {
-        await page.getByTestId("add-component-button-text-input").click();
-        await page.getByTestId("button_run_text input").click();
-      });
+    await page.getByTestId("button_run_text input").click();
 
     await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
       timeout: 30000,

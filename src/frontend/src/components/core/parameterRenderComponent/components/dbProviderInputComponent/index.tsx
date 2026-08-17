@@ -44,6 +44,11 @@ interface DBProviderInputProps {
   disabled?: boolean;
   /** Accessible name for the combobox trigger (WCAG 4.1.2). */
   "aria-label"?: string;
+  /**
+   * Id of the canvas field's label element. Takes precedence over
+   * `aria-label` when set, so the trigger is named by the field's own
+   * visible label rather than a generic string.
+   */
   ariaLabelledBy?: string;
   onValueChange: (
     backendType: AvailableDBProviderId,
@@ -160,8 +165,10 @@ export function DBProviderInput({
           role="combobox"
           ref={refButton}
           aria-expanded={open}
+          // aria-labelledby wins over aria-label when both are set, so only
+          // one is ever emitted — otherwise the aria-label is dead weight.
+          aria-label={!ariaLabelledBy ? ariaLabel : undefined}
           aria-labelledby={ariaLabelledBy}
-          aria-label={ariaLabelledBy ? undefined : ariaLabel}
           data-testid={id}
           className={cn(
             "dropdown-component-false-outline py-2",

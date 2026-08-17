@@ -309,7 +309,7 @@ async def get_component_usage_flows(
     component = component.strip()
     if not component:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="component must not be blank",
         )
     usage, _flows_scanned = await _cached_flow_component_usage()

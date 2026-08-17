@@ -190,7 +190,7 @@ def get_all_tags(starter_projects_path: str | Path | None = None) -> list[str]:
             all_tags.update(tags)
 
         except (json.JSONDecodeError, orjson.JSONDecodeError) as e:
-            logger.aexception(f"Error loading template {template_file}: {e}")
+            logger.exception(f"Error loading template {template_file}: {e}")
             continue
 
     return sorted(all_tags)

@@ -47,7 +47,7 @@ def _reject_unsupported_sync_fields(parsed: ParsedWorkflowRun) -> None:
     if unsupported_fields:
         fields = ", ".join(unsupported_fields)
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "error": "Unsupported sync request fields",
                 "code": "SYNC_MODE_UNSUPPORTED_FIELDS",
@@ -68,7 +68,7 @@ def _reject_sync_only_fields(parsed: ParsedWorkflowRun) -> None:
         return
 
     raise HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         detail={
             "error": "Unsupported request fields for mode",
             "code": "MODE_UNSUPPORTED_FIELDS",
@@ -137,7 +137,7 @@ def _validate_output_ids(output_ids: list[str] | None, terminal_node_ids: list[s
     unknown = [output_id for output_id in output_ids if output_id not in known]
     if unknown:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "error": "Unknown output_ids",
                 "code": "UNKNOWN_OUTPUT_IDS",

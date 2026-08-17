@@ -392,7 +392,10 @@ python scripts/ci/bundle_release_plan.py update \
 Use `--bump minor` or an explicit `--version lfx-<bundle>=X.Y.Z` when a patch
 bump is not appropriate. Release workflows upload the version/artifact plans
 for review and refuse to reuse an existing PyPI version unless its normalized
-wheel content matches the wheel built by the current run.
+wheel content matches the wheel built by the current run. Every bundle pins
+the same exact Hatchling build backend so unchanged sources reproduce the
+immutable published wheel metadata; update that pin only as an explicit,
+repo-wide release migration.
 
 ---
 

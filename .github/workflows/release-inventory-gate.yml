@@ -45,13 +45,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out release profiles
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           ref: ${{ inputs.ref }}
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.14"
 
@@ -67,7 +67,7 @@ jobs:
             --output-dir bundle-profile-inventories
 
       - name: Upload profile inventory artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: downstream-bundle-profile-inventories
           path: bundle-profile-inventories/*.lock.json
@@ -83,37 +83,38 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
       - name: Check out release contract
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           ref: ${{ inputs.ref }}
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: false
 
       - name: Download SDK wheel
         if: ${{ inputs.sdk-artifact-name != '' }}
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.sdk-artifact-name }}
           path: sdk-dist
 
       - name: Download LFX wheel
         if: ${{ inputs.lfx-artifact-name != '' }}
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.lfx-artifact-name }}
           path: lfx-dist
 
       - name: Download base wheel
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.base-artifact-name }}
           path: base-dist
@@ -170,7 +171,7 @@ jobs:
 
       - name: Upload base Python inventory report
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: inventory-python-base-py${{ matrix.python-version }}
           path: inventory-reports/*.json
@@ -187,52 +188,53 @@ jobs:
         profile: [python-default, python-full]
     steps:
       - name: Check out release contract
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           ref: ${{ inputs.ref }}
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: false
 
       - name: Download SDK wheel
         if: ${{ inputs.sdk-artifact-name != '' }}
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.sdk-artifact-name }}
           path: sdk-dist
 
       - name: Download LFX wheel
         if: ${{ inputs.lfx-artifact-name != '' }}
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.lfx-artifact-name }}
           path: lfx-dist
 
       - name: Download base wheel
         if: ${{ inputs.base-artifact-name != '' }}
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.base-artifact-name }}
           path: base-dist
 
       - name: Download main wheel
         if: ${{ inputs.main-artifact-name != '' }}
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.main-artifact-name }}
           path: main-dist
 
       - name: Download bundle wheels
         if: ${{ inputs.bundles-artifact-name != '' }}
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.bundles-artifact-name }}
           path: bundles-dist
@@ -301,7 +303,7 @@ jobs:
 
       - name: Upload Python inventory report
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: inventory-${{ matrix.profile }}-py${{ matrix.python-version }}
           path: inventory-reports/*.json
@@ -320,14 +322,14 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Check out release contract
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           ref: ${{ inputs.ref }}
 
       - name: Download bundle wheels for downstream-image test
         if: ${{ inputs.bundles-artifact-name != '' }}
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.bundles-artifact-name }}
           path: bundles-dist
@@ -355,6 +357,12 @@ jobs:
           set -euo pipefail
           mkdir -p inventory-reports
           for profile in base default full; do
+            report="inventory-reports/image-${profile}-${{ matrix.arch }}.json"
+            # The application image runs as a non-root UID that does not match
+            # the self-hosted runner. Pre-create the bind-mounted report with
+            # write permission instead of making the whole directory writable.
+            : > "$report"
+            chmod a+rw "$report"
             docker run --rm --entrypoint python \
               -v "$PWD/scripts/ci:/inventory:ro" \
               -v "$PWD/inventory-reports:/reports" \
@@ -362,7 +370,7 @@ jobs:
               /inventory/check_release_inventory.py \
               --contract /inventory/release_inventory_contract.json \
               --profile "image-${profile}" \
-              --output "/reports/image-${profile}-${{ matrix.arch }}.json"
+              --output "/reports/$(basename "$report")"
           done
 
       - name: Verify image startup and health
@@ -406,7 +414,7 @@ jobs:
 
       - name: Upload image inventory reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: inventory-images-${{ matrix.arch }}
           path: inventory-reports/*.json

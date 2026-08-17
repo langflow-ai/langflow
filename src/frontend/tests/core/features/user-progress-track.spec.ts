@@ -4,9 +4,10 @@ import { expect, test } from "../../fixtures";
 import { addNewUserAndLogin } from "../../utils/add-new-user-and-loggin";
 import { cleanAllFlows } from "../../utils/clean-all-flows";
 import { cleanOldFolders } from "../../utils/clean-old-folders";
-
 import { TEXTS } from "../../utils/constants/texts";
 import { openTemplatesModal } from "../../utils/flow/new-project-flow";
+import { selectStarterTemplate } from "../../utils/flow/select-starter-template";
+import { waitForFlowEditorReady } from "../../utils/flow/wait-for-flow-editor-ready";
 
 test(
   "admin user must be able to track their progress in getting started",
@@ -37,8 +38,6 @@ async function progressTrackTestFn(
     timeout: 30000,
   });
 
-  await page.waitForTimeout(2000);
-
   await cleanAllFlows(page);
   await cleanOldFolders(page);
 
@@ -53,27 +52,21 @@ async function progressTrackTestFn(
   ).not.toBeVisible();
 
   if (isNormalUser) {
-    await page.getByTestId("empty_page_github_button").click();
-
-    const pagePromiseGithub = context.waitForEvent("page");
-
-    const newPageGithub = await pagePromiseGithub;
-    await newPageGithub.waitForTimeout(3000);
-    const newUrlGithub = newPageGithub.url();
-
-    await expect(newUrlGithub).toContain(GITHUB_URL);
+    const [newPageGithub] = await Promise.all([
+      context.waitForEvent("page"),
+      page.getByTestId("empty_page_github_button").click(),
+    ]);
+    await newPageGithub.waitForLoadState("domcontentloaded");
+    expect(newPageGithub.url()).toContain(GITHUB_URL);
 
     await newPageGithub.close();
   } else {
-    await page.getByTestId("empty_page_discord_button").click();
-
-    const pagePromiseDiscord = context.waitForEvent("page");
-
-    const newPageDiscord = await pagePromiseDiscord;
-    await newPageDiscord.waitForTimeout(3000);
-    const newUrlDiscord = newPageDiscord.url();
-
-    await expect(newUrlDiscord).toContain(DISCORD_URL);
+    const [newPageDiscord] = await Promise.all([
+      context.waitForEvent("page"),
+      page.getByTestId("empty_page_discord_button").click(),
+    ]);
+    await newPageDiscord.waitForLoadState("domcontentloaded");
+    expect(newPageDiscord.url()).toContain(DISCORD_URL);
 
     await newPageDiscord.close();
   }
@@ -82,21 +75,12 @@ async function progressTrackTestFn(
   await expect(page.getByTestId("empty_page_description")).toBeVisible();
 
   await openTemplatesModal(page, { fromEmptyPage: true });
-
-  await page.getByTestId("side_nav_options_all-templates").click();
-  await page
-    .getByRole("heading", { name: TEXTS.templateBasicPrompting })
-    .click();
-
-  await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-    timeout: 100000,
-  });
+  await selectStarterTemplate(page, TEXTS.templateBasicPrompting);
+  await waitForFlowEditorReady(page);
 
   await page.getByTestId("icon-ChevronLeft").first().click();
 
-  await page.waitForSelector('[data-testid="home-dropdown-menu"]', {
-    timeout: 100000,
-  });
+  await expect(page.getByTestId("home-dropdown-menu")).toHaveCount(1);
 
   await expect(
     page.getByTestId("get_started_progress_percentage").first(),
@@ -104,6 +88,7 @@ async function progressTrackTestFn(
 
   await cleanAllFlows(page);
 
+  await expect(page.getByTestId("home-dropdown-menu")).toHaveCount(0);
   await expect(
     page.getByTestId("get_started_progress_title"),
   ).not.toBeVisible();

@@ -1977,6 +1977,8 @@
   "sidebar.nav.versionHistory": "版本历史记录",
   "sidebar.nav.versions": "版本",
   "sidebar.newCustomComponent": "新建自定义组件",
+  "sidebar.permissionsPending": "正在检查权限...",
+  "sidebar.permissionDenied": "只读访问",
   "sidebar.noComponentsFound": "未找到任何组件。",
   "sidebar.projectCreateError": "无法创建项目。",
   "sidebar.projectUploadError": "上传项目时发生错误，请尝试将其拖放到现有项目中。",
