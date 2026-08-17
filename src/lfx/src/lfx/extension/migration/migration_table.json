@@ -4915,6 +4915,11 @@
       "legacy_slot": "ext:valkey:ValkeyIndexChatMemory@official-pre-a",
       "target": "ext:valkey:ValkeyIndexChatMemory@official",
       "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "XquikComponent",
+      "target": "ext:xquik:XquikComponent@official",
+      "added_in": "1.12.0"
     }
   ],
   "ambiguous_bare_names": [
