@@ -1061,6 +1061,7 @@
   "input.typeKey": "Geben Sie einen Schlüssel ein...",
   "input.typeValue": "Geben Sie einen Wert ein...",
   "input.valueQualifier": "Wert",
+  "input.rowQualifier": "Zeile {{index}}",
   "input.addKeyValuePair": "Schlüssel-Wert-Paar hinzufügen",
   "input.removeKeyValuePair": "Schlüssel-Wert-Paar entfernen",
   "inspection.cannotChangeVisibility": "Die Sichtbarkeit verbundener Griffe kann nicht geändert werden",

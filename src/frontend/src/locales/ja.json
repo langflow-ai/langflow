@@ -1061,6 +1061,7 @@
   "input.typeKey": "キーを入力してください...",
   "input.typeValue": "値を入力してください...",
   "input.valueQualifier": "値",
+  "input.rowQualifier": "{{index}} 行目",
   "input.addKeyValuePair": "キーと値のペアを追加",
   "input.removeKeyValuePair": "キーと値のペアを削除",
   "inspection.cannotChangeVisibility": "接続されたハンドルの表示設定を変更できません",

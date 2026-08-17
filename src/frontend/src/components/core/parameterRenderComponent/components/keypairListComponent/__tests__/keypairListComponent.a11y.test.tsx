@@ -38,7 +38,12 @@ describe("KeypairListComponent", () => {
     ).toBeInTheDocument();
   });
 
-  it("does not label the second row's key input with the field's label", () => {
+  // Rows past the first were previously left unnamed on the reasoning that
+  // only row 1 stands in for the field. axe flags that as a `label`
+  // violation, and it reproduces the exact symptom QA reported ("Type a
+  // value…, edit text") one row down — so every row is named, and rows 2+
+  // carry their position to stay distinguishable from row 1.
+  it("names the second row's key input with the field label and its row position", () => {
     render(
       <>
         <span id="field-label">Headers</span>
@@ -46,8 +51,9 @@ describe("KeypairListComponent", () => {
       </>,
     );
 
-    const secondKeyInput = screen.getByTestId("keypair1");
-    expect(secondKeyInput).not.toHaveAttribute("aria-labelledby");
+    expect(
+      screen.getByRole("textbox", { name: "Headers row 2" }),
+    ).toBeInTheDocument();
   });
 
   // QA (LE-2155): the value input was reachable but nameless — a screen
@@ -66,7 +72,7 @@ describe("KeypairListComponent", () => {
     ).toBeInTheDocument();
   });
 
-  it("does not label the second row's value input with the field's label", () => {
+  it("names the second row's value input with the field label, qualifier, and row position", () => {
     render(
       <>
         <span id="field-label">Headers</span>
@@ -74,9 +80,26 @@ describe("KeypairListComponent", () => {
       </>,
     );
 
-    expect(screen.getByTestId("keypair101")).not.toHaveAttribute(
-      "aria-labelledby",
+    expect(
+      screen.getByRole("textbox", { name: "Headers value row 2" }),
+    ).toBeInTheDocument();
+  });
+
+  it("gives every row a distinct accessible name", () => {
+    render(
+      <>
+        <span id="field-label">Headers</span>
+        <KeypairListComponent {...baseProps} ariaLabelledBy="field-label" />
+      </>,
     );
+
+    const names = screen
+      .getAllByRole("textbox")
+      .map((el) => el.getAttribute("aria-labelledby"));
+    // No input may be left without a name — that is the axe `label`
+    // violation this replaced.
+    expect(names.every(Boolean)).toBe(true);
+    expect(new Set(names).size).toBe(names.length);
   });
 
   it("falls back to no accessible-name override when ariaLabelledBy is absent", () => {

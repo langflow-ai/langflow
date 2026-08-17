@@ -1283,6 +1283,7 @@
   "input.typeKey": "Type key...",
   "input.typeValue": "Type a value...",
   "input.valueQualifier": "value",
+  "input.rowQualifier": "row {{index}}",
   "input.addKeyValuePair": "Add key-value pair",
   "input.removeKeyValuePair": "Remove key-value pair",
   "input.duplicateOrEmptyKey": "Duplicate or empty key",
