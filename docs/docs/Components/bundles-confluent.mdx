@@ -14,7 +14,7 @@ import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-ins
 
 This page describes the components that are available in the **IBM Confluent** bundle, and the zero-code ways to connect Langflow flows to Confluent that work with the components you already have.
 
-[IBM Confluent](https://www.ibm.com/products/confluent) is the data-in-motion half of IBM's streaming lakehouse: Apache Kafka® for streams, Apache Flink® for processing (including [Streaming Agents](https://docs.confluent.io/cloud/current/ai/streaming-agents/overview.html)), [Tableflow](https://docs.confluent.io/cloud/current/topics/tableflow/overview.html) to materialize topics as Apache Iceberg™ tables, and the [Real-Time Context Engine](https://docs.confluent.io/cloud/current/ai/real-time-context-engine/overview.html) to serve fresh, governed topic data to AI agents over MCP. The data-at-rest half — IBM watsonx.data — is covered by the [**IBM** bundle](/bundles-ibm).
+[IBM Confluent](https://www.ibm.com/products/confluent) is the data-in-motion half of IBM's streaming lakehouse: Apache Kafka® for streams, Apache Flink® for processing (including [Streaming Agents](https://docs.confluent.io/cloud/current/ai/streaming-agents/overview.html)), [Tableflow](https://docs.confluent.io/cloud/current/topics/tableflow/overview.html) to materialize topics as Apache Iceberg™ tables, and the [Real-Time Context Engine](https://docs.confluent.io/cloud/current/ai/real-time-context-engine/overview.html) to serve fresh, governed topic data to AI agents over MCP. The data-at-rest half — IBM watsonx.data — is covered by the [**IBM** bundle](./bundles-ibm.mdx).
 
 Every component in this bundle talks to Confluent over open protocols only (the Kafka wire protocol, the Iceberg REST catalog, and MCP over Streamable HTTP), so the same components work against Confluent Cloud, Confluent Platform, and WarpStream wherever the corresponding surface is exposed.
 
@@ -120,7 +120,7 @@ Record values are decoded as JSON by default (falling back to text); `string` ke
 
 This component reads a Kafka topic that Tableflow has materialized as an Apache Iceberg table, through the Tableflow Iceberg REST catalog, into a DataFrame. It uses `pyiceberg` (no JVM), so it runs anywhere Langflow runs, and applies an optional row filter, a column projection, and a hard row limit before the data reaches the flow.
 
-Tableflow tables are read-only from external engines. To change the data, publish to the source topic. To query the same tables with SQL alongside your other lakehouse data, register the Tableflow catalog in watsonx.data and use the [**IBM watsonx.data Presto** component](/bundles-ibm#ibm-watsonxdata-presto).
+Tableflow tables are read-only from external engines. To change the data, publish to the source topic. To query the same tables with SQL alongside your other lakehouse data, register the Tableflow catalog in watsonx.data and use the [**IBM watsonx.data Presto** component](./bundles-ibm.mdx#ibm-watsonxdata-presto).
 
 To use it, enable Tableflow on the topic in Confluent Cloud, capture the REST catalog endpoint, and create a Tableflow API key. The Kafka cluster ID doubles as the Iceberg warehouse and namespace. Use the **Tables** output to list the tables in a cluster, and the **Result Table** output to read one.
 
@@ -210,11 +210,11 @@ Reference `langflow_flows` in `CREATE AGENT`, and the agent can invoke your flow
 
 ### Query Tableflow tables from watsonx.data
 
-Register the Tableflow REST catalog as an Iceberg datasource in watsonx.data (Presto: `connector.name=iceberg`, `iceberg.catalog.type=REST`, `iceberg.rest.uri=<Tableflow catalog URI>`, `iceberg.rest.auth.type=OAUTH2`, `iceberg.rest.auth.oauth2.credential=<key>:<secret>`), then query the tables with the [**IBM watsonx.data Presto** component](/bundles-ibm#ibm-watsonxdata-presto) or any SQLAlchemy URL in the [**SQL Database** component](/sql-database). See [Integrating Confluent Tableflow in watsonx.data](https://www.ibm.com/docs/en/watsonxdata/standard/2.3.x?topic=integrations-integrating-confluent-tableflow-in-watsonxdata).
+Register the Tableflow REST catalog as an Iceberg datasource in watsonx.data (Presto: `connector.name=iceberg`, `iceberg.catalog.type=REST`, `iceberg.rest.uri=<Tableflow catalog URI>`, `iceberg.rest.auth.type=OAUTH2`, `iceberg.rest.auth.oauth2.credential=<key>:<secret>`), then query the tables with the [**IBM watsonx.data Presto** component](./bundles-ibm.mdx#ibm-watsonxdata-presto) or any SQLAlchemy URL in the [**SQL Database** component](/sql-database). See [Integrating Confluent Tableflow in watsonx.data](https://www.ibm.com/docs/en/watsonxdata/standard/2.3.x?topic=integrations-integrating-confluent-tableflow-in-watsonxdata).
 
 ## See also
 
-- [IBM bundle](/bundles-ibm) — watsonx.ai, watsonx.data Presto and MCP, Db2 Vector Store
+- [IBM bundle](./bundles-ibm.mdx) — watsonx.ai, watsonx.data Presto and MCP, Db2 Vector Store
 - [MCP client](/mcp-client) and [MCP server](/mcp-server)
 - [Confluent Real-Time Context Engine](https://docs.confluent.io/cloud/current/ai/real-time-context-engine/overview.html)
 - [Confluent Tableflow](https://docs.confluent.io/cloud/current/topics/tableflow/overview.html)
