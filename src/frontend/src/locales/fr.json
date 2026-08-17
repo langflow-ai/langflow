@@ -1060,6 +1060,7 @@
   "input.toolsetPlaceholder": "Utilisé comme outil",
   "input.typeKey": "Tapez une clé...",
   "input.typeValue": "Entrez une valeur...",
+  "input.valueQualifier": "valeur",
   "input.addKeyValuePair": "Ajouter une paire clé-valeur",
   "input.removeKeyValuePair": "Supprimer la paire clé-valeur",
   "inspection.cannotChangeVisibility": "Impossible de modifier la visibilité des poignées connectées",

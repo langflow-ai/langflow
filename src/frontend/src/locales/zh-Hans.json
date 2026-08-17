@@ -1060,6 +1060,7 @@
   "input.toolsetPlaceholder": "作为一种工具",
   "input.typeKey": "请输入键...",
   "input.typeValue": "请输入一个值...",
+  "input.valueQualifier": "值",
   "input.addKeyValuePair": "添加键值对",
   "input.removeKeyValuePair": "删除键值对",
   "inspection.cannotChangeVisibility": "无法更改已连接控件的可见性",

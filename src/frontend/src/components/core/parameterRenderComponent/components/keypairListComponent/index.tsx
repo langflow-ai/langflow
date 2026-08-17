@@ -24,6 +24,7 @@ const KeypairListComponent = ({
   const { t } = useTranslation();
   const getTestId = (prefix, index) =>
     `${editNode ? "editNode" : ""}${prefix}${index}`;
+  const valueQualifierId = `${id}-value-qualifier`;
 
   useEffect(() => {
     if (disabled && value.length > 0 && value[0] !== "") {
@@ -158,6 +159,14 @@ const KeypairListComponent = ({
           className={editNode ? "input-edit-node" : ""}
           placeholder={t("input.typeValue")}
           onChange={(event) => handleChangeValue(event, index)}
+          // Same first-row-stands-in-for-the-field rule as the key input, but
+          // the field label alone would make the two inputs indistinguishable
+          // — the qualifier turns it into "<field> value" vs "<field>".
+          aria-labelledby={
+            index === 0 && ariaLabelledBy
+              ? `${ariaLabelledBy} ${valueQualifierId}`
+              : undefined
+          }
         />
         <div className="hit-area-icon">
           {isList && renderActionButton(index)}
@@ -176,6 +185,9 @@ const KeypairListComponent = ({
         values?.length > 1 && editNode && "mx-2 my-1",
       )}
     >
+      <span id={valueQualifierId} className="sr-only">
+        {t("input.valueQualifier")}
+      </span>
       {values?.map((obj, index) => renderKeyValuePair(obj, index))}
     </div>
   );

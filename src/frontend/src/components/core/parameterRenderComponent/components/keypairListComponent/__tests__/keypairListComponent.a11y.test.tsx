@@ -50,6 +50,35 @@ describe("KeypairListComponent", () => {
     expect(secondKeyInput).not.toHaveAttribute("aria-labelledby");
   });
 
+  // QA (LE-2155): the value input was reachable but nameless — a screen
+  // reader announced only "Type a value…, edit text", so it was
+  // indistinguishable from the key input of the same row.
+  it("names the first row's value input with the field label plus a value qualifier", () => {
+    render(
+      <>
+        <span id="field-label">Headers</span>
+        <KeypairListComponent {...baseProps} ariaLabelledBy="field-label" />
+      </>,
+    );
+
+    expect(
+      screen.getByRole("textbox", { name: "Headers value" }),
+    ).toBeInTheDocument();
+  });
+
+  it("does not label the second row's value input with the field's label", () => {
+    render(
+      <>
+        <span id="field-label">Headers</span>
+        <KeypairListComponent {...baseProps} ariaLabelledBy="field-label" />
+      </>,
+    );
+
+    expect(screen.getByTestId("keypair101")).not.toHaveAttribute(
+      "aria-labelledby",
+    );
+  });
+
   it("falls back to no accessible-name override when ariaLabelledBy is absent", () => {
     // KeypairListComponent has no TS prop types (plain JS-style
     // destructuring), so ariaLabelledBy infers as required — pass it

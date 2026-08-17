@@ -1060,6 +1060,7 @@
   "input.toolsetPlaceholder": "Usado como ferramenta",
   "input.typeKey": "Digite a tecla...",
   "input.typeValue": "Digite um valor...",
+  "input.valueQualifier": "valor",
   "input.addKeyValuePair": "Adicionar par chave-valor",
   "input.removeKeyValuePair": "Remover par chave-valor",
   "inspection.cannotChangeVisibility": "Não é possível alterar a visibilidade das alças conectadas",

@@ -75,12 +75,33 @@ describe("McpComponent", () => {
     expect(await axe(container)).toHaveNoViolations();
   });
 
-  // Regression guard: label only, not composed with the selected server
-  // name. Note this trigger is a plain button with aria-haspopup="dialog"
-  // (it opens ListSelectionComponent's dialog), not role="combobox" like
-  // connectionComponent/dropdownComponent — querying by the wrong role
-  // silently passed before because RTL's error surfaced the real name.
-  it("uses the field's real label as the trigger's accessible name", () => {
+  // Regression guard (QA, LE-2155): this trigger is a plain button with
+  // aria-haspopup="dialog" (it opens ListSelectionComponent's dialog), not
+  // role="combobox" like connectionComponent/dropdownComponent. A combobox
+  // gets its value announced separately from its name, so those widgets
+  // deliberately keep the value out of the name; a button does not, so
+  // labelling this one with the field alone silently dropped the selected
+  // server from the announcement. Name must carry both, exactly once.
+  it("composes the field label and the selected server into the trigger's accessible name", () => {
+    render(
+      <>
+        <span id="field-label">MCP server</span>
+        <McpComponent
+          {...baseProps}
+          value={{ name: "server-a", config: {} }}
+          ariaLabelledBy="field-label"
+        />
+      </>,
+    );
+
+    const trigger = screen.getByTestId("mcp-server-dropdown");
+    expect(trigger).toHaveAccessibleName("MCP server server-a");
+    // aria-labelledby wins over aria-label, so leaving one behind would
+    // strand the value it used to carry.
+    expect(trigger).not.toHaveAttribute("aria-label");
+  });
+
+  it("announces the empty state alongside the field label when nothing is selected", () => {
     render(
       <>
         <span id="field-label">MCP server</span>
@@ -88,9 +109,9 @@ describe("McpComponent", () => {
       </>,
     );
 
-    expect(
-      screen.getByRole("button", { name: "MCP server" }),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId("mcp-server-dropdown")).toHaveAccessibleName(
+      "MCP server Select a server...",
+    );
   });
 
   it("does not set aria-labelledby on the trigger when absent", () => {

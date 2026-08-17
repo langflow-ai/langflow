@@ -220,6 +220,16 @@ export default function McpComponent({
     );
   }, [selectedOption, config]);
 
+  // Id of the visible span holding the selected server, so it can be
+  // composed into the trigger's accessible name alongside the field label.
+  const mcpValueId = `${id}-mcp-server-value`;
+  // The save/clear and loading states describe an action or a transient
+  // state rather than the field's value, so they keep their own aria-label.
+  const mcpTriggerLabelledBy =
+    showSaveButton || !options || !ariaLabelledBy
+      ? undefined
+      : `${ariaLabelledBy} ${mcpValueId}`;
+
   if (!showParameter) {
     return null;
   }
@@ -233,12 +243,20 @@ export default function McpComponent({
             size="xs"
             aria-haspopup={!showSaveButton ? "dialog" : undefined}
             aria-expanded={!showSaveButton ? open : undefined}
+            // This is a plain button, not a combobox: a screen reader
+            // announces its name and nothing else, so the name has to carry
+            // both the field and its current value. When a field label is
+            // available the two are composed via aria-labelledby (label id +
+            // the visible value span); aria-label is dropped in that case,
+            // since aria-labelledby wins and would strand the value here.
             aria-label={
-              showSaveButton
-                ? t("mcp.clearServer")
-                : !options
-                  ? t("mcp.loadingServers")
-                  : (selectedItem[0]?.name ?? t("mcp.selectServer"))
+              mcpTriggerLabelledBy
+                ? undefined
+                : showSaveButton
+                  ? t("mcp.clearServer")
+                  : !options
+                    ? t("mcp.loadingServers")
+                    : (selectedItem[0]?.name ?? t("mcp.selectServer"))
             }
             onClick={
               !showSaveButton
@@ -253,16 +271,14 @@ export default function McpComponent({
             )}
             data-testid="mcp-server-dropdown"
             disabled={disabled || !options}
-            aria-labelledby={
-              showSaveButton || !options ? undefined : ariaLabelledBy
-            }
+            aria-labelledby={mcpTriggerLabelledBy}
           >
             <div
               className={cn(
                 "flex w-full items-center justify-start text-sm font-normal",
               )}
             >
-              <span className="truncate">
+              <span className="truncate" id={mcpValueId}>
                 {!options
                   ? t("mcp.loadingServers")
                   : selectedItem[0]?.name

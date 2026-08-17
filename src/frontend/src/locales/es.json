@@ -1060,6 +1060,7 @@
   "input.toolsetPlaceholder": "Se utiliza como herramienta",
   "input.typeKey": "Escribe una clave...",
   "input.typeValue": "Escribe un valor...",
+  "input.valueQualifier": "valor",
   "input.addKeyValuePair": "Agregar par clave-valor",
   "input.removeKeyValuePair": "Eliminar par clave-valor",
   "inspection.cannotChangeVisibility": "No se puede cambiar la visibilidad de los controles conectados",

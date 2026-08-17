@@ -1282,6 +1282,7 @@
   "input.floatNumberFull": "Type a float number",
   "input.typeKey": "Type key...",
   "input.typeValue": "Type a value...",
+  "input.valueQualifier": "value",
   "input.addKeyValuePair": "Add key-value pair",
   "input.removeKeyValuePair": "Remove key-value pair",
   "input.duplicateOrEmptyKey": "Duplicate or empty key",
