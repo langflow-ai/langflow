@@ -478,6 +478,12 @@ class ConfigResponse(BaseConfigResponse):
     # Mirrors LANGFLOW_AGENTIC_EXPERIENCE (default on) so the Assistant panel
     # can explain, rather than 404, when the experience is disabled server-side.
     agentic_experience: bool = True
+    # True when local Chroma may back a knowledge base or memory base — i.e. on
+    # the dev profile. The production profile refuses it (vectors on the serving
+    # box's own disk don't survive a restart and can't be shared across
+    # replicas), so the vector-store picker hides the option rather than offering
+    # a choice the create endpoint always rejects with 422.
+    local_vector_store_available: bool = True
 
     @classmethod
     def from_settings(
@@ -531,6 +537,7 @@ class ConfigResponse(BaseConfigResponse):
             custom_component_admin_only=settings.custom_component_admin_only,
             a2a_enabled=settings.a2a_enabled,
             agentic_experience=settings.agentic_experience,
+            local_vector_store_available=settings.deployment_profile != "prod",
         )
 
 

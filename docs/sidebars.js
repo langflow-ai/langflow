@@ -509,6 +509,7 @@ module.exports = {
             "Components/bundles-cohere",
             "Components/bundles-cometapi",
             "Components/bundles-composio",
+            "Components/bundles-confluent",
             "Components/bundles-couchbase",
             "Components/bundles-cuga",
             "Components/bundles-datastax",
