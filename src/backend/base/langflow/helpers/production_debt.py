@@ -1,4 +1,4 @@
-# ruff: noqa: S108, PLR2004, TRY003, EM101, FBT001, FBT002, E501
+# ruff: noqa: S108, PLR2004, FBT001, FBT002
 from __future__ import annotations
 
 import hashlib
@@ -31,9 +31,7 @@ class FlowDebtReport:
 
 
 class TechnicalDueDiligenceLedger:
-    """
-    Cryptographic SHA-256 hash-chained Action Ledger for Langflow visual agent runs.
-    """
+    """Cryptographic SHA-256 hash-chained Action Ledger for Langflow visual agent runs."""
 
     def __init__(self) -> None:
         self._entries: list[dict[str, Any]] = []
@@ -87,8 +85,7 @@ class TechnicalDueDiligenceLedger:
 
 
 class ProductionDebtComponent:
-    """
-    A2Z SOC Production Debt & Technical Due Diligence Component for Langflow.
+    """A2Z SOC Production Debt & Technical Due Diligence Component for Langflow.
 
     Quantifies visual multi-agent graph flows against 4 Enterprise Forward Deployed Engineering KPIs:
     1. Visual Graph Debt Index (VDI <= 12.0)
