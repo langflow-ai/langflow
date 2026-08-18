@@ -7,6 +7,7 @@ import useAutoSaveFlow from "../use-autosave-flow";
 import useSaveFlow from "../use-save-flow";
 
 const mockUsePermissions = jest.fn();
+const mockSetErrorData = jest.fn();
 
 const makeMockFlow = (): FlowType =>
   ({
@@ -18,6 +19,11 @@ const makeMockFlow = (): FlowType =>
 jest.mock("../use-save-flow");
 jest.mock("../../use-debounce");
 jest.mock("@/stores/flowsManagerStore");
+jest.mock("@/stores/alertStore", () => ({
+  __esModule: true,
+  default: (selector: (state: unknown) => unknown) =>
+    selector({ setErrorData: mockSetErrorData }),
+}));
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
   default: { getState: jest.fn(() => ({ componentsToUpdate: [] })) },
@@ -35,6 +41,11 @@ describe("useAutoSaveFlow", () => {
     mockSaveFlow.mockReset();
     mockDebouncedFn.mockReset();
 
+    // Each test sets its own component state; without this the blocked-node
+    // cases would leak into the ones after them.
+    (useFlowStore.getState as jest.Mock).mockReturnValue({
+      componentsToUpdate: [],
+    });
     (useSaveFlow as jest.Mock).mockReturnValue(mockSaveFlow);
     (useDebounce as jest.Mock).mockImplementation((fn) => {
       mockDebouncedFn.mockImplementation(fn);
@@ -174,6 +185,31 @@ describe("useAutoSaveFlow", () => {
     autoSaveFlow(mockFlow);
 
     expect(mockSaveFlow).not.toHaveBeenCalled();
+  });
+
+  it("reports the paused save once rather than on every attempt", async () => {
+    (useFlowStore.getState as jest.Mock).mockReturnValue({
+      componentsToUpdate: [
+        { id: "node-1", display_name: "Chat Output", blocked: true },
+      ],
+    });
+    (useFlowsManagerStore as unknown as jest.Mock).mockImplementation(
+      (selector) =>
+        selector({
+          autoSaving: true,
+          autoSavingInterval: 3000,
+          currentFlowId: "flow-1",
+        }),
+    );
+
+    const { result } = renderHook(() => useAutoSaveFlow());
+    await result.current(makeMockFlow());
+    await result.current(makeMockFlow());
+    await result.current(makeMockFlow());
+
+    // The user needs to know saving stopped, not to be told repeatedly.
+    expect(mockSetErrorData).toHaveBeenCalledTimes(1);
+    expect(mockSetErrorData.mock.calls[0][0].list[0]).toContain("Chat Output");
   });
 
   it("should call saveFlow without arguments when no flow is provided", async () => {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { usePermissions } from "@/contexts/permissionsContext";
+import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { FlowType } from "@/types/flow";
@@ -12,19 +13,43 @@ type PendingAutoSave = {
 };
 
 /**
- * A component missing from the registry cannot be persisted: the server
- * rejects the write. Autosaving anyway retries a save that can never succeed,
- * so opening an affected flow produced a stream of failed requests and error
- * toasts before the user had done anything. The node's own banner reports the
- * problem instead, and saving resumes once the component is removed.
+ * Components the server will refuse to persist, if any.
+ *
+ * A component missing from the registry cannot be saved, so autosaving retries
+ * a write that can never succeed: opening an affected flow produced a stream of
+ * failed requests before the user had touched anything. Autosave stops instead,
+ * and the caller reports it once rather than on every attempt.
  */
-const hasBlockedComponents = () =>
+const blockedComponentNames = (): string[] =>
   useFlowStore
     .getState()
-    .componentsToUpdate.some((component) => component.blocked);
+    .componentsToUpdate.filter((component) => component.blocked)
+    .map((component) => component.display_name ?? component.id);
 
 const useAutoSaveFlow = () => {
   const { can, isLoading } = usePermissions();
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const reportedBlockedRef = useRef(false);
+
+  // Report the pause once per occurrence: the user needs to know the flow is
+  // no longer being saved, but not on every debounce tick.
+  const pauseForBlockedComponents = useCallback(() => {
+    const names = blockedComponentNames();
+    if (names.length === 0) {
+      reportedBlockedRef.current = false;
+      return false;
+    }
+    if (!reportedBlockedRef.current) {
+      reportedBlockedRef.current = true;
+      setErrorData({
+        title: "Flow not saved",
+        list: [
+          `Saving is paused while this flow uses components disabled by an administrator: ${names.join(", ")}. Remove them to resume saving.`,
+        ],
+      });
+    }
+    return true;
+  }, [setErrorData]);
   const saveFlow = useSaveFlow();
   const pendingAutoSaveRef = useRef<PendingAutoSave | null>(null);
   const saveQueueTailRef = useRef<Promise<void>>(Promise.resolve());
@@ -56,7 +81,7 @@ const useAutoSaveFlow = () => {
       pendingAutoSaveRef.current = { flow, flowId };
       return;
     }
-    if (hasBlockedComponents()) {
+    if (pauseForBlockedComponents()) {
       pendingAutoSaveRef.current = null;
       return;
     }
@@ -89,7 +114,7 @@ const useAutoSaveFlow = () => {
     }
     const flowId =
       pendingAutoSave.flowId ?? pendingAutoSave.flow?.id ?? currentFlowId;
-    if (hasBlockedComponents()) {
+    if (pauseForBlockedComponents()) {
       pendingAutoSaveRef.current = null;
       return;
     }
@@ -97,7 +122,14 @@ const useAutoSaveFlow = () => {
       pendingAutoSaveRef.current = null;
       void enqueueSave(pendingAutoSave.flow);
     }
-  }, [autoSaving, can, currentFlowId, enqueueSave, isLoading]);
+  }, [
+    autoSaving,
+    can,
+    currentFlowId,
+    enqueueSave,
+    isLoading,
+    pauseForBlockedComponents,
+  ]);
 
   return autoSaveFlow;
 };
