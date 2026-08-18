@@ -207,23 +207,32 @@ def span_exporter():
     from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
     exporter = InMemorySpanExporter()
+    processor = SimpleSpanProcessor(exporter)
     current = trace.get_tracer_provider()
     if isinstance(current, TracerProvider):
         # A real SDK provider is already installed. set_tracer_provider is first-write-wins,
         # so installing another would be ignored and every assertion below would read an
         # exporter nothing feeds. Attach to the one that exists instead: no ordering
         # dependency, and the cells still fail loudly if their span never arrives.
-        current.add_span_processor(SimpleSpanProcessor(exporter))
-        yield exporter
-        exporter.clear()
+        current.add_span_processor(processor)
+        try:
+            yield exporter
+        finally:
+            # Shut the processor down rather than detach it: a provider has no removal API,
+            # so clearing the exporter empties the list and leaves the processor registered,
+            # still appending every later span in this worker to it for the rest of the run.
+            processor.shutdown()
+            exporter.clear()
         return
 
     provider = TracerProvider()
-    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    provider.add_span_processor(processor)
     trace.set_tracer_provider(provider)
-    yield exporter
-    provider.shutdown()
-    exporter.clear()
+    try:
+        yield exporter
+    finally:
+        provider.shutdown()
+        exporter.clear()
 
 
 def flow_span_protocols(exporter) -> list[str | None]:
