@@ -121,11 +121,10 @@ def _build_output_function(
         # Create an isolated copy to prevent race conditions when this
         # tool is invoked concurrently by an agent (GitHub issue #8791)
         comp = deepcopy(component)
-        # Only the Component calling the tool reports to the UI, so the tool run is
-        # silenced on its own copy. Silencing the shared component instead would leak
-        # across overlapping calls: the second call records the first call's no-op as
-        # the method to restore, and restores it after the first call is done.
-        comp.send_message = send_message_noop  # type: ignore[method-assign, assignment]
+        # Nothing patches send_message here. Silencing the shared component leaked across
+        # overlapping calls: the second call recorded the first call's no-op as the method
+        # to restore, and restored it once the first call had put the real one back.
+        # Suppressing the tool run's own messages is a separate change, tracked on its own.
         local_method = getattr(comp, method_name, output_method)
         build_started = False
         result = None
@@ -183,9 +182,7 @@ def _build_output_async_function(
         # Create an isolated copy to prevent race conditions when this
         # tool is invoked concurrently by an agent (GitHub issue #8791)
         comp = deepcopy(component)
-        # See _build_output_function: the no-op belongs to this call's copy, never to
-        # the shared component.
-        comp.send_message = send_message_noop  # type: ignore[method-assign, assignment]
+        # See _build_output_function: a tool call must not patch send_message anywhere.
         local_method = getattr(comp, method_name, output_method)
         build_started = False
         result = None

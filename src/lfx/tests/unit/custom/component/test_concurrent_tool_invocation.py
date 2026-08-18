@@ -333,15 +333,19 @@ async def test_should_keep_send_message_when_async_tool_calls_overlap():
     assert component.send_message == original_send_message
 
 
-async def test_should_suppress_messages_on_the_invocation_copy_only():
-    """The tool call must silence the copy it runs, never the shared component.
+async def test_should_leave_message_delivery_unchanged_when_running_as_tool():
+    """A tool call must not patch send_message anywhere - not on the copy, not on the shared component.
+
+    Message suppression during tool runs has been inactive since #11994 and reviving it
+    is a user-visible change tracked separately. This pins the current behavior so it
+    cannot come back by accident.
 
     GIVEN: A component whose output method sends a message while running as a tool
     WHEN:  The tool is invoked
-    THEN:  The message never reaches the delivery path, the call still gets the Message
-           back, and the shared component keeps its own send_message
+    THEN:  The message reaches the component's own send_message, and the shared component
+           still holds that same method afterwards
     """
-    # Arrange - delivered records every message that reaches the real send_message
+    # Arrange - delivered records every message that reaches the component's send_message
     delivered: list[str] = []
 
     class MessagingComponent(Component):
@@ -367,10 +371,10 @@ async def test_should_suppress_messages_on_the_invocation_copy_only():
     # Act
     result = await tool.ainvoke({"tag": "a"})
 
-    # Assert - the no-op swallowed the message without breaking the call
-    assert delivered == []
+    # Assert - the copy ran with the component's own send_message, not with a no-op
+    assert delivered == ["message from a"]
     assert result["echoed"] == "message from a"
-    # And the shared component was never touched
+    # And the shared component was never patched
     assert component.send_message == original_send_message
     assert component.send_message is not send_message_noop
 
