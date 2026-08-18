@@ -105,6 +105,25 @@ def strip_secret_field_values(flow_data: dict | None) -> dict | None:
     return strip_secret_field_values_in_place(deepcopy(flow_data))
 
 
+def strip_flow_secrets(flow: dict) -> dict:
+    """Return a copy of a serialized flow *envelope* with persisted secrets removed.
+
+    ``strip_secret_field_values`` scrubs a bare flow-data mapping; export paths
+    hold the surrounding flow dict (``{"name": ..., "data": {...}}``) instead.
+    This wrapper keeps those call sites on the metadata-driven scrubber rather
+    than the legacy :func:`remove_api_keys`, which only nulled fields that were
+    both ``password``-marked *and* named like an API key.
+
+    The returned envelope is a shallow copy whose ``data`` is detached, so the
+    caller never mutates the ORM-backed payload it serialized from.
+    """
+    if not isinstance(flow, dict) or "data" not in flow:
+        return flow
+    scrubbed = dict(flow)
+    scrubbed["data"] = strip_secret_field_values(flow["data"])
+    return scrubbed
+
+
 def _normalized_secret_name(value: object) -> str:
     """Normalize snake, kebab, and camel-case names for classification."""
     name = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", str(value or ""))
@@ -370,6 +389,7 @@ __all__ = [
     "API_WORDS",
     "has_api_terms",
     "remove_api_keys",
+    "strip_flow_secrets",
     "strip_secret_field_values",
     "strip_secret_field_values_in_place",
 ]
