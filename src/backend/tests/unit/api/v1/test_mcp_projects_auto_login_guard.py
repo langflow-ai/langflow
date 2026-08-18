@@ -76,3 +76,48 @@ async def test_verify_project_auth_auto_login_skip_keeps_superuser_fallback():
         result = await verify_project_auth(project.id, query_param=None, header_param=None)
 
     assert result is superuser
+
+
+@pytest.mark.anyio
+async def test_verify_project_auth_honours_presented_api_key_under_auto_login():
+    """A presented API key must authenticate even when policy would not have demanded one.
+
+    Under MCP Composer with a default project (no ``auth_settings``) and ``AUTO_LOGIN`` on,
+    ``requires_api_key`` is False. Before the presented-key branch existed, a key minted by
+    ``POST /{id}/install`` was ignored and the caller fell through to the now-rejecting
+    superuser fallback, so the generated client config could never authenticate.
+    """
+    owner_id = uuid4()
+    project = SimpleNamespace(id=uuid4(), user_id=owner_id, auth_settings=None)
+    owner = SimpleNamespace(id=owner_id, username="owner")
+    api_key_result = SimpleNamespace(user=owner)
+
+    with (
+        patch(f"{MODULE}.get_settings_service", return_value=_settings(auto_login=True, skip_auth=False)),
+        patch(f"{MODULE}.session_scope", _session_scope_yielding(project)),
+        patch(f"{MODULE}.authenticate_api_key", new=AsyncMock(return_value=api_key_result)),
+        patch(f"{MODULE}.AuthCredentialContext.from_api_key_result", return_value=MagicMock()),
+        patch(f"{MODULE}.get_user_by_username", new=AsyncMock()) as mock_lookup,
+    ):
+        result = await verify_project_auth(project.id, query_param=None, header_param="generated-key")
+
+    assert result is owner
+    mock_lookup.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_verify_project_auth_rejects_presented_key_from_another_owner():
+    """A valid key belonging to a different user must not unlock this project."""
+    project = SimpleNamespace(id=uuid4(), user_id=uuid4(), auth_settings=None)
+    other_user = SimpleNamespace(id=uuid4(), username="someone-else")
+
+    with (
+        patch(f"{MODULE}.get_settings_service", return_value=_settings(auto_login=True, skip_auth=False)),
+        patch(f"{MODULE}.session_scope", _session_scope_yielding(project)),
+        patch(f"{MODULE}.authenticate_api_key", new=AsyncMock(return_value=SimpleNamespace(user=other_user))),
+        patch(f"{MODULE}.AuthCredentialContext.from_api_key_result", return_value=MagicMock()),
+        pytest.raises(HTTPException) as exc,
+    ):
+        await verify_project_auth(project.id, query_param=None, header_param="someone-elses-key")
+
+    assert exc.value.status_code == status.HTTP_404_NOT_FOUND

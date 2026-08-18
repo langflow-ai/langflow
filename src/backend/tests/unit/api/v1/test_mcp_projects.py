@@ -1164,6 +1164,11 @@ async def test_install_mcp_config_embeds_api_key_without_skip_auth_auto_login(
     args = installed_config["mcpServers"]["lf-user_test_project"]["args"]
     assert "--headers" in args
     assert "x-api-key" in args
+    # The header NAME alone proves nothing: assert the generated key value is actually present,
+    # otherwise an empty or missing value would still satisfy the membership checks above.
+    api_key_value = args[args.index("x-api-key") + 1]
+    assert api_key_value
+    assert api_key_value != "x-api-key"  # pragma: allowlist secret
 
 
 async def test_init_mcp_servers(user_test_project, other_test_project):

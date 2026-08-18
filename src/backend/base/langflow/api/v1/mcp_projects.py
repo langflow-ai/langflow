@@ -154,8 +154,13 @@ async def verify_project_auth(
         project_auth_type in {"apikey", "oauth"}
     )
 
-    if requires_api_key:
-        api_key = query_param or header_param
+    # A presented API key is always honoured, even when policy would not have demanded one.
+    # Under MCP Composer with a default project and AUTO_LOGIN=true, ``requires_api_key`` is
+    # False; without this, a key minted by ``/install`` would be ignored and the caller would
+    # fall through to the (now-rejecting) superuser fallback. Callers presenting NO credential
+    # still reach ``_superuser_fallback`` and get 403 AUTO_LOGIN_ERROR.
+    api_key = query_param or header_param
+    if requires_api_key or api_key:
         if not api_key:
             if project_auth_type == "oauth":
                 detail = (
