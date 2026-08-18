@@ -161,3 +161,33 @@ class TestOpenAIEmbeddingsBaseUrlSSRF:
         kwargs = mock_embeddings.call_args.kwargs
         assert kwargs["base_url"] is None
         assert "http_client" not in kwargs
+
+
+@patch("lfx_openai.components.openai.openai_chat_model.ChatOpenAI")
+def test_chat_model_explicit_default_endpoint_is_still_a_no_op(mock_chat_openai):
+    """A saved configuration that spells out the default endpoint must not change behaviour.
+
+    The existing coverage only exercises an unset base URL. A stored flow that explicitly
+    carries ``https://api.openai.com/v1`` must take the same no-op path, otherwise the
+    default endpoint gets DNS-pinned, redirect-free clients it never had before.
+    """
+    component = _component("https://api.openai.com/v1")
+
+    component.build_model()
+
+    kwargs = mock_chat_openai.call_args.kwargs
+    assert kwargs["base_url"] == "https://api.openai.com/v1"
+    assert "http_client" not in kwargs
+    assert "http_async_client" not in kwargs
+
+
+@patch("lfx_openai.components.openai.openai.OpenAIEmbeddings")
+def test_embeddings_explicit_default_endpoint_is_still_a_no_op(mock_embeddings):
+    """Same for the embeddings component, which previously omitted ``default_url``."""
+    component = _embeddings_component("https://api.openai.com/v1")
+
+    component.build_embeddings()
+
+    kwargs = mock_embeddings.call_args.kwargs
+    assert "http_client" not in kwargs
+    assert "http_async_client" not in kwargs
