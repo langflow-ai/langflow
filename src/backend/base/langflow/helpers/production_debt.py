@@ -12,9 +12,7 @@ from typing import Any
 
 log: logging.Logger = logging.getLogger(__name__)
 
-GENESIS_HASH: str = (
-    "0000000000000000000000000000000000000000000000000000000000000000"
-)
+GENESIS_HASH: str = "0000000000000000000000000000000000000000000000000000000000000000"
 
 
 @dataclass
@@ -51,8 +49,7 @@ class TechnicalDueDiligenceLedger:
         meta_bytes = json.dumps(metadata, sort_keys=True).encode("utf-8")
         meta_hash = hashlib.sha256(meta_bytes).hexdigest()
         canonical_content = (
-            f"{index}|{self._last_hash}|{flow_id}|{event_type}|"
-            f"{readiness_index}|{timestamp}|{meta_hash}"
+            f"{index}|{self._last_hash}|{flow_id}|{event_type}|{readiness_index}|{timestamp}|{meta_hash}"
         )
         curr_hash = hashlib.sha256(canonical_content.encode("utf-8")).hexdigest()
 
@@ -160,9 +157,7 @@ class ProductionDebtComponent:
 
         # Production Readiness Index (0 - 100)
         readiness = max(0.0, 100.0 - vdi_score)
-        is_production_ready = (
-            vdi_score <= self.max_acceptable_vdi and len(critical_smells) == 0
-        )
+        is_production_ready = vdi_score <= self.max_acceptable_vdi and len(critical_smells) == 0
 
         # Cryptographic Ledger Entry
         entry = self.ledger.record_flow_step(
@@ -188,9 +183,7 @@ class ProductionDebtComponent:
             vdi_score=vdi_score,
             token_inflation_multiplier=round(token_ratio, 2),
             step_latency_seconds=round(step_latency_seconds, 2),
-            mutation_safety_score=(
-                100.0 if un_gated_mutations == 0 else max(0.0, 100.0 - un_gated_mutations * 30.0)
-            ),
+            mutation_safety_score=(100.0 if un_gated_mutations == 0 else max(0.0, 100.0 - un_gated_mutations * 30.0)),
             production_readiness_index=readiness,
             is_production_ready=is_production_ready,
             critical_smells=critical_smells,

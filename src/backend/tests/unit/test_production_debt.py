@@ -3,9 +3,7 @@ import sys
 from pathlib import Path
 
 # Load module directly
-file_path = (
-    Path(__file__).parent.parent.parent / "base/langflow/helpers/production_debt.py"
-).resolve()
+file_path = (Path(__file__).parent.parent.parent / "base/langflow/helpers/production_debt.py").resolve()
 spec = importlib.util.spec_from_file_location("langflow_production_debt", file_path)
 production_debt_mod = importlib.util.module_from_spec(spec)
 sys.modules["langflow_production_debt"] = production_debt_mod
