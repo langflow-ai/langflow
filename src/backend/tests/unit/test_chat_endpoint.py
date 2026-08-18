@@ -946,6 +946,9 @@ async def test_build_public_tmp_rejects_mcp_stdio_server_config(client, json_mem
     )
     assert response.status_code == codes.OK
 
+    # The shared client persists access-token cookies from ``logged_in_headers``; clearing
+    # them is the only way to exercise the genuinely unauthenticated public path.
+    client.cookies.clear()
     client.cookies.set("client_id", "test-mcp-stdio-client")
     response = await client.post(
         f"api/v1/build_public_tmp/{flow_id}/flow",
