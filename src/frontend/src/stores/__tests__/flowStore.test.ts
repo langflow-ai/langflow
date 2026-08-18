@@ -1272,6 +1272,108 @@ describe("useFlowStore", () => {
       expect(mockedRunFlow).not.toHaveBeenCalled();
     });
 
+    describe("partial builds", () => {
+      // A partial build only executes the requested subgraph, so a blocked node
+      // outside it has nothing to do with the run and must not reject it.
+      const blockedNode = {
+        id: "node-blocked",
+        type: "genericNode",
+        position: { x: 0, y: 0 },
+        data: { id: "node-blocked", node: { display_name: "Blocked Node" } },
+      } as unknown as AllNodeType;
+      const healthyNode = {
+        id: "node-healthy",
+        type: "genericNode",
+        position: { x: 200, y: 0 },
+        data: { id: "node-healthy", node: { display_name: "Healthy Node" } },
+      } as unknown as AllNodeType;
+      const edgeBlockedToHealthy = {
+        id: "edge-blocked-healthy",
+        source: "node-blocked",
+        target: "node-healthy",
+      } as EdgeType;
+
+      const validityByNodeId = (nodeId: string) => ({
+        outdated: false,
+        blocked: nodeId === "node-blocked",
+        breakingChange: false,
+        userEdited: false,
+      });
+
+      beforeEach(() => {
+        useUtilityStore.setState({
+          allowCustomComponents: true,
+          substituteOutdatedComponentCode: true,
+        });
+        (checkCodeValidity as jest.Mock).mockImplementation(
+          (data: { id: string }) => validityByNodeId(data.id),
+        );
+        mockedRunFlow.mockResolvedValue(undefined);
+      });
+
+      it("runs a downstream build that starts after the blocked component", async () => {
+        useFlowStore.setState({
+          nodes: [blockedNode, healthyNode],
+          edges: [edgeBlockedToHealthy],
+        });
+
+        await useFlowStore
+          .getState()
+          .buildFlow({ startNodeId: "node-healthy" });
+
+        expect(mockedRunFlow).toHaveBeenCalledTimes(1);
+        // The banner still reports the blocked node: only the preflight is scoped.
+        expect(useFlowStore.getState().componentsToUpdate).toEqual([
+          expect.objectContaining({ id: "node-blocked", blocked: true }),
+        ]);
+      });
+
+      it("runs an upstream build that stops before the blocked component", async () => {
+        useFlowStore.setState({
+          nodes: [healthyNode, blockedNode],
+          edges: [
+            {
+              id: "edge-healthy-blocked",
+              source: "node-healthy",
+              target: "node-blocked",
+            } as EdgeType,
+          ],
+        });
+
+        await useFlowStore.getState().buildFlow({ stopNodeId: "node-healthy" });
+
+        expect(mockedRunFlow).toHaveBeenCalledTimes(1);
+      });
+
+      it("blocks a downstream build that reaches the blocked component", async () => {
+        useFlowStore.setState({
+          nodes: [blockedNode, healthyNode],
+          edges: [edgeBlockedToHealthy],
+        });
+
+        await expect(
+          useFlowStore.getState().buildFlow({ startNodeId: "node-blocked" }),
+        ).rejects.toThrow(
+          "Components disabled by an administrator must be removed before building",
+        );
+        expect(mockedRunFlow).not.toHaveBeenCalled();
+      });
+
+      it("blocks an upstream build that reaches the blocked component", async () => {
+        useFlowStore.setState({
+          nodes: [blockedNode, healthyNode],
+          edges: [edgeBlockedToHealthy],
+        });
+
+        await expect(
+          useFlowStore.getState().buildFlow({ stopNodeId: "node-healthy" }),
+        ).rejects.toThrow(
+          "Components disabled by an administrator must be removed before building",
+        );
+        expect(mockedRunFlow).not.toHaveBeenCalled();
+      });
+    });
+
     it("still runs an outdated component while custom components are allowed", async () => {
       // Only a missing template is newly enforced; drift keeps its old behavior.
       useUtilityStore.setState({

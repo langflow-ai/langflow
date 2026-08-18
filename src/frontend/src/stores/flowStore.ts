@@ -894,20 +894,26 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     get().updateComponentsToUpdate(get().nodes);
     const { allowCustomComponents, substituteOutdatedComponentCode } =
       useUtilityStore.getState();
+    // A partial build only executes its own subgraph, so only that subgraph can
+    // block it. componentsToUpdate stays whole-flow for the update banner.
+    const validatedNodeIds = new Set(nodesToValidate.map((node) => node.id));
+    const componentsToPreflight = get().componentsToUpdate.filter((component) =>
+      validatedNodeIds.has(component.id),
+    );
     // A cold shareable Playground intentionally has no component-template registry, so it cannot
     // distinguish a known server component from an unknown custom type. Its public endpoint owns
     // that decision and sanitizes the stored graph before execution. Keep this client preflight
     // for editor runs, where the template registry is loaded and its classification is reliable.
-    if (!get().playgroundPage && get().componentsToUpdate.length > 0) {
+    if (!get().playgroundPage && componentsToPreflight.length > 0) {
       // A missing template blocks the run either way. Outdated components are
       // only enforced in restricted mode, as before.
-      const blockedComponents = get().componentsToUpdate.filter(
+      const blockedComponents = componentsToPreflight.filter(
         (component) => component.blocked,
       );
       const outdatedComponents =
         substituteOutdatedComponentCode || allowCustomComponents
           ? []
-          : get().componentsToUpdate.filter((component) => component.outdated);
+          : componentsToPreflight.filter((component) => component.outdated);
       const mustBlockBuild =
         blockedComponents.length > 0 || outdatedComponents.length > 0;
       if (mustBlockBuild) {
