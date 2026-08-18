@@ -71,10 +71,10 @@ export function useApplyTemplateToCurrentFlow() {
             { ...currentFlow, name: template.name },
             [
               ...(flows ?? []),
-              ...rejectedNames.map(
-                (name, index) =>
-                  ({ id: `rejected-${index}`, name }) as FlowType,
-              ),
+              ...rejectedNames.map((name, index) => ({
+                id: `rejected-${index}`,
+                name,
+              })),
             ],
             examples ?? [],
           );

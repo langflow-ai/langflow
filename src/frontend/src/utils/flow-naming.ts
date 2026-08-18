@@ -1,5 +1,5 @@
 import type { FlowType } from "@/types/flow";
-import { addVersionToDuplicates } from "@/utils/reactflowUtils";
+import { addVersionToDuplicates, type NamedFlow } from "@/utils/reactflowUtils";
 
 // Folder scope matches the UI grouping; user scope matches the DB's unique (user_id, name).
 export function getFolderScopedDuplicateName(
@@ -13,8 +13,8 @@ export function getFolderScopedDuplicateName(
 
 export function getUserScopedDuplicateName(
   flow: FlowType,
-  flows: FlowType[],
-  ownerlessExamples: FlowType[] = [],
+  flows: NamedFlow[],
+  ownerlessExamples: Pick<FlowType, "id">[] = [],
 ): string {
   const ownerlessExampleIds = new Set(
     ownerlessExamples.map((example) => example.id),
