@@ -347,7 +347,23 @@ async def build_flow(
             if sanitized_data is not None:
                 data = FlowDataRequest.model_validate(sanitized_data)
         elif flow and flow.data:
-            validate_flow_for_current_settings(flow.data)
+            # Stored graphs are caller-controlled too: any user who can write a flow can
+            # persist component source through the ordinary flow API and then execute it by
+            # building with an empty body. The global validator does not know the caller, so
+            # it cannot enforce ``custom_component_admin_only`` here. Run the same caller-aware
+            # policy the inline branch runs, and build from the detached copy it returns so the
+            # worker compiles the server's trusted source rather than the stored bytes.
+            # A permissive policy returns ``None`` and the build still loads from the DB.
+            sanitized_data = await prepare_flow_build_for_user(
+                flow.data,
+                is_superuser=current_user.is_superuser,
+            )
+            if sanitized_data is not None:
+                data = FlowDataRequest(
+                    nodes=sanitized_data.get("nodes", []),
+                    edges=sanitized_data.get("edges", []),
+                    viewport=sanitized_data.get("viewport"),
+                )
     except CatalogPolicyIdentityUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except CustomComponentValidationError as exc:

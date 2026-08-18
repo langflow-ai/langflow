@@ -629,11 +629,16 @@ async def execute_sync_workflow(
     try:
         flow_id_str = str(flow.id)
         user_id = str(current_user.id)
+        # Caller-supplied ``data`` is rejected for sync mode before the execution gates run,
+        # so a value here is the server-sanitized stored graph produced by the caller-aware
+        # component policy. It must win over ``flow.data``, and it must bypass the warm
+        # template — which is built from the unsanitized stored row.
+        sanitized_flow_data = parsed.data
         # Opt-in warm fast-path: serve a deepcopy of the pre-built template
         # instead of rebuilding. Cold-fall-back (None) for tweaks, request context/globals,
         # or a HITL/checkpointed run — none of which fit a shared user-agnostic template.
         graph = None
-        if not tweaks and context is None and checkpoint_store is None:
+        if sanitized_flow_data is None and not tweaks and context is None and checkpoint_store is None:
             graph = await warm_deepcopy(
                 flow_id_str,
                 expected_version=flow_version(flow.updated_at),
@@ -644,7 +649,7 @@ async def execute_sync_workflow(
         if graph is None:
             # Use deepcopy to prevent mutation of the original flow.data
             # process_tweaks modifies nested dictionaries in-place
-            graph_data = deepcopy(flow.data)
+            graph_data = deepcopy(sanitized_flow_data if sanitized_flow_data is not None else flow.data)
             graph_data = process_tweaks(graph_data, tweaks, stream=False)
             # Pass context to graph (similar to V1's simple_run_flow)
             # This allows components to access request metadata via graph.context
