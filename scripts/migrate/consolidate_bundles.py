@@ -94,6 +94,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "glean": [],  # httpx + pydantic only (lfx core)
     "icosacomputing": ["requests>=2.32.0"],
     "mem0": ["mem0ai>=2.0.2,<3.0.0"],
+    "mrscraper": ["mrscraper-sdk>=0.1.2,<1.0.0"],
     "needle": ["needle-python>=0.4.0", _LC_COMMUNITY],
     "scrapegraph": ["scrapegraph-py>=1.12.0"],
     "serpapi": ["google-search-results>=2.4.1,<3.0.0", _LC_COMMUNITY],
