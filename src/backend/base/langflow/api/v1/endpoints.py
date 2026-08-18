@@ -942,8 +942,16 @@ async def _run_flow_internal(
         # A refused tweak is a caller error, not a server fault. The generic
         # handler below turns it into a 500 and discards the structured body
         # naming the refused keys, so let the app-level handler answer with 422.
-        # Not redacted by expose_error_details: the refused names are the
-        # caller's own request keys, not server internals.
+        #
+        # Deliberately not routed through error_for_client. That helper only
+        # preserves the status of an HTTPException, and this is not one, so
+        # redacting would degrade it to RuntimeError -> 500 and reinstate the
+        # exact bug this re-raise exists to fix, for delegated callers only.
+        # The cost is that the refusal reason tells a non-owner whether the
+        # flow declares an allowlist or the deployment refuses tweaks. Accepted:
+        # no data, no stack trace, and the refused names are the caller's own
+        # request keys. A caller who cannot tell a refused tweak from an applied
+        # one is the failure this whole path is here to prevent.
         raise
     except Exception as exc:
         background_tasks.add_task(
