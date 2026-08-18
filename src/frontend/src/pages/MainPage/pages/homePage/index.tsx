@@ -14,6 +14,7 @@ import {
   ENABLE_MCP,
 } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { getProjectDisplayName } from "@/utils/project-display-name";
@@ -27,8 +28,15 @@ import DeploymentsPage from "../deploymentsPage/deployments-page";
 import EmptyFolder from "../emptyFolder";
 import { isFolderEmpty } from "./utils/isFolderEmpty";
 
-const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
+const PAGE_TITLE_KEYS = {
+  flows: "mainPage.tabFlows",
+  components: "mainPage.tabComponents",
+  mcp: "mainPage.mcpServer",
+} as const;
+
+const HomePage = ({ type }: { type: keyof typeof PAGE_TITLE_KEYS }) => {
   const { t } = useTranslation();
+  useDocumentTitle(t(PAGE_TITLE_KEYS[type]));
   const [view, setView] = useState<"grid" | "list">(() => {
     const savedView = localStorage.getItem("view");
     return savedView === "grid" || savedView === "list" ? savedView : "list";
