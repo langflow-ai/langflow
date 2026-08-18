@@ -154,7 +154,7 @@ class XquikComponent(Component):
         self._set_visible(
             build_config,
             "limit",
-            visible=operation in {self.SEARCH_TWEETS, self.SEARCH_USERS, self.USER_TWEETS, self.TRENDS},
+            visible=operation in {self.SEARCH_TWEETS, self.USER_TWEETS, self.TRENDS},
         )
         self._set_visible(
             build_config,
@@ -250,13 +250,11 @@ class XquikComponent(Component):
         if operation == self.SEARCH_TWEETS:
             params["queryType"] = self.query_type
             params["limit"] = self._bounded_int("limit", default=20, minimum=1, maximum=10000)
-        if operation == self.SEARCH_USERS:
-            params["pageSize"] = self._bounded_int("limit", default=20, minimum=1, maximum=100)
         if operation == self.TRENDS:
             params["woeid"] = self._bounded_int("woeid", default=1, minimum=1, maximum=None)
             params["count"] = self._bounded_int("limit", default=20, minimum=1, maximum=50)
         if operation == self.USER_TWEETS:
-            params["pageSize"] = self._bounded_int("limit", default=20, minimum=1, maximum=300)
+            params["pageSize"] = self._bounded_int("limit", default=20, minimum=1, maximum=100)
             params["includeReplies"] = bool(self.include_replies)
             params["includeParentTweet"] = bool(self.include_parent_tweet)
         if operation in {self.SEARCH_TWEETS, self.SEARCH_USERS, self.USER_TWEETS} and self.cursor:
