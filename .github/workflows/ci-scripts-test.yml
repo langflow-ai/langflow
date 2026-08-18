@@ -5,6 +5,9 @@ on:
     paths:
       - "scripts/ci/**"
       - ".github/workflows/ci-scripts-test.yml"
+      - "pyproject.toml"
+      - "src/bundles/*/pyproject.toml"
+      - "src/bundles/lfx-bundles/src/lfx_bundles/*/__init__.py"
       - "src/backend/base/langflow/api/build.py"
       - "src/backend/base/langflow/api/v1/a2a.py"
       - "src/backend/base/langflow/api/v1/chat.py"
