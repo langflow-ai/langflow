@@ -1,6 +1,9 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+pytest.importorskip("lfx_bundles")
+
 from lfx.components.avian.avian import AVIAN_DEFAULT_MODELS, AvianModelComponent
 from lfx.schema.message import Message
 
