@@ -172,17 +172,16 @@ module.exports = {
           type: "category",
           label: "Observability",
           items: [
-            "Develop/logging",
             "Develop/observability-opentelemetry",
             "Develop/observability-new-relic",
+            "Develop/logging",
             "Develop/observability-grafana-loki",
             "Develop/traces",
             {
               type: "category",
-              label: "Monitoring",
+              label: "LLM tracing",
               items: [
                 "Develop/integrations-arize",
-                "Develop/observability-grafana-loki",
                 "Develop/integrations-langfuse",
                 "Develop/integrations-langsmith",
                 "Develop/integrations-langwatch",

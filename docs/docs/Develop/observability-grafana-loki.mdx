@@ -1,9 +1,13 @@
 ---
-title: Grafana and Loki
+title: Grafana Loki
 slug: /observability-grafana-loki
 ---
 
-Langflow can emit structured JSON logs for ingestion by [Grafana Loki](https://grafana.com/oss/loki/).
+
+This demonstration scrapes Langflow log files with [Promtail](https://grafana.com/docs/loki/latest/send-data/promtail/), and then sends JSON logs to [Grafana Loki](https://grafana.com/oss/loki/) to be viewed in a Grafana dashboard.
+
+It is _not_ OpenTelemetry.
+For traces, metrics, and OTLP logs to Grafana Cloud or an OpenTelemetry Collector, see [OpenTelemetry](/observability-opentelemetry).
 
 This page demonstrates how to connect Langflow to the [reference Grafana stack](https://github.com/langflow-ai/langflow/tree/main/deploy/observability/grafana-loki) shipped with the Langflow repository.
 For more information, see the [README](https://github.com/langflow-ai/langflow/tree/main/deploy/observability/grafana-loki).
@@ -53,5 +57,6 @@ To consume structured Langflow logs with other ingestion providers, see [Logs](/
 
 ## See also
 
+* [OpenTelemetry](/observability-opentelemetry)
 * [Logs](/logging)
 * [Logs endpoints](/api-logs)
