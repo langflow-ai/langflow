@@ -79,6 +79,26 @@ async def test_unreadable_resource_still_masks_as_404():
 
 
 @pytest.mark.asyncio
+async def test_service_failure_during_the_read_check_is_not_a_404():
+    """A 503 from the plugin means "cannot decide", not "does not exist".
+
+    Collapsing it to 404 would hide an authorization-service outage behind a
+    routine-looking response and send the caller to check an id that is fine.
+    """
+    unavailable = HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="authz plugin down")
+
+    async def _read_check_fails() -> None:
+        raise unavailable
+
+    resolved = await deny_to_404_unless_readable(
+        _denied(), _read_check_fails, denied_detail="never used", not_found_detail="Flow not found"
+    )
+
+    assert resolved is unavailable
+    assert resolved.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+
+
+@pytest.mark.asyncio
 async def test_non_403_is_surfaced_unchanged():
     """A 503 from the plugin must never be relabelled as a permission answer."""
     upstream = HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="plugin down")

@@ -71,13 +71,19 @@ async def deny_to_404_unless_readable(
     404 with ``not_found_detail``.
 
     ``read_check`` must raise ``HTTPException`` when the caller may not read.
-    Anything that is not a 403 (a 5xx from the plugin, say) is surfaced
-    unchanged rather than relabelled.
+    Only a 403 means "cannot see it"; any other status from either the original
+    denial or the read check is a different answer entirely -- a 503 from the
+    authorization plugin says the decision is unavailable, not that the resource
+    is missing -- and is surfaced unchanged rather than relabelled.
     """
     if exc.status_code != status.HTTP_403_FORBIDDEN:
         return exc
     try:
         await read_check()
-    except HTTPException:
+    except HTTPException as read_exc:
+        if read_exc.status_code != status.HTTP_403_FORBIDDEN:
+            # Reporting a service failure as "not found" hides an outage behind
+            # a routine-looking response and sends the caller to check their id.
+            return read_exc
         return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=not_found_detail)
     return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=denied_detail)

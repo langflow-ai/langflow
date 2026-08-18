@@ -132,6 +132,44 @@ class _PluginAppWrapper:
         return self._app.add_api_route(path, endpoint, **kwargs)
 
 
+def _snapshot_registration(app: FastAPI, wrapper: _PluginAppWrapper) -> tuple[int, set[tuple[str, str]]]:
+    """Capture enough state to undo one plugin's route registrations.
+
+    Deliberately module-level rather than a wrapper method: the wrapper is
+    handed to plugins, and a plugin able to roll back to an arbitrary snapshot
+    could delete Langflow's own routes.
+    """
+    return len(app.router.routes), set(wrapper._reserved)  # noqa: SLF001
+
+
+def _rollback_registration(
+    app: FastAPI,
+    wrapper: _PluginAppWrapper,
+    snapshot: tuple[int, set[tuple[str, str]]],
+) -> int:
+    """Undo the routes one failed plugin mounted; return how many were removed.
+
+    A plugin registering several routes can mount some before a later one
+    conflicts, which left it half-live: reported as failed while part of its
+    surface answered requests. For an authorization plugin in particular, a
+    partial route set is worse than none — the app looks functional.
+
+    Only routes are undone. A plugin that installed a lifespan hook, middleware,
+    or a dependency override before failing keeps those; FastAPI offers no
+    supported way to withdraw them. Plugins should therefore register routes
+    before taking any other effect.
+    """
+    route_count, reserved = snapshot
+    removed = len(app.router.routes) - route_count
+    if removed > 0:
+        del app.router.routes[route_count:]
+        # The cached schema, if anything has built one, now describes routes
+        # that no longer exist.
+        app.openapi_schema = None
+    wrapper._reserved = reserved  # noqa: SLF001
+    return max(0, removed)
+
+
 def load_plugin_routes(app: FastAPI) -> None:
     """Discover and register additional routers from authorization plugins.
 
@@ -167,13 +205,18 @@ def load_plugin_routes(app: FastAPI) -> None:
             )
             continue
 
+        # Registration is all-or-nothing, so both messages below can state
+        # plainly that the plugin contributed nothing.
+        snapshot = _snapshot_registration(app, wrapper)
         try:
             plugin_register(wrapper)
             logger.info(f"Loaded plugin: {ep.name}")
         except RouteConflictError as e:
+            rolled_back = _rollback_registration(app, wrapper, snapshot)
             logger.warning(
-                "Plugin '%s' rejected (route conflict): %s",
+                "Plugin '%s' rejected (route conflict); %d route(s) rolled back, none are available: %s",
                 ep.name,
+                rolled_back,
                 e,
                 exc_info=True,
             )
@@ -181,10 +224,11 @@ def load_plugin_routes(app: FastAPI) -> None:
             # Anything else -- a bad plugin config, a failed import inside
             # register() -- is a registration failure, not a route conflict.
             # Reporting every ValueError as a conflict sent operators looking
-            # for a duplicate path when the real cause was elsewhere, and the
-            # whole plugin's routes were missing either way.
+            # for a duplicate path when the real cause was elsewhere.
+            rolled_back = _rollback_registration(app, wrapper, snapshot)
             logger.error(
-                "Plugin '%s' failed during registration; none of its routes are available",
+                "Plugin '%s' failed during registration; %d route(s) rolled back, none are available",
                 ep.name,
+                rolled_back,
                 exc_info=True,
             )
