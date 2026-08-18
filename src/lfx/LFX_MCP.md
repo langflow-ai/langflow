@@ -2,7 +2,7 @@
 
 `lfx-mcp` is an MCP (Model Context Protocol) server that gives any MCP-compatible client full programmatic control over a Langflow instance to build and run flows.
 
-The server is implemented in `src/lfx/src/lfx/mcp/` using [FastMCP](https://github.com/jlowin/fastmcp).
+The server is implemented in `src/lfx/src/lfx/mcp/` using `FastMCP` from the [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk) (`mcp.server.fastmcp`).
 It connects to Langflow's REST API.
 Flow data is never cached server-side, so every mutating tool does a GET → modify → PATCH cycle.
 The component registry is cached on first access per session.

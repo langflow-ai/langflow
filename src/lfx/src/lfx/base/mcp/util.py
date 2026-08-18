@@ -1,6 +1,5 @@
 import asyncio
 import contextlib
-import inspect
 import json
 import os
 import re
@@ -57,7 +56,6 @@ is_dangerous_mcp_env_var = mcp_security.is_dangerous_mcp_env_var
 
 # Minimum cleanup interval to prevent tight-loop CPU spin if settings return 0 or fail.
 _MCP_CLEANUP_INTERVAL_MIN = 30  # seconds
-_SESSION_VALIDATION_TIMEOUT_FLOOR = 10.0
 
 
 def _validate_mcp_stdio_env(env: dict[str, str] | None) -> dict[str, str]:
@@ -92,14 +90,6 @@ def _resolve_mcp_tool_execution_timeout(tool_execution_timeout: float | None) ->
 
     configured_timeouts = [float(value) for value in (configured, mcp_server_timeout) if value is not None]
     return max(configured_timeouts) if configured_timeouts else 180.0
-
-
-def get_session_validation_timeout() -> float:
-    """Derive a fast session health-check timeout from the configured connection budget."""
-    connect_timeout = _get_mcp_setting("mcp_server_timeout", None)
-    if connect_timeout is None:
-        return _SESSION_VALIDATION_TIMEOUT_FLOOR
-    return max(_SESSION_VALIDATION_TIMEOUT_FLOOR, float(connect_timeout) / 3.0)
 
 
 def get_max_sessions_per_server() -> int:
@@ -1179,34 +1169,6 @@ class MCPSessionManager:
             if pair[0] == server_key:
                 self._context_to_session.pop(ctx, None)
 
-    async def _validate_session_connectivity(self, session) -> bool:
-        """Validate that the session is actually usable by testing a simple operation."""
-        try:
-            # Try to list tools as a connectivity test (this is a lightweight operation)
-            # Keep the health check shorter than connection setup while honoring its configured budget.
-            response = await asyncio.wait_for(session.list_tools(), timeout=get_session_validation_timeout())
-        except Exception as e:  # noqa: BLE001
-            # Any failure means the session is not safe to reuse (SDK errors, terminated session, etc.)
-            await logger.adebug(f"Session connectivity test failed: {type(e).__name__}: {e}")
-            return False
-        else:
-            # Validate that we got a meaningful response
-            if response is None:
-                await logger.adebug("Session connectivity test failed: received None response")
-                return False
-            try:
-                # Check if we can access the tools list (even if empty)
-                tools = getattr(response, "tools", None)
-                if tools is None:
-                    await logger.adebug("Session connectivity test failed: no tools attribute in response")
-                    return False
-            except (AttributeError, TypeError) as e:
-                await logger.adebug(f"Session connectivity test failed while validating response: {e}")
-                return False
-            else:
-                await logger.adebug(f"Session connectivity test passed: found {len(tools)} tools")
-                return True
-
     async def get_session(self, context_id: str, connection_params, transport_type: str):
         """Get or create a session with improved reuse strategy.
 
@@ -1567,40 +1529,6 @@ class MCPSessionManager:
             return
 
         try:
-            # First try to properly close the session if it exists
-            if "session" in session_info:
-                session = session_info["session"]
-
-                # Try async close first (aclose method)
-                if hasattr(session, "aclose"):
-                    try:
-                        await session.aclose()
-                        await logger.adebug("Successfully closed session %s using aclose()", session_id)
-                    except Exception as e:  # noqa: BLE001
-                        await logger.adebug("Error closing session %s with aclose(): %s", session_id, e)
-
-                # If no aclose, try regular close method
-                elif hasattr(session, "close"):
-                    try:
-                        # Check if close() is awaitable using inspection
-                        if inspect.iscoroutinefunction(session.close):
-                            # It's an async method
-                            await session.close()
-                            await logger.adebug("Successfully closed session %s using async close()", session_id)
-                        else:
-                            # Try calling it and check if result is awaitable
-                            close_result = session.close()
-                            if inspect.isawaitable(close_result):
-                                await close_result
-                                await logger.adebug(
-                                    "Successfully closed session %s using awaitable close()", session_id
-                                )
-                            else:
-                                # It's a synchronous close
-                                await logger.adebug("Successfully closed session %s using sync close()", session_id)
-                    except Exception as e:  # noqa: BLE001
-                        await logger.adebug("Error closing session %s with close(): %s", session_id, e)
-
             # Cancel the background task which will properly close the session
             if "task" in session_info:
                 task = session_info["task"]
@@ -2132,31 +2060,6 @@ class MCPStreamableHttpClient:
         )
         return self.session
 
-    async def _terminate_remote_session(self) -> None:
-        """Attempt to explicitly terminate the remote MCP session via HTTP DELETE (best-effort)."""
-        # Only relevant for Streamable HTTP or SSE transport
-        if not self._connection_params or "url" not in self._connection_params:
-            return
-
-        url: str = self._connection_params["url"]
-
-        # Retrieve session id from the underlying SDK if exposed
-        session_id = None
-        if getattr(self, "session", None) is not None:
-            # Common attributes in MCP python SDK: `session_id` or `id`
-            session_id = getattr(self.session, "session_id", None) or getattr(self.session, "id", None)
-
-        headers: dict[str, str] = dict(self._connection_params.get("headers", {}))
-        if session_id:
-            headers["Mcp-Session-Id"] = str(session_id)
-
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                await client.delete(url, headers=headers)
-        except Exception as e:  # noqa: BLE001
-            # DELETE is advisory—log and continue
-            logger.debug(f"Unable to send session DELETE to '{url}': {e}")
-
     def _tool_span_attributes(self, tool_name: str) -> dict[str, str]:
         """Identifiers for the span: which tool, on which server, over which transport.
 
@@ -2297,9 +2200,6 @@ class MCPStreamableHttpClient:
 
     async def disconnect(self):
         """Properly close the connection and clean up resources."""
-        # Attempt best-effort remote session termination first
-        await self._terminate_remote_session()
-
         # Clean up local session using the session manager
         if self._session_context:
             session_manager = self._get_session_manager()
@@ -2535,17 +2435,17 @@ async def update_tools(
                 func=create_tool_func(tool.name, args_schema, client),
                 coroutine=create_tool_coroutine(tool.name, args_schema, client),
                 tags=[tool.name],
-                metadata={"server_name": server_name, "output_schema": getattr(tool, "outputSchema", None)},
+                metadata={"server_name": server_name},
                 response_format="content_and_artifact",
             )
 
             tool_list.append(tool_obj)
             tool_cache[tool.name] = tool_obj
-        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
+        except (ConnectionError, TimeoutError, OSError) as e:
             logger.error(f"Failed to create tool '{tool.name}' from server '{server_name}': {e}")
             msg = f"Failed to create tool '{tool.name}' from server '{server_name}': {e}"
             raise ValueError(msg) from e
-        except (TypeError, AttributeError, KeyError, NameError, RecursionError) as e:
+        except (TypeError, AttributeError, KeyError, NameError, RecursionError, ValueError) as e:
             # Per-tool resilience (#11229): isolate one bad schema, keep the rest of the toolset.
             logger.exception(
                 f"Skipping tool '{getattr(tool, 'name', '<unknown>')}' from MCP server "
