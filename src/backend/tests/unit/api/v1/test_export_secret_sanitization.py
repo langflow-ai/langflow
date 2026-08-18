@@ -22,6 +22,7 @@ from fastapi import status
 from httpx import AsyncClient
 from langflow.api.v1.flow_version import strip_version_data
 from langflow.services.database.models.flow.model import Flow, FlowCreate
+from langflow.utils.flow_secrets import strip_flow_secrets, strip_secret_field_values
 from lfx.services.deps import session_scope
 
 # Values that must never survive an export.
@@ -175,3 +176,37 @@ def test_strip_version_data_does_not_mutate_input():
     template = original["nodes"][0]["data"]["node"]["template"]
     assert template["plain_password"]["value"] == _SECRET_PASSWORD
     assert template["database_url"]["value"] == _SECRET_DSN
+
+
+def test_strip_secret_field_values_detaches_empty_mapping():
+    """An empty ``data`` mapping must still be copied, not aliased.
+
+    ``strip_flow_secrets`` documents that the returned envelope's ``data`` is detached so
+    the caller never mutates the ORM-backed payload it serialized from. A falsy-but-present
+    mapping previously short-circuited and returned the caller's own object.
+    """
+    original: dict = {}
+
+    result = strip_secret_field_values(original)
+
+    assert result == {}
+    assert result is not original
+    result["injected"] = True
+    assert original == {}
+
+
+def test_strip_flow_secrets_detaches_empty_data():
+    """The envelope wrapper must not alias an empty ``data`` mapping either."""
+    flow = {"name": "empty", "data": {}}
+
+    scrubbed = strip_flow_secrets(flow)
+
+    assert scrubbed["data"] == {}
+    assert scrubbed["data"] is not flow["data"]
+    scrubbed["data"]["injected"] = True
+    assert flow["data"] == {}
+
+
+def test_strip_secret_field_values_still_passes_none_through():
+    """``None`` remains a pass-through so callers can distinguish absent data."""
+    assert strip_secret_field_values(None) is None

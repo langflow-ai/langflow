@@ -100,7 +100,10 @@ def remove_api_keys(flow: dict) -> dict:
 
 def strip_secret_field_values(flow_data: dict | None) -> dict | None:
     """Return a deep-copied flow-data mapping with persisted secrets removed."""
-    if not flow_data:
+    # Only ``None`` short-circuits. An empty mapping must still be copied: callers such as
+    # ``strip_flow_secrets`` promise the returned ``data`` is detached from the ORM-backed
+    # payload, and returning the original ``{}`` would alias it.
+    if flow_data is None:
         return flow_data
     return strip_secret_field_values_in_place(deepcopy(flow_data))
 
