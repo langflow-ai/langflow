@@ -709,6 +709,156 @@ def test_command_safe_flags_extensibility():
     assert COMMAND_SAFE_FLAGS.get("docker", frozenset()) == frozenset()
 
 
+# ---------------------------------------------------------------------------
+# Runtime-loader environment policy
+#
+# The first-generation env policy was a flat blocklist of exact names, so it only
+# covered the loader/interpreter variables that had been enumerated at the time. Any
+# code-loading variable that was not on the list -- most notably the OPENSSL_* family,
+# whose OPENSSL_CONF points libcrypto at a config file that can dlopen an arbitrary
+# shared object through its engine/provider sections -- passed validation and was
+# forwarded verbatim into the spawned server's environment.
+#
+# The policy is now deny-by-default across whole runtime families, so an unenumerated
+# member of an already-dangerous family is rejected without a code change.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "env_var",
+    [
+        # OpenSSL config/engine/provider loading -> dlopen of an attacker-supplied object.
+        "OPENSSL_CONF",
+        "OPENSSL_ENGINES",
+        "OPENSSL_MODULES",
+        # An unenumerated member of the same family must also be denied.
+        "OPENSSL_SOMETHING_NEW",
+        # CPython interpreter control beyond PYTHONPATH/PYTHONSTARTUP.
+        "PYTHONHOME",
+        "PYTHONBREAKPOINT",
+        "PYTHONUSERBASE",
+        "PYTHONEXECUTABLE",
+        "PYTHONWARNINGS",
+        # Node.js module/loader control beyond NODE_OPTIONS.
+        "NODE_PATH",
+        "NODE_REPL_EXTERNAL_MODULE",
+        # git spawns these as helper commands.
+        "GIT_SSH_COMMAND",
+        "GIT_ASKPASS",
+        "GIT_PROXY_COMMAND",
+        "GIT_EXTERNAL_DIFF",
+        "GIT_CONFIG_GLOBAL",
+        # Other interpreters reachable through an allowlisted runner.
+        "PERL5OPT",
+        "PERL5LIB",
+        "RUBYOPT",
+        "RUBYLIB",
+        "JAVA_TOOL_OPTIONS",
+        "JDK_JAVA_OPTIONS",
+        "CLASSPATH",
+        "LUA_PATH",
+        "LUA_CPATH",
+        "DOTNET_STARTUP_HOOKS",
+        "PHP_INI_SCAN_DIR",
+        # TLS trust anchors: replacing the trust store lets a tenant MITM the package
+        # download that an allowlisted uvx/npx runner then executes.
+        "SSL_CERT_FILE",
+        "SSL_CERT_DIR",
+        "CURL_CA_BUNDLE",
+        "REQUESTS_CA_BUNDLE",
+        # Proxy overrides redirect that same fetch to attacker-controlled infrastructure.
+        "HTTPS_PROXY",
+        "HTTP_PROXY",
+        "ALL_PROXY",
+        # Commands that other tools shell out to.
+        "LESSOPEN",
+        "PAGER",
+        "EDITOR",
+        # Plugin/module directories honored by common native libraries.
+        "GTK_MODULES",
+        "QT_PLUGIN_PATH",
+        "GIO_MODULE_DIR",
+        # glibc message-catalog / locale loading.
+        "NLSPATH",
+        "LOCPATH",
+    ],
+)
+def test_runtime_loader_env_vars_rejected(env_var):
+    """Every runtime-interpreted env var is rejected, not just the originally enumerated ones."""
+    from lfx.base.mcp.security import is_dangerous_mcp_env_var
+
+    assert is_dangerous_mcp_env_var(env_var) is True
+    for variant in (env_var, env_var.lower(), env_var.title()):
+        with pytest.raises(MCPStdioSecurityError, match="not allowed"):
+            validate_mcp_stdio_config("uvx", ["mcp-server-time"], {variant: "/tmp/tenant-controlled"})
+
+
+@pytest.mark.parametrize(
+    "env_var",
+    [
+        # Application credentials/config use arbitrary names -- this is the documented shape
+        # of a real MCP server config, and the reason the default policy denies by family
+        # rather than enforcing a closed name allowlist.
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "BRAVE_API_KEY",
+        "API_KEY",
+        "API_URL",
+        "ENVIRONMENT",
+        "LANGFLOW_SERVER_URL",
+        "LANGFLOW_API_KEY",
+        "PORT",
+        "DEBUG",
+        # Benign members of otherwise-dangerous families stay allowed by explicit exception.
+        "PYTHONUNBUFFERED",
+        "PYTHONIOENCODING",
+        "PYTHONDONTWRITEBYTECODE",
+        "NODE_ENV",
+        "GIT_AUTHOR_NAME",
+        "GIT_COMMITTER_EMAIL",
+        "GIT_TERMINAL_PROMPT",
+        "NO_PROXY",
+    ],
+)
+def test_legitimate_server_env_vars_still_accepted(env_var):
+    """The hardened policy must not break ordinary MCP server configuration."""
+    from lfx.base.mcp.security import is_dangerous_mcp_env_var
+
+    assert is_dangerous_mcp_env_var(env_var) is False
+    validate_mcp_stdio_config("uvx", ["mcp-server-time"], {env_var: "value"})
+
+
+def test_openssl_conf_rejected_at_spawn_path_wrapper():
+    """The env-only wrapper used immediately before spawn rejects the same input."""
+    from lfx.base.mcp.util import _validate_mcp_stdio_env
+
+    with pytest.raises(MCPStdioSecurityError, match="not allowed"):
+        _validate_mcp_stdio_env({"OPENSSL_CONF": "/tmp/tenant.cnf"})
+
+
+def test_env_allowlist_mode_denies_everything_not_listed(monkeypatch):
+    """Opt-in strict mode: only operator-listed names survive, regardless of family."""
+    from lfx.base.mcp import security
+
+    monkeypatch.setattr(security, "_configured_env_allowlist", lambda: frozenset({"github_token"}))
+
+    validate_mcp_stdio_config("uvx", ["mcp-server-time"], {"GITHUB_TOKEN": "t"})  # pragma: allowlist secret
+    for denied in ("BRAVE_API_KEY", "API_URL", "OPENSSL_CONF"):
+        with pytest.raises(MCPStdioSecurityError, match="not allowed"):
+            validate_mcp_stdio_config("uvx", ["mcp-server-time"], {denied: "v"})
+
+
+def test_env_allowlist_empty_string_blocks_all_tenant_env(monkeypatch):
+    """An explicitly empty allowlist means 'no tenant env at all', not 'unset'."""
+    from lfx.base.mcp import security
+
+    monkeypatch.setattr(security, "_configured_env_allowlist", lambda: frozenset())
+
+    with pytest.raises(MCPStdioSecurityError, match="not allowed"):
+        validate_mcp_stdio_config("uvx", ["mcp-server-time"], {"API_KEY": "v"})  # pragma: allowlist secret
+    # No env at all remains valid.
+    validate_mcp_stdio_config("uvx", ["mcp-server-time"], {})
+
+
 async def test_update_tools_injects_bound_user_for_agentic_server():
     """A provided user id is injected into the agentic server's spawn env (never from config)."""
     from unittest.mock import AsyncMock

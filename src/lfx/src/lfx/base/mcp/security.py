@@ -130,8 +130,52 @@ DANGEROUS_ENV_VARS = frozenset(
         "hostaliases",
         "localdomain",
         "res_options",
-        # -- Locale / getconf injection --
+        # -- Locale / message-catalog loading (glibc reads these as file/format paths) --
         "getconf_dir",
+        "nlspath",
+        "locpath",
+        "localedir",
+        "termcap",
+        "terminfo",
+        "terminfo_dirs",
+        # -- Commands other tools shell out to. ``git``, ``less``, ``man`` and friends execute
+        #    the value of these as a command line, so an approved runner that invokes any of
+        #    them turns a tenant string into a spawned process.
+        "lessopen",
+        "lessclose",
+        "lessecho",
+        "less",
+        "pager",
+        "manpager",
+        "systemd_less",
+        "editor",
+        "visual",
+        "browser",
+        # -- TLS trust-anchor replacement. Substituting the trust store lets a tenant MITM the
+        #    package download that an allowlisted uvx/npx runner then executes, so these are a
+        #    supply-chain code-execution vector, not merely a confidentiality issue.
+        "requests_ca_bundle",
+        "ssl_cert_file",
+        "ssl_cert_dir",
+        # -- Proxy overrides redirect that same fetch to attacker-controlled infrastructure.
+        #    ``no_proxy`` only narrows proxy use and is deliberately NOT blocked.
+        "http_proxy",
+        "https_proxy",
+        "all_proxy",
+        "ftp_proxy",
+        "rsync_proxy",
+        # -- Go toolchain (no safe common prefix: ``GO`` also prefixes GOOGLE_* credentials) --
+        "goflags",
+        "gopath",
+        "goroot",
+        "gobin",
+        "goproxy",
+        "goprivate",
+        # -- JVM class/agent loading --
+        "classpath",
+        # -- Windows: ``cmd`` is an allowed wrapper, and these redirect what it resolves --
+        "comspec",
+        "psmodulepath",
         # -- Langflow-internal trust binding: the agentic MCP server reads the owning user's id
         #    from this env var. It must be injected by Langflow at spawn time from the
         #    authenticated identity, never supplied through a tenant-authored stdio config
@@ -141,10 +185,100 @@ DANGEROUS_ENV_VARS = frozenset(
     }
 )
 
-# Prefixes whose values can alter command execution or the package source selected by an
-# approved package runner. In particular, UV_* and NPM_CONFIG_* can redirect uvx/npx to an
-# attacker-controlled registry while retaining an allowlisted package name.
-DANGEROUS_ENV_VAR_PREFIXES = ("bash_func_", "npm_config_", "pip_", "uv_")
+# SECURITY: whole environment-variable FAMILIES that a runtime interprets as code-loading,
+# option-injection, or package-source directives.
+#
+# These are prefixes, not exact names, and that is the point. An exact-name blocklist can only
+# ever contain the variables somebody thought to enumerate: the original list covered
+# ``PYTHONPATH`` and ``NODE_OPTIONS`` but not ``OPENSSL_CONF``, which points libcrypto at a
+# config file whose engine/provider sections name a shared object for OpenSSL to ``dlopen`` --
+# native code execution inside whatever process the allowlisted runner starts. Denying the
+# family instead means a variable nobody has enumerated yet (a new ``OPENSSL_*``, a new
+# ``PYTHON*``) is refused by default rather than forwarded.
+#
+# Only families whose members are interpreted by the *runtime* belong here. Application
+# credentials and configuration use arbitrary vendor-chosen names (``GITHUB_TOKEN``,
+# ``BRAVE_API_KEY``, ``API_URL``) and must keep working -- see ``SAFE_ENV_VARS`` for the
+# benign members that live inside an otherwise-denied family.
+DANGEROUS_ENV_VAR_PREFIXES = (
+    # -- Dynamic linker / loader (arbitrary native code) --
+    "ld_",
+    "dyld_",
+    # -- glibc module loading --
+    "gconv_",
+    # -- OpenSSL config, engine and provider loading (OPENSSL_CONF et al.) --
+    "openssl_",
+    # -- Shell startup / function-export injection --
+    "bash_",
+    "zsh_",
+    # -- Package runners: these redirect an allowlisted package name to attacker-controlled
+    #    code by changing the index, config file, or cache the runner resolves through.
+    "npm_config_",
+    "pip_",
+    "uv_",
+    "yarn_",
+    "pnpm_",
+    "bun_",
+    "poetry_",
+    "cargo_",
+    "rustup_",
+    "deno_",
+    "gem_",
+    # -- Interpreter option / module-path injection --
+    "python",
+    "node_",
+    "perl",
+    "ruby",
+    "lua_",
+    "julia_",
+    "php_",
+    "java_",
+    "jdk_",
+    "_java_",
+    "dotnet_",
+    "coreclr_",
+    "mono_",
+    # -- git executes several of these as helper command lines (GIT_SSH_COMMAND, GIT_ASKPASS,
+    #    GIT_PROXY_COMMAND, GIT_EXTERNAL_DIFF) and resolves its config from others.
+    "git_",
+    # -- TLS trust anchors and curl configuration --
+    "ssl_cert_",
+    "curl_",
+    # -- Native plugin/module search paths honored by common shared libraries --
+    "gtk_",
+    "qt_",
+    "gio_",
+    "gst_",
+    # -- Config/data directory redirection --
+    "xdg_",
+)
+
+# Benign members of an otherwise-denied family. Each of these is read by the runtime as plain
+# behavior configuration -- it names no file to load, no module to import, and no command to
+# run -- so denying it would break ordinary MCP server configs for no security gain.
+SAFE_ENV_VARS = frozenset(
+    {
+        # CPython output/encoding behavior; none of these load code.
+        "pythonunbuffered",
+        "pythonioencoding",
+        "pythondontwritebytecode",
+        "pythonhashseed",
+        "pythonutf8",
+        "pythonfaulthandler",
+        # Node's own conventional mode switch (not a loader directive).
+        "node_env",
+        # git commit attribution and its non-interactive switch.
+        "git_author_name",
+        "git_author_email",
+        "git_author_date",
+        "git_committer_name",
+        "git_committer_email",
+        "git_committer_date",
+        "git_terminal_prompt",
+        # Headless Qt selection; picks a built-in platform plugin, not a path to load from.
+        "qt_qpa_platform",
+    }
+)
 
 # Backward-compatible name previously exported by ``lfx.base.mcp.util``.
 DANGEROUS_MCP_ENV_VARS = DANGEROUS_ENV_VARS
@@ -233,9 +367,38 @@ class MCPStdioSecurityError(ValueError):
 
 
 def is_dangerous_mcp_env_var(key: str) -> bool:
-    """Return whether an environment variable can alter MCP process execution."""
+    """Return whether an environment variable can alter MCP process execution.
+
+    Deny-by-default across the runtime families in ``DANGEROUS_ENV_VAR_PREFIXES``, so an
+    unenumerated member of a dangerous family (a newly added ``OPENSSL_*`` or ``PYTHON*``)
+    is refused without a code change. ``SAFE_ENV_VARS`` carves out the specific members of
+    those families that configure behavior rather than load code.
+
+    This predicate is independent of the opt-in ``mcp_server_env_allowlist``; the allowlist
+    is applied by :func:`validate_mcp_stdio_config`.
+    """
     lower_key = key.lower()
+    if lower_key in SAFE_ENV_VARS:
+        return False
     return lower_key in DANGEROUS_ENV_VARS or lower_key.startswith(DANGEROUS_ENV_VAR_PREFIXES)
+
+
+def _configured_env_allowlist() -> frozenset[str] | None:
+    """Resolve the opt-in strict env allowlist, or ``None`` when the operator has not set one.
+
+    ``None`` (the default) keeps the family policy above as the only env control, preserving
+    existing configs. An explicitly empty value means "no tenant-supplied environment at all",
+    which is the strictest setting -- it is deliberately distinguishable from unset.
+    """
+    try:
+        from lfx.services.deps import get_settings_service
+
+        configured = getattr(get_settings_service().settings, "mcp_server_env_allowlist", None)
+    except Exception:  # noqa: BLE001 - settings may be unavailable (e.g. early import)
+        return None
+    if not isinstance(configured, str):
+        return None
+    return frozenset(item.strip().lower() for item in configured.split(",") if item.strip())
 
 
 def _is_file_path(command: str) -> bool:
@@ -622,9 +785,21 @@ def validate_mcp_stdio_config(
                     msg = f"Argument '{arg}' contains dangerous keyword '{token}' and is not allowed"
                     raise MCPStdioSecurityError(msg)
 
-    # Environment-variable blocklist.
+    # Environment-variable policy. Two layers, both fail-safe:
+    #   1. Always on: deny whole runtime families (see DANGEROUS_ENV_VAR_PREFIXES).
+    #   2. Opt-in: when the operator sets mcp_server_env_allowlist, that list is authoritative
+    #      and every name outside it is refused, which is the durable allowlist posture.
     if env:
+        env_allowlist = _configured_env_allowlist()
         for key in env:
+            if env_allowlist is not None:
+                if key.strip().lower() not in env_allowlist:
+                    msg = (
+                        f"Environment variable '{key}' is not allowed: this deployment restricts "
+                        "MCP stdio environments to LANGFLOW_MCP_SERVER_ENV_ALLOWLIST"
+                    )
+                    raise MCPStdioSecurityError(msg)
+                continue
             if is_dangerous_mcp_env_var(key):
                 msg = f"Environment variable '{key}' is not allowed for security reasons"
                 raise MCPStdioSecurityError(msg)
