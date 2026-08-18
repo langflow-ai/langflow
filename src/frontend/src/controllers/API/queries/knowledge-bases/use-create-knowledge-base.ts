@@ -21,10 +21,11 @@ export interface CreateKnowledgeBaseRequest {
     identifier: boolean;
   }>;
   /**
-   * Vector-store backend selector. Defaults to "chroma" on the server
-   * when omitted so existing callers keep working unchanged. In this
-   * phase only "chroma" and "opensearch" are accepted; the server
-   * rejects other values.
+   * Vector-store backend selector. When omitted (``undefined``), the server
+   * resolves the deployment default — "postgres" when pgVector is configured
+   * via ``PGVECTOR_CONNECTION_STRING``, otherwise "chroma". Accepted explicit
+   * values are "chroma", "opensearch", and "postgres"; the server rejects
+   * others.
    */
   backend_type?: string;
   /**

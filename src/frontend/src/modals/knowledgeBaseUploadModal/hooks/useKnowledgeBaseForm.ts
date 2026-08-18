@@ -3,10 +3,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ModelOption } from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import {
+  ACTIVE_DB_PROVIDER_VARIABLE,
   type AvailableDBProviderId,
   type DBProviderConfigValue,
   getDBProviderOption,
   getDefaultDBProviderConfig,
+  getGlobalVariableValue,
   isDBProviderConfigured,
   resolveUIBackendType,
   toAPIBackendType,
@@ -18,6 +20,7 @@ import { useGetIngestionJobStatus } from "@/controllers/API/queries/knowledge-ba
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import useAlertStore from "@/stores/alertStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import {
   type MetadataPair,
   metadataPairsToFormValue,
@@ -46,25 +49,25 @@ import { formatFileSize } from "../utils";
  * server-side validation in each backend's ``_build_vector_store`` so
  * the user sees the problem inline before the request ever lands.
  *
- * Only the actively-registered providers (Chroma + OpenSearch) are
- * validated here — see ``DBProviderInput`` for the UI side. Stubbed
- * providers (mongodb / astra / postgres) are rejected up front by the
+ * Only providers with UI-entered config need validation here (OpenSearch's
+ * index name) — see ``DBProviderInput`` for the UI side. Postgres (pgvector)
+ * is environment-driven with no UI fields, so it needs no client validation;
+ * remaining stubbed providers (mongodb / astra) are rejected up front by the
  * server schema validator.
  */
 function validateBackendConfig(
   backendType: AvailableDBProviderId,
-  config: Record<string, DBProviderConfigValue>,
+  _config: Record<string, DBProviderConfigValue>,
 ): string | null {
   if (backendType === "chroma_cloud") {
     // API key is validated by isDBProviderConfigured; no literal fields here.
     return null;
   }
-  if (backendType === "opensearch") {
-    const indexName = config.index_name;
-    if (typeof indexName !== "string" || !indexName.trim()) {
-      return "OpenSearch requires an index_name";
-    }
-  }
+  // OpenSearch no longer requires an ``index_name``: the backend derives a
+  // unique index per Knowledge Base from its name when one isn't supplied, so
+  // each KB is isolated in its own index instead of sharing a single global
+  // one. An explicitly-set ``index_name`` is still honored downstream as an
+  // external-index override.
   return null;
 }
 
@@ -96,6 +99,9 @@ export function useKnowledgeBaseForm({
   });
   const { data: globalVariables = [], isFetched: areGlobalVariablesFetched } =
     useGetGlobalVariables();
+  const localVectorStoreAvailable = useUtilityStore(
+    (state) => state.localVectorStoreAvailable,
+  );
   const hasAppliedBackendDefaults = useRef(false);
 
   // Transform provider data into ModelOption[] for embedding models only
@@ -158,8 +164,9 @@ export function useKnowledgeBaseForm({
   const [showAdvanced, setShowAdvanced] = useState(!hideAdvanced);
 
   const defaultBackendSelection = useMemo(
-    () => getDefaultDBProviderConfig(globalVariables),
-    [globalVariables],
+    () =>
+      getDefaultDBProviderConfig(globalVariables, localVectorStoreAvailable),
+    [globalVariables, localVectorStoreAvailable],
   );
   const [isFilePanelOpen, setIsFilePanelOpen] = useState(false);
 
@@ -183,6 +190,9 @@ export function useKnowledgeBaseForm({
   // Preview state
   const [chunkPreviews, setChunkPreviews] = useState<ChunkPreview[]>([]);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+  // True when the last chunk-preview request errored (e.g. overlap > size). Gates
+  // the create button so a config the backend already rejected can't be submitted.
+  const [chunkPreviewFailed, setChunkPreviewFailed] = useState(false);
   const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
   const [selectedPreviewFileIndex, setSelectedPreviewFileIndex] = useState(0);
 
@@ -314,6 +324,7 @@ export function useKnowledgeBaseForm({
     setMetadataPairs([]);
     setPerFileMetadata({});
     setChunkPreviews([]);
+    setChunkPreviewFailed(false);
     setCurrentChunkIndex(0);
     setSelectedPreviewFileIndex(0);
     setCurrentStep(1);
@@ -328,10 +339,12 @@ export function useKnowledgeBaseForm({
   const generateChunkPreviews = useCallback(async () => {
     if (files.length === 0) {
       setChunkPreviews([]);
+      setChunkPreviewFailed(false);
       return;
     }
 
     setIsGeneratingPreview(true);
+    setChunkPreviewFailed(false);
     try {
       const selectedFile = files[selectedPreviewFileIndex] || files[0];
       const formData = new FormData();
@@ -375,6 +388,7 @@ export function useKnowledgeBaseForm({
         list: [err?.response?.data?.detail || err?.message || "Unknown error"],
       });
       setChunkPreviews([]);
+      setChunkPreviewFailed(true);
     } finally {
       setIsGeneratingPreview(false);
     }
@@ -409,7 +423,13 @@ export function useKnowledgeBaseForm({
     }
     if (!isAddSourcesMode) {
       const selectedProvider = getDBProviderOption(backendType);
-      if (!isDBProviderConfigured(backendType, globalVariables)) {
+      if (
+        !isDBProviderConfigured(
+          backendType,
+          globalVariables,
+          localVectorStoreAvailable,
+        )
+      ) {
         errors.backend = `${selectedProvider.label} must be configured in DB Providers settings before it can be used.`;
       } else {
         const backendErrors = validateBackendConfig(backendType, backendConfig);
@@ -443,6 +463,7 @@ export function useKnowledgeBaseForm({
     backendType,
     backendConfig,
     globalVariables,
+    localVectorStoreAvailable,
     files,
     existingKnowledgeBaseNames,
     metadataPairs,
@@ -467,13 +488,26 @@ export function useKnowledgeBaseForm({
     try {
       // Create the knowledge base (skip if adding to existing)
       if (!isAddSourcesMode) {
+        // When the user hasn't explicitly chosen a provider (no active-provider
+        // variable set, still on the Chroma default), send ``undefined`` so the
+        // server resolves the deployment default — this is what lets an
+        // env-configured pgVector auto-become the backend instead of Chroma.
+        // An explicit selection (active variable set, or any non-Chroma pick)
+        // is always sent through and honored.
+        const hasExplicitActiveProvider = Boolean(
+          getGlobalVariableValue(globalVariables, ACTIVE_DB_PROVIDER_VARIABLE),
+        );
+        const resolvedBackendType =
+          !hasExplicitActiveProvider && backendType === "chroma"
+            ? undefined
+            : toAPIBackendType(backendType);
         await createKnowledgeBase.mutateAsync({
           name: kbName,
           embedding_provider: selectedModel.provider || "Unknown",
           embedding_model: selectedModel.id || selectedModel.name,
           model_selection: selectedModel,
           column_config: columnConfig,
-          backend_type: toAPIBackendType(backendType),
+          backend_type: resolvedBackendType,
           backend_config: backendConfig,
         });
       }
@@ -704,6 +738,7 @@ export function useKnowledgeBaseForm({
     // Preview
     chunkPreviews,
     isGeneratingPreview,
+    chunkPreviewFailed,
     currentChunkIndex,
     setCurrentChunkIndex,
     selectedPreviewFileIndex,

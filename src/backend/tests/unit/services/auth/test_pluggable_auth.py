@@ -86,3 +86,33 @@ async def test_get_current_user_delegates_to_service(dummy_auth_registration):
     assert ("get_current_user", None, "q", None, None) in dummy.calls
     assert response["user"] == "dummy"
     assert response["db"] is db
+
+
+def test_get_auth_service_replaces_lfx_no_op_stub():
+    """LFX's no-op auth service must never be what Langflow resolves.
+
+    It self-registers for the ``auth_service`` slot at import time, so any process that
+    touches auth before ``register_all_service_factories()`` would otherwise get a service
+    that raises ``NotImplementedError`` for user/token operations and answers API-key
+    checks with ``None``.
+    """
+    from langflow.services.auth.service import AuthService as LangflowAuthService
+    from langflow.services.deps import get_auth_service
+    from lfx.services.auth.service import AuthService as LFXNoOpAuthService
+
+    service_manager = get_service_manager()
+    previous_class = service_manager.service_classes.get(ServiceType.AUTH_SERVICE)
+    previous_instance = service_manager.services.pop(ServiceType.AUTH_SERVICE, None)
+    service_manager.register_service_class(ServiceType.AUTH_SERVICE, LFXNoOpAuthService, override=True)
+
+    try:
+        assert isinstance(service_manager.get(ServiceType.AUTH_SERVICE), LFXNoOpAuthService)
+        assert isinstance(get_auth_service(), LangflowAuthService)
+    finally:
+        service_manager.services.pop(ServiceType.AUTH_SERVICE, None)
+        if previous_class is not None:
+            service_manager.service_classes[ServiceType.AUTH_SERVICE] = previous_class
+        else:
+            service_manager.service_classes.pop(ServiceType.AUTH_SERVICE, None)
+        if previous_instance is not None:
+            service_manager.services[ServiceType.AUTH_SERVICE] = previous_instance

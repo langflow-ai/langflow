@@ -38,14 +38,6 @@ on:
         description: "(Optional) Ref to checkout"
         required: false
         type: string
-      openai_api_key:
-        description: "OpenAI API Key"
-        required: false
-        type: string
-      store_api_key:
-        description: "Store API Key"
-        required: false
-        type: string
       python-versions:
         description: "Python Versions"
         required: false
@@ -67,11 +59,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-  STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
-  TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+permissions:
+  contents: read
 
 jobs:
   echo-inputs:
@@ -223,16 +212,16 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.ref }}
       - name: Filter Paths
         id: filter
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         with:
           filters: ./.github/changes-filter.yaml
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Install deps for coverage check
@@ -292,6 +281,13 @@ jobs:
   test-frontend-unit:
     needs: [path-filter, set-ci-condition]
     name: Run Frontend Unit Tests
+    # The called workflow publishes a check run and, for PR events, a coverage
+    # comment. Keep these writes scoped to this reporting job; every other CI
+    # job retains the workflow-level read-only token.
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
     if: |
       always() &&
       !cancelled() &&
@@ -325,12 +321,6 @@ jobs:
       release: ${{ inputs.release || false }}
       runs-on: ${{ inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
       ref: ${{ inputs.ref || github.ref }}
-    secrets:
-      OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
-      STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
-      ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
-      TAVILY_API_KEY: "${{ secrets.TAVILY_API_KEY }}"
-
   test-docs-build:
     needs: path-filter
     if: |
@@ -351,19 +341,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.ref }}
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: 3.12
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
-          version: "latest"
+          version: latest-known
 
       - name: Install dependencies
         run: |
@@ -378,9 +368,6 @@ jobs:
     name: Test Docker Images
     if: ${{ needs.path-filter.outputs.docker == 'true' && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
     uses: ./.github/workflows/docker_test.yml
-    secrets:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
   lint-design-md:
     needs: path-filter
@@ -391,12 +378,12 @@ jobs:
       DESIGN_MD_CLI_VERSION: "0.1.1"
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.ref }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
 
@@ -418,17 +405,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Download Jest Coverage
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: jest-coverage
           path: coverage/jest
 
       - name: Download Playwright Coverage
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           pattern: playwright-coverage-*
@@ -454,7 +441,7 @@ jobs:
         if: env.CODECOV_TOKEN != ''
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ env.CODECOV_TOKEN }}
           files: coverage/combined/total-frontend-coverage.json

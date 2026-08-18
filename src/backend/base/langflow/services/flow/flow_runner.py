@@ -8,12 +8,13 @@ from lfx.graph import Graph
 from lfx.graph.vertex.param_handler import ParameterHandler
 from lfx.log.logger import configure, logger
 from lfx.utils.util import update_settings
-from sqlmodel import delete, select, text
+from sqlmodel import delete, select
 
 from langflow.api.utils import cascade_delete_flow
 from langflow.load.utils import replace_tweaks_with_env
 from langflow.processing.process import process_tweaks, run_graph
 from langflow.services.cache.service import AsyncBaseCacheService
+from langflow.services.database.migration import get_current_alembic_heads
 from langflow.services.database.models import Flow, User, Variable
 from langflow.services.database.utils import initialize_database
 from langflow.services.deps import get_auth_service, get_cache_service, get_storage_service, session_scope
@@ -244,12 +245,7 @@ class LangflowRunnerExperimental:
     @staticmethod
     async def database_exists_check():
         async with session_scope() as session:
-            try:
-                result = await session.exec(text("SELECT version_num FROM public.alembic_version"))
-                return result.first() is not None
-            except Exception as e:  # noqa: BLE001
-                await logger.adebug(f"Database check failed: {e}")
-                return False
+            return bool(await get_current_alembic_heads(session))
 
     @staticmethod
     async def get_flow_dict(flow: Path | str | dict) -> dict:

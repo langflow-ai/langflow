@@ -4,6 +4,9 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
+
+pytest.importorskip("lfx_bundles")
+
 from langflow.custom import Component
 from lfx.components.tools.calculator import CalculatorToolComponent
 from lfx_bundles.cuga.cuga_agent import (

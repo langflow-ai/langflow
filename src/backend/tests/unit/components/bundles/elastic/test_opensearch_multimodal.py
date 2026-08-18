@@ -5,6 +5,9 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+pytest.importorskip("lfx_bundles")
+
 from langchain_core.embeddings import Embeddings
 from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
 from lfx.schema.data import Data

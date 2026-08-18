@@ -18,6 +18,8 @@ This file covers the *new* surface area introduced by the merge:
 
 from __future__ import annotations
 
+import json
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -310,26 +312,35 @@ class TestLegacySubclassesPinMode:
 
 # ---------------------------------------------------------------------------
 # Knowledge Base path isolation
+#
+# Path resolution now runs through the shared ``resolve_local_store_path``
+# helper, which is also the only place a local path is ever built — for local
+# Chroma and nothing else.
 # ---------------------------------------------------------------------------
 class TestKnowledgeBasePathIsolation:
-    @pytest.mark.parametrize(
-        "component_class",
-        [KnowledgeComponent, KnowledgeIngestionComponent, KnowledgeBaseComponent],
-    )
-    @pytest.mark.parametrize("knowledge_base", ["../../outside", "../victim/secret_kb"])
-    def test_rejects_kb_names_outside_the_current_user_directory(
-        self, component_class, knowledge_base, tmp_path
-    ) -> None:
-        component = component_class(knowledge_base=knowledge_base)
+    @staticmethod
+    def _resolve(kb_root, username, kb_name, *, backend_type="chroma", backend_config=None):
+        from langflow.api.utils.kb_helpers import resolve_local_store_path
 
+        with patch(
+            "langflow.api.utils.kb_helpers.KBStorageHelper.get_root_path",
+            return_value=kb_root,
+        ):
+            return resolve_local_store_path(
+                kb_name,
+                username,
+                backend_type=backend_type,
+                backend_config=backend_config,
+            )
+
+    @pytest.mark.parametrize("knowledge_base", ["../../outside", "../victim/secret_kb"])
+    def test_rejects_kb_names_outside_the_current_user_directory(self, knowledge_base, tmp_path) -> None:
         with pytest.raises(ValueError, match="KB path escapes root directory"):
-            component._resolve_kb_path(tmp_path, "attacker", knowledge_base)
+            self._resolve(tmp_path, "attacker", knowledge_base)
 
     def test_rejects_username_that_escapes_the_global_kb_root(self, tmp_path) -> None:
-        component = KnowledgeComponent(knowledge_base="safe_kb")
-
         with pytest.raises(ValueError, match="KB path escapes root directory"):
-            component._resolve_kb_path(tmp_path, "../outside", "safe_kb")
+            self._resolve(tmp_path, "../outside", "safe_kb")
 
     def test_rejects_symlink_escape_from_current_user_directory(self, tmp_path) -> None:
         user_root = tmp_path / "attacker"
@@ -337,17 +348,121 @@ class TestKnowledgeBasePathIsolation:
         user_root.mkdir()
         outside_root.mkdir(exist_ok=True)
         (user_root / "linked").symlink_to(outside_root, target_is_directory=True)
-        component = KnowledgeComponent(knowledge_base="linked/secret_kb")
 
         with pytest.raises(ValueError, match="KB path escapes root directory"):
-            component._resolve_kb_path(tmp_path, "attacker", "linked/secret_kb")
+            self._resolve(tmp_path, "attacker", "linked/secret_kb")
 
     def test_preserves_kb_names_inside_the_current_user_directory(self, tmp_path) -> None:
-        component = KnowledgeComponent(knowledge_base="existing_kb")
+        assert self._resolve(tmp_path, "current_user", "existing_kb") == (tmp_path / "current_user" / "existing_kb")
 
-        assert component._resolve_kb_path(tmp_path, "current_user", "existing_kb") == (
-            tmp_path / "current_user" / "existing_kb"
+    @pytest.mark.parametrize(
+        ("backend_type", "backend_config"),
+        [("opensearch", {}), ("postgres", {}), ("chroma", {"mode": "cloud"})],
+    )
+    def test_remote_backends_resolve_no_path_at_all(self, tmp_path, backend_type, backend_config) -> None:
+        """Only local Chroma gets a directory; everything else stays off-disk.
+
+        Notably a traversing name is harmless for these — there is no path to
+        traverse, because none is built.
+        """
+        assert (
+            self._resolve(
+                tmp_path,
+                "attacker",
+                "../victim/secret_kb",
+                backend_type=backend_type,
+                backend_config=backend_config,
+            )
+            is None
         )
+
+
+# ---------------------------------------------------------------------------
+# Backend resolution: the ``knowledge_base`` row is the sole authority, and an
+# unresolvable backend must raise rather than silently degrade to local storage.
+#
+# Ingestion used to read ``embedding_metadata.json`` while retrieval read the
+# database row. Across replicas those disagree — a pod without the sidecar wrote
+# a remote-backed KB into a local Chroma dir while queries followed the row to
+# the configured cluster and returned nothing, with no error raised anywhere.
+# The sidecar is gone entirely now; both paths resolve from the row.
+# ---------------------------------------------------------------------------
+class TestBackendResolution:
+    KB_NAME = "support_docs"
+    USER_ID = "3f1c9c1e-6d2a-4a53-8a4e-9c0b1d2e3f40"
+
+    @staticmethod
+    def _record(backend_type: str, backend_config: dict | None = None) -> SimpleNamespace:
+        return SimpleNamespace(backend_type=backend_type, backend_config=backend_config or {})
+
+    def _component(self) -> KnowledgeComponent:
+        # ``user_id`` is a read-only property backed by ``_user_id``; the public
+        # name is ignored by the constructor (it lands as the string "None").
+        return KnowledgeComponent(knowledge_base=self.KB_NAME, _user_id=self.USER_ID)
+
+    @staticmethod
+    def _write_sidecar(kb_path, backend_type: str, backend_config: dict | None = None) -> None:
+        kb_path.mkdir(parents=True, exist_ok=True)
+        (kb_path / "embedding_metadata.json").write_text(
+            json.dumps({"backend_type": backend_type, "backend_config": backend_config or {}})
+        )
+
+    async def test_resolves_from_the_database_row(self) -> None:
+        component = self._component()
+
+        with patch(
+            "langflow.api.utils.knowledge_base_service.get_by_user_and_name",
+            new=AsyncMock(return_value=self._record("opensearch", {"index_name": "kb_support"})),
+        ):
+            backend_type, backend_config = await component._resolve_backend_config()
+
+        assert backend_type == "opensearch"
+        assert backend_config == {"index_name": "kb_support"}
+
+    async def test_a_stale_sidecar_cannot_override_the_row(self, tmp_path) -> None:
+        """A sidecar left on one pod is inert — nothing reads it any more."""
+        self._write_sidecar(tmp_path, "chroma")
+        component = self._component()
+
+        with patch(
+            "langflow.api.utils.knowledge_base_service.get_by_user_and_name",
+            new=AsyncMock(return_value=self._record("opensearch", {"index_name": "kb_support"})),
+        ):
+            backend_type, _ = await component._resolve_backend_config()
+
+        assert backend_type == "opensearch"
+
+    async def test_raises_without_a_row_even_when_a_sidecar_exists(self, tmp_path) -> None:
+        """No row is unknown, not local — refuse to guess, sidecar or not.
+
+        A legacy directory is adopted explicitly via
+        ``langflow reconcile-kb-from-disk``, never by an implicit read here.
+        """
+        self._write_sidecar(tmp_path, "opensearch", {"index_name": "legacy"})
+        component = self._component()
+
+        with (
+            patch(
+                "langflow.api.utils.knowledge_base_service.get_by_user_and_name",
+                new=AsyncMock(return_value=None),
+            ),
+            pytest.raises(ValueError, match="Refusing to fall back to local storage"),
+        ):
+            await component._resolve_backend_config()
+
+    async def test_database_lookup_failure_propagates(self, tmp_path) -> None:
+        """A DB error must not be swallowed into a local-storage default."""
+        self._write_sidecar(tmp_path, "chroma")
+        component = self._component()
+
+        with (
+            patch(
+                "langflow.api.utils.knowledge_base_service.get_by_user_and_name",
+                new=AsyncMock(side_effect=RuntimeError("connection lost")),
+            ),
+            pytest.raises(RuntimeError, match="connection lost"),
+        ):
+            await component._resolve_backend_config()
 
 
 # ---------------------------------------------------------------------------
@@ -383,11 +498,11 @@ class TestComponentSurface:
 class TestExtractSourceTypesFromDataFrame:
     """Flow-driven ingestion (input_df) must stamp the KB with file extensions.
 
-    The Knowledge Bases list keys file-type icons off
-    ``embedding_metadata.json[source_types]``. Direct upload populates
-    this; flow-driven ingestion used to leave it empty, leaving the
-    icon blank. The extractor reads common path/name columns produced
-    by the File / S3 / cloud-storage components.
+    The Knowledge Bases list keys file-type icons off the ``knowledge_base``
+    row's ``source_types``. Direct upload populates this; flow-driven
+    ingestion used to leave it empty, leaving the icon blank. The extractor
+    reads common path/name columns produced by the File / S3 /
+    cloud-storage components.
     """
 
     def test_extracts_pdf_from_file_path_column(self) -> None:

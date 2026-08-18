@@ -15,7 +15,7 @@ interface ChatSidebarProps {
   onSessionSelect?: (sessionId: string) => void;
   currentSessionId?: string;
   onDeleteSession?: (sessionId: string) => void;
-  onOpenLogs?: (sessionId: string) => void;
+  onOpenLogs?: (sessionId: string, triggerElement: HTMLElement | null) => void;
   onRenameSession?: (oldId: string, newId: string) => Promise<void>;
   onBulkDeleteSessions?: (sessionIds: string[], onSuccess: () => void) => void;
 }

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
@@ -17,6 +17,11 @@ import IconComponent, {
 import { Button } from "../../../../ui/button";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import type { FileComponentType, InputProps } from "../../types";
+
+const sameList = (stored: unknown, next: string[]): boolean =>
+  Array.isArray(stored) &&
+  stored.length === next.length &&
+  stored.every((entry, index) => entry === next[index]);
 
 export default function InputFileComponent({
   value,
@@ -156,9 +161,21 @@ export default function InputFileComponent({
 
   const isDisabled = disabled || isPending;
 
-  const { data: files } = useGetFilesV2({
+  const {
+    data: files,
+    refetch: refetchFiles,
+    isFetching: isFetchingFiles,
+    dataUpdatedAt: filesUpdatedAt,
+  } = useGetFilesV2({
     enabled: !!ENABLE_FILE_MANAGEMENT,
   });
+
+  // Selected paths this component has already forced a fresh list read for.
+  // A path is only dropped once a list fetched *after* we noticed it missing
+  // still omits it.
+  const recheckedPaths = useRef<Set<string>>(new Set());
+
+  const [isFileManagerOpen, setIsFileManagerOpen] = useState(false);
 
   const selectedFiles = (
     isList
@@ -172,41 +189,74 @@ export default function InputFileComponent({
         : [file_path ?? ""]
   ).filter((value) => value !== "");
 
+  // Files the list can actually render a chip for. The list is a cache read,
+  // not the record of what the user attached, so a selected path it does not
+  // know about is left unrendered rather than treated as unselected.
+  const renderedFiles = (files ?? []).filter((file) =>
+    selectedFiles.includes(file.path),
+  );
+
+  // Names already stored on the node, indexed by their path, so a selected file
+  // the current list omits keeps the name it was attached with.
+  const storedNames = Array.isArray(value) ? value : [value ?? ""];
+  const storedPaths = Array.isArray(file_path) ? file_path : [file_path ?? ""];
+
+  const resolveName = (path: string): string =>
+    (files ?? []).find((file) => file.path === path)?.name ??
+    storedNames[storedPaths.indexOf(path)] ??
+    "";
+
+  // Reconcile the node with the file list: follow renames, and drop a file that
+  // was really deleted. One response omitting the file is not evidence that it
+  // is gone - the list can lag the upload that created it (the upload seeds the
+  // cache optimistically, so the refetch it triggers is the first read that has
+  // to find the file), or an older in-flight response can resolve last. Since
+  // clearing value/file_path is persisted with the flow and is terminal - an
+  // empty selection leaves nothing for a later, correct response to restore -
+  // a missing path first forces a fresh read, and is only dropped when a list
+  // fetched after that still omits it.
+  //
+  // The modal owns the selection while open; this effect's `file_path` snapshot
+  // can lag one render behind it and would revert a just-uploaded file.
   useEffect(() => {
-    if (files !== undefined && !tempFile) {
-      if (isList) {
-        if (
-          Array.isArray(value) &&
-          value.every((v) => files?.find((f) => f.name === v)) &&
-          Array.isArray(file_path) &&
-          file_path.every((v) => files?.find((f) => f.path === v))
-        ) {
-          return;
-        }
-      } else {
-        if (
-          typeof value === "string" &&
-          files?.find((f) => f.name === value) &&
-          typeof file_path === "string" &&
-          files?.find((f) => f.path === file_path)
-        ) {
-          return;
-        }
-      }
-      handleOnNewValue({
-        value: isList
-          ? (files ?? [])
-              .filter((f) => selectedFiles.includes(f.path))
-              .map((f) => f.name)
-          : (files?.find((f) => selectedFiles.includes(f.path))?.name ?? ""),
-        file_path: isList
-          ? (files ?? [])
-              .filter((f) => selectedFiles.includes(f.path))
-              .map((f) => f.path)
-          : (files?.find((f) => selectedFiles.includes(f.path))?.path ?? ""),
-      });
+    if (files === undefined || tempFile || isFileManagerOpen) return;
+    if (isFetchingFiles || selectedFiles.length === 0) return;
+
+    const listedPaths = new Set(files.map((file) => file.path));
+    for (const path of selectedFiles) {
+      if (listedPaths.has(path)) recheckedPaths.current.delete(path);
     }
-  }, [files, value, file_path]);
+
+    const unverified = selectedFiles.filter(
+      (path) => !listedPaths.has(path) && !recheckedPaths.current.has(path),
+    );
+    if (unverified.length > 0) {
+      for (const path of unverified) recheckedPaths.current.add(path);
+      refetchFiles();
+      return;
+    }
+
+    const nextPaths = selectedFiles.filter((path) => listedPaths.has(path));
+    const nextNames = nextPaths.map(resolveName);
+
+    if (isList) {
+      if (sameList(value, nextNames) && sameList(file_path, nextPaths)) return;
+      handleOnNewValue({ value: nextNames, file_path: nextPaths });
+      return;
+    }
+
+    const nextName = nextNames[0] ?? "";
+    const nextPath = nextPaths[0] ?? "";
+    if (value === nextName && file_path === nextPath) return;
+    handleOnNewValue({ value: nextName, file_path: nextPath });
+  }, [
+    files,
+    filesUpdatedAt,
+    isFetchingFiles,
+    value,
+    file_path,
+    isFileManagerOpen,
+  ]);
 
   return (
     <div className="w-full">
@@ -217,23 +267,15 @@ export default function InputFileComponent({
               <div className="relative flex w-full flex-col gap-2">
                 <div className="nopan nowheel flex max-h-44 flex-col overflow-y-auto">
                   <FilesRendererComponent
-                    files={files.filter((file) =>
-                      selectedFiles.includes(file.path),
-                    )}
+                    files={renderedFiles}
                     handleRemove={(path) => {
                       const newSelectedFiles = selectedFiles.filter(
                         (file) => file !== path,
                       );
                       handleOnNewValue({
                         value: isList
-                          ? newSelectedFiles.map(
-                              (file) =>
-                                (files ?? []).find((f) => f.path === file)
-                                  ?.name,
-                            )
-                          : ((files ?? []).find(
-                              (f) => f.path === newSelectedFiles[0],
-                            )?.name ?? ""),
+                          ? newSelectedFiles.map(resolveName)
+                          : resolveName(newSelectedFiles[0] ?? ""),
                         file_path: isList
                           ? newSelectedFiles
                           : (newSelectedFiles[0] ?? ""),
@@ -243,20 +285,16 @@ export default function InputFileComponent({
                 </div>
                 <FileManagerModal
                   files={files}
+                  onOpenChange={setIsFileManagerOpen}
                   selectedFiles={selectedFiles}
-                  handleSubmit={(selectedFiles) => {
+                  handleSubmit={(submittedFiles) => {
                     handleOnNewValue({
                       value: isList
-                        ? selectedFiles.map(
-                            (file) =>
-                              (files ?? []).find((f) => f.path === file)?.name,
-                          )
-                        : ((files ?? []).find(
-                            (f) => f.path === selectedFiles[0],
-                          )?.name ?? ""),
+                        ? submittedFiles.map(resolveName)
+                        : resolveName(submittedFiles[0] ?? ""),
                       file_path: isList
-                        ? selectedFiles
-                        : (selectedFiles[0] ?? ""),
+                        ? submittedFiles
+                        : (submittedFiles[0] ?? ""),
                     });
                   }}
                   disabled={isDisabled}
@@ -264,16 +302,16 @@ export default function InputFileComponent({
                   isList={isList}
                   allowFolderSelection={allowFolderSelection}
                 >
-                  {(selectedFiles.length === 0 || isList) && (
+                  {(renderedFiles.length === 0 || isList) && (
                     <div data-testid="input-file-component" className="w-full">
                       <Button
                         disabled={isDisabled}
                         variant={
-                          selectedFiles.length !== 0 ? "ghost" : "default"
+                          renderedFiles.length !== 0 ? "ghost" : "default"
                         }
-                        size={selectedFiles.length !== 0 ? "iconMd" : "default"}
+                        size={renderedFiles.length !== 0 ? "iconMd" : "default"}
                         className={cn(
-                          selectedFiles.length !== 0
+                          renderedFiles.length !== 0
                             ? "hit-area-icon absolute -top-8 right-0"
                             : "w-full",
                           "font-semibold",
@@ -282,7 +320,7 @@ export default function InputFileComponent({
                       >
                         {disabled ? (
                           getPlaceholder(disabled, placeholder)
-                        ) : selectedFiles.length !== 0 ? (
+                        ) : renderedFiles.length !== 0 ? (
                           <ForwardedIconComponent
                             name="Plus"
                             className="icon-size"

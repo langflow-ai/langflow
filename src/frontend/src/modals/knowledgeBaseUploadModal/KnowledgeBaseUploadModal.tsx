@@ -26,6 +26,7 @@ export default function KnowledgeBaseUploadModal({
   existingKnowledgeBase,
   hideAdvanced,
   existingKnowledgeBaseNames,
+  onCloseAutoFocus,
 }: KnowledgeBaseUploadModalProps) {
   const { t } = useTranslation();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -116,6 +117,7 @@ export default function KnowledgeBaseUploadModal({
         setOpen(isOpen);
         if (!isOpen) form.resetForm();
       }}
+      onCloseAutoFocus={onCloseAutoFocus}
       className="bg-background"
       contentClassName="bg-muted"
       currentStep={form.currentStep}
@@ -159,7 +161,9 @@ export default function KnowledgeBaseUploadModal({
           nextDisabled={false}
           submitDisabled={
             !form.sourceName.trim() ||
-            (!form.isAddSourcesMode && form.selectedEmbeddingModel.length === 0)
+            (!form.isAddSourcesMode &&
+              form.selectedEmbeddingModel.length === 0) ||
+            form.chunkPreviewFailed
           }
           isSubmitting={form.isSubmitting}
           submitTestId="kb-create-button"

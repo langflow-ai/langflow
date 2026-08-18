@@ -1,10 +1,16 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
+import {
+  createActiveUserViaApi,
+  deleteUserViaApi,
+  updateUserViaApi,
+} from "../../utils/auth/manage-users-via-api";
 import { TEXTS } from "../../utils/constants/texts";
 import {
   openTemplatesModal,
   waitForNewProjectButton,
 } from "../../utils/flow/new-project-flow";
+import { submitLoginAndRequireSuccess } from "../../utils/login-langflow";
 import { renameFlow } from "../../utils/rename-flow";
 
 test(
@@ -13,10 +19,13 @@ test(
   async ({ page }) => {
     await page.route("**/api/v1/auto_login", (route) => {
       route.fulfill({
-        status: 500,
+        status: 403,
         contentType: "application/json",
         body: JSON.stringify({
-          detail: { auto_login: false },
+          detail: {
+            message: "Auto login is disabled.",
+            auto_login: false,
+          },
         }),
       });
     });
@@ -40,13 +49,10 @@ test(
     const secondRandomName = Math.random().toString(36).substring(5);
     const randomFlowName = Math.random().toString(36).substring(5);
     const secondRandomFlowName = Math.random().toString(36).substring(5);
-    const userRow = page.getByRole("row").filter({
-      has: page.getByText(randomName, { exact: true }),
-    });
 
     await page.goto("/");
 
-    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+    await expect(page.getByRole("button", { name: TEXTS.signIn })).toBeVisible({
       timeout: 30000,
     });
 
@@ -61,7 +67,7 @@ test(
       sessionStorage.removeItem("testMockAutoLogin");
     });
 
-    await page.getByRole("button", { name: TEXTS.signIn }).click();
+    await submitLoginAndRequireSuccess(page);
 
     await page.waitForSelector('[data-testid="mainpage_title"]', {
       timeout: 30000,
@@ -69,88 +75,24 @@ test(
 
     await waitForNewProjectButton(page);
 
-    await page.getByTestId("user-profile-settings").click();
-
-    await page.getByText("Admin Page", { exact: true }).click();
-
-    //CRUD an user
-    await page.getByText("New User", { exact: true }).click();
-
-    await page
-      .getByPlaceholder(TEXTS.placeholderUsername)
-      .last()
-      .fill(randomName);
-    await page.locator('input[name="password"]').fill(randomPassword);
-    await page.locator('input[name="confirmpassword"]').fill(randomPassword);
-
-    await page.waitForSelector("#is_active", {
-      timeout: 1500,
+    // OSS Admin Page UI was removed; exercise the same admin user APIs
+    // against the authenticated superuser session instead.
+    const created = await createActiveUserViaApi(page, {
+      username: randomName,
+      password: randomPassword,
     });
+    await deleteUserViaApi(page, created.id);
 
-    await page.locator("#is_active").click();
-
-    await page.getByText(TEXTS.save, { exact: true }).click();
-
-    await page.waitForSelector("text=new user added", { timeout: 30000 });
-
-    await expect(page.getByText(randomName, { exact: true })).toBeVisible({
-      timeout: 2000,
+    const recreated = await createActiveUserViaApi(page, {
+      username: randomName,
+      password: randomPassword,
     });
-
-    await userRow.getByTestId("icon-Trash2").click();
-    await page.getByText(TEXTS.delete, { exact: true }).last().click();
-
-    await page.waitForSelector("text=user deleted", { timeout: 30000 });
-
-    await expect(page.getByText(randomName, { exact: true })).toBeVisible({
-      timeout: 2000,
-      visible: false,
+    const renamed = await updateUserViaApi(page, recreated.id, {
+      username: secondRandomName,
     });
-
-    await page.getByText("New User", { exact: true }).click();
-
-    await page
-      .getByPlaceholder(TEXTS.placeholderUsername)
-      .last()
-      .fill(randomName);
-    await page.locator('input[name="password"]').fill(randomPassword);
-    await page.locator('input[name="confirmpassword"]').fill(randomPassword);
-
-    await page.waitForSelector("#is_active", {
-      timeout: 1500,
-    });
-
-    await page.locator("#is_active").click();
-
-    await page.getByText(TEXTS.save, { exact: true }).click();
-
-    await page.waitForSelector("text=new user added", { timeout: 30000 });
-
-    await expect(userRow).toBeVisible({ timeout: 30000 });
-    await userRow.getByTestId("icon-Pencil").click();
-
-    await page
-      .getByPlaceholder(TEXTS.placeholderUsername)
-      .last()
-      .fill(secondRandomName);
-
-    await page.getByText(TEXTS.save, { exact: true }).click();
-
-    await page.waitForSelector("text=user edited", { timeout: 30000 });
-
-    await expect(page.getByText(secondRandomName, { exact: true })).toBeVisible(
-      {
-        timeout: 2000,
-      },
-    );
+    expect(renamed.username).toBe(secondRandomName);
 
     //user must see just your own flows
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("icon-ChevronLeft").first().click();
-
     await waitForNewProjectButton(page);
 
     await openTemplatesModal(page, {
@@ -200,7 +142,7 @@ test(
 
     await page.getByText(TEXTS.logout, { exact: true }).click();
 
-    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+    await expect(page.getByRole("button", { name: TEXTS.signIn })).toBeVisible({
       timeout: 30000,
     });
 
@@ -209,11 +151,7 @@ test(
       .fill(secondRandomName);
     await page.getByPlaceholder(TEXTS.placeholderPassword).fill(randomPassword);
 
-    await page.waitForSelector("text=Sign in", {
-      timeout: 1500,
-    });
-
-    await page.getByRole("button", { name: TEXTS.signIn }).click();
+    await submitLoginAndRequireSuccess(page);
 
     await page.evaluate(() => {
       sessionStorage.removeItem("testMockAutoLogin");
@@ -275,7 +213,7 @@ test(
 
     await page.getByText(TEXTS.logout, { exact: true }).click();
 
-    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+    await expect(page.getByRole("button", { name: TEXTS.signIn })).toBeVisible({
       timeout: 30000,
     });
 
@@ -290,7 +228,7 @@ test(
       sessionStorage.removeItem("testMockAutoLogin");
     });
 
-    await page.getByRole("button", { name: TEXTS.signIn }).click();
+    await submitLoginAndRequireSuccess(page);
 
     await page.waitForSelector('[data-testid="mainpage_title"]', {
       timeout: 30000,

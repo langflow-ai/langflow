@@ -5,6 +5,9 @@ import pytest
 from langflow.api.utils.core import extract_global_variables_from_headers
 from langflow.api.v1 import mcp_utils
 from langflow.helpers import flow as flow_helpers
+from langflow.services.database.models import Flow
+from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.user.model import User
 from lfx.interface.components import component_cache
 
 
@@ -139,6 +142,8 @@ async def test_handle_list_tools_skips_blocked_custom_flows(monkeypatch):
     finally:
         mcp_utils.current_user_ctx.reset(token)
 
+    # The global server is the editor-plane surface, where an empty list is a normal
+    # state; only the project endpoint raises. See test_mcp_failure_reporting.py.
     assert tools == []
 
 
@@ -324,6 +329,48 @@ async def test_handle_read_resource_denies_user_bucket_under_project_scope(monke
 
 
 @pytest.mark.asyncio
+async def test_handle_read_resource_project_scope_binds_flow_id_as_uuid(monkeypatch, async_session):
+    """A flow UUID parsed from an advertised resource URI must remain UUID-typed in the database query."""
+    user = User(username="mcp-resource-reader", password="test-password")  # noqa: S106
+    project = Folder(name="MCP Resource Project", user_id=user.id)
+    flow = Flow(name="MCP Resource Flow", user_id=user.id, folder_id=project.id)
+    other_project = Folder(name="Other MCP Resource Project", user_id=user.id)
+    other_flow = Flow(name="Other MCP Resource Flow", user_id=user.id, folder_id=other_project.id)
+    async_session.add_all([user, project, flow, other_project, other_flow])
+    await async_session.flush()
+
+    file_name = "project-resource.txt"
+    storage_service = FakeStorageService(
+        {},
+        {
+            f"{flow.id}/{file_name}": b"project file contents",
+            f"{other_flow.id}/{file_name}": b"other project file contents",
+        },
+    )
+
+    monkeypatch.setattr(mcp_utils, "session_scope", lambda: FakeSessionContext(async_session))
+    monkeypatch.setattr(mcp_utils, "get_storage_service", lambda: storage_service)
+
+    token = mcp_utils.current_user_ctx.set(user)
+    try:
+        uri = f"http://host/api/v1/files/download/{flow.id}/{file_name}"
+        result = await mcp_utils.handle_read_resource(uri, project_id=project.id)
+
+        other_uri = f"http://host/api/v1/files/download/{other_flow.id}/{file_name}"
+        with pytest.raises(ValueError, match="access denied"):
+            await mcp_utils.handle_read_resource(other_uri, project_id=project.id)
+
+        with pytest.raises(ValueError, match="access denied"):
+            await mcp_utils.handle_read_resource(uri, project_id="not-a-uuid")
+    finally:
+        mcp_utils.current_user_ctx.reset(token)
+
+    import base64
+
+    assert base64.b64decode(result) == b"project file contents"
+
+
+@pytest.mark.asyncio
 async def test_handle_list_resources_project_scoped_excludes_user_bucket(monkeypatch):
     """A project-scoped resources/list must not leak user-bucket files unrelated to the project."""
     user_id = "user-bob"
@@ -389,8 +436,14 @@ def _build_fake_server() -> SimpleNamespace:
     )
 
 
-async def _invoke_handle_call_tool(monkeypatch, arguments: dict) -> AsyncMock:
-    """Run handle_call_tool with all external deps stubbed; return the simple_run_flow mock."""
+async def _invoke_handle_call_tool(monkeypatch, arguments: dict, *, authenticated_caller="user-1") -> AsyncMock:
+    """Run handle_call_tool with all external deps stubbed; return the simple_run_flow mock.
+
+    ``authenticated_caller`` is the principal that presented a credential, which the auth
+    dependency establishes before the handler runs. It is not the same as the principal the
+    flow executes as: a project with ``auth_type="none"`` executes as its owner for an
+    anonymous caller, so the handler cannot read ownership off the execution principal.
+    """
     # ``user_id`` matches the current user (see ``current_user_ctx`` below) so the
     # owner-override path in ``ensure_flow_permission`` is exercised; ``workspace_id``
     # is read by the same guard. ``data`` feeds the HITL support gate.
@@ -416,6 +469,7 @@ async def _invoke_handle_call_tool(monkeypatch, arguments: dict) -> AsyncMock:
     mcp_utils.get_mcp_config().enable_progress_notifications = False
 
     token = mcp_utils.current_user_ctx.set(SimpleNamespace(id="user-1"))
+    caller_token = mcp_utils.authenticated_caller_ctx.set(authenticated_caller)
     try:
         await mcp_utils.handle_call_tool(
             name="my_flow",
@@ -423,6 +477,7 @@ async def _invoke_handle_call_tool(monkeypatch, arguments: dict) -> AsyncMock:
             server=_build_fake_server(),
         )
     finally:
+        mcp_utils.authenticated_caller_ctx.reset(caller_token)
         mcp_utils.current_user_ctx.reset(token)
 
     return simple_run_flow_mock
@@ -440,6 +495,36 @@ async def test_handle_call_tool_uses_provided_session_id(monkeypatch):
     forwarded_request = simple_run_flow_mock.await_args.kwargs["input_request"]
     assert forwarded_request.session_id == "user-1-thread-7"
     assert forwarded_request.input_value == "hello"
+    assert simple_run_flow_mock.await_args.kwargs["expose_error_details"] is True
+
+
+@pytest.mark.asyncio
+async def test_handle_call_tool_hides_error_details_from_an_anonymous_caller(monkeypatch):
+    """A public project runs as its owner, so ownership cannot be read off the executor.
+
+    ``auth_type="none"`` establishes no caller. Comparing the execution principal to the
+    flow owner answered yes for everyone and handed anonymous callers the owner's raw
+    component errors, so the absence of a caller has to read as anonymous.
+    """
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello"},
+        authenticated_caller=None,
+    )
+
+    assert simple_run_flow_mock.await_args.kwargs["expose_error_details"] is False
+
+
+@pytest.mark.asyncio
+async def test_handle_call_tool_hides_error_details_from_a_different_user(monkeypatch):
+    """Authenticating as somebody else must not disclose the owner's internals either."""
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello"},
+        authenticated_caller="user-2",
+    )
+
+    assert simple_run_flow_mock.await_args.kwargs["expose_error_details"] is False
 
 
 @pytest.mark.asyncio

@@ -1,11 +1,11 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 
 test(
   "should copy code from playground modal",
@@ -13,77 +13,9 @@ test(
     tag: ["@release"],
   },
   async ({ page }) => {
-    skipIfMissing.openAiKey();
-    loadDotenvIfLocal(__dirname);
-    await openBlankFlow(page);
-    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatOutput);
-
-    await page
-      .getByTestId("input_outputChat Output")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 400, y: 100 },
-      });
-
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatInput);
-
-    await page
-      .getByTestId("input_outputChat Input")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 100 },
-      });
-
-    await page.getByTestId("sidebar-search-input").click();
-    await page
-      .getByTestId("sidebar-search-input")
-      .fill(TEXTS.providerOpenAiSearch);
-
-    const openAIComponent = page.getByTestId("openaiOpenAI");
-    await skipIfComponentUnavailable(openAIComponent, "OpenAI");
-
-    await openAIComponent.dragTo(page.locator('//*[@id="react-flow-id"]'), {
-      targetPosition: { x: 100, y: 200 },
-    });
-
-    await initialGPTsetup(page);
-    await adjustScreenView(page);
-
-    await page.getByText("OpenAI", { exact: true }).last().click();
-
-    await expect(
-      page.getByTestId("handle-chatinput-noshownode-chat message-source"),
-    ).toBeVisible();
-
-    if (await page.getByTestId("remove-icon-badge").isVisible()) {
-      await page.getByTestId("remove-icon-badge").click();
-    }
-
-    if (await page.getByTestId("remove-icon-badge").isVisible()) {
-      await page.getByTestId("remove-icon-badge").click();
-    }
-
-    await page
-      .getByTestId("popover-anchor-input-api_key")
-      .fill(process.env.OPENAI_API_KEY || "");
-
-    await page
-      .getByTestId("handle-chatinput-noshownode-chat message-source")
-      .click();
-    await page
-      .getByTestId("handle-openaimodelcomponent-shownode-input-left")
-      .click();
-
-    await page
-      .getByTestId("handle-openaimodelcomponent-shownode-model response-right")
-      .click();
-    await page
-      .getByTestId("handle-chatoutput-noshownode-inputs-target")
-      .last()
-      .click();
+    await seedLoopbackProvider(page);
+    await openStarterProject(page, TEXTS.templateBasicPrompting);
+    await configureLoopbackOpenAI(page);
     await adjustScreenView(page);
 
     await page
@@ -104,10 +36,6 @@ test(
     });
 
     await page.getByTestId("button-send").click();
-
-    await page.getByTestId("api_tab_python").isVisible({
-      timeout: 100000,
-    });
 
     await page.waitForSelector('[data-testid="copy-code-button"]', {
       state: "visible",
@@ -131,26 +59,31 @@ test(
   async ({ page }) => {
     await openBlankFlow(page);
 
-    expect(await page.getByTestId("playground-btn-flow").isDisabled());
+    await expect(page.getByTestId("playground-btn-flow")).toBeDisabled();
+    await expect(page.getByText("Langflow Chat")).toBeHidden();
 
-    expect(await page.getByText("Langflow Chat").isHidden());
-
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatOutput);
-
-    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
-      timeout: 30000,
+    await addComponentFromSidebar(page, {
+      search: TEXTS.searchChatOutput,
+      testId: "input_outputChat Output",
+      hoverAdd: true,
+      addButtonSlug: "chat-output",
     });
-    await page
-      .locator('//*[@id="input_outputChat Output"]')
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
+    await expect(
+      page.getByRole("group", { name: "Chat Output node" }),
+    ).toBeAttached();
 
     await adjustScreenView(page);
 
+    await expect(page.getByTestId("playground-btn-flow-io")).toBeEnabled();
     await page.getByTestId("playground-btn-flow-io").click({ force: true });
 
-    expect(await page.getByText("Langflow Chat").isVisible());
+    await expect(
+      page.getByRole("dialog", { name: "Playground" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        "Add a Chat Input component to your flow to send messages.",
+      ),
+    ).toBeVisible();
   },
 );

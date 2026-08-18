@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import type { ModelOption } from "@/components/core/parameterRenderComponent/components/modelInputComponent";
@@ -58,6 +59,13 @@ export function StepReview({
 }: StepReviewProps) {
   const { t } = useTranslation();
   const selectedBackend = getDBProviderOption(backendType);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [menuContainer, setMenuContainer] = useState<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    setMenuContainer(
+      rootRef.current?.closest<HTMLElement>('[role="dialog"]') ?? null,
+    );
+  }, []);
   // Use the same validator that gates "Next Step" so the summary only
   // shows pairs the backend will actually accept.
   const populatedRunPairs = filterValidMetadataPairs(metadataPairs);
@@ -66,7 +74,7 @@ export function StepReview({
   ).length;
 
   return (
-    <div className="flex flex-col gap-3 h-full min-h-0">
+    <div className="flex flex-col gap-3 h-full min-h-0" ref={rootRef}>
       {/* Chunk Preview Header */}
       <div className="flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
@@ -97,6 +105,7 @@ export function StepReview({
               <DropdownMenuContent
                 align="end"
                 className="max-w-[160px] overflow-y-auto"
+                container={menuContainer}
               >
                 {files.map((file, idx) => (
                   <DropdownMenuItem
@@ -118,6 +127,7 @@ export function StepReview({
             className="h-7 w-7 rounded-md hover:bg-accent"
             disabled={chunkPreviews.length === 0 || currentChunkIndex === 0}
             onClick={() => onCurrentChunkIndexChange(currentChunkIndex - 1)}
+            aria-label={t("knowledge.previousChunkPreview")}
           >
             <ForwardedIconComponent
               name="ChevronLeft"
@@ -138,6 +148,7 @@ export function StepReview({
               currentChunkIndex === chunkPreviews.length - 1
             }
             onClick={() => onCurrentChunkIndexChange(currentChunkIndex + 1)}
+            aria-label={t("knowledge.nextChunkPreview")}
           >
             <ForwardedIconComponent
               name="ChevronRight"

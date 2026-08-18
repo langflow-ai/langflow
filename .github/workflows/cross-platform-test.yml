@@ -12,11 +12,11 @@ on:
     inputs:
       base-artifact-name:
         description: "Name of the base package artifact"
-        required: true
+        required: false
         type: string
       main-artifact-name:
         description: "Name of the main package artifact"
-        required: true
+        required: false
         type: string
       lfx-artifact-name:
         description: "Name of the LFX package artifact"
@@ -49,10 +49,11 @@ jobs:
       bundles-artifact-name: ${{ steps.set-names.outputs.bundles-artifact-name }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: "3.13"
@@ -99,28 +100,28 @@ jobs:
           echo "bundles-found=1" >> $GITHUB_OUTPUT
           ls -la bundles-dist/
       - name: Upload lfx artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: adhoc-dist-lfx
           path: src/lfx/dist
       - name: Upload SDK artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: adhoc-dist-sdk
           path: src/sdk/dist
       - name: Upload base artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: adhoc-dist-base
           path: src/backend/base/dist
       - name: Upload main artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: adhoc-dist-main
           path: dist
       - name: Upload bundles artifact
         if: steps.build-bundles.outputs.bundles-found == '1'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: adhoc-dist-bundles
           path: bundles-dist
@@ -140,7 +141,10 @@ jobs:
   test-installation-stable:
     name: Install & Run - ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.python-version }}
     needs: [build-if-needed]
-    if: always() && (needs.build-if-needed.result == 'success' || needs.build-if-needed.result == 'skipped')
+    if: |
+      always() &&
+      (needs.build-if-needed.result == 'success' || needs.build-if-needed.result == 'skipped') &&
+      (inputs.langflow-version != '' || inputs.main-artifact-name != '' || needs.build-if-needed.outputs.main-artifact-name != '')
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -215,14 +219,15 @@ jobs:
         shell: bash
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           architecture: ${{ matrix.arch == 'amd64' && 'x64' || matrix.arch }}
 
       - name: Setup UV
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: false
           ignore-empty-workdir: true
 
@@ -239,35 +244,35 @@ jobs:
       # Download artifacts for wheel installation
       - name: Download langflow-sdk package artifact
         if: steps.install-method.outputs.method == 'wheel' && (inputs.sdk-artifact-name != '' || needs.build-if-needed.outputs.sdk-artifact-name != '')
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.sdk-artifact-name || needs.build-if-needed.outputs.sdk-artifact-name || 'adhoc-dist-sdk' }}
           path: ./sdk-dist
 
       - name: Download LFX package artifact
         if: steps.install-method.outputs.method == 'wheel' && (inputs.lfx-artifact-name != '' || needs.build-if-needed.outputs.lfx-artifact-name != '')
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.lfx-artifact-name || needs.build-if-needed.outputs.lfx-artifact-name || 'adhoc-dist-lfx' }}
           path: ./lfx-dist
 
       - name: Download base package artifact
-        if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v7
+        if: steps.install-method.outputs.method == 'wheel' && (inputs.base-artifact-name != '' || needs.build-if-needed.outputs.base-artifact-name != '')
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name || 'adhoc-dist-base' }}
           path: ./base-dist
 
       - name: Download main package artifact
-        if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v7
+        if: steps.install-method.outputs.method == 'wheel' && (inputs.main-artifact-name != '' || needs.build-if-needed.outputs.main-artifact-name != '')
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.main-artifact-name || needs.build-if-needed.outputs.main-artifact-name || 'adhoc-dist-main' }}
           path: ./main-dist
 
       - name: Download bundles package artifact
         if: steps.install-method.outputs.method == 'wheel' && (inputs.bundles-artifact-name != '' || needs.build-if-needed.outputs.bundles-artifact-name != '')
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.bundles-artifact-name || needs.build-if-needed.outputs.bundles-artifact-name }}
           path: ./bundles-dist
@@ -323,7 +328,9 @@ jobs:
           fi
 
           BASE_WHEELS=(./base-dist/*.whl)
-          install_wheels "base" "${BASE_WHEELS[@]}"
+          if [ ${#BASE_WHEELS[@]} -gt 0 ]; then
+            install_wheels "base" "${BASE_WHEELS[@]}"
+          fi
 
           if [ -d ./bundles-dist ]; then
             BUNDLE_WHEELS=(./bundles-dist/*.whl)
@@ -470,7 +477,10 @@ jobs:
   test-installation-experimental:
     name: Install & Run - ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.python-version }} (Experimental)
     needs: [build-if-needed]
-    if: always() && (needs.build-if-needed.result == 'success' || needs.build-if-needed.result == 'skipped')
+    if: |
+      always() &&
+      (needs.build-if-needed.result == 'success' || needs.build-if-needed.result == 'skipped') &&
+      (inputs.langflow-version != '' || inputs.main-artifact-name != '' || needs.build-if-needed.outputs.main-artifact-name != '')
     runs-on: ${{ matrix.runner }}
     continue-on-error: true
     strategy:
@@ -517,14 +527,15 @@ jobs:
         shell: bash
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           architecture: ${{ matrix.arch == 'amd64' && 'x64' || matrix.arch }}
 
       - name: Setup UV
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: false
           ignore-empty-workdir: true
 
@@ -541,35 +552,35 @@ jobs:
       # Download artifacts for wheel installation
       - name: Download langflow-sdk package artifact
         if: steps.install-method.outputs.method == 'wheel' && (inputs.sdk-artifact-name != '' || needs.build-if-needed.outputs.sdk-artifact-name != '')
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.sdk-artifact-name || needs.build-if-needed.outputs.sdk-artifact-name || 'adhoc-dist-sdk' }}
           path: ./sdk-dist
 
       - name: Download LFX package artifact
         if: steps.install-method.outputs.method == 'wheel' && (inputs.lfx-artifact-name != '' || needs.build-if-needed.outputs.lfx-artifact-name != '')
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.lfx-artifact-name || needs.build-if-needed.outputs.lfx-artifact-name || 'adhoc-dist-lfx' }}
           path: ./lfx-dist
 
       - name: Download base package artifact
-        if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v7
+        if: steps.install-method.outputs.method == 'wheel' && (inputs.base-artifact-name != '' || needs.build-if-needed.outputs.base-artifact-name != '')
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name || 'adhoc-dist-base' }}
           path: ./base-dist
 
       - name: Download main package artifact
-        if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v7
+        if: steps.install-method.outputs.method == 'wheel' && (inputs.main-artifact-name != '' || needs.build-if-needed.outputs.main-artifact-name != '')
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.main-artifact-name || needs.build-if-needed.outputs.main-artifact-name || 'adhoc-dist-main' }}
           path: ./main-dist
 
       - name: Download bundles package artifact
         if: steps.install-method.outputs.method == 'wheel' && (inputs.bundles-artifact-name != '' || needs.build-if-needed.outputs.bundles-artifact-name != '')
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.bundles-artifact-name || needs.build-if-needed.outputs.bundles-artifact-name }}
           path: ./bundles-dist
@@ -621,7 +632,9 @@ jobs:
           fi
 
           BASE_WHEELS=(./base-dist/*.whl)
-          install_wheels "base" "${BASE_WHEELS[@]}"
+          if [ ${#BASE_WHEELS[@]} -gt 0 ]; then
+            install_wheels "base" "${BASE_WHEELS[@]}"
+          fi
 
           if [ -d ./bundles-dist ]; then
             BUNDLE_WHEELS=(./bundles-dist/*.whl)
@@ -679,7 +692,7 @@ jobs:
           fi
 
           # Reinstall base
-          BASE_WHEEL=$(find ./base-dist -name "*.whl" -type f | head -1)
+          BASE_WHEEL=$(find ./base-dist -name "*.whl" -type f 2>/dev/null | head -1 || true)
           if [ -n "$BASE_WHEEL" ]; then
             echo "Force reinstalling langflow-base: $BASE_WHEEL"
             INSTALL_WHEELS=("$BASE_WHEEL")
@@ -747,7 +760,7 @@ jobs:
           fi
 
           # Reinstall base
-          BASE_WHEEL=$(find ./base-dist -name "*.whl" -type f | head -1)
+          BASE_WHEEL=$(find ./base-dist -name "*.whl" -type f 2>/dev/null | head -1 || true)
           if [ -n "$BASE_WHEEL" ]; then
             echo "Force reinstalling langflow-base: $BASE_WHEEL"
             INSTALL_WHEELS=("$BASE_WHEEL")
@@ -914,26 +927,28 @@ jobs:
       contents: read
     steps:
       - name: Setup UV
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: false
           python-version: "3.14"
 
       - name: Download langflow-sdk package artifact
         if: inputs.sdk-artifact-name != '' || needs.build-if-needed.outputs.sdk-artifact-name != ''
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.sdk-artifact-name || needs.build-if-needed.outputs.sdk-artifact-name || 'adhoc-dist-sdk' }}
           path: ./sdk-dist
 
       - name: Download LFX package artifact
-        uses: actions/download-artifact@v7
+        if: inputs.lfx-artifact-name != '' || needs.build-if-needed.outputs.lfx-artifact-name != ''
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.lfx-artifact-name || needs.build-if-needed.outputs.lfx-artifact-name || 'adhoc-dist-lfx' }}
           path: ./lfx-dist
 
       - name: Download base package artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name || 'adhoc-dist-base' }}
           path: ./base-dist
@@ -985,8 +1000,11 @@ jobs:
               assert not entry_points(group=group), f"Extension entry points registered in {group}"
 
           scripts = Path(sys.executable).parent
-          assert (scripts / "langflow").is_file()
-          assert not (scripts / "langflow-base").exists()
+          # Must track [project.scripts] in src/backend/base/pyproject.toml. On the
+          # 1.12 line #14339 renamed this entry point back to `langflow`; asserting
+          # `langflow-base` here is only correct on branches that predate it.
+          assert (scripts / "langflow").is_file(), f"langflow console script missing from {scripts}"
+          assert not (scripts / "langflow-base").exists(), "langflow-base console script is not part of the 1.12 base distribution"
           provided_extras = set(metadata("langflow-base").get_all("Provides-Extra", []))
           assert {"complete", "all"} <= provided_extras
           compatibility_requirements = [

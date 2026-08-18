@@ -394,6 +394,12 @@ class BaseConfigResponse(BaseModel):
     # Mirrors ``LANGFLOW_AUTHZ_ENABLED``. EE/custom frontends gate the Access
     # Control settings entry on this flag; OSS UI ignores it until wired.
     authz_enabled: bool = False
+    # Signals that at least one component or template is governed without
+    # exposing the policy contents through the public config response.
+    catalog_governance_enabled: bool = False
+    # The editor uses the same policy as the build path when deciding whether
+    # drifted built-in components must block a run.
+    substitute_outdated_component_code: bool
 
 
 class PublicConfigResponse(BaseConfigResponse):
@@ -407,12 +413,19 @@ class PublicConfigResponse(BaseConfigResponse):
     allow_custom_components: bool
 
     @classmethod
-    def from_settings(cls, settings: Settings, auth_settings) -> "PublicConfigResponse":
+    def from_settings(
+        cls,
+        settings: Settings,
+        auth_settings,
+        *,
+        catalog_governance_enabled: bool = False,
+    ) -> "PublicConfigResponse":
         """Create a PublicConfigResponse instance using values from a Settings object.
 
         Parameters:
             settings (Settings): The Settings object containing configuration values.
             auth_settings: Auth settings (for ``authz_enabled``).
+            catalog_governance_enabled: Whether any catalog policy currently restricts resources.
 
         Returns:
             PublicConfigResponse: An instance populated with public-safe configuration values.
@@ -426,7 +439,9 @@ class PublicConfigResponse(BaseConfigResponse):
             mcp_base_url=settings.mcp_base_url,
             enable_extension_reload=settings.enable_extension_reload,
             allow_custom_components=settings.allow_custom_components,
+            substitute_outdated_component_code=settings.substitute_outdated_component_code,
             authz_enabled=bool(getattr(auth_settings, "AUTHZ_ENABLED", False)),
+            catalog_governance_enabled=catalog_governance_enabled,
         )
 
 
@@ -463,14 +478,27 @@ class ConfigResponse(BaseConfigResponse):
     # Mirrors LANGFLOW_AGENTIC_EXPERIENCE (default on) so the Assistant panel
     # can explain, rather than 404, when the experience is disabled server-side.
     agentic_experience: bool = True
+    # True when local Chroma may back a knowledge base or memory base — i.e. on
+    # the dev profile. The production profile refuses it (vectors on the serving
+    # box's own disk don't survive a restart and can't be shared across
+    # replicas), so the vector-store picker hides the option rather than offering
+    # a choice the create endpoint always rejects with 422.
+    local_vector_store_available: bool = True
 
     @classmethod
-    def from_settings(cls, settings: Settings, auth_settings) -> "ConfigResponse":
+    def from_settings(
+        cls,
+        settings: Settings,
+        auth_settings,
+        *,
+        catalog_governance_enabled: bool = False,
+    ) -> "ConfigResponse":
         """Create a ConfigResponse instance using values from a Settings object and AuthSettings.
 
         Parameters:
             settings (Settings): The Settings object containing configuration values.
             auth_settings: The AuthSettings object containing authentication configuration values.
+            catalog_governance_enabled: Whether any catalog policy currently restricts resources.
 
         Returns:
             ConfigResponse: An instance populated with configuration and feature flag values.
@@ -497,7 +525,9 @@ class ConfigResponse(BaseConfigResponse):
             default_folder_name=DEFAULT_FOLDER_NAME,
             hide_getting_started_progress=settings.hide_getting_started_progress,
             allow_custom_components=settings.allow_custom_components,
+            substitute_outdated_component_code=settings.substitute_outdated_component_code,
             authz_enabled=bool(getattr(auth_settings, "AUTHZ_ENABLED", False)),
+            catalog_governance_enabled=catalog_governance_enabled,
             embedded_mode=settings.embedded_mode,
             hide_logout_button=settings.hide_logout_button or settings.embedded_mode,
             hide_new_project_button=settings.hide_new_project_button or settings.embedded_mode,
@@ -507,6 +537,7 @@ class ConfigResponse(BaseConfigResponse):
             custom_component_admin_only=settings.custom_component_admin_only,
             a2a_enabled=settings.a2a_enabled,
             agentic_experience=settings.agentic_experience,
+            local_vector_store_available=settings.deployment_profile != "prod",
         )
 
 

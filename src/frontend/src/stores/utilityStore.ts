@@ -64,6 +64,13 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   allowCustomComponents: true,
   setAllowCustomComponents: (allowCustomComponents: boolean) =>
     set({ allowCustomComponents }),
+  substituteOutdatedComponentCode: true,
+  setSubstituteOutdatedComponentCode: (
+    substituteOutdatedComponentCode: boolean,
+  ) => set({ substituteOutdatedComponentCode }),
+  catalogGovernanceEnabled: false,
+  setCatalogGovernanceEnabled: (catalogGovernanceEnabled: boolean) =>
+    set({ catalogGovernanceEnabled }),
   a2aEnabled: false,
   setA2aEnabled: (a2aEnabled: boolean) => set({ a2aEnabled }),
   // Default true (backend default) so the panel doesn't flash the disabled
@@ -71,6 +78,9 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   agenticExperienceEnabled: true,
   setAgenticExperienceEnabled: (agenticExperienceEnabled: boolean) =>
     set({ agenticExperienceEnabled }),
+  localVectorStoreAvailable: true,
+  setLocalVectorStoreAvailable: (localVectorStoreAvailable: boolean) =>
+    set({ localVectorStoreAvailable }),
   mcpBaseUrl: "",
   setMcpBaseUrl: (mcpBaseUrl: string) => set({ mcpBaseUrl }),
   // Default false to match the backend's "reload disabled" default until the

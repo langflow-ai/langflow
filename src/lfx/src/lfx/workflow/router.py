@@ -20,7 +20,7 @@ import asyncio
 import contextlib
 import json
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
@@ -29,6 +29,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request,
 from lfx.cli.common import execute_graph_with_capture
 from lfx.cli.runtime_variables import apply_global_vars_to_graph, build_request_variables_from_global_vars
 from lfx.events.event_manager import create_stream_tokens_event_manager
+from lfx.observability import execution_protocol
 from lfx.processing.process import run_graph_internal
 from lfx.run._defaults import apply_run_defaults
 from lfx.schema.schema import InputValueRequest
@@ -53,6 +54,11 @@ from lfx.workflow.converters import (
     create_error_response,
     parse_workflow_run_request,
     run_response_to_workflow_response,
+)
+from lfx.workflow.end_user_identity import (
+    EndUserIdentityRequiredError,
+    resolve_end_user_identity,
+    scope_session_for_identity,
 )
 
 if TYPE_CHECKING:
@@ -135,6 +141,62 @@ class _RunResponse:
     session_id: str | None
 
 
+def _scope_parsed_to_end_user(parsed, flow, http_request: Request):
+    """Scope a parsed run to its serving-plane end-user identity.
+
+    Reads the trusted end-user header (per lfx serving settings), merges an
+    identified user's id into the effective ``session_id`` so ``(end-user id,
+    session_id)`` keys per-user memory, and returns the updated parsed run. A
+    request with no identity runs anonymously: it is moved into the reserved
+    ``anon::`` namespace (so it cannot address an identified session's memory)
+    and marked non-persisting; enforcement of the no-persist contract is applied
+    where the run executes.
+
+    Feature-off (no header configured) and the fail-closed trust gate are handled
+    by :func:`resolve_end_user_identity`, so with the default settings this is a
+    no-op and behavior is byte-for-byte identical to before the feature existed.
+
+    Raises:
+        HTTPException: 401 when identity is required but absent.
+    """
+    settings_service = get_settings_service()
+    # The None guard covers runtimes where the lfx service manager genuinely has no
+    # settings service. The serving fields themselves are accessed directly — they
+    # are statically declared on SecuritySettings, and a silent getattr fallback
+    # would turn a future rename into "security feature off" with no signal.
+    settings = settings_service.settings if settings_service is not None else None
+    header_name = settings.serving_end_user_header if settings is not None else None
+    if not header_name:
+        return parsed
+
+    try:
+        identity = resolve_end_user_identity(
+            header_name=header_name,
+            trust_proxy_headers=bool(settings.serving_trust_proxy_headers),
+            require_identity=bool(settings.serving_end_user_required),
+            get_header=http_request.headers.get,
+        )
+    except EndUserIdentityRequiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={
+                "error": "End-user identity required",
+                "code": "END_USER_IDENTITY_REQUIRED",
+                "message": str(exc),
+            },
+        ) from exc
+
+    default_session_id = flow.session_id_default or flow.flow_id
+    scoped = scope_session_for_identity(
+        identity,
+        requested_session_id=parsed.session_id,
+        default_session_id=default_session_id,
+    )
+    # An anonymous request runs ephemerally: scoped.persist is False, which the
+    # execution path threads onto the graph so astore_message skips the DB write.
+    return replace(parsed, session_id=scoped.session_id, persist_messages=scoped.persist)
+
+
 async def check_developer_api_enabled() -> None:
     """Router guard: 403 when the developer API is disabled in lfx settings.
 
@@ -176,7 +238,7 @@ def _reject_unsupported_fields(parsed: ParsedWorkflowRun) -> None:
     if unsupported:
         fields = ", ".join(unsupported)
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "error": "Unsupported request fields",
                 "code": "LFX_SERVE_UNSUPPORTED_FIELDS",
@@ -213,7 +275,7 @@ def _validate_output_ids(output_ids: list[str] | None, terminal_node_ids: list[s
     unknown = [output_id for output_id in output_ids if output_id not in known]
     if unknown:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "error": "Unknown output_ids",
                 "code": "UNKNOWN_OUTPUT_IDS",
@@ -255,14 +317,15 @@ async def run_workflow_sync(
     # os.environ credentials the operator disabled with LFX_SERVE_NO_ENV_FALLBACK.
     no_env_fallback_token = activate_no_env_fallback(disabled=bool(graph.context.get("no_env_fallback")))
     try:
-        run_outputs, session_id = await run_graph_internal(
-            graph,
-            flow_id,
-            stream=False,
-            session_id=parsed.session_id,
-            inputs=_build_inputs(parsed),
-            outputs=terminal_ids,
-        )
+        with execution_protocol("lfx.serve"):
+            run_outputs, session_id = await run_graph_internal(
+                graph,
+                flow_id,
+                stream=False,
+                session_id=parsed.session_id,
+                inputs=_build_inputs(parsed),
+                outputs=terminal_ids,
+            )
     except Exception as exc:  # noqa: BLE001
         return create_error_response(
             flow_id=flow_id,
@@ -317,13 +380,16 @@ async def stream_workflow_frames(
     async def drive() -> None:
         nonlocal drive_error
         try:
-            await execute_graph_with_capture(
-                graph,
-                parsed.input_value or None,
-                session_id=parsed.session_id,
-                event_manager=event_manager,
-                user_id=user_id,
-            )
+            # drive() is its own task, so the set/reset pair cannot straddle the enclosing
+            # generator's suspension points.
+            with execution_protocol("lfx.serve"):
+                await execute_graph_with_capture(
+                    graph,
+                    parsed.input_value or None,
+                    session_id=parsed.session_id,
+                    event_manager=event_manager,
+                    user_id=user_id,
+                )
             # lfx's async_start does not emit a terminal ``end`` event (the
             # langflow build loop does). Emit one so the adapter closes the run
             # cleanly: the agui adapter rides RUN_FINISHED on translating ``end``,
@@ -422,7 +488,7 @@ def create_workflow_router(
         # caller may access it (matches the pre-seam handler's precedence).
         if request.stream_protocol not in STREAM_ADAPTERS:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail={
                     "error": "Unknown stream_protocol",
                     "code": "UNKNOWN_STREAM_PROTOCOL",
@@ -435,13 +501,17 @@ def create_workflow_router(
         await host.authorize(caller, flow, WorkflowAction.EXECUTE)
 
         parsed = parse_workflow_run_request(request)
+        # Serving-plane end-user scoping: merge an identified end-user into the
+        # effective session_id so per-user memory is isolated. No-op under the
+        # default settings (feature off / header untrusted).
+        parsed = _scope_parsed_to_end_user(parsed, flow, http_request)
         if not host.supports_request_overrides:
             _reject_unsupported_fields(parsed)
 
         if parsed.mode == "background":
             if not host.supports_background:
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail={
                         "error": "Unsupported mode",
                         "code": "LFX_SERVE_UNSUPPORTED_MODE",

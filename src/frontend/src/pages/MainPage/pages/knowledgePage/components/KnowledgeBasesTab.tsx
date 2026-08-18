@@ -1,12 +1,11 @@
-import type { RowClickedEvent, SelectionChangedEvent } from "ag-grid-community";
+import type { CellKeyDownEvent, RowClickedEvent } from "ag-grid-community";
 import type { AgGridReact } from "ag-grid-react";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
+import DataTableTab from "@/components/core/dataTableTabComponent";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import Loading from "@/components/ui/loading";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
@@ -14,7 +13,10 @@ import type {
   IngestionRunInfo,
   PaginatedIngestionRunResponse,
 } from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-runs";
-import { useGetKnowledgeBases } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
+import {
+  type KnowledgeBaseInfo,
+  useGetKnowledgeBases,
+} from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
@@ -24,7 +26,6 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { updateIds } from "@/utils/reactflowUtils";
-import { cn } from "@/utils/utils";
 import { createKnowledgeBaseColumns } from "../config/knowledgeBaseColumns";
 import { isBusyStatus } from "../config/statusConfig";
 import { useKnowledgeBaseActions } from "../hooks/useKnowledgeBaseActions";
@@ -135,6 +136,32 @@ const KnowledgeBasesTab = ({
   const folderIdUrl = folderId ?? myCollectionId;
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const createTriggerRef = useRef<HTMLElement | null>(null);
+  const deleteFocusKbNameRef = useRef<string | null>(null);
+  const bulkDeleteTriggerRef = useRef<HTMLElement | null>(null);
+
+  const captureActiveElement = () =>
+    document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+
+  const focusRowActionsForKb = (kbName: string | null) => {
+    if (!kbName) return;
+    // Prefer the actions trigger whose aria-label includes the KB name.
+    // AG Grid may remount cell renderers while a dialog is open, so always
+    // re-query the live DOM instead of focusing a stale element reference.
+    const triggers = document.querySelectorAll<HTMLElement>(
+      '[data-testid="kb-row-actions-trigger"]',
+    );
+    for (const trigger of triggers) {
+      const label = trigger.getAttribute("aria-label") ?? "";
+      if (label.includes(kbName)) {
+        trigger.focus();
+        return;
+      }
+    }
+    triggers[0]?.focus();
+  };
 
   const {
     data: knowledgeBases,
@@ -193,18 +220,6 @@ const KnowledgeBasesTab = ({
 
   // --- Event handlers ---
 
-  const handleSelectionChange = (event: SelectionChangedEvent) => {
-    const selectedRows = event.api.getSelectedRows();
-    setSelectedFiles(selectedRows);
-    if (selectedRows.length > 0) {
-      setQuantitySelected(selectedRows.length);
-    } else {
-      setTimeout(() => {
-        setQuantitySelected(0);
-      }, 300);
-    }
-  };
-
   const handleCreateKnowledge = async () => {
     const knowledgeBasesExample = examples.find(
       (example) => example.name === "Knowledge Ingestion",
@@ -228,11 +243,76 @@ const KnowledgeBasesTab = ({
     }
   };
 
+  // AG Grid navigates cell-by-cell and never focuses the action button inside a
+  // cell, so keyboard users can't open the row actions menu. Open it when
+  // Enter/Space is pressed while the actions cell is focused (WCAG 2.1.1).
+  const handleCellKeyDown = (event: CellKeyDownEvent<KnowledgeBaseInfo>) => {
+    const keyboardEvent = event.event as KeyboardEvent | undefined;
+    if (!keyboardEvent) return;
+
+    if (event.column?.getColId() === "actions") {
+      if (keyboardEvent.key !== "Enter" && keyboardEvent.key !== " ") {
+        return;
+      }
+      const target = keyboardEvent.target as HTMLElement | null;
+      // The key was already re-dispatched onto the trigger button: let Radix's
+      // own keyboard handler open the menu and don't recurse.
+      if (target?.tagName === "BUTTON") {
+        return;
+      }
+      const actionsButton = target
+        ?.closest?.('[role="gridcell"]')
+        ?.querySelector<HTMLElement>('[data-testid="kb-row-actions-trigger"]');
+      if (!actionsButton) {
+        return;
+      }
+      keyboardEvent.preventDefault();
+      // Focusing an AG Grid cell renderer can synchronously remount it. Dispatch
+      // to the live Radix trigger first so Enter/Space is not sent to a stale ref.
+      actionsButton.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: keyboardEvent.key,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      return;
+    }
+
+    if (keyboardEvent.key !== "Enter") return;
+    const target = keyboardEvent.target as HTMLElement | null;
+    if (target?.closest("button, a, input, [role='menuitem']")) return;
+
+    if (onRowClick && event.data) {
+      keyboardEvent.preventDefault();
+      onRowClick(event.data);
+    }
+  };
+
   const handleAddSources = (
     knowledgeBase: Parameters<typeof actions.handleAddSources>[0],
   ) => {
+    createTriggerRef.current = captureActiveElement();
     actions.handleAddSources(knowledgeBase);
     setIsUploadModalOpen(true);
+  };
+
+  const handleOpenCreateModal = () => {
+    createTriggerRef.current = captureActiveElement();
+    setIsUploadModalOpen(true);
+  };
+
+  const handleOpenBulkDeleteModal = () => {
+    bulkDeleteTriggerRef.current = captureActiveElement();
+    actions.setIsBulkDeleteModalOpen(true);
+  };
+
+  const handleDeleteWithFocus = (
+    knowledgeBase: Parameters<typeof actions.handleDelete>[0],
+    _focusTarget?: HTMLElement | null,
+  ) => {
+    deleteFocusKbNameRef.current = knowledgeBase.name;
+    actions.handleDelete(knowledgeBase);
   };
 
   const existingKnowledgeBaseData = useMemo(() => {
@@ -263,7 +343,7 @@ const KnowledgeBasesTab = ({
   const columnDefs = createKnowledgeBaseColumns(
     {
       onViewChunks: onViewChunks ?? onRowClick,
-      onDelete: actions.handleDelete,
+      onDelete: handleDeleteWithFocus,
       onAddSources: handleAddSources,
       onStopIngestion: actions.handleStopIngestion,
     },
@@ -281,98 +361,78 @@ const KnowledgeBasesTab = ({
 
   // --- Render ---
 
-  if (isLoading || !knowledgeBases || !Array.isArray(knowledgeBases)) {
-    return (
-      <div className="flex flex-1 w-full flex-col items-center justify-center gap-3">
-        <Loading size={36} />
-        <span className="text-sm text-muted-foreground pt-3">
-          {t("knowledge.loadingKnowledgeBases")}
-        </span>
-      </div>
-    );
-  }
-
-  if (knowledgeBases.length === 0) {
-    return (
-      <KnowledgeBaseEmptyState handleCreateKnowledge={handleCreateKnowledge} />
-    );
-  }
-
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex justify-between">
-        <div className="flex w-full xl:w-5/12">
-          <Input
-            icon="Search"
-            data-testid="search-kb-input"
-            type="text"
-            placeholder={t("knowledge.searchPlaceholder")}
-            className="w-full"
-            value={quickFilterText || ""}
-            onChange={(event) => setQuickFilterText(event.target.value)}
-          />
+    <DataTableTab<KnowledgeBaseInfo>
+      columnDefs={columnDefs}
+      rowData={sortedKnowledgeBases}
+      isLoading={isLoading || !knowledgeBases || !Array.isArray(knowledgeBases)}
+      loadingState={
+        <div className="flex flex-1 w-full flex-col items-center justify-center gap-3">
+          <Loading size={36} />
+          <span className="text-sm text-muted-foreground pt-3">
+            {t("knowledge.loadingKnowledgeBases")}
+          </span>
         </div>
-        {quantitySelected > 0 ? (
+      }
+      emptyState={
+        <KnowledgeBaseEmptyState
+          handleCreateKnowledge={handleCreateKnowledge}
+        />
+      }
+      searchPlaceholder={t("knowledge.searchPlaceholder")}
+      searchInputTestId="search-kb-input"
+      searchInputAriaLabel={t("knowledge.searchKnowledgeBases")}
+      quickFilterText={quickFilterText}
+      setQuickFilterText={setQuickFilterText}
+      toolbarActions={
+        quantitySelected > 0 ? (
           <Button
             variant="destructive"
-            className="flex items-center gap-2 font-semibold"
-            onClick={() => actions.setIsBulkDeleteModalOpen(true)}
+            className="flex items-center gap-2 font-semibold ml-4"
+            onClick={handleOpenBulkDeleteModal}
           >
             <ForwardedIconComponent name="Trash2" className="h-4 w-4" />
             {t("knowledge.deleteSelected", { count: quantitySelected })}
           </Button>
         ) : (
           <Button
-            className="flex items-center gap-2 font-semibold"
-            onClick={() => setIsUploadModalOpen(true)}
+            className="flex items-center gap-2 font-semibold ml-4"
+            onClick={handleOpenCreateModal}
           >
             <ForwardedIconComponent name="Plus" className="h-4 w-4" />
             {t("knowledge.addKnowledge")}
           </Button>
-        )}
-      </div>
-
-      <div className="flex h-full flex-col py-4">
-        <div className="relative h-full">
-          <TableComponent
-            rowHeight={45}
-            headerHeight={45}
-            cellSelection={false}
-            tableOptions={{ hide_options: true }}
-            suppressRowClickSelection={!isShiftPressed}
-            rowSelection="multiple"
-            onSelectionChanged={handleSelectionChange}
-            onRowClicked={handleRowClick}
-            columnDefs={columnDefs}
-            rowData={sortedKnowledgeBases}
-            className={cn(
-              "ag-no-border ag-knowledge-table group w-full",
-              isShiftPressed && quantitySelected > 0 && "no-select-cells",
-            )}
-            pagination
-            ref={tableRef}
-            quickFilterText={quickFilterText}
-            getRowId={(params) => params.data.dir_name}
-            gridOptions={{
-              stopEditingWhenCellsLoseFocus: true,
-              ensureDomOrder: true,
-              colResizeDefault: "shift",
-              paginationAutoPageSize: true,
-              isRowSelectable: (rowNode) => !isBusyStatus(rowNode.data?.status),
-            }}
-          />
-        </div>
-      </div>
-
+        )
+      }
+      setSelectedRows={setSelectedFiles}
+      setQuantitySelected={setQuantitySelected}
+      quantitySelected={quantitySelected}
+      isShiftPressed={isShiftPressed}
+      tableRef={tableRef}
+      tableClassName="ag-knowledge-table"
+      onRowClicked={handleRowClick}
+      onCellKeyDown={handleCellKeyDown}
+      getRowId={(params) => params.data.dir_name}
+      gridOptions={{
+        paginationAutoPageSize: true,
+        isRowSelectable: (rowNode) => !isBusyStatus(rowNode.data?.status),
+      }}
+    >
       <DeleteConfirmationModal
         open={actions.isDeleteModalOpen}
         setOpen={actions.setIsDeleteModalOpen}
         onConfirm={actions.confirmDelete}
         description={`knowledge base "${actions.knowledgeBaseToDelete?.name || ""}"`}
         note={t("knowledge.thisActionCannotBeUndone")}
-      >
-        <></>
-      </DeleteConfirmationModal>
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          const kbName = deleteFocusKbNameRef.current;
+          deleteFocusKbNameRef.current = null;
+          // AG Grid may remount the cell renderer while the dialog is open,
+          // so re-query the live trigger instead of focusing a stale node.
+          requestAnimationFrame(() => focusRowActionsForKb(kbName));
+        }}
+      />
 
       <DeleteConfirmationModal
         open={actions.isBulkDeleteModalOpen}
@@ -384,9 +444,12 @@ const KnowledgeBasesTab = ({
             ? `${selectedFiles.length - actions.deletableSelected.length} ingesting knowledge base(s) will be skipped. ${t("knowledge.thisActionCannotBeUndone")}`
             : t("knowledge.thisActionCannotBeUndone")
         }
-      >
-        <></>
-      </DeleteConfirmationModal>
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          bulkDeleteTriggerRef.current?.focus();
+          bulkDeleteTriggerRef.current = null;
+        }}
+      />
 
       <KnowledgeBaseUploadModal
         open={isUploadModalOpen}
@@ -407,13 +470,18 @@ const KnowledgeBasesTab = ({
             actions.setKnowledgeBaseForAddSources(null);
           }
         }}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          createTriggerRef.current?.focus();
+          createTriggerRef.current = null;
+        }}
         onSubmit={captureSubmit}
         existingKnowledgeBase={existingKnowledgeBaseData}
         existingKnowledgeBaseNames={
           knowledgeBases?.map((kb) => kb.dir_name) ?? []
         }
       />
-    </div>
+    </DataTableTab>
   );
 };
 

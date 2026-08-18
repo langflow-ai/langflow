@@ -156,6 +156,11 @@ module.exports = {
             "Develop/configuration-custom-database",
             {
               type: "doc",
+              id: "Develop/database-migrations",
+              label: "Database migrations"
+            },
+            {
+              type: "doc",
               id: "Develop/enterprise-database-guide",
               label: "Database guide for enterprise administrators"
             },
@@ -168,6 +173,8 @@ module.exports = {
           label: "Observability",
           items: [
             "Develop/logging",
+            "Develop/observability-opentelemetry",
+            "Develop/observability-new-relic",
             "Develop/observability-grafana-loki",
             "Develop/traces",
             {
@@ -238,6 +245,16 @@ module.exports = {
               type: "doc",
               id: "Deployment/deployment-docker",
               label: "Langflow Docker images"
+            },
+            {
+              type: "doc",
+              id: "Deployment/docker-image-profiles",
+              label: "Choose a Langflow image"
+            },
+            {
+              type: "doc",
+              id: "Deployment/downstream-bundle-profiles",
+              label: "Downstream bundle profiles"
             },
             {
               type: "doc",
@@ -492,6 +509,7 @@ module.exports = {
             "Components/bundles-cohere",
             "Components/bundles-cometapi",
             "Components/bundles-composio",
+            "Components/bundles-confluent",
             "Components/bundles-couchbase",
             "Components/bundles-cuga",
             "Components/bundles-datastax",
@@ -527,6 +545,7 @@ module.exports = {
             "Components/bundles-openai-compatible",
             "Components/bundles-openrouter",
             "Components/bundles-oracle",
+            "Components/bundles-orcarouter",
             "Components/bundles-paddle",
             "Components/bundles-perplexity",
             "Components/bundles-pgvector",

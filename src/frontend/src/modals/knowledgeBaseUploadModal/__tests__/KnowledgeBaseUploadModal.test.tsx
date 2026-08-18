@@ -459,9 +459,9 @@ describe("KnowledgeBaseUploadModal", () => {
           column_config: [
             { column_name: "text", vectorize: true, identifier: true },
           ],
-          // Phase 4 backend picker defaults: new KBs land on the
-          // local Chroma store until the user picks a different one.
-          backend_type: "chroma",
+          // Omit the implicit Chroma choice so the server can apply its
+          // configured default backend.
+          backend_type: undefined,
           backend_config: {},
         }),
       );
@@ -820,6 +820,34 @@ describe("KnowledgeBaseUploadModal", () => {
       await navigateToStep2(user);
       await waitFor(() =>
         expect(screen.getByText("Hello from chunk one")).toBeInTheDocument(),
+      );
+    });
+
+    it("disables the create button when chunk preview fails", async () => {
+      const user = userEvent.setup();
+      // The backend rejects e.g. chunk_overlap > chunk_size with a 422; the
+      // create button must grey out so the rejected config can't be submitted.
+      mockApiPost.mockRejectedValue({
+        response: {
+          data: {
+            detail:
+              "Chunk overlap (200) can't be larger than chunk size (100).",
+          },
+        },
+      });
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      const fileInput = document.getElementById(
+        "file-input",
+      ) as HTMLInputElement;
+      await user.upload(
+        fileInput,
+        new File(["hello world"], "test.txt", { type: "text/plain" }),
+      );
+      await navigateToStep2(user);
+      await waitFor(() =>
+        expect(screen.getByTestId("kb-create-button")).toBeDisabled(),
       );
     });
   });

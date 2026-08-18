@@ -865,6 +865,7 @@ class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
         assert not base_file.path.exists()
 
     @patch("lfx.base.data.cloud_storage_utils.create_google_drive_service")
+    @pytest.mark.usefixtures("fake_googleapiclient")
     def test_google_drive_temp_file_cleanup_on_download_failure(self, mock_create_service):
         """Test that temp file is cleaned up when Google Drive download fails."""
         from pathlib import Path

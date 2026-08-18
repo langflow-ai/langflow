@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from dataclasses import replace
 from typing import Annotated
 from uuid import UUID, uuid4
 
@@ -60,6 +61,7 @@ from lfx.workflow.converters import (
 from pydantic_core import ValidationError as PydanticValidationError
 from sqlalchemy.exc import OperationalError
 
+from langflow.api.utils.execution_errors import caller_owns_flow
 from langflow.api.v2.workflow_execution import (
     _execute_streaming_workflow,
     _resolve_execution_timeout,
@@ -94,6 +96,7 @@ from langflow.services.deps import (
     get_task_service,
 )
 from langflow.services.jobs.exceptions import DuplicateJobError
+from langflow.services.warm_registry.resolver import resolve_warm_flow_for_execution
 
 # Finished states a late /stop must not rewrite (CANCELLED is handled separately
 # with its own idempotent early return).
@@ -131,6 +134,13 @@ async def resolve_flow_for_execution(flow_id: str, current_user: UserRead):
     unexpected a sanitized 500.
     """
     try:
+        warm_flow = await resolve_warm_flow_for_execution(
+            str(flow_id),
+            current_user.id,
+            widen_for_shares=True,
+        )
+        if warm_flow is not None:
+            return warm_flow
         return await get_flow_by_id_or_endpoint_name(
             str(flow_id),
             current_user.id,
@@ -223,6 +233,7 @@ async def authorize_flow_action(
 
 def _apply_execution_gates(parsed, flow, current_user: UserRead):
     """Run request gates and return any server-sanitized execution payload."""
+    expose_error_details = caller_owns_flow(flow, current_user)
     _reject_unsupported_sync_fields(parsed)
     _reject_sync_only_fields(parsed)
     try:
@@ -234,7 +245,12 @@ def _apply_execution_gates(parsed, flow, current_user: UserRead):
         if exc.status_code == status.HTTP_404_NOT_FOUND:
             raise _flow_not_found_http_exception(str(parsed.flow_id)) from exc
         raise
-    return _validate_flow_data_for_execution(parsed, flow, current_user)
+    return _validate_flow_data_for_execution(
+        parsed,
+        flow,
+        current_user,
+        expose_error_details=expose_error_details,
+    )
 
 
 async def run_sync_with_mapping(
@@ -411,13 +427,31 @@ def _unknown_protocol_http_exception(exc: UnknownStreamProtocolError) -> HTTPExc
     names so clients can self-correct.
     """
     return HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         detail={
             "error": "Unknown stream_protocol",
             "code": "UNKNOWN_STREAM_PROTOCOL",
             "message": f"Unknown stream_protocol {exc.name!r}.",
             "available": exc.available,
         },
+    )
+
+
+def _parse_persisted_workflow_request(request: dict) -> ParsedWorkflowRun:
+    """Re-parse a persisted background/resume request into a ``ParsedWorkflowRun``.
+
+    ``persist_messages`` is an internal serving-plane decision (anonymous runs are
+    ephemeral), not a client wire field — ``WorkflowRunRequest`` forbids extras, so
+    it is popped before constructing the request and re-applied to the parsed run.
+    Without this, the worker re-parse would reset it to the ``True`` default and an
+    anonymous background/resume run would persist memory it must not. Legacy rows
+    that predate the field fall back to ``True`` (persist), matching prior behavior.
+    """
+    persist_messages = request.get("persist_messages", True)
+    request_fields = {k: v for k, v in request.items() if k != "persist_messages"}
+    return replace(
+        parse_workflow_run_request(WorkflowRunRequest(**request_fields)),
+        persist_messages=persist_messages,
     )
 
 
@@ -433,11 +467,11 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
     the v1 build pipeline have; without it every background run would silently
     miss it.
     """
-    parsed = parse_workflow_run_request(WorkflowRunRequest(**request))
+    parsed = _parse_persisted_workflow_request(request)
     terminal_error_type = adapter.terminal_error_type
 
     async def _source(*, job_id=None, resume=None, **_kwargs):
-        flow = await get_flow_by_id_or_endpoint_name(str(flow_id), user.id, widen_for_shares=True)
+        flow = await resolve_flow_for_execution(str(flow_id), user)
         fresh_background_tasks = BackgroundTasks()
         errored = False
         try:
@@ -448,6 +482,8 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 background_tasks=fresh_background_tasks,
                 parsed=parsed,
                 current_user=user,
+                source_flow_owner_id=flow.user_id,
+                expose_error_details=caller_owns_flow(flow, user),
                 job_id=job_id,
                 resume=resume,
                 # Key the persisted vertex builds by the durable job_id so a completed run's GET
@@ -458,6 +494,13 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 # job_id) and fires the memory-base hook below with that id, so the build pipeline
                 # must not mint its own run_id-keyed WORKFLOW row + hook (it would double both).
                 track_job_status=False,
+                # This factory is the runner the v2 background route actually reaches, so the label
+                # belongs here; without it a background run is indistinguishable from a live stream.
+                protocol="v2.background",
+                # Emit the off-wire terminal-output capture the runner records into
+                # ``Job.result`` — protocol-neutral, so agui-protocol runs get a
+                # populated GET-status result too (not just langflow).
+                emit_output_capture=True,
             ):
                 if terminal_error_type is not None and event_type == terminal_error_type:
                     errored = True
@@ -469,7 +512,7 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
             # callback cannot derail the run.
             with contextlib.suppress(Exception):
                 await fresh_background_tasks()
-            if not errored:
+            if not errored and caller_owns_flow(flow, user):
                 try:
                     await get_task_service().fire_and_forget_task(
                         get_memory_base_service().on_flow_output,
@@ -520,6 +563,10 @@ async def execute_workflow_background(
             "start_component_id": parsed.start_component_id,
             "stop_component_id": parsed.stop_component_id,
             "idempotency_key": idempotency_key,
+            # Serving-plane ephemeral decision must survive the worker re-parse so an
+            # anonymous background/resume run does not persist memory (see the pop in
+            # _default_frame_source_factory).
+            "persist_messages": parsed.persist_messages,
         }
         job_id_new = await service.submit(flow_id=flow.id, request=request_dict, user=current_user)
         return WorkflowJobResponse(job_id=str(job_id_new), flow_id=parsed.flow_id, status=JobStatus.QUEUED)
@@ -644,29 +691,64 @@ async def get_workflow_status(
                 folder_id=getattr(flow, "folder_id", None),
             )
 
-            # Reconstruct response from vertex_build table (sync path persists
-            # those keyed by job_id). Background runs do not write vertex_builds
-            # keyed by job_id, so reconstruction finds nothing and raises
-            # ValueError — fall back to the durable Job.result the runner wrote
-            # so a completed background run reports completed instead of 500ing.
+            # The session the run executed under, resolved exactly as the runner's
+            # frame source did (``parsed.session_id or str(flow.id)``): the submit
+            # request is persisted on ``job_metadata["request"]``, so a completed
+            # background GET echoes the same chat/memory thread sync returns. The
+            # terminal output's ``content`` is a rendered string, so it can't be
+            # searched structurally — the persisted request is the source of truth.
+            persisted_request = (job.job_metadata or {}).get("request") or {}
+            effective_session_id = persisted_request.get("session_id") or flow_id_str
+
+            # Default GET-status path: rebuild from the protocol-neutral terminal
+            # captures the runner stored in ``Job.result``. This needs no
+            # ``vertex_build`` rows, so it works with vertex-build storage off
+            # (headless) and skips graph reconstruction.
+            result = job.result if isinstance(job.result, dict) else {}
+            output_events = result.get("outputs") or []
+            partial_stored_response: WorkflowExecutionResponse | None = None
+            if isinstance(output_events, list) and output_events:
+                try:
+                    return workflow_response_from_output_events(
+                        output_events,
+                        flow_id=flow_id_str,
+                        job_id=job_id_str,
+                        session_id=effective_session_id,
+                        fail_on_rejected=True,
+                    )
+                except ValueError:
+                    # Preserve every decodable capture in case the legacy
+                    # vertex-build fallback is also unavailable.
+                    partial_stored_response = workflow_response_from_output_events(
+                        output_events,
+                        flow_id=flow_id_str,
+                        job_id=job_id_str,
+                        session_id=effective_session_id,
+                    )
+
+            # Fallback: ``Job.result`` carried no outputs, has an invalid shape,
+            # contains rejected/version-skewed entries, or predates capture.
+            # Reconstruct from ``vertex_build`` rows keyed by job_id when present.
             try:
-                return await reconstruct_workflow_response_from_job_id(
+                reconstructed = await reconstruct_workflow_response_from_job_id(
                     session=session,
                     flow=flow,
                     job_id=job_id_str,
                     user_id=str(current_user.id),
                 )
             except ValueError:
-                # Rebuild the result from the ``output`` events the runner
-                # captured into ``Job.result`` (langflow-protocol runs). Falls
-                # back to a bare COMPLETED when none were captured (e.g. an
-                # agui-protocol run, where the result lives only on /events).
-                result = job.result if isinstance(job.result, dict) else {}
+                if partial_stored_response is not None:
+                    return partial_stored_response
                 return workflow_response_from_output_events(
-                    result.get("outputs") or [],
+                    [],
                     flow_id=flow_id_str,
                     job_id=job_id_str,
+                    session_id=effective_session_id,
                 )
+            else:
+                if reconstructed.session_id is None:
+                    reconstructed = reconstructed.model_copy(update={"session_id": effective_session_id})
+                return reconstructed
 
         if job.status == JobStatus.FAILED:
             # Surface the durable error JSON the runner persisted, additively.
@@ -904,7 +986,7 @@ async def resume_workflow(
 
     if not await is_decision_allowed(parsed_job_id, request.decision or {}):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "error": "Invalid decision",
                 "code": "INVALID_DECISION",

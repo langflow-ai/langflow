@@ -18,7 +18,14 @@ secrets — and round-trips cleanly through the UI.
   credential. Optional; defaults to the ``OPENSEARCH_PASSWORD``
   variable name. Only the *variable name* lives in config — never
   the raw credential.
-* ``index_name`` — OpenSearch index this KB writes / reads. Required.
+* ``index_name`` — OpenSearch index this KB writes / reads.
+  Optional. When omitted, the index is derived from ``kb_name`` (see
+  ``derive_index_name``) so every Knowledge Base / Memory Base gets its
+  own isolated index — mirroring how the Chroma backends use
+  ``collection_name=kb_name``. Set this explicitly only to point the KB
+  at a pre-existing, externally-managed index; doing so opts out of
+  per-KB isolation (the index is then shared by every KB configured with
+  the same value), so it should name a dedicated index per KB.
 * ``vector_field`` — document field for the embedding vector.
   Defaults to ``vector_field`` — the field LangChain's
   ``OpenSearchVectorSearch`` actually writes to. That wrapper derives
@@ -49,6 +56,7 @@ from __future__ import annotations
 
 import asyncio
 import queue as sync_queue
+import re
 import threading
 from typing import TYPE_CHECKING, Any
 
@@ -97,6 +105,37 @@ DEFAULT_TEXT_FIELD = "text"
 DEFAULT_ENGINE = "faiss"
 DEFAULT_SPACE_TYPE = "l2"
 
+# Chars OpenSearch forbids anywhere in an index name, plus whitespace.
+_OS_INDEX_FORBIDDEN = re.compile(r'[\\/*?"<>|,#: \t\n\r]+')
+# Anything outside the safe index-name alphabet (after the pass above).
+_OS_INDEX_NON_ALNUM = re.compile(r"[^a-z0-9._-]+")
+
+
+def derive_index_name(kb_name: str) -> str:
+    r"""Derive a valid OpenSearch index name from a KB name.
+
+    OpenSearch index names must be lowercase, may not contain
+    ``\\ / * ? " < > | , # :`` / whitespace, and may not begin with
+    ``-``, ``_``, ``+`` or ``.``. Memory-Base ``kb_name``s are already
+    lowercase ``<sanitized>_<8hex>`` and pass through unchanged; regular
+    Knowledge Base names are user-supplied (only spaces get replaced at
+    create time) so they need full sanitization here.
+
+    This is what gives each KB / MB its own index: MB names are globally
+    unique by construction, and KB names are unique per user, so the
+    derived index isolates one base's vectors from another's — the same
+    role ``collection_name=kb_name`` plays for the Chroma backends.
+    """
+    name = (kb_name or "").strip().lower()
+    name = _OS_INDEX_FORBIDDEN.sub("_", name)
+    name = _OS_INDEX_NON_ALNUM.sub("_", name)
+    # Index names cannot start with these; strip leading occurrences.
+    name = name.lstrip("-_+.")
+    if not name or name in {".", ".."}:
+        name = "kb"
+    # OpenSearch caps index names at 255 bytes.
+    return name[:255]
+
 
 def _coerce_bool(value: Any, *, default: bool) -> bool:
     """Coerce a config value to ``bool`` with explicit string handling.
@@ -129,12 +168,22 @@ class OpenSearchBackend(BaseVectorStoreBackend):
 
     backend_type = BackendType.OPENSEARCH
 
-    def _required(self, key: str) -> str:
-        value = self.backend_config.get(key)
-        if not value:
-            msg = f"OpenSearchBackend requires '{key}' in backend_config."
-            raise ValueError(msg)
-        return str(value)
+    def normalize_score(self, score: float) -> float:
+        """Keep OpenSearch relevance scores, which are already higher-is-better."""
+        return float(score)
+
+    def _resolve_index_name(self) -> str:
+        """Resolve the effective index for this KB.
+
+        An explicit ``index_name`` in ``backend_config`` is honored as an
+        operator override (e.g. an externally-managed index); otherwise the
+        index is derived per-KB from ``kb_name`` so each Knowledge Base /
+        Memory Base is isolated in its own index.
+        """
+        configured = self.backend_config.get("index_name")
+        if configured:
+            return str(configured)
+        return derive_index_name(self.kb_name)
 
     async def _resolve_secrets(self) -> None:
         """Resolve URL + optional basic-auth credentials via variable_service.
@@ -165,7 +214,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         # Validate config before touching optional deps so missing
         # fields surface as a clean ``ValueError`` regardless of
         # whether the OpenSearch extras are installed.
-        index_name = self._required("index_name")
+        index_name = self._resolve_index_name()
         url = getattr(self, "_resolved_url", None)
         if not url:
             msg = "OpenSearchBackend.ensure_ready() must be awaited before _build_vector_store."
@@ -250,11 +299,19 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         Dropping the kwarg lets the wrapper build the body without the
         key, which is what every Langflow callsite that doesn't pass a
         filter actually wants.
+
+        Callers hand us the portable flat ``{key: value}`` filter shape
+        (Chroma reads it as ``$eq`` shorthand); we translate it into
+        OpenSearch bool-query DSL here via :meth:`_translate_where`.
+        LangChain injects a non-empty ``filter`` into the k-NN query as an
+        ``efficient_filter`` (faiss/lucene) or ``boolean_filter``, and both
+        require a real query clause — a flat dict would be rejected /
+        silently match nothing.
         """
         await self.ensure_ready()
         kwargs: dict[str, Any] = {"query": query, "k": k}
         if filter:
-            kwargs["filter"] = filter
+            kwargs["filter"] = self._translate_where(filter)
         if with_scores:
             return await self.vector_store.asimilarity_search_with_score(**kwargs)
         docs = await self.vector_store.asimilarity_search(**kwargs)
@@ -537,21 +594,19 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                 await asyncio.to_thread(drain_queue_until_sentinel, batch_queue, sentinel)
             await worker
 
-    async def delete_by(self, where: dict[str, Any]) -> None:
-        """Delete documents via ``delete_by_query``.
+    @staticmethod
+    def _translate_where(where: dict[str, Any]) -> dict[str, Any]:
+        """Translate a flat ``{key: value}`` filter into OpenSearch bool DSL.
 
-        ``where`` is translated to a bool-must query. LangChain's
-        OpenSearch adapter stores ``Document.metadata`` under the nested
-        ``metadata`` source key, while older/manual indexes may expose
-        metadata fields at top level, so each key matches either shape.
+        The flat shape is the portable contract every backend accepts (Chroma
+        reads it as ``$eq`` shorthand). For OpenSearch it has to become a real
+        query clause. LangChain's OpenSearch adapter stores ``Document.metadata``
+        under the nested ``metadata`` source key, while older / manually
+        populated indexes expose metadata fields at top level, so each key
+        matches either shape via a ``should``. Used by both the retrieval filter
+        (``similarity_search``) and the rollback path (``delete_by``) so the two
+        can never drift on this translation.
         """
-        await self.ensure_ready()
-        client = getattr(self, "_os_client", None)
-        if client is None:
-            _ = self.vector_store
-            client = self._os_client
-        if not where:
-            return
         must = [
             {
                 "bool": {
@@ -564,7 +619,23 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             }
             for key, value in where.items()
         ]
-        body = {"query": {"bool": {"must": must}}}
+        return {"bool": {"must": must}}
+
+    async def delete_by(self, where: dict[str, Any]) -> None:
+        """Delete documents via ``delete_by_query``.
+
+        ``where`` is translated to a bool-must query via
+        :meth:`_translate_where` — the same translation the retrieval filter
+        uses.
+        """
+        await self.ensure_ready()
+        client = getattr(self, "_os_client", None)
+        if client is None:
+            _ = self.vector_store
+            client = self._os_client
+        if not where:
+            return
+        body = {"query": self._translate_where(where)}
         try:
             await asyncio.to_thread(
                 client.delete_by_query,
@@ -603,6 +674,28 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                 # connection during shutdown is worth a default-level
                 # warning so it doesn't silently exhaust pool slots.
                 logger.warning("OpenSearch client.close failed: %s", exc)
+        # Close the clients LangChain's ``OpenSearchVectorSearch`` builds in its
+        # own ``__init__`` — not just our sidecar ``_os_client``. The wrapper
+        # eagerly creates an ``AsyncOpenSearch`` (``async_client``) backed by an
+        # aiohttp session; dropping the reference without awaiting its ``close``
+        # leaks the aiohttp ``TCPConnector`` + socket transport, which surfaces
+        # as ``Unclosed connector`` / ``unclosed transport`` ResourceWarnings at
+        # GC time. Read ``_vector_store`` directly (not the ``vector_store``
+        # property) so teardown never rebuilds the store it's tearing down.
+        vector_store = self._vector_store
+        if vector_store is not None:
+            async_client = getattr(vector_store, "async_client", None)
+            if async_client is not None and hasattr(async_client, "close"):
+                try:
+                    await async_client.close()
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("OpenSearch async_client.close failed: %s", exc)
+            wrapper_client = getattr(vector_store, "client", None)
+            if wrapper_client is not None and hasattr(wrapper_client, "close"):
+                try:
+                    await asyncio.to_thread(wrapper_client.close)
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("OpenSearch wrapper client.close failed: %s", exc)
         self._os_client = None
         self._vector_store = None
 
