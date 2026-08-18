@@ -1668,8 +1668,6 @@
   "node.updateBlockedLabel": "Composant personnalisé bloqué",
   "node.updateBlockedByPolicyLabel": "Désactivé par l'administrateur",
   "node.updateBlockedByPolicyMessage": "Ce composant a été désactivé par un administrateur et ne peut pas être exécuté",
-  "node.updateUnavailableLabel": "Composant indisponible",
-  "node.updateUnavailableMessage": "Ce composant n'est pas disponible dans cette installation et ne peut pas être exécuté",
   "node.updateBlockedMessage": "Le composant personnalisé ne peut pas s'exécuter lorsque les composants personnalisés sont désactivés",
   "node.updateReadyLabel": "Prêt pour la mise à jour",
   "node.updateRequiredLabel": "Mise à jour requise",

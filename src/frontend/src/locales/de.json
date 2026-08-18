@@ -1668,8 +1668,6 @@
   "node.updateBlockedLabel": "Benutzerdefinierte Komponente blockiert",
   "node.updateBlockedByPolicyLabel": "Vom Administrator deaktiviert",
   "node.updateBlockedByPolicyMessage": "Diese Komponente wurde von einem Administrator deaktiviert und kann nicht ausgeführt werden",
-  "node.updateUnavailableLabel": "Komponente nicht verfügbar",
-  "node.updateUnavailableMessage": "Diese Komponente ist in dieser Installation nicht verfügbar und kann nicht ausgeführt werden",
   "node.updateBlockedMessage": "Benutzerdefinierte Komponenten können nicht ausgeführt werden, solange benutzerdefinierte Komponenten deaktiviert sind",
   "node.updateReadyLabel": "Bereit für das Update",
   "node.updateRequiredLabel": "Aktualisierung erforderlich",

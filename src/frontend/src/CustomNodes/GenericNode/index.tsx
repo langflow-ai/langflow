@@ -4,6 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
+import { blockedStopsExecution } from "@/CustomNodes/helpers/check-code-validity";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
@@ -438,14 +439,23 @@ function GenericNode({
   // only happened while custom components were disabled, so a component an
   // administrator removed from the catalog left the node looking healthy until
   // the flow was run.
+  // A user's own custom component has no template either, so the banner only
+  // treats a missing one as a problem where it actually stops the node.
+  const blockedIsFatal = blockedStopsExecution(
+    allowCustomComponents,
+    catalogGovernanceEnabled,
+    templates,
+  );
+
   const shouldShowUpdateComponent = useMemo(
     () =>
-      isBlocked ||
+      (isBlocked && blockedIsFatal) ||
       (!allowCustomComponents
         ? isOutdated || hasBreakingChange
         : (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll),
     [
       isBlocked,
+      blockedIsFatal,
       isOutdated,
       hasBreakingChange,
       isUserEdited,
@@ -602,12 +612,15 @@ function GenericNode({
         {shouldShowUpdateComponent ? (
           <NodeUpdateComponent
             hasBreakingChange={hasBreakingChange}
-            blocked={isBlocked}
+            blocked={isBlocked && blockedIsFatal}
             blockedByCatalogPolicy={
               // Restricted mode blocks an unknown code-bearing node on its own,
               // so it stays the stated cause; the policy is only named when it
               // is the one that applies.
-              isBlocked && allowCustomComponents && catalogGovernanceEnabled
+              isBlocked &&
+              blockedIsFatal &&
+              allowCustomComponents &&
+              catalogGovernanceEnabled
             }
             showNode={showNode}
             handleUpdateCode={() =>

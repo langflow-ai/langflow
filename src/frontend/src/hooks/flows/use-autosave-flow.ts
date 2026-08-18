@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { catalogPolicyCanBlock } from "@/CustomNodes/helpers/check-code-validity";
 import { usePermissions } from "@/contexts/permissionsContext";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -35,10 +36,12 @@ type PendingAutoSave = {
  * decide, which is the behaviour that existed before.
  */
 const blockedComponentNames = (): string[] => {
-  if (!useUtilityStore.getState().catalogGovernanceEnabled) {
-    return [];
-  }
-  if (Object.keys(useTypesStore.getState().templates).length === 0) {
+  if (
+    !catalogPolicyCanBlock(
+      useUtilityStore.getState().catalogGovernanceEnabled,
+      useTypesStore.getState().templates,
+    )
+  ) {
     return [];
   }
   return useFlowStore

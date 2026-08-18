@@ -27,19 +27,14 @@ export default function NodeUpdateComponent({
 }) {
   const { t } = useTranslation();
   const showUpdateAction = !blocked;
-  // A missing template has several causes, and the copy should only name one it
-  // can actually tell: a catalog policy is in force, custom components are off,
-  // or the component is simply absent from this install.
+  // `blocked` only reaches here when a catalog policy applies or custom
+  // components are off, so those are the only two causes the copy can name.
   const blockedMessage = blockedByCatalogPolicy
     ? t("node.updateBlockedByPolicyMessage")
-    : isRequired
-      ? t("node.updateBlockedMessage")
-      : t("node.updateUnavailableMessage");
+    : t("node.updateBlockedMessage");
   const blockedLabel = blockedByCatalogPolicy
     ? t("node.updateBlockedByPolicyLabel")
-    : isRequired
-      ? t("node.updateBlockedLabel")
-      : t("node.updateUnavailableLabel");
+    : t("node.updateBlockedLabel");
 
   if (dismissed && isRequired) {
     return (

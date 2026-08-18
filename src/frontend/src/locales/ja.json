@@ -1668,8 +1668,6 @@
   "node.updateBlockedLabel": "カスタムコンポーネントがブロックされました",
   "node.updateBlockedByPolicyLabel": "管理者により無効化されています",
   "node.updateBlockedByPolicyMessage": "このコンポーネントは管理者によって無効化されているため実行できません",
-  "node.updateUnavailableLabel": "コンポーネントを利用できません",
-  "node.updateUnavailableMessage": "このコンポーネントはこのインストール環境では利用できないため実行できません",
   "node.updateBlockedMessage": "カスタムコンポーネントが無効になっている間は、カスタムコンポーネントを実行できません",
   "node.updateReadyLabel": "更新の準備完了",
   "node.updateRequiredLabel": "更新が必要です",

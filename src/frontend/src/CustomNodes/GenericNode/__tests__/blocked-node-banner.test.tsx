@@ -110,8 +110,10 @@ jest.mock("../../../stores/shortcuts", () => ({
 }));
 
 jest.mock("../../../stores/typesStore", () => ({
+  // A loaded registry: an empty one means "still fetching", where a missing
+  // template says nothing about the node.
   useTypesStore: (selector: (state: unknown) => unknown) =>
-    selector({ types: {}, templates: {} }),
+    selector({ types: {}, templates: { SomeKnownType: {} } }),
 }));
 
 jest.mock("../../hooks/use-update-node-code", () => ({
@@ -252,17 +254,16 @@ describe("GenericNode blocked banner", () => {
     expect(banner).toHaveAttribute("data-blocked-by-policy", "true");
   });
 
-  it("surfaces a blocked node without claiming a policy that is not set", () => {
-    // A missing template also covers an uninstalled bundle or an imported
-    // flow, so the banner must still show but must not blame an administrator.
+  it("leaves a custom component alone when no policy is in force", () => {
+    // A user-authored component has code and no registry template, exactly
+    // like a policy-blocked one. With custom components allowed and no policy
+    // it is legitimate, so flagging it would stop people running their own work.
     mockCatalogGovernanceEnabled = false;
     mockComponentsToUpdate = [componentUpdate({ blocked: true })];
 
     renderNode();
 
-    const banner = screen.getByTestId("node-update-banner");
-    expect(banner).toHaveAttribute("data-blocked", "true");
-    expect(banner).toHaveAttribute("data-blocked-by-policy", "false");
+    expect(screen.queryByTestId("node-update-banner")).not.toBeInTheDocument();
   });
 
   it("keeps surfacing a blocked node the user dismissed", () => {

@@ -1668,8 +1668,6 @@
   "node.updateBlockedLabel": "自定义组件被阻止",
   "node.updateBlockedByPolicyLabel": "已被管理员禁用",
   "node.updateBlockedByPolicyMessage": "此组件已被管理员禁用，无法运行",
-  "node.updateUnavailableLabel": "组件不可用",
-  "node.updateUnavailableMessage": "此组件在当前安装中不可用，无法运行",
   "node.updateBlockedMessage": "当自定义组件被禁用时，自定义组件无法运行",
   "node.updateReadyLabel": "已准备好更新",
   "node.updateRequiredLabel": "需要更新",

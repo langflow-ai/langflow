@@ -9,7 +9,10 @@ import {
 import { cloneDeep } from "lodash";
 import { v5 as uuidv5 } from "uuid";
 import { create } from "zustand";
-import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
+import {
+  blockedStopsExecution,
+  checkCodeValidity,
+} from "@/CustomNodes/helpers/check-code-validity";
 import { queryClient } from "@/contexts";
 import {
   runFlowAGUI,
@@ -892,8 +895,19 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     // Unknown code-bearing types always block in restricted mode; known drift only blocks when
     // the server-side trusted-code substitution policy is disabled.
     get().updateComponentsToUpdate(get().nodes);
-    const { allowCustomComponents, substituteOutdatedComponentCode } =
-      useUtilityStore.getState();
+    const {
+      allowCustomComponents,
+      substituteOutdatedComponentCode,
+      catalogGovernanceEnabled,
+    } = useUtilityStore.getState();
+    // A missing template is the normal state of a user-authored custom
+    // component when those are allowed, so it only stops a run under
+    // restricted mode or an actual catalog policy.
+    const blockedIsFatal = blockedStopsExecution(
+      allowCustomComponents,
+      catalogGovernanceEnabled,
+      useTypesStore.getState().templates,
+    );
     // A partial build only executes its own subgraph, so only that subgraph can
     // block it. componentsToUpdate stays whole-flow for the update banner.
     const validatedNodeIds = new Set(nodesToValidate.map((node) => node.id));
@@ -907,9 +921,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     if (!get().playgroundPage && componentsToPreflight.length > 0) {
       // A missing template blocks the run either way. Outdated components are
       // only enforced in restricted mode, as before.
-      const blockedComponents = componentsToPreflight.filter(
-        (component) => component.blocked,
-      );
+      const blockedComponents = blockedIsFatal
+        ? componentsToPreflight.filter((component) => component.blocked)
+        : [];
       const outdatedComponents =
         substituteOutdatedComponentCode || allowCustomComponents
           ? []

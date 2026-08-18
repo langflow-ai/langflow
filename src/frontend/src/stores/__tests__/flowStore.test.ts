@@ -14,6 +14,7 @@ jest.mock("lodash", () => ({
 }));
 
 jest.mock("@/CustomNodes/helpers/check-code-validity", () => ({
+  ...jest.requireActual("@/CustomNodes/helpers/check-code-validity"),
   checkCodeValidity: jest.fn(),
 }));
 
@@ -86,10 +87,12 @@ jest.mock("../tweaksStore", () => ({
   },
 }));
 
+let mockTemplates: Record<string, unknown> = {};
+
 jest.mock("../typesStore", () => ({
   useTypesStore: {
     getState: () => ({
-      templates: {},
+      templates: mockTemplates,
       types: {},
     }),
   },
@@ -162,6 +165,7 @@ describe("useFlowStore", () => {
 
     // Reset store state to basics
     act(() => {
+      mockTemplates = {};
       useUtilityStore.setState({
         allowCustomComponents: true,
         substituteOutdatedComponentCode: true,
@@ -1254,9 +1258,11 @@ describe("useFlowStore", () => {
       // The catalog drops a blocked component from /all, so its node loses its
       // template. That used to be ignored unless custom components were off,
       // leaving the run to fail server side with a generic error.
+      mockTemplates = { SomeKnownType: {} };
       useUtilityStore.setState({
         allowCustomComponents: true,
         substituteOutdatedComponentCode: true,
+        catalogGovernanceEnabled: true,
       });
       (checkCodeValidity as jest.Mock).mockReturnValueOnce({
         outdated: false,
@@ -1301,9 +1307,11 @@ describe("useFlowStore", () => {
       });
 
       beforeEach(() => {
+        mockTemplates = { SomeKnownType: {} };
         useUtilityStore.setState({
           allowCustomComponents: true,
           substituteOutdatedComponentCode: true,
+          catalogGovernanceEnabled: true,
         });
         (checkCodeValidity as jest.Mock).mockImplementation(
           (data: { id: string }) => validityByNodeId(data.id),
@@ -1410,6 +1418,31 @@ describe("useFlowStore", () => {
         "Custom components are blocked while custom components are disabled",
       );
       expect(mockedRunFlow).not.toHaveBeenCalled();
+    });
+
+    it("builds a user-authored component when no policy is in force", async () => {
+      // A component someone wrote themselves carries code and has no registry
+      // template, which is indistinguishable from a policy-blocked one. With
+      // custom components allowed and no policy set it is legitimate, so
+      // rejecting the build would stop people running their own work.
+      mockTemplates = { SomeKnownType: {} };
+      useUtilityStore.setState({
+        allowCustomComponents: true,
+        substituteOutdatedComponentCode: true,
+        catalogGovernanceEnabled: false,
+      });
+      (checkCodeValidity as jest.Mock).mockReturnValueOnce({
+        outdated: false,
+        blocked: true,
+        breakingChange: false,
+        userEdited: false,
+      });
+      useFlowStore.setState({ nodes: [mockNode] });
+      mockedRunFlow.mockResolvedValue(undefined);
+
+      await useFlowStore.getState().buildFlow({});
+
+      expect(mockedRunFlow).toHaveBeenCalledTimes(1);
     });
 
     it("delegates component policy to the backend on a cold public Playground", async () => {
