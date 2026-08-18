@@ -64,7 +64,8 @@ def test_missing_api_key_raises(component):
 
 def test_search_sends_explicit_user_agent(component):
     """Serply is behind Cloudflare; the request MUST carry an explicit
-    User-Agent or it is blocked with a 1010 error."""
+    User-Agent or it is blocked with a 1010 error.
+    """
     mock_get = _mock_get(SAMPLE_PAYLOAD)
     with patch(GET_PATCH_TARGET, mock_get):
         component._search()
