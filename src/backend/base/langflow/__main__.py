@@ -1035,6 +1035,39 @@ async def _migrate_mcp(*, dry_run: bool) -> None:
     )
 
 
+@app.command(name="reconcile-kb-from-disk")
+def reconcile_kb_from_disk(
+    log_level: str = typer.Option("info", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    username: str = typer.Option("", help="Only reconcile this user's knowledge bases."),
+    dry_run: bool = typer.Option(default=False, help="Report what would be adopted without writing."),  # noqa: FBT001
+) -> None:
+    """Adopt knowledge base directories on disk that have no database row.
+
+    The ``knowledge_base`` table is the sole authority for KB metadata, so this scan
+    no longer runs on every boot. Use it to recover KBs created by a Langflow version
+    that still wrote the on-disk ``embedding_metadata.json`` sidecar and that are not
+    showing up after an upgrade.
+
+    Idempotent, and it never deletes anything: directories that already have a row,
+    that carry the ``.kb_deleted`` marker, or whose metadata is unreadable are skipped.
+    """
+    configure(log_level=log_level)
+    asyncio.run(_reconcile_kb_from_disk(username=username or None, dry_run=dry_run))
+
+
+async def _reconcile_kb_from_disk(*, username: str | None, dry_run: bool) -> None:
+    from langflow.api.utils import knowledge_base_service
+
+    await initialize_services()
+    inserted = await knowledge_base_service.backfill_all_users_from_disk(
+        username=username,
+        dry_run=dry_run,
+    )
+    scope = f"user '{username}'" if username else "all users"
+    verb = "would adopt" if dry_run else "adopted"
+    typer.echo(f"Knowledge base reconciliation complete: {verb} {inserted} knowledge base(s) for {scope}.")
+
+
 # command to copy the langflow database from the cache to the current directory
 # because now the database is stored per installation
 @app.command()

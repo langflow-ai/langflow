@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
+import CustomModelProvidersEmptyState from "@/customization/components/custom-model-providers-empty-state";
 import ProviderList from "@/modals/modelProviderModal/components/ProviderList";
 import { Provider } from "@/modals/modelProviderModal/components/types";
 import type { ModelTypeFilter } from "@/types/models";
 import { cn } from "@/utils/utils";
 import { useProviderConfiguration } from "../hooks/useProviderConfiguration";
-import ModelSelection from "./ModelSelection";
+import ModelSelection, { hasProviderOwnedEmptyState } from "./ModelSelection";
 import ProviderConfigurationForm from "./ProviderConfigurationForm";
 
 interface ModelProvidersContentProps {
@@ -80,6 +81,14 @@ const ModelProvidersContent = ({
     );
   };
 
+  const typedModelCount = (syncedSelectedProvider?.models ?? []).filter(
+    (model) => modelType === "all" || model.metadata?.model_type === modelType,
+  ).length;
+  const showNoAvailableModels =
+    !!syncedSelectedProvider &&
+    typedModelCount === 0 &&
+    !hasProviderOwnedEmptyState(syncedSelectedProvider.provider);
+
   return (
     <div className="flex flex-row w-full h-full overflow-hidden">
       <div
@@ -142,18 +151,23 @@ const ModelProvidersContent = ({
 
         <div className="relative flex min-h-0 flex-1 flex-col">
           <div className="flex h-full flex-col gap-3 overflow-y-auto px-4 pt-4 pb-6 transition-all duration-300 ease-in-out">
-            <ModelSelection
-              modelType={modelType}
-              availableModels={syncedSelectedProvider?.models || []}
-              onModelToggle={handleModelToggle}
-              providerName={syncedSelectedProvider?.provider}
-              isEnabledModel={
-                !!(
-                  syncedSelectedProvider?.is_enabled ||
-                  syncedSelectedProvider?.is_configured
-                )
-              }
-            />
+            <CustomModelProvidersEmptyState
+              kind="models"
+              show={showNoAvailableModels}
+            >
+              <ModelSelection
+                modelType={modelType}
+                availableModels={syncedSelectedProvider?.models || []}
+                onModelToggle={handleModelToggle}
+                providerName={syncedSelectedProvider?.provider}
+                isEnabledModel={
+                  !!(
+                    syncedSelectedProvider?.is_enabled ||
+                    syncedSelectedProvider?.is_configured
+                  )
+                }
+              />
+            </CustomModelProvidersEmptyState>
           </div>
           <div className="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-background via-background/70 to-transparent" />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-background via-background/70 to-transparent" />

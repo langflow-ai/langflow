@@ -162,30 +162,55 @@ class BackgroundExecutionService(Service):
 
     # ------------------------------------------------------------------ submit
 
-    async def supersede_suspended_runs(self, *, flow_id: UUID, user_id: UUID) -> list[UUID]:
+    @staticmethod
+    def _effective_session(job: Job) -> str:
+        """The session/thread a job ran under, normalized the way the runner normalizes it.
+
+        ``submit`` persists the submit request under ``job_metadata['request']`` and the
+        runner threads ``request['session_id'] or str(flow_id)`` into the stream adapter
+        (``_build_adapter``), so the same fallback keys the supersede scope. Legacy rows
+        written before the request was persisted keep a flat ``job_metadata['session_id']``
+        — read it the way ``_reconstruct_request`` does rather than mis-scoping them.
+        """
+        meta = job.job_metadata or {}
+        persisted = meta.get("request")
+        source = persisted if isinstance(persisted, dict) and persisted else meta
+        return source.get("session_id") or str(job.flow_id)
+
+    async def supersede_suspended_runs(
+        self, *, flow_id: UUID, user_id: UUID, session_id: str | None = None
+    ) -> list[UUID]:
         """Cancel this user's SUSPENDED runs of the flow so a rerun replaces the stale pause.
 
-        A suspended run holds a pause nobody will answer once its owner reruns the flow;
-        left alive it piles up in every pending surface (badge, cards, trace bar). Scope is
-        flow + user: another user's pause on the same flow is never touched, and running
-        jobs are untouched so parallel runs stay supported.
+        A suspended run holds a pause nobody will answer once its owner reruns that
+        conversation; left alive it piles up in every pending surface (badge, cards, trace
+        bar). Scope is flow + user + effective session (``session_id``, falling back to the
+        flow id — the runner's own normalization): a rerun replaces the stale pause of the
+        SAME session/thread, while SUSPENDED runs of OTHER sessions stay untouched so one
+        flow can serve many independent callers (#14599). Another user's pause on the same
+        flow is never touched, and running jobs are untouched so parallel runs stay
+        supported.
         """
         from sqlmodel import select
 
         from langflow.services.database.models.jobs.model import Job
         from langflow.services.deps import session_scope
 
+        effective_session = session_id or str(flow_id)
         job_service = get_job_service()
         async with session_scope() as session:
             result = await session.exec(
-                select(Job.job_id).where(
+                select(Job).where(
                     Job.flow_id == flow_id,
                     Job.user_id == user_id,
                     Job.status == JobStatus.SUSPENDED,
                     Job.type == JobType.WORKFLOW,
                 )
             )
-            stale_job_ids = list(result.all())
+            # The session lives in job_metadata, so narrow to matching rows INSIDE the
+            # scope: reading a JSON column off a row already detached from its session
+            # would depend on the engine's expire_on_commit setting.
+            stale_job_ids = [job.job_id for job in result.all() if self._effective_session(job) == effective_session]
         cancelled: list[UUID] = []
         for stale_job_id in stale_job_ids:
             if self._scaled:
@@ -234,7 +259,7 @@ class BackgroundExecutionService(Service):
         await job_service.update_job_metadata(job_id, {"request": self._redact_request(request)})
         # After create_job so an idempotent retry returns the existing job instead of
         # cancelling it; the new job is QUEUED, so the suspended-only query skips it.
-        await self.supersede_suspended_runs(flow_id=flow_id, user_id=user.id)
+        await self.supersede_suspended_runs(flow_id=flow_id, user_id=user.id, session_id=request.get("session_id"))
         if self._scaled:
             # Scaled mode: hand the QUEUED job id to a worker via the redis claim
             # queue; the worker hydrates the request from the job row.
