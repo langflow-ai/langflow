@@ -8,6 +8,7 @@ from typing import Any
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, DropdownInput, IntInput, MultilineInput, Output, SecretStrInput, StrInput
 from lfx.schema.dataframe import DataFrame
+from lfx.utils.file_path_security import component_file_access_scopes
 from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 from lfx_ibm.components.ibm.db2_security import (
     create_safe_error_message,
@@ -227,7 +228,9 @@ class WatsonxDataPrestoComponent(Component):
     def _tls_verify(self) -> str | bool:
         ca_file = (getattr(self, "ssl_ca_file", "") or "").strip()
         if ca_file:
-            cert_path, _, error = validate_and_prepare_ssl_certificate(ca_file)
+            cert_path, _, error = validate_and_prepare_ssl_certificate(
+                ca_file, scope_ids=component_file_access_scopes(self)
+            )
             if error or not cert_path:
                 msg = f"Invalid SSL CA certificate: {error or 'unreadable file'}"
                 raise ValueError(msg)
