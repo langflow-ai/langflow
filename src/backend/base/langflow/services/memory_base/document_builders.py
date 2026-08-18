@@ -11,13 +11,11 @@ from typing import TYPE_CHECKING
 from langchain_core.documents import Document
 from lfx.log.logger import logger
 
-from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBStorageHelper, chunk_text_for_ingestion
+from langflow.api.utils.kb_helpers import KBAnalysisHelper, chunk_text_for_ingestion
 
 if TYPE_CHECKING:
     import uuid
-    from pathlib import Path
 
-    from langchain_chroma import Chroma
     from lfx.base.knowledge_bases.backends.base import BaseVectorStoreBackend
 
     from langflow.services.database.models.message.model import MessageTable
@@ -157,35 +155,6 @@ def build_preprocessed_document(
         )
         for i, chunk in enumerate(chunks)
     ]
-
-
-def sync_kb_metadata(*, kb_path: Path, chroma: Chroma) -> None:
-    """Update embedding_metadata.json after a successful Memory Base ingestion.
-
-    Mirrors the post-write metadata sync in ``KBIngestionHelper.perform_ingestion``:
-    - Refreshes chunk / word / character counts from the live Chroma collection.
-    - Updates on-disk size.
-    - Stamps ``is_memory_base: true`` (required for Knowledge Retrieval filtering).
-    - Sets ``source_types: ["memory"]`` to distinguish from file-based KBs.
-
-    Called while the Chroma client is still open so that ``update_text_metrics``
-    can query the collection directly without opening a second client.
-    """
-    try:
-        metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
-        KBAnalysisHelper.update_text_metrics(kb_path, metadata, chroma=chroma)
-        metadata["size"] = KBStorageHelper.get_directory_size(kb_path)
-        metadata["is_memory_base"] = True
-        # Preserve any existing source_types but always include "memory"
-        existing = set(metadata.get("source_types") or [])
-        existing.add("memory")
-        metadata["source_types"] = sorted(existing)
-        (kb_path / "embedding_metadata.json").write_text(json.dumps(metadata, indent=2))
-    except (OSError, json.JSONDecodeError, ValueError):
-        # Metadata sync is best-effort; a failure here must not block the cursor advance.
-        # Note: this runs inside asyncio.to_thread so we use sync logging here.
-        # The lfx logger's sync .warning() method goes through the same structured pipeline.
-        logger.warning("KB metadata sync failed for kb_path=%s", kb_path, exc_info=True)
 
 
 async def sync_kb_stats_to_record(
