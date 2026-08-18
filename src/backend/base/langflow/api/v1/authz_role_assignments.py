@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from lfx.log.logger import logger
 from lfx.services.authorization import (
     AuthorizationMutation,
@@ -52,6 +52,24 @@ def _require_superuser(user) -> None:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Superuser required to administer role assignments.",
         )
+
+
+async def _require_superuser_dependency(current_user: CurrentActiveUser) -> None:
+    """Run the superuser gate as a route dependency, i.e. before body validation.
+
+    FastAPI solves a route's ``dependencies`` before validating that route's own
+    body, so an unauthorised caller is refused whatever they post. Gated only in
+    the endpoint body, they first receive the same 422 field names and enum
+    values a superuser would, which lets them map the request contract of a
+    route they cannot invoke.
+
+    The in-body call is kept as well: it is the gate for anything that reaches
+    the endpoint function without FastAPI resolving dependencies.
+    """
+    _require_superuser(current_user)
+
+
+SUPERUSER_ONLY = [Depends(_require_superuser_dependency)]
 
 
 async def _assignment_reads(session, assignments: list[AuthzRoleAssignment]) -> list[RoleAssignmentRead]:
@@ -136,8 +154,8 @@ async def list_assignments(
     return await _assignment_reads(session, list(rows))
 
 
-@router.post("", response_model=RoleAssignmentRead, status_code=status.HTTP_201_CREATED)
-@router.post("/", response_model=RoleAssignmentRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=RoleAssignmentRead, status_code=status.HTTP_201_CREATED, dependencies=SUPERUSER_ONLY)
+@router.post("/", response_model=RoleAssignmentRead, status_code=status.HTTP_201_CREATED, dependencies=SUPERUSER_ONLY)
 async def create_assignment(
     payload: RoleAssignmentCreate,
     current_user: CurrentActiveUser,
@@ -251,6 +269,7 @@ async def create_assignment(
     response_model=RoleAssignmentRead,
     status_code=status.HTTP_200_OK,
     responses={status.HTTP_204_NO_CONTENT: {"description": "Manual assignment fully revoked."}},
+    dependencies=SUPERUSER_ONLY,
 )
 async def delete_assignment(
     assignment_id: UUID,
