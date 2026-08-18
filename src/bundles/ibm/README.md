@@ -1,9 +1,9 @@
 # lfx-ibm
 
-IBM components — Db2 Vector Store plus watsonx.ai LLM and embeddings — as a
-standalone Langflow Extension Bundle.
+IBM components — Db2 Vector Store, watsonx.ai LLM and embeddings, and
+watsonx.data Presto and MCP — as a standalone Langflow Extension Bundle.
 
-This bundle ships three components:
+This bundle ships five components:
 
 * **`DB2VectorStoreComponent`** — wraps the `DB2VS` LangChain-compatible
   vector store and exposes Db2's native vector search through Langflow's
@@ -12,6 +12,14 @@ This bundle ships three components:
   foundation models via `langchain-ibm`'s `ChatWatsonx`.
 * **`WatsonxEmbeddingsComponent`** — embeddings via watsonx.ai's
   `WatsonxEmbeddings` model.
+* **`WatsonxDataPrestoComponent`** — run SQL on a watsonx.data Presto engine
+  (Iceberg lakehouse, federated sources, Confluent Tableflow tables) and get
+  a DataFrame back; `presto-python-client` DBAPI with `ibmlhapikey` /
+  IAM-API-key or basic auth and an optional CA bundle.
+* **`WatsonxDataMCPComponent`** — a preset MCP toolset for the watsonx.data
+  remote MCP server (`/api/v2/mcp/`): `LIST_/QUERY_DOCUMENT_LIBRARY`,
+  `LIST_/QUERY_DOCUMENT_SET`, `LIST_/QUERY_DATA_ASSETS` for an Agent, with
+  bearer-token or IBM Cloud API-key (IAM exchange) authentication.
 
 It follows the documented porting recipe in
 [`src/bundles/PORTING.md`](../PORTING.md).
@@ -23,7 +31,7 @@ pip install lfx-ibm
 ```
 
 The bundle is registered automatically via the `langflow.extensions`
-entry-point. After install, restart your Langflow server; the three
+entry-point. After install, restart your Langflow server; the
 components appear in the palette under the `ibm` bundle group.
 
 > **Platform notes:**
@@ -54,6 +62,8 @@ canonical namespaced IDs:
 * `ext:ibm:DB2VectorStoreComponent@official`
 * `ext:ibm:WatsonxAIComponent@official`
 * `ext:ibm:WatsonxEmbeddingsComponent@official`
+* `ext:ibm:WatsonxDataPrestoComponent@official`
+* `ext:ibm:WatsonxDataMCPComponent@official`
 
 ## Migration
 

@@ -3,9 +3,10 @@
 Re-running a flow while a previous run sits SUSPENDED left both pauses alive: the
 pending list piled up, every surface (badge, cards, trace bar) kept offering a
 decision nobody could meaningfully answer, and the old checkpoint lingered forever.
-Submitting a new run for the same flow + user now cancels the stale suspended runs
-first — running jobs are untouched (parallel runs stay supported), and other flows
-or users are never affected.
+Submitting a new run for the same flow + user + effective session now cancels the
+stale suspended runs first — running jobs are untouched (parallel runs stay
+supported), and other flows, users, or SESSIONS are never affected (#14599: a
+second caller's background run must not cancel the first caller's pause).
 """
 
 from __future__ import annotations
@@ -38,13 +39,18 @@ def _pause_source(request_id: str):
     return _source
 
 
-async def _suspend_a_job(job_service, *, flow_id, user_id, request_id="req-1", session_id=None):
+async def _suspend_a_job(job_service, *, flow_id, user_id, request_id="req-1", session_id=None, legacy_session_id=None):
     job_id = uuid4()
     await job_service.create_job(job_id=job_id, flow_id=flow_id, user_id=user_id)
-    request_blob = {"flow_id": str(flow_id), "stream_protocol": "langflow"}
-    if session_id is not None:
-        request_blob["session_id"] = session_id
-    await job_service.update_job_metadata(job_id, {"request": request_blob})
+    if legacy_session_id is not None:
+        # Row shape from before ``submit`` persisted the request: no ``request`` blob,
+        # just the flat session key ``_reconstruct_request`` falls back to.
+        await job_service.update_job_metadata(job_id, {"session_id": legacy_session_id}, replace=True)
+    else:
+        request = {"flow_id": str(flow_id), "stream_protocol": "langflow"}
+        if session_id is not None:
+            request["session_id"] = session_id
+        await job_service.update_job_metadata(job_id, {"request": request})
     adapter = get_stream_adapter("langflow", StreamAdapterContext(run_id=str(job_id), thread_id="t"))
     runner = JobRunner(
         job_service=job_service,
@@ -66,6 +72,15 @@ def _service() -> BackgroundExecutionService:
         return _source
 
     return BackgroundExecutionService(get_settings_service(), frame_source_factory=_end_source)
+
+
+async def _wait_for_completed(job_service, job_id):
+    for _ in range(100):
+        job = await job_service.get_job_by_job_id(job_id)
+        if job.status == JobStatus.COMPLETED:
+            return job
+        await asyncio.sleep(0.05)
+    return job
 
 
 async def test_supersede_cancels_suspended_runs_of_same_flow_and_user(real_services_job_service):
@@ -199,53 +214,102 @@ async def test_submit_supersedes_the_previous_suspended_run(real_services_job_se
     assert new.status == JobStatus.COMPLETED
 
 
-async def test_supersede_scopes_to_the_submitting_session(real_services_job_service):
-    """A rerun of session A cancels only A's stale pause; session B stays suspended.
-
-    Two suspended runs of one flow+user in DIFFERENT sessions.
-    """
+async def test_submit_does_not_supersede_suspended_run_of_a_different_session(real_services_job_service):
+    """Submitting for session-b must leave a SUSPENDED run of session-a alone (issue #14599)."""
     job_service = real_services_job_service
     flow_id, user_id = uuid4(), uuid4()
-    job_a = await _suspend_a_job(job_service, flow_id=flow_id, user_id=user_id, session_id="alice::chat-1")
-    job_b = await _suspend_a_job(
-        job_service, flow_id=flow_id, user_id=user_id, session_id="alice::chat-2", request_id="req-2"
+    stale_job_id = await _suspend_a_job(job_service, flow_id=flow_id, user_id=user_id, session_id="session-a")
+
+    service = _service()
+    new_job_id = await service.submit(
+        flow_id=flow_id,
+        request={"flow_id": str(flow_id), "session_id": "session-b", "stream_protocol": "langflow"},
+        user=SimpleNamespace(id=user_id),
     )
 
-    superseded = await _service().supersede_suspended_runs(flow_id=flow_id, user_id=user_id, session_id="alice::chat-1")
-
-    assert superseded == [job_a]
-    assert (await job_service.get_job_by_job_id(job_a)).status == JobStatus.CANCELLED
-    assert (await job_service.get_job_by_job_id(job_b)).status == JobStatus.SUSPENDED
-
-
-async def test_supersede_never_crosses_end_users_under_one_service_account(real_services_job_service):
-    """Alice's rerun must not cancel bob's suspended pause on the same flow.
-
-    Serving plane: every end user shares the single service-account ``user_id`` (SID),
-    separated only by the scoped session — the cross-end-user break this fix closes.
-    """
-    job_service = real_services_job_service
-    flow_id, sid = uuid4(), uuid4()  # sid = the one service-account user_id every end user shares
-    alice = await _suspend_a_job(job_service, flow_id=flow_id, user_id=sid, session_id="alice::chat-1")
-    bob = await _suspend_a_job(job_service, flow_id=flow_id, user_id=sid, session_id="bob::chat-1", request_id="req-2")
-
-    superseded = await _service().supersede_suspended_runs(flow_id=flow_id, user_id=sid, session_id="alice::chat-1")
-
-    assert superseded == [alice]
-    assert (await job_service.get_job_by_job_id(alice)).status == JobStatus.CANCELLED
-    assert (await job_service.get_job_by_job_id(bob)).status == JobStatus.SUSPENDED
+    stale = await job_service.get_job_by_job_id(stale_job_id)
+    assert stale.status == JobStatus.SUSPENDED
+    assert (stale.job_metadata or {}).get("pending_request_id") is not None
+    new = await _wait_for_completed(job_service, new_job_id)
+    assert new.status == JobStatus.COMPLETED
 
 
-async def test_canvas_rerun_without_session_spares_an_explicit_session_pause(real_services_job_service):
-    """A canvas rerun (no session_id) does NOT cancel a run suspended under an explicit session.
-
-    session_id normalizes to the flow id, so they don't match — the called-out behavior change.
-    """
+async def test_submit_supersedes_suspended_run_of_same_session(real_services_job_service):
+    """Re-running the SAME session replaces its own stale pause, as before."""
     job_service = real_services_job_service
     flow_id, user_id = uuid4(), uuid4()
-    explicit = await _suspend_a_job(job_service, flow_id=flow_id, user_id=user_id, session_id="alice::chat-1")
+    stale_job_id = await _suspend_a_job(job_service, flow_id=flow_id, user_id=user_id, session_id="session-a")
 
-    superseded = await _service().supersede_suspended_runs(flow_id=flow_id, user_id=user_id, session_id=str(flow_id))
+    new_job_id = await _service().submit(
+        flow_id=flow_id,
+        request={"flow_id": str(flow_id), "session_id": "session-a", "stream_protocol": "langflow"},
+        user=SimpleNamespace(id=user_id),
+    )
 
-    assert superseded == []
-    assert (await job_service.get_job_by_job_id(explicit)).status == JobStatus.SUSPENDED
+    stale = await job_service.get_job_by_job_id(stale_job_id)
+    assert stale.status == JobStatus.CANCELLED
+    assert (await _wait_for_completed(job_service, new_job_id)).status == JobStatus.COMPLETED
+
+
+async def test_submit_supersedes_suspended_run_when_both_have_no_session(real_services_job_service):
+    """Canvas reruns (no session on either side) fall back to flow_id and still replace."""
+    job_service = real_services_job_service
+    flow_id, user_id = uuid4(), uuid4()
+    stale_job_id = await _suspend_a_job(job_service, flow_id=flow_id, user_id=user_id)
+
+    new_job_id = await _service().submit(
+        flow_id=flow_id,
+        request={"flow_id": str(flow_id), "stream_protocol": "langflow"},
+        user=SimpleNamespace(id=user_id),
+    )
+
+    stale = await job_service.get_job_by_job_id(stale_job_id)
+    assert stale.status == JobStatus.CANCELLED
+    assert (await _wait_for_completed(job_service, new_job_id)).status == JobStatus.COMPLETED
+
+
+async def test_supersede_only_targets_matching_session(real_services_job_service):
+    job_service = real_services_job_service
+    flow_id, user_id = uuid4(), uuid4()
+    job_a = await _suspend_a_job(job_service, flow_id=flow_id, user_id=user_id, session_id="session-a")
+    job_b = await _suspend_a_job(job_service, flow_id=flow_id, user_id=user_id, session_id="session-b")
+
+    superseded = await _service().supersede_suspended_runs(flow_id=flow_id, user_id=user_id, session_id="session-b")
+
+    assert superseded == [job_b]
+    job_a_after = await job_service.get_job_by_job_id(job_a)
+    assert job_a_after.status == JobStatus.SUSPENDED
+    job_b_after = await job_service.get_job_by_job_id(job_b)
+    assert job_b_after.status == JobStatus.CANCELLED
+
+
+async def test_supersede_suspended_run_of_different_session_not_cancelled_when_legacy(real_services_job_service):
+    """A legacy suspended run (no session, effective flow_id) is not cancelled by a sessioned submit."""
+    job_service = real_services_job_service
+    flow_id, user_id = uuid4(), uuid4()
+    stale_job_id = await _suspend_a_job(job_service, flow_id=flow_id, user_id=user_id)
+
+    new_job_id = await _service().submit(
+        flow_id=flow_id,
+        request={"flow_id": str(flow_id), "session_id": "session-b", "stream_protocol": "langflow"},
+        user=SimpleNamespace(id=user_id),
+    )
+
+    stale = await job_service.get_job_by_job_id(stale_job_id)
+    assert stale.status == JobStatus.SUSPENDED
+    assert (await _wait_for_completed(job_service, new_job_id)).status == JobStatus.COMPLETED
+
+
+async def test_supersede_reads_the_session_off_legacy_flat_metadata(real_services_job_service):
+    """A legacy row carrying a flat ``job_metadata['session_id']`` is scoped by that session."""
+    job_service = real_services_job_service
+    flow_id, user_id = uuid4(), uuid4()
+    stale_job_id = await _suspend_a_job(job_service, flow_id=flow_id, user_id=user_id, legacy_session_id="session-a")
+
+    untouched = await _service().supersede_suspended_runs(flow_id=flow_id, user_id=user_id, session_id="session-b")
+    assert untouched == []
+    assert (await job_service.get_job_by_job_id(stale_job_id)).status == JobStatus.SUSPENDED
+
+    superseded = await _service().supersede_suspended_runs(flow_id=flow_id, user_id=user_id, session_id="session-a")
+    assert superseded == [stale_job_id]
+    assert (await job_service.get_job_by_job_id(stale_job_id)).status == JobStatus.CANCELLED
