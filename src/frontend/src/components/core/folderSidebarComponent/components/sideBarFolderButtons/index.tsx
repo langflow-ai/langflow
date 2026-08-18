@@ -485,7 +485,7 @@ const SideBarFoldersButtonsComponent = ({
                                     }
                                   }}
                                   className={cn(
-                                    "flex-grow pr-16",
+                                    "flex-grow pr-8",
                                     hoveredFolderId === item.id && "bg-accent",
                                     checkHoveringFolder(item.id!),
                                   )}
