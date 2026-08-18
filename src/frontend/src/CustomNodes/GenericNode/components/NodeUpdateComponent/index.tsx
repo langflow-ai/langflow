@@ -91,8 +91,14 @@ export default function NodeUpdateComponent({
       )}
     >
       <div className={cn("h-2.5 w-2.5 rounded-full", dotColor)} />
-      <div className="mb-px flex-1 truncate text-mmd font-medium">
-        {showNode && label}
+      {/* A blocked node offers no update action, so the label is the only
+          explanation it has. Keep it even while collapsed, where the row is
+          narrow enough to truncate, and carry the full text in the title. */}
+      <div
+        className="mb-px flex-1 truncate text-mmd font-medium"
+        title={blocked ? blockedMessage : undefined}
+      >
+        {showNode || blocked ? label : null}
       </div>
 
       <Button

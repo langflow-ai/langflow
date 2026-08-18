@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { usePermissions } from "@/contexts/permissionsContext";
+import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { FlowType } from "@/types/flow";
 import { useDebounce } from "../use-debounce";
@@ -9,6 +10,18 @@ type PendingAutoSave = {
   flow?: FlowType;
   flowId: string | undefined;
 };
+
+/**
+ * A component missing from the registry cannot be persisted: the server
+ * rejects the write. Autosaving anyway retries a save that can never succeed,
+ * so opening an affected flow produced a stream of failed requests and error
+ * toasts before the user had done anything. The node's own banner reports the
+ * problem instead, and saving resumes once the component is removed.
+ */
+const hasBlockedComponents = () =>
+  useFlowStore
+    .getState()
+    .componentsToUpdate.some((component) => component.blocked);
 
 const useAutoSaveFlow = () => {
   const { can, isLoading } = usePermissions();
@@ -43,6 +56,10 @@ const useAutoSaveFlow = () => {
       pendingAutoSaveRef.current = { flow, flowId };
       return;
     }
+    if (hasBlockedComponents()) {
+      pendingAutoSaveRef.current = null;
+      return;
+    }
     if (can(flowId, "write")) {
       pendingAutoSaveRef.current = null;
       return enqueueSave(flow);
@@ -72,6 +89,10 @@ const useAutoSaveFlow = () => {
     }
     const flowId =
       pendingAutoSave.flowId ?? pendingAutoSave.flow?.id ?? currentFlowId;
+    if (hasBlockedComponents()) {
+      pendingAutoSaveRef.current = null;
+      return;
+    }
     if (can(flowId, "write")) {
       pendingAutoSaveRef.current = null;
       void enqueueSave(pendingAutoSave.flow);

@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
+import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { FlowType } from "@/types/flow";
 import { useDebounce } from "../../use-debounce";
@@ -17,6 +18,10 @@ const makeMockFlow = (): FlowType =>
 jest.mock("../use-save-flow");
 jest.mock("../../use-debounce");
 jest.mock("@/stores/flowsManagerStore");
+jest.mock("@/stores/flowStore", () => ({
+  __esModule: true,
+  default: { getState: jest.fn(() => ({ componentsToUpdate: [] })) },
+}));
 jest.mock("@/contexts/permissionsContext", () => ({
   usePermissions: () => mockUsePermissions(),
 }));
@@ -343,5 +348,47 @@ describe("useAutoSaveFlow", () => {
 
     expect(can).toHaveBeenCalledWith("flow-1", "write");
     expect(mockSaveFlow).not.toHaveBeenCalled();
+  });
+
+  it("does not autosave a flow holding a component the server will reject", async () => {
+    // A missing template cannot be persisted, so retrying the save only
+    // produces failed requests before the user has touched anything.
+    (useFlowStore.getState as jest.Mock).mockReturnValue({
+      componentsToUpdate: [{ id: "node-1", blocked: true, outdated: false }],
+    });
+    (useFlowsManagerStore as unknown as jest.Mock).mockImplementation(
+      (selector) =>
+        selector({
+          autoSaving: true,
+          autoSavingInterval: 3000,
+          currentFlowId: "flow-1",
+        }),
+    );
+
+    const { result } = renderHook(() => useAutoSaveFlow());
+    // Awaiting matters: the save is enqueued on a promise chain, so a
+    // synchronous assertion would pass whether or not the guard is present.
+    await result.current(makeMockFlow());
+
+    expect(mockSaveFlow).not.toHaveBeenCalled();
+  });
+
+  it("still autosaves once no component is blocked", async () => {
+    (useFlowStore.getState as jest.Mock).mockReturnValue({
+      componentsToUpdate: [{ id: "node-1", blocked: false, outdated: true }],
+    });
+    (useFlowsManagerStore as unknown as jest.Mock).mockImplementation(
+      (selector) =>
+        selector({
+          autoSaving: true,
+          autoSavingInterval: 3000,
+          currentFlowId: "flow-1",
+        }),
+    );
+
+    const { result } = renderHook(() => useAutoSaveFlow());
+    await result.current(makeMockFlow());
+
+    expect(mockSaveFlow).toHaveBeenCalledTimes(1);
   });
 });
