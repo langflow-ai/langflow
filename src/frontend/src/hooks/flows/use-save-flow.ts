@@ -8,6 +8,9 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
 import { customStringify } from "@/utils/reactflowUtils";
 
+// Opt-out for callers that recover from a save failure themselves.
+export type SaveFlowOptions = { suppressErrorToast?: boolean };
+
 const useSaveFlow = () => {
   const { t } = useTranslation();
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
@@ -18,7 +21,10 @@ const useSaveFlow = () => {
   const { mutate: getFlow } = useGetFlow();
   const { mutate } = usePatchUpdateFlow();
 
-  const saveFlow = async (flow?: FlowType): Promise<void> => {
+  const saveFlow = async (
+    flow?: FlowType,
+    options?: SaveFlowOptions,
+  ): Promise<void> => {
     const currentFlow = useFlowStore.getState().currentFlow;
     const currentSavedFlow = useFlowsManagerStore.getState().currentFlow;
     const requestedFlow = flow || currentFlow;
@@ -100,10 +106,12 @@ const useSaveFlow = () => {
           const handleError = (e: any) => {
             const detail =
               e.response?.data?.detail || e.message || "Unknown error";
-            setErrorData({
-              title: t("errors.failedToSaveFlow"),
-              list: [detail],
-            });
+            if (!options?.suppressErrorToast) {
+              setErrorData({
+                title: t("errors.failedToSaveFlow"),
+                list: [detail],
+              });
+            }
             setSaveLoading(false);
             reject(e);
           };
