@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -33,7 +35,7 @@ from langflow.services.authorization.actions import (
 from langflow.services.deps import get_authorization_service, get_settings_service
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterator, Sequence
     from uuid import UUID
 
     from langflow.services.database.models.user.model import User, UserRead
@@ -84,6 +86,37 @@ def _auth_audit_details() -> dict[str, str]:
     return current_auth_context_for_audit()
 
 
+# A capability probe is the UI asking "may I offer this control?" — not an
+# attempt to use it. Enforcement is identical either way, but the *audit row*
+# is not: probing wrote a row named after an action nobody performed, so the
+# sidebar rendering N projects wrote N ``share:create`` rows with no resource
+# and no share behind them. Suppress the decision row for the probe only;
+# real attempts, including denied ones, are audited exactly as before.
+_capability_probe: ContextVar[bool] = ContextVar("langflow_authz_capability_probe", default=False)
+
+
+@contextmanager
+def capability_probe() -> Iterator[None]:
+    """Evaluate permissions for a UI capability answer without auditing the check.
+
+    Wrap only reads whose entire purpose is to decide whether an affordance is
+    offered. The guard still runs and still denies; nothing about enforcement
+    changes. Anything that can have an effect — or that a caller invoked
+    intending an effect — must stay outside this scope so its decision is
+    recorded.
+    """
+    token = _capability_probe.set(True)
+    try:
+        yield
+    finally:
+        _capability_probe.reset(token)
+
+
+async def _audit_suppressed() -> None:
+    """Awaitable no-op standing in for a suppressed decision row."""
+    return
+
+
 def _audit_guard_decision(
     *,
     user_id: UUID | None,
@@ -101,6 +134,8 @@ def _audit_guard_decision(
     an evaluated permission from a performed action. Returns the coroutine so
     callers can await it or gather several.
     """
+    if _capability_probe.get():
+        return _audit_suppressed()
     return _audit.audit_decision(
         user_id=user_id,
         action=action,

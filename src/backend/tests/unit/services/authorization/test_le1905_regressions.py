@@ -176,3 +176,188 @@ async def test_create_in_someone_elses_project_still_reaches_the_policy(monkeypa
 
 async def _true() -> bool:
     return True
+
+
+# --------------------------------------------------------------------------- #
+# Round 2, finding 1: a capability probe is not an action, so it is not audited.
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.asyncio
+async def test_capability_probe_writes_no_decision_row(monkeypatch):
+    """The UI asking whether to offer a control must not log ``share:create``."""
+    from langflow.services.authorization import capability_probe, guards
+
+    captured: list[dict] = []
+
+    async def _capture(**kwargs):
+        captured.append(kwargs)
+
+    monkeypatch.setattr(audit_module, "audit_decision", _capture)
+
+    with capability_probe():
+        await guards._audit_guard_decision(
+            user_id=uuid4(),
+            action="share:create",
+            obj="share:*",
+            result=audit_module.AUDIT_OWNER_OVERRIDE,
+        )
+
+    assert captured == []
+
+
+@pytest.mark.asyncio
+async def test_probe_suppression_does_not_leak_past_the_scope(monkeypatch):
+    """A real attempt after a probe is audited as usual."""
+    from langflow.services.authorization import capability_probe, guards
+
+    captured: list[dict] = []
+
+    async def _capture(**kwargs):
+        captured.append(kwargs)
+
+    monkeypatch.setattr(audit_module, "audit_decision", _capture)
+
+    with capability_probe():
+        await guards._audit_guard_decision(
+            user_id=uuid4(),
+            action="share:create",
+            obj="share:*",
+            result=audit_module.AUDIT_ALLOW,
+        )
+    await guards._audit_guard_decision(
+        user_id=uuid4(),
+        action="share:create",
+        obj="share:abc",
+        result=audit_module.AUDIT_DENY,
+    )
+
+    assert len(captured) == 1
+    assert captured[0]["result"] == audit_module.AUDIT_DENY
+
+
+# --------------------------------------------------------------------------- #
+# Round 2, finding 3: the Playground posts the canvas, so a non-owner who holds
+# ``flow:execute`` must still run — the stored graph, not their override.
+# --------------------------------------------------------------------------- #
+
+
+class _Flow:
+    def __init__(self, owner_id):
+        self.id = uuid4()
+        self.user_id = owner_id
+        self.workspace_id = None
+        self.folder_id = None
+
+
+class _User:
+    def __init__(self):
+        self.id = uuid4()
+        self.is_superuser = False
+
+
+@pytest.fixture
+def _reset_override_context():
+    from langflow.services.authorization import flow_data_override
+
+    token = flow_data_override._flow_data_override_allowed.set(False)
+    yield
+    flow_data_override._flow_data_override_allowed.reset(token)
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("_reset_override_context")
+async def test_owner_override_is_resolved_without_consulting_policy(monkeypatch):
+    """An owner is decided by ownership alone; the policy plugin is never consulted."""
+    from langflow.services.authorization import flow_data_override
+
+    called = False
+
+    async def _never(*_args, **_kwargs):
+        nonlocal called
+        called = True
+
+    monkeypatch.setattr(flow_data_override, "ensure_flow_permission", _never)
+
+    user = _User()
+    flow = _Flow(owner_id=user.id)
+
+    assert await flow_data_override.resolve_flow_data_override(user, flow) is True
+    assert called is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("_reset_override_context")
+async def test_write_holder_may_override_someone_elses_flow(monkeypatch):
+    """``flow:write`` already allows persisting that graph, so running it grants nothing new."""
+    from langflow.services.authorization import flow_data_override
+
+    async def _allow(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(flow_data_override, "ensure_flow_permission", _allow)
+
+    assert await flow_data_override.resolve_flow_data_override(_User(), _Flow(owner_id=uuid4())) is True
+    assert flow_data_override.flow_data_override_allowed() is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("_reset_override_context")
+async def test_execute_only_caller_may_not_override(monkeypatch):
+    """Holding execute but not write leaves the stored definition in charge."""
+    from langflow.services.authorization import flow_data_override
+
+    async def _deny(*_args, **_kwargs):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="nope")
+
+    monkeypatch.setattr(flow_data_override, "ensure_flow_permission", _deny)
+
+    assert await flow_data_override.resolve_flow_data_override(_User(), _Flow(owner_id=uuid4())) is False
+    assert flow_data_override.flow_data_override_allowed() is False
+
+
+@pytest.mark.usefixtures("_reset_override_context")
+def test_execute_only_run_keeps_going_with_the_stored_graph():
+    """The regression itself: this used to be a 404 that said the flow does not exist."""
+    from langflow.api.v2.workflow_validation import _apply_flow_data_override_policy
+    from lfx.workflow.converters import ParsedWorkflowRun
+
+    user = _User()
+    flow = _Flow(owner_id=uuid4())
+    parsed = ParsedWorkflowRun(
+        flow_id=str(flow.id),
+        data={"nodes": [{"id": "injected"}], "edges": []},
+        tweaks={"Component": {"model_name": "attacker-chosen"}},
+    )
+
+    result = _apply_flow_data_override_policy(parsed, flow, user)
+
+    assert result.data is None
+    assert result.tweaks == {}
+    # Everything the caller is entitled to send survives.
+    assert result.flow_id == str(flow.id)
+
+
+@pytest.mark.usefixtures("_reset_override_context")
+def test_owner_keeps_their_unsaved_canvas():
+    """The owner's debugging workflow is untouched."""
+    from langflow.api.v2.workflow_validation import _apply_flow_data_override_policy
+    from lfx.workflow.converters import ParsedWorkflowRun
+
+    user = _User()
+    flow = _Flow(owner_id=user.id)
+    data = {"nodes": [{"id": "mine"}], "edges": []}
+    parsed = ParsedWorkflowRun(flow_id=str(flow.id), data=data)
+
+    assert _apply_flow_data_override_policy(parsed, flow, user).data == data
+
+
+@pytest.mark.usefixtures("_reset_override_context")
+def test_a_run_with_no_override_is_untouched():
+    """A plain run carries no override, so there is nothing to strip."""
+    from langflow.api.v2.workflow_validation import _apply_flow_data_override_policy
+    from lfx.workflow.converters import ParsedWorkflowRun
+
+    parsed = ParsedWorkflowRun(flow_id="abc", input_value="hello")
+
+    assert _apply_flow_data_override_policy(parsed, _Flow(owner_id=uuid4()), _User()) is parsed

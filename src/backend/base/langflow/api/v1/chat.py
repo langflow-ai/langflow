@@ -54,7 +54,8 @@ from langflow.api.v1.schemas import (
 from langflow.exceptions.component import ComponentBuildError
 from langflow.services.auth.utils import get_current_user_optional
 from langflow.services.authorization import FlowAction, ensure_flow_permission
-from langflow.services.authorization.fetch import deny_to_404, deny_to_404_unless_readable
+from langflow.services.authorization.fetch import deny_to_404_unless_readable
+from langflow.services.authorization.flow_data_override import resolve_flow_data_override
 from langflow.services.authorization.public_access import (
     PUBLIC_FLOW_NOT_FOUND_DETAIL,
     PublicResourceAction,
@@ -342,16 +343,18 @@ async def build_flow(
             not_found_detail=f"Flow with id {flow_id} not found",
         ) from exc
 
-    # Execute-only shares must run the stored graph — non-owners cannot inject
-    # alternate flow data via the request body (would bypass the owner's definition).
-    if data is not None and flow.user_id != current_user.id:
-        raise deny_to_404(
-            HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only the flow owner can override flow data during build",
-            ),
-            detail=f"Flow with id {flow_id} not found",
+    # Execute-only callers must run the stored graph — they cannot inject an
+    # alternate definition and have it run under the owner's resources. This
+    # drops the override rather than denying: the caller holds ``flow:execute``,
+    # so the run itself is theirs to make, and denying it reported the flow as
+    # non-existent to someone already looking at it (LE-1905). Overriding is an
+    # edit expressed at run time, so it is gated on ``flow:write``.
+    if data is not None and not await resolve_flow_data_override(current_user, flow):
+        await logger.ainfo(
+            "Ignoring caller-supplied flow data for flow %s: caller may execute but not edit it.",
+            flow_id,
         )
+        data = None
 
     try:
         if data:

@@ -70,7 +70,7 @@ from langflow.api.v2.workflow_execution import (
 )
 from langflow.api.v2.workflow_reconstruction import reconstruct_workflow_response_from_job_id
 from langflow.api.v2.workflow_validation import (
-    _enforce_flow_data_override_owner,
+    _apply_flow_data_override_policy,
     _flow_not_found_privacy_exception,
     _reject_sync_only_fields,
     _reject_unsupported_sync_fields,
@@ -87,6 +87,7 @@ from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.services.auth.utils import get_current_user_for_workflow
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.fetch import deny_to_404_unless_readable
+from langflow.services.authorization.flow_data_override import resolve_flow_data_override
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.jobs.model import JobType
 from langflow.services.database.models.user.model import UserRead
@@ -260,21 +261,21 @@ async def authorize_flow_action(
             },
         ) from err
 
+    # Resolve the graph-override verdict here, where we can await the policy
+    # plugin. The sync gates below run in all three execution modes and read
+    # the resolved value; without this they fall back to owner-only.
+    if flow_action == FlowAction.EXECUTE:
+        await resolve_flow_data_override(current_user, flow)
+
 
 def _apply_execution_gates(parsed, flow, current_user: UserRead):
     """Run request gates and return any server-sanitized execution payload."""
     expose_error_details = caller_owns_flow(flow, current_user)
     _reject_unsupported_sync_fields(parsed)
     _reject_sync_only_fields(parsed)
-    try:
-        _enforce_flow_data_override_owner(parsed, flow, current_user)
-    except HTTPException as exc:
-        # The owner-override deny is a privacy 404 (string detail); re-wrap to the
-        # structured FLOW_NOT_FOUND body using the requested identifier (parsed.flow_id
-        # may be an endpoint name) so the resolved UUID is not leaked.
-        if exc.status_code == status.HTTP_404_NOT_FOUND:
-            raise _flow_not_found_http_exception(str(parsed.flow_id)) from exc
-        raise
+    # An execute-only caller keeps running: their override is dropped and the
+    # stored graph runs, instead of the flow reading as non-existent (LE-1905).
+    parsed = _apply_flow_data_override_policy(parsed, flow, current_user)
     return _validate_flow_data_for_execution(
         parsed,
         flow,
