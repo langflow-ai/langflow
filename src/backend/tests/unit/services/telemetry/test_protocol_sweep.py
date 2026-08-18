@@ -167,12 +167,18 @@ pytestmark = pytest.mark.usefixtures("client")
 
 @pytest.fixture(scope="module")
 def span_exporter():
-    """Install a provider for this module and hand back its exporter.
+    """Attach an exporter to whatever tracer provider this worker has, and hand it back.
 
     In-process rather than in a subprocess because these tests need the app, the database and
-    the auth fixtures. The provider is process-global and ``set_tracer_provider`` is
-    first-write-wins, so the assert is what stops this file passing vacuously when another
-    module in the same worker installs one first.
+    the auth fixtures.
+
+    Attaching rather than installing is deliberate. The provider is process-global and
+    ``set_tracer_provider`` is first-write-wins, so a module that installs its own works alone
+    and breaks the moment xdist puts another provider-installing module in the same worker.
+    Adding a processor to the provider already there has no ordering dependency.
+
+    The cells still cannot pass vacuously: each asserts its own span arrived before asserting
+    anything about it.
     """
     from opentelemetry import trace
     from opentelemetry.sdk.trace import TracerProvider
@@ -180,12 +186,20 @@ def span_exporter():
     from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
     exporter = InMemorySpanExporter()
+    current = trace.get_tracer_provider()
+    if isinstance(current, TracerProvider):
+        # A real SDK provider is already installed. set_tracer_provider is first-write-wins,
+        # so installing another would be ignored and every assertion below would read an
+        # exporter nothing feeds. Attach to the one that exists instead: no ordering
+        # dependency, and the cells still fail loudly if their span never arrives.
+        current.add_span_processor(SimpleSpanProcessor(exporter))
+        yield exporter
+        exporter.clear()
+        return
+
     provider = TracerProvider()
     provider.add_span_processor(SimpleSpanProcessor(exporter))
     trace.set_tracer_provider(provider)
-    assert trace.get_tracer_provider() is provider, (
-        "another test installed a tracer provider first; these assertions would be vacuous"
-    )
     yield exporter
     provider.shutdown()
     exporter.clear()
