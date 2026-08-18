@@ -393,6 +393,57 @@ def test_python_attached_code_flag_is_still_rejected():
         validate_mcp_stdio_config("python", ["-cpass"], {})
 
 
+# ``cmd /c`` is not the only way cmd.exe runs a command line: ``/k`` runs it and keeps the
+# session alive, ``/r`` is an undocumented synonym of ``/c``, and boolean switches may be
+# clustered ahead of the executing switch (``/q/k``). Every spelling must bind the wrapped
+# payload to the command allowlist exactly like ``/c`` does, otherwise the wrapper check is
+# skipped and cmd.exe launches an arbitrary executable.
+CMD_EXEC_SWITCHES = ["/c", "/C", "/k", "/K", "/r", "/R", "/q/k", "/s/k", "/d/k", "/Q/K"]
+
+
+@pytest.mark.parametrize("switch", CMD_EXEC_SWITCHES)
+def test_cmd_exec_switches_bind_wrapped_command_to_allowlist(switch):
+    with pytest.raises(MCPStdioSecurityError, match="Shell wrapper 'cmd' cannot execute 'whoami'"):
+        validate_mcp_stdio_config("cmd", [switch, "whoami"], {})
+
+
+@pytest.mark.parametrize("switch", CMD_EXEC_SWITCHES)
+def test_cmd_exec_switches_bind_wrapped_payload_to_package_allowlist(switch):
+    with pytest.raises(MCPStdioSecurityError, match="not allowed for MCP npx"):
+        validate_mcp_stdio_config(
+            "cmd",
+            [switch, "npx", "@attacker/owned-package"],
+            {},
+            allowed_packages={"mcp-proxy"},
+        )
+
+
+@pytest.mark.parametrize("switch", CMD_EXEC_SWITCHES)
+def test_cmd_exec_switches_bind_wrapped_payload_to_interpreter_hardening(switch):
+    with pytest.raises(MCPStdioSecurityError, match="INTERPRETER_HARDENING"):
+        validate_mcp_stdio_config(
+            "cmd",
+            [switch, "node", "C:\\Users\\attacker\\server.js"],
+            {},
+            interpreter_hardening=True,
+        )
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["/c", "uvx", "mcp-server-fetch"],
+        ["/k", "uvx", "mcp-server-fetch"],
+        ["/q", "/c", "uvx", "mcp-server-fetch"],
+        ["/d", "/k", "uvx", "mcp-server-fetch"],
+        ["/e:on", "/c", "uvx", "mcp-server-fetch"],
+        ["/t:0a", "/k", "uvx", "mcp-server-fetch"],
+    ],
+)
+def test_cmd_wrapper_preserves_allowed_payload_behind_benign_switches(args):
+    validate_mcp_stdio_config("cmd", args, {})
+
+
 @pytest.mark.parametrize(
     "args",
     [
