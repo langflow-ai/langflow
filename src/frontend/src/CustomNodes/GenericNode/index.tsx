@@ -111,6 +111,9 @@ function GenericNode({
   const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
   const isReadOnly = useIsFlowReadOnly(currentFlowId);
 
+  const catalogGovernanceEnabled = useUtilityStore(
+    (state) => state.catalogGovernanceEnabled,
+  );
   const allowCustomComponents = useUtilityStore(
     (state) => state.allowCustomComponents,
   );
@@ -600,7 +603,12 @@ function GenericNode({
           <NodeUpdateComponent
             hasBreakingChange={hasBreakingChange}
             blocked={isBlocked}
-            blockedByCatalogPolicy={isBlocked && allowCustomComponents}
+            blockedByCatalogPolicy={
+              // Restricted mode blocks an unknown code-bearing node on its own,
+              // so it stays the stated cause; the policy is only named when it
+              // is the one that applies.
+              isBlocked && allowCustomComponents && catalogGovernanceEnabled
+            }
             showNode={showNode}
             handleUpdateCode={() =>
               void handleUpdateCode().catch(() => undefined)

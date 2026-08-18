@@ -3,6 +3,8 @@ import { usePermissions } from "@/contexts/permissionsContext";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useTypesStore } from "@/stores/typesStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import type { FlowType } from "@/types/flow";
 import { useDebounce } from "../use-debounce";
 import useSaveFlow from "./use-save-flow";
@@ -15,16 +17,35 @@ type PendingAutoSave = {
 /**
  * Components the server will refuse to persist, if any.
  *
- * A component missing from the registry cannot be saved, so autosaving retries
- * a write that can never succeed: opening an affected flow produced a stream of
- * failed requests before the user had touched anything. Autosave stops instead,
- * and the caller reports it once rather than on every attempt.
+ * Autosaving a flow the server rejects retries a write that can never succeed,
+ * so opening an affected flow produced a stream of failed requests before the
+ * user had touched anything. Pausing instead is only safe where the rejection
+ * is certain, because a wrong pause silently stops persisting the user's work:
+ *
+ *  - the write is only rejected when a catalog policy actually blocks a key.
+ *    `validate_catalog_policy_for_flow` returns early on an empty blocklist, so
+ *    without a policy the save succeeds and there is nothing to pause for.
+ *  - `blocked` means "no template for this type", which is also true of an
+ *    uninstalled bundle, a flow imported from another install, and every
+ *    code-bearing node while the registry is still loading. `templates` starts
+ *    as `{}`, so a cold load would otherwise pause autosave and name every
+ *    component in the flow.
+ *
+ * Anything short of both signals leaves autosave alone and lets the server
+ * decide, which is the behaviour that existed before.
  */
-const blockedComponentNames = (): string[] =>
-  useFlowStore
+const blockedComponentNames = (): string[] => {
+  if (!useUtilityStore.getState().catalogGovernanceEnabled) {
+    return [];
+  }
+  if (Object.keys(useTypesStore.getState().templates).length === 0) {
+    return [];
+  }
+  return useFlowStore
     .getState()
     .componentsToUpdate.filter((component) => component.blocked)
     .map((component) => component.display_name ?? component.id);
+};
 
 const useAutoSaveFlow = () => {
   const { can, isLoading } = usePermissions();
@@ -82,7 +103,9 @@ const useAutoSaveFlow = () => {
       return;
     }
     if (pauseForBlockedComponents()) {
-      pendingAutoSaveRef.current = null;
+      // Hold the edit rather than discard it, so it still lands once the
+      // blocking component is removed.
+      pendingAutoSaveRef.current = { flow, flowId };
       return;
     }
     if (can(flowId, "write")) {
@@ -115,7 +138,6 @@ const useAutoSaveFlow = () => {
     const flowId =
       pendingAutoSave.flowId ?? pendingAutoSave.flow?.id ?? currentFlowId;
     if (pauseForBlockedComponents()) {
-      pendingAutoSaveRef.current = null;
       return;
     }
     if (can(flowId, "write")) {

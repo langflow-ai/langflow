@@ -10,6 +10,7 @@ type ComponentUpdate = {
 };
 
 let mockAllowCustomComponents: boolean;
+let mockCatalogGovernanceEnabled: boolean;
 let mockComponentsToUpdate: ComponentUpdate[];
 let mockDismissedNodes: string[];
 
@@ -97,7 +98,10 @@ jest.mock("../../../stores/flowsManagerStore", () => ({
 
 jest.mock("../../../stores/utilityStore", () => ({
   useUtilityStore: (selector: (state: unknown) => unknown) =>
-    selector({ allowCustomComponents: mockAllowCustomComponents }),
+    selector({
+      allowCustomComponents: mockAllowCustomComponents,
+      catalogGovernanceEnabled: mockCatalogGovernanceEnabled,
+    }),
 }));
 
 jest.mock("../../../stores/shortcuts", () => ({
@@ -231,11 +235,12 @@ describe("GenericNode blocked banner", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAllowCustomComponents = true;
+    mockCatalogGovernanceEnabled = true;
     mockDismissedNodes = [];
     mockComponentsToUpdate = [];
   });
 
-  it("surfaces a blocked node while custom components are allowed", () => {
+  it("names the catalog policy when one is in force", () => {
     // The catalog dropped this component, so its template is gone. Before, the
     // node looked healthy here and only failed once the flow was run.
     mockComponentsToUpdate = [componentUpdate({ blocked: true })];
@@ -245,6 +250,19 @@ describe("GenericNode blocked banner", () => {
     const banner = screen.getByTestId("node-update-banner");
     expect(banner).toHaveAttribute("data-blocked", "true");
     expect(banner).toHaveAttribute("data-blocked-by-policy", "true");
+  });
+
+  it("surfaces a blocked node without claiming a policy that is not set", () => {
+    // A missing template also covers an uninstalled bundle or an imported
+    // flow, so the banner must still show but must not blame an administrator.
+    mockCatalogGovernanceEnabled = false;
+    mockComponentsToUpdate = [componentUpdate({ blocked: true })];
+
+    renderNode();
+
+    const banner = screen.getByTestId("node-update-banner");
+    expect(banner).toHaveAttribute("data-blocked", "true");
+    expect(banner).toHaveAttribute("data-blocked-by-policy", "false");
   });
 
   it("keeps surfacing a blocked node the user dismissed", () => {

@@ -1,5 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import useFlowStore from "@/stores/flowStore";
+import { useTypesStore } from "@/stores/typesStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { FlowType } from "@/types/flow";
 import { useDebounce } from "../../use-debounce";
@@ -24,6 +26,14 @@ jest.mock("@/stores/alertStore", () => ({
   default: (selector: (state: unknown) => unknown) =>
     selector({ setErrorData: mockSetErrorData }),
 }));
+jest.mock("@/stores/typesStore", () => ({
+  useTypesStore: { getState: jest.fn(() => ({ templates: { Agent: {} } })) },
+}));
+jest.mock("@/stores/utilityStore", () => ({
+  useUtilityStore: {
+    getState: jest.fn(() => ({ catalogGovernanceEnabled: true })),
+  },
+}));
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
   default: { getState: jest.fn(() => ({ componentsToUpdate: [] })) },
@@ -45,6 +55,12 @@ describe("useAutoSaveFlow", () => {
     // cases would leak into the ones after them.
     (useFlowStore.getState as jest.Mock).mockReturnValue({
       componentsToUpdate: [],
+    });
+    (useTypesStore.getState as jest.Mock).mockReturnValue({
+      templates: { Agent: {} },
+    });
+    (useUtilityStore.getState as jest.Mock).mockReturnValue({
+      catalogGovernanceEnabled: true,
     });
     (useSaveFlow as jest.Mock).mockReturnValue(mockSaveFlow);
     (useDebounce as jest.Mock).mockImplementation((fn) => {
@@ -426,5 +442,91 @@ describe("useAutoSaveFlow", () => {
     await result.current(makeMockFlow());
 
     expect(mockSaveFlow).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps saving while the component registry is still loading", async () => {
+    // templates is {} until /all resolves, which makes every code-bearing node
+    // look unknown. Pausing on that would strand a cold load's edits.
+    (useTypesStore.getState as jest.Mock).mockReturnValue({ templates: {} });
+    (useFlowStore.getState as jest.Mock).mockReturnValue({
+      componentsToUpdate: [
+        { id: "node-1", display_name: "Chat Output", blocked: true },
+      ],
+    });
+    (useFlowsManagerStore as unknown as jest.Mock).mockImplementation(
+      (selector) =>
+        selector({
+          autoSaving: true,
+          autoSavingInterval: 3000,
+          currentFlowId: "flow-1",
+        }),
+    );
+
+    const { result } = renderHook(() => useAutoSaveFlow());
+    await result.current(makeMockFlow());
+
+    expect(mockSaveFlow).toHaveBeenCalledTimes(1);
+    expect(mockSetErrorData).not.toHaveBeenCalled();
+  });
+
+  it("keeps saving when no catalog policy is in force", async () => {
+    // Without a policy the server accepts the write, so a missing template is
+    // not a reason to stop persisting.
+    (useUtilityStore.getState as jest.Mock).mockReturnValue({
+      catalogGovernanceEnabled: false,
+    });
+    (useFlowStore.getState as jest.Mock).mockReturnValue({
+      componentsToUpdate: [
+        { id: "node-1", display_name: "Chat Output", blocked: true },
+      ],
+    });
+    (useFlowsManagerStore as unknown as jest.Mock).mockImplementation(
+      (selector) =>
+        selector({
+          autoSaving: true,
+          autoSavingInterval: 3000,
+          currentFlowId: "flow-1",
+        }),
+    );
+
+    const { result } = renderHook(() => useAutoSaveFlow());
+    await result.current(makeMockFlow());
+
+    expect(mockSaveFlow).toHaveBeenCalledTimes(1);
+    expect(mockSetErrorData).not.toHaveBeenCalled();
+  });
+
+  it("holds the paused edit so it lands once the block clears", async () => {
+    (useFlowStore.getState as jest.Mock).mockReturnValue({
+      componentsToUpdate: [
+        { id: "node-1", display_name: "Chat Output", blocked: true },
+      ],
+    });
+    let isLoading = false;
+    mockUsePermissions.mockReturnValue({ can: jest.fn(() => true), isLoading });
+    (useFlowsManagerStore as unknown as jest.Mock).mockImplementation(
+      (selector) =>
+        selector({
+          autoSaving: true,
+          autoSavingInterval: 3000,
+          currentFlowId: "flow-1",
+        }),
+    );
+
+    const { result, rerender } = renderHook(() => useAutoSaveFlow());
+    await result.current(makeMockFlow());
+    expect(mockSaveFlow).not.toHaveBeenCalled();
+
+    // Removing the component unblocks the flow; the held edit should persist.
+    (useFlowStore.getState as jest.Mock).mockReturnValue({
+      componentsToUpdate: [],
+    });
+    isLoading = true;
+    rerender();
+    isLoading = false;
+    mockUsePermissions.mockReturnValue({ can: jest.fn(() => true), isLoading });
+    rerender();
+
+    await waitFor(() => expect(mockSaveFlow).toHaveBeenCalledTimes(1));
   });
 });
