@@ -16,6 +16,7 @@ from lfx.utils.constants import DIRECT_TYPES
 from lfx.utils.file_path_security import (
     LocalFileAccessError,
     enforce_local_file_access,
+    enforce_storage_key_scope,
     is_local_file_access_restricted,
 )
 from lfx.utils.util import unescape_string
@@ -317,6 +318,32 @@ class ParameterHandler:
             )
         return processed
 
+    def _scoped_storage_key(self, file_path: str) -> str:
+        """Reject a logical storage key whose namespace is outside the executing graph.
+
+        ``StorageService.resolve_component_path`` turns a relative ``"<namespace>/<file_name>"``
+        value into ``<storage root>/<namespace>/<file_name>``, so the namespace segment selects a
+        per-principal storage location. The value comes from the saved template or a runtime
+        tweak, so it has to be checked *before* it is resolved — afterwards the component only
+        sees an already-resolved path and the shape of the input has decided access on its own.
+
+        Two cases are deliberately left alone:
+
+        * Absolute paths and values without a separator are not storage keys. Reading a local
+          server file by absolute path is the documented single-tenant behavior that
+          ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` governs, so they stay with
+          ``_enforce_file_paths``.
+        * Restricted mode, where ``_enforce_file_paths`` already pins the resolved local path and
+          the S3 logical key to the graph's own scopes. This check exists to close the
+          unrestricted default, and skipping it keeps restricted behavior byte-identical.
+        """
+        if is_local_file_access_restricted():
+            return file_path
+        if "/" not in file_path or PurePosixPath(file_path).is_absolute():
+            return file_path
+        enforce_storage_key_scope(file_path, self._file_access_scopes())
+        return file_path
+
     def process_file_value(self, file_path: str | list[str], *, is_list: bool) -> str | list[str]:
         """Resolve a FileInput value and enforce the configured storage boundary."""
         try:
@@ -325,12 +352,14 @@ class ParameterHandler:
                 if not isinstance(paths, list) or not all(isinstance(path, str) for path in paths):
                     msg = "FileInput values must be file path strings."
                     raise LocalFileAccessError(msg)
-                full_path: str | list[str] = [self.storage_service.resolve_component_path(path) for path in paths]
+                full_path: str | list[str] = [
+                    self.storage_service.resolve_component_path(self._scoped_storage_key(path)) for path in paths
+                ]
             else:
                 if not isinstance(file_path, str):
                     msg = "FileInput values must be file path strings."
                     raise LocalFileAccessError(msg)
-                full_path = self.storage_service.resolve_component_path(file_path)
+                full_path = self.storage_service.resolve_component_path(self._scoped_storage_key(file_path))
         except ValueError as e:
             if "too many values to unpack" in str(e):
                 full_path = file_path

@@ -1029,3 +1029,130 @@ class TestStrFieldWithNonStringListElements:
 
         params, _ = parameter_handler.process_field_parameters()
         assert params["input_value"] == ["hello\nworld", "msg"]
+
+
+class TestFileInputStorageNamespaceOwnership:
+    """A FileInput storage key must name a namespace the executing graph owns.
+
+    ``resolve_component_path`` expands a relative ``"<namespace>/<file_name>"`` value into the
+    per-principal storage location for that namespace, so the component is handed a fully
+    resolved path. Without a namespace check the shape of the input decides access, and a
+    caller can point a FileInput at another user's upload.
+
+    These run at the OSS default (``restrict_local_file_access=False``) against a real
+    ``LocalStorageService``.
+    """
+
+    VICTIM_ID = "11111111-1111-1111-1111-111111111111"
+    ATTACKER_ID = "22222222-2222-2222-2222-222222222222"
+    FLOW_ID = "33333333-3333-3333-3333-333333333333"
+
+    @pytest.fixture
+    def unrestricted_storage(self, monkeypatch, tmp_path):
+        config_dir = tmp_path / "config"
+        (config_dir / self.VICTIM_ID).mkdir(parents=True)
+        (config_dir / self.VICTIM_ID / "secret.txt").write_text("VICTIM_SECRET", encoding="utf-8")
+        (config_dir / self.ATTACKER_ID).mkdir(parents=True)
+        (config_dir / self.ATTACKER_ID / "own.txt").write_text("ATTACKER_OWN", encoding="utf-8")
+
+        settings_service = Mock()
+        settings_service.settings.restrict_local_file_access = False
+        settings_service.settings.config_dir = config_dir
+        settings_service.settings.database_url = ""
+        settings_service.settings.storage_type = "local"
+        monkeypatch.setattr("lfx.utils.file_path_security.get_settings_service", lambda: settings_service)
+        return LocalStorageService(Mock(), settings_service)
+
+    def _handler(self, storage, *, user_id, flow_id):
+        vertex = Mock(spec=Vertex)
+        graph = Mock()
+        graph.user_id = user_id
+        graph.flow_id = flow_id
+        graph.source_flow_id = None
+        vertex.graph = graph
+        vertex.data = {"node": {"template": {}}}
+        vertex.display_name = "File"
+        return ParameterHandler(vertex, storage)
+
+    def test_foreign_namespace_is_rejected_before_resolution(self, unrestricted_storage):
+        handler = self._handler(unrestricted_storage, user_id=self.ATTACKER_ID, flow_id=self.FLOW_ID)
+
+        with pytest.raises(LocalFileAccessError, match="outside the authenticated user's"):
+            handler.process_file_field(
+                "path",
+                {"type": "file", "list": True, "file_path": [f"{self.VICTIM_ID}/secret.txt"]},
+                {},
+            )
+
+    def test_every_list_item_is_checked(self, unrestricted_storage):
+        """A single in-scope entry must not carry a foreign one through with it."""
+        handler = self._handler(unrestricted_storage, user_id=self.ATTACKER_ID, flow_id=self.FLOW_ID)
+
+        with pytest.raises(LocalFileAccessError, match="outside the authenticated user's"):
+            handler.process_file_field(
+                "path",
+                {
+                    "type": "file",
+                    "list": True,
+                    "file_path": [f"{self.ATTACKER_ID}/own.txt", f"{self.VICTIM_ID}/secret.txt"],
+                },
+                {},
+            )
+
+    def test_traversal_out_of_own_namespace_is_rejected(self, unrestricted_storage):
+        handler = self._handler(unrestricted_storage, user_id=self.ATTACKER_ID, flow_id=self.FLOW_ID)
+
+        with pytest.raises(LocalFileAccessError, match="path separators or traversal"):
+            handler.process_file_field(
+                "path",
+                {"type": "file", "file_path": f"{self.ATTACKER_ID}/../{self.VICTIM_ID}/secret.txt"},
+                {},
+            )
+
+    def test_own_namespace_still_resolves(self, unrestricted_storage, tmp_path):
+        handler = self._handler(unrestricted_storage, user_id=self.ATTACKER_ID, flow_id=self.FLOW_ID)
+
+        params = handler.process_file_field(
+            "path",
+            {"type": "file", "list": True, "file_path": [f"{self.ATTACKER_ID}/own.txt"]},
+            {},
+        )
+
+        expected = tmp_path / "config" / self.ATTACKER_ID / "own.txt"
+        assert params["path"] == [str(expected)]
+
+    def test_executing_flow_namespace_still_resolves(self, unrestricted_storage, tmp_path):
+        flow_dir = tmp_path / "config" / self.FLOW_ID
+        flow_dir.mkdir(parents=True)
+        (flow_dir / "flow.txt").write_text("FLOW_UPLOAD", encoding="utf-8")
+        handler = self._handler(unrestricted_storage, user_id=self.ATTACKER_ID, flow_id=self.FLOW_ID)
+
+        params = handler.process_file_field(
+            "path",
+            {"type": "file", "file_path": f"{self.FLOW_ID}/flow.txt"},
+            {},
+        )
+
+        assert params["path"] == str(flow_dir / "flow.txt")
+
+    def test_absolute_local_path_compatibility_is_preserved(self, unrestricted_storage, tmp_path):
+        """Absolute paths are not storage keys; single-tenant support for them is unchanged."""
+        outside = tmp_path / "local-file.txt"
+        outside.write_text("LOCAL", encoding="utf-8")
+        handler = self._handler(unrestricted_storage, user_id=self.ATTACKER_ID, flow_id=self.FLOW_ID)
+
+        params = handler.process_file_field("path", {"type": "file", "file_path": str(outside)}, {})
+
+        assert params["path"] == unrestricted_storage.resolve_component_path(str(outside))
+
+    def test_unscoped_graph_keeps_legacy_behavior(self, unrestricted_storage, tmp_path):
+        """Standalone graphs carry no user or flow id and have no tenant boundary."""
+        handler = self._handler(unrestricted_storage, user_id=None, flow_id=None)
+
+        params = handler.process_file_field(
+            "path",
+            {"type": "file", "file_path": f"{self.VICTIM_ID}/secret.txt"},
+            {},
+        )
+
+        assert params["path"] == str(tmp_path / "config" / self.VICTIM_ID / "secret.txt")
