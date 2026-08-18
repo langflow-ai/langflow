@@ -509,7 +509,16 @@ const SideBarFoldersButtonsComponent = ({
                                           handleKeyDown={handleKeyDown}
                                         />
                                       ) : (
-                                        <span className="block w-0 grow truncate text-sm opacity-100">
+                                        <span
+                                          className="block w-0 grow truncate text-sm opacity-100"
+                                          // The sidebar cannot be widened, so a
+                                          // truncated name is otherwise
+                                          // unreadable. With one default project
+                                          // per user the list fills with rows
+                                          // that differ only in the truncated
+                                          // part.
+                                          title={getProjectDisplayName(item, t)}
+                                        >
                                           {getProjectDisplayName(item, t)}
                                         </span>
                                       )}

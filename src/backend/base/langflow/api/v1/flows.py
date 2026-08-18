@@ -58,6 +58,7 @@ from langflow.api.v1.flows_helpers import (
     _update_existing_flow,
     _validate_and_assign_folder,
     _verify_fs_path,
+    destination_folder_owner_id,
 )
 from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
 from langflow.api.v1.schemas import FlowListCreate
@@ -885,7 +886,11 @@ async def upsert_flow(
             # CREATE path - flow doesn't exist
             await _canonicalize_flow_destination(session, flow, current_user.id, reject_invalid=True)
             await ensure_flow_permission(
-                current_user, FlowAction.CREATE, workspace_id=flow.workspace_id, folder_id=flow.folder_id
+                current_user,
+                FlowAction.CREATE,
+                workspace_id=flow.workspace_id,
+                folder_id=flow.folder_id,
+                folder_user_id=await destination_folder_owner_id(session, flow.folder_id),
             )
             _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
             await stage_mcp_secrets(carried_secrets, secret_variables, writer_id, session)
@@ -993,6 +998,7 @@ async def create_flows(
             FlowAction.CREATE,
             workspace_id=flow.workspace_id,
             folder_id=flow.folder_id,
+            folder_user_id=await destination_folder_owner_id(session, flow.folder_id),
         )
     # Guard against duplicate IDs up-front so callers get a clean 422 instead
     # of an unhandled DB IntegrityError.  Use upload_file() for upsert semantics.
@@ -1143,6 +1149,7 @@ async def upload_file(
             FlowAction.CREATE,
             workspace_id=flow.workspace_id,
             folder_id=flow.folder_id,
+            folder_user_id=await destination_folder_owner_id(session, flow.folder_id),
         )
 
         # Upload upserts ignore omitted/null data. Validate the stored graph in

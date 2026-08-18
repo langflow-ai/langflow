@@ -54,7 +54,7 @@ from langflow.api.v1.schemas import (
 from langflow.exceptions.component import ComponentBuildError
 from langflow.services.auth.utils import get_current_user_optional
 from langflow.services.authorization import FlowAction, ensure_flow_permission
-from langflow.services.authorization.fetch import deny_to_404
+from langflow.services.authorization.fetch import deny_to_404, deny_to_404_unless_readable
 from langflow.services.authorization.public_access import (
     PUBLIC_FLOW_NOT_FOUND_DETAIL,
     PublicResourceAction,
@@ -82,6 +82,8 @@ if TYPE_CHECKING:
     from lfx.graph.vertex.vertex_types import InterfaceVertex
 
 router = APIRouter(tags=["Chat"])
+
+FLOW_EXECUTE_DENIED_DETAIL = "You don't have permission to execute this flow."
 
 
 def _validate_graph_for_execution(graph: Graph) -> None:
@@ -312,8 +314,10 @@ async def build_flow(
 
     # Authorize the execute action — runs the authorization plugin if registered,
     # no-op in OSS pass-through. Audited regardless. A plugin deny becomes 404
-    # so the response is identical to "flow does not exist" and the caller
-    # cannot enumerate UUIDs by probing for 403 vs 404.
+    # so a caller who cannot see the flow cannot enumerate UUIDs by probing for
+    # 403 vs 404. A caller who *can* read it has already seen the flow, so that
+    # mask buys nothing and only hides which permission they are missing — the
+    # Playground is exactly this case.
     try:
         await ensure_flow_permission(
             current_user,
@@ -324,7 +328,19 @@ async def build_flow(
             folder_id=flow.folder_id,
         )
     except HTTPException as exc:
-        raise deny_to_404(exc, detail=f"Flow with id {flow_id} not found") from exc
+        raise await deny_to_404_unless_readable(
+            exc,
+            lambda: ensure_flow_permission(
+                current_user,
+                FlowAction.READ,
+                flow_id=flow_id,
+                flow_user_id=flow.user_id,
+                workspace_id=flow.workspace_id,
+                folder_id=flow.folder_id,
+            ),
+            denied_detail=FLOW_EXECUTE_DENIED_DETAIL,
+            not_found_detail=f"Flow with id {flow_id} not found",
+        ) from exc
 
     # Execute-only shares must run the stored graph — non-owners cannot inject
     # alternate flow data via the request body (would bypass the owner's definition).

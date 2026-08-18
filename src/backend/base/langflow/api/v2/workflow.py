@@ -86,6 +86,7 @@ from langflow.exceptions.api import (
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.services.auth.utils import get_current_user_for_workflow
 from langflow.services.authorization import FlowAction, ensure_flow_permission
+from langflow.services.authorization.fetch import deny_to_404_unless_readable
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.jobs.model import JobType
 from langflow.services.database.models.user.model import UserRead
@@ -109,6 +110,8 @@ _TERMINAL_JOB_STATUSES = frozenset({JobStatus.COMPLETED, JobStatus.FAILED, JobSt
 # routes stay langflow-owned. Both are mounted on the same ``/workflows``
 # prefix in ``langflow.api.router``.
 router = APIRouter(prefix="/workflows", tags=["Workflow"])
+
+FLOW_EXECUTE_DENIED_DETAIL = "You don't have permission to execute this flow."
 
 
 def _flow_not_found_http_exception(flow_id: str) -> HTTPException:
@@ -183,6 +186,10 @@ async def authorize_flow_action(
     leaked through a raw 403. ``requested_id`` is the identifier the caller sent
     (an endpoint name or a UUID); the reframed body echoes it instead of the
     resolved internal UUID. Falls back to ``flow.id`` when not provided.
+
+    The 404 reframe is skipped when the caller can read the flow: they already
+    know it exists, and "verify the flow_id and try again" sends them to debug
+    an identifier that is correct. Those callers get an execute denial instead.
     """
     flow_action = FlowAction.READ if action == WorkflowAction.READ else FlowAction.EXECUTE
     # Echo the identifier the caller requested (which may be an endpoint name),
@@ -198,6 +205,29 @@ async def authorize_flow_action(
             folder_id=getattr(flow, "folder_id", None),
         )
     except HTTPException as exc:
+        if flow_action == FlowAction.EXECUTE:
+            resolved = await deny_to_404_unless_readable(
+                exc,
+                lambda: ensure_flow_permission(
+                    current_user,
+                    FlowAction.READ,
+                    flow_id=flow.id,
+                    flow_user_id=flow.user_id,
+                    workspace_id=getattr(flow, "workspace_id", None),
+                    folder_id=getattr(flow, "folder_id", None),
+                ),
+                denied_detail=FLOW_EXECUTE_DENIED_DETAIL,
+            )
+            if resolved.status_code == status.HTTP_403_FORBIDDEN:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail={
+                        "error": "Permission denied",
+                        "code": "FLOW_EXECUTE_FORBIDDEN",
+                        "message": FLOW_EXECUTE_DENIED_DETAIL,
+                        "flow_id": echo_id,
+                    },
+                ) from exc
         privacy = _flow_not_found_privacy_exception(exc, echo_id)
         # Preserve the legacy contract: any 404 on this path surfaces as the
         # structured FLOW_NOT_FOUND body, not the privacy-reframe's string detail.
