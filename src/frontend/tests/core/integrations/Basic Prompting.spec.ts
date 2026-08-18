@@ -1,21 +1,19 @@
 import { expect } from "../../fixtures";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { buildFlowAndWait } from "../../utils/flow/build-flow-and-wait";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
   "Basic Prompting (Hello, World)",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    skipIfMissing.openAiKey();
-    loadDotenvIfLocal(__dirname);
+    await seedLoopbackProvider(page);
     await openStarterProject(page, "Basic Prompting");
 
-    await initialGPTsetup(page);
+    await configureLoopbackOpenAI(page);
     await buildFlowAndWait(page);
 
     await page

@@ -57,7 +57,7 @@ class TestOutageDeckProviderStatusComponent(ComponentTestBaseWithoutClient):
 
         assert isinstance(result, Data)
         assert result.data == payload
-        assert component.status == "GitHub: Operational — All Systems Operational"
+        assert component.status == "GitHub: Operational. All Systems Operational"
         assert route.called
         assert route.calls.last.request.headers["accept"] == "application/json"
         assert route.calls.last.request.headers["user-agent"] == "Langflow-OutageDeck/1.0"

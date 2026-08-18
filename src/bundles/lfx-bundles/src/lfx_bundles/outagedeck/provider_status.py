@@ -73,5 +73,5 @@ class OutageDeckProviderStatusComponent(Component):
         name = provider.get("name") or slug
         label = current_status.get("label", current_status.get("code", "Unknown"))
         headline = current_status.get("headline", "No status headline")
-        self.status = f"{name}: {label} — {headline}"
+        self.status = f"{name}: {label}. {headline}"
         return Data(data=payload)

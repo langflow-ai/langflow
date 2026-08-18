@@ -8,6 +8,7 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException, status
 from httpx import AsyncClient
+from langflow.api.v1 import projects_mcp_helpers
 from langflow.api.v1.mcp_projects import (
     ProjectMCPServer,
     _args_reference_urls,
@@ -20,6 +21,7 @@ from langflow.api.v1.mcp_projects import (
 )
 from langflow.api.v2.mcp import is_mcp_servers_locked
 from langflow.services.auth.utils import create_user_longterm_token, get_password_hash
+from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.folder import Folder
 from langflow.services.database.models.user.model import User
@@ -33,9 +35,6 @@ from mcp.server.sse import SseServerTransport
 from sqlmodel import select
 
 from tests.unit.utils.mcp import project_session_manager_lifespan
-
-# Mark all tests in this module as asyncio
-pytestmark = pytest.mark.asyncio
 
 
 def _set_startup_mcp_settings(
@@ -476,7 +475,7 @@ async def test_update_project_mcp_settings_invalid_json(client: AsyncClient, use
     response = await client.patch(
         f"api/v1/mcp/project/{user_test_project.id}", headers=logged_in_headers, json="invalid"
     )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 @pytest.fixture
@@ -1299,6 +1298,127 @@ async def test_init_mcp_servers_reconciles_existing_apikey_project_server_config
         assert streamable_http_url in server_args
     finally:
         await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=headers)
+
+
+async def test_init_mcp_servers_reconciles_stale_config_without_transaction_error(
+    client: AsyncClient,
+    user_test_project,
+    created_api_key,
+    monkeypatch,
+):
+    """Reconciling a pre-1.11.1 config must not break the caller's savepoint (issue #14536).
+
+    ``update_server`` used to commit the transaction owned by ``init_mcp_servers``'
+    ``session.begin_nested()``, so its own trailing read raised ``InvalidRequestError:
+    Can't operate on closed transaction inside context manager`` - after that commit had
+    already persisted the API key created for the config.
+    """
+    project_sse_transports.clear()
+    project_mcp_servers.clear()
+    _set_startup_mcp_settings(
+        monkeypatch,
+        auto_login=False,
+        mcp_composer_enabled=False,
+        add_projects_to_mcp_servers=True,
+    )
+
+    async with session_scope() as session:
+        project = await session.get(Folder, user_test_project.id)
+        assert project is not None
+        project.auth_settings = {"auth_type": "apikey"}
+        session.add(project)
+
+    server_name = f"lf-{sanitize_mcp_name(user_test_project.name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+    streamable_http_url = await get_project_streamable_http_url(user_test_project.id)
+    # Config as written by <=1.11.0: no `--with mcp~=1.28` constraint prefix, so 1.11.1+
+    # no longer considers it a match and reconciles it on every startup.
+    stale_server_config = {
+        "command": "uvx",
+        "args": ["mcp-proxy", "--transport", "streamablehttp", streamable_http_url],
+    }
+    headers = {"x-api-key": created_api_key.api_key}
+    response = await client.post(f"/api/v2/mcp/servers/{server_name}", json=stale_server_config, headers=headers)
+    assert response.status_code == 200
+
+    reconcile_errors: list[BaseException] = []
+    real_register = projects_mcp_helpers.register_mcp_servers_for_project
+
+    async def spy(*args, **kwargs):
+        try:
+            return await real_register(*args, **kwargs)
+        except BaseException as exc:
+            reconcile_errors.append(exc)
+            raise
+
+    monkeypatch.setattr(projects_mcp_helpers, "register_mcp_servers_for_project", spy)
+
+    try:
+        with (
+            patch("langflow.api.v1.mcp_projects.get_project_sse"),
+            patch("langflow.api.v1.mcp_projects.get_project_mcp_server"),
+            patch("langflow.api.v1.mcp_projects.auto_configure_starter_projects_mcp", new=AsyncMock()),
+        ):
+            await init_mcp_servers()
+
+        assert not reconcile_errors, f"startup reconciliation raised: {reconcile_errors}"
+
+        response = await client.get(f"/api/v2/mcp/servers/{server_name}", headers=headers)
+        assert response.status_code == 200
+        assert "--with" in response.json()["args"]
+    finally:
+        await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=headers)
+
+
+async def test_init_mcp_servers_does_not_leak_api_key_when_reconciliation_fails(
+    user_test_project,
+    monkeypatch,
+):
+    """A failed startup reconciliation must leave no orphaned API key behind (issue #14536).
+
+    ``create_api_key`` runs before the server write, so the savepoint is the only thing
+    keeping the two atomic. A commit inside ``update_server`` would persist the key even
+    though the reconciliation it was generated for never completed.
+    """
+    project_sse_transports.clear()
+    project_mcp_servers.clear()
+    _set_startup_mcp_settings(
+        monkeypatch,
+        auto_login=False,
+        mcp_composer_enabled=False,
+        add_projects_to_mcp_servers=True,
+    )
+
+    async with session_scope() as session:
+        project = await session.get(Folder, user_test_project.id)
+        assert project is not None
+        project.auth_settings = {"auth_type": "apikey"}
+        session.add(project)
+
+    async def count_api_keys() -> int:
+        async with session_scope() as session:
+            return len((await session.exec(select(ApiKey))).all())
+
+    keys_before = await count_api_keys()
+
+    # Fail after create_api_key and after the server row is written, i.e. exactly where
+    # the InvalidRequestError used to surface.
+    real_update_server = projects_mcp_helpers.update_server
+
+    async def failing_update_server(*args, **kwargs):
+        await real_update_server(*args, **kwargs)
+        msg = "server sync failed"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(projects_mcp_helpers, "update_server", failing_update_server)
+
+    with (
+        patch("langflow.api.v1.mcp_projects.get_project_sse"),
+        patch("langflow.api.v1.mcp_projects.get_project_mcp_server"),
+        patch("langflow.api.v1.mcp_projects.auto_configure_starter_projects_mcp", new=AsyncMock()),
+    ):
+        await init_mcp_servers()
+
+    assert await count_api_keys() == keys_before, "failed reconciliation leaked an API key"
 
 
 async def test_patch_project_mcp_settings_syncs_server_config_for_apikey(

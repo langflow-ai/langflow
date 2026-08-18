@@ -228,9 +228,9 @@ export const DB_PROVIDER_OPTIONS: DBProviderOption[] = [
     // card only reflects whether it's reachable (via test-connection) and lets
     // the user make it active, exactly like Chroma Local.
     id: "postgres",
-    label: "Postgres pgvector",
+    label: "Postgres pgVector",
     description:
-      "Postgres pgvector is set up automatically from your server's environment configuration — there's nothing to enter here. When it's available, your knowledge bases and memory bases use it automatically.",
+      "Postgres pgVector is set up automatically from your server's environment configuration — there's nothing to enter here. When it's available, your knowledge bases and memory bases use it automatically.",
     icon: "Postgres",
     status: "available",
     configFields: [],
@@ -251,6 +251,19 @@ export function getGlobalVariableValue(
 ): string | undefined {
   const value = variables.find((variable) => variable.name === name)?.value;
   return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+export function hasGlobalVariableValue(
+  variables: GlobalVariable[],
+  name: string,
+): boolean {
+  const variable = variables.find((entry) => entry.name === name);
+  if (!variable) return false;
+  if (variable.has_value !== undefined) return variable.has_value;
+  // Credential values are masked in API responses, so without an explicit
+  // `has_value` signal we fail closed rather than assume a secret is stored —
+  // a stale empty row must never enable a remote provider.
+  return Boolean(getGlobalVariableValue(variables, name));
 }
 
 /**
@@ -278,14 +291,28 @@ export function parseBooleanGlobalVariable(
 
 export function getActiveDBProvider(
   variables: GlobalVariable[],
+  localVectorStoreAvailable = true,
 ): AvailableDBProviderId {
   const configuredProvider = getGlobalVariableValue(
     variables,
     ACTIVE_DB_PROVIDER_VARIABLE,
   );
-  if (configuredProvider === "opensearch") return "opensearch";
-  if (configuredProvider === "chroma_cloud") return "chroma_cloud";
-  if (configuredProvider === "postgres") return "postgres";
+  if (
+    (configuredProvider === "opensearch" ||
+      configuredProvider === "chroma_cloud" ||
+      configuredProvider === "postgres") &&
+    isDBProviderConfigured(
+      configuredProvider,
+      variables,
+      localVectorStoreAvailable,
+    )
+  )
+    return configuredProvider;
+  // Local Chroma writes vectors to the serving box's own disk, which the
+  // production profile refuses. When it's unavailable, fall back to the
+  // environment-driven pgVector rather than a Chroma the create endpoint would
+  // reject with 422 (pgVector's own connectivity is re-validated server-side).
+  if (!localVectorStoreAvailable) return "postgres";
   return "chroma";
 }
 
@@ -385,9 +412,14 @@ export function resolveUIBackendType(
 export function isDBProviderConfigured(
   providerType: AvailableDBProviderId,
   variables: GlobalVariable[],
+  localVectorStoreAvailable = true,
 ): boolean {
   if (providerType === "chroma") {
-    return true;
+    // Local Chroma is only a usable target when the deployment allows local
+    // vector storage. On the production profile it isn't, so report it as
+    // unconfigured — pickers then disable it and create-time validation blocks
+    // it (instead of the server rejecting the request with a 422).
+    return localVectorStoreAvailable;
   }
 
   // pgVector has no UI fields. It becomes explicitly selectable only after the
@@ -410,20 +442,20 @@ export function isDBProviderConfigured(
     )
     .every((field) => {
       if (field.isSecret) {
-        // Credential-type variables have their values masked (empty) in the
-        // global-variables API response, so checking the value would always
-        // return false even when the secret is saved. Check existence instead.
-        return variables.some((v) => v.name === field.variableKey);
+        return hasGlobalVariableValue(variables, field.variableKey);
       }
       return Boolean(getGlobalVariableValue(variables, field.variableKey));
     });
 }
 
-export function getDefaultDBProviderConfig(variables: GlobalVariable[]): {
+export function getDefaultDBProviderConfig(
+  variables: GlobalVariable[],
+  localVectorStoreAvailable = true,
+): {
   backendType: AvailableDBProviderId;
   backendConfig: Record<string, DBProviderConfigValue>;
 } {
-  const backendType = getActiveDBProvider(variables);
+  const backendType = getActiveDBProvider(variables, localVectorStoreAvailable);
   return {
     backendType,
     backendConfig: getDBProviderConfig(backendType, variables),

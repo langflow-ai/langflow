@@ -18,7 +18,10 @@ import {
   PopoverContentWithoutPortal,
 } from "../../../../ui/popover";
 import type { BaseInputProps } from "../../types";
-import { focusCommandListOnOpen } from "../../utils/focus-command-list-on-open";
+import {
+  focusCommandListOnOpen,
+  refocusSelectedCommandItemOnNavigate,
+} from "../../utils/focus-command-list-on-open";
 import { ModelDropdownFooter } from "./components/ModelDropdownFooter";
 import {
   ModelInputErrorButton,
@@ -51,6 +54,7 @@ export default function ModelInputComponent({
   showEmptyState = false,
   modelType: modelTypeProp,
   "aria-label": ariaLabel,
+  ariaLabelledBy,
 }: BaseInputProps<ModelOption[] | undefined> &
   ModelInputComponentType): JSX.Element | null {
   const { t } = useTranslation();
@@ -92,7 +96,6 @@ export default function ModelInputComponent({
   );
 
   const { refreshAllModelInputs } = useRefreshModelInputs();
-  const hasProcessedEmptyRef = useRef(false);
 
   const _postTemplateValue = usePostTemplateValue({
     parameterId: "model",
@@ -198,7 +201,6 @@ export default function ModelInputComponent({
         flatOptions,
         providers: providersData,
         providerStatusIsReliable,
-        hasProcessedEmpty: hasProcessedEmptyRef.current,
       }),
     [
       value,
@@ -217,7 +219,6 @@ export default function ModelInputComponent({
     isConnectionMode,
     providers: providersData,
     modelStatusIsReliable,
-    hasProcessedEmptyRef,
   });
 
   /**
@@ -314,9 +315,19 @@ export default function ModelInputComponent({
         className="noflow nowheel nopan nodelete nodrag z-[70] p-0"
         style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
       >
-        {/* The footer actions live outside <Command> so they are not swept into
-            the listbox's composite keyboard/focus model. */}
-        <Command label={t("model.selectModel")} className="flex flex-col">
+        {/* Section 1 — the option list (a self-contained listbox). Keeping the
+            footer actions out of <Command> stops them from being swept into the
+            listbox's composite keyboard/focus model. */}
+        <Command
+          label={t("model.selectModel")}
+          className="flex flex-col"
+          defaultValue={
+            selectedModel
+              ? `${selectedModel.provider}::${selectedModel.name}`
+              : undefined
+          }
+          onKeyDown={refocusSelectedCommandItemOnNavigate}
+        >
           <ModelList
             groupedOptions={groupedOptions}
             selectedModel={selectedModel}
@@ -381,6 +392,7 @@ export default function ModelInputComponent({
               refButton={refButton}
               showEmptyState={showEmptyState}
               aria-label={ariaLabel}
+              ariaLabelledBy={ariaLabelledBy}
             />
           </div>
           {showConfigureAffordance && (

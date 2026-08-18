@@ -102,6 +102,7 @@ EXPECTED_FIELDS = {
     "mcp_session_idle_timeout",
     "mcp_session_cleanup_interval",
     "mcp_server_enabled",
+    "mcp_sse_enabled",
     "mcp_server_enable_progress_notifications",
     "add_projects_to_mcp_servers",
     "skip_mcp_auto_init",
@@ -185,6 +186,7 @@ EXPECTED_FIELDS = {
     "developer_api_enabled",
     # ---- Added after the original Settings split and folded into the mixins ----
     # PathSettings
+    "kb_disk_reconcile_enabled",
     "kb_allowed_folder_roots",
     "kb_folder_max_file_size_bytes",
     "directory_component_allowed_roots",
@@ -260,6 +262,8 @@ EXPECTED_FIELDS = {
     "sandbox_allow_network",
     "sandbox_allowed_domains",
     "sandbox_allow_software_emulation",
+    # SecuritySettings: rebuild drifted built-ins with this server's code (issue #14455)
+    "substitute_outdated_component_code",
     # ---- Serving-plane end-user identity ----
     # SecuritySettings
     "serving_end_user_header",
@@ -299,6 +303,7 @@ def test_critical_defaults_unchanged():
     assert settings.connector_ssrf_validation_enabled is True
     assert settings.allow_custom_components is True
     assert settings.block_code_interpreter_components is False
+    assert settings.substitute_outdated_component_code is True
     assert settings.restrict_local_file_access is False
     assert settings.mcp_server_docker_hardening is False
     assert settings.mcp_server_interpreter_hardening is False
@@ -454,6 +459,7 @@ def test_yaml_round_trip():
         ("LANGFLOW_PROMETHEUS_ENABLED", "true", "prometheus_enabled", True),
         ("LANGFLOW_PROMETHEUS_PORT", "9999", "prometheus_port", 9999),
         ("LANGFLOW_MCP_SERVER_ENABLED", "false", "mcp_server_enabled", False),
+        ("LANGFLOW_MCP_SSE_ENABLED", "false", "mcp_sse_enabled", False),
         ("LANGFLOW_MCP_SDK_CONSTRAINT", "mcp~=1.30", "mcp_sdk_constraint", "mcp~=1.30"),
         ("LANGFLOW_SKIP_MCP_AUTO_INIT", "true", "skip_mcp_auto_init", True),
         ("LANGFLOW_DO_NOT_TRACK", "true", "do_not_track", True),

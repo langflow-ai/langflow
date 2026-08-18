@@ -29,6 +29,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request,
 from lfx.cli.common import execute_graph_with_capture
 from lfx.cli.runtime_variables import apply_global_vars_to_graph, build_request_variables_from_global_vars
 from lfx.events.event_manager import create_stream_tokens_event_manager
+from lfx.observability import execution_protocol
 from lfx.processing.process import run_graph_internal
 from lfx.run._defaults import apply_run_defaults
 from lfx.schema.schema import InputValueRequest
@@ -237,7 +238,7 @@ def _reject_unsupported_fields(parsed: ParsedWorkflowRun) -> None:
     if unsupported:
         fields = ", ".join(unsupported)
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "error": "Unsupported request fields",
                 "code": "LFX_SERVE_UNSUPPORTED_FIELDS",
@@ -274,7 +275,7 @@ def _validate_output_ids(output_ids: list[str] | None, terminal_node_ids: list[s
     unknown = [output_id for output_id in output_ids if output_id not in known]
     if unknown:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "error": "Unknown output_ids",
                 "code": "UNKNOWN_OUTPUT_IDS",
@@ -316,14 +317,15 @@ async def run_workflow_sync(
     # os.environ credentials the operator disabled with LFX_SERVE_NO_ENV_FALLBACK.
     no_env_fallback_token = activate_no_env_fallback(disabled=bool(graph.context.get("no_env_fallback")))
     try:
-        run_outputs, session_id = await run_graph_internal(
-            graph,
-            flow_id,
-            stream=False,
-            session_id=parsed.session_id,
-            inputs=_build_inputs(parsed),
-            outputs=terminal_ids,
-        )
+        with execution_protocol("lfx.serve"):
+            run_outputs, session_id = await run_graph_internal(
+                graph,
+                flow_id,
+                stream=False,
+                session_id=parsed.session_id,
+                inputs=_build_inputs(parsed),
+                outputs=terminal_ids,
+            )
     except Exception as exc:  # noqa: BLE001
         return create_error_response(
             flow_id=flow_id,
@@ -378,13 +380,16 @@ async def stream_workflow_frames(
     async def drive() -> None:
         nonlocal drive_error
         try:
-            await execute_graph_with_capture(
-                graph,
-                parsed.input_value or None,
-                session_id=parsed.session_id,
-                event_manager=event_manager,
-                user_id=user_id,
-            )
+            # drive() is its own task, so the set/reset pair cannot straddle the enclosing
+            # generator's suspension points.
+            with execution_protocol("lfx.serve"):
+                await execute_graph_with_capture(
+                    graph,
+                    parsed.input_value or None,
+                    session_id=parsed.session_id,
+                    event_manager=event_manager,
+                    user_id=user_id,
+                )
             # lfx's async_start does not emit a terminal ``end`` event (the
             # langflow build loop does). Emit one so the adapter closes the run
             # cleanly: the agui adapter rides RUN_FINISHED on translating ``end``,
@@ -483,7 +488,7 @@ def create_workflow_router(
         # caller may access it (matches the pre-seam handler's precedence).
         if request.stream_protocol not in STREAM_ADAPTERS:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail={
                     "error": "Unknown stream_protocol",
                     "code": "UNKNOWN_STREAM_PROTOCOL",
@@ -506,7 +511,7 @@ def create_workflow_router(
         if parsed.mode == "background":
             if not host.supports_background:
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail={
                         "error": "Unsupported mode",
                         "code": "LFX_SERVE_UNSUPPORTED_MODE",

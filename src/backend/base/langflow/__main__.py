@@ -82,6 +82,17 @@ except ImportError:
     # LFX not available, skip adding the sub-app
     pass
 
+# Mounted at the top level, not under `lfx`: the OTLP pipeline it checks is langflow's own
+# (langflow's telemetry service calls the same bootstrap), so `langflow observability doctor` is
+# the command an operator running langflow would look for.
+#
+# Deliberately outside the try/except above: lfx is already imported unguarded at module scope,
+# so an ImportError here means this module is broken, not that lfx is absent. Swallowing it
+# would make the command vanish from `langflow --help` with nothing said.
+from lfx.cli._observability_commands import observability_app  # noqa: E402
+
+app.add_typer(observability_app, name="observability")
+
 
 class ProcessManager:
     """Manages the lifecycle of the backend process."""
@@ -1022,6 +1033,39 @@ async def _migrate_mcp(*, dry_run: bool) -> None:
         f"MCP migration complete: {verb} {summary['imported']} server(s) across "
         f"{summary['users']} user(s) (skipped {summary['skipped']}, errors {summary['errors']})."
     )
+
+
+@app.command(name="reconcile-kb-from-disk")
+def reconcile_kb_from_disk(
+    log_level: str = typer.Option("info", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    username: str = typer.Option("", help="Only reconcile this user's knowledge bases."),
+    dry_run: bool = typer.Option(default=False, help="Report what would be adopted without writing."),  # noqa: FBT001
+) -> None:
+    """Adopt knowledge base directories on disk that have no database row.
+
+    The ``knowledge_base`` table is the sole authority for KB metadata, so this scan
+    no longer runs on every boot. Use it to recover KBs created by a Langflow version
+    that still wrote the on-disk ``embedding_metadata.json`` sidecar and that are not
+    showing up after an upgrade.
+
+    Idempotent, and it never deletes anything: directories that already have a row,
+    that carry the ``.kb_deleted`` marker, or whose metadata is unreadable are skipped.
+    """
+    configure(log_level=log_level)
+    asyncio.run(_reconcile_kb_from_disk(username=username or None, dry_run=dry_run))
+
+
+async def _reconcile_kb_from_disk(*, username: str | None, dry_run: bool) -> None:
+    from langflow.api.utils import knowledge_base_service
+
+    await initialize_services()
+    inserted = await knowledge_base_service.backfill_all_users_from_disk(
+        username=username,
+        dry_run=dry_run,
+    )
+    scope = f"user '{username}'" if username else "all users"
+    verb = "would adopt" if dry_run else "adopted"
+    typer.echo(f"Knowledge base reconciliation complete: {verb} {inserted} knowledge base(s) for {scope}.")
 
 
 # command to copy the langflow database from the cache to the current directory

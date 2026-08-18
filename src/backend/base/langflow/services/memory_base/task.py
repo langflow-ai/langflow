@@ -11,7 +11,9 @@ Design principles enforced here:
 - Live cursor: After acquiring the lock, the current cursor_id is re-read from the DB
   (not the dispatch-time snapshot) so the pending message fetch always starts from the
   true latest position, even if a prior job advanced the cursor while this job waited.
-- Path safety: kb_path is validated against kb_root before any filesystem operation.
+- Path safety: a local path is resolved only for local Chroma, and is containment-checked
+  against the KB root before any filesystem operation. Remote-backed Memory Bases resolve
+  no path at all.
 
 The write goes through whichever backend the KB is configured with, resolved from the
 ``knowledge_base`` row — so a Memory Base on OpenSearch or Chroma Cloud ingests to that
@@ -37,7 +39,7 @@ from lfx.log.logger import logger
 from sqlalchemy import text
 from sqlmodel import Session, col, select
 
-from langflow.api.utils.kb_helpers import KBIngestionHelper, KBStorageHelper, resolve_backend_selection
+from langflow.api.utils.kb_helpers import KBIngestionHelper, resolve_backend_selection, resolve_local_store_path
 from langflow.services.database.models.memory_base.model import (
     MemoryBasePreprocessingOutput,
     MemoryBaseSession,
@@ -50,12 +52,11 @@ from langflow.services.memory_base.document_builders import (
     build_preprocessed_document,
     sync_kb_stats_to_record,
 )
-from langflow.services.memory_base.kb_path_helpers import hash_session_id, validate_kb_path
+from langflow.services.memory_base.kb_path_helpers import hash_session_id
 from langflow.services.memory_base.preprocessing import DEFAULT_KILL_PHRASE, run_preprocessing
 
 if TYPE_CHECKING:
     import uuid
-    from pathlib import Path
 
     from langflow.services.jobs.service import JobService
 
@@ -227,15 +228,9 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
         cursor_id,
         task_job_id,
     )
-    kb_root = KBStorageHelper.get_root_path()
-    if not kb_root:
-        msg = "Knowledge base root path is not configured"
-        raise RuntimeError(msg)
-
-    kb_path: Path = kb_root / kb_username / kb_name
-
-    # ---- Path traversal guard ----
-    validate_kb_path(kb_root, kb_path)
+    # The on-disk path is resolved later, once the backend is known — a Memory Base
+    # on a remote vector store needs no local directory, so requiring one up front
+    # would fail an ingestion that has no business touching this box's filesystem.
 
     # ---- 0. Acquire per-session serialization lock ----
     async with session_scope() as db:
@@ -387,12 +382,16 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
             user_stub = types.SimpleNamespace(id=user_id)
             embeddings = await KBIngestionHelper.build_embeddings(embedding_provider, embedding_model, user_stub)
 
-            # Resolved from the knowledge_base row (sidecar only as legacy
-            # fallback), so an ingestion running on a replica that has never
-            # touched this KB's directory still writes to the configured store
-            # instead of silently creating a local one.
-            backend_type, backend_config = await resolve_backend_selection(
-                user_id=user_id, kb_name=kb_name, kb_path=kb_path
+            # Resolved from the knowledge_base row, so an ingestion running on a
+            # replica that has never touched this KB's directory still writes to
+            # the configured store instead of silently creating a local one.
+            backend_type, backend_config = await resolve_backend_selection(user_id=user_id, kb_name=kb_name)
+            # ``None`` for every remote backend; only local Chroma gets a directory.
+            kb_path = resolve_local_store_path(
+                kb_name,
+                kb_username,
+                backend_type=backend_type,
+                backend_config=backend_config,
             )
             backend = create_backend(
                 backend_type,

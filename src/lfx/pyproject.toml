@@ -16,7 +16,7 @@ dependencies = [
     # xlsx path survives torch/docling becoming opt-in.
     "openpyxl>=3.1.5,<4.0.0",
     "pydantic>=2.0.0,<2.14",
-    "pillow>=11.1.0,<13.0.0",
+    "pillow>=12.3.0,<13.0.0",
     "fastapi>=0.135.0,<1.0.0",
     # [standard] adds uvloop + httptools (fast loop + HTTP parser) for the `lfx serve` worker path.
     "uvicorn[standard]>=0.34.3,<1.0.0",
@@ -28,6 +28,7 @@ dependencies = [
     "platformdirs>=4.3.8,<5.0.0",
     "aiofiles>=24.1.0,<25.0.0",
     "typing-extensions>=4.14.0,<5.0.0",
+    "packaging>=24.1,<25.0",
     "python-dotenv>=1.0.0,<2.0.0",
     "rich>=13.0.0,<14.0.0",
     "httpx[http2]>=0.24.0,<1.0.0",
@@ -101,6 +102,7 @@ otel = [
     "opentelemetry-exporter-otlp>=1.30.0,<2.0.0",
     "opentelemetry-exporter-prometheus>=0.50b0,<1.0.0",
     "opentelemetry-instrumentation-fastapi>=0.50b0,<1.0.0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.50b0,<1.0.0",
     "opentelemetry-instrumentation-system-metrics>=0.50b0,<1.0.0",
 ]
 # Engine-only by default: ``pip install lfx`` ships NO bundles.  This optional
@@ -152,6 +154,10 @@ dev = [
     "coverage>=7.9.2",
     "hypothesis>=6.136.3",
     "langchain-anthropic~=1.4.6",
+    # The otel extra itself, so the observability tests exercise the real exporters. Bare lfx
+    # still ships without them: the tests that assert the no-otel path force the condition by
+    # blocking the import rather than by relying on the extra being absent here.
+    "lfx[otel]",
     "pytest>=9.0.3",
     "pytest-asyncio>=0.26.0",
     "pytest-cov>=7.0.0",

@@ -18,10 +18,10 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -147,7 +147,7 @@ jobs:
 
       - name: Create Build Success Comment
         if: success()
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@v5
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body: "${{ env.BUILD_SUCCESS_COMMENT }}"
@@ -155,7 +155,7 @@ jobs:
 
       - name: Create Build Failure Comment
         if: failure()
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@v5
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
@@ -166,7 +166,7 @@ jobs:
       - name: Find Comment
         id: fc
         if: success()
-        uses: peter-evans/find-comment@v3
+        uses: peter-evans/find-comment@v4
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body-includes: Build successful!
@@ -255,7 +255,7 @@ jobs:
 
       - name: Update Comment
         if: ${{ steps.fc.outputs.comment-id != '' }}
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@v5
         with:
           comment-id: ${{ steps.fc.outputs.comment-id }}
           body: |
@@ -263,7 +263,7 @@ jobs:
           reactions: hooray
 
       - name: Upload Deploy Log
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: deploy.log

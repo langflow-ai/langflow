@@ -32,6 +32,7 @@ interface ModelTriggerProps {
   refButton: RefObject<HTMLButtonElement | null>;
   showEmptyState?: boolean;
   "aria-label"?: string;
+  ariaLabelledBy?: string;
 }
 
 const ModelTrigger = ({
@@ -46,6 +47,7 @@ const ModelTrigger = ({
   refButton,
   showEmptyState = false,
   "aria-label": ariaLabel,
+  ariaLabelledBy,
 }: ModelTriggerProps) => {
   const { t } = useTranslation();
   const renderSelectedIcon = () => {
@@ -71,21 +73,43 @@ const ModelTrigger = ({
       optionCount: options.length,
     })
   ) {
+    // Unlike the combobox below — whose visible text is its *value*, so the
+    // field label alone is the right accessible name — this branch is a plain
+    // button whose visible text is its label. WCAG 2.5.3 (Label in Name)
+    // requires that text to be part of the accessible name, so the field label
+    // is composed after it rather than replacing it: speech input matches what
+    // the user reads ("click Setup Provider"), and the field label still tells
+    // a screen reader user which field the CTA belongs to.
+    const setupProviderTextId = `${id}-setup-provider-label`;
+    const setupProviderText =
+      placeholder === "Setup Provider" ? t("model.setupProvider") : placeholder;
+
     return (
       <Button
         variant="outline"
         size="xs"
         className="dropdown-component-false-outline w-full justify-start gap-2 py-2 font-normal"
         onClick={onOpenManageProviders}
+        aria-label={
+          !ariaLabelledBy && ariaLabel
+            ? `${setupProviderText}, ${ariaLabel}`
+            : undefined
+        }
+        aria-labelledby={
+          ariaLabelledBy
+            ? `${setupProviderTextId} ${ariaLabelledBy}`
+            : undefined
+        }
       >
         <ForwardedIconComponent
           name="BrainCircuit"
           className="h-4 w-4 flex-shrink-0 text-muted-foreground"
         />
-        <div className="text-[13px] text-muted-foreground">
-          {placeholder === "Setup Provider"
-            ? t("model.setupProvider")
-            : placeholder}
+        <div
+          id={setupProviderTextId}
+          className="text-[13px] text-muted-foreground"
+        >
+          {setupProviderText}
         </div>
       </Button>
     );
@@ -102,7 +126,8 @@ const ModelTrigger = ({
           role="combobox"
           ref={refButton}
           aria-expanded={open}
-          aria-label={ariaLabel}
+          aria-label={!ariaLabelledBy ? ariaLabel : undefined}
+          aria-labelledby={ariaLabelledBy}
           data-testid={id}
           className={cn(
             "dropdown-component-false-outline py-2",

@@ -16,6 +16,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
+import CustomResourceShareAction from "@/customization/components/custom-resource-share-action";
 import enTranslations from "@/locales/en.json";
 import { formatFileSize } from "@/utils/stringManipulation";
 import { FILE_ICONS } from "@/utils/styleUtils";
@@ -143,6 +144,12 @@ function KnowledgeBaseRowActions({
             <ForwardedIconComponent name="Layers" className="mr-2 h-4 w-4" />
             {t("knowledge.action.viewChunks")}
           </DropdownMenuItem>
+          <CustomResourceShareAction
+            resourceId={knowledgeBase.id}
+            resourceType="knowledge_base"
+            resourceName={knowledgeBase.name}
+            display="menu"
+          />
           {isBusy ? (
             <DropdownMenuItem
               disabled={isCancelling}
@@ -355,6 +362,9 @@ export const createKnowledgeBaseColumns = (
       // cell's controls instead, so every action button is keyboard-reachable.
       // (Focus enters the cell via Enter — see handleCellKeyDown.)
       suppressKeyboardEvent: (params) => {
+        if (params.event.key === "Enter" || params.event.key === " ") {
+          return true;
+        }
         if (params.event.key !== "Tab") return false;
         const active = document.activeElement as HTMLElement | null;
         const cell = active?.closest(".ag-cell");

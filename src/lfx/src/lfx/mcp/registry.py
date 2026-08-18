@@ -112,17 +112,21 @@ def describe_component(registry: dict[str, dict], component_type: str) -> dict[s
             )
         outputs.append(entry)
 
-    # Tool mode = any INPUT field with tool_mode=True (mirrors Component._handle_tool_mode);
-    # output-side tool_mode is accepted for backward compat.
+    # Tool mode = any INPUT field with tool_mode=True, or the class opting in via
+    # add_tool_output — both halves of Component._handle_tool_mode, the runtime
+    # authority. Output-side tool_mode marks which outputs a toolset exposes, not
+    # whether the component has one (89 of the 127 bundled components set it,
+    # ChatInput included), so advertising on it promised a toolset that the
+    # runtime never creates.
     template_fields = tmpl.get("template", {})
     tool_mode_inputs = [
         name for name, fdata in template_fields.items() if isinstance(fdata, dict) and fdata.get("tool_mode")
     ]
-    tool_mode_outputs = [o["name"] for o in tmpl.get("outputs", []) if o.get("tool_mode")]
-    if tool_mode_inputs or tool_mode_outputs:
-        uses = ", ".join(tool_mode_inputs or tool_mode_outputs)
-        label = "tool inputs" if tool_mode_inputs else "uses"
-        description = f"Wraps this component as a Tool ({label}: {uses}). Connect to an Agent's 'tools' input."
+    if tool_mode_inputs or tmpl.get("add_tool_output"):
+        description = "Wraps this component as a Tool"
+        if tool_mode_inputs:
+            description += f" (tool inputs: {', '.join(tool_mode_inputs)})"
+        description += ". Connect to an Agent's 'tools' input."
         outputs.append(
             {
                 "name": "component_as_tool",

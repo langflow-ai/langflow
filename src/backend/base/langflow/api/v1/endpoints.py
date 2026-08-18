@@ -24,6 +24,7 @@ from lfx.custom.utils import (
 from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
 from lfx.log.logger import logger
+from lfx.observability import execution_protocol
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
 from lfx.services.model_provider_policy import (
@@ -43,6 +44,7 @@ from langflow.api.utils import (
     parse_value,
     release_db_transaction,
 )
+from langflow.api.utils.execution_errors import caller_owns_flow as _caller_owns_flow
 from langflow.api.utils.execution_errors import error_for_client
 from langflow.api.v1.custom_component_policy import (
     CatalogPolicyHTTPException,
@@ -108,11 +110,6 @@ router = APIRouter(tags=["Base"])
 
 # SSE Constants
 SSE_HEARTBEAT_TIMEOUT_SECONDS = 30.0
-
-
-def _caller_owns_flow(flow: Flow | FlowRead, user: User | UserRead) -> bool:
-    """Return whether request actor and stored flow owner are the same principal."""
-    return flow.user_id is not None and str(flow.user_id) == str(user.id)
 
 
 def _has_nonempty_tweaks(tweaks: Tweaks | dict | None) -> bool:
@@ -447,18 +444,26 @@ async def simple_run_flow(
                 user_id=user_id,
                 job_type=JobType.WORKFLOW,
             )
-            task_result, session_id = await _job_svc.execute_with_status(
-                run_id_uuid,
-                run_graph_internal,
-                graph=graph,
-                flow_id=flow_id_str,
-                session_id=input_request.session_id,
-                inputs=inputs,
-                outputs=outputs,
-                stream=stream,
-                event_manager=event_manager,
-            )
+            # The funnel default. Binding is outermost-wins, so a caller that already named its
+            # surface (webhook, mcp, openai_responses) keeps it and only the bare v1 route lands
+            # here; a new surface that reuses simple_run_flow is labelled "v1" rather than nothing.
+            with execution_protocol("v1"):
+                task_result, session_id = await _job_svc.execute_with_status(
+                    run_id_uuid,
+                    run_graph_internal,
+                    graph=graph,
+                    flow_id=flow_id_str,
+                    session_id=input_request.session_id,
+                    inputs=inputs,
+                    outputs=outputs,
+                    stream=stream,
+                    event_manager=event_manager,
+                )
         except Exception as exc:
+            if isinstance(exc, HTTPException):
+                if expose_error_details:
+                    raise
+                raise error_for_client(exc, expose_details=expose_error_details) from exc
             await logger.aerror(
                 "Workflow job execution failed for flow %s: %s",
                 flow.id,
@@ -472,17 +477,19 @@ async def simple_run_flow(
                 flow=flow if expose_error_details else None,
             ) from exc
 
-        # Fire memory-base auto-capture hook — non-blocking background effect.
-        try:
-            _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only
-            await get_task_service().fire_and_forget_task(
-                get_memory_base_service().on_flow_output,
-                flow_id=flow.id,
-                session_id=session_id,
-                job_id=_run_id_uuid,
-            )
-        except (RuntimeError, ValueError, OSError):
-            await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
+        # Memory-base auto-capture resolves the flow owner's private credentials.
+        # Delegated/public executions must never trigger that owner-scoped side effect.
+        if flow.user_id is not None and str(flow.user_id) == str(user_id):
+            try:
+                _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only
+                await get_task_service().fire_and_forget_task(
+                    get_memory_base_service().on_flow_output,
+                    flow_id=flow.id,
+                    session_id=session_id,
+                    job_id=_run_id_uuid,
+                )
+            except (RuntimeError, ValueError, OSError):
+                await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
         return RunResponse(outputs=task_result, session_id=session_id)
 
@@ -545,15 +552,16 @@ async def simple_run_flow_task(
                 {"ids": vertex_ids, "to_run": vertex_ids, "run_id": run_id},
             )
 
-        result = await simple_run_flow(
-            flow=flow,
-            input_request=input_request,
-            stream=stream,
-            api_key_user=api_key_user,
-            event_manager=effective_event_manager,
-            run_id=run_id,
-            expose_error_details=api_key_user is not None and _caller_owns_flow(flow, api_key_user),
-        )
+        with execution_protocol("webhook"):
+            result = await simple_run_flow(
+                flow=flow,
+                input_request=input_request,
+                stream=stream,
+                api_key_user=api_key_user,
+                event_manager=effective_event_manager,
+                run_id=run_id,
+                expose_error_details=api_key_user is not None and _caller_owns_flow(flow, api_key_user),
+            )
 
         if should_emit and flow_id is not None:
             await webhook_event_manager.emit(flow_id, "end", {"run_id": run_id, "success": True})
@@ -906,13 +914,16 @@ async def _run_flow_internal(
                 run_id=run_id,
             ),
         )
-        if expose_error_details and "badly formed hexadecimal UUID string" in str(exc):
+        if "badly formed hexadecimal UUID string" in str(exc):
             # This means the Flow ID is not a valid UUID which means it can't find the flow
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-        if expose_error_details and isinstance(exc, CustomComponentValidationError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-        if expose_error_details and "not found" in str(exc):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+            http_error = HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+            raise error_for_client(http_error, expose_details=expose_error_details) from exc
+        if isinstance(exc, CustomComponentValidationError):
+            http_error = HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+            raise error_for_client(http_error, expose_details=expose_error_details) from exc
+        if "not found" in str(exc):
+            http_error = HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+            raise error_for_client(http_error, expose_details=expose_error_details) from exc
         client_error = error_for_client(exc, expose_details=expose_error_details)
         raise APIException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -920,16 +931,12 @@ async def _run_flow_internal(
             flow=flow if expose_error_details else None,
         ) from exc
     except InvalidChatInputError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        http_error = HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+        raise error_for_client(http_error, expose_details=expose_error_details) from exc
     except HTTPException as exc:
         if expose_error_details:
             raise
-        client_error = error_for_client(exc, expose_details=False)
-        raise APIException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            exception=client_error,
-            flow=None,
-        ) from exc
+        raise error_for_client(exc, expose_details=expose_error_details) from exc
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_run,
@@ -1400,18 +1407,15 @@ async def experimental_run_flow(
             )
         except CustomComponentValidationError as exc:
             await logger.aexception("Advanced-run flow validation failed for flow %s", flow.id)
-            client_error = error_for_client(exc, expose_details=expose_error_details)
-            status_code = status.HTTP_400_BAD_REQUEST if expose_error_details else status.HTTP_500_INTERNAL_SERVER_ERROR
-            raise HTTPException(status_code=status_code, detail=str(client_error)) from exc
+            http_error = HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+            raise error_for_client(http_error, expose_details=expose_error_details) from exc
         except HTTPException as exc:
-            if expose_error_details:
-                raise
             await logger.aexception("Advanced-run flow validation failed for flow %s", flow.id)
-            client_error = error_for_client(exc, expose_details=False)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=str(client_error),
-            ) from exc
+            if expose_error_details:
+                # error_for_client returns ``exc`` itself here; re-raise rather
+                # than chaining the exception to itself.
+                raise
+            raise error_for_client(exc, expose_details=expose_error_details) from exc
         except Exception as exc:
             await logger.aexception("Failed to build advanced-run graph for flow %s", flow.id)
             client_error = error_for_client(exc, expose_details=expose_error_details)
@@ -1423,30 +1427,37 @@ async def experimental_run_flow(
     await release_db_transaction(session)
 
     try:
-        task_result, session_id = await run_graph_internal(
-            graph=graph,
-            flow_id=flow_id_str,
-            session_id=session_id,
-            inputs=inputs,
-            outputs=outputs,
-            stream=stream,
-        )
+        with execution_protocol("v1.advanced"):
+            task_result, session_id = await run_graph_internal(
+                graph=graph,
+                flow_id=flow_id_str,
+                session_id=session_id,
+                inputs=inputs,
+                outputs=outputs,
+                stream=stream,
+            )
     except Exception as exc:
         await logger.aexception("Advanced-run execution failed for flow %s", flow.id)
+        if isinstance(exc, HTTPException):
+            if expose_error_details:
+                raise
+            raise error_for_client(exc, expose_details=expose_error_details) from exc
         client_error = error_for_client(exc, expose_details=expose_error_details)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(client_error)) from exc
 
-    # Fire memory-base auto-capture hook — non-blocking background effect.
-    try:
-        _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only
-        await get_task_service().fire_and_forget_task(
-            get_memory_base_service().on_flow_output,
-            flow_id=flow.id,
-            session_id=session_id,
-            job_id=_run_id_uuid,
-        )
-    except (RuntimeError, ValueError, OSError):
-        await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
+    # Memory-base auto-capture is owner-scoped; shared callers must not spend or
+    # persist through the flow owner's private credentials.
+    if _caller_owns_flow(flow, api_key_user):
+        try:
+            _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only
+            await get_task_service().fire_and_forget_task(
+                get_memory_base_service().on_flow_output,
+                flow_id=flow.id,
+                session_id=session_id,
+                job_id=_run_id_uuid,
+            )
+        except (RuntimeError, ValueError, OSError):
+            await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
     return _v1_run_response(RunResponse(outputs=task_result, session_id=session_id))
 

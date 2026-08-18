@@ -143,6 +143,10 @@ export const lazyIconsMapping = {
     import("@/icons/CometAPI").then((mod) => ({ default: mod.CometAPIIcon })),
   Composio: () =>
     import("@/icons/Composio").then((mod) => ({ default: mod.ComposioIcon })),
+  Confluent: () =>
+    import("@/icons/Confluent").then((mod) => ({
+      default: mod.ConfluentIcon,
+    })),
   Confluence: () =>
     import("@/icons/Confluence").then((mod) => ({
       default: mod.ConfluenceIcon,
@@ -298,6 +302,10 @@ export const lazyIconsMapping = {
     import("@/icons/IBM").then((mod) => ({
       default: mod.WatsonxAiIcon,
     })),
+  WatsonxData: () =>
+    import("@/icons/IBM").then((mod) => ({
+      default: mod.WatsonxDataIcon,
+    })),
   WatsonxOrchestrate: () =>
     import("@/icons/IBM").then((mod) => ({
       default: mod.WatsonxOrchestrateIcon,
@@ -393,6 +401,10 @@ export const lazyIconsMapping = {
     import("@/icons/OpenSearch").then((mod) => ({ default: mod.OpenSearch })),
   Oracle: () =>
     import("@/icons/Oracle").then((mod) => ({ default: mod.OracleIcon })),
+  OrcaRouter: () =>
+    import("@/icons/OrcaRouter").then((mod) => ({
+      default: mod.OrcaRouterIcon,
+    })),
   Perplexity: () =>
     import("@/icons/Perplexity").then((mod) => ({
       default: mod.PerplexityIcon,

@@ -22,7 +22,13 @@ from fastapi_pagination import add_pagination
 from filelock import FileLock
 from lfx.interface.utils import setup_llm_caching
 from lfx.log.logger import configure, logger
-from lfx.observability import instrument_fastapi_app, start_event_loop_lag_monitor, stop_event_loop_lag_monitor
+from lfx.observability import (
+    EXECUTION_CLIENT_HEADER,
+    execution_client,
+    instrument_fastapi_app,
+    start_event_loop_lag_monitor,
+    stop_event_loop_lag_monitor,
+)
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -88,7 +94,7 @@ async def _run_enterprise_lifespan_hooks(phase: str) -> None:
         try:
             await hook()
         except Exception as e:  # noqa: BLE001
-            hook_name = getattr(hook, "__qualname__", repr(hook))
+            hook_name = getattr(hook, "__name__", getattr(hook, "__qualname__", type(hook).__name__))
             await logger.awarning(f"Enterprise lifespan {phase} hook {hook_name} failed: {e}")
 
 
@@ -315,23 +321,36 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await copy_profile_pictures()
                 await logger.adebug(f"Profile pictures copied in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
-            current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Reconciling knowledge base rows from disk")
-            try:
-                from langflow.api.utils import knowledge_base_service
+            # Disk reconciliation is opt-in. The ``knowledge_base`` row is the sole
+            # authority for KB metadata, so this scan exists only to adopt directories
+            # left behind by a version that still wrote the on-disk sidecar. Operators
+            # who need it can flip LANGFLOW_KB_DISK_RECONCILE_ENABLED or run
+            # ``langflow reconcile-kb-from-disk`` once, instead of paying a filesystem
+            # walk on every boot forever.
+            if get_settings_service().settings.kb_disk_reconcile_enabled:
+                current_time = asyncio.get_event_loop().time()
+                await logger.adebug("Reconciling knowledge base rows from disk")
+                try:
+                    from langflow.api.utils import knowledge_base_service
 
-                inserted = await knowledge_base_service.backfill_all_users_from_disk()
-                elapsed = asyncio.get_event_loop().time() - current_time
-                await logger.adebug(
-                    f"Knowledge base reconciliation completed in {elapsed:.2f}s ({inserted} rows inserted)"
-                )
-            except Exception as exc:  # noqa: BLE001
-                await logger.awarning("Knowledge base reconciliation skipped after startup error: %s", exc)
+                    inserted = await knowledge_base_service.backfill_all_users_from_disk()
+                    elapsed = asyncio.get_event_loop().time() - current_time
+                    await logger.adebug(
+                        f"Knowledge base reconciliation completed in {elapsed:.2f}s ({inserted} rows inserted)"
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    await logger.awarning("Knowledge base reconciliation skipped after startup error: %s", exc)
 
             # Memory Bases resolve their backend + embedding purely from the
             # knowledge_base row (no on-disk sidecar), so ensure every Memory Base
             # has one. Sourced from the memory_base table, not disk, so it's
             # replica-safe; only Memory Bases missing a row are touched.
+            #
+            # Deliberately NOT gated behind kb_disk_reconcile_enabled: this is a
+            # DB->DB reconcile that reads no filesystem. Skipping it would leave a
+            # legacy Memory Base with no knowledge_base row, which makes backend and
+            # embedding resolution raise and makes ``check_mismatch`` report a false
+            # mismatch — prompting a regenerate that resets every session cursor.
             try:
                 from langflow.api.utils import knowledge_base_service
 
@@ -881,13 +900,28 @@ def create_app():
     app.add_middleware(JavaScriptMIMETypeMiddleware)
 
     @app.middleware("http")
+    async def bind_execution_client(request: Request, call_next):
+        """Bind the caller's self-declared client for the life of the request.
+
+        Middleware rather than per-route wiring because every surface wants it and a route that
+        forgot would silently report nothing. The value is read from a header rather than the
+        request body: the v2 run model rejects extra fields, so a body field would be a public
+        schema change, and this is advisory metadata rather than part of the contract.
+
+        Self-reported, so it is spoofable, and execution_client drops anything outside the known
+        vocabulary. Never use it for authorization.
+        """
+        with execution_client(request.headers.get(EXECUTION_CLIENT_HEADER)):
+            return await call_next(request)
+
+    @app.middleware("http")
     async def check_boundary(request: Request, call_next):
         if "/api/v1/files/upload" in request.url.path:
             content_type = request.headers.get("Content-Type")
 
             if not content_type or "multipart/form-data" not in content_type or "boundary=" not in content_type:
                 return JSONResponse(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     content={"detail": "Content-Type header must be 'multipart/form-data' with a boundary parameter."},
                 )
 
@@ -895,7 +929,7 @@ def create_app():
 
             if not re.match(r"^[\w\-]{1,70}$", boundary):
                 return JSONResponse(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     content={"detail": "Invalid boundary format"},
                 )
 
@@ -909,7 +943,7 @@ def create_app():
 
             if not body.startswith(boundary_start) or not body.endswith((boundary_end, boundary_end_no_newline)):
                 return JSONResponse(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     content={"detail": "Invalid multipart formatting"},
                 )
 

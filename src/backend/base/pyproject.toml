@@ -49,7 +49,7 @@ dependencies = [
     "alembic>=1.13.0,<1.19.0",
     "passlib>=1.7.4,<2.0.0",
     "bcrypt==4.0.1",
-    "pillow>=12.1.1,<13.0.0",
+    "pillow>=12.3.0,<13.0.0",
     "docstring-parser>=0.16,<1.0.0",
     "PyJWT>=2.12.1",
     "pandas>=2.2.3",
@@ -70,6 +70,7 @@ dependencies = [
     "opentelemetry-exporter-prometheus>=0.50b0,<1.0.0",
     "opentelemetry-exporter-otlp>=1.30.0,<2.0.0",
     "opentelemetry-instrumentation-fastapi>=0.50b0,<1.0.0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.50b0,<1.0.0",
     "opentelemetry-instrumentation-requests>=0.50b0,<1.0.0",
     "opentelemetry-instrumentation-urllib3>=0.50b0,<1.0.0",
     # Process CPU, memory, GC and thread counts. Without it the only metrics the APM gets are
@@ -77,7 +78,7 @@ dependencies = [
     "opentelemetry-instrumentation-system-metrics>=0.50b0,<1.0.0",
     "prometheus-client>=0.20.0,<1.0.0",
     "aiofiles>=24.1.0,<25.0.0",
-    "pip>=26.0.0,<27.0.0",
+    "pip>=26.2.1,<27.0.0",
     "setuptools>=83.0.0,<84.0.0",
     "nanoid>=2.0.0,<3.0.0",
     "filelock>=3.20.1,<4.0.0",
@@ -112,6 +113,9 @@ dependencies = [
     "dynaconf>=3.2.13,<4.0.0",
     "pyasn1>=0.6.3,<0.7.0",
     "langgraph-checkpoint>4.0.0,<5.0.0",
+    # 5.6.0 already clears every published transformers advisory (highest patched version is 5.5.0).
+    # Do not raise past 5.9.0: docling-ibm-models>=3.13.3 caps transformers<5.9.0 on macOS, and a
+    # higher floor silently backtracks the whole docling stack to older releases on darwin only.
     "transformers>=5.6.0,<6.0.0",
     # Service-complete runtime dependencies. Provider component SDKs remain
     # owned by lfx-* extension distributions.
@@ -309,7 +313,7 @@ nltk = ["nltk>=3.9.4"]
 lark = ["lark==1.2.2"]
 
 # Additional dependencies from requirements
-huggingface = ["huggingface-hub[inference]>=1.0.0,<2.0.0"]
+huggingface = ["huggingface-hub>=1.0.0,<2.0.0"]
 # Backwards-compatible alias: the Exa Search component moved to the lfx-exa
 # bundle and now uses exa-py; metaphor-python is deprecated and unused.
 metaphor = ["exa-py>=1.14,<3"]
@@ -401,7 +405,7 @@ jigsawstack = ["jigsawstack==0.2.7"]
 assemblyai = ["assemblyai==0.35.1"]
 
 # Data processing
-datasets = ["datasets>2.14.7,<5.0.0"]
+datasets = ["datasets>2.14.7,<6.0.0"]
 fastparquet = ["fastparquet>=2024.11.0,<2025.0.0"]
 
 # Vision / ML

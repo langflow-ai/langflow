@@ -47,11 +47,13 @@ from lfx.load import load_flow_from_json
 from lfx.log.logger import logger
 from lfx.observability import (
     bootstrap_application_telemetry,
+    execution_protocol,
     instrument_fastapi_app,
     start_event_loop_lag_monitor,
     stop_event_loop_lag_monitor,
 )
 from lfx.utils.flow_validation import validate_flow_for_current_settings
+from lfx.utils.url_redaction import redact_urls_in_text
 from lfx.workflow.router import create_workflow_router
 
 if TYPE_CHECKING:
@@ -108,7 +110,11 @@ async def guarded_execute(graph_copy, input_value, session_id=None, user_id=None
         reset_environ = os.environ.get(_SERVE_RESET_ENVIRON_ENV) == "1"
         env_snapshot = dict(os.environ) if reset_environ else None
         try:
-            return await execute_graph_with_capture(graph_copy, input_value, session_id=session_id, user_id=user_id)
+            # Both native serve routes (/flows/{id}/run and /flows/{id}/stream) funnel through
+            # here, so the flow span gets its label once. The v2 workflow router mounted on the
+            # same app binds its own, and binding is outermost-wins, so the two never fight.
+            with execution_protocol("lfx.serve"):
+                return await execute_graph_with_capture(graph_copy, input_value, session_id=session_id, user_id=user_id)
         finally:
             if env_snapshot is not None and os.environ != env_snapshot:
                 # Restore by diff — never os.environ.clear(). clear() empties the mapping key
@@ -941,9 +947,12 @@ def create_multi_serve_app(
                 component=result_data.get("component", ""),
             )
         except Exception as exc:  # noqa: BLE001
-            error_traceback = traceback.format_exc()
-            error_message = f"Flow execution failed: {exc!s}"
-            logger.error(f"Error running flow {flow_id}: {exc}")
+            # A failing outbound call puts its request URL in the exception text, and the
+            # traceback reproduces that verbatim — so a 401 arrives carrying the credential
+            # it just rejected, on its way to the response body and the log aggregator.
+            error_traceback = redact_urls_in_text(traceback.format_exc())
+            error_message = redact_urls_in_text(f"Flow execution failed: {exc!s}")
+            logger.error(f"Error running flow {flow_id}: {redact_urls_in_text(str(exc))}")
             logger.debug(f"Full traceback for flow {flow_id}:\n{error_traceback}")
             return JSONResponse(
                 status_code=500,

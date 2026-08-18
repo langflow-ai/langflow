@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import isWrappedWithClass from "../../PageComponent/utils/is-wrapped-with-class";
@@ -18,7 +19,8 @@ export function useSidebarHotkeys({
   searchInputRef,
   setOpen,
   isSearchFocused,
-}: UseSidebarHotkeysParams): void {
+}: UseSidebarHotkeysParams): boolean {
+  const [isSearchHotkeyReady, setIsSearchHotkeyReady] = useState(false);
   const searchComponentsSidebar = useShortcutsStore(
     (state) => state.searchComponentsSidebar,
   );
@@ -47,4 +49,13 @@ export function useSidebarHotkeys({
       enabled: isSearchFocused,
     },
   );
+
+  // react-hotkeys-hook installs its document listener in a layout effect. This
+  // passive effect runs afterwards, so consumers can distinguish a rendered
+  // sidebar from one whose search shortcut is ready to receive input.
+  useEffect(() => {
+    setIsSearchHotkeyReady(true);
+  }, [searchComponentsSidebar]);
+
+  return isSearchHotkeyReady;
 }

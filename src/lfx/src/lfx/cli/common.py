@@ -451,15 +451,19 @@ async def execute_graph_with_capture(
     stderr_token = stderr_router.activate(captured_stderr)
 
     try:
-        results = [
-            payload
-            async for payload in coordinator.stream(
-                graph,
-                initial_inputs=inputs,
-                fallback_to_env_vars=fallback_to_env_vars,
-                event_manager=event_manager,
-            )
-        ]
+        # Opened here rather than inside async_start, which is a generator and cannot make its
+        # span current. See Graph.async_start.
+        with graph.flow_execution_span():
+            results = [
+                payload
+                async for payload in coordinator.stream(
+                    graph,
+                    initial_inputs=inputs,
+                    fallback_to_env_vars=fallback_to_env_vars,
+                    event_manager=event_manager,
+                    open_flow_span=False,
+                )
+            ]
     except Exception as exc:
         # Capture any error output that was written to stderr
         error_output = captured_stderr.getvalue()

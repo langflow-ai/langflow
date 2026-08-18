@@ -1,6 +1,8 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import ModelSelection from "../components/ModelSelection";
+import ModelSelection, {
+  hasProviderOwnedEmptyState,
+} from "../components/ModelSelection";
 import { Model } from "../components/types";
 
 // Mock ForwardedIconComponent
@@ -47,6 +49,22 @@ const mockEmbeddingModels: Model[] = [
 ];
 
 const allModels = [...mockLLMModels, ...mockEmbeddingModels];
+
+describe("hasProviderOwnedEmptyState", () => {
+  it.each(["Azure AI Foundry", "ollama", "OLLAMA"])(
+    "returns true for %s",
+    (providerName) => {
+      expect(hasProviderOwnedEmptyState(providerName)).toBe(true);
+    },
+  );
+
+  it.each(["Anthropic", "", undefined])(
+    "returns false for %s",
+    (providerName) => {
+      expect(hasProviderOwnedEmptyState(providerName)).toBe(false);
+    },
+  );
+});
 
 describe("ModelSelection", () => {
   const defaultProps = {

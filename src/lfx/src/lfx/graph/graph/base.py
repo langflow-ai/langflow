@@ -39,7 +39,7 @@ from lfx.graph.vertex.base import Vertex, VertexStates
 from lfx.graph.vertex.schema import NodeData, NodeTypeEnum
 from lfx.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
 from lfx.log.logger import LogConfig, configure, logger
-from lfx.observability import APPLICATION_TRACER_NAME
+from lfx.observability import APPLICATION_TRACER_NAME, get_execution_client, get_execution_protocol
 from lfx.schema.dotdict import dotdict
 from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
 from lfx.services.cache.utils import CacheMiss
@@ -48,12 +48,36 @@ from lfx.utils.async_helpers import run_until_complete
 
 try:
     from opentelemetry import trace as otel_trace
+    from opentelemetry.context import Context as OtelContext
 except ImportError:
     # lfx does not depend on opentelemetry. Under langflow it is installed and the application
     # span is emitted; under bare lfx this stays None and the span code path is a no-op.
     otel_trace = None
+    OtelContext = None
 
 FLOW_EXECUTION_SPAN_NAME = "flow.execute"
+
+
+class FlowSpanScope:
+    """Lets a driver that handles its own component errors still mark the run as failed.
+
+    The /build vertex walk catches a component exception, turns it into an error output for the
+    client and stops walking, rather than re-raising. The span's own except clauses therefore
+    never see it, and without this the run would be exported as a success. Callers that let
+    exceptions propagate (arun, async_start, process) need none of this and ignore the scope.
+
+    Only the exception *type* is accepted, never the message: component output ends up in those
+    messages and must not reach the operator's APM.
+    """
+
+    __slots__ = ("error_type",)
+
+    def __init__(self) -> None:
+        self.error_type: str | None = None
+
+    def record_error(self, error_type: str) -> None:
+        self.error_type = error_type
+
 
 INPUT_TYPE_COMPONENT_TYPES = {
     "chat": {InterfaceComponentTypes.ChatInput.value},
@@ -412,6 +436,26 @@ class Graph:
         }
         self._add_edge(edge_data)
 
+    @contextlib.contextmanager
+    def _flow_span_scope(self, *, open_flow_span: bool):
+        """Open the flow span for a run, or defer to the caller that already opened one.
+
+        The guard is here because deferring and then not opening one is the failure this flag
+        makes possible, and it is silent: the run simply produces no flow span. Warn rather than
+        raise, because telemetry must never take a run down.
+        """
+        if open_flow_span:
+            with self.flow_execution_span(make_current=False):
+                yield
+            return
+        if otel_trace is not None and not otel_trace.get_current_span().is_recording():
+            logger.warning(
+                "async_start was told the caller owns the flow span, but no span is current, "
+                "so this run will not be recorded. The caller should open "
+                "graph.flow_execution_span() around its consumption of the stream."
+            )
+        yield
+
     async def async_start(
         self,
         inputs: list[dict] | None = None,
@@ -421,9 +465,20 @@ class Graph:
         *,
         reset_output_values: bool = True,
         fallback_to_env_vars: bool = False,
+        open_flow_span: bool = True,
     ):
-        # make_current=False: this is an async generator, see flow_execution_span.
-        with self.flow_execution_span(make_current=False):
+        """Run the graph, yielding each step.
+
+        open_flow_span=False says the caller already opened the flow span and this run belongs
+        to it. Prefer that: a span opened here cannot be made current, because this is an async
+        generator and the context token would be attached and detached across its suspension
+        points, so nothing that runs inside the graph nests under the flow span. A caller that
+        is a coroutine has no such problem, so the span it opens is a real parent.
+
+        Left defaulting to True so a caller that has not been converted still gets a span rather
+        than silently none. Those runs keep the flat shape.
+        """
+        with self._flow_span_scope(open_flow_span=open_flow_span):
             # Preserve start_component_id from constructor if available
             start_component_id = self._start.get_id() if self._start else None
             self.prepare(start_component_id=start_component_id)
@@ -525,25 +580,43 @@ class Graph:
             asyncio.set_event_loop(loop)
 
             try:
-                # Run the async generator
-                async_gen = self.async_start(inputs, max_iterations, event_manager)
+                # Nothing is caught inside this block on purpose. A failure has to leave the
+                # span scope for the span to see it: caught in here, the context manager exits
+                # cleanly and a failed run is exported as status "ok", which is worse than no
+                # telemetry because it looks like a healthy run.
+                #
+                # A thread entry point rather than a generator, so the span can be current for
+                # every anext below. See async_start.
+                try:
+                    with self.flow_execution_span():
+                        # By keyword: async_start takes (inputs, max_iterations, config,
+                        # event_manager), so positionally the event manager lands in config and
+                        # __apply_config subscripts it. config is already applied above, so it
+                        # is deliberately not forwarded again.
+                        async_gen = self.async_start(
+                            inputs=inputs,
+                            max_iterations=max_iterations,
+                            event_manager=event_manager,
+                            open_flow_span=False,
+                        )
 
-                while True:
-                    try:
-                        # Get next result from async generator
-                        result = loop.run_until_complete(anext(async_gen))
-                        result_queue.put(result)
+                        while True:
+                            try:
+                                result = loop.run_until_complete(anext(async_gen))
+                                result_queue.put(result)
 
-                        if isinstance(result, Finish):
-                            break
+                                if isinstance(result, Finish):
+                                    break
 
-                    except StopAsyncIteration:
-                        break
-                    except ValueError as e:
-                        # Put the exception in the queue
-                        result_queue.put(e)
-                        break
-
+                            except StopAsyncIteration:
+                                break
+                except Exception as exc:  # noqa: BLE001 - the worker boundary; see below
+                    # Every Exception, not just ValueError. This runs on a thread, so anything
+                    # not put on the queue dies with the thread while the caller reads the None
+                    # below and sees a clean end of stream. The generator consumer re-raises
+                    # whatever arrives here, so the caller gets the failure it would have got
+                    # from a synchronous call.
+                    result_queue.put(exc)
             finally:
                 # Ensure all pending tasks are completed
                 pending = asyncio.all_tasks(loop)
@@ -554,11 +627,23 @@ class Graph:
 
                 # Close the loop
                 loop.close()
-                # Signal completion
+                # Signal completion, after any exception above so the caller reads that first.
                 result_queue.put(None)
 
-        # Start thread for async execution
-        thread = threading.Thread(target=run_async_code)
+        # Start thread for async execution, carrying the caller's context into it.
+        #
+        # A new thread starts with an empty context, so without this the flow span opened inside
+        # run_async_code finds no current span and starts a brand-new trace: measured, the
+        # caller's span and flow.execute came back with different trace ids and no parent or
+        # link between them, which is exactly the correlation this PR exists to provide. The
+        # same copy carries the protocol and client contextvars, which are set at the entry
+        # point for the same reason.
+        #
+        # The caller's span is still recording while the generator below is consumed, so the
+        # flow span parents to it normally. A caller that abandons the generator early leaves a
+        # dead parent, which flow_execution_span already handles by linking instead.
+        context = contextvars.copy_context()
+        thread = threading.Thread(target=context.run, args=(run_async_code,))
         thread.start()
 
         # Yield results from queue
@@ -833,16 +918,53 @@ class Graph:
         attribute is the exception type and not its message. Subgraphs (Loop iterations) are skipped
         so a loop over N items stays one span instead of N.
 
+        That rule is enforced per signal, and this is only the span half: the export filter lives in
+        ``ApplicationOnlySpanProcessor``, and the same content is kept off the logs signal by the
+        body policy in ``lfx.log.logger``. Neither covers container stdout or the local log file,
+        which still carry full messages by design.
+
         make_current attaches the span to the OTel context so a flow run from inside another flow
         (flow-as-tool, sub-flow components) nests under its caller instead of appearing as a sibling
         of it. It must stay False when the scope wraps an async generator: the context token would be
         attached and detached across the generator's suspension points, which leaks it into whatever
         task resumes the generator.
+
+        The status attribute exists because OTel's StatusCode has three values and a paused run is
+        none of them: it did not fail, and calling it OK would tell an operator the work finished
+        when a human is still holding it. Span status stays UNSET for a pause so alerting on the
+        error rate does not fire, and the attribute carries the distinction.
+
+        A parent that has already ended is turned into a link instead. Several drivers outlive the
+        request that started them: the v1 build route hands the work to a task and returns the
+        job_id, so the server span is closed before the flow runs, and ``create_task`` copies the
+        context regardless. Parenting to it yields a child that starts after its parent finished,
+        which renders as a broken trace. Detecting it here rather than asking callers to declare it
+        keeps the v2 stream correct for free: its server span stays open for the whole response, so
+        it is still a real parent and is left as one.
+
+        Yields a :class:`FlowSpanScope`. Callers that let exceptions propagate can ignore it; a
+        driver that catches component failures itself must call ``record_error`` or its run is
+        exported as a success.
         """
+        scope = FlowSpanScope()
         if otel_trace is None or self._is_subgraph:
-            yield
+            yield scope
             return
-        span = otel_trace.get_tracer(APPLICATION_TRACER_NAME).start_span(FLOW_EXECUTION_SPAN_NAME)
+        tracer = otel_trace.get_tracer(APPLICATION_TRACER_NAME)
+        # is_recording() goes False once a span has ended, which is the signal that this run
+        # outlived its request. An empty Context is what makes the replacement a root; without it
+        # start_span would pick the dead span up as parent anyway.
+        parent = otel_trace.get_current_span()
+        parent_context = parent.get_span_context()
+        if parent_context.is_valid and not parent.is_recording():
+            span = tracer.start_span(
+                FLOW_EXECUTION_SPAN_NAME,
+                context=OtelContext(),
+                links=[otel_trace.Link(parent_context)],
+            )
+        else:
+            span = tracer.start_span(FLOW_EXECUTION_SPAN_NAME)
+        status = "ok"
         try:
             with contextlib.ExitStack() as stack:
                 if make_current:
@@ -854,12 +976,27 @@ class Graph:
                             span, end_on_exit=False, record_exception=False, set_status_on_exception=False
                         )
                     )
-                yield
+                yield scope
         except GraphPausedException:
             # A HITL pause suspends the unit of work; it is not a failed request. The resume is
             # driven through Graph.process by the durable runner, which opens its own span.
+            status = "paused"
+            raise
+        except asyncio.CancelledError:
+            # CancelledError is a BaseException, so the handler below does not see it and the
+            # span would otherwise report the run as "ok". Reached by a user pressing stop (the
+            # job service marks the job CANCELLED and re-raises) and by any asyncio.wait_for
+            # ceiling wrapped around a span-carrying run: the v2 build driver, a2a, and the
+            # agentic assistant all have one. The run did not finish, so it gets its own value.
+            #
+            # Span status stays UNSET, which is right for a stop button and arguable for a
+            # timeout: a server-imposed ceiling is closer to a fault, and an operator alerting
+            # on span error rate will not see it. Left as one value for now because the two are
+            # indistinguishable here; the job row (CANCELLED vs FAILED) still tells them apart.
+            status = "cancelled"
             raise
         except Exception as exc:
+            status = "error"
             span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, type(exc).__name__))
             span.set_attribute("error.type", type(exc).__name__)
             raise
@@ -870,6 +1007,21 @@ class Graph:
                 span.set_attribute("run_id", self._run_id)
             if self.session_id:
                 span.set_attribute("session_id", str(self.session_id))
+            # Absent rather than "unknown" when nothing set it: a missing attribute is a wiring
+            # gap the operator can see, an "unknown" value looks like a protocol we support.
+            if (protocol := get_execution_protocol()) is not None:
+                span.set_attribute("protocol", protocol)
+            # Absent when the caller did not identify itself, same rule as protocol: a missing
+            # attribute is "nobody said", which an operator can see and act on.
+            if (client := get_execution_client()) is not None:
+                span.set_attribute("client", client)
+            # A driver that swallowed its own component error exits this scope cleanly, so the
+            # only signal is what it recorded on the way out.
+            if status == "ok" and scope.error_type is not None:
+                status = "error"
+                span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, scope.error_type))
+                span.set_attribute("error.type", scope.error_type)
+            span.set_attribute("status", status)
             span.end()
 
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
@@ -1557,7 +1709,11 @@ class Graph:
         """
         from lfx.extension.migration import migrate_flow_payload
         from lfx.services.deps import get_catalog_policy_service
-        from lfx.utils.flow_validation import validate_catalog_policy_for_flow, validate_flow_for_current_settings
+        from lfx.utils.flow_validation import (
+            substitute_outdated_component_code_in_place,
+            validate_catalog_policy_for_flow,
+            validate_flow_for_current_settings,
+        )
 
         if "data" in payload:
             payload = payload["data"]
@@ -1628,6 +1784,25 @@ class Graph:
                     "extension.event_emit_failed: failed to emit migration events in from_payload.",
                     exc_info=True,
                 )
+        # Restricted deployments (allow_custom_components=False) never execute a node's stored
+        # code — the build substitutes this server's copy keyed by code hash. Rewrite the code of
+        # recognized built-ins whose stored copy has merely drifted across versions, so the
+        # validation below passes on its own and the flow builds with this server's component
+        # instead of being refused over code it was not going to run. No-op when custom
+        # components are allowed or the operator turned the substitution off; a node whose type
+        # is not a known server component is left untouched and still refused below.
+        # Public routes sanitize before handing the payload to the executor, but a hot extension
+        # reload can occur before graph construction. In restricted mode the substitution below
+        # may therefore select a newer source generation than the route checked. Re-run the public
+        # code-execution gate for the anonymous execution principal against the exact
+        # post-substitution bytes and the same registry snapshot, before component instantiation.
+        from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
+
+        validate_public_execution = str(user_id) == str(PUBLIC_ANONYMOUS_ACTOR_ID)
+        substitute_outdated_component_code_in_place(
+            payload,
+            validate_public_execution=validate_public_execution,
+        )
         # Defense-in-depth: validate here so that no code path can construct
         # a graph with blocked/custom components, even if an API endpoint
         # forgets its own pre-check. Ideally this would live only at the API
@@ -1659,7 +1834,7 @@ class Graph:
             graph.add_nodes_and_edges(vertices, edges)
             graph.requires_extension_event_replay = bool(migration_report.any_rewritten or migration_report.errors)
         except KeyError as exc:
-            logger.exception(exc)
+            logger.exception("Extension migration replay failed while reading the payload")
             if "nodes" not in payload and "edges" not in payload:
                 msg = f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
                 raise ValueError(msg) from exc

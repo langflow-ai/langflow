@@ -543,6 +543,7 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
     # Integration Tests (Real API)
     # ===================
 
+    @pytest.mark.api_key_required
     @pytest.mark.skipif(
         not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY is not set or is empty",
@@ -574,6 +575,7 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
         assert result is True
         assert len(component._failed_checks) == 0
 
+    @pytest.mark.api_key_required
     @pytest.mark.skipif(
         not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY is not set or is empty",
@@ -606,6 +608,7 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
         assert len(component._failed_checks) > 0
         assert any("PII" in check for check in component._failed_checks)
 
+    @pytest.mark.api_key_required
     @pytest.mark.skipif(
         not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY is not set or is empty",
@@ -639,6 +642,7 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
         assert result is False
         assert len(component._failed_checks) > 0
 
+    @pytest.mark.api_key_required
     @pytest.mark.skipif(
         not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY is not set or is empty",
@@ -670,6 +674,7 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
         assert result is False
         assert len(component._failed_checks) > 0
 
+    @pytest.mark.api_key_required
     @pytest.mark.skipif(
         not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY is not set or is empty",

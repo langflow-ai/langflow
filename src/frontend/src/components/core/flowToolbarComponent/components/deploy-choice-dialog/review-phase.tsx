@@ -7,8 +7,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { RadioSelectItem } from "@/pages/MainPage/pages/deploymentsPage/components/radio-select-item";
-import type { DeploymentType } from "@/pages/MainPage/pages/deploymentsPage/types";
 import { cn } from "@/utils/utils";
+import { getDeploymentTypeLabel } from "./get-deployment-type-label";
 import ReviewPhaseSkeletonContent from "./review-phase-skeleton";
 import type { FlowAttachment } from "./types";
 
@@ -205,19 +205,4 @@ function VersionSummaryCard({
       </div>
     </div>
   );
-}
-
-function getDeploymentTypeLabel(
-  deploymentType: DeploymentType,
-  t: (key: string) => string,
-) {
-  if (deploymentType === "agent") {
-    return t("deployments.agentTypeLabel");
-  }
-
-  if (deploymentType === "mcp") {
-    return t("deployments.mcpTypeLabel");
-  }
-
-  return deploymentType;
 }

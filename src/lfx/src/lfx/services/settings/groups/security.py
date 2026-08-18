@@ -109,6 +109,28 @@ class SecuritySettings(BaseModel):
     owner (report H1-3754930 follow-up). Enable this only if you knowingly want public flows to
     run custom component code permitted by allow_custom_components."""
 
+    substitute_outdated_component_code: bool = True
+    """Whether a built-in component whose stored code has drifted from this server's copy is
+    rebuilt with this server's code instead of being refused. Only consulted when
+    ``allow_custom_components`` is False (with the default True nothing is gated, so nothing is
+    substituted).
+
+    With ``allow_custom_components=False`` the node's stored code never runs anyway — the build
+    already substitutes the server's copy keyed by code hash (``resolve_trusted_code_for_build``).
+    The hash check therefore refuses flows over code it was not going to execute, which makes every
+    upgrade that touches a built-in component break every saved flow using it until each node is
+    updated by hand.
+
+    Default is True: a node whose ``type`` is a known server component is rebuilt with that
+    component's current server code, matching what the unauthenticated public build path already
+    does by default (see ``prepare_public_flow_build``). Nothing new becomes runnable — the code
+    that runs is always this server's own, selected by component type, and a node whose type is
+    not a known server component is still refused. Substitutions are logged, and the stored flow is
+    left untouched so the editor keeps flagging the node as outdated.
+
+    Set to False to keep the strict behavior: refuse the build whenever a node's stored code does
+    not match the current server template. Has no effect when ``allow_custom_components`` is True."""
+
     block_code_interpreter_components: bool = False
     """If set to True, blocks built-in components that execute user- or model-supplied
     Python, including Python Interpreter/REPL/Function, Smart Transform, CSV Agent,
