@@ -115,7 +115,12 @@ def component_file_access_scopes(component: object) -> tuple[str, ...]:
     return tuple(scopes)
 
 
-def _scope_roots(data_dir: Path, scope_ids: Iterable[object] | None) -> tuple[Path, ...]:
+def _scope_roots(
+    data_dir: Path,
+    scope_ids: Iterable[object] | None,
+    *,
+    allow_storage_root: bool = False,
+) -> tuple[Path, ...]:
     """Build validated storage roots for the current authenticated user/flow."""
     if isinstance(scope_ids, (str, bytes)):
         scope_ids = (scope_ids,)
@@ -132,6 +137,9 @@ def _scope_roots(data_dir: Path, scope_ids: Iterable[object] | None) -> tuple[Pa
         if root not in roots:
             roots.append(root)
 
+    if allow_storage_root and data_dir not in roots:
+        roots.append(data_dir)
+
     if not roots:
         msg = (
             "Local-file access requires an authenticated user or flow scope "
@@ -145,6 +153,7 @@ def enforce_local_file_access(
     resolved_path: str | Path,
     *,
     scope_ids: Iterable[object] | None = None,
+    allow_storage_root: bool = False,
 ) -> Path:
     """Ensure a local path is inside the current user/flow storage scope when restricted.
 
@@ -156,6 +165,12 @@ def enforce_local_file_access(
             symlinks are followed before the containment check; the caller need not pre-resolve it.
         scope_ids: Authenticated user id and/or executing flow id. At least one valid scope is
             required in restricted mode; paths under other storage subdirectories are denied.
+        allow_storage_root: Widen the containment boundary to ``config_dir`` itself and stop
+            requiring a scope. This is a defense-in-depth FLOOR, not tenant isolation: it keeps
+            arbitrary server files (and the reserved secret/key/DB files) out of reach but does
+            not separate one tenant's uploads from another's. Use it only from shared plumbing
+            that cannot see a user/flow scope and whose paths were already scope-checked by the
+            component that produced them; always prefer passing ``scope_ids``.
 
     Returns:
         The resolved path as a ``Path`` object when allowed.
@@ -169,7 +184,7 @@ def enforce_local_file_access(
         return path
 
     data_dir = Path(get_settings_service().settings.config_dir).resolve()
-    allowed_roots = _scope_roots(data_dir, scope_ids)
+    allowed_roots = _scope_roots(data_dir, scope_ids, allow_storage_root=allow_storage_root)
     try:
         candidate = path.resolve()
     except OSError as e:
