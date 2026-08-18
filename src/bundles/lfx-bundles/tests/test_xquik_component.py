@@ -102,7 +102,7 @@ def test_update_build_config_for_user_search() -> None:
     updated = component.update_build_config(build_config, XquikComponent.SEARCH_USERS, "operation")
 
     assert updated["query"] == {"show": True, "required": True}
-    assert updated["limit"]["show"]
+    assert not updated["limit"]["show"]
     assert updated["cursor"]["show"]
     assert not updated["query_type"]["show"]
 
@@ -132,7 +132,7 @@ def test_update_build_config_for_user_search() -> None:
             XquikComponent.SEARCH_USERS,
             {"cursor": "user-next"},
             "https://xquik.com/api/v1/x/users/search",
-            {"q": "langflow", "pageSize": 20, "cursor": "user-next"},
+            {"q": "langflow", "cursor": "user-next"},
         ),
         (
             XquikComponent.USER_TWEETS,
@@ -176,8 +176,7 @@ def test_path_identifier_is_url_encoded(default_kwargs: dict) -> None:
     ("operation", "configured", "parameter", "maximum"),
     [
         (XquikComponent.SEARCH_TWEETS, 20000, "limit", 10000),
-        (XquikComponent.SEARCH_USERS, 200, "pageSize", 100),
-        (XquikComponent.USER_TWEETS, 500, "pageSize", 300),
+        (XquikComponent.USER_TWEETS, 500, "pageSize", 100),
         (XquikComponent.TRENDS, 100, "count", 50),
     ],
 )
