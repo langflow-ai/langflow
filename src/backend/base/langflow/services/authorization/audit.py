@@ -51,6 +51,13 @@ AUDIT_ACTOR_USER = "user"
 # "what actually happened" filter on ``AUDIT_EVENT_MUTATION``.
 AUDIT_EVENT_DECISION = "authorization_decision"
 AUDIT_EVENT_MUTATION = "mutation"
+# Two further classes exist so that *every* row can be classified. Without them
+# a reader filtering on ``event`` silently drops the untagged rows: reading the
+# audit log itself, and the reconcile the server runs at startup with no user
+# behind it. ``access`` is something a user did that changed nothing; ``system``
+# is something the server did on its own.
+AUDIT_EVENT_ACCESS = "access"
+AUDIT_EVENT_SYSTEM = "system"
 
 _AUDIT_QUEUE_MAX = 10_000
 _AUDIT_BATCH_MAX = 100

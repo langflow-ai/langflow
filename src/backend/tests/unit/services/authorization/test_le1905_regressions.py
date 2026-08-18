@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
@@ -361,3 +362,68 @@ def test_a_run_with_no_override_is_untouched():
     parsed = ParsedWorkflowRun(flow_id="abc", input_value="hello")
 
     assert _apply_flow_data_override_policy(parsed, _Flow(owner_id=uuid4()), _User()) is parsed
+
+
+# --------------------------------------------------------------------------- #
+# Round 2, finding 1: every row is classifiable, so a reader can ask for the
+# actions people performed without losing rows written before classification.
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.asyncio
+async def test_event_class_filter_selects_and_never_hides_untagged_rows():
+    """The ``details.event`` filter the audit route applies, against a real database."""
+    import sqlalchemy as sa
+    from langflow.services.database.models.auth.authz import AuthzAuditLog
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlmodel import col, or_, select
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    engine = create_async_engine("sqlite+aiosqlite://")
+    async with engine.begin() as conn:
+        await conn.run_sync(lambda c: AuthzAuditLog.metadata.create_all(c, tables=[AuthzAuditLog.__table__]))
+
+    seeded = (
+        ("share:create", {"event": audit_module.AUDIT_EVENT_DECISION}),
+        ("share:create", {"event": audit_module.AUDIT_EVENT_MUTATION}),
+        ("audit:read", {"event": audit_module.AUDIT_EVENT_ACCESS}),
+        ("flow:read", None),
+        ("flow:write", {"domain": "*"}),
+    )
+    async with AsyncSession(engine) as session:
+        for action, details in seeded:
+            session.add(
+                AuthzAuditLog(
+                    id=uuid4(),
+                    timestamp=datetime.now(timezone.utc),
+                    action=action,
+                    resource_type=action.split(":")[0],
+                    result=audit_module.AUDIT_ALLOW,
+                    details=details,
+                )
+            )
+        await session.commit()
+
+        event_class = col(AuthzAuditLog.details)["event"].as_string()
+
+        async def actions(stmt):
+            return sorted(row.action for row in (await session.exec(stmt)).all())
+
+        # Asking for what happened returns only the mutation.
+        assert await actions(select(AuthzAuditLog).where(event_class.in_([audit_module.AUDIT_EVENT_MUTATION]))) == [
+            "share:create"
+        ]
+
+        # Hiding permission checks drops the check and keeps every other row,
+        # including the two written before classification existed.
+        hide_checks = select(AuthzAuditLog).where(
+            or_(event_class.not_in([audit_module.AUDIT_EVENT_DECISION]), event_class.is_(None))
+        )
+        assert await actions(hide_checks) == ["audit:read", "flow:read", "flow:write", "share:create"]
+
+        # The count the route reports comes off the same filtered subquery, so
+        # pagination cannot disagree with the rows.
+        total = int((await session.exec(select(sa.func.count()).select_from(hide_checks.subquery()))).first() or 0)
+        assert total == 4
+
+    await engine.dispose()
