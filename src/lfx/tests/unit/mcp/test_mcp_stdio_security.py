@@ -778,3 +778,54 @@ async def test_update_tools_injects_bound_user_for_agentic_server():
         {},
         current_user_id=user_id,
     )
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        pytest.param(["/c", "uvx", "mcp-proxy"], id="bare-exec-switch"),
+        pytest.param(["/d", "/c", "uvx", "mcp-proxy"], id="benign-switch-before-exec"),
+        pytest.param(["/q", "/c", "uvx", "mcp-proxy"], id="another-benign-switch-before-exec"),
+        pytest.param(["/t:0a", "/c", "uvx", "mcp-proxy"], id="value-bearing-benign-switch-before-exec"),
+        pytest.param(["/d", "/q", "/c", "uvx", "mcp-proxy"], id="two-benign-switches-before-exec"),
+        pytest.param(["/q/k", "uvx", "mcp-proxy"], id="clustered-benign-and-exec"),
+    ],
+)
+def test_cmd_benign_switches_may_precede_the_exec_switch_under_hardening(args):
+    """cmd.exe accepts benign switches ahead of the execution switch, and so must we.
+
+    Both policy layers previously inspected ``args[0]`` only, so ``cmd /d /c uvx ...`` --
+    a legitimate configuration -- was rejected under interpreter hardening even though the
+    wrapped command is allow-listed.
+    """
+    validate_mcp_stdio_config("cmd", args, {}, interpreter_hardening=True)
+
+
+def test_cmd_operand_before_exec_switch_is_not_a_validated_wrapper():
+    """A non-switch operand ahead of the execution switch must not pass hardening.
+
+    ``parse_mcp_shell_wrapper`` skips any token that is not an execution switch while it
+    searches, so it alone would accept this shape. The leading-switch scan is what keeps a
+    script operand from preceding the execution switch.
+    """
+    with pytest.raises(MCPStdioSecurityError, match="INTERPRETER_HARDENING"):
+        validate_mcp_stdio_config(
+            "cmd",
+            ["foo.bat", "/c", "uvx", "mcp-proxy"],
+            {},
+            interpreter_hardening=True,
+        )
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        pytest.param(["/d", "/c", "whoami"], id="benign-then-c"),
+        pytest.param(["/d", "/k", "whoami"], id="benign-then-k"),
+        pytest.param(["/q/k", "whoami"], id="clustered"),
+    ],
+)
+def test_cmd_benign_switch_prefix_still_binds_payload_to_the_allow_list(args):
+    """Allowing a benign prefix must not let the wrapped payload escape the allow-list."""
+    with pytest.raises(MCPStdioSecurityError):
+        validate_mcp_stdio_config("cmd", args, {})

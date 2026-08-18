@@ -570,7 +570,7 @@ def _validate_interpreter_invocation(base_command: str, args: list[str], *, hard
     if base_command in {"sh", "bash", "cmd"}:
         first_arg = args[0].lower() if args else ""
         has_leading_exec_flag = (
-            is_cmd_exec_flag(first_arg)
+            has_leading_cmd_exec_flag(args)
             if base_command == "cmd"
             else first_arg.startswith("-") and not first_arg.startswith("--") and "c" in first_arg[1:]
         )
@@ -696,6 +696,24 @@ def is_cmd_exec_flag(arg: str) -> bool:
     # ``/q/k`` packs several switches into one token and a switch may carry a value
     # (``/t:0a``), so only the leading letter of each part identifies the switch.
     return any(part[:1] not in CMD_NON_EXEC_SWITCH_LETTERS for part in arg_lower.split("/") if part)
+
+
+def has_leading_cmd_exec_flag(args: list[str]) -> bool:
+    """Whether a cmd.exe execution switch precedes every operand.
+
+    cmd.exe accepts benign switches ahead of the execution switch (``/d /c uvx ...``),
+    and a switch may carry a value (``/t:0a``). Those are skipped. Scanning stops at the
+    first token that is not a switch, so a script operand can never precede the execution
+    switch and be mistaken for a validated wrapper -- ``parse_mcp_shell_wrapper`` alone is
+    not sufficient here because it skips non-switch tokens while searching.
+    """
+    for arg in args:
+        arg_lower = arg.lower()
+        if not arg_lower.startswith("/"):
+            return False
+        if is_cmd_exec_flag(arg_lower):
+            return True
+    return False
 
 
 def parse_mcp_shell_wrapper(command: str, args: list[str]) -> tuple[str, list[str]] | None:

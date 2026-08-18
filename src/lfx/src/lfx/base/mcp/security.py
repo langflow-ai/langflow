@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from lfx.base.mcp.source_policy import (
+    has_leading_cmd_exec_flag,
     is_cmd_exec_flag,
     parse_mcp_shell_wrapper,
     validate_mcp_stdio_source_policy,
@@ -233,7 +234,11 @@ def _is_shell_exec_flag(arg: str, base_command: str = "") -> bool:
 
 def _has_leading_shell_exec_flag(args: list[str], base_command: str = "") -> bool:
     """Return whether a shell execution flag appears before every script operand."""
-    return bool(args) and _is_shell_exec_flag(args[0], base_command)
+    if not args:
+        return False
+    if extract_base_command(base_command) == "cmd":
+        return has_leading_cmd_exec_flag(args)
+    return _is_shell_exec_flag(args[0], base_command)
 
 
 class MCPStdioSecurityError(ValueError):
@@ -562,8 +567,25 @@ def validate_mcp_stdio_config(
             raise MCPStdioSecurityError(msg)
 
         if base_command in SHELL_WRAPPERS:
-            wrapped_command = args[1] if _has_leading_shell_exec_flag(args, base_command) and len(args) > 1 else None
-            wrapped_args = args[2:] if wrapped_command else []
+            # Derive the payload from the parsed wrapper rather than a fixed argv index:
+            # cmd.exe allows benign switches ahead of the execution switch ("/d /c uvx ..."),
+            # so args[1] would be "/c" there and this gate would report "cannot execute 'c'".
+            # ``_has_leading_shell_exec_flag`` still guards the position, so a script operand
+            # cannot precede the execution switch.
+            wrapped_command = None
+            wrapped_args: list[str] = []
+            if _has_leading_shell_exec_flag(args, base_command) and len(args) > 1:
+                # cmd.exe allows benign switches ahead of the execution switch ("/d /c uvx ..."),
+                # so a fixed args[1] would be "/c" and this gate would report "cannot execute 'c'".
+                # Only cmd needs the parsed payload: sh/bash carry their whole command in one
+                # argument ("sh -c 'id > /tmp/x'"), and splitting that here would let the gate
+                # inspect only the first token instead of the full command string.
+                parsed_wrapper = parse_mcp_shell_wrapper(base_command, args) if base_command == "cmd" else None
+                if parsed_wrapper is not None:
+                    wrapped_command, wrapped_args = parsed_wrapper
+                else:
+                    wrapped_command = args[1]
+                    wrapped_args = args[2:]
 
             if wrapped_command:
                 wrapped_base = extract_base_command(wrapped_command)
