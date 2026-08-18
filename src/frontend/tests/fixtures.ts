@@ -153,6 +153,28 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
         await page.emulateMedia({ colorScheme: options.colorScheme });
       }
 
+      // Let enter animations (Radix popover/dialog fade-ins) finish before
+      // scanning. The IBM checker composites element opacity into its
+      // contrast measurement, so a popover caught mid `fade-in` reports
+      // phantom text_contrast_sufficient violations (LE-2235: 4.00:1 on
+      // the model picker that measures 4.95:1 once settled). Infinite
+      // animations (spinners) are skipped; the 2s cap keeps a stuck
+      // animation from hanging the scan.
+      await page.evaluate(() =>
+        Promise.race([
+          Promise.all(
+            document
+              .getAnimations()
+              .filter((a) => {
+                const timing = a.effect?.getTiming();
+                return timing?.iterations !== Infinity;
+              })
+              .map((a) => a.finished.catch(() => undefined)),
+          ),
+          new Promise((resolve) => setTimeout(resolve, 2000)),
+        ]),
+      );
+
       const scanIndex = a11yScanIndex++;
       const scanLabel = buildA11yScanLabel(
         testInfo.project.name,
