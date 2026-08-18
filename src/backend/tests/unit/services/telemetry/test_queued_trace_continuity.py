@@ -27,11 +27,19 @@ pytestmark = pytest.mark.usefixtures("client")
 
 @pytest.fixture(scope="module")
 def span_exporter():
-    """Install a provider for this module and hand back its exporter.
+    """Attach an exporter to whatever tracer provider this worker has, and hand it back.
 
     In-process rather than a subprocess because this needs the app, the database and the auth
-    fixtures. ``set_tracer_provider`` is first-write-wins, so the assert is what stops this
-    file passing vacuously when another module in the worker installs one first.
+    fixtures.
+
+    Attaching rather than installing is deliberate. ``set_tracer_provider`` is
+    first-write-wins, so a module that installs its own provider works alone and fails the
+    moment xdist puts another provider-installing module in the same worker -- which is
+    exactly what happened here on one Python version and not the others. Adding a processor
+    to the provider that is already there has no such ordering dependency.
+
+    The tests still cannot pass vacuously: each one asserts that its own spans arrived before
+    asserting anything about their links.
     """
     from opentelemetry import trace
     from opentelemetry.sdk.trace import TracerProvider
@@ -39,12 +47,18 @@ def span_exporter():
     from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
     exporter = InMemorySpanExporter()
+    current = trace.get_tracer_provider()
+    if isinstance(current, TracerProvider):
+        # Someone already installed a real SDK provider. Ride it rather than fight it; the
+        # helpers below filter to this module's own spans by name and scope.
+        current.add_span_processor(SimpleSpanProcessor(exporter))
+        yield exporter
+        exporter.clear()
+        return
+
     provider = TracerProvider()
     provider.add_span_processor(SimpleSpanProcessor(exporter))
     trace.set_tracer_provider(provider)
-    assert trace.get_tracer_provider() is provider, (
-        "another test installed a tracer provider first; these assertions would be vacuous"
-    )
     yield exporter
     provider.shutdown()
     exporter.clear()
