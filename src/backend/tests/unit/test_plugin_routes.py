@@ -224,8 +224,58 @@ class TestLoadPluginRoutes:
         ]
         assert len(routes_at_path) == 1
 
+    def test_config_valueerror_is_not_reported_as_a_route_conflict(self):
+        """A plugin config error must not read as a duplicate path.
+
+        Reporting every ValueError as a conflict sent operators looking for a
+        clashing route when the real cause was elsewhere — and either way the
+        plugin's whole route set is missing, which is the part that matters.
+        """
+        app = FastAPI()
+
+        def misconfigured_register(_app_like):
+            err_msg = "LANGFLOW_AUTHZ_AUDIT_DURABLE=true is required"
+            raise ValueError(err_msg)
+
+        ep = MagicMock()
+        ep.name = "enterprise"
+        ep.load.return_value = misconfigured_register
+
+        with (
+            patch("langflow.plugin_routes.entry_points", return_value=[ep]),
+            patch("langflow.plugin_routes.logger") as mock_logger,
+        ):
+            load_plugin_routes(app)
+
+        mock_logger.warning.assert_not_called()
+        assert mock_logger.error.called
+        assert "none of its routes are available" in mock_logger.error.call_args.args[0]
+
+    def test_genuine_route_conflict_is_still_reported_as_one(self):
+        app = FastAPI()
+
+        @app.get("/api/v1/flow")
+        def core_flow():
+            return "core"
+
+        def conflicting_register(app_like):
+            app_like.get("/api/v1/flow")(lambda: "plugin")
+
+        ep = MagicMock()
+        ep.name = "conflicting"
+        ep.load.return_value = conflicting_register
+
+        with (
+            patch("langflow.plugin_routes.entry_points", return_value=[ep]),
+            patch("langflow.plugin_routes.logger") as mock_logger,
+        ):
+            load_plugin_routes(app)
+
+        mock_logger.error.assert_not_called()
+        assert "route conflict" in mock_logger.warning.call_args.args[0]
+
     def test_plugin_that_raises_is_skipped_app_continues(self):
-        """When a plugin raises a non-ValueError exception, it is skipped."""
+        """When a plugin raises a non-conflict exception, it is skipped."""
         app = FastAPI()
 
         @app.get("/health")

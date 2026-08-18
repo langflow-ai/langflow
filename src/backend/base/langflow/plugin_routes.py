@@ -54,6 +54,15 @@ def _get_route_keys(app: FastAPI) -> set[tuple[str, str]]:
     return set(_iter_route_keys(app.router.routes))
 
 
+class RouteConflictError(ValueError):
+    """A plugin tried to register a path+method Langflow already serves.
+
+    Distinct from any other ``ValueError`` a plugin's ``register()`` may raise
+    (a bad configuration, say): only a genuine conflict should be reported to
+    operators as one.
+    """
+
+
 class _PluginAppWrapper:
     """Wrapper around the real FastAPI app that only allows adding routes.
 
@@ -72,7 +81,7 @@ class _PluginAppWrapper:
             key = (path, method)
             if key in self._reserved:
                 msg = f"Plugin route conflicts with existing route: {path} [{method}]"
-                raise ValueError(msg)
+                raise RouteConflictError(msg)
             self._reserved.add(key)
 
     def include_router(self, router, prefix: str = "", **kwargs) -> None:
@@ -161,7 +170,7 @@ def load_plugin_routes(app: FastAPI) -> None:
         try:
             plugin_register(wrapper)
             logger.info(f"Loaded plugin: {ep.name}")
-        except ValueError as e:
+        except RouteConflictError as e:
             logger.warning(
                 "Plugin '%s' rejected (route conflict): %s",
                 ep.name,
@@ -169,8 +178,13 @@ def load_plugin_routes(app: FastAPI) -> None:
                 exc_info=True,
             )
         except Exception:  # noqa: BLE001
+            # Anything else -- a bad plugin config, a failed import inside
+            # register() -- is a registration failure, not a route conflict.
+            # Reporting every ValueError as a conflict sent operators looking
+            # for a duplicate path when the real cause was elsewhere, and the
+            # whole plugin's routes were missing either way.
             logger.error(
-                "Plugin '%s' failed during registration",
+                "Plugin '%s' failed during registration; none of its routes are available",
                 ep.name,
                 exc_info=True,
             )
