@@ -1,6 +1,7 @@
 from langchain_openai import OpenAIEmbeddings
 from lfx.base.embeddings.model import LCEmbeddingsModel
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
+from lfx.base.models.provider_ssrf import openai_compatible_client_kwargs
 from lfx.field_typing import Embeddings
 from lfx.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
 
@@ -72,6 +73,11 @@ class OpenAIEmbeddingsComponent(LCEmbeddingsModel):
     ]
 
     def build_embeddings(self) -> Embeddings:
+        # openai_api_base is tenant-editable and the SDK sends the operator's stored API key to
+        # whatever host it names. Apply the connector SSRF policy and route a custom endpoint
+        # through DNS-pinned, redirect-free clients. No-op for the default OpenAI endpoint.
+        ssrf_client_kwargs = openai_compatible_client_kwargs(self.openai_api_base)
+
         return OpenAIEmbeddings(
             client=self.client or None,
             model=self.model,
@@ -96,4 +102,5 @@ class OpenAIEmbeddingsComponent(LCEmbeddingsModel):
             skip_empty=self.skip_empty,
             default_headers=self.default_headers or None,
             default_query=self.default_query or None,
+            **ssrf_client_kwargs,
         )
