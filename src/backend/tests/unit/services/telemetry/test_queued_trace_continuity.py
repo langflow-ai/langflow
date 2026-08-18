@@ -47,21 +47,30 @@ def span_exporter():
     from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
     exporter = InMemorySpanExporter()
+    processor = SimpleSpanProcessor(exporter)
     current = trace.get_tracer_provider()
     if isinstance(current, TracerProvider):
         # Someone already installed a real SDK provider. Ride it rather than fight it; the
         # helpers below filter to this module's own spans by name and scope.
-        current.add_span_processor(SimpleSpanProcessor(exporter))
-        yield exporter
-        exporter.clear()
+        current.add_span_processor(processor)
+        try:
+            yield exporter
+        finally:
+            # Shut the processor down rather than detach it: a provider has no removal API,
+            # so clearing the exporter empties the list and leaves the processor registered,
+            # still appending every later span in this worker to it for the rest of the run.
+            processor.shutdown()
+            exporter.clear()
         return
 
     provider = TracerProvider()
-    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    provider.add_span_processor(processor)
     trace.set_tracer_provider(provider)
-    yield exporter
-    provider.shutdown()
-    exporter.clear()
+    try:
+        yield exporter
+    finally:
+        provider.shutdown()
+        exporter.clear()
 
 
 def _flow_spans(exporter):
