@@ -28,15 +28,17 @@ import DeploymentsPage from "../deploymentsPage/deployments-page";
 import EmptyFolder from "../emptyFolder";
 import { isFolderEmpty } from "./utils/isFolderEmpty";
 
-const PAGE_TITLE_KEYS = {
+// Keyed by the active tab, not the route: Flows and Deployments share /flows
+// and only differ by which header tab is selected.
+const PAGE_TITLE_KEYS: Record<FlowTabType, string> = {
   flows: "mainPage.tabFlows",
+  deployments: "mainPage.tabDeployments",
   components: "mainPage.tabComponents",
   mcp: "mainPage.mcpServer",
-} as const;
+};
 
-const HomePage = ({ type }: { type: keyof typeof PAGE_TITLE_KEYS }) => {
+const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   const { t } = useTranslation();
-  useDocumentTitle(t(PAGE_TITLE_KEYS[type]));
   const [view, setView] = useState<"grid" | "list">(() => {
     const savedView = localStorage.getItem("view");
     return savedView === "grid" || savedView === "list" ? savedView : "list";
@@ -55,6 +57,7 @@ const HomePage = ({ type }: { type: keyof typeof PAGE_TITLE_KEYS }) => {
       ? "deployments"
       : type,
   );
+  useDocumentTitle(t(PAGE_TITLE_KEYS[flowType]));
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const folders = useFolderStore((state) => state.folders);
   const currentFolderId = folderId ?? myCollectionId;

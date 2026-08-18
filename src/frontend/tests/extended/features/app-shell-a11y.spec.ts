@@ -20,10 +20,14 @@ import { TIMEOUTS } from "../../utils/constants/timeouts";
  * Expected titles are exact so the test also catches a route silently
  * inheriting the previous route's title. Settings entries whose label already
  * carries the product name are not double-branded.
+ *
+ * `/components` is deliberately absent: with MCP enabled (the default) it has
+ * no Components tab and force-selects Flows, so it is the same page as `/flows`
+ * and correctly shares its title. The home page titles itself after the active
+ * header tab, which the Deployments test below covers.
  */
 const ROUTE_TITLES = [
   { path: "/flows", title: "Flows | Langflow" },
-  { path: "/components", title: "Components | Langflow" },
   { path: "/mcp", title: "MCP Server | Langflow" },
   { path: "/assets/files", title: "Files | Langflow" },
   { path: "/assets/knowledge-bases", title: "Knowledge | Langflow" },
@@ -55,6 +59,30 @@ test(
 
     // A per-route title is only useful if it actually distinguishes the route.
     expect(new Set(observed).size).toBe(ROUTE_TITLES.length);
+  },
+);
+
+test(
+  "switching to the Deployments tab retitles the page without a route change",
+  { tag: ["@release", "@workspace"] },
+  async ({ page }) => {
+    await awaitBootstrapTest(page, { skipModal: true });
+    await page.goto("/flows");
+    await expect(page).toHaveTitle("Flows | Langflow", {
+      timeout: TIMEOUTS.standard,
+    });
+
+    // Flows and Deployments share /flows; only the header tab differs.
+    await page.getByTestId("deployments-btn").click();
+    await expect(page).toHaveURL(/\/flows\/?$/);
+    await expect(page).toHaveTitle("Deployments | Langflow", {
+      timeout: TIMEOUTS.standard,
+    });
+
+    await page.getByTestId("flows-btn").click();
+    await expect(page).toHaveTitle("Flows | Langflow", {
+      timeout: TIMEOUTS.standard,
+    });
   },
 );
 
