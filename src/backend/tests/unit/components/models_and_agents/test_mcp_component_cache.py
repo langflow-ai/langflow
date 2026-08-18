@@ -15,6 +15,7 @@ import pytest
 from lfx.base.agents.utils import safe_cache_get, safe_cache_set
 from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
 from lfx.schema.dataframe import DataFrame
+from mcp.types import CallToolResult, TextContent
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -526,10 +527,10 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
         # Mock the execution tool
         exec_tool = MagicMock()
         exec_tool.coroutine = AsyncMock()
-        mock_result = MagicMock()
-        mock_result.isError = False
-        mock_result.content = [MagicMock()]
-        mock_result.content[0].model_dump.return_value = {"result": "test_output"}
+        mock_result = CallToolResult(
+            isError=False,
+            content=[TextContent(type="text", text="test_output")],
+        )
         exec_tool.coroutine.return_value = mock_result
 
         # Set up cached tools
@@ -551,7 +552,10 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
             # DataFrame is a pandas subclass, use to_dict to access data
             result_dict = result.to_dict(orient="records")
             assert len(result_dict) == 1
-            assert result_dict[0]["result"] == "test_output"
+            # Columns come from TextContent.model_dump(), so "text" is the real
+            # shape the component produces. The old mock fabricated a "result"
+            # key that no MCP result ever carries.
+            assert result_dict[0]["text"] == "test_output"
 
     @pytest.mark.asyncio
     async def test_error_handling_with_cache_disabled(self, component_class, default_kwargs):

@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
 from lfx.schema.dataframe import DataFrame
+from mcp.types import CallToolResult, TextContent
 
 
 class TestMCPComponentOutputProcessing:
@@ -83,20 +84,17 @@ class TestMCPComponentOutputProcessing:
 
         # Mock the tool cache
         mock_tool = MagicMock()
-        mock_result = MagicMock()
 
-        # Create mock output with various JSON types
-        mock_content_item1 = MagicMock()
-        mock_content_item1.model_dump.return_value = {"type": "text", "text": '{"status": "success"}'}
-
-        mock_content_item2 = MagicMock()
-        mock_content_item2.model_dump.return_value = {"type": "text", "text": '"just a string"'}
-
-        mock_content_item3 = MagicMock()
-        mock_content_item3.model_dump.return_value = {"type": "text", "text": "42"}
-
-        mock_result.isError = False
-        mock_result.content = [mock_content_item1, mock_content_item2, mock_content_item3]
+        # Real SDK models: field names come from mcp.types, not from literals
+        # frozen in this test, so a wire-model rename shows up here.
+        mock_result = CallToolResult(
+            isError=False,
+            content=[
+                TextContent(type="text", text='{"status": "success"}'),
+                TextContent(type="text", text='"just a string"'),
+                TextContent(type="text", text="42"),
+            ],
+        )
         mock_tool.coroutine = AsyncMock(return_value=mock_result)
 
         component._tool_cache = {"test_tool": mock_tool}
@@ -143,14 +141,15 @@ class TestMCPComponentOutputProcessing:
         component.tool = "test_tool"
         component.tools = []
 
-        error_item = MagicMock()
-        error_item.model_dump.return_value = {
-            "type": "text",
-            "text": "This flow uses Human-in-the-Loop and cannot run as an MCP tool.",
-        }
-        mock_result = MagicMock()
-        mock_result.isError = True
-        mock_result.content = [error_item]
+        mock_result = CallToolResult(
+            isError=True,
+            content=[
+                TextContent(
+                    type="text",
+                    text="This flow uses Human-in-the-Loop and cannot run as an MCP tool.",
+                )
+            ],
+        )
         mock_tool = MagicMock()
         mock_tool.coroutine = AsyncMock(return_value=mock_result)
 
@@ -189,11 +188,10 @@ class TestMCPComponentOutputProcessing:
 
         mock_tool = MagicMock()
         mock_tool.name = "list_tool"
-        mock_result = MagicMock()
-        mock_result.isError = False
-        mock_result.content = [
-            MagicMock(model_dump=MagicMock(return_value={"type": "text", "text": '{"results": []}'}))
-        ]
+        mock_result = CallToolResult(
+            isError=False,
+            content=[TextContent(type="text", text='{"results": []}')],
+        )
         mock_tool.coroutine = AsyncMock(return_value=mock_result)
 
         schema = create_model(
