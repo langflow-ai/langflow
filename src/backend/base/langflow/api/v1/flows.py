@@ -23,6 +23,7 @@ from lfx.utils.flow_validation import (
 )
 from pydantic import ValidationError
 from sqlalchemy import case
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import and_, col, select
 
 from langflow.api.utils import (
@@ -1018,7 +1019,18 @@ async def create_flows(
         session.add(db_flow)
         db_flows.append(db_flow)
 
-    await session.flush()
+    # Unlike create_flow/upsert_flow, this endpoint does not route through
+    # _new_flow, so a (user_id, name)/(user_id, endpoint_name) collision reaches
+    # the flush unhandled. Left un-rolled-back on SQLite, the failed INSERT pins
+    # the write lock and the next writer busy-waits busy_timeout (30s) before its
+    # own "database is locked"; the raw error would also leak the SQL statement
+    # and bound parameters. Roll back to release the lock immediately, then map
+    # to a clean 409.
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise _handle_unique_constraint_error(exc, status_code=409) from exc
     for db_flow in db_flows:
         await session.refresh(db_flow)
 
