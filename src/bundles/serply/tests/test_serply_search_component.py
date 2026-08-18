@@ -63,9 +63,7 @@ def test_missing_api_key_raises(component):
 
 
 def test_search_sends_explicit_user_agent(component):
-    """Serply is behind Cloudflare; the request MUST carry an explicit
-    User-Agent or it is blocked with a 1010 error.
-    """
+    """The request must carry an explicit User-Agent to clear Cloudflare (1010)."""
     mock_get = _mock_get(SAMPLE_PAYLOAD)
     with patch(GET_PATCH_TARGET, mock_get):
         component._search()
@@ -75,13 +73,30 @@ def test_search_sends_explicit_user_agent(component):
     assert headers["X-Api-Key"] == "test-key"  # pragma: allowlist secret
 
 
-def test_max_results_is_clamped(component):
-    """max_results is clamped into the 1-100 range Serply accepts."""
+def test_search_builds_query_string_url(component):
+    """The query is sent as a proper ``?``-delimited query string."""
+    mock_get = _mock_get(SAMPLE_PAYLOAD)
+    with patch(GET_PATCH_TARGET, mock_get):
+        component._search()
+    assert mock_get.call_args.args[0] == "https://api.serply.io/v1/search/?q=hello&num=10"
+
+
+def test_max_results_is_clamped_high(component):
+    """max_results above the range is clamped to the 100 upper bound."""
     component.max_results = 500
     mock_get = _mock_get(SAMPLE_PAYLOAD)
     with patch(GET_PATCH_TARGET, mock_get):
         component._search()
-    assert "num=100" in mock_get.call_args.args[0]
+    assert mock_get.call_args.args[0] == "https://api.serply.io/v1/search/?q=hello&num=100"
+
+
+def test_max_results_is_clamped_low(component):
+    """max_results below the range is clamped to the 1 lower bound."""
+    component.max_results = 0
+    mock_get = _mock_get(SAMPLE_PAYLOAD)
+    with patch(GET_PATCH_TARGET, mock_get):
+        component._search()
+    assert mock_get.call_args.args[0] == "https://api.serply.io/v1/search/?q=hello&num=1"
 
 
 def test_fetch_content_maps_results(component):

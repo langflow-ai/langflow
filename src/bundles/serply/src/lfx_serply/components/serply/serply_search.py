@@ -55,7 +55,8 @@ class SerplySearchComponent(Component):
             msg = "Serply API key is required. Set the Serply API Key input."
             raise ValueError(msg)
 
-        num = max(MIN_RESULTS, min(int(self.max_results or 10), MAX_RESULTS))
+        requested = 10 if self.max_results is None else int(self.max_results)
+        num = max(MIN_RESULTS, min(requested, MAX_RESULTS))
         query = urlencode({"q": self.input_value or "", "num": num})
         headers = {
             "X-Api-Key": self.serply_api_key,
@@ -64,7 +65,7 @@ class SerplySearchComponent(Component):
             # User-Agent with a 1010 error, so send an explicit one.
             "User-Agent": "langflow-serply-bundle",
         }
-        response = httpx.get(f"{SEARCH_ENDPOINT}{query}", headers=headers, timeout=30)
+        response = httpx.get(f"{SEARCH_ENDPOINT}?{query}", headers=headers, timeout=30)
         response.raise_for_status()
         return response.json()
 
