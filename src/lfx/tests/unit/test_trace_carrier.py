@@ -49,6 +49,25 @@ def test_the_carrier_round_trips_the_trace_id(tracer):
     assert link.context.trace_id == expected
 
 
+def test_the_carrier_round_trips_the_sampling_flag(tracer):
+    """The reason this is a traceparent and not a bare trace id.
+
+    A bare id carries no sampling decision, so a linked run could be dropped by a sampler that
+    kept the request it came from -- leaving the operator a request with a reference to a run
+    that was never exported. The flag is the whole argument for the standard form, so it gets
+    its own assertion rather than riding along untested with the trace id.
+    """
+    with tracer.start_as_current_span("originating.request") as span:
+        expected = span.get_span_context().trace_flags
+        carrier = inject_trace_carrier()
+
+    link = extract_trace_link(carrier)
+
+    assert link is not None
+    assert link.context.trace_flags == expected
+    assert link.context.trace_flags.sampled is expected.sampled
+
+
 def test_existing_metadata_is_preserved(tracer):
     """The carrier shares the job's metadata dict with application keys."""
     with tracer.start_as_current_span("originating.request"):
