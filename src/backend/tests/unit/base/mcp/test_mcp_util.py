@@ -31,6 +31,7 @@ from lfx.base.mcp.util import (
     validate_headers,
 )
 from lfx.schema.data import Data
+from mcp.types import CallToolResult, ImageContent, TextContent, Tool
 
 
 def test_validate_mcp_stdio_env_rejects_shellopts_ps4_combo():
@@ -1295,13 +1296,13 @@ class TestUpdateToolsPerToolResilience:
     """update_tools must isolate per-tool schema-parsing failures (#11229)."""
 
     @staticmethod
-    def _make_tool(name: str, schema: dict) -> MagicMock:
-        tool = MagicMock()
-        tool.name = name
-        tool.description = f"{name} description"
-        tool.inputSchema = schema
-        tool.outputSchema = None
-        return tool
+    def _make_tool(name: str, schema: dict) -> Tool:
+        """Real ``Tool``, so the schema field name tracks the SDK.
+
+        A MagicMock accepts whatever attribute the test writes, so it keeps
+        passing after a wire-model rename that breaks every real server.
+        """
+        return Tool(name=name, description=f"{name} description", inputSchema=schema)
 
     @pytest.mark.asyncio
     async def test_one_bad_tool_does_not_drop_the_other_tools_issue_11229(self):
@@ -1401,7 +1402,10 @@ class TestUpdateToolsPerToolResilience:
             tool = self._make_tool(f"tool_{i:02d}", schema)
             tools.append(tool)
             if i % 2 == 1:  # 10 odd indices fail with rotated error types
-                bad_schemas[id(schema)] = error_types[(i // 2) % len(error_types)]
+                # Key off the schema the tool actually carries. Tool is a pydantic
+                # model, so it stores a copy and the local dict's id() is not the
+                # one the converter will be handed.
+                bad_schemas[id(tool.inputSchema)] = error_types[(i // 2) % len(error_types)]
 
         def selective_converter(schema):
             err_cls = bad_schemas.get(id(schema))
@@ -2523,16 +2527,16 @@ class TestMCPStreamableHttpClientWithDeepWikiServer:
 
     @pytest.fixture
     def mock_tool(self):
-        """Create a mock MCP tool."""
-        tool = MagicMock()
-        tool.name = "test_tool"
-        tool.description = "Test tool description"
-        tool.inputSchema = {
-            "type": "object",
-            "properties": {"test_param": {"type": "string", "description": "Test parameter"}},
-            "required": ["test_param"],
-        }
-        return tool
+        """Create a real MCP tool model."""
+        return Tool(
+            name="test_tool",
+            description="Test tool description",
+            inputSchema={
+                "type": "object",
+                "properties": {"test_param": {"type": "string", "description": "Test parameter"}},
+                "required": ["test_param"],
+            },
+        )
 
     @pytest.fixture
     def mock_session(self, mock_tool):
@@ -3710,11 +3714,7 @@ class TestConvertMcpResult:
         return block
 
     def _make_image_block(self, data: str = "abc123", mime: str = "image/png"):
-        block = MagicMock()
-        block.type = "image"
-        block.data = data
-        block.mimeType = mime
-        return block
+        return ImageContent(type="image", data=data, mimeType=mime)
 
     def _make_result(self, content):
         result = MagicMock()
@@ -3930,33 +3930,20 @@ class TestMCPStructuredToolToolCallId:
     is multimodal-ready and whose artifact holds the original CallToolResult.
     """
 
-    def _make_raw_result(self, text: str = "ok", image_data: str | None = None):
-        """Build a minimal CallToolResult-like mock."""
-        text_block = MagicMock()
-        text_block.type = "text"
-        text_block.text = text
-
-        content = [text_block]
+    def _make_raw_result(self, text: str = "ok", image_data: str | None = None) -> CallToolResult:
+        """Build a real CallToolResult, so isError and mimeType track the SDK."""
+        content: list[TextContent | ImageContent] = [TextContent(type="text", text=text)]
         if image_data:
-            img_block = MagicMock()
-            img_block.type = "image"
-            img_block.data = image_data
-            img_block.mimeType = "image/png"
-            content.append(img_block)
-
-        result = MagicMock()
-        result.isError = False
-        result.content = content
-        result.structuredContent = None
-        return result
+            content.append(ImageContent(type="image", data=image_data, mimeType="image/png"))
+        return CallToolResult(isError=False, content=content, structuredContent=None)
 
     async def _build_tool_via_update_tools(self, raw_result):
         """Get a real MCPStructuredTool from update_tools() with a mocked client."""
-        mock_tool = MagicMock()
-        mock_tool.name = "get_image"
-        mock_tool.description = "Returns content"
-        mock_tool.inputSchema = {"type": "object", "properties": {}, "required": []}
-        mock_tool.outputSchema = None
+        mock_tool = Tool(
+            name="get_image",
+            description="Returns content",
+            inputSchema={"type": "object", "properties": {}, "required": []},
+        )
 
         mock_client = AsyncMock(spec=MCPStdioClient)
         mock_client.connect_to_server = AsyncMock(return_value=[mock_tool])

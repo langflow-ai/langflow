@@ -15,6 +15,7 @@ from types import SimpleNamespace
 
 import pytest
 from lfx.base.mcp.util import create_tool_coroutine
+from mcp.types import CallToolResult, TextContent
 from pydantic import BaseModel
 
 
@@ -22,10 +23,16 @@ class _ArgSchema(BaseModel):
     input_value: str = ""
 
 
-def _result(*, is_error: bool, text: str = "ok") -> SimpleNamespace:
-    return SimpleNamespace(
+def _result(*, is_error: bool, text: str = "ok") -> CallToolResult:
+    """Build a real ``CallToolResult``, not a duck-typed stand-in.
+
+    A hand-rolled object with an ``isError`` attribute passes whatever the SDK
+    later renames that field to, so it cannot catch a wire-model change. The
+    real model tracks the SDK.
+    """
+    return CallToolResult(
         isError=is_error,
-        content=[SimpleNamespace(type="text", text=text)],
+        content=[TextContent(type="text", text=text)],
     )
 
 
