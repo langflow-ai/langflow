@@ -68,7 +68,7 @@ CELL_EVIDENCE = {
     "v1.build": "tests/unit/api/test_build_flow_span.py",
     "a2a": "tests/unit/api/v1/test_a2a_span.py",
     "voice": "tests/unit/services/telemetry/test_flow_execution_span.py",
-    "lfx.serve": "src/lfx/tests/.../test_serve_app_flow_span.py",
+    "lfx.serve": "src/lfx/tests/unit/cli/test_serve_app_flow_span.py",
     # Not yet driven end to end. Each needs a driver this sweep does not have yet; recorded
     # rather than omitted so the gap is visible in the table instead of in nobody's head.
     "v1.build.public": "BLOCKED: needs a public-flow fixture with the tmp build route",
@@ -93,6 +93,24 @@ def test_no_evidence_row_is_orphaned():
     assert not orphaned, f"evidence rows for protocols that no longer exist: {sorted(orphaned)}"
 
 
+def test_every_cited_evidence_file_exists():
+    """A cited file that has been moved or deleted is a cell claiming coverage it lost.
+
+    The paths were prose until this existed, and one of them was still a placeholder with an
+    ellipsis in it, which is exactly the rot this catches.
+    """
+    repo_root = BACKEND_SRC.parents[3]
+    missing = []
+    for protocol, evidence in sorted(CELL_EVIDENCE.items()):
+        if evidence == "sweep" or evidence.startswith("BLOCKED"):
+            continue
+        candidate = repo_root / evidence if evidence.startswith("src/") else BACKEND_SRC.parents[1] / evidence
+        if not candidate.is_file():
+            missing.append(f"{protocol} -> {evidence} (looked in {candidate})")
+
+    assert not missing, "evidence files that do not exist:\n  " + "\n  ".join(missing)
+
+
 def _literal_protocols(root: Path) -> set[str]:
     """Every protocol value the source under ``root`` can bind, read from the AST.
 
@@ -109,7 +127,10 @@ def _literal_protocols(root: Path) -> set[str]:
     """
     found: set[str] = set()
     for path in root.rglob("*.py"):
-        if "test" in path.parts:
+        # Not `"test" in path.parts`: that matches a directory named exactly "test" and misses
+        # both "tests" directories and test_*.py modules, of which the scanned roots contain 32.
+        # A test that binds a made-up protocol would otherwise register as an emitted value.
+        if any(part in {"test", "tests"} or part.startswith("test_") for part in path.parts):
             continue
         try:
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
