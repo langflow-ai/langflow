@@ -4,6 +4,8 @@ from lfx.custom.custom_component.component import Component
 from lfx.io import MultilineInput, Output, SecretStrInput, StrInput
 from lfx.schema.data import Data
 
+from .mrscraper_common import build_client, payload
+
 
 class MrscraperRunManualScraper(Component):
     """Langflow component wrapping MrScraper `rerun_manual_scraper`."""
@@ -47,15 +49,9 @@ class MrscraperRunManualScraper(Component):
 
     async def rerun_manual(self) -> Data:
         """Rerun a manual scraper configuration and return `Data`."""
-        try:
-            from mrscraper import MrScraper
-        except ImportError as e:
-            msg = "Could not import mrscraper SDK. Please install it with `pip install mrscraper-sdk`."
-            raise ImportError(msg) from e
-
-        client = MrScraper(token=self.api_token)
+        client = build_client(self.api_token)
         result = await client.rerun_manual_scraper(
             scraper_id=self.scraper_id,
             url=self.url,
         )
-        return Data(data=result)
+        return Data(data=payload(result))

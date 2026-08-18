@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import builtins
+import inspect
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -17,6 +19,11 @@ from lfx_bundles.mrscraper.mrscraper_run_manual_scraper import MrscraperRunManua
 
 # Placeholder token for SDK mocks (not a real credential).
 MOCK_MR_API_TOKEN = "test-mrscraper-sdk-token-placeholder"  # noqa: S105
+
+
+def envelope(data: Any) -> dict[str, Any]:
+    """Wrap a payload the way ``MrScraper._parse`` wraps every real response."""
+    return {"status_code": 200, "data": data, "headers": {"content-type": "application/json"}}
 
 
 @pytest.mark.unit
@@ -66,7 +73,7 @@ class TestMrscraperAiScraper:
     async def test_run_scraper_calls_sdk(self) -> None:
         """`create_scraper` runs with expected arguments and returns Data."""
         mock_client = MagicMock()
-        mock_client.create_scraper = AsyncMock(return_value={"ok": True, "id": "run-1"})
+        mock_client.create_scraper = AsyncMock(return_value=envelope({"ok": True, "id": "run-1"}))
 
         with patch("mrscraper.MrScraper", return_value=mock_client):
             c = MrscraperAiScraper()
@@ -91,7 +98,7 @@ class TestMrscraperAiScraper:
     async def test_run_scraper_omits_empty_proxy_country(self) -> None:
         """An empty proxy country is sent as ``None``, not the string ``"None"``."""
         mock_client = MagicMock()
-        mock_client.create_scraper = AsyncMock(return_value={"ok": True})
+        mock_client.create_scraper = AsyncMock(return_value=envelope({"ok": True}))
 
         with patch("mrscraper.MrScraper", return_value=mock_client):
             c = MrscraperAiScraper()
@@ -133,7 +140,7 @@ class TestMrscraperBatchScrape:
     async def test_ai_mode_calls_bulk_ai(self) -> None:
         """Mode AI uses `bulk_rerun_ai_scraper`."""
         mock_client = MagicMock()
-        mock_client.bulk_rerun_ai_scraper = AsyncMock(return_value={"batch": 1})
+        mock_client.bulk_rerun_ai_scraper = AsyncMock(return_value=envelope({"batch": 1}))
         mock_client.bulk_rerun_manual_scraper = AsyncMock()
 
         with patch("mrscraper.MrScraper", return_value=mock_client):
@@ -154,7 +161,7 @@ class TestMrscraperBatchScrape:
     async def test_manual_mode_calls_bulk_manual(self) -> None:
         """Mode Manual uses `bulk_rerun_manual_scraper`."""
         mock_client = MagicMock()
-        mock_client.bulk_rerun_manual_scraper = AsyncMock(return_value={"batch": 2})
+        mock_client.bulk_rerun_manual_scraper = AsyncMock(return_value=envelope({"batch": 2}))
         mock_client.bulk_rerun_ai_scraper = AsyncMock()
 
         with patch("mrscraper.MrScraper", return_value=mock_client):
@@ -200,7 +207,7 @@ class TestMrscraperCrawlWebsite:
     async def test_max_depth_zero_preserved(self) -> None:
         """`max_depth=0` must be passed through (not coerced to default 2)."""
         mock_client = MagicMock()
-        mock_client.create_scraper = AsyncMock(return_value={"crawl": True})
+        mock_client.create_scraper = AsyncMock(return_value=envelope({"crawl": True}))
 
         with patch("mrscraper.MrScraper", return_value=mock_client):
             c = MrscraperCrawlWebsite()
@@ -229,7 +236,7 @@ class TestMrscraperFetchHtml:
     async def test_fetch_html_calls_sdk(self) -> None:
         """`fetch_html` receives timeout and geo settings."""
         mock_client = MagicMock()
-        mock_client.fetch_html = AsyncMock(return_value={"html": "<html></html>"})
+        mock_client.fetch_html = AsyncMock(return_value=envelope("<html></html>"))
 
         with patch("mrscraper.MrScraper", return_value=mock_client):
             c = MrscraperFetchHtml()
@@ -276,7 +283,7 @@ class TestMrscraperGetResults:
     async def test_get_all_results_passes_filters(self) -> None:
         """Pagination and sort params are forwarded to `get_all_results`."""
         mock_client = MagicMock()
-        mock_client.get_all_results = AsyncMock(return_value={"rows": []})
+        mock_client.get_all_results = AsyncMock(return_value=envelope({"rows": []}))
 
         with patch("mrscraper.MrScraper", return_value=mock_client):
             c = MrscraperGetResults()
@@ -307,7 +314,7 @@ class TestMrscraperRunAiScraper:
     async def test_rerun_preserves_zero_depth(self) -> None:
         """`max_depth=0` is forwarded to `rerun_scraper`."""
         mock_client = MagicMock()
-        mock_client.rerun_scraper = AsyncMock(return_value={"ok": True})
+        mock_client.rerun_scraper = AsyncMock(return_value=envelope({"ok": True}))
 
         with patch("mrscraper.MrScraper", return_value=mock_client):
             c = MrscraperRunAiScraper()
@@ -335,7 +342,7 @@ class TestMrscraperRunManualScraper:
     async def test_rerun_manual_calls_sdk(self) -> None:
         """Delegates to `rerun_manual_scraper`."""
         mock_client = MagicMock()
-        mock_client.rerun_manual_scraper = AsyncMock(return_value={"status": "done"})
+        mock_client.rerun_manual_scraper = AsyncMock(return_value=envelope({"status": "done"}))
 
         with patch("mrscraper.MrScraper", return_value=mock_client):
             c = MrscraperRunManualScraper()
@@ -347,3 +354,129 @@ class TestMrscraperRunManualScraper:
             scraper_id="mid",
             url="https://example.com/x",
         )
+
+
+@pytest.mark.unit
+class TestResponseHandling:
+    """The SDK envelope is stripped consistently across every component."""
+
+    @pytest.mark.asyncio
+    async def test_envelope_is_not_surfaced_to_flows(self) -> None:
+        """Transport metadata stays out of the component output."""
+        mock_client = MagicMock()
+        mock_client.rerun_manual_scraper = AsyncMock(return_value=envelope({"status": "done"}))
+
+        with patch("mrscraper.MrScraper", return_value=mock_client):
+            c = MrscraperRunManualScraper()
+            c.set(api_token=MOCK_MR_API_TOKEN, scraper_id="mid", url="https://example.com/x")
+            out = await c.rerun_manual()
+
+        assert out.data == {"status": "done"}
+        assert "status_code" not in out.data
+        assert "headers" not in out.data
+
+    @pytest.mark.asyncio
+    async def test_non_json_html_is_boxed(self) -> None:
+        """`fetch_html` returns text for non-JSON pages; it is boxed under `html`."""
+        mock_client = MagicMock()
+        mock_client.fetch_html = AsyncMock(return_value=envelope("<html>plain</html>"))
+
+        with patch("mrscraper.MrScraper", return_value=mock_client):
+            c = MrscraperFetchHtml()
+            c.set(api_token=MOCK_MR_API_TOKEN, url="https://example.com/")
+            out = await c.fetch()
+
+        assert out.data == {"html": "<html>plain</html>"}
+
+    @pytest.mark.asyncio
+    async def test_get_results_dataframe_rows(self) -> None:
+        """The tabular output yields one row per result, not one row per page."""
+        rows = [{"id": "r1", "status": "done"}, {"id": "r2", "status": "failed"}]
+        mock_client = MagicMock()
+        mock_client.get_all_results = AsyncMock(return_value=envelope({"results": rows, "page": 1, "total": 2}))
+
+        with patch("mrscraper.MrScraper", return_value=mock_client):
+            c = MrscraperGetResults()
+            c.set(api_token=MOCK_MR_API_TOKEN)
+            frame = await c.fetch_all_results_as_dataframe()
+
+        assert len(frame) == 2
+        assert list(frame["id"]) == ["r1", "r2"]
+
+    @pytest.mark.asyncio
+    async def test_get_results_dataframe_survives_key_rename(self) -> None:
+        """A payload with no row list degrades to a single row instead of raising."""
+        mock_client = MagicMock()
+        mock_client.get_all_results = AsyncMock(return_value=envelope({"page": 1, "total": 0}))
+
+        with patch("mrscraper.MrScraper", return_value=mock_client):
+            c = MrscraperGetResults()
+            c.set(api_token=MOCK_MR_API_TOKEN)
+            frame = await c.fetch_all_results_as_dataframe()
+
+        assert len(frame) == 1
+
+
+@pytest.mark.unit
+class TestSdkContract:
+    """Component call sites are checked against the installed SDK, not a mock.
+
+    Every other test in this file patches `mrscraper.MrScraper`, so a signature
+    change in the SDK would leave them green while the components broke at
+    runtime. These assert against the real package; they skip only in a minimal
+    env where `conftest` had to register a stub.
+    """
+
+    @staticmethod
+    def _real_sdk():
+        import mrscraper
+
+        if getattr(mrscraper, "__lfx_test_stub__", False):
+            pytest.skip("mrscraper-sdk is not installed; conftest registered a stub")
+        return mrscraper
+
+    def test_client_accepts_token_kwarg(self) -> None:
+        """Components construct the client as `MrScraper(token=...)`."""
+        mrscraper = self._real_sdk()
+        assert "token" in inspect.signature(mrscraper.MrScraper).parameters
+
+    @pytest.mark.parametrize(
+        ("method_name", "call_site_kwargs"),
+        [
+            (
+                "create_scraper",
+                {
+                    "url",
+                    "message",
+                    "agent",
+                    "proxy_country",
+                    "max_depth",
+                    "max_pages",
+                    "limit",
+                    "include_patterns",
+                    "exclude_patterns",
+                },
+            ),
+            (
+                "rerun_scraper",
+                {"scraper_id", "url", "max_depth", "max_pages", "limit", "include_patterns", "exclude_patterns"},
+            ),
+            ("rerun_manual_scraper", {"scraper_id", "url"}),
+            ("bulk_rerun_ai_scraper", {"scraper_id", "urls"}),
+            ("bulk_rerun_manual_scraper", {"scraper_id", "urls"}),
+            ("fetch_html", {"url", "timeout", "geo_code", "block_resources"}),
+            (
+                "get_all_results",
+                {"sort_field", "sort_order", "page_size", "page", "search", "date_range_column", "start_at", "end_at"},
+            ),
+            ("get_result_by_id", {"result_id"}),
+        ],
+    )
+    def test_call_site_kwargs_still_accepted(self, method_name: str, call_site_kwargs: set[str]) -> None:
+        """Each keyword a component passes is still a parameter of the SDK method."""
+        mrscraper = self._real_sdk()
+        method = getattr(mrscraper.MrScraper, method_name, None)
+        assert method is not None, f"MrScraper.{method_name} no longer exists"
+        accepted = set(inspect.signature(method).parameters) - {"self"}
+        dropped = call_site_kwargs - accepted
+        assert not dropped, f"MrScraper.{method_name} no longer accepts {sorted(dropped)}"

@@ -4,6 +4,8 @@ from lfx.custom.custom_component.component import Component
 from lfx.io import DropdownInput, MultilineInput, Output, SecretStrInput, StrInput
 from lfx.schema.data import Data
 
+from .mrscraper_common import build_client, payload
+
 
 class MrscraperBatchScrape(Component):
     """Langflow component for MrScraper bulk AI or manual scraper reruns."""
@@ -54,11 +56,9 @@ class MrscraperBatchScrape(Component):
 
     async def batch_scrape(self) -> Data:
         """Validate URLs, dispatch bulk rerun by mode, and return `Data`."""
-        try:
-            from mrscraper import MrScraper
-        except ImportError as e:
-            msg = "Could not import mrscraper SDK. Please install it with `pip install mrscraper-sdk`."
-            raise ImportError(msg) from e
+        # Built before the input checks so a missing SDK is reported as such, the
+        # same way it is in the other seven components.
+        client = build_client(self.api_token)
 
         if not self.urls:
             msg = "URLs are required"
@@ -68,8 +68,6 @@ class MrscraperBatchScrape(Component):
         if not url_list:
             msg = "No valid URLs provided"
             raise ValueError(msg)
-
-        client = MrScraper(token=self.api_token)
 
         if self.mode == "AI":
             result = await client.bulk_rerun_ai_scraper(
@@ -85,4 +83,4 @@ class MrscraperBatchScrape(Component):
             msg = f"Unsupported scraper mode {self.mode!r} for scraper {self.scraper_id!r}. Expected 'AI' or 'Manual'."
             raise ValueError(msg)
 
-        return Data(data=result)
+        return Data(data=payload(result))

@@ -9995,7 +9995,7 @@ requires-dist = [
     { name = "lfx-ollama", marker = "extra == 'ollama'", editable = "src/bundles/ollama" },
     { name = "markdown", marker = "extra == 'notion'", specifier = ">=3.8.0" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=2.0.2,<3.0.0" },
-    { name = "mrscraper-sdk", marker = "extra == 'mrscraper'", specifier = ">=0.1.2,<1.0.0" },
+    { name = "mrscraper-sdk", marker = "extra == 'mrscraper'", specifier = ">=0.2.1,<0.3.0" },
     { name = "needle-python", marker = "extra == 'needle'", specifier = ">=0.4.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nvidia'", specifier = ">=26.1.0,<26.3.0" },
     { name = "openai", marker = "extra == 'aiml'", specifier = ">=1.68.2,<3.0.0" },

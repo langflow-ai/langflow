@@ -4,6 +4,8 @@ from lfx.custom.custom_component.component import Component
 from lfx.io import Output, SecretStrInput, StrInput
 from lfx.schema.data import Data
 
+from .mrscraper_common import build_client, payload
+
 
 class MrscraperGetResult(Component):
     """Langflow component wrapping MrScraper `get_result_by_id`."""
@@ -37,12 +39,6 @@ class MrscraperGetResult(Component):
 
     async def get_result(self) -> Data:
         """Return full detail for one result ID as `Data`."""
-        try:
-            from mrscraper import MrScraper
-        except ImportError as e:
-            msg = "Could not import mrscraper SDK. Please install it with `pip install mrscraper-sdk`."
-            raise ImportError(msg) from e
-
-        client = MrScraper(token=self.api_token)
+        client = build_client(self.api_token)
         response = await client.get_result_by_id(result_id=self.result_id)
-        return Data(data=response["data"])
+        return Data(data=payload(response))

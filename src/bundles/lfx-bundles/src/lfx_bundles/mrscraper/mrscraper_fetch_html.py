@@ -1,8 +1,10 @@
-"""MrScraper component: fetch rendered HTML via the stealth browser."""
+"""MrScraper component: fetch rendered HTML for JavaScript-heavy pages."""
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, IntInput, MultilineInput, Output, SecretStrInput, StrInput
 from lfx.schema.data import Data
+
+from .mrscraper_common import build_client, payload
 
 
 class MrscraperFetchHtml(Component):
@@ -10,8 +12,8 @@ class MrscraperFetchHtml(Component):
 
     display_name: str = "MrScraper Fetch Rendered HTML"
     description: str = (
-        "Fetch the fully rendered HTML of a page via the MrScraper stealth browser. "
-        "Handles JavaScript rendering and bot-detection evasion."
+        "Fetch the fully rendered HTML of a page via the MrScraper browser. "
+        "Handles JavaScript-rendered pages and optional proxy geolocation."
     )
     name = "MrscraperFetchHtml"
     icon: str = "MrScraper"
@@ -61,17 +63,11 @@ class MrscraperFetchHtml(Component):
 
     async def fetch(self) -> Data:
         """Fetch rendered HTML for the target URL and return `Data`."""
-        try:
-            from mrscraper import MrScraper
-        except ImportError as e:
-            msg = "Could not import mrscraper SDK. Please install it with `pip install mrscraper-sdk`."
-            raise ImportError(msg) from e
-
-        client = MrScraper(token=self.api_token)
+        client = build_client(self.api_token)
         result = await client.fetch_html(
             url=self.url,
             timeout=self.timeout or 120,
             geo_code=self.geo_code or "US",
             block_resources=self.block_resources,
         )
-        return Data(data=result)
+        return Data(data=payload(result, scalar_key="html"))

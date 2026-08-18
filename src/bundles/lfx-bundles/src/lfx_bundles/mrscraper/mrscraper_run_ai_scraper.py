@@ -4,6 +4,8 @@ from lfx.custom.custom_component.component import Component
 from lfx.io import IntInput, MultilineInput, Output, SecretStrInput, StrInput
 from lfx.schema.data import Data
 
+from .mrscraper_common import build_client, payload
+
 
 class MrscraperRunAiScraper(Component):
     """Langflow component wrapping MrScraper `rerun_scraper` for AI scraper jobs."""
@@ -80,17 +82,11 @@ class MrscraperRunAiScraper(Component):
 
     async def rerun(self) -> Data:
         """Rerun an AI scraper and return the API response as `Data`."""
-        try:
-            from mrscraper import MrScraper
-        except ImportError as e:
-            msg = "Could not import mrscraper SDK. Please install it with `pip install mrscraper-sdk`."
-            raise ImportError(msg) from e
-
         max_depth = 2 if self.max_depth is None else self.max_depth
         max_pages = 50 if self.max_pages is None else self.max_pages
         limit = 1000 if self.limit is None else self.limit
 
-        client = MrScraper(token=self.api_token)
+        client = build_client(self.api_token)
         result = await client.rerun_scraper(
             scraper_id=self.scraper_id,
             url=self.url,
@@ -100,4 +96,4 @@ class MrscraperRunAiScraper(Component):
             include_patterns=self.include_patterns or "",
             exclude_patterns=self.exclude_patterns or "",
         )
-        return Data(data=result)
+        return Data(data=payload(result))

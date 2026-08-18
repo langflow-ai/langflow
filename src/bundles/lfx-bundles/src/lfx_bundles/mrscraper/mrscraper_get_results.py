@@ -3,6 +3,9 @@
 from lfx.custom.custom_component.component import Component
 from lfx.io import DropdownInput, IntInput, Output, SecretStrInput, StrInput
 from lfx.schema.data import Data
+from lfx.schema.dataframe import DataFrame
+
+from .mrscraper_common import build_client, payload, result_rows
 
 
 class MrscraperGetResults(Component):
@@ -87,19 +90,14 @@ class MrscraperGetResults(Component):
     ]
 
     outputs = [
-        # Output method name must not shadow Component.get_results() (build_output_logs).
-        Output(display_name="Results", name="data", method="fetch_all_results"),
+        # Output method names must not shadow Component.get_results() (build_output_logs).
+        Output(display_name="Results", name="dataframe", method="fetch_all_results_as_dataframe"),
+        Output(display_name="Raw Page", name="data", method="fetch_all_results"),
     ]
 
     async def fetch_all_results(self) -> Data:
         """Return a paginated list of results as `Data`."""
-        try:
-            from mrscraper import MrScraper
-        except ImportError as e:
-            msg = "Could not import mrscraper SDK. Please install it with `pip install mrscraper-sdk`."
-            raise ImportError(msg) from e
-
-        client = MrScraper(token=self.api_token)
+        client = build_client(self.api_token)
         result = await client.get_all_results(
             sort_field=self.sort_field,
             sort_order=self.sort_order,
@@ -110,4 +108,9 @@ class MrscraperGetResults(Component):
             start_at=self.start_at or None,
             end_at=self.end_at or None,
         )
-        return Data(data=result)
+        return Data(data=payload(result))
+
+    async def fetch_all_results_as_dataframe(self) -> DataFrame:
+        """Return one row per result, for table and loop components downstream."""
+        page = await self.fetch_all_results()
+        return DataFrame(result_rows(page.data))
