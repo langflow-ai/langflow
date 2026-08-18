@@ -1,3 +1,4 @@
+# ruff: noqa: S108, PLR2004, TRY003, EM101, FBT001, FBT002, E501
 from __future__ import annotations
 
 import hashlib
@@ -7,7 +8,7 @@ import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 log: logging.Logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ class FlowDebtReport:
     mutation_safety_score: float  # Target 100.0
     production_readiness_index: float  # Scale 0 - 100
     is_production_ready: bool
-    critical_smells: List[str]
+    critical_smells: list[str]
     receipt_hash: str
 
 
@@ -35,7 +36,7 @@ class TechnicalDueDiligenceLedger:
     """
 
     def __init__(self) -> None:
-        self._entries: List[Dict[str, Any]] = []
+        self._entries: list[dict[str, Any]] = []
         self._last_hash: str = GENESIS_HASH
 
     def record_flow_step(
@@ -43,14 +44,18 @@ class TechnicalDueDiligenceLedger:
         flow_id: str,
         event_type: str,
         readiness_index: float,
-        critical_smells: List[str],
-        metadata: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        critical_smells: list[str],
+        metadata: dict[str, Any],
+    ) -> dict[str, Any]:
         timestamp = datetime.now(timezone.utc).isoformat()
         index = len(self._entries)
 
         meta_bytes = json.dumps(metadata, sort_keys=True).encode("utf-8")
-        canonical_content = f"{index}|{self._last_hash}|{flow_id}|{event_type}|{readiness_index}|{timestamp}|{hashlib.sha256(meta_bytes).hexdigest()}"
+        meta_hash = hashlib.sha256(meta_bytes).hexdigest()
+        canonical_content = (
+            f"{index}|{self._last_hash}|{flow_id}|{event_type}|"
+            f"{readiness_index}|{timestamp}|{meta_hash}"
+        )
         curr_hash = hashlib.sha256(canonical_content.encode("utf-8")).hexdigest()
 
         entry = {
@@ -69,7 +74,7 @@ class TechnicalDueDiligenceLedger:
         self._last_hash = curr_hash
         return entry
 
-    def get_ledger_entries(self) -> List[Dict[str, Any]]:
+    def get_ledger_entries(self) -> list[dict[str, Any]]:
         return list(self._entries)
 
     def verify_ledger_integrity(self) -> bool:
@@ -104,10 +109,7 @@ class ProductionDebtComponent:
     def check_kill_switch(self) -> bool:
         if os.environ.get("AAG_KILL_SWITCH", "").lower() in ("true", "1", "yes"):
             return True
-        for path_str in ("artifacts/KILL", "/tmp/KILL"):
-            if Path(path_str).exists():
-                return True
-        return False
+        return any(Path(p).exists() for p in ("artifacts/KILL", "/tmp/KILL"))
 
     def evaluate_flow_execution(
         self,
@@ -128,11 +130,10 @@ class ProductionDebtComponent:
                 critical_smells=["EMERGENCY_KILL_SWITCH_ENGAGED"],
                 metadata={"reason": "AAG_KILL_SWITCH is set"},
             )
-            raise PermissionError(
-                "A2Z SOC ActionGate: Emergency kill switch is engaged. Visual flow execution halted."
-            )
+            err_msg = "A2Z SOC ActionGate: Emergency kill switch is engaged. Visual flow execution halted."
+            raise PermissionError(err_msg)
 
-        critical_smells: List[str] = []
+        critical_smells: list[str] = []
 
         # KPI 2: Node Token Inflation Multiplier
         token_ratio = (context_tokens + generated_tokens) / max(1, context_tokens)
@@ -151,11 +152,11 @@ class ProductionDebtComponent:
         if un_gated_mutations > 0:
             critical_smells.append(f"DETECTED_{un_gated_mutations}_UNGATED_MUTATIONS")
 
-        # KPI 1: Visual Debt Index (0 = Clean, 100 = Catastrophic)
+        # KPI 1: Visual Graph Debt Index (0 = Clean, 100 = Catastrophic)
         vdi = (
-            max(0.0, (token_ratio - 1.0) * 15.0)
-            + max(0.0, (step_latency_seconds - 1.8) * 8.0)
-            + (back_edge_loops * 12.0)
+            max(0.0, (token_ratio - 1.0) * 20.0)
+            + max(0.0, (step_latency_seconds - 1.8) * 10.0)
+            + (back_edge_loops * 15.0)
             + (un_gated_mutations * 30.0)
         )
         vdi_score = round(min(100.0, vdi), 2)
@@ -173,9 +174,11 @@ class ProductionDebtComponent:
             readiness_index=readiness,
             critical_smells=critical_smells,
             metadata={
-                "node_count": node_count,
                 "vdi_score": vdi_score,
                 "token_ratio": token_ratio,
+                "node_count": node_count,
+                "context_tokens": context_tokens,
+                "generated_tokens": generated_tokens,
                 "step_latency_seconds": step_latency_seconds,
                 "back_edge_loops": back_edge_loops,
                 "un_gated_mutations": un_gated_mutations,
