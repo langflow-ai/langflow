@@ -140,9 +140,8 @@ jobs:
       - name: Install Python Dependencies
         run: uv sync
 
-      # Reports are informational on PRs (assert is only enabled via manual
-      # dispatch), so we don't retry flaky specs here — the nightly run and the
-      # main e2e suite already cover them, and retries only add wall-clock.
+      # A retry only costs time when a spec actually fails, and a red check
+      # from a single flake costs a full re-run, so allow one.
       - name: Run IBM Equal Access Scans
         shell: bash
         env:
@@ -161,7 +160,7 @@ jobs:
             --project=chromium \
             --shard=${{ matrix.shardIndex }}/${{ strategy.job-total }} \
             --workers=2 \
-            --retries=0
+            --retries=1
 
       - name: Upload Shard Accessibility Reports
         if: always()
