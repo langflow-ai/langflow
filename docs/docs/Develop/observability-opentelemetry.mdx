@@ -7,7 +7,7 @@ Langflow emits OpenTelemetry traces, metrics, and logs describing the health of 
 
 This telemetry answers operator questions, such as which flows are failing, whether the service is slow, and where the time went. It is not LLM tracing. Langflow deliberately withholds prompts, completions, and other flow payloads from this export. For prompt-level tracing, use one of the [monitoring integrations](/integrations-langfuse) instead.
 
-There is no vendor code in the Langflow runtime. Langflow speaks plain OTLP, so any OpenTelemetry-compatible backend works, either directly or through an OpenTelemetry Collector.
+Langflow speaks plain OTLP, so any OpenTelemetry-compatible backend works, either directly or through an OpenTelemetry Collector.
 
 ## Prerequisites
 
