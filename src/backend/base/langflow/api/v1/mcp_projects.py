@@ -53,6 +53,7 @@ from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.api.v1.mcp import ResponseNoOp
 from langflow.api.v1.mcp_utils import (
     authenticated_caller_ctx,
+    current_request_headers_ctx,
     current_request_variables_ctx,
     current_user_ctx,
     handle_call_tool,
@@ -517,6 +518,9 @@ async def _dispatch_project_streamable_http(
     project_token = current_project_ctx.set(project_id)
     variables = extract_global_variables_from_headers(request.headers, include_auth_headers=True)
     request_vars_token = current_request_variables_ctx.set(variables or None)
+    # Carry the raw request headers into the deep tool dispatch so an MCP-triggered run
+    # scopes to the serving end-user identity (resolve_serving_scope) like /run does.
+    request_headers_token = current_request_headers_ctx.set(request.headers)
 
     try:
         await project_server.session_manager.handle_request(request.scope, request.receive, request._send)  # noqa: SLF001
@@ -526,6 +530,7 @@ async def _dispatch_project_streamable_http(
         await logger.aexception(f"Error handling Streamable HTTP request for project {project_id}: {exc!s}")
         raise HTTPException(status_code=500, detail="Internal server error in project MCP transport") from exc
     finally:
+        current_request_headers_ctx.reset(request_headers_token)
         current_request_variables_ctx.reset(request_vars_token)
         current_project_ctx.reset(project_token)
         current_user_ctx.reset(user_token)

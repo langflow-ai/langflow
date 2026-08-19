@@ -123,6 +123,7 @@ class JobService(Service):
         asset_type: str | None = None,
         user_id: UUID | None = None,
         dedupe_key: str | None = None,
+        end_user_id: str | None = None,
     ) -> Job:
         """Create a new job record with QUEUED status.
 
@@ -135,6 +136,11 @@ class JobService(Service):
             asset_type: The asset type
             user_id: The user ID who owns this job
             dedupe_key: Optional idempotency key to prevent duplicate jobs for the same batch
+            end_user_id: Serving-plane end-user id (the gateway header) this run belongs to,
+                or None for editor / anonymous / feature-off runs. Recorded in
+                ``job_metadata['end_user_id']`` (no schema change) — ``user_id`` stays the
+                executing service account so re-enqueue/resume can still fetch the SID-owned
+                flow, while status/stop/resume isolate on this end-user key. See F8.
 
         Returns:
             Created Job object
@@ -181,6 +187,10 @@ class JobService(Service):
                 asset_type=asset_type,
                 user_id=user_id,
                 dedupe_key=dedupe_key,
+                # Stamp the end user atomically with the insert so a later shallow
+                # update_job_metadata (e.g. submit's persisted request) preserves it.
+                # Omit the key entirely when absent to keep non-serving rows byte-identical.
+                job_metadata={"end_user_id": end_user_id} if end_user_id else None,
             )
             session.add(job)
             await session.flush()

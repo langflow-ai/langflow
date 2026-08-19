@@ -1648,6 +1648,23 @@ def _admin_only_build_required(settings: Any, *, is_superuser: bool) -> bool:
     return getattr(settings, "custom_component_admin_only", False) is True and not is_superuser
 
 
+def admin_only_build_required(*, is_superuser: bool) -> bool:
+    """Whether the admin-only component policy currently applies to this caller.
+
+    Exposed so execution seams that hold an already-compiled graph can decide whether that
+    compilation may still be trusted, without paying for the full sanitizer. A graph compiled
+    while the policy was off embeds the caller's own component source; if the policy applies
+    now, that compilation predates it and must not be reused.
+    """
+    from lfx.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    if settings_service is None:
+        # Fail closed: without settings we cannot prove the policy is off.
+        return True
+    return _admin_only_build_required(settings_service.settings, is_superuser=is_superuser)
+
+
 async def prepare_admin_only_flow_build(target: Mapping[str, Any] | Any | None) -> dict[str, Any] | None:
     """Backward-compatible admin-only sanitizer for callers that already selected this policy."""
     return _sanitize_admin_only_flow_build(
