@@ -870,16 +870,16 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         resource_key: str,
     ) -> list[ProviderSnapshotBinding]:
         if get_result.provider_data is None:
-            msg = "An internal error occured. provider_data is required from wxO adapter for get()."
+            msg = "An internal error occurred. provider_data is required from wxO adapter for get()."
             raise ValueError(msg)
         if "tool_ids" not in get_result.provider_data:
-            msg = "An internal error occured. provider_data must contain 'tool_ids' from wxO adapter for get()."
+            msg = "An internal error occurred. provider_data must contain 'tool_ids' from wxO adapter for get()."
             raise ValueError(msg)
 
         tool_ids = get_result.provider_data["tool_ids"]
 
         if not isinstance(tool_ids, list):
-            msg = "An internal error occured. provider_data['tool_ids'] must be a list from wxO adapter for get()."
+            msg = "An internal error occurred. provider_data['tool_ids'] must be a list from wxO adapter for get()."
             raise ValueError(msg)  # noqa: TRY004
 
         return [
