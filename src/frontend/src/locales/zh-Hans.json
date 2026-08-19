@@ -1587,6 +1587,8 @@
   "modelProviders.addLanguageDeployment": "将部署 \"{{name}}\" 添加为语言模型",
   "modelProviders.cancelButton": "取消",
   "modelProviders.checkOllamaLibrary": "查看奥拉马图书馆",
+  "modelProviders.liveDiscoveryTitle": "No models yet",
+  "modelProviders.liveDiscoveryHint": "{{provider}} models are discovered from your account once credentials are configured. Save your credentials above to load the available models.",
   "modelProviders.configuration": "配置",
   "modelProviders.configurationSaved": "{{provider}} 配置已保存",
   "modelProviders.configurePrefix": "配置您的",
