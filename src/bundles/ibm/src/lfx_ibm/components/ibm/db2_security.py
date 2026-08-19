@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 
 import httpx
 from lfx.utils.file_path_security import LocalFileAccessError, enforce_local_file_access
-from lfx.utils.ssrf_httpx import ssrf_safe_httpx_get
+from lfx.utils.ssrf_httpx import ssrf_safe_httpx_get_bounded
 from lfx.utils.ssrf_protection import SSRFProtectionError
 
 if TYPE_CHECKING:
@@ -244,7 +244,7 @@ def download_certificate(url: str) -> tuple[str | None, str | None]:
 
     The URL is tenant-controlled and a published flow makes this reachable without
     authentication, so the fetch is routed through the shared connector SSRF guard
-    (:func:`lfx.utils.ssrf_httpx.ssrf_safe_httpx_get`) rather than a raw HTTP client.
+    (:func:`lfx.utils.ssrf_httpx.ssrf_safe_httpx_get_bounded`) rather than a raw HTTP client.
     That guard validates the host against the internal-network policy and pins the
     connection to the validated IPs. Redirects are followed by the guard itself so
     that *every* hop is re-validated -- a first-hop-only check is defeated by an
@@ -259,23 +259,23 @@ def download_certificate(url: str) -> tuple[str | None, str | None]:
         - If failed: (None, error_message)
     """
     try:
-        response = ssrf_safe_httpx_get(
+        # Bounded stream rather than a buffered read: a hostile endpoint that passes SSRF
+        # validation could still answer with an unbounded body, and measuring it after the
+        # fact has already paid the memory cost. The transfer is abandoned past the cap.
+        cert_data = ssrf_safe_httpx_get_bounded(
             url,
+            max_bytes=_MAX_CERT_BYTES,
             follow_redirects=True,
             timeout=_CERT_DOWNLOAD_TIMEOUT_SECONDS,
         )
-        response.raise_for_status()
-        cert_data = response.content
     except SSRFProtectionError as e:
         return None, f"SSRF Protection: refusing to download certificate from {url}: {e}"
     except httpx.HTTPError as e:
         return None, f"Failed to download certificate from {url}: {e}"
     except (OSError, ValueError) as e:
-        # validate_and_resolve_connector_url raises ValueError on a malformed URL.
+        # validate_and_resolve_connector_url raises ValueError on a malformed URL, and the
+        # bounded reader raises it when the body passes _MAX_CERT_BYTES.
         return None, f"Failed to download certificate from {url}: {e}"
-
-    if len(cert_data) > _MAX_CERT_BYTES:
-        return None, f"Certificate at {url} exceeds the maximum size of {_MAX_CERT_BYTES} bytes"
 
     # Create temporary file with appropriate extension
     try:
