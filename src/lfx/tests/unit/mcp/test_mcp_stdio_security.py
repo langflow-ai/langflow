@@ -393,6 +393,57 @@ def test_python_attached_code_flag_is_still_rejected():
         validate_mcp_stdio_config("python", ["-cpass"], {})
 
 
+# ``cmd /c`` is not the only way cmd.exe runs a command line: ``/k`` runs it and keeps the
+# session alive, ``/r`` is an undocumented synonym of ``/c``, and boolean switches may be
+# clustered ahead of the executing switch (``/q/k``). Every spelling must bind the wrapped
+# payload to the command allowlist exactly like ``/c`` does, otherwise the wrapper check is
+# skipped and cmd.exe launches an arbitrary executable.
+CMD_EXEC_SWITCHES = ["/c", "/C", "/k", "/K", "/r", "/R", "/q/k", "/s/k", "/d/k", "/Q/K"]
+
+
+@pytest.mark.parametrize("switch", CMD_EXEC_SWITCHES)
+def test_cmd_exec_switches_bind_wrapped_command_to_allowlist(switch):
+    with pytest.raises(MCPStdioSecurityError, match="Shell wrapper 'cmd' cannot execute 'whoami'"):
+        validate_mcp_stdio_config("cmd", [switch, "whoami"], {})
+
+
+@pytest.mark.parametrize("switch", CMD_EXEC_SWITCHES)
+def test_cmd_exec_switches_bind_wrapped_payload_to_package_allowlist(switch):
+    with pytest.raises(MCPStdioSecurityError, match="not allowed for MCP npx"):
+        validate_mcp_stdio_config(
+            "cmd",
+            [switch, "npx", "@attacker/owned-package"],
+            {},
+            allowed_packages={"mcp-proxy"},
+        )
+
+
+@pytest.mark.parametrize("switch", CMD_EXEC_SWITCHES)
+def test_cmd_exec_switches_bind_wrapped_payload_to_interpreter_hardening(switch):
+    with pytest.raises(MCPStdioSecurityError, match="INTERPRETER_HARDENING"):
+        validate_mcp_stdio_config(
+            "cmd",
+            [switch, "node", "C:\\Users\\attacker\\server.js"],
+            {},
+            interpreter_hardening=True,
+        )
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["/c", "uvx", "mcp-server-fetch"],
+        ["/k", "uvx", "mcp-server-fetch"],
+        ["/q", "/c", "uvx", "mcp-server-fetch"],
+        ["/d", "/k", "uvx", "mcp-server-fetch"],
+        ["/e:on", "/c", "uvx", "mcp-server-fetch"],
+        ["/t:0a", "/k", "uvx", "mcp-server-fetch"],
+    ],
+)
+def test_cmd_wrapper_preserves_allowed_payload_behind_benign_switches(args):
+    validate_mcp_stdio_config("cmd", args, {})
+
+
 @pytest.mark.parametrize(
     "args",
     [
@@ -877,3 +928,54 @@ async def test_update_tools_injects_bound_user_for_agentic_server():
         {},
         current_user_id=user_id,
     )
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        pytest.param(["/c", "uvx", "mcp-proxy"], id="bare-exec-switch"),
+        pytest.param(["/d", "/c", "uvx", "mcp-proxy"], id="benign-switch-before-exec"),
+        pytest.param(["/q", "/c", "uvx", "mcp-proxy"], id="another-benign-switch-before-exec"),
+        pytest.param(["/t:0a", "/c", "uvx", "mcp-proxy"], id="value-bearing-benign-switch-before-exec"),
+        pytest.param(["/d", "/q", "/c", "uvx", "mcp-proxy"], id="two-benign-switches-before-exec"),
+        pytest.param(["/q/k", "uvx", "mcp-proxy"], id="clustered-benign-and-exec"),
+    ],
+)
+def test_cmd_benign_switches_may_precede_the_exec_switch_under_hardening(args):
+    """cmd.exe accepts benign switches ahead of the execution switch, and so must we.
+
+    Both policy layers previously inspected ``args[0]`` only, so ``cmd /d /c uvx ...`` --
+    a legitimate configuration -- was rejected under interpreter hardening even though the
+    wrapped command is allow-listed.
+    """
+    validate_mcp_stdio_config("cmd", args, {}, interpreter_hardening=True)
+
+
+def test_cmd_operand_before_exec_switch_is_not_a_validated_wrapper():
+    """A non-switch operand ahead of the execution switch must not pass hardening.
+
+    ``parse_mcp_shell_wrapper`` skips any token that is not an execution switch while it
+    searches, so it alone would accept this shape. The leading-switch scan is what keeps a
+    script operand from preceding the execution switch.
+    """
+    with pytest.raises(MCPStdioSecurityError, match="INTERPRETER_HARDENING"):
+        validate_mcp_stdio_config(
+            "cmd",
+            ["foo.bat", "/c", "uvx", "mcp-proxy"],
+            {},
+            interpreter_hardening=True,
+        )
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        pytest.param(["/d", "/c", "whoami"], id="benign-then-c"),
+        pytest.param(["/d", "/k", "whoami"], id="benign-then-k"),
+        pytest.param(["/q/k", "whoami"], id="clustered"),
+    ],
+)
+def test_cmd_benign_switch_prefix_still_binds_payload_to_the_allow_list(args):
+    """Allowing a benign prefix must not let the wrapped payload escape the allow-list."""
+    with pytest.raises(MCPStdioSecurityError):
+        validate_mcp_stdio_config("cmd", args, {})

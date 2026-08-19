@@ -24,6 +24,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from lfx.base.mcp.source_policy import (
+    has_leading_cmd_exec_flag,
+    is_cmd_exec_flag,
     parse_mcp_shell_wrapper,
     validate_mcp_stdio_source_policy,
 )
@@ -335,7 +337,10 @@ DOCKER_DANGEROUS_SECURITY_OPT_SUBSTRINGS = ("unconfined", "disable")
 # SECURITY: Shell wrapper commands that can execute other commands.
 SHELL_WRAPPERS = frozenset({"cmd", "sh", "bash"})
 
-# SECURITY: Shell command flags that execute code.
+# SECURITY: Shell command flags that execute code. cmd.exe accepts more spellings than ``/c``
+# (``/k``, ``/r``, and clustered forms such as ``/q/k``); those are recognized by
+# ``is_cmd_exec_flag`` rather than listed here, because a bare ``/k`` token is a legitimate
+# path operand for the non-cmd commands that also consult this set.
 SHELL_EXEC_FLAGS = frozenset({"-c", "/c"})
 MAX_SHELL_WRAPPER_DEPTH = 4
 
@@ -346,16 +351,28 @@ HARDENED_ALLOWED_PYTHON_MODULES = frozenset({"langflow.agentic.mcp", "langflow.a
 PYTHON_MODULE_MIN_ARGS = 2
 
 
-def _is_shell_exec_flag(arg: str) -> bool:
+def _is_shell_exec_flag(arg: str, base_command: str = "") -> bool:
+    """Return whether *arg* makes the shell wrapper execute the tokens that follow it.
+
+    ``base_command`` selects the cmd.exe switch grammar (``/c``, ``/k``, ``/r``, and clustered
+    forms such as ``/q/k``). It is opt-in because a ``/``-prefixed token is an ordinary path
+    operand for every other command that consults this helper.
+    """
     arg_lower = arg.lower()
     if arg_lower in SHELL_EXEC_FLAGS:
+        return True
+    if base_command == "cmd" and is_cmd_exec_flag(arg_lower):
         return True
     return arg_lower.startswith("-") and not arg_lower.startswith("--") and "c" in arg_lower[1:]
 
 
-def _has_leading_shell_exec_flag(args: list[str]) -> bool:
+def _has_leading_shell_exec_flag(args: list[str], base_command: str = "") -> bool:
     """Return whether a shell execution flag appears before every script operand."""
-    return bool(args) and _is_shell_exec_flag(args[0])
+    if not args:
+        return False
+    if extract_base_command(base_command) == "cmd":
+        return has_leading_cmd_exec_flag(args)
+    return _is_shell_exec_flag(args[0], base_command)
 
 
 class MCPStdioSecurityError(ValueError):
@@ -476,7 +493,7 @@ def _validate_interpreter_invocation(base_command: str, args: list[str], *, hard
     if not hardened:
         return
     if base_command in SHELL_WRAPPERS:
-        if _has_leading_shell_exec_flag(args):
+        if _has_leading_shell_exec_flag(args, base_command):
             return
         msg = (
             f"Shell command '{base_command}' must wrap an approved MCP command when "
@@ -706,15 +723,32 @@ def validate_mcp_stdio_config(
         # single-dash token here would misclassify valid uvx values such as
         # ``-wmcp-proxy`` merely because the package name contains a ``c``.
         checks_code_exec_flags = base_command in SHELL_WRAPPERS | {"python", "python3"}
-        has_shell_exec_flag = checks_code_exec_flags and any(_is_shell_exec_flag(arg) for arg in args)
+        has_shell_exec_flag = checks_code_exec_flags and any(_is_shell_exec_flag(arg, base_command) for arg in args)
 
         if has_shell_exec_flag and base_command not in SHELL_WRAPPERS:
             msg = f"Flag -c or /c is only allowed with shell wrappers (cmd/sh/bash), not with '{base_command}'"
             raise MCPStdioSecurityError(msg)
 
         if base_command in SHELL_WRAPPERS:
-            wrapped_command = args[1] if _has_leading_shell_exec_flag(args) and len(args) > 1 else None
-            wrapped_args = args[2:] if wrapped_command else []
+            # Derive the payload from the parsed wrapper rather than a fixed argv index:
+            # cmd.exe allows benign switches ahead of the execution switch ("/d /c uvx ..."),
+            # so args[1] would be "/c" there and this gate would report "cannot execute 'c'".
+            # ``_has_leading_shell_exec_flag`` still guards the position, so a script operand
+            # cannot precede the execution switch.
+            wrapped_command = None
+            wrapped_args: list[str] = []
+            if _has_leading_shell_exec_flag(args, base_command) and len(args) > 1:
+                # cmd.exe allows benign switches ahead of the execution switch ("/d /c uvx ..."),
+                # so a fixed args[1] would be "/c" and this gate would report "cannot execute 'c'".
+                # Only cmd needs the parsed payload: sh/bash carry their whole command in one
+                # argument ("sh -c 'id > /tmp/x'"), and splitting that here would let the gate
+                # inspect only the first token instead of the full command string.
+                parsed_wrapper = parse_mcp_shell_wrapper(base_command, args) if base_command == "cmd" else None
+                if parsed_wrapper is not None:
+                    wrapped_command, wrapped_args = parsed_wrapper
+                else:
+                    wrapped_command = args[1]
+                    wrapped_args = args[2:]
 
             if wrapped_command:
                 wrapped_base = extract_base_command(wrapped_command)
