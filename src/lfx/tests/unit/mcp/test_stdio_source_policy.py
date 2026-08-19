@@ -309,6 +309,57 @@ def test_interpreter_hardening_preserves_authenticated_agentic_module():
     )
 
 
+def test_interpreter_hardening_denies_all_packages_when_allowlist_unset(monkeypatch):
+    # Hardening on + no explicit package list must compose fail-closed:
+    # uvx with an arbitrary registry package is arbitrary code execution.
+    # Patch the setting read so the unset case is deterministic regardless of
+    # LANGFLOW_MCP_SERVER_ALLOWED_PACKAGES in the environment.
+    monkeypatch.setattr("lfx.base.mcp.source_policy._configured_allowed_packages", lambda: None)
+    with pytest.raises(ValueError, match=r"Package 'mcp-proxy' is not allowed for MCP uvx"):
+        validate_mcp_stdio_source_policy(
+            "uvx",
+            ["mcp-proxy"],
+            interpreter_hardening=True,
+            allowed_packages=None,
+        )
+
+
+def test_interpreter_hardening_denies_npx_when_allowlist_unset(monkeypatch):
+    monkeypatch.setattr("lfx.base.mcp.source_policy._configured_allowed_packages", lambda: None)
+    with pytest.raises(ValueError, match=r"Package 'mcp-proxy' is not allowed for MCP npx"):
+        validate_mcp_stdio_source_policy(
+            "npx",
+            ["mcp-proxy"],
+            interpreter_hardening=True,
+            allowed_packages=None,
+        )
+
+
+def test_interpreter_hardening_permits_explicitly_listed_package():
+    validate_mcp_stdio_source_policy(
+        "uvx",
+        ["mcp-proxy"],
+        interpreter_hardening=True,
+        allowed_packages=frozenset({"mcp-proxy"}),
+    )
+    validate_mcp_stdio_source_policy(
+        "npx",
+        ["mcp-proxy"],
+        interpreter_hardening=True,
+        allowed_packages=frozenset({"mcp-proxy"}),
+    )
+
+
+def test_lenient_mode_keeps_legacy_open_package_runner(monkeypatch):
+    monkeypatch.setattr("lfx.base.mcp.source_policy._configured_allowed_packages", lambda: None)
+    validate_mcp_stdio_source_policy(
+        "uvx",
+        ["mcp-proxy"],
+        interpreter_hardening=False,
+        allowed_packages=None,
+    )
+
+
 def test_windows_forward_slash_executable_path_preserves_source_policy():
     with pytest.raises(ValueError, match=r"not allowed"):
         validate_mcp_stdio_config(
