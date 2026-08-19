@@ -21,6 +21,7 @@ export default function ActionPickerComponent({
   handleOnNewValue,
   disabled,
   nodeId,
+  ariaLabelledBy,
 }: InputProps<string[], MultiselectComponentType>): JSX.Element {
   const { t } = useTranslation();
   const selected = Array.isArray(value) ? value : value ? [value] : [];
@@ -117,7 +118,11 @@ export default function ActionPickerComponent({
   }
 
   return (
-    <div className="flex w-full flex-wrap items-center gap-1.5">
+    <div
+      className="flex w-full flex-wrap items-center gap-1.5"
+      role="group"
+      aria-labelledby={ariaLabelledBy}
+    >
       {selected.map((action, index) =>
         editingIndex === index ? (
           <input
