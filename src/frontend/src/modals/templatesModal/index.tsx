@@ -141,7 +141,9 @@ export default function TemplatesModal({
               currentTab={effectiveTab}
               setCurrentTab={setCurrentTab}
             />
-            <main className="flex flex-1 flex-col gap-4 overflow-auto p-6 md:gap-8">
+            {/* Not a <main>: the page underneath already owns the single
+                main landmark (WCAG 2.4.1). */}
+            <div className="flex flex-1 flex-col gap-4 overflow-auto p-6 md:gap-8">
               {effectiveTab === "get-started" ? (
                 <GetStartedComponent
                   loading={loading}
@@ -182,7 +184,7 @@ export default function TemplatesModal({
                   </Button>
                 </div>
               </BaseModal.Footer>
-            </main>
+            </div>
           </SidebarProvider>
         </div>
       </BaseModal.Content>

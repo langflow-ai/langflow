@@ -65,7 +65,7 @@ VALID_DIMENSION_VALUES = {
         "deployment_owner",
         "job_owner",
     },
-    "tweaks": {"owner_only", "forbidden", "server_generated"},
+    "tweaks": {"owner_only", "owner_or_writer", "forbidden", "server_generated"},
     "revoke": {"new_and_resume", "new_only", "resume_rechecks_actor", "provider_controlled"},
     "error_policy": {"owner_debug_delegated_sanitized", "sanitized", "provider_sanitized"},
 }
