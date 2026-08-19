@@ -173,7 +173,7 @@ def is_port_in_use(port: int, host: str = "localhost") -> bool:
 def get_free_port(starting_port: int = 8000) -> int:
     """Get a free port starting from the given port."""
     port = starting_port
-    while port < MAX_PORT_NUMBER:
+    while port <= MAX_PORT_NUMBER:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             try:
                 s.bind(("", port))
