@@ -46,9 +46,13 @@ jobs:
       - name: Resolve Ref To Scan
         id: resolve_ref
         shell: bash
+        env:
+          # Read the dispatch input via env rather than interpolating it into
+          # the script, so a crafted value can't be executed as shell.
+          INPUT_REF: ${{ inputs.ref }}
         run: |
-          if [ -n "${{ inputs.ref }}" ]; then
-            REF="${{ inputs.ref }}"
+          if [ -n "$INPUT_REF" ]; then
+            REF="$INPUT_REF"
           elif [ "${{ github.event_name }}" = "schedule" ]; then
             REF=$(git ls-remote --heads https://github.com/${{ github.repository }} 'refs/heads/release-*' \
               | awk '{print $2}' \
@@ -62,6 +66,10 @@ jobs:
             fi
           else
             REF="${{ github.ref }}"
+          fi
+          if ! [[ "$REF" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+            echo "Refusing to scan malformed ref: $REF"
+            exit 1
           fi
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
           echo "Scanning ref: $REF"

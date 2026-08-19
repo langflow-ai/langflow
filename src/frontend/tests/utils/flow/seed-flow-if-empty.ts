@@ -115,11 +115,11 @@ export async function seedFlowIfEmpty(page: Page): Promise<boolean> {
   const testViewport = page.viewportSize();
   const widenForSeed =
     testViewport !== null && testViewport.width < SEED_VIEWPORT.width;
-  if (widenForSeed) {
-    await page.setViewportSize(SEED_VIEWPORT);
-  }
 
   try {
+    if (widenForSeed) {
+      await page.setViewportSize(SEED_VIEWPORT);
+    }
     await openTemplatesModal(page, { fromEmptyPage: true });
     placeholderFlowId = new URL(page.url()).pathname.match(
       /\/flow\/([^/?#]+)/,
