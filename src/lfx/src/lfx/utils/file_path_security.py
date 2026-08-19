@@ -35,6 +35,14 @@ class LocalFileAccessError(ValueError):
     """Raised when a resolved path escapes the allowed storage root under restriction."""
 
 
+class StorageNamespaceError(LocalFileAccessError):
+    """Raised when a storage key addresses a namespace the executing graph does not own.
+
+    Subclasses :class:`LocalFileAccessError` so existing handlers that treat a containment
+    failure as a caller error (e.g. the 400 mapping in the build API) cover this denial too.
+    """
+
+
 # Server-managed secret/key file names that live directly under config_dir (see auth.py:
 # ``secret_key``, ``private_key.pem``, ``public_key.pem``). Matched only at their exact
 # config_dir location, never by basename — a tenant upload happens to be named "secret_key"
@@ -113,6 +121,71 @@ def component_file_access_scopes(component: object) -> tuple[str, ...]:
             if scope and scope not in scopes:
                 scopes.append(scope)
     return tuple(scopes)
+
+
+def enforce_storage_key_scope(path: str, scope_ids: Iterable[object] | None) -> tuple[str, str]:
+    """Split a ``"<namespace>/<file_name>"`` storage key and verify the caller may address it.
+
+    Storage keys are the internal addressing scheme for uploaded files: ``<namespace>`` is the
+    uploading user's id (``/api/v2/files``) or a flow id (legacy per-flow uploads), and it selects
+    a per-principal directory under ``config_dir`` (local storage) or object prefix (S3). The value
+    arrives from a tenant-controlled component input field, so an unvalidated namespace lets one
+    tenant address another tenant's uploads — the *shape* of the path ends up deciding access.
+
+    Unlike :func:`enforce_local_file_access` this check is NOT gated on
+    ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS``. Reading a local *server* file by absolute path is a
+    documented single-tenant feature that the flag exists to turn off; addressing another
+    principal's storage namespace is never legitimate, so it is rejected unconditionally. This
+    mirrors the namespace check already applied to unauthenticated public builds by
+    ``langflow.api.utils.flow_utils.validate_public_files``.
+
+    Args:
+        path: The caller-supplied storage key.
+        scope_ids: Storage namespaces the executing graph owns. An empty/None value means there is
+            no tenant boundary to enforce (standalone ``lfx run``, scripted graphs), and the key is
+            accepted; served executions always carry at least the caller's user id or the flow id.
+
+    Returns:
+        tuple[str, str]: The validated ``(namespace, file_name)`` pair.
+
+    Raises:
+        StorageNamespaceError: If the key is malformed, the file name carries path separators or
+            traversal sequences, or the namespace is outside the given scopes.
+    """
+    namespace, separator, file_name = str(path).partition("/")
+    if not separator or not namespace or not file_name:
+        msg = f"Invalid storage path '{path}'. Expected '<namespace>/<file_name>'."
+        raise StorageNamespaceError(msg)
+
+    # Stored file names are single path segments (the storage backends reject separators on
+    # write), so anything else here is an attempt to climb out of the namespace directory —
+    # e.g. "<own_id>/../<victim_id>/secret.txt" would otherwise pass the scope check below.
+    if ".." in file_name or any(char in file_name for char in ("/", "\\", "\x00")):
+        msg = "Invalid storage file name: contains path separators or traversal sequences."
+        raise StorageNamespaceError(msg)
+
+    if isinstance(scope_ids, (str, bytes)):
+        scope_ids = (scope_ids,)
+    scopes = {str(scope).strip().casefold() for scope in scope_ids or ()}
+    scopes.discard("")
+    if not scopes:
+        return namespace, file_name
+
+    if namespace.casefold() not in scopes:
+        msg = (
+            "Access to a storage namespace outside the authenticated user's or executing flow's scope is not permitted."
+        )
+        raise StorageNamespaceError(msg)
+    return namespace, file_name
+
+
+def validate_storage_key(component: object, path: str) -> tuple[str, str]:
+    """Component-facing wrapper around :func:`enforce_storage_key_scope`.
+
+    Resolves the executing graph's storage scopes from the component and applies the same
+    namespace-ownership contract used at the vertex parameter boundary.
+    """
+    return enforce_storage_key_scope(path, component_file_access_scopes(component))
 
 
 def _scope_roots(

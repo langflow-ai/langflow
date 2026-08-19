@@ -140,11 +140,28 @@ async def test_viewer_can_read_and_execute_but_not_write_delete_or_create(client
         delete = await client.delete(f"api/v1/flows/{flow_id}", headers=headers)
         assert delete.status_code == 403
         assert delete.json()["detail"] == "You don't have permission to delete this flow."
-        # create -> denied; 403 is correct here (no existing resource UUID to protect)
-        create = await client.post(
+        # create into the *owner's* project -> denied; 403 is correct here (no
+        # existing resource UUID to protect).
+        owner_project_id = await _make_project(owner_id, f"owner_project_{uuid4().hex}")
+        create_elsewhere = await client.post(
+            "api/v1/flows/",
+            headers=headers,
+            json={
+                "name": f"new_{uuid4().hex}",
+                "data": {"nodes": [], "edges": []},
+                "folder_id": str(owner_project_id),
+            },
+        )
+        assert create_elsewhere.status_code == 403
+        # create into a project the viewer owns -> allowed by owner override.
+        # Ownership is checked before any policy rule, and a project is the
+        # only ownership a not-yet-created flow can inherit. Without this a
+        # read-only role cannot use the default project created for them
+        # (LE-1905 finding 11).
+        create_own = await client.post(
             "api/v1/flows/", headers=headers, json={"name": f"new_{uuid4().hex}", "data": {"nodes": [], "edges": []}}
         )
-        assert create.status_code == 403
+        assert create_own.status_code == 201, create_own.text
 
 
 async def test_developer_can_write_and_create_but_not_delete(client):
@@ -266,7 +283,11 @@ async def test_read_only_share_allows_get_but_denies_write_and_execute(client):
         # execute is modeled independently from write — a read-level share must
         # not grant build either -> deny -> 404
         build = await client.post(f"api/v1/build/{flow_id}/flow", headers=bob_headers, json={})
-        assert build.status_code == 404
+        # execute -> denied. Bob can read this flow, so answering "not found"
+        # would hide a resource he has already opened and send him to debug a
+        # flow id that is correct (LE-1905 finding 8).
+        assert build.status_code == 403
+        assert build.json()["detail"] == "You don't have permission to execute this flow."
 
 
 # --------------------------------------------------------------------------- #

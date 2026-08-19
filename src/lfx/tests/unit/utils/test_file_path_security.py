@@ -7,9 +7,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 from lfx.utils.file_path_security import (
     LocalFileAccessError,
+    StorageNamespaceError,
     component_file_access_scopes,
     enforce_local_file_access,
     is_local_file_access_restricted,
+    validate_storage_key,
 )
 
 
@@ -224,6 +226,78 @@ def test_upload_named_like_secret_in_flow_subdir_allowed(tmp_path):
     upload.write_text("just a user file named secret_key")
     with mock_settings(restricted=True, config_dir=str(tmp_path)):
         assert enforce_local_file_access(str(upload), scope_ids=["flow-id"]) == Path(str(upload))
+
+
+def _component(user_id=None, flow_id=None, source_flow_id=None):
+    """Build a component stub whose graph carries the given storage scopes."""
+    component = MagicMock()
+    component._user_id = user_id
+    component._vertex.graph.user_id = None
+    component._vertex.graph.flow_id = flow_id
+    component._vertex.graph.source_flow_id = source_flow_id
+    return component
+
+
+class TestValidateStorageKey:
+    """Ownership enforcement for ``<namespace>/<file_name>`` storage keys.
+
+    Storage keys are the internal addressing scheme for uploads. The namespace segment comes
+    from a tenant-controlled component input, so it must be checked against the executing
+    graph's own scopes rather than trusted for its shape.
+    """
+
+    def test_own_user_namespace_allowed(self):
+        component = _component(user_id="owner-id")
+        assert validate_storage_key(component, "owner-id/report.csv") == ("owner-id", "report.csv")
+
+    def test_executing_flow_namespace_allowed(self):
+        """Legacy per-flow uploads live under the flow id rather than the user id."""
+        component = _component(user_id="owner-id", flow_id="flow-id")
+        assert validate_storage_key(component, "flow-id/report.csv") == ("flow-id", "report.csv")
+
+    def test_public_source_flow_namespace_allowed(self):
+        component = _component(user_id="owner-id", flow_id="virtual-id", source_flow_id="public-flow-id")
+        assert validate_storage_key(component, "public-flow-id/report.csv") == ("public-flow-id", "report.csv")
+
+    def test_other_user_namespace_denied(self):
+        """The reported issue: addressing another user's upload namespace by storage key."""
+        component = _component(user_id="attacker-id", flow_id="attacker-flow-id")
+        with pytest.raises(StorageNamespaceError, match="outside the authenticated user's"):
+            validate_storage_key(component, "victim-id/secret.txt")
+
+    def test_denial_is_not_gated_on_restrict_local_file_access(self):
+        """Namespace ownership holds regardless of the local-file containment flag.
+
+        The flag exists to turn off reading local *server* files by absolute path, which is a
+        legitimate single-tenant feature. Addressing another principal's namespace never is.
+        """
+        component = _component(user_id="attacker-id")
+        with (
+            mock_settings(restricted=False, config_dir="/tmp/whatever"),
+            pytest.raises(StorageNamespaceError),
+        ):
+            validate_storage_key(component, "victim-id/secret.txt")
+
+    @pytest.mark.parametrize(
+        "file_name",
+        ["../victim-id/secret.txt", "../secret_key", "sub/dir.txt", "a\\b.txt", "a\x00b.txt", ".."],
+    )
+    def test_traversal_in_file_name_denied(self, file_name):
+        """A traversal in the file name would escape an otherwise in-scope namespace."""
+        component = _component(user_id="owner-id")
+        with pytest.raises(StorageNamespaceError, match="path separators or traversal"):
+            validate_storage_key(component, f"owner-id/{file_name}")
+
+    @pytest.mark.parametrize("path", ["", "no-separator.txt", "/leading.txt", "trailing/"])
+    def test_malformed_key_denied(self, path):
+        component = _component(user_id="owner-id")
+        with pytest.raises(StorageNamespaceError, match="Invalid storage path"):
+            validate_storage_key(component, path)
+
+    def test_unscoped_execution_keeps_legacy_behavior(self):
+        """Standalone ``lfx run`` graphs carry no user or flow id and no tenant boundary."""
+        component = _component()
+        assert validate_storage_key(component, "some-namespace/report.csv") == ("some-namespace", "report.csv")
 
 
 class TestStorageRootFloor:

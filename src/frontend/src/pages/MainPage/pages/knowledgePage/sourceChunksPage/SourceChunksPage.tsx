@@ -22,6 +22,7 @@ import {
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useGetKnowledgeBaseChunks } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-base-chunks";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import ChunkCard from "./components/ChunkCard";
 import { ChunksMetadataFilter } from "./components/ChunksMetadataFilter";
 import { CHUNKS_PER_PAGE, PAGE_SIZE_OPTIONS } from "./constants";
@@ -29,6 +30,7 @@ import { CHUNKS_PER_PAGE, PAGE_SIZE_OPTIONS } from "./constants";
 export const SourceChunksPage = () => {
   const { t } = useTranslation();
   const { sourceId } = useParams<{ sourceId: string }>();
+  useDocumentTitle(sourceId);
   const navigate = useCustomNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState("1");

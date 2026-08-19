@@ -28,9 +28,9 @@
       "providers": [
         "lfx-anthropic"
       ],
-      "requested": ">=0.1.0,<1.0.0",
-      "requirement": "lfx-anthropic==0.1.3",
-      "resolved_version": "0.1.3"
+      "requested": ">=0.1.4,<1.0.0",
+      "requirement": "lfx-anthropic==0.1.4",
+      "resolved_version": "0.1.4"
     },
     {
       "distribution": "lfx-azure",
@@ -88,9 +88,9 @@
       "providers": [
         "lfx-ibm"
       ],
-      "requested": ">=0.2.0,<1.0.0",
-      "requirement": "lfx-ibm==0.2.0",
-      "resolved_version": "0.2.0"
+      "requested": ">=0.2.1,<1.0.0",
+      "requirement": "lfx-ibm==0.2.1",
+      "resolved_version": "0.2.1"
     },
     {
       "distribution": "lfx-ollama",
@@ -108,9 +108,9 @@
       "providers": [
         "lfx-openai"
       ],
-      "requested": ">=0.1.0,<1.0.0",
-      "requirement": "lfx-openai==0.1.1",
-      "resolved_version": "0.1.1"
+      "requested": ">=0.1.2,<1.0.0",
+      "requirement": "lfx-openai==0.1.2",
+      "resolved_version": "0.1.2"
     },
     {
       "distribution": "lfx-openai-compatible",
@@ -160,7 +160,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:16e322d017361d01",
+  "profile_digest": "sha256:4bf3c0192d97d363",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
