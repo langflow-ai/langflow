@@ -10267,7 +10267,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-ibm"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/ibm" }
 dependencies = [
     { name = "ibm-cloud-sdk-core" },
