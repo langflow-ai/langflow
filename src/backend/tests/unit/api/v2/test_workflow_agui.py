@@ -295,8 +295,16 @@ class TestAGUIModeDispatch:
 class TestV2WorkflowAdmission:
     """Route-level admission checks before workflow execution dispatch."""
 
-    def test_non_owner_data_override_is_hidden_as_404(self):
-        """Execute-only sharees must not inject alternate graph data into shared flows."""
+    def test_non_owner_data_override_is_dropped_not_denied(self):
+        """Execute-only callers run the stored graph; their injected data never reaches it.
+
+        This asserted a 404 until LE-1905. The Playground always posts the
+        canvas, so denying the override made every non-owner's Playground run
+        fail with "Flow does not exist" on a flow they were reading — while the
+        same user running the same flow through the API succeeded. The security
+        property is unchanged and still asserted here: the caller-supplied graph
+        does not run.
+        """
         from langflow.api.v2 import workflow as workflow_module
         from lfx.schema.workflow import WorkflowRunRequest
         from lfx.workflow.converters import parse_workflow_run_request
@@ -310,32 +318,23 @@ class TestV2WorkflowAdmission:
             data={"nodes": [], "edges": []},
             name="shared",
         )
-        # A non-owner caller passing a data override hits the gate the production
-        # router runs via host.stream_response -> build_stream_response.
         parsed = parse_workflow_run_request(
             WorkflowRunRequest(
                 flow_id=str(flow_id),
                 input_value="hi",
                 mode="stream",
-                data={"nodes": [], "edges": []},
+                data={"nodes": [{"id": "injected"}], "edges": []},
             )
         )
 
-        with pytest.raises(HTTPException) as exc_info:
-            workflow_module.build_stream_response(
-                parsed,
-                flow,
-                SimpleNamespace(id=uuid4()),
-                stream_protocol="langflow",
-                background_tasks=SimpleNamespace(),
-            )
+        gated = workflow_module._apply_execution_gates(parsed, flow, SimpleNamespace(id=uuid4()))
 
-        assert exc_info.value.status_code == 404
-        assert exc_info.value.detail["code"] == "FLOW_NOT_FOUND"
+        assert gated.data is None
+        assert gated.input_value == "hi"
 
     @pytest.mark.parametrize("mode", ["sync", "stream"])
-    def test_non_owner_tweaks_are_hidden_as_404(self, mode: str):
-        """Execute-only sharees must not override stored component parameters."""
+    def test_non_owner_tweaks_are_dropped(self, mode: str):
+        """Execute-only callers must not override stored component parameters."""
         from langflow.api.v2 import workflow as workflow_module
         from lfx.schema.workflow import WorkflowRunRequest
         from lfx.workflow.converters import parse_workflow_run_request
@@ -358,11 +357,10 @@ class TestV2WorkflowAdmission:
             )
         )
 
-        with pytest.raises(HTTPException) as exc_info:
-            workflow_module._apply_execution_gates(parsed, flow, SimpleNamespace(id=uuid4()))
+        gated = workflow_module._apply_execution_gates(parsed, flow, SimpleNamespace(id=uuid4()))
 
-        assert exc_info.value.status_code == 404
-        assert exc_info.value.detail["code"] == "FLOW_NOT_FOUND"
+        # Stored component parameters still win; only the denial shape changed.
+        assert gated.tweaks == {}
 
     @pytest.mark.parametrize("mode", ["sync", "stream"])
     def test_owner_tweaks_remain_supported(self, mode: str):
