@@ -9343,7 +9343,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-anthropic"
-version = "0.1.3"
+version = "0.1.4"
 source = { editable = "src/bundles/anthropic" }
 dependencies = [
     { name = "langchain-anthropic" },
@@ -10297,7 +10297,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-nextplaid"
-version = "0.1.2"
+version = "0.1.3"
 source = { editable = "src/bundles/nextplaid" }
 dependencies = [
     { name = "langchain-plaid" },
@@ -10331,7 +10331,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-openai"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "src/bundles/openai" }
 dependencies = [
     { name = "langchain-openai" },
