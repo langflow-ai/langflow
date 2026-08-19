@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Awaitable, Callable
 
 from fastapi import APIRouter, HTTPException, status
 from lfx.log.logger import logger
@@ -10,6 +11,14 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_chat_service
 
 health_check_router = APIRouter(tags=["Health Check"])
+
+# Enterprise readiness check registry.  Enterprise plugins append async
+# callables here at plugin-registration time (before any request is served).
+# Each callable returns a (name, status) tuple where status is "ok" or a
+# string starting with "error:".  The /healthz handler loops over all
+# registered checks and returns HTTP 503 if any check reports an error.
+# An empty registry (the OSS default) leaves /healthz behaviour unchanged.
+_enterprise_readiness_checks: list[Callable[[], Awaitable[tuple[str, str]]]] = []
 
 
 class HealthResponse(BaseModel):
@@ -58,6 +67,52 @@ async def health_check(
         response.chat = "ok"
     except Exception:  # noqa: BLE001
         await logger.aexception("Error checking chat service")
+
+    if response.has_error():
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=response.model_dump())
+    response.status = "ok"
+    return response
+
+
+# /healthz is the Kubernetes-style readiness probe endpoint.
+# In addition to the OSS service checks it runs all enterprise readiness
+# checks registered in _enterprise_readiness_checks.  A single "error:"
+# result from any registered check causes a 503 response so the pod is
+# marked Unready without requiring a restart.
+@health_check_router.get("/healthz")
+async def healthz(
+    session: DbSession,
+) -> HealthResponse:
+    response = HealthResponse()
+    user_id = "da93c2bd-c857-4b10-8c8c-60988103320f"
+    try:
+        stmt = select(Flow).where(Flow.id == uuid.uuid4())
+        (await session.exec(stmt)).first()
+        response.db = "ok"
+    except Exception:  # noqa: BLE001
+        await logger.aexception("Error checking database")
+
+    try:
+        chat = get_chat_service()
+        await chat.set_cache("health_check", str(user_id))
+        await chat.get_cache("health_check")
+        response.chat = "ok"
+    except Exception:  # noqa: BLE001
+        await logger.aexception("Error checking chat service")
+
+    for check in _enterprise_readiness_checks:
+        try:
+            name, result = await check()
+            if result.startswith("error"):
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail={"status": "nok", name: result},
+                )
+        except HTTPException:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            check_name = getattr(check, "__name__", getattr(check, "__qualname__", type(check).__name__))
+            await logger.awarning(f"Enterprise readiness check {check_name} raised unexpectedly: {exc}")
 
     if response.has_error():
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=response.model_dump())
