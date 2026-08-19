@@ -35,7 +35,10 @@ from lfx.services.model_provider_policy import (
 )
 from lfx.services.settings.service import SettingsService
 from lfx.utils.component_aliases import ComponentIdentityIndex, build_component_identity_index
-from lfx.utils.flow_validation import CustomComponentValidationError
+from lfx.utils.flow_validation import (
+    CustomComponentValidationError,
+    admin_only_build_required,
+    prepare_flow_build_for_user,
 from lfx.workflow.end_user_identity import (
     EndUserIdentityRequiredError,
     end_user_required_detail,
@@ -386,13 +389,28 @@ async def simple_run_flow(
         if flow.data is None:
             msg = f"Flow {flow_id_str} has no data"
             raise ValueError(msg)
+        # The stored graph is caller-controlled: a regular user can persist component source
+        # through the flow-write API and then execute it here. Apply the caller-aware
+        # component policy to a detached copy so ``custom_component_admin_only`` is enforced
+        # on stored bytes, not only on inline build payloads. Returns ``None`` when no
+        # caller-specific restriction applies, leaving the existing fast paths untouched.
+        sanitized_flow_data = await prepare_flow_build_for_user(
+            flow.data,
+            is_superuser=bool(getattr(api_key_user, "is_superuser", False)),
+        )
         # Opt-in warm fast-path: serve a deepcopy of the pre-built
         # template + apply this run's identity, skipping from_payload and the flow-row
         # rebuild. Returns None (-> cold rebuild below) for tweaks / context / auto-bind
         # flows / HITL / disabled registry / cache-miss. See ``try_warm_run_graph``.
-        graph = await try_warm_run_graph(flow, input_request, user_id=user_id, context=context, stream=stream)
+        # Skipped entirely once the policy sanitized the graph: the warm template is built
+        # from the unsanitized stored row and would reintroduce the untrusted source.
+        graph = (
+            None
+            if sanitized_flow_data is not None
+            else await try_warm_run_graph(flow, input_request, user_id=user_id, context=context, stream=stream)
+        )
         if graph is None:
-            graph_data = flow.data.copy()
+            graph_data = (sanitized_flow_data if sanitized_flow_data is not None else flow.data).copy()
             graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
             raise_if_hitl_unsupported(graph_data)
             # Mirror the Playground's one-time fix in-memory: bind empty fields whose
@@ -1468,6 +1486,16 @@ async def experimental_run_flow(
                 flow.id,
             )
             graph = None
+        elif admin_only_build_required(is_superuser=bool(getattr(api_key_user, "is_superuser", False))):
+            # The cached graph was compiled under whatever component policy was in force when
+            # it was cached. Session cache keys carry no policy generation, so a graph cached
+            # while admin-only mode was off still embeds the caller's own component source and
+            # would execute it unchecked. Rebuild from stored data through the policy instead.
+            await logger.awarning(
+                "Ignoring advanced-run cached graph that predates the admin-only component policy for flow %s",
+                flow.id,
+            )
+            graph = None
 
     if graph is None:
         if flow.data is None:
@@ -1480,7 +1508,14 @@ async def experimental_run_flow(
                 detail=str(client_error),
             )
         try:
-            graph_data = deepcopy(flow.data)
+            # Same caller-aware component policy the other stored-graph run paths apply:
+            # the persisted graph is caller-controlled, so admin-only mode must resolve its
+            # component source against the server registry before anything is compiled.
+            sanitized_flow_data = await prepare_flow_build_for_user(
+                flow.data,
+                is_superuser=bool(getattr(api_key_user, "is_superuser", False)),
+            )
+            graph_data = deepcopy(sanitized_flow_data if sanitized_flow_data is not None else flow.data)
             graph_data = process_tweaks(graph_data, tweaks or {})
             raise_if_hitl_unsupported(graph_data)
             graph = Graph.from_payload(
