@@ -69,13 +69,21 @@ CELL_EVIDENCE = {
     "a2a": "tests/unit/api/v1/test_a2a_span.py",
     "voice": "tests/unit/services/telemetry/test_flow_execution_span.py",
     "lfx.serve": "src/lfx/tests/unit/cli/test_serve_app_flow_span.py",
+    "lfx.run": "src/lfx/tests/unit/cli/test_run_command_flow_span.py",
     # Not yet driven end to end. Each needs a driver this sweep does not have yet; recorded
     # rather than omitted so the gap is visible in the table instead of in nobody's head.
     "v1.build.public": "BLOCKED: needs a public-flow fixture with the tmp build route",
     "v2.public": "BLOCKED: needs a published public workflow fixture",
     "mcp": "BLOCKED: needs an MCP client session against the in-process server",
     "agentic": "BLOCKED: needs the assistant service driven end to end",
-    "lfx.run": "BLOCKED: CLI runtime, needs a subprocess probe like the lfx.serve test",
+}
+
+
+# The N/A cells: combinations that must fail loudly rather than run something. Kept beside
+# CELL_EVIDENCE because a table that only records what works reads as complete when it is not.
+NA_EVIDENCE = {
+    "lfx.serve x v1/webhook/mcp routes": "src/lfx/tests/unit/cli/test_serve_app_flow_span.py",
+    "lfx.run x any HTTP surface": "src/lfx/tests/unit/cli/test_run_command_flow_span.py",
 }
 
 
@@ -101,7 +109,7 @@ def test_every_cited_evidence_file_exists():
     """
     repo_root = BACKEND_SRC.parents[3]
     missing = []
-    for protocol, evidence in sorted(CELL_EVIDENCE.items()):
+    for protocol, evidence in sorted({**CELL_EVIDENCE, **NA_EVIDENCE}.items()):
         if evidence == "sweep" or evidence.startswith("BLOCKED"):
             continue
         candidate = repo_root / evidence if evidence.startswith("src/") else BACKEND_SRC.parents[1] / evidence
