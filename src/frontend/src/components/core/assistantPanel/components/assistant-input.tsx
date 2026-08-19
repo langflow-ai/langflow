@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { AgenticStepType } from "@/controllers/API/queries/agentic";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
 import { getAssistantPlaceholder } from "../assistant-panel.constants";
 import type { AssistantModel } from "../assistant-panel.types";
@@ -64,8 +65,6 @@ function useAnimatedPlaceholder(
   return currentMessage;
 }
 
-const MAX_MESSAGE_LENGTH = 500;
-
 interface AssistantInputProps {
   onSend: (message: string, model: AssistantModel | null) => void;
   onStop?: () => void;
@@ -106,6 +105,11 @@ export function AssistantInput({
   onMentionOpenChange,
 }: AssistantInputProps) {
   const { t } = useTranslation();
+  // Server-owned cap (LANGFLOW_ASSISTANT_MAX_MESSAGE_LENGTH), mirrored through /config so the
+  // composer and the assistant API agree on one number.
+  const maxMessageLength = useUtilityStore(
+    (state) => state.assistantMaxMessageLength,
+  );
   const [message, setMessage] = useState(draftMessage);
   const [idlePlaceholder] = useState(getAssistantPlaceholder);
 
@@ -116,6 +120,7 @@ export function AssistantInput({
     !GENERATING_STEPS.includes(currentStep);
   const animatedPlaceholder = useAnimatedPlaceholder(isPostGenerationStep);
   const [selectedModel, setSelectedModel] = useAssistantSelectedModel();
+  const overLimitMessageId = useId();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const inputHistory = useInputHistory();
 
@@ -144,6 +149,7 @@ export function AssistantInput({
   const handleSend = () => {
     const trimmedMessage = message.trim();
     if (!trimmedMessage || disabled || isProcessing) return;
+    if (trimmedMessage.length > maxMessageLength) return;
     inputHistory.push(trimmedMessage);
     onSend(trimmedMessage, selectedModel);
     updateMessage("");
@@ -211,12 +217,16 @@ export function AssistantInput({
     }
   };
 
+  const messageLength = message.trim().length;
+  const charsRemaining = maxMessageLength - messageLength;
+  // Over-limit is a blocked-send state, not a silent truncation: the textarea used to carry a
+  // hard maxLength, which ate the tail of a pasted prompt with nothing on screen to say so.
+  const isOverLimit = charsRemaining < 0;
   // Gate on selectedModel too: a fast click during the model selector's
   // auto-select window would fire with a null model and drop the message.
   const canSend =
-    message.trim().length > 0 && !disabled && selectedModel !== null;
-  const charsRemaining = MAX_MESSAGE_LENGTH - message.length;
-  const showCharCount = message.length > MAX_MESSAGE_LENGTH * 0.8;
+    messageLength > 0 && !disabled && selectedModel !== null && !isOverLimit;
+  const showCharCount = messageLength > maxMessageLength * 0.8;
 
   return (
     <div className="relative px-2 pb-2">
@@ -248,7 +258,8 @@ export function AssistantInput({
           <Textarea
             ref={textareaRef}
             value={message}
-            maxLength={MAX_MESSAGE_LENGTH}
+            aria-invalid={isOverLimit}
+            aria-describedby={isOverLimit ? overLimitMessageId : undefined}
             onChange={(e) => {
               updateMessage(e.target.value);
               mentions.handleValueChange(
@@ -286,6 +297,19 @@ export function AssistantInput({
             </div>
           )}
         </div>
+        {isOverLimit && (
+          <div
+            id={overLimitMessageId}
+            role="alert"
+            data-testid="assistant-input-over-limit"
+            className="px-4 text-xs text-destructive"
+          >
+            {t("assistant.messageTooLong", {
+              over: -charsRemaining,
+              limit: maxMessageLength,
+            })}
+          </div>
+        )}
         <div className="flex items-center justify-between px-3">
           <div className="flex items-center gap-4">
             <ModelSelector

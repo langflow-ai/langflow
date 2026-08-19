@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH } from "@/constants/constants";
 import { EventDeliveryType } from "@/constants/enums";
 import type { Pagination, Tag } from "@/types/utils/types";
 import type { UtilityStoreType } from "@/types/zustand/utility";
@@ -78,6 +79,9 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   agenticExperienceEnabled: true,
   setAgenticExperienceEnabled: (agenticExperienceEnabled: boolean) =>
     set({ agenticExperienceEnabled }),
+  assistantMaxMessageLength: DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH,
+  setAssistantMaxMessageLength: (assistantMaxMessageLength: number) =>
+    set({ assistantMaxMessageLength }),
   localVectorStoreAvailable: true,
   setLocalVectorStoreAvailable: (localVectorStoreAvailable: boolean) =>
     set({ localVectorStoreAvailable }),

@@ -215,6 +215,7 @@
   "assistant.progress.validating.7": "検証中...",
   "assistant.selectModel": "モデルの選択",
   "assistant.sendMessage": "メッセージの送信",
+  "assistant.messageTooLong": "メッセージが{{limit}}文字の上限を{{over}}文字超えています。",
   "assistant.sessionHistory": "セッション履歴",
   "assistant.sessionHistoryLabel": "セッション履歴",
   "assistant.sessionHistoryTooltip": "セッションデータはご利用のブラウザ内にのみ保存され、別のブラウザでは引き継がれません。また、ブラウザのデータを消去した後も保持されません。",

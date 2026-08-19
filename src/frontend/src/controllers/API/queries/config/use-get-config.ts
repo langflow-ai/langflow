@@ -1,5 +1,6 @@
 import axios from "axios";
 import {
+  DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH,
   DEFAULT_POLLING_INTERVAL,
   DEFAULT_TIMEOUT,
 } from "@/constants/constants";
@@ -50,6 +51,7 @@ export interface ConfigResponse extends BaseConfig {
   custom_component_admin_only: boolean;
   a2a_enabled: boolean;
   agentic_experience: boolean;
+  assistant_max_message_length: number;
   local_vector_store_available: boolean;
 }
 
@@ -130,6 +132,9 @@ export const useGetConfig: useQueryFunctionType<
   const setAgenticExperienceEnabled = useUtilityStore(
     (state) => state.setAgenticExperienceEnabled,
   );
+  const setAssistantMaxMessageLength = useUtilityStore(
+    (state) => state.setAssistantMaxMessageLength,
+  );
   const setLocalVectorStoreAvailable = useUtilityStore(
     (state) => state.setLocalVectorStoreAvailable,
   );
@@ -187,6 +192,10 @@ export const useGetConfig: useQueryFunctionType<
         setCustomComponentAdminOnly(data.custom_component_admin_only ?? false);
         setA2aEnabled(data.a2a_enabled ?? false);
         setAgenticExperienceEnabled(data.agentic_experience ?? true);
+        setAssistantMaxMessageLength(
+          data.assistant_max_message_length ??
+            DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH,
+        );
         setLocalVectorStoreAvailable(data.local_vector_store_available ?? true);
       }
     }

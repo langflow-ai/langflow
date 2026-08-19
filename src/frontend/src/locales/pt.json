@@ -215,6 +215,7 @@
   "assistant.progress.validating.7": "Realizando a validação...",
   "assistant.selectModel": "Selecionar modelo",
   "assistant.sendMessage": "Enviar mensagem",
+  "assistant.messageTooLong": "A mensagem excede em {{over}} caracteres o limite de {{limit}} caracteres.",
   "assistant.sessionHistory": "Histórico de sessões",
   "assistant.sessionHistoryLabel": "Histórico de sessões",
   "assistant.sessionHistoryTooltip": "As sessões são armazenadas apenas no seu navegador e não serão mantidas em outros navegadores nem após a limpeza dos dados do navegador.",
