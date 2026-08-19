@@ -199,8 +199,11 @@ def enforce_local_file_access(
         raise LocalFileAccessError(msg)
 
     # The storage dir is config_dir, which also holds server-managed secret/key/DB files as
-    # siblings of the upload subdirs. Scope containment rejects them; retain exact denial as
-    # defense in depth in case storage layout or scope handling changes later.
+    # siblings of the upload subdirs. Scope containment rejects them only when a scope narrows
+    # the root below config_dir -- under ``allow_storage_root`` config_dir IS an allowed root,
+    # so this exact-path denial is the control that keeps secret_key/private_key.pem/the SQLite
+    # DB out of reach, not a redundant second line. Covered by
+    # test_read_file_bytes_denies_reserved_secret_key.
     if candidate in _reserved_secret_paths(data_dir):
         msg = "Access to this server-managed file is not permitted (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true)."
         raise LocalFileAccessError(msg)
