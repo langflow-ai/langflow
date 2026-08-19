@@ -8,6 +8,9 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
 import { customStringify } from "@/utils/reactflowUtils";
 
+// Opt-out for callers that recover from a save failure themselves.
+export type SaveFlowOptions = { suppressErrorToast?: boolean };
+
 const useSaveFlow = () => {
   const { t } = useTranslation();
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
@@ -18,7 +21,10 @@ const useSaveFlow = () => {
   const { mutate: getFlow } = useGetFlow();
   const { mutate } = usePatchUpdateFlow();
 
-  const saveFlow = async (flow?: FlowType): Promise<void> => {
+  const saveFlow = async (
+    flow?: FlowType,
+    options?: SaveFlowOptions,
+  ): Promise<void> => {
     const currentFlow = useFlowStore.getState().currentFlow;
     const currentSavedFlow = useFlowsManagerStore.getState().currentFlow;
     const requestedFlow = flow || currentFlow;
@@ -37,6 +43,11 @@ const useSaveFlow = () => {
     if (isPersistedFlowLocked && !isUnlockingPersistedFlow) {
       return;
     }
+
+    const reportSaveError = (detail: string) => {
+      if (options?.suppressErrorToast) return;
+      setErrorData({ title: t("errors.failedToSaveFlow"), list: [detail] });
+    };
 
     if (customStringify(requestedFlow) !== customStringify(currentSavedFlow)) {
       setSaveLoading(true);
@@ -98,12 +109,9 @@ const useSaveFlow = () => {
           };
           // biome-ignore lint/suspicious/noExplicitAny: legacy
           const handleError = (e: any) => {
-            const detail =
-              e.response?.data?.detail || e.message || "Unknown error";
-            setErrorData({
-              title: t("errors.failedToSaveFlow"),
-              list: [detail],
-            });
+            reportSaveError(
+              e.response?.data?.detail || e.message || "Unknown error",
+            );
             setSaveLoading(false);
             reject(e);
           };
@@ -131,10 +139,7 @@ const useSaveFlow = () => {
                   }
                   resolve();
                 } else {
-                  setErrorData({
-                    title: t("errors.failedToSaveFlow"),
-                    list: [t("errors.flowsVariableUndefined")],
-                  });
+                  reportSaveError(t("errors.flowsVariableUndefined"));
                   reject(new Error("Flows variable undefined"));
                 }
               },
@@ -156,10 +161,7 @@ const useSaveFlow = () => {
             persistFlow();
           }
         } else {
-          setErrorData({
-            title: t("errors.failedToSaveFlow"),
-            list: [t("errors.flowNotFound")],
-          });
+          reportSaveError(t("errors.flowNotFound"));
           reject(new Error("Flow not found"));
         }
       });
