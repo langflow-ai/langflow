@@ -260,7 +260,6 @@ def test_record_normalization(default_kwargs: dict, payload: dict, expected: lis
     assert component._records_from_payload(payload) == expected
 
 
-@pytest.mark.asyncio
 async def test_client_disables_redirects_and_applies_timeout(default_kwargs: dict) -> None:
     component = XquikComponent(**default_kwargs)
     client = component._build_client(12)
@@ -272,7 +271,6 @@ async def test_client_disables_redirects_and_applies_timeout(default_kwargs: dic
         await client.aclose()
 
 
-@pytest.mark.asyncio
 async def test_run_table_uses_fixed_origin_contract_and_secret_header(
     monkeypatch: pytest.MonkeyPatch,
     default_kwargs: dict,
@@ -295,7 +293,6 @@ async def test_run_table_uses_fixed_origin_contract_and_secret_header(
     assert component.status == "Returned 1 record(s)."
 
 
-@pytest.mark.asyncio
 async def test_run_json_preserves_payload(monkeypatch: pytest.MonkeyPatch, default_kwargs: dict) -> None:
     use_handler(monkeypatch, lambda _request: httpx.Response(200, json={"tweets": [{"id": "1"}]}))
     component = XquikComponent(**default_kwargs)
@@ -306,7 +303,6 @@ async def test_run_json_preserves_payload(monkeypatch: pytest.MonkeyPatch, defau
     assert result.data == {"tweets": [{"id": "1"}], "operation": XquikComponent.SEARCH_TWEETS}
 
 
-@pytest.mark.asyncio
 async def test_run_text_returns_json_lines(monkeypatch: pytest.MonkeyPatch, default_kwargs: dict) -> None:
     use_handler(monkeypatch, lambda _request: httpx.Response(200, json={"users": [{"id": "42", "username": "xquik"}]}))
     component = XquikComponent(**default_kwargs)
@@ -318,7 +314,6 @@ async def test_run_text_returns_json_lines(monkeypatch: pytest.MonkeyPatch, defa
     assert result.data["users"] == [{"id": "42", "username": "xquik"}]
 
 
-@pytest.mark.asyncio
 async def test_non_json_response_is_preserved(monkeypatch: pytest.MonkeyPatch, default_kwargs: dict) -> None:
     use_handler(monkeypatch, lambda _request: httpx.Response(200, text="plain response"))
     component = XquikComponent(**default_kwargs)
@@ -330,7 +325,6 @@ async def test_non_json_response_is_preserved(monkeypatch: pytest.MonkeyPatch, d
     assert result.data["operation"] == XquikComponent.SEARCH_TWEETS
 
 
-@pytest.mark.asyncio
 async def test_non_object_json_is_wrapped(monkeypatch: pytest.MonkeyPatch, default_kwargs: dict) -> None:
     use_handler(monkeypatch, lambda _request: httpx.Response(200, json=[{"id": "1"}]))
     component = XquikComponent(**default_kwargs)
@@ -343,7 +337,6 @@ async def test_non_object_json_is_wrapped(monkeypatch: pytest.MonkeyPatch, defau
     }
 
 
-@pytest.mark.asyncio
 async def test_empty_results_have_clear_text(monkeypatch: pytest.MonkeyPatch, default_kwargs: dict) -> None:
     use_handler(monkeypatch, lambda _request: httpx.Response(200, json={"tweets": []}))
     component = XquikComponent(**default_kwargs)
@@ -353,7 +346,6 @@ async def test_empty_results_have_clear_text(monkeypatch: pytest.MonkeyPatch, de
     assert result.text == "No Xquik records returned."
 
 
-@pytest.mark.asyncio
 async def test_http_error_returns_bounded_error_payload(monkeypatch: pytest.MonkeyPatch, default_kwargs: dict) -> None:
     use_handler(monkeypatch, lambda _request: httpx.Response(429, text="provider details"))
     component = XquikComponent(**default_kwargs)
@@ -368,7 +360,6 @@ async def test_http_error_returns_bounded_error_payload(monkeypatch: pytest.Monk
     assert "provider details" not in str(result.data)
 
 
-@pytest.mark.asyncio
 async def test_connection_error_does_not_expose_transport_details(
     monkeypatch: pytest.MonkeyPatch,
     default_kwargs: dict,
@@ -388,7 +379,6 @@ async def test_connection_error_does_not_expose_transport_details(
     }
 
 
-@pytest.mark.asyncio
 async def test_timeout_does_not_expose_transport_details(
     monkeypatch: pytest.MonkeyPatch,
     default_kwargs: dict,
@@ -408,7 +398,6 @@ async def test_timeout_does_not_expose_transport_details(
     }
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize(("configured", "expected"), [(0, 1), (-1, 1), (999, 300)])
 async def test_timeout_is_bounded(
     monkeypatch: pytest.MonkeyPatch,
