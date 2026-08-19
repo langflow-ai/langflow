@@ -100,3 +100,25 @@ def test_reuse_path_custom_params_pop_code_none_safe():
     custom_params = loading.get_params({"foo": 1})
     custom_params.pop("code", None)
     assert custom_params == {"foo": 1}
+
+
+def test_convert_kwargs_preserves_non_config_field_names():
+    """Fields that merely contain 'config' in their name should not be treated as JSON."""
+    params = {
+        "tube_config_name": "test1223",
+    }
+
+    result = loading.convert_kwargs(params)
+
+    assert result["tube_config_name"] == "test1223"
+
+
+def test_convert_kwargs_removes_invalid_json_kwargs():
+    """Actual kwargs fields containing invalid JSON should still be removed."""
+    params = {
+        "kwargs": "not-json",
+    }
+
+    result = loading.convert_kwargs(params)
+
+    assert "kwargs" not in result
