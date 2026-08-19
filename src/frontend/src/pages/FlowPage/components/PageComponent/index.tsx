@@ -87,6 +87,7 @@ import {
   MemoizedSidebarTrigger,
 } from "./MemoizedComponents";
 import { computeNoteScreenPosition } from "./utils/compute-note-position";
+import { getEdgeAriaLabel } from "./utils/get-edge-aria-label";
 import { getNodeAriaLabel } from "./utils/get-node-aria-label";
 import getRandomName from "./utils/get-random-name";
 import isEventFromOutsideElement from "./utils/is-event-from-outside-element";
@@ -126,6 +127,16 @@ export default function Page({
         ariaLabel: getNodeAriaLabel(node, t),
       })),
     [nodes, t],
+  );
+
+  const getNode = useFlowStore((state) => state.getNode);
+  const edgesWithAriaLabel = useMemo(
+    () =>
+      edges.map((edge) => ({
+        ...edge,
+        ariaLabel: getEdgeAriaLabel(edge, getNode, t),
+      })),
+    [edges, getNode, t],
   );
 
   const previewLabel = useVersionPreviewStore((s) => s.previewLabel);
@@ -941,7 +952,7 @@ export default function Page({
             <ReactFlow<AllNodeType, EdgeType>
               aria-label={t("flow.canvasLabel")}
               nodes={nodesWithAriaLabel}
-              edges={edges}
+              edges={edgesWithAriaLabel}
               onNodesChange={onNodesChangeWithHelperLines}
               onEdgesChange={onEdgesChange}
               onConnect={
