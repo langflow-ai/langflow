@@ -1,6 +1,6 @@
 [project]
 name = "lfx-bundles"
-version = "1.1.14"
+version = "1.1.15"
 description = "Langflow's long-tail provider bundles as a single manifest-less metapackage (the langchain-community model)."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -65,6 +65,7 @@ mem0 = ["mem0ai>=2.0.2,<3.0.0"]
 milvus = ["langchain-milvus~=0.3.2"]
 mistral = ["langchain-mistralai~=1.1.1"]
 mongodb = ["pymongo>=4.10.1", "langchain-mongodb>=0.11.0"]
+mrscraper = ["mrscraper-sdk>=0.2.1,<0.3.0"]
 needle = ["needle-python>=0.4.0", "langchain-community>=0.4.1,<1.0.0"]
 notdiamond = []
 notion = ["requests>=2.32.0", "Markdown>=3.8.0"]
@@ -135,6 +136,7 @@ all = [
     "lfx-bundles[milvus]",
     "lfx-bundles[mistral]",
     "lfx-bundles[mongodb]",
+    "lfx-bundles[mrscraper]",
     "lfx-bundles[needle]",
     "lfx-bundles[notdiamond]",
     "lfx-bundles[notion]",
@@ -203,6 +205,7 @@ all-no-torch = [
     "lfx-bundles[milvus]",
     "lfx-bundles[mistral]",
     "lfx-bundles[mongodb]",
+    "lfx-bundles[mrscraper]",
     "lfx-bundles[needle]",
     "lfx-bundles[notdiamond]",
     "lfx-bundles[notion]",
