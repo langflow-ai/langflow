@@ -9,8 +9,10 @@ paths require a running NextPlaid and vLLM server and are covered by the
 end-to-end smoke test in the PR description.
 """
 
+import httpx
 import pytest
 from lfx_nextplaid import NextPlaidVectorStoreComponent, VllmMultivectorEmbeddingsComponent
+from lfx_nextplaid.components.nextplaid import vllm_multivector_impl
 from lfx_nextplaid.components.nextplaid.vllm_multivector_impl import VllmMultivectorEmbeddings
 
 
@@ -55,6 +57,39 @@ def test_embeddings_impl_handles_empty_input():
     assert impl.embed_images([]) == []
     # Trailing slash on the URL is normalized away.
     assert impl.url == "http://localhost:8000"
+
+
+def test_embeddings_impl_posts_pooling_through_ssrf_safe_helper(monkeypatch):
+    calls = []
+
+    def fake_safe_post(url, **kwargs):
+        calls.append((url, kwargs))
+        return httpx.Response(
+            200,
+            json={"data": [{"index": 1, "data": [[2.0]]}, {"index": 0, "data": [[1.0]]}]},
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr(vllm_multivector_impl, "ssrf_safe_httpx_post", fake_safe_post)
+    impl = VllmMultivectorEmbeddings(url="https://vllm.example/", model="m", api_key="token", timeout=3)
+
+    assert impl.embed_documents(["a", "b"]) == [[[1.0]], [[2.0]]]
+
+    url, kwargs = calls[0]
+    assert url == "https://vllm.example/pooling"
+    assert kwargs["json"] == {"model": "m", "input": ["a", "b"]}
+    assert kwargs["headers"]["Authorization"] == "Bearer token"
+    assert kwargs["timeout"] == 3
+
+
+def test_embeddings_impl_blocks_link_local_vllm_url_before_request(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+
+    impl = VllmMultivectorEmbeddings(url="http://169.254.169.254", model="m")
+
+    with pytest.raises(ValueError, match="SSRF Protection"):
+        impl.embed_query("probe")
 
 
 def test_embeddings_impl_identity():
