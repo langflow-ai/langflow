@@ -458,6 +458,7 @@ async def generate_flow_events(
     tweaks: dict | None = None,
     expose_error_details: bool = False,
     persist_messages: bool = True,
+    end_user_id: str | None = None,
 ) -> None:
     """Generate events for flow building process.
 
@@ -497,6 +498,12 @@ async def generate_flow_events(
         graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
         if not graph.user_id:
             graph.user_id = str(current_user.id)
+        # F5: the in-memory end_user_id is lost when the graph is rebuilt from the durable
+        # checkpoint, so re-apply it (threaded here from the persisted request's end_user_id)
+        # — otherwise the resumed run would stamp post-pause messages to the SID, not the end
+        # user, breaking write==read for this conversation.
+        if end_user_id:
+            graph.end_user_id = end_user_id
         # Resume skips the initial run's trace setup (trace_context_var stays unset → post-pause
         # vertices like Chat Output never trace); re-init so the resumed vertices trace.
         graph.flow_name = graph.flow_name or flow_name
@@ -888,6 +895,9 @@ async def generate_flow_events(
         # graph non-persisting (astore_message honors this per component). Defaults
         # True, so the Playground and every other caller are unaffected.
         graph.persist_messages = persist_messages
+        # Carry the end-user identity onto the graph so per-user state (chat memory)
+        # scopes to the end user. None for anonymous / feature-off / editor runs.
+        graph.end_user_id = end_user_id
     except Exception as e:
         client_error = error_for_client(e, expose_details=expose_error_details)
         error_message = ErrorMessage(

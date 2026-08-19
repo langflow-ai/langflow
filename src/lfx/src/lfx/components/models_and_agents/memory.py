@@ -6,6 +6,7 @@ from lfx.helpers.data import data_to_text
 from lfx.inputs.inputs import DropdownInput, HandleInput, IntInput, MessageTextInput, MultilineInput, TabInput
 from lfx.log.logger import logger
 from lfx.memory import aget_messages, astore_message
+from lfx.memory.flow_context import resolve_message_owner_id
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.dotdict import dotdict
@@ -70,20 +71,20 @@ def _safe_graph_flow_id(component: Component) -> str | UUID | None:
 
 
 def _safe_graph_user_id(component: Component) -> str | UUID | None:
-    """Best-effort lookup of the component's executing-user id (see :func:`_safe_graph_flow_id`).
+    """Best-effort lookup of the id chat-history retrieval scopes to (see :func:`_safe_graph_flow_id`).
 
-    Returns ``None`` when the graph is unavailable or carries no real user id (PlaceholderGraph
-    stores ``user_id`` as ``str(...)``, so the literal "None" is treated as no owner), letting
-    retrieval fall back to the previous unscoped behavior rather than crashing or over-filtering.
+    Resolves the serving-plane end-user id when present, else the executing user id, via
+    the shared :func:`resolve_message_owner_id` so the retrieval predicate matches the
+    owner the write path (``Component._store_message``) stamped. Returns ``None`` when
+    the graph is unavailable or carries no real id (PlaceholderGraph stores ``user_id``
+    as ``str(...)``, so the literal "None" is treated as no owner), letting retrieval
+    fall back to the previous unscoped behavior rather than crashing or over-filtering.
     """
     try:
         graph = component.graph
     except AttributeError:
         return None
-    user_id = getattr(graph, "user_id", None)
-    if not user_id or str(user_id) == "None":
-        return None
-    return user_id
+    return resolve_message_owner_id(graph)
 
 
 async def aget_agent_chat_history(

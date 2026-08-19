@@ -1,0 +1,28 @@
+{
+  "label": "chromium__model-picker-popover-open-non-first-selected",
+  "description": "KNOWN a11y limitation, not fixable in app code (LE-2235). The two <span tabindex=\"0\" data-radix-focus-guard> elements are injected at the <body> edges by Radix's FocusScope (via react-remove-scroll / focus-guards) while the model-picker Popover is open, so IBM reports element_tabbable_role_valid on them. They are opacity:0, pointer-events:none, 1px focus sentinels that keep Tab inside the modal-like popover; they carry no content and are never announced. Radix does not expose a way to add a role or remove them, and they disappear as soon as the popover closes. Only these two guards are baselined \u2014 every other violation on this scan state is tracked separately (label_ref_valid: backlog item 09 / #14517; canvas node role: LE-1514 F3; rf__background svg: LE-2210). Delete this file to resurface the guards in tests/a11y/model-picker-canvas.a11y.spec.ts.",
+  "results": [
+    {
+      "ruleId": "element_tabbable_role_valid",
+      "reasonId": "fail_no_valid_role",
+      "level": "violation",
+      "message": "The tabbable element does not have a valid widget role",
+      "path": {
+        "dom": "/html[1]/body[1]/span[1]",
+        "aria": "/document[1]"
+      },
+      "value": ["VIOLATION", "FAIL"]
+    },
+    {
+      "ruleId": "element_tabbable_role_valid",
+      "reasonId": "fail_no_valid_role",
+      "level": "violation",
+      "message": "The tabbable element does not have a valid widget role",
+      "path": {
+        "dom": "/html[1]/body[1]/span[2]",
+        "aria": "/document[1]"
+      },
+      "value": ["VIOLATION", "FAIL"]
+    }
+  ]
+}
