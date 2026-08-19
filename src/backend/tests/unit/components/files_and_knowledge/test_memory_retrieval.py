@@ -6,7 +6,6 @@ Covers:
 - Where-clause composition (session filter on / off / multi-predicate).
 - update_build_config dropdown population.
 - _coerce_uuid input coercion.
-- _load_kb_metadata branches (missing file, invalid JSON, decrypt failure).
 - retrieve_data behavior: similarity search w/ filter, empty query short-circuit,
   filter_by_session=False end-to-end, include_metadata=False output shape.
 """
@@ -16,7 +15,6 @@ from __future__ import annotations
 import contextlib
 import json
 import uuid
-from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -247,49 +245,10 @@ class TestBuildWhereClause:
 
 
 # ---------------------------------------------------------------------------
-# load_kb_metadata branches (shared helper)
-# ---------------------------------------------------------------------------
-
-
-class TestLoadKbMetadata:
-    def test_missing_file_returns_empty(self, tmp_path: Path):
-        assert _kb_paths.load_kb_metadata(tmp_path, log_label="x") == {}
-
-    def test_invalid_json_returns_empty(self, tmp_path: Path):
-        (tmp_path / "embedding_metadata.json").write_text("{not-json")
-        assert _kb_paths.load_kb_metadata(tmp_path, log_label="x") == {}
-
-    def test_no_api_key_skips_decrypt(self, tmp_path: Path):
-        payload = {"embedding_provider": "OpenAI", "embedding_model": "x"}
-        (tmp_path / "embedding_metadata.json").write_text(json.dumps(payload))
-        with patch("lfx.components.files_and_knowledge._kb_paths.decrypt_api_key") as decrypt:
-            result = _kb_paths.load_kb_metadata(tmp_path, log_label="x")
-            decrypt.assert_not_called()
-        assert result == payload
-
-    def test_decrypt_success(self, tmp_path: Path):
-        payload = {"embedding_provider": "OpenAI", "api_key": "ENCRYPTED"}  # pragma: allowlist secret
-        (tmp_path / "embedding_metadata.json").write_text(json.dumps(payload))
-        with patch(
-            "lfx.components.files_and_knowledge._kb_paths.decrypt_api_key",
-            return_value="plain",
-        ):
-            result = _kb_paths.load_kb_metadata(tmp_path, log_label="x")
-        assert result["api_key"] == "plain"  # pragma: allowlist secret
-
-    def test_decrypt_failure_sets_none(self, tmp_path: Path):
-        payload = {"embedding_provider": "OpenAI", "api_key": "ENCRYPTED"}  # pragma: allowlist secret
-        (tmp_path / "embedding_metadata.json").write_text(json.dumps(payload))
-        with patch(
-            "lfx.components.files_and_knowledge._kb_paths.decrypt_api_key",
-            side_effect=ValueError("bad token"),
-        ):
-            result = _kb_paths.load_kb_metadata(tmp_path, log_label="x")
-        assert result["api_key"] is None
 
 
 class TestRootPathCache:
-    def test_reset_cache_picks_up_new_setting(self, tmp_path: Path):
+    def test_reset_cache_picks_up_new_setting(self, tmp_path):
         _kb_paths.reset_knowledge_bases_root_path_cache()
         first = tmp_path / "first"
         second = tmp_path / "second"
@@ -510,12 +469,12 @@ class TestMemoryBaseRetrievalInvariants:
                 new=AsyncMock(return_value=owner),
             ),
             patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.get_knowledge_bases_root_path",
-                return_value=Path(),
+                "lfx.components.files_and_knowledge.memory_retrieval.resolve_backend_selection",
+                new=AsyncMock(return_value=("chroma", {})),
             ),
             patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.validate_kb_path",
-                side_effect=ValueError("escapes root"),
+                "lfx.components.files_and_knowledge.memory_retrieval.resolve_local_store_path",
+                side_effect=ValueError("KB path escapes root directory"),
             ),
             pytest.raises(ValueError, match="not accessible"),
         ):
@@ -527,7 +486,7 @@ class TestMemoryBaseRetrievalBehavior:
     def _enter_full_chain(stack: contextlib.ExitStack, *, db, fake_backend, owner, metadata):
         # Embedding provider/model now come from the DB row via
         # resolve_embedding_selection (no on-disk sidecar), so patch that instead
-        # of the removed load_kb_metadata read. The ``metadata`` dict is reused as
+        # of the removed sidecar read. The ``metadata`` dict is reused as
         # the source of the provider/model the resolver returns.
         provider = metadata.get("embedding_provider", "OpenAI")
         model = metadata.get("embedding_model", "x")
@@ -540,11 +499,7 @@ class TestMemoryBaseRetrievalBehavior:
                 new=AsyncMock(return_value=owner),
             ),
             patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.get_knowledge_bases_root_path",
-                return_value=Path(),
-            ),
-            patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.validate_kb_path",
+                "lfx.components.files_and_knowledge.memory_retrieval.resolve_local_store_path",
                 return_value=None,
             ),
             patch(

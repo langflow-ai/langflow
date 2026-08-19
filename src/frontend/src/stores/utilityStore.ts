@@ -78,6 +78,9 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   agenticExperienceEnabled: true,
   setAgenticExperienceEnabled: (agenticExperienceEnabled: boolean) =>
     set({ agenticExperienceEnabled }),
+  localVectorStoreAvailable: true,
+  setLocalVectorStoreAvailable: (localVectorStoreAvailable: boolean) =>
+    set({ localVectorStoreAvailable }),
   mcpBaseUrl: "",
   setMcpBaseUrl: (mcpBaseUrl: string) => set({ mcpBaseUrl }),
   // Default false to match the backend's "reload disabled" default until the

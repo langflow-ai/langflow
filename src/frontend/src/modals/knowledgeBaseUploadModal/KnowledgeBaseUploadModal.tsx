@@ -161,7 +161,9 @@ export default function KnowledgeBaseUploadModal({
           nextDisabled={false}
           submitDisabled={
             !form.sourceName.trim() ||
-            (!form.isAddSourcesMode && form.selectedEmbeddingModel.length === 0)
+            (!form.isAddSourcesMode &&
+              form.selectedEmbeddingModel.length === 0) ||
+            form.chunkPreviewFailed
           }
           isSubmitting={form.isSubmitting}
           submitTestId="kb-create-button"

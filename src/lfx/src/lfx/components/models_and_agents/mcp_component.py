@@ -15,6 +15,7 @@ from lfx.base.agents.utils import maybe_unflatten_dict, safe_cache_get, safe_cac
 from lfx.base.mcp.util import (
     MCPStdioClient,
     MCPStreamableHttpClient,
+    config_uses_global_variables,
     update_tools,
 )
 from lfx.base.tools.constants import TOOL_OUTPUT_DISPLAY_NAME, TOOL_OUTPUT_NAME
@@ -523,16 +524,13 @@ class MCPToolsComponent(ComponentWithCache):
                 if hasattr(self, "graph") and self.graph and hasattr(self.graph, "context"):
                     request_variables = self.graph.context.get("request_variables")
 
-                # Only load global variables from database if we have headers that might use them
-                # This avoids unnecessary database queries when headers are empty.
-                #
-                # The database load must NOT be skipped just because the request carried
-                # overrides: a request that overrides one variable still needs every other
-                # header variable resolved from the database. Skipping the load there sends
-                # the unresolved variable *name* upstream as the header value. Per-request
-                # values win on conflict, matching ``CustomComponent.get_variable``.
-                has_headers = server_config.get("headers") and len(server_config.get("headers", {})) > 0
-                if has_headers:
+                # Load global variables only when the config actually references them, so a
+                # static config still costs no query -- but a URL-only reference now counts.
+                # The load must NOT be skipped just because the request carried overrides: a
+                # request that overrides one variable still needs every other referenced
+                # variable resolved from the database.
+                db_variables: dict[str, str] | None = None
+                if config_uses_global_variables(server_config):
                     try:
                         from lfx.services.deps import get_variable_service
 
@@ -545,9 +543,18 @@ class MCPToolsComponent(ComponentWithCache):
                                 db_variables = await variable_service.get_all_decrypted_variables(
                                     user_id=self.user_id, session=db
                                 )
-                            request_variables = {**(db_variables or {}), **(request_variables or {})}
                     except Exception as e:  # noqa: BLE001
-                        await logger.awarning(f"Failed to load global variables for MCP component: {e}")
+                        await logger.awarning("Failed to load global variables for MCP component", exc_info=e)
+
+                # Headers may resolve from either source, per-request values winning on
+                # conflict (matching ``CustomComponent.get_variable``). Dropping the database
+                # side whenever the request carried anything would send an unresolved variable
+                # *name* upstream as the header value (#14604).
+                #
+                # The URL still resolves from the database only, via ``url_variables`` below:
+                # request_variables carry the caller's X-Langflow-Global-Var-* values, and a
+                # caller must not be able to choose where this flow connects.
+                request_variables = {**(db_variables or {}), **(request_variables or {})} or None
 
                 await logger.adebug(
                     "MCP update_tool_list: calling update_tools server=%r mode_headers=%s",
@@ -565,6 +572,7 @@ class MCPToolsComponent(ComponentWithCache):
                     mcp_stdio_client=self.stdio_client,
                     mcp_streamable_http_client=self.streamable_http_client,
                     request_variables=request_variables,
+                    url_variables=db_variables,
                     tool_execution_timeout=timeout,
                     current_user_id=self.user_id,
                 )
