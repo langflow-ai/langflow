@@ -23,6 +23,7 @@ from lfx.utils.flow_validation import (
 )
 from pydantic import ValidationError
 from sqlalchemy import case
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import and_, col, select
 
 from langflow.api.utils import (
@@ -58,6 +59,7 @@ from langflow.api.v1.flows_helpers import (
     _update_existing_flow,
     _validate_and_assign_folder,
     _verify_fs_path,
+    destination_folder_owner_id,
 )
 from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
 from langflow.api.v1.schemas import FlowListCreate
@@ -885,7 +887,11 @@ async def upsert_flow(
             # CREATE path - flow doesn't exist
             await _canonicalize_flow_destination(session, flow, current_user.id, reject_invalid=True)
             await ensure_flow_permission(
-                current_user, FlowAction.CREATE, workspace_id=flow.workspace_id, folder_id=flow.folder_id
+                current_user,
+                FlowAction.CREATE,
+                workspace_id=flow.workspace_id,
+                folder_id=flow.folder_id,
+                folder_user_id=await destination_folder_owner_id(session, flow.folder_id),
             )
             _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
             await stage_mcp_secrets(carried_secrets, secret_variables, writer_id, session)
@@ -993,6 +999,7 @@ async def create_flows(
             FlowAction.CREATE,
             workspace_id=flow.workspace_id,
             folder_id=flow.folder_id,
+            folder_user_id=await destination_folder_owner_id(session, flow.folder_id),
         )
     # Guard against duplicate IDs up-front so callers get a clean 422 instead
     # of an unhandled DB IntegrityError.  Use upload_file() for upsert semantics.
@@ -1018,7 +1025,18 @@ async def create_flows(
         session.add(db_flow)
         db_flows.append(db_flow)
 
-    await session.flush()
+    # Unlike create_flow/upsert_flow, this endpoint does not route through
+    # _new_flow, so a (user_id, name)/(user_id, endpoint_name) collision reaches
+    # the flush unhandled. Left un-rolled-back on SQLite, the failed INSERT pins
+    # the write lock and the next writer busy-waits busy_timeout (30s) before its
+    # own "database is locked"; the raw error would also leak the SQL statement
+    # and bound parameters. Roll back to release the lock immediately, then map
+    # to a clean 409.
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise _handle_unique_constraint_error(exc, status_code=409) from exc
     for db_flow in db_flows:
         await session.refresh(db_flow)
 
@@ -1143,6 +1161,7 @@ async def upload_file(
             FlowAction.CREATE,
             workspace_id=flow.workspace_id,
             folder_id=flow.folder_id,
+            folder_user_id=await destination_folder_owner_id(session, flow.folder_id),
         )
 
         # Upload upserts ignore omitted/null data. Validate the stored graph in

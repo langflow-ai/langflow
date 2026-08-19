@@ -364,6 +364,21 @@ async def _resolve_flow_destination(
     return folder.workspace_id, folder.id
 
 
+async def destination_folder_owner_id(session: AsyncSession, folder_id: UUID | None) -> UUID | None:
+    """Return who owns the project a flow is about to be created in.
+
+    A flow being created has no owner yet, so the destination project is the
+    only ownership the CREATE check can consult. Read it from the stored row
+    after canonicalization — a caller-supplied folder_id may have been
+    redirected to the caller's default project, and the payload can never be
+    trusted to assert who owns a project.
+    """
+    if folder_id is None:
+        return None
+    folder = await session.get(Folder, folder_id)
+    return getattr(folder, "user_id", None)
+
+
 async def _canonicalize_flow_destination(
     session: AsyncSession,
     flow: Flow | FlowCreate | FlowUpdate,

@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 from fastapi import HTTPException, status
+from lfx.log.logger import logger
 from lfx.utils.flow_validation import (
     CatalogPolicyIdentityUnavailableError,
     CustomComponentValidationError,
@@ -21,6 +22,7 @@ from lfx.workflow.converters import ParsedWorkflowRun
 
 from langflow.api.utils.execution_errors import caller_owns_flow, error_for_client
 from langflow.services.authorization.fetch import deny_to_404
+from langflow.services.authorization.flow_data_override import flow_data_override_allowed
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.user.model import UserRead
 
@@ -79,18 +81,33 @@ def _reject_sync_only_fields(parsed: ParsedWorkflowRun) -> None:
     )
 
 
-def _enforce_flow_data_override_owner(parsed: ParsedWorkflowRun, flow: FlowRead, current_user: UserRead) -> None:
-    """Only the flow owner may execute caller-supplied graph data or tweaks."""
-    if (parsed.data is None and not parsed.tweaks) or caller_owns_flow(flow, current_user):
-        return
+def _apply_flow_data_override_policy(
+    parsed: ParsedWorkflowRun,
+    flow: FlowRead,
+    current_user: UserRead,
+) -> ParsedWorkflowRun:
+    """Strip caller-supplied graph data the caller may not override.
 
-    raise _flow_not_found_privacy_exception(
-        HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the flow owner can override flow data or component parameters during execution",
-        ),
-        parsed.flow_id,
+    This used to deny, reframed to 404 for privacy. That made the Playground
+    unusable for every non-owner: the canvas always posts ``data`` (its own
+    nodes and edges), so a user holding ``flow:execute`` — which the built-in
+    Viewer and Editor both do — could run the flow through the API but got
+    "Flow does not exist" from the UI on the same flow (LE-1905).
+
+    Execute-only callers get what ``flow:execute`` means: the stored definition
+    runs. Dropping their override is also strictly safer than honoring it, and
+    their canvas is read-only, so the graph they posted is the stored one.
+    """
+    if (parsed.data is None and not parsed.tweaks) or flow_data_override_allowed():
+        return parsed
+    if caller_owns_flow(flow, current_user):
+        return parsed
+
+    logger.info(
+        "Ignoring caller-supplied flow data for flow %s: caller may execute but not edit it; running the stored graph.",
+        flow.id,
     )
+    return replace(parsed, data=None, tweaks={})
 
 
 def _validate_flow_data_for_execution(
