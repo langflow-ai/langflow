@@ -7,6 +7,10 @@ import { selectStarterTemplate } from "./select-starter-template";
 import { waitForFlowEditorReady } from "./wait-for-flow-editor-ready";
 
 const SEEDED_FLOW_NAME = TEXTS.templateBasicPrompting;
+// Playwright's default desktop viewport. Seeding drives the desktop flow
+// editor (templates modal -> component sidebar), which is unreachable at
+// mobile widths.
+const SEED_VIEWPORT = { width: 1280, height: 720 };
 
 function isFlowCreateResponse(response: Response): boolean {
   return (
@@ -105,7 +109,17 @@ export async function seedFlowIfEmpty(page: Page): Promise<boolean> {
   page.on("response", rememberCreateResponse);
   let placeholderFlowId: string | undefined;
 
+  // A mobile-viewport test can be the first to hit an empty workspace (each CI
+  // shard starts from a fresh DB), so seed at desktop width and restore the
+  // test's viewport afterwards.
+  const testViewport = page.viewportSize();
+  const widenForSeed =
+    testViewport !== null && testViewport.width < SEED_VIEWPORT.width;
+
   try {
+    if (widenForSeed) {
+      await page.setViewportSize(SEED_VIEWPORT);
+    }
     await openTemplatesModal(page, { fromEmptyPage: true });
     placeholderFlowId = new URL(page.url()).pathname.match(
       /\/flow\/([^/?#]+)/,
@@ -148,6 +162,9 @@ export async function seedFlowIfEmpty(page: Page): Promise<boolean> {
     await waitForConcurrentSeed(page);
   } finally {
     page.off("response", rememberCreateResponse);
+    if (widenForSeed && testViewport) {
+      await page.setViewportSize(testViewport);
+    }
   }
 
   return true;

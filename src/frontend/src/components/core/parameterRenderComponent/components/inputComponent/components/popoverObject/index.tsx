@@ -21,7 +21,7 @@ import { useIMEInputForOnChange } from "../../../../hooks/use-ime-input";
 
 const CustomInputPopoverObject = ({
   id,
-  nodeId = undefined as string | undefined,
+  nodeId = undefined,
   refInput,
   onInputLostFocus,
   selectedOption,
@@ -45,7 +45,7 @@ const CustomInputPopoverObject = ({
   handleKeyDown,
   showOptions,
   inspectionPanel,
-  ariaLabelledBy = undefined as string | undefined,
+  ariaLabelledBy,
 }) => {
   const { t } = useTranslation();
   const PopoverContentInput =

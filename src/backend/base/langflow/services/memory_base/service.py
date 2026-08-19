@@ -23,6 +23,7 @@ from lfx.base.models.unified_models import get_api_key_for_provider
 from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, require_model_provider
 from sqlmodel import col, select
 
+from langflow.api.utils.kb_helpers import local_chroma_rejection_reason
 from langflow.services.base import Service
 from langflow.services.database.models.memory_base.model import (
     MemoryBase,
@@ -54,6 +55,7 @@ from langflow.services.memory_base.ingestion import (
     trigger_ingestion as _trigger_ingestion,
 )
 from langflow.services.memory_base.kb_path_helpers import (
+    BackendProvisioningError,
     delete_kb,
     delete_kb_remote_collection,
     initialize_kb,
@@ -145,6 +147,14 @@ class MemoryBaseService(Service):
     async def create(self, payload: MemoryBaseCreate, user_id: uuid.UUID) -> MemoryBase:
         backend_type = payload.backend_type or resolve_default_kb_backend()
         backend_config = payload.backend_config or {}
+
+        # 0. Local Chroma is a dev-profile-only backend — its vectors live on the
+        # serving box's filesystem. ``BackendProvisioningError`` is already mapped
+        # to 422 by the route, which is the same status the KB endpoint returns
+        # for this rejection.
+        rejection = local_chroma_rejection_reason(backend_type, backend_config, resource="memory base")
+        if rejection is not None:
+            raise BackendProvisioningError(rejection)
 
         # 1. Verify that the referenced flow belongs to this user.
         async with session_scope() as db:
@@ -270,7 +280,7 @@ class MemoryBaseService(Service):
         from langflow.api.utils import knowledge_base_service
 
         try:
-            await delete_kb_remote_collection(kb_name=kb_name, kb_username=kb_username, user_id=user_id)
+            await delete_kb_remote_collection(kb_name=kb_name, user_id=user_id)
         except Exception as exc:  # noqa: BLE001 — rollback is best-effort
             await logger.awarning("Create rollback: remote collection cleanup failed for kb_name=%s: %s", kb_name, exc)
         try:
@@ -375,7 +385,7 @@ class MemoryBaseService(Service):
         # the OpenSearch index / Chroma Cloud collection is stranded with no way
         # to resolve how to reach it. Best-effort; local Chroma is a no-op here
         # (its vectors are removed by ``delete_kb`` below).
-        await delete_kb_remote_collection(kb_name=kb_name, kb_username=kb_username, user_id=user_id)
+        await delete_kb_remote_collection(kb_name=kb_name, user_id=user_id)
 
         # Delete the backing knowledge_base row — it's the authoritative record for
         # this Memory Base, so leaving it would orphan the row (and keep the KB's

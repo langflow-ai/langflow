@@ -26,7 +26,7 @@ const buttonVariants = cva(
           "text-foreground hover:bg-accent hover:text-accent-foreground disabled:!bg-transparent",
         ghostActive:
           "bg-muted text-foreground hover:bg-secondary-hover hover:text-accent-foreground",
-        menu: "hover:bg-muted hover:text-accent-foreground focus:!ring-0 focus-visible:!ring-0",
+        menu: "hover:bg-muted hover:text-accent-foreground",
         "menu-active":
           "font-semibold hover:bg-muted hover:text-accent-foreground focus-visible:!ring-offset-0",
         link: "underline-offset-4 hover:underline text-primary",

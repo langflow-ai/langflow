@@ -14,6 +14,12 @@ import { cn } from "@/utils/utils";
 /** Providers where the callable model id is a user-chosen deployment name. */
 const CUSTOM_DEPLOYMENT_PROVIDERS = new Set(["Azure AI Foundry"]);
 
+/** Providers that render their own useful UI when no catalog models exist. */
+export const hasProviderOwnedEmptyState = (providerName?: string): boolean =>
+  !!providerName &&
+  (CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName) ||
+    providerName.toLowerCase() === "ollama");
+
 export interface ModelProviderSelectionProps {
   availableModels: Model[];
   onModelToggle: (
@@ -402,7 +408,9 @@ const ModelSelection = ({
     );
   };
 
-  const isOllama = providerName?.toLowerCase() === "ollama";
+  const providerOwnsEmptyState = hasProviderOwnedEmptyState(providerName);
+  const isOllama =
+    providerOwnsEmptyState && providerName?.toLowerCase() === "ollama";
   // Use the unfiltered list for the empty-state check so an
   // ollama-no-models warning still fires when the search field happens to be
   // populated.

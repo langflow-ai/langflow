@@ -19,7 +19,7 @@ const KeypairListComponent = ({
   isList = true,
   id,
   showParameter = true,
-  ariaLabelledBy = undefined as string | undefined,
+  ariaLabelledBy,
 }) => {
   const { t } = useTranslation();
   const getTestId = (prefix, index) =>
