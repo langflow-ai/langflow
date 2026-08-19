@@ -327,7 +327,7 @@ class TestV2WorkflowAdmission:
             )
         )
 
-        gated = workflow_module._apply_execution_gates(parsed, flow, SimpleNamespace(id=uuid4()))
+        gated = workflow_module._apply_execution_gates(parsed, flow, SimpleNamespace(id=uuid4(), is_superuser=False))
 
         assert gated.data is None
         assert gated.input_value == "hi"
@@ -357,7 +357,7 @@ class TestV2WorkflowAdmission:
             )
         )
 
-        gated = workflow_module._apply_execution_gates(parsed, flow, SimpleNamespace(id=uuid4()))
+        gated = workflow_module._apply_execution_gates(parsed, flow, SimpleNamespace(id=uuid4(), is_superuser=False))
 
         # Stored component parameters still win; only the denial shape changed.
         assert gated.tweaks == {}
