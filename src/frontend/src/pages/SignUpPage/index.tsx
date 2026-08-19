@@ -10,6 +10,7 @@ import { CustomLink } from "@/customization/components/custom-link";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import { track } from "@/customization/utils/analytics";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import {
   appendErrorSuggestion,
   getRequiredFieldError,
@@ -33,6 +34,7 @@ export default function SignUp(): JSX.Element {
   const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
 
   const { t } = useTranslation();
+  useDocumentTitle(t("auth.signupButton"));
   useTheme();
   const { password, cnfPassword, username } = inputState;
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
