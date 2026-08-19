@@ -58,9 +58,13 @@ def test_embeddings_impl_handles_empty_input():
 
 
 def test_embeddings_impl_identity():
-    a = VllmMultivectorEmbeddings(url="http://h:1", model="m", api_key="k")
-    b = VllmMultivectorEmbeddings(url="http://h:1", model="m", api_key="k")
-    c = VllmMultivectorEmbeddings(url="http://h:1", model="other", api_key="k")
+    # The constructor now applies the connector SSRF policy, which resolves the hostname.
+    # "http://h:1" was a placeholder that cannot resolve, so it fails in a network-isolated
+    # runner. Loopback is exempt from the policy by default and needs no DNS, which keeps
+    # this test about identity/hash/repr rather than about URL validation.
+    a = VllmMultivectorEmbeddings(url="http://127.0.0.1:1", model="m", api_key="k")
+    b = VllmMultivectorEmbeddings(url="http://127.0.0.1:1", model="m", api_key="k")
+    c = VllmMultivectorEmbeddings(url="http://127.0.0.1:1", model="other", api_key="k")
 
     assert a == b
     assert a != c
