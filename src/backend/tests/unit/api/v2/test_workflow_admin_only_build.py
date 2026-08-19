@@ -188,3 +188,31 @@ async def test_v2_background_persists_only_sanitized_inline_data(monkeypatch):
 
     assert execute.call_args.kwargs["parsed"].data == sanitized
     assert parsed.data["nodes"][0]["data"]["source"] == "request"
+
+
+@pytest.mark.parametrize("mode", ["sync", "stream", "background"])
+def test_v2_stored_graph_forwards_superuser_status_to_the_policy(monkeypatch, mode):
+    """A superuser caller must reach the policy as a superuser, not be silently downgraded.
+
+    ``prepare_flow_build_for_user_from_cache`` decides whether admin-only sanitization applies
+    from the caller's superuser flag. If the seam forwarded a hardcoded or defaulted ``False``,
+    administrators would be sanitized against their own trusted source and the admin-only
+    escape hatch would stop working -- a functional break that no denial test would catch.
+    """
+    from langflow.api.v2 import workflow as workflow_module
+    from langflow.api.v2 import workflow_validation
+
+    parsed, flow, user = _stored_execution_context(mode=mode)
+    user.is_superuser = True
+    seen: dict = {}
+
+    def sanitize(data, *, is_superuser):  # noqa: ARG001
+        seen["is_superuser"] = is_superuser
+        # A superuser is exempt, so the real policy returns None -- preserve the payload.
+
+    monkeypatch.setattr(workflow_validation, "prepare_flow_build_for_user_from_cache", sanitize)
+
+    gated = workflow_module._apply_execution_gates(parsed, flow, user)
+
+    assert seen["is_superuser"] is True
+    assert gated.data is None, "an exempt caller's request must not gain a sanitized payload"

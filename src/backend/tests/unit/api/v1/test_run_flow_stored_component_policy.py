@@ -200,3 +200,104 @@ async def test_superuser_status_is_forwarded_to_the_policy(run_flow_env, monkeyp
     )
 
     assert seen["is_superuser"] is True
+
+
+def _advanced_flow(user_id, data: dict):
+    """The advanced-run path reads authorization fields the simple-run helper omits."""
+    flow = _make_flow(user_id, data)
+    flow.workspace_id = None
+    flow.folder_id = None
+    return flow
+
+
+def _advanced_run_env(monkeypatch, *, cached_graph, admin_only: bool):
+    """Wire the advanced-run seam so only the cached-graph policy decision is exercised."""
+    from langflow.api.v1 import endpoints
+
+    captured: dict = {}
+
+    def fake_from_payload(data, **_kwargs):
+        rebuilt = SimpleNamespace(run_id=None, rebuilt=True)
+        captured["rebuilt_from_payload"] = data
+        return rebuilt
+
+    async def fake_run_graph_internal(**kwargs):
+        captured["runtime_graph"] = kwargs["graph"]
+        return [], "session"
+
+    monkeypatch.setattr(endpoints.Graph, "from_payload", fake_from_payload)
+    monkeypatch.setattr(endpoints, "ensure_flow_permission", AsyncMock())
+    monkeypatch.setattr(endpoints, "run_graph_internal", fake_run_graph_internal)
+    monkeypatch.setattr(endpoints, "get_task_service", lambda: SimpleNamespace(fire_and_forget_task=AsyncMock()))
+    monkeypatch.setattr(endpoints, "get_memory_base_service", lambda: SimpleNamespace(on_flow_output=Mock()))
+    monkeypatch.setattr(endpoints, "process_tweaks", lambda graph_data, _tweaks, **_kwargs: graph_data)
+    monkeypatch.setattr(endpoints, "raise_if_hitl_unsupported", lambda _graph_data: None)
+    monkeypatch.setattr(
+        endpoints,
+        "get_session_service",
+        lambda: SimpleNamespace(load_session=AsyncMock(return_value=(cached_graph, None))),
+    )
+    # The cached graph belongs to this same caller, so the existing principal check keeps it.
+    monkeypatch.setattr(endpoints, "_graph_executes_as_actor", lambda *_a, **_k: True)
+    monkeypatch.setattr(endpoints, "admin_only_build_required", lambda *, is_superuser: admin_only)  # noqa: ARG005
+
+    sanitized = _stored_graph("# server-trusted source")
+    policy = AsyncMock(return_value=sanitized if admin_only else None)
+    monkeypatch.setattr(endpoints, "prepare_flow_build_for_user", policy)
+
+    return endpoints, captured, policy
+
+
+@pytest.mark.asyncio
+async def test_cached_advanced_run_graph_is_rebuilt_when_admin_only_applies(monkeypatch):
+    """A graph cached before admin-only mode was enabled must not be reused.
+
+    Session cache keys carry no policy generation, so a graph compiled while the policy was
+    off still embeds the caller's own component source. Reusing it would execute that source
+    unchecked, which is the same persistence bypass this PR closes for stored flow data.
+    """
+    caller_id = uuid4()
+    cached = SimpleNamespace(run_id=None, rebuilt=False)
+    endpoints, captured, policy = _advanced_run_env(monkeypatch, cached_graph=cached, admin_only=True)
+    flow = _advanced_flow(caller_id, _stored_graph("import os\n_x = os.system('id')\n"))
+
+    await endpoints.experimental_run_flow(
+        session=SimpleNamespace(exec=AsyncMock(), in_transaction=lambda: False, commit=AsyncMock()),
+        flow=flow,
+        inputs=None,
+        outputs=None,
+        tweaks=None,
+        stream=False,
+        session_id="cached-session",
+        api_key_user=SimpleNamespace(id=caller_id, is_superuser=False),
+    )
+
+    policy.assert_awaited_once()
+    assert captured["runtime_graph"] is not cached, "the pre-policy cached graph was executed"
+    assert captured["runtime_graph"].rebuilt is True
+    assert captured["rebuilt_from_payload"]["nodes"][0]["data"]["node"]["template"]["code"]["value"] == (
+        "# server-trusted source"
+    )
+
+
+@pytest.mark.asyncio
+async def test_cached_advanced_run_graph_is_reused_when_the_policy_is_off(monkeypatch):
+    """With admin-only mode off the rebuild would not sanitize, so the cache stays a fast path."""
+    caller_id = uuid4()
+    cached = SimpleNamespace(run_id=None, rebuilt=False)
+    endpoints, captured, _policy = _advanced_run_env(monkeypatch, cached_graph=cached, admin_only=False)
+    flow = _advanced_flow(caller_id, _stored_graph("# anything"))
+
+    await endpoints.experimental_run_flow(
+        session=SimpleNamespace(exec=AsyncMock(), in_transaction=lambda: False, commit=AsyncMock()),
+        flow=flow,
+        inputs=None,
+        outputs=None,
+        tweaks=None,
+        stream=False,
+        session_id="cached-session",
+        api_key_user=SimpleNamespace(id=caller_id, is_superuser=False),
+    )
+
+    assert captured["runtime_graph"] is cached
+    assert "rebuilt_from_payload" not in captured

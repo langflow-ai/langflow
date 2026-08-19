@@ -35,7 +35,11 @@ from lfx.services.model_provider_policy import (
 )
 from lfx.services.settings.service import SettingsService
 from lfx.utils.component_aliases import ComponentIdentityIndex, build_component_identity_index
-from lfx.utils.flow_validation import CustomComponentValidationError, prepare_flow_build_for_user
+from lfx.utils.flow_validation import (
+    CustomComponentValidationError,
+    admin_only_build_required,
+    prepare_flow_build_for_user,
+)
 
 from langflow.api.utils import (
     CurrentActiveUser,
@@ -1396,6 +1400,16 @@ async def experimental_run_flow(
             # stored flow under the current actor instead.
             await logger.awarning(
                 "Ignoring advanced-run graph cached under another execution principal for flow %s",
+                flow.id,
+            )
+            graph = None
+        elif admin_only_build_required(is_superuser=bool(getattr(api_key_user, "is_superuser", False))):
+            # The cached graph was compiled under whatever component policy was in force when
+            # it was cached. Session cache keys carry no policy generation, so a graph cached
+            # while admin-only mode was off still embeds the caller's own component source and
+            # would execute it unchecked. Rebuild from stored data through the policy instead.
+            await logger.awarning(
+                "Ignoring advanced-run cached graph that predates the admin-only component policy for flow %s",
                 flow.id,
             )
             graph = None
