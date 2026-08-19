@@ -81,6 +81,7 @@ import {
   type HelperLinesState,
 } from "./helpers/helper-lines";
 import { useCanvasDragSelectFix } from "./hooks/useCanvasDragSelectFix";
+import { usePresentationalEdgeSvgs } from "./hooks/usePresentationalEdgeSvgs";
 import {
   MemoizedBackground,
   MemoizedCanvasControls,
@@ -763,6 +764,7 @@ export default function Page({
   }, []);
 
   useCanvasDragSelectFix(reactFlowWrapper);
+  usePresentationalEdgeSvgs(reactFlowWrapper);
 
   // Workaround to show the menu only after the selection has ended.
   useEffect(() => {
@@ -1027,7 +1029,13 @@ export default function Page({
               onNodeContextMenu={onNodeContextMenu}
             >
               {!effectiveLocked && <UpdateAllComponents />}
-              <MemoizedBackground />
+              {/* The dot grid is pure decoration. ReactFlow's <Background>
+                  does not forward DOM props, so the only way to reach its
+                  <svg> is a wrapper; `display: contents` keeps it out of the
+                  layout entirely. */}
+              <div aria-hidden="true" style={{ display: "contents" }}>
+                <MemoizedBackground />
+              </div>
               {helperLineEnabled && <HelperLines helperLines={helperLines} />}
             </ReactFlow>
             <FlowBuildingComponent />
