@@ -99,6 +99,24 @@ if TYPE_CHECKING:
     from lfx.services.tracing.service import TracingService
 
 
+def _serving_trace_end_user_enabled() -> bool:
+    """Whether the operator opted into forwarding the end-user id to the tracing provider (I4).
+
+    Default False (fail-closed): the end-user id is PII and tracing providers are third-party. Reads
+    the serving setting lazily; any resolution failure (lfx-standalone / no settings) is treated as
+    off so telemetry never leaks the identity by accident.
+    """
+    try:
+        from lfx.services.deps import get_settings_service
+
+        settings_service = get_settings_service()
+    except (ImportError, AttributeError, RuntimeError):
+        return False
+    if settings_service is None:
+        return False
+    return bool(getattr(settings_service.settings, "serving_trace_end_user", False))
+
+
 class Graph:
     """A class representing a graph of vertices and edges."""
 
@@ -151,6 +169,13 @@ class Graph:
         # surfaced in external traces (e.g. Langfuse trace metadata) without
         # leaking into authn/authz paths.
         self.tracing_user_id: str | None = None
+        # Serving-plane end-user id (the gateway-injected identity for this run).
+        # In-memory only, never persisted: the single carrier every service reads to
+        # scope memory (and, later, telemetry and agent file writes) to the end user
+        # while execution still runs as ``self.user_id`` (the service account). ``None``
+        # on the editor plane and for anonymous/feature-off runs, so those paths are
+        # byte-for-byte unchanged.
+        self.end_user_id: str | None = None
         self._is_input_vertices: list[str] = []
         self._is_output_vertices: list[str] = []
         self._is_state_vertices: list[str] | None = None
@@ -898,6 +923,14 @@ class Graph:
         if not self._run_id:
             self.set_run_id()
         if self.tracing_service:
+            # Serving-plane telemetry attribution: surface the end user as the SEPARATE tracing label
+            # (never the primary trace user_id, which stays the SID). Gated OFF by default: the
+            # end-user id is PII and tracing providers are third-party SaaS, so it is forwarded only
+            # when the operator opts in via ``serving_trace_end_user``, matching the fail-closed
+            # posture of outbound MCP forwarding. Only fills when an identified serving run set
+            # end_user_id and no explicit caller label was already provided.
+            if self.end_user_id and not self.tracing_user_id and _serving_trace_end_user_enabled():
+                self.tracing_user_id = self.end_user_id
             run_name = f"{self.flow_name} - {self.flow_id}"
             await self.tracing_service.start_tracers(
                 run_id=uuid.UUID(self._run_id),
@@ -3104,6 +3137,9 @@ class Graph:
         # A subgraph extends the parent's run, so it inherits the ephemeral
         # (no-persist) decision too.
         subgraph.persist_messages = self.persist_messages
+        # Sub-flows and loop iterations run under the same end user as the parent, so
+        # the identity carrier propagates down (memory scopes to the same end user).
+        subgraph.end_user_id = self.end_user_id
         subgraph.source_flow_id = self.source_flow_id
         subgraph._is_subgraph = True
 

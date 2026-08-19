@@ -36,6 +36,11 @@ from lfx.services.model_provider_policy import (
 from lfx.services.settings.service import SettingsService
 from lfx.utils.component_aliases import ComponentIdentityIndex, build_component_identity_index
 from lfx.utils.flow_validation import CustomComponentValidationError
+from lfx.workflow.end_user_identity import (
+    EndUserIdentityRequiredError,
+    end_user_required_detail,
+    resolve_serving_scope,
+)
 
 from langflow.api.utils import (
     CurrentActiveUser,
@@ -367,6 +372,7 @@ async def simple_run_flow(
     context: dict | None = None,
     run_id: str | None = None,
     expose_error_details: bool = False,
+    http_request: Request | None = None,
 ):
     validate_input_and_tweaks(input_request)
     policy_context_token = set_current_model_provider_policy_context(
@@ -407,6 +413,37 @@ async def simple_run_flow(
         run_id_uuid = uuid4() if run_id is None else UUID(run_id)
         run_id = str(run_id_uuid)
         graph.set_run_id(run_id)
+
+        # Serving-plane end-user session scoping (shared with the v2 workflow router):
+        # merge an identified end-user into the effective session_id so per-user memory
+        # is isolated, and mark an anonymous run non-persisting. resolve_serving_scope
+        # returns None under the default settings (feature off), so v1 /run, webhook and
+        # every editor-plane caller are byte-for-byte unchanged. Callers that cannot
+        # supply the request (no header available) pass http_request=None and skip it.
+        effective_session_id = input_request.session_id
+        if http_request is not None:
+            try:
+                scoped = resolve_serving_scope(
+                    http_request=http_request,
+                    requested_session_id=input_request.session_id,
+                    # run_graph_internal falls back to the flow id when no session id is
+                    # supplied; mirror that here so an identified run with no session id
+                    # scopes to ``<end-user>::<flow_id>`` rather than a bare flow id.
+                    default_session_id=flow_id_str,
+                )
+            except EndUserIdentityRequiredError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=end_user_required_detail(exc),
+                ) from exc
+            if scoped is not None:
+                effective_session_id = scoped.session_id
+                graph.persist_messages = scoped.persist
+                # Carry the end-user identity onto the graph so services (chat memory,
+                # and later telemetry / agent file writes) scope per-user state to the
+                # end user. None for an anonymous run.
+                graph.end_user_id = scoped.end_user_id
+
         inputs = None
         if input_request.input_value is not None:
             inputs = [
@@ -443,6 +480,11 @@ async def simple_run_flow(
                 flow_id=flow.id,
                 user_id=user_id,
                 job_type=JobType.WORKFLOW,
+                # Record the serving end user (set on the graph by resolve_serving_scope) so
+                # status/stop isolate to it; user_id stays the executing SID. See F8. Defensive
+                # getattr: the warm-run path may hand back a lightweight graph stand-in without
+                # this attribute, matching every other end_user_id read in the codebase.
+                end_user_id=getattr(graph, "end_user_id", None),
             )
             # The funnel default. Binding is outermost-wins, so a caller that already named its
             # surface (webhook, mcp, openai_responses) keeps it and only the bare v1 route lands
@@ -453,7 +495,7 @@ async def simple_run_flow(
                     run_graph_internal,
                     graph=graph,
                     flow_id=flow_id_str,
-                    session_id=input_request.session_id,
+                    session_id=effective_session_id,
                     inputs=inputs,
                     outputs=outputs,
                     stream=stream,
@@ -518,6 +560,7 @@ async def simple_run_flow_task(
     run_id: str | None = None,
     emit_events: bool = False,
     flow_id: str | None = None,
+    http_request: Request | None = None,
 ):
     """Run a flow task as a BackgroundTask, therefore it should not throw exceptions.
 
@@ -532,6 +575,8 @@ async def simple_run_flow_task(
         run_id: Unique ID for this run
         emit_events: Whether to emit events to webhook_event_manager (for UI feedback)
         flow_id: Flow ID for event emission (required if emit_events=True)
+        http_request: The incoming HTTP request, forwarded so serving-plane end-user
+            session scoping can read the trusted identity header (None to skip).
     """
     should_emit = emit_events and flow_id
 
@@ -561,6 +606,7 @@ async def simple_run_flow_task(
                 event_manager=effective_event_manager,
                 run_id=run_id,
                 expose_error_details=api_key_user is not None and _caller_owns_flow(flow, api_key_user),
+                http_request=http_request,
             )
 
         if should_emit and flow_id is not None:
@@ -671,6 +717,7 @@ async def run_flow_generator(
     context: dict | None = None,
     *,
     expose_error_details: bool = False,
+    http_request: Request | None = None,
 ) -> None:
     """Executes a flow asynchronously and manages event streaming to the client.
 
@@ -685,6 +732,8 @@ async def run_flow_generator(
         client_consumed_queue (asyncio.Queue): Tracks client consumption of events
         context (dict | None): Optional context to pass to the flow
         expose_error_details: Whether client events may contain owner debugging details.
+        http_request: The incoming HTTP request, forwarded so serving-plane end-user
+            session scoping can read the trusted identity header (None to skip).
 
     Events Generated:
         - "add_message": Sent when new messages are added during flow execution
@@ -707,6 +756,7 @@ async def run_flow_generator(
             event_manager=event_manager,
             context=context,
             expose_error_details=expose_error_details,
+            http_request=http_request,
         )
         event_manager.on_end(data={"result": result.model_dump()})
         await client_consumed_queue.get()
@@ -854,6 +904,24 @@ async def _run_flow_internal(
 
     start_time = time.perf_counter()
 
+    # Required-identity gate must fire BEFORE the streaming branch: that branch returns a
+    # StreamingResponse with 200 headers before simple_run_flow runs, so its 401 would only ever
+    # arrive as an in-stream error event. Enforce it synchronously here (idempotent with the scope
+    # simple_run_flow applies again on the same http_request). The non-stream path also flows
+    # through this — harmless, it already surfaced the 401 by propagation. Mirrors the webhook
+    # pre-check (I3); kept outside any try so the 401 is not rewritten. See BUG-01.
+    try:
+        resolve_serving_scope(
+            http_request=http_request,
+            requested_session_id=input_request.session_id,
+            default_session_id=str(flow.id),
+        )
+    except EndUserIdentityRequiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=end_user_required_detail(exc),
+        ) from exc
+
     if stream:
         asyncio_queue: asyncio.Queue = asyncio.Queue()
         asyncio_queue_client_consumed: asyncio.Queue = asyncio.Queue()
@@ -867,6 +935,7 @@ async def _run_flow_internal(
                 client_consumed_queue=asyncio_queue_client_consumed,
                 context=context,
                 expose_error_details=expose_error_details,
+                http_request=http_request,
             )
         )
 
@@ -890,6 +959,7 @@ async def _run_flow_internal(
             context=context,
             run_id=run_id,
             expose_error_details=expose_error_details,
+            http_request=http_request,
         )
         end_time = time.perf_counter()
         background_tasks.add_task(
@@ -1237,6 +1307,19 @@ async def webhook_run_flow(
 
     raise_if_hitl_unsupported(flow.data or {})
 
+    # The run executes in a fire-and-forget background task that never raises, so the identity gate
+    # inside simple_run_flow can't surface its 401 from the webhook. Enforce it synchronously here so
+    # a required-but-absent end-user identity is rejected BEFORE the task is scheduled (idempotent
+    # with the scoping simple_run_flow does again on the same http_request). See I3. Kept outside the
+    # try below so the 401 is not rewritten to a 500 by its generic handler.
+    try:
+        resolve_serving_scope(http_request=request, requested_session_id=None, default_session_id=str(flow.id))
+    except EndUserIdentityRequiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=end_user_required_detail(exc),
+        ) from exc
+
     try:
         # get all webhook components in the flow
         webhook_components = get_all_webhook_components_in_flow(flow.data)
@@ -1270,6 +1353,7 @@ async def webhook_run_flow(
                 run_id=run_id,
                 emit_events=has_ui_listeners,
                 flow_id=flow_id_str,
+                http_request=request,
             )
         )
         # Fire-and-forget: log exceptions but don't block

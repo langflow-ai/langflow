@@ -11,6 +11,11 @@ from lfx.log.logger import logger
 from lfx.observability import execution_protocol
 from lfx.schema.openai_responses_schemas import create_openai_error, create_openai_error_chunk
 from lfx.utils.flow_validation import CustomComponentValidationError
+from lfx.workflow.end_user_identity import (
+    EndUserIdentityRequiredError,
+    end_user_required_detail,
+    resolve_serving_scope,
+)
 
 from langflow.api.utils import extract_global_variables_from_headers
 from langflow.api.utils.execution_errors import error_for_client
@@ -68,6 +73,7 @@ async def run_flow_for_openai_responses(
     *,
     stream: bool = False,
     variables: dict[str, str] | None = None,
+    http_request: Request | None = None,
 ) -> OpenAIResponsesResponse | StreamingResponse:
     """Run a flow for OpenAI Responses API compatibility."""
     expose_error_details = _caller_owns_flow(flow, api_key_user)
@@ -128,6 +134,7 @@ async def run_flow_for_openai_responses(
                         client_consumed_queue=asyncio_queue_client_consumed,
                         context=context,
                         expose_error_details=expose_error_details,
+                        http_request=http_request,
                     )
                 )
 
@@ -483,6 +490,7 @@ async def run_flow_for_openai_responses(
             api_key_user=api_key_user,
             context=context,
             expose_error_details=expose_error_details,
+            http_request=http_request,
         )
 
     # Extract output text, tool calls, and usage from result
@@ -692,6 +700,20 @@ async def create_response(
             return _flow_not_found_response(request.model)
         raise
 
+    # Required-identity gate must fire BEFORE the run: create_response wraps the run in a blanket
+    # ``except Exception`` (below) that converts any raise — including the identity 401 from
+    # simple_run_flow — into an OpenAIErrorResponse returned at the route's default 200, and the
+    # streaming variant returns before the run even executes. Enforce it synchronously here so a
+    # required-but-absent identity is a real 401 (idempotent with the scope simple_run_flow applies
+    # again). Mirrors the webhook pre-check (I3). See BUG-01.
+    try:
+        resolve_serving_scope(http_request=http_request, requested_session_id=None, default_session_id=str(flow.id))
+    except EndUserIdentityRequiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=end_user_required_detail(exc),
+        ) from exc
+
     try:
         # Process the request
         result = await run_flow_for_openai_responses(
@@ -700,6 +722,7 @@ async def create_response(
             api_key_user=api_key_user,
             stream=request.stream,
             variables=variables,
+            http_request=http_request,
         )
 
     except CustomComponentValidationError as exc:

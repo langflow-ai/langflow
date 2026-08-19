@@ -9,6 +9,7 @@ from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
 from functools import wraps
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, ParamSpec, TypeVar
 from urllib.parse import quote, unquote, urlparse
 from uuid import UUID, uuid4
@@ -63,6 +64,12 @@ EXCLUDED_FLOWS_META_KEY = "langflow.org/excluded-flows"
 current_request_variables_ctx: ContextVar[dict[str, str] | None] = ContextVar(
     "current_request_variables_ctx", default=None
 )
+# Carries the inbound request's headers into the deep MCP tool dispatch. The MCP SDK invokes
+# handle_call_tool through its own machinery, so the live FastAPI request is not on the call
+# chain; the streamable/SSE endpoint stashes ``request.headers`` here (same pattern as
+# current_request_variables_ctx) so a tool run can scope to the serving end-user identity via
+# the same ``resolve_serving_scope`` path /run and /workflows use. None outside a request.
+current_request_headers_ctx: ContextVar[Any] = ContextVar("current_request_headers_ctx", default=None)
 
 
 def handle_mcp_errors(func: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[T]]:
@@ -392,6 +399,13 @@ async def handle_call_tool(
                 progress_task = asyncio.create_task(send_progress_updates(server.request_context.meta.progressToken))
 
             try:
+                # Scope the run to the serving end-user identity exactly as /run and
+                # /workflows do: the MCP SDK dispatch has no live request on the call
+                # chain, so replay the endpoint-captured headers through a minimal shim
+                # (resolve_serving_scope only needs ``headers.get``). None -> feature off
+                # / no request -> scoping skipped, byte-for-byte the prior behavior.
+                req_headers = current_request_headers_ctx.get()
+                http_request_shim = SimpleNamespace(headers=req_headers) if req_headers is not None else None
                 try:
                     with execution_protocol("mcp"):
                         result = await simple_run_flow(
@@ -401,6 +415,7 @@ async def handle_call_tool(
                             api_key_user=current_user,
                             context=exec_context,
                             expose_error_details=caller_owns_resource(flow.user_id),
+                            http_request=http_request_shim,
                         )
                     # Process all outputs and messages, ensuring no duplicates
                     processed_texts = set()

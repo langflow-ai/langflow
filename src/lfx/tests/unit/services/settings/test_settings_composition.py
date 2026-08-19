@@ -269,6 +269,8 @@ EXPECTED_FIELDS = {
     "serving_end_user_header",
     "serving_trust_proxy_headers",
     "serving_end_user_required",
+    "serving_trace_end_user",
+    "serving_internal_mcp_hosts",
 }
 
 
