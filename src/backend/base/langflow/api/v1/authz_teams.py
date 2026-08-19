@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from lfx.log.logger import logger
 from lfx.services.authorization import AuthorizationMutation, AuthorizationMutationKind
 from lfx.utils.util_strings import escape_like_pattern
@@ -49,6 +49,24 @@ def _require_superuser(user) -> None:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Superuser required to administer teams.",
         )
+
+
+async def _require_superuser_dependency(current_user: CurrentActiveUser) -> None:
+    """Run the superuser gate as a route dependency, i.e. before body validation.
+
+    FastAPI solves a route's ``dependencies`` before validating that route's own
+    body, so an unauthorised caller is refused whatever they post. Gated only in
+    the endpoint body, they first receive the same 422 field names and enum
+    values a superuser would, which lets them map the request contract of a
+    route they cannot invoke.
+
+    The in-body call is kept as well: it is the gate for anything that reaches
+    the endpoint function without FastAPI resolving dependencies.
+    """
+    _require_superuser(current_user)
+
+
+SUPERUSER_ONLY = [Depends(_require_superuser_dependency)]
 
 
 # --- teams ---------------------------------------------------------------- #
@@ -94,8 +112,8 @@ async def read_team(
     return TeamRead.model_validate(team)
 
 
-@router.post("", response_model=TeamRead, status_code=status.HTTP_201_CREATED)
-@router.post("/", response_model=TeamRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=TeamRead, status_code=status.HTTP_201_CREATED, dependencies=SUPERUSER_ONLY)
+@router.post("/", response_model=TeamRead, status_code=status.HTTP_201_CREATED, dependencies=SUPERUSER_ONLY)
 async def create_team(
     payload: TeamCreate,
     current_user: CurrentActiveUser,
@@ -145,7 +163,7 @@ async def create_team(
     return TeamRead.model_validate(team)
 
 
-@router.patch("/{team_id}", response_model=TeamRead)
+@router.patch("/{team_id}", response_model=TeamRead, dependencies=SUPERUSER_ONLY)
 async def update_team(
     team_id: UUID,
     payload: TeamUpdate,
@@ -213,7 +231,7 @@ async def update_team(
     return TeamRead.model_validate(team)
 
 
-@router.delete("/{team_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{team_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=SUPERUSER_ONLY)
 async def delete_team(
     team_id: UUID,
     current_user: CurrentActiveUser,
@@ -290,6 +308,7 @@ async def list_members(
     "/{team_id}/members",
     response_model=TeamMemberRead,
     status_code=status.HTTP_201_CREATED,
+    dependencies=SUPERUSER_ONLY,
 )
 async def add_member(
     team_id: UUID,
@@ -356,6 +375,7 @@ async def add_member(
 @router.delete(
     "/{team_id}/members/{user_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=SUPERUSER_ONLY,
 )
 async def remove_member(
     team_id: UUID,
