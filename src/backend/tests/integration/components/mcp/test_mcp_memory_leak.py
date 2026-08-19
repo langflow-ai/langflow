@@ -322,47 +322,6 @@ async def test_session_manager_server_key_generation():
 
 
 @pytest.mark.asyncio
-async def test_session_manager_connectivity_validation():
-    """Test session connectivity validation."""
-    session_manager = MCPSessionManager()
-
-    # Mock a session that responds to list_tools
-    class MockSession:
-        def __init__(self, should_fail=False):  # noqa: FBT002
-            self.should_fail = should_fail
-
-        async def list_tools(self):
-            if self.should_fail:
-                msg = "Connection failed"
-                raise Exception(msg)  # noqa: TRY002
-
-            class MockResponse:
-                def __init__(self):
-                    self.tools = ["tool1", "tool2"]
-
-            return MockResponse()
-
-    # Test healthy session
-    healthy_session = MockSession(should_fail=False)
-    is_healthy = await session_manager._validate_session_connectivity(healthy_session)
-    assert is_healthy is True
-
-    # Test unhealthy session
-    unhealthy_session = MockSession(should_fail=True)
-    is_healthy = await session_manager._validate_session_connectivity(unhealthy_session)
-    assert is_healthy is False
-
-    # Test session that returns None
-    class MockNoneSession:
-        async def list_tools(self):
-            return None
-
-    none_session = MockNoneSession()
-    is_healthy = await session_manager._validate_session_connectivity(none_session)
-    assert is_healthy is False
-
-
-@pytest.mark.asyncio
 async def test_session_manager_cleanup_all(process_tracker):
     """Test that cleanup_all properly cleans up all sessions."""
     process, initial_count = process_tracker

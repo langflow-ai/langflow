@@ -77,7 +77,7 @@ This component has two modes, depending on the type of server you want to access
 Every Langflow project runs a separate MCP server that exposes the project's flows as MCP tools.
 For more information about your projects' MCP servers, including exposing flows as MCP tools, see [Use Langflow as an MCP server](/mcp-server).
 
-Langflow MCP servers support both the **streamable HTTP** transport and **Server-Sent Events (SSE)** as a fallback.
+Langflow MCP servers support the **streamable HTTP** transport and, for backward compatibility, the legacy **Server-Sent Events (SSE)** transport.
 
 To leverage flows-as-tools, register your Langflow MCP endpoint as a server first, and then add the **MCP Tools** component from the <McpIcon /> **MCP** sidebar.
 
