@@ -20,6 +20,7 @@ import { useGetIngestionJobStatus } from "@/controllers/API/queries/knowledge-ba
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import useAlertStore from "@/stores/alertStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import {
   type MetadataPair,
   metadataPairsToFormValue,
@@ -98,6 +99,9 @@ export function useKnowledgeBaseForm({
   });
   const { data: globalVariables = [], isFetched: areGlobalVariablesFetched } =
     useGetGlobalVariables();
+  const localVectorStoreAvailable = useUtilityStore(
+    (state) => state.localVectorStoreAvailable,
+  );
   const hasAppliedBackendDefaults = useRef(false);
 
   // Transform provider data into ModelOption[] for embedding models only
@@ -160,8 +164,9 @@ export function useKnowledgeBaseForm({
   const [showAdvanced, setShowAdvanced] = useState(!hideAdvanced);
 
   const defaultBackendSelection = useMemo(
-    () => getDefaultDBProviderConfig(globalVariables),
-    [globalVariables],
+    () =>
+      getDefaultDBProviderConfig(globalVariables, localVectorStoreAvailable),
+    [globalVariables, localVectorStoreAvailable],
   );
   const [isFilePanelOpen, setIsFilePanelOpen] = useState(false);
 
@@ -185,6 +190,9 @@ export function useKnowledgeBaseForm({
   // Preview state
   const [chunkPreviews, setChunkPreviews] = useState<ChunkPreview[]>([]);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+  // True when the last chunk-preview request errored (e.g. overlap > size). Gates
+  // the create button so a config the backend already rejected can't be submitted.
+  const [chunkPreviewFailed, setChunkPreviewFailed] = useState(false);
   const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
   const [selectedPreviewFileIndex, setSelectedPreviewFileIndex] = useState(0);
 
@@ -316,6 +324,7 @@ export function useKnowledgeBaseForm({
     setMetadataPairs([]);
     setPerFileMetadata({});
     setChunkPreviews([]);
+    setChunkPreviewFailed(false);
     setCurrentChunkIndex(0);
     setSelectedPreviewFileIndex(0);
     setCurrentStep(1);
@@ -330,10 +339,12 @@ export function useKnowledgeBaseForm({
   const generateChunkPreviews = useCallback(async () => {
     if (files.length === 0) {
       setChunkPreviews([]);
+      setChunkPreviewFailed(false);
       return;
     }
 
     setIsGeneratingPreview(true);
+    setChunkPreviewFailed(false);
     try {
       const selectedFile = files[selectedPreviewFileIndex] || files[0];
       const formData = new FormData();
@@ -377,6 +388,7 @@ export function useKnowledgeBaseForm({
         list: [err?.response?.data?.detail || err?.message || "Unknown error"],
       });
       setChunkPreviews([]);
+      setChunkPreviewFailed(true);
     } finally {
       setIsGeneratingPreview(false);
     }
@@ -411,7 +423,13 @@ export function useKnowledgeBaseForm({
     }
     if (!isAddSourcesMode) {
       const selectedProvider = getDBProviderOption(backendType);
-      if (!isDBProviderConfigured(backendType, globalVariables)) {
+      if (
+        !isDBProviderConfigured(
+          backendType,
+          globalVariables,
+          localVectorStoreAvailable,
+        )
+      ) {
         errors.backend = `${selectedProvider.label} must be configured in DB Providers settings before it can be used.`;
       } else {
         const backendErrors = validateBackendConfig(backendType, backendConfig);
@@ -445,6 +463,7 @@ export function useKnowledgeBaseForm({
     backendType,
     backendConfig,
     globalVariables,
+    localVectorStoreAvailable,
     files,
     existingKnowledgeBaseNames,
     metadataPairs,
@@ -719,6 +738,7 @@ export function useKnowledgeBaseForm({
     // Preview
     chunkPreviews,
     isGeneratingPreview,
+    chunkPreviewFailed,
     currentChunkIndex,
     setCurrentChunkIndex,
     selectedPreviewFileIndex,

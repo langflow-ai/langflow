@@ -16,9 +16,9 @@ from sqlmodel import col, func, select
 
 from langflow.api.utils.kb_helpers import (
     KBIngestionHelper,
-    KBStorageHelper,
     resolve_backend_selection,
     resolve_embedding_selection,
+    resolve_local_store_path,
 )
 from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
 from langflow.services.database.models.memory_base.model import (
@@ -32,7 +32,6 @@ from langflow.services.memory_base.kb_path_helpers import (
     hash_session_id,
     resolve_kb_username,
     resolve_kb_username_by_user_id,
-    validate_kb_path,
 )
 from langflow.services.memory_base.task import IngestionRequest, ingest_memory_task
 
@@ -247,29 +246,26 @@ async def check_mismatch(
         return False
 
     kb_username = await resolve_kb_username_by_user_id(user_id)
-    kb_root = KBStorageHelper.get_root_path()
-    if not kb_root:
-        return False
-    kb_path = kb_root / kb_username / mb.kb_name
-    validate_kb_path(kb_root, kb_path)
 
-    # Ask the vector store, not the on-disk sidecar. For a remote-backed Memory
-    # Base the local directory says nothing about whether the vectors are
-    # actually there, and on a replica that never ran an ingestion it may not
-    # exist at all — which the old check read as "empty" and would answer by
-    # regenerating a Memory Base that was perfectly intact.
+    # Ask the vector store, not the filesystem. For a remote-backed Memory Base
+    # the local directory says nothing about whether the vectors are actually
+    # there, and on a replica that never ran an ingestion it may not exist at
+    # all — which the old check read as "empty" and would answer by regenerating
+    # a Memory Base that was perfectly intact.
     try:
-        backend_type, backend_config = await resolve_backend_selection(
-            user_id=user_id, kb_name=mb.kb_name, kb_path=kb_path
-        )
+        backend_type, backend_config = await resolve_backend_selection(user_id=user_id, kb_name=mb.kb_name)
     except ValueError:
-        # No record and no sidecar: nothing was ever provisioned, so the
+        # No ``knowledge_base`` row: nothing was ever provisioned, so the
         # processed-rows count genuinely has no vectors behind it.
         return True
 
-    embedding_provider, embedding_model = await resolve_embedding_selection(
-        user_id=user_id, kb_name=mb.kb_name, kb_path=kb_path
+    kb_path = resolve_local_store_path(
+        mb.kb_name,
+        kb_username,
+        backend_type=backend_type,
+        backend_config=backend_config,
     )
+    embedding_provider, embedding_model = await resolve_embedding_selection(user_id=user_id, kb_name=mb.kb_name)
     user_stub = types.SimpleNamespace(id=user_id)
     embeddings = await KBIngestionHelper.build_embeddings(embedding_provider, embedding_model, user_stub)
     backend = create_backend(
@@ -401,28 +397,25 @@ async def purge_session_data(
         kb_username = await resolve_kb_username(db, user_id)
 
     # ---- 1. Delete vector-store chunks (best-effort, outside the DB session) ----
-    kb_root = KBStorageHelper.get_root_path()
-    if kb_root:
-        for mb, mbs in pairs:
-            try:
-                await _delete_chunks_for_session(
-                    kb_root=kb_root,
-                    kb_username=kb_username,
-                    kb_name=mb.kb_name,
-                    user_id=user_id,
-                    session_id=mbs.session_id,
-                )
-            # Broad on purpose: the purge now runs against whichever backend the
-            # KB is on, so the failure modes include remote transport errors, not
-            # just the local Chroma/OS set. One session's failure must not abort
-            # the purge for the rest.
-            except Exception:  # noqa: BLE001
-                await logger.aerror(
-                    "Failed to purge chunks for memory_base=%s session=%s",
-                    mb.id,
-                    hash_session_id(mbs.session_id),
-                    exc_info=True,
-                )
+    for mb, mbs in pairs:
+        try:
+            await _delete_chunks_for_session(
+                kb_username=kb_username,
+                kb_name=mb.kb_name,
+                user_id=user_id,
+                session_id=mbs.session_id,
+            )
+        # Broad on purpose: the purge runs against whichever backend the KB is
+        # on, so the failure modes include remote transport errors, not just the
+        # local Chroma/OS set. One session's failure must not abort the purge for
+        # the rest.
+        except Exception:  # noqa: BLE001
+            await logger.aerror(
+                "Failed to purge chunks for memory_base=%s session=%s",
+                mb.id,
+                hash_session_id(mbs.session_id),
+                exc_info=True,
+            )
 
     # ---- 2. Delete tracking rows in a single transaction ----
     pair_keys = [(mb.id, mbs.session_id) for mb, mbs in pairs]
@@ -458,7 +451,6 @@ async def purge_session_data(
 
 async def _delete_chunks_for_session(
     *,
-    kb_root,
     kb_username: str,
     kb_name: str,
     user_id: uuid.UUID,
@@ -472,16 +464,17 @@ async def _delete_chunks_for_session(
     Passing Chroma's explicit ``{"$eq": ...}`` operator form here would silently
     match nothing on a remote backend.
     """
-    kb_path = kb_root / kb_username / kb_name
-    validate_kb_path(kb_root, kb_path)
-
-    embedding_provider, embedding_model = await resolve_embedding_selection(
-        user_id=user_id, kb_name=kb_name, kb_path=kb_path
-    )
+    embedding_provider, embedding_model = await resolve_embedding_selection(user_id=user_id, kb_name=kb_name)
     user_stub = types.SimpleNamespace(id=user_id)
     embeddings = await KBIngestionHelper.build_embeddings(embedding_provider, embedding_model, user_stub)
 
-    backend_type, backend_config = await resolve_backend_selection(user_id=user_id, kb_name=kb_name, kb_path=kb_path)
+    backend_type, backend_config = await resolve_backend_selection(user_id=user_id, kb_name=kb_name)
+    kb_path = resolve_local_store_path(
+        kb_name,
+        kb_username,
+        backend_type=backend_type,
+        backend_config=backend_config,
+    )
     backend = create_backend(
         backend_type,
         kb_name=kb_name,

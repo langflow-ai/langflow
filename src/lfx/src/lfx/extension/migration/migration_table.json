@@ -1532,6 +1532,11 @@
       "added_in": "1.11.0"
     },
     {
+      "bare_class_name": "OrcaRouterComponent",
+      "target": "ext:orcarouter:OrcaRouterComponent@official",
+      "added_in": "1.12.0"
+    },
+    {
       "bare_class_name": "VllmComponent",
       "target": "ext:vllm:VllmComponent@official",
       "added_in": "1.11.0"
