@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+from pathlib import Path
 from typing import Any
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, DropdownInput, IntInput, MultilineInput, Output, SecretStrInput, StrInput
 from lfx.schema.dataframe import DataFrame
+from lfx.utils.file_path_security import component_file_access_scopes
 from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 from lfx_ibm.components.ibm.db2_security import (
     create_safe_error_message,
@@ -224,15 +227,22 @@ class WatsonxDataPrestoComponent(Component):
         kwargs["_password"] = secret
         return kwargs
 
-    def _tls_verify(self) -> str | bool:
+    def _tls_verify(self) -> tuple[str | bool, str | None]:
+        """Return the requests ``verify`` value plus any temporary CA file the caller must remove.
+
+        An ``https://`` CA file is downloaded to a temporary path, so ownership of that file has
+        to travel back to the caller. Discarding it leaks one file per query.
+        """
         ca_file = (getattr(self, "ssl_ca_file", "") or "").strip()
         if ca_file:
-            cert_path, _, error = validate_and_prepare_ssl_certificate(ca_file)
+            cert_path, is_temp, error = validate_and_prepare_ssl_certificate(
+                ca_file, scope_ids=component_file_access_scopes(self)
+            )
             if error or not cert_path:
                 msg = f"Invalid SSL CA certificate: {error or 'unreadable file'}"
                 raise ValueError(msg)
-            return cert_path
-        return bool(getattr(self, "verify_ssl", True))
+            return cert_path, (cert_path if is_temp else None)
+        return bool(getattr(self, "verify_ssl", True)), None
 
     def _max_rows(self) -> int:
         rows = int(getattr(self, "max_rows", DEFAULT_MAX_ROWS) or DEFAULT_MAX_ROWS)
@@ -268,7 +278,7 @@ class WatsonxDataPrestoComponent(Component):
             msg = "SQL Query is required."
             raise ValueError(msg)
         kwargs = self._connection_kwargs()
-        verify = self._tls_verify()
+        verify, temp_cert_path = self._tls_verify()
         max_rows = self._max_rows()
         try:
             rows = await asyncio.to_thread(self._run_sync, kwargs, query, max_rows, verify=verify)
@@ -277,6 +287,12 @@ class WatsonxDataPrestoComponent(Component):
         except Exception as exc:
             msg = create_safe_error_message(exc, "watsonx.data Presto query failed")
             raise ValueError(msg) from exc
+        finally:
+            # ``_run_sync`` closes the connection before returning, so the downloaded CA file
+            # is no longer needed on either the success or the failure path.
+            if temp_cert_path:
+                with contextlib.suppress(OSError):
+                    Path(temp_cert_path).unlink(missing_ok=True)
         frame = DataFrame(rows)
         self.status = f"{len(frame)} row(s)"
         return frame

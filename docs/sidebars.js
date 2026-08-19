@@ -536,6 +536,7 @@ module.exports = {
             "Components/bundles-milvus",
             "Components/bundles-mistralai",
             "Components/bundles-mongodb",
+            "Components/bundles-mrscraper",
             "Components/bundles-nextplaid",
             "Components/bundles-notion",
             "Components/bundles-novita",

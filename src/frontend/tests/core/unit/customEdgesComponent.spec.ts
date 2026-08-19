@@ -61,6 +61,24 @@ test(
     await page.mouse.up();
 
     await expect(page.locator(".react-flow__edge-interaction")).toHaveCount(2);
+
+    // The handles resolved above by testid must also be reachable by their
+    // accessible name — confirms the aria-label targets the same element.
+    await expect(
+      page.getByRole("button", { name: /Output handle for Toolset/ }).first(),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /Input handle for Tools/ }).first(),
+    ).toBeVisible();
+
+    // The newly created edge exposes an accessible name identifying the
+    // connection's source and target. The canvas is unlocked here, so
+    // ReactFlow's EdgeWrapper renders it as a focusable role="group" — not
+    // role="img", which is a pruned leaf reserved for the locked/preview
+    // canvas (see get-edge-aria-label.ts).
+    await expect(
+      page.getByRole("group", { name: /^Edge from .* to .*/ }).last(),
+    ).toBeVisible();
   },
 );
 
