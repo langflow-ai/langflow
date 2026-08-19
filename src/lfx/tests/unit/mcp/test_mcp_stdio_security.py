@@ -979,3 +979,25 @@ def test_cmd_benign_switch_prefix_still_binds_payload_to_the_allow_list(args):
     """Allowing a benign prefix must not let the wrapped payload escape the allow-list."""
     with pytest.raises(MCPStdioSecurityError):
         validate_mcp_stdio_config("cmd", args, {})
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        pytest.param(["/c", "uvx mcp-proxy && calc.exe"], id="and-chain"),
+        pytest.param(["/c", "uvx mcp-proxy; whoami"], id="semicolon-chain"),
+        pytest.param(["/c", "uvx", "mcp-proxy", "|", "evil"], id="pipe-in-split-payload"),
+        pytest.param(["/d", "/c", "uvx mcp-proxy & calc.exe"], id="benign-switch-then-chain"),
+        pytest.param(["/c", "uvx 'unterminated"], id="unparseable-quoting"),
+    ],
+)
+def test_cmd_payload_control_chars_raise_the_security_error_type(args):
+    """A cmd payload denial must arrive as MCPStdioSecurityError, like every other denial.
+
+    ``parse_mcp_shell_wrapper`` is reached before the argument metacharacter scan and signals
+    shell control characters (and unparseable quoting) with a bare ``ValueError``. The
+    equivalent ``sh -c 'uvx mcp-proxy && calc'`` denial comes back as ``MCPStdioSecurityError``,
+    so without the conversion the exception type depended on which shell the caller named.
+    """
+    with pytest.raises(MCPStdioSecurityError):
+        validate_mcp_stdio_config("cmd", args, {})

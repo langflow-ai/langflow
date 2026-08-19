@@ -70,12 +70,18 @@ async def test_build_flow_validates_request_data_instead_of_stale_db_flow(
     request_data["nodes"][0]["data"]["node"]["display_name"] = "Updated Request Flow"
     saved_flow_validation_message = "saved flow should not be validated when request data is provided"
 
-    def fail_if_saved_flow_is_validated(target):
+    # ``prepare_flow_build_for_user`` is the preflight seam: build_flow runs it on the request
+    # body when one is present and on the stored graph otherwise, so seeing the stored data
+    # here would mean the stale DB copy was the one policy-checked and built.
+    validated_targets = []
+
+    async def fail_if_saved_flow_is_validated(target, *, is_superuser):  # noqa: ARG001
         if target == flow_data["data"]:
             raise ValueError(saved_flow_validation_message)
+        validated_targets.append(target)
 
     monkeypatch.setattr(
-        "langflow.api.v1.chat.validate_flow_for_current_settings",
+        "langflow.api.v1.chat.prepare_flow_build_for_user",
         fail_if_saved_flow_is_validated,
     )
 
@@ -87,6 +93,10 @@ async def test_build_flow_validates_request_data_instead_of_stale_db_flow(
 
     assert response.status_code == codes.OK
     assert "job_id" in response.json()
+    # Pin that preflight ran at all: a seam that stopped being called would otherwise let
+    # this test pass for the wrong reason.
+    assert len(validated_targets) == 1
+    assert validated_targets[0]["nodes"][0]["data"]["node"]["display_name"] == "Updated Request Flow"
 
 
 async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, logged_in_headers):
@@ -694,8 +704,9 @@ async def test_build_public_tmp_checks_public_access_before_validation(
     def fail_if_validation_runs(_target):
         raise ValueError(public_access_validation_message)
 
+    # First validator on the public build path, immediately after the public-access gate.
     monkeypatch.setattr(
-        "langflow.api.v1.chat.validate_flow_for_current_settings",
+        "langflow.api.v1.chat.validate_public_flow_no_code_execution",
         fail_if_validation_runs,
     )
 
