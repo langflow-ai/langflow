@@ -267,29 +267,52 @@ def extract_base_command(command: str) -> str:
     return base_command
 
 
+# Last-known-good hardening states. The settings service can be unavailable at
+# early import (legit default-off), but a runtime failure AFTER a successful
+# read must not silently revert an operator's enabled hardening to permissive.
+_hardening_last_known: dict[str, bool] = {"docker": False, "interpreter": False}
+
+
+def _read_hardening_flag(key: str, reader) -> bool:
+    """Read a hardening flag, failing to its last-known-good value on error.
+
+    A successful read always updates the cache (so an operator intentionally
+    disabling hardening is honored); only a failed read falls back to the
+    cached state (default False for the early-import case).
+    """
+    try:
+        value = bool(reader())
+    except Exception:  # noqa: BLE001 - settings may be unavailable; use last-known-good
+        return _hardening_last_known[key]
+    _hardening_last_known[key] = value
+    return value
+
+
 def _docker_hardening_enabled() -> bool:
     """Whether the opt-in MCP docker-arg hardening policy is active.
 
-    Reads ``LANGFLOW_MCP_SERVER_DOCKER_HARDENING`` (default False). Fails safe to False if the
-    settings service is unavailable -- the hardening is an opt-in multi-tenant control, not a
-    default, so an unreadable setting must not start rejecting previously-valid docker configs.
+    Reads ``LANGFLOW_MCP_SERVER_DOCKER_HARDENING`` (default False). Falls back to the
+    last-known-good value if the settings service is unavailable -- an unreadable
+    setting must not silently disable hardening an operator already turned on.
     """
-    try:
+
+    def _read() -> bool:
         from lfx.services.deps import get_settings_service
 
         return bool(get_settings_service().settings.mcp_server_docker_hardening)
-    except Exception:  # noqa: BLE001 - settings may be unavailable (e.g. early import); default off
-        return False
+
+    return _read_hardening_flag("docker", _read)
 
 
 def _interpreter_hardening_enabled() -> bool:
     """Whether direct Python/Node MCP entrypoints are restricted for multi-tenant use."""
-    try:
+
+    def _read() -> bool:
         from lfx.services.deps import get_settings_service
 
         return bool(get_settings_service().settings.mcp_server_interpreter_hardening)
-    except Exception:  # noqa: BLE001 - settings may be unavailable; preserve the legacy default
-        return False
+
+    return _read_hardening_flag("interpreter", _read)
 
 
 def _normalize_package_name(package_spec: str) -> str:
@@ -509,6 +532,16 @@ def validate_mcp_stdio_config(
 
     # Command allowlist.
     if command:
+        # In hardened (multi-tenant) mode the command must be a bare executable name
+        # resolved via PATH. A path-form command ('/tmp/x/node', './node') reduces to a
+        # lookalike basename ('node') that passes the allowlist while executing an
+        # attacker-chosen binary; legacy single-tenant mode keeps trusting operator paths.
+        if _is_file_path(command) and (interpreter_hardening or docker_hardening):
+            msg = (
+                f"Command '{command}' is a file path; hardened mode requires a bare command name "
+                "resolved via PATH so the allowlist cannot be bypassed by a lookalike binary."
+            )
+            raise MCPStdioSecurityError(msg)
         base_command = extract_base_command(command)
         if base_command not in ALLOWED_MCP_COMMANDS:
             allowed_list = ", ".join(sorted(ALLOWED_MCP_COMMANDS))
@@ -554,6 +587,13 @@ def validate_mcp_stdio_config(
             wrapped_args = args[2:] if wrapped_command else []
 
             if wrapped_command:
+                # Same path-bypass guard for the wrapped command (sh -c '/tmp/x/node ...').
+                if _is_file_path(wrapped_command) and (interpreter_hardening or docker_hardening):
+                    msg = (
+                        f"Shell-wrapped command '{wrapped_command}' is a file path; hardened mode "
+                        "requires a bare command name resolved via PATH."
+                    )
+                    raise MCPStdioSecurityError(msg)
                 wrapped_base = extract_base_command(wrapped_command)
                 allowed_wrapped = ALLOWED_MCP_COMMANDS - SHELL_WRAPPERS
                 if wrapped_base not in allowed_wrapped:
@@ -572,6 +612,12 @@ def validate_mcp_stdio_config(
                 if wrapped_tokens:
                     nested_command = wrapped_tokens[0]
                     nested_args = wrapped_tokens[1:] + wrapped_args
+                    if _is_file_path(nested_command) and (interpreter_hardening or docker_hardening):
+                        msg = (
+                            f"Shell-wrapped command '{nested_command}' is a file path; hardened mode "
+                            "requires a bare command name resolved via PATH."
+                        )
+                        raise MCPStdioSecurityError(msg)
                     nested_base = extract_base_command(nested_command)
                     _validate_interpreter_invocation(nested_base, nested_args, hardened=interpreter_hardening)
                     if nested_base == "docker":
