@@ -10,16 +10,15 @@ import hashlib
 import re
 from typing import TYPE_CHECKING
 
-from lfx.base.knowledge_bases.backends import BackendType, create_backend
+from lfx.base.knowledge_bases.backends import create_backend, is_local_chroma
 from lfx.log.logger import logger
 from sqlmodel import select
 
-from langflow.api.utils.kb_helpers import KBStorageHelper
+from langflow.api.utils.kb_helpers import KBStorageHelper, resolve_local_store_path, validate_kb_path
 from langflow.services.deps import session_scope
 
 if TYPE_CHECKING:
     import uuid
-    from pathlib import Path
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -34,22 +33,19 @@ class BackendProvisioningError(ValueError):
     """
 
 
-def _is_local_chroma(backend_type: str, backend_config: dict | None) -> bool:
-    """True for the default local-Chroma backend (on-disk, lazily created)."""
-    return backend_type == BackendType.CHROMA.value and (backend_config or {}).get("mode") != "cloud"
-
-
-def validate_kb_path(kb_root: Path, kb_path: Path) -> None:
-    """Assert that kb_path is contained within kb_root (path traversal guard).
-
-    Prevents crafted usernames with '..' segments from escaping the KB root directory.
-    Follows the same pattern as services/storage/local.py:save_file.
-    """
-    kb_root_resolved = kb_root.resolve()
-    kb_path_resolved = kb_path.resolve()
-    if not kb_path_resolved.is_relative_to(kb_root_resolved):
-        msg = "KB path escapes root directory"
-        raise ValueError(msg)
+# Re-exported for this module's long-standing importers. The guard itself lives in
+# ``kb_helpers`` (the lower-level module) so the import graph stays acyclic.
+__all__ = [
+    "BackendProvisioningError",
+    "delete_kb",
+    "delete_kb_remote_collection",
+    "hash_session_id",
+    "initialize_kb",
+    "resolve_kb_username",
+    "resolve_kb_username_by_user_id",
+    "sanitize_kb_name",
+    "validate_kb_path",
+]
 
 
 def hash_session_id(session_id: str) -> str:
@@ -117,15 +113,15 @@ async def initialize_kb(
       here and a failure raises :class:`BackendProvisioningError`, rejecting the
       create up front.
     """
-    kb_root = KBStorageHelper.get_root_path()
-    if not kb_root:
-        await logger.awarning("KB root path not configured — Memory Base collection will not be pre-provisioned.")
-        return
+    local = is_local_chroma(backend_type, backend_config)
+    # ``None`` for every remote backend — no settings read, no filesystem touch.
+    kb_path = resolve_local_store_path(
+        kb_name,
+        kb_username,
+        backend_type=backend_type,
+        backend_config=backend_config,
+    )
 
-    kb_path: Path = kb_root / kb_username / kb_name
-    validate_kb_path(kb_root, kb_path)
-
-    is_local_chroma = _is_local_chroma(backend_type, backend_config)
     backend = create_backend(
         backend_type,
         kb_name=kb_name,
@@ -134,7 +130,7 @@ async def initialize_kb(
         user_id=user_id,
     )
     try:
-        if is_local_chroma:
+        if local:
             # Touch the collection so it exists before the first ingestion.
             # Best-effort: it is created lazily on write anyway.
             await backend.ensure_ready()
@@ -150,14 +146,14 @@ async def initialize_kb(
         raise
     except Exception as exc:
         await logger.awarning("Initial %s setup for %s failed: %s", backend_type, kb_name, exc)
-        if not is_local_chroma:
+        if not local:
             msg = f"Could not initialize the '{backend_type}' vector store for this Memory Base: {exc}"
             raise BackendProvisioningError(msg) from exc
     finally:
         await backend.teardown()
 
 
-async def delete_kb_remote_collection(*, kb_name: str, kb_username: str, user_id: uuid.UUID) -> None:
+async def delete_kb_remote_collection(*, kb_name: str, user_id: uuid.UUID) -> None:
     """Drop the remote vector-store collection backing a Memory Base.
 
     Must run *before* the ``knowledge_base`` row is deleted: the row holds the
@@ -170,33 +166,25 @@ async def delete_kb_remote_collection(*, kb_name: str, kb_username: str, user_id
     Local Chroma is skipped: its vectors live inside the KB directory and are
     removed by :func:`delete_kb`. Every other backend (OpenSearch, Chroma Cloud,
     Astra, Mongo, Postgres) stores off-box and needs an explicit
-    ``delete_collection`` call.
+    ``delete_collection`` call — and needs no local path, which is why this no
+    longer takes a ``kb_username`` to build one from.
     """
-    from lfx.base.knowledge_bases.backends import BackendType, create_backend
-
     from langflow.api.utils.kb_helpers import resolve_backend_selection
 
-    kb_root = KBStorageHelper.get_root_path()
-    if not kb_root:
-        return
-    kb_path = kb_root / kb_username / kb_name  # only consumed by local backends
     try:
-        backend_type, backend_config = await resolve_backend_selection(
-            user_id=user_id, kb_name=kb_name, kb_path=kb_path
-        )
+        backend_type, backend_config = await resolve_backend_selection(user_id=user_id, kb_name=kb_name)
     except ValueError as exc:
-        # No row and no sidecar — nothing we can resolve a backend from.
+        # No ``knowledge_base`` row — nothing we can resolve a backend from.
         await logger.awarning("Could not resolve backend for Memory Base kb_name=%s: %s", kb_name, exc)
         return
 
     # Local Chroma keeps everything on disk; ``delete_kb`` handles it.
-    if backend_type == BackendType.CHROMA.value and (backend_config or {}).get("mode") != "cloud":
+    if is_local_chroma(backend_type, backend_config):
         return
 
     backend = create_backend(
         backend_type,
         kb_name=kb_name,
-        kb_path=kb_path,
         backend_config=backend_config,
         user_id=user_id,
     )
@@ -216,15 +204,29 @@ async def delete_kb_remote_collection(*, kb_name: str, kb_username: str, user_id
 
 
 async def delete_kb(*, kb_name: str, kb_username: str) -> None:
-    """Remove the KB directory from disk. Logs on failure, does not raise."""
+    """Remove a local-Chroma Memory Base's directory from disk.
+
+    Runs *after* the ``knowledge_base`` row has been dropped, so it cannot resolve
+    the backend to check whether this KB ever had local storage. It doesn't need
+    to: a remote-backed Memory Base simply has no directory, and the absence is
+    the answer rather than an error.
+
+    Deliberately tolerant of an unconfigured or unusable KB root. A deployment
+    that serves only remote vector stores may have no local storage at all, and
+    Memory Base deletion must not fail there. Logs on failure, never raises.
+    """
     if not kb_name:
         return
-    kb_root = KBStorageHelper.get_root_path()
-    if not kb_root:
+    try:
+        kb_root = KBStorageHelper.get_root_path()
+    except ValueError:
+        # No local storage configured — nothing on disk to remove.
         return
     kb_path = kb_root / kb_username / kb_name
-    validate_kb_path(kb_root, kb_path)
     try:
+        validate_kb_path(kb_root, kb_path)
+        if not await asyncio.to_thread(kb_path.exists):
+            return
         await asyncio.to_thread(KBStorageHelper.delete_storage, kb_path, kb_name)
     except (OSError, ValueError):
         await logger.awarning("Could not delete KB '%s' from disk after Memory Base deletion.", kb_name, exc_info=True)

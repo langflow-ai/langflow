@@ -48,6 +48,9 @@ export type UtilityStoreType = {
   setA2aEnabled: (a2aEnabled: boolean) => void;
   agenticExperienceEnabled: boolean;
   setAgenticExperienceEnabled: (agenticExperienceEnabled: boolean) => void;
+  // False on the production deployment profile, where local Chroma is refused.
+  localVectorStoreAvailable: boolean;
+  setLocalVectorStoreAvailable: (localVectorStoreAvailable: boolean) => void;
   mcpBaseUrl: string;
   setMcpBaseUrl: (mcpBaseUrl: string) => void;
   /**

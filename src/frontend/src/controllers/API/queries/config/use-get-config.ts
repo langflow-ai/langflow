@@ -50,6 +50,7 @@ export interface ConfigResponse extends BaseConfig {
   custom_component_admin_only: boolean;
   a2a_enabled: boolean;
   agentic_experience: boolean;
+  local_vector_store_available: boolean;
 }
 
 // Union type for the response (can be either public or full config)
@@ -129,6 +130,9 @@ export const useGetConfig: useQueryFunctionType<
   const setAgenticExperienceEnabled = useUtilityStore(
     (state) => state.setAgenticExperienceEnabled,
   );
+  const setLocalVectorStoreAvailable = useUtilityStore(
+    (state) => state.setLocalVectorStoreAvailable,
+  );
 
   const { query } = UseRequestProcessor();
 
@@ -183,6 +187,7 @@ export const useGetConfig: useQueryFunctionType<
         setCustomComponentAdminOnly(data.custom_component_admin_only ?? false);
         setA2aEnabled(data.a2a_enabled ?? false);
         setAgenticExperienceEnabled(data.agentic_experience ?? true);
+        setLocalVectorStoreAvailable(data.local_vector_store_available ?? true);
       }
     }
     return data;
