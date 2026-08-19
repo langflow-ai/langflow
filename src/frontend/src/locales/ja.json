@@ -1587,6 +1587,8 @@
   "modelProviders.addLanguageDeployment": "言語モデルとして「 \"{{name}}\" 」を追加する",
   "modelProviders.cancelButton": "キャンセル",
   "modelProviders.checkOllamaLibrary": "オラマ図書館をチェック",
+  "modelProviders.liveDiscoveryTitle": "No models yet",
+  "modelProviders.liveDiscoveryHint": "{{provider}} models are discovered from your account once credentials are configured. Save your credentials above to load the available models.",
   "modelProviders.configuration": "構成",
   "modelProviders.configurationSaved": "{{provider}} 設定が保存されました",
   "modelProviders.configurePrefix": "設定を行う",

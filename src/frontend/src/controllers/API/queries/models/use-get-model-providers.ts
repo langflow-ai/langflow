@@ -14,6 +14,9 @@ export interface ModelProviderInfo {
   api_docs_url?: string;
   /** Icon name from provider metadata (e.g. MODEL_PROVIDER_METADATA). */
   icon?: string;
+  /** True when the model list is discovered from the provider's endpoint
+   *  after credentials are configured (e.g. IBM WatsonX, OpenRouter, vLLM). */
+  live_discovery?: boolean;
 }
 
 export interface ModelProviderWithStatus extends ModelProviderInfo {
