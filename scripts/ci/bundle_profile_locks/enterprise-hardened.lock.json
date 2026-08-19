@@ -88,9 +88,9 @@
       "providers": [
         "lfx-ibm"
       ],
-      "requested": ">=0.2.0,<1.0.0",
-      "requirement": "lfx-ibm==0.2.0",
-      "resolved_version": "0.2.0"
+      "requested": ">=0.2.1,<1.0.0",
+      "requirement": "lfx-ibm==0.2.1",
+      "resolved_version": "0.2.1"
     },
     {
       "distribution": "lfx-ollama",
@@ -160,7 +160,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:16e322d017361d01",
+  "profile_digest": "sha256:facd43b386df904b",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
