@@ -1,8 +1,6 @@
 import { useTranslation } from "react-i18next";
-import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
 import BaseModal from "@/modals/baseModal";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { useUtilityStore } from "@/stores/utilityStore";
 import type { CardData } from "@/types/templates/types";
 import memoryChatbot from "../../../../assets/temp-pat-1.png";
 import vectorRag from "../../../../assets/temp-pat-2.png";
@@ -10,7 +8,10 @@ import multiAgent from "../../../../assets/temp-pat-3.png";
 import memoryChatbotHorizontal from "../../../../assets/temp-pat-m-1.png";
 import vectorRagHorizontal from "../../../../assets/temp-pat-m-2.png";
 import multiAgentHorizontal from "../../../../assets/temp-pat-m-3.png";
-
+import {
+  FEATURED_TEMPLATE_KEYS,
+  isTemplateVisible,
+} from "../../utils/template-availability";
 import TemplateGetStartedCardComponent from "../TemplateGetStartedCardComponent";
 
 interface GetStartedComponentProps {
@@ -24,13 +25,14 @@ export default function GetStartedComponent({
 }: GetStartedComponentProps) {
   const { t } = useTranslation();
   const examples = useFlowsManagerStore((state) => state.examples);
-  const catalogGovernanceEnabled = useUtilityStore(
-    (state) => state.catalogGovernanceEnabled,
-  );
 
-  const filteredExamples = examples.filter((example) => {
-    return !(!ENABLE_KNOWLEDGE_BASES && example.name?.includes("Knowledge"));
-  });
+  const filteredExamples = examples.filter(isTemplateVisible);
+
+  // Card order follows FEATURED_TEMPLATE_KEYS, which is also what decides
+  // whether the nav offers this tab at all.
+  const [promptingKey, ragKey, agentKey] = FEATURED_TEMPLATE_KEYS;
+  const findFeatured = (key: string) =>
+    filteredExamples.find((example) => example.name_key === key);
 
   // Define the card data
   const cardData: CardData[] = [
@@ -39,27 +41,21 @@ export default function GetStartedComponent({
       bgHorizontalImage: memoryChatbotHorizontal,
       icon: "MessagesSquare",
       category: t("templatesModal.prompting"),
-      flow: filteredExamples.find(
-        (example) => example.name_key === "basic_prompting",
-      ),
+      flow: findFeatured(promptingKey),
     },
     {
       bgImage: vectorRag,
       bgHorizontalImage: vectorRagHorizontal,
       icon: "Database",
       category: t("templatesModal.rag"),
-      flow: filteredExamples.find(
-        (example) => example.name_key === "vector_store_rag",
-      ),
+      flow: findFeatured(ragKey),
     },
     {
       bgImage: multiAgent,
       bgHorizontalImage: multiAgentHorizontal,
       icon: "Bot",
       category: t("templatesModal.agents"),
-      flow: filteredExamples.find(
-        (example) => example.name_key === "simple_agent",
-      ),
+      flow: findFeatured(agentKey),
     },
   ];
   const availableCards = cardData.filter((card) => card.flow);
@@ -69,21 +65,17 @@ export default function GetStartedComponent({
       <BaseModal.Header description={t("templatesModal.getStartedDescription")}>
         {t("templatesModal.getStarted")}
       </BaseModal.Header>
+      {/* No empty state: the nav disables this tab when a policy leaves no
+          featured card, so it cannot be opened with nothing to show. */}
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-3">
-        {availableCards.length > 0 ? (
-          availableCards.map((card) => (
-            <TemplateGetStartedCardComponent
-              key={card.flow?.name_key}
-              {...card}
-              loading={loading}
-              onFlowCreating={onFlowCreating}
-            />
-          ))
-        ) : catalogGovernanceEnabled ? (
-          <p className="col-span-full self-center text-center text-sm text-secondary-foreground">
-            {t("templatesModal.featuredCatalogPolicyEmpty")}
-          </p>
-        ) : null}
+        {availableCards.map((card) => (
+          <TemplateGetStartedCardComponent
+            key={card.flow?.name_key}
+            {...card}
+            loading={loading}
+            onFlowCreating={onFlowCreating}
+          />
+        ))}
       </div>
     </div>
   );
