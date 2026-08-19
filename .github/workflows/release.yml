@@ -388,8 +388,8 @@ jobs:
 
           if [ "$version" = "$last_released_version" ] && [ "${{ inputs.release_package_base }}" = "true" ]; then
             echo "Base pypi version $version is already released. Skipping release."
+            echo version=$version >> $GITHUB_OUTPUT
             echo skipped=true >> $GITHUB_OUTPUT
-            exit 1
           else
             echo version=$version >> $GITHUB_OUTPUT
             echo skipped=false >> $GITHUB_OUTPUT
@@ -437,8 +437,8 @@ jobs:
 
           if [ "$version" = "$last_released_version" ] && [ "${{ inputs.release_package_main }}" = "true" ]; then
             echo "Main pypi version $version is already released. Skipping release."
+            echo version=$version >> $GITHUB_OUTPUT
             echo skipped=true >> $GITHUB_OUTPUT
-            exit 1
           else
             echo version=$version >> $GITHUB_OUTPUT
             echo skipped=false >> $GITHUB_OUTPUT
@@ -486,8 +486,8 @@ jobs:
 
           if [ "$version" = "$last_released_version" ]; then
             echo "LFX pypi version $version is already released. Skipping release."
+            echo version=$version >> $GITHUB_OUTPUT
             echo skipped=true >> $GITHUB_OUTPUT
-            exit 1
           else
             echo version=$version >> $GITHUB_OUTPUT
             echo skipped=false >> $GITHUB_OUTPUT
@@ -553,8 +553,8 @@ jobs:
 
           if [ "$version" = "$last_released_version" ]; then
             echo "SDK pypi version $version is already released. Skipping release."
+            echo version=$version >> $GITHUB_OUTPUT
             echo skipped=true >> $GITHUB_OUTPUT
-            exit 1
           else
             echo version=$version >> $GITHUB_OUTPUT
             echo skipped=false >> $GITHUB_OUTPUT
@@ -1456,6 +1456,8 @@ jobs:
   create_release:
     name: Create Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     needs:
       [determine-main-version, build-main, publish-main, validate-tag-format]
     if: |
@@ -1477,14 +1479,29 @@ jobs:
       # version (main only adopts the new version via the post-release
       # back-merge). Pre-releases keep their computed tag (e.g. 1.10.0rc1),
       # but `commit` pins any newly minted tag to the release commit.
+      #
+      # `commit` is only safe while the tag is still missing. GitHub ignores
+      # target_commitish once the tag exists, but sending it anyway subjects the
+      # request to the workflow-permission check on the resolved commit, and an
+      # Actions token is never granted the Workflows permission — which is how
+      # the 1.11.4 release earned "403 Resource not accessible by integration"
+      # with contents: write already in hand.
       - name: Resolve release commit
         id: release_commit
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          PUBLISHED_TAG: ${{ inputs.pre_release && needs.determine-main-version.outputs.version || inputs.release_tag }}
         run: |
-          sha=$(gh api "repos/${{ github.repository }}/commits/${{ inputs.release_tag }}" --jq '.sha')
-          echo "Release tag '${{ inputs.release_tag }}' resolves to commit $sha"
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          sha=$(gh api "repos/${{ github.repository }}/commits/$RELEASE_TAG" --jq '.sha')
+          echo "Release tag '$RELEASE_TAG' resolves to commit $sha"
+          if gh api "repos/${{ github.repository }}/git/ref/tags/$PUBLISHED_TAG" >/dev/null 2>&1; then
+            echo "Tag '$PUBLISHED_TAG' already exists; omitting target_commitish."
+            echo "sha=" >> "$GITHUB_OUTPUT"
+          else
+            echo "Tag '$PUBLISHED_TAG' does not exist yet; pinning it to $sha"
+            echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          fi
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
