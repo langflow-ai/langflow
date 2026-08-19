@@ -5,6 +5,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { ModelSelector } from "@/components/core/assistantPanel/components/model-selector";
 import { useAssistantSelectedModel } from "@/components/core/assistantPanel/hooks/use-assistant-selected-model";
+import { useAutoGrowTextarea } from "@/components/core/assistantPanel/hooks/use-auto-grow-textarea";
 import { useEnabledModels } from "@/components/core/assistantPanel/hooks/use-enabled-models";
 import { Button } from "@/components/ui/button";
 import type { SidebarSection } from "@/components/ui/sidebar";
@@ -12,6 +13,8 @@ import ModelProviderModal from "@/modals/modelProviderModal";
 import { NAV_ITEMS } from "@/pages/FlowPage/components/flowSidebarComponent/components/sidebar-nav-items";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { StarterTemplateNameKey } from "./helpers/find-starter-template";
+
+const COMPOSER_MAX_HEIGHT_PX = 144; // 9rem — keeps the conversation above the composer readable
 
 interface FlowBuilderWelcomeProps {
   /** Called with the trimmed text when the user submits the textarea. */
@@ -48,6 +51,7 @@ export function FlowBuilderWelcome({
   );
   const limitHintId = useId();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  useAutoGrowTextarea(textareaRef, message, COMPOSER_MAX_HEIGHT_PX);
 
   useEffect(() => {
     textareaRef.current?.focus();
@@ -214,7 +218,7 @@ export function FlowBuilderWelcome({
                   id={limitHintId}
                   role="status"
                   data-testid="flow-builder-welcome-limit-hint"
-                  className="px-4 pb-1 text-xs text-destructive"
+                  className="px-4 py-1 text-xs text-destructive"
                 >
                   {t("assistant.messageLimitReached")}
                 </div>

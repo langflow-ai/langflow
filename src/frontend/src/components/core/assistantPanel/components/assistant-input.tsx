@@ -10,6 +10,7 @@ import { getAssistantPlaceholder } from "../assistant-panel.constants";
 import type { AssistantModel } from "../assistant-panel.types";
 import { getRandomPlaceholderMessage } from "../helpers/messages";
 import { useAssistantSelectedModel } from "../hooks/use-assistant-selected-model";
+import { useAutoGrowTextarea } from "../hooks/use-auto-grow-textarea";
 import { useComponentMentions } from "../hooks/use-component-mentions";
 import { useInputHistory } from "../hooks/use-input-history";
 import { AssistantMentionPopover } from "./assistant-mention-popover";
@@ -64,6 +65,8 @@ function useAnimatedPlaceholder(
 
   return currentMessage;
 }
+
+const COMPOSER_MAX_HEIGHT_PX = 144; // 9rem — keeps the conversation above the composer readable
 
 interface AssistantInputProps {
   onSend: (message: string, model: AssistantModel | null) => void;
@@ -123,6 +126,7 @@ export function AssistantInput({
   const limitHintId = useId();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const inputHistory = useInputHistory();
+  useAutoGrowTextarea(textareaRef, message, COMPOSER_MAX_HEIGHT_PX);
 
   // Auto-focus textarea when requested
   useEffect(() => {
@@ -280,8 +284,8 @@ export function AssistantInput({
             disabled={disabled || isProcessing}
             className={cn(
               "resize-none overflow-y-auto border-0 bg-transparent px-4 pt-3 text-sm focus-visible:ring-0 disabled:bg-transparent disabled:cursor-not-allowed",
-              // Cap the growth: the panel is resizable and the composer must leave the
-              // conversation above it readable no matter how long the draft is.
+              // Hard stop for the auto-grow above: past this the draft scrolls inside the
+              // composer so the conversation stays readable.
               "max-h-[9rem]",
               compact ? "min-h-0" : "min-h-[60px]",
               isProcessing && !isPostGenerationStep && "placeholder:opacity-50",
@@ -297,17 +301,20 @@ export function AssistantInput({
               <span className="animate-pulse">{animatedPlaceholder}</span>
             </div>
           )}
+          {/* Inside the textarea wrapper on purpose: as a direct child of the composer's
+              flex column it would also inherit the column gap, spacing the hint far wider
+              than the welcome screen's. */}
+          {isAtLimit && (
+            <div
+              id={limitHintId}
+              role="status"
+              data-testid="assistant-input-limit-hint"
+              className="px-4 py-1 text-xs text-destructive"
+            >
+              {t("assistant.messageLimitReached")}
+            </div>
+          )}
         </div>
-        {isAtLimit && (
-          <div
-            id={limitHintId}
-            role="status"
-            data-testid="assistant-input-limit-hint"
-            className="px-4 text-xs text-destructive"
-          >
-            {t("assistant.messageLimitReached")}
-          </div>
-        )}
         <div className="flex items-center justify-between px-3">
           <div className="flex items-center gap-4">
             <ModelSelector
