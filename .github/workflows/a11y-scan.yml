@@ -2,6 +2,9 @@ name: A11y / IBM Equal Access Scans
 
 on:
   pull_request:
+    paths:
+      - "src/frontend/**"
+      - ".github/workflows/a11y-scan.yml"
   schedule:
     # Run nightly at 02:00 UTC, after the nightly build window
     - cron: "0 2 * * *"
@@ -17,29 +20,39 @@ on:
         type: boolean
         default: false
 
+# A new push to the same PR supersedes the in-flight scan of the old commit.
+# Nightly / manual runs keep a unique group so they never cancel each other.
+concurrency:
+  group: a11y-scan-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: true
+
 env:
   NODE_VERSION: "22"
   PYTHON_VERSION: "3.13"
   # Define the directory where Playwright browsers will be installed.
   # This path is used for caching across workflows
-  PLAYWRIGHT_BROWSERS_PATH: "ms-playwright"
+  PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/ms-playwright
   PLAYWRIGHT_VERSION: "1.60.0"
 
 jobs:
-  a11y-scan:
-    name: Playwright scan runner
+  resolve-ref:
+    name: Resolve ref to scan
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    outputs:
+      ref: ${{ steps.resolve_ref.outputs.ref }}
     steps:
       # Cron only fires from the default branch, so scheduled runs resolve the
       # latest release-* branch and scan that (same pattern as nightly_build).
       - name: Resolve Ref To Scan
         id: resolve_ref
         shell: bash
+        env:
+          # Read the dispatch input via env rather than interpolating it into
+          # the script, so a crafted value can't be executed as shell.
+          INPUT_REF: ${{ inputs.ref }}
         run: |
-          if [ -n "${{ inputs.ref }}" ]; then
-            REF="${{ inputs.ref }}"
+          if [ -n "$INPUT_REF" ]; then
+            REF="$INPUT_REF"
           elif [ "${{ github.event_name }}" = "schedule" ]; then
             REF=$(git ls-remote --heads https://github.com/${{ github.repository }} 'refs/heads/release-*' \
               | awk '{print $2}' \
@@ -54,13 +67,32 @@ jobs:
           else
             REF="${{ github.ref }}"
           fi
+          if ! [[ "$REF" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+            echo "Refusing to scan malformed ref: $REF"
+            exit 1
+          fi
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
           echo "Scanning ref: $REF"
 
+  a11y-scan:
+    name: Playwright scan runner (shard ${{ matrix.shardIndex }})
+    needs: resolve-ref
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        # Each shard is a full Langflow backend + frontend + Playwright, so
+        # keep the count proportional to the spec count (~200 tests / 8 ≈ 25
+        # per shard). Adding an entry here is all it takes to add a shard.
+        shardIndex: [1, 2, 3, 4, 5, 6, 7, 8]
+    steps:
       - name: Checkout Repository
         uses: actions/checkout@v7
         with:
-          ref: ${{ steps.resolve_ref.outputs.ref }}
+          ref: ${{ needs.resolve-ref.outputs.ref }}
 
       - name: Setup Node.js Environment
         uses: actions/setup-node@v7
@@ -95,12 +127,14 @@ jobs:
           restore-keys: |
             playwright-${{ env.PLAYWRIGHT_VERSION }}-chromium-${{ runner.os }}
 
-      - name: Install Playwright Browser Dependencies
+      # No `--with-deps` on Linux: the hosted image already has every library
+      # Chromium needs (see typescript_test.yml for the history).
+      - name: Install Playwright Browsers
         if: steps.cache-playwright.outputs.cache-hit != 'true'
+        timeout-minutes: 10
         shell: bash
-        run: |
-          cd ./src/frontend
-          npx playwright install --with-deps chromium
+        working-directory: ./src/frontend
+        run: npx playwright install chromium
 
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v10.0.0
@@ -114,6 +148,8 @@ jobs:
       - name: Install Python Dependencies
         run: uv sync
 
+      # A retry only costs time when a spec actually fails, and a red check
+      # from a single flake costs a full re-run, so allow one.
       - name: Run IBM Equal Access Scans
         shell: bash
         env:
@@ -128,10 +164,50 @@ jobs:
           echo "Specs with a11y scans:"
           echo "$SCAN_SPECS"
           test -n "$SCAN_SPECS"
-          npx playwright test $SCAN_SPECS --project=chromium --workers=1 --retries=2
+          npx playwright test $SCAN_SPECS \
+            --project=chromium \
+            --shard=${{ matrix.shardIndex }}/${{ strategy.job-total }} \
+            --workers=2 \
+            --retries=1
+
+      - name: Upload Shard Accessibility Reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ibm-a11y-reports-shard-${{ matrix.shardIndex }}-attempt-${{ github.run_attempt }}
+          path: src/frontend/coverage/accessibility-reports
+          retention-days: 1
+          if-no-files-found: ignore
+
+  a11y-report:
+    name: Build IBM scan summary
+    needs: [resolve-ref, a11y-scan]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve-ref.outputs.ref }}
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # Every scan writes a flat `<label>.json` + `.html` pair, so the shard
+      # outputs merge into one directory without collisions. aChecker's own
+      # per-process `summary.json` does collide, but the report scripts skip it.
+      - name: Download Shard Accessibility Reports
+        uses: actions/download-artifact@v8
+        with:
+          path: src/frontend/coverage/accessibility-reports
+          pattern: ibm-a11y-reports-shard-*-attempt-${{ github.run_attempt }}
+          merge-multiple: true
 
       - name: Build IBM Scan Summary
-        if: always()
         shell: bash
         run: |
           cd src/frontend
@@ -149,10 +225,10 @@ jobs:
           fi
 
       - name: Upload Accessibility Reports
-        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: ibm-a11y-reports-${{ github.run_attempt }}
           path: src/frontend/coverage/accessibility-reports
           retention-days: 30
           overwrite: true
+          if-no-files-found: ignore

@@ -97,6 +97,7 @@ export function ToolbarButtonRow({
             />
           }
           side="top"
+          ariaDescribedBy={undefined}
         >
           <Button
             asChild
@@ -112,7 +113,16 @@ export function ToolbarButtonRow({
               className="flex items-center gap-2"
               role="button"
               tabIndex={0}
+              aria-pressed={toolMode}
               onClick={(event) => {
+                event.preventDefault();
+                onToolMode();
+              }}
+              // A plain div doesn't get the browser's native
+              // button-activates-on-Enter/Space behavior — without this the
+              // div is an announced-but-inert control from the keyboard.
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
                 event.preventDefault();
                 onToolMode();
               }}
@@ -127,15 +137,23 @@ export function ToolbarButtonRow({
               <span className="text-mmd font-medium">
                 {t("nodeToolbar.toolMode")}
               </span>
-              <ToggleShadComponent
-                value={toolMode}
-                editNode={false}
-                handleOnNewValue={onToolMode}
-                disabled={false}
-                size="medium"
-                showToogle={false}
-                id="tool-mode-toggle"
-              />
+              {/* This div is the real, keyboard-operable control (role="button"
+                  above) and now carries its own aria-pressed. The nested
+                  Switch is a visual echo of the same state, not a second
+                  control — pulled out of tab order and hidden from the a11y
+                  tree so it isn't a redundant, half-working focus stop. */}
+              <div aria-hidden="true">
+                <ToggleShadComponent
+                  value={toolMode}
+                  editNode={false}
+                  handleOnNewValue={onToolMode}
+                  disabled={false}
+                  size="medium"
+                  showToogle={false}
+                  id="tool-mode-toggle"
+                  tabIndex={-1}
+                />
+              </div>
             </div>
           </Button>
         </ShadTooltip>

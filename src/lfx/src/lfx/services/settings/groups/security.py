@@ -267,6 +267,26 @@ class SecuritySettings(BaseModel):
     Default False: a request with no identity is allowed and runs as an anonymous, ephemeral
     session with no persisted memory. Set True to reject identity-less requests instead (e.g. a
     deployment that must attribute every run to an end user)."""
+    serving_trace_end_user: bool = False
+    """Whether the serving-plane end-user id is forwarded to the configured tracing provider.
+
+    The end-user id is PII (the same reason outbound MCP forwarding is allowlist-gated and
+    fail-closed). Tracing providers (Langfuse, LangSmith, Opik, ...) are third-party SaaS, so this is
+    OFF by default: an identified serving run's trace shows only the service account (SID), never the
+    end user. Set True to surface the end user as the ``langflow.tracing_user_id`` trace label
+    (attribution) — an explicit operator decision to send that identity off-deployment. Independent of
+    the primary ``trace.userId``, which is always the SID regardless of this flag."""
+    serving_internal_mcp_hosts: str | None = None
+    """Comma-separated allowlist of hosts (``host`` or ``host:port``) treated as INTERNAL for
+    outbound MCP calls. When a flow's MCPTools component calls out to a server whose host is on this
+    list, the serving-plane end-user identity header (``serving_end_user_header``) is auto-appended
+    so a sibling project on the same plane can attribute the run to the same end user.
+
+    Default UNSET means the allowlist is empty, so the end-user header is NEVER auto-appended to any
+    outbound MCP call (fail-closed): the identity is PII and must never leak to an external MCP
+    server. Only hosts an operator explicitly lists here — the deployment's own serving endpoints —
+    receive it. Matching is exact on the URL host (and port when given); it does not widen to
+    subdomains. Unrelated to by-name header substitution, which stays opt-in and unaffected."""
 
     # Rate Limiting
     rate_limit_enabled: bool = True
