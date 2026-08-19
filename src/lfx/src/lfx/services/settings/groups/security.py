@@ -109,6 +109,28 @@ class SecuritySettings(BaseModel):
     owner (report H1-3754930 follow-up). Enable this only if you knowingly want public flows to
     run custom component code permitted by allow_custom_components."""
 
+    substitute_outdated_component_code: bool = True
+    """Whether a built-in component whose stored code has drifted from this server's copy is
+    rebuilt with this server's code instead of being refused. Only consulted when
+    ``allow_custom_components`` is False (with the default True nothing is gated, so nothing is
+    substituted).
+
+    With ``allow_custom_components=False`` the node's stored code never runs anyway — the build
+    already substitutes the server's copy keyed by code hash (``resolve_trusted_code_for_build``).
+    The hash check therefore refuses flows over code it was not going to execute, which makes every
+    upgrade that touches a built-in component break every saved flow using it until each node is
+    updated by hand.
+
+    Default is True: a node whose ``type`` is a known server component is rebuilt with that
+    component's current server code, matching what the unauthenticated public build path already
+    does by default (see ``prepare_public_flow_build``). Nothing new becomes runnable — the code
+    that runs is always this server's own, selected by component type, and a node whose type is
+    not a known server component is still refused. Substitutions are logged, and the stored flow is
+    left untouched so the editor keeps flagging the node as outdated.
+
+    Set to False to keep the strict behavior: refuse the build whenever a node's stored code does
+    not match the current server template. Has no effect when ``allow_custom_components`` is True."""
+
     block_code_interpreter_components: bool = False
     """If set to True, blocks built-in components that execute user- or model-supplied
     Python, including Python Interpreter/REPL/Function, Smart Transform, CSV Agent,
@@ -245,6 +267,26 @@ class SecuritySettings(BaseModel):
     Default False: a request with no identity is allowed and runs as an anonymous, ephemeral
     session with no persisted memory. Set True to reject identity-less requests instead (e.g. a
     deployment that must attribute every run to an end user)."""
+    serving_trace_end_user: bool = False
+    """Whether the serving-plane end-user id is forwarded to the configured tracing provider.
+
+    The end-user id is PII (the same reason outbound MCP forwarding is allowlist-gated and
+    fail-closed). Tracing providers (Langfuse, LangSmith, Opik, ...) are third-party SaaS, so this is
+    OFF by default: an identified serving run's trace shows only the service account (SID), never the
+    end user. Set True to surface the end user as the ``langflow.tracing_user_id`` trace label
+    (attribution) — an explicit operator decision to send that identity off-deployment. Independent of
+    the primary ``trace.userId``, which is always the SID regardless of this flag."""
+    serving_internal_mcp_hosts: str | None = None
+    """Comma-separated allowlist of hosts (``host`` or ``host:port``) treated as INTERNAL for
+    outbound MCP calls. When a flow's MCPTools component calls out to a server whose host is on this
+    list, the serving-plane end-user identity header (``serving_end_user_header``) is auto-appended
+    so a sibling project on the same plane can attribute the run to the same end user.
+
+    Default UNSET means the allowlist is empty, so the end-user header is NEVER auto-appended to any
+    outbound MCP call (fail-closed): the identity is PII and must never leak to an external MCP
+    server. Only hosts an operator explicitly lists here — the deployment's own serving endpoints —
+    receive it. Matching is exact on the URL host (and port when given); it does not widen to
+    subdomains. Unrelated to by-name header substitution, which stays opt-in and unaffected."""
 
     # Rate Limiting
     rate_limit_enabled: bool = True

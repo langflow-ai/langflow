@@ -88,7 +88,7 @@ class PromptComponent(Component):
                 except ValueError as e:
                     # If validation fails, we still updated the mode and cleaned old fields
                     # User will see error when they try to save
-                    logger.debug(f"Template validation failed during mode switch: {e}")
+                    logger.debug("Template validation failed during mode switch", exc_info=e)
         return build_config
 
     async def build_prompt(self) -> Message:
@@ -119,7 +119,7 @@ class PromptComponent(Component):
             )
         except ValueError as e:
             # If validation fails, don't add variables but allow component to be created
-            logger.debug(f"Template validation failed in _update_template: {e}")
+            logger.debug("Template validation failed in _update_template", exc_info=e)
         return frontend_node
 
     async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):
@@ -144,7 +144,7 @@ class PromptComponent(Component):
             )
         except ValueError as e:
             # If validation fails, don't add variables but allow component to be updated
-            logger.debug(f"Template validation failed in update_frontend_node: {e}")
+            logger.debug("Template validation failed in update_frontend_node", exc_info=e)
         # Now that template is updated, we need to grab any values that were set in the current_frontend_node
         # and update the frontend_node with those values
         update_template_values(new_template=frontend_node, previous_template=current_frontend_node["template"])

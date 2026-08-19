@@ -80,6 +80,13 @@ def _context_stub() -> SimpleNamespace:
     )
 
 
+def _session_mock() -> AsyncMock:
+    session = AsyncMock()
+    # SQLAlchemy's add() API is synchronous even on AsyncSession.
+    session.add = MagicMock()
+    return session
+
+
 class TestRunAssistantToolRegistration:
     @pytest.mark.asyncio
     async def test_should_expose_run_assistant_tool_on_the_agentic_mcp_server(self):
@@ -98,7 +105,7 @@ class TestRunAssistantAndPersist:
 
         user_id = uuid4()
         created_flow = SimpleNamespace(id=uuid4(), name="Assistant Flow", data=None, user_id=user_id)
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=created_flow)
         with (
             patch(f"{RUNNER_MODULE}._new_flow", new_callable=AsyncMock, return_value=created_flow) as new_flow,
@@ -143,7 +150,7 @@ class TestRunAssistantAndPersist:
             user_id=user_id,
             updated_at=previous_updated_at,
         )
-        session = AsyncMock()
+        session = _session_mock()
         session.add = MagicMock()
         session.get = AsyncMock(return_value=flow)
         with (
@@ -185,7 +192,7 @@ class TestRunAssistantAndPersist:
             user_id=user_id,
             locked=True,
         )
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
         with (
@@ -215,7 +222,7 @@ class TestRunAssistantAndPersist:
             user_id=user_id,
             locked=False,
         )
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
         async def acquire_lock(*_args, **_kwargs):
@@ -257,7 +264,7 @@ class TestRunAssistantAndPersist:
         user_id = uuid4()
         original_data = {"nodes": [], "edges": []}
         flow = SimpleNamespace(id=uuid4(), name="My Flow", data=original_data, user_id=user_id)
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
         with (
             patch(
@@ -288,7 +295,7 @@ class TestRunAssistantAndPersist:
 
         user_id = uuid4()
         flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
         with (
             patch(
@@ -323,7 +330,7 @@ class TestRunAssistantAndPersist:
         flow = SimpleNamespace(
             id=uuid4(), name="My Flow", data={"nodes": [existing_node], "edges": []}, user_id=user_id
         )
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
         with (
             patch(
@@ -354,7 +361,7 @@ class TestRunAssistantAndPersist:
         from langflow.agentic.utils.assistant_runner import run_assistant_and_persist
 
         flow = SimpleNamespace(id=uuid4(), name="Not yours", data=None, user_id=uuid4())
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
         with pytest.raises(HTTPException) as exc_info:
@@ -376,7 +383,7 @@ class TestRunAssistantAndPersist:
 
         user_id = uuid4()
         flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
         captured_kwargs: dict = {}
@@ -406,7 +413,7 @@ class TestRunAssistantAndPersist:
         user_id = uuid4()
         original_data = {"nodes": [], "edges": []}
         flow = SimpleNamespace(id=uuid4(), name="My Flow", data=original_data, user_id=user_id)
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
         blocked_data = {
             "nodes": [{"id": "Blocked-1", "data": {"id": "Blocked-1", "type": "BlockedComponent"}}],
@@ -450,7 +457,7 @@ class TestRunAssistantAndPersist:
 
         user_id = uuid4()
         created_flow = SimpleNamespace(id=uuid4(), name="Assistant Flow", data=None, user_id=user_id)
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=created_flow)
         blocked_data = {
             "nodes": [{"id": "Blocked-1", "data": {"id": "Blocked-1", "type": "BlockedComponent"}}],
@@ -508,7 +515,7 @@ class TestRunAssistantReleasesTransactionBeforeRun:
 
         user_id = uuid4()
         flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
         commits_when_stream_created: list[int] = []
@@ -563,7 +570,7 @@ class TestRunAssistantProgressForwarding:
 
         user_id = uuid4()
         flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
         received: list[dict] = []
 
@@ -594,7 +601,7 @@ class TestRunAssistantProgressForwarding:
 
         user_id = uuid4()
         flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
         async def broken_callback(_event: dict) -> None:
@@ -624,7 +631,7 @@ class TestRunAssistantProgressForwarding:
 
         user_id = uuid4()
         flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
         with (
             patch(f"{RUNNER_MODULE}._resolve_assistant_context", new_callable=AsyncMock, return_value=_context_stub()),
@@ -821,7 +828,7 @@ class TestRunAssistantAppliesProposedFieldEdits:
         flow = SimpleNamespace(
             id=uuid4(), name="My Flow", data=self._agent_data("You are a Langflow Agent."), user_id=user_id
         )
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
         # The working flow snapshot still holds the OLD prompt — the proposal was
@@ -862,7 +869,7 @@ class TestRunAssistantAppliesProposedFieldEdits:
         flow = SimpleNamespace(
             id=uuid4(), name="My Flow", data=self._agent_data("You are a Langflow Agent."), user_id=user_id
         )
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
         with (
@@ -919,7 +926,7 @@ class TestRunAssistantPersistsAuthoritativeWorkingFlow:
             data={"nodes": [{"id": "Agent-1"}, {"id": "Old-1"}], "edges": []},
             user_id=user_id,
         )
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
         events = [
@@ -966,7 +973,7 @@ class TestRunAssistantPersistsAuthoritativeWorkingFlow:
             data={"nodes": [blocked_node], "edges": []},
             user_id=user_id,
         )
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
         events = [
             {"event": "flow_update", "action": "remove_component", "component_id": "Blocked-1"},
@@ -1007,7 +1014,7 @@ class TestRunAssistantPersistsAuthoritativeWorkingFlow:
 
         user_id = uuid4()
         flow = SimpleNamespace(id=uuid4(), name="My Flow", data={"nodes": [], "edges": []}, user_id=user_id)
-        session = AsyncMock()
+        session = _session_mock()
         session.get = AsyncMock(return_value=flow)
 
         node = {"id": "ChatInput-x", "data": {"id": "ChatInput-x", "type": "ChatInput"}}

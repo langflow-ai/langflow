@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
 from mcp.server.fastmcp import Context, FastMCP
 
+from lfx.base.mcp.pydantic_compat import ensure_fastmcp_settings_ready
 from lfx.graph.flow_builder import (
     add_component as fb_add_component,
 )
@@ -32,6 +33,7 @@ from lfx.graph.flow_builder import (
 )
 from lfx.graph.flow_builder import (
     empty_flow,
+    ensure_tool_mode_supported,
     layout_flow,
     needs_server_update,
     parse_flow_spec,
@@ -92,6 +94,7 @@ async def _telemetry_lifespan(_server: FastMCP) -> AsyncIterator[dict]:
         _telemetry = None
 
 
+ensure_fastmcp_settings_ready()
 mcp = FastMCP(
     "langflow-mcp",
     instructions=(
@@ -981,13 +984,22 @@ async def connect_components(
     """
     flow = await _get_flow(flow_id)
 
-    # Auto-enable tool_mode when connecting via component_as_tool
+    # Auto-enable tool_mode when connecting via component_as_tool.
+    registry: dict[str, dict] | None = None
     if source_output == "component_as_tool":
+        registry = await _get_registry()
+        # Validate FIRST, against the local copy: this used to PATCH tool_mode=True
+        # onto the source before validating, so a component that cannot produce a
+        # toolset output was left in a dead tool mode after the edge was rejected.
+        ensure_tool_mode_supported(flow, source_id, registry)
+        # The flip itself stays server-side. /custom_component/update rebuilds the
+        # node via Component.run_and_validate_update_outputs, which is what inserts
+        # the toolset metadata field (tools_metadata) into the template — a local
+        # flip sets tool_mode and the output but cannot synthesize that field.
         await configure_component(flow_id, source_id, {"tool_mode": True})
-        # Re-fetch flow after tool_mode update changed the template
         flow = await _get_flow(flow_id)
 
-    fb_add_connection(flow, source_id, source_output, target_id, target_input)
+    fb_add_connection(flow, source_id, source_output, target_id, target_input, registry=registry)
     layout_flow(flow)
     await _patch_flow(flow_id, flow)
     await _get_client().post_event(flow_id, "connection_added", f"Connected {source_id} to {target_id}")

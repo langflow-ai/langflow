@@ -41,6 +41,8 @@ def doctor_command(
     from rich.console import Console
     from rich.markup import escape
 
+    from lfx.log.logger import otel_log_bodies_exported
+    from lfx.observability import db_spans_enabled
     from lfx.observability_doctor import FAILED, OK, SKIPPED, run_doctor
 
     # highlight=False: the captured exporter messages are full of URLs and numbers, and rich's
@@ -76,6 +78,38 @@ def doctor_command(
             console.print(f"    [dim]headers: {escape(', '.join(signal.header_keys))}[/dim]")
         for message in signal.exporter_logs:
             console.print(f"    [dim]{escape(message)}[/dim]")
+        # The signals do not carry the same content, and the doctor is where an operator checks
+        # what they are about to send. Saying it per signal beats a paragraph in a vendor doc.
+        if signal.signal == "logs" and signal.status != SKIPPED:
+            if otel_log_bodies_exported():
+                console.print(
+                    "    [yellow]message bodies ARE exported (LANGFLOW_OTEL_LOG_BODIES=all): "
+                    "completions, chat history and provider error text[/yellow]"
+                )
+            else:
+                console.print(
+                    "    [dim]bodies withheld unless a call site opts in; records keep "
+                    "severity, scope, callsite, error.type and trace correlation[/dim]"
+                )
+        # Volume, for the same reason the logs note exists: an operator sizing a paid APM needs
+        # to know this before the first bill, not after. Database spans are the bulk of it.
+        if signal.signal == "traces" and signal.status != SKIPPED:
+            if db_spans_enabled():
+                console.print(
+                    # "enabled", not "are exported": this reads the setting, and it cannot
+                    # see whether the instrumentor actually attached. _instrument_sqlalchemy
+                    # swallows an ImportError or a double-instrument, so claiming export
+                    # here would be a confident lie on exactly the box where it is wrong.
+                    "    [dim]database span export is enabled. When the instrumentation "
+                    "attaches, these are most of the volume (~50 spans per flow run). Set "
+                    "LANGFLOW_OTEL_DB_SPANS=false to send flow and request spans only, at "
+                    "the cost of losing database latency[/dim]"
+                )
+            else:
+                console.print(
+                    "    [yellow]database spans are OFF (LANGFLOW_OTEL_DB_SPANS): a slow run "
+                    "waiting on the database will show no cause[/yellow]"
+                )
 
     if not report.ok:
         raise typer.Exit(1)

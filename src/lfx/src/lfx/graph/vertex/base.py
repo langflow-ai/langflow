@@ -645,7 +645,7 @@ class Vertex:
         try:
             await log_transaction(flow_id, source, status, target, error, outputs)
         except Exception as exc:  # noqa: BLE001
-            logger.debug(f"Error logging transaction: {exc!s}")
+            logger.debug("Error logging transaction", exc_info=exc)
 
     async def _get_result(
         self,
@@ -703,7 +703,7 @@ class Vertex:
 
                     self.params[key].append(result)
                 except AttributeError as e:
-                    await logger.aexception(e)
+                    await logger.aexception("Failed to append a result to a list parameter")
                     msg = (
                         f"Params {key} ({self.params[key]}) is not a list and cannot be extended with {result}"
                         f"Error building Component {self.display_name}: \n\n{e}"
@@ -750,7 +750,7 @@ class Vertex:
             self._update_built_object_and_artifacts(result)
         except Exception as exc:
             tb = traceback.format_exc()
-            await logger.aexception(exc)
+            await logger.aexception("Vertex build failed")
             # Log transaction error
             flow_id = self.graph.flow_id
             if flow_id:

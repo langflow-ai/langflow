@@ -57,8 +57,8 @@ from lfx.workflow.converters import (
 )
 from lfx.workflow.end_user_identity import (
     EndUserIdentityRequiredError,
-    resolve_end_user_identity,
-    scope_session_for_identity,
+    end_user_required_detail,
+    resolve_serving_scope,
 )
 
 if TYPE_CHECKING:
@@ -153,48 +153,39 @@ def _scope_parsed_to_end_user(parsed, flow, http_request: Request):
     where the run executes.
 
     Feature-off (no header configured) and the fail-closed trust gate are handled
-    by :func:`resolve_end_user_identity`, so with the default settings this is a
-    no-op and behavior is byte-for-byte identical to before the feature existed.
+    by :func:`resolve_serving_scope` (the shared entry-point helper), so with the
+    default settings this is a no-op and behavior is byte-for-byte identical to before
+    the feature existed.
 
     Raises:
         HTTPException: 401 when identity is required but absent.
     """
-    settings_service = get_settings_service()
-    # The None guard covers runtimes where the lfx service manager genuinely has no
-    # settings service. The serving fields themselves are accessed directly — they
-    # are statically declared on SecuritySettings, and a silent getattr fallback
-    # would turn a future rename into "security feature off" with no signal.
-    settings = settings_service.settings if settings_service is not None else None
-    header_name = settings.serving_end_user_header if settings is not None else None
-    if not header_name:
-        return parsed
-
+    default_session_id = flow.session_id_default or flow.flow_id
     try:
-        identity = resolve_end_user_identity(
-            header_name=header_name,
-            trust_proxy_headers=bool(settings.serving_trust_proxy_headers),
-            require_identity=bool(settings.serving_end_user_required),
-            get_header=http_request.headers.get,
+        scoped = resolve_serving_scope(
+            http_request=http_request,
+            requested_session_id=parsed.session_id,
+            default_session_id=default_session_id,
         )
     except EndUserIdentityRequiredError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={
-                "error": "End-user identity required",
-                "code": "END_USER_IDENTITY_REQUIRED",
-                "message": str(exc),
-            },
+            detail=end_user_required_detail(exc),
         ) from exc
 
-    default_session_id = flow.session_id_default or flow.flow_id
-    scoped = scope_session_for_identity(
-        identity,
-        requested_session_id=parsed.session_id,
-        default_session_id=default_session_id,
-    )
+    # Feature off: leave the parsed run untouched.
+    if scoped is None:
+        return parsed
     # An anonymous request runs ephemerally: scoped.persist is False, which the
     # execution path threads onto the graph so astore_message skips the DB write.
-    return replace(parsed, session_id=scoped.session_id, persist_messages=scoped.persist)
+    # ``end_user_id`` (None for anonymous) is stamped onto the graph at the build site
+    # so downstream services scope per-user state to the end user.
+    return replace(
+        parsed,
+        session_id=scoped.session_id,
+        persist_messages=scoped.persist,
+        end_user_id=scoped.end_user_id,
+    )
 
 
 async def check_developer_api_enabled() -> None:
@@ -238,7 +229,7 @@ def _reject_unsupported_fields(parsed: ParsedWorkflowRun) -> None:
     if unsupported:
         fields = ", ".join(unsupported)
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "error": "Unsupported request fields",
                 "code": "LFX_SERVE_UNSUPPORTED_FIELDS",
@@ -275,7 +266,7 @@ def _validate_output_ids(output_ids: list[str] | None, terminal_node_ids: list[s
     unknown = [output_id for output_id in output_ids if output_id not in known]
     if unknown:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "error": "Unknown output_ids",
                 "code": "UNKNOWN_OUTPUT_IDS",
@@ -488,7 +479,7 @@ def create_workflow_router(
         # caller may access it (matches the pre-seam handler's precedence).
         if request.stream_protocol not in STREAM_ADAPTERS:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail={
                     "error": "Unknown stream_protocol",
                     "code": "UNKNOWN_STREAM_PROTOCOL",
@@ -511,7 +502,7 @@ def create_workflow_router(
         if parsed.mode == "background":
             if not host.supports_background:
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail={
                         "error": "Unsupported mode",
                         "code": "LFX_SERVE_UNSUPPORTED_MODE",

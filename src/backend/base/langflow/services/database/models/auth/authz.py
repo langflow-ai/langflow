@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import sqlalchemy as sa
 from sqlalchemy import CheckConstraint, Column, ForeignKey, Index, UniqueConstraint, text
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
 
 from langflow.schema.serialize import UUIDstr
 
@@ -143,6 +143,17 @@ class AuthzRoleAssignment(SQLModel, table=True):  # type: ignore[call-arg]
     assigned_by: UUIDstr | None = Field(
         default=None,
         sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="SET NULL"), nullable=True),
+    )
+    # SQLite ignores ``ON DELETE CASCADE`` unless ``PRAGMA foreign_keys=ON`` is
+    # issued on every connection, which Langflow never does, so revoking an
+    # assignment on the default backend left its provenance rows orphaned.
+    # Cascading through the ORM issues the child deletes on every backend.
+    #
+    # ``all, delete`` deliberately excludes ``delete-orphan``: grant rows are
+    # created by setting ``assignment_id`` directly rather than by appending to
+    # this collection, and ``delete-orphan`` would reject those as unparented.
+    grants: list["AuthzRoleAssignmentGrant"] = Relationship(
+        sa_relationship_kwargs={"cascade": "all, delete", "passive_deletes": False},
     )
 
 

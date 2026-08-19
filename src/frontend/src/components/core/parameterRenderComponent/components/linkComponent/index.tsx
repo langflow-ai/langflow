@@ -12,6 +12,7 @@ export default function LinkComponent({
   id = "",
   text,
   icon,
+  ariaLabelledBy,
 }: InputProps<string, LinkComponentType>): JSX.Element {
   function handleOpenLink() {
     if (value) {
@@ -48,6 +49,7 @@ export default function LinkComponent({
         variant="primary"
         size="sm"
         className={buttonClassName}
+        aria-labelledby={!text ? ariaLabelledBy : undefined}
       >
         <ButtonContent icon={icon ?? DEFAULT_ICON} text={text ?? ""} />
       </Button>

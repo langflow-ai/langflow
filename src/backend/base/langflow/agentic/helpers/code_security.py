@@ -259,6 +259,12 @@ class _SecurityChecker(ast.NodeVisitor):
         # control flow so a later finally sees every state that can reach it.
         self._alias_scope_depth = 0
         self._alias_state_collectors: list[tuple[int, list[_AliasState]]] = []
+        # Depth of enclosing class bodies. A name bound directly in a class body
+        # also becomes a class attribute, read later as ``self.x`` / ``Cls.x``.
+        self._class_body_depth = 0
+        # Names declared ``global`` / ``nonlocal`` in the current function scope:
+        # their bindings outlive the alias state restored at scope exit.
+        self._escaping_names: set[str] = set()
 
     def _resolved_names(self, name: str) -> frozenset[str]:
         """Return possible canonical values for a local name."""
@@ -440,10 +446,39 @@ class _SecurityChecker(ast.NodeVisitor):
             for target_element in target.elts:
                 yield from self._iter_assignment_leaves(target_element, value)
 
+    def _binding_escapes(self, name: str) -> bool:
+        """True when a name binding outlives the alias state that would track it.
+
+        Binding a resolvable value to a plain name is normally safe to defer to
+        the use site, because alias tracking keeps following the value. That only
+        holds while the binding stays inside the scope being analysed. A class
+        body publishes the name as a class attribute (later read as ``self.x`` /
+        ``Cls.x``, which cannot be related back to the module or callable), and
+        ``global`` / ``nonlocal`` publish it into a scope this visitor has already
+        restored by the time the reader is visited. Both are opaque boundaries.
+        """
+        return self._class_body_depth > 0 or name in self._escaping_names
+
+    def _check_escaping_binding(self, name: str, values: frozenset[str]) -> None:
+        """Flag a dangerous value published through a binding alias tracking cannot follow."""
+        if not self._binding_escapes(name):
+            return
+        for value in sorted(values):
+            if value in _RESTRICTED_MODULE_REFERENCES:
+                self.violations.append(f"Indirect reference to restricted module '{value}' is forbidden in components")
+                return
+            if violation := self._dangerous_callable_message(value):
+                self.violations.append(violation)
+                return
+
     def _check_assignment_value(self, target: ast.AST, value: ast.AST) -> None:
         """Check assignment values that cannot remain visible to alias tracking."""
         for target_leaf, value_leaf in self._iter_assignment_leaves(target, value):
-            if isinstance(target_leaf, ast.Name) and self._resolved_assignment_value(value_leaf):
+            if (
+                isinstance(target_leaf, ast.Name)
+                and not self._binding_escapes(target_leaf.id)
+                and self._resolved_assignment_value(value_leaf)
+            ):
                 continue
             self._check_opaque_reference(value_leaf)
 
@@ -531,6 +566,8 @@ class _SecurityChecker(ast.NodeVisitor):
             binding = alias.asname or module
             imported_name = alias.name if alias.asname else module
             self._bind_name(binding, frozenset({imported_name}))
+            # An import inside a class body binds a class attribute, not a local.
+            self._check_escaping_binding(binding, frozenset({imported_name}))
         self.generic_visit(node)
 
     def visit_ImportFrom(self, node: ast.ImportFrom):
@@ -556,7 +593,9 @@ class _SecurityChecker(ast.NodeVisitor):
         for alias in node.names:
             if alias.name != "*":
                 binding = alias.asname or alias.name
-                self._bind_name(binding, frozenset({f"{node.module}.{alias.name}"}))
+                imported_names = frozenset({f"{node.module}.{alias.name}"})
+                self._bind_name(binding, imported_names)
+                self._check_escaping_binding(binding, imported_names)
 
         return self.generic_visit(node)
 
@@ -581,6 +620,12 @@ class _SecurityChecker(ast.NodeVisitor):
         self._check_assignment_value(node.target, node.value)
         self._bind_assignment_target(node.target, node.value)
 
+    def visit_Global(self, node: ast.Global):
+        self._escaping_names.update(node.names)
+
+    def visit_Nonlocal(self, node: ast.Nonlocal):
+        self._escaping_names.update(node.names)
+
     def visit_AugAssign(self, node: ast.AugAssign):
         self.visit(node.target)
         self.visit(node.value)
@@ -603,6 +648,8 @@ class _SecurityChecker(ast.NodeVisitor):
     def _visit_iterating_loop(self, node: ast.For | ast.AsyncFor) -> None:
         """Bind the loop target and merge zero-iteration and body states."""
         self.visit(node.iter)
+        if any(self._binding_escapes(name) for name in self._assignment_target_names(node.target)):
+            self._check_opaque_reference(node.iter)
         before_loop = self._snapshot_alias_state()
         self.visit(node.target)
         self._bind_iterated_target(node.target, node.iter)
@@ -754,7 +801,13 @@ class _SecurityChecker(ast.NodeVisitor):
             self._check_opaque_reference(default)
 
         enclosing_state = self._snapshot_alias_state()
+        enclosing_class_body_depth = self._class_body_depth
+        enclosing_escaping_names = self._escaping_names
         self._alias_scope_depth += 1
+        # A function body is its own scope: names bound here are locals, not class
+        # attributes, and ``global`` / ``nonlocal`` declarations do not carry in.
+        self._class_body_depth = 0
+        self._escaping_names = set()
         try:
             self._bind_name(node.name, frozenset())
             self._shadow_arguments(node.args)
@@ -762,6 +815,8 @@ class _SecurityChecker(ast.NodeVisitor):
                 self.visit(statement)
         finally:
             self._alias_scope_depth -= 1
+            self._class_body_depth = enclosing_class_body_depth
+            self._escaping_names = enclosing_escaping_names
             self._restore_alias_state(enclosing_state)
         self._bind_name(node.name, frozenset())
 
@@ -776,13 +831,19 @@ class _SecurityChecker(ast.NodeVisitor):
         for default in (*node.args.defaults, *(item for item in node.args.kw_defaults if item is not None)):
             self._check_opaque_reference(default)
         enclosing_state = self._snapshot_alias_state()
+        enclosing_class_body_depth = self._class_body_depth
+        enclosing_escaping_names = self._escaping_names
         self._alias_scope_depth += 1
+        self._class_body_depth = 0
+        self._escaping_names = set()
         try:
             self._shadow_arguments(node.args)
             self._check_opaque_reference(node.body)
             self.visit(node.body)
         finally:
             self._alias_scope_depth -= 1
+            self._class_body_depth = enclosing_class_body_depth
+            self._escaping_names = enclosing_escaping_names
             self._restore_alias_state(enclosing_state)
 
     def visit_ClassDef(self, node: ast.ClassDef):
@@ -796,12 +857,18 @@ class _SecurityChecker(ast.NodeVisitor):
             self.visit(type_parameter)
 
         enclosing_state = self._snapshot_alias_state()
+        enclosing_escaping_names = self._escaping_names
         self._alias_scope_depth += 1
+        # Names bound in a class body escape as class attributes; see _binding_escapes.
+        self._class_body_depth += 1
+        self._escaping_names = set()
         try:
             for statement in node.body:
                 self.visit(statement)
         finally:
             self._alias_scope_depth -= 1
+            self._class_body_depth -= 1
+            self._escaping_names = enclosing_escaping_names
             self._restore_alias_state(enclosing_state)
         self._bind_name(node.name, frozenset())
 

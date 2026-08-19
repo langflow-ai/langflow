@@ -203,7 +203,7 @@ async def emit_vertex_build_event(
     except ImportError:
         pass  # langflow not available (standalone lfx usage)
     except Exception as exc:  # noqa: BLE001
-        logger.debug(f"SSE emission failed for vertex {vertex_id}: {exc}")
+        logger.debug(f"SSE emission failed for vertex {vertex_id}", exc_info=exc)
 
 
 async def emit_build_start_event(flow_id: str | UUID, vertex_id: str) -> None:
@@ -224,7 +224,7 @@ async def emit_build_start_event(flow_id: str | UUID, vertex_id: str) -> None:
     except ImportError:
         pass  # langflow not available (standalone lfx usage)
     except Exception as exc:  # noqa: BLE001
-        logger.debug(f"SSE build_start emission failed for vertex {vertex_id}: {exc}")
+        logger.debug(f"SSE build_start emission failed for vertex {vertex_id}", exc_info=exc)
 
 
 def _vertex_to_primitive_dict(target: Vertex) -> dict:
@@ -311,7 +311,7 @@ async def log_transaction(
         )
 
     except Exception as exc:  # noqa: BLE001
-        logger.debug(f"Error logging transaction: {exc!s}")
+        logger.debug("Error logging transaction", exc_info=exc)
 
 
 # Latch so the "writer enabled but not running" fall-through log fires once
@@ -442,7 +442,7 @@ async def log_vertex_build(
             logger.debug(f"Vertex build logged: vertex={vertex_id}, flow={flow_id}, valid={valid}")
 
     except Exception as exc:  # noqa: BLE001
-        logger.warning(f"Error logging vertex build: {exc}")
+        logger.warning("Error logging vertex build", exc_info=exc)
 
 
 def rewrite_file_path(file_path: str):

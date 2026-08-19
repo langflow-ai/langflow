@@ -2,8 +2,18 @@
 
 Application observability answers whether the service is healthy: request rates, latency,
 errors, and the units of work the service performed. It is a separate concern from the LLM
-tracer integrations, which describe what a flow did and carry prompt and completion text, and
-the boundary between them is enforced here, on the export path.
+tracer integrations, which describe what a flow did and carry prompt and completion text.
+
+The boundary between them is drawn per signal, all three deny by default on the way out. Spans go
+through ``ApplicationOnlySpanProcessor`` and metrics through ``ApplicationOnlyMetricExporter``,
+both below, each allowlisting an instrumentation scope. Logs are filtered in ``lfx.log.logger``,
+where a record is assembled, and on a declared opt-in rather than a scope name, because a log
+record's scope is derived from the calling module and so is not something a call site can be
+trusted to have chosen.
+
+Worth knowing when reading the claim we make about this: the filter covers what this process
+exports over OTLP, and nothing else. The console and the rotating log file still contain every
+message in full, so shipping those to the same backend goes around it.
 
 This lives in lfx, not langflow, because lfx is the runtime that actually serves flows in
 production (``lfx serve`` / ``lfx run``). The graph emits the application span, ``lfx serve``
@@ -18,16 +28,25 @@ degrades to a no-op when it is absent, so bare lfx imports this module without c
 from __future__ import annotations
 
 import asyncio
+import builtins
 import contextlib
 import contextvars
+import importlib
 import os
 import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from urllib.parse import urlsplit, urlunsplit
 
-from lfx.log.logger import logger
+from lfx.log.logger import logger, operator_logger, otel_log_bodies_exported
 from lfx.observability_fastapi import patch_otel_fastapi_route_details
+
+_BASE_EXCEPTION_GROUP_TYPE = getattr(builtins, "BaseExceptionGroup", None)
+if _BASE_EXCEPTION_GROUP_TYPE is None:
+    # The backport is present with the supported Python 3.10 dependency set, but
+    # observability must remain importable in a deliberately minimal bare-lfx install.
+    with contextlib.suppress(ImportError):
+        _BASE_EXCEPTION_GROUP_TYPE = importlib.import_module("exceptiongroup").BaseExceptionGroup
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -36,6 +55,7 @@ if TYPE_CHECKING:
     from opentelemetry.sdk._logs import LoggerProvider
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.trace import Span
 
 # The tracer name Langflow's own application spans are emitted under. Deliberately not
 # "langflow": the LLM tracer integrations already take a tracer under that name, and their
@@ -182,6 +202,14 @@ _OTLP_ENDPOINT_VARS = (
 # Only asgi and fastapi (installed by instrument_fastapi_app) and APPLICATION_TRACER_NAME (the
 # flow span) are emitted against our provider, so only they are listed. Re-add a scope the same
 # commit that wires its instrumentor with tracer_provider=, never before.
+# Named rather than inlined because two places need the same string: the allowlist below and
+# the instrumentation call that produces the spans. An operator turning them off should get
+# neither, and a literal repeated in both is one edit away from disagreeing.
+DB_INSTRUMENTATION_SCOPE = "opentelemetry.instrumentation.sqlalchemy"
+
+# Values that turn a boolean env var off. Anything else leaves the default in place.
+_FALSE_VALUES = frozenset({"0", "f", "false", "n", "no", "off"})
+
 APPLICATION_INSTRUMENTATION_SCOPES = frozenset(
     {
         "opentelemetry.instrumentation.asgi",
@@ -195,10 +223,43 @@ APPLICATION_INSTRUMENTATION_SCOPES = frozenset(
         # LLM vendor SDKs instrument them globally against whatever provider is global (ours),
         # so admitting them would put one span per outbound LLM call in the operator's APM.
         # Outbound provider health is delivered as leak-safe metrics instead.
-        "opentelemetry.instrumentation.sqlalchemy",
+        DB_INSTRUMENTATION_SCOPE,
         APPLICATION_TRACER_NAME,
     }
 )
+
+
+def db_spans_enabled() -> bool:
+    """Whether database spans are exported. On by default.
+
+    They are the bulk of the span volume -- measured against a live run, roughly 80% of
+    exported spans and about 50 spans per flow run, against one ``flow.execute`` -- and a
+    commercial APM bills per span ingested. An operator who only wants flow and request
+    health should not have to pay for the rest.
+
+    On by default anyway, because the volume buys something. In that same run 17% of pool
+    checkouts took over 50ms and 4% took over 200ms, which is the difference between "the
+    flow was slow" and "the flow was slow waiting for the database". Defaulting this off
+    would hide the most common cause of a slow run behind a setting nobody knows to look for.
+
+    Anything other than a recognised false value keeps them on, so a typo cannot silently
+    turn off telemetry the operator believes is running.
+    """
+    return os.getenv("LANGFLOW_OTEL_DB_SPANS", "true").strip().lower() not in _FALSE_VALUES
+
+
+def exported_span_scopes() -> frozenset[str]:
+    """The scopes this process actually exports, after operator configuration.
+
+    Only ever *subtracts* from ``APPLICATION_INSTRUMENTATION_SCOPES``. That direction is the
+    whole safety property: the allowlist is what keeps prompt-carrying scopes out of the APM,
+    so configuration must not be able to widen it. A setting that could add a scope would be
+    an env var that reopens the leak the allowlist exists to close.
+    """
+    if db_spans_enabled():
+        return APPLICATION_INSTRUMENTATION_SCOPES
+    return APPLICATION_INSTRUMENTATION_SCOPES - {DB_INSTRUMENTATION_SCOPE}
+
 
 # The same boundary for metrics. Separate from the span set because the meter the runtime
 # records its own counters and histograms on is named "langflow", while its application spans
@@ -247,6 +308,47 @@ def otlp_endpoint(signal: str) -> str | None:
 def otlp_exporter_disabled(signal: str) -> bool:
     """Whether the operator turned this signal off while leaving a shared endpoint set."""
     return os.getenv(f"OTEL_{signal.upper()}_EXPORTER", "otlp").strip().lower() == "none"
+
+
+# C0 controls plus DEL. None can appear in a URL, and urlsplit strips a subset of them silently.
+_CONTROL_CHARACTERS = frozenset(chr(code) for code in [*range(0x20), 0x7F])
+
+
+def safe_endpoint(endpoint: str) -> str:
+    """An OTLP endpoint with its credentials removed, for printing.
+
+    The endpoint is operator-supplied and routinely carries a token, either as userinfo in the
+    authority or as a query parameter; both are how vendors document their collectors. The
+    startup line that reports the endpoint is now on the one log scope whose bodies are exported
+    verbatim, so without this, closing the log body boundary would open a credential leak through
+    the line announcing it.
+
+    Userinfo and query string go; scheme, host, port and path stay, because a wrong port is the
+    thing this line exists to make visible. Unparseable input degrades to a fixed marker rather
+    than raising, since this only ever runs to build a log message.
+
+    Control characters are rejected outright rather than parsed. ``urlsplit`` silently strips
+    tab, carriage return and newline per WHATWG, which quietly rejoins whatever followed one of
+    them into the path, so an endpoint with an embedded newline comes back as a single line with
+    the injected text appended to the path, and that line is written verbatim to the one log
+    scope that is exported. A URL cannot legally contain them, so their presence means this is
+    not a URL.
+    """
+    if _CONTROL_CHARACTERS.intersection(endpoint):
+        return "<unparseable endpoint>"
+    try:
+        parts = urlsplit(endpoint)
+        _ = parts.port  # Validates the authority; a bad port raises here rather than later.
+    except ValueError:
+        return "<unparseable endpoint>"
+    # An endpoint with no authority is not an endpoint, and the failure mode is the one this
+    # function exists to prevent: ``urlsplit`` treats ``https:sekrit`` as an opaque value and
+    # parks the whole of it in ``path``, so a typo that drops the slashes would have printed the
+    # secret verbatim on the one log scope that is exported. Same for a bare word with no scheme.
+    if not parts.netloc:
+        return "<unparseable endpoint>"
+    netloc = parts.netloc.rsplit("@", maxsplit=1)[-1]
+    return urlunsplit((parts.scheme, netloc, parts.path, "", ""))
 
 
 def otlp_exporter_class(signal: str, protocol: str):
@@ -322,11 +424,15 @@ if _OTEL_AVAILABLE:
         def __init__(self, *args, **kwargs) -> None:
             super().__init__(*args, **kwargs)
             self._dropped_scopes: set[str] = set()
+            # Resolved once, at construction, so the set cannot change under a running
+            # process and leave two spans of the same scope treated differently.
+            self._scopes = exported_span_scopes()
 
         def on_end(self, span) -> None:
             scope = span.instrumentation_scope.name if span.instrumentation_scope else ""
-            if scope in APPLICATION_INSTRUMENTATION_SCOPES:
+            if scope in self._scopes:
                 _redact_url_attributes(span)
+                _redact_db_path_attributes(span)
                 super().on_end(span)
                 return
             if scope not in self._dropped_scopes:
@@ -461,7 +567,7 @@ if _OTEL_AVAILABLE:
             return None
 
         # Without this, a protocol/port mismatch is indistinguishable from never having booted.
-        logger.info(f"OTLP metric export enabled (protocol={protocol}, endpoint={endpoint}).")
+        operator_logger().info(f"OTLP metric export enabled (protocol={protocol}, endpoint={safe_endpoint(endpoint)}).")
         return reader
 
     def _install_meter_provider(*, prometheus_enabled: bool) -> tuple[MeterProvider | None, bool]:
@@ -555,7 +661,7 @@ if _OTEL_AVAILABLE:
 
         trace.set_tracer_provider(tracer_provider)
         # Without this, a protocol/port mismatch is indistinguishable from never having booted.
-        logger.info(f"OTLP trace export enabled (protocol={protocol}, endpoint={endpoint}).")
+        operator_logger().info(f"OTLP trace export enabled (protocol={protocol}, endpoint={safe_endpoint(endpoint)}).")
         return tracer_provider
 
     def _configure_logger_provider_from_environment() -> LoggerProvider | None:
@@ -585,8 +691,46 @@ if _OTEL_AVAILABLE:
             return None
 
         _logs.set_logger_provider(provider)
-        logger.info(f"OTLP log export enabled (protocol={protocol}, endpoint={endpoint}).")
+        _announce_log_export(protocol, endpoint)
         return provider
+
+    def _announce_log_export(protocol: str, endpoint: str) -> None:
+        """State the log boundary in the operator's own log stream, at boot.
+
+        Documentation does not reach the person writing the Helm values, and this is the signal
+        with the residual exposure worth knowing about: the body filter covers what Langflow
+        exports over OTLP, and nothing else. Container stdout and the rotating log file still
+        carry every message in full, so a sidecar log shipper reaches the same backend by a route
+        this process never sees. That is a deployment choice, and it is only a deliberate one if
+        the operator has been told.
+
+        WARNING rather than INFO when the logs endpoint was inherited from the shared
+        ``OTEL_EXPORTER_OTLP_ENDPOINT``, because then shipping logs was a side effect of
+        configuring traces rather than a decision. Setting the per-signal variable says the
+        operator meant it, and earns the quieter level.
+        """
+        inherited = not os.getenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT")
+        bodies_exported = otel_log_bodies_exported()
+        boundary = (
+            "Message bodies ARE exported (LANGFLOW_OTEL_LOG_BODIES=all); they carry model "
+            "completions, chat history and provider error text."
+            if bodies_exported
+            else "Message bodies are withheld unless a call site opts in; records keep severity, "
+            "scope, callsite, error.type and trace correlation."
+        )
+        message = (
+            f"OTLP log export enabled (protocol={protocol}, endpoint={safe_endpoint(endpoint)}). "
+            f"{boundary} This filter covers OTLP only: container stdout and the local log file "
+            f"still contain full messages, so shipping those to the same backend bypasses it. "
+            f"Set OTEL_LOGS_EXPORTER=none to export traces and metrics without logs."
+        )
+        if inherited:
+            operator_logger().warning(
+                f"{message} Logs were enabled by the shared OTEL_EXPORTER_OTLP_ENDPOINT; set "
+                f"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT to make that explicit."
+            )
+        else:
+            operator_logger().info(message)
 
 
 @dataclass
@@ -708,6 +852,84 @@ def _redact_url_attributes(span) -> None:
     span._attributes = redacted_attributes  # noqa: SLF001
 
 
+# Attributes a database instrumentor derives from the database name. For SQLite the "name" is
+# the file path, so each of these carries it: db.operation is built as "<operation> <db.name>",
+# and the span name is that same string.
+_DB_NAME_DERIVED_ATTRIBUTES = ("db.name", "db.operation")
+
+
+def _shorten_db_path(value: str) -> str:
+    """Return the final path segment, or the value unchanged when it is not a path.
+
+    Split on both separators rather than using os.path, because the exporting host and the host
+    that wrote the path are not necessarily the same platform: a Windows deployment's backslash
+    path must still be shortened when this runs anywhere else.
+    """
+    return value.replace("\\", "/").rsplit("/", maxsplit=1)[-1]
+
+
+def _redact_db_path_attributes(span) -> None:
+    """Replace a SQLite database file path with its file name, in place.
+
+    SQLAlchemy's instrumentation sets ``db.name`` from the database name, and for SQLite that
+    name is the file path. It then builds ``db.operation`` and the span name as
+    ``"<operation> <db.name>"``, so a span arrives at the APM named
+    ``SELECT /home/alice/langflow/langflow.db``. Confirmed present in a commercial APM, not only
+    locally, so it survives export to a third party.
+
+    SQLite is the default database, so this is the default configuration rather than an edge
+    case. The path is not a credential, but it is host detail the operator did not choose to
+    send: install directory, the account name on a typical unix path, and whatever their
+    directory naming gives away.
+
+    It is also a cardinality problem. Every deployment path is a distinct span name, so
+    dashboards written against one environment do not port to another.
+
+    The file name is kept rather than dropping the value, because an operator running more than
+    one SQLite database still needs to tell them apart.
+
+    Only SQLite spans are touched, and the gate is ``db.system`` rather than "does this value
+    look like a path". A separator is legal inside a Postgres or MySQL database name, so a
+    shape-based test would silently rename a logical database in the operator's dashboards.
+    """
+    attributes = span.attributes
+    if not attributes or attributes.get("db.system") != "sqlite":
+        # Gated on the system rather than on "does this look like a path", because a
+        # separator is legal inside a Postgres or MySQL database name. Shortening one of
+        # those would silently rename a logical database in the operator's dashboards.
+        return
+
+    db_name = attributes.get("db.name")
+    if not isinstance(db_name, str):
+        return
+    shortened = _shorten_db_path(db_name)
+    if shortened == db_name:
+        # An in-memory database, or a bare file name that is already its final segment.
+        return
+
+    updated = dict(attributes)
+    for key in _DB_NAME_DERIVED_ATTRIBUTES:
+        value = attributes.get(key)
+        if isinstance(value, str):
+            updated[key] = value.replace(db_name, shortened)
+
+    from opentelemetry.attributes import BoundedAttributes
+
+    original_attributes = span._attributes  # noqa: SLF001
+    shortened_attributes = BoundedAttributes(
+        maxlen=original_attributes.maxlen,
+        attributes=updated,
+        max_value_len=original_attributes.max_value_len,
+    )
+    shortened_attributes.dropped = original_attributes.dropped
+    span._attributes = shortened_attributes  # noqa: SLF001
+
+    # The span name is the other carrier, and the one an operator actually reads. ReadableSpan
+    # exposes name as a read-only property over this attribute, the same shape as _attributes.
+    if isinstance(span.name, str) and db_name in span.name:
+        span._name = span.name.replace(db_name, shortened)  # noqa: SLF001
+
+
 def bootstrap_application_telemetry(*, prometheus_enabled: bool = False) -> ApplicationTelemetry:
     """Install OTLP providers for traces, metrics and logs from the standard OTel env vars.
 
@@ -765,6 +987,13 @@ def instrument_database(engine: object) -> None:
 
 
 def _instrument_sqlalchemy(engine: object) -> None:
+    if not db_spans_enabled():
+        # Not instrumenting at all, rather than instrumenting and dropping on the way out.
+        # The spans are never created, so the operator pays no span-creation cost for
+        # telemetry they turned off. The processor subtracts the scope as well, which is what
+        # covers the case of some other library instrumenting sqlalchemy against our provider.
+        logger.debug("LANGFLOW_OTEL_DB_SPANS is off; not instrumenting sqlalchemy")
+        return
     try:
         from opentelemetry import trace
         from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
@@ -792,15 +1021,26 @@ class OutboundCallScope:
     the arguments it was called with.
     """
 
-    __slots__ = ("error_type",)
+    __slots__ = ("error_type", "span")
 
-    def __init__(self) -> None:
+    def __init__(self, span: Span | None = None) -> None:
         self.error_type: str | None = None
+        self.span = span
 
     def record_error(self, error_type: str) -> None:
         # First failure wins, so a later one cannot overwrite the one that caused the retry.
         if self.error_type is None:
             self.error_type = error_type
+
+    def set_attribute(self, key: str, value: str) -> None:
+        """Record an identifier the caller only learns mid-call.
+
+        A2A only learns which agent it reached after resolving the remote card, which is itself
+        part of the call the span covers. Same boundary as the opening attributes: identifiers
+        only, never a message, an argument or a result.
+        """
+        if self.span is not None:
+            self.span.set_attribute(key, value)
 
 
 def _root_error_type(exc: BaseException) -> str:
@@ -808,13 +1048,32 @@ def _root_error_type(exc: BaseException) -> str:
 
     Both MCP retry loops re-raise as ``ValueError(f"Failed to run tool ...")`` with ``from e``,
     so without walking the chain every timeout, dropped connection and closed resource records
-    as ``ValueError`` and the attribute tells an operator nothing. Only the type is read; the
-    message stays unrecorded either way.
+    as ``ValueError`` and the attribute tells an operator nothing. Transport task groups can
+    also wrap one actionable failure in an exception group; a group is unwrapped only when it
+    has one member, because a multi-error group has no single root type. Only the type is read;
+    the message stays unrecorded either way.
     """
     root = exc
     seen = {id(root)}
-    while root.__cause__ is not None and id(root.__cause__) not in seen:
-        root = root.__cause__
+    while True:
+        # asyncio implements wait_for timeouts by cancelling the inner task, so TimeoutError
+        # explicitly chains a CancelledError. The timeout is the actionable failure; the inner
+        # cancellation is an implementation detail. A real outer cancellation still arrives as
+        # CancelledError directly and is reported as such.
+        if isinstance(root, (asyncio.TimeoutError, TimeoutError)):
+            break
+        next_error = root.__cause__
+        if (
+            next_error is None
+            and _BASE_EXCEPTION_GROUP_TYPE is not None
+            and isinstance(root, _BASE_EXCEPTION_GROUP_TYPE)
+        ):
+            grouped = root.exceptions
+            if isinstance(grouped, tuple) and len(grouped) == 1 and isinstance(grouped[0], BaseException):
+                next_error = grouped[0]
+        if next_error is None or id(next_error) in seen:
+            break
+        root = next_error
         seen.add(id(root))
     return type(root).__name__
 
@@ -835,14 +1094,14 @@ def outbound_call_span(name: str, attributes: dict[str, str]) -> Iterator[Outbou
     Yields an :class:`OutboundCallScope`. A caller whose protocol reports failure in the return
     value rather than by raising must call ``record_error`` or its failures export as successes.
     """
-    scope = OutboundCallScope()
     if not _OTEL_AVAILABLE:
-        yield scope
+        yield OutboundCallScope()
         return
     tracer = trace.get_tracer(APPLICATION_TRACER_NAME)
     # Neither recording nor status-setting is delegated to the SDK: its versions write the
     # exception message onto the span, and that can carry flow data.
     with tracer.start_as_current_span(name, record_exception=False, set_status_on_exception=False) as span:
+        scope = OutboundCallScope(span)
         for key, value in attributes.items():
             span.set_attribute(key, value)
         try:

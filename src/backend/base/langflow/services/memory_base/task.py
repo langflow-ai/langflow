@@ -11,7 +11,9 @@ Design principles enforced here:
 - Live cursor: After acquiring the lock, the current cursor_id is re-read from the DB
   (not the dispatch-time snapshot) so the pending message fetch always starts from the
   true latest position, even if a prior job advanced the cursor while this job waited.
-- Path safety: kb_path is validated against kb_root before any filesystem operation.
+- Path safety: a local path is resolved only for local Chroma, and is containment-checked
+  against the KB root before any filesystem operation. Remote-backed Memory Bases resolve
+  no path at all.
 
 The write goes through whichever backend the KB is configured with, resolved from the
 ``knowledge_base`` row — so a Memory Base on OpenSearch or Chroma Cloud ingests to that
@@ -34,10 +36,11 @@ from typing import TYPE_CHECKING
 
 from lfx.base.knowledge_bases.backends import create_backend
 from lfx.log.logger import logger
+from lfx.workflow.end_user_identity import end_user_id_from_scoped_session
 from sqlalchemy import text
 from sqlmodel import Session, col, select
 
-from langflow.api.utils.kb_helpers import KBIngestionHelper, KBStorageHelper, resolve_backend_selection
+from langflow.api.utils.kb_helpers import KBIngestionHelper, resolve_backend_selection, resolve_local_store_path
 from langflow.services.database.models.memory_base.model import (
     MemoryBasePreprocessingOutput,
     MemoryBaseSession,
@@ -50,12 +53,11 @@ from langflow.services.memory_base.document_builders import (
     build_preprocessed_document,
     sync_kb_stats_to_record,
 )
-from langflow.services.memory_base.kb_path_helpers import hash_session_id, validate_kb_path
+from langflow.services.memory_base.kb_path_helpers import hash_session_id
 from langflow.services.memory_base.preprocessing import DEFAULT_KILL_PHRASE, run_preprocessing
 
 if TYPE_CHECKING:
     import uuid
-    from pathlib import Path
 
     from langflow.services.jobs.service import JobService
 
@@ -219,6 +221,11 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
     preproc_instructions = request.preproc_instructions
     preproc_kill_phrase = request.preproc_kill_phrase or DEFAULT_KILL_PHRASE
 
+    # Serving plane: recover the end-user id from the scoped session id (the one identity
+    # signal every ingestion path carries — live run, regenerate, manual trigger — since a
+    # graph is not available here). None off / editor / anonymous, so nothing is stamped.
+    end_user_id = end_user_id_from_scoped_session(session_id)
+
     hashed_sid = hash_session_id(session_id)
     await logger.adebug(
         "Ingestion job started | memory_base=%s session=%s dispatch_cursor=%s job=%s",
@@ -227,15 +234,9 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
         cursor_id,
         task_job_id,
     )
-    kb_root = KBStorageHelper.get_root_path()
-    if not kb_root:
-        msg = "Knowledge base root path is not configured"
-        raise RuntimeError(msg)
-
-    kb_path: Path = kb_root / kb_username / kb_name
-
-    # ---- Path traversal guard ----
-    validate_kb_path(kb_root, kb_path)
+    # The on-disk path is resolved later, once the backend is known — a Memory Base
+    # on a remote vector store needs no local directory, so requiring one up front
+    # would fail an ingestion that has no business touching this box's filesystem.
 
     # ---- 0. Acquire per-session serialization lock ----
     async with session_scope() as db:
@@ -370,10 +371,11 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
                     flow_id=str(flow_id),
                     job_id=job_id_str,
                     preproc_output_id=str(preproc_row.id),
+                    end_user_id=end_user_id,
                 )
             else:
                 documents = build_documents_from_messages(
-                    messages, session_id=session_id, flow_id=str(flow_id), job_id=job_id_str
+                    messages, session_id=session_id, flow_id=str(flow_id), job_id=job_id_str, end_user_id=end_user_id
                 )
 
             if not documents:
@@ -387,12 +389,16 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
             user_stub = types.SimpleNamespace(id=user_id)
             embeddings = await KBIngestionHelper.build_embeddings(embedding_provider, embedding_model, user_stub)
 
-            # Resolved from the knowledge_base row (sidecar only as legacy
-            # fallback), so an ingestion running on a replica that has never
-            # touched this KB's directory still writes to the configured store
-            # instead of silently creating a local one.
-            backend_type, backend_config = await resolve_backend_selection(
-                user_id=user_id, kb_name=kb_name, kb_path=kb_path
+            # Resolved from the knowledge_base row, so an ingestion running on a
+            # replica that has never touched this KB's directory still writes to
+            # the configured store instead of silently creating a local one.
+            backend_type, backend_config = await resolve_backend_selection(user_id=user_id, kb_name=kb_name)
+            # ``None`` for every remote backend; only local Chroma gets a directory.
+            kb_path = resolve_local_store_path(
+                kb_name,
+                kb_username,
+                backend_type=backend_type,
+                backend_config=backend_config,
             )
             backend = create_backend(
                 backend_type,

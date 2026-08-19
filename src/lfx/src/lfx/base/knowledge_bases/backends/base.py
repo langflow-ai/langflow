@@ -110,6 +110,19 @@ class TestConnectionResult:
     details: dict[str, Any] = field(default_factory=dict)
 
 
+class BackendConfigurationError(ValueError):
+    """A permanent, operator-actionable backend misconfiguration.
+
+    Raised for conditions that a retry of the same call can never fix: a missing
+    database extension, an embedding-dimension mismatch between the stored
+    collection and the current model, a missing privilege, etc. Ingestion's
+    retry loop (``KBIngestionHelper.write_documents_to_backend``) re-raises these
+    immediately instead of spending its backoff budget on a call that cannot
+    succeed. Subclasses ``ValueError`` so existing ``except ValueError`` sites
+    (and their tests) keep catching it.
+    """
+
+
 class BaseVectorStoreBackend(ABC):
     """Base class every KB vector-store backend inherits from.
 
@@ -130,11 +143,15 @@ class BaseVectorStoreBackend(ABC):
     def __init__(
         self,
         kb_name: str,
-        kb_path: Path,
+        kb_path: Path | None = None,
         backend_config: dict[str, Any] | None = None,
         embedding_function: Embeddings | None = None,
         user_id: UUID | str | None = None,
     ) -> None:
+        # ``kb_path`` is meaningful only to local Chroma, the one backend that
+        # persists to this box's filesystem. Every other backend ignores it, so
+        # callers that resolved a non-local backend pass ``None`` rather than
+        # inventing a throwaway directory just to satisfy the signature.
         self.kb_name = kb_name
         self.kb_path = kb_path
         self.backend_config = backend_config or {}

@@ -279,6 +279,9 @@ async def _stream_event_frames(
                         # Anonymous serving runs are ephemeral: thread the no-persist
                         # decision onto the graph so astore_message skips the DB write.
                         persist_messages=parsed.persist_messages,
+                        # Carry the end-user identity onto the graph so per-user state
+                        # (chat memory) scopes to the end user.
+                        end_user_id=parsed.end_user_id,
                     ),
                     timeout=execution_timeout,
                 )
@@ -315,8 +318,12 @@ async def _stream_event_frames(
     side_channel_events = frozenset({"add_message", "token", "remove_message", "error", "end"})
     terminal_error_type = getattr(adapter, "terminal_error_type", None)
     terminal_error_seen = False
+    stream_paused = False
+    _stream_completed = False
+    _stream_cancelled = False
 
     seq = 0
+    _run_start = time.perf_counter()
     run_task = asyncio.create_task(drive())
     try:
         for event in adapter.initial_events():
@@ -367,6 +374,7 @@ async def _stream_event_frames(
                 frame_bytes, frame_type = _frame(event, seq)
                 # Runner detects a pause by the langflow-side type; agui maps it to CUSTOM.
                 if event_type == "human_input_required":
+                    stream_paused = True
                     frame_type = "human_input_required"
                 yield (frame_bytes, frame_type)
                 seq += 1
@@ -389,12 +397,40 @@ async def _stream_event_frames(
                     terminal_error_seen = True
                 yield _frame(event, seq)
                 seq += 1
+        # Reached only when the try body exits normally (no cancellation or exception).
+        _stream_completed = True
+    except asyncio.CancelledError:
+        # Client disconnected (or server shutdown). Not a workflow failure — suppress
+        # telemetry so a tab-close is never recorded as a failed run.
+        _stream_cancelled = True
+        raise
     finally:
         if not run_task.done():
             run_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await run_task
         await queue.aclose()
+        # Emit a RunPayload so Enterprise metering (run_event_store) and the
+        # Scarf telemetry pipeline both see every v2 workflow run.
+        # Mirrors the v1 endpoints.py instrumentation for the streaming path.
+        # Skip on: pause (run is resumable), client disconnect (not a failure).
+        if not stream_paused and not _stream_cancelled:
+            with contextlib.suppress(Exception):
+                from langflow.services.deps import get_telemetry_service
+                from langflow.services.telemetry.schema import RunPayload
+
+                _telemetry = get_telemetry_service()
+                if _telemetry is not None:
+                    _run_success = _stream_completed and not terminal_error_seen
+                    await _telemetry.log_package_run(
+                        RunPayload(
+                            run_is_webhook=False,
+                            run_seconds=int(time.perf_counter() - _run_start),
+                            run_success=_run_success,
+                            run_error_message="" if _run_success else str(drive_error or "workflow error"),
+                            run_id=run_id,
+                        )
+                    )
 
 
 def _execute_streaming_workflow(
@@ -596,11 +632,16 @@ async def execute_sync_workflow(
     try:
         flow_id_str = str(flow.id)
         user_id = str(current_user.id)
+        # Caller-supplied ``data`` is rejected for sync mode before the execution gates run,
+        # so a value here is the server-sanitized stored graph produced by the caller-aware
+        # component policy. It must win over ``flow.data``, and it must bypass the warm
+        # template — which is built from the unsanitized stored row.
+        sanitized_flow_data = parsed.data
         # Opt-in warm fast-path: serve a deepcopy of the pre-built template
         # instead of rebuilding. Cold-fall-back (None) for tweaks, request context/globals,
         # or a HITL/checkpointed run — none of which fit a shared user-agnostic template.
         graph = None
-        if not tweaks and context is None and checkpoint_store is None:
+        if sanitized_flow_data is None and not tweaks and context is None and checkpoint_store is None:
             graph = await warm_deepcopy(
                 flow_id_str,
                 expected_version=flow_version(flow.updated_at),
@@ -611,7 +652,7 @@ async def execute_sync_workflow(
         if graph is None:
             # Use deepcopy to prevent mutation of the original flow.data
             # process_tweaks modifies nested dictionaries in-place
-            graph_data = deepcopy(flow.data)
+            graph_data = deepcopy(sanitized_flow_data if sanitized_flow_data is not None else flow.data)
             graph_data = process_tweaks(graph_data, tweaks, stream=False)
             # Pass context to graph (similar to V1's simple_run_flow)
             # This allows components to access request metadata via graph.context
@@ -622,6 +663,9 @@ async def execute_sync_workflow(
         # graph non-persisting (astore_message honors this per component). Defaults
         # True for every other run.
         graph.persist_messages = parsed.persist_messages
+        # Carry the end-user identity onto the graph so services (chat memory) scope
+        # per-user state to the end user. None for anonymous / feature-off / editor runs.
+        graph.end_user_id = parsed.end_user_id
         # Set run_id for tracing/logging (similar to V1's simple_run_flow)
         graph.set_run_id(job_id)
         # HITL: when a checkpoint store is supplied, a pausing node (HumanInput) durably
@@ -645,7 +689,15 @@ async def execute_sync_workflow(
 
     # Execute graph - component errors are caught and returned in response body
     job_service = get_job_service()
-    await job_service.create_job(job_id=job_id, flow_id=flow_id_str, user_id=current_user.id)
+    # user_id stays the executing service account (flow fetch / resume rely on it); the end
+    # user is recorded in job_metadata so status/stop isolate to it. See F8 / create_job.
+    await job_service.create_job(
+        job_id=job_id, flow_id=flow_id_str, user_id=current_user.id, end_user_id=parsed.end_user_id
+    )
+    _sync_run_paused = False
+    _sync_run_success = False
+    _sync_run_error: str = ""
+    _run_start = time.perf_counter()
     try:
         with execution_protocol("v2"):
             task_result, execution_session_id = await job_service.execute_with_status(
@@ -704,6 +756,7 @@ async def execute_sync_workflow(
                 "output_ids": parsed.output_ids,
             }
             await _persist_sync_result(job_service, job_id, workflow_response, request_blob, flow.id)
+        _sync_run_success = True
         return workflow_response  # noqa: TRY300 — keep response-building under the broad except below
 
     except GraphPausedException as exc:
@@ -715,13 +768,15 @@ async def execute_sync_workflow(
         # reaps this parked run to FAILED (worker_lost) once its heartbeat goes stale, and resume
         # (WHERE status=SUSPENDED) could never re-claim it.
         await job_service.update_job_status(job_id, JobStatus.SUSPENDED)
-        return WorkflowExecutionResponse(
+        suspended_response = WorkflowExecutionResponse(
             flow_id=parsed.flow_id,
             session_id=session_id,
             job_id=str(job_id),
             status=JobStatus.SUSPENDED,
             human_request=exc.data or {},
         )
+        _sync_run_paused = True
+        return suspended_response
     except asyncio.CancelledError:
         # Re-raise CancelledError to allow timeout mechanism to work properly
         # This ensures asyncio.wait_for() can properly cancel and raise TimeoutError
@@ -733,6 +788,7 @@ async def execute_sync_workflow(
     except Exception as exc:  # noqa: BLE001
         # Component execution errors - return in response body with HTTP 200
         # This allows partial results and detailed error information per component
+        _sync_run_error = str(exc)
         return create_error_response(
             flow_id=parsed.flow_id,
             job_id=job_id,
@@ -740,3 +796,25 @@ async def execute_sync_workflow(
             error=error_for_client(exc, expose_details=expose_error_details),
             effective_globals=request_variables,
         )
+    finally:
+        # Emit a RunPayload so Enterprise metering (run_event_store) and the
+        # Scarf telemetry pipeline both see every v2 sync workflow run.
+        # Mirrors the _stream_event_frames instrumentation for the SSE path.
+        import contextlib as _cl
+
+        if not _sync_run_paused:
+            with _cl.suppress(Exception):
+                from langflow.services.deps import get_telemetry_service
+                from langflow.services.telemetry.schema import RunPayload
+
+                _telemetry = get_telemetry_service()
+                if _telemetry is not None:
+                    await _telemetry.log_package_run(
+                        RunPayload(
+                            run_is_webhook=False,
+                            run_seconds=int(time.perf_counter() - _run_start),
+                            run_success=_sync_run_success,
+                            run_error_message="" if _sync_run_success else (_sync_run_error or "workflow error"),
+                            run_id=str(job_id),
+                        )
+                    )

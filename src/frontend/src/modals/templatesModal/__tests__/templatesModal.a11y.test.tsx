@@ -97,10 +97,12 @@ describe("TemplatesModal accessibility", () => {
     );
   });
 
-  it("should_place_the_template_panes_inside_a_main_landmark", () => {
+  it("should_not_nest_a_main_landmark_inside_the_dialog", () => {
     renderModal();
 
-    const main = screen.getByRole("main");
-    expect(main).toContainElement(screen.getByTestId("get-started-component"));
+    // The page behind the modal already owns the single main landmark, so a
+    // second one here would break landmark navigation (WCAG 2.4.1).
+    expect(screen.queryByRole("main")).not.toBeInTheDocument();
+    expect(screen.getByTestId("get-started-component")).toBeInTheDocument();
   });
 });

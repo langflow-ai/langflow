@@ -684,6 +684,23 @@ async def test_get_all__empty_value_warns_and_skips(service, session: AsyncSessi
     assert any("no stored value" in c for c in warning_calls)
 
 
+async def test_get_all__empty_agentic_placeholder_is_debug_only(service, session: AsyncSession):
+    """Known agentic placeholders are intentionally empty until an agent run populates them."""
+    user_id = uuid4()
+    variable = await service.create_variable(user_id, "FLOW_ID", "initial", type_=GENERIC_TYPE, session=session)
+    variable.value = ""
+    session.add(variable)
+    await session.flush()
+
+    mock_logger = MagicMock(adebug=AsyncMock(), awarning=AsyncMock())
+    with patch("langflow.services.variable.service.logger", mock_logger):
+        result = await service.get_all(user_id, session=session)
+
+    assert not any(item.name == "FLOW_ID" for item in result)
+    mock_logger.adebug.assert_awaited_once()
+    mock_logger.awarning.assert_not_awaited()
+
+
 async def test_get_all_reports_whether_masked_credentials_have_a_value(service, session: AsyncSession):
     user_id = uuid4()
     await service.create_variable(

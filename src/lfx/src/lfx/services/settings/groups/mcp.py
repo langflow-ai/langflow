@@ -9,9 +9,12 @@ class McpSettings(BaseModel):
     """MCP server, session manager, and composer settings, plus the A2A protocol toggle."""
 
     mcp_base_url: str = ""
-    """External base URL used to build MCP server URLs in the UI configuration JSON
-    (e.g. 'https://langflow.example.com'). When empty, the frontend falls back to
-    the browser's window.location.origin."""
+    """External base URL (scheme + host + optional path) used to build MCP server URLs.
+    Set it to the externally reachable origin (e.g. 'https://langflow.example.com'); this is
+    required in multi-pod deployments where the pod binds 0.0.0.0 but must advertise a routable
+    gateway/service address, since the bind host cannot also serve as the advertised host.
+    When empty (default): the backend builds URLs from host/port (0.0.0.0 -> localhost) and the
+    frontend falls back to the browser's window.location.origin."""
 
     mcp_server_timeout: int = 20
     """The number of seconds to wait before giving up on establishing a connection to the MCP server."""
@@ -51,6 +54,16 @@ class McpSettings(BaseModel):
     # MCP Server
     mcp_server_enabled: bool = True
     """If set to False, Langflow will not enable the MCP server."""
+
+    mcp_sse_enabled: bool = True
+    """If set to False, the legacy SSE transport and its message endpoint answer 404.
+
+    ``mcp_server_enabled`` mounts both transports and there is no way to serve only the
+    modern one. SSE holds a stream open for the life of the connection and keeps a
+    never-evicted ``SseServerTransport`` per project, which is a poor fit for a shared
+    multi-tenant serving tier. Default True preserves compatibility for clients that
+    still speak SSE; Streamable HTTP is unaffected either way.
+    Env var: LANGFLOW_MCP_SSE_ENABLED."""
     mcp_server_enable_progress_notifications: bool = False
     """If set to False, Langflow will not send progress notifications in the MCP server."""
 
@@ -112,6 +125,28 @@ class McpSettings(BaseModel):
     Version specifiers are allowed but do not change the package identity. Leave unset to
     preserve the legacy single-tenant behavior. Multi-tenant deployments should set this
     to the packages installed by their operator; an empty value blocks all package runners.
+    """
+
+    mcp_server_env_allowlist: str | None = None
+    """Comma-separated allowlist of environment-variable names an MCP stdio config may set.
+
+    Unset (the default) applies only the built-in policy, which denies whole runtime families
+    -- loader (``LD_*``/``DYLD_*``), OpenSSL (``OPENSSL_*``), interpreter option and module
+    paths (``PYTHON*``, ``NODE_*``, ``PERL*``, ``JAVA_*``, ...), package-runner source
+    overrides (``UV_*``, ``NPM_CONFIG_*``, ``PIP_*``), git helper commands (``GIT_*``), and
+    TLS trust anchors -- while permitting the arbitrary vendor-named credentials that real MCP
+    servers require (``GITHUB_TOKEN``, ``BRAVE_API_KEY``, ...).
+
+    Setting this switches to a strict allowlist: exactly these names are accepted and every
+    other name is rejected. That is the durable posture for multi-tenant deployments, since no
+    blocklist can enumerate every code-loading variable across libc, OpenSSL, git, and every
+    interpreter. An explicitly empty value (``""``) is the strictest setting -- it rejects all
+    tenant-supplied environment variables -- and is distinct from leaving this unset.
+
+    Because the list is authoritative, naming a loader or interpreter variable here
+    re-enables that code-execution vector; list only application credentials and configuration
+    your servers actually need. Langflow always injects ``PATH`` itself, so it need not be
+    listed. Env var: LANGFLOW_MCP_SERVER_ENV_ALLOWLIST.
     """
 
     mcp_server_interpreter_hardening: bool = False

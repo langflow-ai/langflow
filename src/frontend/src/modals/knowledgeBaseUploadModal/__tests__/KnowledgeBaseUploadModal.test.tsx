@@ -822,6 +822,34 @@ describe("KnowledgeBaseUploadModal", () => {
         expect(screen.getByText("Hello from chunk one")).toBeInTheDocument(),
       );
     });
+
+    it("disables the create button when chunk preview fails", async () => {
+      const user = userEvent.setup();
+      // The backend rejects e.g. chunk_overlap > chunk_size with a 422; the
+      // create button must grey out so the rejected config can't be submitted.
+      mockApiPost.mockRejectedValue({
+        response: {
+          data: {
+            detail:
+              "Chunk overlap (200) can't be larger than chunk size (100).",
+          },
+        },
+      });
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      const fileInput = document.getElementById(
+        "file-input",
+      ) as HTMLInputElement;
+      await user.upload(
+        fileInput,
+        new File(["hello world"], "test.txt", { type: "text/plain" }),
+      );
+      await navigateToStep2(user);
+      await waitFor(() =>
+        expect(screen.getByTestId("kb-create-button")).toBeDisabled(),
+      );
+    });
   });
 
   // ── Add Sources Mode ───────────────────────────────────────────────────────

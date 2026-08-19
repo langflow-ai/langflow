@@ -2,6 +2,7 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
 import { openFlowCard } from "../../utils/flow/open-flow-card";
+import { selectStarterTemplate } from "../../utils/flow/select-starter-template";
 import { renameFlow } from "../../utils/rename-flow";
 
 test(
@@ -15,9 +16,7 @@ test(
 
     await awaitBootstrapTest(page);
 
-    await page
-      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
-      .click();
+    await selectStarterTemplate(page, TEXTS.templateBasicPrompting);
 
     await renameFlow(page, { flowName: randomName });
 

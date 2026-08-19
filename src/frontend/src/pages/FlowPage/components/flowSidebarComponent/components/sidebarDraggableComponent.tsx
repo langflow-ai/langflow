@@ -13,9 +13,14 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
+import {
+  useIsFlowPermissionPending,
+  useIsFlowReadOnly,
+} from "@/contexts/permissionsContext";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
 import { useDarkStore } from "@/stores/darkStore";
+import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { APIClassType } from "@/types/api";
 import {
@@ -65,6 +70,25 @@ export const SidebarDraggableComponent = forwardRef(
     const { deleteFlow } = useDeleteFlow();
     const flows = useFlowsManagerStore((state) => state.flows);
     const addComponent = useAddComponent();
+    // Same flow id `useAddComponent` gates on, so the affordance and the gate
+    // can never disagree about which flow is being evaluated.
+    const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
+    const isReadOnly = useIsFlowReadOnly(currentFlowId);
+    const isPermissionPending = useIsFlowPermissionPending(currentFlowId);
+
+    // `isReadOnly` is the same predicate the add path refuses on, so the
+    // control is unavailable for exactly as long as the click would be
+    // discarded — while the answer is in flight and, permanently, when it
+    // denies write. Pending only picks which reason to show.
+    // A placement constraint is a separate verdict and keeps hiding the add
+    // button; the permission cases only disable it, so a read-only user still
+    // sees the same layout everyone else does.
+    const isUnavailable = disabled || isReadOnly;
+    const unavailableTooltip = disabled
+      ? disabledTooltip
+      : isPermissionPending
+        ? t("sidebar.permissionsPending")
+        : t("sidebar.permissionDenied");
 
     const version = useDarkStore((state) => state.version);
     const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
@@ -104,8 +128,20 @@ export const SidebarDraggableComponent = forwardRef(
       }
     }
 
+    // WCAG 2.5.3 Label in Name (LE-2235): the accessible name must contain
+    // the text the row shows, and the Beta / Legacy badge is part of that
+    // visible text — so it goes into the name too ("Add Listen Beta to
+    // canvas"), otherwise voice-control users saying "click Listen Beta"
+    // get no match. Keep these literals in sync with the badges below.
+    const visibleName = [display_name, beta && "Beta", legacy && "Legacy"]
+      .filter(Boolean)
+      .join(" ");
+    const addToCanvasLabel = t("sidebar.addComponentToCanvas", {
+      name: visibleName,
+    });
+
     const handleKeyDown = (e) => {
-      if (disabled) return;
+      if (isUnavailable) return;
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         e.stopPropagation();
@@ -121,7 +157,7 @@ export const SidebarDraggableComponent = forwardRef(
         key={itemName}
       >
         <ShadTooltip
-          content={disabled ? disabledTooltip : null}
+          content={isUnavailable ? unavailableTooltip : null}
           styleClasses="z-50"
         >
           <div
@@ -135,7 +171,7 @@ export const SidebarDraggableComponent = forwardRef(
             className={cn(
               "group/draggable flex items-center gap-2 rounded-md bg-muted p-1 px-2 hover:bg-secondary-hover/75",
               error && "cursor-not-allowed select-none",
-              disabled
+              isUnavailable
                 ? "cursor-not-allowed bg-accent text-placeholder-foreground h-8"
                 : "bg-muted text-foreground",
             )}
@@ -145,22 +181,20 @@ export const SidebarDraggableComponent = forwardRef(
               data-testid={sectionName + display_name}
               id={sectionName + display_name}
               role="button"
-              aria-label={t("sidebar.addComponentToCanvas", {
-                name: display_name,
-              })}
+              aria-label={addToCanvasLabel}
               tabIndex={0}
               onKeyDown={handleKeyDown}
               className={cn(
                 "flex flex-1 items-center gap-2 rounded-md outline-none ring-ring focus-visible:ring-1",
-                disabled ? "cursor-not-allowed" : "cursor-grab",
+                isUnavailable ? "cursor-not-allowed" : "cursor-grab",
               )}
-              draggable={!error && !disabled}
+              draggable={!error && !isUnavailable}
               style={{
                 borderLeftColor: color,
               }}
               onDragStart={onDragStart}
               onDoubleClick={() => {
-                if (!disabled) {
+                if (!isUnavailable) {
                   addComponent(apiClass, itemName);
                 }
               }}
@@ -216,9 +250,8 @@ export const SidebarDraggableComponent = forwardRef(
                   variant="ghost"
                   size="icon"
                   tabIndex={-1}
-                  aria-label={t("sidebar.addComponentToCanvas", {
-                    name: display_name,
-                  })}
+                  disabled={isReadOnly}
+                  aria-label={addToCanvasLabel}
                   className="text-primary"
                   onClick={() => addComponent(apiClass, itemName)}
                 >

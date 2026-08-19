@@ -1,6 +1,6 @@
 [project]
 name = "lfx-bundles"
-version = "1.1.8"
+version = "1.1.15"
 description = "Langflow's long-tail provider bundles as a single manifest-less metapackage (the langchain-community model)."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -54,7 +54,7 @@ glean = []
 google = ["lfx-google>=0.1.0,<1.0.0"]
 groq = ["langchain-groq~=1.1.1"]
 homeassistant = ["requests>=2.32.0"]
-huggingface = ["langchain-huggingface~=1.2.0; sys_platform != 'darwin' or platform_machine != 'x86_64'", "huggingface-hub[inference]>=1.0.0,<2.0.0", "langchain-community>=0.4.1,<1.0.0"]
+huggingface = ["langchain-huggingface~=1.2.0; sys_platform != 'darwin' or platform_machine != 'x86_64'", "huggingface-hub>=1.0.0,<2.0.0", "langchain-community>=0.4.1,<1.0.0"]
 icosacomputing = ["requests>=2.32.0"]
 jigsawstack = ["jigsawstack==0.2.7"]
 langwatch = []
@@ -65,6 +65,7 @@ mem0 = ["mem0ai>=2.0.2,<3.0.0"]
 milvus = ["langchain-milvus~=0.3.2"]
 mistral = ["langchain-mistralai~=1.1.1"]
 mongodb = ["pymongo>=4.10.1", "langchain-mongodb>=0.11.0"]
+mrscraper = ["mrscraper-sdk>=0.2.1,<0.3.0"]
 needle = ["needle-python>=0.4.0", "langchain-community>=0.4.1,<1.0.0"]
 notdiamond = []
 notion = ["requests>=2.32.0", "Markdown>=3.8.0"]
@@ -73,6 +74,7 @@ nvidia = ["langchain-nvidia-ai-endpoints~=1.0.0", "nv-ingest-client>=26.1.0,<26.
 olivya = []
 ollama = ["lfx-ollama>=0.1.0,<1.0.0"]
 openrouter = ["langchain-openai>=1.1.6"]
+orcarouter = ["langchain-openai>=1.1.6"]
 perplexity = ["langchain-perplexity>=1.0.0,<2.0.0"]
 pgvector = ["pgvector>=0.4.2", "langchain-community>=0.4.1,<1.0.0"]
 pinecone = ["langchain-pinecone~=0.2.13; python_version < '3.14'"]
@@ -134,6 +136,7 @@ all = [
     "lfx-bundles[milvus]",
     "lfx-bundles[mistral]",
     "lfx-bundles[mongodb]",
+    "lfx-bundles[mrscraper]",
     "lfx-bundles[needle]",
     "lfx-bundles[notdiamond]",
     "lfx-bundles[notion]",
@@ -141,6 +144,7 @@ all = [
     "lfx-bundles[nvidia]",
     "lfx-bundles[olivya]",
     "lfx-bundles[openrouter]",
+    "lfx-bundles[orcarouter]",
     "lfx-bundles[perplexity]",
     "lfx-bundles[pgvector]",
     "lfx-bundles[pinecone]",
@@ -201,6 +205,7 @@ all-no-torch = [
     "lfx-bundles[milvus]",
     "lfx-bundles[mistral]",
     "lfx-bundles[mongodb]",
+    "lfx-bundles[mrscraper]",
     "lfx-bundles[needle]",
     "lfx-bundles[notdiamond]",
     "lfx-bundles[notion]",
@@ -208,6 +213,7 @@ all-no-torch = [
     "lfx-bundles[nvidia]",
     "lfx-bundles[olivya]",
     "lfx-bundles[openrouter]",
+    "lfx-bundles[orcarouter]",
     "lfx-bundles[perplexity]",
     "lfx-bundles[pgvector]",
     "lfx-bundles[pinecone]",
@@ -249,7 +255,7 @@ Repository = "https://github.com/langflow-ai/langflow"
 lfx_bundles = "lfx_bundles"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling==1.31.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
@@ -264,4 +270,15 @@ include = [
     "src/lfx_bundles",
     "README.md",
     "pyproject.toml",
+]
+
+[tool.pytest.ini_options]
+# The bundle's own tests (``tests/``) are run by .github/workflows/cross-bundle-test.yml in a
+# venv holding lfx + this bundle. They were previously in src/backend/tests/, where they skipped
+# in every default install because ``lfx-bundles`` is opt-in -- see issue #14554.
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "unit: fast, isolated component test",
+    "api_key_required: needs a real provider credential; not run in CI",  # pragma: allowlist secret
 ]

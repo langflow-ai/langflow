@@ -11,6 +11,7 @@ import {
   LLMS_MOCK,
   PROVIDERS_MOCK,
 } from "../../utils/deployment-mocks";
+import { getDefaultProjectIdForTest } from "../../utils/get-default-project-id-for-test.mjs";
 
 test.skip(
   process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
@@ -366,28 +367,8 @@ test(
     tag: ["@release", "@workspace", "@api"],
   },
   async ({ page }) => {
-    // Capture folder ID from the projects API before bootstrap
-    const projectsResponsePromise = page.waitForResponse(
-      (resp) =>
-        resp.url().includes("/api/v1/projects") && resp.status() === 200,
-      { timeout: 30000 },
-    );
-
     await awaitBootstrapTest(page, { skipModal: true });
-
-    let folderId = "";
-    try {
-      const projectsResp = await projectsResponsePromise;
-      const folders = await projectsResp.json();
-      const match = Array.isArray(folders)
-        ? (folders.find(
-            (f: { name: string; id: string }) => f.name === "Starter Project",
-          ) ?? folders[0])
-        : null;
-      folderId = (match as { id: string } | null)?.id ?? "";
-    } catch {
-      // proceed
-    }
+    const folderId = await getDefaultProjectIdForTest(page);
 
     await setupRoutesWithConnections(page, folderId);
     await page.getByTestId("deployments-btn").click();
@@ -412,7 +393,7 @@ test(
     // Click the pre-attached flow and its version to open the connection panel
     await page.getByTestId("flow-item-f1").click();
     await page.waitForSelector('[data-testid="version-item-fv1"]');
-    await page.getByTestId("version-item-fv1").click();
+    await page.getByTestId("version-item-fv1-select").click();
 
     // Wait for connection panel to appear with available connections
     await page.waitForSelector('[data-testid="connection-item-existing-app"]');
@@ -462,27 +443,8 @@ test(
     tag: ["@release", "@workspace", "@api"],
   },
   async ({ page }) => {
-    const projectsResponsePromise = page.waitForResponse(
-      (resp) =>
-        resp.url().includes("/api/v1/projects") && resp.status() === 200,
-      { timeout: 30000 },
-    );
-
     await awaitBootstrapTest(page, { skipModal: true });
-
-    let folderId = "";
-    try {
-      const projectsResp = await projectsResponsePromise;
-      const folders = await projectsResp.json();
-      const match = Array.isArray(folders)
-        ? (folders.find(
-            (f: { name: string; id: string }) => f.name === "Starter Project",
-          ) ?? folders[0])
-        : null;
-      folderId = (match as { id: string } | null)?.id ?? "";
-    } catch {
-      // proceed
-    }
+    const folderId = await getDefaultProjectIdForTest(page);
 
     await setupRoutesWithConnections(page, folderId);
     await page.getByTestId("deployments-btn").click();
@@ -505,7 +467,7 @@ test(
     await page.waitForSelector('[data-testid="flow-item-f1"]');
     await page.getByTestId("flow-item-f1").click();
     await page.waitForSelector('[data-testid="version-item-fv1"]');
-    await page.getByTestId("version-item-fv1").click();
+    await page.getByTestId("version-item-fv1-select").click();
 
     // Wait for connection panel
     await page.waitForSelector('[data-testid="connection-item-existing-app"]');

@@ -311,6 +311,9 @@ async def get_servers(
                 mcp_stdio_client=mcp_stdio_client,
                 mcp_streamable_http_client=mcp_streamable_http_client,
                 request_variables=request_variables,
+                # These are read straight from the variable table above, so they are the
+                # DB-backed set the URL is allowed to resolve from.
+                url_variables=request_variables,
                 current_user_id=current_user.id,
             )
             server_info["mode"] = mode.lower()
@@ -405,6 +408,14 @@ def _clear_server_cache(server_name: str) -> None:
         safe_cache_set(shared_component_cache_service, "servers", servers)
 
 
+async def _persist(session, *, owns_transaction: bool) -> None:
+    """Commit when we own the transaction, otherwise just flush for the owner."""
+    if owns_transaction:
+        await session.commit()
+    else:
+        await session.flush()
+
+
 async def update_server(
     server_name: str,
     server_config: dict,
@@ -416,6 +427,7 @@ async def update_server(
     check_existing: bool = False,
     delete: bool = False,
     merge_existing: bool = False,
+    owns_transaction: bool = True,
 ):
     """Create, update, or delete one MCP server row for the user.
 
@@ -425,6 +437,15 @@ async def update_server(
     last-writer-wins; a full replace updates unconditionally. ``current_user`` is read
     once into ``user_id`` because a later commit/rollback can expire it and re-reading it
     would attempt IO in an async context.
+
+    ``owns_transaction=False`` is for callers that already own the transaction - notably
+    the startup reconciliation, which runs inside ``session.begin_nested()``. Committing
+    there would end the transaction the caller's context manager owns, so every later
+    statement (including this function's own trailing read) raises ``InvalidRequestError:
+    Can't operate on closed transaction inside context manager``, and it would also
+    escape any rollback the caller relies on for atomicity. Flushing instead keeps the
+    write visible to the rest of the caller's transaction while leaving commit/rollback
+    to whoever opened it.
     """
     user_id = current_user.id
     settings = getattr(settings_service, "settings", None)
@@ -439,7 +460,7 @@ async def update_server(
         if existing is None:
             raise HTTPException(status_code=404, detail="Server not found.")
         await session.delete(existing)
-        await session.commit()
+        await _persist(session, owns_transaction=owns_transaction)
         _clear_server_cache(server_name)
         return None
 
@@ -460,12 +481,16 @@ async def update_server(
                 )
             )
             try:
-                await session.commit()
+                await _persist(session, owns_transaction=owns_transaction)
             except IntegrityError:
                 # The expected IntegrityError here is the duplicate-name race: re-read the
                 # winner and fall through to the update path. Any other integrity failure
                 # (e.g. a bad FK) leaves no winning row, so re-raise it instead of masking
                 # it as retries that end in a misleading 409.
+                if not owns_transaction:
+                    # Recovering here needs a rollback, which on a borrowed transaction would
+                    # discard the caller's work too. Let the caller's savepoint unwind instead.
+                    raise
                 await session.rollback()
                 result = await session.exec(
                     select(MCPServer).where(MCPServer.user_id == user_id, MCPServer.name == server_name)
@@ -489,7 +514,7 @@ async def update_server(
                     updated_at=datetime.now(timezone.utc),
                 )
             )
-            await session.commit()
+            await _persist(session, owns_transaction=owns_transaction)
             if updated.rowcount == 1:
                 break
             # Version moved under us: expire and re-read so a concurrent delete reads as None.
@@ -516,7 +541,7 @@ async def update_server(
                 updated_at=datetime.now(timezone.utc),
             )
         )
-        await session.commit()
+        await _persist(session, owns_transaction=owns_transaction)
         if replaced.rowcount == 1:
             break
         # Row deleted under us: re-read, and a still-missing row takes the create path

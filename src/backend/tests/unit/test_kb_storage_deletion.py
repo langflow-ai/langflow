@@ -300,6 +300,21 @@ class TestDeleteStorage:
 # ===========================================================================
 
 
+async def _seed_kb_row(active_user, name: str):
+    """Create the ``knowledge_base`` row that makes a KB exist.
+
+    The delete endpoints resolve existence from the row, not from a directory,
+    so a bare directory is not deletable (and not visible) without one.
+    """
+    from langflow.api.utils import knowledge_base_service
+
+    return await knowledge_base_service.create_record(
+        user_id=active_user.id,
+        name=name,
+        model_selection={"name": "text-embedding-3-small", "provider": "OpenAI"},
+    )
+
+
 class TestDeleteEndpoint:
     """Tests that delete endpoint uses KBStorageHelper.delete_storage."""
 
@@ -307,9 +322,10 @@ class TestDeleteEndpoint:
     @patch("langflow.api.utils.kb_helpers.Chroma", new=MagicMock())
     @patch("langflow.api.utils.kb_helpers.time.sleep", new=MagicMock())
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    async def test_should_delete_kb_successfully(self, mock_root, client, logged_in_headers, tmp_path):
+    async def test_should_delete_kb_successfully(self, mock_root, client, logged_in_headers, active_user, tmp_path):
         mock_root.return_value = tmp_path
         (tmp_path / "activeuser" / "My_KB").mkdir(parents=True)
+        await _seed_kb_row(active_user, "My_KB")
 
         response = await client.delete("api/v1/knowledge_bases/My_KB", headers=logged_in_headers)
 
@@ -318,7 +334,7 @@ class TestDeleteEndpoint:
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=False)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_should_return_200_with_warning_when_storage_cleanup_fails(
-        self, mock_root, mock_delete, client, logged_in_headers, tmp_path
+        self, mock_root, mock_delete, client, logged_in_headers, active_user, tmp_path
     ):
         """Storage failure must not block the user from removing the KB.
 
@@ -329,6 +345,7 @@ class TestDeleteEndpoint:
         """
         mock_root.return_value = tmp_path
         (tmp_path / "activeuser" / "My_KB").mkdir(parents=True)
+        await _seed_kb_row(active_user, "My_KB")
 
         response = await client.delete("api/v1/knowledge_bases/My_KB", headers=logged_in_headers)
 
@@ -351,12 +368,14 @@ class TestBulkDeleteEndpoint:
     @patch("langflow.api.utils.kb_helpers.Chroma", new=MagicMock())
     @patch("langflow.api.utils.kb_helpers.time.sleep", new=MagicMock())
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    async def test_should_delete_multiple_kbs(self, mock_root, client, logged_in_headers, tmp_path):
+    async def test_should_delete_multiple_kbs(self, mock_root, client, logged_in_headers, active_user, tmp_path):
         mock_root.return_value = tmp_path
         kb_user_path = tmp_path / "activeuser"
         kb_user_path.mkdir(parents=True)
         (kb_user_path / "KB1").mkdir()
         (kb_user_path / "KB2").mkdir()
+        await _seed_kb_row(active_user, "KB1")
+        await _seed_kb_row(active_user, "KB2")
 
         response = await client.request(
             "DELETE",
@@ -372,7 +391,7 @@ class TestBulkDeleteEndpoint:
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_should_handle_partial_storage_failure_with_warning(
-        self, mock_root, mock_delete, client, logged_in_headers, tmp_path
+        self, mock_root, mock_delete, client, logged_in_headers, active_user, tmp_path
     ):
         """Storage failure on one KB still counts as deleted, with a warning.
 
@@ -387,6 +406,8 @@ class TestBulkDeleteEndpoint:
         kb_user_path.mkdir(parents=True)
         (kb_user_path / "KB1").mkdir()
         (kb_user_path / "KB2").mkdir()
+        await _seed_kb_row(active_user, "KB1")
+        await _seed_kb_row(active_user, "KB2")
 
         mock_delete.side_effect = [True, False]
 
@@ -407,11 +428,12 @@ class TestBulkDeleteEndpoint:
 
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", new=MagicMock(return_value=True))
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    async def test_should_report_not_found_kbs(self, mock_root, client, logged_in_headers, tmp_path):
+    async def test_should_report_not_found_kbs(self, mock_root, client, logged_in_headers, active_user, tmp_path):
         mock_root.return_value = tmp_path
         kb_user_path = tmp_path / "activeuser"
         kb_user_path.mkdir(parents=True)
         (kb_user_path / "KB1").mkdir()
+        await _seed_kb_row(active_user, "KB1")
 
         response = await client.request(
             "DELETE",

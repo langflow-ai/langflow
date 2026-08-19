@@ -15,6 +15,7 @@ import { useCreateMemory } from "@/controllers/API/queries/memories/use-create-m
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import useAlertStore from "@/stores/alertStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { extractApiErrorMessages } from "@/utils/apiError";
 
 interface UseCreateMemoryModalParams {
@@ -61,12 +62,18 @@ export function useCreateMemoryModal({
   const { data: modelProviders = [] } = useGetModelProviders({});
   const { data: globalVariables = [], isFetched: areGlobalVariablesFetched } =
     useGetGlobalVariables();
+  const localVectorStoreAvailable = useUtilityStore(
+    (state) => state.localVectorStoreAvailable,
+  );
 
   // Default to the platform's active DB provider (Chroma Cloud / OpenSearch when
   // configured), falling back to local Chroma — identical to Knowledge Bases.
+  // When local storage is unavailable (production profile), the fallback is
+  // pgVector instead so we never seed a Chroma the create endpoint rejects.
   const defaultBackendSelection = useMemo(
-    () => getDefaultDBProviderConfig(globalVariables),
-    [globalVariables],
+    () =>
+      getDefaultDBProviderConfig(globalVariables, localVectorStoreAvailable),
+    [globalVariables, localVectorStoreAvailable],
   );
 
   // Seed the selector from the active provider once global variables load.
@@ -95,6 +102,7 @@ export function useCreateMemoryModal({
   const backendConfigured = isDBProviderConfigured(
     backendType,
     globalVariables,
+    localVectorStoreAvailable,
   );
   const { setErrorData, setSuccessData } = useAlertStore((state) => ({
     setErrorData: state.setErrorData,

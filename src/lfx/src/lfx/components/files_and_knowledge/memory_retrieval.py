@@ -1,8 +1,11 @@
 """Memory Base retrieval component.
 
-Queries the auto-provisioned Chroma KB backing a Memory Base, scoped to the
-current flow's request session. Additional option to filter by session_id if the
-developer wants to turn that on. The component will auto filter based on session_id then.
+Queries the vector store backing a Memory Base, scoped to the current flow's
+request session. Additional option to filter by session_id if the developer wants
+to turn that on. The component will auto filter based on session_id then.
+
+Where that store lives comes from the Memory Base's ``knowledge_base`` row, not
+from disk: only a local-Chroma Memory Base resolves a filesystem path at all.
 """
 
 from __future__ import annotations
@@ -11,26 +14,27 @@ import uuid
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
-from langflow.api.utils.kb_helpers import KBIngestionHelper, resolve_backend_selection, resolve_embedding_selection
+from langflow.api.utils.kb_helpers import (
+    KBIngestionHelper,
+    resolve_backend_selection,
+    resolve_embedding_selection,
+    resolve_local_store_path,
+)
 from langflow.services.database.models.memory_base.model import MemoryBase
 from langflow.services.database.models.user.crud import get_user_by_id
-from langflow.services.memory_base.kb_path_helpers import hash_session_id, validate_kb_path
+from langflow.services.memory_base.kb_path_helpers import hash_session_id
 from sqlmodel import select
 
 from lfx.base.knowledge_bases.backends import create_backend
-from lfx.components.files_and_knowledge._kb_paths import (
-    get_knowledge_bases_root_path,
-)
 from lfx.custom import Component
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.services.deps import session_scope
+from lfx.workflow.end_user_identity import end_user_id_from_scoped_session, serving_end_user_enabled
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from langflow.services.database.models.user.model import User
     from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -134,7 +138,7 @@ class MemoryBaseComponent(Component):
         ),
     ]
 
-    def _build_where_clause(self, *, session_id: str | None = None) -> dict | None:
+    def _build_where_clause(self, *, session_id: str | None = None, end_user_id: str | None = None) -> dict | None:
         """Compose the metadata filter based on opt-in filters and manual params.
 
         Emits a flat ``{key: value}`` dict, which is the contract every
@@ -142,10 +146,18 @@ class MemoryBaseComponent(Component):
         and OpenSearch translates it into a bool query. Chroma's explicit
         ``{"$eq": ...}`` operator form is NOT portable — a remote backend would
         treat the operator dict as a literal value and silently match nothing.
+
+        When ``filter_by_session`` is on, the session-id predicate already scopes to one
+        end user (its ``<end_user>::<base>`` prefix). When it is off (cross-session recall)
+        on the serving plane, ``end_user_id`` keeps the query within that one end user so it
+        does not span every end user's chunks in the shared service-account store. Off /
+        editor (``end_user_id`` None) adds neither predicate — all sessions, unchanged.
         """
         predicates: dict = {}
         if _session_filter_enabled(self.filter_by_session) and session_id:
             predicates["session_id"] = str(session_id)
+        elif end_user_id:
+            predicates["end_user_id"] = str(end_user_id)
 
         return predicates or None
 
@@ -203,39 +215,40 @@ class MemoryBaseComponent(Component):
             raise ValueError(msg)
         return mb, owner
 
-    def _resolve_kb_location(self, owner_username: str, kb_name: str) -> Path:
-        """Build and validate the on-disk KB path for the given owner."""
-        kb_root = get_knowledge_bases_root_path()
-        kb_path = kb_root / owner_username / kb_name
-        try:
-            validate_kb_path(kb_root, kb_path)
-        except ValueError as exc:
-            msg = "Memory Base path is not accessible."
-            raise ValueError(msg) from exc
-        return kb_path
-
     async def _build_backend(
         self,
-        kb_path: Path,
         owner: User,
+        owner_username: str,
         kb_name: str,
     ) -> BaseVectorStoreBackend:
         """Construct the KB's configured backend, wired to its embedding function.
 
-        Both the embedding config and the backend are resolved from the
-        ``knowledge_base`` row — no ``kb_path`` is passed to either resolver, so
-        the on-disk sidecar (``embedding_metadata.json``) is never consulted for
-        a Memory Base. A Memory Base always has a row (created at MB-create and
-        backfilled for pre-existing ones), so a disk fallback here would only
-        ever mask a real DB problem, not recover from a missing sidecar — and a
-        Memory Base provisioned on OpenSearch or Chroma Cloud is queried there —
-        with the right embedding model — even on a replica whose local disk
-        never held the KB directory.
+        The embedding config and the backend both resolve from the
+        ``knowledge_base`` row, so nothing on disk is consulted to decide *where*
+        this Memory Base lives. A local path is then derived only when that row
+        says local Chroma; for OpenSearch, pgVector, or Chroma Cloud it stays
+        ``None`` and the filesystem is never touched. That is what lets a
+        Memory Base be queried — with the right embedding model — from a replica
+        whose local disk never held the KB directory.
         """
+        # Resolve where this Memory Base lives first: containment is a cheap
+        # local check, and a request that will be refused shouldn't first pay for
+        # a credential lookup and a provider client.
+        backend_type, backend_config = await resolve_backend_selection(user_id=owner.id, kb_name=kb_name)
+        try:
+            kb_path = resolve_local_store_path(
+                kb_name,
+                owner_username,
+                backend_type=backend_type,
+                backend_config=backend_config,
+            )
+        except ValueError as exc:
+            msg = "Memory Base path is not accessible."
+            raise ValueError(msg) from exc
+
         provider, model = await resolve_embedding_selection(user_id=owner.id, kb_name=kb_name)
         embedding_function = await KBIngestionHelper.build_embeddings(provider, model, owner)
 
-        backend_type, backend_config = await resolve_backend_selection(user_id=owner.id, kb_name=kb_name)
         backend = create_backend(
             backend_type,
             kb_name=kb_name,
@@ -273,13 +286,26 @@ class MemoryBaseComponent(Component):
         context from prior conversations across all sessions.
         """
         session_id = getattr(self.graph, "session_id", None)
-        if _session_filter_enabled(self.filter_by_session) and not session_id:
+        filter_on = _session_filter_enabled(self.filter_by_session)
+        if filter_on and not session_id:
             # Only required when filtering is on, since the value gates the where clause.
             msg = (
                 "A session_id is required on the flow request when 'Filter by Session' "
                 "is enabled — disable the toggle to allow cross-session retrieval."
             )
             raise ValueError(msg)
+
+        # Serving plane: the end-user id lives in the scoped session prefix. When filtering
+        # by session it is already scoped; when doing cross-session recall it becomes the
+        # sole end-user predicate (see _build_where_clause).
+        end_user_id = end_user_id_from_scoped_session(session_id)
+        if serving_end_user_enabled() and not filter_on and end_user_id is None:
+            # Fail-closed: an anonymous serving caller has no end-user scope, so
+            # cross-session recall over the shared service-account store would return every
+            # end user's memory. Anonymous runs persist nothing and have no cross-session
+            # memory to recall, so return empty rather than leak.
+            logger.debug("MemoryBase cross-session recall blocked for anonymous serving caller")
+            return DataFrame(data=[])
 
         flow_id = _coerce_uuid(getattr(self.graph, "flow_id", None))
         if flow_id is None:
@@ -301,14 +327,7 @@ class MemoryBaseComponent(Component):
             owner_username = owner.username
             kb_name = mb.kb_name
 
-        # ``kb_path`` is still needed for a local-Chroma backend (that's where its
-        # vectors live), but embedding + backend now resolve from the DB row, so a
-        # missing on-disk ``embedding_metadata.json`` is no longer fatal — a
-        # remote-backed Memory Base is fully queryable on a replica with no local
-        # KB directory.
-        kb_path = self._resolve_kb_location(owner_username, kb_name)
-
-        where = self._build_where_clause(session_id=session_id)
+        where = self._build_where_clause(session_id=session_id, end_user_id=end_user_id)
 
         logger.debug(
             "MemoryBase retrieval mb=%s session_hash=%s session_filter=%s top_k=%s",
@@ -322,7 +341,7 @@ class MemoryBaseComponent(Component):
             # Embedding providers may reject empty input; skip the round-trip entirely.
             return DataFrame(data=[])
 
-        backend = await self._build_backend(kb_path, owner, kb_name)
+        backend = await self._build_backend(owner, owner_username, kb_name)
         try:
             results = await backend.similarity_search(
                 query=self.search_query,
