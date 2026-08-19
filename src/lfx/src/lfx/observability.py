@@ -55,7 +55,7 @@ if TYPE_CHECKING:
     from opentelemetry.sdk._logs import LoggerProvider
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.trace import Span
+    from opentelemetry.trace import Link, Span
 
 # The tracer name Langflow's own application spans are emitted under. Deliberately not
 # "langflow": the LLM tracer integrations already take a tracer under that name, and their
@@ -1063,7 +1063,7 @@ _current_queued_trace_link: contextvars.ContextVar[Any] = contextvars.ContextVar
 )
 
 
-def get_queued_trace_link() -> Any:
+def get_queued_trace_link() -> Link | None:
     """Return the link to the request that queued this run, or None outside a queued run."""
     return _current_queued_trace_link.get()
 
@@ -1085,7 +1085,16 @@ def queued_trace_link(link: Any) -> Iterator[None]:
         _current_queued_trace_link.reset(token)
 
 
-def extract_trace_link(metadata: dict[str, Any] | None):
+def tracing_is_available() -> bool:
+    """Whether OpenTelemetry is importable at all.
+
+    Exposed so a caller can skip work that exists only to feed telemetry, such as reading a
+    job row purely for its trace carrier, on a deployment that ships without the extra.
+    """
+    return _OTEL_AVAILABLE
+
+
+def extract_trace_link(metadata: dict[str, Any] | None) -> Link | None:
     """Return a ``Link`` to the request that queued this job, or None.
 
     None covers every honest case: OpenTelemetry absent, the job enqueued while nothing was

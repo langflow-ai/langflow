@@ -994,24 +994,28 @@ class Graph:
         # start_span would pick the dead span up as parent anyway.
         parent = otel_trace.get_current_span()
         parent_context = parent.get_span_context()
-        if parent_context.is_valid and not parent.is_recording():
-            span = tracer.start_span(
-                FLOW_EXECUTION_SPAN_NAME,
-                context=OtelContext(),
-                links=[otel_trace.Link(parent_context)],
-            )
-        elif (queued_link := get_queued_trace_link()) is not None and not parent_context.is_valid:
-            # A run picked off a queue. Nothing is current here, because the request that
-            # queued it finished in another task and possibly another process, so the branch
-            # above cannot fire. The link travelled on the job row instead.
+        queued_link = get_queued_trace_link()
+        if queued_link is not None and not parent.is_recording():
+            # A run picked off a queue, carrying the context of the request that queued it on
+            # the job row.
             #
-            # Only when no span is current: an in-process parent is better evidence than a
-            # stamped one, and preferring the carrier would relabel a run that really is
-            # nested inside a live request.
+            # Checked before the ended-parent branch, and gated on the parent not recording
+            # rather than on no span being current. Whatever ended span the worker happens to
+            # be holding is not necessarily this run's originator: a worker task started from
+            # a request inherits that request's context permanently, so every later run it
+            # serves would link back to that first request. The carrier was written for this
+            # specific job and is the authoritative answer; an ambient ended span is only a
+            # good guess. A live parent still wins over both, below.
             span = tracer.start_span(
                 FLOW_EXECUTION_SPAN_NAME,
                 context=OtelContext(),
                 links=[queued_link],
+            )
+        elif parent_context.is_valid and not parent.is_recording():
+            span = tracer.start_span(
+                FLOW_EXECUTION_SPAN_NAME,
+                context=OtelContext(),
+                links=[otel_trace.Link(parent_context)],
             )
         else:
             span = tracer.start_span(FLOW_EXECUTION_SPAN_NAME)
