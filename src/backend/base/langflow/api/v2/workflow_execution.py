@@ -495,9 +495,16 @@ async def execute_sync_workflow(
     try:
         flow_id_str = str(flow.id)
         user_id = str(current_user.id)
+        # Caller-supplied ``data`` is rejected for sync mode before the execution gates run,
+        # so a value here is the server-sanitized stored graph produced by the caller-aware
+        # component policy. It must win over ``flow.data``.
+        #
+        # 1.12 additionally bypasses a warm pre-built template here; 1.11.x has no warm
+        # registry, so there is nothing to bypass and the cold path below is the only one.
+        sanitized_flow_data = parsed.data
         # Use deepcopy to prevent mutation of the original flow.data
         # process_tweaks modifies nested dictionaries in-place
-        graph_data = deepcopy(flow.data)
+        graph_data = deepcopy(sanitized_flow_data if sanitized_flow_data is not None else flow.data)
         graph_data = process_tweaks(graph_data, tweaks, stream=False)
         # Pass context to graph (similar to V1's simple_run_flow)
         # This allows components to access request metadata via graph.context

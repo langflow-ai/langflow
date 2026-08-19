@@ -35,9 +35,11 @@ class SecuritySettings(BaseModel):
     connector_ssrf_validation_enabled: bool = True
     """SSRF validation for CONNECTOR components that take a tenant-controlled host/URL:
     vector stores (Chroma/Qdrant/Elasticsearch/OpenSearch/Milvus/Weaviate/Supabase/Upstash/
-    ClickHouse), the SQL Database components, the Glean and AstraDB-CQL tools, model-provider
-    model discovery (LiteLLM/HuggingFace/xAI/DeepSeek/Groq/watsonx), the Ollama / LM Studio /
-    Home Assistant base-URL fields, the A2A Agent agent URL, and the PaddleOCR base URL.
+    ClickHouse), the SQL Database components, the Glean and AstraDB-CQL tools, the DataStax
+    Astra DB / HCD API endpoint (shared by the Data API, tool, vector store, graph and chat-memory
+    components), model-provider model discovery (LiteLLM/HuggingFace/xAI/DeepSeek/Groq/watsonx),
+    the Ollama / LM Studio / Home Assistant base-URL fields, the A2A Agent agent URL, and the
+    PaddleOCR base URL.
 
     Default True: connector host validation follows ssrf_protection_enabled / ssrf_allowed_hosts
     so tenant-controlled connector URLs cannot reach internal/cloud-metadata hosts by default.

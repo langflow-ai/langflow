@@ -22,6 +22,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import build_content_disposition, normalize_flow_for_export, remove_api_keys
+from langflow.api.utils.core import strip_flow_secrets
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_move_allowed
 from langflow.services.database.models.flow.guards import (
@@ -705,7 +706,7 @@ def _build_flows_download_response(
 
     Strips API keys and normalises for git-friendly export before packaging.
     """
-    normalised_flows = [normalize_flow_for_export(remove_api_keys(flow.model_dump())) for flow in flows]
+    normalised_flows = [normalize_flow_for_export(strip_flow_secrets(flow.model_dump())) for flow in flows]
 
     if len(normalised_flows) > 1:
         zip_stream = io.BytesIO()

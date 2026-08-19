@@ -756,6 +756,63 @@ async def test_build_public_tmp_rejects_code_execution_components(
 
 @pytest.mark.benchmark
 @pytest.mark.security
+async def test_build_public_tmp_rejects_mcp_stdio_server_config(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Unauthenticated public builds must reject an MCP Tools node using the stdio transport.
+
+    The OS command lives in the ``mcp_server`` field VALUE, not in ``code``, so the
+    trusted-code substitution performed for public builds does not neutralise it. Without
+    an explicit check, triggering the public flow spawns that process as the server account.
+    """
+    flow_dict = json.loads(json_memory_chatbot_no_llm)
+    flow_dict["data"]["nodes"].append(
+        {
+            "id": "MCPTools-pub1",
+            "type": "genericNode",
+            "position": {"x": 0, "y": 0},
+            "data": {
+                "id": "MCPTools-pub1",
+                "type": "MCPTools",
+                "node": {
+                    "display_name": "MCP Tools",
+                    "template": {
+                        "mcp_server": {
+                            "type": "mcp",
+                            "name": "mcp_server",
+                            "value": {
+                                "name": "local",
+                                "config": {"command": "python", "args": ["-m", "some_module"]},
+                            },
+                        }
+                    },
+                },
+            },
+        }
+    )
+    flow_id = await create_flow(client, json.dumps(flow_dict), logged_in_headers)
+
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    # The shared client persists access-token cookies from ``logged_in_headers``; clearing
+    # them is the only way to exercise the genuinely unauthenticated public path.
+    client.cookies.clear()
+    client.cookies.set("client_id", "test-mcp-stdio-client")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": "test_session"}},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert response.json()["detail"] == "This flow cannot be executed."
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
 async def test_build_public_tmp_rejects_flow_invoking_components(client, json_memory_chatbot_no_llm, logged_in_headers):
     """Report H1-3754930 (transitive case): public builds must reject flow-invoking components.
 

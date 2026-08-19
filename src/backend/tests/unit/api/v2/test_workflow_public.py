@@ -465,6 +465,60 @@ async def test_public_endpoint_rejects_code_execution_components(
 
 @pytest.mark.benchmark
 @pytest.mark.security
+async def test_public_endpoint_rejects_mcp_stdio_server_config(
+    client: AsyncClient, json_memory_chatbot_no_llm, logged_in_headers
+):
+    """An MCP Tools node configured for the stdio transport must not run anonymously.
+
+    The command it would launch lives in the ``mcp_server`` field VALUE rather than in
+    ``code``, so trusted-code substitution leaves it intact; without the public-path
+    check an anonymous visitor would make the server spawn that OS process.
+    """
+    import json
+
+    from tests.unit.build_utils import create_flow
+
+    flow_dict = json.loads(json_memory_chatbot_no_llm)
+    flow_dict["data"]["nodes"].append(
+        {
+            "id": "MCPTools-pub1",
+            "type": "genericNode",
+            "position": {"x": 0, "y": 0},
+            "data": {
+                "id": "MCPTools-pub1",
+                "type": "MCPTools",
+                "node": {
+                    "display_name": "MCP Tools",
+                    "template": {
+                        "mcp_server": {
+                            "type": "mcp",
+                            "name": "mcp_server",
+                            "value": {
+                                "name": "local",
+                                "config": {"command": "python", "args": ["-m", "some_module"]},
+                            },
+                        }
+                    },
+                },
+            },
+        }
+    )
+    flow_id = await create_flow(client, json.dumps(flow_dict), logged_in_headers)
+    await _make_flow_public(client, flow_id, logged_in_headers)
+
+    _send_unauthenticated(client, "test-mcp-stdio-client")
+    response = await client.post(
+        "api/v2/workflows/public",
+        json={"flow_id": str(flow_id), "input_value": "Hi"},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert response.json()["detail"] == "This flow cannot be executed."
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
 async def test_public_endpoint_surfaces_value_error_as_400(client: AsyncClient, public_flow_id, monkeypatch):
     """Other ``ValueError``s from the gate sequence become 400 with the message preserved.
 

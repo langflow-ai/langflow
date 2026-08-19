@@ -8,6 +8,7 @@ from lfx.base.models.anthropic_constants import (
     TOOL_CALLING_UNSUPPORTED_ANTHROPIC_MODELS,
 )
 from lfx.base.models.model import LCModelComponent
+from lfx.base.models.provider_ssrf import validate_provider_base_url
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
@@ -81,6 +82,10 @@ class AnthropicModelComponent(LCModelComponent):
         except ImportError as e:
             msg = "langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`."
             raise ImportError(msg) from e
+        # base_url is tenant-editable and the SDK sends the operator's stored API key to whatever
+        # host it names. Validate before the try block below, which would otherwise flatten the
+        # SSRF error into a generic "could not connect" message.
+        validate_provider_base_url(self.base_url, default_url=DEFAULT_ANTHROPIC_API_URL)
         try:
             max_tokens_value = getattr(self, "max_tokens", "")
             max_tokens_value = 4096 if max_tokens_value == "" else int(max_tokens_value)
@@ -102,6 +107,9 @@ class AnthropicModelComponent(LCModelComponent):
         return output
 
     def get_models(self, *, tool_model_enabled: bool | None = None) -> list[str]:
+        # The tool-capability probe below builds a client against base_url and sends the
+        # operator's API key to it, so the same connector SSRF policy applies here.
+        validate_provider_base_url(self.base_url, default_url=DEFAULT_ANTHROPIC_API_URL)
         try:
             import anthropic
 

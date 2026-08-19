@@ -243,6 +243,7 @@ EXPECTED_FIELDS = {
     "mcp_server_docker_hardening",
     "mcp_server_allowed_packages",
     "mcp_server_interpreter_hardening",
+    "mcp_server_env_allowlist",
 }
 
 

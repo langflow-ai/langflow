@@ -28,6 +28,7 @@ from lfx.services.storage.service import StorageService
 from lfx.template.utils import update_frontend_node_with_template_values
 from lfx.type_extraction import post_process_type
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.file_path_security import validate_storage_key
 
 if TYPE_CHECKING:
     from langchain_core.callbacks.base import BaseCallbackHandler
@@ -183,9 +184,16 @@ class CustomComponent(BaseComponent):
         return str(path_object)
 
     def get_full_path(self, path: str) -> str:
+        """Resolve a ``"<namespace>/<file_name>"`` storage key to its backing storage path.
+
+        The namespace segment arrives from a tenant-controlled component input and selects a
+        per-user / per-flow storage directory, so it is validated against the executing graph's
+        own scopes before the storage service is asked to build a path for it. Without that
+        check a caller could address another user's uploads by their storage key.
+        """
         storage_svc: StorageService = get_storage_service()
 
-        flow_id, file_name = path.split("/", 1)
+        flow_id, file_name = validate_storage_key(self, path)
         return storage_svc.build_full_path(flow_id, file_name)
 
     @property

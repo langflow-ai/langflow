@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import requests
 from langchain_core.embeddings import Embeddings as LCEmbeddings
+from lfx.base.models.provider_ssrf import validate_provider_base_url
 
 if TYPE_CHECKING:
     from PIL.Image import Image as PILImage
@@ -45,6 +46,9 @@ class VllmMultivectorEmbeddings(LCEmbeddings):
         timeout: float = 60.0,
         max_retries: int = 1,
     ) -> None:
+        # url is tenant-editable and every /pooling request below carries api_key in an
+        # Authorization header, so validate once here to cover both request sites.
+        validate_provider_base_url(url)
         self.url = url.rstrip("/")
         self.model = model
         self.api_key = api_key
