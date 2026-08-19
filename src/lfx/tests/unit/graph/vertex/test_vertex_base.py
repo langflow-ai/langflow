@@ -1156,3 +1156,27 @@ class TestFileInputStorageNamespaceOwnership:
         )
 
         assert params["path"] == str(tmp_path / "config" / self.VICTIM_ID / "secret.txt")
+
+
+class TestStorageNamespaceDenialIsNotDowngraded(TestFileInputStorageNamespaceOwnership):
+    """A namespace denial must survive the broad ValueError handler in process_file_value."""
+
+    def test_denial_survives_even_if_its_message_matches_the_unpack_branch(self, unrestricted_storage, monkeypatch):
+        """The handler below the denial decides by substring; pin that it cannot swallow this.
+
+        ``StorageNamespaceError`` is a ``ValueError``, so without an explicit re-raise its fate
+        depends on whether its message happens to contain "too many values to unpack". Force
+        exactly that collision and assert the denial still propagates.
+        """
+        from lfx.graph.vertex import param_handler as param_handler_module
+        from lfx.utils.file_path_security import StorageNamespaceError
+
+        def _deny(*_args, **_kwargs):
+            msg = "too many values to unpack (engineered to collide with the unpack branch)"
+            raise StorageNamespaceError(msg)
+
+        monkeypatch.setattr(param_handler_module, "enforce_storage_key_scope", _deny)
+        handler = self._handler(unrestricted_storage, user_id=self.ATTACKER_ID, flow_id=self.FLOW_ID)
+
+        with pytest.raises(StorageNamespaceError):
+            handler.process_file_value(f"{self.VICTIM_ID}/secret.txt", is_list=False)

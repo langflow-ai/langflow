@@ -15,6 +15,7 @@ from lfx.services.deps import get_storage_service
 from lfx.utils.constants import DIRECT_TYPES
 from lfx.utils.file_path_security import (
     LocalFileAccessError,
+    StorageNamespaceError,
     enforce_local_file_access,
     enforce_storage_key_scope,
     is_local_file_access_restricted,
@@ -360,6 +361,12 @@ class ParameterHandler:
                     msg = "FileInput values must be file path strings."
                     raise LocalFileAccessError(msg)
                 full_path = self.storage_service.resolve_component_path(self._scoped_storage_key(file_path))
+        except StorageNamespaceError:
+            # A namespace denial must never be downgraded. It is a ValueError subclass, so the
+            # broad handler below would otherwise decide its fate by substring-matching an
+            # unrelated message -- correct today, but one added branch away from silently
+            # turning a cross-tenant denial back into a read.
+            raise
         except ValueError as e:
             if "too many values to unpack" in str(e):
                 full_path = file_path
