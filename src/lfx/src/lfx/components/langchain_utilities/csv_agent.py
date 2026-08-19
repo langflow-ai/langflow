@@ -227,8 +227,10 @@ class CSVAgentComponent(LCAgentComponent):
 
         # If using S3 storage, download the file to temp
         if settings.storage_type == "s3":
-            # Download from S3 to temp file
-            csv_bytes = run_until_complete(read_file_bytes(file_path))
+            # Download from S3 to temp file. A genuine absolute local path is read from disk
+            # instead of S3 (#13798), so hand the reader the same scoped confinement the
+            # local-storage branch below applies.
+            csv_bytes = run_until_complete(read_file_bytes(file_path, resolve_path=self._confine_local_path))
 
             # Create temp file with .csv extension
             suffix = Path(file_path.split("/")[-1]).suffix or ".csv"
@@ -242,7 +244,11 @@ class CSVAgentComponent(LCAgentComponent):
 
         # Local storage - confine tenant-controlled path to the storage dir when
         # LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS is enabled (blocks /etc/passwd etc.).
-        return str(enforce_local_file_access(file_path, scope_ids=component_file_access_scopes(self)))
+        return self._confine_local_path(file_path)
+
+    def _confine_local_path(self, path: str) -> str:
+        """Confine a tenant-controlled local path to this component's storage scope."""
+        return str(enforce_local_file_access(path, scope_ids=component_file_access_scopes(self)))
 
     def _cleanup_temp_file(self) -> None:
         """Clean up temporary file if one was created."""

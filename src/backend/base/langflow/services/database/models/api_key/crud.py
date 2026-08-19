@@ -216,7 +216,10 @@ async def _check_key_from_db_with_context(
         # authentication (missing user or blocked external user) does not bump
         # total_uses / last_used_at.
         user = await session.get(User, api_key_obj.user_id)
-        if user is None:
+        if user is None or not user.is_active:
+            # Deactivating a user must revoke their programmatic access too. Without the
+            # is_active check a key minted while the account was active keeps authenticating
+            # after an administrator disables it (LE-2246).
             return None
         if await _external_access_ceiling_blocks_user(session, user, settings_service):
             logger.info("API key rejected for externally managed user while external access ceiling is enabled")
@@ -261,7 +264,8 @@ async def _check_key_from_db_with_context(
             # backfill so a denied authentication (missing user or blocked
             # external user) does not bump total_uses / last_used_at.
             user = await session.get(User, api_key_obj.user_id)
-            if user is None:
+            if user is None or not user.is_active:
+                # Same revocation guard on the legacy (unhashed) lookup branch (LE-2246).
                 return None
             if await _external_access_ceiling_blocks_user(session, user, settings_service):
                 logger.info("API key rejected for externally managed user while external access ceiling is enabled")

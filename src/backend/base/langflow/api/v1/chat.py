@@ -17,7 +17,6 @@ from lfx.utils.flow_validation import (
     CustomComponentValidationError,
     prepare_flow_build_for_user,
     prepare_public_flow_build,
-    validate_flow_for_current_settings,
     validate_public_flow_no_code_execution,
 )
 from sqlmodel import select
@@ -155,7 +154,11 @@ async def retrieve_vertices_order(
     stmt = (
         select(Flow)
         .where(Flow.id == flow_id)
-        .where((Flow.user_id == current_user.id) | (Flow.access_type == AccessTypeEnum.PUBLIC))
+        # Owner-only: a non-owner must not supply graph data for a PUBLIC flow on this
+        # deprecated route. prepare_flow_build_for_user is a no-op under shipped defaults
+        # (custom_component_admin_only=False), so narrowing the fetch is what actually
+        # closes the reported RCE (LE-2242). 1.12 gets this via #14497's authz work.
+        .where(Flow.user_id == current_user.id)
     )
     flow = (await session.exec(stmt)).first()
     if not flow:
@@ -325,7 +328,23 @@ async def build_flow(
             if sanitized_data is not None:
                 data = FlowDataRequest.model_validate(sanitized_data)
         elif flow and flow.data:
-            validate_flow_for_current_settings(flow.data)
+            # Stored graphs are caller-controlled too: any user who can write a flow can
+            # persist component source through the ordinary flow API and then execute it by
+            # building with an empty body. The global validator does not know the caller, so
+            # it cannot enforce ``custom_component_admin_only`` here. Run the same caller-aware
+            # policy the inline branch runs, and build from the detached copy it returns so the
+            # worker compiles the server's trusted source rather than the stored bytes.
+            # A permissive policy returns ``None`` and the build still loads from the DB.
+            sanitized_data = await prepare_flow_build_for_user(
+                flow.data,
+                is_superuser=current_user.is_superuser,
+            )
+            if sanitized_data is not None:
+                data = FlowDataRequest(
+                    nodes=sanitized_data.get("nodes", []),
+                    edges=sanitized_data.get("edges", []),
+                    viewport=sanitized_data.get("viewport"),
+                )
     except CustomComponentValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:

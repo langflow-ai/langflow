@@ -36,6 +36,7 @@ from langflow.api.utils.core import (
     parse_value,
     raise_error_if_astra_cloud_env,
     remove_api_keys,
+    strip_flow_secrets,
     validate_is_component,
 )
 from langflow.api.utils.flow_utils import (
@@ -51,16 +52,13 @@ from langflow.api.utils.flow_utils import (
 
 # Explicitly list the main exports for better IDE support and documentation
 __all__ = [
-    # Constants
     "API_WORDS",
     "MAX_PAGE_SIZE",
     "MIN_PAGE_SIZE",
     "CurrentActiveMCPUser",
-    # Type annotations
     "CurrentActiveUser",
     "DbSession",
     "DbSessionReadOnly",
-    # Enums
     "EventDeliveryType",
     "ValidatedFileName",
     "ValidatedFolderName",
@@ -81,7 +79,6 @@ __all__ = [
     "get_is_component_from_data",
     "get_suggestion_message",
     "get_top_level_vertices",
-    # Functions
     "has_api_terms",
     "normalize_code_for_import",
     "normalize_flow_for_export",
@@ -90,7 +87,12 @@ __all__ = [
     "raise_error_if_astra_cloud_env",
     "remove_api_keys",
     "scope_session_to_namespace",
+    "strip_flow_secrets",
     "validate_is_component",
     "validate_public_files",
     "verify_public_flow_and_get_user",
+    # Constants,
+    # Enums,
+    # Functions,
+    # Type annotations,
 ]

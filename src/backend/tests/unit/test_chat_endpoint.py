@@ -70,12 +70,18 @@ async def test_build_flow_validates_request_data_instead_of_stale_db_flow(
     request_data["nodes"][0]["data"]["node"]["display_name"] = "Updated Request Flow"
     saved_flow_validation_message = "saved flow should not be validated when request data is provided"
 
-    def fail_if_saved_flow_is_validated(target):
+    # ``prepare_flow_build_for_user`` is the preflight seam: build_flow runs it on the request
+    # body when one is present and on the stored graph otherwise, so seeing the stored data
+    # here would mean the stale DB copy was the one policy-checked and built.
+    validated_targets = []
+
+    async def fail_if_saved_flow_is_validated(target, *, is_superuser):  # noqa: ARG001
         if target == flow_data["data"]:
             raise ValueError(saved_flow_validation_message)
+        validated_targets.append(target)
 
     monkeypatch.setattr(
-        "langflow.api.v1.chat.validate_flow_for_current_settings",
+        "langflow.api.v1.chat.prepare_flow_build_for_user",
         fail_if_saved_flow_is_validated,
     )
 
@@ -87,6 +93,10 @@ async def test_build_flow_validates_request_data_instead_of_stale_db_flow(
 
     assert response.status_code == codes.OK
     assert "job_id" in response.json()
+    # Pin that preflight ran at all: a seam that stopped being called would otherwise let
+    # this test pass for the wrong reason.
+    assert len(validated_targets) == 1
+    assert validated_targets[0]["nodes"][0]["data"]["node"]["display_name"] == "Updated Request Flow"
 
 
 async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, logged_in_headers):
@@ -694,8 +704,9 @@ async def test_build_public_tmp_checks_public_access_before_validation(
     def fail_if_validation_runs(_target):
         raise ValueError(public_access_validation_message)
 
+    # First validator on the public build path, immediately after the public-access gate.
     monkeypatch.setattr(
-        "langflow.api.v1.chat.validate_flow_for_current_settings",
+        "langflow.api.v1.chat.validate_public_flow_no_code_execution",
         fail_if_validation_runs,
     )
 
@@ -744,6 +755,63 @@ async def test_build_public_tmp_rejects_code_execution_components(
     assert response.status_code == codes.OK
 
     client.cookies.set("client_id", "test-code-exec-client")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": "test_session"}},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert response.json()["detail"] == "This flow cannot be executed."
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_rejects_mcp_stdio_server_config(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Unauthenticated public builds must reject an MCP Tools node using the stdio transport.
+
+    The OS command lives in the ``mcp_server`` field VALUE, not in ``code``, so the
+    trusted-code substitution performed for public builds does not neutralise it. Without
+    an explicit check, triggering the public flow spawns that process as the server account.
+    """
+    flow_dict = json.loads(json_memory_chatbot_no_llm)
+    flow_dict["data"]["nodes"].append(
+        {
+            "id": "MCPTools-pub1",
+            "type": "genericNode",
+            "position": {"x": 0, "y": 0},
+            "data": {
+                "id": "MCPTools-pub1",
+                "type": "MCPTools",
+                "node": {
+                    "display_name": "MCP Tools",
+                    "template": {
+                        "mcp_server": {
+                            "type": "mcp",
+                            "name": "mcp_server",
+                            "value": {
+                                "name": "local",
+                                "config": {"command": "python", "args": ["-m", "some_module"]},
+                            },
+                        }
+                    },
+                },
+            },
+        }
+    )
+    flow_id = await create_flow(client, json.dumps(flow_dict), logged_in_headers)
+
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    # The shared client persists access-token cookies from ``logged_in_headers``; clearing
+    # them is the only way to exercise the genuinely unauthenticated public path.
+    client.cookies.clear()
+    client.cookies.set("client_id", "test-mcp-stdio-client")
     response = await client.post(
         f"api/v1/build_public_tmp/{flow_id}/flow",
         json={"inputs": {"session": "test_session"}},

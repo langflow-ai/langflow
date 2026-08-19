@@ -10,9 +10,10 @@ import jwt
 import pytest
 from cryptography.fernet import Fernet, InvalidToken
 from fastapi import HTTPException, WebSocketException, status
-from langflow.services.auth.constants import AUTO_LOGIN_WARNING
+from langflow.services.auth.constants import AUTO_LOGIN_ERROR, AUTO_LOGIN_WARNING
 from langflow.services.auth.context import (
     AUTH_METHOD_API_KEY,
+    AUTH_METHOD_AUTO_LOGIN,
     clear_current_auth_context,
     get_current_auth_context,
 )
@@ -1313,3 +1314,105 @@ async def test_api_key_entrypoint_clears_stale_external_access_ceiling(
         set_current_external_access_context(None)
 
     assert result.id == user.id
+
+
+# =============================================================================
+# get_current_user_mcp Tests — AUTO_LOGIN parity with the non-MCP entrypoints
+# =============================================================================
+
+
+@pytest.mark.anyio
+async def test_get_current_user_mcp_auto_login_alone_still_rejects(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """MCP credential resolution must honour skip_auth_auto_login like every other entrypoint.
+
+    With the default configuration (AUTO_LOGIN on, skip_auth_auto_login off) a caller
+    that presents no token and no API key must be rejected. Without this guard the MCP
+    transport endpoints resolve an anonymous request to the configured superuser while
+    every other authenticated route returns 403.
+    """
+    auth_settings.AUTO_LOGIN = True
+    auth_settings.skip_auth_auto_login = False
+    auth_settings.SUPERUSER = "admin"
+    superuser = _dummy_user(uuid4())
+
+    with (
+        patch(
+            "langflow.services.auth.service.get_user_by_username",
+            new=AsyncMock(return_value=superuser),
+        ) as mock_lookup,
+        pytest.raises(HTTPException) as exc,
+    ):
+        await auth_service.get_current_user_mcp(
+            token=None,
+            query_param=None,
+            header_param=None,
+            db=AsyncMock(),
+        )
+
+    assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+    assert exc.value.detail == AUTO_LOGIN_ERROR
+    mock_lookup.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_get_current_user_mcp_auto_login_skip_returns_superuser(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """AUTO_LOGIN + skip_auth_auto_login keeps the documented single-user MCP fallback."""
+    auth_settings.AUTO_LOGIN = True
+    auth_settings.skip_auth_auto_login = True
+    auth_settings.SUPERUSER = "admin"
+    superuser = _dummy_user(uuid4())
+
+    try:
+        with (
+            patch(
+                "langflow.services.auth.service.get_user_by_username",
+                new=AsyncMock(return_value=superuser),
+            ) as mock_lookup,
+            patch("langflow.services.auth.service.logger") as mock_logger,
+        ):
+            result = await auth_service.get_current_user_mcp(
+                token=None,
+                query_param=None,
+                header_param=None,
+                db=AsyncMock(),
+            )
+
+        assert result is superuser
+        mock_lookup.assert_awaited_once()
+        mock_logger.warning.assert_called_once_with(AUTO_LOGIN_WARNING)
+        assert get_current_auth_context().method == AUTH_METHOD_AUTO_LOGIN
+    finally:
+        clear_current_auth_context()
+
+
+@pytest.mark.anyio
+async def test_get_current_user_mcp_auto_login_skip_missing_superuser_rejects(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """AUTO_LOGIN + skip_auth_auto_login with no superuser row must not fall through to allow."""
+    auth_settings.AUTO_LOGIN = True
+    auth_settings.skip_auth_auto_login = True
+    auth_settings.SUPERUSER = "admin"
+
+    with (
+        patch(
+            "langflow.services.auth.service.get_user_by_username",
+            new=AsyncMock(return_value=None),
+        ),
+        pytest.raises(HTTPException) as exc,
+    ):
+        await auth_service.get_current_user_mcp(
+            token=None,
+            query_param=None,
+            header_param=None,
+            db=AsyncMock(),
+        )
+
+    assert exc.value.status_code == status.HTTP_403_FORBIDDEN

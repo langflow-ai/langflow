@@ -11,7 +11,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.api.utils.core import remove_api_keys
+from langflow.api.utils.core import strip_secret_field_values
 from langflow.api.v1.mappers.deployments.helpers import get_owned_provider_account_or_404
 from langflow.api.v1.mappers.deployments.sync import sync_flow_version_attachments
 from langflow.services.authorization import FlowAction, ensure_flow_permission
@@ -51,7 +51,10 @@ def strip_version_data(data: dict | None) -> dict | None:
         return None
     data_copy = copy.deepcopy(data)
     try:
-        return remove_api_keys({"data": data_copy}).get("data")
+        # Metadata-driven scrubber: remove_api_keys only nulled password-marked fields whose
+        # NAME also looked like an API key, so passwords and connection strings under ordinary
+        # names were exported in cleartext.
+        return strip_secret_field_values(data_copy)
     except (KeyError, TypeError, AttributeError, ValueError):
         logger.warning(
             "Failed to strip API keys from version data — excluding data from response to prevent secret leakage",

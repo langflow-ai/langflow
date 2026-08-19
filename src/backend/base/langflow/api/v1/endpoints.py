@@ -29,9 +29,11 @@ from lfx.schema.schema import InputValueRequest
 from lfx.services.settings.service import SettingsService
 from lfx.utils.flow_validation import (
     CustomComponentValidationError,
+    admin_only_build_required,
     code_hash_matches_any_template,
     get_component_hash_lookups_for_validation,
     get_trusted_code_for_validation,
+    prepare_flow_build_for_user,
 )
 from sqlmodel import select
 
@@ -247,7 +249,16 @@ async def simple_run_flow(
         if flow.data is None:
             msg = f"Flow {flow_id_str} has no data"
             raise ValueError(msg)
-        graph_data = flow.data.copy()
+        # The stored graph is caller-controlled: a regular user can persist component source
+        # through the ordinary flow-write API and then execute it here by sending no inline
+        # data. The global validator never sees the caller, so it cannot enforce
+        # custom_component_admin_only. Run the caller-aware policy and build from the detached
+        # copy it returns; a permissive policy returns None and the fast path is unchanged.
+        sanitized_flow_data = await prepare_flow_build_for_user(
+            flow.data,
+            is_superuser=bool(getattr(api_key_user, "is_superuser", False)),
+        )
+        graph_data = (sanitized_flow_data if sanitized_flow_data is not None else flow.data).copy()
         graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
         raise_if_hitl_unsupported(graph_data)
         # Mirror the Playground's one-time fix in-memory: bind empty fields whose
@@ -1173,6 +1184,17 @@ async def experimental_run_flow(
         if graph is None:
             msg = f"Session {session_id} not found"
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
+        if admin_only_build_required(is_superuser=bool(getattr(api_key_user, "is_superuser", False))):
+            # A cached graph was compiled under whatever component policy was in force when it
+            # was cached, and session cache keys carry no policy generation -- so one cached
+            # while admin-only mode was off still embeds the caller's own component source.
+            # 1.12 rebuilds from stored data at this point; this branch has no rebuild path, so
+            # refuse rather than execute a compilation that predates the policy.
+            msg = (
+                "This session's cached graph predates the admin-only component policy. "
+                "Re-run without a session_id to rebuild it from the stored flow."
+            )
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=msg)
     else:
         try:
             # Get the flow that matches the flow_id and belongs to the user
@@ -1197,7 +1219,12 @@ async def experimental_run_flow(
             msg = f"Flow {flow_id_str} has no data"
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
         try:
-            graph_data = flow.data
+            # Same caller-aware policy as the other stored-graph run paths.
+            sanitized_flow_data = await prepare_flow_build_for_user(
+                flow.data,
+                is_superuser=bool(getattr(api_key_user, "is_superuser", False)),
+            )
+            graph_data = sanitized_flow_data if sanitized_flow_data is not None else flow.data
             graph_data = process_tweaks(graph_data, tweaks or {})
             raise_if_hitl_unsupported(graph_data)
             graph = Graph.from_payload(graph_data, flow_id=flow_id_str)

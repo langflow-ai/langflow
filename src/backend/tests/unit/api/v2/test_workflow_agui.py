@@ -427,18 +427,20 @@ class TestV2WorkflowAdmission:
             name="private",
         )
 
-        def _reject(_flow_data):
+        def _reject(_flow_data, *, is_superuser=False):  # noqa: ARG001
             message = "custom components are disabled"
             raise CustomComponentValidationError(message)
 
-        monkeypatch.setattr(wf_val, "validate_flow_for_current_settings", _reject)
+        # The stored-graph gate now runs the caller-aware policy, which is a strict superset of
+        # the old global validator, so the denial surfaces from there instead.
+        monkeypatch.setattr(wf_val, "prepare_flow_build_for_user_from_cache", _reject)
         parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=str(flow_id), input_value="hi", mode="stream"))
 
         with pytest.raises(HTTPException) as exc_info:
             workflow_module.build_stream_response(
                 parsed,
                 flow,
-                SimpleNamespace(id=flow.user_id),
+                SimpleNamespace(id=flow.user_id, is_superuser=False),
                 stream_protocol="langflow",
                 background_tasks=SimpleNamespace(),
             )
