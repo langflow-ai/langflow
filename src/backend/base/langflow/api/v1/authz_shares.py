@@ -16,6 +16,7 @@ from sqlmodel import select
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas.authz_shares import ShareCreate, ShareRead, ShareUpdate
 from langflow.services.authorization import ShareAction, ensure_share_permission
+from langflow.services.authorization.audit import AUDIT_EVENT_MUTATION
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.auth import (
@@ -370,6 +371,10 @@ async def create_share(
         obj=f"{payload.resource_type}:{payload.resource_id}",
         result="allow",
         details={
+            # The guard already wrote an ``event: authorization_decision`` row
+            # for the share:create check. This row is the effect, and only it
+            # means a share now exists.
+            "event": AUDIT_EVENT_MUTATION,
             "share_id": str(response.id),
             "scope": payload.scope,
             "target_id": str(payload.target_id) if payload.target_id else None,
@@ -568,6 +573,7 @@ async def update_share(
         obj=f"{response.resource_type}:{response.resource_id}",
         result="allow",
         details={
+            "event": AUDIT_EVENT_MUTATION,
             "share_id": str(response.id),
             "permission_level": response.permission_level,
         },
@@ -620,7 +626,7 @@ async def delete_share(
         action="share:delete",
         obj=f"{snapshot.resource_type}:{snapshot.resource_id}",
         result="allow",
-        details={"share_id": str(share_id)},
+        details={"event": AUDIT_EVENT_MUTATION, "share_id": str(share_id)},
     )
 
 

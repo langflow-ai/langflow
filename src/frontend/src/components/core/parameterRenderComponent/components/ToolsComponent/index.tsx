@@ -22,11 +22,11 @@ export default function ToolsComponent({
   title,
   icon,
   disabled = false,
-  template,
   showParameter = true,
   hideButton = false,
   open,
   setOpen,
+  ariaLabelledBy,
   // biome-ignore lint/suspicious/noExplicitAny: legacy
 }: InputProps<any[] | undefined, ToolsComponentType>): JSX.Element | null {
   const { t } = useTranslation();
@@ -89,6 +89,7 @@ export default function ToolsComponent({
               "absolute -top-8 right-0 !text-mmd font-normal group-hover:text-primary",
               !button_description ? "text-muted-foreground" : "",
             )}
+            aria-labelledby={button_description ? undefined : ariaLabelledBy}
           >
             <ForwardedIconComponent
               name={
