@@ -188,7 +188,12 @@ def validate_storage_key(component: object, path: str) -> tuple[str, str]:
     return enforce_storage_key_scope(path, component_file_access_scopes(component))
 
 
-def _scope_roots(data_dir: Path, scope_ids: Iterable[object] | None) -> tuple[Path, ...]:
+def _scope_roots(
+    data_dir: Path,
+    scope_ids: Iterable[object] | None,
+    *,
+    allow_storage_root: bool = False,
+) -> tuple[Path, ...]:
     """Build validated storage roots for the current authenticated user/flow."""
     if isinstance(scope_ids, (str, bytes)):
         scope_ids = (scope_ids,)
@@ -205,6 +210,9 @@ def _scope_roots(data_dir: Path, scope_ids: Iterable[object] | None) -> tuple[Pa
         if root not in roots:
             roots.append(root)
 
+    if allow_storage_root and data_dir not in roots:
+        roots.append(data_dir)
+
     if not roots:
         msg = (
             "Local-file access requires an authenticated user or flow scope "
@@ -218,6 +226,7 @@ def enforce_local_file_access(
     resolved_path: str | Path,
     *,
     scope_ids: Iterable[object] | None = None,
+    allow_storage_root: bool = False,
 ) -> Path:
     """Ensure a local path is inside the current user/flow storage scope when restricted.
 
@@ -229,6 +238,12 @@ def enforce_local_file_access(
             symlinks are followed before the containment check; the caller need not pre-resolve it.
         scope_ids: Authenticated user id and/or executing flow id. At least one valid scope is
             required in restricted mode; paths under other storage subdirectories are denied.
+        allow_storage_root: Widen the containment boundary to ``config_dir`` itself and stop
+            requiring a scope. This is a defense-in-depth FLOOR, not tenant isolation: it keeps
+            arbitrary server files (and the reserved secret/key/DB files) out of reach but does
+            not separate one tenant's uploads from another's. Use it only from shared plumbing
+            that cannot see a user/flow scope and whose paths were already scope-checked by the
+            component that produced them; always prefer passing ``scope_ids``.
 
     Returns:
         The resolved path as a ``Path`` object when allowed.
@@ -242,7 +257,7 @@ def enforce_local_file_access(
         return path
 
     data_dir = Path(get_settings_service().settings.config_dir).resolve()
-    allowed_roots = _scope_roots(data_dir, scope_ids)
+    allowed_roots = _scope_roots(data_dir, scope_ids, allow_storage_root=allow_storage_root)
     try:
         candidate = path.resolve()
     except OSError as e:
@@ -257,8 +272,11 @@ def enforce_local_file_access(
         raise LocalFileAccessError(msg)
 
     # The storage dir is config_dir, which also holds server-managed secret/key/DB files as
-    # siblings of the upload subdirs. Scope containment rejects them; retain exact denial as
-    # defense in depth in case storage layout or scope handling changes later.
+    # siblings of the upload subdirs. Scope containment rejects them only when a scope narrows
+    # the root below config_dir -- under ``allow_storage_root`` config_dir IS an allowed root,
+    # so this exact-path denial is the control that keeps secret_key/private_key.pem/the SQLite
+    # DB out of reach, not a redundant second line. Covered by
+    # test_read_file_bytes_denies_reserved_secret_key.
     if candidate in _reserved_secret_paths(data_dir):
         msg = "Access to this server-managed file is not permitted (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true)."
         raise LocalFileAccessError(msg)

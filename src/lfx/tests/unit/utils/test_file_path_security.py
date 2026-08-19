@@ -298,3 +298,48 @@ class TestValidateStorageKey:
         """Standalone ``lfx run`` graphs carry no user or flow id and no tenant boundary."""
         component = _component()
         assert validate_storage_key(component, "some-namespace/report.csv") == ("some-namespace", "report.csv")
+
+
+class TestStorageRootFloor:
+    """``allow_storage_root`` is a containment floor for scope-less shared plumbing.
+
+    Shared readers (``base/data/storage_utils.py``) are handed paths that a component already
+    scope-checked, so they have no user/flow scope of their own. They must still refuse paths
+    outside the storage dir rather than skipping the control entirely.
+    """
+
+    def test_floor_denies_path_outside_storage_dir(self, tmp_path):
+        with mock_settings(restricted=True, config_dir=str(tmp_path)), pytest.raises(LocalFileAccessError):
+            enforce_local_file_access("/etc/passwd", allow_storage_root=True)
+
+    def test_floor_allows_path_inside_storage_dir_without_scope(self, tmp_path):
+        inside = tmp_path / "flow-id" / "upload.txt"
+        inside.parent.mkdir(parents=True)
+        inside.write_text("hi")
+        with mock_settings(restricted=True, config_dir=str(tmp_path)):
+            assert enforce_local_file_access(str(inside), allow_storage_root=True) == inside.resolve()
+
+    @pytest.mark.parametrize("name", ["secret_key", "private_key.pem", "public_key.pem"])
+    def test_floor_still_denies_reserved_secrets(self, tmp_path, name):
+        """The floor widens the root to config_dir, where the secrets live - they stay denied."""
+        (tmp_path / name).write_text("x")
+        with mock_settings(restricted=True, config_dir=str(tmp_path)), pytest.raises(LocalFileAccessError):
+            enforce_local_file_access(str(tmp_path / name), allow_storage_root=True)
+
+    def test_floor_still_denies_sqlite_db_in_config_dir(self, tmp_path):
+        db = tmp_path / "langflow.db"
+        db.write_text("x")
+        with (
+            mock_settings(restricted=True, config_dir=str(tmp_path), database_url=f"sqlite:///{db}"),
+            pytest.raises(LocalFileAccessError),
+        ):
+            enforce_local_file_access(str(db), allow_storage_root=True)
+
+    def test_floor_is_noop_when_restriction_disabled(self, tmp_path):
+        with mock_settings(restricted=False, config_dir=str(tmp_path)):
+            assert enforce_local_file_access("/etc/passwd", allow_storage_root=True) == Path("/etc/passwd")
+
+    def test_scoped_call_is_unaffected_by_default(self, tmp_path):
+        """Without the flag a scope is still mandatory - existing callers keep failing closed."""
+        with mock_settings(restricted=True, config_dir=str(tmp_path)), pytest.raises(LocalFileAccessError):
+            enforce_local_file_access(str(tmp_path / "x.txt"))
