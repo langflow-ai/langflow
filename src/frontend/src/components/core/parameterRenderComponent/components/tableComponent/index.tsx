@@ -644,6 +644,22 @@ const TableComponent = forwardRef<
             scheduleGridAccessibilityPatch();
             props.onPaginationChanged?.(event);
           }}
+          // Row virtualization recycles the row that owns the roving tab stop
+          // out of the DOM once the user scrolls past it, and nothing puts the
+          // tab stop back — the grid then has no tabbable row at all and cannot
+          // be entered from the keyboard (IBM `aria_child_tabbable`, WCAG
+          // 2.1.1). `viewportChanged` fires whenever the rendered row window
+          // moves, `modelUpdated` covers the re-renders that sorting, filtering
+          // and data changes trigger. The patch is rAF-debounced, so the scroll
+          // path stays cheap.
+          onViewportChanged={(event) => {
+            scheduleGridAccessibilityPatch();
+            props.onViewportChanged?.(event);
+          }}
+          onModelUpdated={(event) => {
+            scheduleGridAccessibilityPatch();
+            props.onModelUpdated?.(event);
+          }}
           onColumnMoved={onColumnMoved}
           onCellEditingStarted={onCellEditingStarted}
           onCellKeyDown={onCellKeyDown}
