@@ -215,7 +215,7 @@
   "assistant.progress.validating.7": "正在进行验证...",
   "assistant.selectModel": "选择模型",
   "assistant.sendMessage": "发送消息",
-  "assistant.messageTooLong": "消息超出 {{limit}} 个字符的上限 {{over}} 个字符。",
+  "assistant.messageLimitReached": "已达到消息上限。请调高 LANGFLOW_ASSISTANT_MAX_MESSAGE_LENGTH 以允许更长的消息。",
   "assistant.sessionHistory": "会话历史记录",
   "assistant.sessionHistoryLabel": "会话历史记录",
   "assistant.sessionHistoryTooltip": "会话仅存储在您的浏览器中，不会在不同浏览器之间保留，也不会保留在清除浏览器数据之后。",

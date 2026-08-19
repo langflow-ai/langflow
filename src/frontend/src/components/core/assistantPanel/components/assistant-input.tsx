@@ -120,7 +120,7 @@ export function AssistantInput({
     !GENERATING_STEPS.includes(currentStep);
   const animatedPlaceholder = useAnimatedPlaceholder(isPostGenerationStep);
   const [selectedModel, setSelectedModel] = useAssistantSelectedModel();
-  const overLimitMessageId = useId();
+  const limitHintId = useId();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const inputHistory = useInputHistory();
 
@@ -217,16 +217,14 @@ export function AssistantInput({
     }
   };
 
-  const messageLength = message.trim().length;
-  const charsRemaining = maxMessageLength - messageLength;
-  // Over-limit is a blocked-send state, not a silent truncation: the textarea used to carry a
-  // hard maxLength, which ate the tail of a pasted prompt with nothing on screen to say so.
-  const isOverLimit = charsRemaining < 0;
+  const messageLength = message.length;
+  // The cap is hard, but never silent: the counter is always on screen and hitting the limit
+  // names the environment variable that raises it.
+  const isAtLimit = messageLength >= maxMessageLength;
   // Gate on selectedModel too: a fast click during the model selector's
   // auto-select window would fire with a null model and drop the message.
   const canSend =
-    messageLength > 0 && !disabled && selectedModel !== null && !isOverLimit;
-  const showCharCount = messageLength > maxMessageLength * 0.8;
+    message.trim().length > 0 && !disabled && selectedModel !== null;
 
   return (
     <div className="relative px-2 pb-2">
@@ -258,8 +256,8 @@ export function AssistantInput({
           <Textarea
             ref={textareaRef}
             value={message}
-            aria-invalid={isOverLimit}
-            aria-describedby={isOverLimit ? overLimitMessageId : undefined}
+            maxLength={maxMessageLength}
+            aria-describedby={isAtLimit ? limitHintId : undefined}
             onChange={(e) => {
               updateMessage(e.target.value);
               mentions.handleValueChange(
@@ -281,7 +279,10 @@ export function AssistantInput({
             }
             disabled={disabled || isProcessing}
             className={cn(
-              "resize-none border-0 bg-transparent px-4 pt-3 text-sm focus-visible:ring-0 disabled:bg-transparent disabled:cursor-not-allowed",
+              "resize-none overflow-y-auto border-0 bg-transparent px-4 pt-3 text-sm focus-visible:ring-0 disabled:bg-transparent disabled:cursor-not-allowed",
+              // Cap the growth: the panel is resizable and the composer must leave the
+              // conversation above it readable no matter how long the draft is.
+              "max-h-[9rem]",
               compact ? "min-h-0" : "min-h-[60px]",
               isProcessing && !isPostGenerationStep && "placeholder:opacity-50",
             )}
@@ -297,17 +298,14 @@ export function AssistantInput({
             </div>
           )}
         </div>
-        {isOverLimit && (
+        {isAtLimit && (
           <div
-            id={overLimitMessageId}
-            role="alert"
-            data-testid="assistant-input-over-limit"
+            id={limitHintId}
+            role="status"
+            data-testid="assistant-input-limit-hint"
             className="px-4 text-xs text-destructive"
           >
-            {t("assistant.messageTooLong", {
-              over: -charsRemaining,
-              limit: maxMessageLength,
-            })}
+            {t("assistant.messageLimitReached")}
           </div>
         )}
         <div className="flex items-center justify-between px-3">
@@ -318,18 +316,15 @@ export function AssistantInput({
             />
           </div>
           <div className="flex items-center gap-2">
-            {showCharCount && (
-              <span
-                className={cn(
-                  "text-xs tabular-nums",
-                  charsRemaining <= 20
-                    ? "text-destructive"
-                    : "text-muted-foreground",
-                )}
-              >
-                {charsRemaining}
-              </span>
-            )}
+            <span
+              data-testid="assistant-input-char-count"
+              className={cn(
+                "text-xs tabular-nums",
+                isAtLimit ? "text-destructive" : "text-muted-foreground",
+              )}
+            >
+              {messageLength}/{maxMessageLength}
+            </span>
             {isProcessing ? (
               <button
                 type="button"

@@ -215,7 +215,7 @@
   "assistant.progress.validating.7": "Validierung wird durchgeführt...",
   "assistant.selectModel": "Modell auswählen",
   "assistant.sendMessage": "Nachricht senden",
-  "assistant.messageTooLong": "Die Nachricht überschreitet das Limit von {{limit}} Zeichen um {{over}} Zeichen.",
+  "assistant.messageLimitReached": "Nachrichtenlimit erreicht. Erhöhen Sie LANGFLOW_ASSISTANT_MAX_MESSAGE_LENGTH, um längere Nachrichten zu erlauben.",
   "assistant.sessionHistory": "Sitzungsverlauf",
   "assistant.sessionHistoryLabel": "Sitzungsverlauf",
   "assistant.sessionHistoryTooltip": "Sitzungen werden ausschließlich in Ihrem Browser gespeichert und bleiben weder in anderen Browsern noch nach dem Löschen der Browserdaten erhalten.",

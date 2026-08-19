@@ -485,16 +485,34 @@ describe("AssistantInput", () => {
       fireEvent.change(textarea, { target: { value } });
     };
 
-    it("should_keep_the_whole_prompt_instead_of_truncating_it", () => {
-      // Regression: the textarea carried a hard maxLength of 500, so a longer
-      // prompt was silently clipped in the browser and never reached the API.
+    it("should_accept_a_prompt_far_past_the_old_500_character_cap", () => {
+      // Regression: the composer hard-capped at 500 while the API accepted 2000,
+      // so longer prompts were clipped in the browser and never sent in full.
       render(<AssistantInput {...defaultProps} />);
       const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
 
       setValue(textarea, "a".repeat(1600));
 
-      expect(textarea).not.toHaveAttribute("maxlength");
       expect(textarea.value).toHaveLength(1600);
+      expect(textarea).toHaveAttribute(
+        "maxlength",
+        String(DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH),
+      );
+    });
+
+    it("should_always_show_the_character_count", () => {
+      render(<AssistantInput {...defaultProps} />);
+      const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
+
+      expect(
+        screen.getByTestId("assistant-input-char-count"),
+      ).toHaveTextContent(`0/${DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH}`);
+
+      setValue(textarea, "a".repeat(120));
+
+      expect(
+        screen.getByTestId("assistant-input-char-count"),
+      ).toHaveTextContent(`120/${DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH}`);
     });
 
     it("should_send_a_prompt_at_the_configured_limit", () => {
@@ -508,26 +526,18 @@ describe("AssistantInput", () => {
       fireEvent.keyDown(textarea, { key: "Enter" });
 
       expect(onSend).toHaveBeenCalledWith(prompt, expect.anything());
-      expect(
-        screen.queryByTestId("assistant-input-over-limit"),
-      ).not.toBeInTheDocument();
     });
 
-    it("should_block_send_and_warn_when_the_prompt_is_over_the_limit", () => {
-      primeModel();
-      const onSend = jest.fn();
-      render(<AssistantInput {...defaultProps} onSend={onSend} />);
+    it("should_name_the_environment_variable_when_the_limit_is_reached", () => {
+      render(<AssistantInput {...defaultProps} />);
       const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
 
-      setValue(textarea, "a".repeat(DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH + 1));
-      fireEvent.keyDown(textarea, { key: "Enter" });
+      setValue(textarea, "a".repeat(DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH));
 
-      expect(onSend).not.toHaveBeenCalled();
-      expect(screen.getByTestId("assistant-input-over-limit")).toBeVisible();
-      expect(textarea).toHaveAttribute("aria-invalid", "true");
-      expect(
-        screen.getByRole("button", { name: /send message/i }),
-      ).toBeDisabled();
+      const hint = screen.getByTestId("assistant-input-limit-hint");
+      expect(hint).toBeVisible();
+      expect(hint).toHaveTextContent("LANGFLOW_ASSISTANT_MAX_MESSAGE_LENGTH");
+      expect(textarea).toHaveAttribute("aria-describedby", hint.id);
     });
 
     it("should_follow_the_limit_served_by_the_backend_config", () => {
@@ -537,11 +547,19 @@ describe("AssistantInput", () => {
       render(<AssistantInput {...defaultProps} onSend={onSend} />);
       const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
 
+      expect(textarea).toHaveAttribute("maxlength", "6000");
+      expect(
+        screen.getByTestId("assistant-input-char-count"),
+      ).toHaveTextContent("0/6000");
+
       const prompt = "a".repeat(4000);
       setValue(textarea, prompt);
       fireEvent.keyDown(textarea, { key: "Enter" });
 
       expect(onSend).toHaveBeenCalledWith(prompt, expect.anything());
+      expect(
+        screen.queryByTestId("assistant-input-limit-hint"),
+      ).not.toBeInTheDocument();
     });
   });
 });
