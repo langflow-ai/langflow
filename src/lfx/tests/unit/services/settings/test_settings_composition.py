@@ -196,6 +196,7 @@ EXPECTED_FIELDS = {
     "allow_components_paths_override",
     # RuntimeSettings
     "job_queue_type",
+    "dangerously_allow_multi_worker_without_shared_queue",
     "redis_queue_host",
     "redis_queue_port",
     "redis_queue_db",
@@ -288,6 +289,7 @@ def test_critical_defaults_unchanged():
     assert settings.dev is False
     assert settings.agentic_experience is True
     assert settings.developer_api_enabled is False
+    assert settings.dangerously_allow_multi_worker_without_shared_queue is False
 
 
 def test_dict_defaults_unchanged():
