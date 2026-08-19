@@ -403,7 +403,10 @@ For multi-worker tuning—including the Redis job queue and Gunicorn worker sett
 
 ### Monitoring and metrics
 
-For environment variables for specific monitoring service providers, see the Langflow monitoring integration guides, such as [Langfuse](/integrations-langfuse) and [Best practices for Langflow on Kubernetes](/deployment-prod-best-practices).
+For OpenTelemetry traces, metrics, and logs that describe Langflow service health, see [OpenTelemetry](/observability-opentelemetry).
+
+For prompt-level LLM tracing, see [Langfuse](/integrations-langfuse) and the other monitoring integrations.
+For Prometheus on Kubernetes, see [Best practices for Langflow on Kubernetes](/deployment-prod-best-practices).
 
 ### Server
 
@@ -435,7 +438,9 @@ For database environment variables, including PostgreSQL configuration, see [Mem
 
 ### Telemetry
 
-See [Telemetry](/contributing-telemetry).
+Anonymous product usage telemetry is separate from OpenTelemetry export.
+See [Telemetry](/contributing-telemetry) to opt out with `DO_NOT_TRACK`.
+For OTLP export to your own backend, see [OpenTelemetry](/observability-opentelemetry).
 
 ### Visual editor and Playground behavior
 
