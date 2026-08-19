@@ -1674,6 +1674,8 @@
   "node.stopBuild": "Detener compilación",
   "node.updateAvailableLabel": "Actualización disponible",
   "node.updateBlockedLabel": "Componente personalizado bloqueado",
+  "node.updateBlockedByPolicyLabel": "Deshabilitado por el administrador",
+  "node.updateBlockedByPolicyMessage": "Un administrador ha deshabilitado este componente y no se puede ejecutar",
   "node.updateBlockedMessage": "El componente personalizado no se puede ejecutar mientras los componentes personalizados estén desactivados",
   "node.updateReadyLabel": "Listo para la actualización",
   "node.updateRequiredLabel": "Actualización necesaria",

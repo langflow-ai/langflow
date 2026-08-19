@@ -342,6 +342,7 @@ class TestDatabaseCreation:
         mock_admin.async_create_database.assert_called_once()
 
 
+@pytest.mark.usefixtures("allow_placeholder_endpoints")
 class TestCollectionCreation:
     """Tests for collection creation."""
 
@@ -459,6 +460,7 @@ class TestUpdateBuildConfig:
         assert result["reranker"]["show"] is False  # Default value from fixture
 
 
+@pytest.mark.usefixtures("allow_placeholder_endpoints")
 class TestGetDatabaseObject:
     """Tests for getting database object."""
 
