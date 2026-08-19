@@ -82,6 +82,24 @@ async def list_audit_log(
         str | None,
         Query(description="Filter by audit result (``allow`` / ``deny`` / ``owner_override`` / ``skip``)."),
     ] = None,
+    event: Annotated[
+        list[str] | None,
+        Query(
+            description=(
+                "Include only rows whose ``details.event`` class matches, e.g. ``mutation`` for "
+                "things that happened and ``authorization_decision`` for permission checks."
+            )
+        ),
+    ] = None,
+    exclude_event: Annotated[
+        list[str] | None,
+        Query(
+            description=(
+                "Exclude rows whose ``details.event`` class matches. Rows written before event "
+                "classification existed carry no class and are always kept."
+            )
+        ),
+    ] = None,
     since: Annotated[datetime | None, Query(description="Inclusive lower bound on ``timestamp``.")] = None,
     until: Annotated[datetime | None, Query(description="Exclusive upper bound on ``timestamp``.")] = None,
     page: Annotated[int, Query(ge=1)] = 1,
@@ -122,6 +140,16 @@ async def list_audit_log(
         base = base.where(AuthzAuditLog.action == action)
     if result is not None:
         base = base.where(AuthzAuditLog.result == result)
+    # ``details`` is a JSON column; SQLAlchemy renders the index access as
+    # ``json_extract`` on SQLite and ``->>`` on Postgres, so one expression
+    # serves both. An untagged row (written before classification existed) has
+    # a NULL extraction: it can never satisfy an include, and is never dropped
+    # by an exclude, so history stays visible.
+    event_class = col(AuthzAuditLog.details)["event"].as_string()
+    if event:
+        base = base.where(event_class.in_(event))
+    if exclude_event:
+        base = base.where(or_(event_class.not_in(exclude_event), event_class.is_(None)))
     if since is not None:
         base = base.where(AuthzAuditLog.timestamp >= since)
     if until is not None:
