@@ -150,26 +150,82 @@ async def test_build_flow_shared_private_non_owner_succeeds(patch_build_flow):
 
 
 @pytest.mark.asyncio
-async def test_build_flow_non_owner_cannot_override_flow_data(patch_build_flow):
-    """Non-owner with execute access cannot supply alternate graph data in the body."""
+async def test_build_flow_non_owner_cannot_override_flow_data(patch_build_flow, monkeypatch):
+    """Non-owner with execute access cannot supply alternate graph data in the body.
+
+    This asserted a 404 until LE-1905. Denying the override broke the
+    Playground, which posts the canvas data on every run: a non-owner with
+    execute permission was told the flow did not exist. The override is now
+    gated on ``flow:write``; an execute-only caller has it dropped and runs
+    the stored graph. The security property is unchanged and still asserted
+    here: the caller-supplied graph never runs.
+    """
     from langflow.api.v1 import chat as chat_module
     from langflow.api.v1.schemas import FlowDataRequest
+    from langflow.services.authorization import flow_data_override
+
+    async def _deny_write(*_args, **_kwargs):
+        raise HTTPException(status_code=403, detail="forbidden")
+
+    # Execute-only caller: the flow:write gate denies the override.
+    monkeypatch.setattr(flow_data_override, "ensure_flow_permission", _deny_write)
 
     user = _make_user()
     flow = _make_flow(owner_id=uuid4(), public=False)
     patch_build_flow["read_flow"] = flow
     override = FlowDataRequest(nodes=[{"id": "n1"}], edges=[])
 
-    with pytest.raises(HTTPException) as excinfo:
-        await chat_module.build_flow(
-            flow_id=flow.id,
-            background_tasks=None,
-            current_user=user,
-            queue_service=_make_queue_service(),
-            data=override,
-        )
-    assert excinfo.value.status_code == 404
-    assert f"Flow with id {flow.id} not found" in excinfo.value.detail
+    result = await chat_module.build_flow(
+        flow_id=flow.id,
+        background_tasks=None,
+        current_user=user,
+        queue_service=_make_queue_service(),
+        data=override,
+    )
+    # The run proceeds with the stored graph; the override is dropped.
+    assert result == {"job_id": "fake-job-id"}
+    assert patch_build_flow["start_kwargs"]["data"] is None
+
+
+@pytest.mark.asyncio
+async def test_build_flow_write_holder_may_override_someone_elses_flow(patch_build_flow, monkeypatch):
+    """A caller holding ``flow:write`` may run an unsaved graph they cannot save.
+
+    Overriding the stored graph is an edit expressed at run time, so it is
+    gated on ``flow:write`` rather than ownership (LE-1905): a caller who can
+    persist the graph can already PATCH it and run it, so honoring the unsaved
+    copy grants nothing new.
+    """
+    from langflow.api.v1 import chat as chat_module
+    from langflow.api.v1.schemas import FlowDataRequest
+    from langflow.services.authorization import flow_data_override
+
+    async def _allow_write(*_args, **_kwargs):
+        return None
+
+    # Non-owner, but the flow:write gate allows the override.
+    monkeypatch.setattr(flow_data_override, "ensure_flow_permission", _allow_write)
+
+    async def allow_inline(_data, *, is_superuser):
+        assert is_superuser is False
+
+    monkeypatch.setattr(chat_module, "prepare_flow_build_for_user", allow_inline)
+
+    user = _make_user()
+    flow = _make_flow(owner_id=uuid4(), public=False)
+    patch_build_flow["read_flow"] = flow
+    override = FlowDataRequest(nodes=[{"id": "n1"}], edges=[])
+
+    result = await chat_module.build_flow(
+        flow_id=flow.id,
+        background_tasks=None,
+        current_user=user,
+        queue_service=_make_queue_service(),
+        data=override,
+    )
+    assert result == {"job_id": "fake-job-id"}
+    # The caller's graph is honored, not the stored one.
+    assert patch_build_flow["start_kwargs"]["data"] is override
 
 
 @pytest.mark.asyncio
