@@ -16,6 +16,7 @@ import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useWebhookEvents } from "@/hooks/use-webhook-events";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
@@ -94,6 +95,8 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
+
+  useDocumentTitle(currentSavedFlow?.name);
 
   const changesNotSaved =
     customStringify(currentFlow) !== customStringify(currentSavedFlow) &&

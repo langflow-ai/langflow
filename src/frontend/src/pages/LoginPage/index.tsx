@@ -11,6 +11,7 @@ import CustomLoginFormGate from "@/customization/components/custom-login-form-ga
 import CustomLoginSignupPrompt from "@/customization/components/custom-login-signup-prompt";
 import CustomLoginSsoOptions from "@/customization/components/custom-login-sso-options";
 import useTheme from "@/customization/hooks/use-custom-theme";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useSanitizeRedirectUrl } from "@/hooks/use-sanitize-redirect-url";
 import {
   appendErrorSuggestion,
@@ -40,6 +41,7 @@ export default function LoginPage(): JSX.Element {
   useTheme();
 
   const { t } = useTranslation();
+  useDocumentTitle(t("auth.signInButton"));
   const { login, clearAuthSession } = useContext(AuthContext);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
