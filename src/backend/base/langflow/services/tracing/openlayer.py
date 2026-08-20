@@ -313,12 +313,15 @@ class OpenlayerTracer(BaseTracer):
                 if self.component_trace_types.get(tid) == "agent"
             ]
             if agent_names:
-                trace_data["agents"] = agent_names
+                trace_data["agents"] = ", ".join(agent_names)
 
-            # Collect agent and tool names from the final serialized steps tree
+            # Collect agent and tool names from the final serialized steps tree.
+            # These are joined into strings because rows carrying `steps` are ingested
+            # as traces, and that path only persists scalar columns -- a list-valued
+            # column is dropped even when declared in input_variable_names.
             agents_called, tools_called = self._collect_step_names(trace_data)
-            trace_data["agents_called"] = agents_called
-            trace_data["tools_called"] = tools_called
+            trace_data["agents_called"] = ", ".join(agents_called)
+            trace_data["tools_called"] = ", ".join(tools_called)
 
             # Aggregate token/model data from nested ChatCompletionSteps.
             # post_process_trace only reads tokens from the root step (UserCallStep),
