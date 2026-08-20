@@ -44,7 +44,7 @@ def _make_user(*, is_superuser: bool = False) -> SimpleNamespace:
     return SimpleNamespace(id=uuid4(), is_superuser=is_superuser, username="u")
 
 
-def _make_flow(*, owner_id: UUID, public: bool = False):
+def _make_flow(*, owner_id: UUID, public: bool = False, data: dict[str, Any] | None = None):
     """Build a flow stub with the attributes build_flow reads."""
     from langflow.services.database.models.flow.model import AccessTypeEnum
 
@@ -53,7 +53,7 @@ def _make_flow(*, owner_id: UUID, public: bool = False):
         user_id=owner_id,
         workspace_id=None,
         folder_id=None,
-        data=None,
+        data=data,
         access_type=AccessTypeEnum.PUBLIC if public else AccessTypeEnum.PRIVATE,
     )
 
@@ -347,6 +347,150 @@ async def test_build_flow_admin_only_keeps_superuser_inline_custom_code(patch_bu
     assert result == {"job_id": "fake-job-id"}
     assert seen["validated"] == override.model_dump()
     assert patch_build_flow["start_kwargs"]["data"] is override
+
+
+def _stored_graph(source: str) -> dict[str, Any]:
+    """A stored graph whose single node carries component source in the usual place."""
+    return {
+        "nodes": [
+            {
+                "id": "ChatInput-1",
+                "data": {
+                    "id": "ChatInput-1",
+                    "type": "ChatInput",
+                    "node": {"template": {"code": {"value": source}}},
+                },
+            }
+        ],
+        "edges": [],
+        "viewport": None,
+    }
+
+
+@pytest.mark.asyncio
+async def test_build_flow_admin_only_blocks_non_superuser_stored_custom_code(patch_build_flow, monkeypatch):
+    """Stored graph data must face the same caller-aware policy as inline request data.
+
+    A regular user could otherwise persist modified component source through the
+    ordinary flow-write API and then execute it by building with an empty body,
+    because the stored branch only ran the caller-agnostic global validator.
+    """
+    from langflow.api.v1 import chat as chat_module
+    from lfx.utils.flow_validation import CustomComponentValidationError
+
+    owner = _make_user()
+    flow = _make_flow(owner_id=owner.id, public=False, data=_stored_graph("# attacker source"))
+    patch_build_flow["read_flow"] = flow
+    seen: dict[str, Any] = {}
+
+    async def reject_custom_code(data, *, is_superuser):
+        seen["validated"] = data
+        assert is_superuser is False
+        message = "custom components are restricted to administrators"
+        raise CustomComponentValidationError(message)
+
+    monkeypatch.setattr(chat_module, "prepare_flow_build_for_user", reject_custom_code)
+
+    with pytest.raises(HTTPException) as excinfo:
+        await chat_module.build_flow(
+            flow_id=flow.id,
+            background_tasks=None,
+            current_user=owner,
+            queue_service=_make_queue_service(),
+        )
+
+    assert excinfo.value.status_code == 400
+    assert "restricted to administrators" in excinfo.value.detail
+    assert seen["validated"] == flow.data
+    assert patch_build_flow["start_kwargs"] is None
+
+
+@pytest.mark.asyncio
+async def test_build_flow_admin_only_passes_sanitized_stored_data_to_worker(patch_build_flow, monkeypatch):
+    """The worker must receive the server-trusted copy, not the stored bytes."""
+    from langflow.api.v1 import chat as chat_module
+
+    owner = _make_user()
+    stored = _stored_graph("# stored source")
+    flow = _make_flow(owner_id=owner.id, public=False, data=stored)
+    patch_build_flow["read_flow"] = flow
+    sanitized = _stored_graph("# trusted server source")
+
+    async def sanitize(_data, *, is_superuser):
+        assert is_superuser is False
+        return sanitized
+
+    monkeypatch.setattr(chat_module, "prepare_flow_build_for_user", sanitize)
+
+    result = await chat_module.build_flow(
+        flow_id=flow.id,
+        background_tasks=None,
+        current_user=owner,
+        queue_service=_make_queue_service(),
+    )
+
+    assert result == {"job_id": "fake-job-id"}
+    forwarded = patch_build_flow["start_kwargs"]["data"]
+    assert forwarded is not None
+    assert forwarded.model_dump()["nodes"] == sanitized["nodes"]
+    # The stored row is never mutated by the sanitizer.
+    assert flow.data["nodes"][0]["data"]["node"]["template"]["code"]["value"] == "# stored source"
+
+
+@pytest.mark.asyncio
+async def test_build_flow_stored_data_permissive_policy_still_builds_from_db(patch_build_flow, monkeypatch):
+    """When no caller-aware restriction applies the build keeps loading from the DB."""
+    from langflow.api.v1 import chat as chat_module
+
+    owner = _make_user()
+    flow = _make_flow(owner_id=owner.id, public=False, data=_stored_graph("# stored source"))
+    patch_build_flow["read_flow"] = flow
+    seen: dict[str, Any] = {}
+
+    async def permissive(data, *, is_superuser):
+        seen["validated"] = data
+        assert is_superuser is False
+
+    monkeypatch.setattr(chat_module, "prepare_flow_build_for_user", permissive)
+
+    result = await chat_module.build_flow(
+        flow_id=flow.id,
+        background_tasks=None,
+        current_user=owner,
+        queue_service=_make_queue_service(),
+    )
+
+    assert result == {"job_id": "fake-job-id"}
+    assert seen["validated"] == flow.data
+    assert patch_build_flow["start_kwargs"]["data"] is None
+
+
+@pytest.mark.asyncio
+async def test_build_flow_admin_only_keeps_superuser_stored_custom_code(patch_build_flow, monkeypatch):
+    """Superusers keep the documented exception on the stored path too."""
+    from langflow.api.v1 import chat as chat_module
+
+    owner = _make_user(is_superuser=True)
+    flow = _make_flow(owner_id=owner.id, public=False, data=_stored_graph("# admin source"))
+    patch_build_flow["read_flow"] = flow
+    seen: dict[str, Any] = {}
+
+    async def preserve_superuser_data(data, *, is_superuser):
+        seen["validated"] = data
+        assert is_superuser is True
+
+    monkeypatch.setattr(chat_module, "prepare_flow_build_for_user", preserve_superuser_data)
+
+    result = await chat_module.build_flow(
+        flow_id=flow.id,
+        background_tasks=None,
+        current_user=owner,
+        queue_service=_make_queue_service(),
+    )
+
+    assert result == {"job_id": "fake-job-id"}
+    assert seen["validated"] == flow.data
+    assert patch_build_flow["start_kwargs"]["data"] is None
 
 
 @pytest.mark.asyncio

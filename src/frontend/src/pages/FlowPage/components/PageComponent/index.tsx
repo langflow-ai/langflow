@@ -81,12 +81,14 @@ import {
   type HelperLinesState,
 } from "./helpers/helper-lines";
 import { useCanvasDragSelectFix } from "./hooks/useCanvasDragSelectFix";
+import { usePresentationalEdgeSvgs } from "./hooks/usePresentationalEdgeSvgs";
 import {
   MemoizedBackground,
   MemoizedCanvasControls,
   MemoizedSidebarTrigger,
 } from "./MemoizedComponents";
 import { computeNoteScreenPosition } from "./utils/compute-note-position";
+import { getEdgeAriaLabel } from "./utils/get-edge-aria-label";
 import { getNodeAriaLabel } from "./utils/get-node-aria-label";
 import getRandomName from "./utils/get-random-name";
 import isEventFromOutsideElement from "./utils/is-event-from-outside-element";
@@ -126,6 +128,16 @@ export default function Page({
         ariaLabel: getNodeAriaLabel(node, t),
       })),
     [nodes, t],
+  );
+
+  const getNode = useFlowStore((state) => state.getNode);
+  const edgesWithAriaLabel = useMemo(
+    () =>
+      edges.map((edge) => ({
+        ...edge,
+        ariaLabel: getEdgeAriaLabel(edge, getNode, t),
+      })),
+    [edges, getNode, t],
   );
 
   const previewLabel = useVersionPreviewStore((s) => s.previewLabel);
@@ -752,6 +764,7 @@ export default function Page({
   }, []);
 
   useCanvasDragSelectFix(reactFlowWrapper);
+  usePresentationalEdgeSvgs(reactFlowWrapper);
 
   // Workaround to show the menu only after the selection has ended.
   useEffect(() => {
@@ -941,7 +954,7 @@ export default function Page({
             <ReactFlow<AllNodeType, EdgeType>
               aria-label={t("flow.canvasLabel")}
               nodes={nodesWithAriaLabel}
-              edges={edges}
+              edges={edgesWithAriaLabel}
               onNodesChange={onNodesChangeWithHelperLines}
               onEdgesChange={onEdgesChange}
               onConnect={
@@ -1016,7 +1029,13 @@ export default function Page({
               onNodeContextMenu={onNodeContextMenu}
             >
               {!effectiveLocked && <UpdateAllComponents />}
-              <MemoizedBackground />
+              {/* The dot grid is pure decoration. ReactFlow's <Background>
+                  does not forward DOM props, so the only way to reach its
+                  <svg> is a wrapper; `display: contents` keeps it out of the
+                  layout entirely. */}
+              <div aria-hidden="true" style={{ display: "contents" }}>
+                <MemoizedBackground />
+              </div>
               {helperLineEnabled && <HelperLines helperLines={helperLines} />}
             </ReactFlow>
             <FlowBuildingComponent />

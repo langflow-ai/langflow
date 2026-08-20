@@ -16,7 +16,6 @@ from lfx.utils.flow_validation import (
     CatalogPolicyIdentityUnavailableError,
     CustomComponentValidationError,
     prepare_flow_build_for_user_from_cache,
-    validate_flow_for_current_settings,
 )
 from lfx.workflow.converters import ParsedWorkflowRun
 
@@ -127,7 +126,21 @@ def _validate_flow_data_for_execution(
             if sanitized_data is not None:
                 return replace(parsed, data=sanitized_data)
         elif flow.data:
-            validate_flow_for_current_settings(flow.data)
+            # A stored graph is caller-controlled: a regular user can persist component
+            # source through the flow-write API and then execute it by omitting ``data``.
+            # ``validate_flow_for_current_settings`` never sees the caller and therefore
+            # cannot apply ``custom_component_admin_only``. Run the caller-aware policy and
+            # carry the server-sanitized copy on ``parsed.data`` so every execution mode
+            # builds from it. Caller-supplied ``data`` was already rejected for sync mode by
+            # ``_reject_unsupported_sync_fields``, so a value here is always server-trusted.
+            sanitized_data = prepare_flow_build_for_user_from_cache(
+                flow.data,
+                is_superuser=current_user.is_superuser,
+            )
+            if sanitized_data is not None:
+                # The streaming driver rebuilds a ``FlowDataRequest`` from this dict, which
+                # requires both graph keys, so normalize a stored row that omits one.
+                return replace(parsed, data={"nodes": [], "edges": [], **sanitized_data})
     except CustomComponentValidationError as exc:
         client_error = error_for_client(exc, expose_details=expose_error_details)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(client_error)) from exc

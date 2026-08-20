@@ -153,6 +153,39 @@ describe("useSaveFlow", () => {
     expect(mockSetSaveLoading).toHaveBeenCalledWith(false);
   });
 
+  it("stays silent but still rejects when the caller suppresses the error toast", async () => {
+    const error = {
+      response: { status: 400, data: { detail: "Name must be unique" } },
+    };
+    mockMutate.mockImplementation((_payload, options) => {
+      options.onError(error);
+    });
+    const { result } = renderHook(() => useSaveFlow());
+
+    await expect(
+      result.current(undefined, { suppressErrorToast: true }),
+    ).rejects.toBe(error);
+
+    expect(mockSetErrorData).not.toHaveBeenCalled();
+    expect(mockSetSaveLoading).toHaveBeenCalledWith(false);
+  });
+
+  it("suppresses the store-inconsistency toast too so the caller never gets two", async () => {
+    // A caller that reports the rejection itself would otherwise show a second
+    // toast on top of this one.
+    flowsManagerState.flows = undefined;
+    mockMutate.mockImplementation((_payload, options) => {
+      options.onSuccess({ ...flowsManagerState.currentFlow, name: "Renamed" });
+    });
+    const { result } = renderHook(() => useSaveFlow());
+
+    await expect(
+      result.current(undefined, { suppressErrorToast: true }),
+    ).rejects.toThrow("Flows variable undefined");
+
+    expect(mockSetErrorData).not.toHaveBeenCalled();
+  });
+
   it("does not autosave hydrated data while the persisted flow is locked", async () => {
     const persistedFlow = {
       ...flowsManagerState.currentFlow,

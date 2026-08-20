@@ -127,6 +127,28 @@ class McpSettings(BaseModel):
     to the packages installed by their operator; an empty value blocks all package runners.
     """
 
+    mcp_server_env_allowlist: str | None = None
+    """Comma-separated allowlist of environment-variable names an MCP stdio config may set.
+
+    Unset (the default) applies only the built-in policy, which denies whole runtime families
+    -- loader (``LD_*``/``DYLD_*``), OpenSSL (``OPENSSL_*``), interpreter option and module
+    paths (``PYTHON*``, ``NODE_*``, ``PERL*``, ``JAVA_*``, ...), package-runner source
+    overrides (``UV_*``, ``NPM_CONFIG_*``, ``PIP_*``), git helper commands (``GIT_*``), and
+    TLS trust anchors -- while permitting the arbitrary vendor-named credentials that real MCP
+    servers require (``GITHUB_TOKEN``, ``BRAVE_API_KEY``, ...).
+
+    Setting this switches to a strict allowlist: exactly these names are accepted and every
+    other name is rejected. That is the durable posture for multi-tenant deployments, since no
+    blocklist can enumerate every code-loading variable across libc, OpenSSL, git, and every
+    interpreter. An explicitly empty value (``""``) is the strictest setting -- it rejects all
+    tenant-supplied environment variables -- and is distinct from leaving this unset.
+
+    Because the list is authoritative, naming a loader or interpreter variable here
+    re-enables that code-execution vector; list only application credentials and configuration
+    your servers actually need. Langflow always injects ``PATH`` itself, so it need not be
+    listed. Env var: LANGFLOW_MCP_SERVER_ENV_ALLOWLIST.
+    """
+
     mcp_server_interpreter_hardening: bool = False
     """If set to True, blocks tenant-controlled Python, Node.js, and shell MCP entrypoints.
 
