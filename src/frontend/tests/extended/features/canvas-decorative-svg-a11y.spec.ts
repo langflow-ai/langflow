@@ -68,7 +68,7 @@ test(
     for (const name of names) {
       // `getByRole` uses the computed accessible name, so an `aria-hidden`
       // ancestor anywhere above the edge makes this resolve to nothing.
-      const edge = page.getByRole("group", { name: name!, exact: true });
+      const edge = page.getByRole("button", { name: name!, exact: true });
       await expect(edge).toHaveCount(1);
       await expect(edge).toHaveAttribute("tabindex", "0");
 

@@ -80,6 +80,7 @@ import {
   getSnapPosition,
   type HelperLinesState,
 } from "./helpers/helper-lines";
+import { useKeyboardMovePersistence } from "./hooks/use-keyboard-move-persistence";
 import { useCanvasDragSelectFix } from "./hooks/useCanvasDragSelectFix";
 import { usePresentationalEdgeSvgs } from "./hooks/usePresentationalEdgeSvgs";
 import {
@@ -110,6 +111,9 @@ export default function Page({
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const setFilterComponent = useFlowStore((state) => state.setFilterComponent);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  // True between onNodeDragStart and onNodeDragStop — lets the keyboard-move
+  // wrapper tell pointer-drag position changes apart from arrow-key ones.
+  const isPointerDragRef = useRef(false);
   const setPositionDictionary = useFlowStore(
     (state) => state.setPositionDictionary,
   );
@@ -126,6 +130,14 @@ export default function Page({
       nodes.map((node) => ({
         ...node,
         ariaLabel: getNodeAriaLabel(node, t),
+        // Nodes are tabbable, so a plain "group" (ReactFlow's fallback)
+        // fails IBM element_tabbable_role_valid — but every widget role with
+        // presentational children (button, option, ...) fails
+        // aria_descendant_valid instead, because nodes contain interactive
+        // handles and fields. "application" is the ARIA role for a composite
+        // canvas widget with its own keyboard model (arrow keys move the
+        // node), permits interactive descendants, and scans clean.
+        ariaRole: "application" as const,
       })),
     [nodes, t],
   );
@@ -136,6 +148,9 @@ export default function Page({
       edges.map((edge) => ({
         ...edge,
         ariaLabel: getEdgeAriaLabel(edge, getNode, t),
+        // Same widget-role requirement as nodes; the edge wrapper is a
+        // tabbable <g> whose ReactFlow fallback role is "group".
+        ariaRole: "button" as const,
       })),
     [edges, getNode, t],
   );
@@ -584,6 +599,7 @@ export default function Page({
       // 👇 make dragging a node undoable
       takeSnapshot();
       setIsDragging(true);
+      isPointerDragRef.current = true;
       // 👉 you can place your event handlers here
     },
     [takeSnapshot],
@@ -596,6 +612,7 @@ export default function Page({
       updateCurrentFlow({ nodes });
       setPositionDictionary({});
       setIsDragging(false);
+      isPointerDragRef.current = false;
       setHelperLines({});
     },
     [
@@ -663,6 +680,21 @@ export default function Page({
       onNodesChange(modifiedChanges);
     },
     [onNodesChange, nodes, isDragging, helperLineEnabled],
+  );
+
+  // Arrow-key node moves (keyboard a11y) don't pass through the drag
+  // handlers, so this wrapper gives them the same undo snapshot + autosave
+  // treatment a pointer drag gets.
+  const persistKeyboardMove = useCallback(() => {
+    autoSaveFlow();
+    updateCurrentFlow({ nodes: useFlowStore.getState().nodes });
+  }, [autoSaveFlow, updateCurrentFlow]);
+
+  const onNodesChangeWithKeyboardPersistence = useKeyboardMovePersistence(
+    onNodesChangeWithHelperLines,
+    isPointerDragRef,
+    takeSnapshot,
+    persistKeyboardMove,
   );
 
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
@@ -955,12 +987,12 @@ export default function Page({
               aria-label={t("flow.canvasLabel")}
               nodes={nodesWithAriaLabel}
               edges={edgesWithAriaLabel}
-              onNodesChange={onNodesChangeWithHelperLines}
+              onNodesChange={onNodesChangeWithKeyboardPersistence}
               onEdgesChange={onEdgesChange}
               onConnect={
                 effectiveLocked || isPreviewActive ? undefined : onConnectMod
               }
-              disableKeyboardA11y={true}
+              disableKeyboardA11y={false}
               nodesFocusable={!effectiveLocked && !isPreviewActive}
               edgesFocusable={!effectiveLocked && !isPreviewActive}
               nodesDraggable={!isPreviewActive && !effectiveLocked}

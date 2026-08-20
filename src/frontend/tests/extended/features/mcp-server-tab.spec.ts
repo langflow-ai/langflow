@@ -232,7 +232,7 @@ test(
     // Create a new flow with MCP component
     const mcpFlowId = await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
-    const mcpNodes = page.getByRole("group", { name: "MCP Tools node" });
+    const mcpNodes = page.getByRole("application", { name: "MCP Tools node" });
     const previousMcpNodeCount = await mcpNodes.count();
     await expect(page.getByTestId("canvas-add-note-button")).toBeEnabled({
       timeout: 30_000,

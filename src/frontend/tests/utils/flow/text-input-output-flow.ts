@@ -24,7 +24,7 @@ async function addComponent(
   });
   await expect(nodes).toHaveCount(previousCount + 1);
   await expect(
-    page.getByRole("group", { name: `${options.displayName} node` }),
+    page.getByRole("application", { name: `${options.displayName} node` }),
   ).toBeAttached();
 }
 
