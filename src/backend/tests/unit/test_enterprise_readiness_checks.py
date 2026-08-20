@@ -3,6 +3,7 @@
 Testing library and framework: pytest
 """
 
+import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -155,6 +156,20 @@ async def test_healthz_raises_503_on_error_result(fake_session):
 
 
 @pytest.mark.usefixtures("_patch_services")
+async def test_healthz_returns_ok_for_non_error_prefix_status(fake_session):
+    """A check returning a non-'error:' status (e.g. 'errorless') must not trigger 503."""
+
+    async def ambiguous_check():
+        return ("entitlement", "errorless")
+
+    _enterprise_readiness_checks.append(ambiguous_check)
+
+    # Must complete successfully — 'errorless' does not start with 'error:'
+    response = await healthz(session=fake_session)
+    assert response.status == "ok"
+
+
+@pytest.mark.usefixtures("_patch_services")
 async def test_healthz_first_error_short_circuits_remaining_checks(fake_session):
     """The first error-result check stops further checks immediately."""
     calls: list[str] = []
@@ -204,15 +219,20 @@ async def test_healthz_503_when_db_and_chat_fail(fake_session):
 
 @pytest.mark.usefixtures("_patch_services")
 async def test_healthz_raises_503_on_timeout(fake_session):
-    """A check that times out causes a 503."""
+    """A check that remains pending longer than worker_timeout triggers a real asyncio timeout."""
 
     async def slow_check():
-        return ("entitlement", "ok")
+        # Waits on an Event that is never set — stays pending until cancelled.
+        await asyncio.Event().wait()
+        return ("entitlement", "ok")  # pragma: no cover
 
     _enterprise_readiness_checks.append(slow_check)
 
     with (
-        patch("langflow.api.health_check_router.asyncio.wait_for", side_effect=TimeoutError),
+        patch(
+            "langflow.api.health_check_router.get_settings_service",
+            return_value=SimpleNamespace(settings=SimpleNamespace(worker_timeout=0.01)),
+        ),
         pytest.raises(HTTPException) as exc_info,
     ):
         await healthz(session=fake_session)

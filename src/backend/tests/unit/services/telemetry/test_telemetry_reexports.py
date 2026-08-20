@@ -40,20 +40,16 @@ def test_reexports_present_in_all():
 def test_pop_all_takes_no_parameters():
     """pop_all() must remain a zero-argument callable (enterprise callers pass none)."""
     sig = inspect.signature(pop_all)
-    params = [p for p in sig.parameters.values() if p.default is inspect.Parameter.empty]
-    assert params == [], f"pop_all gained required parameter(s): {params}"
+    assert list(sig.parameters.values()) == []
 
 
 def test_append_run_event_accepts_single_payload_param():
     """append_run_event(payload) must keep exactly one required positional parameter."""
     sig = inspect.signature(append_run_event)
-    required = [
-        name
-        for name, p in sig.parameters.items()
-        if p.default is inspect.Parameter.empty
-        and p.kind not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
-    ]
-    assert required == ["payload"], f"append_run_event required params changed: {required}"
+    assert list(sig.parameters) == ["payload"]
+    payload_param = sig.parameters["payload"]
+    assert payload_param.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
+    assert payload_param.default is inspect.Parameter.empty
 
 
 def test_stable_import_path_resolves():
