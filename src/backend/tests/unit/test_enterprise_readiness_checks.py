@@ -200,3 +200,34 @@ async def test_healthz_503_when_db_and_chat_fail(fake_session):
         await healthz(session=fake_session)
 
     assert exc_info.value.status_code == 500
+
+
+@pytest.mark.usefixtures("_patch_services")
+async def test_healthz_raises_503_on_timeout(fake_session):
+    """A check that times out causes a 503."""
+
+    async def slow_check():
+        return ("entitlement", "ok")
+
+    _enterprise_readiness_checks.append(slow_check)
+
+    with (
+        patch("langflow.api.health_check_router.asyncio.wait_for", side_effect=TimeoutError),
+        pytest.raises(HTTPException) as exc_info,
+    ):
+        await healthz(session=fake_session)
+
+    assert exc_info.value.status_code == 503
+    assert exc_info.value.detail == "Service unavailable"
+
+
+@pytest.mark.usefixtures("_patch_services")
+async def test_healthz_chat_failure_returns_500(fake_session):
+    """Chat service failure (not DB) still causes 500 via has_error path."""
+    with (
+        patch("langflow.api.health_check_router.get_chat_service", side_effect=RuntimeError("chat down")),
+        pytest.raises(HTTPException) as exc_info,
+    ):
+        await healthz(session=fake_session)
+
+    assert exc_info.value.status_code == 500
