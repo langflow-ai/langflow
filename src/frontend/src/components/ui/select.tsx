@@ -15,7 +15,7 @@ const SelectValue = SelectPrimitive.Value;
 
 const selectTriggerVariants = {
   default:
-    "flex h-8 items-center justify-between gap-2 rounded-md border border-input px-4 py-2 text-sm text-primary ring-offset-background placeholder:text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+    "flex h-8 items-center justify-between gap-2 rounded-md border border-control px-4 py-2 text-sm text-primary ring-offset-background placeholder:text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
   plain: "flex w-full items-center justify-between",
 };
 

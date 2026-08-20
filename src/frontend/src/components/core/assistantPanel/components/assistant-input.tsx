@@ -243,7 +243,7 @@ export function AssistantInput({
       />
       <div
         className={cn(
-          "relative flex cursor-text flex-col rounded-md border border-border bg-background pb-2.5 transition-colors focus-within:border-muted-foreground shadow-[0_0_15px_hsl(var(--accent-assistant-purple)/0.12),0_0_30px_hsl(var(--accent-assistant-brand)/0.08)]",
+          "relative flex cursor-text flex-col rounded-md border border-control bg-background pb-2.5 transition-colors focus-within:border-muted-foreground shadow-[0_0_15px_hsl(var(--accent-assistant-purple)/0.12),0_0_30px_hsl(var(--accent-assistant-brand)/0.08)]",
           compact ? "gap-1" : "gap-4",
           // With the limit hint on screen the column gap would stack on top of the hint's own
           // padding, spacing it away from the footer far wider than from the text above it.
