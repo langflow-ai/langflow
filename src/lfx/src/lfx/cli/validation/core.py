@@ -119,7 +119,7 @@ def validate_flow_file(
 
     try:
         raw = path.read_text(encoding="utf-8")
-        flow: dict[str, Any] = json.loads(raw)
+        flow: Any = json.loads(raw)
     except OSError as exc:
         result.issues.append(
             ValidationIssue(

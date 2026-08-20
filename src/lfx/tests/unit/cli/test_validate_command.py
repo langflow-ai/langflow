@@ -99,6 +99,13 @@ class TestStructural:
         assert not result.ok
         assert any("Invalid JSON" in i.message for i in result.errors)
 
+    @pytest.mark.parametrize("raw", ["[]", "null", '"not-an-object"'])
+    def test_root_not_object(self, tmp_path, raw):
+        p = tmp_path / "flow.json"
+        p.write_text(raw, encoding="utf-8")
+        result = validate_flow_file(p, level=1)
+        assert [issue.message for issue in result.errors] == ["Flow must be a JSON object"]
+
     def test_missing_top_level_id(self, tmp_path):
         flow = {k: v for k, v in _MINIMAL_VALID.items() if k != "id"}
         p = _write_flow(tmp_path, "flow.json", flow)
