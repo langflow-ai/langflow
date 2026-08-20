@@ -3,7 +3,14 @@
 Verifies that enterprise consumers can import pop_all and append_run_event
 from the stable langflow.services.telemetry package path and that the
 functions are the same objects as those in the internal module.
+
+These tests are the CI gate for the public API contract described in
+run_event_store.py.  A rename, removal, or signature change in that
+module will cause one of the assertions below to fail before any
+enterprise consumer is broken.
 """
+
+import inspect
 
 from langflow.services import telemetry as telemetry_pkg
 from langflow.services.telemetry import append_run_event, pop_all
@@ -21,6 +28,51 @@ def test_append_run_event_reexported_from_package():
 def test_reexports_present_in_all():
     assert "pop_all" in telemetry_pkg.__all__
     assert "append_run_event" in telemetry_pkg.__all__
+
+
+# ---------------------------------------------------------------------------
+# Public API contract — signature shape
+# These break if a future refactor renames, removes, or changes the arity of
+# the two stable extension-point functions.
+# ---------------------------------------------------------------------------
+
+
+def test_pop_all_takes_no_parameters():
+    """pop_all() must remain a zero-argument callable (enterprise callers pass none)."""
+    sig = inspect.signature(pop_all)
+    params = [p for p in sig.parameters.values() if p.default is inspect.Parameter.empty]
+    assert params == [], f"pop_all gained required parameter(s): {params}"
+
+
+def test_append_run_event_accepts_single_payload_param():
+    """append_run_event(payload) must keep exactly one required positional parameter."""
+    sig = inspect.signature(append_run_event)
+    required = [
+        name
+        for name, p in sig.parameters.items()
+        if p.default is inspect.Parameter.empty
+        and p.kind not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
+    ]
+    assert required == ["payload"], f"append_run_event required params changed: {required}"
+
+
+def test_stable_import_path_resolves():
+    """The documented import path must resolve without ImportError.
+
+    This is a belt-and-suspenders guard: the import at the top of this
+    module already exercises it, but an explicit assertion makes the
+    intent clear to future maintainers.
+    """
+    import importlib
+
+    mod = importlib.import_module("langflow.services.telemetry")
+    assert callable(getattr(mod, "pop_all", None)), "pop_all missing from langflow.services.telemetry"
+    assert callable(getattr(mod, "append_run_event", None)), "append_run_event missing from langflow.services.telemetry"
+
+
+# ---------------------------------------------------------------------------
+# Functional smoke-test
+# ---------------------------------------------------------------------------
 
 
 def test_append_then_pop_roundtrip():

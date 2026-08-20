@@ -3,9 +3,12 @@
 Testing library and framework: pytest
 """
 
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 from fastapi import HTTPException
-from langflow.api.health_check_router import _enterprise_readiness_checks
+from langflow.api.health_check_router import _enterprise_readiness_checks, healthz
 
 
 @pytest.fixture(autouse=True)
@@ -14,6 +17,31 @@ def _clean_registry():
     saved = list(_enterprise_readiness_checks)
     yield
     _enterprise_readiness_checks[:] = saved
+
+
+@pytest.fixture
+def fake_session():
+    """Minimal async session double that satisfies the healthz DB probe."""
+    exec_result = MagicMock()
+    exec_result.first.return_value = None
+    session = AsyncMock()
+    session.exec = AsyncMock(return_value=exec_result)
+    return session
+
+
+@pytest.fixture
+def _patch_services():
+    """Patch get_chat_service and get_settings_service for healthz.
+
+    Returns worker_timeout=300 to match the /health_check route's effective timeout.
+    """
+    fake_chat = AsyncMock()
+    fake_settings = SimpleNamespace(settings=SimpleNamespace(worker_timeout=300))
+    with (
+        patch("langflow.api.health_check_router.get_chat_service", return_value=fake_chat),
+        patch("langflow.api.health_check_router.get_settings_service", return_value=fake_settings),
+    ):
+        yield
 
 
 # ---------------------------------------------------------------------------
@@ -39,7 +67,7 @@ async def test_passing_check_returns_name_and_ok():
     name, result = await _enterprise_readiness_checks[0]()
     assert name == "entitlement"
     assert result == "ok"
-    assert not result.startswith("error")
+    assert not result.startswith("error:")
 
 
 # ---------------------------------------------------------------------------
@@ -47,7 +75,7 @@ async def test_passing_check_returns_name_and_ok():
 # ---------------------------------------------------------------------------
 
 
-async def test_error_check_result_starts_with_error():
+async def test_error_check_result_starts_with_error_colon():
     async def failing_check():
         return ("entitlement", "error: entitlement lost")
 
@@ -55,7 +83,7 @@ async def test_error_check_result_starts_with_error():
 
     name, result = await _enterprise_readiness_checks[0]()
     assert name == "entitlement"
-    assert result.startswith("error")
+    assert result.startswith("error:")
 
 
 # ---------------------------------------------------------------------------
@@ -83,40 +111,52 @@ async def test_checks_run_in_registration_order():
 
 
 # ---------------------------------------------------------------------------
-# Registry: /healthz loop behaviour — error causes 503, crash is swallowed
-# Exercised by calling the handler logic directly (no HTTP transport needed).
+# /healthz handler behaviour — exercised via the real handler
 # ---------------------------------------------------------------------------
 
 
-async def _run_checks_like_healthz() -> HTTPException | None:
-    """Replicate the /healthz enterprise check loop — returns 503 exc or None."""
-    for check in list(_enterprise_readiness_checks):
-        try:
-            name, result = await check()
-            if result.startswith("error"):
-                return HTTPException(
-                    status_code=503,
-                    detail={"status": "nok", name: result},
-                )
-        except Exception:  # noqa: S110
-            pass  # crash is swallowed — same as handler behaviour
-    return None
+@pytest.mark.usefixtures("_patch_services")
+async def test_healthz_returns_ok_with_empty_registry(fake_session):
+    """No registered checks → healthy response."""
+    response = await healthz(session=fake_session)
+    assert response.status == "ok"
+    assert response.db == "ok"
+    assert response.chat == "ok"
 
 
-async def test_error_check_causes_503_via_handler():
+@pytest.mark.usefixtures("_patch_services")
+async def test_healthz_returns_ok_when_all_checks_pass(fake_session):
+    """All registered checks succeed → healthy response."""
+
+    async def always_ok():
+        return ("entitlement", "ok")
+
+    _enterprise_readiness_checks.append(always_ok)
+
+    response = await healthz(session=fake_session)
+    assert response.status == "ok"
+
+
+@pytest.mark.usefixtures("_patch_services")
+async def test_healthz_raises_503_on_error_result(fake_session):
+    """A check returning 'error:…' causes a 503 with a generic detail."""
+
     async def failing_check():
         return ("entitlement", "error: entitlement lost")
 
     _enterprise_readiness_checks.append(failing_check)
 
-    exc = await _run_checks_like_healthz()
-    assert exc is not None
-    assert exc.status_code == 503
-    assert exc.detail["entitlement"] == "error: entitlement lost"
-    assert exc.detail["status"] == "nok"
+    with pytest.raises(HTTPException) as exc_info:
+        await healthz(session=fake_session)
+
+    assert exc_info.value.status_code == 503
+    # Detail must be generic — no plugin name or raw result exposed to clients.
+    assert exc_info.value.detail == "Service unavailable"
 
 
-async def test_first_error_short_circuits_remaining_checks():
+@pytest.mark.usefixtures("_patch_services")
+async def test_healthz_first_error_short_circuits_remaining_checks(fake_session):
+    """The first error-result check stops further checks immediately."""
     calls: list[str] = []
 
     async def first_fail():
@@ -129,19 +169,34 @@ async def test_first_error_short_circuits_remaining_checks():
 
     _enterprise_readiness_checks.extend([first_fail, second])
 
-    await _run_checks_like_healthz()
+    with pytest.raises(HTTPException):
+        await healthz(session=fake_session)
 
     assert "first" in calls
     assert "second" not in calls
 
 
-async def test_crashing_check_is_swallowed_by_handler_loop():
+@pytest.mark.usefixtures("_patch_services")
+async def test_healthz_swallows_crashing_check(fake_session):
+    """An exception from a check is logged and swallowed — no 503, no propagation."""
+
     async def boom():
         msg = "unexpected crash"
         raise RuntimeError(msg)
 
     _enterprise_readiness_checks.append(boom)
 
-    # Crash is swallowed — must not propagate and must not trigger a 503.
-    exc = await _run_checks_like_healthz()
-    assert exc is None
+    # Must complete successfully — crash is swallowed.
+    response = await healthz(session=fake_session)
+    assert response.status == "ok"
+
+
+@pytest.mark.usefixtures("_patch_services")
+async def test_healthz_503_when_db_and_chat_fail(fake_session):
+    """DB and chat failures → 500, not a 503 from the enterprise checks path."""
+    fake_session.exec.side_effect = RuntimeError("db down")
+
+    with pytest.raises(HTTPException) as exc_info:
+        await healthz(session=fake_session)
+
+    assert exc_info.value.status_code == 500

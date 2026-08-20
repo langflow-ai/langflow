@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from collections.abc import Awaitable, Callable
 
@@ -8,7 +9,7 @@ from sqlmodel import select
 
 from langflow.api.utils import DbSession
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.deps import get_chat_service
+from langflow.services.deps import get_chat_service, get_settings_service
 
 health_check_router = APIRouter(tags=["Health Check"])
 
@@ -100,19 +101,27 @@ async def healthz(
     except Exception:  # noqa: BLE001
         await logger.aexception("Error checking chat service")
 
+    check_timeout: float = get_settings_service().settings.worker_timeout
     for check in _enterprise_readiness_checks:
+        check_name = getattr(check, "__name__", getattr(check, "__qualname__", type(check).__name__))
         try:
-            name, result = await check()
-            if result.startswith("error"):
+            _name, result = await asyncio.wait_for(check(), timeout=check_timeout)
+            if result.startswith("error:"):
+                await logger.awarning("Enterprise readiness check %s returned error: %s", check_name, result)
                 raise HTTPException(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail={"status": "nok", name: result},
+                    detail="Service unavailable",
                 )
         except HTTPException:
             raise
+        except TimeoutError as exc:
+            await logger.awarning("Enterprise readiness check %s timed out after %ss", check_name, check_timeout)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Service unavailable",
+            ) from exc
         except Exception as exc:  # noqa: BLE001
-            check_name = getattr(check, "__name__", getattr(check, "__qualname__", type(check).__name__))
-            await logger.awarning(f"Enterprise readiness check {check_name} raised unexpectedly: {exc}")
+            await logger.awarning("Enterprise readiness check %s raised unexpectedly: %s", check_name, exc)
 
     if response.has_error():
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=response.model_dump())
