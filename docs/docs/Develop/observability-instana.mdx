@@ -27,7 +27,7 @@ Instana SaaS exposes a per-region OTLP acceptor:
 https://otlp-COLOR-saas.instana.io:4318
 ```
 
-`COLOR` is the region identifier in your tenant URL, such as `orange`, `blue`, `coral`, or `magenta`. Port `4318` is OTLP/HTTP; `4317` is OTLP/gRPC.
+`COLOR` is the region identifier for your tenant, such as `orange`, `blue`, `coral`, or `magenta`. Port `4318` is OTLP/HTTP; `4317` is OTLP/gRPC. Instana also documents `otlp-http-COLOR-saas.instana.io` and `otlp-grpc-COLOR-saas.instana.io` on port `443`; both forms reach the same acceptor.
 
 If your tenant URL does not follow the `TENANT-COLOR.instana.io` pattern, it is a dedicated or self-hosted unit and the acceptor host differs. Ask whoever operates the tenant rather than guessing, because a wrong host fails in the same silent way as a wrong key.
 
@@ -62,11 +62,26 @@ A `2xx` response on export is not evidence. Instana acknowledges the payload bef
 
 2. Retrieve a single run by its trace ID. Take a `trace_id` from any Langflow log line, then use **Analytics** > **Traces** and filter on it. Finding the exact run you just executed is the evidence that the pipeline works end to end; a service that merely exists is not.
 
+   If the trace view is not available to your role, query the API instead, which needs only an API token:
+
+   ```bash
+   curl -s "https://YOUR_TENANT.instana.io/api/application-monitoring/v2/analyze/traces/YOUR_TRACE_ID" \
+     -H "authorization: apiToken YOUR_API_TOKEN"
+   ```
+
+   A run driven over HTTP returns the request span with `flow.execute` nested beneath it.
+
 3. Confirm metrics are arriving. Open the `langflow` service and check that request rate and latency are populated, or query the metric by `service.name` in a custom dashboard.
 
 A failed run's `flow.execute` span arrives with `error.type` set to the exception class. The exception message is not exported. For the full list of what Langflow withholds, see [OpenTelemetry](./observability-opentelemetry.mdx).
 
 ## Troubleshooting
+
+### A run appears by API but not by browsing
+
+Instana builds its Calls views from entry spans. A run with an HTTP request in front of it has one, and browses normally. A CLI run (`lfx run`) emits only an internal `flow.execute` span, so there is no entry span to anchor a Call to, and the run can be retrievable by trace ID while not appearing in the trace list.
+
+Retrieve those by ID through the API rather than expecting to find them by browsing.
 
 ### The export succeeds but nothing appears in the UI
 
