@@ -10,8 +10,12 @@ import { Button } from "@/components/ui/button";
 import type { SidebarSection } from "@/components/ui/sidebar";
 import ModelProviderModal from "@/modals/modelProviderModal";
 import { NAV_ITEMS } from "@/pages/FlowPage/components/flowSidebarComponent/components/sidebar-nav-items";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { WELCOME_MAX_INPUT_LENGTH } from "./flow-builder-welcome.constants";
-import type { StarterTemplateNameKey } from "./helpers/find-starter-template";
+import {
+  findStarterTemplate,
+  type StarterTemplateNameKey,
+} from "./helpers/find-starter-template";
 
 interface FlowBuilderWelcomeProps {
   /** Called with the trimmed text when the user submits the textarea. */
@@ -33,6 +37,9 @@ interface FlowBuilderWelcomeProps {
 // sidebar sections is automatically reflected here. Keeps the two views from
 // drifting apart.
 
+const TEMPLATE_BUTTON_CLASS =
+  "flex h-[3.125rem] w-[11rem] items-center justify-center gap-2.5 whitespace-nowrap rounded-xl border border-border bg-muted p-[0.8125rem] text-sm font-medium text-foreground transition-colors hover:bg-border";
+
 export function FlowBuilderWelcome({
   onSubmit,
   onSelectTemplate,
@@ -42,6 +49,15 @@ export function FlowBuilderWelcome({
 }: FlowBuilderWelcomeProps) {
   const [message, setMessage] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // AppInitPage holds every route back until the examples fetch settles, so an
+  // empty list here means a policy blocked them, never "still loading".
+  const examples = useFlowsManagerStore((state) => state.examples);
+  const hasSimpleAgent = findStarterTemplate(examples, "simple_agent") !== null;
+  const hasVectorStoreRag =
+    findStarterTemplate(examples, "vector_store_rag") !== null;
+  // "Browse more…" opens the full modal, which is worth offering for any
+  // surviving template, not just the two with their own button.
+  const hasAnyTemplate = examples.length > 0;
 
   useEffect(() => {
     textareaRef.current?.focus();
@@ -228,40 +244,67 @@ export function FlowBuilderWelcome({
         )}
 
         {/* Template buttons — design spec: 143×50px, 12px radius, 13px
-            padding, 10px gap. */}
+            padding, 10px gap. A catalog policy can block any of these, and a
+            button for a template that is gone would only fail on click, so
+            each appears with its template. With nothing left to offer, the
+            row becomes the one action still available: start blank. */}
         <div className="flex flex-col items-center gap-2">
-          <span className="text-sm text-muted-foreground">
-            {t("flowBuilderWelcome.orTemplateLabel")}
-          </span>
-          <div className="flex flex-wrap items-center justify-center gap-3">
+          {hasAnyTemplate ? (
+            <>
+              <span className="text-sm text-muted-foreground">
+                {t("flowBuilderWelcome.orTemplateLabel")}
+              </span>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                {hasSimpleAgent && (
+                  <button
+                    type="button"
+                    data-testid="flow-builder-welcome-template-simple-agent"
+                    onClick={() => onSelectTemplate("simple_agent")}
+                    className={TEMPLATE_BUTTON_CLASS}
+                  >
+                    <ForwardedIconComponent name="Bot" className="h-4 w-4" />
+                    {t("flowBuilderWelcome.simpleAgentLabel")}
+                  </button>
+                )}
+                {hasVectorStoreRag && (
+                  <button
+                    type="button"
+                    data-testid="flow-builder-welcome-template-vector-store-rag"
+                    onClick={() => onSelectTemplate("vector_store_rag")}
+                    className={TEMPLATE_BUTTON_CLASS}
+                  >
+                    <ForwardedIconComponent
+                      name="Database"
+                      className="h-4 w-4"
+                    />
+                    {t("flowBuilderWelcome.vectorStoreRagLabel")}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  data-testid="flow-builder-welcome-browse-more"
+                  onClick={onBrowseMore}
+                  className={TEMPLATE_BUTTON_CLASS}
+                >
+                  <ForwardedIconComponent
+                    name="LayoutGrid"
+                    className="h-4 w-4"
+                  />
+                  {t("flowBuilderWelcome.browseMoreLabel")}
+                </button>
+              </div>
+            </>
+          ) : (
             <button
               type="button"
-              data-testid="flow-builder-welcome-template-simple-agent"
-              onClick={() => onSelectTemplate("simple_agent")}
-              className="flex h-[3.125rem] w-[11rem] items-center justify-center gap-2.5 whitespace-nowrap rounded-xl border border-border bg-muted p-[0.8125rem] text-sm font-medium text-foreground transition-colors hover:bg-border"
+              data-testid="flow-builder-welcome-blank-flow"
+              onClick={onClose}
+              className={TEMPLATE_BUTTON_CLASS}
             >
-              <ForwardedIconComponent name="Bot" className="h-4 w-4" />
-              {t("flowBuilderWelcome.simpleAgentLabel")}
+              <ForwardedIconComponent name="Plus" className="h-4 w-4" />
+              {t("flowBuilderWelcome.blankFlowLabel")}
             </button>
-            <button
-              type="button"
-              data-testid="flow-builder-welcome-template-vector-store-rag"
-              onClick={() => onSelectTemplate("vector_store_rag")}
-              className="flex h-[3.125rem] w-[11rem] items-center justify-center gap-2.5 whitespace-nowrap rounded-xl border border-border bg-muted p-[0.8125rem] text-sm font-medium text-foreground transition-colors hover:bg-border"
-            >
-              <ForwardedIconComponent name="Database" className="h-4 w-4" />
-              {t("flowBuilderWelcome.vectorStoreRagLabel")}
-            </button>
-            <button
-              type="button"
-              data-testid="flow-builder-welcome-browse-more"
-              onClick={onBrowseMore}
-              className="flex h-[3.125rem] w-[11rem] items-center justify-center gap-2.5 whitespace-nowrap rounded-xl border border-border bg-muted p-[0.8125rem] text-sm font-medium text-foreground transition-colors hover:bg-border"
-            >
-              <ForwardedIconComponent name="LayoutGrid" className="h-4 w-4" />
-              {t("flowBuilderWelcome.browseMoreLabel")}
-            </button>
-          </div>
+          )}
         </div>
       </div>
     </div>
