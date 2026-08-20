@@ -23,6 +23,7 @@ function setup(isDragging = false, debounceMs = 600) {
   const onNodesChange = jest.fn();
   const takeSnapshot = jest.fn();
   const persist = jest.fn();
+  const flushPersist = jest.fn();
   const isDraggingRef = { current: isDragging };
   const { result, unmount } = renderHook(() =>
     useKeyboardMovePersistence(
@@ -31,6 +32,7 @@ function setup(isDragging = false, debounceMs = 600) {
       takeSnapshot,
       persist,
       debounceMs,
+      flushPersist,
     ),
   );
   return {
@@ -39,6 +41,7 @@ function setup(isDragging = false, debounceMs = 600) {
     onNodesChange,
     takeSnapshot,
     persist,
+    flushPersist,
     isDraggingRef,
   };
 }
@@ -98,10 +101,27 @@ describe("useKeyboardMovePersistence", () => {
     expect(persist).not.toHaveBeenCalled();
   });
 
-  it("flushes a pending persist on unmount so a move is not lost to navigation", () => {
-    const { result, unmount, persist } = setup();
+  it("ignores a selection-rectangle drag even though the node drag ref never flips", () => {
+    // ReactFlow routes a selection-rect drag through onSelectionDrag*, not the
+    // node drag handlers — its position changes arrive with dragging: true
+    // while isDraggingRef can still be false. They must not be mistaken for
+    // keyboard moves (that costs a second snapshot: one drag, two undos).
+    const { result, takeSnapshot, persist } = setup(false);
+    act(() => result.current([positionChange("a", true)]));
+    act(() => result.current([positionChange("b", true)]));
+    act(() => jest.advanceTimersByTime(700));
+    expect(takeSnapshot).not.toHaveBeenCalled();
+    expect(persist).not.toHaveBeenCalled();
+  });
+
+  it("uses the flush variant on unmount so the save fires before navigation swaps the flow", () => {
+    // A plain persist() only schedules the debounced autosave, which can fire
+    // after the store already points at a different flow — the wrapper must
+    // hand unmount to the synchronous flush path instead.
+    const { result, unmount, persist, flushPersist } = setup();
     act(() => result.current([positionChange("a", false)]));
     unmount();
-    expect(persist).toHaveBeenCalledTimes(1);
+    expect(flushPersist).toHaveBeenCalledTimes(1);
+    expect(persist).not.toHaveBeenCalled();
   });
 });

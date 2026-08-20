@@ -143,6 +143,32 @@ export default function Page({
   );
 
   const getNode = useFlowStore((state) => state.getNode);
+  // ReactFlow's built-in screen-reader strings (node/edge instructions via
+  // aria-describedby, and the assertive live region that announces arrow-key
+  // moves) are hard-coded English in @xyflow/system. Everything else the
+  // canvas announces is translated, so these must be too.
+  const ariaLabelConfig = useMemo(
+    () => ({
+      "node.a11yDescription.default": t("flow.a11y.nodeInstructions"),
+      "node.a11yDescription.ariaLiveMessage": ({
+        direction,
+        x,
+        y,
+      }: {
+        direction: string;
+        x: number;
+        y: number;
+      }) =>
+        t("flow.a11y.nodeMoved", {
+          direction: t(`flow.a11y.direction.${direction}`),
+          x,
+          y,
+        }),
+      "edge.a11yDescription.default": t("flow.a11y.edgeInstructions"),
+    }),
+    [t],
+  );
+
   const edgesWithAriaLabel = useMemo(
     () =>
       edges.map((edge) => ({
@@ -690,16 +716,34 @@ export default function Page({
     updateCurrentFlow({ nodes: useFlowStore.getState().nodes });
   }, [autoSaveFlow, updateCurrentFlow]);
 
+  // On unmount the debounced autosave would fire after navigation, when the
+  // store can already hold a different flow — flush it while it still holds
+  // this one.
+  const flushKeyboardMove = useCallback(() => {
+    persistKeyboardMove();
+    void autoSaveFlow.flush?.();
+  }, [persistKeyboardMove, autoSaveFlow]);
+
   const onNodesChangeWithKeyboardPersistence = useKeyboardMovePersistence(
     onNodesChangeWithHelperLines,
     isPointerDragRef,
     takeSnapshot,
     persistKeyboardMove,
+    undefined,
+    flushKeyboardMove,
   );
 
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
     takeSnapshot();
+    // A selection-rect drag never fires the node drag handlers, so it must
+    // mark the pointer-drag ref itself or the keyboard-move wrapper would
+    // read its position changes as arrow-key moves (double snapshot).
+    isPointerDragRef.current = true;
   }, [takeSnapshot]);
+
+  const onSelectionDragStop: SelectionDragHandler = useCallback(() => {
+    isPointerDragRef.current = false;
+  }, []);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -993,6 +1037,7 @@ export default function Page({
                 effectiveLocked || isPreviewActive ? undefined : onConnectMod
               }
               disableKeyboardA11y={false}
+              ariaLabelConfig={ariaLabelConfig}
               nodesFocusable={!effectiveLocked && !isPreviewActive}
               edgesFocusable={!effectiveLocked && !isPreviewActive}
               nodesDraggable={!isPreviewActive && !effectiveLocked}
@@ -1021,6 +1066,11 @@ export default function Page({
                 isPreviewActive || effectiveLocked
                   ? undefined
                   : onSelectionDragStart
+              }
+              onSelectionDragStop={
+                isPreviewActive || effectiveLocked
+                  ? undefined
+                  : onSelectionDragStop
               }
               elevateEdgesOnSelect={false}
               onSelectionEnd={
