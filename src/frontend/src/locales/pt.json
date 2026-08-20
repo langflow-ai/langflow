@@ -929,6 +929,7 @@
   "flow.a11y.direction.right": "a direita",
   "flow.canvasLabel": "Tela do flow",
   "flow.nodeAriaLabel": "Nó {{name}}",
+  "flow.nodeAriaLabelOrdinal": "{{label}} {{ordinal}}",
   "flow.saveChanges": "Salvar mudanças",
   "flow.saveVersion": "Salve uma versão do seu fluxo",
   "flow.savedHover": "Última gravação: ",

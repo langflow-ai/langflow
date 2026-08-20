@@ -929,6 +929,7 @@
   "flow.a11y.direction.right": "la droite",
   "flow.canvasLabel": "Canevas du flux",
   "flow.nodeAriaLabel": "Nœud {{name}}",
+  "flow.nodeAriaLabelOrdinal": "{{label}} {{ordinal}}",
   "flow.saveChanges": "Sauvegarder les modifications",
   "flow.saveVersion": "Enregistrer une version de votre flux",
   "flow.savedHover": "Dernière sauvegarde : ",

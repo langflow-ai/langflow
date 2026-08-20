@@ -929,6 +929,7 @@
   "flow.a11y.direction.right": "rechts",
   "flow.canvasLabel": "Flow-Arbeitsfläche",
   "flow.nodeAriaLabel": "Knoten {{name}}",
+  "flow.nodeAriaLabelOrdinal": "{{label}} {{ordinal}}",
   "flow.saveChanges": "Änderungen speichern",
   "flow.saveVersion": "Speichere eine Version deines Ablaufs",
   "flow.savedHover": "Zuletzt gespeichert: ",
