@@ -890,6 +890,67 @@ def test_custom_content_types_emit_langflow_custom_events():
     assert customs["langflow.content.code"].value["content"]["code"] == "print(1)"
 
 
+def test_disable_custom_events_suppresses_langflow_content_custom_events():
+    """``disable_custom_events`` drops json/code/media/error CUSTOM events only."""
+    t = AGUITranslator(run_id="r1", thread_id="t1", disable_custom_events=True)
+    t.start()
+
+    out = t.translate(
+        "add_message",
+        {
+            "id": "m1",
+            "content_blocks": [
+                {
+                    "title": "Steps",
+                    "contents": [
+                        {"type": "json", "data": {"k": "v"}},
+                        {"type": "code", "code": "print(1)", "language": "python"},
+                        {"type": "media", "urls": ["http://x/img.png"], "caption": "pic"},
+                        {"type": "error", "reason": "boom", "traceback": "trace"},
+                    ],
+                }
+            ],
+        },
+    )
+
+    assert not any(isinstance(e, CustomEvent) and e.name.startswith("langflow.content.") for e in out)
+
+
+def test_disable_custom_events_does_not_affect_tool_calls_or_text():
+    """``disable_custom_events`` only scopes the json/code/media/error content types.
+
+    Tool-call and text-message events (and the other CUSTOM markers — log,
+    message.removed, human_input_required, run.cancelled) are unrelated control
+    signals, not Langflow-specific content, so they must still emit.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1", disable_custom_events=True)
+    t.start()
+
+    out = t.translate(
+        "add_message",
+        {
+            "id": "m1",
+            "text": "The weather is sunny.",
+            "content_blocks": [
+                {
+                    "type": "tool_use",
+                    "contents": [],
+                    "name": "search",
+                    "tool_input": {"q": "weather"},
+                    "output": "sunny",
+                    "error": None,
+                }
+            ],
+        },
+    )
+
+    assert any(isinstance(e, ToolCallStartEvent) for e in out)
+    assert any(isinstance(e, TextMessageStartEvent) for e in out)
+
+    log_out = t.translate("log", {"message": "hi", "type": "text", "name": "Log 1", "component_id": "c1"})
+    assert any(isinstance(e, CustomEvent) and e.name == "langflow.log" for e in log_out)
+
+
 def test_log_event_emits_langflow_log_custom_event():
     t = AGUITranslator(run_id="r1", thread_id="t1")
     t.start()
