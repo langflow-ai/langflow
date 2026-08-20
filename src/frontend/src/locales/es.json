@@ -217,6 +217,7 @@
   "assistant.progress.validating.7": "Se está realizando la validación...",
   "assistant.selectModel": "Seleccionar modelo",
   "assistant.sendMessage": "Enviar mensaje",
+  "assistant.messageLimitReached": "Se alcanzó el límite del mensaje. Aumenta LANGFLOW_ASSISTANT_MAX_MESSAGE_LENGTH para permitir mensajes más largos.",
   "assistant.sessionHistory": "Historial de sesiones",
   "assistant.sessionHistoryLabel": "Historial de sesiones",
   "assistant.sessionHistoryTooltip": "Las sesiones se almacenan únicamente en tu navegador y no se conservarán en otros navegadores ni tras borrar los datos del navegador.",

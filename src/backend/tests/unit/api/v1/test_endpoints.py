@@ -38,6 +38,23 @@ async def test_get_config_basic(client: AsyncClient, logged_in_headers: dict):
     assert "max_file_size_upload" in result, "The dictionary must contain a key called 'max_file_size_upload'"
 
 
+async def test_get_config_mirrors_assistant_message_length(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """The Assistant composer reads its cap from /config, so the setting must be mirrored there.
+
+    Without this the UI falls back to a local constant, which is how a 500-character UI cap
+    ended up silently truncating prompts the 2000-character API would have accepted.
+    """
+    from lfx.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "assistant_max_message_length", 6000)
+
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["assistant_max_message_length"] == 6000
+
+
 @pytest.mark.parametrize("path", ["api/v1/custom_component", "api/v1/custom_component/update"])
 async def test_catalog_blocks_known_template_before_custom_component_build(
     client: AsyncClient,

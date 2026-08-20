@@ -478,6 +478,10 @@ class ConfigResponse(BaseConfigResponse):
     # Mirrors LANGFLOW_AGENTIC_EXPERIENCE (default on) so the Assistant panel
     # can explain, rather than 404, when the experience is disabled server-side.
     agentic_experience: bool = True
+    # Mirrors LANGFLOW_ASSISTANT_MAX_MESSAGE_LENGTH so the Assistant composer enforces the same
+    # cap the API does. A UI-only constant drifted below the API's and silently truncated long
+    # prompts before they were ever sent.
+    assistant_max_message_length: int = 2000
     # True when local Chroma may back a knowledge base or memory base — i.e. on
     # the dev profile. The production profile refuses it (vectors on the serving
     # box's own disk don't survive a restart and can't be shared across
@@ -537,6 +541,7 @@ class ConfigResponse(BaseConfigResponse):
             custom_component_admin_only=settings.custom_component_admin_only,
             a2a_enabled=settings.a2a_enabled,
             agentic_experience=settings.agentic_experience,
+            assistant_max_message_length=settings.assistant_max_message_length,
             local_vector_store_available=settings.deployment_profile != "prod",
         )
 

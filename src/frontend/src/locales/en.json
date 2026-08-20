@@ -1309,6 +1309,7 @@
   "assistant.continue": "Continue",
   "assistant.stopGeneration": "Stop generation",
   "assistant.sendMessage": "Send message",
+  "assistant.messageLimitReached": "Message limit reached. Raise LANGFLOW_ASSISTANT_MAX_MESSAGE_LENGTH to allow longer messages.",
   "assistant.sessionHistory": "Session history",
   "assistant.noModelsDescription": "To use the assistant, please configure at least one model provider in your settings.",
   "assistant.disabledTitle": "Assistant Disabled",
