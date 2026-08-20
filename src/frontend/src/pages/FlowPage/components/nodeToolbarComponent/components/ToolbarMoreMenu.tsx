@@ -112,6 +112,14 @@ export function ToolbarMoreMenu({
             dataTestId="copy-button-modal"
           />
         </SelectItem>
+        <SelectItem variant="plain" value={"moveTo"}>
+          <ToolbarSelectItem
+            shortcut=""
+            value={t("nodeToolbar.moveTo")}
+            icon={"Move"}
+            dataTestId="move-to-button-modal"
+          />
+        </SelectItem>
         {isOutdated && (
           <SelectItem variant="plain" value={"update"}>
             <ToolbarSelectItem

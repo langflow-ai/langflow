@@ -1126,6 +1126,8 @@
   "modelProviders.showDeprecatedSingular": "Show 1 deprecated model",
   "multiselect.chooseOption": "Choose an option...",
   "multiselect.noValuesFound": "No values found.",
+  "nodeToolbar.moveTo": "Move to…",
+  "nodeToolbar.moveToArmed": "Click a spot on the canvas to place the node. Press Escape to cancel.",
   "nodeToolbar.code": "Code",
   "nodeToolbar.freeze": "Freeze",
   "nodeToolbar.toolMode": "Tool Mode",

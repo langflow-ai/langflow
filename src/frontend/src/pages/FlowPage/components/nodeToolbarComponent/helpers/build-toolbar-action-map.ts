@@ -19,7 +19,8 @@ export type ToolbarActionEvent =
   | "update"
   | "copy"
   | "duplicate"
-  | "toolMode";
+  | "toolMode"
+  | "moveTo";
 
 export interface ToolbarActionHandlers {
   save: () => void;
@@ -37,6 +38,7 @@ export interface ToolbarActionHandlers {
   copy: () => void;
   duplicate: () => void;
   toolMode: () => void;
+  moveTo: () => void;
 }
 
 /**
@@ -65,5 +67,6 @@ export function buildToolbarActionMap(
     copy: handlers.copy,
     duplicate: handlers.duplicate,
     toolMode: handlers.toolMode,
+    moveTo: handlers.moveTo,
   };
 }

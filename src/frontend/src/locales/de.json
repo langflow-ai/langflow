@@ -1683,6 +1683,8 @@
   "node.updateRequiredLabel": "Aktualisierung erforderlich",
   "node.upgradeRequiredMessage": "Zur Ausführung des Ablaufs ist ein Upgrade erforderlich",
   "node.viewCode": "Code anzeigen",
+  "nodeToolbar.moveTo": "Verschieben nach …",
+  "nodeToolbar.moveToArmed": "Klicken Sie auf eine Stelle der Arbeitsfläche, um den Knoten zu platzieren. Esc bricht ab.",
   "nodeToolbar.code": "Code erstellen",
   "nodeToolbar.copy": "Kopieren",
   "nodeToolbar.delete": "Löschen",
