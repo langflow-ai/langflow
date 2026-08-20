@@ -12,6 +12,22 @@ import type { APIClassType } from "@/types/api";
 import type { NodeDataType } from "@/types/flow";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { Command } from "../../../../ui/command";
+
+/**
+ * cmdk unconditionally renders a hidden `<label htmlFor={inputId}>` inside
+ * <Command>, even when no CommandInput exists for that id — a label whose
+ * `for` references nothing (IBM label_ref_valid, WCAG 1.3.1). The listbox
+ * carries the picker's accessible name, so the reference is pure debt.
+ * Dropping the ATTRIBUTE (not the node) is reconciliation-safe: React only
+ * rewrites props it sees change, and `htmlFor` never changes here.
+ */
+export function stripDanglingCmdkLabelFor(root: HTMLElement | null): void {
+  const label = root?.querySelector("label[cmdk-label][for]");
+  if (label && !document.getElementById(label.getAttribute("for") ?? "")) {
+    label.removeAttribute("for");
+  }
+}
+
 import {
   Popover,
   PopoverContent,
@@ -318,8 +334,12 @@ export default function ModelInputComponent({
         {/* Section 1 — the option list (a self-contained listbox). Keeping the
             footer actions out of <Command> stops them from being swept into the
             listbox's composite keyboard/focus model. */}
+        {/* No CommandInput is rendered here, and cmdk's `label` prop renders
+            a <label htmlFor={inputId}> for that input — leaving a label that
+            references a non-existent element (IBM label_ref_valid). The
+            accessible name lives on the CommandList (the listbox) instead. */}
         <Command
-          label={t("model.selectModel")}
+          ref={stripDanglingCmdkLabelFor}
           className="flex flex-col"
           defaultValue={
             selectedModel
