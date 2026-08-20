@@ -9,7 +9,7 @@ from lfx.inputs.inputs import StrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.utils.python_repl_security import ensure_code_execution_enabled, safe_builtins, validate_code_safety
-from lfx.utils.sandbox import is_sandbox_enabled, run_code_in_sandbox, sanitize_code
+from lfx.utils.sandbox import is_sandbox_enabled, run_code_in_sandbox, sanitize_code, session_for
 
 
 class PythonREPLToolComponent(LCToolComponent):
@@ -117,7 +117,16 @@ class PythonREPLToolComponent(LCToolComponent):
                 # (including configured-but-unavailable) surface as
                 # ToolException — never fall back to in-process exec.
                 if is_sandbox_enabled():
-                    result = run_code_in_sandbox(sanitize_code(code), global_imports=self.global_imports)
+                    # A session lets an agent build up state across tool
+                    # calls instead of restarting from nothing each time.
+                    # Artifacts are not collected here: this tool returns one
+                    # observation string to the model, with nowhere to put a
+                    # file.
+                    result = run_code_in_sandbox(
+                        sanitize_code(code),
+                        global_imports=self.global_imports,
+                        session=session_for(self.flow_id, self.user_id),
+                    )
                     if not result.success:
                         # Parity with the in-process path: PythonREPL.run()
                         # RETURNS user-code errors as the observation string

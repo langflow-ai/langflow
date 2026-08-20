@@ -1,10 +1,11 @@
+import base64
 import importlib
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import MultilineInput, Output, StrInput
 from lfx.schema.data import Data
 from lfx.utils.python_repl_security import ensure_code_execution_enabled, safe_builtins, validate_code_safety
-from lfx.utils.sandbox import is_sandbox_enabled, run_code_in_sandbox, sanitize_code
+from lfx.utils.sandbox import is_sandbox_enabled, run_code_in_sandbox, sanitize_code, session_for
 
 
 class PythonREPLComponent(Component):
@@ -93,13 +94,32 @@ class PythonREPLComponent(Component):
         # Same input normalization as the in-process path (which calls
         # PythonREPL.sanitize_input): strip markdown fences so LLM-authored
         # tool-mode code behaves identically in both modes.
-        result = run_code_in_sandbox(sanitize_code(self.python_code), global_imports=self.global_imports)
+        result = run_code_in_sandbox(
+            sanitize_code(self.python_code),
+            global_imports=self.global_imports,
+            session=session_for(self.flow_id, self.user_id),
+        )
         if not result.success:
             error_message = result.error_message()
             self.log(f"Sandboxed code execution failed: {error_message}")
             return Data(data={"error": error_message})
         self.log("Sandboxed code execution completed successfully")
-        return Data(data={"result": result.stdout.strip()})
+        data: dict = {"result": result.stdout.strip()}
+        if result.files:
+            data["artifacts"] = [
+                {
+                    "name": artifact.path,
+                    "size": artifact.size,
+                    # Base64 rather than raw bytes so the value survives JSON
+                    # serialization on its way through the flow. Bounded by
+                    # LANGFLOW_SANDBOX_MAX_ARTIFACT_BYTES, which is why that
+                    # default is small.
+                    "content_base64": base64.b64encode(artifact.content).decode(),
+                }
+                for artifact in result.files
+            ]
+            self.log(f"Collected {len(result.files)} sandbox artifact(s)")
+        return Data(data=data)
 
     def run_python_repl(self) -> Data:
         try:

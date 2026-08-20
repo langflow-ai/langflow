@@ -21,6 +21,9 @@ from lfx.utils.sandbox import (
     run_code_in_sandbox,
     sanitize_code,
 )
+from lfx.utils.sandbox import base as base_module
+from lfx.utils.sandbox import exec_sandbox as exec_module
+from lfx.utils.sandbox import registry as registry_module
 
 
 def _settings(backend, **extra):
@@ -41,13 +44,13 @@ def fresh_executor(monkeypatch):
     """Give each test its own executor and tear down its loop thread afterwards."""
     import atexit
 
-    executor = sandbox_module._ExecSandboxExecutor()
-    monkeypatch.setattr(sandbox_module, "_executor", executor)
+    executor = exec_module._ExecSandboxExecutor()
+    monkeypatch.setitem(registry_module._instances, "exec-sandbox", executor)
     yield executor
     # Tear down so daemon loop threads and atexit hooks don't accumulate
     # across the test session.
-    atexit.unregister(executor._shutdown)
-    executor._shutdown()
+    atexit.unregister(executor.shutdown)
+    executor.shutdown()
     loop, thread = executor._loop, executor._thread
     if loop is not None and not loop.is_closed():
         loop.call_soon_threadsafe(loop.stop)
@@ -152,7 +155,7 @@ def _install_fake_exec_sandbox(monkeypatch):
     monkeypatch.setitem(sys.modules, "exec_sandbox.system_probes", probes)
     monkeypatch.setitem(sys.modules, "exec_sandbox.settings", settings_mod)
     monkeypatch.setitem(sys.modules, "exec_sandbox.vm_types", vm_types)
-    monkeypatch.setattr(sandbox_module, "_hardware_acceleration_available", lambda: True)
+    monkeypatch.setattr(exec_module, "_hardware_acceleration_available", lambda: True)
     return _FakeScheduler
 
 
@@ -410,7 +413,7 @@ class TestRunCodeInSandbox:
     def test_refuses_tcg_without_override(self, monkeypatch, fake_exec_sandbox):
         """No hardware hypervisor -> fail closed rather than silently run under TCG."""
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
-        monkeypatch.setattr(sandbox_module, "_hardware_acceleration_available", lambda: False)
+        monkeypatch.setattr(exec_module, "_hardware_acceleration_available", lambda: False)
         with pytest.raises(SandboxUnavailableError, match="hardware"):
             run_code_in_sandbox("print('hi')")
         assert not fake_exec_sandbox.instances
@@ -421,7 +424,7 @@ class TestRunCodeInSandbox:
             "lfx.services.deps.get_settings_service",
             lambda: _settings("exec-sandbox", sandbox_allow_software_emulation=True),
         )
-        monkeypatch.setattr(sandbox_module, "_hardware_acceleration_available", lambda: False)
+        monkeypatch.setattr(exec_module, "_hardware_acceleration_available", lambda: False)
         result = run_code_in_sandbox("print('hello from vm')")
         assert result.success
 
@@ -547,8 +550,8 @@ class TestRunCodeInSandbox:
             "lfx.services.deps.get_settings_service",
             lambda: _settings("exec-sandbox", sandbox_timeout_seconds=0),
         )
-        monkeypatch.setattr(sandbox_module, "_RUN_GRACE_SECONDS", 0)
-        monkeypatch.setattr(sandbox_module, "_STARTUP_GRACE_SECONDS", 5)
+        monkeypatch.setattr(exec_module, "_RUN_GRACE_SECONDS", 0)
+        monkeypatch.setattr(exec_module, "_STARTUP_GRACE_SECONDS", 5)
         # Cold start (creation sleeps 20ms): succeeds only under startup grace.
         assert run_code_in_sandbox("print('hi')").success
         shutdown_sandbox()
@@ -577,8 +580,8 @@ class TestRunCodeInSandbox:
             "lfx.services.deps.get_settings_service",
             lambda: _settings("exec-sandbox", sandbox_timeout_seconds=0),
         )
-        monkeypatch.setattr(sandbox_module, "_RUN_GRACE_SECONDS", 0)
-        monkeypatch.setattr(sandbox_module, "_STARTUP_GRACE_SECONDS", 5)
+        monkeypatch.setattr(exec_module, "_RUN_GRACE_SECONDS", 0)
+        monkeypatch.setattr(exec_module, "_STARTUP_GRACE_SECONDS", 5)
 
         # Warm up (cold, startup grace), leaving readiness True.
         assert run_code_in_sandbox("print('hi')").success
@@ -647,7 +650,7 @@ class TestRunCodeInSandbox:
         assert inherited_lock.acquire(blocking=False)  # now "held by a dead thread"
         old_generation = fresh_executor._generation
 
-        sandbox_module._reinit_executor_after_fork()
+        sandbox_module._reinit_backends_after_fork()
 
         assert fresh_executor._lock is not inherited_lock
         assert fresh_executor._lock.acquire(blocking=False)
@@ -988,3 +991,527 @@ class TestLiveExecSandbox:
         result = run_code_in_sandbox("this_name_does_not_exist")
         assert not result.success
         assert "NameError" in result.stderr
+
+
+# ---------------------------------------------------------------------------
+# Registry and the policy gate
+# ---------------------------------------------------------------------------
+
+
+class _StubBackend:
+    """A minimal backend, used to prove the dispatcher decides and not the backend."""
+
+    name = "stub"
+
+    def __init__(self, capabilities=None):
+        self._capabilities = capabilities or base_module.Capabilities(
+            supports_deny_all_egress=True, supports_domain_allowlist=True
+        )
+        self.runs: list[tuple[str, object]] = []
+
+    def capabilities(self):
+        return self._capabilities
+
+    def run(self, code, *, env=None, session=None):  # noqa: ARG002
+        self.runs.append((code, session))
+        return base_module.SandboxResult(stdout="stub", stderr="", exit_code=0)
+
+    def shutdown(self):
+        pass
+
+    def reset_after_fork(self):
+        pass
+
+
+@pytest.fixture
+def stub_backend(monkeypatch):
+    """Register a stub under its own name and return an installer for it."""
+
+    def _install(capabilities=None):
+        backend = _StubBackend(capabilities)
+        monkeypatch.setitem(registry_module._factories, "stub", lambda: backend)
+        monkeypatch.setitem(registry_module._instances, "stub", backend)
+        return backend
+
+    return _install
+
+
+class TestRegistry:
+    def test_in_tree_backends_are_registered(self):
+        names = registry_module.known_sandbox_backends()
+        assert "none" in names
+        assert "exec-sandbox" in names
+        assert "createos" in names
+
+    def test_none_cannot_be_claimed_by_a_backend(self):
+        with pytest.raises(ValueError, match="reserved"):
+            registry_module.register_sandbox_backend("none", _StubBackend)
+
+    def test_a_registered_backend_is_dispatched_to(self, monkeypatch, stub_backend):
+        backend = stub_backend()
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("stub"))
+
+        result = run_code_in_sandbox("print(1)")
+
+        assert result.stdout == "stub"
+        assert len(backend.runs) == 1
+
+    def test_an_unregistered_backend_fails_closed(self, monkeypatch):
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("no-such-backend"))
+        with pytest.raises(SandboxUnavailableError, match="Unknown sandbox backend"):
+            run_code_in_sandbox("print(1)")
+
+    def test_the_factory_is_called_once(self, monkeypatch):
+        built = []
+
+        def factory():
+            built.append(1)
+            return _StubBackend()
+
+        monkeypatch.setitem(registry_module._factories, "counted", factory)
+        monkeypatch.delitem(registry_module._instances, "counted", raising=False)
+
+        first = registry_module.resolve_sandbox_backend("counted")
+        second = registry_module.resolve_sandbox_backend("counted")
+
+        assert first is second
+        assert len(built) == 1
+
+    def test_the_settings_validator_reads_the_same_list(self, monkeypatch, stub_backend):
+        """D6: one source of truth, so a backend cannot be accepted by only one of them."""
+        from lfx.services.settings.groups.security import SecuritySettings
+
+        stub_backend()
+        monkeypatch.setattr(registry_module, "_entry_points_loaded", True)
+        assert SecuritySettings(sandbox_backend="stub").sandbox_backend == "stub"
+
+
+class TestPolicyGate:
+    """The backend declares; the dispatcher decides. Every branch fails closed."""
+
+    def test_software_isolation_is_refused(self, monkeypatch, stub_backend):
+        stub_backend(base_module.Capabilities(isolation="process", supports_deny_all_egress=True))
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("stub"))
+
+        with pytest.raises(SandboxUnavailableError, match="not a hardware-virtualized boundary"):
+            run_code_in_sandbox("print(1)")
+
+    def test_a_backend_that_cannot_deny_egress_is_refused(self, monkeypatch, stub_backend):
+        stub_backend(base_module.Capabilities(supports_deny_all_egress=False))
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("stub"))
+
+        with pytest.raises(SandboxUnavailableError, match="cannot block all egress"):
+            run_code_in_sandbox("print(1)")
+
+    def test_a_backend_without_domain_filtering_is_refused(self, monkeypatch, stub_backend):
+        stub_backend(base_module.Capabilities(supports_deny_all_egress=True, supports_domain_allowlist=False))
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: _settings("stub", sandbox_allow_network=True, sandbox_allowed_domains=["pypi.org"]),
+        )
+
+        with pytest.raises(SandboxUnavailableError, match="cannot restrict egress by domain"):
+            run_code_in_sandbox("print(1)")
+
+    def test_a_backend_without_artifacts_is_refused_when_they_are_requested(self, monkeypatch, stub_backend):
+        stub_backend(
+            base_module.Capabilities(
+                supports_deny_all_egress=True, supports_domain_allowlist=True, supports_artifacts=False
+            )
+        )
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: _settings("stub", sandbox_collect_artifacts=True),
+        )
+
+        with pytest.raises(SandboxUnavailableError, match="cannot read files back out"):
+            run_code_in_sandbox("print(1)")
+
+    def test_a_timeout_above_the_backend_cap_is_refused(self, monkeypatch, stub_backend):
+        stub_backend(
+            base_module.Capabilities(
+                supports_deny_all_egress=True, supports_domain_allowlist=True, max_timeout_seconds=10
+            )
+        )
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: _settings("stub", sandbox_timeout_seconds=60),
+        )
+
+        with pytest.raises(SandboxUnavailableError, match="caps one execution at 10s"):
+            run_code_in_sandbox("print(1)")
+
+
+class TestSessionGate:
+    """Reuse needs consent from the operator AND a claim from the backend."""
+
+    def test_a_session_is_dropped_when_the_operator_left_sessions_off(self, monkeypatch, stub_backend):
+        backend = stub_backend(
+            base_module.Capabilities(
+                supports_deny_all_egress=True, supports_domain_allowlist=True, supports_sessions=True
+            )
+        )
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("stub"))
+
+        run_code_in_sandbox("print(1)", session=base_module.SessionKey(flow_id="f", user_id="u"))
+
+        assert backend.runs[0][1] is None
+
+    def test_a_session_is_dropped_when_the_backend_cannot_hold_one(self, monkeypatch, stub_backend):
+        backend = stub_backend(
+            base_module.Capabilities(
+                supports_deny_all_egress=True, supports_domain_allowlist=True, supports_sessions=False
+            )
+        )
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service", lambda: _settings("stub", sandbox_session_mode="flow")
+        )
+
+        run_code_in_sandbox("print(1)", session=base_module.SessionKey(flow_id="f", user_id="u"))
+
+        assert backend.runs[0][1] is None
+
+    def test_a_session_survives_when_both_gates_are_open(self, monkeypatch, stub_backend):
+        backend = stub_backend(
+            base_module.Capabilities(
+                supports_deny_all_egress=True, supports_domain_allowlist=True, supports_sessions=True
+            )
+        )
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service", lambda: _settings("stub", sandbox_session_mode="flow")
+        )
+        session = base_module.SessionKey(flow_id="f", user_id="u")
+
+        run_code_in_sandbox("print(1)", session=session)
+
+        assert backend.runs[0][1] == session
+
+
+class TestSessionKey:
+    def test_the_token_hides_the_identity_it_was_built_from(self):
+        key = base_module.SessionKey(flow_id="flow-123", user_id="user-456")
+        token = key.token()
+        assert "flow-123" not in token
+        assert "user-456" not in token
+
+    def test_the_token_is_stable(self):
+        first = base_module.SessionKey(flow_id="f", user_id="u").token()
+        second = base_module.SessionKey(flow_id="f", user_id="u").token()
+        assert first == second
+
+    def test_different_users_of_one_flow_never_share_a_guest(self):
+        one = base_module.SessionKey(flow_id="f", user_id="alice").token()
+        two = base_module.SessionKey(flow_id="f", user_id="bob").token()
+        assert one != two
+
+    def test_different_flows_never_share_a_guest(self):
+        one = base_module.SessionKey(flow_id="flow-a", user_id="u").token()
+        two = base_module.SessionKey(flow_id="flow-b", user_id="u").token()
+        assert one != two
+
+    def test_the_separator_cannot_be_forged(self):
+        """A concatenated key would collide here; the hash input is delimited."""
+        one = base_module.SessionKey(flow_id="a", user_id="bc").token()
+        two = base_module.SessionKey(flow_id="ab", user_id="c").token()
+        assert one != two
+
+
+class TestSessionStateCarryOver:
+    """Reusing a guest keeps its filesystem, not its Python process."""
+
+    def test_the_preamble_loads_and_saves(self):
+        composed = base_module.compose_session_code("print(1)")
+        assert "_lf_state" in composed
+        assert "atexit" in composed
+        assert composed.endswith("print(1)")
+
+    def test_future_imports_still_come_first(self):
+        composed = base_module.compose_session_code("from __future__ import annotations\nprint(1)")
+        assert composed.startswith("from __future__ import annotations")
+
+    def test_a_module_docstring_still_comes_first(self):
+        composed = base_module.compose_session_code('"""Doc."""\nprint(1)')
+        assert composed.startswith('"""Doc."""')
+
+    def test_its_own_names_are_never_carried(self):
+        """The machinery must not leak into the next execution's namespace."""
+        composed = base_module.compose_session_code("print(1)")
+        assert '_lf_name.startswith("_lf_")' in composed
+
+    def test_a_session_run_gets_the_preamble(self, monkeypatch, stub_backend):
+        backend = stub_backend(
+            base_module.Capabilities(
+                supports_deny_all_egress=True, supports_domain_allowlist=True, supports_sessions=True
+            )
+        )
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service", lambda: _settings("stub", sandbox_session_mode="flow")
+        )
+
+        run_code_in_sandbox("print(1)", session=base_module.SessionKey(flow_id="f", user_id="u"))
+
+        assert "_lf_save_state" in backend.runs[0][0]
+
+    def test_a_cold_run_does_not(self, monkeypatch, stub_backend):
+        backend = stub_backend()
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("stub"))
+
+        run_code_in_sandbox("print(1)")
+
+        assert "_lf_save_state" not in backend.runs[0][0]
+
+
+class TestSessionStateSurvivesOneBadValue:
+    """The preamble runs for real here: composed code, a real interpreter, twice.
+
+    Mocking cannot reach this. The defect it guards against only appears when a
+    SECOND fresh interpreter tries to load what the first one wrote.
+    """
+
+    @staticmethod
+    def _run(code, state_file):
+        import subprocess
+        import sys
+
+        composed = base_module.compose_session_code(code, state_path=str(state_file))
+        return subprocess.run(  # noqa: S603
+            [sys.executable, "-c", composed],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,
+        )
+
+    def test_a_user_defined_function_does_not_erase_the_other_variables(self, tmp_path):
+        """Pickling the namespace as one object loses everything to one bad entry."""
+        state = tmp_path / "session.pkl"
+        first = self._run("keep = 5\nalso = 'hello'\ndef helper():\n    return 1\n", state)
+        assert first.returncode == 0, first.stderr
+
+        second = self._run("print(keep)\nprint(also)\n", state)
+
+        assert second.returncode == 0, second.stderr
+        assert second.stdout.split() == ["5", "hello"]
+
+    def test_the_uncarryable_name_is_reported_not_swallowed(self, tmp_path):
+        state = tmp_path / "session.pkl"
+        result = self._run("keep = 5\ndef helper():\n    return 1\n", state)
+
+        assert "did not carry" in result.stderr
+        assert "helper" in result.stderr
+
+    def test_an_unpicklable_value_costs_only_itself(self, tmp_path):
+        state = tmp_path / "session.pkl"
+        first = self._run("keep = 7\nhandle = open(__file__ if False else '/dev/null')\n", state)
+        assert first.returncode == 0, first.stderr
+
+        second = self._run("print(keep)\nprint('handle' in dir())\n", state)
+
+        assert second.returncode == 0, second.stderr
+        assert second.stdout.split() == ["7", "False"]
+
+    def test_ordinary_values_round_trip(self, tmp_path):
+        state = tmp_path / "session.pkl"
+        self._run("import json\nnumbers = [1, 2, 3]\nmapping = {'a': 1}\ntext = 'x'\n", state)
+
+        result = self._run("print(numbers, mapping, text)\n", state)
+
+        assert result.returncode == 0, result.stderr
+        assert result.stdout.strip() == "[1, 2, 3] {'a': 1} x"
+
+    def test_a_corrupt_state_file_does_not_break_the_run(self, tmp_path):
+        state = tmp_path / "session.pkl"
+        state.write_bytes(b"not a pickle at all")
+
+        result = self._run("print('ran anyway')\n", state)
+
+        assert result.returncode == 0, result.stderr
+        assert "ran anyway" in result.stdout
+
+    def test_an_oversized_value_is_dropped_and_reported(self, tmp_path):
+        state = tmp_path / "session.pkl"
+        first = self._run(f"small = 1\nbig = 'x' * {base_module._SESSION_MAX_VALUE_BYTES + 1024}\n", state)
+        assert "did not carry" in first.stderr
+        assert "big" in first.stderr
+
+        second = self._run("print(small)\nprint('big' in dir())\n", state)
+
+        assert second.stdout.split() == ["1", "False"]
+
+
+class TestSessionStateWriteIsAtomic:
+    """A session guest can be shared by workers, so a reader must never see a torn file."""
+
+    @staticmethod
+    def _run(code, state_file):
+        import subprocess
+        import sys
+
+        composed = base_module.compose_session_code(code, state_path=str(state_file))
+        return subprocess.Popen(  # noqa: S603
+            [sys.executable, "-c", composed],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+
+    def test_concurrent_writers_never_leave_an_unreadable_state(self, tmp_path):
+        import pickle
+
+        state = tmp_path / "session.pkl"
+        # Each writer stores a payload big enough that a non-atomic write would
+        # span more than one block, which is what makes a torn read possible.
+        writers = [self._run(f"value_{index} = 'x' * 200000\n", state) for index in range(12)]
+        for writer in writers:
+            writer.communicate(timeout=120)
+
+        assert state.exists()
+        # The file is written by the preamble under test, not by anything
+        # untrusted; reading it back is the whole assertion.
+        entries = pickle.loads(state.read_bytes())  # noqa: S301
+        assert isinstance(entries, dict)
+        for blob in entries.values():
+            pickle.loads(blob)  # noqa: S301
+
+    def test_no_temporary_file_is_left_behind(self, tmp_path):
+        state = tmp_path / "session.pkl"
+        self._run("kept = 1\n", state).communicate(timeout=60)
+
+        leftovers = [path.name for path in tmp_path.iterdir() if path.name != state.name]
+        assert leftovers == []
+
+    def test_a_later_run_reads_a_whole_state(self, tmp_path):
+        state = tmp_path / "session.pkl"
+        self._run("payload = 'y' * 300000\n", state).communicate(timeout=60)
+
+        reader = self._run("print(len(payload))\n", state)
+        stdout, stderr = reader.communicate(timeout=60)
+
+        assert reader.returncode == 0, stderr
+        assert stdout.strip() == "300000"
+
+
+class _FakeEntryPoint:
+    """Records whether load() ran, which is the thing that imports foreign code."""
+
+    def __init__(self, name, factory=None, *, explode=False):
+        self.name = name
+        self._factory = factory or (lambda: _StubBackend())
+        self._explode = explode
+        self.loaded = False
+
+    def load(self):
+        self.loaded = True
+        if self._explode:
+            msg = "hostile plugin"
+            raise RuntimeError(msg)
+        return self._factory
+
+
+@pytest.fixture
+def entry_points(monkeypatch):
+    """Serve a canned set of lfx.sandbox_backends entry points to the registry."""
+
+    def _install(*points):
+        monkeypatch.setattr(registry_module, "_entry_points_loaded", False)
+        monkeypatch.setattr(
+            registry_module,
+            "_factories",
+            dict(registry_module._factories),
+        )
+        monkeypatch.setattr(registry_module, "_instances", dict(registry_module._instances))
+        import importlib.metadata
+
+        monkeypatch.setattr(
+            importlib.metadata,
+            "entry_points",
+            lambda group=None: list(points) if group == registry_module._ENTRY_POINT_GROUP else [],
+        )
+        return points
+
+    return _install
+
+
+class TestSandboxBackendPlugins:
+    """Loading a plugin imports foreign code into the security path, so it is opt-in."""
+
+    def test_nothing_is_imported_without_the_allowlist(self, monkeypatch, entry_points):
+        monkeypatch.delenv("LANGFLOW_SANDBOX_BACKEND_PLUGINS", raising=False)
+        (point,) = entry_points(_FakeEntryPoint("vendor"))
+
+        names = registry_module.known_sandbox_backends()
+
+        assert not point.loaded, "an unlisted plugin must never be imported"
+        assert "vendor" not in names
+
+    def test_an_allowlisted_plugin_is_loaded(self, monkeypatch, entry_points):
+        monkeypatch.setenv("LANGFLOW_SANDBOX_BACKEND_PLUGINS", "vendor")
+        (point,) = entry_points(_FakeEntryPoint("vendor"))
+
+        names = registry_module.known_sandbox_backends()
+
+        assert point.loaded
+        assert "vendor" in names
+
+    def test_an_unlisted_plugin_is_skipped_while_a_listed_one_loads(self, monkeypatch, entry_points):
+        monkeypatch.setenv("LANGFLOW_SANDBOX_BACKEND_PLUGINS", "wanted")
+        wanted, unwanted = entry_points(_FakeEntryPoint("wanted"), _FakeEntryPoint("unwanted"))
+
+        names = registry_module.known_sandbox_backends()
+
+        assert wanted.loaded
+        assert not unwanted.loaded
+        assert "wanted" in names
+        assert "unwanted" not in names
+
+    def test_a_plugin_cannot_take_over_a_builtin_name(self, monkeypatch, entry_points):
+        """Otherwise an installed package becomes exec-sandbox while settings still say so."""
+        monkeypatch.setenv("LANGFLOW_SANDBOX_BACKEND_PLUGINS", "exec-sandbox")
+        (point,) = entry_points(_FakeEntryPoint("exec-sandbox"))
+
+        registry_module.known_sandbox_backends()
+
+        assert not point.loaded, "a built-in name must be refused before the import"
+        assert registry_module._factories["exec-sandbox"] is exec_module._ExecSandboxExecutor
+
+    def test_registering_over_a_builtin_is_refused(self):
+        with pytest.raises(ValueError, match="built-in sandbox backend"):
+            registry_module.register_sandbox_backend("exec-sandbox", _StubBackend)
+
+    def test_a_plugin_that_fails_to_load_does_not_break_startup(self, monkeypatch, entry_points):
+        monkeypatch.setenv("LANGFLOW_SANDBOX_BACKEND_PLUGINS", "broken,fine")
+        broken, fine = entry_points(_FakeEntryPoint("broken", explode=True), _FakeEntryPoint("fine"))
+
+        names = registry_module.known_sandbox_backends()
+
+        assert broken.loaded
+        assert fine.loaded
+        assert "broken" not in names
+        assert "fine" in names
+
+    def test_a_missing_plugin_fails_closed_at_dispatch(self, monkeypatch, entry_points):
+        """An absent backend refuses the run; it never degrades to in-process exec."""
+        monkeypatch.setenv("LANGFLOW_SANDBOX_BACKEND_PLUGINS", "vendor")
+        entry_points(_FakeEntryPoint("vendor", explode=True))
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("vendor"))
+
+        with pytest.raises(SandboxUnavailableError, match="Unknown sandbox backend"):
+            run_code_in_sandbox("print(1)")
+
+    def test_the_allowlist_ignores_blanks_and_spacing(self, monkeypatch, entry_points):
+        monkeypatch.setenv("LANGFLOW_SANDBOX_BACKEND_PLUGINS", " vendor , , ")
+        (point,) = entry_points(_FakeEntryPoint("vendor"))
+
+        assert "vendor" in registry_module.known_sandbox_backends()
+        assert point.loaded
+
+    def test_an_allowlisted_plugin_still_faces_the_policy_gate(self, monkeypatch, entry_points):
+        """A declaration is configuration metadata, not evidence of enforcement."""
+        monkeypatch.setenv("LANGFLOW_SANDBOX_BACKEND_PLUGINS", "vendor")
+        weak = _StubBackend(base_module.Capabilities(isolation="process", supports_deny_all_egress=True))
+        weak.name = "vendor"
+        entry_points(_FakeEntryPoint("vendor", factory=lambda: weak))
+        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("vendor"))
+
+        with pytest.raises(SandboxUnavailableError, match="not a hardware-virtualized boundary"):
+            run_code_in_sandbox("print(1)")
