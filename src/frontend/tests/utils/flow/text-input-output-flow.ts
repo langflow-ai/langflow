@@ -67,7 +67,9 @@ export async function createTextInputOutputFlow(page: Page): Promise<void> {
     addButtonSlug: "text-input",
     displayName: "Text Input",
   });
-  const textInputNode = page.getByRole("application", { name: "Text Input node" });
+  const textInputNode = page.getByRole("application", {
+    name: "Text Input node",
+  });
   await moveNodeBy(page, textInputNode, -400);
 
   await addComponent(page, {
@@ -120,7 +122,9 @@ export async function runTextInputOutputFlow(
       .getByTestId("textarea_str_input_value")
       .fill(value, { force: true });
   }
-  const textOutputNode = page.getByRole("application", { name: "Text Output node" });
+  const textOutputNode = page.getByRole("application", {
+    name: "Text Output node",
+  });
   const runButton = textOutputNode.getByRole("button", {
     name: "Run component",
   });
