@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 interface ComboBoxItemProps {
-  item: any;
+  item?: { name?: string; description?: string };
 }
 
 const ComboBoxItem = ({ item }: ComboBoxItemProps) => {

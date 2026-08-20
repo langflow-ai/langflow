@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { loadLanguage } from "@/i18n";
 import { SUPPORTED_LANGUAGES } from "@/constants/languages";
+import { loadLanguage } from "@/i18n";
 import { useTypesStore } from "@/stores/typesStore";
 
 export const LanguageSelector = () => {
