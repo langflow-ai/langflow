@@ -841,12 +841,23 @@ def test_repeated_add_message_after_text_consolidation_does_not_duplicate_tool_c
         },
     )
 
-    first_starts = [e for e in first if isinstance(e, ToolCallStartEvent)]
-    second_starts = [e for e in second if isinstance(e, ToolCallStartEvent)]
-    assert len(first_starts) == 1
-    assert len(second_starts) == 0, (
-        f"tool call re-emitted under a new id after content_blocks reindexing: {second_starts}"
-    )
+    def _tool_events(events):
+        return {
+            event_type: [e for e in events if isinstance(e, event_type)]
+            for event_type in (ToolCallStartEvent, ToolCallArgsEvent, ToolCallEndEvent, ToolCallResultEvent)
+        }
+
+    first_tool_events = _tool_events(first)
+    second_tool_events = _tool_events(second)
+
+    # The first firing emits exactly one full START/ARGS/END/RESULT quartet.
+    for event_type, events in first_tool_events.items():
+        assert len(events) == 1, f"expected exactly one {event_type.__name__} on first firing, got {events}"
+
+    # The second firing must re-emit nothing: same tool call, same id, already
+    # started and resolved — not a new quartet under a shifted id.
+    for event_type, events in second_tool_events.items():
+        assert events == [], f"tool call re-emitted {event_type.__name__} after content_blocks reindexing: {events}"
 
 
 def test_tool_use_error_is_reported_via_tool_call_result():
