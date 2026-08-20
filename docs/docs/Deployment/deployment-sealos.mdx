@@ -7,9 +7,13 @@ The Sealos community template pins Langflow 1.10.2, with persistent storage and 
 
 [Open the Langflow template on Sealos](https://sealos.io/products/app-store/langflow)
 
+:::warning Admin password
+Choose a strong, unique `admin_password` and store it securely.
+:::
+
 1. Open the template and select **Deploy Now**.
 2. Set `admin_username` and `admin_password` for the initial Langflow superuser.
-3. To use PostgreSQL instead of persistent SQLite, enable `enable_database`.
+3. Set `enable_database` to `true` to use PostgreSQL or `false` to use persistent SQLite.
 4. Wait for the deployment to finish, and then open the generated Langflow URL.
 5. Sign in with the credentials from step 2.
 
