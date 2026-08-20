@@ -309,6 +309,10 @@ async def _buffer_background_run(
             # Build under the job id so the run's vertex builds are persisted
             # keyed by job_id and GET-status reconstruction can find them.
             run_id=job_id,
+            # Also as job_id: run_id keys the persisted vertex builds, job_id is what the
+            # trace carrier is looked up by. Passing only the first reads no carrier, so this
+            # path would quietly produce unlinked runs.
+            job_id=job_uuid,
             track_job_status=False,
             # Distinct from the live v2 stream: same driver, but nobody is holding the connection,
             # so an operator reading latency needs to tell the two apart.

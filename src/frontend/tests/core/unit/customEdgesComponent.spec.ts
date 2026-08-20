@@ -77,7 +77,7 @@ test(
     // role="img", which is a pruned leaf reserved for the locked/preview
     // canvas (see get-edge-aria-label.ts).
     await expect(
-      page.getByRole("group", { name: /^Edge from .* to .*/ }).last(),
+      page.getByRole("button", { name: /^Edge from .* to .*/ }).last(),
     ).toBeVisible();
   },
 );

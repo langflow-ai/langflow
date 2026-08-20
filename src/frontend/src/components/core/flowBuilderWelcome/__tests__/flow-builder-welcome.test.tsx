@@ -9,6 +9,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH } from "@/constants/constants";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { FlowBuilderWelcome } from "../flow-builder-welcome";
 
@@ -81,8 +82,19 @@ function makeProps(
   };
 }
 
+const example = (name_key: string) =>
+  ({ id: name_key, name: name_key, name_key }) as never;
+
+/** Both quick templates plus one other, i.e. an unrestricted catalog. */
+const FULL_CATALOG = [
+  example("simple_agent"),
+  example("vector_store_rag"),
+  example("basic_prompting"),
+];
+
 describe("FlowBuilderWelcome", () => {
   beforeEach(() => {
+    useFlowsManagerStore.setState({ examples: FULL_CATALOG });
     mockUseEnabledModels.mockReturnValue({
       hasEnabledModels: true,
       filteredProviders: [],
@@ -256,6 +268,69 @@ describe("FlowBuilderWelcome", () => {
         screen.getByRole("button", { name: WELCOME_VECTOR_STORE_RAG_LABEL }),
       );
       expect(props.onSelectTemplate).toHaveBeenCalledWith("vector_store_rag");
+    });
+  });
+
+  describe("catalog policy", () => {
+    it("should_hide_a_quick_template_its_catalog_no_longer_offers", () => {
+      // Clicking a button for a blocked template only fails the lookup, so it
+      // is not offered at all.
+      useFlowsManagerStore.setState({
+        examples: [example("vector_store_rag")],
+      });
+
+      render(<FlowBuilderWelcome {...makeProps()} />);
+
+      expect(
+        screen.queryByTestId("flow-builder-welcome-template-simple-agent"),
+      ).toBeNull();
+      expect(
+        screen.getByTestId("flow-builder-welcome-template-vector-store-rag"),
+      ).toBeInTheDocument();
+    });
+
+    it("should_keep_browse_more_while_any_template_survives", () => {
+      // The modal is worth opening for templates that have no button here.
+      useFlowsManagerStore.setState({ examples: [example("basic_prompting")] });
+
+      render(<FlowBuilderWelcome {...makeProps()} />);
+
+      expect(
+        screen.getByTestId("flow-builder-welcome-browse-more"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("flow-builder-welcome-template-simple-agent"),
+      ).toBeNull();
+    });
+
+    it("should_offer_a_blank_flow_when_no_template_survives", () => {
+      // Nothing to browse and nothing to start from, so the row collapses to
+      // the one action left rather than three dead ends.
+      useFlowsManagerStore.setState({ examples: [] });
+
+      render(<FlowBuilderWelcome {...makeProps()} />);
+
+      expect(
+        screen.getByTestId("flow-builder-welcome-blank-flow"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("flow-builder-welcome-browse-more"),
+      ).toBeNull();
+      expect(screen.queryByText("Or start from a template:")).toBeNull();
+    });
+
+    it("should_land_on_the_blank_canvas_from_the_blank_flow_action", async () => {
+      // The welcome already sits on a freshly created empty flow, so starting
+      // blank is just dismissing the overlay onto it.
+      useFlowsManagerStore.setState({ examples: [] });
+      const props = makeProps();
+
+      render(<FlowBuilderWelcome {...props} />);
+      await userEvent.click(
+        screen.getByTestId("flow-builder-welcome-blank-flow"),
+      );
+
+      expect(props.onClose).toHaveBeenCalledTimes(1);
     });
   });
 
