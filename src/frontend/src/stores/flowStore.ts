@@ -158,6 +158,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         if (codeValidity && (codeValidity.outdated || codeValidity.blocked))
           outdatedNodes.push({
             id: node.id,
+            type: node.data.type,
             icon: node.data.node?.icon,
             display_name: node.data.node?.display_name,
             outdated: codeValidity.outdated,
@@ -898,16 +899,17 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const {
       allowCustomComponents,
       substituteOutdatedComponentCode,
-      catalogGovernanceEnabled,
+      blockedComponentTypes,
     } = useUtilityStore.getState();
     // A missing template is the normal state of a user-authored custom
     // component when those are allowed, so it only stops a run under
-    // restricted mode or an actual catalog policy.
-    const blockedIsFatal = blockedStopsExecution(
-      allowCustomComponents,
-      catalogGovernanceEnabled,
-      useTypesStore.getState().templates,
-    );
+    // restricted mode or when the policy names this component.
+    const stopsExecution = (component: { type?: string }) =>
+      blockedStopsExecution(
+        allowCustomComponents,
+        blockedComponentTypes,
+        component.type,
+      );
     // A partial build only executes its own subgraph, so only that subgraph can
     // block it. componentsToUpdate stays whole-flow for the update banner.
     const validatedNodeIds = new Set(nodesToValidate.map((node) => node.id));
@@ -921,9 +923,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     if (!get().playgroundPage && componentsToPreflight.length > 0) {
       // A missing template blocks the run either way. Outdated components are
       // only enforced in restricted mode, as before.
-      const blockedComponents = blockedIsFatal
-        ? componentsToPreflight.filter((component) => component.blocked)
-        : [];
+      const blockedComponents = componentsToPreflight.filter(
+        (component) => component.blocked && stopsExecution(component),
+      );
       const outdatedComponents =
         substituteOutdatedComponentCode || allowCustomComponents
           ? []

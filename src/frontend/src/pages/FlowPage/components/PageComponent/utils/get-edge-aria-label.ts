@@ -2,8 +2,8 @@ import type { AllNodeType, EdgeType } from "@/types/flow";
 
 /**
  * ReactFlow's EdgeWrapper reads `edge.ariaLabel` natively and uses it to name
- * the wrapping <g> (role="group" when focusable, role="img" — a pruned leaf —
- * otherwise). Setting it here, at build time, is the single source of truth:
+ * the wrapping <g> (a widget role — we set ariaRole="button" — when focusable,
+ * role="img", a pruned leaf, otherwise). Setting it here, at build time, is the single source of truth:
  * it replaces RF's raw-id default instead of layering a second, redundant
  * name on the interaction path inside DefaultEdge.
  */

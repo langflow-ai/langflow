@@ -69,7 +69,7 @@ test(
       addButtonSlug: "chat-output",
     });
     await expect(
-      page.getByRole("group", { name: "Chat Output node" }),
+      page.getByRole("application", { name: "Chat Output node" }),
     ).toBeAttached();
 
     await adjustScreenView(page);

@@ -31,7 +31,9 @@ jest.mock("@/stores/typesStore", () => ({
 }));
 jest.mock("@/stores/utilityStore", () => ({
   useUtilityStore: {
-    getState: jest.fn(() => ({ catalogGovernanceEnabled: true })),
+    getState: jest.fn(() => ({
+      blockedComponentTypes: new Set(["ChatOutput"]),
+    })),
   },
 }));
 jest.mock("@/stores/flowStore", () => ({
@@ -60,7 +62,7 @@ describe("useAutoSaveFlow", () => {
       templates: { Agent: {} },
     });
     (useUtilityStore.getState as jest.Mock).mockReturnValue({
-      catalogGovernanceEnabled: true,
+      blockedComponentTypes: new Set(["ChatOutput"]),
     });
     (useSaveFlow as jest.Mock).mockReturnValue(mockSaveFlow);
     (useDebounce as jest.Mock).mockImplementation((fn) => {
@@ -206,7 +208,12 @@ describe("useAutoSaveFlow", () => {
   it("reports the paused save once rather than on every attempt", async () => {
     (useFlowStore.getState as jest.Mock).mockReturnValue({
       componentsToUpdate: [
-        { id: "node-1", display_name: "Chat Output", blocked: true },
+        {
+          id: "node-1",
+          type: "ChatOutput",
+          display_name: "Chat Output",
+          blocked: true,
+        },
       ],
     });
     (useFlowsManagerStore as unknown as jest.Mock).mockImplementation(
@@ -406,7 +413,9 @@ describe("useAutoSaveFlow", () => {
     // A missing template cannot be persisted, so retrying the save only
     // produces failed requests before the user has touched anything.
     (useFlowStore.getState as jest.Mock).mockReturnValue({
-      componentsToUpdate: [{ id: "node-1", blocked: true, outdated: false }],
+      componentsToUpdate: [
+        { id: "node-1", type: "ChatOutput", blocked: true, outdated: false },
+      ],
     });
     (useFlowsManagerStore as unknown as jest.Mock).mockImplementation(
       (selector) =>
@@ -444,13 +453,22 @@ describe("useAutoSaveFlow", () => {
     expect(mockSaveFlow).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps saving while the component registry is still loading", async () => {
-    // templates is {} until /all resolves, which makes every code-bearing node
-    // look unknown. Pausing on that would strand a cold load's edits.
-    (useTypesStore.getState as jest.Mock).mockReturnValue({ templates: {} });
+  it("keeps saving a component the policy does not name", async () => {
+    // LE-2226: a policy blocking some *other* component — or only a starter
+    // template — must not stop persisting this flow. A missing template is
+    // equally an uninstalled bundle, an imported flow, or the user's own
+    // component, all of which the server accepts.
+    (useUtilityStore.getState as jest.Mock).mockReturnValue({
+      blockedComponentTypes: new Set(["SomeOtherComponent"]),
+    });
     (useFlowStore.getState as jest.Mock).mockReturnValue({
       componentsToUpdate: [
-        { id: "node-1", display_name: "Chat Output", blocked: true },
+        {
+          id: "node-1",
+          type: "MyUninstalledBundleComponent",
+          display_name: "Bundle Component",
+          blocked: true,
+        },
       ],
     });
     (useFlowsManagerStore as unknown as jest.Mock).mockImplementation(
@@ -473,7 +491,7 @@ describe("useAutoSaveFlow", () => {
     // Without a policy the server accepts the write, so a missing template is
     // not a reason to stop persisting.
     (useUtilityStore.getState as jest.Mock).mockReturnValue({
-      catalogGovernanceEnabled: false,
+      blockedComponentTypes: new Set<string>(),
     });
     (useFlowStore.getState as jest.Mock).mockReturnValue({
       componentsToUpdate: [
@@ -499,7 +517,12 @@ describe("useAutoSaveFlow", () => {
   it("holds the paused edit so it lands once the block clears", async () => {
     (useFlowStore.getState as jest.Mock).mockReturnValue({
       componentsToUpdate: [
-        { id: "node-1", display_name: "Chat Output", blocked: true },
+        {
+          id: "node-1",
+          type: "ChatOutput",
+          display_name: "Chat Output",
+          blocked: true,
+        },
       ],
     });
     let isLoading = false;

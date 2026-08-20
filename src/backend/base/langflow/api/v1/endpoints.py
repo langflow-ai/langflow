@@ -1891,6 +1891,34 @@ async def custom_component_update(
         raise SerializationError.from_exception(exc, data=component_node) from exc
 
 
+def _blocked_component_types(snapshot) -> list[str]:
+    """Return the component types the editor should treat as policy-blocked.
+
+    A blocked key is whatever the administrator entered, which may be an alias
+    rather than the registry's canonical name, so it is resolved the same way
+    the enforcement path resolves it. Both the raw key and its canonical
+    candidates are reported: a node's ``type`` can carry either.
+
+    A node whose ``type`` is some *third* alias of a blocked component is not
+    listed and the editor will not name a policy for it. That under-claims
+    rather than over-claims, and the server still refuses the run.
+    """
+    blocked_keys = getattr(snapshot, "blocked_component_keys", None)
+    if not blocked_keys:
+        return []
+
+    types = set(blocked_keys)
+    try:
+        from lfx.utils.flow_validation import get_component_identity_index_for_validation
+
+        identity_index = get_component_identity_index_for_validation()
+    except Exception:  # noqa: BLE001
+        identity_index = None
+    if identity_index is not None:
+        types |= set(identity_index.resolve_many(blocked_keys))
+    return sorted(types)
+
+
 @router.get("/config")
 async def get_config(
     user: Annotated[User | None, Depends(get_optional_user)] = None,
@@ -1912,14 +1940,21 @@ async def get_config(
     """
     try:
         settings_service: SettingsService = get_settings_service()
+        blocked_component_types: list[str] = []
         try:
-            catalog_governance_enabled = get_catalog_policy_service().enabled
+            catalog_policy_service = get_catalog_policy_service()
+            catalog_governance_enabled = catalog_policy_service.enabled
+            # A custom policy service need not expose a snapshot. Reporting no
+            # identities then simply leaves the editor unable to name a cause,
+            # which is the safe direction.
+            blocked_component_types = _blocked_component_types(getattr(catalog_policy_service, "snapshot", None))
         except Exception as exc:  # noqa: BLE001
             # Catalog governance is explicitly fail-open. A broken custom
             # policy implementation must not break the public config endpoint
             # or expose its internal exception text.
             await logger.aexception("Catalog policy status unavailable; reporting governance disabled", exception=exc)
             catalog_governance_enabled = False
+            blocked_component_types = []
 
         if user is None:
             return PublicConfigResponse.from_settings(
@@ -1932,6 +1967,7 @@ async def get_config(
             settings_service.settings,
             settings_service.auth_settings,
             catalog_governance_enabled=catalog_governance_enabled,
+            blocked_component_types=blocked_component_types,
         )
 
     except Exception as exc:

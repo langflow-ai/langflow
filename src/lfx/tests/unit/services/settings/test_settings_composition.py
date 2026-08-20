@@ -266,6 +266,8 @@ EXPECTED_FIELDS = {
     "sandbox_allow_software_emulation",
     # SecuritySettings: rebuild drifted built-ins with this server's code (issue #14455)
     "substitute_outdated_component_code",
+    # VariablesSettings: operator-tunable Langflow Assistant prompt length
+    "assistant_max_message_length",
     # ---- Serving-plane end-user identity ----
     # SecuritySettings
     "serving_end_user_header",
