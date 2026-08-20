@@ -72,6 +72,9 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   catalogGovernanceEnabled: false,
   setCatalogGovernanceEnabled: (catalogGovernanceEnabled: boolean) =>
     set({ catalogGovernanceEnabled }),
+  blockedComponentTypes: new Set<string>(),
+  setBlockedComponentTypes: (blockedComponentTypes: Iterable<string>) =>
+    set({ blockedComponentTypes: new Set(blockedComponentTypes) }),
   a2aEnabled: false,
   setA2aEnabled: (a2aEnabled: boolean) => set({ a2aEnabled }),
   // Default true (backend default) so the panel doesn't flash the disabled

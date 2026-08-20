@@ -99,34 +99,36 @@ const codeHasBreakingChange = (
 };
 
 /**
- * Whether a catalog policy can be the reason a template is missing.
+ * Whether an administrator's catalog policy blocks this component type.
  *
- * `blocked` only means "no template for this type", which is also the normal
- * state of a user-authored custom component, an uninstalled bundle and an
- * imported flow. It is a policy block only when a policy is actually in force,
- * and only once the registry has loaded: `templates` starts as `{}`, so every
- * code-bearing node looks unknown until `/all` resolves.
+ * `blocked` only means "no template for this type", which is equally the
+ * normal state of a user-authored component, an uninstalled bundle and a flow
+ * imported from another install. Only the policy's own identities can tell
+ * those apart, so the server sends them and this asks about *this* component
+ * rather than whether some policy exists somewhere.
  */
-export const catalogPolicyCanBlock = (
-  catalogGovernanceEnabled: boolean,
-  templates: { [key: string]: unknown },
+export const isBlockedByCatalogPolicy = (
+  blockedComponentTypes: ReadonlySet<string> | undefined,
+  componentType: string | undefined,
 ): boolean =>
-  catalogGovernanceEnabled && Object.keys(templates ?? {}).length > 0;
+  componentType !== undefined &&
+  blockedComponentTypes !== undefined &&
+  blockedComponentTypes.has(componentType);
 
 /**
  * Whether a missing template should stop the node running.
  *
  * Restricted mode blocks any unknown code-bearing node on its own, as before.
- * With custom components allowed, only a catalog policy makes one fatal —
- * otherwise a user's own component could not run.
+ * With custom components allowed, only an actual policy block makes one fatal
+ * — otherwise a user's own component could not run.
  */
 export const blockedStopsExecution = (
   allowCustomComponents: boolean,
-  catalogGovernanceEnabled: boolean,
-  templates: { [key: string]: unknown },
+  blockedComponentTypes: ReadonlySet<string> | undefined,
+  componentType: string | undefined,
 ): boolean =>
   !allowCustomComponents ||
-  catalogPolicyCanBlock(catalogGovernanceEnabled, templates);
+  isBlockedByCatalogPolicy(blockedComponentTypes, componentType);
 
 export const checkCodeValidity = (
   data: NodeDataType,
