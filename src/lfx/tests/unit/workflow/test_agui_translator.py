@@ -781,6 +781,74 @@ def test_repeated_add_message_does_not_re_emit_flat_tool_call():
     assert len([e for e in second if isinstance(e, ToolCallStartEvent)]) == 0
 
 
+def test_repeated_add_message_after_text_consolidation_does_not_duplicate_tool_call():
+    """A tool call must not re-emit under a new id when a later add_message reindexes content_blocks.
+
+    Reproduces the reported AG-UI duplication bug: ``ChatOutput.message_response()``
+    sets ``message.text`` on an already-streamed Agent message, and ``Message.text``'s
+    setter drops the message's ``TextContent`` blocks and appends one consolidated
+    block at the end. When narration text precedes a tool call, that shifts the
+    tool_use block's absolute list index between the two ``add_message`` firings. A
+    position-derived tool-call id treated the shifted block as a brand-new call and
+    re-emitted its whole START/ARGS/END/RESULT quartet under a fresh id, with the
+    same tool name/input/output and near-zero duration.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    # First firing: narration text precedes the tool call, so the tool_use leaf
+    # sits at absolute index 1.
+    first = t.translate(
+        "add_message",
+        {
+            "id": "m1",
+            "text": "",
+            "properties": {"state": "partial"},
+            "content_blocks": [
+                {"type": "text", "contents": [], "text": "Let me check that..."},
+                {
+                    "type": "tool_use",
+                    "contents": [],
+                    "name": "search",
+                    "tool_input": {"q": "weather"},
+                    "output": "sunny",
+                    "error": None,
+                },
+            ],
+        },
+    )
+
+    # Second firing simulates ``Message.text``'s setter: the TextContent block is
+    # dropped and a consolidated one appended at the end, shifting the tool_use
+    # leaf's absolute index from 1 to 0. Same message id, same tool call.
+    second = t.translate(
+        "add_message",
+        {
+            "id": "m1",
+            "text": "Let me check that...",
+            "properties": {"state": "complete"},
+            "content_blocks": [
+                {
+                    "type": "tool_use",
+                    "contents": [],
+                    "name": "search",
+                    "tool_input": {"q": "weather"},
+                    "output": "sunny",
+                    "error": None,
+                },
+                {"type": "text", "contents": [], "text": "Let me check that..."},
+            ],
+        },
+    )
+
+    first_starts = [e for e in first if isinstance(e, ToolCallStartEvent)]
+    second_starts = [e for e in second if isinstance(e, ToolCallStartEvent)]
+    assert len(first_starts) == 1
+    assert len(second_starts) == 0, (
+        f"tool call re-emitted under a new id after content_blocks reindexing: {second_starts}"
+    )
+
+
 def test_tool_use_error_is_reported_via_tool_call_result():
     t = AGUITranslator(run_id="r1", thread_id="t1")
     t.start()
