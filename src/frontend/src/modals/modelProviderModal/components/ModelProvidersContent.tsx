@@ -84,9 +84,16 @@ const ModelProvidersContent = ({
   const typedModelCount = (syncedSelectedProvider?.models ?? []).filter(
     (model) => modelType === "all" || model.metadata?.model_type === modelType,
   ).length;
+  // Providers whose catalog is discovered from their endpoint have no models
+  // to show until credentials are configured; ModelSelection renders a
+  // configure-credentials hint for them instead of the generic empty state.
+  const awaitingLiveDiscovery =
+    !!syncedSelectedProvider?.live_discovery &&
+    !syncedSelectedProvider?.is_configured;
   const showNoAvailableModels =
     !!syncedSelectedProvider &&
     typedModelCount === 0 &&
+    !awaitingLiveDiscovery &&
     !hasProviderOwnedEmptyState(syncedSelectedProvider.provider);
 
   return (
@@ -166,6 +173,8 @@ const ModelProvidersContent = ({
                     syncedSelectedProvider?.is_configured
                   )
                 }
+                liveDiscovery={!!syncedSelectedProvider?.live_discovery}
+                isConfigured={!!syncedSelectedProvider?.is_configured}
               />
             </CustomModelProvidersEmptyState>
           </div>

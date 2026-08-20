@@ -18,7 +18,7 @@ const UNROLED_EDGE_SVG = ".react-flow__edges > svg:not([role])";
  * correct answer — it drops the wrapper's implicit `graphics-document` role
  * without touching anything inside it.
  *
- * Do NOT reach for `aria-hidden` here. The named, tabbable `<g role="group">`
+ * Do NOT reach for `aria-hidden` here. The named, tabbable widget `<g>` (role="button")
  * that carries the edge's accessible name lives *inside* each wrapper, so an
  * `aria-hidden` ancestor would erase every edge name and pull the edges out of
  * the accessibility tree entirely.

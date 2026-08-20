@@ -35,6 +35,27 @@ uv run python scripts/a11y/a11y_scan.py \
 
 Explicit `--route` or `--routes` arguments still work and override the manifest.
 
+### State files
+
+Reusable `--states-file` manifests live in `scripts/a11y/states/`. Commit new state
+files there instead of ad-hoc `/tmp` paths so post-interaction states (open modals,
+scrolled grids) stay rerunnable. `settings-messages.json` covers the AG-Grid
+scroll states on `/settings/messages` that a default-load scan cannot see.
+
+### Policies
+
+`--policies` selects the IBM guideline set the engine evaluates against and defaults
+to `IBM_Accessibility`, matching `policies` in `src/frontend/.achecker.yml` so the
+Python scanner and the Playwright suite report the same rules.
+
+Passing `--policies ""` runs unfiltered. That also surfaces rules belonging to no
+guideline at all (`"rulesets": []` in the report, e.g. `element_scrollable_tabbable`),
+which the IBM browser extension hides and which are **not** compliance findings.
+Every issue in the report carries its `rulesets` so a non-policy rule is easy to spot.
+
+`--ace-url` defaults to the engine version pinned in `a11y_scan.py`, kept in sync with
+the `accessibility-checker` dependency and `ruleArchive` used by the Playwright suite.
+
 ## Playwright CI
 
 `src/frontend/tests/a11y/static-routes.a11y.spec.ts` reads the same manifest and

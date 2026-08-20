@@ -1,0 +1,24 @@
+{
+  "routes": [
+    {
+      "route": "/settings/messages",
+      "states": [
+        {
+          "name": "grid-scrolled-to-bottom",
+          "open": [
+            { "waitFor": ".ag-body-viewport" },
+            { "scroll": { "selector": ".ag-body-viewport", "to": "bottom" } },
+            { "wait": 800 }
+          ]
+        },
+        {
+          "name": "grid-scrolled-back-to-top",
+          "open": [
+            { "scroll": { "selector": ".ag-body-viewport", "to": "top" } },
+            { "wait": 800 }
+          ]
+        }
+      ]
+    }
+  ]
+}

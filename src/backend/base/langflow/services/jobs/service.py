@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 from lfx.graph.exceptions import GraphPausedException
+from lfx.observability import inject_trace_carrier
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlmodel import col, func, select
 
@@ -187,10 +188,20 @@ class JobService(Service):
                 asset_type=asset_type,
                 user_id=user_id,
                 dedupe_key=dedupe_key,
-                # Stamp the end user atomically with the insert so a later shallow
-                # update_job_metadata (e.g. submit's persisted request) preserves it.
-                # Omit the key entirely when absent to keep non-serving rows byte-identical.
-                job_metadata={"end_user_id": end_user_id} if end_user_id else None,
+                # Two things stamped atomically with the insert, for the same reason: a later
+                # shallow update_job_metadata (e.g. submit's persisted request) preserves what
+                # is already on the row.
+                #
+                # The end user, so serving rows carry who the run was for.
+                #
+                # The trace carrier, because the queued run happens after this request returns,
+                # in a worker that may be a different process, so contextvars cannot carry the
+                # trace there. Written once, here, and never rewritten: job_metadata is saved
+                # back whole, and a second writer on the pause path would race this one.
+                #
+                # Still None when neither applies, so non-serving untraced rows stay
+                # byte-identical to what they were.
+                job_metadata=inject_trace_carrier({"end_user_id": end_user_id} if end_user_id else None) or None,
             )
             session.add(job)
             await session.flush()
