@@ -1588,6 +1588,8 @@
   "modelProviders.addLanguageDeployment": "Añadir el modelo de lenguaje « \"{{name}}\" »",
   "modelProviders.cancelButton": "Cancelar",
   "modelProviders.checkOllamaLibrary": "Visita la biblioteca de Ollama",
+  "modelProviders.liveDiscoveryTitle": "No models yet",
+  "modelProviders.liveDiscoveryHint": "{{provider}} models are discovered from your account once credentials are configured. Save your credentials above to load the available models.",
   "modelProviders.configuration": "Configuración",
   "modelProviders.configurationSaved": "{{provider}} Configuración guardada",
   "modelProviders.configurePrefix": "Configura tu",

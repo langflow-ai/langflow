@@ -1093,6 +1093,8 @@
   "modelProviders.ollamaNoModelsEmbeddings": "It looks like you don't have any embedding models installed for Ollama. Please pull the models you want to use.",
   "modelProviders.ollamaNoModelsAll": "It looks like you don't have any models installed for Ollama. Please pull the models you want to use.",
   "modelProviders.checkOllamaLibrary": "Check Ollama Library",
+  "modelProviders.liveDiscoveryTitle": "No models yet",
+  "modelProviders.liveDiscoveryHint": "{{provider}} models are discovered from your account once credentials are configured. Save your credentials above to load the available models.",
   "modelProviders.configurationSaved": "{{provider}} Configuration Saved",
   "modelProviders.providerActivated": "{{provider}} Activated",
   "modelProviders.providerDisconnected": "{{provider}} Disconnected",
