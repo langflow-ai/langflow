@@ -162,6 +162,7 @@
   "flow.a11y.direction.right": "right",
   "flow.canvasLabel": "Flow canvas",
   "flow.nodeAriaLabel": "{{name}} node",
+  "flow.nodeAriaLabelOrdinal": "{{label}} {{ordinal}}",
   "toolsModal.searchPlaceholder": "Search tools...",
   "toolsModal.columnName": "Name",
   "toolsModal.columnFlowName": "Flow Name",

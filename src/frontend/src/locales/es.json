@@ -930,6 +930,7 @@
   "flow.a11y.direction.right": "la derecha",
   "flow.canvasLabel": "Lienzo del flujo",
   "flow.nodeAriaLabel": "Nodo {{name}}",
+  "flow.nodeAriaLabelOrdinal": "{{label}} {{ordinal}}",
   "flow.saveChanges": "Guardar cambios",
   "flow.saveVersion": "Guarda una versión de tu flujo",
   "flow.savedHover": "Última vez guardado: ",

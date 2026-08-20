@@ -930,6 +930,7 @@
   "flow.a11y.direction.right": "右",
   "flow.canvasLabel": "フローキャンバス",
   "flow.nodeAriaLabel": "{{name}} ノード",
+  "flow.nodeAriaLabelOrdinal": "{{label}} {{ordinal}}",
   "flow.saveChanges": "変更を保存",
   "flow.saveVersion": "フローのバージョンを保存する",
   "flow.savedHover": "最終保存日時： ",
