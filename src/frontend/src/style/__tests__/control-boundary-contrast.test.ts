@@ -79,15 +79,12 @@ describe("WCAG 1.4.11 — control boundary contrast", () => {
     );
   });
 
-  it("keeps --border decorative: it is NOT held to the control threshold", () => {
-    // Documents the deliberate split. --border paints dividers, card edges and
-    // table rules, which SC 1.4.11 does not cover, so it stays light. If a
-    // future change makes --border compliant on its own, --control-boundary
-    // can be retired — this assertion is the reminder.
-    const ratio = contrast(
-      readToken("root", "border"),
-      readToken("root", "background"),
-    );
-    expect(ratio).toBeLessThan(WCAG_NON_TEXT);
+  it("documents the deliberate split without failing future --border improvements", () => {
+    // --border paints dividers, card edges and table rules, which SC 1.4.11
+    // does not cover, so it is NOT held to the 3:1 threshold. No upper-bound
+    // assertion: if a future change makes --border compliant on its own,
+    // that is a valid improvement (and --control-boundary could be retired),
+    // not a failure. This case only pins that the token still parses.
+    expect(readToken("root", "border")).toHaveLength(3);
   });
 });

@@ -22,7 +22,7 @@ export const LanguageSelector = () => {
       aria-label={t("settings.languageSelectAriaLabel")}
       value={i18n.language}
       onChange={(e) => handleChange(e.target.value)}
-      className="rounded border border-border bg-background px-1 py-0.5 text-sm text-foreground"
+      className="rounded border border-control bg-background px-1 py-0.5 text-sm text-foreground"
     >
       {SUPPORTED_LANGUAGES.map((lang) => (
         <option key={lang.code} value={lang.code}>

@@ -148,7 +148,7 @@ export function StepConfiguration({
             <span className="text-destructive">*</span>
           </Label>
           {isAddSourcesMode ? (
-            <div className="flex h-10 w-full items-center gap-2 rounded-md border border-control bg-muted px-3 py-2 text-sm">
+            <div className="flex h-10 w-full items-center gap-2 rounded-md border border-input bg-muted px-3 py-2 text-sm">
               <ForwardedIconComponent
                 name={existingEmbeddingIcon || "Cpu"}
                 className="h-4 w-4 shrink-0"
