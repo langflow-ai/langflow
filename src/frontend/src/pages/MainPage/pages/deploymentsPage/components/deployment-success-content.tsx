@@ -52,7 +52,7 @@ export default function DeploymentSuccessContent({
       {showTestButton && deploymentName && (
         <Button
           variant="outline"
-          className="h-11 w-full max-w-lg gap-2 rounded-lg border-input font-sans text-base font-semibold text-foreground hover:bg-input"
+          className="h-11 w-full max-w-lg gap-2 rounded-lg border-control font-sans text-base font-semibold text-foreground hover:bg-input"
           data-testid="deployment-stepper-test"
           onClick={onTest}
         >
