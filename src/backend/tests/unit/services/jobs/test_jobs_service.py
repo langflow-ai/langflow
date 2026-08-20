@@ -35,6 +35,49 @@ async def test_get_jobs_by_flow_id_orders_by_created_timestamp():
 
 
 @pytest.mark.usefixtures("client")
+async def test_create_job_stamps_end_user_in_metadata():
+    """P3: an identified serving run records its end user in job_metadata (no schema change).
+
+    user_id stays the executing SID so re-enqueue/resume can still fetch the SID-owned flow;
+    the end user lives only in job_metadata['end_user_id'] where status/stop/resume isolate on it.
+    """
+    service = JobService()
+    job_id = uuid4()
+    sid = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=sid, end_user_id="alice")
+
+    fetched = await service.get_job_by_job_id(job_id)
+    assert fetched.user_id == sid  # owner column is the SID, not the end user
+    assert (fetched.job_metadata or {}).get("end_user_id") == "alice"
+
+
+@pytest.mark.usefixtures("client")
+async def test_create_job_without_end_user_writes_no_metadata_key():
+    """BC: a non-serving / anonymous / feature-off run stays byte-identical (no metadata)."""
+    service = JobService()
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+
+    fetched = await service.get_job_by_job_id(job_id)
+    # No end_user_id passed -> job_metadata is not created at all (omit, don't store None).
+    assert fetched.job_metadata is None
+
+
+@pytest.mark.usefixtures("client")
+async def test_end_user_survives_later_metadata_merge():
+    """The end-user stamp must survive submit's later shallow update_job_metadata(request=...)."""
+    service = JobService()
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4(), end_user_id="alice")
+    await service.update_job_metadata(job_id, {"request": {"input_value": "hi"}})
+
+    fetched = await service.get_job_by_job_id(job_id)
+    meta = fetched.job_metadata or {}
+    assert meta.get("end_user_id") == "alice"  # preserved by the shallow merge
+    assert meta.get("request") == {"input_value": "hi"}
+
+
+@pytest.mark.usefixtures("client")
 async def test_set_result_persists_blob():
     service = JobService()
     job_id = uuid4()

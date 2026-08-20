@@ -9,7 +9,10 @@ import {
 import { cloneDeep } from "lodash";
 import { v5 as uuidv5 } from "uuid";
 import { create } from "zustand";
-import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
+import {
+  blockedStopsExecution,
+  checkCodeValidity,
+} from "@/CustomNodes/helpers/check-code-validity";
 import { queryClient } from "@/contexts";
 import {
   runFlowAGUI,
@@ -892,33 +895,52 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     // Unknown code-bearing types always block in restricted mode; known drift only blocks when
     // the server-side trusted-code substitution policy is disabled.
     get().updateComponentsToUpdate(get().nodes);
-    const { allowCustomComponents, substituteOutdatedComponentCode } =
-      useUtilityStore.getState();
+    const {
+      allowCustomComponents,
+      substituteOutdatedComponentCode,
+      catalogGovernanceEnabled,
+    } = useUtilityStore.getState();
+    // A missing template is the normal state of a user-authored custom
+    // component when those are allowed, so it only stops a run under
+    // restricted mode or an actual catalog policy.
+    const blockedIsFatal = blockedStopsExecution(
+      allowCustomComponents,
+      catalogGovernanceEnabled,
+      useTypesStore.getState().templates,
+    );
+    // A partial build only executes its own subgraph, so only that subgraph can
+    // block it. componentsToUpdate stays whole-flow for the update banner.
+    const validatedNodeIds = new Set(nodesToValidate.map((node) => node.id));
+    const componentsToPreflight = get().componentsToUpdate.filter((component) =>
+      validatedNodeIds.has(component.id),
+    );
     // A cold shareable Playground intentionally has no component-template registry, so it cannot
     // distinguish a known server component from an unknown custom type. Its public endpoint owns
     // that decision and sanitizes the stored graph before execution. Keep this client preflight
     // for editor runs, where the template registry is loaded and its classification is reliable.
-    if (
-      !get().playgroundPage &&
-      !allowCustomComponents &&
-      get().componentsToUpdate.length > 0
-    ) {
-      const blockedComponents = get().componentsToUpdate.filter(
-        (component) => component.blocked,
-      );
-      const outdatedComponents = substituteOutdatedComponentCode
-        ? []
-        : get().componentsToUpdate.filter((component) => component.outdated);
+    if (!get().playgroundPage && componentsToPreflight.length > 0) {
+      // A missing template blocks the run either way. Outdated components are
+      // only enforced in restricted mode, as before.
+      const blockedComponents = blockedIsFatal
+        ? componentsToPreflight.filter((component) => component.blocked)
+        : [];
+      const outdatedComponents =
+        substituteOutdatedComponentCode || allowCustomComponents
+          ? []
+          : componentsToPreflight.filter((component) => component.outdated);
       const mustBlockBuild =
         blockedComponents.length > 0 || outdatedComponents.length > 0;
       if (mustBlockBuild) {
         const errorList: string[] = [];
 
         if (blockedComponents.length > 0) {
+          const names = blockedComponents
+            .map((component) => component.display_name ?? component.id)
+            .join(", ");
           errorList.push(
-            `The following custom components cannot run while custom components are disabled: ${blockedComponents
-              .map((component) => component.display_name ?? component.id)
-              .join(", ")}`,
+            allowCustomComponents
+              ? `The following components are no longer available in the approved catalog: ${names}`
+              : `The following custom components cannot run while custom components are disabled: ${names}`,
           );
         }
 
@@ -930,17 +952,21 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           );
         }
 
+        const blockedTitle = allowCustomComponents
+          ? "Components disabled by an administrator must be removed before building"
+          : "Custom components are blocked while custom components are disabled";
+
         setErrorData({
           title:
             blockedComponents.length > 0
-              ? "Custom components are blocked while custom components are disabled"
+              ? blockedTitle
               : "Outdated components must be updated before building",
           list: errorList,
         });
         get().setIsBuilding(false);
         throw new Error(
           blockedComponents.length > 0
-            ? "Custom components are blocked while custom components are disabled"
+            ? blockedTitle
             : "Outdated components must be updated",
         );
       }

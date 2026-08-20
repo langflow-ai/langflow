@@ -280,6 +280,9 @@ async def _stream_event_frames(
                         # Anonymous serving runs are ephemeral: thread the no-persist
                         # decision onto the graph so astore_message skips the DB write.
                         persist_messages=parsed.persist_messages,
+                        # Carry the end-user identity onto the graph so per-user state
+                        # (chat memory) scopes to the end user.
+                        end_user_id=parsed.end_user_id,
                     ),
                     timeout=execution_timeout,
                 )
@@ -630,11 +633,16 @@ async def execute_sync_workflow(
     try:
         flow_id_str = str(flow.id)
         user_id = str(current_user.id)
+        # Caller-supplied ``data`` is rejected for sync mode before the execution gates run,
+        # so a value here is the server-sanitized stored graph produced by the caller-aware
+        # component policy. It must win over ``flow.data``, and it must bypass the warm
+        # template — which is built from the unsanitized stored row.
+        sanitized_flow_data = parsed.data
         # Opt-in warm fast-path: serve a deepcopy of the pre-built template
         # instead of rebuilding. Cold-fall-back (None) for tweaks, request context/globals,
         # or a HITL/checkpointed run — none of which fit a shared user-agnostic template.
         graph = None
-        if not tweaks and context is None and checkpoint_store is None:
+        if sanitized_flow_data is None and not tweaks and context is None and checkpoint_store is None:
             graph = await warm_deepcopy(
                 flow_id_str,
                 expected_version=flow_version(flow.updated_at),
@@ -645,7 +653,7 @@ async def execute_sync_workflow(
         if graph is None:
             # Use deepcopy to prevent mutation of the original flow.data
             # process_tweaks modifies nested dictionaries in-place
-            graph_data = deepcopy(flow.data)
+            graph_data = deepcopy(sanitized_flow_data if sanitized_flow_data is not None else flow.data)
             graph_data = process_tweaks(graph_data, tweaks, stream=False)
             # Pass context to graph (similar to V1's simple_run_flow)
             # This allows components to access request metadata via graph.context
@@ -656,6 +664,9 @@ async def execute_sync_workflow(
         # graph non-persisting (astore_message honors this per component). Defaults
         # True for every other run.
         graph.persist_messages = parsed.persist_messages
+        # Carry the end-user identity onto the graph so services (chat memory) scope
+        # per-user state to the end user. None for anonymous / feature-off / editor runs.
+        graph.end_user_id = parsed.end_user_id
         # Set run_id for tracing/logging (similar to V1's simple_run_flow)
         graph.set_run_id(job_id)
         # HITL: when a checkpoint store is supplied, a pausing node (HumanInput) durably
@@ -684,7 +695,11 @@ async def execute_sync_workflow(
 
     # Execute graph - component errors are caught and returned in response body
     job_service = get_job_service()
-    await job_service.create_job(job_id=job_id, flow_id=flow_id_str, user_id=current_user.id)
+    # user_id stays the executing service account (flow fetch / resume rely on it); the end
+    # user is recorded in job_metadata so status/stop isolate to it. See F8 / create_job.
+    await job_service.create_job(
+        job_id=job_id, flow_id=flow_id_str, user_id=current_user.id, end_user_id=parsed.end_user_id
+    )
     _sync_run_paused = False
     _sync_run_success = False
     _sync_run_error: str = ""

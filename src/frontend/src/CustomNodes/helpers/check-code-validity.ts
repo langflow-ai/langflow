@@ -98,6 +98,36 @@ const codeHasBreakingChange = (
   return false;
 };
 
+/**
+ * Whether a catalog policy can be the reason a template is missing.
+ *
+ * `blocked` only means "no template for this type", which is also the normal
+ * state of a user-authored custom component, an uninstalled bundle and an
+ * imported flow. It is a policy block only when a policy is actually in force,
+ * and only once the registry has loaded: `templates` starts as `{}`, so every
+ * code-bearing node looks unknown until `/all` resolves.
+ */
+export const catalogPolicyCanBlock = (
+  catalogGovernanceEnabled: boolean,
+  templates: { [key: string]: unknown },
+): boolean =>
+  catalogGovernanceEnabled && Object.keys(templates ?? {}).length > 0;
+
+/**
+ * Whether a missing template should stop the node running.
+ *
+ * Restricted mode blocks any unknown code-bearing node on its own, as before.
+ * With custom components allowed, only a catalog policy makes one fatal —
+ * otherwise a user's own component could not run.
+ */
+export const blockedStopsExecution = (
+  allowCustomComponents: boolean,
+  catalogGovernanceEnabled: boolean,
+  templates: { [key: string]: unknown },
+): boolean =>
+  !allowCustomComponents ||
+  catalogPolicyCanBlock(catalogGovernanceEnabled, templates);
+
 export const checkCodeValidity = (
   data: NodeDataType,
   templates: { [key: string]: APIClassType },

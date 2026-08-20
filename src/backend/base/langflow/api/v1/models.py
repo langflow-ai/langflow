@@ -5,7 +5,7 @@ from collections.abc import Collection
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query
-from lfx.base.models.model_metadata import EXPLICIT_ENABLE_ONLY_PROVIDERS
+from lfx.base.models.model_metadata import EXPLICIT_ENABLE_ONLY_PROVIDERS, LIVE_MODEL_PROVIDERS
 from lfx.base.models.model_utils import inject_custom_enabled_models, replace_with_live_models
 from lfx.base.models.provider_registry import (
     get_provider_descriptor,
@@ -387,8 +387,8 @@ async def list_models(
                 }
             )
 
-    # Run before status is computed so live-only providers appended here (e.g. IBM WatsonX,
-    # whose static catalog is fully deprecated) still receive is_enabled/is_configured (#13735).
+    # Run before status is computed so live-only providers appended here (providers
+    # that ship no static catalog rows) still receive is_enabled/is_configured (#13735).
     configured_providers = {p for p, configured in provider_configured_status.items() if configured}
     configured_providers = {provider for provider in configured_providers if provider_policy.allows(provider)}
     replace_with_live_models(filtered_models, current_user.id, configured_providers, model_type)
@@ -413,10 +413,16 @@ async def list_models(
     if selected_providers:
         filtered_models = [p for p in filtered_models if p.get("provider") in selected_providers]
 
+    # Providers whose model list is discovered from the provider's endpoint
+    # once credentials are configured. The UI uses this to explain an empty
+    # (or seed-only) catalog instead of presenting it as "no models exist".
+    live_discovery_providers = set(LIVE_MODEL_PROVIDERS) | set(get_live_only_providers())
+
     for provider_dict in filtered_models:
         prov_name = provider_dict.get("provider")
         provider_dict["provider_id"] = resolve_provider_id(prov_name) if isinstance(prov_name, str) else None
         provider_dict["is_configured"] = provider_configured_status.get(prov_name, False)
+        provider_dict["live_discovery"] = prov_name in live_discovery_providers
         prov_models_status = enabled_models_map.get(prov_name, {})
         has_active_model = any(prov_models_status.values())
         provider_dict["is_enabled"] = has_active_model

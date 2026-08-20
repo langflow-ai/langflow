@@ -204,6 +204,72 @@ def ssrf_safe_httpx_get(
     raise SSRFProtectionError(msg)
 
 
+def ssrf_safe_httpx_get_bounded(
+    url: str,
+    *,
+    max_bytes: int,
+    follow_redirects: bool = False,
+    max_redirects: int = DEFAULT_MAX_REDIRECTS,
+    **request_kwargs: Any,
+) -> bytes:
+    """GET with connector SSRF validation, refusing a body larger than ``max_bytes``.
+
+    :func:`ssrf_safe_httpx_get` buffers the whole response before a caller can measure it, so
+    a size check on the returned content has already paid the memory cost. This streams
+    instead and abandons the transfer as soon as the cap is passed, so a hostile endpoint
+    cannot exhaust memory by answering an allowed request with an unbounded body.
+
+    Redirects are validated per hop exactly as in :func:`ssrf_safe_httpx_get`; only the final
+    response is streamed.
+
+    Raises:
+        SSRFProtectionError: if a hop fails validation or the redirect budget is exhausted.
+        ValueError: if the body exceeds ``max_bytes``.
+    """
+    current_url = url
+    supplied_headers = request_kwargs.pop("headers", None)
+    current_headers = httpx.Headers(supplied_headers) if supplied_headers is not None else None
+    current_params = request_kwargs.pop("params", None)
+    current_request_kwargs = request_kwargs
+
+    for _ in range(max_redirects + 1):
+        validated_url, validated_ips = validate_and_resolve_connector_url(current_url)
+        with (
+            _sync_client_for_url(validated_url, validated_ips) as client,
+            client.stream(
+                "GET",
+                url=validated_url,
+                headers=current_headers,
+                params=current_params,
+                follow_redirects=False,
+                **current_request_kwargs,
+            ) as response,
+        ):
+            location = response.headers.get("location")
+            is_redirect = response.status_code in REDIRECT_STATUS_CODES and bool(location)
+            if not follow_redirects or not is_redirect:
+                response.raise_for_status()
+                chunks: list[bytes] = []
+                total = 0
+                for chunk in response.iter_bytes():
+                    total += len(chunk)
+                    if total > max_bytes:
+                        msg = f"Response from {url} exceeds the maximum size of {max_bytes} bytes"
+                        raise ValueError(msg)
+                    chunks.append(chunk)
+                return b"".join(chunks)
+
+        next_url = urljoin(validated_url, location)
+        current_headers = _headers_for_redirect(current_headers, validated_url, next_url)
+        current_request_kwargs = _request_kwargs_for_redirect(current_request_kwargs, validated_url, next_url)
+        current_url = next_url
+        # Redirect locations carry their own query string; initial params apply once.
+        current_params = None
+
+    msg = f"Exceeded the maximum of {max_redirects} redirects while requesting {url}"
+    raise SSRFProtectionError(msg)
+
+
 def ssrf_safe_httpx_post(url: str, **request_kwargs: Any) -> httpx.Response:
     """Perform a synchronous POST with connector SSRF validation and DNS pinning."""
     _raise_if_following_redirects(request_kwargs)

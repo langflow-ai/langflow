@@ -44,7 +44,11 @@ from langflow.services.authorization import (
     restrict_to_owned_or_visible_scope,
     visible_scope_prefilter,
 )
-from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
+from langflow.services.authorization.fetch import (
+    authorized_or_owner_scoped,
+    deny_to_404,
+    deny_to_404_unless_readable,
+)
 from langflow.services.authorization.utils import _resolve_authz_domain
 from langflow.services.database.lock_retry import (
     is_database_lock_error,
@@ -80,6 +84,8 @@ PROJECT_UPDATE_FAILED = "Could not update the project."
 PROJECT_SAVE_FAILED = "Could not save the project."
 PROJECT_DELETE_FAILED = "Could not delete the project."
 PROJECT_DELETE_BUSY = "The database is busy. Please retry the request."
+PROJECT_WRITE_DENIED_DETAIL = "You don't have permission to edit this project."
+PROJECT_DELETE_DENIED_DETAIL = "You don't have permission to delete this project."
 
 # Backwards-compatible local alias; the implementation now lives in lfx.utils.util_strings so the
 # same LIKE-escaping is shared across the API endpoints + the tracing repository.
@@ -804,7 +810,21 @@ async def update_project(
             workspace_id=existing_project.workspace_id,
         )
     except HTTPException as exc:
-        raise deny_to_404(exc, detail="Project not found") from exc
+        # A caller who can read this project already knows it exists, so the
+        # 404 mask only hides *why* the edit failed. Match the flow-edit path:
+        # readable -> 403 with a permission message, unreadable -> 404.
+        raise await deny_to_404_unless_readable(
+            exc,
+            lambda: ensure_project_permission(
+                current_user,
+                ProjectAction.READ,
+                project_id=project_id,
+                project_user_id=existing_project.user_id,
+                workspace_id=existing_project.workspace_id,
+            ),
+            denied_detail=PROJECT_WRITE_DENIED_DETAIL,
+            not_found_detail="Project not found",
+        ) from exc
 
     try:
         return await _apply_project_update(
@@ -963,7 +983,18 @@ async def delete_project(
             workspace_id=project.workspace_id,
         )
     except HTTPException as exc:
-        raise deny_to_404(exc, detail="Project not found") from exc
+        raise await deny_to_404_unless_readable(
+            exc,
+            lambda: ensure_project_permission(
+                current_user,
+                ProjectAction.READ,
+                project_id=project_id,
+                project_user_id=project.user_id,
+                workspace_id=project.workspace_id,
+            ),
+            denied_detail=PROJECT_DELETE_DENIED_DETAIL,
+            not_found_detail="Project not found",
+        ) from exc
 
     # Prevent deletion of projects managed by Langflow. The ownerless Starter
     # Project is also a stable authorization boundary for bundled examples.

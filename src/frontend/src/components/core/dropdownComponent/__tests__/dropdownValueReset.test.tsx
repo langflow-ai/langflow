@@ -146,6 +146,9 @@ describe("Dropdown value reset bug", () => {
         nodeClass={mockNodeClass}
         handleNodeClass={jest.fn()}
         id="test-dropdown"
+        editNode={false}
+        handleOnNewValue={jest.fn()}
+        disabled={false}
       />,
     );
 
@@ -165,6 +168,9 @@ describe("Dropdown value reset bug", () => {
         nodeClass={mockNodeClass}
         handleNodeClass={jest.fn()}
         id="test-dropdown"
+        editNode={false}
+        handleOnNewValue={jest.fn()}
+        disabled={false}
       />,
     );
 
@@ -184,6 +190,9 @@ describe("Dropdown value reset bug", () => {
         nodeClass={mockNodeClass}
         handleNodeClass={jest.fn()}
         id="test-dropdown"
+        editNode={false}
+        handleOnNewValue={jest.fn()}
+        disabled={false}
       />,
     );
 
@@ -205,6 +214,9 @@ describe("Dropdown accessibility", () => {
         nodeClass={mockNodeClass}
         handleNodeClass={jest.fn()}
         id="test-dropdown"
+        editNode={false}
+        handleOnNewValue={jest.fn()}
+        disabled={false}
       />,
     );
 

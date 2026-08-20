@@ -196,3 +196,66 @@ async def test_run_query_requires_sql(component):
     component.query = "   "
     with pytest.raises(ValueError, match="SQL Query is required"):
         await component.run_query()
+
+
+async def test_downloaded_ca_bundle_is_removed_after_a_successful_query(component, tmp_path):
+    """A CA file fetched over HTTP lives in a temp file the component must clean up.
+
+    ``validate_and_prepare_ssl_certificate`` reports ownership through its ``is_temp`` flag;
+    discarding it leaks one file per query and can exhaust temporary storage.
+    """
+    temp_cert = tmp_path / "downloaded.crt"
+    temp_cert.write_text("-----BEGIN CERTIFICATE-----")
+    component.ssl_ca_file = "https://certs.example.com/ca.pem"
+
+    with (
+        patch(
+            "lfx_ibm.components.ibm.watsonx_data_presto.validate_and_prepare_ssl_certificate",
+            return_value=(str(temp_cert), True, None),
+        ),
+        patch(CONNECT_TARGET, side_effect=_fake_connect),
+    ):
+        await component.run_query()
+
+    assert not temp_cert.exists(), "the downloaded CA bundle outlived the query"
+
+
+async def test_downloaded_ca_bundle_is_removed_when_the_query_fails(component, tmp_path):
+    """Cleanup must also happen on the failure path, which is where leaks accumulate."""
+    temp_cert = tmp_path / "downloaded.crt"
+    temp_cert.write_text("-----BEGIN CERTIFICATE-----")
+    component.ssl_ca_file = "https://certs.example.com/ca.pem"
+
+    def _boom(**_kwargs):
+        msg = "connection refused"
+        raise RuntimeError(msg)
+
+    with (
+        patch(
+            "lfx_ibm.components.ibm.watsonx_data_presto.validate_and_prepare_ssl_certificate",
+            return_value=(str(temp_cert), True, None),
+        ),
+        patch(CONNECT_TARGET, side_effect=_boom),
+        pytest.raises(ValueError, match="Presto query failed"),
+    ):
+        await component.run_query()
+
+    assert not temp_cert.exists(), "the downloaded CA bundle outlived a failed query"
+
+
+async def test_operator_supplied_ca_path_is_never_deleted(component, tmp_path):
+    """A local CA path belongs to the operator: is_temp is False and it must survive."""
+    local_cert = tmp_path / "corporate-ca.pem"
+    local_cert.write_text("-----BEGIN CERTIFICATE-----")
+    component.ssl_ca_file = str(local_cert)
+
+    with (
+        patch(
+            "lfx_ibm.components.ibm.watsonx_data_presto.validate_and_prepare_ssl_certificate",
+            return_value=(str(local_cert), False, None),
+        ),
+        patch(CONNECT_TARGET, side_effect=_fake_connect),
+    ):
+        await component.run_query()
+
+    assert local_cert.exists(), "an operator-owned CA file must not be deleted"
