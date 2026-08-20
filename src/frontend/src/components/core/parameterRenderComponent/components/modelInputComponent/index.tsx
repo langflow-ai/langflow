@@ -18,8 +18,13 @@ import { Command } from "../../../../ui/command";
  * <Command>, even when no CommandInput exists for that id — a label whose
  * `for` references nothing (IBM label_ref_valid, WCAG 1.3.1). The listbox
  * carries the picker's accessible name, so the reference is pure debt.
- * Dropping the ATTRIBUTE (not the node) is reconciliation-safe: React only
- * rewrites props it sees change, and `htmlFor` never changes here.
+ * Only the `for` ATTRIBUTE is removed — never the node (React owns it and
+ * would fight its removal during reconciliation; attribute edits are safe
+ * because React only rewrites props it sees change, and `htmlFor` never
+ * changes here). The `label` prop stays so the element keeps inner text:
+ * an EMPTY label just trades `label_ref_valid` for `label_content_exists`
+ * (which ignores aria-hidden), while a text-bearing label with no `for`
+ * passes every rule and is inert to screen readers — nothing references it.
  */
 export function stripDanglingCmdkLabelFor(root: HTMLElement | null): void {
   const label = root?.querySelector("label[cmdk-label][for]");
@@ -334,12 +339,13 @@ export default function ModelInputComponent({
         {/* Section 1 — the option list (a self-contained listbox). Keeping the
             footer actions out of <Command> stops them from being swept into the
             listbox's composite keyboard/focus model. */}
-        {/* No CommandInput is rendered here, and cmdk's `label` prop renders
-            a <label htmlFor={inputId}> for that input — leaving a label that
-            references a non-existent element (IBM label_ref_valid). The
-            accessible name lives on the CommandList (the listbox) instead. */}
+        {/* The picker's accessible name lives on the CommandList (the
+            listbox). cmdk also renders a hidden <label htmlFor={inputId}>
+            for a CommandInput that does not exist here — the ref strips
+            that dangling reference; see stripDanglingCmdkLabelFor. */}
         <Command
           ref={stripDanglingCmdkLabelFor}
+          label={t("model.selectModel")}
           className="flex flex-col"
           defaultValue={
             selectedModel

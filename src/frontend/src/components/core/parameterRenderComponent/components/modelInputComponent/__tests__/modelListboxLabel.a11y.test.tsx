@@ -28,7 +28,7 @@ function renderList(grouped: Record<string, ModelOption[]>) {
   // mirror the real picker: Command gets the same ref callback the
   // component wires, since cmdk renders its dangling label unconditionally
   return render(
-    <Command ref={stripDanglingCmdkLabelFor}>
+    <Command ref={stripDanglingCmdkLabelFor} label="Select a model">
       <ModelList
         groupedOptions={grouped}
         selectedModel={null}
@@ -59,7 +59,13 @@ describe("model picker listbox accessible name", () => {
       expect(target).not.toBeNull();
     }
     // cmdk's hidden input-label survives (React owns the node) but must no
-    // longer reference the input it never had
+    // longer reference the input it never had. It must KEEP its text: an
+    // empty label just trades label_ref_valid for label_content_exists,
+    // which ignores aria-hidden. Unassociated, it is inert to screen readers.
     expect(container.querySelector("label[cmdk-label][for]")).toBeNull();
+    const vestige = container.querySelector("label[cmdk-label]");
+    if (vestige) {
+      expect(vestige.textContent).not.toBe("");
+    }
   });
 });
