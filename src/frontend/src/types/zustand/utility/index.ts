@@ -44,6 +44,9 @@ export type UtilityStoreType = {
   ) => void;
   catalogGovernanceEnabled: boolean;
   setCatalogGovernanceEnabled: (catalogGovernanceEnabled: boolean) => void;
+  /** Component types an administrator blocked, as reported by /config. */
+  blockedComponentTypes: ReadonlySet<string>;
+  setBlockedComponentTypes: (blockedComponentTypes: Iterable<string>) => void;
   a2aEnabled: boolean;
   setA2aEnabled: (a2aEnabled: boolean) => void;
   agenticExperienceEnabled: boolean;

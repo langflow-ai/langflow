@@ -10,7 +10,7 @@ type ComponentUpdate = {
 };
 
 let mockAllowCustomComponents: boolean;
-let mockCatalogGovernanceEnabled: boolean;
+let mockBlockedComponentTypes: Set<string>;
 let mockComponentsToUpdate: ComponentUpdate[];
 let mockDismissedNodes: string[];
 
@@ -100,7 +100,7 @@ jest.mock("../../../stores/utilityStore", () => ({
   useUtilityStore: (selector: (state: unknown) => unknown) =>
     selector({
       allowCustomComponents: mockAllowCustomComponents,
-      catalogGovernanceEnabled: mockCatalogGovernanceEnabled,
+      blockedComponentTypes: mockBlockedComponentTypes,
     }),
 }));
 
@@ -237,7 +237,8 @@ describe("GenericNode blocked banner", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAllowCustomComponents = true;
-    mockCatalogGovernanceEnabled = true;
+    // The fixture node is a Prompt; the policy names it by default.
+    mockBlockedComponentTypes = new Set(["Prompt"]);
     mockDismissedNodes = [];
     mockComponentsToUpdate = [];
   });
@@ -258,7 +259,19 @@ describe("GenericNode blocked banner", () => {
     // A user-authored component has code and no registry template, exactly
     // like a policy-blocked one. With custom components allowed and no policy
     // it is legitimate, so flagging it would stop people running their own work.
-    mockCatalogGovernanceEnabled = false;
+    mockBlockedComponentTypes = new Set<string>();
+    mockComponentsToUpdate = [componentUpdate({ blocked: true })];
+
+    renderNode();
+
+    expect(screen.queryByTestId("node-update-banner")).not.toBeInTheDocument();
+  });
+
+  it("leaves a node alone when the policy names a different component", () => {
+    // LE-2226: a policy that blocks some other component — or only a starter
+    // template — must not brand this node "disabled by an administrator". A
+    // missing template is equally an uninstalled bundle or an imported flow.
+    mockBlockedComponentTypes = new Set(["SomeOtherComponent"]);
     mockComponentsToUpdate = [componentUpdate({ blocked: true })];
 
     renderNode();

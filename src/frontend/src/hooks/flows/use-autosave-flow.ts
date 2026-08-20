@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { catalogPolicyCanBlock } from "@/CustomNodes/helpers/check-code-validity";
+import { isBlockedByCatalogPolicy } from "@/CustomNodes/helpers/check-code-validity";
 import { usePermissions } from "@/contexts/permissionsContext";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { useTypesStore } from "@/stores/typesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { FlowType } from "@/types/flow";
 import { useDebounce } from "../use-debounce";
@@ -21,32 +20,27 @@ type PendingAutoSave = {
  * Autosaving a flow the server rejects retries a write that can never succeed,
  * so opening an affected flow produced a stream of failed requests before the
  * user had touched anything. Pausing instead is only safe where the rejection
- * is certain, because a wrong pause silently stops persisting the user's work:
+ * is certain, because a wrong pause silently stops persisting the user's work.
  *
- *  - the write is only rejected when a catalog policy actually blocks a key.
- *    `validate_catalog_policy_for_flow` returns early on an empty blocklist, so
- *    without a policy the save succeeds and there is nothing to pause for.
- *  - `blocked` means "no template for this type", which is also true of an
- *    uninstalled bundle, a flow imported from another install, and every
- *    code-bearing node while the registry is still loading. `templates` starts
- *    as `{}`, so a cold load would otherwise pause autosave and name every
- *    component in the flow.
- *
- * Anything short of both signals leaves autosave alone and lets the server
- * decide, which is the behaviour that existed before.
+ * `blocked` alone is not that certainty: it means "no template for this type",
+ * which is equally an uninstalled bundle, a flow imported from another
+ * install, and a component the user wrote themselves. Only the policy's own
+ * identities separate the one the server will reject from the three it accepts,
+ * so this asks whether the policy names this component, not whether a policy
+ * exists.
  */
 const blockedComponentNames = (): string[] => {
-  if (
-    !catalogPolicyCanBlock(
-      useUtilityStore.getState().catalogGovernanceEnabled,
-      useTypesStore.getState().templates,
-    )
-  ) {
+  const { blockedComponentTypes } = useUtilityStore.getState();
+  if (blockedComponentTypes.size === 0) {
     return [];
   }
   return useFlowStore
     .getState()
-    .componentsToUpdate.filter((component) => component.blocked)
+    .componentsToUpdate.filter(
+      (component) =>
+        component.blocked &&
+        isBlockedByCatalogPolicy(blockedComponentTypes, component.type),
+    )
     .map((component) => component.display_name ?? component.id);
 };
 
