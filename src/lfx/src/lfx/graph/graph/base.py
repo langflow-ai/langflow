@@ -39,7 +39,12 @@ from lfx.graph.vertex.base import Vertex, VertexStates
 from lfx.graph.vertex.schema import NodeData, NodeTypeEnum
 from lfx.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
 from lfx.log.logger import LogConfig, configure, logger
-from lfx.observability import APPLICATION_TRACER_NAME, get_execution_client, get_execution_protocol
+from lfx.observability import (
+    APPLICATION_TRACER_NAME,
+    get_execution_client,
+    get_execution_protocol,
+    get_queued_trace_link,
+)
 from lfx.schema.dotdict import dotdict
 from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
 from lfx.services.cache.utils import CacheMiss
@@ -989,7 +994,24 @@ class Graph:
         # start_span would pick the dead span up as parent anyway.
         parent = otel_trace.get_current_span()
         parent_context = parent.get_span_context()
-        if parent_context.is_valid and not parent.is_recording():
+        queued_link = get_queued_trace_link()
+        if queued_link is not None and not parent.is_recording():
+            # A run picked off a queue, carrying the context of the request that queued it on
+            # the job row.
+            #
+            # Checked before the ended-parent branch, and gated on the parent not recording
+            # rather than on no span being current. Whatever ended span the worker happens to
+            # be holding is not necessarily this run's originator: a worker task started from
+            # a request inherits that request's context permanently, so every later run it
+            # serves would link back to that first request. The carrier was written for this
+            # specific job and is the authoritative answer; an ambient ended span is only a
+            # good guess. A live parent still wins over both, below.
+            span = tracer.start_span(
+                FLOW_EXECUTION_SPAN_NAME,
+                context=OtelContext(),
+                links=[queued_link],
+            )
+        elif parent_context.is_valid and not parent.is_recording():
             span = tracer.start_span(
                 FLOW_EXECUTION_SPAN_NAME,
                 context=OtelContext(),
