@@ -40,13 +40,13 @@ OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp-COLOR-saas.instana.io:4318
 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 OTEL_EXPORTER_OTLP_HEADERS=x-instana-key=YOUR_AGENT_KEY,x-instana-host=YOUR_HOST_ID
 OTEL_SERVICE_NAME=langflow
-OTEL_RESOURCE_ATTRIBUTES=host.name=YOUR_HOST_ID,service.name=langflow
+OTEL_RESOURCE_ATTRIBUTES=host.id=YOUR_HOST_ID,host.name=YOUR_HOST_ID,service.name=langflow
 OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE=delta
 ```
 
 Three of these are not optional in practice:
 
-- **A host identity.** This is the one that breaks a naive setup. Instana attaches telemetry to a host entity, and data that identifies no host is accepted and then has nowhere to live, so it never appears in the UI. Supply it as the `x-instana-host` header, as a `host.name` resource attribute, or both. Any stable string works; reuse the same one across restarts or each run creates a new entity.
+- **A host identity.** This is the one that breaks a naive setup. Instana attaches telemetry to a host entity, and data that identifies no host is accepted and then has nowhere to live, so it never appears in the UI. Satisfy it in one of two ways: set the `x-instana-host` header, or set a `host.id`, `faas.id`, or `device.id` resource attribute. `host.name` does not count. It is a label, so it can supply the *value* you put in `x-instana-host`, but on its own it leaves the data unattached. Any stable string works; reuse the same one across restarts or each run creates a new entity.
 - **`OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf`.** Port `4318` speaks HTTP. Pointing the gRPC exporter at it fails at connect time.
 - **`OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE=delta`.** Instana renders counters from delta values, and the OpenTelemetry SDK sends cumulative by default. Without this, rate charts read as ever-climbing totals, which looks like a broken integration when it is only the temporality.
 
@@ -85,7 +85,7 @@ Retrieve those by ID through the API rather than expecting to find them by brows
 
 ### The export succeeds but nothing appears in the UI
 
-Almost always the host identity. Instana has accepted data it cannot attach to anything. Set `x-instana-host` and `host.name` as shown above, restart, and generate new traffic.
+Almost always the host identity. Instana has accepted data it cannot attach to anything. Check that you set `x-instana-host`, or one of `host.id` / `faas.id` / `device.id`. Setting only `host.name` is the common version of this mistake, because it looks like a host identity and is not one. Fix it, restart, and generate new traffic.
 
 If your tenant enforces tagging conventions, untagged data can also be accepted and then be invisible to you specifically, through access control rather than through discarding. Check with the tenant operator.
 
