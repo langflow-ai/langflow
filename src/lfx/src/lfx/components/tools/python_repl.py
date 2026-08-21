@@ -119,9 +119,16 @@ class PythonREPLToolComponent(LCToolComponent):
                 if is_sandbox_enabled():
                     # A session lets an agent build up state across tool
                     # calls instead of restarting from nothing each time.
-                    # Artifacts are not collected here: this tool returns one
-                    # observation string to the model, with nowhere to put a
-                    # file.
+                    #
+                    # This tool DISCARDS any collected artifacts: it returns
+                    # one observation string to the model, with nowhere to put
+                    # a file. Collection is driven by
+                    # LANGFLOW_SANDBOX_COLLECT_ARTIFACTS inside the backend
+                    # rather than by this caller, so when an operator turns it
+                    # on the work still happens here and the files are dropped.
+                    # Wasteful, not unsafe -- the files never leave the
+                    # process. A per-call opt-out belongs in the backend
+                    # protocol, not in a flag this component sets.
                     result = run_code_in_sandbox(
                         sanitize_code(code),
                         global_imports=self.global_imports,

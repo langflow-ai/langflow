@@ -17,6 +17,7 @@ protocol is implementable and to stay a reference for what an upstream
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import io
 import ipaddress
 import json
@@ -204,9 +205,42 @@ def _guest_code_path() -> str:
     return f"{_CREATEOS_GUEST_CODE_DIR}/{_CREATEOS_GUEST_CODE_PREFIX}{uuid.uuid4().hex}.py"
 
 
-def _session_guest_name(token: str) -> str:
+def _session_identity(token: str, egress: tuple[str, ...], memory_mb: int) -> str:
+    """Bind a session to the policy its guest must have been created under.
+
+    The create-time check (:meth:`_CreateosExecutor._assert_policy_applied`) is
+    the only place a guest's policy is ever verified, and a REUSED guest never
+    reaches it. A session guest deliberately outlives the process -- it carries
+    a stable name so another worker, or the same worker after a restart, adopts
+    it instead of building a second VM. That is what makes stale policy
+    reachable: tighten ``LANGFLOW_SANDBOX_ALLOW_NETWORK`` (or narrow the
+    allowlist, or raise the memory floor) and restart inside the auto-pause
+    window, and the old guest -- created under the OLD, looser policy -- is
+    still sitting there under the name the new process looks up.
+
+    Re-verifying on adoption is not an option: ``GET /v1/sandboxes/{id}`` omits
+    ``egress`` entirely, and ``GET /v1/sandboxes/{id}/egress`` answers with an
+    empty list even for a sandbox created with rules (checked against the live
+    control plane, both while starting and while running). There is no way to
+    ask what policy a guest actually has.
+
+    So the policy is folded into the identity instead. A guest is only ever
+    adopted by a process asking for the same policy that guest was created
+    with, because any other policy simply derives a different name and misses
+    it. Changing a setting orphans the old guest rather than inheriting it; the
+    idle reaper and the control plane's auto-pause collect it. Session state
+    does not survive that, which is correct -- the state belongs to a guest the
+    operator has just declared unacceptable.
+    """
+    # Sorted so an allowlist written in a different order is the same policy,
+    # and unit-separated so ("a", "b") cannot collide with ("a\x1fb",).
+    policy = "\x1f".join((*sorted(egress), str(memory_mb)))
+    return hashlib.sha256(f"{token}\x00{policy}".encode()).hexdigest()
+
+
+def _session_guest_name(identity: str) -> str:
     """The control-plane name that identifies one session's guest."""
-    return f"{_CREATEOS_SESSION_NAME_PREFIX}{token[:_CREATEOS_SESSION_TOKEN_CHARS]}"
+    return f"{_CREATEOS_SESSION_NAME_PREFIX}{identity[:_CREATEOS_SESSION_TOKEN_CHARS]}"
 
 
 def _safe_artifact_name(name: str) -> str:
@@ -572,10 +606,14 @@ class _CreateosExecutor:
         than throwing it away. The session stays running and the idle reaper
         destroys it.
         """
-        token = session.token()
+        # Keyed on the policy as well as the identity, so a guest created under
+        # settings the operator has since changed is never adopted. See
+        # _session_identity -- the control plane cannot be asked what policy a
+        # running guest has, so the name is what has to encode it.
+        token = _session_identity(session.token(), self._egress_for(settings), settings.memory_mb)
         lock = self._session_lock(token)
         with lock, self._client(_CREATEOS_CONTROL_TIMEOUT_SECONDS) as client:
-            self._reap_idle_sessions(client, settings)
+            self._reap_idle_sessions(client, settings, token)
             sandbox_id = self._acquire_session_vm(client, token, env, settings)
             try:
                 result = self._upload_and_exec(client, sandbox_id, code, settings)
@@ -605,9 +643,7 @@ class _CreateosExecutor:
                 logger.warning("CreateOS session guest timed out; destroying it rather than reusing it")
                 self._drop_session(client, token)
                 return result
-            with self._lock:
-                if token in self._sessions:
-                    self._sessions[token] = (sandbox_id, time.monotonic())
+            self._touch_session(token, sandbox_id)
             return result
 
     def _session_lock(self, token: str) -> threading.Lock:
@@ -616,6 +652,17 @@ class _CreateosExecutor:
             if lock is None:
                 lock = self._session_locks[token] = threading.Lock()
             return lock
+
+    def _touch_session(self, token: str, sandbox_id: str) -> None:
+        """Record that this session's guest is in use as of now.
+
+        Only refreshes an entry that still exists: a session dropped while this
+        execution was running must stay dropped, not be resurrected by a
+        timestamp.
+        """
+        with self._lock:
+            if token in self._sessions:
+                self._sessions[token] = (sandbox_id, time.monotonic())
 
     def _acquire_session_vm(
         self, client: httpx.Client, token: str, env: dict[str, str] | None, settings: _SandboxSettings
@@ -645,6 +692,13 @@ class _CreateosExecutor:
         if cached is not None:
             sandbox_id, _ = cached
             if self._is_running(client, sandbox_id):
+                # Stamp on the way IN, not only on the way out. The stored
+                # timestamp is what the idle reaper judges, and until this
+                # execution finishes the only timestamp on record is the
+                # PREVIOUS completion. A run that starts inside the idle
+                # window but outlives it would otherwise be reaped while its
+                # own code is still running.
+                self._touch_session(token, sandbox_id)
                 return sandbox_id
             logger.debug("CreateOS session guest %s is no longer running; replacing it", sandbox_id)
             self._drop_session(client, token)
@@ -727,7 +781,7 @@ class _CreateosExecutor:
         if entry is not None:
             self._destroy(client, entry[0])
 
-    def _reap_idle_sessions(self, client: httpx.Client, settings: _SandboxSettings) -> None:
+    def _reap_idle_sessions(self, client: httpx.Client, settings: _SandboxSettings, current: str) -> None:
         """Destroy sessions that went quiet, bounding both cost and exposure.
 
         Runs on the way into an execution rather than on a timer: a background
@@ -735,13 +789,54 @@ class _CreateosExecutor:
         already owns enough lifecycle. The gap is honest and bounded -- a
         process that stops running code entirely leaves its last sessions to
         the control plane's auto-pause backstop.
+
+        This reaps OTHER sessions than the caller's, so it must never destroy a
+        guest that is mid-execution. Nothing about the timestamps rules that
+        out on its own: an execution can legitimately start just inside the
+        idle window and run past the deadline (the default settings allow a
+        300s execution against a 600s idle window), and the victim's own
+        ``last_used`` cannot advance while it is busy. The per-session lock is
+        the authority on "in use", so a session whose lock is held is skipped
+        outright and the destroy happens under that lock.
+
+        ``current`` is the caller's own session, which is exempt from that
+        probe: the caller already holds its lock and a ``threading.Lock`` is not
+        reentrant, so probing would always fail and a session could never expire
+        for the flow that owns it. Reaping it here is safe and wanted -- the
+        caller has not started executing yet, and a guest past the idle bound
+        must not be handed back to the very next run just because it is the same
+        flow asking.
         """
         cutoff = time.monotonic() - settings.session_idle_seconds
         with self._lock:
             stale = [token for token, (_, last_used) in self._sessions.items() if last_used < cutoff]
         for token in stale:
-            logger.debug("Destroying idle CreateOS session guest")
-            self._drop_session(client, token)
+            if token == current:
+                logger.debug("Destroying idle CreateOS session guest")
+                self._drop_session(client, token)
+                continue
+            lock = self._session_lock(token)
+            # NEVER block: this runs on another session's critical path, and
+            # waiting here would serialize unrelated flows behind whatever the
+            # busy one is doing. A session that is executing simply is not
+            # idle, so failing to take the lock is the answer, not a retry.
+            if not lock.acquire(blocking=False):
+                logger.debug("Skipping idle reap: the session is executing")
+                continue
+            try:
+                # Re-read under the lock. The scan above is a snapshot, and the
+                # owner may have finished and stamped a fresh timestamp in
+                # between -- destroying on the stale reading would kill a guest
+                # that just proved it is live.
+                with self._lock:
+                    entry = self._sessions.get(token)
+                    still_idle = entry is not None and entry[1] < cutoff
+                if not still_idle:
+                    continue
+                logger.debug("Destroying idle CreateOS session guest")
+                self._drop_session(client, token)
+            finally:
+                lock.release()
 
     def _destroy_all_sessions(self) -> None:
         with self._lock:
@@ -997,9 +1092,7 @@ class _CreateosExecutor:
         is preserved across that cleanup. Without it a long-lived session guest
         would accumulate one file per execution forever.
         """
-        run_program = (
-            f"{_CREATEOS_GUEST_PYTHON} {code_path}; _lf_rc=$?; rm -f {code_path}; exit $_lf_rc"
-        )
+        run_program = f"{_CREATEOS_GUEST_PYTHON} {code_path}; _lf_rc=$?; rm -f {code_path}; exit $_lf_rc"
         if not settings.collect_artifacts:
             return run_program
         # Emptied, not just created. On a reused session guest the directory
@@ -1041,6 +1134,15 @@ class _CreateosExecutor:
         Never fatal. Artifacts are an extra, so a guest that wrote nothing, a
         rootfs without ``tar``, or a failed download all return the execution's
         real result rather than replacing it with a collection error.
+
+        The archive is built by the guest, so it is not merely absent or
+        oversized -- it can be malformed. ``tarfile`` reports that outside the
+        ``OSError`` tree (``TarError`` derives straight from ``Exception``, and
+        a truncated gzip member surfaces as ``EOFError``), so both have to be
+        named here or a corrupt tarball would escape as an uncaught traceback
+        and replace a perfectly good execution result. A guest that filled its
+        disk mid-``tar``, or a program still writing after a post-timeout kill
+        that has not landed yet, produces exactly that.
         """
         try:
             self._unwrap(
@@ -1056,7 +1158,7 @@ class _CreateosExecutor:
             if archive is None:
                 return result
             files = self._unpack_artifacts(archive, settings.max_artifact_bytes)
-        except (httpx.HTTPError, SandboxExecutionError, OSError):
+        except (httpx.HTTPError, SandboxExecutionError, OSError, tarfile.TarError, EOFError):
             logger.warning("Could not collect CreateOS artifacts; returning the execution result", exc_info=True)
             return result
         if not files:
