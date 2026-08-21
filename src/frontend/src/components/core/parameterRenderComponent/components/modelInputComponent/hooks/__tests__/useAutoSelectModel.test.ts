@@ -106,9 +106,7 @@ describe("useAutoSelectModel", () => {
     });
 
     expect(handleOnNewValue).toHaveBeenCalledTimes(1);
-    expect(handleOnNewValue.mock.calls[0][0].value[0].name).toBe(
-      "gpt-4o-mini",
-    );
+    expect(handleOnNewValue.mock.calls[0][0].value[0].name).toBe("gpt-4o-mini");
   });
 
   it("should_not_act_while_provider_status_is_still_loading", () => {
