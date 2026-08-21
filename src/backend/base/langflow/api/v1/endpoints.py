@@ -1552,6 +1552,12 @@ async def experimental_run_flow(
                 # than chaining the exception to itself.
                 raise
             raise error_for_client(exc, expose_details=expose_error_details) from exc
+        except TweakRefusedError:
+            # Third run route that applies tweaks, and the generic handler below
+            # would turn a refused tweak into a redacted 500 with a stack trace
+            # in the logs. Let it through so the app-level handler answers 422
+            # naming the refused keys, as the setting documents for every mode.
+            raise
         except Exception as exc:
             await logger.aexception("Failed to build advanced-run graph for flow %s", flow.id)
             client_error = error_for_client(exc, expose_details=expose_error_details)
