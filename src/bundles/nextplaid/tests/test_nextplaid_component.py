@@ -34,7 +34,9 @@ def test_nextplaid_component_template_defaults():
 
 
 def test_vllm_multivector_embeddings_build(monkeypatch):
-    monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "localhost")
+    # Avoid initializing the shared settings service while a temporary environment
+    # allowlist is active; that would leak "localhost" into later deny-policy tests.
+    monkeypatch.setattr("lfx.utils.ssrf_protection.get_allowed_hosts", lambda: ["localhost"])
     component = VllmMultivectorEmbeddingsComponent(
         model_name="answerdotai/answerai-colbert-small-v1",
         api_base="http://localhost:8000",

@@ -9343,7 +9343,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-anthropic"
-version = "0.1.4"
+version = "0.1.5"
 source = { editable = "src/bundles/anthropic" }
 dependencies = [
     { name = "langchain-anthropic" },
@@ -10297,7 +10297,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-nextplaid"
-version = "0.1.3"
+version = "0.1.4"
 source = { editable = "src/bundles/nextplaid" }
 dependencies = [
     { name = "httpx" },
