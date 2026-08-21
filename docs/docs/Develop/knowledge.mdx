@@ -118,10 +118,10 @@ For more information on using knowledge bases in a flow, see the [**Knowledge Ba
 
 ### Configure vector database providers
 
-**DB Providers** are the vector databases where your knowledge bases store and search embeddings.
+**DB Providers** are the vector databases where your knowledge bases and [memory bases](/memory-bases) store and search embeddings.
 To configure these providers, go to **Settings → DB Providers**.
-The selected provider applies to all new knowledge bases you create.
-Existing knowledge bases continue to use the provider that was active when they were created.
+The selected provider applies to all new knowledge bases and memory bases you create.
+Existing knowledge bases and memory bases continue to use the provider that was active when they were created.
 
 #### Chroma (default)
 
@@ -238,7 +238,63 @@ This example uses an OpenSearch container running locally, but you can also use 
 
 To create a knowledge base using this provider, see [Create a knowledge base](#create-a-knowledge-base).
 
+#### Postgres pgvector
+
+To use [Postgres with pgvector](https://github.com/pgvector/pgvector) as a database provider, you need a PostgreSQL database with the `vector` extension available, and the Langflow `pgvector` optional dependency installed.
+This example uses a Postgres container running locally, but you can also use a remote PostgreSQL instance that has pgvector installed.
+
+:::tip
+`PGVECTOR_CONNECTION_STRING` configures the vector store for knowledge bases and memory bases.
+It is separate from [`LANGFLOW_DATABASE_URL`](/configuration-custom-database), which configures Langflow's application database for flows, users, and messages.
+You can point both at the same PostgreSQL server, or use different databases.
+:::
+
+1. Install the `pgvector` optional dependency in your Langflow environment:
+
+    ```bash
+    uv pip install "langflow[pgvector]"
+    ```
+
+    For more information, see [Install custom dependencies](/install-custom-dependencies).
+
+2. For this example, start a local Postgres container with pgvector:
+
+    ```bash
+    podman run -d \
+      --name pgvector \
+      -p 5432:5432 \
+      -e POSTGRES_USER=pgvector \
+      -e POSTGRES_PASSWORD=pgvector \
+      -e POSTGRES_DB=langflow_vectors \
+      pgvector/pgvector:pg16
+    ```
+
+3. Set the `PGVECTOR_CONNECTION_STRING` environment variable to your Postgres connection string, and then start or restart Langflow:
+
+    ```bash
+    export PGVECTOR_CONNECTION_STRING="postgresql+psycopg://pgvector:pgvector@localhost:5432/langflow_vectors"
+    ```
+
+    You can also use a `postgresql://` URL. Langflow normalizes it to the `psycopg` driver at runtime.
+
+    When `PGVECTOR_CONNECTION_STRING` is set, new knowledge bases and memory bases default to Postgres pgvector unless you select a different provider.
+    Langflow creates the `vector` extension and required tables on first use.
+
+4. To connect Postgres pgvector to Langflow, click **Settings**, and then click **DB Providers**.
+5. Select **Postgres pgvector**.
+
+    There are no credentials to enter in the UI. Postgres pgvector is configured from your server environment.
+
+6. Click **Use Postgres pgVector**.
+
+    Optionally, click **Test Connection** to verify that Langflow can reach your Postgres instance before selecting it.
+
+    The Postgres pgvector database is now connected to Langflow as a knowledge base and memory base provider.
+    To create a knowledge base using this provider, see [Create a knowledge base](#create-a-knowledge-base).
+    To create a memory base using this provider, see [Create a memory base](/memory-bases#create-a-memory-base).
+
 ## See also
 
+* [Manage memory bases](/memory-bases)
 * [Use Langflow agents](/agents)
 * [Language model components](/components-models)
