@@ -75,6 +75,40 @@ describe("useAutoSelectModel", () => {
     );
   });
 
+  it("should_preserve_a_blocked_or_disabled_sticky_selection", () => {
+    const blocked = {
+      ...ANTHROPIC,
+      name: "claude-blocked",
+      metadata: { not_enabled_locally: true },
+    };
+    const handleOnNewValue = renderAutoSelect({
+      value: [blocked],
+      rawOptions: [blocked, ANTHROPIC, OPENAI],
+    });
+
+    expect(handleOnNewValue).not.toHaveBeenCalled();
+  });
+
+  it("should_replace_a_sticky_selection_when_its_provider_is_disconnected", () => {
+    const sticky = {
+      ...ANTHROPIC,
+      name: "claude-blocked",
+      metadata: { not_enabled_locally: true },
+    };
+    const handleOnNewValue = renderAutoSelect({
+      value: [sticky],
+      rawOptions: [sticky, OPENAI],
+      providers: [
+        { provider: "Anthropic", is_configured: false, is_enabled: false },
+        { provider: "OpenAI", is_configured: true, is_enabled: true },
+      ] as never,
+      flatOptions: [OPENAI],
+    });
+
+    expect(handleOnNewValue).toHaveBeenCalledTimes(1);
+    expect(handleOnNewValue.mock.calls[0][0].value[0].name).toBe("gpt-4o-mini");
+  });
+
   it("should_not_act_while_provider_status_is_still_loading", () => {
     const handleOnNewValue = renderAutoSelect({
       value: [{ ...ANTHROPIC, name: "claude-retired" }],
