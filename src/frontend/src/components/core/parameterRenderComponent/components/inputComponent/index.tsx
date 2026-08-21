@@ -270,6 +270,7 @@ export default function InputComponent({
               options={options}
               disabledOptions={disabledOptions}
               optionsPlaceholder={optionsPlaceholder}
+              inputProps={inputProps}
               nodeStyle={nodeStyle}
               popoverWidth={popoverWidth}
               commandWidth={commandWidth}
