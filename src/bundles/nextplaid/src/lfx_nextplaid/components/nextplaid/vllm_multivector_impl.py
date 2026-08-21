@@ -5,9 +5,9 @@ import io
 import time
 from typing import TYPE_CHECKING
 
-import requests
+import httpx
 from langchain_core.embeddings import Embeddings as LCEmbeddings
-from lfx.base.models.provider_ssrf import validate_provider_base_url
+from lfx.base.models.provider_ssrf import provider_safe_httpx_post, validate_provider_base_url
 
 if TYPE_CHECKING:
     from PIL.Image import Image as PILImage
@@ -46,8 +46,8 @@ class VllmMultivectorEmbeddings(LCEmbeddings):
         timeout: float = 60.0,
         max_retries: int = 1,
     ) -> None:
-        # url is tenant-editable and every /pooling request below carries api_key in an
-        # Authorization header, so validate once here to cover both request sites.
+        # Reject an unsafe URL at construction, then revalidate and pin every request below so
+        # a hostname cannot rebind after this preflight check.
         validate_provider_base_url(url)
         self.url = url.rstrip("/")
         self.model = model
@@ -87,7 +87,7 @@ class VllmMultivectorEmbeddings(LCEmbeddings):
         last_exc: Exception | None = None
         for attempt in range(max(self.max_retries, 1)):
             try:
-                resp = requests.post(
+                resp = provider_safe_httpx_post(
                     f"{self.url}/pooling",
                     json={"model": self.model, "input": input_data},
                     headers=self._headers,
@@ -101,14 +101,14 @@ class VllmMultivectorEmbeddings(LCEmbeddings):
                 except (KeyError, TypeError) as exc:
                     msg = "vLLM /pooling response has invalid embedding row shape"
                     raise RuntimeError(msg) from exc
-            except requests.HTTPError as exc:
+            except httpx.HTTPStatusError as exc:
                 valid_client_status_codes = 500
                 if exc.response is not None and exc.response.status_code < valid_client_status_codes:
                     raise  # don't retry 4xx — surface immediately
                 last_exc = exc
                 if attempt < self.max_retries - 1:
                     time.sleep(2**attempt)
-            except requests.RequestException as exc:
+            except httpx.RequestError as exc:
                 last_exc = exc
                 if attempt < self.max_retries - 1:
                     time.sleep(2**attempt)
@@ -147,7 +147,7 @@ class VllmMultivectorEmbeddings(LCEmbeddings):
             last_exc: Exception | None = None
             for attempt in range(max(self.max_retries, 1)):
                 try:
-                    resp = requests.post(
+                    resp = provider_safe_httpx_post(
                         f"{self.url}/pooling",
                         json={
                             "model": self.model,
@@ -169,7 +169,7 @@ class VllmMultivectorEmbeddings(LCEmbeddings):
                         msg = "vLLM /pooling image response has invalid embedding row shape"
                         raise RuntimeError(msg) from exc
                     break
-                except requests.HTTPError as exc:
+                except httpx.HTTPStatusError as exc:
                     valid_client_status_codes = 500
                     if exc.response is not None and exc.response.status_code < valid_client_status_codes:
                         msg = f"vLLM {exc.response.status_code}: {exc.response.text}"
@@ -177,7 +177,7 @@ class VllmMultivectorEmbeddings(LCEmbeddings):
                     last_exc = exc
                     if attempt < self.max_retries - 1:
                         time.sleep(2**attempt)
-                except requests.RequestException as exc:
+                except httpx.RequestError as exc:
                     last_exc = exc
                     if attempt < self.max_retries - 1:
                         time.sleep(2**attempt)
