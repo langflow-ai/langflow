@@ -1,5 +1,8 @@
 """Unit tests for the langflow.helpers.flow module."""
 
+import inspect
+from types import SimpleNamespace
+
 import pytest
 from lfx.utils.langflow_utils import has_langflow_memory
 
@@ -85,3 +88,22 @@ class TestDynamicImport:
 
         # Helper module should be the langflow implementation
         assert is_helper_module(run_flow, _LANGFLOW_HELPER_MODULE_FLOW)
+
+
+def test_generate_function_for_flow_sanitizes_untrusted_input_names():
+    from langflow.helpers.flow import generate_function_for_flow
+
+    inputs = [
+        SimpleNamespace(display_name='value"; __import__("os").system("id"); #', base_name="ChatInput"),
+        SimpleNamespace(display_name="class", base_name="TextInput"),
+        SimpleNamespace(display_name="value", base_name="JSONInput"),
+        SimpleNamespace(display_name="value", base_name="ChatInput"),
+    ]
+
+    function = generate_function_for_flow(inputs, "flow-id", user_id="user-id")
+    parameter_names = list(inspect.signature(function).parameters)
+
+    assert len(parameter_names) == len(inputs)
+    assert len(set(parameter_names)) == len(inputs)
+    assert all(name.isidentifier() for name in parameter_names)
+    assert "class" not in parameter_names

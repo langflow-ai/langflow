@@ -160,6 +160,24 @@ class TestScanCodeSecurityDangerousAttrCalls:
         result = scan_code_security(code)
         assert result.is_safe is False
 
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "import asyncio\nasync def run():\n    await asyncio.create_subprocess_exec('id')\n",
+                id="asyncio-create-subprocess-exec",
+            ),
+            pytest.param("import posix\nposix.system('id')\n", id="posix-system"),
+            pytest.param(
+                "import multiprocessing\np = multiprocessing.Process(target=print)\np.start()\n",
+                id="multiprocessing-process",
+            ),
+        ],
+    )
+    def test_should_detect_reported_process_spawning_bypasses(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+
 
 class TestScanCodeSecurityDangerousImports:
     """Tests that dangerous imports are detected."""
@@ -1069,6 +1087,28 @@ class TestScanCodeSecurityRuntimeModuleBypass:
 
     def test_should_allow_dynamic_getattr_on_ordinary_objects(self):
         result = scan_code_security("field = 'value'\nvalue = getattr(self, field, None)")
+        assert result.is_safe is True
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "getattr(().__class__.__bases__[0], '__sub' + 'classes__')()",
+                id="computed-receiver",
+            ),
+            pytest.param(
+                "target = object\ngetattr(target, '__sub' + 'classes__')()",
+                id="name-receiver",
+            ),
+        ],
+    )
+    def test_should_detect_computed_dangerous_dunder_getattr(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("__subclasses__" in violation for violation in result.violations)
+
+    def test_should_allow_computed_safe_getattr_on_ordinary_object(self):
+        result = scan_code_security("getattr(record, 'display' + '_name', None)")
         assert result.is_safe is True
 
     def test_should_detect_reflective_call_through_assignment_alias(self):
