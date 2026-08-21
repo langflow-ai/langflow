@@ -9,9 +9,12 @@ import httpx
 
 from lfx.utils.ssrf_protection import (
     SSRFProtectionError,
+    is_connector_ssrf_validation_enabled,
     is_ssrf_protection_enabled,
     validate_and_resolve_connector_url,
+    validate_and_resolve_url,
     validate_connector_url_for_ssrf,
+    validate_url_for_ssrf,
 )
 from lfx.utils.ssrf_transport import (
     SSRFProtectedSyncTransport,
@@ -32,6 +35,23 @@ def validate_url_for_ssrf_or_raise(url: str) -> None:
     except SSRFProtectionError as e:
         msg = f"SSRF Protection: {e}"
         raise ValueError(msg) from e
+
+
+def validate_strict_url_for_ssrf_or_raise(url: str) -> None:
+    """Validate a credential-bearing provider URL without the connector loopback exemption."""
+    try:
+        if is_connector_ssrf_validation_enabled():
+            validate_url_for_ssrf(url)
+    except SSRFProtectionError as e:
+        msg = f"SSRF Protection: {e}"
+        raise ValueError(msg) from e
+
+
+def _validate_and_resolve_strict_url(url: str) -> tuple[str, list[str]]:
+    """Resolve a credential-bearing provider URL without the connector loopback exemption."""
+    if not is_connector_ssrf_validation_enabled():
+        return url, []
+    return validate_and_resolve_url(url)
 
 
 def _raise_if_following_redirects(request_kwargs: dict[str, Any]) -> None:
@@ -61,14 +81,10 @@ def _sync_client_for_url(url: str, validated_ips: list[str]) -> httpx.Client:
     return httpx.Client()
 
 
-def ssrf_protected_httpx_client_kwargs_for_url(url: str) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Return sync/async httpx kwargs that enforce connector SSRF protection for SDK clients."""
-    try:
-        validated_url, validated_ips = validate_and_resolve_connector_url(url)
-    except SSRFProtectionError as e:
-        msg = f"SSRF Protection: {e}"
-        raise ValueError(msg) from e
-
+def _httpx_client_kwargs_for_validated_url(
+    validated_url: str, validated_ips: list[str]
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Build sync and async client kwargs for an already validated URL."""
     if not is_ssrf_protection_enabled():
         return {}, {}
 
@@ -84,15 +100,46 @@ def ssrf_protected_httpx_client_kwargs_for_url(url: str) -> tuple[dict[str, Any]
     return sync_kwargs, async_kwargs
 
 
-def ssrf_protected_openai_clients_for_url(url: str) -> dict[str, httpx.Client | httpx.AsyncClient]:
-    """Return pinned sync and async clients for OpenAI-compatible LangChain components."""
-    sync_kwargs, async_kwargs = ssrf_protected_httpx_client_kwargs_for_url(url)
+def ssrf_protected_httpx_client_kwargs_for_url(url: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Return sync/async httpx kwargs that enforce connector SSRF protection for SDK clients."""
+    try:
+        validated_url, validated_ips = validate_and_resolve_connector_url(url)
+    except SSRFProtectionError as e:
+        msg = f"SSRF Protection: {e}"
+        raise ValueError(msg) from e
+    return _httpx_client_kwargs_for_validated_url(validated_url, validated_ips)
+
+
+def ssrf_protected_strict_httpx_client_kwargs_for_url(url: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Return pinned client kwargs while denying provider loopback unless explicitly allowlisted."""
+    try:
+        validated_url, validated_ips = _validate_and_resolve_strict_url(url)
+    except SSRFProtectionError as e:
+        msg = f"SSRF Protection: {e}"
+        raise ValueError(msg) from e
+    return _httpx_client_kwargs_for_validated_url(validated_url, validated_ips)
+
+
+def _openai_clients_from_kwargs(
+    sync_kwargs: dict[str, Any], async_kwargs: dict[str, Any]
+) -> dict[str, httpx.Client | httpx.AsyncClient]:
+    """Build OpenAI-compatible sync and async clients from validated kwargs."""
     if not sync_kwargs and not async_kwargs:
         return {}
     return {
         "http_client": httpx.Client(**sync_kwargs),
         "http_async_client": httpx.AsyncClient(**async_kwargs),
     }
+
+
+def ssrf_protected_openai_clients_for_url(url: str) -> dict[str, httpx.Client | httpx.AsyncClient]:
+    """Return pinned sync and async clients for OpenAI-compatible LangChain components."""
+    return _openai_clients_from_kwargs(*ssrf_protected_httpx_client_kwargs_for_url(url))
+
+
+def ssrf_protected_strict_openai_clients_for_url(url: str) -> dict[str, httpx.Client | httpx.AsyncClient]:
+    """Return pinned clients while denying provider loopback unless explicitly allowlisted."""
+    return _openai_clients_from_kwargs(*ssrf_protected_strict_httpx_client_kwargs_for_url(url))
 
 
 async def ssrf_safe_async_get(url: str, **request_kwargs: Any) -> httpx.Response:
@@ -274,5 +321,13 @@ def ssrf_safe_httpx_post(url: str, **request_kwargs: Any) -> httpx.Response:
     """Perform a synchronous POST with connector SSRF validation and DNS pinning."""
     _raise_if_following_redirects(request_kwargs)
     validated_url, validated_ips = validate_and_resolve_connector_url(url)
+    with _sync_client_for_url(validated_url, validated_ips) as client:
+        return client.post(url=validated_url, **request_kwargs)
+
+
+def ssrf_safe_strict_httpx_post(url: str, **request_kwargs: Any) -> httpx.Response:
+    """POST to a credential-bearing provider URL with strict validation and DNS pinning."""
+    _raise_if_following_redirects(request_kwargs)
+    validated_url, validated_ips = _validate_and_resolve_strict_url(url)
     with _sync_client_for_url(validated_url, validated_ips) as client:
         return client.post(url=validated_url, **request_kwargs)

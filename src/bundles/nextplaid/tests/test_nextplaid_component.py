@@ -33,7 +33,8 @@ def test_nextplaid_component_template_defaults():
     assert node["template"]["nbits"]["value"] == "4"
 
 
-def test_vllm_multivector_embeddings_build():
+def test_vllm_multivector_embeddings_build(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "localhost")
     component = VllmMultivectorEmbeddingsComponent(
         model_name="answerdotai/answerai-colbert-small-v1",
         api_base="http://localhost:8000",
@@ -47,8 +48,9 @@ def test_vllm_multivector_embeddings_build():
     assert embeddings.url == "http://localhost:8000"
 
 
-def test_embeddings_impl_handles_empty_input():
+def test_embeddings_impl_handles_empty_input(monkeypatch):
     """Empty batches short-circuit without touching the network."""
+    monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "localhost")
     impl = VllmMultivectorEmbeddings(url="http://localhost:8000/", model="m")
 
     assert impl.embed_documents([]) == []
@@ -57,11 +59,9 @@ def test_embeddings_impl_handles_empty_input():
     assert impl.url == "http://localhost:8000"
 
 
-def test_embeddings_impl_identity():
-    # The constructor now applies the connector SSRF policy, which resolves the hostname.
-    # "http://h:1" was a placeholder that cannot resolve, so it fails in a network-isolated
-    # runner. Loopback is exempt from the policy by default and needs no DNS, which keeps
-    # this test about identity/hash/repr rather than about URL validation.
+def test_embeddings_impl_identity(monkeypatch):
+    # Keep this test about identity/hash/repr rather than provider URL policy.
+    monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "127.0.0.1")
     a = VllmMultivectorEmbeddings(url="http://127.0.0.1:1", model="m", api_key="k")
     b = VllmMultivectorEmbeddings(url="http://127.0.0.1:1", model="m", api_key="k")
     c = VllmMultivectorEmbeddings(url="http://127.0.0.1:1", model="other", api_key="k")
