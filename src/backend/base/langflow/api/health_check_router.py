@@ -114,7 +114,7 @@ async def healthz(
                 )
         except HTTPException:
             raise
-        except TimeoutError as exc:
+        except (TimeoutError, asyncio.TimeoutError) as exc:
             await logger.awarning("Enterprise readiness check %s timed out after %ss", check_name, check_timeout)
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
