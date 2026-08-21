@@ -3,25 +3,32 @@ title: Choose a Langflow Docker image
 slug: /deployment/docker-image-profiles
 ---
 
-Langflow publishes three application image profiles. They share the same
-frontend, non-root runtime, health check, SSRF defaults, and `langflow`
-executable. Choose the smallest profile that contains every extension used by
-your flows.
+Langflow publishes three application image profiles from
+`docker/build_and_push.Dockerfile` (`base`, `full`, and `full-bundles`).
+They share the same frontend, non-root runtime (uid 1000),
+`LANGFLOW_AUTO_LOGIN=false`, and `langflow` executable.
+None of them install PyTorch or TorchVision.
+All three include the `postgresql` extra so they can use an external Postgres
+database without a derived image.
+Choose the smallest profile that contains every extension used by your flows.
 
 | Profile | Docker Hub image | GitHub Container Registry image | Included inventory |
 | --- | --- | --- | --- |
-| Base | `langflowai/langflow:base-VERSION` | `ghcr.io/langflow-ai/langflow:base-VERSION` | The runnable `langflow-base` application and built-in LFX components, without provider extension distributions |
-| Default | `langflowai/langflow:VERSION` | `ghcr.io/langflow-ai/langflow:VERSION` | Base plus the curated standalone `lfx-*` extensions included by `pip install langflow` |
-| Extended | `langflowai/langflow-all:VERSION` | `ghcr.io/langflow-ai/langflow-all:VERSION` | The `langflow[bundles]` inventory: default plus the no-Torch long tail and opt-in standalone extensions |
+| Base | `langflowai/langflow:base-VERSION` | `ghcr.io/langflow-ai/langflow:base-VERSION` | `langflow-base` plus built-in LFX components. No `lfx-*` provider packages. |
+| Default | `langflowai/langflow:VERSION` | `ghcr.io/langflow-ai/langflow:VERSION` | Base plus the curated standalone `lfx-*` packages from `uv pip install langflow` |
+| Extended | `langflowai/langflow-all:VERSION` | `ghcr.io/langflow-ai/langflow-all:VERSION` | Default plus `langflow[bundles]`: the no-Torch long tail and opt-in standalones, including Confluent |
 
 The base and default profiles use the `langflow` image repository. The extended
 profile uses the separate `langflow-all` repository. All three profiles use the
-same Langflow 1.12 version; the base image isn't independently versioned.
+same Langflow 1.12 version.
+As of Langflow 1.12.x, there is no `langflow-core` image, and earlier `core-*` tags are not published.
 
-The base profile intentionally contains no provider extension distributions,
-PyTorch, or TorchVision. A flow that references an omitted component cannot run
-until you select a profile that provides it or install the reviewed extension
-in a derived image.
+The base image is a complete, minimal Langflow with no provider extensions,
+not only the [additional bundles](/extensions-bundle-list#additional-bundles)
+omitted from the default `langflow` install.
+The default image matches `uv pip install langflow`.
+A flow that references an omitted component cannot run until you select a
+profile that provides it, or install the reviewed extension in a derived image.
 
 ## Pin a release
 

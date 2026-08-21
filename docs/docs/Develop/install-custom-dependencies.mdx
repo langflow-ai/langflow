@@ -7,8 +7,8 @@ Langflow provides optional dependency groups and support for custom dependencies
 
 The Langflow codebase uses three package layers:
 
-* The full package (`langflow`) is managed by the root-level `pyproject.toml`. It depends on `langflow-base` and adds the curated standalone `lfx-*` provider extensions.
-* The runnable base package (`langflow-base`) is managed at `src/backend/base/pyproject.toml`. It provides the UI, API, platform services, and built-in components without provider extension distributions. It depends on `lfx`.
+* The minimal application (`langflow-base`) is managed at `src/backend/base/pyproject.toml`. As of Langflow 1.12, it is a complete Langflow install: UI, API, platform services, built-in components, and the `langflow` command, without provider extensions. It is version-aligned with `langflow`, and  depends on `lfx`. There is no `langflow-core` package.
+* The full package (`langflow`) is managed by the root-level `pyproject.toml`. It depends on the same `langflow-base` version and adds the curated standalone `lfx-*` provider extensions.
 * The `lfx` package is managed at `src/lfx/pyproject.toml`. LFX is a lightweight CLI tool for executing and serving Langflow flows. The `lfx` package does not provide optional dependency groups for end users.
 
 ## Install custom dependencies in Langflow Desktop {#langflow-desktop}
@@ -55,8 +55,8 @@ uv pip install "langflow[postgresql,audio]"
 ```
 
 Use the `bundles` extra to install every no-Torch long-tail bundle plus the
-arXiv, DuckDuckGo, EmpirioLabs, Exa, Firecrawl, NextPlaid, Paddle, and Valkey
-standalone extensions:
+opt-in standalone extensions listed in
+[Additional bundles](/extensions-bundle-list#additional-bundles):
 
 ```bash
 uv pip install "langflow[bundles]"
@@ -64,11 +64,12 @@ uv pip install "langflow[bundles]"
 
 ### Install optional dependency groups for `langflow-base`
 
-`langflow-base` is recommended when you want the runnable Langflow UI and API
-without provider extensions. It includes platform services such as Redis,
-Chroma, MCP, Kubernetes, object storage, and tracing support. The `langflow`
-package depends on this same version of `langflow-base` and adds curated
-standalone extensions.
+`langflow-base` is the minimal workable Langflow: the UI, API, platform
+services, and built-in components, without provider extensions. It is
+version-aligned with `langflow` starting with version 1.12.0. It includes platform
+services such as Redis, Chroma, MCP, Kubernetes, object storage, and
+tracing support. The `langflow` package depends on this same version of
+`langflow-base` and adds curated standalone extensions.
 
 The `langflow-base` package provides its own optional dependency groups that are separate from those in the `langflow` package. The `langflow-base` package can be installed as a standalone package with these optional dependency groups.
 
