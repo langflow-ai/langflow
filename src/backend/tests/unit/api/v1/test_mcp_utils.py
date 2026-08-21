@@ -1,5 +1,6 @@
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
+from uuid import uuid4
 
 import pytest
 from langflow.api.utils.core import extract_global_variables_from_headers
@@ -9,6 +10,7 @@ from langflow.services.database.models import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
 from lfx.interface.components import component_cache
+from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
 
 
 class FakeResult:
@@ -436,7 +438,14 @@ def _build_fake_server() -> SimpleNamespace:
     )
 
 
-async def _invoke_handle_call_tool(monkeypatch, arguments: dict, *, authenticated_caller="user-1") -> AsyncMock:
+async def _invoke_handle_call_tool(
+    monkeypatch,
+    arguments: dict,
+    *,
+    authenticated_caller="user-1",
+    project_id=None,
+    flow_data=None,
+) -> AsyncMock:
     """Run handle_call_tool with all external deps stubbed; return the simple_run_flow mock.
 
     ``authenticated_caller`` is the principal that presented a credential, which the auth
@@ -448,13 +457,21 @@ async def _invoke_handle_call_tool(monkeypatch, arguments: dict, *, authenticate
     # owner-override path in ``ensure_flow_permission`` is exercised; ``workspace_id``
     # is read by the same guard. ``data`` feeds the HITL support gate.
     flow = SimpleNamespace(
-        id="flow-id-1",
+        id=uuid4(),
         name="my_flow",
-        folder_id=None,
+        folder_id=project_id,
         user_id="user-1",
         workspace_id=None,
-        data={"nodes": [], "edges": []},
+        data=flow_data or {"nodes": [], "edges": []},
     )
+
+    def model_copy(*, update, deep):
+        assert deep is True
+        copied = vars(flow).copy()
+        copied.update(update)
+        return SimpleNamespace(**copied)
+
+    flow.model_copy = model_copy
 
     async def fake_get_flow_snake_case(*_args, **_kwargs):
         return flow
@@ -475,12 +492,64 @@ async def _invoke_handle_call_tool(monkeypatch, arguments: dict, *, authenticate
             name="my_flow",
             arguments=arguments,
             server=_build_fake_server(),
+            project_id=project_id,
         )
     finally:
         mcp_utils.authenticated_caller_ctx.reset(caller_token)
         mcp_utils.current_user_ctx.reset(token)
 
     return simple_run_flow_mock
+
+
+@pytest.mark.asyncio
+async def test_handle_call_tool_applies_public_policy_and_scopes_session(monkeypatch):
+    project_id = uuid4()
+    prepared_data = {"nodes": [{"prepared": True}], "edges": []}
+    sanitized_data = {"nodes": [{"sanitized": True}], "edges": []}
+    validate = MagicMock()
+    prepare = AsyncMock(return_value=prepared_data)
+    strip = MagicMock(return_value=sanitized_data)
+    monkeypatch.setattr(mcp_utils, "validate_public_flow_no_code_execution", validate)
+    monkeypatch.setattr(mcp_utils, "prepare_public_flow_build", prepare)
+    monkeypatch.setattr(mcp_utils, "strip_secret_field_values", strip)
+
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello", "session_id": "owner-private"},
+        authenticated_caller=None,
+        project_id=project_id,
+    )
+
+    validate.assert_called_once()
+    prepare.assert_awaited_once()
+    strip.assert_called_once_with(prepared_data)
+    forwarded_flow = simple_run_flow_mock.await_args.kwargs["flow"]
+    forwarded_request = simple_run_flow_mock.await_args.kwargs["input_request"]
+    forwarded_user = simple_run_flow_mock.await_args.kwargs["api_key_user"]
+    assert forwarded_flow.data == sanitized_data
+    assert forwarded_request.session_id != "owner-private"
+    assert forwarded_request.session_id.endswith(":owner-private")
+    assert forwarded_user.id == PUBLIC_ANONYMOUS_ACTOR_ID
+    assert forwarded_user.is_superuser is False
+
+
+@pytest.mark.asyncio
+async def test_handle_call_tool_preserves_authenticated_mcp_session(monkeypatch):
+    prepare = AsyncMock()
+    monkeypatch.setattr(mcp_utils, "prepare_public_flow_build", prepare)
+
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello", "session_id": "user-thread"},
+        authenticated_caller="user-1",
+        project_id=uuid4(),
+    )
+
+    prepare.assert_not_awaited()
+    forwarded_request = simple_run_flow_mock.await_args.kwargs["input_request"]
+    forwarded_user = simple_run_flow_mock.await_args.kwargs["api_key_user"]
+    assert forwarded_request.session_id == "user-thread"
+    assert forwarded_user.id == "user-1"
 
 
 @pytest.mark.asyncio
