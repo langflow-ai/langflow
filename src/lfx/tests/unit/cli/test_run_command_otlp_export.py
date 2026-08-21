@@ -27,8 +27,11 @@ from pathlib import Path
 import pytest
 
 # opentelemetry is an optional lfx extra (``lfx[otel]``); skip rather than error on an install
-# that did not opt in, matching the sibling probes.
-pytest.importorskip("opentelemetry")
+# that did not opt in, matching the sibling probes. Probed through the OTLP/HTTP trace exporter
+# rather than the bare ``opentelemetry`` namespace, which opentelemetry-api alone satisfies: this
+# file needs the exporter the command installs in the subprocess and the proto module the
+# collector decodes with, and the exporter import brings both (plus the SDK) or fails.
+pytest.importorskip("opentelemetry.exporter.otlp.proto.http.trace_exporter")
 from lfx.observability import APPLICATION_TRACER_NAME
 from opentelemetry.proto.collector.trace.v1.trace_service_pb2 import ExportTraceServiceRequest
 

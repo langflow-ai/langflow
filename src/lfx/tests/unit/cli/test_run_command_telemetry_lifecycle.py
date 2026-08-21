@@ -5,7 +5,9 @@ one pins the ordering cheaply, in-process and without OpenTelemetry installed: t
 must be bootstrapped before the run (a span created earlier lands on the no-op proxy provider
 and is gone), the protocol must be bound while the run executes, and the flush must happen
 after the run ends, on every exit path. A flush that only ran on success would lose exactly the
-span an operator most needs, the ``status=error`` one from the cron job that broke.
+span an operator most needs, the ``status=error`` one from the cron job that broke. The result is
+echoed before the flush, so a consumer reading stdout is never held behind the export; that is
+asserted as an ordering too, since a stdout check after the fact cannot tell the two apart.
 """
 
 from pathlib import Path
@@ -27,14 +29,21 @@ class _RecordingTelemetry:
 
 @pytest.fixture
 def events(monkeypatch):
-    """Record the order of bootstrap, run, and shutdown; ``run_flow`` itself is stubbed."""
+    """Record the order of bootstrap, run, echo, and shutdown; ``run_flow`` itself is stubbed."""
     recorded: list[str] = []
 
     def fake_bootstrap(**_kwargs):
         recorded.append("bootstrap")
         return _RecordingTelemetry(recorded)
 
+    original_echo = typer.echo
+
+    def recording_echo(*args, **kwargs):
+        recorded.append("echo")
+        return original_echo(*args, **kwargs)
+
     monkeypatch.setattr("lfx.cli.run.bootstrap_application_telemetry", fake_bootstrap)
+    monkeypatch.setattr("lfx.cli.run.typer.echo", recording_echo)
     return recorded
 
 
@@ -58,9 +67,9 @@ def test_bootstrap_precedes_the_run_and_shutdown_follows_it(events, monkeypatch,
 
     _invoke()
 
-    assert events == ["bootstrap", "run_flow protocol=lfx.run", "shutdown"]
-    # The result is written before the flush, so a consumer reading stdout is never held
-    # behind the export.
+    # The result is echoed before the flush, so a consumer reading stdout is never held behind
+    # the export.
+    assert events == ["bootstrap", "run_flow protocol=lfx.run", "echo", "shutdown"]
     assert '"success": true' in capsys.readouterr().out
 
 
@@ -76,7 +85,8 @@ def test_a_failed_run_still_flushes(events, monkeypatch):
         _invoke()
 
     assert exc_info.value.exit_code == 1
-    assert events == ["bootstrap", "run_flow", "shutdown"]
+    # The error JSON, too, is out before the flush.
+    assert events == ["bootstrap", "run_flow", "echo", "shutdown"]
 
 
 def test_an_unexpected_exception_still_flushes(events, monkeypatch):
@@ -92,4 +102,6 @@ def test_an_unexpected_exception_still_flushes(events, monkeypatch):
     with pytest.raises(RuntimeError):
         _invoke()
 
+    # Nothing is echoed for an exception the command does not know how to report; the flush
+    # still runs.
     assert events == ["bootstrap", "run_flow", "shutdown"]
