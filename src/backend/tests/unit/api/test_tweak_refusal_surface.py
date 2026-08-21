@@ -7,6 +7,9 @@ the refused keys. Each route therefore has to let ``TweakRefusedError`` through
 on purpose, and that is easy to drop when a handler is next edited.
 """
 
+from unittest.mock import patch
+
+import pytest
 from fastapi import status
 
 
@@ -66,3 +69,33 @@ async def test_refused_tweak_returns_422_on_the_v1_advanced_run(client, simple_a
     detail = response.json()["detail"]
     assert detail["code"] == "TWEAKS_REFUSED"
     assert detail["fields"] == ["code"]
+
+
+async def test_off_does_not_break_a_flow_called_as_a_tool(simple_api_test, active_user):
+    """``off`` closes the API surface, it must not stop agents calling flows as tools.
+
+    An agent invoking a flow as a tool reaches the runtime through the generated
+    ``flow_function``, which builds tweaks from the tool's own declared arguments
+    and hands them to ``load_flow``. ``RunFlowBaseComponent`` escapes this path by
+    passing a prebuilt graph, so the graph-path exemption alone does not cover it.
+    """
+    from types import SimpleNamespace
+
+    from langflow.helpers.flow import _build_graph_from_authorized_flow
+    from lfx.exceptions.tweaks import TweakRefusedError
+
+    flow_data = simple_api_test["data"]
+    node_id = next(n["id"] for n in flow_data["nodes"] if n["id"].startswith(("ChatInput", "TextInput")))
+    flow = SimpleNamespace(data=flow_data)
+
+    with patch("lfx.processing.process._resolve_tweak_policy", return_value="off"):
+        try:
+            await _build_graph_from_authorized_flow(
+                caller=active_user,
+                flow=flow,
+                flow_id=simple_api_test["id"],
+                user_id=str(active_user.id),
+                tweaks={node_id: {"input_value": "from the agent"}},
+            )
+        except TweakRefusedError as exc:
+            pytest.fail(f"off refused a tool-supplied tweak: {exc.refused}")
