@@ -39,13 +39,11 @@ export function isSavedModelUnavailable({
   enabledModels,
   modelStatusIsReliable,
 }: SavedModelAvailabilityParams): boolean {
-  if (
-    !modelStatusIsReliable ||
-    !providers ||
-    providers.length === 0 ||
-    enabledModels === undefined
-  ) {
+  if (!modelStatusIsReliable || !providers || enabledModels === undefined) {
     // Nothing can be judged unavailable until both server views have loaded.
+    // A settled, empty provider list is a verdict, not a gap: no provider is
+    // offered to this user at all, so a saved one is unavailable like any
+    // other missing provider.
     return false;
   }
   const saved = recoverModelOption(savedValue);

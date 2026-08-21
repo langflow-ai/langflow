@@ -179,6 +179,20 @@ const mockProviderRevoked = () => {
   });
 };
 
+/** Nothing is offered to this user at all (an Enterprise install that starts closed). */
+const mockNoProvidersOffered = () => {
+  (useGetModelProviders as jest.Mock).mockReturnValue({
+    data: [],
+    isLoading: false,
+    isFetching: false,
+  });
+  (useGetEnabledModels as jest.Mock).mockReturnValue({
+    data: { enabled_models: {} },
+    isLoading: false,
+    isFetching: false,
+  });
+};
+
 describe("ModelInputComponent — saved model restricted after selection (LE-1960)", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -187,6 +201,7 @@ describe("ModelInputComponent — saved model restricted after selection (LE-196
   it.each([
     ["the model was hidden by policy", mockModelHiddenByPolicy],
     ["the provider was revoked", mockProviderRevoked],
+    ["no provider is offered at all", mockNoProvidersOffered],
   ])(
     "keeps naming the saved model, flags it as not available, and never swaps the value when %s",
     (_case, arrange) => {
@@ -211,10 +226,13 @@ describe("ModelInputComponent — saved model restricted after selection (LE-196
         "title",
         expect.stringContaining("restricted by an administrator"),
       );
-      // The configure wrench belongs to "not enabled locally", not to this.
+      // The configure wrench belongs to "not enabled locally", not to this,
+      // and the setup-provider call to action must not replace the field.
       expect(
         screen.queryByTestId(`${baseProps.id}-configure`),
       ).not.toBeInTheDocument();
+      expect(screen.queryByText("Setup Provider")).not.toBeInTheDocument();
+      expect(screen.getByRole("combobox")).toBeInTheDocument();
       // The saved value is kept so lifting the restriction restores it.
       expect(handleOnNewValue).not.toHaveBeenCalled();
     },

@@ -53,6 +53,12 @@ describe("isSavedModelUnavailable", () => {
     expect(isSavedModelUnavailable({ ...base, providers: [openai] })).toBe(
       true,
     );
+    // ...including when no provider is offered to this user at all (an
+    // Enterprise install that starts closed): a settled empty list is a
+    // verdict, not a still-loading gap.
+    expect(
+      isSavedModelUnavailable({ ...base, providers: [], enabledModels: {} }),
+    ).toBe(true);
   });
 
   it("is true when a configured provider stopped listing the model and the user's settings never heard of it", () => {
@@ -89,7 +95,7 @@ describe("isSavedModelUnavailable", () => {
     ).toBe(false);
   });
 
-  it("cannot judge a legacy name-only value, an empty provider list, or a missing enabled-models map", () => {
+  it("cannot judge a legacy name-only value or a missing enabled-models map", () => {
     expect(
       isSavedModelUnavailable({
         ...base,
@@ -97,7 +103,6 @@ describe("isSavedModelUnavailable", () => {
         providers: [openai],
       }),
     ).toBe(false);
-    expect(isSavedModelUnavailable({ ...base, providers: [] })).toBe(false);
     expect(
       isSavedModelUnavailable({
         ...base,

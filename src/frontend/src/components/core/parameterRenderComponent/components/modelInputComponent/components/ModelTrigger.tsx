@@ -69,7 +69,12 @@ const ModelTrigger = ({
   // administrator or removed from the catalog). Keep naming it, but say so.
   const isUnavailable = selectedModel?.metadata?.unavailable === true;
 
+  // A selected-but-unavailable model outranks the setup-provider call to
+  // action: replacing it with "Setup Provider" would hide both the saved
+  // selection and the reason it cannot be used (the footer still offers
+  // provider management).
   if (
+    !isUnavailable &&
     isSetupProviderState({
       hasEnabledProviders,
       showEmptyState,
