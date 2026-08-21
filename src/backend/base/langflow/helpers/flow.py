@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import keyword
+import re
 from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
@@ -33,6 +35,25 @@ SORT_DISPATCHER = {
     "asc": asc,
     "desc": desc,
 }
+
+
+def _safe_function_argument_names(inputs: list[Vertex]) -> list[str]:
+    """Return unique Python identifiers for flow-tool input arguments."""
+    names: list[str] = []
+    used: set[str] = set()
+    for index, input_ in enumerate(inputs, start=1):
+        base = re.sub(r"\W", "_", input_.display_name.lower())
+        if not base or not base.isidentifier() or keyword.iskeyword(base):
+            base = f"input_{index}"
+
+        name = base
+        suffix = 2
+        while name in used:
+            name = f"{base}_{suffix}"
+            suffix += 1
+        names.append(name)
+        used.add(name)
+    return names
 
 
 async def list_flows(*, user_id: str | None = None) -> list[Data]:
@@ -363,12 +384,10 @@ def generate_function_for_flow(
         result = function(input1, input2)
     """
     # Prepare function arguments with type hints and default values
+    safe_arg_names = _safe_function_argument_names(inputs)
     args = [
-        (
-            f"{input_.display_name.lower().replace(' ', '_')}: {INPUT_TYPE_MAP[input_.base_name]['type_hint']} = "
-            f"{INPUT_TYPE_MAP[input_.base_name]['default']}"
-        )
-        for input_ in inputs
+        (f"{arg_name}: {INPUT_TYPE_MAP[input_.base_name]['type_hint']} = {INPUT_TYPE_MAP[input_.base_name]['default']}")
+        for input_, arg_name in zip(inputs, safe_arg_names, strict=True)
     ]
 
     # Maintain original argument names for constructing the tweaks dictionary
@@ -379,8 +398,7 @@ def generate_function_for_flow(
 
     # Map original argument names to their corresponding Pythonic variable names in the function
     arg_mappings = ", ".join(
-        f'"{original_name}": {name}'
-        for original_name, name in zip(original_arg_names, [arg.split(":")[0] for arg in args], strict=True)
+        f"{original_name!r}: {name}" for original_name, name in zip(original_arg_names, safe_arg_names, strict=True)
     )
 
     func_body = f"""
@@ -393,8 +411,8 @@ async def flow_function({func_args}):
     try:
         run_outputs = await run_flow(
             tweaks={{key: {{'input_value': value}} for key, value in tweaks.items()}},
-            flow_id="{flow_id}",
-            user_id="{user_id}"
+            flow_id={flow_id!r},
+            user_id={str(user_id)!r}
         )
         if not run_outputs:
                 return []

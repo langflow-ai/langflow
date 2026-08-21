@@ -51,6 +51,8 @@ DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
 
 # Dangerous attribute calls: (module, method, violation_message)
 DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
+    ("asyncio", "create_subprocess_exec", "asyncio.create_subprocess_exec() is forbidden"),
+    ("asyncio", "create_subprocess_shell", "asyncio.create_subprocess_shell() is forbidden"),
     ("os", "system", "os.system() is forbidden — use Langflow's built-in integrations"),
     ("os", "popen", "os.popen() is forbidden"),
     ("os", "execl", "os.execl() is forbidden"),
@@ -97,6 +99,10 @@ DANGEROUS_IMPORTS: set[str] = {
     "codeop",
     "compileall",
     "importlib",
+    # Direct process-spawning modules. ``asyncio`` itself remains allowed, but
+    # its subprocess entry points are blocked in DANGEROUS_ATTR_CALLS above.
+    "multiprocessing",
+    "posix",
     # Network / IPC primitives — same attack class as subprocess (reverse
     # shells, raw exfil, SSRF, non-HTTP protocol egress). High-level HTTP via
     # ``requests``/``httpx`` stays allowed by design (legit API components need
@@ -170,6 +176,18 @@ def _dotted_parts(node: ast.AST) -> list[str] | None:
     if isinstance(node, ast.Name):
         parts.append(node.id)
         return list(reversed(parts))
+    return None
+
+
+def _static_string_value(node: ast.AST) -> str | None:
+    """Resolve a literal string assembled with ``+`` without executing code."""
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left = _static_string_value(node.left)
+        right = _static_string_value(node.right)
+        if left is not None and right is not None:
+            return left + right
     return None
 
 
@@ -286,9 +304,9 @@ class _SecurityChecker(ast.NodeVisitor):
                 attr_node = node.args[1]
             except IndexError:
                 return frozenset()
-            if isinstance(attr_node, ast.Constant) and isinstance(attr_node.value, str):
+            if (attr_name := _static_string_value(attr_node)) is not None:
                 return frozenset(
-                    f"{base_name}.{attr_node.value}" for base_name in self._resolved_assignment_value(node.args[0])
+                    f"{base_name}.{attr_name}" for base_name in self._resolved_assignment_value(node.args[0])
                 )
         parts = _dotted_parts(node)
         if not parts:
@@ -988,23 +1006,27 @@ class _SecurityChecker(ast.NodeVisitor):
         else:
             function_names = frozenset()
 
-        if not (
-            {"getattr", "builtins.getattr"} & function_names
-            and node.args
-            and isinstance(node.args[0], (ast.Name, ast.Attribute))
-        ):
+        if not ({"getattr", "builtins.getattr"} & function_names and node.args):
             return False
-
-        module_names = self._resolved_receiver_names(node.args[0])
-        for receiver_name in module_names:
-            if violation := self._dangerous_callable_message(receiver_name):
-                self.violations.append(violation)
-                return True
         try:
             attr_node = node.args[1]
         except IndexError:
             return False
-        if not (isinstance(attr_node, ast.Constant) and isinstance(attr_node.value, str)):
+        attr_name = _static_string_value(attr_node)
+        if attr_name in DANGEROUS_DUNDER_ATTRS:
+            self.violations.append(f"Access to '{attr_name}' is forbidden in components (sandbox escape)")
+            return True
+
+        receiver = node.args[0]
+        if not isinstance(receiver, (ast.Name, ast.Attribute)):
+            return False
+
+        module_names = self._resolved_receiver_names(receiver)
+        for receiver_name in module_names:
+            if violation := self._dangerous_callable_message(receiver_name):
+                self.violations.append(violation)
+                return True
+        if attr_name is None:
             dangerous_modules = sorted(
                 module_name for module_name in module_names if module_name in _RESTRICTED_MODULE_REFERENCES
             )
@@ -1014,7 +1036,6 @@ class _SecurityChecker(ast.NodeVisitor):
                 )
             return True
 
-        attr_name = attr_node.value
         if any(module_name in {"builtins", "__builtins__"} for module_name in module_names) and (
             violation := DANGEROUS_CALLS.get(attr_name)
         ):
