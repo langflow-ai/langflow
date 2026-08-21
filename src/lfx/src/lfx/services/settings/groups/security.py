@@ -262,7 +262,20 @@ class SecuritySettings(BaseModel):
 
     Refused tweaks return 422 naming the refused keys in every mode. They previously
     logged a warning and returned 200, which left a caller unable to tell a refused
-    tweak from an applied one."""
+    tweak from an applied one.
+
+    This setting governs what a *caller* may override. ``tweaks`` is also the internal
+    mechanism for passing values into a sub-flow, so tweaks the runtime generates for
+    itself (the Run Flow component feeding its declared inputs to a sub-flow, resolved
+    global-variable values) are not judged by it. Otherwise ``off`` would stop the Run
+    Flow component and every flow used as an agent tool, which is not what closing an
+    API surface should mean. The protected-field floor still applies to those.
+
+    MCP is the exception, and deliberately so. An MCP client calling a flow as a tool
+    is an external caller, so its inputs travel the caller-facing run API and this
+    setting judges them. Under ``off`` an MCP tool call cannot pass inputs at all,
+    because inputs are the only thing it sends. Leave the deployment on ``permissive``
+    or ``declared`` if MCP tool calls have to keep working."""
     # Serving-plane end-user identity
     serving_end_user_header: str | None = None
     """Name of the trusted request header that carries the end-user identity on the serving plane
