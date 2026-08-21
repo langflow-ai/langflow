@@ -363,6 +363,27 @@ class MCPToolsComponent(ComponentWithCache):
         else:
             return schema_inputs
 
+    async def _ensure_cached_mcp_stdio_access(self, server_config: dict) -> None:
+        """Reapply the current stdio policy before returning cached tools."""
+        try:
+            from langflow.api.v2.mcp import ensure_mcp_stdio_access
+            from langflow.services.database.models.user.crud import get_user_by_id
+
+            from lfx.services.deps import get_settings_service
+        except ModuleNotFoundError as e:
+            missing_module = e.name or ""
+            if missing_module != "langflow" and not missing_module.startswith("langflow."):
+                raise
+            return
+
+        async with session_scope() as db:
+            if not self.user_id:
+                msg = "User ID is required for fetching MCP tools."
+                raise ValueError(msg)
+            current_user = await get_user_by_id(db, self.user_id)
+
+        ensure_mcp_stdio_access(server_config, current_user, get_settings_service().settings)
+
     async def update_tool_list(self, mcp_server_value=None):
         # Accepts mcp_server_value as dict {name, config} or uses self.mcp_server
         mcp_server = mcp_server_value if mcp_server_value is not None else getattr(self, "mcp_server", None)
@@ -416,15 +437,22 @@ class MCPToolsComponent(ComponentWithCache):
                         current_servers_cache.pop(servers_cache_key)
                         safe_cache_set(self._shared_component_cache, "servers", current_servers_cache)
                 else:
-                    self.tools = tools_from_cache
-                    self.tool_names = [t.name for t in self.tools if hasattr(t, "name")]
-                    self._tool_cache = cached["tool_cache"]
-                    await logger.adebug(
-                        "MCP update_tool_list: shared_servers_cache HIT count=%d server=%r",
-                        len(self.tools),
-                        server_name,
-                    )
-                    return self.tools, {"name": server_name, "config": server_config_from_value}
+                    try:
+                        await self._ensure_cached_mcp_stdio_access(server_config_from_value)
+                    except Exception as e:
+                        msg = f"Error updating tool list: {e!s}"
+                        await logger.aexception(msg)
+                        raise ValueError(msg) from e
+                    else:
+                        self.tools = tools_from_cache
+                        self.tool_names = [t.name for t in self.tools if hasattr(t, "name")]
+                        self._tool_cache = cached["tool_cache"]
+                        await logger.adebug(
+                            "MCP update_tool_list: shared_servers_cache HIT count=%d server=%r",
+                            len(self.tools),
+                            server_name,
+                        )
+                        return self.tools, {"name": server_name, "config": server_config_from_value}
 
             try:
                 # Try to fetch from database first to ensure we have the latest config.
@@ -433,8 +461,11 @@ class MCPToolsComponent(ComponentWithCache):
                 # database may not be available — in that case we skip the DB lookup
                 # and fall back to the config embedded in the flow (server_config_from_value).
                 server_config_from_db = None
+                current_user = None
+                settings_service = None
+                ensure_mcp_stdio_access = None
                 try:
-                    from langflow.api.v2.mcp import get_server
+                    from langflow.api.v2.mcp import ensure_mcp_stdio_access, get_server
                     from langflow.services.database.models.user.crud import get_user_by_id
 
                     from lfx.services.deps import get_settings_service
@@ -464,6 +495,7 @@ class MCPToolsComponent(ComponentWithCache):
                             msg = "User ID is required for fetching MCP tools."
                             raise ValueError(msg)
                         current_user = await get_user_by_id(db, self.user_id)
+                        settings_service = get_settings_service()
 
                         # Try to get server config from DB/API
                         server_config_from_db = await get_server(
@@ -471,7 +503,7 @@ class MCPToolsComponent(ComponentWithCache):
                             current_user,
                             db,
                             storage_service=get_storage_service(),
-                            settings_service=get_settings_service(),
+                            settings_service=settings_service,
                         )
 
                 # Resolve config with proper precedence: DB takes priority, falls back to value
@@ -488,6 +520,13 @@ class MCPToolsComponent(ComponentWithCache):
                         server_name,
                     )
                     return [], {"name": server_name, "config": server_config}
+
+                # The REST API applies this policy when a stdio server is registered,
+                # but imported flows can carry the same process-spawning config in the
+                # MCP component value. Reapply the policy to the resolved config at the
+                # component boundary before update_tools reaches the subprocess client.
+                if ensure_mcp_stdio_access is not None and current_user is not None and settings_service is not None:
+                    ensure_mcp_stdio_access(server_config, current_user, settings_service.settings)
 
                 # Add verify_ssl option to server config if not present
                 if "verify_ssl" not in server_config:
