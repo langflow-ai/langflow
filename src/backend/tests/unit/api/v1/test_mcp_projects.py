@@ -1040,8 +1040,8 @@ async def test_v2_mcp_servers_locked_allows_superuser_add_patch_delete(
 
 @pytest.mark.usefixtures("active_user")
 @pytest.mark.parametrize(
-    ("allow_custom_components", "custom_component_admin_only"),
-    [(False, False), (True, True)],
+    ("allow_custom_components", "custom_component_admin_only", "block_code_interpreter_components"),
+    [(False, False, False), (True, True, False), (True, False, True)],
 )
 async def test_v2_mcp_stdio_registration_follows_code_execution_lockdown(
     client: AsyncClient,
@@ -1049,12 +1049,14 @@ async def test_v2_mcp_stdio_registration_follows_code_execution_lockdown(
     monkeypatch,
     allow_custom_components,
     custom_component_admin_only,
+    block_code_interpreter_components,
 ):
     """A non-superuser cannot register a process-spawning MCP server under code-exec lockdown."""
     settings = get_settings_service().settings
     monkeypatch.setattr(settings, "mcp_servers_locked", False)
     monkeypatch.setattr(settings, "allow_custom_components", allow_custom_components)
     monkeypatch.setattr(settings, "custom_component_admin_only", custom_component_admin_only)
+    monkeypatch.setattr(settings, "block_code_interpreter_components", block_code_interpreter_components)
 
     stdio_name = f"lf-lockdown-stdio-{uuid4().hex[:8]}"
     response = await client.post(
