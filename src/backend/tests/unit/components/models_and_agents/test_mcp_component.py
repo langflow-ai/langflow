@@ -735,6 +735,48 @@ class TestMCPComponentConfigPriority:
             mock_connect.assert_not_called()
 
     @pytest.mark.asyncio
+    async def test_cached_stdio_config_rechecks_code_execution_lockdown(self, component, monkeypatch):
+        """A cached stdio tool list must not outlive a newly enabled lockdown."""
+        server_name = "embedded_stdio"
+        server_config = {"command": "uvx", "args": ["mcp-server-fetch"]}
+        cached_tool = SimpleNamespace(name="cached-tool")
+        component.mcp_server = {"name": server_name, "config": server_config}
+        component._user_id = "test_user_123"
+        component.use_cache = True
+
+        cache_key = component._mcp_servers_cache_key(server_name)
+        servers_cache = {
+            cache_key: {
+                "tools": [cached_tool],
+                "tool_cache": {"cached-tool": cached_tool},
+                "config": server_config,
+            }
+        }
+        monkeypatch.setattr(
+            "lfx.components.models_and_agents.mcp_component.safe_cache_get",
+            lambda _cache, key, default=None: servers_cache if key == "servers" else default,
+        )
+
+        settings = get_settings_service().settings
+        monkeypatch.setattr(settings, "allow_custom_components", True)
+        monkeypatch.setattr(settings, "custom_component_admin_only", True)
+        monkeypatch.setattr(settings, "block_code_interpreter_components", False)
+
+        with (
+            patch("langflow.api.v2.mcp.get_server") as mock_get_server,
+            patch("langflow.services.database.models.user.crud.get_user_by_id") as mock_get_user,
+            patch("lfx.components.models_and_agents.mcp_component.session_scope"),
+            patch.object(component.stdio_client, "connect_to_server") as mock_connect,
+        ):
+            mock_get_user.return_value = SimpleNamespace(id="test_user_123", is_superuser=False)
+
+            with pytest.raises(ValueError, match="restricted to administrators"):
+                await component.update_tool_list()
+
+            mock_get_server.assert_not_called()
+            mock_connect.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_unsafe_value_config_is_rejected_when_not_in_database(self, component):
         """An embedded fallback must be rejected before the stdio client is used."""
         component.mcp_server = {
