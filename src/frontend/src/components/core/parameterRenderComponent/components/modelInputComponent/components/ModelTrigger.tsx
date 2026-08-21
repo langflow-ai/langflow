@@ -65,6 +65,9 @@ const ModelTrigger = ({
 
   // Check if we're in empty state mode (showEmptyState=true and no options)
   const isEmptyStateMode = showEmptyState && options.length === 0;
+  // The saved model is no longer offered to this user (restricted by an
+  // administrator or removed from the catalog). Keep naming it, but say so.
+  const isUnavailable = selectedModel?.metadata?.unavailable === true;
 
   if (
     isSetupProviderState({
@@ -157,6 +160,20 @@ const ModelTrigger = ({
                 </div>
               )}
             </span>
+            {!disabled && isUnavailable ? (
+              <span
+                data-testid={`${id}-unavailable`}
+                title={t("model.unavailableTitle")}
+                aria-label={t("model.unavailableTitle")}
+                className="inline-flex shrink-0 items-center gap-1 text-[11px] text-accent-amber-foreground"
+              >
+                <ForwardedIconComponent
+                  name="TriangleAlert"
+                  className="h-3.5 w-3.5"
+                />
+                {t("model.unavailable")}
+              </span>
+            ) : null}
           </span>
           <ForwardedIconComponent
             name={disabled ? "Lock" : "ChevronsUpDown"}
