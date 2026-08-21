@@ -22,6 +22,17 @@
   height: 3rem !important;
 }
 
+/* WCAG 2.5.8 — AG-Grid renders the paging buttons as 16x16 icon boxes, too
+   close to the grid's last row for the spacing exception to apply. Grow the
+   hit area to the 24x24 minimum and keep the icon centered. */
+.ag-theme-shadcn .ag-paging-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
+}
+
 .ag-row .ag-cell {
   align-content: center !important;
 }

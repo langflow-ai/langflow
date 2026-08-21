@@ -236,16 +236,21 @@ export default function TextAreaComponent({
             onClick={() => changeWebhookFormat("multiline")}
             aria-label={t("input.expandTextEditor")}
             className={cn(
-              // `before:` pseudo-element pads the touch target out to the
-              // WCAG 2.5.8 minimum (24x24) without resizing the visible
-              // icon or shifting its position. The button is already
-              // `position: absolute` (via externalLinkIconClasses.icon),
-              // which is enough to anchor the pseudo-element.
-              "flex items-center justify-center before:absolute before:-inset-1 before:content-['']",
+              "flex items-center justify-center",
               externalLinkIconClasses.icon,
               editNode
-                ? externalLinkIconClasses.editNodeTop
-                : externalLinkIconClasses.iconTop,
+                ? // `before:` pseudo-element pads the touch target out to the
+                  // WCAG 2.5.8 minimum (24x24) without resizing the compact
+                  // edit-node layout; the button is `position: absolute` (via
+                  // externalLinkIconClasses.icon), which anchors the pseudo.
+                  cn(
+                    externalLinkIconClasses.editNodeTop,
+                    "before:absolute before:-inset-1 before:content-['']",
+                  )
+                : // Real 24x24 box (WCAG 2.5.8) — rect-based checkers don't
+                  // count pseudo-element hit areas. The offsets keep the 16px
+                  // icon exactly where the old right-3/top-[-1.7rem] box put it.
+                  "right-2 top-[-1.95rem] h-6 w-6",
             )}
           >
             {renderIcon()}

@@ -135,7 +135,9 @@ export default function McpClientPage() {
         <div
           role="tablist"
           aria-label={t("settings.mcpClient.agentTablistLabel")}
-          className="flex flex-row justify-start border-b border-border"
+          // flex-wrap: tab labels are text-nowrap, so at a 320px viewport the
+          // last tab would clip off-screen instead of wrapping (WCAG 1.4.10).
+          className="flex flex-row flex-wrap justify-start border-b border-border"
         >
           {agents.map((agent, index) => {
             const isSelected = selectedAgent === agent.id;
