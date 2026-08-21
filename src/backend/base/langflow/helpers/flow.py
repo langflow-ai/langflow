@@ -43,7 +43,7 @@ def _safe_function_argument_names(inputs: list[Vertex]) -> list[str]:
     used: set[str] = set()
     for index, input_ in enumerate(inputs, start=1):
         base = re.sub(r"\W", "_", input_.display_name.lower())
-        if not base or not base.isidentifier() or keyword.iskeyword(base):
+        if not base or not base.isidentifier() or keyword.iskeyword(base) or base == "__debug__":
             base = f"input_{index}"
 
         name = base
@@ -390,16 +390,14 @@ def generate_function_for_flow(
         for input_, arg_name in zip(inputs, safe_arg_names, strict=True)
     ]
 
-    # Maintain original argument names for constructing the tweaks dictionary
-    original_arg_names = [input_.display_name for input_ in inputs]
+    # Use vertex IDs for tweaks so duplicate display names remain independently addressable.
+    input_ids = [str(input_.id) for input_ in inputs]
 
     # Prepare a Pythonic, valid function argument string
     func_args = ", ".join(args)
 
-    # Map original argument names to their corresponding Pythonic variable names in the function
-    arg_mappings = ", ".join(
-        f"{original_name!r}: {name}" for original_name, name in zip(original_arg_names, safe_arg_names, strict=True)
-    )
+    # Map input vertex IDs to their corresponding Pythonic variable names in the function.
+    arg_mappings = ", ".join(f"{input_id!r}: {name}" for input_id, name in zip(input_ids, safe_arg_names, strict=True))
 
     func_body = f"""
 from typing import Optional
@@ -479,8 +477,8 @@ def build_schema_from_inputs(name: str, inputs: list[Vertex]) -> type[BaseModel]
 
     """
     fields = {}
-    for input_ in inputs:
-        field_name = input_.display_name.lower().replace(" ", "_")
+    safe_arg_names = _safe_function_argument_names(inputs)
+    for input_, field_name in zip(inputs, safe_arg_names, strict=True):
         description = input_.description
         fields[field_name] = (str, Field(default="", description=description))
     return create_model(name, **fields)
@@ -496,9 +494,10 @@ def get_arg_names(inputs: list[Vertex]) -> list[dict[str, str]]:
         List[dict[str, str]]: A list of dictionaries, where each dictionary contains the component name and its
             argument name.
     """
+    safe_arg_names = _safe_function_argument_names(inputs)
     return [
-        {"component_name": input_.display_name, "arg_name": input_.display_name.lower().replace(" ", "_")}
-        for input_ in inputs
+        {"component_name": str(input_.id), "arg_name": arg_name}
+        for input_, arg_name in zip(inputs, safe_arg_names, strict=True)
     ]
 
 
