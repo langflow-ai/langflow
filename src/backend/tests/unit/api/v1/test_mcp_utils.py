@@ -438,6 +438,22 @@ def _build_fake_server() -> SimpleNamespace:
     )
 
 
+def test_public_mcp_session_namespace_is_stable_and_isolated():
+    """Namespaces are stable per connection and isolated by connection, project, and flow."""
+    project_id = uuid4()
+    flow_id = uuid4()
+    server = SimpleNamespace(request_context=SimpleNamespace(session=SimpleNamespace(session_id="connection-a")))
+
+    namespace = mcp_utils._public_mcp_session_namespace(server, project_id, flow_id)
+
+    assert mcp_utils._public_mcp_session_namespace(server, project_id, flow_id) == namespace
+    assert mcp_utils._public_mcp_session_namespace(server, uuid4(), flow_id) != namespace
+    assert mcp_utils._public_mcp_session_namespace(server, project_id, uuid4()) != namespace
+
+    other_server = SimpleNamespace(request_context=SimpleNamespace(session=SimpleNamespace(session_id="connection-b")))
+    assert mcp_utils._public_mcp_session_namespace(other_server, project_id, flow_id) != namespace
+
+
 async def _invoke_handle_call_tool(
     monkeypatch,
     arguments: dict,
