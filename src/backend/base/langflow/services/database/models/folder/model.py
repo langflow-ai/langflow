@@ -1,7 +1,7 @@
 from typing import Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import Text, UniqueConstraint
+from sqlalchemy import Text, UniqueConstraint, text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.services.database.models.deployment.model import Deployment
@@ -16,6 +16,20 @@ class FolderBase(SQLModel):
         default=None,
         sa_column=Column(JSON, nullable=True),
         description="Authentication settings for the folder/project",
+    )
+    project_type: str = Field(
+        default="flows",
+        sa_column=Column(Text, nullable=False, server_default=text("'flows'")),
+        description=(
+            "Which project type this folder is. Per row: a child folder does not inherit its "
+            "parent's type. Stored as text rather than a DB enum so registering a new project "
+            "type never needs an ALTER TYPE migration."
+        ),
+    )
+    project_config: dict | None = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+        description="Values for the project type's form fields. Not encrypted; must hold no secrets.",
     )
 
 
@@ -69,3 +83,7 @@ class FolderUpdate(SQLModel):
     components: list[UUID] = Field(default_factory=list)
     flows: list[UUID] = Field(default_factory=list)
     auth_settings: dict | None = None
+    # FolderUpdate subclasses SQLModel, not FolderBase, so new FolderBase fields do not
+    # reach it. Adding them here is required for PATCH and for the PUT upsert body.
+    project_type: str | None = None
+    project_config: dict | None = None
