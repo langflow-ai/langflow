@@ -53,6 +53,8 @@ DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
 DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     ("asyncio", "create_subprocess_exec", "asyncio.create_subprocess_exec() is forbidden"),
     ("asyncio", "create_subprocess_shell", "asyncio.create_subprocess_shell() is forbidden"),
+    ("asyncio.subprocess", "create_subprocess_exec", "asyncio.subprocess.create_subprocess_exec() is forbidden"),
+    ("asyncio.subprocess", "create_subprocess_shell", "asyncio.subprocess.create_subprocess_shell() is forbidden"),
     ("os", "system", "os.system() is forbidden — use Langflow's built-in integrations"),
     ("os", "popen", "os.popen() is forbidden"),
     ("os", "execl", "os.execl() is forbidden"),
@@ -64,6 +66,8 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     ("os", "execvpe", "os.execvpe() is forbidden"),
     ("os", "spawn", "os.spawn*() is forbidden"),
     ("os", "spawnl", "os.spawnl() is forbidden"),
+    ("os", "posix_spawn", "os.posix_spawn() is forbidden"),
+    ("os", "posix_spawnp", "os.posix_spawnp() is forbidden"),
     ("os", "remove", "os.remove() is forbidden in components"),
     ("os", "rmdir", "os.rmdir() is forbidden in components"),
     ("os", "unlink", "os.unlink() is forbidden in components"),
@@ -308,10 +312,9 @@ class _SecurityChecker(ast.NodeVisitor):
                 return frozenset(
                     f"{base_name}.{attr_name}" for base_name in self._resolved_assignment_value(node.args[0])
                 )
-        parts = _dotted_parts(node)
-        if not parts:
-            return frozenset()
-        return frozenset(".".join([root, *parts[1:]]) for root in self._resolved_names(parts[0]))
+        if isinstance(node, ast.Attribute):
+            return frozenset(f"{base_name}.{node.attr}" for base_name in self._resolved_assignment_value(node.value))
+        return frozenset()
 
     @staticmethod
     def _dangerous_callable_message(resolved_name: str) -> str | None:
@@ -976,19 +979,11 @@ class _SecurityChecker(ast.NodeVisitor):
         """
         if not isinstance(node.func, ast.Attribute):
             return
-        if not isinstance(node.func.value, ast.Name):
-            return
 
-        method_name = node.func.attr
-
-        for module_name in self._resolved_names(node.func.value.id):
-            if module_name in {"builtins", "__builtins__"} and method_name in DANGEROUS_CALLS:
-                self.violations.append(DANGEROUS_CALLS[method_name])
+        for resolved_name in self._resolved_assignment_value(node.func):
+            if violation := self._dangerous_callable_message(resolved_name):
+                self.violations.append(violation)
                 return
-            for mod, method, message in DANGEROUS_ATTR_CALLS:
-                if module_name == mod and method_name == method:
-                    self.violations.append(message)
-                    return
 
     def _check_getattr_access(self, node: ast.Call) -> bool:
         """Check reflective access to restricted module members.

@@ -167,6 +167,25 @@ class TestScanCodeSecurityDangerousAttrCalls:
                 "import asyncio\nasync def run():\n    await asyncio.create_subprocess_exec('id')\n",
                 id="asyncio-create-subprocess-exec",
             ),
+            pytest.param(
+                "import asyncio\nasync def run():\n    await asyncio.create_subprocess_shell('id')\n",
+                id="asyncio-create-subprocess-shell",
+            ),
+            pytest.param(
+                "import asyncio\nasync def run():\n    await asyncio.subprocess.create_subprocess_exec('id')\n",
+                id="asyncio-subprocess-create-subprocess-exec",
+            ),
+            pytest.param(
+                "import asyncio\nasync def run():\n    await asyncio.subprocess.create_subprocess_shell('id')\n",
+                id="asyncio-subprocess-create-subprocess-shell",
+            ),
+            pytest.param(
+                "import asyncio\nasync def run():\n    factory = getattr(asyncio, 'subprocess')\n"
+                "    await factory.create_subprocess_exec('id')\n",
+                id="computed-asyncio-subprocess-getattr",
+            ),
+            pytest.param("import os\nos.posix_spawn('/bin/id', ['id'], {})\n", id="os-posix-spawn"),
+            pytest.param("import os\nos.posix_spawnp('id', ['id'], {})\n", id="os-posix-spawnp"),
             pytest.param("import posix\nposix.system('id')\n", id="posix-system"),
             pytest.param(
                 "import multiprocessing\np = multiprocessing.Process(target=print)\np.start()\n",

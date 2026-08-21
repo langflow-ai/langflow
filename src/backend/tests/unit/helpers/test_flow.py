@@ -2,6 +2,7 @@
 
 import inspect
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 from lfx.utils.langflow_utils import has_langflow_memory
@@ -90,20 +91,47 @@ class TestDynamicImport:
         assert is_helper_module(run_flow, _LANGFLOW_HELPER_MODULE_FLOW)
 
 
-def test_generate_function_for_flow_sanitizes_untrusted_input_names():
-    from langflow.helpers.flow import generate_function_for_flow
+async def test_generate_function_for_flow_sanitizes_and_preserves_distinct_inputs(monkeypatch):
+    from langflow.helpers import flow as flow_helpers
 
     inputs = [
-        SimpleNamespace(display_name='value"; __import__("os").system("id"); #', base_name="ChatInput"),
-        SimpleNamespace(display_name="class", base_name="TextInput"),
-        SimpleNamespace(display_name="value", base_name="JSONInput"),
-        SimpleNamespace(display_name="value", base_name="ChatInput"),
+        SimpleNamespace(
+            id="malicious-input",
+            display_name='value"; __import__("os").system("id"); #',
+            base_name="ChatInput",
+            description="malicious",
+        ),
+        SimpleNamespace(id="keyword-input", display_name="class", base_name="TextInput", description="keyword"),
+        SimpleNamespace(id="debug-input", display_name="__debug__", base_name="TextInput", description="debug"),
+        SimpleNamespace(id="json-input", display_name="value", base_name="JSONInput", description="json"),
+        SimpleNamespace(id="chat-input", display_name="value", base_name="ChatInput", description="chat"),
     ]
+    flow_id = "flow-'quoted\nidentifier"
+    user_id = "user-'quoted\nidentifier"
+    run_flow = AsyncMock(return_value=[])
+    monkeypatch.setattr(flow_helpers, "run_flow", run_flow)
 
-    function = generate_function_for_flow(inputs, "flow-id", user_id="user-id")
+    function = flow_helpers.generate_function_for_flow(inputs, flow_id, user_id=user_id)
     parameter_names = list(inspect.signature(function).parameters)
 
     assert len(parameter_names) == len(inputs)
     assert len(set(parameter_names)) == len(inputs)
     assert all(name.isidentifier() for name in parameter_names)
     assert "class" not in parameter_names
+    assert "__debug__" not in parameter_names
+
+    values = ["malicious-value", "keyword-value", "debug-value", '{"json": true}', "chat-value"]
+    await function(*values)
+
+    assert run_flow.await_args.kwargs == {
+        "tweaks": {input_.id: {"input_value": value} for input_, value in zip(inputs, values, strict=True)},
+        "flow_id": flow_id,
+        "user_id": user_id,
+    }
+
+    schema = flow_helpers.build_schema_from_inputs("FlowInputs", inputs)
+    assert list(schema.schema()["properties"]) == parameter_names
+    assert flow_helpers.get_arg_names(inputs) == [
+        {"component_name": input_.id, "arg_name": arg_name}
+        for input_, arg_name in zip(inputs, parameter_names, strict=True)
+    ]
