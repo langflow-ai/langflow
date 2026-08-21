@@ -1,17 +1,24 @@
 import { ArrowUp } from "lucide-react";
-import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { ModelSelector } from "@/components/core/assistantPanel/components/model-selector";
 import { useAssistantSelectedModel } from "@/components/core/assistantPanel/hooks/use-assistant-selected-model";
+import { useAutoGrowTextarea } from "@/components/core/assistantPanel/hooks/use-auto-grow-textarea";
 import { useEnabledModels } from "@/components/core/assistantPanel/hooks/use-enabled-models";
 import { Button } from "@/components/ui/button";
 import type { SidebarSection } from "@/components/ui/sidebar";
 import ModelProviderModal from "@/modals/modelProviderModal";
 import { NAV_ITEMS } from "@/pages/FlowPage/components/flowSidebarComponent/components/sidebar-nav-items";
-import { WELCOME_MAX_INPUT_LENGTH } from "./flow-builder-welcome.constants";
-import type { StarterTemplateNameKey } from "./helpers/find-starter-template";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useUtilityStore } from "@/stores/utilityStore";
+import {
+  findStarterTemplate,
+  type StarterTemplateNameKey,
+} from "./helpers/find-starter-template";
+
+const COMPOSER_MAX_HEIGHT_PX = 144; // 9rem — keeps the conversation above the composer readable
 
 interface FlowBuilderWelcomeProps {
   /** Called with the trimmed text when the user submits the textarea. */
@@ -33,6 +40,9 @@ interface FlowBuilderWelcomeProps {
 // sidebar sections is automatically reflected here. Keeps the two views from
 // drifting apart.
 
+const TEMPLATE_BUTTON_CLASS =
+  "flex h-[3.125rem] w-[11rem] items-center justify-center gap-2.5 whitespace-nowrap rounded-xl border border-border bg-muted p-[0.8125rem] text-sm font-medium text-foreground transition-colors hover:bg-border";
+
 export function FlowBuilderWelcome({
   onSubmit,
   onSelectTemplate,
@@ -41,7 +51,23 @@ export function FlowBuilderWelcome({
   onSelectRailItem,
 }: FlowBuilderWelcomeProps) {
   const [message, setMessage] = useState("");
+  // Same server-owned cap the assistant panel uses (LANGFLOW_ASSISTANT_MAX_MESSAGE_LENGTH,
+  // served by /config): this textarea posts to the same assistant endpoint.
+  const maxMessageLength = useUtilityStore(
+    (state) => state.assistantMaxMessageLength,
+  );
+  const limitHintId = useId();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  useAutoGrowTextarea(textareaRef, message, COMPOSER_MAX_HEIGHT_PX);
+  // AppInitPage holds every route back until the examples fetch settles, so an
+  // empty list here means a policy blocked them, never "still loading".
+  const examples = useFlowsManagerStore((state) => state.examples);
+  const hasSimpleAgent = findStarterTemplate(examples, "simple_agent") !== null;
+  const hasVectorStoreRag =
+    findStarterTemplate(examples, "vector_store_rag") !== null;
+  // "Browse more…" opens the full modal, which is worth offering for any
+  // surviving template, not just the two with their own button.
+  const hasAnyTemplate = examples.length > 0;
 
   useEffect(() => {
     textareaRef.current?.focus();
@@ -62,7 +88,7 @@ export function FlowBuilderWelcome({
 
   const trySubmit = () => {
     const trimmed = message.trim();
-    if (!trimmed) return;
+    if (!trimmed || trimmed.length > maxMessageLength) return;
     onSubmit(trimmed);
   };
 
@@ -73,6 +99,10 @@ export function FlowBuilderWelcome({
     }
   };
 
+  const messageLength = message.length;
+  // The cap is hard, but never silent: the counter is always on screen and hitting the limit
+  // names the environment variable that raises it.
+  const isAtLimit = messageLength >= maxMessageLength;
   const canSend = message.trim().length > 0;
   const { t } = useTranslation();
   // Shared model state with the AssistantPanel — picking a model here
@@ -192,29 +222,51 @@ export function FlowBuilderWelcome({
                 data-testid="flow-builder-welcome-textarea"
                 placeholder={t("flowBuilderWelcome.textareaPlaceholder")}
                 value={message}
-                onChange={(e) =>
-                  setMessage(e.target.value.slice(0, WELCOME_MAX_INPUT_LENGTH))
-                }
+                maxLength={maxMessageLength}
+                aria-describedby={isAtLimit ? limitHintId : undefined}
+                onChange={(e) => setMessage(e.target.value)}
                 onKeyDown={handleKeyDown}
                 rows={3}
-                className="nopan nodelete nodrag noflow nowheel flex-1 resize-none border-0 bg-transparent px-4 pt-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-0"
+                className="nopan nodelete nodrag noflow nowheel max-h-[9rem] flex-1 resize-none overflow-y-auto border-0 bg-transparent px-4 pt-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-0"
               />
+              {isAtLimit && (
+                <div
+                  id={limitHintId}
+                  role="status"
+                  data-testid="flow-builder-welcome-limit-hint"
+                  className="px-4 py-1 text-xs text-destructive"
+                >
+                  {t("assistant.messageLimitReached")}
+                </div>
+              )}
               <div className="flex items-center justify-between gap-2 px-2 pb-2">
                 <ModelSelector
                   selectedModel={selectedModel}
                   onModelChange={setSelectedModel}
                 />
-                <button
-                  type="button"
-                  data-testid="flow-builder-welcome-send-button"
-                  aria-label={t("flowBuilderWelcome.sendLabel")}
-                  title={t("flowBuilderWelcome.sendLabel")}
-                  disabled={!canSend}
-                  onClick={trySubmit}
-                  className="flex h-8 w-8 items-center justify-center rounded-md bg-foreground text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
-                >
-                  <ArrowUp className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <span
+                    data-testid="flow-builder-welcome-char-count"
+                    className={
+                      isAtLimit
+                        ? "text-xs tabular-nums text-destructive"
+                        : "text-xs tabular-nums text-muted-foreground"
+                    }
+                  >
+                    {messageLength}/{maxMessageLength}
+                  </span>
+                  <button
+                    type="button"
+                    data-testid="flow-builder-welcome-send-button"
+                    aria-label={t("flowBuilderWelcome.sendLabel")}
+                    title={t("flowBuilderWelcome.sendLabel")}
+                    disabled={!canSend}
+                    onClick={trySubmit}
+                    className="flex h-8 w-8 items-center justify-center rounded-md bg-foreground text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -228,40 +280,67 @@ export function FlowBuilderWelcome({
         )}
 
         {/* Template buttons — design spec: 143×50px, 12px radius, 13px
-            padding, 10px gap. */}
+            padding, 10px gap. A catalog policy can block any of these, and a
+            button for a template that is gone would only fail on click, so
+            each appears with its template. With nothing left to offer, the
+            row becomes the one action still available: start blank. */}
         <div className="flex flex-col items-center gap-2">
-          <span className="text-sm text-muted-foreground">
-            {t("flowBuilderWelcome.orTemplateLabel")}
-          </span>
-          <div className="flex flex-wrap items-center justify-center gap-3">
+          {hasAnyTemplate ? (
+            <>
+              <span className="text-sm text-muted-foreground">
+                {t("flowBuilderWelcome.orTemplateLabel")}
+              </span>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                {hasSimpleAgent && (
+                  <button
+                    type="button"
+                    data-testid="flow-builder-welcome-template-simple-agent"
+                    onClick={() => onSelectTemplate("simple_agent")}
+                    className={TEMPLATE_BUTTON_CLASS}
+                  >
+                    <ForwardedIconComponent name="Bot" className="h-4 w-4" />
+                    {t("flowBuilderWelcome.simpleAgentLabel")}
+                  </button>
+                )}
+                {hasVectorStoreRag && (
+                  <button
+                    type="button"
+                    data-testid="flow-builder-welcome-template-vector-store-rag"
+                    onClick={() => onSelectTemplate("vector_store_rag")}
+                    className={TEMPLATE_BUTTON_CLASS}
+                  >
+                    <ForwardedIconComponent
+                      name="Database"
+                      className="h-4 w-4"
+                    />
+                    {t("flowBuilderWelcome.vectorStoreRagLabel")}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  data-testid="flow-builder-welcome-browse-more"
+                  onClick={onBrowseMore}
+                  className={TEMPLATE_BUTTON_CLASS}
+                >
+                  <ForwardedIconComponent
+                    name="LayoutGrid"
+                    className="h-4 w-4"
+                  />
+                  {t("flowBuilderWelcome.browseMoreLabel")}
+                </button>
+              </div>
+            </>
+          ) : (
             <button
               type="button"
-              data-testid="flow-builder-welcome-template-simple-agent"
-              onClick={() => onSelectTemplate("simple_agent")}
-              className="flex h-[3.125rem] w-[11rem] items-center justify-center gap-2.5 whitespace-nowrap rounded-xl border border-border bg-muted p-[0.8125rem] text-sm font-medium text-foreground transition-colors hover:bg-border"
+              data-testid="flow-builder-welcome-blank-flow"
+              onClick={onClose}
+              className={TEMPLATE_BUTTON_CLASS}
             >
-              <ForwardedIconComponent name="Bot" className="h-4 w-4" />
-              {t("flowBuilderWelcome.simpleAgentLabel")}
+              <ForwardedIconComponent name="Plus" className="h-4 w-4" />
+              {t("flowBuilderWelcome.blankFlowLabel")}
             </button>
-            <button
-              type="button"
-              data-testid="flow-builder-welcome-template-vector-store-rag"
-              onClick={() => onSelectTemplate("vector_store_rag")}
-              className="flex h-[3.125rem] w-[11rem] items-center justify-center gap-2.5 whitespace-nowrap rounded-xl border border-border bg-muted p-[0.8125rem] text-sm font-medium text-foreground transition-colors hover:bg-border"
-            >
-              <ForwardedIconComponent name="Database" className="h-4 w-4" />
-              {t("flowBuilderWelcome.vectorStoreRagLabel")}
-            </button>
-            <button
-              type="button"
-              data-testid="flow-builder-welcome-browse-more"
-              onClick={onBrowseMore}
-              className="flex h-[3.125rem] w-[11rem] items-center justify-center gap-2.5 whitespace-nowrap rounded-xl border border-border bg-muted p-[0.8125rem] text-sm font-medium text-foreground transition-colors hover:bg-border"
-            >
-              <ForwardedIconComponent name="LayoutGrid" className="h-4 w-4" />
-              {t("flowBuilderWelcome.browseMoreLabel")}
-            </button>
-          </div>
+          )}
         </div>
       </div>
     </div>

@@ -39,7 +39,12 @@ from lfx.graph.vertex.base import Vertex, VertexStates
 from lfx.graph.vertex.schema import NodeData, NodeTypeEnum
 from lfx.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
 from lfx.log.logger import LogConfig, configure, logger
-from lfx.observability import APPLICATION_TRACER_NAME, get_execution_client, get_execution_protocol
+from lfx.observability import (
+    APPLICATION_TRACER_NAME,
+    get_execution_client,
+    get_execution_protocol,
+    get_queued_trace_link,
+)
 from lfx.schema.dotdict import dotdict
 from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
 from lfx.services.cache.utils import CacheMiss
@@ -99,6 +104,24 @@ if TYPE_CHECKING:
     from lfx.services.tracing.service import TracingService
 
 
+def _serving_trace_end_user_enabled() -> bool:
+    """Whether the operator opted into forwarding the end-user id to the tracing provider (I4).
+
+    Default False (fail-closed): the end-user id is PII and tracing providers are third-party. Reads
+    the serving setting lazily; any resolution failure (lfx-standalone / no settings) is treated as
+    off so telemetry never leaks the identity by accident.
+    """
+    try:
+        from lfx.services.deps import get_settings_service
+
+        settings_service = get_settings_service()
+    except (ImportError, AttributeError, RuntimeError):
+        return False
+    if settings_service is None:
+        return False
+    return bool(getattr(settings_service.settings, "serving_trace_end_user", False))
+
+
 class Graph:
     """A class representing a graph of vertices and edges."""
 
@@ -151,6 +174,13 @@ class Graph:
         # surfaced in external traces (e.g. Langfuse trace metadata) without
         # leaking into authn/authz paths.
         self.tracing_user_id: str | None = None
+        # Serving-plane end-user id (the gateway-injected identity for this run).
+        # In-memory only, never persisted: the single carrier every service reads to
+        # scope memory (and, later, telemetry and agent file writes) to the end user
+        # while execution still runs as ``self.user_id`` (the service account). ``None``
+        # on the editor plane and for anonymous/feature-off runs, so those paths are
+        # byte-for-byte unchanged.
+        self.end_user_id: str | None = None
         self._is_input_vertices: list[str] = []
         self._is_output_vertices: list[str] = []
         self._is_state_vertices: list[str] | None = None
@@ -898,6 +928,14 @@ class Graph:
         if not self._run_id:
             self.set_run_id()
         if self.tracing_service:
+            # Serving-plane telemetry attribution: surface the end user as the SEPARATE tracing label
+            # (never the primary trace user_id, which stays the SID). Gated OFF by default: the
+            # end-user id is PII and tracing providers are third-party SaaS, so it is forwarded only
+            # when the operator opts in via ``serving_trace_end_user``, matching the fail-closed
+            # posture of outbound MCP forwarding. Only fills when an identified serving run set
+            # end_user_id and no explicit caller label was already provided.
+            if self.end_user_id and not self.tracing_user_id and _serving_trace_end_user_enabled():
+                self.tracing_user_id = self.end_user_id
             run_name = f"{self.flow_name} - {self.flow_id}"
             await self.tracing_service.start_tracers(
                 run_id=uuid.UUID(self._run_id),
@@ -956,7 +994,24 @@ class Graph:
         # start_span would pick the dead span up as parent anyway.
         parent = otel_trace.get_current_span()
         parent_context = parent.get_span_context()
-        if parent_context.is_valid and not parent.is_recording():
+        queued_link = get_queued_trace_link()
+        if queued_link is not None and not parent.is_recording():
+            # A run picked off a queue, carrying the context of the request that queued it on
+            # the job row.
+            #
+            # Checked before the ended-parent branch, and gated on the parent not recording
+            # rather than on no span being current. Whatever ended span the worker happens to
+            # be holding is not necessarily this run's originator: a worker task started from
+            # a request inherits that request's context permanently, so every later run it
+            # serves would link back to that first request. The carrier was written for this
+            # specific job and is the authoritative answer; an ambient ended span is only a
+            # good guess. A live parent still wins over both, below.
+            span = tracer.start_span(
+                FLOW_EXECUTION_SPAN_NAME,
+                context=OtelContext(),
+                links=[queued_link],
+            )
+        elif parent_context.is_valid and not parent.is_recording():
             span = tracer.start_span(
                 FLOW_EXECUTION_SPAN_NAME,
                 context=OtelContext(),
@@ -3104,6 +3159,9 @@ class Graph:
         # A subgraph extends the parent's run, so it inherits the ephemeral
         # (no-persist) decision too.
         subgraph.persist_messages = self.persist_messages
+        # Sub-flows and loop iterations run under the same end user as the parent, so
+        # the identity carrier propagates down (memory scopes to the same end user).
+        subgraph.end_user_id = self.end_user_id
         subgraph.source_flow_id = self.source_flow_id
         subgraph._is_subgraph = True
 

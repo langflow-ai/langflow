@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import CustomModelProvidersEmptyState from "@/customization/components/custom-model-providers-empty-state";
 import type { ModelTypeFilter } from "@/types/models";
 import ProviderListItem from "./ProviderListItem";
 import { Provider } from "./types";
@@ -52,6 +53,7 @@ const ProviderList = ({
           model_count: matchingModels.length,
           models: matchingModels,
           api_docs_url: provider.api_docs_url,
+          live_discovery: provider.live_discovery,
         };
       });
   }, [rawProviders, modelType, trimmedQuery]);
@@ -88,17 +90,22 @@ const ProviderList = ({
   }
 
   return (
-    <div className="flex flex-col gap-1" data-testid="provider-list">
-      {filteredProviders.map((provider) => (
-        <ProviderListItem
-          key={provider.provider}
-          provider={provider}
-          showIcon={selectedProviderName !== null}
-          isSelected={selectedProviderName === provider.provider}
-          onSelect={handleProviderSelect}
-        />
-      ))}
-    </div>
+    <CustomModelProvidersEmptyState
+      kind="providers"
+      show={filteredProviders.length === 0}
+    >
+      <div className="flex flex-col gap-1" data-testid="provider-list">
+        {filteredProviders.map((provider) => (
+          <ProviderListItem
+            key={provider.provider}
+            provider={provider}
+            showIcon={selectedProviderName !== null}
+            isSelected={selectedProviderName === provider.provider}
+            onSelect={handleProviderSelect}
+          />
+        ))}
+      </div>
+    </CustomModelProvidersEmptyState>
   );
 };
 

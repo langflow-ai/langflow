@@ -33,7 +33,8 @@ from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
-from langflow.api import health_check_router, log_router
+from langflow.api import log_router
+from langflow.api.health_check_router import health_check_router
 from langflow.api.router import router
 from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.api.warm_graph import is_warm_registry_enabled
@@ -1035,6 +1036,27 @@ def create_app():
         return JSONResponse(
             status_code=HTTPStatus.CONFLICT,
             content={"detail": exc.detail},
+        )
+
+    from lfx.exceptions.tweaks import TweakRefusedError
+
+    @app.exception_handler(TweakRefusedError)
+    async def tweak_refused_exception_handler(_request: Request, exc: TweakRefusedError):
+        """Refused tweaks are a 422 naming the keys, not a silent drop.
+
+        Mirrors the detail shape of the existing output-selection validator so a
+        caller parses one error format across the run API.
+        """
+        return JSONResponse(
+            status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
+            content={
+                "detail": {
+                    "error": "Refused tweaks",
+                    "code": "TWEAKS_REFUSED",
+                    "message": exc.reason,
+                    "fields": exc.refused,
+                }
+            },
         )
 
     # Add rate limit exception handler

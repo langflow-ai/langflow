@@ -92,13 +92,17 @@ describe("non-flow share entry-point wiring", () => {
     );
   });
 
-  it("reserves the complete two-action project row width", () => {
+  it("reserves exactly the one-action project row width", () => {
+    // Share moved into the three-dot menu, so the row is back to a single
+    // control and the width reserved for two would only cost the project name
+    // characters it does not need to give up -- the names are already
+    // truncated (LE-1905).
     const source = readFrontendSource(
       "components/core/folderSidebarComponent/components/sideBarFolderButtons/index.tsx",
     );
 
-    expect(source).toContain('"flex-grow pr-16"');
-    expect(source).not.toContain('"flex-grow pr-8"');
+    expect(source).toContain('"flex-grow pr-8"');
+    expect(source).not.toContain('"flex-grow pr-16"');
   });
 
   it("keeps resource subtype in the generic customization seam contract", () => {

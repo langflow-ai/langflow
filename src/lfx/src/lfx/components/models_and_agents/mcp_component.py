@@ -521,11 +521,19 @@ class MCPToolsComponent(ComponentWithCache):
                         server_config["headers"] = merged_headers
                 # Get request_variables from graph context for global variable resolution
                 request_variables = None
-                if hasattr(self, "graph") and self.graph and hasattr(self.graph, "context"):
-                    request_variables = self.graph.context.get("request_variables")
+                end_user_id = None
+                if hasattr(self, "graph") and self.graph:
+                    if hasattr(self.graph, "context"):
+                        request_variables = self.graph.context.get("request_variables")
+                    # Serving-plane end-user id (set by the entry-point scoping); forwarded only
+                    # to allowlisted internal MCP targets by update_tools (fail-closed).
+                    end_user_id = getattr(self.graph, "end_user_id", None)
 
                 # Load global variables only when the config actually references them, so a
                 # static config still costs no query -- but a URL-only reference now counts.
+                # The load must NOT be skipped just because the request carried overrides: a
+                # request that overrides one variable still needs every other referenced
+                # variable resolved from the database.
                 db_variables: dict[str, str] | None = None
                 if config_uses_global_variables(server_config):
                     try:
@@ -543,11 +551,15 @@ class MCPToolsComponent(ComponentWithCache):
                     except Exception as e:  # noqa: BLE001
                         await logger.awarning("Failed to load global variables for MCP component", exc_info=e)
 
-                # Headers may resolve from either source; the URL only from the database.
+                # Headers may resolve from either source, per-request values winning on
+                # conflict (matching ``CustomComponent.get_variable``). Dropping the database
+                # side whenever the request carried anything would send an unresolved variable
+                # *name* upstream as the header value (#14604).
+                #
+                # The URL still resolves from the database only, via ``url_variables`` below:
                 # request_variables carry the caller's X-Langflow-Global-Var-* values, and a
                 # caller must not be able to choose where this flow connects.
-                if not request_variables:
-                    request_variables = db_variables
+                request_variables = {**(db_variables or {}), **(request_variables or {})} or None
 
                 await logger.adebug(
                     "MCP update_tool_list: calling update_tools server=%r mode_headers=%s",
@@ -568,6 +580,7 @@ class MCPToolsComponent(ComponentWithCache):
                     url_variables=db_variables,
                     tool_execution_timeout=timeout,
                     current_user_id=self.user_id,
+                    end_user_id=end_user_id,
                 )
 
                 self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]
