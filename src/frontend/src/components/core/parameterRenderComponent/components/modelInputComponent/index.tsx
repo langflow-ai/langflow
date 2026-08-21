@@ -222,6 +222,8 @@ export default function ModelInputComponent({
         flatOptions,
         providers: providersData,
         providerStatusIsReliable,
+        enabledModels: enabledModelsData?.enabled_models,
+        modelStatusIsReliable,
       }),
     [
       value,
@@ -230,6 +232,8 @@ export default function ModelInputComponent({
       externalOptions,
       providersData,
       providerStatusIsReliable,
+      enabledModelsData,
+      modelStatusIsReliable,
     ],
   );
 
@@ -240,6 +244,7 @@ export default function ModelInputComponent({
     isConnectionMode,
     providers: providersData,
     modelStatusIsReliable,
+    enabledModels: enabledModelsData?.enabled_models,
   });
 
   /**

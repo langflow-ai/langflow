@@ -1736,6 +1736,8 @@
   "node.incompatibleWith": "Incompatible with",
   "model.configureProvider": "Configure this model's provider",
   "model.notEnabledTitle": "This model isn't enabled for your user. Click to configure its provider.",
+  "model.unavailable": "Not available",
+  "model.unavailableTitle": "This model is not available: it may have been restricted by an administrator or removed from the catalog. Select another model or ask an administrator to enable it.",
   "multiselect.textPrefix": "Text:",
   "knowledge.columnNameDescription": "Name of the column in the source DataFrame",
   "knowledge.columnEmbeddingDescription": "Create embeddings for this column",
