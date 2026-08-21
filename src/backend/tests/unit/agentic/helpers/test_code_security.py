@@ -1119,6 +1119,14 @@ class TestScanCodeSecurityRuntimeModuleBypass:
                 "target = object\ngetattr(target, '__sub' + 'classes__')()",
                 id="name-receiver",
             ),
+            pytest.param(
+                "__builtins__.getattr(object, '__sub' + 'classes__')()",
+                id="qualified-builtins-dict",
+            ),
+            pytest.param(
+                "reflect = __builtins__.getattr\nreflect(object, '__sub' + 'classes__')()",
+                id="aliased-builtins-dict",
+            ),
         ],
     )
     def test_should_detect_computed_dangerous_dunder_getattr(self, code):

@@ -1001,7 +1001,7 @@ class _SecurityChecker(ast.NodeVisitor):
         else:
             function_names = frozenset()
 
-        if not ({"getattr", "builtins.getattr"} & function_names and node.args):
+        if not ({"getattr", "builtins.getattr", "__builtins__.getattr"} & function_names and node.args):
             return False
         try:
             attr_node = node.args[1]
