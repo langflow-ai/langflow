@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { extractApiErrorMessage } from "@/controllers/API/helpers/extract-api-error-message";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useGenerateToken } from "@/customization/hooks/use-custom-generate-token";
 import { createApiKey } from "../../controllers/API";
@@ -39,6 +40,9 @@ export default function SecretKeyModal({
   const [expiresAt, setExpiresAt] = useState<string>("");
   const [renderKey, setRenderKey] = useState(false);
   const [textCopied, setTextCopied] = useState(true);
+  // Key-creation failure, surfaced inline and associated with the name field
+  // (WCAG 3.3.1) — it was previously swallowed entirely.
+  const [serverError, setServerError] = useState<string | null>(null);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const generateToken = useGenerateToken();
@@ -57,6 +61,7 @@ export default function SecretKeyModal({
     setApiKeyName("");
     setApiKeyValue("");
     setExpiresAt("");
+    setServerError(null);
   }
 
   const handleCopyClick = async () => {
@@ -85,7 +90,14 @@ export default function SecretKeyModal({
       .then((res) => {
         setApiKeyValue(res["api_key"]);
       })
-      .catch((err) => {});
+      .catch((err) => {
+        // Return to the form view instead of showing an empty "generated key"
+        // screen, and tell the user what went wrong.
+        setRenderKey(false);
+        setServerError(
+          extractApiErrorMessage(err, t("errors.errorGeneratingApiKey")),
+        );
+      });
   }
 
   async function handleSubmitForm() {
@@ -156,9 +168,13 @@ export default function SecretKeyModal({
             modalProps={modalConfigProps}
             apiKeyName={apiKeyName}
             inputRef={inputRef}
-            setApiKeyName={setApiKeyName}
+            setApiKeyName={(value) => {
+              setApiKeyName(value);
+              setServerError(null);
+            }}
             expiresAt={expiresAt}
             setExpiresAt={setExpiresAt}
+            serverError={serverError}
           />
         )}
       </BaseModal.Content>

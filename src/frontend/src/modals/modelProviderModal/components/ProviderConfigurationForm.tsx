@@ -130,7 +130,10 @@ const ProviderConfigurationForm = ({
   return (
     <div className="flex flex-col gap-1 px-4 pt-4">
       <div className="flex flex-row gap-1 min-w-[300px]">
-        <span className="text-[13px] font-semibold mr-auto">
+        <span
+          id="provider-single-variable-label"
+          className="text-[13px] font-semibold mr-auto"
+        >
           {isSingleVariableProvider ? (
             <>
               {providerVariables[0].variable_name}
@@ -181,11 +184,21 @@ const ProviderConfigurationForm = ({
             const isConfigured = isVariableConfigured(variable.variable_key);
             const hasNewValue = variableValues[variable.variable_key]?.trim();
             const isEditing = editingSecret[variable.variable_key];
+            const inputId = `provider-variable-${variable.variable_key}`;
+            // Single-variable providers render their only label as the form
+            // heading, so the control is named via aria-labelledby instead.
+            const labelId = isSingleVariableProvider
+              ? "provider-single-variable-label"
+              : `provider-variable-label-${variable.variable_key}`;
 
             return (
               <div key={variable.variable_key} className="flex flex-col gap-1">
                 {!isSingleVariableProvider && (
-                  <label className="text-[12px] font-medium text-muted-foreground">
+                  <label
+                    id={labelId}
+                    htmlFor={inputId}
+                    className="text-[12px] font-medium text-muted-foreground"
+                  >
                     {variable.variable_name}
                     {variable.required && (
                       <span className="text-destructive ml-1">*</span>
@@ -197,6 +210,7 @@ const ProviderConfigurationForm = ({
                   <div className="relative">
                     <MultiselectComponent
                       id={variable.variable_key}
+                      ariaLabelledBy={labelId}
                       editNode={false}
                       disabled={isSaving || isDeleting}
                       value={
@@ -260,6 +274,16 @@ const ProviderConfigurationForm = ({
                 ) : (
                   // Render input for text/secret variables
                   <Input
+                    id={inputId}
+                    aria-labelledby={
+                      isSingleVariableProvider ? labelId : undefined
+                    }
+                    aria-invalid={validationState === "invalid" || undefined}
+                    aria-describedby={
+                      validationState === "invalid" && validationError
+                        ? "provider-validation-error"
+                        : undefined
+                    }
                     data-testid={`provider-variable-input-${variable.variable_key}`}
                     placeholder={getPlaceholder(
                       variable.variable_name,
@@ -331,6 +355,15 @@ const ProviderConfigurationForm = ({
               </div>
             );
           })}
+          {validationState === "invalid" && validationError && (
+            <p
+              id="provider-validation-error"
+              role="alert"
+              className="field-invalid static"
+            >
+              {validationError}
+            </p>
+          )}
           {/* Save button */}
           <div className="flex justify-end mt-2 gap-2">
             {selectedProvider.is_enabled && (

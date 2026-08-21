@@ -81,4 +81,23 @@ describe("FormKeyRender", () => {
     expect(screen.getByText(PRESET_WEEK)).toBeInTheDocument();
     expect(screen.getByText(PRESET_YEAR)).toBeInTheDocument();
   });
+
+  it("associates a server error with the name input", () => {
+    render(
+      <FormKeyRender {...makeProps({ serverError: "Something went wrong" })} />,
+    );
+    const error = screen.getByText("Something went wrong");
+    expect(error).toHaveAttribute("role", "alert");
+    expect(error).toHaveAttribute("id", "api-key-form-error");
+    const input = screen.getByPlaceholderText("Enter key name");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input).toHaveAttribute("aria-describedby", "api-key-form-error");
+  });
+
+  it("does not mark the name input invalid without a server error", () => {
+    render(<FormKeyRender {...makeProps()} />);
+    const input = screen.getByPlaceholderText("Enter key name");
+    expect(input).toHaveAttribute("aria-invalid", "false");
+    expect(input).not.toHaveAttribute("aria-describedby");
+  });
 });

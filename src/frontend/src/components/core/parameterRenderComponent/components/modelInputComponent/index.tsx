@@ -76,6 +76,8 @@ export default function ModelInputComponent({
   modelType: modelTypeProp,
   "aria-label": ariaLabel,
   ariaLabelledBy,
+  ariaDescribedBy,
+  ariaInvalid,
 }: BaseInputProps<ModelOption[] | undefined> &
   ModelInputComponentType): JSX.Element | null {
   const { t } = useTranslation();
@@ -424,6 +426,8 @@ export default function ModelInputComponent({
               showEmptyState={showEmptyState}
               aria-label={ariaLabel}
               ariaLabelledBy={ariaLabelledBy}
+              ariaDescribedBy={ariaDescribedBy}
+              ariaInvalid={ariaInvalid}
             />
           </div>
           {showConfigureAffordance && (

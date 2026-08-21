@@ -33,6 +33,8 @@ interface ModelTriggerProps {
   showEmptyState?: boolean;
   "aria-label"?: string;
   ariaLabelledBy?: string;
+  ariaDescribedBy?: string;
+  ariaInvalid?: boolean;
 }
 
 const ModelTrigger = ({
@@ -48,6 +50,8 @@ const ModelTrigger = ({
   showEmptyState = false,
   "aria-label": ariaLabel,
   ariaLabelledBy,
+  ariaDescribedBy,
+  ariaInvalid,
 }: ModelTriggerProps) => {
   const { t } = useTranslation();
   const renderSelectedIcon = () => {
@@ -136,6 +140,8 @@ const ModelTrigger = ({
           aria-expanded={open}
           aria-label={!ariaLabelledBy ? ariaLabel : undefined}
           aria-labelledby={ariaLabelledBy}
+          aria-describedby={ariaDescribedBy}
+          aria-invalid={ariaInvalid || undefined}
           data-testid={id}
           className={cn(
             "dropdown-component-false-outline py-2",

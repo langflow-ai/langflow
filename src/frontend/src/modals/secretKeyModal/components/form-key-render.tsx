@@ -63,6 +63,7 @@ export const FormKeyRender = ({
   setApiKeyName,
   expiresAt,
   setExpiresAt,
+  serverError,
 }: {
   modalProps: ModalConfigProps | undefined;
   apiKeyName: string;
@@ -70,6 +71,7 @@ export const FormKeyRender = ({
   setApiKeyName: (value: string) => void;
   expiresAt: string;
   setExpiresAt: (value: string) => void;
+  serverError?: string | null;
 }) => {
   const { t } = useTranslation();
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -94,9 +96,21 @@ export const FormKeyRender = ({
                 setApiKeyName(value);
               }}
               placeholder={modalProps?.inputPlaceholder}
+              aria-invalid={Boolean(serverError)}
+              aria-describedby={serverError ? "api-key-form-error" : undefined}
             />
           </Form.Control>
         </div>
+
+        {serverError && (
+          <p
+            id="api-key-form-error"
+            role="alert"
+            className="field-invalid static mt-2"
+          >
+            {serverError}
+          </p>
+        )}
       </Form.Field>
 
       <Form.Field name="expires_at">

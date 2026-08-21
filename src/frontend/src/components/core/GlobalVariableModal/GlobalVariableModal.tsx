@@ -57,6 +57,10 @@ export default function GlobalVariableModal({
       ? [myOpen, mySetOpen]
       : useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  // Server-side rejection (duplicate name, invalid provider key…), mirrored
+  // inline so the error is programmatically associated with the fields
+  // (WCAG 3.3.1) instead of living only in the transient toast.
+  const [serverError, setServerError] = useState<string | null>(null);
   const componentFields = useTypesStore((state) => state.ComponentFields);
   const { upsertGlobalVariable, updateGlobalVariable } =
     useGlobalVariableUpsert();
@@ -122,16 +126,17 @@ export default function GlobalVariableModal({
         action?: "created" | "updated";
       };
       const didUpdate = responseError?.action === "updated";
+      const message =
+        responseError?.response?.data?.detail ??
+        (didUpdate
+          ? t("globalVars.modal.errorUnexpectedUpdate")
+          : t("globalVars.modal.errorUnexpectedCreate"));
+      setServerError(message);
       setErrorData({
         title: didUpdate
           ? t("globalVars.modal.errorUpdating")
           : t("globalVars.modal.errorCreating"),
-        list: [
-          responseError?.response?.data?.detail ??
-            (didUpdate
-              ? t("globalVars.modal.errorUnexpectedUpdate")
-              : t("globalVars.modal.errorUnexpectedCreate")),
-        ],
+        list: [message],
       });
     }
   }
@@ -182,6 +187,7 @@ export default function GlobalVariableModal({
             responseError?.response?.data?.detail ??
             t("globalVars.modal.errorUnexpectedUpdate");
 
+          setServerError(errorMessage);
           setErrorData({
             title: isModelProviderVariable
               ? t("globalVars.modal.invalidApiKey")
@@ -249,8 +255,15 @@ export default function GlobalVariableModal({
             <Input
               id="global-variable-name"
               value={key}
-              onChange={(e) => setKey(e.target.value)}
+              onChange={(e) => {
+                setKey(e.target.value);
+                setServerError(null);
+              }}
               placeholder={t("globalVars.modal.namePlaceholder")}
+              aria-invalid={Boolean(serverError)}
+              aria-describedby={
+                serverError ? "global-variable-error" : undefined
+              }
             />
           </div>
 
@@ -266,10 +279,19 @@ export default function GlobalVariableModal({
               password
               id="global-variable-value-credential"
               value={value}
-              onChange={(e) => setValue(e)}
+              onChange={(e) => {
+                setValue(e);
+                setServerError(null);
+              }}
               placeholder={t("globalVars.modal.valuePlaceholder")}
               nodeStyle
               ariaLabelledBy="global-variable-value-credential-label"
+              inputProps={{
+                "aria-invalid": Boolean(serverError) || undefined,
+                "aria-describedby": serverError
+                  ? "global-variable-error"
+                  : undefined,
+              }}
             />
           </TabsContent>
           <TabsContent value="Generic" className="m-0 space-y-2" tabIndex={-1}>
@@ -279,8 +301,15 @@ export default function GlobalVariableModal({
             <Input
               id="global-variable-value-generic"
               value={value}
-              onChange={(e) => setValue(e.target.value)}
+              onChange={(e) => {
+                setValue(e.target.value);
+                setServerError(null);
+              }}
               placeholder={t("globalVars.modal.valuePlaceholder")}
+              aria-invalid={Boolean(serverError)}
+              aria-describedby={
+                serverError ? "global-variable-error" : undefined
+              }
             />
           </TabsContent>
 
@@ -303,6 +332,16 @@ export default function GlobalVariableModal({
               {t("globalVars.modal.applyToFieldsHint")}
             </div>
           </div>
+
+          {serverError && (
+            <p
+              id="global-variable-error"
+              role="alert"
+              className="field-invalid static"
+            >
+              {serverError}
+            </p>
+          )}
         </Tabs>
       </BaseModal.Content>
       <BaseModal.Footer

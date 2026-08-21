@@ -18,6 +18,8 @@ type PasswordFormComponentProps = {
   cnfPassword: string;
   handleInput: (event: inputHandlerEventType) => void;
   handlePatchPassword: () => void;
+  /** Mismatch or server rejection, rendered inline and associated with the fields (WCAG 3.3.1). */
+  serverError?: string | null;
 };
 const PasswordFormComponent = ({
   currentPassword,
@@ -25,8 +27,13 @@ const PasswordFormComponent = ({
   cnfPassword,
   handleInput,
   handlePatchPassword,
+  serverError,
 }: PasswordFormComponentProps) => {
   const { t } = useTranslation();
+  const errorAriaProps = {
+    "aria-invalid": serverError ? true : undefined,
+    "aria-describedby": serverError ? "password-form-error" : undefined,
+  };
   return (
     <>
       <Form.Root
@@ -57,6 +64,10 @@ const PasswordFormComponent = ({
                   isForm
                   password={true}
                   required
+                  inputProps={{
+                    "aria-label": t("settings.currentPasswordPlaceholder"),
+                    ...errorAriaProps,
+                  }}
                   placeholder={t("settings.currentPasswordPlaceholder")}
                   className="w-full"
                 />
@@ -74,6 +85,10 @@ const PasswordFormComponent = ({
                   isForm
                   password={true}
                   required
+                  inputProps={{
+                    "aria-label": t("settings.passwordPlaceholder"),
+                    ...errorAriaProps,
+                  }}
                   placeholder={t("settings.passwordPlaceholder")}
                   className="w-full"
                 />
@@ -93,6 +108,10 @@ const PasswordFormComponent = ({
                   isForm
                   password={true}
                   required
+                  inputProps={{
+                    "aria-label": t("settings.confirmPasswordPlaceholder"),
+                    ...errorAriaProps,
+                  }}
                   placeholder={t("settings.confirmPasswordPlaceholder")}
                   className="w-full"
                 />
@@ -102,6 +121,15 @@ const PasswordFormComponent = ({
                 </Form.Message>
               </Form.Field>
             </div>
+            {serverError && (
+              <p
+                id="password-form-error"
+                role="alert"
+                className="field-invalid static mt-3"
+              >
+                {serverError}
+              </p>
+            )}
           </CardContent>
           <CardFooter className="border-t px-6 py-4">
             <Form.Submit asChild>
