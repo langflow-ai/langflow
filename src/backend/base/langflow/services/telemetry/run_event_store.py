@@ -6,25 +6,6 @@ telemetry is disabled. Nothing in OSS reads the store — enterprise builds
 drain it periodically via pop_all() — and events never leave the process
 unless such a consumer is installed. The store is bounded so a deployment
 without a consumer holds at most _MAX_EVENTS payloads.
-
-**Stable enterprise extension points**
-
-The following two functions are part of the public contract between OSS
-Langflow and enterprise/third-party metering consumers:
-
-- :func:`append_run_event` — called by OSS to record each completed run.
-- :func:`pop_all` — called by enterprise consumers to atomically drain
-  the store.
-
-These functions MUST NOT be renamed, removed, or have their signatures
-changed without a deprecation cycle.  Both are re-exported from
-``langflow.services.telemetry`` so enterprise consumers should import
-from that stable path::
-
-    from langflow.services.telemetry import pop_all, append_run_event
-
-Internal implementation details (_lock, _events, _MAX_EVENTS, peek_all)
-carry no stability guarantee.
 """
 
 from __future__ import annotations
