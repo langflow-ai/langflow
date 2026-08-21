@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH } from "@/constants/constants";
 import { EventDeliveryType } from "@/constants/enums";
 import type { Pagination, Tag } from "@/types/utils/types";
 import type { UtilityStoreType } from "@/types/zustand/utility";
@@ -71,6 +72,9 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   catalogGovernanceEnabled: false,
   setCatalogGovernanceEnabled: (catalogGovernanceEnabled: boolean) =>
     set({ catalogGovernanceEnabled }),
+  blockedComponentTypes: new Set<string>(),
+  setBlockedComponentTypes: (blockedComponentTypes: Iterable<string>) =>
+    set({ blockedComponentTypes: new Set(blockedComponentTypes) }),
   a2aEnabled: false,
   setA2aEnabled: (a2aEnabled: boolean) => set({ a2aEnabled }),
   // Default true (backend default) so the panel doesn't flash the disabled
@@ -78,6 +82,9 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   agenticExperienceEnabled: true,
   setAgenticExperienceEnabled: (agenticExperienceEnabled: boolean) =>
     set({ agenticExperienceEnabled }),
+  assistantMaxMessageLength: DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH,
+  setAssistantMaxMessageLength: (assistantMaxMessageLength: number) =>
+    set({ assistantMaxMessageLength }),
   localVectorStoreAvailable: true,
   setLocalVectorStoreAvailable: (localVectorStoreAvailable: boolean) =>
     set({ localVectorStoreAvailable }),

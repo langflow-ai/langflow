@@ -90,7 +90,7 @@ import {
 } from "./MemoizedComponents";
 import { computeNoteScreenPosition } from "./utils/compute-note-position";
 import { getEdgeAriaLabel } from "./utils/get-edge-aria-label";
-import { getNodeAriaLabel } from "./utils/get-node-aria-label";
+import { getNodeAriaLabels } from "./utils/get-node-aria-label";
 import getRandomName from "./utils/get-random-name";
 import isEventFromOutsideElement from "./utils/is-event-from-outside-element";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
@@ -125,22 +125,23 @@ export default function Page({
   const edges = useFlowStore((state) => state.edges);
   const isEmptyFlow = useRef(nodes.length === 0);
 
-  const nodesWithAriaLabel = useMemo(
-    () =>
-      nodes.map((node) => ({
-        ...node,
-        ariaLabel: getNodeAriaLabel(node, t),
-        // Nodes are tabbable, so a plain "group" (ReactFlow's fallback)
-        // fails IBM element_tabbable_role_valid — but every widget role with
-        // presentational children (button, option, ...) fails
-        // aria_descendant_valid instead, because nodes contain interactive
-        // handles and fields. "application" is the ARIA role for a composite
-        // canvas widget with its own keyboard model (arrow keys move the
-        // node), permits interactive descendants, and scans clean.
-        ariaRole: "application" as const,
-      })),
-    [nodes, t],
-  );
+  const nodesWithAriaLabel = useMemo(() => {
+    // Labels are derived from the whole list at once: same-type nodes would
+    // otherwise share an accessible name, which role="application" forbids.
+    const ariaLabels = getNodeAriaLabels(nodes, t);
+    return nodes.map((node, index) => ({
+      ...node,
+      ariaLabel: ariaLabels[index],
+      // Nodes are tabbable, so a plain "group" (ReactFlow's fallback)
+      // fails IBM element_tabbable_role_valid — but every widget role with
+      // presentational children (button, option, ...) fails
+      // aria_descendant_valid instead, because nodes contain interactive
+      // handles and fields. "application" is the ARIA role for a composite
+      // canvas widget with its own keyboard model (arrow keys move the
+      // node), permits interactive descendants, and scans clean.
+      ariaRole: "application" as const,
+    }));
+  }, [nodes, t]);
 
   const getNode = useFlowStore((state) => state.getNode);
   // ReactFlow's built-in screen-reader strings (node/edge instructions via
