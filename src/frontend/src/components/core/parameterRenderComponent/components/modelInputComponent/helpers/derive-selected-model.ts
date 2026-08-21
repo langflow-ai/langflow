@@ -31,8 +31,8 @@ export function deriveSelectedModel({
   connectIcon,
   savedValue,
   flatOptions,
-  providers,
-  providerStatusIsReliable,
+  providers: _providers,
+  providerStatusIsReliable: _providerStatusIsReliable,
 }: DeriveSelectedModelParams): SelectedModel | null {
   if (isConnectionMode) {
     return {
@@ -55,23 +55,21 @@ export function deriveSelectedModel({
   );
   if (match) return match;
 
+  // Saved model is absent from selectable options (blocked, user-disabled, or
+  // provider disconnected). Keep showing the saved name instead of advertising
+  // a different model the flow has not actually selected.
   if (saved) {
-    const savedProviderConfigured = providerStatusIsReliable
-      ? providers?.some((p) => p.provider === saved.provider && p.is_configured)
-      : undefined;
-    if (!savedProviderConfigured) {
-      return {
-        ...(saved.id && { id: saved.id }),
-        name: saved.name,
-        icon: saved.icon || "Bot",
-        provider: saved.provider || "Unknown",
-        metadata: {
-          ...(saved.metadata ?? {}),
-          not_enabled_locally: true,
-        },
-      } as SelectedModel;
-    }
+    return {
+      ...(saved.id && { id: saved.id }),
+      name: saved.name,
+      icon: saved.icon || "Bot",
+      provider: saved.provider || "Unknown",
+      metadata: {
+        ...(saved.metadata ?? {}),
+        not_enabled_locally: true,
+      },
+    } as SelectedModel;
   }
 
-  return flatOptions.length > 0 ? flatOptions[0] : null;
+  return null;
 }

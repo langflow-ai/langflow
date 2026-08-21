@@ -496,6 +496,36 @@ class TestBackwardsCompatibility:
         error_contents = [c for c in error_blocks[0].contents if isinstance(c, ErrorContent)]
         assert len(error_contents) == 1
 
+    def test_error_message_prefers_policy_message_over_code(self):
+        """Policy denials must show the plain-English message, not Code: policy_blocked."""
+        from lfx.services.model_provider_policy.base import (
+            ModelProviderPolicyError,
+            ModelProviderPolicyPurpose,
+        )
+
+        source = Source(
+            id="test-id",
+            display_name="LanguageModel",
+            source="LanguageModel",
+        )
+        exc = ModelProviderPolicyError(
+            "openai",
+            ModelProviderPolicyPurpose.USE,
+            model_name="gpt-4o",
+        )
+        err_msg = ErrorMessage(
+            exception=exc,
+            session_id="session-1",
+            source=source,
+            flow_id="flow-1",
+        )
+        assert "The requested model is not available" in err_msg.text
+        assert "policy_blocked" not in err_msg.text
+        assert "Code:" not in err_msg.text
+        markdown = ErrorMessage._format_markdown_reason(exc)
+        assert "The requested model is not available" in markdown
+        assert "Code: policy_blocked" not in markdown
+
     def test_error_message_can_omit_active_exception_traceback(self):
         """Public/delegated errors keep a generic reason without the caught traceback."""
         sensitive_detail = "owner-provider-secret"

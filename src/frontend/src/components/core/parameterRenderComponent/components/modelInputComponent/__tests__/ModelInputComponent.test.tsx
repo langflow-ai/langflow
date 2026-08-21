@@ -1019,13 +1019,9 @@ describe("ModelInputComponent", () => {
       ).not.toBeInTheDocument();
     });
 
-    it("does not render Configure when the saved model's provider is configured but the model was deactivated", async () => {
-      // Bug repro: user has provider X configured, then deactivates all models
-      // from X (including the one currently saved on the flow). The backend
-      // still injects the saved value as a sticky-default (not_enabled_locally)
-      // so the trigger displays a name. We must hide the wrench because the
-      // provider doesn't need configuring — instead we should default to a
-      // model the user actually has enabled.
+    it("keeps a deactivated sticky model when its provider is still configured", async () => {
+      // Admin-blocked or user-disabled models must stay on the canvas. Silently
+      // swapping to another allowed model rewrites the flow without consent.
       mockedUseGetModelProviders.mockReturnValue({
         data: [
           {
@@ -1086,18 +1082,16 @@ describe("ModelInputComponent", () => {
         />,
       );
 
-      // The Configure wrench must NOT appear — the provider is already set up.
+      // The Configure wrench helps the user re-enable the model; the provider
+      // itself does not need setup.
       expect(
-        screen.queryByTestId(`${defaultProps.id}-configure`),
-      ).not.toBeInTheDocument();
+        screen.getByTestId(`${defaultProps.id}-configure`),
+      ).toBeInTheDocument();
 
-      // The component must default to a different (valid) model so the flow
-      // doesn't run with a deactivated selection.
+      expect(handleOnNewValue).not.toHaveBeenCalled();
       await waitFor(() => {
-        expect(handleOnNewValue).toHaveBeenCalled();
+        expect(screen.getByText("gpt-3.5-turbo")).toBeInTheDocument();
       });
-      const newValue = handleOnNewValue.mock.calls[0][0].value;
-      expect(newValue[0].name).not.toBe("gpt-3.5-turbo");
     });
 
     it("hides the deactivated provider's models from the dropdown when the provider is still configured", async () => {

@@ -214,6 +214,7 @@ export default function ModelInputComponent({
 
   useAutoSelectModel({
     flatOptions,
+    rawOptions: options,
     value,
     handleOnNewValue,
     isConnectionMode,
