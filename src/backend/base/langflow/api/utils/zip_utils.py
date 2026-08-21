@@ -15,14 +15,12 @@ MAX_ZIP_ENTRIES = 500
 MAX_ENTRY_UNCOMPRESSED_BYTES = 50 * 1024 * 1024  # 50 MB per file
 
 # Reserved zip member carrying project-level metadata (project_type, project_config).
-# Every other ``.json`` entry is a flow, so this name must be skipped when collecting
-# flows or it is imported as a junk flow. Matched on the basename, case-insensitively,
-# so a zip written with a directory prefix still resolves.
-PROJECT_METADATA_FILENAME = "project.json"
-
-
-def _is_project_metadata(filename: str) -> bool:
-    return filename.rsplit("/", 1)[-1].lower() == PROJECT_METADATA_FILENAME
+# Deliberately NOT a ``.json`` file. Flows are exported as ``{name}.json``, so a ``.json``
+# metadata member would collide with a flow legitimately named "project", and the collision
+# is silent: the flow and the metadata would both be lost. A non-json extension also makes
+# the member invisible to importers that predate it, because only ``.json`` entries are ever
+# read, so an older deployment ignores it instead of failing the whole upload.
+PROJECT_METADATA_FILENAME = "project.meta"
 
 
 @dataclass
@@ -32,6 +30,37 @@ class _ZipExtractionResult:
     flows: list[dict] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     project_metadata: dict | None = None
+
+
+def _read_project_metadata(zf: zipfile.ZipFile, result: _ZipExtractionResult) -> None:
+    """Read the reserved metadata member, by exact name, if the archive carries one.
+
+    Matched exactly rather than by basename: only the member this exporter writes at the zip
+    root is ours. A same-named file inside a directory belongs to whoever built that archive.
+    """
+    try:
+        info = zf.getinfo(PROJECT_METADATA_FILENAME)
+    except KeyError:
+        return
+    if info.file_size > MAX_ENTRY_UNCOMPRESSED_BYTES:
+        result.warnings.append(
+            f"Skipping ZIP entry '{PROJECT_METADATA_FILENAME}': uncompressed size "
+            f"{info.file_size} exceeds limit of {MAX_ENTRY_UNCOMPRESSED_BYTES} bytes"
+        )
+        return
+    raw = zf.read(PROJECT_METADATA_FILENAME)
+    if len(raw) > MAX_ENTRY_UNCOMPRESSED_BYTES:
+        result.warnings.append(f"Skipping ZIP entry '{PROJECT_METADATA_FILENAME}': actual size exceeds limit")
+        return
+    try:
+        parsed = orjson.loads(raw)
+    except orjson.JSONDecodeError:
+        result.warnings.append(f"Ignoring ZIP entry '{PROJECT_METADATA_FILENAME}': invalid JSON")
+        return
+    if isinstance(parsed, dict):
+        result.project_metadata = parsed
+    else:
+        result.warnings.append(f"Ignoring ZIP entry '{PROJECT_METADATA_FILENAME}': expected a JSON object")
 
 
 def _extract_flows_sync(contents: bytes) -> _ZipExtractionResult:
@@ -49,6 +78,8 @@ def _extract_flows_sync(contents: bytes) -> _ZipExtractionResult:
         raise ValueError(msg) from exc
 
     with zf:
+        _read_project_metadata(zf, result)
+
         json_entries = [info for info in zf.infolist() if info.filename.lower().endswith(".json")]
 
         if len(json_entries) > MAX_ZIP_ENTRIES:
@@ -70,16 +101,7 @@ def _extract_flows_sync(contents: bytes) -> _ZipExtractionResult:
                         f"{len(raw)} exceeds limit of {MAX_ENTRY_UNCOMPRESSED_BYTES} bytes"
                     )
                     continue
-                parsed = orjson.loads(raw)
-                if _is_project_metadata(info.filename):
-                    # Project metadata, not a flow. Ignore a non-object payload rather than
-                    # failing the whole import over it.
-                    if isinstance(parsed, dict):
-                        result.project_metadata = parsed
-                    else:
-                        result.warnings.append(f"Ignoring ZIP entry '{info.filename}': expected a JSON object")
-                    continue
-                result.flows.append(parsed)
+                result.flows.append(orjson.loads(raw))
             except orjson.JSONDecodeError:
                 result.warnings.append(f"Skipping ZIP entry '{info.filename}': invalid JSON")
                 continue

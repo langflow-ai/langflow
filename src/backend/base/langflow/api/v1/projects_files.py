@@ -81,20 +81,16 @@ async def download_project_flows(
 
         with zipfile.ZipFile(zip_stream, "w") as zip_file:
             # Project-level metadata rides alongside the flows so a typed project survives a
-            # round trip. Written only when there is something to carry: an untyped project
-            # exports exactly as it did before this member existed. That matters because an
-            # importer that predates it reads every .json entry as a flow, so a zip carrying
-            # this member imports as a junk flow on an older deployment. Absence means the
-            # default type, which is what the importer assumes.
-            if project.project_type != DEFAULT_PROJECT_TYPE or project.project_config is not None:
-                project_metadata = {
-                    "project_type": project.project_type,
-                    "project_config": project.project_config,
-                }
-                zip_file.writestr(
-                    PROJECT_METADATA_FILENAME,
-                    orjson_dumps(project_metadata, sort_keys=True).encode("utf-8"),
-                )
+            # round trip. Written unconditionally: the member is not a .json entry, so an
+            # importer that predates it never reads it, and it cannot collide with a flow file.
+            project_metadata = {
+                "project_type": project.project_type,
+                "project_config": project.project_config,
+            }
+            zip_file.writestr(
+                PROJECT_METADATA_FILENAME,
+                orjson_dumps(project_metadata, sort_keys=True).encode("utf-8"),
+            )
             for flow in normalised_flows:
                 safe_name = _sanitize_flow_filename(str(flow["name"]), str(flow.get("id", "flow")))
                 # Serialise with sorted keys and 2-space indent for stable diffs.
@@ -121,6 +117,24 @@ async def download_project_flows(
         raise HTTPException(
             status_code=500, detail="An internal error occurred while downloading project flows."
         ) from e
+
+
+def _imported_project_config(value: object) -> dict | None:
+    """Resolve the project config from an uploaded payload.
+
+    ``FolderCreate.project_config`` is a ``dict | None``, so a scalar or a list reaches pydantic
+    as a validation error that no handler catches and the whole upload answers 500. An uploaded
+    archive is untrusted input, so a wrong shape degrades to no config, matching how an unknown
+    project type degrades to the default.
+    """
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        logger.warning(
+            "Ignoring project_config of type %s in uploaded project; expected an object", type(value).__name__
+        )
+        return None
+    return value
 
 
 def _imported_project_type(value: object) -> str:
@@ -209,7 +223,7 @@ async def upload_project_flows(
         name=data["folder_name"],
         description=data.get("folder_description", ""),
         project_type=_imported_project_type(data.get("folder_project_type")),
-        project_config=data.get("folder_project_config"),
+        project_config=_imported_project_config(data.get("folder_project_config")),
     )
 
     new_project = Folder.model_validate(project, from_attributes=True)

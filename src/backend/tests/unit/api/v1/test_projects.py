@@ -101,7 +101,9 @@ async def test_shared_project_download_filters_flows_by_read_permission():
 
     body = b"".join([chunk async for chunk in response.body_iterator])
     with zipfile.ZipFile(io.BytesIO(body), "r") as archive:
-        assert archive.namelist() == ["Allowed Flow.json"]
+        # The archive also carries the reserved project metadata member; this test is about
+        # which flows are visible, so compare the flow entries only.
+        assert [n for n in archive.namelist() if n.endswith(".json")] == ["Allowed Flow.json"]
 
     filter_visible.assert_awaited_once()
     assert filter_visible.await_args.kwargs["candidates"] == [allowed_flow, denied_flow]
@@ -2001,9 +2003,9 @@ async def test_download_file_starter_project(client: AsyncClient, logged_in_head
     # Verify zip file contents
     zip_content = response.content
     with zipfile.ZipFile(io.BytesIO(zip_content), "r") as zip_file:
-        file_names = zip_file.namelist()
-        # Should have 3 flow files
-        assert len(file_names) == 3, f"Expected 3 files in zip, got {len(file_names)}: {file_names}"
+        file_names = [n for n in zip_file.namelist() if n.endswith(".json")]
+        # Should have 3 flow files, alongside the reserved project metadata member
+        assert len(file_names) == 3, f"Expected 3 flow files in zip, got {len(file_names)}: {file_names}"
 
         # Verify each basic flow file exists and contains valid JSON
         for i in range(2):
@@ -2101,7 +2103,7 @@ async def test_download_project_sanitizes_windows_path_characters(
     assert response.status_code == status.HTTP_200_OK
 
     with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_file:
-        file_names = zip_file.namelist()
+        file_names = [n for n in zip_file.namelist() if n.endswith(".json")]
         assert len(file_names) == 1
         assert "/" not in file_names[0]
         assert "\\" not in file_names[0]
@@ -2775,8 +2777,8 @@ async def test_project_type_survives_zip_round_trip(client: AsyncClient, logged_
 
     # The metadata member must be present, and must not be mistaken for a flow.
     with zipfile.ZipFile(io.BytesIO(download_response.content)) as zf:
-        assert "project.json" in zf.namelist()
-        metadata = json.loads(zf.read("project.json"))
+        assert "project.meta" in zf.namelist()
+        metadata = json.loads(zf.read("project.meta"))
     assert metadata["project_type"] == "agent-harness"
     assert metadata["project_config"] == {"Model": "openai/gpt-4o"}
 
@@ -2797,10 +2799,10 @@ async def test_project_type_survives_zip_round_trip(client: AsyncClient, logged_
     assert imported, f"no imported project found in {[p['name'] for p in projects]}"
     assert imported[0]["project_type"] == "agent-harness"
 
-    # project.json must not have been imported as a flow.
+    # The metadata member must not have been imported as a flow.
     imported_detail = (await client.get(f"api/v1/projects/{imported[0]['id']}", headers=logged_in_headers)).json()
     flow_names = [f["name"] for f in imported_detail.get("flows", [])]
-    assert "project" not in flow_names, f"project.json leaked in as a flow: {flow_names}"
+    assert "project" not in flow_names, f"the metadata member leaked in as a flow: {flow_names}"
 
 
 async def test_zip_import_falls_back_on_unknown_project_type(client: AsyncClient, logged_in_headers, json_flow):
@@ -2811,7 +2813,7 @@ async def test_zip_import_falls_back_on_unknown_project_type(client: AsyncClient
     flow_payload = json.loads(json_flow)
     zip_stream = io.BytesIO()
     with zipfile.ZipFile(zip_stream, "w") as zf:
-        zf.writestr("project.json", json.dumps({"project_type": "from-the-future", "project_config": {"a": 1}}))
+        zf.writestr("project.meta", json.dumps({"project_type": "from-the-future", "project_config": {"a": 1}}))
         zf.writestr("a_flow.json", json.dumps({**flow_payload, "name": "future_flow"}))
     zip_stream.seek(0)
 
@@ -2826,3 +2828,73 @@ async def test_zip_import_falls_back_on_unknown_project_type(client: AsyncClient
     imported = [p for p in projects if p["name"].startswith("future")]
     assert imported, f"no imported project found in {[p['name'] for p in projects]}"
     assert imported[0]["project_type"] == "flows"
+
+
+async def test_flow_named_project_survives_the_round_trip(client: AsyncClient, logged_in_headers, json_flow):
+    """A flow called "project" must not be eaten by the reserved metadata member.
+
+    Flows export as ``{name}.json``, so a metadata member named ``project.json`` collides with
+    a flow named "project" and the loss is silent: the import answers 201 having dropped it.
+    """
+    create_response = await client.post(
+        "api/v1/projects/",
+        json={"name": "collide_src", "description": "", "project_type": "agent-harness"},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED, create_response.text
+    project_id = create_response.json()["id"]
+
+    for flow_name in ("project", "keeper"):
+        flow_payload = json.loads(json_flow)
+        flow_payload.pop("id", None)  # let the server assign ids; the fixture reuses one
+        flow_response = await client.post(
+            "api/v1/flows/",
+            json={**flow_payload, "name": flow_name, "folder_id": project_id},
+            headers=logged_in_headers,
+        )
+        assert flow_response.status_code == status.HTTP_201_CREATED, flow_response.text
+
+    download_response = await client.get(f"api/v1/projects/download/{project_id}", headers=logged_in_headers)
+    assert download_response.status_code == status.HTTP_200_OK, download_response.text
+
+    names = zipfile.ZipFile(io.BytesIO(download_response.content)).namelist()
+    assert sorted(names) == ["keeper.json", "project.json", "project.meta"], names
+
+    delete_response = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert delete_response.status_code in (status.HTTP_200_OK, status.HTTP_204_NO_CONTENT), delete_response.text
+
+    upload_response = await client.post(
+        "api/v1/projects/upload/",
+        files={"file": ("collide.zip", download_response.content, "application/zip")},
+        headers=logged_in_headers,
+    )
+    assert upload_response.status_code == status.HTTP_201_CREATED, upload_response.text
+
+    projects = (await client.get("api/v1/projects/", headers=logged_in_headers)).json()
+    imported = [p for p in projects if p["name"].startswith("collide")]
+    assert imported, f"no imported project in {[p['name'] for p in projects]}"
+    assert imported[0]["project_type"] == "agent-harness"
+
+    detail = (await client.get(f"api/v1/projects/{imported[0]['id']}", headers=logged_in_headers)).json()
+    assert sorted(f["name"] for f in detail.get("flows", [])) == ["keeper", "project"]
+
+
+@pytest.mark.parametrize("bad_config", ["junk", 123, ["a"]])
+async def test_zip_import_ignores_malformed_project_config(client, logged_in_headers, json_flow, bad_config):
+    """A wrong-shaped project_config degrades to none; it must not 500 the whole upload."""
+    zip_stream = io.BytesIO()
+    with zipfile.ZipFile(zip_stream, "w") as zf:
+        zf.writestr("project.meta", json.dumps({"project_type": "flows", "project_config": bad_config}))
+        zf.writestr("a_flow.json", json.dumps({**json.loads(json_flow), "name": f"badcfg_{type(bad_config).__name__}"}))
+
+    upload_response = await client.post(
+        "api/v1/projects/upload/",
+        files={"file": ("badcfg.zip", zip_stream.getvalue(), "application/zip")},
+        headers=logged_in_headers,
+    )
+    assert upload_response.status_code == status.HTTP_201_CREATED, upload_response.text
+
+    projects = (await client.get("api/v1/projects/", headers=logged_in_headers)).json()
+    imported = [p for p in projects if p["name"].startswith("badcfg")]
+    assert imported, f"no imported project in {[p['name'] for p in projects]}"
+    assert imported[0]["project_config"] is None
