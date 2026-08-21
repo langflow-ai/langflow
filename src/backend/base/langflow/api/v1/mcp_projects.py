@@ -109,6 +109,7 @@ async def verify_project_auth(
     # Mirror the service.py auth entrypoints: reset request-local credential metadata at entry so a
     # later branch (e.g. the composer-token fast path) never inherits stale context from a prior call.
     clear_current_auth_context()
+    authenticated_caller_ctx.set(None)
     # Defensive invariant: drop any stale external access ceiling so it can't carry into MCP project auth.
     clear_current_external_access_context()
 

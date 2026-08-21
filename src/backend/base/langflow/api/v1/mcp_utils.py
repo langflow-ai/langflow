@@ -19,17 +19,24 @@ from lfx.base.mcp.constants import MAX_MCP_TOOL_NAME_LENGTH
 from lfx.base.mcp.util import get_flow_snake_case, get_unique_name, sanitize_mcp_name
 from lfx.log.logger import logger
 from lfx.observability import execution_protocol
-from lfx.utils.flow_validation import CustomComponentValidationError
+from lfx.utils.flow_validation import (
+    CustomComponentValidationError,
+    prepare_public_flow_build,
+    validate_public_flow_no_code_execution,
+)
 from lfx.utils.helpers import build_content_type_from_extension
 from mcp import types
 from sqlmodel import select
 
+from langflow.api.utils.core import strip_secret_field_values
+from langflow.api.utils.flow_utils import compute_virtual_flow_id, scope_session_to_namespace
 from langflow.api.v1.endpoints import simple_run_flow
 from langflow.api.v1.run_validation import HITL_UNSUPPORTED_DETAIL, flow_requires_hitl
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.helpers.flow import get_flow_input_tweaks, json_schema_from_flow
 from langflow.schema.message import Message
 from langflow.services.authorization import FlowAction, ensure_flow_permission
+from langflow.services.authorization.public_access import public_execution_user
 from langflow.services.database.models import Flow
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.database.models.user.model import User
@@ -57,6 +64,26 @@ def caller_owns_resource(owner_id: UUID | None) -> bool:
     """
     caller_id = authenticated_caller_ctx.get()
     return caller_id is not None and owner_id is not None and caller_id == owner_id
+
+
+def _public_mcp_session_namespace(server: Any, project_id: UUID, flow_id: UUID) -> str:
+    """Return a per-MCP-connection namespace for anonymous session IDs."""
+    mcp_session = getattr(getattr(server, "request_context", None), "session", None)
+    connection_id = getattr(mcp_session, "session_id", None)
+    if not connection_id:
+        # The SSE session object is stable for the life of a connection even on
+        # SDK versions that do not expose a public session identifier.
+        connection_id = str(id(mcp_session)) if mcp_session is not None else str(uuid4())
+    identifier = f"mcp:{project_id}:{connection_id}"
+    return str(compute_virtual_flow_id(identifier, flow_id, principal_type="client"))
+
+
+async def _prepare_public_mcp_execution_flow(flow: Flow) -> Flow:
+    """Apply the shared anonymous-flow policy to a detached MCP execution graph."""
+    validate_public_flow_no_code_execution(flow.data)
+    prepared_data = await prepare_public_flow_build(flow.data)
+    sanitized_data = strip_secret_field_values(prepared_data if prepared_data is not None else flow.data)
+    return flow.model_copy(update={"data": sanitized_data}, deep=True)
 
 
 EXCLUDED_FLOWS_META_KEY = "langflow.org/excluded-flows"
@@ -358,6 +385,18 @@ async def handle_call_tool(
         if flow_requires_hitl(flow.data or {}):
             raise RuntimeError(HITL_UNSUPPORTED_DETAIL)
 
+        is_public_project_call = project_id is not None and authenticated_caller_ctx.get() is None
+        execution_flow = flow
+        execution_user = current_user
+        if is_public_project_call:
+            try:
+                execution_flow = await _prepare_public_mcp_execution_flow(flow)
+            except CustomComponentValidationError as exc:
+                await logger.awarning(f"Public MCP tool call blocked for flow {flow.id}: {exc!s}")
+                msg = "This flow cannot be executed through a public MCP project."
+                raise RuntimeError(msg) from exc
+            execution_user = public_execution_user()
+
         # Process inputs
         processed_inputs = dict(arguments)
 
@@ -368,8 +407,11 @@ async def handle_call_tool(
             )
 
         session_id = processed_inputs.pop("session_id", None) or str(uuid4())
+        if is_public_project_call:
+            namespace = _public_mcp_session_namespace(server, project_id, flow.id)
+            session_id = scope_session_to_namespace(session_id, namespace) or namespace
         input_value = processed_inputs.pop("input_value", "")
-        tweaks = get_flow_input_tweaks(flow, processed_inputs) if processed_inputs else None
+        tweaks = get_flow_input_tweaks(execution_flow, processed_inputs) if processed_inputs else None
         input_request = SimplifiedAPIRequest(
             input_value=input_value,
             session_id=session_id,
@@ -409,10 +451,10 @@ async def handle_call_tool(
                 try:
                     with execution_protocol("mcp"):
                         result = await simple_run_flow(
-                            flow=flow,
+                            flow=execution_flow,
                             input_request=input_request,
                             stream=False,
-                            api_key_user=current_user,
+                            api_key_user=execution_user,
                             context=exec_context,
                             expose_error_details=caller_owns_resource(flow.user_id),
                             http_request=http_request_shim,
