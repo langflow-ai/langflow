@@ -2585,12 +2585,14 @@ async def test_create_project_persists_explicit_project_type(client: AsyncClient
     create_response = await client.post("api/v1/projects/", json=body, headers=logged_in_headers)
     assert create_response.status_code == status.HTTP_201_CREATED, create_response.text
     assert create_response.json()["project_type"] == "agent-harness"
+    assert create_response.json()["project_config"] == {"Instructions": "be careful"}
 
     # Re-read rather than trusting the create response, so this asserts persistence.
     project_id = create_response.json()["id"]
     read_response = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
     assert read_response.status_code == status.HTTP_200_OK, read_response.text
     assert read_response.json()["project_type"] == "agent-harness"
+    assert read_response.json()["project_config"] == {"Instructions": "be careful"}
 
 
 async def test_patch_project_updates_project_type(client: AsyncClient, logged_in_headers):
@@ -2615,6 +2617,39 @@ async def test_patch_project_updates_project_type(client: AsyncClient, logged_in
     read_response = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
     assert read_response.status_code == status.HTTP_200_OK, read_response.text
     assert read_response.json()["project_type"] == "agent-harness"
+    assert read_response.json()["project_config"] == {"Model": "openai/gpt-4o"}
+
+
+async def test_patch_project_clears_project_config_with_explicit_null(client: AsyncClient, logged_in_headers):
+    """Sending null clears project_config; omitting it leaves the stored value alone.
+
+    This is the whole reason the apply block reads ``model_fields_set`` instead of checking for
+    None. A None check cannot tell "clear this" from "do not touch this".
+    """
+    create_response = await client.post(
+        "api/v1/projects/",
+        json={"name": "clear_config", "description": "", "project_config": {"Model": "openai/gpt-4o"}},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED, create_response.text
+    project_id = create_response.json()["id"]
+
+    # Omitting project_config must not disturb it.
+    untouched = await client.patch(
+        f"api/v1/projects/{project_id}", json={"description": "touched"}, headers=logged_in_headers
+    )
+    assert untouched.status_code == status.HTTP_200_OK, untouched.text
+    assert untouched.json()["project_config"] == {"Model": "openai/gpt-4o"}
+
+    # Sending null must clear it.
+    cleared = await client.patch(
+        f"api/v1/projects/{project_id}", json={"project_config": None}, headers=logged_in_headers
+    )
+    assert cleared.status_code == status.HTTP_200_OK, cleared.text
+    assert cleared.json()["project_config"] is None
+
+    read_response = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert read_response.json()["project_config"] is None
 
 
 async def test_upsert_project_updates_project_type(client: AsyncClient, logged_in_headers):
@@ -2634,15 +2669,22 @@ async def test_upsert_project_updates_project_type(client: AsyncClient, logged_i
 
     response = await client.put(
         f"api/v1/projects/{project_id}",
-        json={"name": "put_retype", "description": "", "project_type": "agent-harness"},
+        json={
+            "name": "put_retype",
+            "description": "",
+            "project_type": "agent-harness",
+            "project_config": {"Model": "openai/gpt-4o"},
+        },
         headers=logged_in_headers,
     )
     assert response.status_code == status.HTTP_200_OK, response.text
     assert response.json()["project_type"] == "agent-harness"
+    assert response.json()["project_config"] == {"Model": "openai/gpt-4o"}
 
     read_response = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
     assert read_response.status_code == status.HTTP_200_OK, read_response.text
     assert read_response.json()["project_type"] == "agent-harness"
+    assert read_response.json()["project_config"] == {"Model": "openai/gpt-4o"}
 
 
 @pytest.mark.parametrize("bad_type", ["totally-not-a-real-type", ""])
@@ -2656,7 +2698,7 @@ async def test_project_type_rejects_unknown_values(client: AsyncClient, logged_i
         json={"name": f"reject_{bad_type or 'empty'}", "description": "", "project_type": bad_type},
         headers=logged_in_headers,
     )
-    assert create_response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, create_response.text
+    assert create_response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT, create_response.text
 
     ok_response = await client.post(
         "api/v1/projects/",
@@ -2671,7 +2713,32 @@ async def test_project_type_rejects_unknown_values(client: AsyncClient, logged_i
         json={"project_type": bad_type},
         headers=logged_in_headers,
     )
-    assert patch_response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, patch_response.text
+    assert patch_response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT, patch_response.text
 
     read_response = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
     assert read_response.json()["project_type"] == "flows"
+
+
+async def test_patch_project_rejects_explicit_null_project_type(client: AsyncClient, logged_in_headers):
+    """An explicit null is a value the caller asked for, and project_type cannot be null.
+
+    Omitting the field means "leave it alone"; sending null means "set it to null", which the
+    NOT NULL column cannot honour. Ignoring it would answer 200 for a request that did nothing.
+    """
+    create_response = await client.post(
+        "api/v1/projects/",
+        json={"name": "null_type", "description": "", "project_type": "agent-harness"},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED, create_response.text
+    project_id = create_response.json()["id"]
+
+    response = await client.patch(
+        f"api/v1/projects/{project_id}",
+        json={"project_type": None},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT, response.text
+
+    read_response = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert read_response.json()["project_type"] == "agent-harness"

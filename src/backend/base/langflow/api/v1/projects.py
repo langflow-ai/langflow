@@ -616,7 +616,16 @@ async def _apply_project_update(
     if project.description is not None:
         existing_project.description = project.description
 
-    if project.project_type is not None:
+    # An omitted project_type means "leave it alone". An explicit null is a value the caller
+    # asked for, and the column is NOT NULL, so it cannot be honoured. Answering 200 for a
+    # request that changed nothing is the same silent no-op this endpoint already avoids
+    # elsewhere, and `validate_project_type` already refuses every other invalid value.
+    if "project_type" in project.model_fields_set:
+        if project.project_type is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="project_type must not be null.",
+            )
         existing_project.project_type = validate_project_type(project.project_type)
 
     # project_config uses model_fields_set, not a None check: clearing the config and leaving
