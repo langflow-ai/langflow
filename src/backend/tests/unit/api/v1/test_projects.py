@@ -2742,3 +2742,87 @@ async def test_patch_project_rejects_explicit_null_project_type(client: AsyncCli
 
     read_response = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
     assert read_response.json()["project_type"] == "agent-harness"
+
+
+async def test_project_type_survives_zip_round_trip(client: AsyncClient, logged_in_headers, json_flow):
+    """A typed project exported as a zip re-imports with its type and config intact.
+
+    The zip carries the type in a reserved ``project.json`` member. Without it the round trip
+    silently downgrades every imported project to the default type.
+    """
+    create_response = await client.post(
+        "api/v1/projects/",
+        json={
+            "name": "roundtrip_source",
+            "description": "",
+            "project_type": "agent-harness",
+            "project_config": {"Model": "openai/gpt-4o"},
+        },
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED, create_response.text
+    project_id = create_response.json()["id"]
+
+    flow_response = await client.post(
+        "api/v1/flows/",
+        json={**json.loads(json_flow), "name": "roundtrip_flow", "folder_id": project_id},
+        headers=logged_in_headers,
+    )
+    assert flow_response.status_code == status.HTTP_201_CREATED, flow_response.text
+
+    download_response = await client.get(f"api/v1/projects/download/{project_id}", headers=logged_in_headers)
+    assert download_response.status_code == status.HTTP_200_OK, download_response.text
+
+    # The metadata member must be present, and must not be mistaken for a flow.
+    with zipfile.ZipFile(io.BytesIO(download_response.content)) as zf:
+        assert "project.json" in zf.namelist()
+        metadata = json.loads(zf.read("project.json"))
+    assert metadata["project_type"] == "agent-harness"
+    assert metadata["project_config"] == {"Model": "openai/gpt-4o"}
+
+    # Remove the source project first. Re-importing the same flows into the same account
+    # otherwise collides on flow ids, which is a property of this test, not of the round trip.
+    delete_response = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert delete_response.status_code in (status.HTTP_200_OK, status.HTTP_204_NO_CONTENT), delete_response.text
+
+    upload_response = await client.post(
+        "api/v1/projects/upload/",
+        files={"file": ("roundtrip.zip", download_response.content, "application/zip")},
+        headers=logged_in_headers,
+    )
+    assert upload_response.status_code == status.HTTP_201_CREATED, upload_response.text
+
+    projects = (await client.get("api/v1/projects/", headers=logged_in_headers)).json()
+    imported = [p for p in projects if p["name"].startswith("roundtrip")]
+    assert imported, f"no imported project found in {[p['name'] for p in projects]}"
+    assert imported[0]["project_type"] == "agent-harness"
+
+    # project.json must not have been imported as a flow.
+    imported_detail = (await client.get(f"api/v1/projects/{imported[0]['id']}", headers=logged_in_headers)).json()
+    flow_names = [f["name"] for f in imported_detail.get("flows", [])]
+    assert "project" not in flow_names, f"project.json leaked in as a flow: {flow_names}"
+
+
+async def test_zip_import_falls_back_on_unknown_project_type(client: AsyncClient, logged_in_headers, json_flow):
+    """An archive naming a project type this deployment does not have still imports.
+
+    Refusing the whole upload would lose the flows too, so the type degrades to the default.
+    """
+    flow_payload = json.loads(json_flow)
+    zip_stream = io.BytesIO()
+    with zipfile.ZipFile(zip_stream, "w") as zf:
+        zf.writestr("project.json", json.dumps({"project_type": "from-the-future", "project_config": {"a": 1}}))
+        zf.writestr("a_flow.json", json.dumps({**flow_payload, "name": "future_flow"}))
+    zip_stream.seek(0)
+
+    upload_response = await client.post(
+        "api/v1/projects/upload/",
+        files={"file": ("future.zip", zip_stream.getvalue(), "application/zip")},
+        headers=logged_in_headers,
+    )
+    assert upload_response.status_code == status.HTTP_201_CREATED, upload_response.text
+
+    projects = (await client.get("api/v1/projects/", headers=logged_in_headers)).json()
+    imported = [p for p in projects if p["name"].startswith("future")]
+    assert imported, f"no imported project found in {[p['name'] for p in projects]}"
+    assert imported[0]["project_type"] == "flows"

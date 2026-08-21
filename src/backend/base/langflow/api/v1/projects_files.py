@@ -23,7 +23,7 @@ from langflow.api.utils import (
     normalize_flow_for_export,
     strip_flow_secrets,
 )
-from langflow.api.utils.zip_utils import extract_flows_from_zip
+from langflow.api.utils.zip_utils import PROJECT_METADATA_FILENAME, extract_project_from_zip
 from langflow.api.v1.flows import create_flows
 from langflow.api.v1.flows_helpers import _sanitize_flow_filename
 from langflow.api.v1.schemas import FlowListCreate
@@ -38,6 +38,7 @@ from langflow.services.database.models.folder.model import (
     Folder,
     FolderCreate,
 )
+from langflow.services.database.models.folder.utils import DEFAULT_PROJECT_TYPE, registered_project_types
 from langflow.services.deps import get_settings_service
 
 
@@ -79,6 +80,21 @@ async def download_project_flows(
         zip_stream = io.BytesIO()
 
         with zipfile.ZipFile(zip_stream, "w") as zip_file:
+            # Project-level metadata rides alongside the flows so a typed project survives a
+            # round trip. Written only when there is something to carry: an untyped project
+            # exports exactly as it did before this member existed. That matters because an
+            # importer that predates it reads every .json entry as a flow, so a zip carrying
+            # this member imports as a junk flow on an older deployment. Absence means the
+            # default type, which is what the importer assumes.
+            if project.project_type != DEFAULT_PROJECT_TYPE or project.project_config is not None:
+                project_metadata = {
+                    "project_type": project.project_type,
+                    "project_config": project.project_config,
+                }
+                zip_file.writestr(
+                    PROJECT_METADATA_FILENAME,
+                    orjson_dumps(project_metadata, sort_keys=True).encode("utf-8"),
+                )
             for flow in normalised_flows:
                 safe_name = _sanitize_flow_filename(str(flow["name"]), str(flow.get("id", "flow")))
                 # Serialise with sorted keys and 2-space indent for stable diffs.
@@ -107,6 +123,23 @@ async def download_project_flows(
         ) from e
 
 
+def _imported_project_type(value: object) -> str:
+    """Resolve the project type from an uploaded payload.
+
+    Unlike the create and update paths, an import does not reject an unknown type. The archive
+    may come from a deployment that has a project type this one does not, and refusing the whole
+    import over it would lose the flows too. Fall back to the default and say so in the log.
+    """
+    if value is None:
+        return DEFAULT_PROJECT_TYPE
+    if not isinstance(value, str) or value not in registered_project_types():
+        logger.warning(
+            "Ignoring unknown project_type %r in uploaded project; importing as %s", value, DEFAULT_PROJECT_TYPE
+        )
+        return DEFAULT_PROJECT_TYPE
+    return value
+
+
 async def upload_project_flows(
     *,
     session: DbSession,
@@ -129,7 +162,7 @@ async def upload_project_flows(
     # Detect ZIP files and extract flow data
     if zipfile.is_zipfile(io.BytesIO(contents)):
         try:
-            flows_data = await extract_flows_from_zip(contents)
+            flows_data, project_metadata = await extract_project_from_zip(contents)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
         if not flows_data:
@@ -143,6 +176,9 @@ async def upload_project_flows(
             "folder_description": "",
             "flows": flows_data,
         }
+        if project_metadata:
+            data["folder_project_type"] = project_metadata.get("project_type")
+            data["folder_project_config"] = project_metadata.get("project_config")
     else:
         try:
             data = orjson.loads(contents)
@@ -169,7 +205,12 @@ async def upload_project_flows(
 
     data["folder_name"] = project_name
 
-    project = FolderCreate(name=data["folder_name"], description=data.get("folder_description", ""))
+    project = FolderCreate(
+        name=data["folder_name"],
+        description=data.get("folder_description", ""),
+        project_type=_imported_project_type(data.get("folder_project_type")),
+        project_config=data.get("folder_project_config"),
+    )
 
     new_project = Folder.model_validate(project, from_attributes=True)
     new_project.id = None
