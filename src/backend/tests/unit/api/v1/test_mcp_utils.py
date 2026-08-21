@@ -445,6 +445,7 @@ async def _invoke_handle_call_tool(
     authenticated_caller="user-1",
     project_id=None,
     flow_data=None,
+    expected_error: str | None = None,
 ) -> AsyncMock:
     """Run handle_call_tool with all external deps stubbed; return the simple_run_flow mock.
 
@@ -488,12 +489,21 @@ async def _invoke_handle_call_tool(
     token = mcp_utils.current_user_ctx.set(SimpleNamespace(id="user-1"))
     caller_token = mcp_utils.authenticated_caller_ctx.set(authenticated_caller)
     try:
-        await mcp_utils.handle_call_tool(
-            name="my_flow",
-            arguments=arguments,
-            server=_build_fake_server(),
-            project_id=project_id,
-        )
+        if expected_error is None:
+            await mcp_utils.handle_call_tool(
+                name="my_flow",
+                arguments=arguments,
+                server=_build_fake_server(),
+                project_id=project_id,
+            )
+        else:
+            with pytest.raises(RuntimeError, match=expected_error):
+                await mcp_utils.handle_call_tool(
+                    name="my_flow",
+                    arguments=arguments,
+                    server=_build_fake_server(),
+                    project_id=project_id,
+                )
     finally:
         mcp_utils.authenticated_caller_ctx.reset(caller_token)
         mcp_utils.current_user_ctx.reset(token)
@@ -501,7 +511,6 @@ async def _invoke_handle_call_tool(
     return simple_run_flow_mock
 
 
-@pytest.mark.asyncio
 async def test_handle_call_tool_applies_public_policy_and_scopes_session(monkeypatch):
     project_id = uuid4()
     prepared_data = {"nodes": [{"prepared": True}], "edges": []}
@@ -533,7 +542,44 @@ async def test_handle_call_tool_applies_public_policy_and_scopes_session(monkeyp
     assert forwarded_user.is_superuser is False
 
 
-@pytest.mark.asyncio
+async def test_handle_call_tool_rejects_public_flow_validation_failure(monkeypatch):
+    validate = MagicMock(side_effect=mcp_utils.CustomComponentValidationError("custom code is not allowed"))
+    prepare = AsyncMock()
+    monkeypatch.setattr(mcp_utils, "validate_public_flow_no_code_execution", validate)
+    monkeypatch.setattr(mcp_utils, "prepare_public_flow_build", prepare)
+
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello"},
+        authenticated_caller=None,
+        project_id=uuid4(),
+        expected_error="cannot be executed through a public MCP project",
+    )
+
+    validate.assert_called_once()
+    prepare.assert_not_awaited()
+    simple_run_flow_mock.assert_not_awaited()
+
+
+async def test_handle_call_tool_rejects_public_flow_prepare_failure(monkeypatch):
+    validate = MagicMock()
+    prepare = AsyncMock(side_effect=mcp_utils.CustomComponentValidationError("invalid public flow"))
+    monkeypatch.setattr(mcp_utils, "validate_public_flow_no_code_execution", validate)
+    monkeypatch.setattr(mcp_utils, "prepare_public_flow_build", prepare)
+
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello"},
+        authenticated_caller=None,
+        project_id=uuid4(),
+        expected_error="cannot be executed through a public MCP project",
+    )
+
+    validate.assert_called_once()
+    prepare.assert_awaited_once()
+    simple_run_flow_mock.assert_not_awaited()
+
+
 async def test_handle_call_tool_preserves_authenticated_mcp_session(monkeypatch):
     prepare = AsyncMock()
     monkeypatch.setattr(mcp_utils, "prepare_public_flow_build", prepare)
