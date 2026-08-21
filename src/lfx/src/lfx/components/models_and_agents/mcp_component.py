@@ -434,8 +434,11 @@ class MCPToolsComponent(ComponentWithCache):
                 # database may not be available — in that case we skip the DB lookup
                 # and fall back to the config embedded in the flow (server_config_from_value).
                 server_config_from_db = None
+                current_user = None
+                settings_service = None
+                ensure_mcp_stdio_access = None
                 try:
-                    from langflow.api.v2.mcp import get_server
+                    from langflow.api.v2.mcp import ensure_mcp_stdio_access, get_server
                     from langflow.services.database.models.user.crud import get_user_by_id
 
                     from lfx.services.deps import get_settings_service
@@ -465,6 +468,7 @@ class MCPToolsComponent(ComponentWithCache):
                             msg = "User ID is required for fetching MCP tools."
                             raise ValueError(msg)
                         current_user = await get_user_by_id(db, self.user_id)
+                        settings_service = get_settings_service()
 
                         # Try to get server config from DB/API
                         server_config_from_db = await get_server(
@@ -472,7 +476,7 @@ class MCPToolsComponent(ComponentWithCache):
                             current_user,
                             db,
                             storage_service=get_storage_service(),
-                            settings_service=get_settings_service(),
+                            settings_service=settings_service,
                         )
 
                 # Resolve config with proper precedence: DB takes priority, falls back to value
@@ -489,6 +493,13 @@ class MCPToolsComponent(ComponentWithCache):
                         server_name,
                     )
                     return [], {"name": server_name, "config": server_config}
+
+                # The REST API applies this policy when a stdio server is registered,
+                # but imported flows can carry the same process-spawning config in the
+                # MCP component value. Reapply the policy to the resolved config at the
+                # component boundary before update_tools reaches the subprocess client.
+                if ensure_mcp_stdio_access is not None and current_user is not None and settings_service is not None:
+                    ensure_mcp_stdio_access(server_config, current_user, settings_service.settings)
 
                 # Add verify_ssl option to server config if not present
                 if "verify_ssl" not in server_config:

@@ -10,6 +10,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from langflow.services.deps import get_settings_service
 from lfx.base.mcp.util import MCPSessionManager, MCPStdioClient, MCPStreamableHttpClient
 from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
 from lfx.inputs.inputs import BoolInput, MessageTextInput, NestedDictInput
@@ -705,6 +706,33 @@ class TestMCPComponentConfigPriority:
 
             # Connect should be called with value config as fallback
             mock_connect.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_value_config_respects_code_execution_lockdown(self, component, monkeypatch):
+        """An imported stdio config cannot bypass the non-admin process policy."""
+        component.mcp_server = {
+            "name": "embedded_stdio",
+            "config": {"command": "uvx", "args": ["mcp-server-fetch"]},
+        }
+        component._user_id = "test_user_123"
+        settings = get_settings_service().settings
+        monkeypatch.setattr(settings, "allow_custom_components", True)
+        monkeypatch.setattr(settings, "custom_component_admin_only", True)
+        monkeypatch.setattr(settings, "block_code_interpreter_components", False)
+
+        with (
+            patch("langflow.api.v2.mcp.get_server") as mock_get_server,
+            patch("langflow.services.database.models.user.crud.get_user_by_id") as mock_get_user,
+            patch("lfx.components.models_and_agents.mcp_component.session_scope"),
+            patch.object(component.stdio_client, "connect_to_server") as mock_connect,
+        ):
+            mock_get_user.return_value = SimpleNamespace(id="test_user_123", is_superuser=False)
+            mock_get_server.return_value = None
+
+            with pytest.raises(ValueError, match="restricted to administrators"):
+                await component.update_tool_list()
+
+            mock_connect.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_unsafe_value_config_is_rejected_when_not_in_database(self, component):
