@@ -160,7 +160,9 @@ export default function McpClientPage() {
                 className={cn(
                   // No fixed height: the icon/text used to overflow the h-6
                   // box invisibly, and the scrollable tablist would clip it.
-                  "flex flex-row items-end gap-2 text-nowrap border-b-2 border-b-transparent px-3 py-2 text-[13px] font-medium",
+                  // Inset focus outline: the tab fills the scroll container's
+                  // padding box, so the global +2px outline would be clipped.
+                  "flex flex-row items-end gap-2 text-nowrap border-b-2 border-b-transparent px-3 py-2 text-[13px] font-medium focus-visible:-outline-offset-2",
                   isSelected
                     ? "border-b-2 border-black dark:border-b-white"
                     : "text-muted-foreground hover:text-foreground",
