@@ -112,6 +112,7 @@ const ModelTrigger = ({
             ? `${setupProviderTextId} ${ariaLabelledBy}`
             : undefined
         }
+        aria-describedby={ariaDescribedBy}
       >
         <ForwardedIconComponent
           name="BrainCircuit"

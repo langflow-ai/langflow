@@ -196,7 +196,13 @@ const ProviderConfigurationForm = ({
                 {!isSingleVariableProvider && (
                   <label
                     id={labelId}
-                    htmlFor={inputId}
+                    // The options branch renders a multiselect with no id —
+                    // only the text-input branch has a target for htmlFor.
+                    htmlFor={
+                      variable.options && variable.options.length > 0
+                        ? undefined
+                        : inputId
+                    }
                     className="text-[12px] font-medium text-muted-foreground"
                   >
                     {variable.variable_name}
@@ -278,7 +284,10 @@ const ProviderConfigurationForm = ({
                     aria-labelledby={
                       isSingleVariableProvider ? labelId : undefined
                     }
-                    aria-invalid={validationState === "invalid" || undefined}
+                    aria-invalid={
+                      (validationState === "invalid" && variable.required) ||
+                      undefined
+                    }
                     aria-describedby={
                       validationState === "invalid" && validationError
                         ? "provider-validation-error"

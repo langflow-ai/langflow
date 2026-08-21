@@ -68,6 +68,12 @@ export default function GlobalVariableModal({
   const [availableFields, setAvailableFields] = useState<string[]>([]);
   useGetTypes({ checkCache: true, enabled: !!globalVariables });
 
+  // The component stays mounted behind its trigger, so a rejection from a
+  // previous session would otherwise re-announce (role="alert") on reopen.
+  useEffect(() => {
+    if (open) setServerError(null);
+  }, [open]);
+
   useEffect(() => {
     if (initialData) {
       setKey(initialData.name ?? "");

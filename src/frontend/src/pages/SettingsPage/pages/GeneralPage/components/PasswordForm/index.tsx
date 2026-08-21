@@ -30,10 +30,15 @@ const PasswordFormComponent = ({
   serverError,
 }: PasswordFormComponentProps) => {
   const { t } = useTranslation();
-  const errorAriaProps = {
-    "aria-invalid": serverError ? true : undefined,
-    "aria-describedby": serverError ? "password-form-error" : undefined,
-  };
+  // Built conditionally: spreading present-but-undefined aria keys would
+  // clobber the aria-describedby Radix Form.Control wires to its
+  // valueMissing messages (Slot merge lets child keys win even at undefined).
+  const errorAriaProps = serverError
+    ? {
+        "aria-invalid": true,
+        "aria-describedby": "password-form-error",
+      }
+    : {};
   return (
     <>
       <Form.Root

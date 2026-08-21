@@ -106,12 +106,10 @@ export const GeneralPage = () => {
             setSuccessData({ title: t("success.changesSaved") });
           },
           onError: (error) => {
-            // biome-ignore lint/suspicious/noExplicitAny: legacy
-            const detail = (error as any)?.response?.data?.detail;
-            setPasswordFormError(detail ?? t("errors.saveChanges"));
             setErrorData({
               title: t("errors.saveChanges"),
-              list: [detail],
+              // biome-ignore lint/suspicious/noExplicitAny: legacy
+              list: [(error as any)?.response?.data?.detail],
             });
           },
         },

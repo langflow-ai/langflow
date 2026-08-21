@@ -177,7 +177,10 @@ export default function SecretKeyModal({
               setServerError(null);
             }}
             expiresAt={expiresAt}
-            setExpiresAt={setExpiresAt}
+            setExpiresAt={(value) => {
+              setExpiresAt(value);
+              setServerError(null);
+            }}
             serverError={serverError}
           />
         )}
