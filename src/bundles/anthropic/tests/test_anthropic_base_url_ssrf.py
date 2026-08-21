@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 import pytest
 from lfx.base.models.anthropic_constants import DEFAULT_ANTHROPIC_API_URL
+from lfx.utils.ssrf_transport import SSRFProtectedSyncTransport, SSRFProtectedTransport
 from lfx_anthropic.components.anthropic.anthropic import AnthropicModelComponent
 
 _FAKE_ANTHROPIC_API_KEY = "sk-ant-not-a-real-key"  # pragma: allowlist secret
@@ -17,6 +18,8 @@ BLOCKED_URLS = [
     "http://10.0.0.5:8000",
     "http://192.168.1.10",
     "http://172.16.0.9",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
 ]
 
 
@@ -70,3 +73,22 @@ class TestAnthropicBaseUrlSSRF:
         component.build_model()
 
         assert mock_chat.call_args.kwargs["anthropic_api_url"] == "http://10.0.0.5:8000"
+
+    def test_should_install_dns_pinned_clients_for_custom_endpoint(self, monkeypatch):
+        monkeypatch.setattr("lfx.utils.ssrf_protection.resolve_hostname", lambda _hostname: ["93.184.216.34"])
+        component = _component("https://anthropic-proxy.example")
+
+        model = component.build_model()
+
+        assert isinstance(model._client._client._transport, SSRFProtectedSyncTransport)
+        assert isinstance(model._async_client._client._transport, SSRFProtectedTransport)
+        assert model._client._client._transport.pinned_ips == {"anthropic-proxy.example": ["93.184.216.34"]}
+        assert model._async_client._client._transport.pinned_ips == {"anthropic-proxy.example": ["93.184.216.34"]}
+
+    def test_should_allow_explicitly_allowlisted_loopback(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "127.0.0.1")
+        component = _component("http://127.0.0.1:8000")
+
+        model = component.build_model()
+
+        assert model.anthropic_api_url == "http://127.0.0.1:8000"

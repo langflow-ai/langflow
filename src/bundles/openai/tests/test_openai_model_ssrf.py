@@ -61,27 +61,37 @@ class TestOpenAIModelBaseUrlSSRF:
         mock_chat_openai.assert_not_called()
 
     @patch("lfx_openai.components.openai.openai_chat_model.ChatOpenAI")
-    def test_should_pin_http_clients_for_custom_base_url(self, mock_chat_openai):
+    def test_should_pin_http_clients_for_custom_base_url(self, mock_chat_openai, monkeypatch):
         """An allowed custom endpoint still builds, but through SSRF-protected clients."""
-        component = _component("http://127.0.0.1:1234/v1")
+        monkeypatch.setattr("lfx.utils.ssrf_protection.resolve_hostname", lambda _hostname: ["93.184.216.34"])
+        component = _component("https://provider.example/v1")
 
         component.build_model()
 
         kwargs = mock_chat_openai.call_args.kwargs
-        assert kwargs["base_url"] == "http://127.0.0.1:1234/v1"
+        assert kwargs["base_url"] == "https://provider.example/v1"
         assert "http_client" in kwargs
         assert "http_async_client" in kwargs
 
     @patch("lfx_openai.components.openai.openai_chat_model.ChatOpenAI")
-    def test_should_block_loopback_when_operator_disables_the_exemption(self, mock_chat_openai, monkeypatch):
-        """Multi-tenant operators can close the local-model-server loopback exemption."""
-        monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK", "false")
+    def test_should_block_loopback_by_default(self, mock_chat_openai):
+        """Provider credentials must not reach a server-local listener under defaults."""
         component = _component("http://127.0.0.1:9999/v1")
 
         with pytest.raises(ValueError, match="SSRF Protection"):
             component.build_model()
 
         mock_chat_openai.assert_not_called()
+
+    @patch("lfx_openai.components.openai.openai_chat_model.ChatOpenAI")
+    def test_should_allow_explicitly_allowlisted_loopback(self, mock_chat_openai, monkeypatch):
+        """A single-tenant operator can explicitly trust a local provider host."""
+        monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "127.0.0.1")
+        component = _component("http://127.0.0.1:1234/v1")
+
+        component.build_model()
+
+        assert mock_chat_openai.call_args.kwargs["base_url"] == "http://127.0.0.1:1234/v1"
 
     @patch("lfx_openai.components.openai.openai_chat_model.ChatOpenAI")
     def test_should_leave_default_endpoint_untouched(self, mock_chat_openai):
@@ -161,6 +171,15 @@ class TestOpenAIEmbeddingsBaseUrlSSRF:
         kwargs = mock_embeddings.call_args.kwargs
         assert kwargs["base_url"] is None
         assert "http_client" not in kwargs
+
+    @patch("lfx_openai.components.openai.openai.OpenAIEmbeddings")
+    def test_should_block_loopback_by_default(self, mock_embeddings):
+        component = _embeddings_component("http://127.0.0.1:9999/v1")
+
+        with pytest.raises(ValueError, match="SSRF Protection"):
+            component.build_embeddings()
+
+        mock_embeddings.assert_not_called()
 
 
 @patch("lfx_openai.components.openai.openai_chat_model.ChatOpenAI")

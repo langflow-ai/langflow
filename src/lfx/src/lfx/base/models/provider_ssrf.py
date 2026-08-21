@@ -9,29 +9,37 @@ and a credential-exfiltration primitive.
 This module is the single seam where those components apply the repository's existing
 connector SSRF policy (``lfx.utils.ssrf_protection`` /
 ``lfx.utils.ssrf_httpx``), so a new provider bundle picks up the guard by importing one
-helper rather than copy-pasting a call site. It adds no policy of its own: the
-``LANGFLOW_SSRF_PROTECTION_ENABLED``, ``LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED``,
-``LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK`` and ``LANGFLOW_SSRF_ALLOWED_HOSTS`` settings
-govern behavior exactly as they do for every other connector.
+helper rather than copy-pasting a call site. Credential-bearing provider URLs intentionally
+use a stricter default than ordinary connectors: literal loopback is blocked unless the
+operator explicitly trusts it through ``LANGFLOW_SSRF_ALLOWED_HOSTS``. The global and
+connector validation kill switches retain their existing behavior.
 
-Scope note: this policy blocks *internal* destinations (cloud metadata, RFC1918, and —
-for operators who close the local-model-server exemption — loopback). It does not, and
-cannot, decide whether an arbitrary *public* host is a legitimate OpenAI-compatible
-provider, so pointing a provider component at an attacker-controlled public endpoint
-still forwards the configured credential. Restricting which hosts a stored provider
-credential may be sent to is a separate, additive control.
+Scope note: this policy blocks *internal* destinations (cloud metadata, RFC1918, and
+loopback). It does not, and cannot, decide whether an arbitrary *public* host is a
+legitimate OpenAI-compatible provider, so pointing a provider component at an
+attacker-controlled public endpoint still forwards the configured credential. Restricting
+which hosts a stored provider credential may be sent to is a separate, additive control.
 """
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from lfx.utils.ssrf_httpx import (
-    ssrf_protected_openai_clients_for_url,
-    validate_url_for_ssrf_or_raise,
+    ssrf_protected_strict_openai_clients_for_url,
+    ssrf_safe_strict_httpx_post,
+    validate_strict_url_for_ssrf_or_raise,
 )
 
-__all__ = ["openai_compatible_client_kwargs", "validate_provider_base_url"]
+if TYPE_CHECKING:
+    import httpx
+
+__all__ = [
+    "openai_compatible_client_kwargs",
+    "provider_httpx_clients",
+    "provider_safe_httpx_post",
+    "validate_provider_base_url",
+]
 
 
 def _is_provider_default(base_url: str | None, default_url: str | None) -> bool:
@@ -53,10 +61,10 @@ def _is_provider_default(base_url: str | None, default_url: str | None) -> bool:
 def validate_provider_base_url(base_url: str | None, *, default_url: str | None = None) -> None:
     """Apply connector SSRF policy to a tenant-supplied provider base URL.
 
-    Use this for provider SDKs that expose no HTTP-client seam to pin DNS on (e.g.
-    ``ChatAnthropic``) or for plain ``requests``-based clients. Prefer
-    :func:`openai_compatible_client_kwargs` whenever the SDK accepts an httpx client,
-    since that additionally pins the validated IP and disables redirect following.
+    Use this only for configuration or preflight paths that do not later connect to
+    ``base_url``. Credential-bearing network calls must use :func:`provider_httpx_clients`,
+    :func:`provider_safe_httpx_post`, or :func:`openai_compatible_client_kwargs` so the
+    actual connection stays pinned to the validated IP.
 
     Args:
         base_url: The tenant-supplied base URL, or None/empty to use the provider default.
@@ -67,7 +75,21 @@ def validate_provider_base_url(base_url: str | None, *, default_url: str | None 
     """
     if _is_provider_default(base_url, default_url):
         return
-    validate_url_for_ssrf_or_raise(base_url)
+    validate_strict_url_for_ssrf_or_raise(base_url)
+
+
+def provider_httpx_clients(
+    base_url: str | None, *, default_url: str | None = None
+) -> dict[str, httpx.Client | httpx.AsyncClient]:
+    """Return strict, DNS-pinned clients for a credential-bearing provider SDK."""
+    if _is_provider_default(base_url, default_url):
+        return {}
+    return ssrf_protected_strict_openai_clients_for_url(base_url)
+
+
+def provider_safe_httpx_post(url: str, **request_kwargs: Any) -> httpx.Response:
+    """POST to a provider URL with strict validation and connection-time DNS pinning."""
+    return ssrf_safe_strict_httpx_post(url, **request_kwargs)
 
 
 def openai_compatible_client_kwargs(base_url: str | None, *, default_url: str | None = None) -> dict[str, Any]:
@@ -95,4 +117,4 @@ def openai_compatible_client_kwargs(base_url: str | None, *, default_url: str | 
     """
     if _is_provider_default(base_url, default_url):
         return {}
-    return ssrf_protected_openai_clients_for_url(base_url)
+    return provider_httpx_clients(base_url)
