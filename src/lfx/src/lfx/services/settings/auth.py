@@ -2,6 +2,7 @@ import secrets
 from enum import Enum
 from pathlib import Path
 from typing import Literal
+
 import bcrypt
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -356,7 +357,6 @@ class AuthSettings(BaseSettings):
             "AUTHZ_AUDIT_RETENTION_DAYS > 0. Default 86400 (daily); minimum 300 (5 minutes)."
         ),
     )
-
 
     pwd_context: PasswordContext = Field(default_factory=PasswordContext)
 

@@ -1,4 +1,3 @@
-import pytest
 from lfx.services.settings.auth import PasswordContext
 
 
