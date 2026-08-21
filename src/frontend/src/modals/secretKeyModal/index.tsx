@@ -92,10 +92,14 @@ export default function SecretKeyModal({
       })
       .catch((err) => {
         // Return to the form view instead of showing an empty "generated key"
-        // screen, and tell the user what went wrong.
+        // screen, and tell the user what went wrong. Raw 5xx detail ("Internal
+        // Server Error") is no help — prefer the translated message there.
         setRenderKey(false);
+        const status = err?.response?.status;
         setServerError(
-          extractApiErrorMessage(err, t("errors.errorGeneratingApiKey")),
+          typeof status === "number" && status >= 500
+            ? t("errors.errorGeneratingApiKey")
+            : extractApiErrorMessage(err, t("errors.errorGeneratingApiKey")),
         );
       });
   }

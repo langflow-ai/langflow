@@ -96,21 +96,10 @@ export const FormKeyRender = ({
                 setApiKeyName(value);
               }}
               placeholder={modalProps?.inputPlaceholder}
-              aria-invalid={Boolean(serverError)}
               aria-describedby={serverError ? "api-key-form-error" : undefined}
             />
           </Form.Control>
         </div>
-
-        {serverError && (
-          <p
-            id="api-key-form-error"
-            role="alert"
-            className="field-invalid static mt-2"
-          >
-            {serverError}
-          </p>
-        )}
       </Form.Field>
 
       <Form.Field name="expires_at">
@@ -176,6 +165,21 @@ export const FormKeyRender = ({
           })}
         </div>
       </Form.Field>
+
+      {/*
+        Key creation fails as a whole (server error), so the message lives at
+        form level next to the action instead of blaming the name field —
+        the input still references it via aria-describedby.
+      */}
+      {serverError && (
+        <p
+          id="api-key-form-error"
+          role="alert"
+          className="field-invalid static"
+        >
+          {serverError}
+        </p>
+      )}
     </div>
   );
 };

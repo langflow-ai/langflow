@@ -82,7 +82,7 @@ describe("FormKeyRender", () => {
     expect(screen.getByText(PRESET_YEAR)).toBeInTheDocument();
   });
 
-  it("associates a server error with the name input", () => {
+  it("describes the name input with the form-level server error", () => {
     render(
       <FormKeyRender {...makeProps({ serverError: "Something went wrong" })} />,
     );
@@ -90,14 +90,17 @@ describe("FormKeyRender", () => {
     expect(error).toHaveAttribute("role", "alert");
     expect(error).toHaveAttribute("id", "api-key-form-error");
     const input = screen.getByPlaceholderText("Enter key name");
-    expect(input).toHaveAttribute("aria-invalid", "true");
+    // The failure is the create action's, not the field's — described, not
+    // marked invalid.
     expect(input).toHaveAttribute("aria-describedby", "api-key-form-error");
+    expect(input).not.toHaveAttribute("aria-invalid");
   });
 
-  it("does not mark the name input invalid without a server error", () => {
+  it("renders no error wiring without a server error", () => {
     render(<FormKeyRender {...makeProps()} />);
     const input = screen.getByPlaceholderText("Enter key name");
-    expect(input).toHaveAttribute("aria-invalid", "false");
+    expect(input).not.toHaveAttribute("aria-invalid");
     expect(input).not.toHaveAttribute("aria-describedby");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
