@@ -158,7 +158,9 @@ export default function McpClientPage() {
                 // move within the tablist.
                 tabIndex={isSelected ? 0 : -1}
                 className={cn(
-                  "flex h-6 flex-row items-end gap-2 text-nowrap border-b-2 border-b-transparent px-3 py-2 text-[13px] font-medium",
+                  // No fixed height: the icon/text used to overflow the h-6
+                  // box invisibly, and the scrollable tablist would clip it.
+                  "flex flex-row items-end gap-2 text-nowrap border-b-2 border-b-transparent px-3 py-2 text-[13px] font-medium",
                   isSelected
                     ? "border-b-2 border-black dark:border-b-white"
                     : "text-muted-foreground hover:text-foreground",
