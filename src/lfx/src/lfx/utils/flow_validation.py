@@ -144,6 +144,61 @@ def is_protected_tweak_field(component_type: str | None, field_name: str, field_
     )
 
 
+# ---------------------------------------------------------------------------
+# Deployment tweak policy
+# ---------------------------------------------------------------------------
+# Two lists with two owners. The deployment owns the floor above
+# (``is_protected_tweak_field``), a denylist nothing can bypass. The flow author
+# owns the allowlist below, the per-field ``api_editable`` flag. The policy
+# setting only chooses which of the two is consulted; it never supplies list
+# content itself, because an operator cannot anticipate every flow.
+
+TWEAK_POLICY_PERMISSIVE = "permissive"
+TWEAK_POLICY_DECLARED = "declared"
+TWEAK_POLICY_OFF = "off"
+TWEAK_POLICIES = frozenset({TWEAK_POLICY_PERMISSIVE, TWEAK_POLICY_DECLARED, TWEAK_POLICY_OFF})
+
+
+def flow_declares_api_editable(nodes: list[dict[str, Any]]) -> bool:
+    """Return whether any node in the flow marks a template field ``api_editable``.
+
+    This is the derived form of the per-flow enforcement opt-in. A flow whose
+    author has toggled at least one field has declared an allowlist, so the
+    remaining fields are closed under ``declared``. A flow with no toggles has
+    declared nothing and keeps permissive behavior, which is what stops a
+    deployment-wide switch from breaking every flow nobody prepared.
+
+    A later release replaces this derived value with a stored flag on the flow.
+    """
+    for node in nodes:
+        template = node.get("data", {}).get("node", {}).get("template")
+        if not isinstance(template, dict):
+            continue
+        for field in template.values():
+            if isinstance(field, dict) and field.get("api_editable") is True:
+                return True
+    return False
+
+
+def is_tweak_refused_by_policy(
+    policy: str,
+    *,
+    flow_declares_allowlist: bool,
+    field_is_api_editable: bool,
+) -> bool:
+    """Return whether the deployment policy refuses a tweak on this field.
+
+    The caller checks ``is_protected_tweak_field`` separately. That floor refuses
+    in every policy, including ``permissive``. This function only decides the
+    policy layer above the floor.
+    """
+    if policy == TWEAK_POLICY_OFF:
+        return True
+    if policy == TWEAK_POLICY_DECLARED and flow_declares_allowlist:
+        return not field_is_api_editable
+    return False
+
+
 # Component node ``type`` values that load and execute *another* saved flow by
 # id or name at build/run time. On the unauthenticated public path these are an
 # indirect code-execution primitive: a public wrapper flow with none of the

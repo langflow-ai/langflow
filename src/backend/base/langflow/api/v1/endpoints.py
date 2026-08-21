@@ -21,6 +21,7 @@ from lfx.custom.utils import (
     get_instance_name,
     update_component_build_config,
 )
+from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
 from lfx.log.logger import logger
@@ -1026,6 +1027,21 @@ async def _run_flow_internal(
         if expose_error_details:
             raise
         raise error_for_client(exc, expose_details=expose_error_details) from exc
+    except TweakRefusedError:
+        # A refused tweak is a caller error, not a server fault. The generic
+        # handler below turns it into a 500 and discards the structured body
+        # naming the refused keys, so let the app-level handler answer with 422.
+        #
+        # Deliberately not routed through error_for_client. That helper only
+        # preserves the status of an HTTPException, and this is not one, so
+        # redacting would degrade it to RuntimeError -> 500 and reinstate the
+        # exact bug this re-raise exists to fix, for delegated callers only.
+        # The cost is that the refusal reason tells a non-owner whether the
+        # flow declares an allowlist or the deployment refuses tweaks. Accepted:
+        # no data, no stack trace, and the refused names are the caller's own
+        # request keys. A caller who cannot tell a refused tweak from an applied
+        # one is the failure this whole path is here to prevent.
+        raise
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_run,
