@@ -51,6 +51,7 @@ from langflow.api.utils.mcp import (
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.api.v1.mcp import ResponseNoOp
 from langflow.api.v1.mcp_utils import (
+    authenticated_caller_ctx,
     current_request_variables_ctx,
     current_user_ctx,
     handle_call_tool,
@@ -106,6 +107,7 @@ async def verify_project_auth(
     # Mirror the service.py auth entrypoints: reset request-local credential metadata at entry so a
     # later branch (e.g. the composer-token fast path) never inherits stale context from a prior call.
     clear_current_auth_context()
+    authenticated_caller_ctx.set(None)
     # Defensive invariant: drop any stale external access ceiling so it can't carry into MCP project auth.
     clear_current_external_access_context()
 
@@ -130,6 +132,7 @@ async def verify_project_auth(
             if project.user_id:
                 project_user = await db.get(User, project.user_id)
                 if project_user:
+                    authenticated_caller_ctx.set(project_user.id)
                     return project_user
             raise HTTPException(status_code=404, detail="Project owner not found")
 
@@ -190,6 +193,7 @@ async def verify_project_auth(
         if not project_access:
             raise HTTPException(status_code=404, detail="Project not found")
 
+        authenticated_caller_ctx.set(user.id)
         return user
 
     # Legacy AUTO_LOGIN projects without explicit auth settings retain the
@@ -218,6 +222,7 @@ async def _superuser_fallback(db: AsyncSession, settings_service) -> User:
     if result:
         logger.warning(AUTO_LOGIN_WARNING)
         set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_AUTO_LOGIN))
+        authenticated_caller_ctx.set(result.id)
         return result
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
@@ -235,6 +240,7 @@ async def verify_project_auth_conditional(
     - MCP Composer enabled + API key auth: Only allow API keys
     - All other cases: Use standard MCP auth (JWT + API keys)
     """
+    authenticated_caller_ctx.set(None)
     async with session_scope() as session:
         # Get project to check auth settings
         project = (await session.exec(select(Folder).where(Folder.id == project_id))).first()
@@ -279,6 +285,7 @@ async def verify_project_auth_conditional(
         if not project_access:
             raise HTTPException(status_code=404, detail="Project not found")
 
+        authenticated_caller_ctx.set(user.id)
         return user
 
 
