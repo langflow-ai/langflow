@@ -7,6 +7,10 @@ drives the real command rather than that context manager, so a refactor that mov
 off the command's path is caught.
 
 Runs in a subprocess because the tracer provider is process-global and installed once.
+
+This installs its own in-memory provider, so it proves the attribute is bound on the right
+span and nothing about delivery. Whether the command installs a provider from the OTEL_* env
+vars and flushes it before the process exits is ``test_run_command_otlp_export.py``'s job.
 """
 
 import json
