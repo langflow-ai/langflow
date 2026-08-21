@@ -39,6 +39,20 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import urlsplit, urlunsplit
 
 from lfx.log.logger import logger, operator_logger, otel_log_bodies_exported
+
+# Opt into the stable HTTP semantic conventions here, at import, rather than beside the call
+# that needs them.
+#
+# OpenTelemetry reads this once, when its instrumentation package first initialises, and
+# caches it for the life of the process. Setting it inside instrument_fastapi_app looked
+# early enough and is not: bootstrap_application_telemetry runs first on both runtimes, and
+# its SystemMetricsInstrumentor loads that package, freezing the decision while the variable
+# is still unset. The FastAPI metrics then arrive under the pre-stable names, which is a
+# silent defect -- ingest is healthy, and an APM keying its HTTP dashboards off the stable
+# names shows nothing.
+#
+# setdefault, so "http/dup" stays available to an operator mid-migration.
+os.environ.setdefault("OTEL_SEMCONV_STABILITY_OPT_IN", "http")
 from lfx.observability_fastapi import patch_otel_fastapi_route_details
 
 _BASE_EXCEPTION_GROUP_TYPE = getattr(builtins, "BaseExceptionGroup", None)
@@ -1238,18 +1252,16 @@ def instrument_fastapi_app(app: FastAPI) -> None:
     app, ``lfx serve`` on the multi-flow app. No-op when the FastAPI instrumentation is not
     installed.
 
-    Sets the stable HTTP semantic conventions (http.route, http.request.method,
-    http.response.status_code) rather than the pre-1.0 names, because APMs key their HTTP
-    dashboards and service maps off the stable ones. It has to run before instrument_app: the
-    opt-in is read once, on first instrumentation, and cached for the life of the process.
-    setdefault leaves "http/dup" available to an operator migrating.
+    The stable HTTP semantic conventions (http.route, http.request.method,
+    http.response.status_code) are opted into at module import, not here. The opt-in is read
+    once, when OpenTelemetry's instrumentation package first initialises, and by the time this
+    runs that has already happened.
     """
     try:
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
     except ImportError:
         return
 
-    os.environ.setdefault("OTEL_SEMCONV_STABILITY_OPT_IN", "http")
     # FastAPI >=0.137 lazy include_router puts _IncludedRouter wrappers (no .path) in
     # app.routes, which crashes OTel's span route extraction on partial matches (e.g. CORS
     # preflight). Patch the helper before instrumenting.

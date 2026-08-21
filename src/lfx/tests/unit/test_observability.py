@@ -307,13 +307,20 @@ def test_root_error_type_keeps_a_multi_exception_group():
 
 
 @requires_otel
-def test_instrument_fastapi_app_sets_stable_semconv():
-    """The shared FastAPI helper opts into the stable HTTP conventions before instrumenting."""
-    os.environ.pop("OTEL_SEMCONV_STABILITY_OPT_IN", None)
-    from fastapi import FastAPI
-    from lfx.observability import instrument_fastapi_app
+def test_importing_observability_opts_into_stable_semconv():
+    """The opt-in happens at import, which is the only point early enough.
 
-    instrument_fastapi_app(FastAPI())
+    It used to live in ``instrument_fastapi_app``. That reads as early enough and is not:
+    ``bootstrap_application_telemetry`` runs first on both runtimes and loads OpenTelemetry's
+    instrumentation package, which caches the decision for the process while the variable is
+    still unset. Popping the variable and re-calling the helper cannot restore the old
+    behaviour, because the cache is already set by then.
+
+    Asserted on the imported module rather than by calling anything: by the time any test
+    runs, ``lfx.observability`` has been imported and the variable is set.
+    """
+    import lfx.observability  # noqa: F401
+
     assert os.environ.get("OTEL_SEMCONV_STABILITY_OPT_IN") == "http"
 
 
