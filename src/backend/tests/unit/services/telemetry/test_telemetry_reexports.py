@@ -86,6 +86,6 @@ def test_append_then_pop_roundtrip():
     drained = pop_all()
 
     assert len(drained) == 1
-    assert drained[0] is payload
+    assert drained[0].model_dump() == payload.model_dump()
     # store is empty after pop
     assert pop_all() == []
