@@ -21,6 +21,9 @@ health_check_router = APIRouter(tags=["Health Check"])
 # An empty registry (the OSS default) leaves /healthz behaviour unchanged.
 _enterprise_readiness_checks: list[Callable[[], Awaitable[tuple[str, str]]]] = []
 
+# use a fixed valid UUId that UUID collision is very unlikely
+_HEALTH_CHECK_PROBE_KEY = "da93c2bd-c857-4b10-8c8c-60988103320f"
+
 
 class HealthResponse(BaseModel):
     status: str = "nok"
@@ -33,6 +36,28 @@ class HealthResponse(BaseModel):
 
     def has_error(self) -> bool:
         return any(v.startswith("error") for v in self.model_dump().values())
+
+
+async def _probe_services(session: DbSession) -> HealthResponse:
+    """Run DB and chat-service liveness probes and return a populated HealthResponse."""
+    response = HealthResponse()
+    try:
+        # Check database to query a bogus flow
+        stmt = select(Flow).where(Flow.id == uuid.uuid4())
+        (await session.exec(stmt)).first()
+        response.db = "ok"
+    except Exception:  # noqa: BLE001
+        await logger.aexception("Error checking database")
+
+    try:
+        chat = get_chat_service()
+        await chat.set_cache("health_check", _HEALTH_CHECK_PROBE_KEY)
+        await chat.get_cache("health_check")
+        response.chat = "ok"
+    except Exception:  # noqa: BLE001
+        await logger.aexception("Error checking chat service")
+
+    return response
 
 
 # /health is also supported by uvicorn
@@ -50,25 +75,7 @@ async def health():
 async def health_check(
     session: DbSession,
 ) -> HealthResponse:
-    response = HealthResponse()
-    # use a fixed valid UUId that UUID collision is very unlikely
-    user_id = "da93c2bd-c857-4b10-8c8c-60988103320f"
-    try:
-        # Check database to query a bogus flow
-        stmt = select(Flow).where(Flow.id == uuid.uuid4())
-        (await session.exec(stmt)).first()
-        response.db = "ok"
-    except Exception:  # noqa: BLE001
-        await logger.aexception("Error checking database")
-
-    try:
-        chat = get_chat_service()
-        await chat.set_cache("health_check", str(user_id))
-        await chat.get_cache("health_check")
-        response.chat = "ok"
-    except Exception:  # noqa: BLE001
-        await logger.aexception("Error checking chat service")
-
+    response = await _probe_services(session)
     if response.has_error():
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=response.model_dump())
     response.status = "ok"
@@ -84,36 +91,23 @@ async def health_check(
 async def healthz(
     session: DbSession,
 ) -> HealthResponse:
-    response = HealthResponse()
-    user_id = "da93c2bd-c857-4b10-8c8c-60988103320f"
-    try:
-        stmt = select(Flow).where(Flow.id == uuid.uuid4())
-        (await session.exec(stmt)).first()
-        response.db = "ok"
-    except Exception:  # noqa: BLE001
-        await logger.aexception("Error checking database")
-
-    try:
-        chat = get_chat_service()
-        await chat.set_cache("health_check", str(user_id))
-        await chat.get_cache("health_check")
-        response.chat = "ok"
-    except Exception:  # noqa: BLE001
-        await logger.aexception("Error checking chat service")
+    response = await _probe_services(session)
 
     check_timeout: float = get_settings_service().settings.worker_timeout
     for check in _enterprise_readiness_checks:
-        check_name = getattr(check, "__name__", getattr(check, "__qualname__", type(check).__name__))
+        check_name = getattr(check, "__qualname__", type(check).__name__)
         try:
             _name, result = await asyncio.wait_for(check(), timeout=check_timeout)
             if result.startswith("error:"):
-                await logger.awarning("Enterprise readiness check %s returned error: %s", check_name, result)
+                await logger.awarning("Enterprise readiness check %s returned error result", check_name)
                 raise HTTPException(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                     detail="Service unavailable",
                 )
         except HTTPException:
             raise
+        # asyncio.TimeoutError is a subclass of TimeoutError since 3.11;
+        # both listed for Python 3.10 compatibility.
         except (TimeoutError, asyncio.TimeoutError) as exc:
             await logger.awarning("Enterprise readiness check %s timed out after %ss", check_name, check_timeout)
             raise HTTPException(
