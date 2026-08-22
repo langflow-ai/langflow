@@ -83,6 +83,28 @@ from lfx.components.mem0.mem0_chat_memory import Mem0MemoryComponent
             # Regression guard for the credential-bleed bug: never pollute os.environ.
             assert "OPENAI_API_KEY" not in os.environ
 
+    @patch("lfx.components.mem0.mem0_chat_memory.importlib.import_module")
+    def test_build_mem0_with_api_key_does_not_call_memory_client_from_config(self, mock_import_module):
+        """MemoryClient has no from_config classmethod; build_mem0 must not call it.
+
+        Regression test for https://github.com/langflow-ai/langflow/issues/8555:
+        providing both mem0_api_key and mem0_config used to raise
+        AttributeError: type object 'MemoryClient' has no attribute 'from_config'.
+        """
+        with patch.dict(os.environ, {"ASTRA_CLOUD_DISABLE_COMPONENT": "false"}):
+            mock_mem0 = Mock(spec=["Memory", "MemoryClient"])
+            mock_import_module.return_value = mock_mem0
+            component = Mem0MemoryComponent(
+                mem0_api_key="fake-platform-key",
+                mem0_config={"version": "v1.1"},
+            )
+
+            result = component.build_mem0()
+
+            mock_mem0.MemoryClient.from_config.assert_not_called()
+            mock_mem0.MemoryClient.assert_called_once_with(api_key="fake-platform-key")
+            assert result == mock_mem0.MemoryClient.return_value
+
     def test_build_search_results_uses_mem0_2_filters_for_search(self):
         """Test that search uses filters for Mem0 2.x entity scoping."""
         memory = Mock()
