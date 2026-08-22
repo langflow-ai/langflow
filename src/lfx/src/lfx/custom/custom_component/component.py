@@ -1312,6 +1312,12 @@ class Component(CustomComponent):
             raise
 
     async def _build_results(self) -> tuple[dict, dict]:
+        """Build sanitized display results while preserving raw values for connected components.
+
+        ``Output.value`` is the graph-edge cache and must retain the value returned by the
+        component. The results and artifacts returned here can be serialized to clients, so
+        they receive independent secret-sanitized copies.
+        """
         results, artifacts = {}, {}
 
         self._pre_run_setup_if_needed()
@@ -1320,8 +1326,9 @@ class Component(CustomComponent):
         for output in self._get_outputs_to_process():
             self._current_output = output.name
             result = await self._get_output_result(output)
-            results[output.name] = result
-            artifacts[output.name] = self._build_artifact(result)
+            sanitized_result = self._sanitize_secret_values(result)
+            results[output.name] = sanitized_result
+            artifacts[output.name] = self._build_artifact(sanitized_result)
             self._log_output(output)
 
         self._finalize_results(results, artifacts)
@@ -1381,8 +1388,9 @@ class Component(CustomComponent):
         """Computes and returns the result for a given output, applying caching and output options.
 
         If the output is cached and a value is already defined, returns the cached value. Otherwise,
-        invokes the associated output method asynchronously, applies output options, updates the cache,
-        and returns the result. Raises a ValueError if the output method is not defined, or a TypeError
+        invokes the associated output method asynchronously, applies output options, caches the raw
+        value for connected graph edges, and returns it. Display serialization is sanitized separately
+        by ``_build_results``. Raises a ValueError if the output method is not defined, or a TypeError
         if the method invocation fails.
         """
         if output.cache and output.value != UNDEFINED:
@@ -1407,7 +1415,6 @@ class Component(CustomComponent):
         ):
             result.set_flow_id(self._vertex.graph.flow_id)
         result = output.apply_options(result)
-        result = self._sanitize_secret_values(result)
         output.value = result
 
         return result
@@ -1454,21 +1461,24 @@ class Component(CustomComponent):
         return value
 
     def _sanitize_secret_values(self, value):
+        """Return a sanitized value without mutating caller-owned ``Message`` or ``Data`` objects."""
         if not self._secret_values:
             return _mask_secret_value(value)
         value = _mask_secret_value(value)
         if isinstance(value, str):
             return self._sanitize_secret_string(value)
         if isinstance(value, Message):
+            sanitized = value.model_copy(update={"data": self._sanitize_secret_values(value.data)})
             if isinstance(value.text, str):
-                value.text = self._sanitize_secret_string(value.text)
-            value.data = self._sanitize_secret_values(value.data)
-            return value
+                sanitized.text = self._sanitize_secret_string(value.text)
+            return sanitized
         if isinstance(value, Data):
-            value.data = self._sanitize_secret_values(value.data)
-            if isinstance(value.default_value, str):
-                value.default_value = self._sanitize_secret_string(value.default_value)
-            return value
+            default_value = value.default_value
+            if isinstance(default_value, str):
+                default_value = self._sanitize_secret_string(default_value)
+            return value.model_copy(
+                update={"data": self._sanitize_secret_values(value.data), "default_value": default_value}
+            )
         if isinstance(value, dict):
             return {key: self._sanitize_secret_values(item) for key, item in value.items()}
         if isinstance(value, list):
