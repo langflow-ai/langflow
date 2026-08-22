@@ -176,6 +176,7 @@ module.exports = {
             "Develop/observability-opentelemetry",
             "Develop/observability-new-relic",
             "Develop/observability-grafana-loki",
+            "Develop/observability-otlp",
             "Develop/traces",
             {
               type: "category",
