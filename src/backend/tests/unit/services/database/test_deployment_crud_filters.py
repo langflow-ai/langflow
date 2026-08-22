@@ -162,3 +162,29 @@ async def test_local_deployment_queries_filter_project_and_flow_versions(async_s
         deployment_provider_account_id=provider_account.id,
     )
     assert count == 3
+
+
+@pytest.mark.asyncio
+async def test_create_deployment_stores_microsecond_precision_on_sqlite(async_session: AsyncSession):
+    """ORM creates must write DateTime bind strings, not SQLite whole-second now()."""
+    from sqlalchemy import text
+
+    user, provider_account, project_a, _project_b = await _seed_user_provider_and_projects(async_session)
+    dep = await create_deployment(
+        async_session,
+        user_id=user.id,
+        project_id=project_a.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key=f"rk-{uuid4()}",
+        display_name="Timed",
+        deployment_type=DeploymentType.AGENT,
+    )
+    await async_session.commit()
+    row = (
+        await async_session.execute(
+            text("SELECT quote(created_at), quote(updated_at) FROM deployment WHERE id = :id"),
+            {"id": dep.id.hex},
+        )
+    ).one()
+    assert "." in row[0], f"created_at missing fractional seconds: {row[0]}"
+    assert "." in row[1], f"updated_at missing fractional seconds: {row[1]}"
