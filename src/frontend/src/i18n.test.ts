@@ -7,12 +7,12 @@
 
 // Import the real i18n instance and loadLanguage (not the mock from jest.setup.js)
 jest.unmock("react-i18next");
-import i18n, { loadLanguage } from "./i18n";
+import i18n, { loadLanguage, normalizeLanguage } from "./i18n";
 
 describe("loadLanguage", () => {
   beforeEach(() => {
     // Clear cached non-English bundles between tests
-    ["fr", "ja", "es", "de", "pt", "zh-Hans"].forEach((lang) => {
+    ["fr", "ja", "es", "de", "pt", "zh-Hans", "ko"].forEach((lang) => {
       if (i18n.hasResourceBundle(lang, "translation")) {
         i18n.removeResourceBundle(lang, "translation");
       }
@@ -36,6 +36,12 @@ describe("loadLanguage", () => {
     expect(i18n.hasResourceBundle("fr", "translation")).toBe(true);
   });
 
+  it("loads and registers the Korean (ko) bundle", async () => {
+    expect(i18n.hasResourceBundle("ko", "translation")).toBe(false);
+    await loadLanguage("ko");
+    expect(i18n.hasResourceBundle("ko", "translation")).toBe(true);
+  });
+
   it("does not call addResourceBundle if language is already cached", async () => {
     await loadLanguage("fr");
     const spy = jest.spyOn(i18n, "addResourceBundle");
@@ -49,5 +55,27 @@ describe("loadLanguage", () => {
     await loadLanguage("ja");
     expect(i18n.hasResourceBundle("fr", "translation")).toBe(true);
     expect(i18n.hasResourceBundle("ja", "translation")).toBe(true);
+  });
+});
+
+describe("normalizeLanguage", () => {
+  it("keeps a supported language code unchanged", () => {
+    expect(normalizeLanguage("ko")).toBe("ko");
+    expect(normalizeLanguage("fr")).toBe("fr");
+  });
+
+  it("maps a regional Korean tag ('ko-KR') to the supported 'ko'", () => {
+    expect(normalizeLanguage("ko-KR")).toBe("ko");
+  });
+
+  it("maps Chinese variants to 'zh-Hans'", () => {
+    expect(normalizeLanguage("zh-CN")).toBe("zh-Hans");
+    expect(normalizeLanguage("zh-Hans")).toBe("zh-Hans");
+  });
+
+  it("falls back to 'en' for empty or unsupported languages", () => {
+    expect(normalizeLanguage(null)).toBe("en");
+    expect(normalizeLanguage("")).toBe("en");
+    expect(normalizeLanguage("xx")).toBe("en");
   });
 });
