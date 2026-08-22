@@ -1,0 +1,22 @@
+---
+title: Deploy Langflow on Sealos
+slug: /deployment-sealos
+---
+
+The Sealos community template pins Langflow 1.10.2, with persistent storage and optional PostgreSQL.
+
+[Open the Langflow template on Sealos](https://sealos.io/products/app-store/langflow)
+
+:::warning Admin password
+Choose a strong, unique `admin_password` and store it securely.
+:::
+
+1. Open the template and select **Deploy Now**.
+2. Set `admin_username` and `admin_password` for the initial Langflow superuser.
+3. Set `enable_database` to `true` to use PostgreSQL or `false` to use persistent SQLite.
+4. Wait for the deployment to finish, and then open the generated Langflow URL.
+5. Sign in with the credentials from step 2.
+
+The template stores application data and exported flows in persistent volumes mounted at `/app/data` and `/app/flows`.
+
+The Sealos community validated administrator sign-in, flow creation and reopen, SQLite and PostgreSQL persistence, and container restarts in [labring-actions/templates#727](https://github.com/labring-actions/templates/pull/727). The template is maintained independently from the Langflow project.
