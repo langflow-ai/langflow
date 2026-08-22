@@ -28,6 +28,7 @@ dependencies = [
     # The cross-bundle CI matrix verifies these ranges resolve together across
     # the supported lfx axis.
     "lfx-duckduckgo>=0.1.0,<1.0.0",
+    "lfx-adanos>=0.1.0,<1.0.0",
     "lfx-arxiv>=0.1.0,<1.0.0",
     "lfx-ibm>=0.1.0,<1.0.0",
     "lfx-docling>=0.1.0,<1.0.0",
@@ -107,6 +108,7 @@ lfx = { workspace = true }
 langflow-sdk = { workspace = true }
 # langflow-extensions:bundle-sources-start
 lfx-duckduckgo = { workspace = true }
+lfx-adanos = { workspace = true }
 lfx-arxiv = { workspace = true }
 lfx-ibm = { workspace = true }
 lfx-docling = { workspace = true }
@@ -138,6 +140,7 @@ members = [
     "src/sdk",
     # langflow-extensions:bundle-members-start
     "src/bundles/duckduckgo",
+    "src/bundles/adanos",
     "src/bundles/arxiv",
     "src/bundles/ibm",
     "src/bundles/docling",

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-adanos",
+  "version": "0.1.0",
+  "name": "Adanos",
+  "description": "Market sentiment data for stocks and crypto from Adanos.",
+  "lfx": {
+    "compat": ["1"]
+  },
+  "bundles": [
+    {
+      "name": "adanos",
+      "path": "components/adanos"
+    }
+  ]
+}

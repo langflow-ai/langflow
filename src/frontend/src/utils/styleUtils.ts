@@ -433,6 +433,7 @@ export const SIDEBAR_BUNDLES = [
   },
   { display_name: "Embeddings", name: "embeddings", icon: "Binary" },
   { display_name: "Memories", name: "memories", icon: "Cpu" },
+  { display_name: "Adanos", name: "adanos", icon: "TrendingUp" },
   { display_name: "Amazon", name: "amazon", icon: "Amazon" },
   { display_name: "Anthropic", name: "anthropic", icon: "Anthropic" },
   { display_name: "Apify", name: "apify", icon: "Apify" },

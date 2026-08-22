@@ -1,0 +1,36 @@
+---
+title: Adanos
+slug: /bundles-adanos
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="adanos" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the component available in the **Adanos** bundle.
+
+## Adanos Market Sentiment
+
+The Adanos Market Sentiment Component retrieves read-only market sentiment data for use in agents, prompts, and data-processing Flows. It supports individual assets, trending assets, and aggregate market sentiment.
+
+For stocks, choose Reddit, X / FinTwit, financial news, or Polymarket as the source. Crypto sentiment currently uses Reddit data.
+
+Create an API key at [Adanos registration](https://adanos.org/register). For endpoint details and plan limits, see the [Adanos API documentation](https://api.adanos.org/docs).
+
+The output is [`Data`](/data-types#data).
+
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Adanos API Key (`api_key`) | SecretString | Input parameter. Your Adanos API key. |
+| Operation (`operation`) | Dropdown | Input parameter. Retrieve asset sentiment, trending assets, or aggregate market sentiment. |
+| Asset Type (`asset_type`) | Dropdown | Input parameter. Stocks or Crypto. |
+| Stock Source (`source`) | Dropdown | Input parameter. Reddit, X / FinTwit, News, or Polymarket. Applies to stocks only. |
+| Ticker or Symbol (`symbol`) | String | Input parameter. Required for Asset sentiment, for example `AAPL` or `BTC`. |
+| From Date (`start_date`) | String | Input parameter. Optional inclusive UTC date in `YYYY-MM-DD` format. |
+| To Date (`end_date`) | String | Input parameter. Optional inclusive UTC date in `YYYY-MM-DD` format. |
+| Result Limit (`limit`) | Integer | Input parameter. Maximum number of trending results, from 1 to 100. Default: `20`. |
