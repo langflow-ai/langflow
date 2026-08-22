@@ -8,6 +8,9 @@ class UploadError(Exception):
     """Raised when an error occurs during the upload process."""
 
 
+UPLOAD_TIMEOUT = 30.0
+
+
 def upload(file_path: str, host: str, flow_id: str, api_key: str | None = None):
     """Upload a file to Langflow and return the file path.
 
@@ -34,14 +37,20 @@ def upload(file_path: str, host: str, flow_id: str, api_key: str | None = None):
         resolved_api_key = api_key if api_key is not None else os.environ.get("LANGFLOW_API_KEY")
         headers = {"x-api-key": resolved_api_key} if resolved_api_key else {}
         with Path(file_path).open("rb") as file:
-            response = httpx.post(url, files={"file": file}, headers=headers)
+            response = httpx.post(url, files={"file": file}, headers=headers, timeout=UPLOAD_TIMEOUT)
             if response.status_code in {httpx.codes.OK, httpx.codes.CREATED}:
                 return response.json()
+    except httpx.TimeoutException as e:
+        msg = f"Error uploading file: request timed out after {UPLOAD_TIMEOUT}s"
+        raise UploadError(msg) from e
     except Exception as e:
         msg = f"Error uploading file: {e}"
         raise UploadError(msg) from e
 
+    response_text = getattr(response, "text", "")
     msg = f"Error uploading file: {response.status_code}"
+    if response_text:
+        msg = f"{msg} - {response_text}"
     raise UploadError(msg)
 
 
