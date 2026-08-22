@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, NamedTuple, TypeVar
 
 from lfx.log.logger import logger
-from sqlalchemy import Select, column, values
+from sqlalchemy import Select, and_, column, or_, tuple_, values
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, func, select, update
 
@@ -29,6 +29,26 @@ if TYPE_CHECKING:
 # Preserves the concrete statement type (scalar count select vs. multi-column
 # page select) through the authz scoping helper below.
 StmtT = TypeVar("StmtT", bound=Select[Any])
+
+
+class DeploymentOwnerPair(NamedTuple):
+    owner_id: UUID
+    deployment_id: UUID
+
+
+class UnknownDeleteCount:
+    """Sentinel returned when DELETE rowcount is not a usable integer."""
+
+    __slots__ = ()
+
+    def __repr__(self) -> str:
+        return "UnknownDeleteCount()"
+
+    def __bool__(self) -> bool:
+        return False
+
+
+UNKNOWN_DELETE_COUNT = UnknownDeleteCount()
 
 
 @dataclass(frozen=True, slots=True)
@@ -356,11 +376,14 @@ async def list_deployments_page(
     *,
     user_id: UUID,
     deployment_provider_account_id: UUID,
-    offset: int,
     limit: int,
+    offset: int | None = None,
     flow_version_ids: list[UUID] | None = None,
     project_id: UUID | None = None,
+    deployment_type: DeploymentType | None = None,
     allowed_ids: list[UUID] | None = None,
+    cursor_created_at: datetime | None = None,
+    cursor_exclude_id: UUID | None = None,
 ) -> list[tuple[Deployment, int, list[tuple[UUID, str | None]]]]:
     """Return a page of deployments with attachment counts and matched attachments.
 
@@ -373,12 +396,29 @@ async def list_deployments_page(
     is widened to the union of owner rows and ``allowed_ids`` (rows a registered
     authorization plugin reports the caller may read) — see
     ``langflow.services.authorization.restrict_to_owned_or_visible``.
+
+    ``deployment_type`` optionally restricts the page to one local deployment
+    type. When set, callers that also type-filter the provider can treat
+    provider-unknown rows as stale without a Python type skip.
+
+    Use ``offset`` for the first page. Use ``cursor_created_at`` and
+    ``cursor_exclude_id`` together for follow-up keyset reads; cursor reads must
+    not also pass ``offset``. Exactly one of those modes is required.
     """
-    if offset < 0:
+    if offset is not None and offset < 0:
         msg = "offset must be greater than or equal to 0"
         raise ValueError(msg)
     if limit <= 0:
         msg = "limit must be greater than 0"
+        raise ValueError(msg)
+    if (cursor_created_at is None) != (cursor_exclude_id is None):
+        msg = "cursor_created_at and cursor_exclude_id must be provided together"
+        raise ValueError(msg)
+    if cursor_created_at is not None and offset is not None:
+        msg = "offset cannot be used with cursor_created_at and cursor_exclude_id"
+        raise ValueError(msg)
+    if offset is None and cursor_created_at is None:
+        msg = "either offset or cursor_created_at/cursor_exclude_id is required"
         raise ValueError(msg)
     attachment_counts_subquery = (
         select(
@@ -406,6 +446,19 @@ async def list_deployments_page(
     stmt = _scope_to_owner_or_allowed(stmt, user_id=user_id, allowed_ids=allowed_ids)
     if project_id is not None:
         stmt = stmt.where(Deployment.project_id == project_id)
+    if deployment_type is not None:
+        stmt = stmt.where(Deployment.deployment_type == deployment_type)
+    if cursor_created_at is not None:
+        # DESC keyset: seek strictly after (created_at, id) cursor.
+        stmt = stmt.where(
+            or_(
+                col(Deployment.created_at) < cursor_created_at,
+                and_(
+                    col(Deployment.created_at) == cursor_created_at,
+                    col(Deployment.id) < cursor_exclude_id,
+                ),
+            )
+        )
     if flow_version_ids:
         matched_deployments_subquery = (
             select(FlowVersionDeploymentAttachment.deployment_id)
@@ -420,7 +473,10 @@ async def list_deployments_page(
             matched_deployments_subquery,
             matched_deployments_subquery.c.deployment_id == Deployment.id,
         )
-    stmt = stmt.order_by(col(Deployment.created_at).desc(), col(Deployment.id).desc()).offset(offset).limit(limit)
+    stmt = stmt.order_by(col(Deployment.created_at).desc(), col(Deployment.id).desc())
+    if offset is not None:
+        stmt = stmt.offset(offset)
+    stmt = stmt.limit(limit)
     rows = (await db.exec(stmt)).all()
     deployment_rows = [(deployment, int(attached_count or 0)) for deployment, attached_count in rows]
     if not flow_version_ids or not deployment_rows:
@@ -542,6 +598,7 @@ async def count_deployments_by_provider(
     deployment_provider_account_id: UUID,
     flow_version_ids: list[UUID] | None = None,
     project_id: UUID | None = None,
+    deployment_type: DeploymentType | None = None,
     allowed_ids: list[UUID] | None = None,
 ) -> int:
     """Count deployments for a provider account.
@@ -549,6 +606,7 @@ async def count_deployments_by_provider(
     ``allowed_ids`` mirrors ``list_deployments_page``: ``None`` counts owner rows
     only (OSS default); a list counts the owner ⊕ ``allowed_ids`` union so the
     pagination total reflects the same authorization prefilter as the page.
+    ``deployment_type``, when set, counts only rows of that local type.
     """
     stmt = select(func.count(Deployment.id)).where(
         Deployment.deployment_provider_account_id == deployment_provider_account_id,
@@ -556,6 +614,8 @@ async def count_deployments_by_provider(
     stmt = _scope_to_owner_or_allowed(stmt, user_id=user_id, allowed_ids=allowed_ids)
     if project_id is not None:
         stmt = stmt.where(Deployment.project_id == project_id)
+    if deployment_type is not None:
+        stmt = stmt.where(Deployment.deployment_type == deployment_type)
     if flow_version_ids:
         matched_deployments_subquery = (
             select(FlowVersionDeploymentAttachment.deployment_id)
@@ -678,3 +738,48 @@ async def delete_deployments_by_ids(
             deployment_ids,
         )
     return int(result.rowcount or 0)
+
+
+async def delete_deployments_by_owner_and_ids(
+    db: AsyncSession,
+    *,
+    deployment_owner_pairs: list[DeploymentOwnerPair],
+) -> int | UnknownDeleteCount:
+    """Delete owner-scoped deployment rows.
+
+    Returns:
+        The deleted row count when the driver reports an ``int`` rowcount;
+        otherwise ``UNKNOWN_DELETE_COUNT``.
+    """
+    if not deployment_owner_pairs:
+        return 0
+
+    await db.exec(
+        delete(FlowVersionDeploymentAttachment).where(
+            tuple_(
+                FlowVersionDeploymentAttachment.user_id,
+                FlowVersionDeploymentAttachment.deployment_id,
+            ).in_(deployment_owner_pairs),
+        )
+    )
+
+    result = await db.exec(
+        delete(Deployment).where(
+            tuple_(
+                Deployment.user_id,
+                Deployment.id,
+            ).in_(deployment_owner_pairs),
+        )
+    )
+    # Prefer isinstance over ``is not None``: some drivers may return non-int
+    # sentinels, and inventing a count from those would be misleading.
+    if isinstance(result.rowcount, int):
+        return result.rowcount
+
+    await logger.aerror(
+        "DELETE rowcount was not an int for deployments=%s (got %r) -- "
+        "database driver may not support rowcount for DELETE statements",
+        deployment_owner_pairs,
+        result.rowcount,
+    )
+    return UNKNOWN_DELETE_COUNT
