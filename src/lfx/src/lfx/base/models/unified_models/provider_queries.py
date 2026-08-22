@@ -5,6 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
+from lfx.base.models.apimart_constants import APIMART_MODELS_DETAILED
 from lfx.base.models.azure_ai_foundry_constants import AZURE_AI_FOUNDRY_MODELS_DETAILED
 from lfx.base.models.google_generative_ai_constants import (
     GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED,
@@ -46,6 +47,10 @@ _STATIC_MODELS_DETAILED: list[list[dict]] = [
     OLLAMA_EMBEDDING_MODELS_DETAILED,
     OPENROUTER_MODELS_DETAILED,
     WATSONX_MODELS_DETAILED,
+    # APIMart aliases many established provider model names. Keep it after
+    # those catalogs so backwards-compatible provider inference still maps
+    # shared names such as ``gpt-4o`` to their original provider.
+    APIMART_MODELS_DETAILED,
     # Last: seed deployment aliases (gpt-4o, gpt-4.1, …) overlap OpenAI rows.
     # ``get_provider_for_model_name`` returns the first catalog hit, so keep
     # Foundry after established providers for 1.8.x backwards compat.

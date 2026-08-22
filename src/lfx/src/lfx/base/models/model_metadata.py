@@ -91,6 +91,33 @@ EXPLICIT_ENABLE_ONLY_PROVIDERS: frozenset[str] = frozenset({"Azure AI Foundry"})
 # attribution headers use this pattern.
 #
 MODEL_PROVIDER_METADATA: dict[str, Any] = {
+    "APIMart": {
+        "icon": "OpenAI",
+        "max_tokens_field_name": "max_tokens",
+        "base_url": "https://api.apimart.ai/v1",
+        "variables": [
+            {
+                "variable_name": "APIMart API Key",
+                "variable_key": "APIMART_API_KEY",
+                "required": True,
+                "is_secret": True,
+                "is_list": False,
+                "options": [],
+                "langchain_param": "api_key",
+                "component_metadata": {
+                    "mapping_field": "api_key",
+                    "required": False,
+                    "advanced": True,
+                    "info": "Falls back to APIMART_API_KEY environment variable",
+                },
+            },
+        ],
+        "api_docs_url": "https://docs.apimart.ai/",
+        "mapping": {
+            "model_class": "ChatOpenAI",
+            "model_param": "model",
+        },
+    },
     "OpenAI": {
         "icon": "OpenAI",
         "max_tokens_field_name": "max_tokens",
