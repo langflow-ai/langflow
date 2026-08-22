@@ -1693,6 +1693,8 @@
   "node.updateRequiredLabel": "需要更新",
   "node.upgradeRequiredMessage": "执行该流程需要进行升级",
   "node.viewCode": "查看代码",
+  "nodeToolbar.moveTo": "移动到…",
+  "nodeToolbar.moveToArmed": "点击画布上的位置以放置节点。按 Escape 取消。",
   "nodeToolbar.code": "代码",
   "nodeToolbar.copy": "副本",
   "nodeToolbar.delete": "删除",

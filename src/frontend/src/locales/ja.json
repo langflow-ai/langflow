@@ -1693,6 +1693,8 @@
   "node.updateRequiredLabel": "更新が必要です",
   "node.upgradeRequiredMessage": "フローを実行するにはアップグレードが必要です",
   "node.viewCode": "コードの表示",
+  "nodeToolbar.moveTo": "移動先を選択…",
+  "nodeToolbar.moveToArmed": "キャンバス上の位置をクリックしてノードを配置します。Escape でキャンセルします。",
   "nodeToolbar.code": "コード",
   "nodeToolbar.copy": "コピー",
   "nodeToolbar.delete": "削除",

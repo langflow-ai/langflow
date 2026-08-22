@@ -1693,6 +1693,8 @@
   "node.updateRequiredLabel": "Mise à jour requise",
   "node.upgradeRequiredMessage": "Une mise à niveau est nécessaire pour exécuter le flux",
   "node.viewCode": "Afficher le code",
+  "nodeToolbar.moveTo": "Déplacer vers…",
+  "nodeToolbar.moveToArmed": "Cliquez sur un point du canevas pour placer le nœud. Échap pour annuler.",
   "nodeToolbar.code": "Coder",
   "nodeToolbar.copy": "Copier",
   "nodeToolbar.delete": "Supprimer",

@@ -14,6 +14,7 @@ let mockShortcutFreeze: (() => void) | undefined;
 
 jest.mock("@xyflow/react", () => ({
   useUpdateNodeInternals: () => jest.fn(),
+  useReactFlow: () => ({ screenToFlowPosition: jest.fn((p) => p) }),
 }));
 
 jest.mock("@/CustomNodes/helpers/mutate-template", () => ({

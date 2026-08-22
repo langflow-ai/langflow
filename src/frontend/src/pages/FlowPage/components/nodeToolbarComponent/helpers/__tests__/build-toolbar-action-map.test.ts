@@ -22,6 +22,8 @@ const ORIGINAL_SWITCH_CASES: ToolbarActionEvent[] = [
   "copy",
   "duplicate",
   "toolMode",
+  // added after the extraction: single-pointer move (WCAG 2.5.7)
+  "moveTo",
 ];
 
 function makeHandlers(): jest.Mocked<ToolbarActionHandlers> {
@@ -41,6 +43,7 @@ function makeHandlers(): jest.Mocked<ToolbarActionHandlers> {
     copy: jest.fn(),
     duplicate: jest.fn(),
     toolMode: jest.fn(),
+    moveTo: jest.fn(),
   };
 }
 
