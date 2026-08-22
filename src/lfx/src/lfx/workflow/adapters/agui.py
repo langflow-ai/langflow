@@ -60,9 +60,19 @@ class AGUIAdapter:
 
     def __init__(self, context: StreamAdapterContext) -> None:
         self.context = context
+        # Settings (not a raw env read) so this honors the same
+        # LANGFLOW_AGUI_DISABLE_CUSTOM_EVENTS -> Settings binding as every other
+        # Langflow toggle; imported at call time so tests can stub
+        # ``lfx.services.deps.get_settings_service`` per run.
+        from lfx.services.deps import get_settings_service
+
+        settings_service = get_settings_service()
+        settings = settings_service.settings if settings_service is not None else None
+        disable_custom_events = bool(settings.agui_disable_custom_events) if settings is not None else False
         self._translator = AGUITranslator(
             run_id=context.run_id,
             thread_id=context.thread_id,
+            disable_custom_events=disable_custom_events,
         )
 
     def initial_events(self) -> Iterable[StreamEvent]:

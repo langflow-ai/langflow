@@ -168,6 +168,7 @@ EXPECTED_FIELDS = {
     "dev",
     "warm_reconcile_interval",
     "event_delivery",
+    "agui_disable_custom_events",
     "worker_timeout",
     "workflow_execution_timeout",
     "model_provider_policy_refresh_interval_s",

@@ -129,6 +129,13 @@ class RuntimeSettings(BaseModel):
     event_delivery: Literal["polling", "streaming", "direct"] = "streaming"
     """How to deliver build events to the frontend. Can be 'polling', 'streaming' or 'direct'."""
 
+    agui_disable_custom_events: bool = False
+    """If True, the AG-UI stream protocol (LANGFLOW_AGUI_DISABLE_CUSTOM_EVENTS) drops
+    Langflow-specific content blocks (json/code/media/error) instead of emitting them as
+    namespaced ``langflow.*`` CUSTOM events, so the stream carries only the standard AG-UI
+    vocabulary. Tool-call and text-message events, and the other CUSTOM control markers
+    (log, message removal, human-input-required, run cancellation), are unaffected."""
+
     worker_timeout: int = 300
     """Timeout for the API calls in seconds."""
 
