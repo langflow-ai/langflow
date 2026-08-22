@@ -3,9 +3,25 @@ import type { ModelOption } from "../types";
 
 type EnabledModels = Record<string, Record<string, boolean>>;
 
+/**
+ * Type-aware counterpart of {@link EnabledModels}, keyed
+ * provider -> model type -> name -> enabled.
+ */
+type EnabledModelsByType = Record<
+  string,
+  Partial<Record<string, Record<string, boolean>>>
+>;
+
 export interface BuildGroupedOptionsParams {
   options: ModelOption[];
   enabledModels: EnabledModels | undefined;
+  /**
+   * Per-type enabled-models map, authoritative for any provider it lists.
+   * `enabledModels` merges `llm` and `embeddings` into a single record, so a
+   * model enabled for chat also reads as enabled for embeddings there. Older
+   * servers omit this map, leaving the flat one as the only available signal.
+   */
+  enabledModelsByType: EnabledModelsByType | undefined;
   providers: ModelProviderWithStatus[] | undefined;
   modelType: string;
   savedValue: ModelOption | undefined;
@@ -44,6 +60,7 @@ function passesModelFilters(
 export function buildGroupedOptions({
   options,
   enabledModels,
+  enabledModelsByType,
   providers,
   modelType,
   savedValue,
@@ -52,6 +69,23 @@ export function buildGroupedOptions({
 }: BuildGroupedOptionsParams): Record<string, ModelOption[]> {
   const grouped: Record<string, ModelOption[]> = {};
   const seen = new Set<string>();
+
+  const hasEnabledStatus = !!enabledModels || !!enabledModelsByType;
+
+  /**
+   * Enabled-status record to filter `providerName` against. Prefers the typed
+   * map so a model enabled for another type cannot pass as enabled for this
+   * one. A provider listed there but carrying no entry for `modelType` has
+   * nothing enabled for it, hence `{}` — filtering every candidate out rather
+   * than falling through to the type-agnostic map.
+   */
+  const enabledStatusFor = (
+    providerName: string,
+  ): Record<string, boolean> | undefined => {
+    const typed = enabledModelsByType?.[providerName];
+    if (typed) return typed[modelType] ?? {};
+    return enabledModels?.[providerName];
+  };
   const disconnectedProviders = new Set(
     providerStatusIsReliable
       ? (providers ?? [])
@@ -72,11 +106,11 @@ export function buildGroupedOptions({
     // Filter against client-side enabled models data. This is the source of
     // truth for what the current user has enabled — stale `options` saved in
     // an imported flow may include models from providers the current user
-    // hasn't enabled (e.g. WatsonX). When the provider is tracked in
-    // enabled_models, the model must be explicitly enabled (=== true); a
+    // hasn't enabled (e.g. WatsonX). When the provider is tracked in the
+    // enabled-status map, the model must be explicitly enabled (=== true); a
     // `false` or missing entry means the model should be hidden.
-    if (enabledModels) {
-      const providerModels = enabledModels[provider];
+    if (hasEnabledStatus) {
+      const providerModels = enabledStatusFor(provider);
       if (providerModels && providerModels[option.name] !== true) {
         continue;
       }
@@ -98,17 +132,21 @@ export function buildGroupedOptions({
     seen.add(`${provider}::${option.name}`);
   }
 
-  if (enabledModels && providers) {
+  if (hasEnabledStatus && providers) {
     for (const providerInfo of providers) {
       const providerName = providerInfo.provider;
       if (disconnectedProviders.has(providerName)) continue;
-      const providerModels = enabledModels[providerName];
+      const providerModels = enabledStatusFor(providerName);
       if (!providerModels) continue;
 
       for (const model of providerInfo.models ?? []) {
         const modelName = model.model_name;
         if (providerModels[modelName] !== true) continue;
 
+        // Weaker second line of defence: live discovery stamps each model with
+        // the type that was requested, so against an OpenAI-compatible
+        // endpoint every candidate claims `modelType` and this cannot separate
+        // them on its own — `enabledStatusFor` is what actually scopes them.
         const modelMetadata = (model.metadata ?? {}) as Record<string, unknown>;
         const modelMetadataType = modelMetadata.model_type;
         if (

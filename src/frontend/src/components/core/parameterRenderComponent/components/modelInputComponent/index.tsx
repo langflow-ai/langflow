@@ -190,6 +190,7 @@ export default function ModelInputComponent({
       buildGroupedOptions({
         options,
         enabledModels: enabledModelsData?.enabled_models,
+        enabledModelsByType: enabledModelsData?.enabled_models_by_type,
         providers: providersData,
         modelType,
         savedValue: value?.[0],
