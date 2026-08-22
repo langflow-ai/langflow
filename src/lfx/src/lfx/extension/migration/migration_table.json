@@ -2312,6 +2312,26 @@
       "added_in": "1.11.0"
     },
     {
+      "bare_class_name": "TwelveLabsVideoSearch",
+      "target": "ext:twelvelabs:TwelveLabsVideoSearch@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.video_search.TwelveLabsVideoSearch",
+      "target": "ext:twelvelabs:TwelveLabsVideoSearch@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.TwelveLabsVideoSearch",
+      "target": "ext:twelvelabs:TwelveLabsVideoSearch@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:twelvelabs:TwelveLabsVideoSearch@official-pre-a",
+      "target": "ext:twelvelabs:TwelveLabsVideoSearch@official",
+      "added_in": "1.11.0"
+    },
+    {
       "bare_class_name": "JigsawStackAIScraperComponent",
       "target": "ext:jigsawstack:JigsawStackAIScraperComponent@official",
       "added_in": "1.11.0"

@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from .twelvelabs_pegasus import TwelveLabsPegasus
     from .video_embeddings import TwelveLabsVideoEmbeddingsComponent
     from .video_file import VideoFileComponent
+    from .video_search import TwelveLabsVideoSearch
 
 _dynamic_imports = {
     "ConvertAstraToTwelveLabs": "convert_astra_results",
@@ -20,6 +21,7 @@ _dynamic_imports = {
     "TwelveLabsPegasus": "twelvelabs_pegasus",
     "TwelveLabsTextEmbeddingsComponent": "text_embeddings",
     "TwelveLabsVideoEmbeddingsComponent": "video_embeddings",
+    "TwelveLabsVideoSearch": "video_search",
     "VideoFileComponent": "video_file",
 }
 
@@ -30,6 +32,7 @@ __all__ = [
     "TwelveLabsPegasus",
     "TwelveLabsTextEmbeddingsComponent",
     "TwelveLabsVideoEmbeddingsComponent",
+    "TwelveLabsVideoSearch",
     "VideoFileComponent",
 ]
 
