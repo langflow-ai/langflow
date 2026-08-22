@@ -183,6 +183,7 @@ _SESSION_STATE_PATH = "/workspace/.lf_session_state.pkl"
 # the limit is simply not carried; the execution that created it is unaffected.
 _SESSION_MAX_VALUE_BYTES = 4 * 1024 * 1024
 
+
 # Prepended to the user's code when a session is active.
 #
 # Reusing a guest preserves its FILESYSTEM, not the Python process: each
@@ -225,8 +226,18 @@ _lf_lost = []
 if _lf_state.exists():
     try:
         _lf_entries = _lf_pickle.loads(_lf_state.read_bytes())
-    except Exception:
+    except Exception as _lf_exc:
         _lf_entries = {{}}
+        print(
+            "langflow session: could not read the saved session state, "
+            "starting empty (" + type(_lf_exc).__name__ + ")",
+            file=_lf_sys.stderr,
+        )
+    if not isinstance(_lf_entries, dict):
+        print(
+            "langflow session: saved session state was not a mapping, starting empty",
+            file=_lf_sys.stderr,
+        )
     if isinstance(_lf_entries, dict):
         for _lf_name, _lf_blob in _lf_entries.items():
             try:
@@ -402,9 +413,16 @@ class Capabilities:
     still reports ``hardware-virtualized`` here and enforces that opt-out
     itself, because the opt-out is the operator's decision rather than a limit
     of the backend.
+
+    Every field defaults to the value that grants nothing, so a backend that
+    omits one is refused rather than trusted. ``isolation`` is the field that
+    matters most: ``_assert_backend_honours_policy`` accepts only
+    ``"hardware-virtualized"``, and defaulting to it would let a plugin that
+    never names its isolation clear the strongest gate by saying nothing.
     """
 
-    isolation: str = "hardware-virtualized"
+    # Deliberately not "hardware-virtualized". See the note above.
+    isolation: str = "none"
     supports_deny_all_egress: bool = False
     supports_domain_allowlist: bool = False
     # Longest single execution the backend accepts, or None for no cap.

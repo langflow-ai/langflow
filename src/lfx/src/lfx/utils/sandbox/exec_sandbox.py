@@ -473,4 +473,9 @@ class _ExecSandboxExecutor:
             raise SandboxExecutionError(msg) from e
 
 
-register_sandbox_backend(SANDBOX_BACKEND_EXEC_SANDBOX, _ExecSandboxExecutor)
+# Re-executing this module (importlib.reload, or a test that reimports it)
+# must not raise. seal_builtins() has run by then, and re-registering a sealed
+# built-in name is refused by design -- which is the correct refusal, just not
+# a reason to break the import.
+with contextlib.suppress(ValueError):
+    register_sandbox_backend(SANDBOX_BACKEND_EXEC_SANDBOX, _ExecSandboxExecutor)

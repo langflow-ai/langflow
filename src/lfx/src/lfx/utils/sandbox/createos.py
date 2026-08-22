@@ -944,12 +944,27 @@ class _CreateosExecutor:
             raise SandboxUnavailableError(msg)
 
         granted = created.get("mem_mib")
-        if granted is not None and int(granted) < settings.memory_mb:
-            msg = (
-                f"CreateOS granted {granted} MiB but LANGFLOW_SANDBOX_MEMORY_MB is "
-                f"{settings.memory_mb}. Refusing to run the code."
-            )
-            raise SandboxUnavailableError(msg)
+        if granted is not None:
+            # The rest of this module treats control-plane responses as
+            # untrusted, and this one is no different. A bare int() on a
+            # string, list, or dict raises outside the SandboxUnavailableError
+            # tree, so the caller's teardown handler would not run and the VM
+            # would leak. A value that cannot be compared is a FAILED
+            # verification, not a crash.
+            try:
+                granted_mib = int(granted)
+            except (TypeError, ValueError) as exc:
+                msg = (
+                    f"CreateOS reported an unreadable memory grant "
+                    f"({_CreateosExecutor._redact(repr(granted))}). Refusing to run the code."
+                )
+                raise SandboxUnavailableError(msg) from exc
+            if granted_mib < settings.memory_mb:
+                msg = (
+                    f"CreateOS granted {granted} MiB but LANGFLOW_SANDBOX_MEMORY_MB is "
+                    f"{settings.memory_mb}. Refusing to run the code."
+                )
+                raise SandboxUnavailableError(msg)
 
     def _destroy(self, client: httpx.Client, sandbox_id: str) -> None:
         """Best-effort teardown that never masks the execution result.
@@ -1055,7 +1070,16 @@ class _CreateosExecutor:
                         msg = f"CreateOS could not start the guest command: {self._redact(str(event['error']))}"
                         raise SandboxExecutionError(msg)
                     if "exit_code" in event:
-                        exit_code = int(event["exit_code"] or 0)
+                        # Guest-controlled frame. An unmapped ValueError here
+                        # escapes the SandboxExecutionError tree, so
+                        # _run_in_session would keep the session mapping
+                        # pointing at a guest whose program state is unknown
+                        # and the next execution would reuse it.
+                        try:
+                            exit_code = int(event["exit_code"] or 0)
+                        except (TypeError, ValueError) as exc:
+                            msg = f"CreateOS returned an unreadable exit code: {self._redact(repr(event['exit_code']))}"
+                            raise SandboxExecutionError(msg) from exc
                         break
         except httpx.TimeoutException:
             exit_code = _EXIT_CODE_TIMEOUT
@@ -1288,4 +1312,9 @@ class _CreateosExecutor:
         self._sessions = {}
 
 
-register_sandbox_backend(SANDBOX_BACKEND_CREATEOS, _CreateosExecutor)
+# Re-executing this module (importlib.reload, or a test that reimports it)
+# must not raise. seal_builtins() has run by then, and re-registering a sealed
+# built-in name is refused by design -- which is the correct refusal, just not
+# a reason to break the import.
+with contextlib.suppress(ValueError):
+    register_sandbox_backend(SANDBOX_BACKEND_CREATEOS, _CreateosExecutor)

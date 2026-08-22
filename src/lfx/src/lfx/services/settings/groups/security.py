@@ -250,7 +250,7 @@ class SecuritySettings(BaseModel):
     session support; ``exec-sandbox`` does not, and runs cold either way.
     Only used when sandbox_backend is not "none"."""
 
-    sandbox_session_idle_seconds: int = 600
+    sandbox_session_idle_seconds: int = Field(default=600, ge=1, le=86_400)
     """How long a reused guest may sit idle before it is destroyed.
 
     Bounds both the cost of a forgotten session and how long its state stays
@@ -266,7 +266,7 @@ class SecuritySettings(BaseModel):
     backend cannot read files back out of the guest, rather than silently
     returning nothing. Only used when sandbox_backend is not "none"."""
 
-    sandbox_max_artifact_bytes: int = 5 * 1024 * 1024
+    sandbox_max_artifact_bytes: int = Field(default=5 * 1024 * 1024, ge=1, le=64 * 1024 * 1024)
     """Total size of collected artifacts allowed per execution, in bytes.
 
     Guest code chooses what it writes, so this is the cap that keeps a runaway

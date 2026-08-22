@@ -36,7 +36,7 @@ import os
 
 from lfx.log.logger import logger
 from lfx.utils.sandbox.base import (
-    SESSION_MODE_OFF,
+    SESSION_MODE_FLOW,
     Capabilities,
     SandboxBackend,
     SandboxExecutionError,
@@ -57,6 +57,7 @@ from lfx.utils.sandbox.registry import (
     known_sandbox_backends,
     live_sandbox_backends,
     register_sandbox_backend,
+    reset_registry_after_fork,
     resolve_sandbox_backend,
 )
 from lfx.utils.sandbox.registry import seal_builtins as _seal_builtins
@@ -100,6 +101,11 @@ def _reinit_backends_after_fork() -> None:
     post-fork window; must never raise, because an exception here would
     surface inside unrelated fork calls.
     """
+    # First, before anything reads the registry. The registry's own mutex was
+    # inherited from the parent and may be locked with no owner, so
+    # live_sandbox_backends() below would block here forever -- and a blocked
+    # child cannot be rescued by the suppress() around the loop.
+    reset_registry_after_fork()
     for backend in live_sandbox_backends():
         with contextlib.suppress(Exception):
             backend.reset_after_fork()
@@ -190,12 +196,21 @@ def _effective_session(backend: SandboxBackend, session: SessionKey | None) -> S
     if session is None:
         return None
     settings = _sandbox_settings()
-    if settings.session_mode == SESSION_MODE_OFF:
+    # Allowlisted, not "anything but off". _sandbox_settings reads the mode
+    # with getattr and validates nothing, so a value that reached here without
+    # passing the settings validator must produce a cold run rather than
+    # granting reuse.
+    if settings.session_mode not in _SESSION_MODES_THAT_REUSE:
         return None
     if not backend.capabilities().supports_sessions:
         logger.debug("Sandbox backend %r has no session support; running cold", backend.name)
         return None
     return session
+
+
+# The session modes that actually reuse a guest. Anything else -- "off", or a
+# value that never went through the settings validator -- runs cold.
+_SESSION_MODES_THAT_REUSE = frozenset({SESSION_MODE_FLOW})
 
 
 # One warning per backend per process: a declared egress hole is worth saying

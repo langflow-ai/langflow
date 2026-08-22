@@ -44,6 +44,10 @@ Langflow refuses the run when a setting asks for more than the backend declares:
   egress by domain.
 * `LANGFLOW_SANDBOX_COLLECT_ARTIFACTS` is true, but the backend cannot read
   files back out of the guest.
+* `LANGFLOW_SANDBOX_TIMEOUT_SECONDS` is higher than the longest execution the
+  backend accepts. The 1-300 second range is the range Langflow accepts. A
+  backend can declare a lower cap, and a value inside the Langflow range is
+  still refused when it exceeds that cap.
 
 Session reuse is the one setting that is dropped instead of refused. Reuse is an
 optimization, so a backend without session support runs every execution cold.

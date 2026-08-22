@@ -30,7 +30,14 @@ SANDBOX_BACKEND_NONE = "none"
 
 _ENTRY_POINT_GROUP = "lfx.sandbox_backends"
 
+# Guards the registry dictionaries only. Never held while third-party code
+# runs, so a factory or a plugin import can call back into this module.
 _lock = threading.Lock()
+# Held across the whole entry-point load, so a second thread waits for the
+# load to FINISH rather than observing a half-populated registry. Reentrant:
+# a plugin module that calls back into this module during its own import must
+# not deadlock against the load that imported it.
+_load_lock = threading.RLock()
 _factories: dict[str, Callable[[], SandboxBackend]] = {}
 _instances: dict[str, SandboxBackend] = {}
 _entry_points_loaded = False
@@ -46,7 +53,13 @@ def register_sandbox_backend(name: str, factory: Callable[[], SandboxBackend]) -
     is actually used, so registering a backend costs nothing until an operator
     selects it. Re-registering a name replaces the factory and drops any
     instance already built from the previous one.
+
+    The name is lowercased. The settings validator lowercases
+    ``sandbox_backend`` before comparing it against
+    :func:`known_sandbox_backends`, so a name registered with an uppercase
+    letter would be listed as available and yet never be selectable.
     """
+    name = name.lower()
     if name == SANDBOX_BACKEND_NONE:
         msg = f"{SANDBOX_BACKEND_NONE!r} is reserved and cannot name a backend"
         raise ValueError(msg)
@@ -80,13 +93,25 @@ def resolve_sandbox_backend(name: str) -> SandboxBackend:
             this into the operator-facing message, because only the caller
             knows which setting supplied the name.
     """
+    name = name.lower()
     _load_entry_points()
     with _lock:
         instance = _instances.get(name)
-        if instance is None:
-            factory = _factories[name]
-            instance = _instances[name] = factory()
-        return instance
+        if instance is not None:
+            return instance
+        factory = _factories[name]
+
+    # Built outside the lock. A factory validates control-plane configuration
+    # or probes hardware acceleration, and it may call back into this module;
+    # `_lock` is not reentrant, so holding it here would deadlock the process
+    # on the first such factory and would block `known_sandbox_backends()` --
+    # which the settings validator calls at startup -- for the whole probe.
+    built = factory()
+
+    with _lock:
+        # Another thread may have finished first while we were building.
+        # Whoever landed first wins, so the singleton stays a singleton.
+        return _instances.setdefault(name, built)
 
 
 def live_sandbox_backends() -> tuple[SandboxBackend, ...]:
@@ -97,6 +122,22 @@ def live_sandbox_backends() -> tuple[SandboxBackend, ...]:
     """
     with _lock:
         return tuple(_instances.values())
+
+
+def reset_registry_after_fork() -> None:
+    """Replace this module's mutexes in a freshly forked child.
+
+    A lock held by another thread at fork time is inherited LOCKED with no
+    owner, and the child has no thread that can release it. Every reader here
+    would then block forever, including the fork hook itself, which reads the
+    registry before it touches anything else.
+
+    Only safe in the child's single-threaded post-fork window, which is the
+    only place it is called from.
+    """
+    global _lock, _load_lock  # noqa: PLW0603 - post-fork mutex replacement
+    _lock = threading.Lock()
+    _load_lock = threading.RLock()
 
 
 def seal_builtins() -> None:
@@ -151,11 +192,22 @@ def _load_entry_points() -> None:
     the run.
     """
     global _entry_points_loaded  # noqa: PLW0603 - module-level one-shot latch
-    with _lock:
+    # The latch is read AND set under a lock that stays held for the whole
+    # load. Setting it early and releasing would let a second thread return
+    # from here immediately and then read a registry that is still filling,
+    # so a plugin backend mid-registration would be reported as unknown and
+    # startup would fail with "sandbox_backend must be one of".
+    with _load_lock:
         if _entry_points_loaded:
             return
-        _entry_points_loaded = True
+        try:
+            _load_entry_points_locked()
+        finally:
+            _entry_points_loaded = True
 
+
+def _load_entry_points_locked() -> None:
+    """The body of :func:`_load_entry_points`, run once with ``_load_lock`` held."""
     allowed = _plugin_allowlist()
     if not allowed:
         return
@@ -184,29 +236,38 @@ def _load_entry_points() -> None:
         except Exception:  # noqa: BLE001 - one bad plugin must not hide the others
             logger.warning("Could not load sandbox backend %r", entry_point.name, exc_info=True)
             continue
-        register_sandbox_backend(entry_point.name, factory)
+        try:
+            register_sandbox_backend(entry_point.name, factory)
+        except ValueError:
+            # Reserved name (`none`) or a built-in collision. The docstring
+            # promises a broken plugin is absent rather than fatal, so this
+            # cannot be allowed to propagate out of the settings validator.
+            logger.warning("Refusing sandbox backend plugin %r", entry_point.name, exc_info=True)
+            continue
         logger.info("Registered out-of-tree sandbox backend %r", entry_point.name)
 
 
 def get_sandbox_backend() -> str:
     """Return the configured sandbox backend name (``none`` when unset).
 
-    An absent or unresolvable settings stack means the sandbox was never
-    opted into, so the answer is ``none`` — unlike the
-    ``allow_custom_components`` gate there is no fail-closed question here;
-    the fail-closed behavior lives in :func:`run_code_in_sandbox` once a
-    backend IS configured.
+    ``get_settings_service()`` returns None when the settings stack failed to
+    build, which is indistinguishable here from "never configured". Answering
+    ``none`` in that case would send user code to in-process ``exec`` on a
+    deployment that explicitly asked for a sandbox, so the environment is read
+    directly as a fallback. A name that no backend claims then fails closed in
+    :func:`run_code_in_sandbox` rather than running unsandboxed.
     """
     try:
         from lfx.services.deps import get_settings_service
 
         settings_service = get_settings_service()
     except ImportError:
-        return SANDBOX_BACKEND_NONE
-    if settings_service is None:
-        return SANDBOX_BACKEND_NONE
-    backend = getattr(settings_service.settings, "sandbox_backend", SANDBOX_BACKEND_NONE)
-    return backend or SANDBOX_BACKEND_NONE
+        settings_service = None
+    if settings_service is not None:
+        backend = getattr(settings_service.settings, "sandbox_backend", None)
+        if backend:
+            return backend.lower()
+    return os.environ.get("LANGFLOW_SANDBOX_BACKEND", "").strip().lower() or SANDBOX_BACKEND_NONE
 
 
 def is_sandbox_enabled() -> bool:

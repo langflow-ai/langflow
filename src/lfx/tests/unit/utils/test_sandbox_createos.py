@@ -1402,3 +1402,45 @@ class TestCreateosArtifactCollectionIsNeverFatal:
         assert result.exit_code == 0
         assert result.stdout == "real output"
         assert result.files == ()
+
+
+class TestUntrustedControlPlaneValues:
+    """A response this module cannot read is a failed check, not a crash."""
+
+    @pytest.mark.parametrize("granted", ["not-a-number", ["4096"], {"mib": 4096}])
+    def test_an_unreadable_memory_grant_refuses_and_destroys_the_vm(self, monkeypatch, createos, granted):
+        """int(granted) on a non-numeric value raises outside the SandboxUnavailableError tree.
+
+        The caller's teardown handler catches only that type, so the raw
+        TypeError or ValueError skips it: the VM is never destroyed and the
+        component receives a traceback instead of a mapped sandbox error.
+        """
+        api = createos(_FakeCreateosApi(create_data={"id": "sb-test", "egress": ["240.0.0.0/4"], "mem_mib": granted}))
+        _use_createos(monkeypatch)
+
+        with pytest.raises(SandboxUnavailableError, match="unreadable memory grant"):
+            run_code_in_sandbox("print('hi')")
+
+        assert "sb-test" in api.deleted_ids, "the VM leaked when the grant could not be read"
+        assert not any(p.endswith("/exec") for _, p in api.calls), "code ran despite a failed check"
+
+    def test_an_unreadable_exit_code_is_a_sandbox_error(self, monkeypatch, createos):
+        """The exit_code frame comes from the guest agent stream, so it is guest-controlled.
+
+        An unmapped ValueError escapes the SandboxExecutionError tree, and
+        _run_in_session drops a guest only for that type -- so the session
+        mapping would keep pointing at a guest whose program state is unknown
+        and the next execution would reuse it.
+        """
+        createos(_FakeCreateosApi(exec_result={"stdout": "", "stderr": "", "exit_code": "done"}))
+        _use_createos(monkeypatch)
+
+        with pytest.raises(SandboxExecutionError, match="unreadable exit code"):
+            run_code_in_sandbox("print('hi')")
+
+    def test_a_readable_grant_still_passes(self, monkeypatch, createos):
+        """The guard must not reject the numeric strings a JSON API legitimately returns."""
+        createos(_FakeCreateosApi(create_data={"id": "sb-test", "egress": ["240.0.0.0/4"], "mem_mib": "4096"}))
+        _use_createos(monkeypatch)
+
+        assert run_code_in_sandbox("print(1+1)").success
