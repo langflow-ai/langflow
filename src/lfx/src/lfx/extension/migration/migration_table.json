@@ -4955,6 +4955,11 @@
       "bare_class_name": "MrscraperRunManualScraper",
       "target": "ext:mrscraper:MrscraperRunManualScraper@official",
       "added_in": "1.12.0"
+    },
+    {
+      "bare_class_name": "XquikComponent",
+      "target": "ext:xquik:XquikComponent@official",
+      "added_in": "1.12.0"
     }
   ],
   "ambiguous_bare_names": [
