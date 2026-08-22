@@ -1,0 +1,95 @@
+---
+title: Magic Hour
+slug: /bundles-magic-hour
+description: Generate videos and images in Langflow with Magic Hour's AI video and image generation API.
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Magic Hour** bundle.
+
+[Magic Hour](https://magichour.ai) is an AI video and image generation API. One API key gives access to Sora 2, Veo 3.1, Kling 3.0, Seedance, MiniMax, WAN 2.2 and LTX for video, and GPT-image, Nano Banana Pro, Seedream, Flux and Z-Image for images.
+Get a free API key at [magichour.ai/developer](https://magichour.ai/developer); new accounts receive 400 credits plus 100 credits per day.
+The `wan-2.2`, `ltx-2.3` and `minimax-h3` video models and the `default` image model fit inside the free tier.
+
+For more information, see the [Magic Hour documentation](https://docs.magichour.ai).
+
+## Magic Hour Text to Video
+
+This component generates a video from a text prompt and returns the rendered video URL.
+
+It outputs either a **Result** ([`Data`](/data-types#data)) with `project_id`, `status`, `video_url` and `credits_charged`, or a **Video URL** ([`Message`](/data-types#message)).
+
+### Magic Hour Text to Video parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your Magic Hour API key. |
+| prompt | String | Input parameter. The description of the video to generate. |
+| model | Dropdown | Input parameter. The video model. `wan-2.2` (default), `ltx-2.3` and `minimax-h3` are free-tier models at 24 credits per second; `kling-3.0` costs 48, `veo3.1` 96 and `sora-2` 120 credits per second. |
+| duration | Integer | Input parameter. Video length in seconds. Allowed values depend on the model. Default: `5`. |
+| resolution | Dropdown | Input parameter. `480p`, `720p` or `1080p`. Default: `480p`. |
+| aspect_ratio | Dropdown | Input parameter. `16:9`, `9:16` or `1:1`. Default: `16:9`. |
+| audio | Boolean | Input parameter. Generate audio where the model supports it. Default: `false`. |
+| wait_for_completion | Boolean | Input parameter. Poll until the render finishes. If disabled, only the project ID is returned. Default: `true`. |
+| timeout_seconds | Integer | Input parameter. Maximum time to wait for the render. Default: `900`. |
+
+## Magic Hour Image to Video
+
+This component animates a source image into a video.
+The image can be a public `https` URL or a local file path, which the component uploads to Magic Hour automatically.
+
+### Magic Hour Image to Video parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your Magic Hour API key. |
+| image | String | Input parameter. A public image URL or a local file path. |
+| prompt | String | Input parameter. A description of the motion or scene. |
+| model | Dropdown | Input parameter. The video model. Default: `wan-2.2`. |
+| duration | Integer | Input parameter. Video length in seconds. Default: `5`. |
+| resolution | Dropdown | Input parameter. `480p`, `720p` or `1080p`. Default: `480p`. |
+| wait_for_completion | Boolean | Input parameter. Poll until the render finishes. Default: `true`. |
+| timeout_seconds | Integer | Input parameter. Maximum time to wait for the render. Default: `900`. |
+
+## Magic Hour Image Generator
+
+This component generates one or more images from a text prompt and returns their URLs.
+
+### Magic Hour Image Generator parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your Magic Hour API key. |
+| prompt | String | Input parameter. The description of the image to generate. |
+| model | Dropdown | Input parameter. `default`, `gpt-image-2`, `nano-banana-pro`, `seedream-5-pro`, `flux-2-klein`, `z-image-turbo` or `qwen-edit`. Default: `default`. |
+| image_count | Integer | Input parameter. Number of images to generate. Default: `1`. |
+| aspect_ratio | Dropdown | Input parameter. `1:1`, `16:9`, `9:16`, `4:3` or `3:4`. Default: `1:1`. |
+| wait_for_completion | Boolean | Input parameter. Poll until rendering finishes. Default: `true`. |
+| timeout_seconds | Integer | Input parameter. Maximum time to wait. Default: `300`. |
+
+## Use Magic Hour in a flow
+
+1. Get an API key at [magichour.ai/developer](https://magichour.ai/developer).
+2. In Langflow, add the **Magic Hour Text to Video** component to your flow and enter your API key.
+3. Connect a **Chat Input** component to the **Prompt** field, and connect the **Video URL** output to a **Chat Output** component.
+4. Click **Playground**, describe a scene, and the rendered video URL is returned when the job completes.
+
+All three components expose **Tool Mode**, so an **Agent** can call them to generate media on demand.
+
+## See also
+
+- [Magic Hour API documentation](https://docs.magichour.ai)
+- [Magic Hour LangChain integration](https://github.com/RhythmP28/langchain-magic-hour)

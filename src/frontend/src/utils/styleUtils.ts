@@ -481,6 +481,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "LangWatch", name: "langwatch", icon: "Langwatch" },
   { display_name: "LiteLLM", name: "litellm", icon: "LiteLLM" },
   { display_name: "LMStudio", name: "lmstudio", icon: "LMStudio" },
+  { display_name: "Magic Hour", name: "magic_hour", icon: "Clapperboard" },
   { display_name: "MariTalk", name: "maritalk", icon: "Maritalk" },
   { display_name: "Mem0", name: "mem0", icon: "Mem0" },
   { display_name: "Memories", name: "memories", icon: "Cpu" },
