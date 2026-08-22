@@ -364,7 +364,16 @@ async def read_flows(
     try:
         auth_settings = get_settings_service().auth_settings
 
-        default_folder = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
+        # Scope the default-project lookup to the caller. Every user gets their own folder named
+        # DEFAULT_FOLDER_NAME (see get_or_create_default_folder), so an unscoped ``.first()`` returns
+        # an arbitrary user's folder — and the paginated branch below then intersects that stranger's
+        # folder id with ``Flow.user_id == current_user.id``, which can never match. This matches the
+        # owner-scoped lookup ``get_default_folder_id`` already performs.
+        default_folder = (
+            await session.exec(
+                select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME, Folder.user_id == current_user.id)
+            )
+        ).first()
         default_folder_id = default_folder.id if default_folder else None
 
         starter_folder = (
@@ -373,10 +382,20 @@ async def read_flows(
         starter_folder_id = starter_folder.id if starter_folder else None
 
         if not starter_folder and not default_folder:
-            raise HTTPException(
-                status_code=404,
-                detail="Starter project and default project not found. Please create a project and add flows to it.",
-            )
+            # This 404 reports an instance that was never set up, so keep it keyed on *any*
+            # default project rather than the caller's. Narrowing the lookup above must not
+            # turn a request that used to succeed into a 404 for someone who renamed their
+            # own default project.
+            instance_has_default_folder = (
+                await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))
+            ).first()
+            if not instance_has_default_folder:
+                raise HTTPException(
+                    status_code=404,
+                    detail=(
+                        "Starter project and default project not found. Please create a project and add flows to it."
+                    ),
+                )
 
         if not folder_id:
             folder_id = default_folder_id
