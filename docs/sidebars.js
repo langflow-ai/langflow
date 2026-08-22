@@ -327,6 +327,16 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/sandbox-backends",
+          label: "Sandbox backends",
+        },
+        {
+          type: "doc",
+          id: "Deployment/sandbox-createos",
+          label: "Run code in CreateOS microVMs",
+        },
+        {
+          type: "doc",
           id: "Deployment/security",
           label: "Security",
         },

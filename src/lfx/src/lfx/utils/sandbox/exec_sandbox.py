@@ -1,23 +1,4 @@
-"""Optional hardware-isolated sandbox backend for user-authored code execution.
-
-Issue #12029: the Python Interpreter / Python REPL components execute
-user-supplied code with ``exec`` inside the server process. The Python-level
-hardening in :mod:`lfx.utils.python_repl_security` is best-effort defense in
-depth, not a security boundary. This module adds an opt-in execution backend
-that routes that code into a dedicated QEMU microVM per execution via the
-`exec-sandbox <https://github.com/dualeai/exec-sandbox>`_ package, so a
-malicious payload lands in a throwaway VM (read-only rootfs, no network by
-default) instead of the Langflow server process.
-
-Operator contract:
-
-* ``LANGFLOW_SANDBOX_BACKEND=none`` (default) — existing in-process behavior,
-  nothing in this module activates and ``exec-sandbox`` need not be installed.
-* ``LANGFLOW_SANDBOX_BACKEND=exec-sandbox`` — code-execution components run
-  user code through :func:`run_code_in_sandbox`. If the backend cannot be used
-  (package not installed, Python < 3.12, QEMU missing) execution FAILS CLOSED
-  with :class:`SandboxUnavailableError`; it never silently falls back to
-  in-process ``exec``, because the operator explicitly asked for isolation.
+"""The ``exec-sandbox`` backend: one local QEMU microVM per execution.
 
 Event-loop ownership: ``exec_sandbox.Scheduler`` is asyncio-based and
 loop-bound, while component code may run on any thread/loop (and
@@ -31,69 +12,27 @@ lives on that loop for the life of the process and calls are submitted with
 
 from __future__ import annotations
 
-import ast
 import asyncio
 import atexit
 import contextlib
 import os
-import re
 import subprocess
 import sys
 import threading
-from dataclasses import dataclass
 from pathlib import Path
 
 from lfx.log.logger import logger
+from lfx.utils.sandbox.base import (
+    Capabilities,
+    SandboxExecutionError,
+    SandboxResult,
+    SandboxUnavailableError,
+    SessionKey,
+    _sandbox_settings,
+)
+from lfx.utils.sandbox.registry import register_sandbox_backend
 
-# Backend identifiers accepted by LANGFLOW_SANDBOX_BACKEND.
-SANDBOX_BACKEND_NONE = "none"
 SANDBOX_BACKEND_EXEC_SANDBOX = "exec-sandbox"
-KNOWN_SANDBOX_BACKENDS = (SANDBOX_BACKEND_NONE, SANDBOX_BACKEND_EXEC_SANDBOX)
-
-# Mirrors langchain_experimental's PythonREPL.sanitize_input, which the
-# in-process path applies before exec: strip a leading markdown fence /
-# "python" language tag / backticks and trailing backticks-whitespace. The
-# sandbox path must normalize identically or fenced LLM-generated code that
-# runs in-process today would become a guest SyntaxError. Replicated here
-# (two small regexes) so the sandbox path does not depend on
-# langchain_experimental being installed.
-_FENCE_PREFIX_RE = re.compile(r"^(\s|`)*(?i:python)?\s*")
-_FENCE_SUFFIX_RE = re.compile(r"(\s|`)*$")
-
-# The Python tokenizer's line-break set: \n, \r\n, \r. Deliberately narrower
-# than str.splitlines(), which also breaks on U+2028/U+2029 etc. that Python
-# source treats as ordinary characters inside string literals.
-_SOURCE_NEWLINE_RE = re.compile(r"\r\n|\r|\n")
-
-
-def sanitize_code(code: str) -> str:
-    """Strip markdown fences/backticks the way PythonREPL.sanitize_input does."""
-    return _FENCE_SUFFIX_RE.sub("", _FENCE_PREFIX_RE.sub("", code))
-
-
-class SandboxExecutionError(RuntimeError):
-    """Raised when a sandboxed execution fails for infrastructure reasons.
-
-    Infrastructure failures (VM boot timeout, guest communication loss) are
-    distinct from the user code failing — the latter is reported through
-    :attr:`SandboxResult.exit_code` / :attr:`SandboxResult.stderr`, not an
-    exception.
-    """
-
-
-class SandboxUnavailableError(SandboxExecutionError):
-    """Raised when a sandbox backend is configured but cannot be used.
-
-    Deliberately NOT caught by the components' fallback paths: a configured
-    sandbox that cannot start must block execution (fail closed), not degrade
-    to in-process ``exec``.
-    """
-
-
-# exec-sandbox reports these outcomes through exit_code instead of raising:
-# -1 is a wall-clock timeout, 137 is SIGKILL (usually the guest OOM killer).
-_EXIT_CODE_TIMEOUT = -1
-_EXIT_CODE_KILLED = 137
 
 # Host-side grace added on top of the guest-enforced timeout when waiting for
 # the loop-thread future. The guest timeout is authoritative (it surfaces as a
@@ -105,89 +44,6 @@ _EXIT_CODE_KILLED = 137
 # boots on hosts without KVM/HVF) on the first execution.
 _RUN_GRACE_SECONDS = 60
 _STARTUP_GRACE_SECONDS = 300
-
-
-@dataclass(frozen=True)
-class SandboxResult:
-    """Outcome of one sandboxed execution."""
-
-    stdout: str
-    stderr: str
-    exit_code: int
-    execution_time_ms: int | None = None
-
-    @property
-    def success(self) -> bool:
-        return self.exit_code == 0
-
-    def error_message(self) -> str:
-        """A user-facing message for a failed execution (non-zero exit code)."""
-        if self.exit_code == _EXIT_CODE_TIMEOUT:
-            return "Sandboxed execution timed out (see LANGFLOW_SANDBOX_TIMEOUT_SECONDS)."
-        if self.exit_code == _EXIT_CODE_KILLED:
-            return (
-                "Sandboxed execution was killed (exit code 137), typically because it "
-                "exceeded the VM memory limit (see LANGFLOW_SANDBOX_MEMORY_MB)."
-            )
-        return self.stderr.strip() or f"Sandboxed execution failed with exit code {self.exit_code}"
-
-
-def get_sandbox_backend() -> str:
-    """Return the configured sandbox backend name (``none`` when unset).
-
-    An absent or unresolvable settings stack means the sandbox was never
-    opted into, so the answer is ``none`` — unlike the
-    ``allow_custom_components`` gate there is no fail-closed question here;
-    the fail-closed behavior lives in :func:`run_code_in_sandbox` once a
-    backend IS configured.
-    """
-    try:
-        from lfx.services.deps import get_settings_service
-
-        settings_service = get_settings_service()
-    except ImportError:
-        return SANDBOX_BACKEND_NONE
-    if settings_service is None:
-        return SANDBOX_BACKEND_NONE
-    backend = getattr(settings_service.settings, "sandbox_backend", SANDBOX_BACKEND_NONE)
-    return backend or SANDBOX_BACKEND_NONE
-
-
-def is_sandbox_enabled() -> bool:
-    """True when a non-default sandbox backend is configured."""
-    return get_sandbox_backend() != SANDBOX_BACKEND_NONE
-
-
-@dataclass(frozen=True)
-class _SandboxSettings:
-    timeout_seconds: int = 30
-    memory_mb: int = 192
-    allow_network: bool = False
-    allowed_domains: tuple[str, ...] = ()
-    allow_software_emulation: bool = False
-
-
-def _sandbox_settings() -> _SandboxSettings:
-    """Read the sandbox tuning settings, defaulting when the settings stack is absent."""
-    defaults = _SandboxSettings()
-    try:
-        from lfx.services.deps import get_settings_service
-
-        settings_service = get_settings_service()
-    except ImportError:
-        return defaults
-    if settings_service is None:
-        return defaults
-    settings = settings_service.settings
-    return _SandboxSettings(
-        timeout_seconds=getattr(settings, "sandbox_timeout_seconds", defaults.timeout_seconds),
-        memory_mb=getattr(settings, "sandbox_memory_mb", defaults.memory_mb),
-        allow_network=getattr(settings, "sandbox_allow_network", defaults.allow_network),
-        allowed_domains=tuple(getattr(settings, "sandbox_allowed_domains", ()) or ()),
-        allow_software_emulation=getattr(
-            settings, "sandbox_allow_software_emulation", defaults.allow_software_emulation
-        ),
-    )
 
 
 def _hardware_acceleration_available() -> bool:
@@ -297,6 +153,24 @@ async def _assert_hardware_acceleration() -> None:
 class _ExecSandboxExecutor:
     """Owns the private event-loop thread and the lazily-created Scheduler."""
 
+    name = SANDBOX_BACKEND_EXEC_SANDBOX
+
+    @staticmethod
+    def capabilities() -> Capabilities:
+        """exec-sandbox runs a QEMU guest with an in-guest DNS filter.
+
+        ``isolation`` reports what the backend provides, not what the current
+        settings ask for: LANGFLOW_SANDBOX_ALLOW_SOFTWARE_EMULATION is an
+        operator opt-out that :meth:`run` enforces itself, and reporting it
+        here would make the dispatcher refuse a run the operator deliberately
+        allowed.
+        """
+        return Capabilities(
+            isolation="hardware-virtualized",
+            supports_deny_all_egress=True,
+            supports_domain_allowlist=True,
+        )
+
     def __init__(self) -> None:
         self._loop: asyncio.AbstractEventLoop | None = None
         self._thread: threading.Thread | None = None
@@ -328,7 +202,7 @@ class _ExecSandboxExecutor:
             self._generation += 1
             # Create the creation lock EAGERLY, together with the loop: it
             # must exist by the time run() releases self._lock, so a
-            # subsequent _shutdown() always finds it and queues the close
+            # subsequent shutdown() always finds it and queues the close
             # behind any submitted-but-not-yet-executed run instead of
             # returning early and leaving that run's scheduler open.
             # (asyncio.Lock binds to a loop only on first acquire, so
@@ -345,7 +219,7 @@ class _ExecSandboxExecutor:
             self._thread = thread
         return self._loop
 
-    def _reset_after_fork(self) -> None:
+    def reset_after_fork(self) -> None:
         """Rebuild synchronization state in a freshly forked child.
 
         Called from an ``os.register_at_fork(after_in_child=...)`` hook, i.e.
@@ -397,7 +271,7 @@ class _ExecSandboxExecutor:
                 scheduler = Scheduler(SchedulerConfig())
                 self._scheduler = await scheduler.__aenter__()
                 if not self._atexit_registered:
-                    atexit.register(self._shutdown)
+                    atexit.register(self.shutdown)
                     self._atexit_registered = True
         return self._scheduler
 
@@ -411,7 +285,7 @@ class _ExecSandboxExecutor:
         restartable (a later execution creates a fresh Scheduler rather than
         calling into an exited one).
 
-        Readiness/generation are NOT touched here: _shutdown() transitions
+        Readiness/generation are NOT touched here: shutdown() transitions
         them synchronously under the thread mutex at submission time, because
         by the time this coroutine runs another run may already have captured
         its grace classification.
@@ -424,7 +298,7 @@ class _ExecSandboxExecutor:
             scheduler, self._scheduler = self._scheduler, None
             await scheduler.__aexit__(None, None, None)
 
-    def _shutdown(self) -> None:
+    def shutdown(self) -> None:
         """Best-effort Scheduler teardown (atexit + app-shutdown hook).
 
         The loop thread is a daemon, so without this the process would exit
@@ -501,7 +375,7 @@ class _ExecSandboxExecutor:
         # nothing about the current epoch's readiness.
         #
         # The comparison and the write must be one atomic step under the same
-        # mutex _shutdown() uses for its transition: unlocked, a shutdown can
+        # mutex shutdown() uses for its transition: unlocked, a shutdown can
         # land between a successful comparison and the assignment, leaving
         # startup_complete=True with no scheduler — the next cold start would
         # then run under the steady-state margin and can time out. Holding
@@ -517,7 +391,11 @@ class _ExecSandboxExecutor:
             execution_time_ms=getattr(result, "execution_time_ms", None),
         )
 
-    def run(self, code: str, *, env: dict[str, str] | None = None) -> SandboxResult:
+    def run(self, code: str, *, env: dict[str, str] | None = None, session: SessionKey | None = None) -> SandboxResult:
+        # ``session`` is accepted and ignored: exec-sandbox builds one VM per
+        # run and exposes no handle to reuse, so capabilities() reports
+        # supports_sessions=False and the dispatcher never passes a real key.
+        del session
         settings = _sandbox_settings()
         try:
             import exec_sandbox  # noqa: F401
@@ -541,7 +419,7 @@ class _ExecSandboxExecutor:
 
         # Loop acquisition, readiness capture, and submission form one
         # critical section under the executor's thread mutex, totally ordered
-        # against _shutdown() (which submits its close under the same mutex).
+        # against shutdown() (which submits its close under the same mutex).
         # This closes two races: a shutdown can no longer slip between the
         # readiness read and the submission (stale steady-state grace for
         # what becomes a cold start), and a shutdown can no longer observe
@@ -595,156 +473,9 @@ class _ExecSandboxExecutor:
             raise SandboxExecutionError(msg) from e
 
 
-_executor = _ExecSandboxExecutor()
-
-
-def _reinit_executor_after_fork() -> None:
-    """after_in_child fork hook: give the (current) executor fresh sync state.
-
-    Resolves the module global at call time so a test-injected executor is
-    covered too. Runs in the child's single-threaded post-fork window; must
-    never raise (an exception here would surface inside unrelated fork calls).
-    """
-    with contextlib.suppress(Exception):
-        _executor._reset_after_fork()  # noqa: SLF001 - module-owned singleton
-
-
-if hasattr(os, "register_at_fork"):
-    # POSIX only (exec-sandbox itself is Linux/macOS only). Registered once at
-    # import for the process lifetime; the hook re-resolves _executor when it
-    # fires, so it never pins a stale instance.
-    os.register_at_fork(after_in_child=_reinit_executor_after_fork)
-
-
-def build_import_preamble(global_imports: str | list[str]) -> str:
-    """Translate the components' ``Global Imports`` field into import statements.
-
-    In-process execution imports these modules on the host and injects them
-    into the exec globals; in sandbox mode the equivalent is a plain import
-    preamble that runs inside the guest VM. A module missing from the guest
-    image surfaces as an ImportError in the sandboxed stderr.
-    """
-    if isinstance(global_imports, str):
-        modules = [module.strip() for module in global_imports.split(",") if module.strip()]
-    elif isinstance(global_imports, list):
-        modules = [str(module).strip() for module in global_imports if str(module).strip()]
-    else:
-        msg = "global_imports must be either a string or a list"
-        raise TypeError(msg)
-    for module in modules:
-        # Modules become import statements in generated code, so restrict to
-        # dotted-identifier names to keep code injection out of the preamble.
-        if not all(part.isidentifier() for part in module.split(".")):
-            msg = f"Invalid module name in Global Imports: {module!r}"
-            raise ValueError(msg)
-    return "\n".join(f"import {module}" for module in modules)
-
-
-def _compose_sandbox_code(preamble: str, code: str) -> str:
-    """Join the import preamble and user code without breaking future imports.
-
-    ``from __future__ import ...`` must be the first statement after an
-    optional module docstring, so naively prepending the preamble would turn
-    valid user code into a SyntaxError. Insert the preamble after any leading
-    docstring/future-import block instead. If the user code does not parse,
-    return the naive concatenation — the guest surfaces the same SyntaxError
-    the user would get anyway.
-    """
-    if not preamble:
-        return code
-    try:
-        tree = ast.parse(code)
-    except SyntaxError:
-        return f"{preamble}\n{code}"
-    idx = 0
-    body = tree.body
-    if (
-        body
-        and isinstance(body[0], ast.Expr)
-        and isinstance(body[0].value, ast.Constant)
-        and isinstance(body[0].value.value, str)
-    ):
-        idx = 1
-    while idx < len(body) and isinstance(body[idx], ast.ImportFrom) and body[idx].module == "__future__":
-        idx += 1
-    if idx == 0:
-        return f"{preamble}\n{code}"
-    if idx >= len(body):
-        # Only a docstring/future block — nothing runs after the preamble.
-        return f"{code}\n{preamble}"
-    # Split at the exact (line, column) start of the first real statement, not
-    # at a line boundary: semicolon-joined code like
-    # ``from __future__ import annotations; print(math.pi)`` would otherwise
-    # keep user statements on the hoisted line and run them before the
-    # preamble's imports.
-    first_tail = body[idx]
-    # Line starts must use the tokenizer's newline semantics (\n, \r\n, \r) —
-    # NOT str.splitlines(), which also breaks on U+2028/U+2029 and friends
-    # that Python source treats as ordinary characters inside strings; a
-    # docstring containing U+2028 would otherwise shift every subsequent
-    # offset and drop the preamble inside the docstring.
-    line_start = 0
-    for _ in range(first_tail.lineno - 1):
-        match = _SOURCE_NEWLINE_RE.search(code, line_start)
-        if match is None:  # pragma: no cover - AST linenos always fit the source
-            break
-        line_start = match.end()
-    # ast col_offset counts UTF-8 BYTES, not characters — slicing the string
-    # with it directly would split mid-identifier after any non-ASCII text
-    # (e.g. an accented docstring). Convert via a byte-slice round-trip; AST
-    # offsets always fall on character boundaries so the decode is safe.
-    col_chars = len(code[line_start:].encode("utf-8")[: first_tail.col_offset].decode("utf-8"))
-    offset = line_start + col_chars
-    head, tail = code[:offset], code[offset:]
-    # head ends mid-line in the semicolon-joined case; add the newline only
-    # then (a trailing semicolon before a newline is valid Python).
-    separator = "" if head.endswith("\n") else "\n"
-    return f"{head}{separator}{preamble}\n{tail}"
-
-
-def run_code_in_sandbox(
-    code: str, *, global_imports: str | list[str] = "", env: dict[str, str] | None = None
-) -> SandboxResult:
-    """Execute ``code`` in the configured sandbox backend and return the outcome.
-
-    Synchronous by design: the code-execution components are synchronous and
-    may be invoked from arbitrary threads/event loops, so the loop-affine
-    scheduler work is delegated to the module's private loop thread.
-
-    Raises:
-        SandboxUnavailableError: A sandbox backend is configured but unusable
-            (fail closed — never falls back to in-process execution).
-        SandboxExecutionError: The sandbox infrastructure failed mid-run.
-        ValueError: ``global_imports`` contains an invalid module name.
-    """
-    backend = get_sandbox_backend()
-    if backend == SANDBOX_BACKEND_NONE:
-        msg = "run_code_in_sandbox called while no sandbox backend is configured"
-        raise SandboxExecutionError(msg)
-    if backend != SANDBOX_BACKEND_EXEC_SANDBOX:
-        msg = (
-            f"Unknown sandbox backend {backend!r}. Supported values for "
-            f"LANGFLOW_SANDBOX_BACKEND: {', '.join(KNOWN_SANDBOX_BACKENDS)}."
-        )
-        raise SandboxUnavailableError(msg)
-
-    if not code.strip():
-        # Parity with the in-process interpreter, which returns an empty
-        # result for blank code; exec-sandbox rejects empty code outright and
-        # that rejection would otherwise surface as an infrastructure error.
-        return SandboxResult(stdout="", stderr="", exit_code=0)
-
-    preamble = build_import_preamble(global_imports)
-    full_code = _compose_sandbox_code(preamble, code)
-    return _executor.run(full_code, env=env)
-
-
-def shutdown_sandbox() -> None:
-    """Best-effort teardown of the sandbox scheduler and its VMs.
-
-    Safe to call when the sandbox was never used. Wired into application
-    shutdown in addition to the atexit hook because exec-sandbox only gets
-    QEMU parent-death cleanup on QEMU 10.2+; on older QEMU an abrupt worker
-    exit could otherwise leave guest VMs running.
-    """
-    _executor._shutdown()  # noqa: SLF001 - module-owned singleton
+# Re-executing this module (importlib.reload, or a test that reimports it)
+# must not raise. seal_builtins() has run by then, and re-registering a sealed
+# built-in name is refused by design -- which is the correct refusal, just not
+# a reason to break the import.
+with contextlib.suppress(ValueError):
+    register_sandbox_backend(SANDBOX_BACKEND_EXEC_SANDBOX, _ExecSandboxExecutor)
