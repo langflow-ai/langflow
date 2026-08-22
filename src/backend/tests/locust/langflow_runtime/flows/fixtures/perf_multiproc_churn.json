@@ -1,0 +1,800 @@
+{
+  "data": {
+    "edges": [
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-WzJwi",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "PerfSubprocessChurn-K4QNX",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "ChatInput-WzJwi",
+        "target": "PerfSubprocessChurn-K4QNX"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "PerfSubprocessChurn",
+            "id": "PerfSubprocessChurn-K4QNX",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-K_RVe",
+            "inputTypes": [
+              "Data",
+              "JSON",
+              "DataFrame",
+              "Table",
+              "Message"
+            ],
+            "type": "other"
+          }
+        },
+        "source": "PerfSubprocessChurn-K4QNX",
+        "target": "ChatOutput-K_RVe"
+      }
+    ],
+    "nodes": [
+      {
+        "data": {
+          "id": "ChatInput-WzJwi",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Get chat inputs from the Playground.",
+            "display_name": "Chat Input",
+            "documentation": "https://docs.langflow.org/chat-input-and-output",
+            "edited": false,
+            "field_order": [],
+            "frozen": false,
+            "icon": "MessagesSquare",
+            "legacy": false,
+            "metadata": {},
+            "minimized": true,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Chat Message",
+                "group_outputs": false,
+                "method": "message_response",
+                "name": "message",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "api_editable": false,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from lfx.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom lfx.base.io.chat import ChatComponent\nfrom lfx.inputs.inputs import BoolInput\nfrom lfx.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom lfx.schema.message import Message\nfrom lfx.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    documentation: str = \"https://docs.langflow.org/chat-input-and-output\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"context_id\",\n            display_name=\"Context ID\",\n            info=\"The context ID of the chat. Adds an extra layer to the local memory.\",\n            value=\"\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Chat Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        # Ensure files is a list and filter out empty/None values\n        files = self.files if self.files else []\n        if files and not isinstance(files, list):\n            files = [files]\n        # Filter out None/empty values\n        files = [f for f in files if f is not None and f != \"\"]\n\n        session_id = self.session_id or self.graph.session_id or \"\"\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=session_id,\n            context_id=self.context_id,\n            files=files,\n        )\n        if session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+              },
+              "context_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Context ID",
+                "dynamic": false,
+                "info": "The context ID of the chat. Adds an extra layer to the local memory.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "context_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "files": {
+                "_input_type": "FileInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Files",
+                "dynamic": false,
+                "fileTypes": [
+                  "csv",
+                  "json",
+                  "pdf",
+                  "txt",
+                  "md",
+                  "mdx",
+                  "yaml",
+                  "yml",
+                  "xml",
+                  "html",
+                  "htm",
+                  "docx",
+                  "py",
+                  "sh",
+                  "sql",
+                  "js",
+                  "ts",
+                  "tsx",
+                  "jpg",
+                  "jpeg",
+                  "png",
+                  "bmp",
+                  "image"
+                ],
+                "file_path": "",
+                "info": "Files to be sent with the message.",
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "files",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "temp_file": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "file",
+                "value": ""
+              },
+              "input_value": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "ai_enabled": false,
+                "api_editable": false,
+                "copy_field": false,
+                "display_name": "Input Text",
+                "dynamic": false,
+                "info": "Message to be passed as input.",
+                "input_types": [],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "input_value",
+                "override_skip": false,
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "perf-multiproc"
+              },
+              "sender": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "api_editable": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "external_options": {},
+                "info": "Type of sender.",
+                "name": "sender",
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": "User"
+              },
+              "sender_name": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Sender Name",
+                "dynamic": false,
+                "info": "Name of the sender.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sender_name",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "User"
+              },
+              "session_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Session ID",
+                "dynamic": false,
+                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "session_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "should_store_message": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Store Messages",
+                "dynamic": false,
+                "info": "Store the message in the history.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_store_message",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "ChatInput"
+        },
+        "id": "ChatInput-WzJwi"
+      },
+      {
+        "data": {
+          "id": "ChatOutput-K_RVe",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Display a chat message in the Playground.",
+            "display_name": "Chat Output",
+            "documentation": "https://docs.langflow.org/chat-input-and-output",
+            "edited": false,
+            "field_order": [],
+            "frozen": false,
+            "icon": "MessagesSquare",
+            "legacy": false,
+            "metadata": {},
+            "minimized": true,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Output Message",
+                "group_outputs": false,
+                "method": "message_response",
+                "name": "message",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "clean_data": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Basic Clean Data",
+                "dynamic": false,
+                "info": "Whether to clean data before converting to string.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "clean_data",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": true
+              },
+              "code": {
+                "advanced": true,
+                "api_editable": false,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from collections.abc import Generator\nfrom typing import Any\n\nimport orjson\nfrom fastapi.encoders import jsonable_encoder\n\nfrom lfx.base.io.chat import ChatComponent\nfrom lfx.helpers.data import safe_convert\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, MessageTextInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.schema.properties import Source\nfrom lfx.template.field.base import Output\nfrom lfx.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    documentation: str = \"https://docs.langflow.org/chat-input-and-output\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Inputs\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"JSON\", \"DataFrame\", \"Table\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"context_id\",\n            display_name=\"Context ID\",\n            info=\"The context ID of the chat. Adds an extra layer to the local memory.\",\n            value=\"\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            advanced=True,\n            info=\"Whether to clean data before converting to string.\",\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Output Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n\n        # Get source properties\n        source, _, display_name, source_id = self.get_properties_from_source_component()\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message) and not self.is_connected_to_chat_input():\n            message = self.input_value\n            # Update message properties\n            message.text = text\n            # Preserve existing session_id from the incoming message if it exists\n            existing_session_id = message.session_id\n        else:\n            message = Message(text=text)\n            existing_session_id = None\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        # Preserve session_id from incoming message, or use component/graph session_id\n        message.session_id = (\n            self.session_id or existing_session_id or (self.graph.session_id if hasattr(self, \"graph\") else None) or \"\"\n        )\n        message.context_id = self.context_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n\n        # Store message if needed\n        if message.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        # Set accumulated token usage from all upstream LLM vertices.\n        # This must happen AFTER send_message() because streaming captures\n        # usage from chunks and would overwrite accumulated totals.\n        if hasattr(self, \"_vertex\") and self._vertex is not None:\n            accumulated_usage = self._vertex._accumulate_upstream_token_usage()  # noqa: SLF001\n            if accumulated_usage:\n                message.properties.usage = accumulated_usage\n                if self.should_store_message and message.get_id():\n                    message = await self._update_stored_message(message)\n                    await self._send_message_event(message, id_=message.get_id())\n\n        self.status = message\n        return message\n\n    def _serialize_data(self, data: Data) -> str:\n        \"\"\"Serialize Data object to JSON string.\"\"\"\n        # Convert data.data to JSON-serializable format\n        serializable_data = jsonable_encoder(data.data)\n        # Serialize with orjson, enabling pretty printing with indentation\n        json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)\n        # Convert bytes to string and wrap in Markdown code blocks\n        return \"```json\\n\" + json_bytes.decode(\"utf-8\") + \"\\n```\"\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            clean_data: bool = getattr(self, \"clean_data\", False)\n            return \"\\n\".join([safe_convert(item, clean_data=clean_data) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return safe_convert(self.input_value)\n"
+              },
+              "context_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Context ID",
+                "dynamic": false,
+                "info": "The context ID of the chat. Adds an extra layer to the local memory.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "context_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "data_template": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Data Template",
+                "dynamic": false,
+                "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "data_template",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "{text}"
+              },
+              "input_value": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Inputs",
+                "dynamic": false,
+                "info": "Message to be passed as output.",
+                "input_types": [
+                  "Data",
+                  "JSON",
+                  "DataFrame",
+                  "Table",
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "input_value",
+                "override_skip": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "other",
+                "value": ""
+              },
+              "sender": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "api_editable": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "external_options": {},
+                "info": "Type of sender.",
+                "name": "sender",
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": "Machine"
+              },
+              "sender_name": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Sender Name",
+                "dynamic": false,
+                "info": "Name of the sender.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sender_name",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "AI"
+              },
+              "session_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Session ID",
+                "dynamic": false,
+                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "session_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "should_store_message": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Store Messages",
+                "dynamic": false,
+                "info": "Store the message in the history.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_store_message",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "ChatOutput"
+        },
+        "id": "ChatOutput-K_RVe"
+      },
+      {
+        "data": {
+          "id": "PerfSubprocessChurn-K4QNX",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Bounded concurrent multiprocess context-switch pressure with memory-resident working sets.",
+            "display_name": "Perf Subprocess Churn",
+            "documentation": "",
+            "edited": false,
+            "field_order": [],
+            "frozen": false,
+            "icon": "terminal",
+            "legacy": false,
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Output",
+                "group_outputs": false,
+                "method": "run",
+                "name": "output",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "api_editable": false,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "\"\"\"Bounded concurrent multiprocess context-switch isolator for the performance suite.\n\nEmbedded into ``perf_multiproc_churn`` (and ensemble fixtures) by\n``flows/build_fixtures.py``. Children run concurrently with independent\nmemory-resident working sets on one CPU (when affinity is available) so the\nOS must schedule among them. This stresses spawn, context switching, and\ncache/TLB disruption — not disk paging.\n\nWorking-set size is clamped using portable ``os.sysconf`` available-memory\nhints (``SC_AVPHYS_PAGES`` * ``SC_PAGE_SIZE``) plus suite hard caps — not\nLinux-only ``/proc`` or cgroup paths.\n\nCovered by unit bounds checks and live Workflows assertions under\n``tests/locust/tests/``. Child scheduler counters prefer Unix ``resource``;\nwhen unavailable they report zeros (affinity metrics remain best-effort).\n\"\"\"\n\nfrom __future__ import annotations\n\nimport contextlib\nimport os\nimport re\nimport subprocess\nimport sys\nimport time\n\nfrom lfx.custom import Component\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.io import IntInput, MessageTextInput, Output\nfrom lfx.schema.message import Message\n\n# Hard ceilings so a misconfigured profile cannot fork-bomb or OOM the host.\n_MAX_COUNT = 8\n_MAX_TIMEOUT_S = 30\n_MAX_DURATION_MS = 5_000\n_MIN_WORKING_SET_BYTES = 256 * 1024  # 256 KiB\n_DEFAULT_WORKING_SET_BYTES = 4 * 1024 * 1024  # 4 MiB\n_MAX_WORKING_SET_BYTES = 64 * 1024 * 1024  # 64 MiB per child\n_MAX_TOTAL_WORKING_SET_BYTES = 128 * 1024 * 1024  # 128 MiB across children\n# Deterministic sentinel when a child exceeds timeout_s (not a real OS status).\n_TIMEOUT_SENTINEL = -9\n_PAGE_SIZE = 4096\n\n# Compact child: wait for synchronized start, pin CPU, touch working set, report metrics.\n# ``resource`` is Unix-only; on other platforms vcs/ivcs are reported as 0.\n_CHILD_SCRIPT = r\"\"\"\nimport hashlib\nimport os\nimport sys\nimport time\n\ntry:\n    import resource\nexcept ImportError:\n    resource = None\n\nindex = int(sys.argv[1])\nws_bytes = int(sys.argv[2])\nduration_ms = int(sys.argv[3])\ncpu_token = sys.argv[4]\npage = int(sys.argv[5])\nsys.stdin.readline()\naff = \"none\"\nif cpu_token != \"\":\n    try:\n        cpu = int(cpu_token)\n        os.sched_setaffinity(0, {cpu})\n        aff = str(sorted(os.sched_getaffinity(0))[0])\n    except (AttributeError, OSError, ValueError):\n        aff = \"unsupported\"\npages = max(1, ws_bytes // page)\nbuf = bytearray(pages * page)\nfor i in range(pages):\n    buf[i * page] = (index + i) & 0xFF\nstart = time.perf_counter()\ndeadline = start + (duration_ms / 1000.0)\ntouched = 0\nround_i = 0\nwhile time.perf_counter() < deadline:\n    for i in range(pages):\n        off = ((i + round_i) % pages) * page\n        buf[off] = (buf[off] + 1) & 0xFF\n        touched += 1\n    round_i += 1\nend = time.perf_counter()\ndigest = hashlib.sha256(bytes(buf[::page][:64])).hexdigest()[:16]\nif resource is not None:\n    usage = resource.getrusage(resource.RUSAGE_SELF)\n    vcs = int(usage.ru_nvcsw)\n    ivcs = int(usage.ru_nivcsw)\nelse:\n    vcs = 0\n    ivcs = 0\nprint(\n    f\"child:pid={os.getpid()}:start={start:.6f}:end={end:.6f}:\"\n    f\"pages={pages}:touched={touched}:cksum={digest}:aff={aff}:\"\n    f\"vcs={vcs}:ivcs={ivcs}\"\n)\n\"\"\"\n\n_CHILD_RE = re.compile(\n    r\"^child:pid=(?P<pid>\\d+):start=(?P<start>[0-9.]+):end=(?P<end>[0-9.]+):\"\n    r\"pages=(?P<pages>\\d+):touched=(?P<touched>\\d+):cksum=(?P<cksum>[0-9a-f]+):\"\n    r\"aff=(?P<aff>[^:]+):vcs=(?P<vcs>\\d+):ivcs=(?P<ivcs>\\d+)$\"\n)\n\n\ndef _sanitize_seed(raw: object) -> str:\n    \"\"\"Return a delimiter-safe seed for the multiproc metrics framing.\n\n    Child records are joined with ``|`` after the header, so ``|`` and newlines\n    are replaced. Colons inside the seed are left as-is (``split(\":\", 8)`` keeps\n    the remainder intact).\n    \"\"\"\n    text = getattr(raw, \"text\", None)\n    seed = text if text is not None else str(raw)\n    for ch in (\"|\", \"\\n\", \"\\r\"):\n        seed = seed.replace(ch, \"_\")\n    return seed\n\n\ndef available_memory_bytes(*, fallback: int = _MAX_TOTAL_WORKING_SET_BYTES) -> int:\n    \"\"\"Estimate available physical RAM via portable ``os.sysconf`` names.\n\n    Uses POSIX system-configuration queries when present:\n\n    * ``SC_AVPHYS_PAGES`` — available physical memory pages\n    * ``SC_PAGE_SIZE`` — bytes per memory page\n\n    Product ≈ currently available physical RAM. This is an OS estimate, not a\n    container/cgroup limit. On platforms without these names (e.g. Windows),\n    return ``fallback`` so suite hard caps still bound the workload.\n\n    Note: duplicated in ``perf_disk_io`` on purpose — each isolator's source is\n    embedded into fixture JSON and must stay import-free of sibling modules.\n    \"\"\"\n    try:\n        pages = int(os.sysconf(\"SC_AVPHYS_PAGES\"))\n        page_size = int(os.sysconf(\"SC_PAGE_SIZE\"))\n    except (AttributeError, OSError, TypeError, ValueError):\n        return fallback\n    if pages <= 0 or page_size <= 0:\n        return fallback\n    return pages * page_size\n\n\ndef resolve_working_set_bytes(*, requested: int, count: int) -> int:\n    \"\"\"Clamp per-child working set against host memory and suite hard caps.\"\"\"\n    if requested <= 0:\n        requested = _DEFAULT_WORKING_SET_BYTES\n    budget = available_memory_bytes() // 8  # leave headroom for the parent + Locust workers\n    per_child_budget = max(_MIN_WORKING_SET_BYTES, min(_MAX_WORKING_SET_BYTES, budget // max(count, 1)))\n    total_cap = _MAX_TOTAL_WORKING_SET_BYTES // max(count, 1)\n    return max(_MIN_WORKING_SET_BYTES, min(requested, per_child_budget, total_cap, _MAX_WORKING_SET_BYTES))\n\n\ndef pick_affinity_cpu() -> str:\n    \"\"\"Return one allowed CPU id as a string, or empty when affinity is unavailable.\"\"\"\n    try:\n        allowed = sorted(os.sched_getaffinity(0))\n    except (AttributeError, OSError):\n        return \"\"\n    if not allowed:\n        return \"\"\n    return str(allowed[0])\n\n\ndef parse_child_line(line: str) -> dict[str, object] | None:\n    match = _CHILD_RE.match(line.strip())\n    if match is None:\n        return None\n    data = match.groupdict()\n    return {\n        \"pid\": int(data[\"pid\"]),\n        \"start\": float(data[\"start\"]),\n        \"end\": float(data[\"end\"]),\n        \"pages\": int(data[\"pages\"]),\n        \"touched\": int(data[\"touched\"]),\n        \"cksum\": data[\"cksum\"],\n        \"aff\": data[\"aff\"],\n        \"vcs\": int(data[\"vcs\"]),\n        \"ivcs\": int(data[\"ivcs\"]),\n    }\n\n\ndef parse_multiproc_result(text: str) -> dict[str, object]:\n    \"\"\"Parse the component Message text into aggregate + child metrics.\"\"\"\n    header, *child_parts = text.split(\"|\")\n    # multiproc:count:codes:ws:elapsed_ms:overlap_ms:vcs:ivcs:seed\n    parts = header.split(\":\", 8)\n    if len(parts) != 9 or parts[0] != \"multiproc\":\n        msg = f\"malformed multiproc header: {header!r}\"\n        raise ValueError(msg)\n    children = []\n    for part in child_parts:\n        parsed = parse_child_line(part)\n        if parsed is None:\n            msg = f\"malformed child metrics: {part!r}\"\n            raise ValueError(msg)\n        children.append(parsed)\n    return {\n        \"count\": int(parts[1]),\n        \"codes\": [int(code) for code in parts[2].split(\",\") if code != \"\"],\n        \"ws_bytes\": int(parts[3]),\n        \"elapsed_ms\": int(parts[4]),\n        \"overlap_ms\": int(parts[5]),\n        \"vcs\": int(parts[6]),\n        \"ivcs\": int(parts[7]),\n        \"seed\": parts[8],\n        \"children\": children,\n    }\n\n\nclass PerfSubprocessChurn(Component):\n    \"\"\"Spawn concurrent short-lived processes that thrash independent working sets.\n\n    Blocking multiprocess work is intentional for the multiproc isolator. Langflow\n    runs sync ``run()`` via a thread pool; under high concurrency that pool can\n    saturate — size generator threads accordingly when profiling this axis.\n    \"\"\"\n\n    display_name = \"Perf Subprocess Churn\"\n    description = \"Bounded concurrent multiprocess context-switch pressure with memory-resident working sets.\"\n    name = \"PerfSubprocessChurn\"\n    icon = \"terminal\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"Opaque payload echoed into the deterministic result.\",\n            value=\"perf-multiproc\",\n        ),\n        IntInput(\n            name=\"count\",\n            display_name=\"Subprocess count\",\n            info=f\"Number of concurrent subprocesses to spawn (capped at {_MAX_COUNT}).\",\n            value=2,\n            range_spec=RangeSpec(min=1, max=_MAX_COUNT, step=1, step_type=\"int\"),\n        ),\n        IntInput(\n            name=\"duration_ms\",\n            display_name=\"Duration ms\",\n            info=f\"How long each child stays runnable while touching memory (capped at {_MAX_DURATION_MS}).\",\n            value=100,\n            range_spec=RangeSpec(min=1, max=_MAX_DURATION_MS, step=1, step_type=\"int\"),\n        ),\n        IntInput(\n            name=\"working_set_bytes\",\n            display_name=\"Working set bytes\",\n            info=(\n                \"Per-child memory-resident working set. Zero selects the suite default; \"\n                f\"values are clamped to host budget and {_MAX_WORKING_SET_BYTES} bytes.\"\n            ),\n            value=_DEFAULT_WORKING_SET_BYTES,\n            advanced=True,\n            range_spec=RangeSpec(min=0, max=_MAX_WORKING_SET_BYTES, step=4096, step_type=\"int\"),\n        ),\n        IntInput(\n            name=\"timeout_s\",\n            display_name=\"Timeout seconds\",\n            info=f\"Wall-clock timeout for the whole concurrent batch (capped at {_MAX_TIMEOUT_S}).\",\n            value=5,\n            advanced=True,\n            range_spec=RangeSpec(min=1, max=_MAX_TIMEOUT_S, step=1, step_type=\"int\"),\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", method=\"run\"),\n    ]\n\n    def run(self) -> Message:\n        count = max(1, min(int(self.count or 1), _MAX_COUNT))\n        duration_ms = max(1, min(int(self.duration_ms or 1), _MAX_DURATION_MS))\n        timeout_s = max(1, min(int(self.timeout_s or 1), _MAX_TIMEOUT_S))\n        requested_ws = int(self.working_set_bytes or 0)\n        ws_bytes = resolve_working_set_bytes(requested=requested_ws, count=count)\n        seed = _sanitize_seed(self.input_value)\n        cpu = pick_affinity_cpu()\n        page = _PAGE_SIZE\n        try:\n            page = int(os.sysconf(\"SC_PAGE_SIZE\"))\n        except (AttributeError, OSError, ValueError):\n            page = _PAGE_SIZE\n\n        procs: list[subprocess.Popen[str]] = []\n        codes: list[int] = []\n        children: list[dict[str, object]] = []\n        wall_start = time.perf_counter()\n        try:\n            for index in range(count):\n                proc = subprocess.Popen(\n                    [\n                        sys.executable,\n                        \"-c\",\n                        _CHILD_SCRIPT,\n                        str(index),\n                        str(ws_bytes),\n                        str(duration_ms),\n                        cpu,\n                        str(page),\n                    ],\n                    stdin=subprocess.PIPE,\n                    stdout=subprocess.PIPE,\n                    stderr=subprocess.PIPE,\n                    text=True,\n                )\n                procs.append(proc)\n            for proc in procs:\n                if proc.stdin is None:\n                    msg = \"subprocess stdin pipe was not created\"\n                    raise RuntimeError(msg)\n                proc.stdin.write(\"go\\n\")\n                proc.stdin.flush()\n                proc.stdin.close()\n\n            deadline = wall_start + timeout_s\n            for proc in procs:\n                remaining = max(0.01, deadline - time.perf_counter())\n                try:\n                    stdout, stderr = proc.communicate(timeout=remaining)\n                except subprocess.TimeoutExpired:\n                    proc.kill()\n                    stdout, stderr = proc.communicate()\n                    codes.append(_TIMEOUT_SENTINEL)\n                    continue\n                code = int(proc.returncode if proc.returncode is not None else _TIMEOUT_SENTINEL)\n                codes.append(code)\n                line = (stdout or \"\").strip().splitlines()[-1] if (stdout or \"\").strip() else \"\"\n                parsed = parse_child_line(line) if line else None\n                if parsed is None:\n                    detail = (stderr or \"\").strip() or line or f\"exit={code}\"\n                    msg = f\"child produced malformed metrics: {detail}\"\n                    raise RuntimeError(msg)\n                children.append(parsed)\n        finally:\n            for proc in procs:\n                if proc.poll() is None:\n                    proc.kill()\n                    with contextlib.suppress(Exception):\n                        proc.wait(timeout=1)\n\n        elapsed_ms = max(1, int((time.perf_counter() - wall_start) * 1000))\n        if children:\n            latest_start = max(float(child[\"start\"]) for child in children)\n            earliest_end = min(float(child[\"end\"]) for child in children)\n            overlap_ms = max(0, int((earliest_end - latest_start) * 1000))\n        else:\n            overlap_ms = 0\n        total_vcs = sum(int(child[\"vcs\"]) for child in children)\n        total_ivcs = sum(int(child[\"ivcs\"]) for child in children)\n        code_csv = \",\".join(str(code) for code in codes)\n        child_csv = \"|\".join(\n            (\n                f\"child:pid={child['pid']}:start={float(child['start']):.6f}:end={float(child['end']):.6f}:\"\n                f\"pages={child['pages']}:touched={child['touched']}:cksum={child['cksum']}:\"\n                f\"aff={child['aff']}:vcs={child['vcs']}:ivcs={child['ivcs']}\"\n            )\n            for child in children\n        )\n        header = f\"multiproc:{count}:{code_csv}:{ws_bytes}:{elapsed_ms}:{overlap_ms}:{total_vcs}:{total_ivcs}:{seed}\"\n        text = header if not child_csv else f\"{header}|{child_csv}\"\n        return Message(text=text)\n"
+              },
+              "count": {
+                "_input_type": "IntInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Subprocess count",
+                "dynamic": false,
+                "info": "Number of concurrent subprocesses to spawn (capped at 8).",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "count",
+                "override_skip": false,
+                "placeholder": "",
+                "range_spec": {
+                  "max": 8.0,
+                  "min": 1.0,
+                  "step": 1.0,
+                  "step_type": "int"
+                },
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 2
+              },
+              "duration_ms": {
+                "_input_type": "IntInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Duration ms",
+                "dynamic": false,
+                "info": "How long each child stays runnable while touching memory (capped at 5000).",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "duration_ms",
+                "override_skip": false,
+                "placeholder": "",
+                "range_spec": {
+                  "max": 5000.0,
+                  "min": 1.0,
+                  "step": 1.0,
+                  "step_type": "int"
+                },
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 100
+              },
+              "input_value": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Input",
+                "dynamic": false,
+                "info": "Opaque payload echoed into the deterministic result.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "input_value",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "perf-multiproc"
+              },
+              "timeout_s": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Timeout seconds",
+                "dynamic": false,
+                "info": "Wall-clock timeout for the whole concurrent batch (capped at 30).",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "timeout_s",
+                "override_skip": false,
+                "placeholder": "",
+                "range_spec": {
+                  "max": 30.0,
+                  "min": 1.0,
+                  "step": 1.0,
+                  "step_type": "int"
+                },
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 5
+              },
+              "working_set_bytes": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Working set bytes",
+                "dynamic": false,
+                "info": "Per-child memory-resident working set. Zero selects the suite default; values are clamped to host budget and 67108864 bytes.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "working_set_bytes",
+                "override_skip": false,
+                "placeholder": "",
+                "range_spec": {
+                  "max": 67108864.0,
+                  "min": 0.0,
+                  "step": 4096.0,
+                  "step_type": "int"
+                },
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 4194304
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "PerfSubprocessChurn"
+        },
+        "id": "PerfSubprocessChurn-K4QNX"
+      }
+    ]
+  },
+  "description": "Bounded concurrent multiprocess context-switch pressure with memory-resident working sets (no Agent, KB, or provider work).",
+  "endpoint_name": "perf-multiproc-churn",
+  "is_component": false,
+  "name": "perf_multiproc_churn",
+  "tags": [
+    "performance-suite",
+    "v1"
+  ]
+}

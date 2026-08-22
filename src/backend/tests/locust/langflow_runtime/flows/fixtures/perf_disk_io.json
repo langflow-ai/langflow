@@ -1,0 +1,719 @@
+{
+  "data": {
+    "edges": [
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-JuuuR",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "PerfDiskIo-IESCt",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "source": "ChatInput-JuuuR",
+        "target": "PerfDiskIo-IESCt"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "PerfDiskIo",
+            "id": "PerfDiskIo-IESCt",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-49vVf",
+            "inputTypes": [
+              "Data",
+              "JSON",
+              "DataFrame",
+              "Table",
+              "Message"
+            ],
+            "type": "other"
+          }
+        },
+        "source": "PerfDiskIo-IESCt",
+        "target": "ChatOutput-49vVf"
+      }
+    ],
+    "nodes": [
+      {
+        "data": {
+          "id": "ChatInput-JuuuR",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Get chat inputs from the Playground.",
+            "display_name": "Chat Input",
+            "documentation": "https://docs.langflow.org/chat-input-and-output",
+            "edited": false,
+            "field_order": [],
+            "frozen": false,
+            "icon": "MessagesSquare",
+            "legacy": false,
+            "metadata": {},
+            "minimized": true,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Chat Message",
+                "group_outputs": false,
+                "method": "message_response",
+                "name": "message",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "api_editable": false,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from lfx.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom lfx.base.io.chat import ChatComponent\nfrom lfx.inputs.inputs import BoolInput\nfrom lfx.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom lfx.schema.message import Message\nfrom lfx.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    documentation: str = \"https://docs.langflow.org/chat-input-and-output\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"context_id\",\n            display_name=\"Context ID\",\n            info=\"The context ID of the chat. Adds an extra layer to the local memory.\",\n            value=\"\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Chat Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        # Ensure files is a list and filter out empty/None values\n        files = self.files if self.files else []\n        if files and not isinstance(files, list):\n            files = [files]\n        # Filter out None/empty values\n        files = [f for f in files if f is not None and f != \"\"]\n\n        session_id = self.session_id or self.graph.session_id or \"\"\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=session_id,\n            context_id=self.context_id,\n            files=files,\n        )\n        if session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+              },
+              "context_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Context ID",
+                "dynamic": false,
+                "info": "The context ID of the chat. Adds an extra layer to the local memory.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "context_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "files": {
+                "_input_type": "FileInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Files",
+                "dynamic": false,
+                "fileTypes": [
+                  "csv",
+                  "json",
+                  "pdf",
+                  "txt",
+                  "md",
+                  "mdx",
+                  "yaml",
+                  "yml",
+                  "xml",
+                  "html",
+                  "htm",
+                  "docx",
+                  "py",
+                  "sh",
+                  "sql",
+                  "js",
+                  "ts",
+                  "tsx",
+                  "jpg",
+                  "jpeg",
+                  "png",
+                  "bmp",
+                  "image"
+                ],
+                "file_path": "",
+                "info": "Files to be sent with the message.",
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "files",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "temp_file": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "file",
+                "value": ""
+              },
+              "input_value": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "ai_enabled": false,
+                "api_editable": false,
+                "copy_field": false,
+                "display_name": "Input Text",
+                "dynamic": false,
+                "info": "Message to be passed as input.",
+                "input_types": [],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "input_value",
+                "override_skip": false,
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "perf-disk"
+              },
+              "sender": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "api_editable": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "external_options": {},
+                "info": "Type of sender.",
+                "name": "sender",
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": "User"
+              },
+              "sender_name": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Sender Name",
+                "dynamic": false,
+                "info": "Name of the sender.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sender_name",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "User"
+              },
+              "session_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Session ID",
+                "dynamic": false,
+                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "session_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "should_store_message": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Store Messages",
+                "dynamic": false,
+                "info": "Store the message in the history.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_store_message",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "ChatInput"
+        },
+        "id": "ChatInput-JuuuR"
+      },
+      {
+        "data": {
+          "id": "ChatOutput-49vVf",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Display a chat message in the Playground.",
+            "display_name": "Chat Output",
+            "documentation": "https://docs.langflow.org/chat-input-and-output",
+            "edited": false,
+            "field_order": [],
+            "frozen": false,
+            "icon": "MessagesSquare",
+            "legacy": false,
+            "metadata": {},
+            "minimized": true,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Output Message",
+                "group_outputs": false,
+                "method": "message_response",
+                "name": "message",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "clean_data": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Basic Clean Data",
+                "dynamic": false,
+                "info": "Whether to clean data before converting to string.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "clean_data",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": true
+              },
+              "code": {
+                "advanced": true,
+                "api_editable": false,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from collections.abc import Generator\nfrom typing import Any\n\nimport orjson\nfrom fastapi.encoders import jsonable_encoder\n\nfrom lfx.base.io.chat import ChatComponent\nfrom lfx.helpers.data import safe_convert\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, MessageTextInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.schema.properties import Source\nfrom lfx.template.field.base import Output\nfrom lfx.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    documentation: str = \"https://docs.langflow.org/chat-input-and-output\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Inputs\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"JSON\", \"DataFrame\", \"Table\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"context_id\",\n            display_name=\"Context ID\",\n            info=\"The context ID of the chat. Adds an extra layer to the local memory.\",\n            value=\"\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            advanced=True,\n            info=\"Whether to clean data before converting to string.\",\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Output Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n\n        # Get source properties\n        source, _, display_name, source_id = self.get_properties_from_source_component()\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message) and not self.is_connected_to_chat_input():\n            message = self.input_value\n            # Update message properties\n            message.text = text\n            # Preserve existing session_id from the incoming message if it exists\n            existing_session_id = message.session_id\n        else:\n            message = Message(text=text)\n            existing_session_id = None\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        # Preserve session_id from incoming message, or use component/graph session_id\n        message.session_id = (\n            self.session_id or existing_session_id or (self.graph.session_id if hasattr(self, \"graph\") else None) or \"\"\n        )\n        message.context_id = self.context_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n\n        # Store message if needed\n        if message.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        # Set accumulated token usage from all upstream LLM vertices.\n        # This must happen AFTER send_message() because streaming captures\n        # usage from chunks and would overwrite accumulated totals.\n        if hasattr(self, \"_vertex\") and self._vertex is not None:\n            accumulated_usage = self._vertex._accumulate_upstream_token_usage()  # noqa: SLF001\n            if accumulated_usage:\n                message.properties.usage = accumulated_usage\n                if self.should_store_message and message.get_id():\n                    message = await self._update_stored_message(message)\n                    await self._send_message_event(message, id_=message.get_id())\n\n        self.status = message\n        return message\n\n    def _serialize_data(self, data: Data) -> str:\n        \"\"\"Serialize Data object to JSON string.\"\"\"\n        # Convert data.data to JSON-serializable format\n        serializable_data = jsonable_encoder(data.data)\n        # Serialize with orjson, enabling pretty printing with indentation\n        json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)\n        # Convert bytes to string and wrap in Markdown code blocks\n        return \"```json\\n\" + json_bytes.decode(\"utf-8\") + \"\\n```\"\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            clean_data: bool = getattr(self, \"clean_data\", False)\n            return \"\\n\".join([safe_convert(item, clean_data=clean_data) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return safe_convert(self.input_value)\n"
+              },
+              "context_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Context ID",
+                "dynamic": false,
+                "info": "The context ID of the chat. Adds an extra layer to the local memory.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "context_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "data_template": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Data Template",
+                "dynamic": false,
+                "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "data_template",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "{text}"
+              },
+              "input_value": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Inputs",
+                "dynamic": false,
+                "info": "Message to be passed as output.",
+                "input_types": [
+                  "Data",
+                  "JSON",
+                  "DataFrame",
+                  "Table",
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "input_value",
+                "override_skip": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "other",
+                "value": ""
+              },
+              "sender": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "api_editable": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "external_options": {},
+                "info": "Type of sender.",
+                "name": "sender",
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": "Machine"
+              },
+              "sender_name": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Sender Name",
+                "dynamic": false,
+                "info": "Name of the sender.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sender_name",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "AI"
+              },
+              "session_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Session ID",
+                "dynamic": false,
+                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "session_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "should_store_message": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Store Messages",
+                "dynamic": false,
+                "info": "Store the message in the history.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_store_message",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "ChatOutput"
+        },
+        "id": "ChatOutput-49vVf"
+      },
+      {
+        "data": {
+          "id": "PerfDiskIo-IESCt",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Bounded mixed local disk I/O (write, fsync, advisory cold-read, verify).",
+            "display_name": "Perf Disk IO",
+            "documentation": "",
+            "edited": false,
+            "field_order": [],
+            "frozen": false,
+            "icon": "hard-drive",
+            "legacy": false,
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Output",
+                "group_outputs": false,
+                "method": "run",
+                "name": "output",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "api_editable": false,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "\"\"\"Bounded mixed local disk I/O isolator for the performance suite.\n\nEmbedded into ``perf_disk_io`` (and ensemble fixtures) by ``flows/build_fixtures.py``.\nWrites deterministic blocks with normal buffered I/O, ``fsync``s, optionally advises\nthe kernel to drop clean cached pages (``POSIX_FADV_DONTNEED``), then reads back and\nverifies a checksum. Distinct from ``perf_payload_echo``, which validates the\nSaveToFile/storage abstraction rather than sustained filesystem I/O.\n\nFile size is clamped using free disk space plus portable ``os.sysconf``\navailable-memory hints (``SC_AVPHYS_PAGES`` * ``SC_PAGE_SIZE``) and suite hard\ncaps. Logical vs backing-storage I/O counters are reported on Linux\n(``/proc/thread-self/io``). Cached reads are reported, not failed — tmpfs /\ndevice caches prevent a portable physical-media guarantee.\n\nCovered by unit checks and live Workflows tests under ``tests/locust/tests/``.\n\"\"\"\n\nfrom __future__ import annotations\n\nimport contextlib\nimport hashlib\nimport os\nimport re\nimport shutil\nimport tempfile\nimport time\nfrom pathlib import Path\nfrom uuid import uuid4\n\nfrom lfx.custom import Component\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.io import IntInput, MessageTextInput, Output\nfrom lfx.schema.message import Message\n\n_MIN_SIZE_BYTES = 64 * 1024  # 64 KiB\n_DEFAULT_SIZE_BYTES = 4 * 1024 * 1024  # 4 MiB\n_MAX_SIZE_BYTES = 64 * 1024 * 1024  # 64 MiB\n_BLOCK_SIZE = 64 * 1024\n\n_RESULT_RE = re.compile(\n    r\"^diskio:size=(?P<size>\\d+):written=(?P<written>\\d+):read=(?P<read>\\d+):\"\n    r\"cksum_ok=(?P<cksum_ok>[01]):write_ms=(?P<write_ms>\\d+):fsync_ms=(?P<fsync_ms>\\d+):\"\n    r\"read_ms=(?P<read_ms>\\d+):advise=(?P<advise>[01]):rchar=(?P<rchar>\\d+):wchar=(?P<wchar>\\d+):\"\n    r\"read_bytes=(?P<read_bytes>\\d+):write_bytes=(?P<write_bytes>\\d+):\"\n    r\"cached_read=(?P<cached_read>[01]):seed=(?P<seed>.*)$\"\n)\n\n\ndef available_memory_bytes(*, fallback: int = _MAX_SIZE_BYTES) -> int:\n    \"\"\"Estimate available physical RAM via portable ``os.sysconf`` names.\n\n    Uses POSIX system-configuration queries when present:\n\n    * ``SC_AVPHYS_PAGES`` — available physical memory pages\n    * ``SC_PAGE_SIZE`` — bytes per memory page\n\n    Product ≈ currently available physical RAM. This is an OS estimate, not a\n    container/cgroup limit. On platforms without these names (e.g. Windows),\n    return ``fallback`` so suite hard caps still bound the workload.\n\n    Note: duplicated in ``perf_subprocess_churn`` on purpose — each isolator's\n    source is embedded into fixture JSON and must stay import-free of sibling\n    modules.\n    \"\"\"\n    try:\n        pages = int(os.sysconf(\"SC_AVPHYS_PAGES\"))\n        page_size = int(os.sysconf(\"SC_PAGE_SIZE\"))\n    except (AttributeError, OSError, TypeError, ValueError):\n        return fallback\n    if pages <= 0 or page_size <= 0:\n        return fallback\n    return pages * page_size\n\n\ndef resolve_size_bytes(*, requested: int, root: Path) -> int:\n    \"\"\"Clamp file size against free disk, memory budget, and suite hard caps.\"\"\"\n    if requested <= 0:\n        requested = _DEFAULT_SIZE_BYTES\n    try:\n        free_disk = shutil.disk_usage(root).free\n    except OSError:\n        free_disk = _MAX_SIZE_BYTES\n    mem_budget = available_memory_bytes() // 8\n    return max(\n        _MIN_SIZE_BYTES,\n        min(requested, free_disk // 4, mem_budget, _MAX_SIZE_BYTES),\n    )\n\n\ndef _work_root() -> Path:\n    \"\"\"Prefer Langflow ``config_dir`` when settings are available; else system temp.\"\"\"\n    with contextlib.suppress(Exception):\n        from lfx.services.deps import get_settings_service\n\n        config_dir = get_settings_service().settings.config_dir\n        if config_dir:\n            root = Path(config_dir) / \"perf_disk_io\"\n            root.mkdir(parents=True, exist_ok=True)\n            return root\n    root = Path(tempfile.gettempdir()) / \"langflow_perf_disk_io\"\n    root.mkdir(parents=True, exist_ok=True)\n    return root\n\n\ndef _read_thread_io() -> dict[str, int]:\n    for path in (Path(\"/proc/thread-self/io\"), Path(\"/proc/self/io\")):\n        try:\n            text = path.read_text(encoding=\"utf-8\")\n        except OSError:\n            continue\n        values: dict[str, int] = {}\n        for line in text.splitlines():\n            if \":\" not in line:\n                continue\n            key, raw = line.split(\":\", 1)\n            try:\n                values[key.strip()] = int(raw.strip())\n            except ValueError:\n                continue\n        if values:\n            return values\n    return {}\n\n\ndef _io_delta(before: dict[str, int], after: dict[str, int], key: str) -> int:\n    return max(0, after.get(key, 0) - before.get(key, 0))\n\n\ndef _render_block(seed: str, index: int, size: int) -> bytes:\n    material = f\"{seed}:{index}:\".encode()\n    repeats = (size // len(material)) + 1\n    return (material * repeats)[:size]\n\n\ndef parse_diskio_result(text: str) -> dict[str, object]:\n    match = _RESULT_RE.match(text.strip())\n    if match is None:\n        msg = f\"malformed diskio result: {text!r}\"\n        raise ValueError(msg)\n    data = match.groupdict()\n    return {\n        \"size\": int(data[\"size\"]),\n        \"written\": int(data[\"written\"]),\n        \"read\": int(data[\"read\"]),\n        \"cksum_ok\": data[\"cksum_ok\"] == \"1\",\n        \"write_ms\": int(data[\"write_ms\"]),\n        \"fsync_ms\": int(data[\"fsync_ms\"]),\n        \"read_ms\": int(data[\"read_ms\"]),\n        \"advise\": data[\"advise\"] == \"1\",\n        \"rchar\": int(data[\"rchar\"]),\n        \"wchar\": int(data[\"wchar\"]),\n        \"read_bytes\": int(data[\"read_bytes\"]),\n        \"write_bytes\": int(data[\"write_bytes\"]),\n        \"cached_read\": data[\"cached_read\"] == \"1\",\n        \"seed\": data[\"seed\"],\n    }\n\n\nclass PerfDiskIo(Component):\n    \"\"\"Write/fsync/read/verify a bounded temporary file and report I/O metrics.\"\"\"\n\n    display_name = \"Perf Disk IO\"\n    description = \"Bounded mixed local disk I/O (write, fsync, advisory cold-read, verify).\"\n    name = \"PerfDiskIo\"\n    icon = \"hard-drive\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"Opaque payload mixed into deterministic file contents and echoed in the result.\",\n            value=\"perf-disk\",\n        ),\n        IntInput(\n            name=\"size_bytes\",\n            display_name=\"Size bytes\",\n            info=(\n                \"Target file size. Zero selects the suite default; values are clamped to free \"\n                f\"disk / memory budget and {_MAX_SIZE_BYTES} bytes.\"\n            ),\n            value=_DEFAULT_SIZE_BYTES,\n            range_spec=RangeSpec(min=0, max=_MAX_SIZE_BYTES, step=4096, step_type=\"int\"),\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", method=\"run\"),\n    ]\n\n    def run(self) -> Message:\n        seed = getattr(self.input_value, \"text\", None) or str(self.input_value)\n        root = _work_root()\n        root.mkdir(parents=True, exist_ok=True)\n        size = resolve_size_bytes(requested=int(self.size_bytes or 0), root=root)\n        path = root / f\"perf-disk-{uuid4().hex}.bin\"\n        digest = hashlib.sha256()\n        written = 0\n        read_total = 0\n        advise_ok = 0\n        cksum_ok = 0\n        io_before = _read_thread_io()\n        write_ms = 0\n        fsync_ms = 0\n        read_ms = 0\n        try:\n            write_start = time.perf_counter()\n            with path.open(\"wb\") as handle:\n                remaining = size\n                index = 0\n                while remaining > 0:\n                    chunk = _render_block(seed, index, min(_BLOCK_SIZE, remaining))\n                    handle.write(chunk)\n                    digest.update(chunk)\n                    written += len(chunk)\n                    remaining -= len(chunk)\n                    index += 1\n                handle.flush()\n                write_ms = max(1, int((time.perf_counter() - write_start) * 1000))\n                fsync_start = time.perf_counter()\n                os.fsync(handle.fileno())\n                fsync_ms = max(1, int((time.perf_counter() - fsync_start) * 1000))\n                if hasattr(os, \"posix_fadvise\") and hasattr(os, \"POSIX_FADV_DONTNEED\"):\n                    try:\n                        os.posix_fadvise(handle.fileno(), 0, 0, os.POSIX_FADV_DONTNEED)\n                        advise_ok = 1\n                    except OSError:\n                        advise_ok = 0\n\n            expected = digest.hexdigest()\n            verify = hashlib.sha256()\n            read_start = time.perf_counter()\n            with path.open(\"rb\") as handle:\n                while True:\n                    chunk = handle.read(_BLOCK_SIZE)\n                    if not chunk:\n                        break\n                    verify.update(chunk)\n                    read_total += len(chunk)\n            read_ms = max(1, int((time.perf_counter() - read_start) * 1000))\n            cksum_ok = 1 if verify.hexdigest() == expected else 0\n        finally:\n            path.unlink(missing_ok=True)\n            with contextlib.suppress(OSError):\n                root.rmdir()\n\n        io_after = _read_thread_io()\n        rchar = _io_delta(io_before, io_after, \"rchar\")\n        wchar = _io_delta(io_before, io_after, \"wchar\")\n        read_bytes = _io_delta(io_before, io_after, \"read_bytes\")\n        write_bytes = _io_delta(io_before, io_after, \"write_bytes\")\n        # Report whether the kernel appears to have served the read from page cache.\n        cached_read = 1 if (advise_ok and read_total > 0 and read_bytes < (read_total // 2)) else 0\n        text = (\n            f\"diskio:size={size}:written={written}:read={read_total}:cksum_ok={cksum_ok}:\"\n            f\"write_ms={write_ms}:fsync_ms={fsync_ms}:read_ms={read_ms}:advise={advise_ok}:\"\n            f\"rchar={rchar}:wchar={wchar}:read_bytes={read_bytes}:write_bytes={write_bytes}:\"\n            f\"cached_read={cached_read}:seed={seed}\"\n        )\n        return Message(text=text)\n"
+              },
+              "input_value": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Input",
+                "dynamic": false,
+                "info": "Opaque payload mixed into deterministic file contents and echoed in the result.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "input_value",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "perf-disk"
+              },
+              "size_bytes": {
+                "_input_type": "IntInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Size bytes",
+                "dynamic": false,
+                "info": "Target file size. Zero selects the suite default; values are clamped to free disk / memory budget and 67108864 bytes.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "size_bytes",
+                "override_skip": false,
+                "placeholder": "",
+                "range_spec": {
+                  "max": 67108864.0,
+                  "min": 0.0,
+                  "step": 4096.0,
+                  "step_type": "int"
+                },
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 4194304
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "PerfDiskIo"
+        },
+        "id": "PerfDiskIo-IESCt"
+      }
+    ]
+  },
+  "description": "Bounded mixed local disk I/O (write, fsync, advisory cold-read, verify). Distinct from SaveToFile/storage abstraction coverage.",
+  "endpoint_name": "perf-disk-io",
+  "is_component": false,
+  "name": "perf_disk_io",
+  "tags": [
+    "performance-suite",
+    "v1"
+  ]
+}
