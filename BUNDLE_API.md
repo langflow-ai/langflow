@@ -519,3 +519,13 @@ the deserialize half is covered by
   messages and winner selection are unchanged, and two physically distinct
   manifests for one canonical name still error.  No public symbol's name or
   signature changed.
+- **Manifest `providers[].models[]` — bundles can seed the static model catalog (additive).**
+  Each `ProviderEntry` in `ExtensionManifest.providers[]` gains an optional
+  `models` list of `ModelMetadata`-shaped dicts (same shape as
+  `create_model_metadata` produces).  At load time the loader passes the list
+  to `ProviderSpec.models` and `register_provider()` appends it to
+  `_STATIC_MODELS_DETAILED` in-place, making the models immediately visible in
+  `get_models_detailed()` and the UI model picker.  `clear()` removes the group.
+  Useful for providers whose model list is fixed (e.g. cloud-specific
+  deployments).  Omitting `models` (empty list) is the default and is fully
+  backward-compatible; existing bundles are unaffected.

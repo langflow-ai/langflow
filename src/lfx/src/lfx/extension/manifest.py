@@ -137,6 +137,7 @@ class LfxCompat(BaseModel):
     @field_validator("compat")
     @classmethod
     def _compat_well_formed(cls, value: list[str]) -> list[str]:
+        """Validate that every compat entry is a positive-integer string and entries are unique."""
         for v in value:
             if not _COMPAT_VERSION_RE.fullmatch(v):
                 msg = f"compat entries must be positive-integer strings (got {v!r})"
@@ -226,6 +227,7 @@ class BundleRef(BaseModel):
     @field_validator("path")
     @classmethod
     def _validate_path_shape(cls, value: str) -> str:
+        """Reject empty, absolute, or parent-traversal (``..``) bundle paths."""
         if not value:
             msg = "Bundle path must not be empty"
             raise ValueError(msg)
@@ -327,10 +329,19 @@ class ProviderManifestEntry(BaseModel):
         min_length=1,
         description="Dotted-path callable 'module:attr' validating credentials: (provider, variables, model) -> None.",
     )
+    models: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description=(
+            "Optional static seed model catalog injected into _STATIC_MODELS_DETAILED. "
+            "Each entry is a ModelMetadata dict (same shape as create_model_metadata produces). "
+            "Use for providers whose model list is fixed (e.g. deployment-specific clouds)."
+        ),
+    )
 
     @field_validator("metadata")
     @classmethod
     def _metadata_has_model_class(cls, value: dict[str, Any]) -> dict[str, Any]:
+        """Ensure provider metadata contains a non-empty ``mapping.model_class``."""
         mapping = value.get("mapping") if isinstance(value, dict) else None
         if not isinstance(mapping, dict) or not mapping.get("model_class"):
             msg = "provider.metadata must include a 'mapping' object with a non-empty 'model_class'"
@@ -338,7 +349,21 @@ class ProviderManifestEntry(BaseModel):
         return value
 
     @model_validator(mode="after")
+    def _models_are_well_formed(self) -> ProviderManifestEntry:
+        """Raise if any models[] entry is missing a name or has a mismatched provider key."""
+        for entry in self.models:
+            if not entry.get("name"):
+                msg = f"provider {self.name!r} has a models[] entry without a non-empty 'name'"
+                raise ValueError(msg)
+            provider = entry.get("provider")
+            if provider is not None and provider != self.name:
+                msg = f"provider {self.name!r} has a models[] entry with mismatched provider {provider!r}"
+                raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
     def _live_mutually_exclusive(self) -> ProviderManifestEntry:
+        """Raise if both ``live`` and ``conditional_live`` are set on the same provider."""
         if self.live and self.conditional_live:
             msg = f"provider {self.name!r} cannot set both 'live' and 'conditional_live'"
             raise ValueError(msg)
@@ -462,6 +487,7 @@ class ExtensionManifest(BaseModel):
 
     @model_validator(mode="after")
     def _validate_declares_something(self) -> ExtensionManifest:
+        """Reject a manifest that declares neither bundles nor providers."""
         # An extension must contribute at least one bundle (components) or one
         # provider; an empty manifest is almost certainly a mistake.
         if not self.bundles and not self.providers:
@@ -471,6 +497,7 @@ class ExtensionManifest(BaseModel):
 
     @model_validator(mode="after")
     def _validate_provider_name_uniqueness(self) -> ExtensionManifest:
+        """Raise if two providers in the same extension share a name."""
         names = [p.name for p in self.providers]
         if len(set(names)) != len(names):
             msg = "Provider names must be unique within an extension"
@@ -479,6 +506,7 @@ class ExtensionManifest(BaseModel):
 
     @model_validator(mode="after")
     def _validate_bundle_uniqueness(self) -> ExtensionManifest:
+        """Raise if two bundle entries in the same extension share a name."""
         # The list-length constraint (exactly one bundle in v0) is encoded on
         # the field above so it lands in the JSON Schema.  This validator covers
         # what Field constraints can't express: bundle names must be unique

@@ -296,6 +296,7 @@ def _register_manifest_providers(
                 conditional_live=entry.conditional_live,
                 live_discovery=entry.live_discovery,
                 validator=entry.validator,
+                models=list(entry.models),
             )
             if not register_provider(spec):
                 result.warnings.append(
@@ -562,6 +563,7 @@ def _read_inline_bundle_json(
         return {}
 
     def _warn(detail: str) -> None:
+        """Append a ``bundle-json-invalid`` warning to result, if result is available."""
         if result is None:
             return
         result.warnings.append(
