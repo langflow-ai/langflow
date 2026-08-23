@@ -1,4 +1,4 @@
-"""Schema-hardening wrapper around composio_langchain.LangchainProvider.
+"""Schema and argument hardening for composio_langchain.LangchainProvider.
 
 Composio's runtime file-substitution helpers (composio.core.models._files) and
 its Pydantic schema builder (composio.utils.shared.pydantic_model_from_param_schema)
@@ -12,12 +12,19 @@ We sanitize ``tool.input_parameters`` in-place at wrap time, and also patch
 both the FileHelper file-substitution helpers and the pydantic schema builder
 so the agent path, the direct ``execute_action`` path, and the legacy
 ``tools.get`` path all see a schema with a ``"type"`` for every node.
+
+The LangChain wrapper can also materialize omitted optional objects as nested
+Pydantic models containing only empty strings. We omit those empty containers
+before Composio validates action input, without changing required or meaningful
+values.
 """
 
 from __future__ import annotations
 
 import keyword
 from typing import TYPE_CHECKING, Any
+
+from pydantic import BaseModel
 
 try:
     import composio_langchain.provider as _composio_lc_provider
@@ -99,6 +106,60 @@ def _sanitize_schema(schema: Any) -> None:
                 _sanitize_schema(sub)
 
 
+def _is_effectively_empty(value: Any) -> bool:
+    """Return whether a nested value contains no meaningful user input."""
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return not value.strip()
+    if isinstance(value, BaseModel):
+        return _is_effectively_empty(value.model_dump())
+    if isinstance(value, dict):
+        return all(_is_effectively_empty(item) for item in value.values())
+    if isinstance(value, list):
+        return all(_is_effectively_empty(item) for item in value)
+    return False
+
+
+def _omit_empty_optional_containers(arguments: Any, schema: Any) -> Any:
+    """Copy arguments while omitting optional objects and arrays with no input.
+
+    Some tool calls materialize an omitted optional object as a mapping whose
+    leaves are empty strings. Composio then validates that mapping as a supplied
+    value, so actions such as Gmail draft/send reject an otherwise valid call.
+    Required containers and meaningful falsy values (``False`` and ``0``) are
+    preserved so downstream validation and action semantics remain unchanged.
+    """
+    if not isinstance(arguments, dict) or not isinstance(schema, dict):
+        return arguments
+
+    required = set(schema.get("required") or [])
+    properties = schema.get("properties") or {}
+    cleaned_arguments = {}
+
+    for name, value in arguments.items():
+        property_schema = properties.get(name, {}) if isinstance(properties, dict) else {}
+        if isinstance(value, dict):
+            cleaned_value = _omit_empty_optional_containers(value, property_schema)
+        elif isinstance(value, list):
+            item_schema = property_schema.get("items", {}) if isinstance(property_schema, dict) else {}
+            cleaned_value = [
+                _omit_empty_optional_containers(item, item_schema) if isinstance(item, dict) else item for item in value
+            ]
+        else:
+            cleaned_value = value
+
+        if (
+            name not in required
+            and isinstance(cleaned_value, (dict, list, BaseModel))
+            and _is_effectively_empty(cleaned_value)
+        ):
+            continue
+        cleaned_arguments[name] = cleaned_value
+
+    return cleaned_arguments
+
+
 if _COMPOSIO_AVAILABLE:
 
     class SafeLangchainProvider(LangchainProvider, name="langchain"):
@@ -106,7 +167,12 @@ if _COMPOSIO_AVAILABLE:
 
         def wrap_tool(self, tool: Tool, execute_tool: Callable[..., Any]) -> StructuredTool:
             _sanitize_schema(tool.input_parameters)
-            return super().wrap_tool(tool=tool, execute_tool=execute_tool)
+
+            def safe_execute_tool(slug: str, arguments: dict[str, Any]) -> Any:
+                cleaned_arguments = _omit_empty_optional_containers(arguments, tool.input_parameters)
+                return execute_tool(slug, cleaned_arguments)
+
+            return super().wrap_tool(tool=tool, execute_tool=safe_execute_tool)
 
 
 def _extract_schema_arg(args: tuple, kwargs: dict, positional_index: int, keyword: str) -> Any:
