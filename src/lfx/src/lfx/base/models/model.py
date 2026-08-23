@@ -431,7 +431,6 @@ class LCModelComponent(Component):
 
         Args:
             provider_name: Name of the model provider (e.g., "OpenAI", "Azure OpenAI")
-            inputs: Dictionary of input parameters for the model
             model_info: Dictionary of model information
 
         Returns:

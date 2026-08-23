@@ -1022,7 +1022,6 @@ def filter_vertices_up_to_vertex(
         get_vertex_predecessors: Function to get predecessors of a vertex
         get_vertex_successors: Function to get successors of a vertex
         graph_dict: Dictionary containing graph information
-        parent_node_map: Map of vertex IDs to their parent node IDs
 
     Returns:
         Set of vertex IDs that are predecessors of the given vertex
