@@ -130,7 +130,11 @@ def _omit_empty_optional_containers(arguments: Any, schema: Any) -> Any:
     Required containers and meaningful falsy values (``False`` and ``0``) are
     preserved so downstream validation and action semantics remain unchanged.
     """
-    if not isinstance(arguments, dict) or not isinstance(schema, dict):
+    if not isinstance(schema, dict):
+        return arguments
+    if isinstance(arguments, BaseModel):
+        arguments = arguments.model_dump()
+    if not isinstance(arguments, dict):
         return arguments
 
     required = set(schema.get("required") or [])
@@ -139,12 +143,13 @@ def _omit_empty_optional_containers(arguments: Any, schema: Any) -> Any:
 
     for name, value in arguments.items():
         property_schema = properties.get(name, {}) if isinstance(properties, dict) else {}
-        if isinstance(value, dict):
+        if isinstance(value, (dict, BaseModel)):
             cleaned_value = _omit_empty_optional_containers(value, property_schema)
         elif isinstance(value, list):
             item_schema = property_schema.get("items", {}) if isinstance(property_schema, dict) else {}
             cleaned_value = [
-                _omit_empty_optional_containers(item, item_schema) if isinstance(item, dict) else item for item in value
+                _omit_empty_optional_containers(item, item_schema) if isinstance(item, (dict, BaseModel)) else item
+                for item in value
             ]
         else:
             cleaned_value = value

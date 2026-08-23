@@ -15,6 +15,7 @@ Composio validation while preserving required and meaningful values (#14715).
 from types import SimpleNamespace
 
 import pytest
+from pydantic import BaseModel
 
 composio = pytest.importorskip("composio", reason="composio extra not installed in this env")
 pytest.importorskip("composio_langchain", reason="composio extra not installed in this env")
@@ -258,6 +259,29 @@ class TestOptionalContainerNormalization:
 
         assert result == {"ok": True}
         assert captured == {"slug": "GMAIL_CREATE_EMAIL_DRAFT", "arguments": {}}
+
+    def test_pydantic_list_item_drops_nested_empty_attachment(self):
+        class Attachment(BaseModel):
+            name: str
+            data: str
+
+        class Draft(BaseModel):
+            subject: str
+            attachment: Attachment
+
+        draft_schema = {
+            "type": "object",
+            "properties": {
+                "subject": {"type": "string"},
+                "attachment": self.attachment_schema["properties"]["attachment"],
+            },
+        }
+        schema = {"type": "object", "properties": {"drafts": {"type": "array", "items": draft_schema}}}
+        draft = Draft(subject="test", attachment=Attachment(name="", data=""))
+
+        result = _omit_empty_optional_containers({"drafts": [draft]}, schema)
+
+        assert result == {"drafts": [{"subject": "test"}]}
 
 
 class TestNoOpOnAlreadyTypedSchemas:
