@@ -508,7 +508,7 @@ uv run langflow migration --fix
 `langflow migration --fix` is destructive.
 Use a dedicated database for Langflow application data.
 Repair mode repeatedly downgrades and re-applies Langflow's schema revisions, which can delete Langflow data, and it might fail to converge when non-Langflow tables such as `langchain_pg_*` vector store tables share the same database.
-For more information, see [Database migrations](./database-migrations).
+For more information, see [Database migrations](../Develop/database-migrations).
 :::
 
 If the migration fix doesn't resolve the issue, clear the cache by deleting the contents of your Langflow cache folder.
@@ -724,7 +724,7 @@ To resolve this issue:
 - Ensure `LANGFLOW_JOB_QUEUE_TYPE=redis` is set on **all** workers, not just some. Mixed-mode deployments (some workers using `asyncio`, others using `redis`) are not supported.
 - Verify all workers can reach the same Redis instance.
 
-For setup instructions, see [Deploy Langflow with multiple workers](./deployment-multi-worker).
+For setup instructions, see [Deploy Langflow with multiple workers](../Deployment/deployment-multi-worker).
 
 ### Redis connection refused or auth errors
 
@@ -781,7 +781,7 @@ If Langflow feels slow on an Intel Mac:
 2. Use API-based providers for embeddings and completions instead of local models.
 3. Consider upgrading to Apple Silicon for better performance with ML features.
 
-For more information, see [Workarounds for Intel Mac users](./macos-support-matrix.mdx#workarounds-for-intel-mac-users).
+For more information, see [Workarounds for Intel Mac users](./macos-support-matrix#installation-recommendations).
 
 ## See also
 

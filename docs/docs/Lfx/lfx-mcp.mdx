@@ -14,17 +14,17 @@ The server calls the Langflow REST API, so flows that the agent creates appear i
 
 `lfx-mcp` differs from these other MCP options:
 
-* [Use Langflow as an MCP server](./mcp-server): Expose existing flows as tools that clients can call.
-* [Use Langflow as an MCP client](./mcp-client): Call MCP servers from components on the canvas.
+* [Use Langflow as an MCP server](../Agents/mcp-server): Expose existing flows as tools that clients can call.
+* [Use Langflow as an MCP client](../Agents/mcp-client): Call MCP servers from components on the canvas.
 
 For Bob (IBM) and Claude Code, you can also use the guided setup in Langflow under **Settings** → <Icon name="Terminal" aria-hidden="true" /> **Langflow MCP Client**.
-For more information, see [Langflow MCP Client for coding agents](./langflow-mcp-client).
+For more information, see [Langflow MCP Client for coding agents](../Agents/langflow-mcp-client).
 
 ## Prerequisites
 
 * A running Langflow instance
-* A [Langflow API key](./api-keys-and-authentication)
-* An LLM provider API key available in Langflow, typically as a [global variable](./configuration-global-variables)
+* A [Langflow API key](../Develop/api-keys-and-authentication)
+* An LLM provider API key available in Langflow, typically as a [global variable](../Develop/configuration-global-variables)
 * [`uv`](https://docs.astral.sh/uv/getting-started/installation/), or `lfx` installed with `uv pip install lfx`
 * [Claude Code](https://docs.anthropic.com/en/docs/claude-code), or another MCP client that supports stdio servers
 
@@ -161,8 +161,8 @@ To connect an agent and create a flow on your Langflow server, follow these step
 
 ## See also
 
-* [Langflow MCP Client for coding agents](./langflow-mcp-client)
-* [Use Langflow as an MCP server](./mcp-server)
-* [Use Langflow as an MCP client](./mcp-client)
+* [Langflow MCP Client for coding agents](../Agents/langflow-mcp-client)
+* [Use Langflow as an MCP server](../Agents/mcp-server)
+* [Use Langflow as an MCP client](../Agents/mcp-client)
 * [About LFX](./lfx-overview)
 * [Install LFX](./lfx-install)

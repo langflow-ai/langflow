@@ -189,13 +189,13 @@ If Langflow fails to start with a `get_body_field` error after installing versio
     Missing-provider errors use the same install guidance.
     Graduated providers such as OpenAI, Anthropic, Cohere, and Exa remain part of the default Langflow installation through their standalone `lfx-*` packages.
 
-    For the complete package list and provider-specific commands, see [Extension bundle list](./extensions-bundle-list).
+    For the complete package list and provider-specific commands, see [Extension bundle list](../Lfx/extensions-bundle-list).
 
 - PyTorch components are opt-in by default
 
     **CUGA**, **Code Agents**, and **Docling** local conversion are excluded from the default `uv pip install langflow` installation because they require PyTorch.
 
-    To install these components, see [Torch opt-in installs](./components-bundle-components#torch-opt-in).
+    To install these components, see [Torch opt-in installs](/components-bundle-components#torch-opt-in).
 
 - Workflow API request schema (Beta)
 
@@ -248,13 +248,13 @@ If Langflow fails to start with a `get_body_field` error after installing versio
     Human-in-the-Loop (HITL) pauses an agent when the agent calls a tool and creates a stateful checkpoint.
     After a human responds by approving, rejecting, or editing the request, the agent resumes from the checkpoint.
 
-    For more information, see [Human-in-the-Loop](./human-in-the-loop).
+    For more information, see [Human-in-the-Loop](../Flows/human-in-the-loop).
 
 - Agent2Agent (A2A) protocol support
 
     Publish a flow as an A2A agent so other agents can discover and call it, and call remote A2A agents from inside a flow with the **A2A Agent** component.
 
-    For more information, see [Use Langflow as an A2A server](./a2a-server) and the [**A2A Agent** component](./a2a-agent-component).
+    For more information, see [Use Langflow as an A2A server](../Agents/a2a-server) and the [**A2A Agent** component](../Components/a2a-agent).
 
 - AG-UI compatible streaming for the Workflow API
 
@@ -267,13 +267,13 @@ If Langflow fails to start with a `get_body_field` error after installing versio
     Point Langflow's model provider at any OpenAI-compatible endpoint, and Langflow discovers models live from the `/v1/models` endpoint.
     These models can power flows, Langflow Assistant, and any component that uses Langflow’s global model providers.
 
-    For more information, see [OpenAI Compatible](./bundles-openai-compatible).
+    For more information, see [OpenAI Compatible](../Components/bundles-openai-compatible).
 
 - Unified **Data Operations** component
 
-    **Text Operations**, **JSON Operations**, and **Table Operations** are consolidated into a single [**Data Operations** component](./operations).
+    **Text Operations**, **JSON Operations**, and **Table Operations** are consolidated into a single [**Data Operations** component](../Components/operations).
     Saved flows that use the separate components continue to work.
-    For more information, see the [**Data Operations** component](./operations).
+    For more information, see the [**Data Operations** component](../Components/operations).
 
 - IBM watsonx Orchestrate: Python 3.14 compatibility
 
@@ -299,25 +299,25 @@ If Langflow fails to start with a `get_body_field` error after installing versio
 
     The **NextPlaid** vector store, backed by a running [NextPlaid](https://github.com/meetdoshi90/next-plaid) server, stores each document as a matrix of token embeddings, and the **vLLM Multivector Embeddings** component generates the token-level multi-vector embeddings required by NextPlaid.
 
-    For more information, see [NextPlaid bundle](./bundles-nextplaid).
+    For more information, see [NextPlaid bundle](../Components/bundles-nextplaid).
 
 - PaddleOCR bundle
 
     The **Paddle** bundle (`lfx-paddle`) adds a **PaddleOCR** component that calls the PaddleOCR AI Studio Job API for layout-aware document parsing into Markdown.
 
-    For more information, see [Paddle bundle](./bundles-paddle).
+    For more information, see [Paddle bundle](../Components/bundles-paddle).
 
 - Oracle Extension bundle
 
     The **Oracle** bundle adds Oracle Database integration for vector search, document loading, and embeddings.
 
-    For more information, see [Oracle bundle](./bundles-oracle).
+    For more information, see [Oracle bundle](../Components/bundles-oracle).
 
 - Valkey bundle
 
     The **Valkey** bundle adds a vector store and chat memory components for [Valkey](https://valkey.io/), an open-source Redis fork.
 
-    For more information, see [Valkey bundle](./bundles-valkey).
+    For more information, see [Valkey bundle](../Components/bundles-valkey).
 
 - LFX is now engine-only
 
@@ -331,7 +331,7 @@ If Langflow fails to start with a `get_body_field` error after installing versio
     Graduated providers, such as OpenAI, Anthropic, Cohere, and Exa, ship as individual packages and are installed separately with `uv pip install lfx-<provider>`.
 
     The `lfx-bundles` long tail is opt-in for both `lfx` and `langflow` installations.
-    For more information, see [Extensions overview](./extensions-overview).
+    For more information, see [Extensions overview](../Lfx/extensions-overview).
 
 ## 1.10.x
 

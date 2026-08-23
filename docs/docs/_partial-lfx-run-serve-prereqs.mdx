@@ -1,6 +1,6 @@
 ## Prerequisites
 
-- [Install LFX](./lfx-install)
+- [Install LFX](/lfx-install)
 - A flow JSON file. Download the Simple Agent starter flow from the repository:
 
   ```bash
@@ -20,15 +20,15 @@ component-not-found-with-hint: DuckDuckGoSearchComponent not found.
 Hint: try ext:duckduckgo:DuckDuckGoSearchComponent@official
 ```
 
-Use the bundle name from the hint to find the pip package in the [Bundle list](./extensions-bundle-list).
+Use the bundle name from the hint to find the pip package in the [Bundle list](/extensions-bundle-list).
 
-For more information, see [Install LFX with bundle components](./lfx-install#install-with-bundle-components).
+For more information, see [Install LFX with bundle components](/lfx-install#install-with-bundle-components).
 
 ### Generate requirements.txt
 
 Extension packages cover component code. Some flows still need additional Python packages at runtime (third-party SDKs imported by those components).
 
-To list them from a flow JSON file, use [`lfx requirements`](./flow-devops-sdk#generate-requirementstxt-for-flows):
+To list them from a flow JSON file, use [`lfx requirements`](/flow-devops-sdk#generate-requirementstxt-for-flows):
 
 ```bash
 lfx requirements simple-agent-flow.json
