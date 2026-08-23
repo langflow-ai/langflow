@@ -690,8 +690,16 @@ async def _validate_create_backend(
     kb_path: Path,
     user_id: uuid.UUID,
 ) -> None:
-    """Reject an unavailable pgvector backend before persisting a KB."""
-    if backend_type != BackendType.POSTGRES.value:
+    """Reject an unreachable remote backend before persisting a KB.
+
+    Local Chroma creates its store lazily on first write, so there is nothing to
+    probe. Every remote backend (Postgres / OpenSearch / Chroma Cloud / Mongo /
+    Astra) is connectivity-checked up front, mirroring the Memory Base path in
+    ``kb_path_helpers.provision_memory_base_collection`` so a KB and an MB
+    pointed at the same dead backend both fail the create with 422 instead of
+    persisting a resource that only errors on first use.
+    """
+    if is_local_chroma(backend_type, backend_config):
         return
 
     backend = create_backend(

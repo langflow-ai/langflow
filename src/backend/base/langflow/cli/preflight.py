@@ -391,6 +391,11 @@ async def probe_mcp_posture(settings_service: SettingsService) -> CheckResult:
     unsafe = [env for attr, expected, env in _MCP_SERVING_POSTURE if getattr(settings, attr, expected) != expected]
     if settings.mcp_server_allowed_packages is None:
         unsafe.append("LANGFLOW_MCP_SERVER_ALLOWED_PACKAGES")
+    # Unset means the built-in runtime-family env policy is the only env control. That policy is
+    # deny-by-default and blocks the known loader/interpreter/package-source families, but a
+    # multi-tenant plane should pin the exact env names its servers may set.
+    if getattr(settings, "mcp_server_env_allowlist", None) is None:
+        unsafe.append("LANGFLOW_MCP_SERVER_ENV_ALLOWLIST")
 
     if not unsafe:
         return CheckResult("ok", "hardened for multi-tenant serving")

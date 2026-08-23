@@ -59,6 +59,8 @@ export type FlowPoolType = {
 
 export type ComponentsToUpdateType = {
   id: string;
+  /** Registry type, needed to ask whether a policy names this component. */
+  type?: string;
   icon?: string;
   display_name: string;
   outdated: boolean;
