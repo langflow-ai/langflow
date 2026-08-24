@@ -175,6 +175,7 @@ module.exports = {
             "Develop/logging",
             "Develop/observability-opentelemetry",
             "Develop/observability-new-relic",
+            "Develop/observability-instana",
             "Develop/observability-grafana-loki",
             "Develop/traces",
             {
@@ -546,6 +547,7 @@ module.exports = {
             "Components/bundles-milvus",
             "Components/bundles-mistralai",
             "Components/bundles-mongodb",
+            "Components/bundles-mrscraper",
             "Components/bundles-nextplaid",
             "Components/bundles-notion",
             "Components/bundles-novita",

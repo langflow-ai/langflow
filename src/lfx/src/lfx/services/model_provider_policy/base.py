@@ -135,11 +135,17 @@ class ModelProviderPolicyError(PermissionError):
         self.provider_id = provider_id
         self.purpose = purpose
         self.model_name = model_name
-        message = (
-            "The requested model is not available"
-            if model_name is not None
-            else "The requested model provider is not available"
-        )
+        # The message is what builders read in the Playground error panel
+        # (rendered by ``ErrorMessage``), so name the blocked model and point
+        # at the governance owner instead of exposing only a reason code.
+        if model_name is not None:
+            message = (
+                f"The requested model is not available: {model_name!r} ({provider_id}) "
+                "is blocked by the current model provider policy. "
+                "Ask an administrator to enable it."
+            )
+        else:
+            message = "The requested model provider is not available"
         super().__init__(message)
 
 

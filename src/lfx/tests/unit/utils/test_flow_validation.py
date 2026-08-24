@@ -1432,6 +1432,171 @@ def test_public_flow_type_block_works_without_hash_lookups(monkeypatch):
         validate_public_flow_no_code_execution(_flow_with_component("RunFlow"))
 
 
+# --- MCP stdio server configuration on the public path ---------------------------
+#
+# The stdio command lives in the ``mcp_server`` field VALUE, not in ``code``. Trusted-code
+# substitution only rewrites ``code``, and MCPTools is not a code-execution component, so
+# without an explicit check an anonymous visitor triggers an OS subprocess spawn.
+
+
+def _mcp_node(config: object, *, field_name: str = "mcp_server", component_type: str = "MCPTools") -> dict:
+    """Build a node whose template carries an MCP server selection value."""
+    node_id = f"{component_type}-abc12"
+    return {
+        "id": node_id,
+        "data": {
+            "id": node_id,
+            "type": component_type,
+            "node": {
+                "display_name": "MCP Tools",
+                "template": {
+                    "code": {"value": "# stored MCPTools code"},
+                    field_name: {"type": "mcp", "name": field_name, "value": config},
+                },
+            },
+        },
+    }
+
+
+def _mcp_flow(config: object, **kwargs) -> dict:
+    return {"nodes": [_mcp_node(config, **kwargs)], "edges": []}
+
+
+STDIO_CONFIG = {"command": "python", "args": ["-m", "some_module"], "env": {}}
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        pytest.param({"name": "srv", "config": dict(STDIO_CONFIG)}, id="command-only"),
+        pytest.param({"name": "srv", "config": {"mode": "Stdio", "command": "uvx", "args": ["pkg"]}}, id="mode-stdio"),
+        pytest.param({"name": "srv", "config": {"mode": "stdio", "command": "npx"}}, id="mode-lowercase"),
+        pytest.param(dict(STDIO_CONFIG), id="bare-config"),
+        pytest.param({"mcpServers": {"srv": dict(STDIO_CONFIG)}}, id="mcpservers-map"),
+    ],
+)
+def test_public_flow_blocks_mcp_stdio_server_config(config):
+    """A public flow that would spawn an OS subprocess through MCP stdio must be refused."""
+    with pytest.raises(PublicFlowValidationError) as exc_info:
+        validate_public_flow_no_code_execution(_mcp_flow(config))
+    assert "MCP" in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        pytest.param({"name": "srv", "config": {"url": "https://mcp.example.com/mcp"}}, id="http"),
+        pytest.param(
+            {"name": "srv", "config": {"mode": "SSE", "url": "https://mcp.example.com/sse"}},
+            id="sse",
+        ),
+        pytest.param({"name": "srv", "config": {}}, id="empty-config"),
+        pytest.param({"name": "srv"}, id="name-only"),
+        pytest.param("srv", id="plain-name"),
+        pytest.param(None, id="unset"),
+    ],
+)
+def test_public_flow_allows_non_stdio_mcp_server_config(config):
+    """Remote MCP transports carry no subprocess spawn and must keep working publicly."""
+    validate_public_flow_no_code_execution(_mcp_flow(config))  # must not raise
+
+
+def test_public_flow_blocks_mcp_stdio_under_relabelled_field_name():
+    """The check follows the config shape, not just the canonical ``mcp_server`` field key."""
+    flow = _mcp_flow({"name": "srv", "config": dict(STDIO_CONFIG)}, field_name="renamed_field")
+    with pytest.raises(PublicFlowValidationError):
+        validate_public_flow_no_code_execution(flow)
+
+
+def test_public_flow_blocks_nested_mcp_stdio_server_config():
+    """An MCP stdio node hidden inside an inlined sub-flow must still be caught."""
+    nested = {
+        "nodes": [
+            {
+                "id": "group-1",
+                "data": {
+                    "id": "group-1",
+                    "type": "GroupNode",
+                    "node": {"flow": {"data": _mcp_flow({"name": "srv", "config": dict(STDIO_CONFIG)})}},
+                },
+            }
+        ],
+        "edges": [],
+    }
+    with pytest.raises(PublicFlowValidationError):
+        validate_public_flow_no_code_execution(nested)
+
+
+def test_public_flow_blocks_legacy_stdio_component_type():
+    """The deprecated MCPStdio component is stdio-only, so its type is refused outright."""
+    from lfx.utils.flow_validation import MCP_STDIO_COMPONENT_TYPES
+
+    for component_type in sorted(MCP_STDIO_COMPONENT_TYPES):
+        with pytest.raises(PublicFlowValidationError):
+            validate_public_flow_no_code_execution(_flow_with_component(component_type))
+
+
+def test_public_flow_ignores_ordinary_dict_field_with_command_key():
+    """A plain dict input that happens to carry a ``command`` key is not an MCP config."""
+    flow = {
+        "nodes": [
+            {
+                "id": "APIRequest-1",
+                "data": {
+                    "id": "APIRequest-1",
+                    "type": "APIRequest",
+                    "node": {
+                        "display_name": "API Request",
+                        "template": {"body": {"type": "dict", "name": "body", "value": {"command": "restart"}}},
+                    },
+                },
+            }
+        ],
+        "edges": [],
+    }
+    validate_public_flow_no_code_execution(flow)  # must not raise
+
+
+@pytest.mark.asyncio
+async def test_prepare_public_flow_build_blocks_mcp_stdio_after_trusted_substitution(monkeypatch):
+    """Trusted-code substitution rewrites ``code`` only; the stdio config must still be refused.
+
+    This is the end-to-end default-mode shape: the server's own MCPTools source is swapped in
+    (so the component that spawns the subprocess is trusted code), while the attacker-authored
+    ``mcp_server`` value survives sanitization untouched.
+    """
+    from lfx.utils import flow_validation as fv
+
+    trusted_mcp_code = "class MCPToolsComponent(Component):\n    name = 'MCPTools'\n"
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _public_settings())
+    monkeypatch.setattr(
+        fv,
+        "_ensure_public_component_lookup_snapshot",
+        AsyncMock(return_value=_public_lookup_snapshot({"MCPTools": trusted_mcp_code})),
+    )
+
+    flow = _mcp_flow({"name": "srv", "config": dict(STDIO_CONFIG)})
+    with pytest.raises(PublicFlowValidationError) as exc_info:
+        await fv.prepare_public_flow_build(flow)
+    assert "MCP" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_prepare_public_flow_build_blocks_mcp_stdio_under_custom_component_optin(monkeypatch):
+    """The public custom-component opt-in must not reopen the MCP stdio spawn path."""
+    from lfx.utils import flow_validation as fv
+
+    monkeypatch.setattr(
+        "lfx.services.deps.get_settings_service",
+        lambda: _public_settings(allow_custom=True, allow_public_custom=True),
+    )
+    monkeypatch.setattr(fv, "validate_flow_for_current_settings", lambda _target: None)
+
+    flow = _mcp_flow({"name": "srv", "config": dict(STDIO_CONFIG)})
+    with pytest.raises(PublicFlowValidationError):
+        await fv.prepare_public_flow_build(flow)
+
+
 # --- block_code_interpreter_components (built-in code-exec component gate) ----------
 
 

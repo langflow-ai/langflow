@@ -19,7 +19,11 @@ from urllib.parse import urljoin, urlparse
 
 from playwright.async_api import Page, Request, async_playwright
 
-DEFAULT_ACE_URL = "https://unpkg.com/accessibility-checker-engine@latest/ace.js"
+# Pinned to the same engine the Playwright a11y suite uses (see src/frontend/.achecker.yml,
+# ruleArchive 19May2026) so both scanners evaluate the same ruleset. Override with --ace-url.
+DEFAULT_ACE_URL = "https://unpkg.com/accessibility-checker-engine@4.0.26/ace.js"
+# Matches the `policies` list in src/frontend/.achecker.yml.
+DEFAULT_POLICIES = "IBM_Accessibility"
 STATIC_RESOURCE_TYPES = {"image", "media", "font"}
 STATIC_EXTENSIONS = (
     ".png",
@@ -66,6 +70,16 @@ def parse_args() -> argparse.Namespace:
         "--levels",
         default="violation",
         help="Comma-separated levels: violation,potentialviolation,recommendation,manual.",
+    )
+    parser.add_argument(
+        "--policies",
+        default=DEFAULT_POLICIES,
+        help=(
+            "Comma-separated IBM ACE guideline ids to evaluate against: "
+            "EXTENSIONS,IBM_Accessibility,IBM_Accessibility_next,WCAG_2_2,WCAG_2_1,WCAG_2_0. "
+            f"Default: {DEFAULT_POLICIES}. Pass an empty string to run unfiltered, which also "
+            "reports rules that belong to no policy and are therefore not compliance findings."
+        ),
     )
     parser.add_argument("--timeout-ms", type=int, default=30000)
     parser.add_argument("--quiet-ms", type=int, default=1000)
@@ -189,10 +203,17 @@ async def wait_for_settled_network(page: Page, pending: set[Request], timeout_ms
         await page.wait_for_timeout(100)
 
 
-async def evaluate_ace(page: Page, levels: list[str]) -> list[dict[str, Any]]:
+async def evaluate_ace(page: Page, levels: list[str], policies: list[str]) -> list[dict[str, Any]]:
+    """Run the loaded ACE checker and return the issues matching ``levels``.
+
+    ``policies`` are IBM ACE guideline ids. ``checker.check`` takes the guideline list as its
+    second argument; omitting it returns *every* rule the engine ships, including rules that
+    belong to no guideline (empty ``rulesets``) and therefore are not compliance findings.
+    Pass an empty list to reproduce that unfiltered behaviour.
+    """
     return await page.evaluate(
         """
-        async (levels) => {
+        async ([levels, policies]) => {
           const wanted = new Set(levels.map((level) => level.toLowerCase()));
           const matchesLevel = (values) => {
             if (!Array.isArray(values)) return false;
@@ -209,7 +230,29 @@ async def evaluate_ace(page: Page, levels: list[str]) -> list[dict[str, Any]]:
           }
 
           const checker = new window.ace.Checker();
-          const report = await checker.check(document);
+          const knownPolicies = new Set(checker.rulesetIds);
+          const unknown = policies.filter((policy) => !knownPolicies.has(policy));
+          if (unknown.length) {
+            throw new Error(
+              `Unknown ACE policy: ${unknown.join(", ")}. Known: ${checker.rulesetIds.join(", ")}`
+            );
+          }
+
+          // Rule id -> the guidelines that contain it. A rule missing from this map is in no
+          // guideline at all, which is what makes it invisible to the IBM browser extension.
+          const rulesetsByRule = new Map();
+          for (const guideline of checker.getGuidelines()) {
+            for (const checkpoint of guideline.checkpoints ?? []) {
+              for (const rule of checkpoint.rules ?? []) {
+                if (!rulesetsByRule.has(rule.id)) rulesetsByRule.set(rule.id, new Set());
+                rulesetsByRule.get(rule.id).add(guideline.id);
+              }
+            }
+          }
+
+          const report = policies.length
+            ? await checker.check(document, policies)
+            : await checker.check(document);
           return report.results
             .filter((item) => matchesLevel(item.value))
             .map((item) => ({
@@ -219,10 +262,11 @@ async def evaluate_ace(page: Page, levels: list[str]) -> list[dict[str, Any]]:
               path: item.path?.dom ?? item.path?.aria ?? null,
               snippet: item.snippet ?? null,
               value: item.value,
+              rulesets: [...(rulesetsByRule.get(item.ruleId) ?? [])],
             }));
         }
         """,
-        levels,
+        [levels, policies],
     )
 
 
@@ -304,6 +348,41 @@ async def run_action(page: Page, action: dict[str, Any], timeout_ms: int) -> Non
             await page.locator(press_action["selector"]).first.press(press_action["key"], timeout=timeout_ms)
         else:
             await page.keyboard.press(str(press_action))
+    elif "scroll" in action:
+        # Lets a states-file capture post-scroll DOM, e.g. virtualised grids that only
+        # drop their tabbable rows once the user scrolls:
+        #   {"scroll": {"selector": ".ag-body-viewport", "to": "bottom"}}
+        scroll_action = action["scroll"]
+        if not isinstance(scroll_action, dict):
+            raise ValueError("scroll action must be an object with an optional selector and to/by")
+        to_value = scroll_action.get("to", "bottom")
+        if to_value not in {"top", "bottom"}:
+            raise ValueError("scroll 'to' must be 'top' or 'bottom'")
+        by_value = scroll_action.get("by")
+        if by_value is not None and not isinstance(by_value, (int, float)):
+            raise ValueError("scroll 'by' must be a number of pixels")
+        options = {"to": to_value, "by": by_value}
+        scroll_js = """
+          (el, options) => {
+            const target = el === document ? document.scrollingElement : el;
+            if (options.by !== null && options.by !== undefined) {
+              target.scrollTop += options.by;
+            } else {
+              target.scrollTop = options.to === "top" ? 0 : target.scrollHeight;
+            }
+            // Two frames so virtualised lists finish re-rendering before the scan reads the DOM.
+            return new Promise((resolve) =>
+              requestAnimationFrame(() => requestAnimationFrame(resolve))
+            );
+          }
+        """
+        selector = scroll_action.get("selector")
+        if selector:
+            locator = page.locator(selector).first
+            await locator.wait_for(state="visible", timeout=timeout_ms)
+            await locator.evaluate(scroll_js, options)
+        else:
+            await page.evaluate(f"(options) => ({scroll_js})(document, options)", options)
     elif "waitFor" in action:
         await page.locator(action["waitFor"]).first.wait_for(state="visible", timeout=timeout_ms)
     elif "waitForHidden" in action:
@@ -333,6 +412,7 @@ async def scan_current_dom(
     *,
     ace_script: str,
     levels: list[str],
+    policies: list[str],
     timeout_ms: int,
     route: str,
     requested_url: str,
@@ -344,7 +424,7 @@ async def scan_current_dom(
     diagnostics: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     await ensure_ace_loaded(page, ace_script, timeout_ms)
-    issues = await evaluate_ace(page, levels)
+    issues = await evaluate_ace(page, levels, policies)
     return {
         "route": route,
         "state": state_name,
@@ -367,6 +447,7 @@ async def scan_route(
     route: str,
     states: list[dict[str, Any]],
     levels: list[str],
+    policies: list[str],
     timeout_ms: int,
     quiet_ms: int,
 ) -> list[dict[str, Any]]:
@@ -425,6 +506,7 @@ async def scan_route(
             page,
             ace_script=ace_script,
             levels=levels,
+            policies=policies,
             timeout_ms=timeout_ms,
             route=route,
             requested_url=target_url,
@@ -457,6 +539,7 @@ async def scan_route(
                 page,
                 ace_script=ace_script,
                 levels=levels,
+                policies=policies,
                 timeout_ms=timeout_ms,
                 route=route,
                 requested_url=target_url,
@@ -920,6 +1003,7 @@ def write_html_report(report: dict[str, Any], output_path: Path) -> None:
       <span class="danger">{report["totalIssues"]} total issues</span>
       <span>{len(report["routes"])} routes</span>
       <span>levels: {html_escape(", ".join(report["reportLevels"]))}</span>
+      <span>policies: {html_escape(", ".join(report["policies"]) or "unfiltered")}</span>
       <span>base: {html_escape(report["url"])}</span>
     </div>
   </section>
@@ -963,6 +1047,7 @@ async def main() -> None:
     manifest_routes = load_routes_file(args.routes_file, args.route_group)
     routes = route_args or manifest_routes or list(states_by_route.keys()) or [urlparse(args.url).path or "/"]
     levels = split_csv(args.levels)
+    policies = split_csv(args.policies)
     ace_script = fetch_ace_script(args.ace_url)
     executable_path = find_chromium_executable(args.browser_executable)
 
@@ -982,6 +1067,7 @@ async def main() -> None:
                     route,
                     states_by_route.get(route, []),
                     levels,
+                    policies,
                     args.timeout_ms,
                     args.quiet_ms,
                 )
@@ -1004,6 +1090,8 @@ async def main() -> None:
         "url": args.url,
         "routes": routes,
         "reportLevels": levels,
+        "policies": policies,
+        "aceUrl": args.ace_url,
         "totalIssues": sum(len(result["issues"]) for result in results),
         "results": results,
     }

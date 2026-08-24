@@ -2486,6 +2486,64 @@ class MCPStreamableHttpClient:
 MCPSseClient = MCPStreamableHttpClient
 
 
+def _internal_mcp_hosts() -> set[str]:
+    """Operator-allowlisted internal MCP hosts (lowercased ``host`` / ``host:port``), or empty.
+
+    Empty by default (feature off / unset) so nothing is treated as internal — the fail-closed
+    baseline for outbound end-user header injection.
+    """
+    try:
+        from lfx.services.deps import get_settings_service
+
+        raw = get_settings_service().settings.serving_internal_mcp_hosts
+    except (ImportError, AttributeError):
+        return set()
+    if not raw:
+        return set()
+    return {h.strip().lower() for h in raw.split(",") if h.strip()}
+
+
+def _is_internal_mcp_target(url: str) -> bool:
+    """Whether ``url``'s host is on the internal allowlist (exact host, or host:port).
+
+    Userinfo is stripped before matching (mirrors the session-key host parse elsewhere). A bare
+    ``host`` allowlist entry matches any port; a ``host:port`` entry matches only that port.
+    """
+    allowed = _internal_mcp_hosts()
+    if not allowed:
+        return False
+    netloc = urlparse(url).netloc.rsplit("@", maxsplit=1)[-1].lower()
+    if not netloc:
+        return False
+    candidates = {netloc}
+    # Also consider the bare host (strip a trailing :port; leave bracketed IPv6 intact).
+    if not netloc.startswith("[") and ":" in netloc:
+        candidates.add(netloc.rsplit(":", maxsplit=1)[0])
+    return bool(candidates & allowed)
+
+
+def _maybe_inject_end_user_header(headers: dict, url: str, end_user_id: str | None) -> dict:
+    """Append the serving end-user identity header for INTERNAL/owned MCP targets only.
+
+    Fail-closed: the end-user id is PII, so it is forwarded ONLY when (a) an id is present,
+    (b) the serving end-user header feature is configured, and (c) the target host is on the
+    operator's internal allowlist. External servers — or any run without an end user / with the
+    feature off — get the headers unchanged. This is what lets a sibling project on the same
+    plane attribute the call to the same end user without leaking identity off-deployment.
+    """
+    if not end_user_id:
+        return headers
+    try:
+        from lfx.services.deps import get_settings_service
+
+        header_name = get_settings_service().settings.serving_end_user_header
+    except (ImportError, AttributeError):
+        header_name = None
+    if not header_name or not _is_internal_mcp_target(url):
+        return headers
+    return validate_headers({**(headers or {}), header_name: end_user_id})
+
+
 async def update_tools(
     server_name: str,
     server_config: dict,
@@ -2495,6 +2553,7 @@ async def update_tools(
     request_variables: dict[str, str] | None = None,
     tool_execution_timeout: float | None = None,
     current_user_id: str | UUID | None = None,
+    end_user_id: str | None = None,
     url_variables: dict[str, str] | None = None,
 ) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
     """Fetch server config and update available tools.
@@ -2517,6 +2576,9 @@ async def update_tools(
         current_user_id: Authenticated user id of the caller. Injected into the env of the
             internal agentic MCP server (``langflow.agentic.mcp``) at spawn time so its tools are
             scoped to this user. Never sourced from the (tenant-controlled) server config.
+        end_user_id: Serving-plane end-user identity of the run. Forwarded as the end-user header
+            ONLY to operator-allowlisted internal hosts (fail-closed); external servers never
+            receive it. None / feature-off means no header is appended (BC).
     """
     if server_config is None:
         server_config = {}
@@ -2603,6 +2665,10 @@ async def update_tools(
         # the cloud-metadata endpoint. Guard the URL with the same SSRF posture as other
         # outbound fetches (no-op when SSRF protection is disabled / host is allowlisted).
         validate_connector_url_for_ssrf(url)
+        # Serving-plane: forward the end-user identity to a SIBLING project (an operator-
+        # allowlisted internal host) so it attributes the run to the same end user. Fail-closed —
+        # external hosts never receive the PII header; no-op when the feature is off / no end user.
+        headers = _maybe_inject_end_user_header(headers, url, end_user_id)
         verify_ssl = server_config.get("verify_ssl", True)
         try:
             tools = await mcp_streamable_http_client.connect_to_server(url, headers=headers, verify_ssl=verify_ssl)

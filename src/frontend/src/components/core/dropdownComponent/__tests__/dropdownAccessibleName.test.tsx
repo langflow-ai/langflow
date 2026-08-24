@@ -133,6 +133,9 @@ const baseProps = {
   nodeClass: mockNodeClass,
   handleNodeClass: jest.fn(),
   id: "model-dropdown",
+  editNode: false,
+  handleOnNewValue: jest.fn(),
+  disabled: false,
 };
 
 describe("Dropdown accessible name", () => {

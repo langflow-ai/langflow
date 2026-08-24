@@ -44,6 +44,17 @@ const RESPONSE_BODY_READ_TIMEOUT_MS = API_REQUEST_DRAIN_TIMEOUT_MS;
 const RESPONSE_INSPECTION_DRAIN_TIMEOUT_MS = API_REQUEST_DRAIN_TIMEOUT_MS;
 const MAX_PENDING_REQUEST_DIAGNOSTICS = 20;
 
+/**
+ * A request a spec intentionally leaves in flight — e.g. a route mocked with a
+ * long delay so a loading state stays on screen for the duration of the test.
+ * Such a request cannot settle inside the teardown drain window, so it must be
+ * declared rather than treated as a stuck request.
+ */
+type AllowedPendingRequest = {
+  method?: string;
+  path: string;
+};
+
 type ObservedHttpError = {
   method: string;
   path: string;
@@ -135,6 +146,14 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
     ).expectServerError = (expectation) => {
       expectServerError(serverErrorContract, expectation);
     };
+    const allowedPendingRequests: AllowedPendingRequest[] = [];
+    (
+      page as Page & {
+        expectPendingRequest?: (expectation: AllowedPendingRequest) => void;
+      }
+    ).expectPendingRequest = (expectation) => {
+      allowedPendingRequests.push(expectation);
+    };
 
     let a11yScanIndex = 0;
     (
@@ -152,6 +171,28 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
       if (options?.colorScheme) {
         await page.emulateMedia({ colorScheme: options.colorScheme });
       }
+
+      // Let enter animations (Radix popover/dialog fade-ins) finish before
+      // scanning. The IBM checker composites element opacity into its
+      // contrast measurement, so a popover caught mid `fade-in` reports
+      // phantom text_contrast_sufficient violations (LE-2235: 4.00:1 on
+      // the model picker that measures 4.95:1 once settled). Infinite
+      // animations (spinners) are skipped; the 2s cap keeps a stuck
+      // animation from hanging the scan.
+      await page.evaluate(() =>
+        Promise.race([
+          Promise.all(
+            document
+              .getAnimations()
+              .filter((a) => {
+                const timing = a.effect?.getTiming();
+                return timing?.iterations !== Infinity;
+              })
+              .map((a) => a.finished.catch(() => undefined)),
+          ),
+          new Promise((resolve) => setTimeout(resolve, 2000)),
+        ]),
+      );
 
       const scanIndex = a11yScanIndex++;
       const scanLabel = buildA11yScanLabel(
@@ -405,7 +446,19 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
     pendingApiResponseStatuses.stop();
     page.off("request", requestListener);
     await pendingApiResponseStatuses.drain(API_REQUEST_DRAIN_TIMEOUT_MS);
-    const unresolvedApiRequests = pendingApiResponseStatuses.snapshot();
+    const isAllowedPending = (request: Request) => {
+      const { pathname } = new URL(request.url());
+      const method = request.method().toUpperCase();
+      return allowedPendingRequests.some(
+        (allowed) =>
+          pathname === allowed.path &&
+          (allowed.method === undefined ||
+            allowed.method.toUpperCase() === method),
+      );
+    };
+    const unresolvedApiRequests = pendingApiResponseStatuses
+      .snapshot()
+      .filter((request) => !isAllowedPending(request));
     page.off("response", responseListener);
     page.off("requestfinished", requestFinishedListener);
     page.off("requestfailed", requestFailedListener);
@@ -487,14 +540,20 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
             .filter(Boolean)
             .join("\n")
         : "";
+      const hasServerErrors =
+        unexpectedServerErrors.length > 0 || missingServerErrors.length > 0;
       throw new Error(
         [
-          "Server-error contract failed:",
+          hasServerErrors
+            ? "Server-error contract failed:"
+            : "API requests did not settle before teardown:",
           unexpected,
           dropped,
           missing,
           unresolved,
-          "Register intentional failures with page.expectServerError({ method, path, status, count }).",
+          hasServerErrors
+            ? "Register intentional failures with page.expectServerError({ method, path, status, count })."
+            : "If the request is deliberately left in flight (e.g. a delayed route mock holding a loading state), declare it with page.expectPendingRequest({ method, path }).",
         ]
           .filter(Boolean)
           .join("\n"),

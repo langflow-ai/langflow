@@ -908,7 +908,7 @@ async def test_project_session_manager_lifespan_handles_cleanup(user_test_projec
     assert lifecycle_events == ["enter", "exit"]
 
 
-def _prepare_install_test_env(monkeypatch, tmp_path, filename="cursor.json"):
+def _prepare_install_test_env(monkeypatch, tmp_path, filename="cursor.json", *, skip_auth=True):
     config_path = tmp_path / filename
     config_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -933,6 +933,9 @@ def _prepare_install_test_env(monkeypatch, tmp_path, filename="cursor.json"):
     class DummyAuth:
         AUTO_LOGIN = True
         SUPERUSER = True
+        # The credential-less superuser fallback on the MCP transport endpoints is only
+        # available when this is explicitly enabled; installs otherwise embed an API key.
+        skip_auth_auto_login = skip_auth
 
     dummy_settings = SimpleNamespace(host="localhost", port=9999, mcp_composer_enabled=False)
     dummy_service = SimpleNamespace(settings=dummy_settings, auth_settings=DummyAuth())
@@ -1034,8 +1037,8 @@ async def test_v2_mcp_servers_locked_allows_superuser_add_patch_delete(
 
 @pytest.mark.usefixtures("active_user")
 @pytest.mark.parametrize(
-    ("allow_custom_components", "custom_component_admin_only"),
-    [(False, False), (True, True)],
+    ("allow_custom_components", "custom_component_admin_only", "block_code_interpreter_components"),
+    [(False, False, False), (True, True, False), (True, False, True)],
 )
 async def test_v2_mcp_stdio_registration_follows_code_execution_lockdown(
     client: AsyncClient,
@@ -1043,12 +1046,14 @@ async def test_v2_mcp_stdio_registration_follows_code_execution_lockdown(
     monkeypatch,
     allow_custom_components,
     custom_component_admin_only,
+    block_code_interpreter_components,
 ):
     """A non-superuser cannot register a process-spawning MCP server under code-exec lockdown."""
     settings = get_settings_service().settings
     monkeypatch.setattr(settings, "mcp_servers_locked", False)
     monkeypatch.setattr(settings, "allow_custom_components", allow_custom_components)
     monkeypatch.setattr(settings, "custom_component_admin_only", custom_component_admin_only)
+    monkeypatch.setattr(settings, "block_code_interpreter_components", block_code_interpreter_components)
 
     stdio_name = f"lf-lockdown-stdio-{uuid4().hex[:8]}"
     response = await client.post(
@@ -1133,6 +1138,39 @@ async def test_install_mcp_config_streamable_transport(
     assert "--transport" in args
     assert "streamablehttp" in args
     assert args[-1].endswith("/streamable")
+
+
+async def test_install_mcp_config_embeds_api_key_without_skip_auth_auto_login(
+    client: AsyncClient,
+    user_test_project,
+    logged_in_headers,
+    tmp_path,
+    monkeypatch,
+):
+    """AUTO_LOGIN alone no longer authenticates MCP transport callers, so installs need a key.
+
+    With AUTO_LOGIN on and skip_auth_auto_login off (the default), the MCP transport
+    endpoints reject credential-less callers. The generated client config must therefore
+    carry an x-api-key header instead of relying on the superuser fallback.
+    """
+    config_path = _prepare_install_test_env(monkeypatch, tmp_path, "cursor_apikey.json", skip_auth=False)
+
+    response = await client.post(
+        f"/api/v1/mcp/project/{user_test_project.id}/install",
+        headers=logged_in_headers,
+        json={"client": "cursor"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    installed_config = json.loads(config_path.read_text())
+    args = installed_config["mcpServers"]["lf-user_test_project"]["args"]
+    assert "--headers" in args
+    assert "x-api-key" in args
+    # The header NAME alone proves nothing: assert the generated key value is actually present,
+    # otherwise an empty or missing value would still satisfy the membership checks above.
+    api_key_value = args[args.index("x-api-key") + 1]
+    assert api_key_value
+    assert api_key_value != "x-api-key"  # pragma: allowlist secret
 
 
 async def test_init_mcp_servers(user_test_project, other_test_project):
