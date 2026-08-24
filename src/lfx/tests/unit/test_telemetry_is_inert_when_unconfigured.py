@@ -50,16 +50,16 @@ from opentelemetry import trace, metrics
 default_tracer_provider = trace.get_tracer_provider()
 default_meter_provider = metrics.get_meter_provider()
 
-from lfx.observability import bootstrap_application_telemetry
+from lfx.observability import APPLICATION_METER_NAME, APPLICATION_TRACER_NAME, bootstrap_application_telemetry
 
 telemetry = bootstrap_application_telemetry()
 
 # Produce telemetry. If anything is live, this is what would be exported.
-tracer = trace.get_tracer("langflow.application")
+tracer = trace.get_tracer(APPLICATION_TRACER_NAME)
 with tracer.start_as_current_span("flow.execute") as span:
     span.set_attribute("protocol", "probe")
 
-meter = metrics.get_meter("langflow.application")
+meter = metrics.get_meter(APPLICATION_METER_NAME)
 meter.create_counter("probe.counter").add(1)
 
 # Enumerated BEFORE shutdown. Shutting down first stops the exporter threads, which made an
