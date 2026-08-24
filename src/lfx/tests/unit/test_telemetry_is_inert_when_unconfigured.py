@@ -42,13 +42,17 @@ OTLP_PORTS = (4317, 4318)
 PROBE = """
 import json, threading
 
+# Captured before lfx is imported at all, so this is the API's own default. Comparing identity
+# rather than checking "not an SDK provider": a custom provider that records and exports is
+# neither the default nor an SDK type, so a type check would call that inert when it is not.
+from opentelemetry import trace, metrics
+
+default_tracer_provider = trace.get_tracer_provider()
+default_meter_provider = metrics.get_meter_provider()
+
 from lfx.observability import bootstrap_application_telemetry
 
 telemetry = bootstrap_application_telemetry()
-
-from opentelemetry import trace, metrics
-from opentelemetry.sdk.trace import TracerProvider as SdkTracerProvider
-from opentelemetry.sdk.metrics import MeterProvider as SdkMeterProvider
 
 # Produce telemetry. If anything is live, this is what would be exported.
 tracer = trace.get_tracer("langflow.application")
@@ -63,8 +67,10 @@ meter.create_counter("probe.counter").add(1)
 otel_threads = sorted(t.name for t in threading.enumerate() if t.name.startswith("Otel"))
 
 result = {
-    "tracer_provider_is_sdk": isinstance(trace.get_tracer_provider(), SdkTracerProvider),
-    "meter_provider_is_sdk": isinstance(metrics.get_meter_provider(), SdkMeterProvider),
+    "tracer_provider_unchanged": trace.get_tracer_provider() is default_tracer_provider,
+    "meter_provider_unchanged": metrics.get_meter_provider() is default_meter_provider,
+    "tracer_provider_type": type(trace.get_tracer_provider()).__name__,
+    "meter_provider_type": type(metrics.get_meter_provider()).__name__,
     "otel_threads": otel_threads,
 }
 
@@ -91,10 +97,14 @@ def _bind(port: int):
 
 def test_nothing_is_recorded_exported_or_sent_without_configuration():
     listeners = {port: _bind(port) for port in OTLP_PORTS}
-    if not any(listeners.values()):
-        pytest.skip("could not bind either OTLP port; something else is using them")
-
     try:
+        # Every port, not any: watching only one leaves a regression that connects to the other
+        # undetected, and the test would report inertness it never checked. Inside the try so
+        # the sockets that did bind are closed on the way out.
+        unbound = sorted(port for port, sock in listeners.items() if sock is None)
+        if unbound:
+            pytest.skip(f"could not bind OTLP port(s) {unbound}; something else is using them")
+
         env = {k: v for k, v in os.environ.items() if not k.startswith("OTEL_")}
         with tempfile.TemporaryDirectory() as tmp:
             probe_path = Path(tmp) / "probe.py"
@@ -111,14 +121,16 @@ def test_nothing_is_recorded_exported_or_sent_without_configuration():
         line = next(ln for ln in completed.stdout.splitlines() if ln.startswith("PROBE_RESULT "))
         result = json.loads(line.removeprefix("PROBE_RESULT "))
 
-        assert not result["tracer_provider_is_sdk"], "an SDK tracer provider was installed with no endpoint set"
-        assert not result["meter_provider_is_sdk"], "an SDK meter provider was installed with no endpoint set"
+        assert result["tracer_provider_unchanged"], (
+            f"the global tracer provider was replaced with no endpoint set: {result['tracer_provider_type']}"
+        )
+        assert result["meter_provider_unchanged"], (
+            f"the global meter provider was replaced with no endpoint set: {result['meter_provider_type']}"
+        )
         assert result["otel_threads"] == [], f"exporter threads alive: {result['otel_threads']}"
 
         connected = []
         for port, sock in listeners.items():
-            if sock is None:
-                continue
             with suppress(BlockingIOError, OSError):
                 conn, _ = sock.accept()
                 conn.close()
