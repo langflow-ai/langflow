@@ -14,6 +14,7 @@ layer uses (``lfx.services.manager._discover_from_entry_points``).
 
 from __future__ import annotations
 
+import contextlib
 import os
 import threading
 from typing import TYPE_CHECKING
@@ -111,7 +112,16 @@ def resolve_sandbox_backend(name: str) -> SandboxBackend:
     with _lock:
         # Another thread may have finished first while we were building.
         # Whoever landed first wins, so the singleton stays a singleton.
-        return _instances.setdefault(name, built)
+        winner = _instances.setdefault(name, built)
+
+    if winner is not built:
+        # The loser is unreachable: it is not in _instances, so
+        # live_sandbox_backends() never returns it and shutdown_sandbox()
+        # cannot reach it. A factory that acquired a loop thread or a client
+        # pool would leak it for the process lifetime.
+        with contextlib.suppress(Exception):
+            built.shutdown()
+    return winner
 
 
 def live_sandbox_backends() -> tuple[SandboxBackend, ...]:
@@ -164,8 +174,12 @@ def _plugin_allowlist() -> frozenset[str]:
     boundary is a deployment decision about what is installed on the host, not
     an application preference someone should be able to edit through the app.
     """
+    # Lowercased, because register_sandbox_backend lowercases too. Matching
+    # verbatim on one side and normalizing on the other means an operator who
+    # spells the case differently from the entry point gets a silent skip and
+    # a startup failure reporting the backend as unknown.
     raw = os.environ.get("LANGFLOW_SANDBOX_BACKEND_PLUGINS", "")
-    return frozenset(name.strip() for name in raw.split(",") if name.strip())
+    return frozenset(name.strip().lower() for name in raw.split(",") if name.strip())
 
 
 def _load_entry_points() -> None:
@@ -221,12 +235,13 @@ def _load_entry_points_locked() -> None:
         return
 
     for entry_point in discovered:
-        if entry_point.name not in allowed:
+        plugin_name = entry_point.name.strip().lower()
+        if plugin_name not in allowed:
             logger.debug(
                 "Ignoring sandbox backend %r: not listed in LANGFLOW_SANDBOX_BACKEND_PLUGINS", entry_point.name
             )
             continue
-        if entry_point.name in _builtin_names:
+        if plugin_name in _builtin_names:
             logger.warning(
                 "Refusing sandbox backend plugin %r: that name belongs to a built-in backend", entry_point.name
             )

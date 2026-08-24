@@ -108,6 +108,8 @@ class _FakeCreateosApi:
         self.artifact_bytes_served = 0
         self.artifact_chunk_size = 8192
         self.metrics = metrics if metrics is not None else {"cpu_pct": 3.5, "mem_mib": 128}
+        # Overridable so a test can serve an entry this module cannot read.
+        self.shapes = list(_SHAPE_CATALOG)
         # name -> id, mirroring the control plane's "unique per user among
         # non-terminal sandboxes" rule that makes create-with-name a CAS.
         self.names: dict[str, str] = {}
@@ -144,7 +146,7 @@ class _FakeCreateosApi:
         if path == "/v1/whoami":
             return self._ok({"user_id": "usr_test"})
         if path == "/v1/shapes":
-            return self._ok({"data": _SHAPE_CATALOG})
+            return self._ok({"data": self.shapes})
         if path == "/v1/sandboxes" and request.method == "POST":
             body = json.loads(request.content)
             self.bodies["create"] = body
@@ -161,7 +163,7 @@ class _FakeCreateosApi:
             # The real control plane echoes the stored policy and the memory
             # actually granted for the requested shape; the backend verifies
             # both before running anything.
-            mem = next(s["mem_mib"] for s in _SHAPE_CATALOG if s["id"] == body["shape"])
+            mem = next(s["mem_mib"] for s in self.shapes if s["id"] == body["shape"])
             return self._ok({"id": sandbox_id, "egress": body["egress"], "mem_mib": mem})
         if path.endswith("/metrics"):
             return self._ok(self.metrics)
@@ -1244,12 +1246,29 @@ class TestCreateosIdleReaperSparesRunningGuests:
             if sandbox_id == "sb-busy":
                 started.set()
                 # Hold the guest "mid-execution" while the other session reaps.
-                assert release.wait(timeout=10), "the reaping thread never finished"
+                # Raised rather than asserted: this runs on the worker thread,
+                # where an AssertionError would be swallowed. The caller
+                # re-raises whatever lands in `failure`.
+                if not release.wait(timeout=10):
+                    msg = "the reaping thread never finished"
+                    raise RuntimeError(msg)
             return real_exec(client, sandbox_id, code, settings)
 
         monkeypatch.setattr(executor, "_upload_and_exec", blocking_exec)
 
-        worker = threading.Thread(target=lambda: run_code_in_sandbox("print(1)", session=busy))
+        # The worker's outcome is captured and asserted on the main thread.
+        # An AssertionError raised inside a thread never reaches pytest, and a
+        # swallowed failure here would surface as the reaper assertion below
+        # failing for the wrong reason.
+        failure: list[BaseException] = []
+
+        def busy_run():
+            try:
+                run_code_in_sandbox("print(1)", session=busy)
+            except BaseException as exc:  # re-raised on the main thread
+                failure.append(exc)
+
+        worker = threading.Thread(target=busy_run)
         worker.start()
         try:
             assert started.wait(timeout=10), "the busy session never started executing"
@@ -1259,6 +1278,9 @@ class TestCreateosIdleReaperSparesRunningGuests:
         finally:
             release.set()
             worker.join(timeout=10)
+        assert not worker.is_alive(), "the busy session never finished"
+        if failure:
+            raise failure[0]
 
     def test_an_idle_session_is_still_reaped(self, monkeypatch, createos):
         """The guard must not disable reaping for sessions that really are idle."""
@@ -1444,3 +1466,129 @@ class TestUntrustedControlPlaneValues:
         _use_createos(monkeypatch)
 
         assert run_code_in_sandbox("print(1+1)").success
+
+
+class TestCatalogIsFetchedOutsideTheMutex:
+    """The catalog request must not stall unrelated session work."""
+
+    def test_a_slow_catalog_fetch_does_not_block_session_bookkeeping(self, monkeypatch, createos):
+        """`self._lock` guards every session operation, and the fetch has a 60s budget.
+
+        Holding it across the request serializes unrelated flows behind a
+        control-plane call that has nothing to do with them.
+        """
+        executor = createos(_FakeCreateosApi()) and registry_module._instances["createos"]
+        executor._shapes = None
+        inside = threading.Event()
+        release = threading.Event()
+
+        real_client = executor._client
+
+        def slow_client(timeout):
+            inside.set()
+            release.wait(timeout=5)
+            return real_client(timeout)
+
+        monkeypatch.setattr(executor, "_client", slow_client)
+
+        fetching = threading.Thread(target=executor._catalog, daemon=True)
+        fetching.start()
+        assert inside.wait(timeout=5), "the catalog fetch never started"
+
+        touched = threading.Event()
+        threading.Thread(target=lambda: (executor._touch_session("t", "sb-x"), touched.set()), daemon=True).start()
+        assert touched.wait(timeout=2), "a session operation blocked behind the catalog fetch"
+
+        release.set()
+        fetching.join(timeout=5)
+
+    def test_an_unreadable_shape_entry_is_skipped_not_raised(self, monkeypatch, createos):
+        """A control-plane value that cannot be read must cost only itself."""
+        api = _FakeCreateosApi()
+        api.shapes = [
+            {"id": "s-broken", "vcpu": 1, "mem_mib": "many"},
+            {"id": "s-2vcpu-4gb", "vcpu": 2, "mem_mib": 4096},
+        ]
+        createos(api)
+        _use_createos(monkeypatch)
+
+        assert run_code_in_sandbox("print(1+1)").success
+
+
+class TestEgressEchoIsUntrusted:
+    """A create response this code cannot read is a failed check, not a crash."""
+
+    @pytest.mark.parametrize("echoed", [5, 3.5, True])
+    def test_a_non_iterable_egress_echo_refuses_and_destroys_the_vm(self, monkeypatch, createos, echoed):
+        """sorted(map(str, echoed)) raises TypeError outside the mapped error tree.
+
+        That skips the caller's teardown handler, so the VM leaks and the
+        component receives a raw traceback instead of a policy refusal.
+        """
+        api = createos(_FakeCreateosApi(create_data={"id": "sb-test", "egress": echoed, "mem_mib": 4096}))
+        _use_createos(monkeypatch)
+
+        with pytest.raises(SandboxUnavailableError, match="did not store the requested egress"):
+            run_code_in_sandbox("print('hi')")
+
+        assert "sb-test" in api.deleted_ids, "the VM leaked on an unreadable egress echo"
+        assert not any(p.endswith("/exec") for _, p in api.calls), "code ran despite a failed check"
+
+
+class TestResolverRuleIsNotSentTwice:
+    """A duplicate rule turns into a policy mismatch the operator cannot act on."""
+
+    def test_an_operator_supplied_resolver_is_not_duplicated(self, monkeypatch, createos):
+        """_assert_policy_applied compares sorted lists.
+
+        A control plane that stores a deduplicated set then produces a length
+        mismatch, and the run is refused with a message about a policy the
+        operator did in fact request.
+        """
+        api = createos(_FakeCreateosApi())
+        _use_createos(
+            monkeypatch,
+            sandbox_allow_network=True,
+            sandbox_allowed_domains=["api.example.com", createos_module._CREATEOS_DNS_EGRESS],
+        )
+
+        assert run_code_in_sandbox("print(1+1)").success
+
+        sent = api.bodies["create"]["egress"]
+        assert sent.count(createos_module._CREATEOS_DNS_EGRESS) == 1
+        assert len(sent) == len(set(sent))
+
+
+class TestSessionLocksDoNotGrow:
+    """The lock map has no reaper of its own, so it must be pruned with the session."""
+
+    def test_dropping_a_session_drops_its_lock(self, monkeypatch, createos):
+        """The identity encodes the policy, so a leak here is one entry per policy change.
+
+        _sessions is bounded by the idle reaper. _session_locks was not bounded
+        by anything.
+        """
+        executor = createos(_FakeCreateosApi()) and registry_module._instances["createos"]
+        _use_createos(monkeypatch, sandbox_session_mode="flow")
+
+        run_code_in_sandbox("print(1)", session=_session(user="a"))
+        assert executor._session_locks, "the session never took a lock"
+
+        with executor._client(5) as client:
+            for token in list(executor._sessions):
+                executor._drop_session(client, token)
+
+        assert not executor._session_locks, "the per-session lock outlived its session"
+
+
+class TestSessionErrorHandlingCoversBothErrorClasses:
+    """Guards the hierarchy the session handler relies on."""
+
+    def test_sandbox_unavailable_is_caught_by_the_execution_handler(self):
+        """_run_in_session catches SandboxExecutionError to drop a tainted guest.
+
+        That only covers a control-plane 4xx because SandboxUnavailableError
+        derives from it. Breaking that relationship would silently stop the
+        guest from being dropped, so it is asserted rather than assumed.
+        """
+        assert issubclass(SandboxUnavailableError, SandboxExecutionError)

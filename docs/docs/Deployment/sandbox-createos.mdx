@@ -48,8 +48,9 @@ hypervisor is required there.
 1. A VM is created with the configured shape, image, and network policy.
 2. The egress policy CreateOS stored is compared against what was requested. A
    mismatch refuses the run before any code is uploaded.
-3. The code is uploaded to `/workspace/main.py` in the guest.
-4. `python3 /workspace/main.py` runs, and its output is streamed back.
+3. The code is uploaded to a generated path in `/workspace`. Each execution
+   gets its own file name, so two runs cannot overwrite each other's program.
+4. `python3` runs that file, and its output is streamed back.
 5. The VM is deleted.
 
 Nothing survives between two executions unless you turn sessions on. A cold

@@ -1844,6 +1844,90 @@ class TestBackendRegistrationIsIdempotent:
 
         The refusal is correct. Letting it escape as ValueError out of an
         import is not.
+
+        The reload rebinds every attribute of the module, and the suppressed
+        re-registration means _factories keeps pointing at the PRE-reload
+        class. test_a_plugin_cannot_take_over_a_builtin_name asserts exactly
+        that identity, so the module state is restored here rather than left
+        for whatever test happens to run next.
         """
         module = importlib.import_module(f"lfx.utils.sandbox.{module_name}")
+        before = dict(vars(module))
+
         importlib.reload(module)
+
+        # Put the original attribute objects back, so the identity the registry
+        # holds and the identity the module exposes stay the same object.
+        for name, value in before.items():
+            setattr(module, name, value)
+
+
+class TestTheLosingInstanceIsShutDown:
+    """Only one instance is kept, so the other one has to be told to stop."""
+
+    def test_the_instance_that_loses_the_race_is_shut_down(self, monkeypatch):
+        """The setdefault call keeps the first instance and drops the second.
+
+        The dropped one is not in _instances, so live_sandbox_backends() never
+        returns it and shutdown_sandbox() cannot reach it. A factory that
+        acquired a loop thread or a client pool would leak it for the process
+        lifetime.
+        """
+
+        class _Closable(_StubBackend):
+            def __init__(self):
+                super().__init__()
+                self.stopped = False
+
+            def shutdown(self):
+                self.stopped = True
+
+        winner = _Closable()
+        loser = _Closable()
+
+        def factory():
+            # Stands in for another thread that finished first while this
+            # factory was still building.
+            registry_module._instances["racy"] = winner
+            return loser
+
+        monkeypatch.setitem(registry_module._factories, "racy", factory)
+        monkeypatch.delitem(registry_module._instances, "racy", raising=False)
+
+        assert registry_module.resolve_sandbox_backend("racy") is winner
+        assert loser.stopped, "the losing instance was never shut down"
+        assert not winner.stopped, "the kept instance must not be shut down"
+
+    def test_a_shutdown_that_raises_does_not_break_resolution(self, monkeypatch):
+        """Cleaning up the loser is best effort; it must not fail the caller."""
+
+        class _Angry(_StubBackend):
+            def shutdown(self):
+                msg = "no"
+                raise RuntimeError(msg)
+
+        winner = _Angry()
+
+        def factory():
+            registry_module._instances["angry"] = winner
+            return _Angry()
+
+        monkeypatch.setitem(registry_module._factories, "angry", factory)
+        monkeypatch.delitem(registry_module._instances, "angry", raising=False)
+
+        assert registry_module.resolve_sandbox_backend("angry") is winner
+
+
+class TestPluginAllowlistMatchingIsCaseInsensitive:
+    """Registration lowercases, so the allowlist match has to as well."""
+
+    def test_an_operator_may_spell_the_plugin_name_in_any_case(self, monkeypatch, entry_points):
+        """Matching verbatim on one side and normalizing on the other is a silent skip.
+
+        The only trace is a debug log, and the startup failure then reports the
+        backend as unknown.
+        """
+        entry_points(_FakeEntryPoint("VendorBox", lambda: _StubBackend))
+        monkeypatch.setenv("LANGFLOW_SANDBOX_BACKEND_PLUGINS", "vendorbox")
+
+        assert "vendorbox" in registry_module.known_sandbox_backends()

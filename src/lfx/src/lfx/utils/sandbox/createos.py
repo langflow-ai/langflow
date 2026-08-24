@@ -482,21 +482,38 @@ class _CreateosExecutor:
         stale entry is not a correctness risk worth a request per execution.
         """
         with self._lock:
+            cached = self._shapes
+        if cached is not None:
+            return cached
+
+        # Fetched OUTSIDE the mutex. The request carries a 60s budget, and this
+        # is the same mutex every session operation takes, so holding it here
+        # would stall unrelated flows for that whole budget. Two callers that
+        # race simply fetch twice, which is far cheaper than the contention.
+        try:
+            with self._client(_CREATEOS_CONTROL_TIMEOUT_SECONDS) as client:
+                data = self._unwrap(client.get("/v1/shapes"))
+        except httpx.HTTPError as exc:
+            msg = f"Could not read the CreateOS shape catalog: {exc}"
+            raise SandboxUnavailableError(msg) from exc
+
+        entries = []
+        for shape in data.get("data", []):
+            mem_mib, shape_id = shape.get("mem_mib"), shape.get("id")
+            if not mem_mib or not shape_id:
+                continue
+            try:
+                entries.append((int(mem_mib), str(shape_id)))
+            except (TypeError, ValueError):
+                # A control-plane value, so untrusted. One unreadable entry
+                # costs itself; letting it raise here would escape the mapped
+                # error tree and reach the component as a raw traceback.
+                logger.debug("Skipping a CreateOS shape with an unreadable mem_mib", exc_info=True)
+
+        with self._lock:
             if self._shapes is None:
-                try:
-                    with self._client(_CREATEOS_CONTROL_TIMEOUT_SECONDS) as client:
-                        data = self._unwrap(client.get("/v1/shapes"))
-                except httpx.HTTPError as exc:
-                    msg = f"Could not read the CreateOS shape catalog: {exc}"
-                    raise SandboxUnavailableError(msg) from exc
-                self._shapes = tuple(
-                    sorted(
-                        (int(shape["mem_mib"]), str(shape["id"]))
-                        for shape in data.get("data", [])
-                        if shape.get("mem_mib") and shape.get("id")
-                    )
-                )
-        return self._shapes
+                self._shapes = tuple(sorted(entries))
+            return self._shapes
 
     def _shape_for(self, memory_mb: int) -> str:
         """Choose the VM shape for one execution.
@@ -564,7 +581,13 @@ class _CreateosExecutor:
                 "IPv6 and *:port are not supported by the host parser."
             )
             raise SandboxUnavailableError(msg)
-        return (*settings.allowed_domains, _CREATEOS_DNS_EGRESS)
+        # Deduplicated, order preserved. An operator who already lists the
+        # resolver would otherwise send it twice, and _assert_policy_applied
+        # compares sorted lists -- so a control plane that stores a set would
+        # produce a length mismatch and refuse the run with a policy message
+        # the operator cannot act on.
+        rules = [*settings.allowed_domains, _CREATEOS_DNS_EGRESS]
+        return tuple(dict.fromkeys(rules))
 
     # -- execution --------------------------------------------------------
 
@@ -778,6 +801,16 @@ class _CreateosExecutor:
     def _drop_session(self, client: httpx.Client, token: str) -> None:
         with self._lock:
             entry = self._sessions.pop(token, None)
+            # The lock goes with the session. The identity encodes the policy
+            # as well as the flow and the user, so leaving it behind means one
+            # permanent entry per tenant AND per policy change -- _sessions is
+            # bounded by the idle reaper, this map would not be.
+            #
+            # Safe to delete while the caller still holds the lock object: a
+            # concurrent _session_lock() call simply creates a fresh one, and
+            # the two can only be handed out once no _sessions entry remains,
+            # which is exactly when there is no guest left to serialize on.
+            self._session_locks.pop(token, None)
         if entry is not None:
             self._destroy(client, entry[0])
 
@@ -935,7 +968,15 @@ class _CreateosExecutor:
         # a mismatch -- treating it as "nothing to check" would let a server
         # that dropped the policy pass verification silently.
         echoed = created.get("egress")
-        if echoed is None or sorted(map(str, echoed)) != sorted(egress):
+        try:
+            # Control-plane value, so untrusted. A non-iterable echo raises
+            # TypeError outside the mapped error tree, which skips the
+            # caller's teardown handler and leaks the VM. An echo this code
+            # cannot read is a failed verification, not a crash.
+            mismatch = echoed is None or sorted(map(str, echoed)) != sorted(egress)
+        except TypeError:
+            mismatch = True
+        if mismatch:
             stored = "omitted" if echoed is None else _CreateosExecutor._redact(repr(echoed))
             msg = (
                 f"CreateOS did not store the requested egress policy "
@@ -1034,7 +1075,12 @@ class _CreateosExecutor:
         destroying the VM, which is not available when the guest has to live on,
         and which discards whatever the program had already printed.
         """
-        deadline = time.monotonic() + _exec_deadline(settings.timeout_seconds)
+        # Computed once and used for both the loop deadline and the transport
+        # budget, so the two can never disagree. Clamped at zero because the
+        # transport rejects a negative timeout, while the loop reads any past
+        # deadline as "already expired".
+        budget = _exec_deadline(settings.timeout_seconds)
+        deadline = time.monotonic() + budget
         stdout: list[str] = []
         stderr: list[str] = []
         exit_code: int | None = None
@@ -1046,7 +1092,7 @@ class _CreateosExecutor:
                 f"/v1/sandboxes/{sandbox_id}/exec",
                 params={"stream": "true"},
                 json={"cmd": _CREATEOS_GUEST_SHELL, "args": ["-c", self._guest_command(code_path, settings)]},
-                timeout=self._timeout(_exec_deadline(settings.timeout_seconds)),
+                timeout=self._timeout(max(budget, 0.0)),
             ) as response:
                 if response.status_code != httpx.codes.OK:
                     response.read()

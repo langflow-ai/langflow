@@ -533,7 +533,11 @@ Pair these settings with the [SSRF settings](#ssrf-protection) to reduce common 
 
 These settings **do not** provide full user isolation. For more information, see [Security](/security).
 
-The flags above decide *whether* code is allowed to run. They do not constrain what it does once it runs, so they are authorization controls rather than an isolation boundary. If you want permitted executions to run behind a kernel boundary instead of blocking them outright, set a [sandbox backend](./environment-variables.mdx): `exec-sandbox` for a QEMU microVM on this host, or [`createos`](../Deployment/sandbox-createos.mdx) for a Firecracker microVM on a remote host when this one has no hypervisor. A sandbox backend covers the [**Python Interpreter**](/python-interpreter) and the legacy Python REPL tool only — the other surfaces listed above still need the blocking flags.
+The flags above decide *whether* code is allowed to run. They do not constrain what it does once it runs, so they are authorization controls rather than an isolation boundary.
+
+To run permitted executions behind a kernel boundary instead of blocking them outright, set a [sandbox backend](./environment-variables.mdx). Use `exec-sandbox` for a QEMU microVM on this host, or [`createos`](../Deployment/sandbox-createos.mdx) for a Firecracker microVM on a remote host when this one has no hypervisor.
+
+A sandbox backend covers the [**Python Interpreter**](/python-interpreter) and the legacy Python REPL tool only — the other surfaces listed above still need the blocking flags.
 
 :::tip
 Do not enable a shared tracer when users are untrusted. Instead, use [built-in local tracing](/traces).
