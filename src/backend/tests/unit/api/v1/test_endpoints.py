@@ -593,10 +593,74 @@ async def test_get_config_names_blocked_components_to_authenticated_callers(
     response = await client.get("api/v1/config", headers=logged_in_headers)
 
     assert response.status_code == status.HTTP_200_OK
-    result = response.json()
-    assert result["blocked_component_types"] == ["Agent", "ChatOutput"]
+    reported = response.json()["blocked_component_types"]
+    # The keys themselves, plus every alias a saved node could carry for them.
+    assert {"Agent", "ChatOutput"} <= set(reported)
     # Template identities stay withheld: nothing in the editor consumes them.
-    assert "Simple Agent" not in result["blocked_component_types"]
+    assert "Simple Agent" not in reported
+    # An unrelated component contributes nothing.
+    assert "Prompt Template" not in reported
+
+
+async def test_get_config_names_every_alias_of_a_blocked_component(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    """A node saved under an alias must match the administrator's canonical key.
+
+    Alias resolution runs alias -> canonical only, so reporting just the
+    blocked key and its canonical candidates leaves a node saved as ``Prompt``
+    unmatched when ``Prompt Template`` is blocked -- and the palette exposes
+    only ``Prompt Template``, so that is the key an administrator can find.
+    Nine shipped starter flows save that component as ``Prompt``.
+    """
+    identity_index = SimpleNamespace(
+        canonical_keys=frozenset({"Prompt Template", "ParserComponent"}),
+        aliases={
+            "Prompt": frozenset({"Prompt Template"}),
+            "PromptComponent": frozenset({"Prompt Template"}),
+            "parser": frozenset({"ParserComponent"}),
+        },
+        resolve_many=lambda keys: frozenset(
+            candidate
+            for key in keys
+            for candidate in (
+                frozenset({key})
+                if key in {"Prompt Template", "ParserComponent"}
+                else {
+                    "Prompt": frozenset({"Prompt Template"}),
+                    "PromptComponent": frozenset({"Prompt Template"}),
+                    "parser": frozenset({"ParserComponent"}),
+                }.get(key, frozenset({key}))
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        "lfx.utils.flow_validation.get_component_identity_index_for_validation",
+        lambda: identity_index,
+    )
+    monkeypatch.setattr(
+        "langflow.api.v1.endpoints.get_catalog_policy_service",
+        lambda: SimpleNamespace(
+            enabled=True,
+            snapshot=SimpleNamespace(
+                blocked_component_keys=frozenset({"Prompt Template"}),
+                blocked_template_keys=frozenset(),
+            ),
+        ),
+    )
+
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    reported = response.json()["blocked_component_types"]
+    # The alias a saved node actually carries.
+    assert "Prompt" in reported
+    assert "PromptComponent" in reported
+    assert "Prompt Template" in reported
+    # An unrelated component's alias stays out of it.
+    assert "parser" not in reported
 
 
 async def test_get_config_names_no_components_when_only_a_template_is_blocked(
