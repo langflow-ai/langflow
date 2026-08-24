@@ -323,6 +323,12 @@ Other endpoints are helpful for specific use cases, such as administration and f
   * PATCH `/v1/users/{user_id}/reset-password`: Reset own password.
   * DELETE `/v1/users/{user_id}`: Delete a user (cannot delete yourself).
 
+* [API governance policy](./api-governance-policy) (superuser required):
+  * GET `/v1/policy-bundle`: Read the install-wide catalog and model policy.
+  * PUT `/v1/policy-bundle`: Replace the bundle. Requires `expected_revision`.
+  * GET `/v1/catalog-policy/components` and `PUT /v1/catalog-policy/components`: Blocked component keys.
+  * GET `/v1/model-provider-policy` and `PUT /v1/model-provider-policy`: Approved model providers.
+
 * Custom components: You might use these endpoints when developing custom Langflow components for your own use or to share with the Langflow community:
   * GET `/v1/all`: Return all available Langflow component types. See [Get all components](/api-reference-api-examples#get-all-components).
   * POST `/v1/custom_component`: Build a custom component from code and return its node.

@@ -620,6 +620,7 @@ module.exports = {
         "API-Reference/api-monitor",
         "API-Reference/api-build",
         "API-Reference/api-users",
+        "API-Reference/api-governance-policy",
         {
           type: "link",
           label: "Langflow API specification",
