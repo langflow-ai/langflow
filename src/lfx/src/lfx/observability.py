@@ -452,6 +452,30 @@ if _OTEL_AVAILABLE:
             # re-parenting, leaving the span exactly as it was exported before this existed.
             self._lineage: dict[int, tuple[bool, int | None, Any]] = {}
             self._lineage_capped = False
+            self._reparent_failed = False
+
+        def _reparent_safely(self, span) -> None:
+            """Re-parent, but never at the cost of the run.
+
+            ``span._parent`` reaches into the SDK's internals, and the SDK does not catch
+            exceptions raised by a span processor: it lets them out of ``Span.end()`` and into
+            whatever application code ended the span. So a future OpenTelemetry release that
+            renames that attribute would not merely stop the trace rendering nicely, it would
+            raise inside a flow run. Telemetry is not allowed to do that.
+
+            Logged once rather than per span, since the cause is process-wide when it happens
+            at all, and the span is exported either way with the parent it already had.
+            """
+            try:
+                self._reparent_over_dropped_ancestors(span)
+            except Exception:  # noqa: BLE001
+                if not self._reparent_failed:
+                    self._reparent_failed = True
+                    logger.debug(
+                        "Could not re-parent a span over its dropped ancestors; "
+                        "exporting it unchanged. This is a no-op for the run itself.",
+                        exc_info=True,
+                    )
 
         def on_start(self, span, parent_context=None) -> None:
             super().on_start(span, parent_context)
@@ -510,7 +534,7 @@ if _OTEL_AVAILABLE:
             scope = span.instrumentation_scope.name if span.instrumentation_scope else ""
             try:
                 if scope in self._scopes:
-                    self._reparent_over_dropped_ancestors(span)
+                    self._reparent_safely(span)
                     _redact_url_attributes(span)
                     _redact_db_path_attributes(span)
                     super().on_end(span)

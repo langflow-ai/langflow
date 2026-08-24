@@ -286,3 +286,40 @@ def test_the_lineage_map_does_not_grow_across_runs():
     provider.force_flush()
     assert processor._lineage == {}, f"{len(processor._lineage)} entries left behind"
     provider.shutdown()
+
+
+def test_a_failure_while_reparenting_does_not_break_the_run():
+    """Telemetry must not raise into the code that ended the span.
+
+    The SDK does not catch exceptions from a span processor: it lets them out of
+    ``Span.end()`` and into the caller. Re-parenting reaches into SDK internals, so if a
+    future release changes them, the failure has to stay inside the processor. The span is
+    still exported, with whatever parent it already had.
+
+    Corrupts the processor's own lineage map rather than patching the SDK, so the failure is
+    raised by the real code path under test.
+    """
+    from opentelemetry.trace import use_span
+
+    exporter = InMemorySpanExporter()
+    processor = ApplicationOnlySpanProcessor(exporter)
+    provider = TracerProvider()
+    provider.add_span_processor(processor)
+
+    request = provider.get_tracer(APPLICATION_TRACER_NAME).start_span("POST /api/v1/run")
+    with use_span(request, end_on_exit=False):
+        llm = provider.get_tracer("opentelemetry.instrumentation.openai").start_span("openai.chat")
+        with use_span(llm, end_on_exit=False):
+            child = provider.get_tracer(APPLICATION_TRACER_NAME).start_span("flow.execute")
+            # The walk unpacks each entry as (exported, parent_id, context). A short tuple
+            # raises there, which is what a changed SDK looks like from inside this code.
+            # It has to be falsy in position 0 too, or the caller returns before the walk.
+            processor._lineage[llm.get_span_context().span_id] = (False,)
+            child.end()  # must not raise
+        llm.end()
+    request.end()
+
+    provider.force_flush()
+    exported = [s for s in exporter.get_finished_spans() if s.name == "flow.execute"]
+    assert len(exported) == 1, "the span must still be exported when re-parenting fails"
+    provider.shutdown()
