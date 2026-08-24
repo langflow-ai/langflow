@@ -149,6 +149,51 @@ async def test_role_assignment_grants_preserve_independent_manual_and_idp_source
 
 
 @pytest.mark.anyio
+async def test_deleting_assignment_removes_its_grants_on_sqlite(authz_async_session: AsyncSession):
+    """Revoking an assignment must not leave orphan provenance rows.
+
+    SQLite ignores ``ON DELETE CASCADE`` unless ``PRAGMA foreign_keys=ON`` is
+    issued on every connection, which Langflow never does, so the cascade has
+    to come from the ORM relationship rather than from the database.
+    """
+    user = User(username="cascade_assignee", password=_TEST_PASSWORD)
+    role = AuthzRole(name="cascade_role", permissions=["flow:write"])
+    authz_async_session.add_all([user, role])
+    await authz_async_session.commit()
+
+    assignment = AuthzRoleAssignment(user_id=user.id, role_id=role.id)
+    authz_async_session.add(assignment)
+    await authz_async_session.flush()
+    assignment_id = assignment.id
+    authz_async_session.add_all(
+        [
+            AuthzRoleAssignmentGrant(assignment_id=assignment_id, source_kind="manual"),
+            AuthzRoleAssignmentGrant(
+                assignment_id=assignment_id,
+                source_kind="idp",
+                provider_id="cascade-idp",
+                external_group="cascade_group",
+            ),
+        ]
+    )
+    await authz_async_session.commit()
+
+    await authz_async_session.delete(assignment)
+    await authz_async_session.commit()
+
+    surviving = (
+        await authz_async_session.exec(select(AuthzRoleAssignment).where(AuthzRoleAssignment.id == assignment_id))
+    ).all()
+    orphans = (
+        await authz_async_session.exec(
+            select(AuthzRoleAssignmentGrant).where(AuthzRoleAssignmentGrant.assignment_id == assignment_id)
+        )
+    ).all()
+    assert surviving == []
+    assert orphans == []
+
+
+@pytest.mark.anyio
 async def test_role_assignment_grant_rejects_duplicate_manual_source(authz_async_session: AsyncSession):
     from sqlalchemy.exc import IntegrityError
 

@@ -198,6 +198,7 @@ class KubernetesSecretService(VariableService, Service):
             variable = Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
             variable_read = VariableRead.model_validate(variable, from_attributes=True)
             variable_read.value = decrypted_value
+            variable_read.has_value = bool(value.strip())
             variables_read.append(variable_read)
 
         return variables_read

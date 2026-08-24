@@ -346,6 +346,86 @@ async def test_create_share_returns_404_when_resource_missing(patch_authz, silen
     assert excinfo.value.detail == "Resource not found"
 
 
+@pytest.mark.parametrize(
+    "permission_level",
+    [
+        SharePermissionLevel.READ.value,
+        SharePermissionLevel.WRITE.value,
+        SharePermissionLevel.ADMIN.value,
+    ],
+)
+@pytest.mark.asyncio
+async def test_create_share_rejects_non_executable_public_flow(permission_level, patch_authz, silence_audit):  # noqa: ARG001
+    """The public flow product is an executable playground, not a generic anonymous grant."""
+    from langflow.services.database.models.flow.model import Flow
+
+    patch_authz(cross_user=False, enabled=False)
+
+    owner = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    session = _FakeAsyncSession({(Flow, flow.id): flow})
+    payload = ShareCreate(
+        resource_type="flow",
+        resource_id=flow.id,
+        scope=ShareScope.PUBLIC.value,
+        permission_level=permission_level,
+    )
+
+    with pytest.raises(HTTPException) as excinfo:
+        await shares_module.create_share(payload=payload, current_user=owner, session=session)
+
+    assert excinfo.value.status_code == 422
+    assert excinfo.value.detail == "PUBLIC flow shares require permission_level 'execute'."
+    assert session.added == []
+    assert session.flushed == 0
+
+
+@pytest.mark.asyncio
+async def test_create_share_allows_executable_public_flow(patch_authz, silence_audit):  # noqa: ARG001
+    from langflow.services.database.models.flow.model import Flow
+
+    patch_authz(cross_user=False, enabled=False)
+
+    owner = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    session = _FakeAsyncSession({(Flow, flow.id): flow})
+    payload = ShareCreate(
+        resource_type="flow",
+        resource_id=flow.id,
+        scope=ShareScope.PUBLIC.value,
+        permission_level=SharePermissionLevel.EXECUTE.value,
+    )
+
+    result = await shares_module.create_share(payload=payload, current_user=owner, session=session)
+
+    assert result.permission_level == SharePermissionLevel.EXECUTE.value
+    assert session.flushed == 1
+    assert session.committed == 1
+
+
+@pytest.mark.asyncio
+async def test_create_share_keeps_public_read_for_non_flow_resources(patch_authz, silence_audit):  # noqa: ARG001
+    from langflow.services.database.models.file.model import File
+
+    patch_authz(cross_user=False, enabled=False)
+
+    owner = _make_user()
+    file = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    session = _FakeAsyncSession({(File, file.id): file})
+    payload = ShareCreate(
+        resource_type="file",
+        resource_id=file.id,
+        scope=ShareScope.PUBLIC.value,
+        permission_level=SharePermissionLevel.READ.value,
+    )
+
+    result = await shares_module.create_share(payload=payload, current_user=owner, session=session)
+
+    assert result.permission_level == SharePermissionLevel.READ.value
+    assert session.flushed == 1
+    assert session.committed == 1
+
+
 # --------------------------------------------------------------------------- #
 # PATCH — same floor
 # --------------------------------------------------------------------------- #
@@ -449,6 +529,79 @@ async def test_update_share_prefers_targeted_sync_after_commit(monkeypatch, sile
     assert stub.synced_share_ids == [share.id]
     assert session.events == ["flush", "commit", "sync_share"]
     assert stub.sync_shares_calls == 0
+
+
+@pytest.mark.parametrize(
+    "permission_level",
+    [
+        SharePermissionLevel.READ.value,
+        SharePermissionLevel.WRITE.value,
+        SharePermissionLevel.ADMIN.value,
+    ],
+)
+@pytest.mark.asyncio
+async def test_update_share_rejects_non_executable_public_flow(permission_level, patch_authz, silence_audit):  # noqa: ARG001
+    """PATCH cannot turn a PUBLIC flow share into a grant with no matching product behavior."""
+    from langflow.services.database.models.flow.model import Flow
+
+    patch_authz(cross_user=False, enabled=False)
+
+    owner = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    share = AuthzShare(
+        id=uuid4(),
+        resource_type="flow",
+        resource_id=flow.id,
+        scope=ShareScope.PUBLIC.value,
+        target_id=None,
+        permission_level=SharePermissionLevel.EXECUTE.value,
+        created_by=owner.id,
+    )
+    session = _FakeAsyncSession({(AuthzShare, share.id): share, (Flow, flow.id): flow})
+
+    with pytest.raises(HTTPException) as excinfo:
+        await shares_module.update_share(
+            share_id=share.id,
+            payload=ShareUpdate(permission_level=permission_level),
+            current_user=owner,
+            session=session,
+        )
+
+    assert excinfo.value.status_code == 422
+    assert excinfo.value.detail == "PUBLIC flow shares require permission_level 'execute'."
+    assert share.permission_level == SharePermissionLevel.EXECUTE.value
+    assert session.flushed == 0
+
+
+@pytest.mark.asyncio
+async def test_update_share_allows_executable_public_flow(patch_authz, silence_audit):  # noqa: ARG001
+    from langflow.services.database.models.flow.model import Flow
+
+    patch_authz(cross_user=False, enabled=False)
+
+    owner = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    share = AuthzShare(
+        id=uuid4(),
+        resource_type="flow",
+        resource_id=flow.id,
+        scope=ShareScope.PUBLIC.value,
+        target_id=None,
+        permission_level=SharePermissionLevel.READ.value,
+        created_by=owner.id,
+    )
+    session = _FakeAsyncSession({(AuthzShare, share.id): share, (Flow, flow.id): flow})
+
+    result = await shares_module.update_share(
+        share_id=share.id,
+        payload=ShareUpdate(permission_level=SharePermissionLevel.EXECUTE.value),
+        current_user=owner,
+        session=session,
+    )
+
+    assert result.permission_level == SharePermissionLevel.EXECUTE.value
+    assert session.flushed == 1
+    assert session.committed == 1
 
 
 # --------------------------------------------------------------------------- #
@@ -746,9 +899,18 @@ def test_share_visible_owner_and_creator_always_see():
     assert shares_module._share_visible(row=row, user_id=creator, resource_owner_id=owner, is_team_member=False)
 
 
-def test_share_visible_public_is_visible_to_anyone():
-    row = _share(scope=ShareScope.PUBLIC.value, target_id=None, created_by=uuid4())
-    assert shares_module._share_visible(row=row, user_id=uuid4(), resource_owner_id=uuid4(), is_team_member=False)
+def test_share_visible_public_is_direct_link_only():
+    owner = uuid4()
+    creator = uuid4()
+    row = _share(scope=ShareScope.PUBLIC.value, target_id=None, created_by=creator)
+    assert shares_module._share_visible(row=row, user_id=owner, resource_owner_id=owner, is_team_member=False)
+    assert shares_module._share_visible(row=row, user_id=creator, resource_owner_id=owner, is_team_member=False)
+    assert not shares_module._share_visible(
+        row=row,
+        user_id=uuid4(),
+        resource_owner_id=uuid4(),
+        is_team_member=False,
+    )
 
 
 def test_share_visible_user_scope_matches_target_only():

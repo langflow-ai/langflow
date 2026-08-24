@@ -381,7 +381,9 @@ export default function ToolsTable({
 
   return (
     <>
-      <main className="flex h-full w-full flex-1 flex-col gap-2 overflow-hidden py-4">
+      {/* Not a <main>: the flow canvas underneath already owns the single
+          main landmark (WCAG 2.4.1). */}
+      <div className="flex h-full w-full flex-1 flex-col gap-2 overflow-hidden py-4">
         <div className="flex-none px-4">
           <Input
             icon="Search"
@@ -411,7 +413,7 @@ export default function ToolsTable({
             onGridReady={handleGridReady}
           />
         </div>
-      </main>
+      </div>
       <Sidebar
         side="right"
         className="flex h-full flex-col overflow-auto border-l border-border"

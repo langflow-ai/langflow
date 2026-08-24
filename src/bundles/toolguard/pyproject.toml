@@ -1,6 +1,6 @@
 [project]
 name = "lfx-toolguard"
-version = "0.1.0"
+version = "0.1.1"
 description = "Langflow Policies component powered by ToolGuard."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -23,7 +23,7 @@ Repository = "https://github.com/langflow-ai/langflow"
 lfx-toolguard = "lfx_toolguard"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling==1.31.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]

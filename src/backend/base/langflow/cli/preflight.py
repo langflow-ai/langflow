@@ -256,13 +256,27 @@ async def probe_storage(settings_service: SettingsService) -> CheckResult:
 
 
 async def probe_secret_key(settings_service: SettingsService) -> CheckResult:
-    """Require an operator-supplied encryption secret key (not auto-generated).
+    """Require a usable operator-supplied encryption secret key (not auto-generated).
 
     Reads provenance from the environment because the materialized settings
     value is indistinguishable between env-supplied, file-loaded, and
     per-boot auto-generated keys.
     """
-    if os.environ.get("LANGFLOW_SECRET_KEY", "").strip():
+    secret_key = os.environ.get("LANGFLOW_SECRET_KEY", "")
+    if secret_key.strip():
+        from cryptography.fernet import Fernet
+
+        from langflow.services.auth.utils import ensure_fernet_key
+
+        try:
+            Fernet(ensure_fernet_key(secret_key))
+        except ValueError as exc:
+            return CheckResult(
+                "fail",
+                f"operator-supplied but unusable ({_short_exc(exc)})",
+                "Set LANGFLOW_SECRET_KEY to a URL-safe base64-encoded 32-byte key, such as the output of "
+                "Fernet.generate_key(), and use the same value in every replica.",
+            )
         return CheckResult("ok", "operator-supplied (LANGFLOW_SECRET_KEY)")
 
     config_dir = settings_service.settings.config_dir
@@ -277,7 +291,8 @@ async def probe_secret_key(settings_service: SettingsService) -> CheckResult:
     return CheckResult(
         "fail",
         "secret key is auto-generated per boot",
-        "Set LANGFLOW_SECRET_KEY to a stable, operator-provided value (32+ characters).",
+        "Set LANGFLOW_SECRET_KEY to a URL-safe base64-encoded 32-byte key, such as the output of "
+        "Fernet.generate_key(), and use the same value in every replica.",
     )
 
 
@@ -343,6 +358,54 @@ async def probe_pgvector(_settings_service: SettingsService) -> CheckResult:
 # ---------------------------------------------------------------------------
 # Degraded checks (warn only)
 # ---------------------------------------------------------------------------
+
+
+_MCP_SERVING_POSTURE: tuple[tuple[str, bool, str], ...] = (
+    ("skip_mcp_auto_init", True, "LANGFLOW_SKIP_MCP_AUTO_INIT"),
+    ("add_projects_to_mcp_servers", False, "LANGFLOW_ADD_PROJECTS_TO_MCP_SERVERS"),
+    ("mcp_composer_enabled", False, "LANGFLOW_MCP_COMPOSER_ENABLED"),
+    ("mcp_servers_locked", True, "LANGFLOW_MCP_SERVERS_LOCKED"),
+    ("mcp_sse_enabled", False, "LANGFLOW_MCP_SSE_ENABLED"),
+    ("mcp_server_interpreter_hardening", True, "LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING"),
+    ("mcp_server_docker_hardening", True, "LANGFLOW_MCP_SERVER_DOCKER_HARDENING"),
+    ("ssrf_protection_enabled", True, "LANGFLOW_SSRF_PROTECTION_ENABLED"),
+    ("connector_ssrf_validation_enabled", True, "LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED"),
+    ("connector_ssrf_allow_loopback", False, "LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK"),
+    ("disable_track_apikey_usage", True, "LANGFLOW_DISABLE_TRACK_APIKEY_USAGE"),
+)
+
+
+async def probe_mcp_posture(settings_service: SettingsService) -> CheckResult:
+    """Report MCP knobs left at a single-tenant default on a production boot.
+
+    Each of these defaults to the permissive value, so a multi-tenant serving plane must
+    override eleven settings by hand and nothing tells the operator when one is missed.
+    Degraded rather than required on purpose: promoting it to a boot failure would break
+    every existing ``prod`` deployment that has not adopted the list. The deploy job is
+    the right place to make the same list a hard precondition.
+    """
+    settings = settings_service.settings
+    if not settings.mcp_server_enabled:
+        return CheckResult("ok", "MCP server disabled (LANGFLOW_MCP_SERVER_ENABLED=false)")
+
+    unsafe = [env for attr, expected, env in _MCP_SERVING_POSTURE if getattr(settings, attr, expected) != expected]
+    if settings.mcp_server_allowed_packages is None:
+        unsafe.append("LANGFLOW_MCP_SERVER_ALLOWED_PACKAGES")
+    # Unset means the built-in runtime-family env policy is the only env control. That policy is
+    # deny-by-default and blocks the known loader/interpreter/package-source families, but a
+    # multi-tenant plane should pin the exact env names its servers may set.
+    if getattr(settings, "mcp_server_env_allowlist", None) is None:
+        unsafe.append("LANGFLOW_MCP_SERVER_ENV_ALLOWLIST")
+
+    if not unsafe:
+        return CheckResult("ok", "hardened for multi-tenant serving")
+
+    return CheckResult(
+        "warn",
+        f"{len(unsafe)} setting(s) at a single-tenant default: {', '.join(unsafe)}",
+        remediation="Set each listed variable to its multi-tenant-safe value, or set "
+        "LANGFLOW_MCP_SERVER_ENABLED=false if this plane does not serve MCP.",
+    )
 
 
 async def probe_telemetry(settings_service: SettingsService) -> CheckResult:
@@ -456,6 +519,7 @@ REQUIRED_CHECKS: list[PreflightCheck] = [
 ]
 
 DEGRADED_CHECKS: list[PreflightCheck] = [
+    PreflightCheck("mcp_posture", "MCP serving posture", "degraded", probe_mcp_posture),
     PreflightCheck("telemetry", "Telemetry", "degraded", probe_telemetry),
     PreflightCheck("cache", "Cache service", "degraded", probe_cache),
     PreflightCheck("shared_queue", "Shared queue (Redis)", "degraded", probe_shared_queue),

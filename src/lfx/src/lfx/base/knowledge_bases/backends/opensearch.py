@@ -168,6 +168,10 @@ class OpenSearchBackend(BaseVectorStoreBackend):
 
     backend_type = BackendType.OPENSEARCH
 
+    def normalize_score(self, score: float) -> float:
+        """Keep OpenSearch relevance scores, which are already higher-is-better."""
+        return float(score)
+
     def _resolve_index_name(self) -> str:
         """Resolve the effective index for this KB.
 
@@ -331,14 +335,21 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             return 0
 
     async def test_connection(self) -> TestConnectionResult:
-        """Validate auth + reachability via ``cluster.info()``.
+        """Validate auth + reachability via ``client.info()``.
 
         The LangChain wrapper builds lazily, so the default
         ``test_connection`` would only catch construction-time mistakes.
-        Calling ``cluster.info()`` on the raw ``opensearch-py`` client
+        Calling ``client.info()`` on the raw ``opensearch-py`` client
         exercises the same auth / SSL / DNS path ingestion uses, but
         without requiring the index to exist yet — operators commonly
         configure the backend before creating the index.
+
+        Semantics are liveness-only: ``client.info`` (``GET /``) needs the
+        ``cluster:monitor/main`` permission, which a least-privilege,
+        index-scoped account may not hold. A resulting 403 still proves the
+        cluster is reachable and the credentials authenticated, so it is
+        treated as a *successful* connection rather than a failure — KB
+        create/ingest relies on index-scoped permissions granted separately.
         """
         try:
             await self.ensure_ready()
@@ -405,10 +416,17 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                 details={"type": "AuthenticationException", "error": str(exc)},
             )
         except AuthorizationException as exc:
+            # A 403 proves liveness: DNS, TLS, the connection, and credential
+            # authentication all succeeded (a bad password raises 401
+            # AuthenticationException instead) — the cluster only declined the
+            # cluster:monitor/main permission that ``client.info`` needs. KB
+            # create/ingest uses separately-granted index-scoped permissions, so
+            # a least-privilege account that lacks cluster-monitor must still
+            # pass the connectivity check rather than fail creation with a 422.
             return TestConnectionResult(
-                ok=False,
-                message="Authorization failed. The user is reachable but lacks cluster permissions.",
-                details={"type": "AuthorizationException", "error": str(exc)},
+                ok=True,
+                message="Connected to OpenSearch (cluster-monitor not permitted; liveness confirmed).",
+                details={"type": "AuthorizationException", "reachable": True, "error": str(exc)},
             )
         except OpenSearchSSLError as exc:
             return TestConnectionResult(

@@ -18,6 +18,7 @@ from contextlib import asynccontextmanager
 from typing import Any
 from uuid import UUID
 
+from lfx.base.mcp.pydantic_compat import ensure_fastmcp_settings_ready
 from lfx.base.mcp.security import AGENTIC_USER_ID_ENV_VAR
 from lfx.log.logger import logger
 from mcp.server.fastmcp import Context, FastMCP
@@ -117,6 +118,7 @@ async def _service_lifespan(_server: FastMCP) -> AsyncIterator[dict]:
 
 
 # Initialize FastMCP server
+ensure_fastmcp_settings_ready()
 mcp = FastMCP("langflow-agentic", lifespan=_service_lifespan)
 
 DEFAULT_TEMPLATE_FIELDS = ["id", "name", "description", "tags", "endpoint_name", "icon"]

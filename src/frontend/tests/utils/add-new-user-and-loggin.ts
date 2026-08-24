@@ -1,16 +1,19 @@
-import { type Page } from "@playwright/test";
 import { expect } from "../fixtures";
 import { createActiveUserViaApi } from "./auth/manage-users-via-api";
 import { TEXTS } from "./constants/texts";
 import { waitForNewProjectButton } from "./flow/new-project-flow";
+import type { LangflowPage } from "./types";
 
-export const addNewUserAndLogin = async (page: Page) => {
+export const addNewUserAndLogin = async (page: LangflowPage) => {
   await page.route("**/api/v1/auto_login", (route) => {
     route.fulfill({
-      status: 500,
+      status: 403,
       contentType: "application/json",
       body: JSON.stringify({
-        detail: { auto_login: false },
+        detail: {
+          message: "Auto login is disabled.",
+          auto_login: false,
+        },
       }),
     });
   });

@@ -330,7 +330,7 @@ async def test_provider_read_purpose_rejects_unknown_values(
 ):
     response = await client.get(path, headers=logged_in_headers, params={"purpose": "discover"})
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 @pytest.mark.usefixtures("active_user")

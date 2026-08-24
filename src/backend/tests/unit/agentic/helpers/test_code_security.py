@@ -160,6 +160,43 @@ class TestScanCodeSecurityDangerousAttrCalls:
         result = scan_code_security(code)
         assert result.is_safe is False
 
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "import asyncio\nasync def run():\n    await asyncio.create_subprocess_exec('id')\n",
+                id="asyncio-create-subprocess-exec",
+            ),
+            pytest.param(
+                "import asyncio\nasync def run():\n    await asyncio.create_subprocess_shell('id')\n",
+                id="asyncio-create-subprocess-shell",
+            ),
+            pytest.param(
+                "import asyncio\nasync def run():\n    await asyncio.subprocess.create_subprocess_exec('id')\n",
+                id="asyncio-subprocess-create-subprocess-exec",
+            ),
+            pytest.param(
+                "import asyncio\nasync def run():\n    await asyncio.subprocess.create_subprocess_shell('id')\n",
+                id="asyncio-subprocess-create-subprocess-shell",
+            ),
+            pytest.param(
+                "import asyncio\nasync def run():\n    factory = getattr(asyncio, 'subprocess')\n"
+                "    await factory.create_subprocess_exec('id')\n",
+                id="computed-asyncio-subprocess-getattr",
+            ),
+            pytest.param("import os\nos.posix_spawn('/bin/id', ['id'], {})\n", id="os-posix-spawn"),
+            pytest.param("import os\nos.posix_spawnp('id', ['id'], {})\n", id="os-posix-spawnp"),
+            pytest.param("import posix\nposix.system('id')\n", id="posix-system"),
+            pytest.param(
+                "import multiprocessing\np = multiprocessing.Process(target=print)\np.start()\n",
+                id="multiprocessing-process",
+            ),
+        ],
+    )
+    def test_should_detect_reported_process_spawning_bypasses(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+
 
 class TestScanCodeSecurityDangerousImports:
     """Tests that dangerous imports are detected."""
@@ -1071,6 +1108,36 @@ class TestScanCodeSecurityRuntimeModuleBypass:
         result = scan_code_security("field = 'value'\nvalue = getattr(self, field, None)")
         assert result.is_safe is True
 
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "getattr(().__class__.__bases__[0], '__sub' + 'classes__')()",
+                id="computed-receiver",
+            ),
+            pytest.param(
+                "target = object\ngetattr(target, '__sub' + 'classes__')()",
+                id="name-receiver",
+            ),
+            pytest.param(
+                "__builtins__.getattr(object, '__sub' + 'classes__')()",
+                id="qualified-builtins-dict",
+            ),
+            pytest.param(
+                "reflect = __builtins__.getattr\nreflect(object, '__sub' + 'classes__')()",
+                id="aliased-builtins-dict",
+            ),
+        ],
+    )
+    def test_should_detect_computed_dangerous_dunder_getattr(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("__subclasses__" in violation for violation in result.violations)
+
+    def test_should_allow_computed_safe_getattr_on_ordinary_object(self):
+        result = scan_code_security("getattr(record, 'display' + '_name', None)")
+        assert result.is_safe is True
+
     def test_should_detect_reflective_call_through_assignment_alias(self):
         result = scan_code_security("import os\nmodule = os\ngetattr(module, 'system')('id')")
         assert result.is_safe is False
@@ -1139,4 +1206,207 @@ class TestScanCodeSecurityDottedSubmoduleAccess:
 
     def test_should_allow_os_path_dotted_access(self):
         result = scan_code_security("import os\np = os.path.join('a', 'b')")
+        assert result.is_safe is True
+
+
+class TestScanCodeSecurityEscapingBindingBypass:
+    """Name bindings that outlive the scanner's scope must be checked at the assignment.
+
+    Alias tracking normally defers the check to the use site: ``module = os`` is
+    fine because ``module.system(...)`` is still resolvable. That deferral is only
+    sound while the binding stays visible to the scanner. Two bindings escape it:
+
+    * a class body binds a *class attribute*, later read as ``self.x`` / ``Cls.x``,
+      which alias tracking cannot relate back to the module or callable;
+    * ``global`` / ``nonlocal`` publish the binding into a scope the scanner has
+      already restored by the time the reader is visited.
+
+    Both must therefore be treated as opaque boundaries at the assignment itself.
+    """
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "import os\n_os = os\n\n\nclass C:\n    _fn: object = _os.system\n\n"
+                "    def run(self):\n        return self._fn('id')\n",
+                id="annotated-class-attribute-alias",
+            ),
+            pytest.param(
+                "import os\n_os = os\n\n\nclass C:\n    _fn = _os.system\n\n"
+                "    def run(self):\n        return self._fn('id')\n",
+                id="plain-class-attribute-alias",
+            ),
+            pytest.param(
+                "import os\n\n\nclass C:\n    _fn: object = os.system\n\n"
+                "    def run(self):\n        return self._fn('id')\n",
+                id="class-attribute-direct-module-member",
+            ),
+            pytest.param(
+                "import os\n_a = os\n_b = _a\n\n\nclass C:\n    _fn = _b.system\n\n"
+                "    def run(self):\n        return self._fn('id')\n",
+                id="class-attribute-transitive-alias",
+            ),
+            pytest.param(
+                "import os\n\n\nclass C:\n    _fn = os.popen\n\n    def run(self):\n        return self._fn('id')\n",
+                id="class-attribute-os-popen",
+            ),
+            pytest.param(
+                "import os\n\n\nclass C:\n    _mod = os\n\n    def run(self):\n        return self._mod.system('id')\n",
+                id="class-attribute-module-object",
+            ),
+            pytest.param(
+                "import os\n\n\nclass C:\n    _env = os.environ\n\n"
+                "    def run(self):\n        return dict(self._env)\n",
+                id="class-attribute-environ-read",
+            ),
+            pytest.param(
+                "class C:\n    _fn = exec\n\n    def run(self):\n        return self._fn('import os')\n",
+                id="class-attribute-builtin-exec",
+            ),
+            pytest.param(
+                "class C:\n    _fn = open\n\n    def run(self):\n        return self._fn('/etc/passwd')\n",
+                id="class-attribute-builtin-open",
+            ),
+            pytest.param(
+                "import os\n\n\nclass C:\n    _a, _b = os.system, os.popen\n",
+                id="class-attribute-tuple-unpack",
+            ),
+            pytest.param(
+                "import os\n\n\nclass Outer:\n    class Inner:\n        _fn = os.system\n",
+                id="nested-class-attribute",
+            ),
+            pytest.param(
+                "import os\n\n\nclass C:\n    _fn = os.system\n\n\nC._fn('id')\n",
+                id="class-attribute-read-from-outside",
+            ),
+            pytest.param(
+                "import os\n\n\ndef bind():\n    global _fn\n\n    _fn = os.system\n\n\n"
+                "def run():\n    return _fn('id')\n",
+                id="global-declared-binding",
+            ),
+            pytest.param(
+                "import os\n\n\ndef outer():\n    _fn = None\n\n    def bind():\n        nonlocal _fn\n\n"
+                "        _fn = os.system\n\n    return bind\n",
+                id="nonlocal-declared-binding",
+            ),
+            pytest.param(
+                "import os\n\n\nclass C:\n    for _fn in (os.system,):\n        pass\n\n"
+                "    def run(self):\n        return self._fn('id')\n",
+                id="class-body-loop-target",
+            ),
+            pytest.param(
+                "class C:\n    import os as _os\n\n    def run(self):\n        return self._os.system('id')\n",
+                id="class-body-import",
+            ),
+            pytest.param(
+                "class C:\n    from os import path as _p\n\n    def run(self):\n        return self._p.os.getcwd()\n",
+                id="class-body-from-import-of-os-path",
+            ),
+            pytest.param(
+                "import os\n\n\nclass C:\n    _fns = [fn for fn in (os.system,)]\n",
+                id="class-body-comprehension",
+            ),
+            pytest.param(
+                "import os\n\nFLAG = True\n\n\nclass C:\n    if FLAG:\n        _fn = os.system\n"
+                "    else:\n        _fn = print\n",
+                id="class-body-conditional-branch",
+            ),
+            pytest.param(
+                "import os\n\n\nclass C:\n    try:\n        _fn = os.system\n"
+                "    except Exception:\n        _fn = print\n",
+                id="class-body-try-except",
+            ),
+            pytest.param(
+                "import os\n\n\ndef make():\n    class C:\n        _fn = os.system\n\n    return C\n",
+                id="class-body-inside-function",
+            ),
+        ],
+    )
+    def test_should_detect_escaping_binding_of_dangerous_value(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+
+    def test_should_report_os_system_for_reported_class_attribute_shape(self):
+        code = """
+import os
+
+_os = os
+
+
+class MyComponent:
+    _fn: object = _os.system
+
+    def run(self):
+        return self._fn("id")
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.system()" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "from lfx.custom import Component\n"
+                "from lfx.io import MessageTextInput, Output\n\n\n"
+                "class MyComponent(Component):\n"
+                '    display_name = "My Component"\n'
+                '    description = "What it does"\n'
+                '    icon = "component-icon"\n'
+                '    documentation: str = "https://docs.langflow.org"\n'
+                '    inputs = [MessageTextInput(name="input_value", display_name="Input")]\n'
+                '    outputs = [Output(display_name="Output", name="output", method="process")]\n\n'
+                "    def process(self):\n"
+                "        return self.input_value\n",
+                id="component-shaped-class-body",
+            ),
+            pytest.param(
+                "import os\n\n\nclass C:\n    _sep = os.sep\n\n    def run(self):\n        return self._sep\n",
+                id="class-attribute-os-sep",
+            ),
+            pytest.param(
+                "import os\n\n\nclass C:\n    _join = os.path.join\n\n"
+                "    def run(self):\n        return self._join('a', 'b')\n",
+                id="class-attribute-os-path-join",
+            ),
+            pytest.param(
+                "import requests\n\n\nclass C:\n    _client = requests\n\n"
+                "    def run(self):\n        return self._client.get('https://example.com')\n",
+                id="class-attribute-safe-module",
+            ),
+            pytest.param("def bind():\n    global _count\n\n    _count = 0\n", id="global-constant"),
+            pytest.param(
+                "import requests\n\n\ndef bind():\n    global _client\n\n    _client = requests\n",
+                id="global-safe-module",
+            ),
+            pytest.param(
+                "class C:\n    from os import sep as _sep\n\n    def run(self):\n        return self._sep\n",
+                id="class-body-from-import-safe-member",
+            ),
+            pytest.param(
+                "class C:\n    import requests as _requests\n\n"
+                "    def run(self):\n        return self._requests.get('https://x')\n",
+                id="class-body-import-safe-module",
+            ),
+            pytest.param("class C:\n    for _n in (1, 2, 3):\n        pass\n", id="class-body-loop-over-constants"),
+            pytest.param(
+                "def helper(value):\n    return value\n\n\nclass C:\n    _helper = helper\n\n"
+                "    def run(self):\n        return self._helper('x')\n",
+                id="class-attribute-local-helper",
+            ),
+            pytest.param(
+                "import os\n\n\nclass C:\n    def run(self):\n        module = os\n        module = object()\n"
+                "        return module.system('not os')\n",
+                id="method-local-alias-stays-deferred",
+            ),
+        ],
+    )
+    def test_should_allow_safe_escaping_binding(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is True
+
+    def test_should_still_allow_module_alias_deferred_to_use_site(self):
+        """The alias deferral itself must survive: ``module = os`` alone is not a violation."""
+        result = scan_code_security("import os\nmodule = os\nmodule = object()\nmodule.system('not os')")
         assert result.is_safe is True

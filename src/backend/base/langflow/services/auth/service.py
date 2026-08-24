@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
+import secrets
+import time
 import warnings
+from collections import OrderedDict
 from collections.abc import Awaitable, Callable, Coroutine, Iterable, Mapping
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
@@ -27,6 +31,8 @@ from langflow.services.auth.context import (
     set_current_auth_context,
 )
 from langflow.services.auth.exceptions import (
+    AuthBackendUnavailableError,
+    AuthenticationError,
     InactiveUserError,
     InvalidCredentialsError,
     MissingCredentialsError,
@@ -57,6 +63,147 @@ from langflow.services.schema import ServiceType
 _MAX_EXTERNAL_AUTHORIZATION_GROUPS = 500
 _MAX_EXTERNAL_AUTHORIZATION_GROUP_LENGTH = 256
 _MAX_EXTERNAL_GROUP_CLAIM_PATH_DEPTH = 16
+_MAX_DIRECTORY_RECONCILE_CACHE_ENTRIES = 10_000
+_MAX_EXTERNAL_AUTH_ATTEMPTS = 3
+_EXTERNAL_AUTH_RETRY_BACKOFF_SECONDS = 0.02
+
+# SQLSTATE classes that mean "the transaction was rolled back, retry it": the
+# statement never took effect, so nothing the caller sent was rejected.
+_RETRYABLE_SQLSTATES = frozenset(
+    {
+        "40001",  # serialization_failure
+        "40P01",  # deadlock_detected
+        "55P03",  # lock_not_available
+    }
+)
+
+
+def _is_retryable_backend_failure(exc: BaseException) -> bool:
+    """Return whether an exception is a transient backend failure, not a verdict.
+
+    A deadlock victim, a serialization failure or a lost connection all mean the
+    request never got an answer. Reporting those as an authentication failure
+    tells the caller to fix a credential that was never actually rejected.
+    """
+    from sqlalchemy.exc import DBAPIError, InterfaceError, OperationalError
+    from sqlalchemy.exc import TimeoutError as SQLTimeoutError
+
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if isinstance(current, (InterfaceError, OperationalError, SQLTimeoutError)):
+            return True
+        if isinstance(current, DBAPIError):
+            if current.connection_invalidated:
+                return True
+            orig = current.orig
+            # psycopg3 exposes ``sqlstate``; psycopg2 exposes ``pgcode``.
+            sqlstate = getattr(orig, "sqlstate", None) or getattr(orig, "pgcode", None)
+            if isinstance(sqlstate, str) and sqlstate in _RETRYABLE_SQLSTATES:
+                return True
+        current = current.__cause__ or current.__context__
+    return False
+
+
+class _DirectoryReconcileCache:
+    """Bounded, short-lived record of the last directory state reconciled per user.
+
+    LE-2109: bearer tokens arrive on every request, and reconciliation opens a
+    transaction, takes the authorization plugin's policy locks and appends an
+    audit row. Repeating all of that for a directory state that has not moved
+    is pure overhead, so one successful *no-op* pass is remembered for a short
+    interval.
+
+    The cache holds at most one entry per user: the exact state the last
+    confirming pass verified. A request is skipped only while that entry is
+    fresh *and* carries the same state, so any claim that differs from the
+    last reconciled state misses by construction - including a state that
+    was cached earlier and has since been moved past. Keying by state alone
+    would let ``[devs]`` cached before a promotion to ``[admins, devs]`` keep
+    serving after the IdP revokes ``admins`` again, holding the admin role
+    until the entry aged out.
+
+    Two rules keep an entry from outliving the state it verified when passes
+    for one user overlap (an old and a new token in flight together):
+
+    * :meth:`begin` records a miss. It drops the user's entry, because the
+      claim being reconciled supersedes it, and hands the pass a ticket. Only
+      the pass holding the user's *latest* ticket may :meth:`remember`.
+    * :meth:`invalidate` is called after a pass changed the stored state. It
+      drops the entry and revokes the outstanding ticket, so a concurrent
+      no-op pass that verified the *previous* state cannot re-cache it after
+      the change landed.
+
+    One slot per user is deliberate: a user alternating between two different
+    identities (two providers, or two subjects) simply misses on each switch
+    and reconciles - never a stale hit, only less caching for that edge case.
+
+    Entries are per-process and expire on their own, so the worst case is that
+    an out-of-band directory change (one that arrives with the *same* claim)
+    is observed one interval late.
+    """
+
+    def __init__(self, *, max_entries: int = _MAX_DIRECTORY_RECONCILE_CACHE_ENTRIES) -> None:
+        self._max_entries = max_entries
+        # user key -> (verified state, monotonic deadline)
+        self._entries: OrderedDict[str, tuple[tuple[object, ...], float]] = OrderedDict()
+        # user key -> ticket of the latest pass that began for the user
+        self._tickets: OrderedDict[str, int] = OrderedDict()
+        self._last_ticket = 0
+
+    def is_fresh(self, user_key: str, state: tuple[object, ...], *, now: float) -> bool:
+        entry = self._entries.get(user_key)
+        if entry is None:
+            return False
+        verified_state, deadline = entry
+        if deadline <= now:
+            del self._entries[user_key]
+            return False
+        return verified_state == state
+
+    def begin(self, user_key: str) -> int:
+        """Record a cache miss and return the ticket the pass must present to remember its result."""
+        self._entries.pop(user_key, None)
+        self._last_ticket += 1
+        self._tickets.pop(user_key, None)
+        self._tickets[user_key] = self._last_ticket
+        while len(self._tickets) > self._max_entries:
+            self._tickets.popitem(last=False)
+        return self._last_ticket
+
+    def remember(
+        self,
+        user_key: str,
+        state: tuple[object, ...],
+        *,
+        ticket: int,
+        now: float,
+        ttl_seconds: float,
+    ) -> None:
+        if ttl_seconds <= 0:
+            return
+        if self._tickets.get(user_key) != ticket:
+            # A newer pass began for this user, or a change landed, after this
+            # pass verified its state: that verdict is stale and must not
+            # become the entry.
+            return
+        del self._tickets[user_key]
+        self._purge_expired(now)
+        self._entries.pop(user_key, None)
+        self._entries[user_key] = (state, now + ttl_seconds)
+        while len(self._entries) > self._max_entries:
+            self._entries.popitem(last=False)
+
+    def invalidate(self, user_key: str) -> None:
+        """Forget the user's entry and revoke any in-flight ticket after their stored state changed."""
+        self._entries.pop(user_key, None)
+        self._tickets.pop(user_key, None)
+
+    def _purge_expired(self, now: float) -> None:
+        expired = [key for key, (_, deadline) in self._entries.items() if deadline <= now]
+        for key in expired:
+            del self._entries[key]
 
 
 def _has_external_group_overage(claims: Mapping[str, object], claim_path: tuple[str, ...]) -> bool:
@@ -157,6 +304,7 @@ class AuthService(BaseAuthService):
 
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
+        self._directory_reconcile_cache = _DirectoryReconcileCache()
         self.set_ready()
 
     @property
@@ -233,6 +381,12 @@ class AuthService(BaseAuthService):
         if token:
             try:
                 return await self._authenticate_with_token(token, db)
+            except AuthBackendUnavailableError:
+                # A backend outage is not a credential verdict, so there is
+                # nothing for the remaining credentials to disambiguate. Retrying
+                # them would only widen the outage's blast radius, and answering
+                # 401 would blame a token that was never rejected.
+                raise
             except (AuthInvalidTokenError, TokenExpiredError, InactiveUserError) as e:
                 # Native auth failed. If a *distinct* external credential was
                 # extracted, try it before surfacing the native error so a present
@@ -438,9 +592,39 @@ class AuthService(BaseAuthService):
             AuthCredentialContext(method=AUTH_METHOD_EXTERNAL, external_provider=identity.provider)
         )
         set_current_external_access_context(access_context_from_identity(identity, self.settings.auth_settings))
-        user = await self._materialize_external_user(identity, db)
-        await self._reconcile_verified_external_groups(identity=identity, user=user, db=db)
-        return user
+        # The credential has already verified here. Materialization and group
+        # reconciliation own everything staged on this session, so a conflict
+        # that rolled the transaction back can be replayed from scratch: a
+        # deadlock victim, a serialization failure, or two concurrent logins
+        # racing to create the same row. What must never happen is reporting
+        # any of those as a failed authentication — nothing was rejected.
+        for attempt in range(1, _MAX_EXTERNAL_AUTH_ATTEMPTS + 1):
+            try:
+                user = await self._materialize_external_user(identity, db)
+                await self._reconcile_verified_external_groups(identity=identity, user=user, db=db)
+            except AuthenticationError:
+                raise
+            except Exception as exc:
+                retryable = _is_retryable_backend_failure(exc)
+                if not retryable and not isinstance(exc, IntegrityError):
+                    raise
+                await db.rollback()
+                if attempt >= _MAX_EXTERNAL_AUTH_ATTEMPTS:
+                    logger.warning(
+                        "External identity resolved but its backend work kept failing for provider=%s: %s: %s",
+                        identity.provider,
+                        type(exc).__name__,
+                        exc,
+                    )
+                    if not retryable:
+                        raise
+                    raise AuthBackendUnavailableError from exc
+                # Jitter so two requests that conflicted do not line up again.
+                await asyncio.sleep(_EXTERNAL_AUTH_RETRY_BACKOFF_SECONDS * attempt * (1 + secrets.randbelow(100) / 100))
+            else:
+                return user
+        msg = "unreachable: the final attempt either returns or raises"
+        raise AssertionError(msg)
 
     async def _reconcile_verified_external_groups(
         self,
@@ -535,6 +719,37 @@ class AuthService(BaseAuthService):
         elif complete and not groups:
             claim_state = DirectoryMembershipClaimState.EMPTY
 
+        # LE-2109: bearer tokens arrive on every request. Reconciliation writes
+        # rows, takes the plugin's policy locks and appends an audit entry, so
+        # a directory state that was verified unchanged a moment ago is skipped
+        # until the configured interval elapses. The cache remembers only the
+        # *last* reconciled state per user, so a claim whose group set, claim
+        # state or identity differs from that state reconciles immediately -
+        # even a group set that was itself cached earlier and has since been
+        # moved past (a promotion followed by a revocation).
+        reconcile_interval = float(self.settings.auth_settings.EXTERNAL_AUTH_GROUP_RECONCILE_INTERVAL_SECONDS)
+        cache_user = str(user.id)
+        cache_state = (
+            identity.provider,
+            identity.subject,
+            claim_name,
+            claim_state.value if claim_state is not None else None,
+            complete,
+            groups,
+        )
+        now = time.monotonic()
+        if reconcile_interval > 0 and self._directory_reconcile_cache.is_fresh(cache_user, cache_state, now=now):
+            # Skipping reconciliation must not skip the JIT/profile bookkeeping
+            # that materializing the user staged on this session.
+            await db.commit()
+            return
+        # This claim is about to be reconciled, so whatever the cache holds
+        # for the user describes a state that is being superseded: begin()
+        # drops it and hands this pass the ticket it must present to be
+        # remembered, so an overlapping pass for the same user can never
+        # re-cache a state a later pass moved past.
+        cache_ticket = self._directory_reconcile_cache.begin(cache_user)
+
         if not complete:
             assert claim_state is not None  # noqa: S101 - internal state-machine invariant
             logger.warning(
@@ -564,6 +779,13 @@ class AuthService(BaseAuthService):
                         "authoritative": False,
                         "complete": False,
                     },
+                )
+                self._directory_reconcile_cache.remember(
+                    cache_user,
+                    cache_state,
+                    ticket=cache_ticket,
+                    now=now,
+                    ttl_seconds=reconcile_interval,
                 )
                 return
 
@@ -606,6 +828,11 @@ class AuthService(BaseAuthService):
             changed = bool(getattr(result, "changed", True))
             added = getattr(result, "added", None)
             removed = getattr(result, "removed", None)
+        if changed:
+            # The stored state just moved. Whatever the cache holds for the
+            # user, and any pass still in flight that verified the previous
+            # state, must not be served or remembered after this commit.
+            self._directory_reconcile_cache.invalidate(cache_user)
 
         if not complete:
             assert claim_state is not None  # noqa: S101 - internal state-machine invariant
@@ -623,6 +850,14 @@ class AuthService(BaseAuthService):
                     authorization_service,
                     user_id=user.id,
                     changed=True,
+                )
+            else:
+                self._directory_reconcile_cache.remember(
+                    cache_user,
+                    cache_state,
+                    ticket=cache_ticket,
+                    now=now,
+                    ttl_seconds=reconcile_interval,
                 )
             return
 
@@ -643,6 +878,18 @@ class AuthService(BaseAuthService):
             user_id=user.id,
             changed=changed,
         )
+        if not changed:
+            # Only a reconciliation that verified the stored state already
+            # matched the claim is safe to skip next time. A pass that changed
+            # something gets one confirming pass before the interval starts, so
+            # a post-commit propagation retry is never hidden by the cache.
+            self._directory_reconcile_cache.remember(
+                cache_user,
+                cache_state,
+                ticket=cache_ticket,
+                now=now,
+                ttl_seconds=reconcile_interval,
+            )
 
     async def _authenticate_with_api_key(self, api_key: str) -> UserRead | None:
         """Internal method to authenticate with API key (raises generic exceptions).
@@ -1446,6 +1693,16 @@ class AuthService(BaseAuthService):
                     detail="Missing first superuser credentials",
                 )
             if not query_param and not header_param:
+                # AUTO_LOGIN parity with _api_key_security_impl / ws_api_key_security:
+                # AUTO_LOGIN on its own is not a credential. Only an explicit
+                # skip_auth_auto_login opt-in may resolve a credential-less caller to
+                # the superuser; otherwise the MCP transport endpoints would accept
+                # anonymous requests that every other authenticated route rejects.
+                if not settings_service.auth_settings.skip_auth_auto_login:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=AUTO_LOGIN_ERROR,
+                    )
                 result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
                 if result:
                     logger.warning(AUTO_LOGIN_WARNING)

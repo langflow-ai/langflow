@@ -90,10 +90,11 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "assemblyai": ["assemblyai>=0.33.0,<1.0.0"],
     "confluence": ["atlassian-python-api==3.41.16", _LC_COMMUNITY],
     "firecrawl": ["firecrawl-py>=1.0.16,<2.0.0"],
-    "git": ["GitPython>=3.1.50", _LC_COMMUNITY],
+    "git": ["GitPython>=3.1.58", _LC_COMMUNITY],
     "glean": [],  # httpx + pydantic only (lfx core)
     "icosacomputing": ["requests>=2.32.0"],
     "mem0": ["mem0ai>=2.0.2,<3.0.0"],
+    "mrscraper": ["mrscraper-sdk>=0.2.1,<0.3.0"],
     "needle": ["needle-python>=0.4.0", _LC_COMMUNITY],
     "scrapegraph": ["scrapegraph-py>=1.12.0"],
     "serpapi": ["google-search-results>=2.4.1,<3.0.0", _LC_COMMUNITY],
@@ -143,12 +144,14 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "codeagents": [
         "smolagents>=1.8.0",
         "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",  # noqa: E501
+        # Temporary compatibility valve: newer releases require cryptography<49.
+        "langchain-litellm==0.5.1; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",  # noqa: E501
     ],
     # --- tranche 8: agent/model SDKs (needed the lfx dynamic-import test decoupling) ---
     "composio": ["composio==0.9.2", "composio-langchain==0.9.2"],
     "huggingface": [
         "langchain-huggingface~=1.2.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
-        "huggingface-hub[inference]>=1.0.0,<2.0.0",
+        "huggingface-hub>=1.0.0,<2.0.0",
         _LC_COMMUNITY,
     ],
     "nvidia": [
@@ -159,6 +162,9 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "cuga": [
         "cuga>=0.2.20,<0.3.0; sys_platform != 'darwin' and python_version < '3.14'",
         "cuga>=0.2.20,<0.3.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
+        # Temporary compatibility valve: newer releases require cryptography<49.
+        "langchain-litellm==0.5.1; sys_platform != 'darwin' and python_version < '3.14'",
+        "langchain-litellm==0.5.1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",  # noqa: E501
     ],
     # --- tranche 9: langwatch evaluator (pure httpx REST; the langwatch SDK extra
     # is for the tracing service, not this component) ---

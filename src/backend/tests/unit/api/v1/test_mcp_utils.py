@@ -1,5 +1,6 @@
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
+from uuid import uuid4
 
 import pytest
 from langflow.api.utils.core import extract_global_variables_from_headers
@@ -9,6 +10,7 @@ from langflow.services.database.models import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
 from lfx.interface.components import component_cache
+from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
 
 
 class FakeResult:
@@ -142,6 +144,8 @@ async def test_handle_list_tools_skips_blocked_custom_flows(monkeypatch):
     finally:
         mcp_utils.current_user_ctx.reset(token)
 
+    # The global server is the editor-plane surface, where an empty list is a normal
+    # state; only the project endpoint raises. See test_mcp_failure_reporting.py.
     assert tools == []
 
 
@@ -434,19 +438,57 @@ def _build_fake_server() -> SimpleNamespace:
     )
 
 
-async def _invoke_handle_call_tool(monkeypatch, arguments: dict) -> AsyncMock:
-    """Run handle_call_tool with all external deps stubbed; return the simple_run_flow mock."""
+def test_public_mcp_session_namespace_is_stable_and_isolated():
+    """Namespaces are stable per connection and isolated by connection, project, and flow."""
+    project_id = uuid4()
+    flow_id = uuid4()
+    server = SimpleNamespace(request_context=SimpleNamespace(session=SimpleNamespace(session_id="connection-a")))
+
+    namespace = mcp_utils._public_mcp_session_namespace(server, project_id, flow_id)
+
+    assert mcp_utils._public_mcp_session_namespace(server, project_id, flow_id) == namespace
+    assert mcp_utils._public_mcp_session_namespace(server, uuid4(), flow_id) != namespace
+    assert mcp_utils._public_mcp_session_namespace(server, project_id, uuid4()) != namespace
+
+    other_server = SimpleNamespace(request_context=SimpleNamespace(session=SimpleNamespace(session_id="connection-b")))
+    assert mcp_utils._public_mcp_session_namespace(other_server, project_id, flow_id) != namespace
+
+
+async def _invoke_handle_call_tool(
+    monkeypatch,
+    arguments: dict,
+    *,
+    authenticated_caller="user-1",
+    project_id=None,
+    flow_data=None,
+    expected_error: str | None = None,
+) -> AsyncMock:
+    """Run handle_call_tool with all external deps stubbed; return the simple_run_flow mock.
+
+    ``authenticated_caller`` is the principal that presented a credential, which the auth
+    dependency establishes before the handler runs. It is not the same as the principal the
+    flow executes as: a project with ``auth_type="none"`` executes as its owner for an
+    anonymous caller, so the handler cannot read ownership off the execution principal.
+    """
     # ``user_id`` matches the current user (see ``current_user_ctx`` below) so the
     # owner-override path in ``ensure_flow_permission`` is exercised; ``workspace_id``
     # is read by the same guard. ``data`` feeds the HITL support gate.
     flow = SimpleNamespace(
-        id="flow-id-1",
+        id=uuid4(),
         name="my_flow",
-        folder_id=None,
+        folder_id=project_id,
         user_id="user-1",
         workspace_id=None,
-        data={"nodes": [], "edges": []},
+        data=flow_data or {"nodes": [], "edges": []},
     )
+
+    def model_copy(*, update, deep):
+        assert deep is True
+        copied = vars(flow).copy()
+        copied.update(update)
+        return SimpleNamespace(**copied)
+
+    flow.model_copy = model_copy
 
     async def fake_get_flow_snake_case(*_args, **_kwargs):
         return flow
@@ -461,16 +503,115 @@ async def _invoke_handle_call_tool(monkeypatch, arguments: dict) -> AsyncMock:
     mcp_utils.get_mcp_config().enable_progress_notifications = False
 
     token = mcp_utils.current_user_ctx.set(SimpleNamespace(id="user-1"))
+    caller_token = mcp_utils.authenticated_caller_ctx.set(authenticated_caller)
     try:
-        await mcp_utils.handle_call_tool(
-            name="my_flow",
-            arguments=arguments,
-            server=_build_fake_server(),
-        )
+        if expected_error is None:
+            await mcp_utils.handle_call_tool(
+                name="my_flow",
+                arguments=arguments,
+                server=_build_fake_server(),
+                project_id=project_id,
+            )
+        else:
+            with pytest.raises(RuntimeError, match=expected_error):
+                await mcp_utils.handle_call_tool(
+                    name="my_flow",
+                    arguments=arguments,
+                    server=_build_fake_server(),
+                    project_id=project_id,
+                )
     finally:
+        mcp_utils.authenticated_caller_ctx.reset(caller_token)
         mcp_utils.current_user_ctx.reset(token)
 
     return simple_run_flow_mock
+
+
+async def test_handle_call_tool_applies_public_policy_and_scopes_session(monkeypatch):
+    project_id = uuid4()
+    prepared_data = {"nodes": [{"prepared": True}], "edges": []}
+    sanitized_data = {"nodes": [{"sanitized": True}], "edges": []}
+    validate = MagicMock()
+    prepare = AsyncMock(return_value=prepared_data)
+    strip = MagicMock(return_value=sanitized_data)
+    monkeypatch.setattr(mcp_utils, "validate_public_flow_no_code_execution", validate)
+    monkeypatch.setattr(mcp_utils, "prepare_public_flow_build", prepare)
+    monkeypatch.setattr(mcp_utils, "strip_secret_field_values", strip)
+
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello", "session_id": "owner-private"},
+        authenticated_caller=None,
+        project_id=project_id,
+    )
+
+    validate.assert_called_once()
+    prepare.assert_awaited_once()
+    strip.assert_called_once_with(prepared_data)
+    forwarded_flow = simple_run_flow_mock.await_args.kwargs["flow"]
+    forwarded_request = simple_run_flow_mock.await_args.kwargs["input_request"]
+    forwarded_user = simple_run_flow_mock.await_args.kwargs["api_key_user"]
+    assert forwarded_flow.data == sanitized_data
+    assert forwarded_request.session_id != "owner-private"
+    assert forwarded_request.session_id.endswith(":owner-private")
+    assert forwarded_user.id == PUBLIC_ANONYMOUS_ACTOR_ID
+    assert forwarded_user.is_superuser is False
+
+
+async def test_handle_call_tool_rejects_public_flow_validation_failure(monkeypatch):
+    validate = MagicMock(side_effect=mcp_utils.CustomComponentValidationError("custom code is not allowed"))
+    prepare = AsyncMock()
+    monkeypatch.setattr(mcp_utils, "validate_public_flow_no_code_execution", validate)
+    monkeypatch.setattr(mcp_utils, "prepare_public_flow_build", prepare)
+
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello"},
+        authenticated_caller=None,
+        project_id=uuid4(),
+        expected_error="cannot be executed through a public MCP project",
+    )
+
+    validate.assert_called_once()
+    prepare.assert_not_awaited()
+    simple_run_flow_mock.assert_not_awaited()
+
+
+async def test_handle_call_tool_rejects_public_flow_prepare_failure(monkeypatch):
+    validate = MagicMock()
+    prepare = AsyncMock(side_effect=mcp_utils.CustomComponentValidationError("invalid public flow"))
+    monkeypatch.setattr(mcp_utils, "validate_public_flow_no_code_execution", validate)
+    monkeypatch.setattr(mcp_utils, "prepare_public_flow_build", prepare)
+
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello"},
+        authenticated_caller=None,
+        project_id=uuid4(),
+        expected_error="cannot be executed through a public MCP project",
+    )
+
+    validate.assert_called_once()
+    prepare.assert_awaited_once()
+    simple_run_flow_mock.assert_not_awaited()
+
+
+async def test_handle_call_tool_preserves_authenticated_mcp_session(monkeypatch):
+    prepare = AsyncMock()
+    monkeypatch.setattr(mcp_utils, "prepare_public_flow_build", prepare)
+
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello", "session_id": "user-thread"},
+        authenticated_caller="user-1",
+        project_id=uuid4(),
+    )
+
+    prepare.assert_not_awaited()
+    forwarded_request = simple_run_flow_mock.await_args.kwargs["input_request"]
+    forwarded_user = simple_run_flow_mock.await_args.kwargs["api_key_user"]
+    assert forwarded_request.session_id == "user-thread"
+    assert forwarded_user.id == "user-1"
 
 
 @pytest.mark.asyncio
@@ -485,6 +626,36 @@ async def test_handle_call_tool_uses_provided_session_id(monkeypatch):
     forwarded_request = simple_run_flow_mock.await_args.kwargs["input_request"]
     assert forwarded_request.session_id == "user-1-thread-7"
     assert forwarded_request.input_value == "hello"
+    assert simple_run_flow_mock.await_args.kwargs["expose_error_details"] is True
+
+
+@pytest.mark.asyncio
+async def test_handle_call_tool_hides_error_details_from_an_anonymous_caller(monkeypatch):
+    """A public project runs as its owner, so ownership cannot be read off the executor.
+
+    ``auth_type="none"`` establishes no caller. Comparing the execution principal to the
+    flow owner answered yes for everyone and handed anonymous callers the owner's raw
+    component errors, so the absence of a caller has to read as anonymous.
+    """
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello"},
+        authenticated_caller=None,
+    )
+
+    assert simple_run_flow_mock.await_args.kwargs["expose_error_details"] is False
+
+
+@pytest.mark.asyncio
+async def test_handle_call_tool_hides_error_details_from_a_different_user(monkeypatch):
+    """Authenticating as somebody else must not disclose the owner's internals either."""
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello"},
+        authenticated_caller="user-2",
+    )
+
+    assert simple_run_flow_mock.await_args.kwargs["expose_error_details"] is False
 
 
 @pytest.mark.asyncio

@@ -68,6 +68,47 @@ class ModelProviderPolicyPurpose(str, Enum):
     USE = "use"
 
 
+# Blocked-model keys reuse the persisted model-status identity grammar
+# (``model``, ``provider::model``, ``provider::<type>::model``) so admins block
+# exactly the identities users see in the model picker. The grammar constants
+# are mirrored here instead of imported: ``unified_models.credentials`` (their
+# original home) pulls service dependencies this stable contract module must
+# not load. A drift guard in the unified-model tests keeps the mirrors equal.
+MODEL_POLICY_KEY_SEPARATOR = "::"
+MODEL_POLICY_KEY_TYPES = ("llm", "embeddings")
+
+
+def normalize_blocked_model_key(key: str) -> str:
+    """Canonicalize one blocked-model key's provider segment to its stable ID.
+
+    Accepts the three model-status identity forms. The split is bounded so
+    model names containing ``::`` survive when provider-qualified; a bare name
+    can therefore never itself contain the separator. Raises ``ValueError``
+    for empty keys or empty segments.
+    """
+    from lfx.base.models.provider_registry import resolve_provider_id
+
+    normalized = key.strip()
+    if not normalized:
+        msg = "Blocked-model keys must not be empty"
+        raise ValueError(msg)
+    parts = normalized.split(MODEL_POLICY_KEY_SEPARATOR, 2)
+    if len(parts) == 1:
+        return normalized
+    if any(not part.strip() for part in parts):
+        msg = "Blocked-model key segments must not be empty"
+        raise ValueError(msg)
+    provider_id = resolve_provider_id(parts[0].strip())
+    if len(parts) == 2:  # noqa: PLR2004
+        return f"{provider_id}{MODEL_POLICY_KEY_SEPARATOR}{parts[1].strip()}"
+    possible_type = parts[1].strip()
+    if possible_type in MODEL_POLICY_KEY_TYPES:
+        return MODEL_POLICY_KEY_SEPARATOR.join((provider_id, possible_type, parts[2].strip()))
+    # Not a typed key: the remainder after the provider is one model name that
+    # happens to contain the separator, mirroring parse_model_status_key.
+    return f"{provider_id}{MODEL_POLICY_KEY_SEPARATOR}{MODEL_POLICY_KEY_SEPARATOR.join((parts[1], parts[2])).strip()}"
+
+
 @dataclass(frozen=True)
 class ModelProviderPolicyContext:
     """Principal and request attributes available to future RBAC policies."""
@@ -80,14 +121,32 @@ class ModelProviderPolicyContext:
 
 
 class ModelProviderPolicyError(PermissionError):
-    """A provider is not usable under the resolved policy snapshot."""
+    """A provider or model is not usable under the resolved policy snapshot."""
 
     code = "policy_blocked"
 
-    def __init__(self, provider_id: str, purpose: ModelProviderPolicyPurpose) -> None:
+    def __init__(
+        self,
+        provider_id: str,
+        purpose: ModelProviderPolicyPurpose,
+        *,
+        model_name: str | None = None,
+    ) -> None:
         self.provider_id = provider_id
         self.purpose = purpose
-        super().__init__("The requested model provider is not available")
+        self.model_name = model_name
+        # The message is what builders read in the Playground error panel
+        # (rendered by ``ErrorMessage``), so name the blocked model and point
+        # at the governance owner instead of exposing only a reason code.
+        if model_name is not None:
+            message = (
+                f"The requested model is not available: {model_name!r} ({provider_id}) "
+                "is blocked by the current model provider policy. "
+                "Ask an administrator to enable it."
+            )
+        else:
+            message = "The requested model provider is not available"
+        super().__init__(message)
 
 
 @dataclass(frozen=True)
@@ -98,6 +157,7 @@ class ModelProviderPolicySnapshot:
     purpose: ModelProviderPolicyPurpose
     candidate_provider_ids: frozenset[str]
     allowed_provider_ids: frozenset[str]
+    blocked_model_keys: frozenset[str] = frozenset()
 
     def __post_init__(self) -> None:
         candidates = frozenset(self.candidate_provider_ids)
@@ -107,6 +167,7 @@ class ModelProviderPolicySnapshot:
             raise ValueError(msg)
         object.__setattr__(self, "candidate_provider_ids", candidates)
         object.__setattr__(self, "allowed_provider_ids", allowed)
+        object.__setattr__(self, "blocked_model_keys", frozenset(self.blocked_model_keys))
 
     @staticmethod
     def _stable_id(provider: str) -> str:
@@ -126,6 +187,39 @@ class ModelProviderPolicySnapshot:
         """Raise a reason-coded error when a provider is not allowed."""
         if not self.allows(provider):
             raise ModelProviderPolicyError(self._stable_id(provider), self.purpose)
+
+    def _model_is_blocked(self, provider: str, model_name: str, model_type: str | None) -> bool:
+        if not self.blocked_model_keys:
+            return False
+        if model_name in self.blocked_model_keys:
+            return True
+        provider_id = self._stable_id(provider)
+        qualified = f"{provider_id}{MODEL_POLICY_KEY_SEPARATOR}{model_name}"
+        if qualified in self.blocked_model_keys:
+            return True
+        types = (model_type,) if model_type in MODEL_POLICY_KEY_TYPES else MODEL_POLICY_KEY_TYPES
+        return any(
+            MODEL_POLICY_KEY_SEPARATOR.join((provider_id, type_segment, model_name)) in self.blocked_model_keys
+            for type_segment in types
+        )
+
+    def allows_model(self, provider: str, model_name: str, *, model_type: str | None = None) -> bool:
+        """Return whether a specific model of an allowed provider is usable.
+
+        A model is matched against the blocked-key grammar by its bare name,
+        its provider-qualified name, and its typed identity. An unknown
+        ``model_type`` matches every typed key so a block cannot be dodged by
+        an untyped catalog row.
+        """
+        if not self.allows(provider):
+            return False
+        return not self._model_is_blocked(provider, model_name, model_type)
+
+    def require_model(self, provider: str, model_name: str, *, model_type: str | None = None) -> None:
+        """Raise a reason-coded error when a provider or one of its models is blocked."""
+        self.require(provider)
+        if self._model_is_blocked(provider, model_name, model_type):
+            raise ModelProviderPolicyError(self._stable_id(provider), self.purpose, model_name=model_name)
 
 
 class BaseModelProviderPolicyService(Service, abc.ABC):
@@ -191,6 +285,24 @@ class BaseModelProviderPolicyService(Service, abc.ABC):
             purpose=purpose,
         )
 
+    def get_blocked_model_keys(
+        self,
+        *,
+        context: ModelProviderPolicyContext,
+        purpose: ModelProviderPolicyPurpose,
+    ) -> Collection[str]:
+        """Return normalized blocked-model keys for this context and purpose.
+
+        Keys use the model-status identity grammar (bare ``model``,
+        ``provider::model``, ``provider::<llm|embeddings>::model``) with the
+        provider segment already canonicalized to its stable ID. The default
+        blocks nothing; implementations typically surface a deployment-wide
+        deny-list from the shared policy bundle. This is an in-memory read on
+        the snapshot resolution path — implementations must not perform I/O.
+        """
+        _ = context, purpose
+        return ()
+
     @staticmethod
     def _cache_key(
         *,
@@ -251,8 +363,8 @@ class BaseModelProviderPolicyService(Service, abc.ABC):
             if len(self._snapshot_cache) > self.SNAPSHOT_CACHE_MAX_SIZE:
                 self._snapshot_cache.popitem(last=False)
 
-    @staticmethod
     def _snapshot(
+        self,
         *,
         context: ModelProviderPolicyContext,
         candidate_provider_ids: frozenset[str],
@@ -264,6 +376,7 @@ class BaseModelProviderPolicyService(Service, abc.ABC):
             purpose=purpose,
             candidate_provider_ids=candidate_provider_ids,
             allowed_provider_ids=frozenset(allowed_provider_ids),
+            blocked_model_keys=frozenset(self.get_blocked_model_keys(context=context, purpose=purpose)),
         )
 
     def resolve(

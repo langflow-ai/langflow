@@ -1,12 +1,102 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 import { TEXTS } from "../../utils/constants/texts";
+import { routeTestScopedDefaultFlowNames } from "../../utils/flow/route-test-scoped-default-flow-names";
 import {
   getSidebarProjectButton,
   getSidebarProjectOptionsButton,
+  getSidebarProjectRowById,
   getSidebarProjectRows,
 } from "../../utils/project-sidebar";
+
+// These tests intentionally mutate the shared project inventory, including one
+// case that deletes every project. Keep those destructive transitions ordered.
+test.describe.configure({ mode: "serial" });
+
+const PROJECT_PATH_PREFIX = "/api/v1/projects/";
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Deleting the last project leaves the home page re-rendering with a project
+// id that has just become undefined. It used to reach the network as
+// GET /api/v1/projects/undefined and come back 422, so watch every project
+// request these destructive tests make and keep non-id ones out.
+function collectInvalidProjectRequests(page: Page): string[] {
+  const invalidRequests: string[] = [];
+  page.on("request", (request) => {
+    const { pathname } = new URL(request.url());
+    if (!pathname.startsWith(PROJECT_PATH_PREFIX)) return;
+
+    // Everything past the prefix identifies a single project; the list route
+    // ends at the prefix and nested routes (download/, upload/) keep a slash.
+    const projectId = pathname.slice(PROJECT_PATH_PREFIX.length);
+    if (projectId === "" || projectId.includes("/")) return;
+    if (UUID_PATTERN.test(projectId)) return;
+
+    invalidRequests.push(`${request.method()} ${pathname}`);
+  });
+  return invalidRequests;
+}
+
+let invalidProjectRequests: string[] = [];
+
+test.beforeEach(async ({ page }, testInfo) => {
+  invalidProjectRequests = collectInvalidProjectRequests(page);
+  await routeTestScopedDefaultFlowNames(page, testInfo, "folder-integrity");
+});
+
+test.afterEach(() => {
+  expect(
+    invalidProjectRequests,
+    "the frontend requested a project by an id that is not a UUID",
+  ).toEqual([]);
+});
+
+async function createAndRenameProject(page: Page, projectName: string) {
+  const createResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      response.request().method() === "POST" &&
+      url.pathname === "/api/v1/projects/"
+    );
+  });
+  await page.getByTestId("add-project-button").click();
+  const createResponse = await createResponsePromise;
+  expect(
+    createResponse.ok(),
+    `Creating a project returned ${createResponse.status()}`,
+  ).toBeTruthy();
+  const createdProject = (await createResponse.json()) as { id?: unknown };
+  expect(typeof createdProject.id).toBe("string");
+
+  const projectId = createdProject.id as string;
+  const projectRow = getSidebarProjectRowById(page, projectId);
+  await expect(projectRow).toBeVisible();
+  await projectRow.getByTestId(/^sidebar-nav-/).dblclick();
+
+  const projectInput = projectRow.getByTestId("input-project");
+  await expect(projectInput).toBeVisible();
+  await projectInput.fill(projectName);
+  const renameResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      response.request().method() === "PATCH" &&
+      url.pathname === `/api/v1/projects/${projectId}`
+    );
+  });
+  await page.keyboard.press("Enter");
+  const renameResponse = await renameResponsePromise;
+  expect(
+    renameResponse.ok(),
+    `Renaming project ${projectId} returned ${renameResponse.status()}`,
+  ).toBeTruthy();
+  expect(await renameResponse.finished()).toBeNull();
+  await expect(projectRow.getByTestId(/^sidebar-nav-/)).toContainText(
+    projectName,
+  );
+}
 
 /**
  * Tests for folder deletion integrity
@@ -40,32 +130,8 @@ test(
       timeout: 30000,
     });
 
-    // Create a new folder
-    await page.getByTestId("add-project-button").click();
-
-    await page
-      .locator("[data-testid='project-sidebar']")
-      .getByText(TEXTS.labelNewProject)
-      .last()
-      .waitFor({ state: "visible", timeout: 10000 });
-
-    // Rename the folder for easier identification
-    await page
-      .locator("[data-testid='project-sidebar']")
-      .getByText(TEXTS.labelNewProject)
-      .last()
-      .dblclick();
-
-    const folderInput = page.getByTestId("input-project");
-    await folderInput.waitFor({ state: "visible", timeout: 10000 });
-    await folderInput.fill("test-folder-to-delete");
-    await page.keyboard.press("Enter");
-
-    // Wait for the folder to be renamed
-    await page.getByText("test-folder-to-delete").last().waitFor({
-      state: "visible",
-      timeout: 30000,
-    });
+    // Create a new folder and keep its server identity through the rename.
+    await createAndRenameProject(page, "test-folder-to-delete");
 
     // Verify the folder exists in the sidebar
     const folderBeforeDelete = getSidebarProjectButton(
@@ -122,54 +188,10 @@ test(
     });
 
     // Create first folder
-    await page.getByTestId("add-project-button").click();
-
-    await page
-      .locator("[data-testid='project-sidebar']")
-      .getByText(TEXTS.labelNewProject)
-      .last()
-      .waitFor({ state: "visible", timeout: 10000 });
-
-    await page
-      .locator("[data-testid='project-sidebar']")
-      .getByText(TEXTS.labelNewProject)
-      .last()
-      .dblclick();
-
-    const folderAlphaInput = page.getByTestId("input-project");
-    await folderAlphaInput.waitFor({ state: "visible", timeout: 10000 });
-    await folderAlphaInput.fill("folder-alpha");
-    await page.keyboard.press("Enter");
-
-    await page.getByText("folder-alpha").last().waitFor({
-      state: "visible",
-      timeout: 30000,
-    });
+    await createAndRenameProject(page, "folder-alpha");
 
     // Create second folder
-    await page.getByTestId("add-project-button").click();
-
-    await page
-      .locator("[data-testid='project-sidebar']")
-      .getByText(TEXTS.labelNewProject)
-      .last()
-      .waitFor({ state: "visible", timeout: 10000 });
-
-    await page
-      .locator("[data-testid='project-sidebar']")
-      .getByText(TEXTS.labelNewProject)
-      .last()
-      .dblclick();
-
-    const folderBetaInput = page.getByTestId("input-project");
-    await folderBetaInput.waitFor({ state: "visible", timeout: 10000 });
-    await folderBetaInput.fill("folder-beta");
-    await page.keyboard.press("Enter");
-
-    await page.getByText("folder-beta").last().waitFor({
-      state: "visible",
-      timeout: 30000,
-    });
+    await createAndRenameProject(page, "folder-beta");
 
     // Verify both folders exist
     await expect(getSidebarProjectButton(page, "folder-alpha")).toBeVisible({
@@ -252,29 +274,7 @@ test(
     });
 
     // Create first folder
-    await page.getByTestId("add-project-button").click();
-
-    await page
-      .locator("[data-testid='project-sidebar']")
-      .getByText(TEXTS.labelNewProject)
-      .last()
-      .waitFor({ state: "visible", timeout: 10000 });
-
-    await page
-      .locator("[data-testid='project-sidebar']")
-      .getByText(TEXTS.labelNewProject)
-      .last()
-      .dblclick();
-
-    const folderOneInput = page.getByTestId("input-project");
-    await folderOneInput.waitFor({ state: "visible", timeout: 10000 });
-    await folderOneInput.fill("folder-one");
-    await page.keyboard.press("Enter");
-
-    await page.getByText("folder-one").last().waitFor({
-      state: "visible",
-      timeout: 30000,
-    });
+    await createAndRenameProject(page, "folder-one");
 
     // Delete the folder
     const folderOne = getSidebarProjectButton(page, "folder-one");
@@ -296,31 +296,8 @@ test(
       timeout: 5000,
     });
 
-    // Create a new folder immediately after deletion
-    await page.getByTestId("add-project-button").click();
-
-    await page
-      .locator("[data-testid='project-sidebar']")
-      .getByText(TEXTS.labelNewProject)
-      .last()
-      .waitFor({ state: "visible", timeout: 10000 });
-
-    await page
-      .locator("[data-testid='project-sidebar']")
-      .getByText(TEXTS.labelNewProject)
-      .last()
-      .dblclick();
-
-    const folderTwoInput = page.getByTestId("input-project");
-    await folderTwoInput.waitFor({ state: "visible", timeout: 10000 });
-    await folderTwoInput.fill("folder-two");
-    await page.keyboard.press("Enter");
-
-    // The new folder should be created successfully without any stale data issues
-    await page.getByText("folder-two").last().waitFor({
-      state: "visible",
-      timeout: 30000,
-    });
+    // Create a new folder immediately after deletion.
+    await createAndRenameProject(page, "folder-two");
 
     const folderTwo = getSidebarProjectButton(page, "folder-two");
     await expect(folderTwo).toBeVisible({ timeout: 5000 });

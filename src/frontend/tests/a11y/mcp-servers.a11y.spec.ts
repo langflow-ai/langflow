@@ -103,7 +103,10 @@ async function openMcpServersRoute(
 ) {
   await mockServerDetail(page);
   await mockServers(page, servers);
-  await awaitBootstrapTest(page, { skipModal: true });
+  await awaitBootstrapTest(page, {
+    skipModal: true,
+    seedFlowIfEmpty: false,
+  });
   await page.goto("/settings/mcp-servers");
   await disableAnimations(page);
   await expect(page.getByTestId("settings_menu_header")).toContainText(

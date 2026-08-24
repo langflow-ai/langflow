@@ -6,6 +6,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { Checkbox } from "@/components/ui/checkbox";
 import useDuplicateFlows from "@/pages/MainPage/hooks/use-handle-duplicate";
+import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import type { ComponentsToUpdateType } from "@/types/zustand/flow";
 import { cn } from "@/utils/utils";
@@ -21,7 +22,7 @@ export default function UpdateComponentModal({
 }: {
   open: boolean;
   setOpen: (open: boolean) => void;
-  onUpdateNode: (updatedComponents?: string[]) => void;
+  onUpdateNode: (updatedComponents?: string[]) => void | Promise<void>;
   children?: React.ReactNode;
   components: ComponentsToUpdateType[];
   isMultiple?: boolean;
@@ -34,6 +35,7 @@ export default function UpdateComponentModal({
   );
   const agGrid = useRef<AgGridReact>(null);
   const currentFlow = useFlowStore((state) => state.currentFlow);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const { handleDuplicate } = useDuplicateFlows({
     flow: currentFlow
@@ -41,22 +43,26 @@ export default function UpdateComponentModal({
       : undefined,
   });
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     setLoading(true);
-    if (backupFlow) {
-      handleDuplicate().then(() => {
-        onUpdateNode(
-          components.length > 0 ? Array.from(selectedComponents) : undefined,
-        );
-        setLoading(false);
-        setOpen(false);
-      });
-    } else {
-      onUpdateNode(
+    try {
+      if (backupFlow) {
+        try {
+          await handleDuplicate();
+        } catch {
+          setErrorData({ title: t("errors.generic") });
+          return;
+        }
+      }
+      await onUpdateNode(
         components.length > 0 ? Array.from(selectedComponents) : undefined,
       );
-      setLoading(false);
       setOpen(false);
+    } catch {
+      // The update action reports its own error. Keep the modal open so failed
+      // components remain selected and can be retried.
+    } finally {
+      setLoading(false);
     }
   };
 

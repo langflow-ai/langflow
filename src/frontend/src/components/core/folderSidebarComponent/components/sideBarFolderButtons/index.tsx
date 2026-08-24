@@ -116,6 +116,27 @@ const SideBarFoldersButtonsComponent = ({
     folders.map((obj) => ({ id: obj.id!, edit: false })) ?? [],
   );
 
+  // Committing or cancelling a rename unmounts the input while it still holds
+  // focus, dropping focus to <body> and forcing a keyboard user to tab from the
+  // top of the page. Hand focus back to the project's nav item instead — but
+  // only when focus was actually lost, so clicking straight to another control
+  // isn't yanked back here.
+  const renamingFolderId =
+    editFolders.find((folder) => folder.edit)?.id ?? null;
+  const previousRenamingFolderId = useRef<string | null>(null);
+
+  useEffect(() => {
+    const justFinished = previousRenamingFolderId.current;
+    previousRenamingFolderId.current = renamingFolderId;
+
+    if (!justFinished || renamingFolderId) return;
+    if (document.activeElement && document.activeElement !== document.body) {
+      return;
+    }
+
+    document.getElementById(`sidebar-nav-${justFinished}`)?.focus();
+  }, [renamingFolderId]);
+
   const isFetchingFolders = !!useIsFetching({
     queryKey: ["useGetFolders"],
     exact: false,
@@ -488,7 +509,16 @@ const SideBarFoldersButtonsComponent = ({
                                           handleKeyDown={handleKeyDown}
                                         />
                                       ) : (
-                                        <span className="block w-0 grow truncate text-sm opacity-100">
+                                        <span
+                                          className="block w-0 grow truncate text-sm opacity-100"
+                                          // The sidebar cannot be widened, so a
+                                          // truncated name is otherwise
+                                          // unreadable. With one default project
+                                          // per user the list fills with rows
+                                          // that differ only in the truncated
+                                          // part.
+                                          title={getProjectDisplayName(item, t)}
+                                        >
                                           {getProjectDisplayName(item, t)}
                                         </span>
                                       )}

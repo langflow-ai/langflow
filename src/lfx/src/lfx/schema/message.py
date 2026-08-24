@@ -857,13 +857,32 @@ class ErrorMessage(Message):
     """A message class specifically for error messages with predefined error-specific attributes."""
 
     @staticmethod
+    def _coded_exception_message(exception: BaseException) -> str | None:
+        """Return the human-readable message of an exception that also carries a ``code``.
+
+        Reason-coded errors (for example ``ModelProviderPolicyError`` with
+        ``code="policy_blocked"``) raise with a message meant for the person
+        reading the error panel. Rendering only ``Code: policy_blocked`` --
+        prefixed by the Python class name -- told builders nothing about what
+        was blocked or who to ask.
+        """
+        args = getattr(exception, "args", ())
+        if args and isinstance(args[0], str) and args[0].strip():
+            return args[0].strip()
+        return None
+
+    @staticmethod
     def _format_markdown_reason(exception: BaseException) -> str:
         """Format the error reason with markdown formatting."""
         reason = f"**{exception.__class__.__name__}**\n"
         if hasattr(exception, "body") and isinstance(exception.body, dict) and "message" in exception.body:
             reason += f" - **{exception.body.get('message')}**\n"
         elif hasattr(exception, "code"):
-            reason += f" - **Code: {exception.code}**\n"
+            message = ErrorMessage._coded_exception_message(exception)
+            if message:
+                reason = f"**{message}**\n - **Code: {exception.code}**\n"
+            else:
+                reason += f" - **Code: {exception.code}**\n"
         elif hasattr(exception, "args") and exception.args:
             reason += f" - **Details: {exception.args[0]}**\n"
         elif isinstance(exception, ValidationError):
@@ -880,7 +899,8 @@ class ErrorMessage(Message):
         elif hasattr(exception, "_message"):
             reason = f"{exception._message()}\n" if callable(exception._message) else f"{exception._message}\n"  # noqa: SLF001
         elif hasattr(exception, "code"):
-            reason = f"Code: {exception.code}\n"
+            message = ErrorMessage._coded_exception_message(exception)
+            reason = f"{message}\n" if message else f"Code: {exception.code}\n"
         elif hasattr(exception, "args") and exception.args:
             reason = f"{exception.args[0]}\n"
         elif isinstance(exception, ValidationError):
@@ -902,6 +922,8 @@ class ErrorMessage(Message):
         trace_name: str | None = None,
         flow_id: UUID | str | None = None,
         session_metadata: dict | None = None,
+        *,
+        include_traceback: bool = True,
     ) -> None:
         # This is done to avoid circular imports
         if exception.__class__.__name__ == "ExceptionWithMessageError" and exception.__cause__ is not None:
@@ -942,7 +964,7 @@ class ErrorMessage(Message):
                             field=str(exception.field) if hasattr(exception, "field") else None,
                             reason=markdown_reason,
                             solution=str(exception.solution) if hasattr(exception, "solution") else None,
-                            traceback=traceback.format_exc(),
+                            traceback=traceback.format_exc() if include_traceback else "",
                         )
                     ],
                 ),

@@ -46,14 +46,27 @@ async def ensure_resume_execute_permission(current_user, flow_id: UUID) -> None:
     )
 
 
-async def list_pending_human_requests(flow_id: UUID, user_id: UUID) -> list[dict]:
+async def list_pending_human_requests(
+    flow_id: UUID,
+    user_id: UUID,
+    *,
+    request_end_user_id: str | None = None,
+    include_all_end_users: bool = False,
+) -> list[dict]:
     """Suspended HITL jobs for a flow + their pending request, for the Traces overlay.
 
     Traces and jobs are separate stores; the paused state lives on the SUSPENDED job, so
     the frontend correlates these to trace rows by ``session_id``.
+
+    Serving-plane isolation (B1): this enumerates by flow_id and each row exposes the merged
+    ``session_id`` + the HITL prompt, so rows are filtered to the requesting end user by the SAME
+    rule the single-job guard uses (``_end_user_matches``). ``include_all_end_users`` bypasses the
+    filter for a superuser. Default (feature off / anonymous) keeps only end-user-less jobs, which
+    on an editor plane is every job — unchanged behavior.
     """
     from sqlmodel import select
 
+    from langflow.api.v2.workflow import _end_user_matches
     from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
     from langflow.services.deps import session_scope
 
@@ -70,6 +83,8 @@ async def list_pending_human_requests(flow_id: UUID, user_id: UUID) -> list[dict
 
     pending: list[dict] = []
     for job in jobs:
+        if not include_all_end_users and not _end_user_matches(request_end_user_id, job.job_metadata):
+            continue
         request = await get_job_service().get_pending_human_request(job.job_id)
         if not request:
             continue
@@ -109,9 +124,11 @@ async def persist_human_input_card(data: dict, flow_id: uuid.UUID, session_id: s
     The card carries request_id + job_id, so a reloaded session can resume the run.
     Records the card's message id in job metadata so resume can mark it answered.
     """
+    from lfx.memory.flow_context import derive_message_owner_uuid
     from lfx.schema.content_block import ContentBlock
     from lfx.schema.content_types import HumanInputContent
     from lfx.schema.message import Message
+    from lfx.workflow.end_user_identity import end_user_id_from_scoped_session
 
     from langflow.memory import astore_message
 
@@ -133,8 +150,19 @@ async def persist_human_input_card(data: dict, flow_id: uuid.UUID, session_id: s
         flow_id=flow_id,
         content_blocks=[block],
     )
+    # Stamp the serving-plane owner so this card is retrievable through the per-user monitor pull
+    # (GET /monitor/messages?end_user_id=...). The card is built by hand and bypasses
+    # Component._store_message, so without this it persists user_id=NULL and the owner's own pull
+    # misses it (the pull's predicate is an exact owner match, so NULL never returns). The scoped
+    # session carries the end user (<end_user>::<base>); resolve it through the same helpers the
+    # component write path and the monitor read path use so write == read. None off / editor /
+    # anonymous -> NULL, unchanged. See BUG-02.
+    owner_end_user = end_user_id_from_scoped_session(session_id)
+    owner_user_id = derive_message_owner_uuid(owner_end_user) if owner_end_user else None
     try:
-        stored = await astore_message(message, flow_id=flow_id, run_id=str(job_id) if job_id else None)
+        stored = await astore_message(
+            message, flow_id=flow_id, run_id=str(job_id) if job_id else None, user_id=owner_user_id
+        )
         if stored and job_id is not None:
             await get_job_service().update_job_metadata(uuid.UUID(str(job_id)), {"card_message_id": str(stored[0].id)})
     except Exception:  # noqa: BLE001

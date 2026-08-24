@@ -4,6 +4,10 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
+import {
+  blockedStopsExecution,
+  isBlockedByCatalogPolicy,
+} from "@/CustomNodes/helpers/check-code-validity";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
@@ -111,6 +115,9 @@ function GenericNode({
   const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
   const isReadOnly = useIsFlowReadOnly(currentFlowId);
 
+  const blockedComponentTypes = useUtilityStore(
+    (state) => state.blockedComponentTypes,
+  );
   const allowCustomComponents = useUtilityStore(
     (state) => state.allowCustomComponents,
   );
@@ -138,7 +145,7 @@ function GenericNode({
     return null;
   }, []);
 
-  const { mutate: validateComponentCode } = usePostValidateComponentCode();
+  const { mutateAsync: validateComponentCode } = usePostValidateComponentCode();
 
   const [editNameDescription, toggleEditNameDescription, set] =
     useAlternate(false);
@@ -205,51 +212,55 @@ function GenericNode({
   ]);
 
   const handleUpdateCode = useCallback(
-    (confirmed: boolean = false) => {
+    async (confirmed: boolean = false): Promise<void> => {
       if (isReadOnly) return;
       if (!confirmed && hasBreakingChange) {
         setOpenUpdateModal(true);
         return;
       }
-      setLoadingUpdate(true);
-      takeSnapshot();
 
       const thisNodeTemplate = templates[data.type]?.template;
-      if (!thisNodeTemplate?.code) return;
+      if (!thisNodeTemplate?.code || !data.node) {
+        setErrorData({
+          title: t("node.errorUpdatingCode"),
+          list: [
+            t("node.errorUpdatingCodeDetail"),
+            t("node.errorUpdatingCodeReport"),
+          ],
+        });
+        throw new Error(`Unable to update component ${data.id}`);
+      }
 
       const currentCode = thisNodeTemplate.code.value;
-      if (data.node) {
-        registerNodeUpdate(data.id);
-        validateComponentCode(
-          { code: currentCode, frontend_node: data.node },
-          {
-            onSuccess: ({ data: resData, type }) => {
-              if (resData && type && updateNodeCode) {
-                const newNode = processNodeAdvancedFields(
-                  resData,
-                  edges,
-                  data.id,
-                );
-                updateNodeCode(newNode, currentCode, "code", type);
-                removeDismissedNodes([data.id]);
-                setLoadingUpdate(false);
-              }
-              completeNodeUpdate(data.id);
-            },
-            onError: (error) => {
-              setErrorData({
-                title: t("node.errorUpdatingCode"),
-                list: [
-                  t("node.errorUpdatingCodeDetail"),
-                  t("node.errorUpdatingCodeReport"),
-                ],
-              });
-              console.error(error);
-              setLoadingUpdate(false);
-              completeNodeUpdate(data.id);
-            },
-          },
-        );
+      setLoadingUpdate(true);
+      takeSnapshot();
+      registerNodeUpdate(data.id);
+
+      try {
+        const { data: resData, type } = await validateComponentCode({
+          code: currentCode,
+          frontend_node: data.node,
+        });
+        if (!resData || !type) {
+          throw new Error(`Validation returned no update for ${data.id}`);
+        }
+
+        const newNode = processNodeAdvancedFields(resData, edges, data.id);
+        updateNodeCode(newNode, currentCode, "code", type);
+        removeDismissedNodes([data.id]);
+      } catch (error) {
+        setErrorData({
+          title: t("node.errorUpdatingCode"),
+          list: [
+            t("node.errorUpdatingCodeDetail"),
+            t("node.errorUpdatingCodeReport"),
+          ],
+        });
+        console.error(error);
+        throw error;
+      } finally {
+        setLoadingUpdate(false);
+        completeNodeUpdate(data.id);
       }
     },
     [
@@ -262,12 +273,14 @@ function GenericNode({
       setErrorData,
       takeSnapshot,
       isReadOnly,
+      removeDismissedNodes,
+      t,
     ],
   );
 
   const handleUpdateCodeWShortcut = useCallback(() => {
     if (isOutdated && selected) {
-      handleUpdateCode();
+      void handleUpdateCode().catch(() => undefined);
     }
   }, [isOutdated, selected, handleUpdateCode]);
 
@@ -425,13 +438,31 @@ function GenericNode({
 
   const rightClickedNodeId = useFlowStore((state) => state.rightClickedNodeId);
 
+  // A node whose template has gone missing is always surfaced. Previously this
+  // only happened while custom components were disabled, so a component an
+  // administrator removed from the catalog left the node looking healthy until
+  // the flow was run.
+  // A user's own custom component has no template either, so the banner only
+  // treats a missing one as a problem where it actually stops the node.
+  const blockedByPolicy = isBlockedByCatalogPolicy(
+    blockedComponentTypes,
+    data.type,
+  );
+  const blockedIsFatal = blockedStopsExecution(
+    allowCustomComponents,
+    blockedComponentTypes,
+    data.type,
+  );
+
   const shouldShowUpdateComponent = useMemo(
     () =>
-      !allowCustomComponents
-        ? isBlocked || isOutdated || hasBreakingChange
-        : (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll,
+      (isBlocked && blockedIsFatal) ||
+      (!allowCustomComponents
+        ? isOutdated || hasBreakingChange
+        : (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll),
     [
       isBlocked,
+      blockedIsFatal,
       isOutdated,
       hasBreakingChange,
       isUserEdited,
@@ -473,7 +504,7 @@ function GenericNode({
             }}
             numberOfOutputHandles={shownOutputs.length ?? 0}
             showNode={showNode}
-            updateNode={() => handleUpdateCode()}
+            updateNode={() => void handleUpdateCode().catch(() => undefined)}
             isOutdated={isOutdated && (dismissAll || isUserEdited)}
             isUserEdited={isUserEdited}
             hasBreakingChange={hasBreakingChange}
@@ -530,7 +561,7 @@ function GenericNode({
     takeSnapshot,
     setNode,
     showNode,
-    updateNodeCode,
+    handleUpdateCode,
     isOutdated,
     isUserEdited,
     selected,
@@ -588,9 +619,17 @@ function GenericNode({
         {shouldShowUpdateComponent ? (
           <NodeUpdateComponent
             hasBreakingChange={hasBreakingChange}
-            blocked={isBlocked}
+            blocked={isBlocked && blockedIsFatal}
+            blockedByCatalogPolicy={
+              // Restricted mode blocks every unknown code-bearing node on its
+              // own, so it stays the stated cause; the policy is only named
+              // when it is both in force and names this component.
+              isBlocked && allowCustomComponents && blockedByPolicy
+            }
             showNode={showNode}
-            handleUpdateCode={() => handleUpdateCode()}
+            handleUpdateCode={() =>
+              void handleUpdateCode().catch(() => undefined)
+            }
             loadingUpdate={loadingUpdate}
             setDismissAll={memoizedSetDismissAll}
             dismissed={dismissAll}
@@ -677,7 +716,7 @@ function GenericNode({
               data={data}
               frozen={data.node?.frozen}
               showNode={showNode}
-              display_name={data.node?.display_name!}
+              display_name={data.node?.display_name}
               nodeId={data.id}
               selected={selected}
               setBorderColor={setBorderColor}

@@ -5,6 +5,13 @@ export type A11yScanOptions = {
   colorScheme?: "light" | "dark";
 };
 
+export type ExpectedServerError = {
+  method: string;
+  path: string;
+  status: number;
+  count: number;
+};
+
 /**
  * Page augmented with the `allowFlowErrors()` helper attached by
  * `fixtures.ts`. Call this to opt out of the per-test flow-error
@@ -13,6 +20,16 @@ export type A11yScanOptions = {
  */
 export type LangflowPage = Page & {
   allowFlowErrors: () => void;
+  expectServerError: (expectation: ExpectedServerError) => void;
+  /**
+   * Declare a request the spec deliberately leaves in flight — e.g. a route
+   * mocked with a delay longer than the test body so a loading state stays
+   * rendered. Without this the teardown drain reports it as unsettled.
+   */
+  expectPendingRequest: (expectation: {
+    method?: string;
+    path: string;
+  }) => void;
   runA11yScan: (
     label: string,
     options?: A11yScanOptions,

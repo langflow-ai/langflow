@@ -2,22 +2,20 @@ import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 async function addTextInputNode(page: Page) {
   await openBlankFlow(page);
   await addLegacyComponents(page);
-  await page.getByTestId("sidebar-search-input").click();
-  await page.getByTestId("sidebar-search-input").fill("text input");
-
-  await page.waitForSelector('[data-testid="input_outputText Input"]', {
-    timeout: 3000,
+  await addComponentFromSidebar(page, {
+    search: "text input",
+    testId: "input_outputText Input",
+    hoverAdd: true,
   });
-  await page
-    .getByTestId("input_outputText Input")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
+  await expect(
+    page.getByRole("application", { name: "Text Input node" }),
+  ).toHaveCount(1);
   await adjustScreenView(page);
 }
 

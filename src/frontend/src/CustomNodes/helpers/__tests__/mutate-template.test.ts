@@ -10,6 +10,12 @@ const setStoreNodeCode = (nodeId: string, code: string) => {
   } as never);
 };
 
+const setStoreNodeTemplate = (nodeId: string, template: object) => {
+  jest.spyOn(useFlowStore, "getState").mockReturnValue({
+    nodes: [{ id: nodeId, data: { node: { template } } }],
+  } as never);
+};
+
 describe("mutateTemplate", () => {
   afterEach(() => {
     jest.useRealTimers();
@@ -168,6 +174,141 @@ describe("mutateTemplate", () => {
     expect(setNodeClass).toHaveBeenCalledWith(
       expect.objectContaining({
         template: expect.objectContaining({ model_name: expect.anything() }),
+      }),
+    );
+  });
+
+  it("keeps a canvas-visibility flip that happened while the refresh was in flight", async () => {
+    const node = {
+      template: {
+        code: { value: "original source" },
+        agent_llm: { value: "OpenAI" },
+        add_calculator_tool: { value: true, advanced: true },
+      },
+      outputs: [],
+    } as unknown as APIClassType;
+    const setNodeClass = jest.fn();
+    const mutateAsync = jest.fn().mockImplementation(async () => {
+      // The user adds the parameter to the canvas before the response lands.
+      setStoreNodeTemplate("agent-node", {
+        code: { value: "original source" },
+        agent_llm: { value: "OpenAI" },
+        add_calculator_tool: { value: true, advanced: false },
+      });
+      return {
+        template: {
+          code: { value: "original source" },
+          agent_llm: { value: "OpenAI" },
+          add_calculator_tool: { value: true, advanced: true },
+        },
+        outputs: [],
+      } as unknown as APIClassType;
+    });
+    setStoreNodeTemplate("agent-node", node.template);
+
+    await mutateTemplate(
+      "OpenAI",
+      "agent-node",
+      node,
+      setNodeClass,
+      { mutateAsync } as never,
+      jest.fn(),
+      "agent_llm",
+    );
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    expect(setNodeClass).toHaveBeenCalledWith(
+      expect.objectContaining({
+        template: expect.objectContaining({
+          add_calculator_tool: expect.objectContaining({ advanced: false }),
+        }),
+      }),
+    );
+  });
+
+  it("keeps an API-exposure flip that happened while the refresh was in flight", async () => {
+    const node = {
+      template: {
+        code: { value: "original source" },
+        agent_llm: { value: "OpenAI" },
+        max_tokens: { value: 100, api_editable: false },
+      },
+      outputs: [],
+    } as unknown as APIClassType;
+    const setNodeClass = jest.fn();
+    const mutateAsync = jest.fn().mockImplementation(async () => {
+      setStoreNodeTemplate("agent-node", {
+        code: { value: "original source" },
+        agent_llm: { value: "OpenAI" },
+        max_tokens: { value: 100, api_editable: true },
+      });
+      return {
+        template: {
+          code: { value: "original source" },
+          agent_llm: { value: "OpenAI" },
+          max_tokens: { value: 100, api_editable: false },
+        },
+        outputs: [],
+      } as unknown as APIClassType;
+    });
+    setStoreNodeTemplate("agent-node", node.template);
+
+    await mutateTemplate(
+      "OpenAI",
+      "agent-node",
+      node,
+      setNodeClass,
+      { mutateAsync } as never,
+      jest.fn(),
+      "agent_llm",
+    );
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    expect(setNodeClass).toHaveBeenCalledWith(
+      expect.objectContaining({
+        template: expect.objectContaining({
+          max_tokens: expect.objectContaining({ api_editable: true }),
+        }),
+      }),
+    );
+  });
+
+  it("applies a backend-driven visibility change the user did not touch", async () => {
+    const node = {
+      template: {
+        code: { value: "original source" },
+        agent_llm: { value: "OpenAI" },
+        api_key: { value: "", advanced: true },
+      },
+      outputs: [],
+    } as unknown as APIClassType;
+    const setNodeClass = jest.fn();
+    const mutateAsync = jest.fn().mockResolvedValue({
+      template: {
+        code: { value: "original source" },
+        agent_llm: { value: "OpenAI" },
+        api_key: { value: "", advanced: false },
+      },
+      outputs: [],
+    } as unknown as APIClassType);
+    setStoreNodeTemplate("agent-node", node.template);
+
+    await mutateTemplate(
+      "OpenAI",
+      "agent-node",
+      node,
+      setNodeClass,
+      { mutateAsync } as never,
+      jest.fn(),
+      "agent_llm",
+    );
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    expect(setNodeClass).toHaveBeenCalledWith(
+      expect.objectContaining({
+        template: expect.objectContaining({
+          api_key: expect.objectContaining({ advanced: false }),
+        }),
       }),
     );
   });

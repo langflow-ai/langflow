@@ -173,6 +173,9 @@ module.exports = {
           label: "Observability",
           items: [
             "Develop/logging",
+            "Develop/observability-opentelemetry",
+            "Develop/observability-new-relic",
+            "Develop/observability-instana",
             "Develop/observability-grafana-loki",
             "Develop/traces",
             {
@@ -507,6 +510,7 @@ module.exports = {
             "Components/bundles-cohere",
             "Components/bundles-cometapi",
             "Components/bundles-composio",
+            "Components/bundles-confluent",
             "Components/bundles-couchbase",
             "Components/bundles-cuga",
             "Components/bundles-datastax",
@@ -533,6 +537,7 @@ module.exports = {
             "Components/bundles-milvus",
             "Components/bundles-mistralai",
             "Components/bundles-mongodb",
+            "Components/bundles-mrscraper",
             "Components/bundles-nextplaid",
             "Components/bundles-notion",
             "Components/bundles-novita",
@@ -542,6 +547,7 @@ module.exports = {
             "Components/bundles-openai-compatible",
             "Components/bundles-openrouter",
             "Components/bundles-oracle",
+            "Components/bundles-orcarouter",
             "Components/bundles-paddle",
             "Components/bundles-perplexity",
             "Components/bundles-pgvector",

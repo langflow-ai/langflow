@@ -31,7 +31,7 @@
         {
           "distribution": "lfx-ibm",
           "extras": [],
-          "version": ">=0.1.5,<1.0.0",
+          "version": ">=0.2.1,<1.0.0",
           "providers": [
             "lfx-ibm"
           ]
@@ -47,7 +47,7 @@
         {
           "distribution": "lfx-datastax",
           "extras": [],
-          "version": ">=0.1.3,<1.0.0",
+          "version": ">=0.1.5,<1.0.0",
           "providers": [
             "lfx-datastax"
           ]
@@ -55,7 +55,7 @@
         {
           "distribution": "lfx-toolguard",
           "extras": [],
-          "version": ">=0.1.0,<1.0.0",
+          "version": ">=0.1.1,<1.0.0",
           "providers": [
             "lfx-toolguard"
           ]
@@ -63,7 +63,7 @@
         {
           "distribution": "lfx-openai",
           "extras": [],
-          "version": ">=0.1.0,<1.0.0",
+          "version": ">=0.1.2,<1.0.0",
           "providers": [
             "lfx-openai"
           ]
@@ -71,7 +71,7 @@
         {
           "distribution": "lfx-anthropic",
           "extras": [],
-          "version": ">=0.1.0,<1.0.0",
+          "version": ">=0.1.5,<1.0.0",
           "providers": [
             "lfx-anthropic"
           ]

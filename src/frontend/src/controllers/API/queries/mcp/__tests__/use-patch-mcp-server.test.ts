@@ -83,6 +83,9 @@ describe("usePatchMCPServer", () => {
       queryKey: ["useGetMCPServers"],
     });
     expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["useGetMCPServerCounts"],
+    });
+    expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["useGetMCPServer", "my-server"],
     });
   });

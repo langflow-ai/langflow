@@ -18,10 +18,16 @@ from anyio import Path
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
 from lfx.log import logger
+from pydantic import ValidationError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.api.utils import build_content_disposition, normalize_flow_for_export, remove_api_keys
+from langflow.api.utils import (
+    build_content_disposition,
+    normalize_flow_for_export,
+    remove_api_keys,
+    strip_flow_secrets,
+)
 from langflow.services.authorization.fetch import authorized_or_owner_scoped
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_move_allowed
@@ -358,6 +364,21 @@ async def _resolve_flow_destination(
     return folder.workspace_id, folder.id
 
 
+async def destination_folder_owner_id(session: AsyncSession, folder_id: UUID | None) -> UUID | None:
+    """Return who owns the project a flow is about to be created in.
+
+    A flow being created has no owner yet, so the destination project is the
+    only ownership the CREATE check can consult. Read it from the stored row
+    after canonicalization — a caller-supplied folder_id may have been
+    redirected to the caller's default project, and the payload can never be
+    trusted to assert who owns a project.
+    """
+    if folder_id is None:
+        return None
+    folder = await session.get(Folder, folder_id)
+    return getattr(folder, "user_id", None)
+
+
 async def _canonicalize_flow_destination(
     session: AsyncSession,
     flow: Flow | FlowCreate | FlowUpdate,
@@ -393,6 +414,7 @@ async def _new_flow(
     fail_on_endpoint_conflict: bool = False,
     validate_folder: bool = False,
     widen_for_authz: bool = False,
+    propagate_unhandled_errors: bool = False,
 ):
     """Create or upsert a flow.
 
@@ -405,6 +427,7 @@ async def _new_flow(
         fail_on_endpoint_conflict: PUT should fail predictably on conflicts rather than silently renaming.
         validate_folder: Validates folder_id under the active authorization fetch mode for external upserts.
         widen_for_authz: Preserve a cross-user destination that the route already authorized.
+        propagate_unhandled_errors: Let the caller own retry and sanitization of unexpected failures.
     """
     try:
         await _verify_fs_path(flow.fs_path, user_id, storage_service)
@@ -447,13 +470,15 @@ async def _new_flow(
         await _save_flow_to_fs(db_flow, user_id, storage_service)
 
         return FlowRead.model_validate(db_flow, from_attributes=True)
-    except Exception as e:
-        if hasattr(e, "errors"):
-            raise HTTPException(status_code=400, detail=str(e)) from e
-        if isinstance(e, HTTPException):
+    except ValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        if propagate_unhandled_errors:
             raise
-        logger.exception("Error creating flow")
-        raise HTTPException(status_code=500, detail="An internal error occurred while creating the flow.") from e
+        await logger.aerror("Error creating flow", error_type=type(exc).__name__)
+        raise HTTPException(status_code=500, detail="An internal error occurred while creating the flow.") from exc
 
 
 async def _read_flow(
@@ -775,9 +800,12 @@ def _build_flows_download_response(
 ) -> StreamingResponse | dict:
     """Build a download response (ZIP or single JSON) for the given flows.
 
-    Strips API keys and normalises for git-friendly export before packaging.
+    Strips secret field values and normalises for git-friendly export before
+    packaging. Scrubbing uses the metadata-driven scrubber rather than the
+    legacy API-key-name matcher, so ``password``-marked fields under ordinary
+    names and credential-bearing connection strings are cleared too.
     """
-    normalised_flows = [normalize_flow_for_export(remove_api_keys(flow.model_dump())) for flow in flows]
+    normalised_flows = [normalize_flow_for_export(strip_flow_secrets(flow.model_dump())) for flow in flows]
 
     if len(normalised_flows) > 1:
         zip_stream = io.BytesIO()

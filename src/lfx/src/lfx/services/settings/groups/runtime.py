@@ -13,12 +13,54 @@ class RuntimeSettings(BaseModel):
     guarantees ``workers`` is in ``info.data`` when this validator runs.
     """
 
+    warm_registry_enabled: bool = False
+    """Enable the process-local warm graph registry (LANGFLOW_WARM_REGISTRY_ENABLED)."""
+
+    warm_registry_preload_limit: int = Field(default=0, ge=0)
+    """Maximum flows each worker eagerly preloads (LANGFLOW_WARM_REGISTRY_PRELOAD_LIMIT).
+
+    The safe default is zero: flows warm lazily after an authorized request, so
+    enabling the cache on a shared cluster cannot make every worker materialize
+    every tenant's saved graph. Dedicated trusted execution workers may opt into
+    a bounded preload. Must be >= 0.
+    """
+
+    warm_registry_max_entries: int = Field(default=128, gt=0)
+    """Maximum resident flow templates per worker (LANGFLOW_WARM_REGISTRY_MAX_ENTRIES)."""
+
+    warm_registry_max_flow_bytes: int = Field(default=2_000_000, gt=0)
+    """Maximum serialized retained execution snapshot eligible for warming, in bytes."""
+
+    warm_registry_max_total_bytes: int = Field(default=32_000_000, gt=0)
+    """Maximum total serialized execution-snapshot bytes retained or in flight per worker."""
+
     dev: bool = False
     """If True, Langflow will run in development mode."""
+
+    warm_reconcile_interval: float = Field(default=20.0, gt=0)
+    """Seconds between warm-registry reconcile passes (LANGFLOW_WARM_RECONCILE_INTERVAL).
+
+    Each execution machine independently diffs its in-memory registry against the
+    shared ``flow`` table every ``interval`` seconds, so a deploy or delete takes up
+    to this long to propagate across the fleet. Lower for faster convergence at the
+    cost of more manifest queries. Only used when ``warm_registry_enabled`` is true.
+    Must be > 0."""
 
     # Job Queue
     job_queue_type: Literal["asyncio", "redis"] = "asyncio"
     """The job queue backend. Use 'redis' for multi-worker deployments to solve cross-worker JobQueueNotFoundError."""
+    dangerously_allow_multi_worker_without_shared_queue: bool = False
+    """Opt out of the startup guard that refuses ``workers > 1`` with the default
+    in-memory job queue.
+
+    Off by default. Enabling it lets headless deployments take multi-worker
+    throughput without standing up Redis, at the cost of every behavior that
+    needs process-shared state: the v1 ``/build`` editor and playground flows and
+    MCP over SSE stop working, and rate limiting, webhook UI feedback, and the
+    orphan sweep degrade to per-worker or per-node. ``LANGFLOW_JOB_QUEUE_TYPE=redis``
+    remains the supported way to run multiple workers; see
+    ``langflow.__main__.ensure_multi_worker_safe`` for the full list of caveats
+    logged when the bypass is active."""
     redis_queue_host: str | None = None
     """Redis host for the job queue. Falls back to redis_host if not set."""
     redis_queue_port: int | None = None

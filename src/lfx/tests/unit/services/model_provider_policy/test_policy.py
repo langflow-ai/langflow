@@ -1066,3 +1066,247 @@ def test_model_options_filter_denied_dynamic_sources(option_builder, model_type,
     )
     assert live_enabled_providers == [{"OpenAI"}]
     assert {(option["provider"], option["name"]) for option in options} == {("OpenAI", openai_model)}
+
+
+def _snapshot_with_blocked(*blocked: str, allowed: tuple[str, ...] = ("openai", "anthropic", "ollama")):
+    return ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(user_id="user-1"),
+        purpose=ModelProviderPolicyPurpose.USE,
+        candidate_provider_ids=frozenset({"openai", "anthropic", "ollama"}),
+        allowed_provider_ids=frozenset(allowed),
+        blocked_model_keys=frozenset(blocked),
+    )
+
+
+def test_model_policy_key_grammar_matches_persisted_model_status_grammar():
+    from lfx.base.models.unified_models.credentials import MODEL_STATUS_KEY_SEPARATOR, MODEL_STATUS_TYPES
+    from lfx.services.model_provider_policy import MODEL_POLICY_KEY_SEPARATOR, MODEL_POLICY_KEY_TYPES
+
+    assert MODEL_POLICY_KEY_SEPARATOR == MODEL_STATUS_KEY_SEPARATOR
+    assert MODEL_POLICY_KEY_TYPES == MODEL_STATUS_TYPES
+
+
+def test_snapshot_blocks_model_by_bare_qualified_and_typed_key():
+    snapshot = _snapshot_with_blocked(
+        "bare-model",
+        "anthropic::claude-blocked",
+        "openai::llm::gpt-blocked",
+    )
+
+    assert not snapshot.allows_model("OpenAI", "bare-model", model_type="llm")
+    assert not snapshot.allows_model("Anthropic", "claude-blocked", model_type="llm")
+    assert not snapshot.allows_model("Anthropic", "claude-blocked")
+    assert not snapshot.allows_model("OpenAI", "gpt-blocked", model_type="llm")
+    # A typed block never leaks onto the same name in the other modality.
+    assert snapshot.allows_model("OpenAI", "gpt-blocked", model_type="embeddings")
+    # An unknown row type cannot dodge a typed block.
+    assert not snapshot.allows_model("OpenAI", "gpt-blocked")
+    # A qualified block never reaches another provider's models.
+    assert snapshot.allows_model("OpenAI", "claude-blocked", model_type="llm")
+    assert snapshot.allows_model("OpenAI", "gpt-ok", model_type="llm")
+
+
+def test_snapshot_with_no_blocked_keys_allows_every_model_of_allowed_providers():
+    snapshot = _restricted_snapshot("openai")
+
+    assert snapshot.blocked_model_keys == frozenset()
+    assert snapshot.allows_model("OpenAI", "gpt-anything", model_type="llm")
+    assert not snapshot.allows_model("Anthropic", "claude-anything", model_type="llm")
+
+
+def test_require_model_raises_generic_reason_coded_error():
+    snapshot = _snapshot_with_blocked("anthropic::claude-blocked")
+
+    snapshot.require_model("Anthropic", "claude-ok", model_type="llm")
+    with pytest.raises(ModelProviderPolicyError) as exc_info:
+        snapshot.require_model("Anthropic", "claude-blocked", model_type="llm")
+
+    assert exc_info.value.code == "policy_blocked"
+    assert exc_info.value.provider_id == "anthropic"
+    assert exc_info.value.model_name == "claude-blocked"
+    assert str(exc_info.value) == (
+        "The requested model is not available: 'claude-blocked' (anthropic) is blocked by the "
+        "current model provider policy. Ask an administrator to enable it."
+    )
+
+
+def test_require_model_still_reports_denied_provider_without_model_detail():
+    snapshot = _snapshot_with_blocked("anthropic::claude-blocked", allowed=("openai",))
+
+    with pytest.raises(ModelProviderPolicyError) as exc_info:
+        snapshot.require_model("Anthropic", "claude-ok", model_type="llm")
+
+    assert exc_info.value.model_name is None
+    assert str(exc_info.value) == "The requested model provider is not available"
+
+
+def test_base_service_resolves_blocked_model_keys_into_snapshot():
+    class _BlockingPolicy(BaseModelProviderPolicyService):
+        def __init__(self) -> None:
+            super().__init__()
+            self.set_ready()
+
+        def get_allowed_provider_ids(self, *, context, candidate_provider_ids, purpose):
+            _ = (context, purpose)
+            return candidate_provider_ids
+
+        def get_blocked_model_keys(self, *, context, purpose):
+            _ = (context, purpose)
+            return {"openai::llm::gpt-blocked"}
+
+    snapshot = _BlockingPolicy().resolve(
+        context=ModelProviderPolicyContext(user_id="user-1"),
+        candidate_provider_ids=frozenset({"openai"}),
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
+
+    assert snapshot.blocked_model_keys == frozenset({"openai::llm::gpt-blocked"})
+    assert not snapshot.allows_model("OpenAI", "gpt-blocked", model_type="llm")
+
+
+def test_default_service_surfaces_bundle_blocked_model_keys():
+    bundle_service = PolicyBundleService()
+    bundle_service.publish(
+        PolicyBundleSnapshot(
+            revision=1,
+            initialized=True,
+            source="api",
+            blocked_model_keys=frozenset({"openai::gpt-blocked"}),
+            content_hash="0" * 64,
+        )
+    )
+    service = ModelProviderPolicyService(policy_bundle_service=bundle_service)
+
+    snapshot = service.resolve(
+        context=ModelProviderPolicyContext(user_id="user-1"),
+        candidate_provider_ids=frozenset({"openai"}),
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
+
+    assert snapshot.allows("OpenAI")
+    assert not snapshot.allows_model("OpenAI", "gpt-blocked", model_type="llm")
+    assert snapshot.allows_model("OpenAI", "gpt-ok", model_type="llm")
+
+
+def test_bundle_content_hash_is_stable_when_no_models_are_blocked():
+    legacy_hash = policy_bundle_content_hash(
+        approved_provider_ids={"openai"},
+        blocked_component_keys={"OldComponent"},
+        blocked_template_keys={"old-template"},
+    )
+    explicit_empty_hash = policy_bundle_content_hash(
+        approved_provider_ids={"openai"},
+        blocked_component_keys={"OldComponent"},
+        blocked_template_keys={"old-template"},
+        blocked_model_keys=(),
+    )
+    blocking_hash = policy_bundle_content_hash(
+        approved_provider_ids={"openai"},
+        blocked_component_keys={"OldComponent"},
+        blocked_template_keys={"old-template"},
+        blocked_model_keys={"openai::gpt-blocked"},
+    )
+
+    assert legacy_hash == explicit_empty_hash
+    assert blocking_hash != legacy_hash
+
+
+def test_normalize_blocked_model_key_canonicalizes_provider_segment():
+    from lfx.services.model_provider_policy import normalize_blocked_model_key
+
+    assert normalize_blocked_model_key("bare-model") == "bare-model"
+    assert normalize_blocked_model_key("OpenAI::gpt-4o") == "openai::gpt-4o"
+    assert normalize_blocked_model_key(" OpenAI :: gpt-4o ") == "openai::gpt-4o"
+    assert normalize_blocked_model_key("OpenAI::llm::gpt-4o") == "openai::llm::gpt-4o"
+    # A non-typed second segment is part of one model name containing the separator.
+    assert normalize_blocked_model_key("OpenAI::my::deployment") == "openai::my::deployment"
+    for invalid in ("", "  ", "::gpt-4o", "OpenAI::", "OpenAI::llm::"):
+        with pytest.raises(ValueError, match="Blocked-model key"):
+            normalize_blocked_model_key(invalid)
+
+
+def test_runtime_denies_blocked_model_before_credential_resolution(monkeypatch):
+    credential_lookup_called = False
+
+    def _credential_lookup(*_args, **_kwargs):
+        nonlocal credential_lookup_called
+        credential_lookup_called = True
+        return "key"
+
+    monkeypatch.setattr("lfx.base.models.unified_models.get_api_key_for_provider", _credential_lookup)
+
+    with pytest.raises(ModelProviderPolicyError) as exc_info:
+        get_llm(
+            [{"name": "claude-blocked", "provider": "Anthropic", "metadata": {}}],
+            user_id="user-1",
+            provider_policy=_snapshot_with_blocked("anthropic::llm::claude-blocked"),
+        )
+
+    assert exc_info.value.code == "policy_blocked"
+    assert exc_info.value.model_name == "claude-blocked"
+    assert credential_lookup_called is False
+
+
+def test_embedding_runtime_denies_blocked_model_before_credential_resolution(monkeypatch):
+    credential_lookup_called = False
+
+    def _credential_lookup(*_args, **_kwargs):
+        nonlocal credential_lookup_called
+        credential_lookup_called = True
+        return "key"
+
+    monkeypatch.setattr("lfx.base.models.unified_models.get_api_key_for_provider", _credential_lookup)
+
+    with pytest.raises(ModelProviderPolicyError) as exc_info:
+        get_embeddings(
+            [{"name": "embed-blocked", "provider": "OpenAI", "metadata": {}}],
+            user_id="user-1",
+            provider_policy=_snapshot_with_blocked("openai::embeddings::embed-blocked"),
+        )
+
+    assert exc_info.value.code == "policy_blocked"
+    assert exc_info.value.model_name == "embed-blocked"
+    assert credential_lookup_called is False
+
+
+@pytest.mark.parametrize(
+    ("option_builder", "model_type", "blocked_key"),
+    [
+        ("get_language_model_options", "llm", "openai::llm::gpt-blocked"),
+        ("get_language_model_options", "llm", "openai::gpt-blocked"),
+        ("get_language_model_options", "llm", "gpt-blocked"),
+        ("get_embedding_model_options", "embeddings", "openai::embeddings::gpt-blocked"),
+    ],
+)
+def test_model_options_hide_blocked_models(option_builder, model_type, blocked_key):
+    from lfx.base.models.unified_models import model_catalog
+
+    catalog = [
+        {
+            "provider": "OpenAI",
+            "icon": "OpenAI",
+            "models": [
+                {"model_name": "gpt-blocked", "metadata": {"default": True, "model_type": model_type}},
+                {"model_name": "gpt-visible", "metadata": {"default": True, "model_type": model_type}},
+            ],
+        },
+    ]
+    policy = _snapshot_with_blocked(blocked_key)
+
+    with (
+        patch.object(model_catalog, "get_unified_models_detailed", return_value=catalog),
+        patch.object(model_catalog, "_get_model_status", new=AsyncMock(return_value=(set(), set()))),
+        patch.object(
+            model_catalog,
+            "_fetch_enabled_providers_for_user",
+            new=AsyncMock(return_value={"OpenAI"}),
+        ),
+        patch.object(model_catalog, "replace_with_live_models", side_effect=lambda *_a, **_k: None),
+        patch.object(model_catalog, "inject_custom_enabled_models", side_effect=lambda *_a, **_k: None),
+    ):
+        options = getattr(model_catalog, option_builder)(
+            user_id="00000000-0000-0000-0000-000000000001",
+            provider_policy=policy,
+        )
+
+    assert {(option["provider"], option["name"]) for option in options} == {("OpenAI", "gpt-visible")}

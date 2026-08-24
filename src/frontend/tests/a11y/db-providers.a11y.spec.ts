@@ -9,6 +9,7 @@ type GlobalVariableFixture = {
   default_fields: string[];
   name: string;
   value?: string;
+  has_value?: boolean;
 };
 
 type WriteBehavior = {
@@ -30,6 +31,7 @@ const openSearchConfiguredVariables: GlobalVariableFixture[] = [
     default_fields: [],
     name: "LANGFLOW_KNOWLEDGE_BACKEND",
     value: "opensearch",
+    has_value: true,
   },
   {
     id: "a11y-os-url",
@@ -37,6 +39,7 @@ const openSearchConfiguredVariables: GlobalVariableFixture[] = [
     default_fields: [],
     name: "OPENSEARCH_URL",
     value: "https://search.example.com:9200",
+    has_value: true,
   },
   {
     id: "a11y-os-username",
@@ -44,6 +47,7 @@ const openSearchConfiguredVariables: GlobalVariableFixture[] = [
     default_fields: [],
     name: "OPENSEARCH_USERNAME",
     value: "admin",
+    has_value: true,
   },
   {
     id: "a11y-os-index-name",
@@ -51,14 +55,18 @@ const openSearchConfiguredVariables: GlobalVariableFixture[] = [
     default_fields: [],
     name: "OPENSEARCH_INDEX_NAME",
     value: "langflow_knowledge",
+    has_value: true,
   },
   {
     // Credential-type variables are masked server-side — value is
-    // intentionally omitted here to mirror the real API response.
+    // intentionally omitted here to mirror the real API response, which
+    // reports presence only through the `has_value` flag. The UI fails
+    // closed without it, so omitting it would read as "not configured".
     id: "a11y-os-password",
     type: "Credential",
     default_fields: [],
     name: "OPENSEARCH_PASSWORD", // pragma: allowlist secret
+    has_value: true,
   },
   {
     id: "a11y-os-use-ssl",
@@ -66,6 +74,7 @@ const openSearchConfiguredVariables: GlobalVariableFixture[] = [
     default_fields: [],
     name: "OPENSEARCH_USE_SSL",
     value: "false",
+    has_value: true,
   },
   {
     id: "a11y-os-verify-certs",
@@ -73,6 +82,7 @@ const openSearchConfiguredVariables: GlobalVariableFixture[] = [
     default_fields: [],
     name: "OPENSEARCH_VERIFY_CERTS", // pragma: allowlist secret
     value: "false",
+    has_value: true,
   },
 ];
 
@@ -97,6 +107,14 @@ async function mockGlobalVariables(
   variables: GlobalVariableFixture[],
   writeBehavior: WriteBehavior = {},
 ) {
+  if (writeBehavior.fail) {
+    page.expectServerError({
+      method: "POST",
+      path: "/api/v1/variables/",
+      status: 500,
+      count: 1,
+    });
+  }
   await page.route(/\/api\/v1\/variables\/?.*/, async (route: Route) => {
     const request = route.request();
     const method = request.method();
@@ -129,6 +147,7 @@ async function mockGlobalVariables(
           id: (body.id as string) ?? "a11y-db-provider-variable",
           name: body.name ?? "a11y-db-provider-variable",
           type: body.type ?? "Generic",
+          has_value: true,
         },
       });
       return;

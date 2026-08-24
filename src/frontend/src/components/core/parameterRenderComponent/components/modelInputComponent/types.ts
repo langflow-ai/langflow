@@ -25,4 +25,8 @@ export interface ModelInputComponentType {
   modelType?: "llm" | "embeddings";
   /** Accessible name for the combobox trigger (WCAG 4.1.2). */
   "aria-label"?: string;
+  /** Id of the error text describing this field (aria-describedby, WCAG 3.3.1). */
+  ariaDescribedBy?: string;
+  /** Marks the combobox trigger invalid when the field failed validation. */
+  ariaInvalid?: boolean;
 }

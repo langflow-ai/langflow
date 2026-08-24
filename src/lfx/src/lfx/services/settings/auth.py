@@ -235,6 +235,17 @@ class AuthSettings(BaseSettings):
         default="name",
         description="JWT claim containing the user's display name.",
     )
+    EXTERNAL_AUTH_GROUP_RECONCILE_INTERVAL_SECONDS: int = Field(
+        default=60,
+        ge=0,
+        description=(
+            "Minimum seconds between external group reconciliations for one unchanged directory state. "
+            "Bearer tokens arrive on every request, and reconciliation writes rows, takes policy locks and "
+            "appends an audit entry, so an unchanged (provider, subject, group set) is only reconciled once "
+            "per interval. A group set that differs from the last reconciled one always reconciles "
+            "immediately. Set to 0 to reconcile on every request."
+        ),
+    )
     EXTERNAL_AUTH_ACCESS_CEILING_ENABLED: bool = Field(
         default=False,
         description=(
@@ -282,9 +293,17 @@ class AuthSettings(BaseSettings):
         description=(
             "Write an AuthzAuditLog row for every authorization decision and share-administration "
             "action. Independent of AUTHZ_ENABLED — set this to True while enforcement is off to "
-            "observe traffic before flipping the AUTHZ_ENABLED flag. Defaults to False because the "
-            "fire-and-forget audit task opens its own DB session per row; on SQLite this can "
-            "contend with concurrent write transactions ('database is locked')."
+            "observe traffic before flipping the AUTHZ_ENABLED flag. The default pipeline is "
+            "best effort and may drop rows under sustained database failure or queue saturation."
+        ),
+    )
+    AUTHZ_AUDIT_DURABLE: bool = Field(
+        default=False,
+        description=(
+            "Require every accepted authorization audit call to wait for its database commit. "
+            "A full queue applies backpressure and persistence failures fail the triggering request "
+            "with a sanitized error. Disabled by default to preserve the non-blocking OSS behavior; "
+            "enable it before using authz_audit_log as a compliance or external-delivery source."
         ),
     )
     AUTHZ_AUDIT_RETENTION_DAYS: int = Field(

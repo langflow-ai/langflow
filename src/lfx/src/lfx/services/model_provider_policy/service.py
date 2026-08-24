@@ -48,6 +48,17 @@ class ModelProviderPolicyService(BaseModelProviderPolicyService):
             return candidate_provider_ids
         return candidate_provider_ids & approved_provider_ids
 
+    def get_blocked_model_keys(
+        self,
+        *,
+        context: ModelProviderPolicyContext,  # noqa: ARG002
+        purpose: ModelProviderPolicyPurpose,  # noqa: ARG002
+    ) -> Collection[str]:
+        """Surface the deployment-wide blocked-model deny-list from the bundle."""
+        if self._policy_bundle_service is not None:
+            return self._policy_bundle_service.snapshot.blocked_model_keys
+        return frozenset()
+
     @property
     def approved_provider_ids(self) -> frozenset[str]:
         """Return the install-wide deployment ceiling; empty means unrestricted."""

@@ -28,12 +28,12 @@ dependencies = [
     # default langflow dependency.
     # The cross-bundle CI matrix verifies these ranges resolve together across
     # the supported lfx axis.
-    "lfx-ibm>=0.1.5,<1.0.0",
+    "lfx-ibm>=0.2.1,<1.0.0",
     "lfx-docling>=0.1.0,<1.0.0",
-    "lfx-datastax>=0.1.3,<1.0.0",
-    "lfx-toolguard>=0.1.0,<1.0.0",
-    "lfx-openai>=0.1.0,<1.0.0",
-    "lfx-anthropic>=0.1.0,<1.0.0",
+    "lfx-datastax>=0.1.5,<1.0.0",
+    "lfx-toolguard>=0.1.1,<1.0.0",
+    "lfx-openai>=0.1.2,<1.0.0",
+    "lfx-anthropic>=0.1.5,<1.0.0",
     "lfx-azure>=0.1.0,<1.0.0",
     "lfx-ollama>=0.1.0,<1.0.0",
     "lfx-amazon>=0.1.0,<1.0.0",
@@ -122,6 +122,7 @@ lfx-openai-compatible = { workspace = true }
 lfx-exa = { workspace = true }
 lfx-valkey = { workspace = true }
 lfx-google = { workspace = true }
+lfx-confluent = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -157,6 +158,7 @@ members = [
     "src/bundles/exa",
     "src/bundles/valkey",
     "src/bundles/google",
+    "src/bundles/confluent",
     # langflow-extensions:bundle-members-end
 ]
 
@@ -169,13 +171,14 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 bundles = [
-    "lfx-bundles[all-no-torch]>=1.1.6,<2.0",
+    "lfx-bundles[all-no-torch]>=1.1.15,<2.0",
     "lfx-arxiv>=0.1.0,<1.0.0",
+    "lfx-confluent>=0.1.0,<1.0.0",
     "lfx-duckduckgo>=0.1.0,<1.0.0",
     "lfx-empiriolabs>=0.1.0,<1.0.0",
     "lfx-exa>=0.1.0,<1.0.0",
     "lfx-firecrawl>=0.1.0,<1.0.0",
-    "lfx-nextplaid>=0.1.0,<1.0.0",
+    "lfx-nextplaid>=0.1.4,<1.0.0",
     "lfx-paddle>=0.1.0,<1.0.0",
     "lfx-valkey>=0.1.0,<1.0.0",
 ]
@@ -245,19 +248,25 @@ override-dependencies = [
     # Security: Force upgraded versions to prevent transitive deps from pulling older vulnerable versions
     "orjson>=3.11.6",
     "gunicorn>=25.3.0",
-    "pypdf>=6.10.0",  # Force pypdf 6.10+ to prevent vulnerable 6.6.x versions
+    "pypdf>=6.15.0,<7.0.0",  # Force a patched pypdf 6.x release
+    "cryptography>=50.0.0",  # GHSA-g6cj-pr64-35w5 is fixed in 50.0.0
     "nltk>=3.9.4",
     "Markdown>=3.8.0",
     "dynaconf>=3.2.13",
-    "pillow>=12.1.1",  # Force Pillow 12.1.1+ to prevent CVE-vulnerable versions
+    "pillow>=12.3.0",  # Force Pillow 12.3.0+ to prevent CVE-vulnerable versions
     "playwright>=1.59.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
     # Keep uv workspace resolution on the Python 3.14-compatible LiteLLM floor.
     "litellm>=1.93.0,<2.0.0",
+    # Temporary compatibility valve: langchain-litellm 0.6.1-0.7.0 cap
+    # cryptography below 49; 0.5.1 is the newest release without that cap.
+    "langchain-litellm==0.5.1",
     # Transitive dependency CVE fixes
     "lxml>=6.1.0,<7.0.0",  # CVE-2026-41066
     "mako>=1.3.12,<2.0.0",  # CVE-2026-44307
     "urllib3>=2.7.0,<3.0.0",  # CVE-2026-44431, CVE-2026-44432
     "python-liquid>=2.2.0,<3.0.0",  # CVE-2026-45017
+    "GitPython>=3.1.58",  # GHSA-wvpp-8hx9-p66j, GHSA-jm78-9fvv-mhgr, GHSA-hmq2-w58f-27jc, GHSA-4gmw-gg2m-w46p, GHSA-9rj7-rf2p-w77r, GHSA-hh9p-6wh2-4mfc
+    "h2>=4.4.1",  # CVE-2026-71554
 ]
 
 [tool.codespell]
@@ -282,9 +291,6 @@ console_output_style = "progress"
 filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::ResourceWarning",
-    "ignore:Skipped unsupported reflection:sqlalchemy.exc.SAWarning",
-    "ignore:.*SQL-parsed foreign key constraint:sqlalchemy.exc.SAWarning",
-    "ignore:autogenerate skipping metadata-specified expression-based index:UserWarning",
 ]
 log_cli = true
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
@@ -305,13 +311,25 @@ asyncio_default_fixture_loop_scope = "function"
 addopts = "-p no:benchmark"
 
 [tool.coverage.run]
+# Canonical backend coverage configuration. Keep this static and independent
+# of frontend bundle presentation so local and CI reports measure the same code.
 command_line = """
     -m pytest --ignore=tests/integration
     --cov --cov-report=term --cov-report=html
     --instafail -ra -n auto -m "not api_key_required"
 """
 source = ["src/backend/base/langflow/"]
-omit = ["*/alembic/*", "tests/*", "*/__init__.py"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/*test*",
+    "*/alembic/*",
+    "*/migrations/*",
+    "*/__pycache__/*",
+    "*/.*",
+    "*/__init__.py",
+    "*/components/deactivated/*",
+]
 
 
 [tool.coverage.report]
