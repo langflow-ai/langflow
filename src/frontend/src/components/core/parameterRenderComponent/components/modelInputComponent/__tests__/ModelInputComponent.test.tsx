@@ -883,13 +883,18 @@ describe("ModelInputComponent", () => {
       expect(screen.getByRole("combobox")).not.toBeDisabled();
     });
 
-    it("keeps a saved value whose model isn't enabled locally and renders the Configure wrench", async () => {
+    it("keeps a saved value whose provider is not offered at all and flags it as not available", async () => {
       // The backend's update_model_options_in_build_config injects the saved
       // value into options tagged with `not_enabled_locally: true` whenever
-      // it isn't in the user's enabled list. The frontend must:
+      // it isn't in the user's enabled list. Here the saved provider is absent
+      // from /models entirely — it is not offered to this user (not installed,
+      // or its approval was revoked), so there is no provider to configure.
+      // The frontend must:
       //   1. NOT auto-reset the saved value.
-      //   2. Keep the option visible/selectable in the dropdown.
-      //   3. Render the Configure wrench next to the trigger.
+      //   2. Keep naming the saved model in the trigger.
+      //   3. Say the model is not available instead of offering a Configure
+      //      wrench that opens a provider manager the provider is not in
+      //      (LE-1960 restricted messaging).
       mockedUseGetEnabledModels.mockReturnValue({
         data: {
           enabled_models: {
@@ -939,15 +944,39 @@ describe("ModelInputComponent", () => {
         expect(screen.getByText("ibm/granite-3")).toBeInTheDocument();
       });
 
-      // Configure wrench is rendered next to the trigger.
+      // The restriction is explained next to the name; no dead-end wrench.
       expect(
-        screen.getByTestId(`${defaultProps.id}-configure`),
-      ).toBeInTheDocument();
+        screen.getByTestId(`${defaultProps.id}-unavailable`),
+      ).toHaveTextContent("Not available");
+      expect(
+        screen.queryByTestId(`${defaultProps.id}-configure`),
+      ).not.toBeInTheDocument();
     });
 
-    it("opens the provider manager when the Configure wrench is clicked", async () => {
+    it("renders the Configure wrench for a provider that is offered but not yet configured", async () => {
+      // The saved provider IS in /models, awaiting credentials: that is the
+      // shape the Configure wrench exists for, and it opens the provider
+      // manager. Another provider is configured but has no enabled model, so
+      // there is nothing for the auto-select to swap the saved value for.
+      mockedUseGetModelProviders.mockReturnValue({
+        data: [
+          {
+            provider: "OpenAI",
+            is_enabled: false,
+            is_configured: true,
+            models: [{ model_name: "gpt-4", metadata: {} }],
+          },
+          {
+            provider: "IBM watsonx.ai",
+            is_enabled: false,
+            is_configured: false,
+            models: [{ model_name: "ibm/granite-3", metadata: {} }],
+          },
+        ],
+        isLoading: false,
+      });
       mockedUseGetEnabledModels.mockReturnValue({
-        data: { enabled_models: { OpenAI: { "gpt-4": true } } },
+        data: { enabled_models: { OpenAI: { "gpt-4": false } } },
         isLoading: false,
       });
 
@@ -976,7 +1005,9 @@ describe("ModelInputComponent", () => {
       renderWithQueryClient(
         <ModelInputComponent
           {...defaultProps}
-          options={optionsWithSticky}
+          options={optionsWithSticky.filter(
+            (option) => option.provider === "IBM watsonx.ai",
+          )}
           value={savedValue}
           handleOnNewValue={handleOnNewValue}
         />,
@@ -1590,6 +1621,40 @@ describe("ModelInputComponent", () => {
       expect(
         screen.getByRole("combobox", { name: "Embedding model" }),
       ).toBeInTheDocument();
+    });
+
+    // Precedence guard: ModelTrigger renders
+    // `aria-label={!ariaLabelledBy ? ariaLabel : undefined}` — the literal
+    // aria-label is only a fallback for callers with no field label id to
+    // forward. When a caller (accidentally or otherwise) supplies both,
+    // ariaLabelledBy must win outright, not merge or get overridden.
+    it("prefers the forwarded field label over a literal aria-label when both are supplied", () => {
+      renderWithQueryClient(
+        <>
+          <span id="model-field-label">Model Name</span>
+          <ModelInputComponent
+            {...defaultProps}
+            value={[mockOptions[0]]}
+            ariaLabelledBy="model-field-label"
+            aria-label="Embedding model"
+          />
+        </>,
+      );
+
+      expect(
+        screen.getByRole("combobox", { name: "Model Name" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("combobox", { name: "Embedding model" }),
+      ).not.toBeInTheDocument();
+      // The literal aria-label must be dropped outright, not merely
+      // shadowed — a stray leftover attribute would still corrupt the
+      // accessible name computation in browsers that don't prioritize
+      // aria-labelledby as strictly as the test-library name algorithm.
+      expect(screen.getByRole("combobox")).not.toHaveAttribute(
+        "aria-label",
+        "Embedding model",
+      );
     });
   });
 

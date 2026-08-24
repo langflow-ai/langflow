@@ -1,12 +1,13 @@
 import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { usePermissions } from "@/contexts/permissionsContext";
 import CustomResourceShareAction from "@/customization/components/custom-resource-share-action";
 import type { FolderType } from "@/pages/MainPage/entities";
@@ -34,36 +35,35 @@ export const SelectOptions = ({
   const canDownload = can(item.id, "read");
   const canDelete = can(item.id, "delete");
   const displayName = getProjectDisplayName(item, t);
+  const select = (option: string) =>
+    handleSelectChange(
+      option,
+      item,
+      handleDeleteFolder,
+      handleDownloadFolder,
+      handleSelectFolderToRename,
+    );
   return (
-    <div className="flex items-center gap-1">
-      <CustomResourceShareAction
-        resourceId={item.id!}
-        resourceType="project"
-        resourceName={displayName}
-      />
-      <Select
-        onValueChange={(value) =>
-          handleSelectChange(
-            value,
-            item,
-            handleDeleteFolder,
-            handleDownloadFolder,
-            handleSelectFolderToRename,
-          )
-        }
-        value=""
+    // A menu of commands, not a value to pick: Knowledge Bases, Files and
+    // Deployments all use DropdownMenu here, and Share is a menu item on each.
+    // The sidebar was the one surface rendering Share as a second, always-on
+    // icon beside the trigger -- the only permanently visible control in the
+    // list, on every row (LE-1905).
+    <DropdownMenu>
+      <ShadTooltip
+        content={t("folder.options")}
+        side="right"
+        styleClasses="z-50"
       >
-        <ShadTooltip
-          content={t("folder.options")}
-          side="right"
-          styleClasses="z-50"
-        >
-          <SelectTrigger
-            variant="plain"
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
             className="h-6 w-6 min-h-[24px] min-w-[24px]"
             id={`options-trigger-${item.id}`}
             data-testid={`more-options-button_${item.id}`}
             aria-label={t("folder.optionsFor", { name: displayName })}
+            onClick={(e) => e.stopPropagation()}
           >
             <IconComponent
               name={"MoreHorizontal"}
@@ -72,44 +72,55 @@ export const SelectOptions = ({
                 checkPathName(item.id!) ? "block" : "hidden",
               )}
             />
-          </SelectTrigger>
-        </ShadTooltip>
-        <SelectContent
-          align="end"
-          alignOffset={-16}
-          position="popper"
-          className="min-w-[11.5rem]"
+          </Button>
+        </DropdownMenuTrigger>
+      </ShadTooltip>
+      <DropdownMenuContent
+        align="end"
+        alignOffset={-16}
+        className="min-w-[11.5rem]"
+      >
+        <DropdownMenuItem
+          id="rename-button"
+          data-testid="btn-rename-project"
+          className="text-xs"
+          disabled={!canRename}
+          onClick={(e) => {
+            e.stopPropagation();
+            select("rename");
+          }}
         >
-          <SelectItem
-            variant="plain"
-            id="rename-button"
-            value="rename"
-            data-testid="btn-rename-project"
-            className="text-xs"
-            disabled={!canRename}
-          >
-            <FolderSelectItem name={t("folder.rename")} iconName="SquarePen" />
-          </SelectItem>
-          <SelectItem
-            variant="plain"
-            value="download"
-            data-testid="btn-download-project"
-            className="text-xs"
-            disabled={!canDownload}
-          >
-            <FolderSelectItem name={t("folder.download")} iconName="Download" />
-          </SelectItem>
-          <SelectItem
-            variant="plain"
-            value="delete"
-            data-testid="btn-delete-project"
-            className="text-xs"
-            disabled={!canDelete}
-          >
-            <FolderSelectItem name={t("folder.delete")} iconName="Trash2" />
-          </SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
+          <FolderSelectItem name={t("folder.rename")} iconName="SquarePen" />
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          data-testid="btn-download-project"
+          className="text-xs"
+          disabled={!canDownload}
+          onClick={(e) => {
+            e.stopPropagation();
+            select("download");
+          }}
+        >
+          <FolderSelectItem name={t("folder.download")} iconName="Download" />
+        </DropdownMenuItem>
+        <CustomResourceShareAction
+          resourceId={item.id!}
+          resourceType="project"
+          resourceName={displayName}
+          display="menu"
+        />
+        <DropdownMenuItem
+          data-testid="btn-delete-project"
+          className="text-xs"
+          disabled={!canDelete}
+          onClick={(e) => {
+            e.stopPropagation();
+            select("delete");
+          }}
+        >
+          <FolderSelectItem name={t("folder.delete")} iconName="Trash2" />
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };

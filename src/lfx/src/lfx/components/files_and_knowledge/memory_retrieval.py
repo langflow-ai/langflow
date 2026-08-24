@@ -32,6 +32,7 @@ from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.services.deps import session_scope
+from lfx.workflow.end_user_identity import end_user_id_from_scoped_session, serving_end_user_enabled
 
 if TYPE_CHECKING:
     from langflow.services.database.models.user.model import User
@@ -137,7 +138,7 @@ class MemoryBaseComponent(Component):
         ),
     ]
 
-    def _build_where_clause(self, *, session_id: str | None = None) -> dict | None:
+    def _build_where_clause(self, *, session_id: str | None = None, end_user_id: str | None = None) -> dict | None:
         """Compose the metadata filter based on opt-in filters and manual params.
 
         Emits a flat ``{key: value}`` dict, which is the contract every
@@ -145,10 +146,18 @@ class MemoryBaseComponent(Component):
         and OpenSearch translates it into a bool query. Chroma's explicit
         ``{"$eq": ...}`` operator form is NOT portable — a remote backend would
         treat the operator dict as a literal value and silently match nothing.
+
+        When ``filter_by_session`` is on, the session-id predicate already scopes to one
+        end user (its ``<end_user>::<base>`` prefix). When it is off (cross-session recall)
+        on the serving plane, ``end_user_id`` keeps the query within that one end user so it
+        does not span every end user's chunks in the shared service-account store. Off /
+        editor (``end_user_id`` None) adds neither predicate — all sessions, unchanged.
         """
         predicates: dict = {}
         if _session_filter_enabled(self.filter_by_session) and session_id:
             predicates["session_id"] = str(session_id)
+        elif end_user_id:
+            predicates["end_user_id"] = str(end_user_id)
 
         return predicates or None
 
@@ -277,13 +286,26 @@ class MemoryBaseComponent(Component):
         context from prior conversations across all sessions.
         """
         session_id = getattr(self.graph, "session_id", None)
-        if _session_filter_enabled(self.filter_by_session) and not session_id:
+        filter_on = _session_filter_enabled(self.filter_by_session)
+        if filter_on and not session_id:
             # Only required when filtering is on, since the value gates the where clause.
             msg = (
                 "A session_id is required on the flow request when 'Filter by Session' "
                 "is enabled — disable the toggle to allow cross-session retrieval."
             )
             raise ValueError(msg)
+
+        # Serving plane: the end-user id lives in the scoped session prefix. When filtering
+        # by session it is already scoped; when doing cross-session recall it becomes the
+        # sole end-user predicate (see _build_where_clause).
+        end_user_id = end_user_id_from_scoped_session(session_id)
+        if serving_end_user_enabled() and not filter_on and end_user_id is None:
+            # Fail-closed: an anonymous serving caller has no end-user scope, so
+            # cross-session recall over the shared service-account store would return every
+            # end user's memory. Anonymous runs persist nothing and have no cross-session
+            # memory to recall, so return empty rather than leak.
+            logger.debug("MemoryBase cross-session recall blocked for anonymous serving caller")
+            return DataFrame(data=[])
 
         flow_id = _coerce_uuid(getattr(self.graph, "flow_id", None))
         if flow_id is None:
@@ -305,7 +327,7 @@ class MemoryBaseComponent(Component):
             owner_username = owner.username
             kb_name = mb.kb_name
 
-        where = self._build_where_clause(session_id=session_id)
+        where = self._build_where_clause(session_id=session_id, end_user_id=end_user_id)
 
         logger.debug(
             "MemoryBase retrieval mb=%s session_hash=%s session_filter=%s top_k=%s",

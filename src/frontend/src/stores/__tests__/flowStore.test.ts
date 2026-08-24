@@ -14,6 +14,7 @@ jest.mock("lodash", () => ({
 }));
 
 jest.mock("@/CustomNodes/helpers/check-code-validity", () => ({
+  ...jest.requireActual("@/CustomNodes/helpers/check-code-validity"),
   checkCodeValidity: jest.fn(),
 }));
 
@@ -86,10 +87,12 @@ jest.mock("../tweaksStore", () => ({
   },
 }));
 
+let mockTemplates: Record<string, unknown> = {};
+
 jest.mock("../typesStore", () => ({
   useTypesStore: {
     getState: () => ({
-      templates: {},
+      templates: mockTemplates,
       types: {},
     }),
   },
@@ -143,6 +146,7 @@ describe("useFlowStore", () => {
     type: "genericNode",
     position: { x: 100, y: 100 },
     data: {
+      type: "TestComponent",
       node: {
         display_name: "Test Node",
         icon: "test-icon",
@@ -162,7 +166,9 @@ describe("useFlowStore", () => {
 
     // Reset store state to basics
     act(() => {
+      mockTemplates = {};
       useUtilityStore.setState({
+        blockedComponentTypes: new Set<string>(),
         allowCustomComponents: true,
         substituteOutdatedComponentCode: true,
       });
@@ -1250,6 +1256,157 @@ describe("useFlowStore", () => {
       expect(mockedRunFlow).not.toHaveBeenCalled();
     });
 
+    it("blocks a run when a component was disabled by an administrator", async () => {
+      // The catalog drops a blocked component from /all, so its node loses its
+      // template. That used to be ignored unless custom components were off,
+      // leaving the run to fail server side with a generic error.
+      mockTemplates = { SomeKnownType: {} };
+      useUtilityStore.setState({
+        allowCustomComponents: true,
+        substituteOutdatedComponentCode: true,
+        blockedComponentTypes: new Set(["TestComponent"]),
+      });
+      (checkCodeValidity as jest.Mock).mockReturnValueOnce({
+        outdated: false,
+        blocked: true,
+        breakingChange: false,
+        userEdited: false,
+      });
+      useFlowStore.setState({ nodes: [mockNode] });
+
+      await expect(useFlowStore.getState().buildFlow({})).rejects.toThrow(
+        "Components disabled by an administrator must be removed before building",
+      );
+      expect(mockedRunFlow).not.toHaveBeenCalled();
+    });
+
+    describe("partial builds", () => {
+      // A partial build only executes the requested subgraph, so a blocked node
+      // outside it has nothing to do with the run and must not reject it.
+      const blockedNode = {
+        id: "node-blocked",
+        type: "genericNode",
+        position: { x: 0, y: 0 },
+        data: {
+          id: "node-blocked",
+          type: "BlockedComponent",
+          node: { display_name: "Blocked Node" },
+        },
+      } as unknown as AllNodeType;
+      const healthyNode = {
+        id: "node-healthy",
+        type: "genericNode",
+        position: { x: 200, y: 0 },
+        data: { id: "node-healthy", node: { display_name: "Healthy Node" } },
+      } as unknown as AllNodeType;
+      const edgeBlockedToHealthy = {
+        id: "edge-blocked-healthy",
+        source: "node-blocked",
+        target: "node-healthy",
+      } as EdgeType;
+
+      const validityByNodeId = (nodeId: string) => ({
+        outdated: false,
+        blocked: nodeId === "node-blocked",
+        breakingChange: false,
+        userEdited: false,
+      });
+
+      beforeEach(() => {
+        mockTemplates = { SomeKnownType: {} };
+        useUtilityStore.setState({
+          allowCustomComponents: true,
+          substituteOutdatedComponentCode: true,
+          blockedComponentTypes: new Set(["BlockedComponent"]),
+        });
+        (checkCodeValidity as jest.Mock).mockImplementation(
+          (data: { id: string }) => validityByNodeId(data.id),
+        );
+        mockedRunFlow.mockResolvedValue(undefined);
+      });
+
+      it("runs a downstream build that starts after the blocked component", async () => {
+        useFlowStore.setState({
+          nodes: [blockedNode, healthyNode],
+          edges: [edgeBlockedToHealthy],
+        });
+
+        await useFlowStore
+          .getState()
+          .buildFlow({ startNodeId: "node-healthy" });
+
+        expect(mockedRunFlow).toHaveBeenCalledTimes(1);
+        // The banner still reports the blocked node: only the preflight is scoped.
+        expect(useFlowStore.getState().componentsToUpdate).toEqual([
+          expect.objectContaining({ id: "node-blocked", blocked: true }),
+        ]);
+      });
+
+      it("runs an upstream build that stops before the blocked component", async () => {
+        useFlowStore.setState({
+          nodes: [healthyNode, blockedNode],
+          edges: [
+            {
+              id: "edge-healthy-blocked",
+              source: "node-healthy",
+              target: "node-blocked",
+            } as EdgeType,
+          ],
+        });
+
+        await useFlowStore.getState().buildFlow({ stopNodeId: "node-healthy" });
+
+        expect(mockedRunFlow).toHaveBeenCalledTimes(1);
+      });
+
+      it("blocks a downstream build that reaches the blocked component", async () => {
+        useFlowStore.setState({
+          nodes: [blockedNode, healthyNode],
+          edges: [edgeBlockedToHealthy],
+        });
+
+        await expect(
+          useFlowStore.getState().buildFlow({ startNodeId: "node-blocked" }),
+        ).rejects.toThrow(
+          "Components disabled by an administrator must be removed before building",
+        );
+        expect(mockedRunFlow).not.toHaveBeenCalled();
+      });
+
+      it("blocks an upstream build that reaches the blocked component", async () => {
+        useFlowStore.setState({
+          nodes: [blockedNode, healthyNode],
+          edges: [edgeBlockedToHealthy],
+        });
+
+        await expect(
+          useFlowStore.getState().buildFlow({ stopNodeId: "node-healthy" }),
+        ).rejects.toThrow(
+          "Components disabled by an administrator must be removed before building",
+        );
+        expect(mockedRunFlow).not.toHaveBeenCalled();
+      });
+    });
+
+    it("still runs an outdated component while custom components are allowed", async () => {
+      // Only a missing template is newly enforced; drift keeps its old behavior.
+      useUtilityStore.setState({
+        allowCustomComponents: true,
+        substituteOutdatedComponentCode: false,
+      });
+      (checkCodeValidity as jest.Mock).mockReturnValueOnce({
+        outdated: true,
+        blocked: false,
+        breakingChange: false,
+        userEdited: false,
+      });
+      useFlowStore.setState({ nodes: [mockNode] });
+
+      await useFlowStore.getState().buildFlow({});
+
+      expect(mockedRunFlow).toHaveBeenCalledTimes(1);
+    });
+
     it("keeps blocking unknown components when server-side substitution is enabled", async () => {
       useUtilityStore.setState({
         allowCustomComponents: false,
@@ -1267,6 +1424,55 @@ describe("useFlowStore", () => {
         "Custom components are blocked while custom components are disabled",
       );
       expect(mockedRunFlow).not.toHaveBeenCalled();
+    });
+
+    it("builds a component the policy does not name", async () => {
+      // LE-2226: a policy blocking some other component — or only a starter
+      // template — must not stop this run. A missing template is equally an
+      // uninstalled bundle, an imported flow, or the user's own component.
+      mockTemplates = { SomeKnownType: {} };
+      useUtilityStore.setState({
+        allowCustomComponents: true,
+        substituteOutdatedComponentCode: true,
+        blockedComponentTypes: new Set(["SomeOtherComponent"]),
+      });
+      (checkCodeValidity as jest.Mock).mockReturnValueOnce({
+        outdated: false,
+        blocked: true,
+        breakingChange: false,
+        userEdited: false,
+      });
+      useFlowStore.setState({ nodes: [mockNode] });
+      mockedRunFlow.mockResolvedValue(undefined);
+
+      await useFlowStore.getState().buildFlow({});
+
+      expect(mockedRunFlow).toHaveBeenCalledTimes(1);
+    });
+
+    it("builds a user-authored component when no policy is in force", async () => {
+      // A component someone wrote themselves carries code and has no registry
+      // template, which is indistinguishable from a policy-blocked one. With
+      // custom components allowed and no policy set it is legitimate, so
+      // rejecting the build would stop people running their own work.
+      mockTemplates = { SomeKnownType: {} };
+      useUtilityStore.setState({
+        allowCustomComponents: true,
+        substituteOutdatedComponentCode: true,
+        blockedComponentTypes: new Set<string>(),
+      });
+      (checkCodeValidity as jest.Mock).mockReturnValueOnce({
+        outdated: false,
+        blocked: true,
+        breakingChange: false,
+        userEdited: false,
+      });
+      useFlowStore.setState({ nodes: [mockNode] });
+      mockedRunFlow.mockResolvedValue(undefined);
+
+      await useFlowStore.getState().buildFlow({});
+
+      expect(mockedRunFlow).toHaveBeenCalledTimes(1);
     });
 
     it("delegates component policy to the backend on a cold public Playground", async () => {

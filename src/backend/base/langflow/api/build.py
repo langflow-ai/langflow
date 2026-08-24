@@ -6,11 +6,12 @@ import uuid
 from collections.abc import AsyncIterator
 
 from fastapi import BackgroundTasks, HTTPException, Response
+from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
-from lfx.graph.vertex.base import Vertex
 from lfx.log.logger import logger
+from lfx.processing.process import process_tweaks_on_graph
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
 from lfx.utils.file_path_security import LocalFileAccessError
@@ -458,6 +459,7 @@ async def generate_flow_events(
     tweaks: dict | None = None,
     expose_error_details: bool = False,
     persist_messages: bool = True,
+    end_user_id: str | None = None,
 ) -> None:
     """Generate events for flow building process.
 
@@ -497,6 +499,12 @@ async def generate_flow_events(
         graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
         if not graph.user_id:
             graph.user_id = str(current_user.id)
+        # F5: the in-memory end_user_id is lost when the graph is rebuilt from the durable
+        # checkpoint, so re-apply it (threaded here from the persisted request's end_user_id)
+        # — otherwise the resumed run would stamp post-pause messages to the SID, not the end
+        # user, breaking write==read for this conversation.
+        if end_user_id:
+            graph.end_user_id = end_user_id
         # Resume skips the initial run's trace setup (trace_context_var stays unset → post-pause
         # vertices like Chat Output never trace); re-init so the resumed vertices trace.
         graph.flow_name = graph.flow_name or flow_name
@@ -544,18 +552,16 @@ async def generate_flow_events(
             # Apply request tweaks to the built graph. The sync path applies
             # tweaks before Graph construction; the streaming/background path
             # builds from the DB (or request data), so tweaks must be applied
-            # to the built graph here or they are silently dropped. We use
-            # ``update_raw_params`` rather than the lfx ``process_tweaks_on_graph``
-            # helper because that helper only sets ``vertex.params`` and does not
-            # persist the override to runtime (mirrors the workaround in
-            # ``lfx.base.tools.run_flow._process_tweaks_on_graph``).
+            # to the built graph here or they are silently dropped.
+            #
+            # This used to filter only the literal key "code" and write straight
+            # through ``update_raw_params``, which meant the streaming and
+            # background modes accepted tweaks the sync mode refused: the
+            # protected-field floor and the deployment tweak policy were never
+            # consulted. ``process_tweaks_on_graph`` now enforces both and
+            # persists the override correctly, so this path uses it.
             if tweaks:
-                for vertex in graph.vertices:
-                    if not (isinstance(vertex, Vertex) and isinstance(vertex.id, str)):
-                        continue
-                    if node_tweaks := tweaks.get(vertex.id):
-                        node_tweaks = {k: v for k, v in node_tweaks.items() if k != "code"}
-                        vertex.update_raw_params(node_tweaks, overwrite=True)
+                process_tweaks_on_graph(graph, tweaks)
 
             graph.set_run_id(build_run_id)
             if job_id is not None:
@@ -578,6 +584,16 @@ async def generate_flow_events(
             await chat_service.set_cache(flow_id_str, graph)
             await log_telemetry(start_time, components_count, run_id=build_run_id, success=True)
 
+        except TweakRefusedError:
+            # A refused tweak is a caller error, not a build failure, so it must
+            # not be flattened into the generic 500 below.
+            #
+            # Where it surfaces depends on how this ran. Called inline, it
+            # reaches the app-level handler and answers 422. Streaming and
+            # background callers run this in their own task, so the refusal is
+            # reported as an error event on an already-committed HTTP 200
+            # instead. Enforcement holds either way: the tweak is never applied.
+            raise
         except Exception as exc:
             await log_telemetry(
                 start_time,
@@ -888,6 +904,9 @@ async def generate_flow_events(
         # graph non-persisting (astore_message honors this per component). Defaults
         # True, so the Playground and every other caller are unaffected.
         graph.persist_messages = persist_messages
+        # Carry the end-user identity onto the graph so per-user state (chat memory)
+        # scopes to the end user. None for anonymous / feature-off / editor runs.
+        graph.end_user_id = end_user_id
     except Exception as e:
         client_error = error_for_client(e, expose_details=expose_error_details)
         error_message = ErrorMessage(

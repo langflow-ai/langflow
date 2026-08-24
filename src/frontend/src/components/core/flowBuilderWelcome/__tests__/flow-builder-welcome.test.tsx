@@ -6,8 +6,11 @@
  * panel lives in the parent, so these tests can assert behavior in isolation.
  */
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH } from "@/constants/constants";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { FlowBuilderWelcome } from "../flow-builder-welcome";
 
 const WELCOME_TITLE = "What do you want to build?";
@@ -79,13 +82,27 @@ function makeProps(
   };
 }
 
+const example = (name_key: string) =>
+  ({ id: name_key, name: name_key, name_key }) as never;
+
+/** Both quick templates plus one other, i.e. an unrestricted catalog. */
+const FULL_CATALOG = [
+  example("simple_agent"),
+  example("vector_store_rag"),
+  example("basic_prompting"),
+];
+
 describe("FlowBuilderWelcome", () => {
   beforeEach(() => {
+    useFlowsManagerStore.setState({ examples: FULL_CATALOG });
     mockUseEnabledModels.mockReturnValue({
       hasEnabledModels: true,
       filteredProviders: [],
       isLoading: false,
     });
+    useUtilityStore
+      .getState()
+      .setAssistantMaxMessageLength(DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH);
   });
 
   describe("no model provider configured", () => {
@@ -254,6 +271,69 @@ describe("FlowBuilderWelcome", () => {
     });
   });
 
+  describe("catalog policy", () => {
+    it("should_hide_a_quick_template_its_catalog_no_longer_offers", () => {
+      // Clicking a button for a blocked template only fails the lookup, so it
+      // is not offered at all.
+      useFlowsManagerStore.setState({
+        examples: [example("vector_store_rag")],
+      });
+
+      render(<FlowBuilderWelcome {...makeProps()} />);
+
+      expect(
+        screen.queryByTestId("flow-builder-welcome-template-simple-agent"),
+      ).toBeNull();
+      expect(
+        screen.getByTestId("flow-builder-welcome-template-vector-store-rag"),
+      ).toBeInTheDocument();
+    });
+
+    it("should_keep_browse_more_while_any_template_survives", () => {
+      // The modal is worth opening for templates that have no button here.
+      useFlowsManagerStore.setState({ examples: [example("basic_prompting")] });
+
+      render(<FlowBuilderWelcome {...makeProps()} />);
+
+      expect(
+        screen.getByTestId("flow-builder-welcome-browse-more"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("flow-builder-welcome-template-simple-agent"),
+      ).toBeNull();
+    });
+
+    it("should_offer_a_blank_flow_when_no_template_survives", () => {
+      // Nothing to browse and nothing to start from, so the row collapses to
+      // the one action left rather than three dead ends.
+      useFlowsManagerStore.setState({ examples: [] });
+
+      render(<FlowBuilderWelcome {...makeProps()} />);
+
+      expect(
+        screen.getByTestId("flow-builder-welcome-blank-flow"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("flow-builder-welcome-browse-more"),
+      ).toBeNull();
+      expect(screen.queryByText("Or start from a template:")).toBeNull();
+    });
+
+    it("should_land_on_the_blank_canvas_from_the_blank_flow_action", async () => {
+      // The welcome already sits on a freshly created empty flow, so starting
+      // blank is just dismissing the overlay onto it.
+      useFlowsManagerStore.setState({ examples: [] });
+      const props = makeProps();
+
+      render(<FlowBuilderWelcome {...props} />);
+      await userEvent.click(
+        screen.getByTestId("flow-builder-welcome-blank-flow"),
+      );
+
+      expect(props.onClose).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("browse more", () => {
     it("should_call_onBrowseMore_when_the_browse_link_is_clicked", async () => {
       const props = makeProps();
@@ -326,6 +406,81 @@ describe("FlowBuilderWelcome", () => {
       event.preventDefault();
       window.dispatchEvent(event);
       expect(props.onClose).not.toHaveBeenCalled();
+    });
+  });
+  describe("message length limit", () => {
+    const typeInto = (value: string) => {
+      const textarea = screen.getByTestId(
+        "flow-builder-welcome-textarea",
+      ) as HTMLTextAreaElement;
+      fireEvent.change(textarea, { target: { value } });
+      return textarea;
+    };
+
+    it("should_accept_a_prompt_far_past_the_old_500_character_cap", () => {
+      // Regression: onChange sliced the value at 500 characters, so a longer
+      // prompt lost its tail with nothing on screen to say so.
+      render(<FlowBuilderWelcome {...makeProps()} />);
+
+      const textarea = typeInto("a".repeat(1600));
+
+      expect(textarea.value).toHaveLength(1600);
+      expect(textarea).toHaveAttribute(
+        "maxlength",
+        String(DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH),
+      );
+    });
+
+    it("should_always_show_the_character_count", () => {
+      render(<FlowBuilderWelcome {...makeProps()} />);
+
+      expect(
+        screen.getByTestId("flow-builder-welcome-char-count"),
+      ).toHaveTextContent(`0/${DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH}`);
+
+      typeInto("a".repeat(120));
+
+      expect(
+        screen.getByTestId("flow-builder-welcome-char-count"),
+      ).toHaveTextContent(`120/${DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH}`);
+    });
+
+    it("should_submit_a_prompt_at_the_configured_limit", () => {
+      const props = makeProps();
+      render(<FlowBuilderWelcome {...props} />);
+
+      const prompt = "a".repeat(DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH);
+      typeInto(prompt);
+      fireEvent.click(screen.getByTestId("flow-builder-welcome-send-button"));
+
+      expect(props.onSubmit).toHaveBeenCalledWith(prompt);
+    });
+
+    it("should_name_the_environment_variable_when_the_limit_is_reached", () => {
+      render(<FlowBuilderWelcome {...makeProps()} />);
+
+      const textarea = typeInto(
+        "a".repeat(DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH),
+      );
+
+      const hint = screen.getByTestId("flow-builder-welcome-limit-hint");
+      expect(hint).toBeVisible();
+      expect(hint).toHaveTextContent("LANGFLOW_ASSISTANT_MAX_MESSAGE_LENGTH");
+      expect(textarea).toHaveAttribute("aria-describedby", hint.id);
+    });
+
+    it("should_follow_the_limit_served_by_the_backend_config", () => {
+      useUtilityStore.getState().setAssistantMaxMessageLength(6000);
+      const props = makeProps();
+      render(<FlowBuilderWelcome {...props} />);
+
+      const prompt = "a".repeat(4000);
+      const textarea = typeInto(prompt);
+
+      expect(textarea).toHaveAttribute("maxlength", "6000");
+      fireEvent.click(screen.getByTestId("flow-builder-welcome-send-button"));
+
+      expect(props.onSubmit).toHaveBeenCalledWith(prompt);
     });
   });
 });

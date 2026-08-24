@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import type { ModelProviderWithStatus } from "@/controllers/API/queries/models/use-get-model-providers";
 import { matchesModelIdentity } from "../helpers/model-option-identity";
+import { isSavedModelUnavailable } from "../helpers/saved-model-availability";
 import type { ModelOption } from "../types";
 
 export interface UseAutoSelectModelParams {
@@ -16,12 +17,17 @@ export interface UseAutoSelectModelParams {
    * fetch must not be read as "the saved model is gone".
    */
   modelStatusIsReliable: boolean;
+  /** The user's enabled-models map; a model absent from it (and from the catalog) is restricted, not stale. */
+  enabledModels?: Record<string, Record<string, boolean>>;
 }
 
 /**
  * Replaces a saved value that went stale — its provider is known but no longer
  * offers the model, whether it was disconnected or the model deactivated. An
- * empty value is left empty (LE-2168). Extracted from ModelInputComponent
+ * empty value is left empty (LE-2168). A model that is no longer offered at
+ * all — restricted by an administrator or removed from the catalog — is left
+ * in place too, so the restriction stays visible instead of being papered
+ * over by a silent swap (LE-1960). Extracted from ModelInputComponent
  * (LE-1736 W24).
  */
 export function useAutoSelectModel({
@@ -31,6 +37,7 @@ export function useAutoSelectModel({
   isConnectionMode,
   providers,
   modelStatusIsReliable,
+  enabledModels,
 }: UseAutoSelectModelParams): void {
   useEffect(() => {
     if (
@@ -53,7 +60,13 @@ export function useAutoSelectModel({
       // disconnected or the model deactivated; an unknown one we cannot judge.
       if (!inOptions && saved.provider) {
         isSavedValueStale =
-          providers?.some((p) => p.provider === saved.provider) ?? false;
+          (providers?.some((p) => p.provider === saved.provider) ?? false) &&
+          !isSavedModelUnavailable({
+            savedValue: saved,
+            providers,
+            enabledModels,
+            modelStatusIsReliable,
+          });
       }
     }
 
@@ -79,5 +92,6 @@ export function useAutoSelectModel({
     isConnectionMode,
     providers,
     modelStatusIsReliable,
+    enabledModels,
   ]);
 }

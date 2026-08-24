@@ -296,7 +296,10 @@ test.describe("Model providers route accessibility", () => {
     "scans provider list loading state",
     { tag: ["@release", "@workspace"] },
     async ({ page }) => {
+      // The catalog is stalled far past the teardown drain window on purpose:
+      // the loading state has to still be on screen when the scan runs.
       await mockProviderCatalog(page, { providersDelayMs: 6000 });
+      page.expectPendingRequest({ method: "GET", path: "/api/v1/models" });
       await mockGlobalVariables(page);
       await awaitBootstrapTest(page, { skipModal: true });
       await page.goto("/settings/model-providers");
