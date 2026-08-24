@@ -9,7 +9,7 @@ import json
 import stat
 import zipfile
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import partial
 from typing import TYPE_CHECKING, Any, TypeVar
 
@@ -24,6 +24,8 @@ from langflow.services.authorization import (
 from langflow.services.authorization.fetch import authorized_or_owner_scoped
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
+from langflow.services.database.models.memory_base.model import MemoryBase
 from langflow.utils.flow_secrets import strip_secret_field_values_in_place
 
 if TYPE_CHECKING:
@@ -110,6 +112,9 @@ class ProjectArtifact:
     project_id: UUID
     project_name: str
     flows: tuple[ProjectArtifactFlow, ...]
+    # MB/KB the packaged flows reference, shaped for the Control Plane's SyncRequest.
+    # Empty when no flow references a Memory Base or Knowledge Base.
+    dependencies: dict[str, Any] = field(default_factory=dict)
 
     @property
     def flow_count(self) -> int:
@@ -296,6 +301,7 @@ def _build_archive(
     project_name: str,
     snapshots: tuple[_FlowSnapshot, ...],
     limits: ProjectArtifactLimits,
+    dependencies: dict[str, list[dict[str, Any]]] | None = None,
 ) -> ProjectArtifact:
     flow_entries: list[ProjectArtifactFlow] = []
     files: list[tuple[str, bytes]] = []
@@ -330,7 +336,8 @@ def _build_archive(
         )
 
     manifest = {
-        "schema_version": 1,
+        # v2 when dependencies are present; v1 (byte-identical to before) when not.
+        "schema_version": 2 if dependencies else 1,
         "project": {"id": str(project_id), "name": project_name},
         # Names of every load_from_db-bound global variable the packaged flows
         # reference; the deploy target must provision each name before serving.
@@ -347,6 +354,9 @@ def _build_archive(
             for flow in flow_entries
         ],
     }
+    if dependencies:
+        # Sibling of required_variables: the MB/KB the deploy target must provision.
+        manifest["dependencies"] = dependencies
     manifest_bytes = _canonical_json_bytes(manifest)
     if len(manifest_bytes) > limits.max_flow_bytes:
         msg = f"manifest file is {len(manifest_bytes)} bytes, exceeding the {limits.max_flow_bytes}-byte limit"
@@ -369,6 +379,7 @@ def _build_archive(
         project_id=project_id,
         project_name=project_name,
         flows=tuple(flow_entries),
+        dependencies=dependencies or {},
     )
 
 
@@ -398,6 +409,7 @@ async def _build_archive_non_abandoning(
     project_name: str,
     snapshots: tuple[_FlowSnapshot, ...],
     limits: ProjectArtifactLimits,
+    dependencies: dict[str, list[dict[str, Any]]] | None = None,
 ) -> ProjectArtifact:
     """Build an archive without outliving its caller's capacity lease."""
     return await _run_sync_non_abandoning(
@@ -407,8 +419,180 @@ async def _build_archive_non_abandoning(
             project_name=project_name,
             snapshots=snapshots,
             limits=limits,
+            dependencies=dependencies,
         )
     )
+
+
+def _collect_dependency_refs(payload: dict[str, Any]) -> tuple[set[str], set[str]]:
+    """Return (memory_base_names, knowledge_base_names) referenced by a flow's nodes.
+
+    A flow references a Memory Base by name at ``template.memory_base.value`` (the
+    MB is flow-scoped) and a Knowledge Base by name at ``template.knowledge_base.value``,
+    with ``template.new_kb_name.value`` naming a KB the flow creates inline. These
+    names are the deploy target's provisioning keys — the same values the serving
+    plane resolves the MB/KB by at run time.
+    """
+    mb_names: set[str] = set()
+    kb_names: set[str] = set()
+    data = payload.get("data")
+    if not isinstance(data, dict):
+        return mb_names, kb_names
+    for node in data.get("nodes") or []:
+        if not isinstance(node, dict):
+            continue
+        template = (((node.get("data") or {}).get("node")) or {}).get("template")
+        if not isinstance(template, dict):
+            continue
+        for field_name, bucket in (("memory_base", mb_names), ("knowledge_base", kb_names), ("new_kb_name", kb_names)):
+            entry = template.get(field_name)
+            value = entry.get("value") if isinstance(entry, dict) else None
+            if isinstance(value, str) and value.strip():
+                bucket.add(value.strip())
+    return mb_names, kb_names
+
+
+# Keys whose *value* would be a raw secret if inlined into backend_config. Legitimate KB/MB
+# config never stores a secret value: it stores a variable NAME reference (e.g.
+# ``api_key_variable``) that the serving plane resolves from its own env/variable store, or
+# it relies on a fixed env var (the Postgres backend reads ``PGVECTOR_CONNECTION_STRING`` and
+# deliberately never honors backend_config). backend_config is tenant-controlled, so this is
+# defense in depth: stripping these values can never change serving behaviour (the serving
+# plane resolves real credentials by name, not from these values), it only stops a raw secret
+# from ever riding into the packaged artifact.
+_RAW_SECRET_KEY_HINTS = ("password", "passwd", "secret", "token", "credential", "private_key")
+_RAW_SECRET_KEY_EXACT = frozenset({"api_key", "apikey", "connection_string", "connectionstring", "dsn", "conn_str"})
+
+
+def _scrub_backend_config(backend_config: dict[str, Any] | None) -> dict[str, Any]:
+    """Return ``backend_config`` with any inlined raw-secret value removed.
+
+    A key ending in ``_variable`` is a name reference (not a secret) and is kept. A value
+    under a bare secret key (``api_key`` rather than ``api_key_variable``) is an inlined raw
+    credential and is dropped so it can never enter the manifest.
+    """
+    if not isinstance(backend_config, dict):
+        return {}
+    scrubbed: dict[str, Any] = {}
+    for key, value in backend_config.items():
+        lowered = key.lower()
+        if lowered.endswith("_variable"):
+            scrubbed[key] = value
+            continue
+        if lowered in _RAW_SECRET_KEY_EXACT or any(hint in lowered for hint in _RAW_SECRET_KEY_HINTS):
+            continue
+        scrubbed[key] = value
+    return scrubbed
+
+
+async def _resolve_dependencies(
+    session: AsyncSession,
+    *,
+    owner_id: UUID,
+    snapshots: tuple[_FlowSnapshot, ...],
+) -> dict[str, list[dict[str, Any]]]:
+    """Resolve the MB/KB names the packaged flows reference to their provisioning specs.
+
+    The names come from the flows; the specs come from the owner's ``memory_base`` /
+    ``knowledge_base`` rows. Each emitted item is shaped 1:1 with the Control Plane's
+    ``KnowledgeBaseItem`` / ``MemoryBaseItem`` so the deploy target passes it straight
+    through the same validation with no second schema to drift. A Memory Base's backend
+    lives on its auto-generated backing KB, so its ``backendType`` / ``backendConfig``
+    are read from that KB, and the backing KB is dropped from the KB list so it is never
+    provisioned twice. Returns ``{}`` when the flows reference no MB or KB (manifest stays
+    byte-identical to the pre-feature output).
+    """
+    mb_names: set[str] = set()
+    kb_names: set[str] = set()
+    for snapshot in snapshots:
+        refs_mb, refs_kb = _collect_dependency_refs(snapshot.payload)
+        mb_names |= refs_mb
+        kb_names |= refs_kb
+    if not mb_names and not kb_names:
+        return {}
+
+    memory_bases: list[dict[str, Any]] = []
+    mb_backing_kb_names: set[str] = set()
+    if mb_names:
+        mb_rows = (
+            await session.exec(
+                select(MemoryBase).where(MemoryBase.user_id == owner_id, col(MemoryBase.name).in_(mb_names))
+            )
+        ).all()
+        backing_names = {mb.kb_name for mb in mb_rows if mb.kb_name}
+        backend_by_kb: dict[str, tuple[str, dict[str, Any]]] = {}
+        if backing_names:
+            backing_rows = (
+                await session.exec(
+                    select(KnowledgeBaseRecord).where(
+                        KnowledgeBaseRecord.user_id == owner_id, col(KnowledgeBaseRecord.name).in_(backing_names)
+                    )
+                )
+            ).all()
+            backend_by_kb = {kb.name: (kb.backend_type, kb.backend_config or {}) for kb in backing_rows}
+        for mb in sorted(mb_rows, key=lambda row: row.name):
+            if mb.kb_name:
+                mb_backing_kb_names.add(mb.kb_name)
+            backend_type, backend_config = backend_by_kb.get(mb.kb_name, ("", {}))
+            item: dict[str, Any] = {
+                "name": mb.name,
+                "flowId": str(mb.flow_id),
+                "embeddingModel": mb.embedding_model,
+                "backendType": backend_type,
+                "backendConfig": _scrub_backend_config(backend_config),
+                "threshold": mb.threshold,
+                "autoCapture": mb.auto_capture,
+                "preprocessing": mb.preprocessing,
+            }
+            if mb.preproc_model:
+                item["preprocModel"] = mb.preproc_model
+            if mb.preproc_instructions:
+                item["preprocInstructions"] = mb.preproc_instructions
+            if mb.preproc_kill_phrase:
+                item["preprocKillPhrase"] = mb.preproc_kill_phrase
+            memory_bases.append(item)
+
+    # Provisioning an MB creates its backing KB; never emit that KB on its own.
+    kb_names -= mb_backing_kb_names
+    knowledge_bases: list[dict[str, Any]] = []
+    if kb_names:
+        kb_rows = (
+            await session.exec(
+                select(KnowledgeBaseRecord).where(
+                    KnowledgeBaseRecord.user_id == owner_id, col(KnowledgeBaseRecord.name).in_(kb_names)
+                )
+            )
+        ).all()
+        for kb in sorted(kb_rows, key=lambda row: row.name):
+            model_selection = kb.model_selection if isinstance(kb.model_selection, dict) else {}
+            item = {
+                "name": kb.name,
+                "embeddingProvider": model_selection.get("provider", ""),
+                "embeddingModel": model_selection.get("name", ""),
+                "backendType": kb.backend_type,
+                # Non-secret routing only; the serving plane resolves credentials by variable
+                # name from its own environment. Scrubbed as defense in depth so a raw secret
+                # inlined into tenant-controlled backend_config can never leak into the artifact.
+                "backendConfig": _scrub_backend_config(kb.backend_config),
+            }
+            if kb.column_config:
+                item["columnConfig"] = [
+                    {
+                        "columnName": entry.get("column_name", entry.get("columnName", "")),
+                        "vectorize": bool(entry.get("vectorize", False)),
+                        "identifier": bool(entry.get("identifier", False)),
+                    }
+                    for entry in kb.column_config
+                    if isinstance(entry, dict)
+                ]
+            knowledge_bases.append(item)
+
+    dependencies: dict[str, list[dict[str, Any]]] = {}
+    if knowledge_bases:
+        dependencies["knowledgeBases"] = knowledge_bases
+    if memory_bases:
+        dependencies["memoryBases"] = memory_bases
+    return dependencies
 
 
 async def build_project_artifact(
@@ -563,9 +747,15 @@ async def build_project_artifact(
     # Archive construction is intentionally non-abandoning. If the HTTP request
     # is cancelled, keep the caller suspended until the worker exits so the
     # Enterprise package semaphore continues to account for its memory use.
+    dependencies = await _resolve_dependencies(
+        session,
+        owner_id=project.user_id,
+        snapshots=tuple(snapshots),
+    )
     return await _build_archive_non_abandoning(
         project_id=project_id,
         project_name=project.name,
         snapshots=tuple(snapshots),
         limits=effective_limits,
+        dependencies=dependencies,
     )
