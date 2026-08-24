@@ -8,6 +8,7 @@ is exercised everywhere CI runs.
 import importlib
 import importlib.util
 import os
+import re
 import sys
 import threading
 import time
@@ -36,6 +37,7 @@ def _settings(backend, **extra):
         "sandbox_memory_mb": 192,
         "sandbox_allow_network": False,
         "sandbox_allowed_domains": [],
+        "sandbox_accept_egress_exceptions": False,
         "sandbox_allow_software_emulation": False,
     }
     defaults.update(extra)
@@ -1931,3 +1933,96 @@ class TestPluginAllowlistMatchingIsCaseInsensitive:
         monkeypatch.setenv("LANGFLOW_SANDBOX_BACKEND_PLUGINS", "vendorbox")
 
         assert "vendorbox" in registry_module.known_sandbox_backends()
+
+
+class TestEgressExceptionsFailClosed:
+    """A destination the backend cannot block is a decision, not a warning."""
+
+    @staticmethod
+    def _leaky():
+        return base_module.Capabilities(
+            isolation="hardware-virtualized",
+            supports_deny_all_egress=True,
+            supports_domain_allowlist=True,
+            egress_exceptions=("169.254.0.0/16",),
+        )
+
+    def test_a_denied_network_refuses_a_backend_with_a_hole(self, monkeypatch, stub_backend):
+        """The whole point of ALLOW_NETWORK=false is that nothing is reachable.
+
+        createos declares 169.254.0.0/16 here, which carries the VM metadata
+        service and answered a guest request under a live deny-all policy.
+        Declaring supports_deny_all_egress and logging the hole let that run.
+        """
+        stub_backend(self._leaky())
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: _settings("stub", sandbox_allow_network=False),
+        )
+
+        with pytest.raises(SandboxUnavailableError, match=re.escape("cannot block egress to 169.254.0.0/16")):
+            run_code_in_sandbox("print(1)")
+
+    def test_a_domain_allowlist_refuses_one_too(self, monkeypatch, stub_backend):
+        """An allowlist is also a restriction, and the hole is outside it."""
+        stub_backend(self._leaky())
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: _settings("stub", sandbox_allow_network=True, sandbox_allowed_domains=["api.example.com"]),
+        )
+
+        with pytest.raises(SandboxUnavailableError, match=re.escape("cannot block egress to 169.254.0.0/16")):
+            run_code_in_sandbox("print(1)")
+
+    def test_the_operator_can_accept_the_hole_deliberately(self, monkeypatch, stub_backend):
+        """The opt-in exists so a backend with a documented hole stays usable."""
+        backend = stub_backend(self._leaky())
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: _settings("stub", sandbox_allow_network=False, sandbox_accept_egress_exceptions=True),
+        )
+
+        run_code_in_sandbox("print(1)")
+
+        assert backend.runs, "the opt-in did not let the run through"
+
+    def test_an_unrestricted_policy_is_not_refused(self, monkeypatch, stub_backend):
+        """Nothing was asked for, so nothing is broken by the hole."""
+        backend = stub_backend(self._leaky())
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: _settings("stub", sandbox_allow_network=True),
+        )
+
+        run_code_in_sandbox("print(1)")
+
+        assert backend.runs
+
+    def test_a_backend_without_exceptions_needs_no_opt_in(self, monkeypatch, stub_backend):
+        """The refusal must be scoped to backends that actually declare a hole."""
+        backend = stub_backend(
+            base_module.Capabilities(
+                isolation="hardware-virtualized",
+                supports_deny_all_egress=True,
+                supports_domain_allowlist=True,
+            )
+        )
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: _settings("stub", sandbox_allow_network=False),
+        )
+
+        run_code_in_sandbox("print(1)")
+
+        assert backend.runs
+
+    def test_createos_declares_the_link_local_hole(self):
+        """The refusal above is only meaningful if createos still declares it.
+
+        Dropping the declaration would silence the gate rather than fix the
+        hole, which is the exact failure this whole guard exists to prevent.
+        """
+        from lfx.utils.sandbox import createos as createos_module
+
+        caps = createos_module._CreateosExecutor().capabilities()
+        assert "169.254.0.0/16" in caps.egress_exceptions

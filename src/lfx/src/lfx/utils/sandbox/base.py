@@ -105,6 +105,7 @@ class _SandboxSettings:
     memory_mb: int = 192
     allow_network: bool = False
     allowed_domains: tuple[str, ...] = ()
+    accept_egress_exceptions: bool = False
     allow_software_emulation: bool = False
     session_mode: str = SESSION_MODE_OFF
     session_idle_seconds: int = 600
@@ -129,6 +130,9 @@ def _sandbox_settings() -> _SandboxSettings:
         memory_mb=getattr(settings, "sandbox_memory_mb", defaults.memory_mb),
         allow_network=getattr(settings, "sandbox_allow_network", defaults.allow_network),
         allowed_domains=tuple(getattr(settings, "sandbox_allowed_domains", ()) or ()),
+        accept_egress_exceptions=getattr(
+            settings, "sandbox_accept_egress_exceptions", defaults.accept_egress_exceptions
+        ),
         allow_software_emulation=getattr(
             settings, "sandbox_allow_software_emulation", defaults.allow_software_emulation
         ),
@@ -432,9 +436,11 @@ class Capabilities:
     supports_sessions: bool = False
     # Whether the backend can read files back out of the guest after a run.
     supports_artifacts: bool = False
-    # Destinations the backend cannot block even when egress is denied. Honesty
-    # field: it exists so a hole has to be declared rather than discovered.
-    # Logged once per process when non-empty.
+    # Destinations the backend cannot block even when egress is denied. A hole
+    # has to be declared rather than discovered, AND declaring it is refused by
+    # default: when the operator restricts egress at all, a backend with any
+    # entry here is rejected unless sandbox_accept_egress_exceptions is true.
+    # Empty means the backend blocks everything it is told to.
     egress_exceptions: tuple[str, ...] = ()
 
 

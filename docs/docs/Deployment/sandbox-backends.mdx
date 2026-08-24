@@ -44,6 +44,11 @@ Langflow refuses the run when a setting asks for more than the backend declares:
   egress by domain.
 * `LANGFLOW_SANDBOX_COLLECT_ARTIFACTS` is true, but the backend cannot read
   files back out of the guest.
+* You restrict egress, but the backend declares a destination it cannot block,
+  and `LANGFLOW_SANDBOX_ACCEPT_EGRESS_EXCEPTIONS` is false. A backend states
+  what it cannot block. Langflow refuses by default rather than warn, because
+  an operator who turned the network off did not ask for "off except one
+  range". Set that variable to `true` to accept the declared destinations.
 * `LANGFLOW_SANDBOX_TIMEOUT_SECONDS` is higher than the longest execution the
   backend accepts. The 1-300 second range is the range Langflow accepts. A
   backend can declare a lower cap, and a value inside the Langflow range is

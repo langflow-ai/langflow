@@ -97,6 +97,12 @@ is exposed there. But if you attach an S3 disk to a sandbox by other means, its
 credentials are published to that metadata service in plaintext, and sandboxed
 code can read them. Do not treat the default policy as a guarantee that
 untrusted code sees nothing at all.
+
+Because of this, Langflow refuses to run `createos` under a restricted egress
+policy by default. To use `createos` with `LANGFLOW_SANDBOX_ALLOW_NETWORK=false`
+or with a domain allowlist, set
+`LANGFLOW_SANDBOX_ACCEPT_EGRESS_EXCEPTIONS=true`. That variable records that you
+read this warning and accept the reachable range.
 :::
 
 :::warning

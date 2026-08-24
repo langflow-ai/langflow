@@ -42,6 +42,7 @@ def _settings(backend, **extra):
         "sandbox_memory_mb": 192,
         "sandbox_allow_network": False,
         "sandbox_allowed_domains": [],
+        "sandbox_accept_egress_exceptions": False,
         "sandbox_allow_software_emulation": False,
         "sandbox_session_mode": "off",
         "sandbox_session_idle_seconds": 600,
@@ -233,6 +234,15 @@ def createos(monkeypatch):
 
 
 def _use_createos(monkeypatch, **extra):
+    """Configure createos for a test that is about something OTHER than the egress hole.
+
+    createos declares 169.254.0.0/16 as a destination it cannot block, and the
+    dispatcher refuses a restricted-egress policy against such a backend unless
+    the operator accepts it. These tests are not about that decision, so they
+    accept it by default. TestEgressExceptionsFailClosed covers the gate
+    itself, and passes accept_egress_exceptions=False explicitly.
+    """
+    extra.setdefault("sandbox_accept_egress_exceptions", True)
     monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("createos", **extra))
 
 

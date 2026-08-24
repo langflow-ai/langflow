@@ -261,6 +261,7 @@ EXPECTED_FIELDS = {
     "sandbox_memory_mb",
     "sandbox_allow_network",
     "sandbox_allowed_domains",
+    "sandbox_accept_egress_exceptions",
     "sandbox_allow_software_emulation",
     # SecuritySettings: guest reuse and artifact collection, for backends that
     # report support for them

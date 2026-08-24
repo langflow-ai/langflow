@@ -259,13 +259,37 @@ def _assert_backend_honours_policy(backend: SandboxBackend) -> None:
         )
         raise SandboxUnavailableError(msg)
 
-    if capabilities.egress_exceptions and not _EGRESS_EXCEPTIONS_LOGGED.get(backend.name):
-        _EGRESS_EXCEPTIONS_LOGGED[backend.name] = True
-        logger.warning(
-            "Sandbox backend %r cannot block egress to %s even when the network is denied",
-            backend.name,
-            ", ".join(capabilities.egress_exceptions),
-        )
+    if capabilities.egress_exceptions:
+        # A declared hole is a DECISION, not a log line. The operator restricts
+        # egress by turning the network off or by naming an allowlist; either
+        # way a destination the backend cannot block is outside what they
+        # asked for, and warning about it does not make the policy hold.
+        #
+        # Under createos the exception is 169.254.0.0/16, which carries the VM
+        # metadata service and answered a guest request under a live deny-all
+        # policy. Refusing is the honest answer; the opt-in exists so an
+        # operator who has read that can still choose to run.
+        operator_restricts_egress = not settings.allow_network or bool(settings.allowed_domains)
+        if operator_restricts_egress and not settings.accept_egress_exceptions:
+            asked_for = (
+                "LANGFLOW_SANDBOX_ALLOW_NETWORK is false"
+                if not settings.allow_network
+                else "LANGFLOW_SANDBOX_ALLOWED_DOMAINS restricts egress"
+            )
+            msg = (
+                f"{asked_for}, but sandbox backend {backend.name!r} cannot block egress to "
+                f"{', '.join(capabilities.egress_exceptions)}. Those destinations stay reachable "
+                "from the guest whatever the policy says. Refusing to run the code. Set "
+                "LANGFLOW_SANDBOX_ACCEPT_EGRESS_EXCEPTIONS=true to accept them deliberately."
+            )
+            raise SandboxUnavailableError(msg)
+        if not _EGRESS_EXCEPTIONS_LOGGED.get(backend.name):
+            _EGRESS_EXCEPTIONS_LOGGED[backend.name] = True
+            logger.warning(
+                "Sandbox backend %r cannot block egress to %s; the operator accepted this",
+                backend.name,
+                ", ".join(capabilities.egress_exceptions),
+            )
 
     if capabilities.max_timeout_seconds is not None and settings.timeout_seconds > capabilities.max_timeout_seconds:
         msg = (

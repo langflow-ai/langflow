@@ -218,6 +218,25 @@ class SecuritySettings(BaseModel):
     like an SSRF allow-list: prefer narrow, fully-qualified domains.
     Only used when sandbox_backend is not "none"."""
 
+    sandbox_accept_egress_exceptions: bool = False
+    """Whether to run anyway when the backend cannot block every destination.
+
+    A backend declares the destinations it cannot block in
+    ``Capabilities.egress_exceptions``. When the operator restricts egress --
+    ``LANGFLOW_SANDBOX_ALLOW_NETWORK`` false, or
+    ``LANGFLOW_SANDBOX_ALLOWED_DOMAINS`` set -- a backend with any such
+    exception is REFUSED unless this is true.
+
+    Default False, because the refusal is the honest answer: an operator who
+    turned the network off did not ask for "off except one range". The
+    exception is not cosmetic. Under ``createos`` it is 169.254.0.0/16, which
+    carries the VM metadata service and answered a guest request under a live
+    deny-all policy.
+
+    Set this to true only after reading what the chosen backend cannot block
+    and deciding those destinations are acceptable in your deployment. Only
+    used when ``sandbox_backend`` is not "none"."""
+
     sandbox_allow_software_emulation: bool = False
     """Permit the sandbox to run without a hardware hypervisor (KVM on Linux,
     HVF on macOS), letting QEMU fall back to TCG software emulation.
