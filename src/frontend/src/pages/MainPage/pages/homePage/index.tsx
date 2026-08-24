@@ -91,7 +91,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   const permissionsFolderId = folderId ?? myCollectionId;
 
   const { data: folderData, isLoading } = useGetFolderQuery({
-    id: folderId ?? myCollectionId!,
+    id: folderId ?? myCollectionId,
     page: pageIndex,
     size: pageSize,
     is_component: flowType === "components",
@@ -142,8 +142,8 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     // folder is empty. This avoids a one-frame flash of <EmptyFolder> on
     // initial mount and right after login, when the store is briefly
     // stale. Gating on isLoading instead of folderData lets us still
-    // resolve when the query errors out (e.g. when there is no valid
-    // folder id to query, after deleting all folders).
+    // resolve when the query settles with no folder to read (it returns
+    // null when there is no valid folder id, after deleting all folders).
     if (flows === undefined || isLoading) return;
     setIsEmptyFolder(
       isFolderEmpty({
