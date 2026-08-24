@@ -13,6 +13,7 @@ This page describes how to use Langflow as an MCP server that exposes your flows
 
 Langflow MCP servers support both the **streamable HTTP** transport and **Server-Sent Events (SSE)** as a fallback.
 The default project MCP server configuration uses streamable HTTP transport at the URL path `/streamable`.
+To serve only streamable HTTP, see [Disable the legacy MCP SSE transport](#disable-legacy-sse).
 
 For information about using Langflow as an MCP client and managing MCP server connections within flows, see [Use Langflow as an MCP client](/mcp-client).
 
@@ -404,6 +405,11 @@ The default address is `http://localhost:6274`.
 
 5. To quit MCP Inspector, press <kbd>Control+C</kbd> in the same terminal window where you started it.
 
+## Disable the legacy MCP SSE transport {#disable-legacy-sse}
+
+Set `LANGFLOW_MCP_SSE_ENABLED=false` to return `404` from the legacy SSE transport and its message endpoint.
+Streamable HTTP is unaffected.
+
 ## Restrict MCP server management to superusers {#restrict-mcp-server-management}
 
 To prevent non-superusers from editing MCP server connections, set `LANGFLOW_MCP_SERVERS_LOCKED=true`.
@@ -420,12 +426,18 @@ The following environment variables set behaviors related to your Langflow proje
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
 | `LANGFLOW_MCP_SERVER_ENABLED` | Boolean | `True` | Whether to initialize an MCP server for each of your Langflow projects. If `false`, Langflow doesn't initialize MCP servers. |
+| `LANGFLOW_MCP_SSE_ENABLED` | Boolean | `True` | Whether to serve the legacy SSE transport. If `false`, SSE and its message endpoint return `404`. Streamable HTTP is unaffected. See [Disable the legacy MCP SSE transport](#disable-legacy-sse). |
 | `LANGFLOW_MCP_SERVER_ENABLE_PROGRESS_NOTIFICATIONS` | Boolean | `False` | If `true`, Langflow MCP servers send progress notifications. |
+| `LANGFLOW_SKIP_MCP_AUTO_INIT` | Boolean | `False` | If `true`, skip background MCP server auto-initialization on startup. Use this on offline, firewalled, or CI hosts so startup does not wait on outbound MCP connections. |
+| `LANGFLOW_MCP_COMPOSER_ENABLED` | Boolean | `True` | Whether to start the MCP Composer service. |
 | `LANGFLOW_MCP_SERVER_TIMEOUT` | Integer | `20` | Timeout in seconds for MCP connection setup and tool execution. See [Configure tool execution timeouts](#configure-tool-execution-timeouts). |
 | `LANGFLOW_MCP_TOOL_EXECUTION_TIMEOUT` | Integer | `180` | Global timeout in seconds for MCP tool calls. See [Configure tool execution timeouts](#configure-tool-execution-timeouts). |
 | `LANGFLOW_MCP_MAX_SESSIONS_PER_SERVER` | Integer | `10` | Maximum number of MCP sessions to keep per unique server. |
 | `LANGFLOW_ADD_PROJECTS_TO_MCP_SERVERS` | Boolean | `True` | Whether to automatically add newly created projects to the user's MCP servers configuration. If `false`, projects must be manually added to MCP servers. |
 | `LANGFLOW_MCP_SERVERS_LOCKED` | Boolean | `False` | If `true`, non-superusers cannot add, edit, or remove MCP server connections through the UI or API. Superusers retain full access. For more information, see [Restrict MCP server management to superusers](#restrict-mcp-server-management). |
+| `LANGFLOW_MCP_SERVER_ALLOWED_PACKAGES` | String | Not set | Comma-separated allowlist of package names that MCP `npx`/`uvx` stdio servers may download and run. Leave unset for single-tenant compatibility. An empty value blocks all package runners. |
+| `LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING` | Boolean | `False` | If `true`, blocks tenant-controlled Python, Node.js, and shell MCP entrypoints. Package wrappers and the authenticated internal Langflow MCP server still work. |
+| `LANGFLOW_MCP_SERVER_DOCKER_HARDENING` | Boolean | `False` | If `true`, applies a strict argument policy to MCP `docker` stdio servers so tenants cannot mount the host filesystem or use privileged flags. |
 
 ## Troubleshoot Langflow MCP servers {#troubleshooting-mcp-server}
 

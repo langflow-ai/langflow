@@ -418,6 +418,7 @@ The following environment variables set base Langflow server configuration, such
 | `LANGFLOW_PORT` | Integer | `7860` | The port on which the Langflow server runs. The server automatically selects a free port if the specified port is in use. |
 | `LANGFLOW_BACKEND_ONLY` | Boolean | `False` | Run only the Langflow backend service (no frontend). |
 | `LANGFLOW_DEV` | Boolean | `False` | Whether to run Langflow in development mode (may contain bugs). |
+| `LANGFLOW_DEPLOYMENT_PROFILE` | String | `dev` | Deployment profile. `dev` skips production checks. `prod` runs [production preflight](/deployment-prod-best-practices#production-preflight) before the server starts and aborts boot if a required service is missing. |
 | `LANGFLOW_OPEN_BROWSER` | Boolean | `False` | Open the system web browser on startup. |
 | `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` | Integer | `5` | Set the maximum number of retries for Langflow's server status health checks. |
 | `LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes. See [Deploy Langflow with multiple workers](./deployment-multi-worker#recommended-gunicorn-settings). |

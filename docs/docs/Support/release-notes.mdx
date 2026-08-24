@@ -56,7 +56,7 @@ Highlights of this release include the following changes. For all changes, see t
 
     Langflow 1.12 makes `langflow-base` a complete, version-aligned installation of the Langflow application.
 
-- Ongoing breaking changes: bundle separation
+- Ongoing breaking change: bundle separation
 
     Bundle separation concludes in 1.12.
     `uv pip install langflow` no longer installs all provider bundles, and includes only a curated list of providers.
@@ -73,6 +73,22 @@ Highlights of this release include the following changes. For all changes, see t
     `/login/admin` is still the admin sign-in endpoint and page.
 
     For more information, see [Manage users as an administrator](/api-keys-and-authentication#manage-users-as-an-administrator).
+
+### New features
+
+- Production preflight
+
+    Set `LANGFLOW_DEPLOYMENT_PROFILE=prod` to probe your Langflow deployment before any workers start.
+    The default remains `dev`, which skips prod checks.
+
+    For more information, see [Production preflight checks](/deployment-prod-best-practices#production-preflight).
+
+- Disable the legacy MCP SSE transport
+
+    Set `LANGFLOW_MCP_SSE_ENABLED=false` to return a `404` from the legacy SSE transport endpoint.
+    Streamable HTTP is not affected.
+
+    For more information, see [Disable the legacy MCP SSE transport](/mcp-server#disable-legacy-sse).
 
 ## 1.11.x
 
