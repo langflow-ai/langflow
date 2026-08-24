@@ -213,6 +213,84 @@ def test_process_tweaks_permissive_leaves_a_normal_flow_working():
     assert result["data"]["nodes"][0]["data"]["node"]["template"]["a"]["value"] == "new"
 
 
+# --- runtime-generated tweaks are not caller overrides ---------------------
+# ``tweaks`` is also the internal mechanism for passing values into a sub-flow.
+# The Run Flow component pushes its own declared inputs through the graph path,
+# and the flow runner turns resolved load_from_db values into tweaks. Judging
+# those against the deployment policy would make ``off`` disable flow-as-tool
+# orchestration rather than close an API surface, which is not what an operator
+# flipping a tweaks policy is asking for.
+
+
+def test_off_does_not_refuse_runtime_generated_tweaks():
+    """``off`` closes the API surface, it does not disable the runtime."""
+    node = _node({"a": {"value": "old", "type": "str"}}, node_id="n1")
+    graph = _graph([node])
+    with patch("lfx.processing.process._resolve_tweak_policy", return_value="off"):
+        process_tweaks(graph, {"n1": {"a": "from-the-runtime"}}, caller_supplied=False)
+    assert graph["data"]["nodes"][0]["data"]["node"]["template"]["a"]["value"] == "from-the-runtime"
+
+
+def test_declared_does_not_refuse_runtime_generated_tweaks():
+    """A sub-flow allowlist constrains callers, not the component feeding it."""
+    node = _node(
+        {
+            "declared": {"value": "old", "type": "str", "api_editable": True},
+            "undeclared": {"value": "old", "type": "str"},
+        },
+        node_id="n1",
+    )
+    graph = _graph([node])
+    with patch("lfx.processing.process._resolve_tweak_policy", return_value="declared"):
+        process_tweaks(graph, {"n1": {"undeclared": "from-the-runtime"}}, caller_supplied=False)
+    assert graph["data"]["nodes"][0]["data"]["node"]["template"]["undeclared"]["value"] == "from-the-runtime"
+
+
+def test_runtime_generated_tweaks_still_hit_the_floor():
+    """The exemption covers the policy layer only. The floor never yields."""
+    graph = _graph(
+        [_node({"database_url": {"value": "stored", "type": "str"}}, node_type="SQLComponent", node_id="n1")]
+    )
+    with (
+        patch("lfx.processing.process._resolve_tweak_policy", return_value="permissive"),
+        pytest.raises(TweakRefusedError) as exc,
+    ):
+        process_tweaks(graph, {"n1": {"database_url": "postgresql://attacker/db"}}, caller_supplied=False)
+    assert exc.value.refused == ["database_url"]
+
+
+def test_off_still_refuses_a_caller_supplied_tweak():
+    """The exemption must not leak into the default caller path."""
+    graph = _graph([_node({"a": {"value": "old", "type": "str"}}, node_id="n1")])
+    with (
+        patch("lfx.processing.process._resolve_tweak_policy", return_value="off"),
+        pytest.raises(TweakRefusedError),
+    ):
+        process_tweaks(graph, {"n1": {"a": "from-a-caller"}})
+
+
+def test_graph_path_exempts_runtime_generated_tweaks():
+    """The Run Flow component reaches a sub-flow through this path."""
+    from unittest.mock import MagicMock
+
+    from lfx.graph.vertex.base import Vertex
+    from lfx.processing.process import process_tweaks_on_graph
+
+    vertex = MagicMock(spec=Vertex)
+    vertex.id = "v1"
+    vertex.data = {"node": {"template": {"a": {"value": "old", "type": "str"}}}}
+    vertex.params = {}
+    vertex.load_from_db_fields = []
+
+    class _G:
+        vertices = [vertex]
+
+    with patch("lfx.processing.process._resolve_tweak_policy", return_value="off"):
+        process_tweaks_on_graph(_G(), {"v1": {"a": "from-the-runtime"}}, caller_supplied=False)
+
+    vertex.update_raw_params.assert_called_once_with({"a": "from-the-runtime"}, overwrite=True)
+
+
 # --- the graph-level path (streaming and background run modes) -------------
 # These modes build the graph first, so they land in process_tweaks_on_graph
 # rather than process_tweaks. Before the policy existed this path filtered only
