@@ -38,6 +38,23 @@ async def test_get_config_basic(client: AsyncClient, logged_in_headers: dict):
     assert "max_file_size_upload" in result, "The dictionary must contain a key called 'max_file_size_upload'"
 
 
+async def test_get_config_mirrors_assistant_message_length(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """The Assistant composer reads its cap from /config, so the setting must be mirrored there.
+
+    Without this the UI falls back to a local constant, which is how a 500-character UI cap
+    ended up silently truncating prompts the 2000-character API would have accepted.
+    """
+    from lfx.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "assistant_max_message_length", 6000)
+
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["assistant_max_message_length"] == 6000
+
+
 @pytest.mark.parametrize("path", ["api/v1/custom_component", "api/v1/custom_component/update"])
 async def test_catalog_blocks_known_template_before_custom_component_build(
     client: AsyncClient,
@@ -518,7 +535,7 @@ async def test_get_config_reports_catalog_governance_without_exposing_policy_con
     logged_in_headers: dict,
     monkeypatch,
 ):
-    """Both config variants expose only the derived governance indicator."""
+    """The public variant exposes only the derived governance indicator."""
     monkeypatch.setattr(
         "langflow.api.v1.endpoints.get_catalog_policy_service",
         lambda: SimpleNamespace(enabled=True),
@@ -533,6 +550,146 @@ async def test_get_config_reports_catalog_governance_without_exposing_policy_con
         assert result["catalog_governance_enabled"] is True
         assert "blocked_component_keys" not in result
         assert "blocked_template_keys" not in result
+    # A policy service exposing no snapshot names nothing rather than guessing.
+    assert authenticated_response.json()["blocked_component_types"] == []
+
+
+def test_public_config_never_carries_blocked_component_identities():
+    """The anonymous response withholds the policy contents by construction.
+
+    Asserted on the schema rather than a response: the test client's
+    unauthenticated request resolves a user under auto-login, so it cannot
+    exercise the anonymous branch.
+    """
+    from langflow.api.v1.schemas import ConfigResponse, PublicConfigResponse
+
+    assert "blocked_component_types" not in PublicConfigResponse.model_fields
+    assert "blocked_component_types" in ConfigResponse.model_fields
+
+
+async def test_get_config_names_blocked_components_to_authenticated_callers(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    """The editor cannot attribute a missing template without the identities.
+
+    ``catalog_governance_enabled`` says a policy exists somewhere; a node whose
+    template is missing may instead be an uninstalled bundle, an imported flow
+    or the caller's own component, so the editor needs the blocked identities
+    to name a cause truthfully.
+    """
+    monkeypatch.setattr(
+        "langflow.api.v1.endpoints.get_catalog_policy_service",
+        lambda: SimpleNamespace(
+            enabled=True,
+            snapshot=SimpleNamespace(
+                blocked_component_keys=frozenset({"ChatOutput", "Agent"}),
+                blocked_template_keys=frozenset({"Simple Agent"}),
+            ),
+        ),
+    )
+
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    reported = response.json()["blocked_component_types"]
+    # The keys themselves, plus every alias a saved node could carry for them.
+    assert {"Agent", "ChatOutput"} <= set(reported)
+    # Template identities stay withheld: nothing in the editor consumes them.
+    assert "Simple Agent" not in reported
+    # An unrelated component contributes nothing.
+    assert "Prompt Template" not in reported
+
+
+async def test_get_config_names_every_alias_of_a_blocked_component(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    """A node saved under an alias must match the administrator's canonical key.
+
+    Alias resolution runs alias -> canonical only, so reporting just the
+    blocked key and its canonical candidates leaves a node saved as ``Prompt``
+    unmatched when ``Prompt Template`` is blocked -- and the palette exposes
+    only ``Prompt Template``, so that is the key an administrator can find.
+    Nine shipped starter flows save that component as ``Prompt``.
+    """
+    identity_index = SimpleNamespace(
+        canonical_keys=frozenset({"Prompt Template", "ParserComponent"}),
+        aliases={
+            "Prompt": frozenset({"Prompt Template"}),
+            "PromptComponent": frozenset({"Prompt Template"}),
+            "parser": frozenset({"ParserComponent"}),
+        },
+        resolve_many=lambda keys: frozenset(
+            candidate
+            for key in keys
+            for candidate in (
+                frozenset({key})
+                if key in {"Prompt Template", "ParserComponent"}
+                else {
+                    "Prompt": frozenset({"Prompt Template"}),
+                    "PromptComponent": frozenset({"Prompt Template"}),
+                    "parser": frozenset({"ParserComponent"}),
+                }.get(key, frozenset({key}))
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        "lfx.utils.flow_validation.get_component_identity_index_for_validation",
+        lambda: identity_index,
+    )
+    monkeypatch.setattr(
+        "langflow.api.v1.endpoints.get_catalog_policy_service",
+        lambda: SimpleNamespace(
+            enabled=True,
+            snapshot=SimpleNamespace(
+                blocked_component_keys=frozenset({"Prompt Template"}),
+                blocked_template_keys=frozenset(),
+            ),
+        ),
+    )
+
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    reported = response.json()["blocked_component_types"]
+    # The alias a saved node actually carries.
+    assert "Prompt" in reported
+    assert "PromptComponent" in reported
+    assert "Prompt Template" in reported
+    # An unrelated component's alias stays out of it.
+    assert "parser" not in reported
+
+
+async def test_get_config_names_no_components_when_only_a_template_is_blocked(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    """Governance is on, yet no component is blocked (LE-2226).
+
+    ``enabled`` is true when *either* blocklist is non-empty, so blocking one
+    starter template used to be enough for the editor to brand every
+    code-bearing node without a template "disabled by an administrator".
+    """
+    monkeypatch.setattr(
+        "langflow.api.v1.endpoints.get_catalog_policy_service",
+        lambda: SimpleNamespace(
+            enabled=True,
+            snapshot=SimpleNamespace(
+                blocked_component_keys=frozenset(),
+                blocked_template_keys=frozenset({"Simple Agent"}),
+            ),
+        ),
+    )
+
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["catalog_governance_enabled"] is True
+    assert response.json()["blocked_component_types"] == []
 
 
 async def test_get_config_fails_open_without_exposing_catalog_policy_errors(client: AsyncClient, monkeypatch):

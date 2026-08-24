@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -48,8 +50,8 @@ class SecuritySettings(BaseModel):
     components, the separate LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS toggle still governs local-file
     dialects (e.g. sqlite) independently of this flag."""
     connector_ssrf_allow_loopback: bool = True
-    """Whether a literal loopback host (localhost, 127.0.0.0/8, ::1) is allowed for HTTP CONNECTOR
-    and model-provider URLs, even while connector SSRF validation is on.
+    """Whether a literal loopback host (localhost, 127.0.0.0/8, ::1) is allowed for ordinary HTTP
+    CONNECTOR URLs, even while connector SSRF validation is on.
 
     Default True because connectors routinely target a *local* service: Ollama and LM Studio
     default to http://localhost:11434 / http://localhost:1234, and local vector stores bind to
@@ -59,8 +61,10 @@ class SecuritySettings(BaseModel):
     Multi-tenant deployers, where a tenant pointing a connector at the *server's* loopback is an
     SSRF vector, set this to False to block loopback too. Only literal loopback references are
     exempted — a hostname that *resolves* to loopback is still blocked, so DNS-rebinding cannot
-    abuse this. Has no effect on the API Request component (always strict), database URLs, or git
-    URLs, which validate loopback independently."""
+    abuse this. When SSRF validation is enabled, credential-bearing URLs guarded by
+    ``lfx.base.models.provider_ssrf`` use the strict path and require an explicit
+    ``ssrf_allowed_hosts`` entry for loopback. Has no effect on the API Request component,
+    database URLs, or git URLs, which validate loopback independently."""
 
     # API key handling
     disable_track_apikey_usage: bool = False
@@ -238,6 +242,29 @@ class SecuritySettings(BaseModel):
     ``--security-opt`` is rejected only when it disables the sandbox. Benign forms (no flags,
     ``--user``, ``--network none``/``bridge``, ``--security-opt no-new-privileges``) stay allowed."""
 
+    # Runtime tweak policy
+    tweaks_policy: Literal["permissive", "declared", "off"] = "permissive"
+    """Which fields a run request may set through ``tweaks``.
+
+    ``permissive`` (default) preserves existing behavior: the protected-field floor
+    refuses code fields and privileged sinks, and every other field accepts a tweak.
+
+    ``declared`` honors the per-flow allowlist the flow author sets in the parameters
+    panel. On a flow where at least one field is marked editable via API, only those
+    fields accept a tweak. A flow where the author has marked nothing keeps permissive
+    behavior, so enabling this does not break flows nobody has prepared.
+
+    ``off`` refuses every tweak, and also refuses component-targeted ``inputs``. A
+    caller can still send ``input_value`` and ``session_id``, so chat flows keep
+    running.
+
+    The protected-field floor applies in all three modes and no setting relaxes it.
+    ``declared`` cannot expose a code field, because the flow author's allowlist is
+    consulted only after the floor has already refused.
+
+    Refused tweaks return 422 naming the refused keys in every mode. They previously
+    logged a warning and returned 200, which left a caller unable to tell a refused
+    tweak from an applied one."""
     # Serving-plane end-user identity
     serving_end_user_header: str | None = None
     """Name of the trusted request header that carries the end-user identity on the serving plane

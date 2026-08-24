@@ -21,6 +21,7 @@ from lfx.custom.utils import (
     get_instance_name,
     update_component_build_config,
 )
+from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
 from lfx.log.logger import logger
@@ -1026,6 +1027,21 @@ async def _run_flow_internal(
         if expose_error_details:
             raise
         raise error_for_client(exc, expose_details=expose_error_details) from exc
+    except TweakRefusedError:
+        # A refused tweak is a caller error, not a server fault. The generic
+        # handler below turns it into a 500 and discards the structured body
+        # naming the refused keys, so let the app-level handler answer with 422.
+        #
+        # Deliberately not routed through error_for_client. That helper only
+        # preserves the status of an HTTPException, and this is not one, so
+        # redacting would degrade it to RuntimeError -> 500 and reinstate the
+        # exact bug this re-raise exists to fix, for delegated callers only.
+        # The cost is that the refusal reason tells a non-owner whether the
+        # flow declares an allowlist or the deployment refuses tweaks. Accepted:
+        # no data, no stack trace, and the refused names are the caller's own
+        # request keys. A caller who cannot tell a refused tweak from an applied
+        # one is the failure this whole path is here to prevent.
+        raise
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_run,
@@ -1875,6 +1891,47 @@ async def custom_component_update(
         raise SerializationError.from_exception(exc, data=component_node) from exc
 
 
+def _blocked_component_types(snapshot) -> list[str]:
+    """Return every component type the editor should treat as policy-blocked.
+
+    The editor compares a node's ``type`` against this set, and a saved node
+    carries whichever identity it was saved under -- ``Prompt`` rather than the
+    registry key ``Prompt Template``. Alias resolution only runs one way, so
+    reporting the administrator's key and its canonical candidates is not
+    enough: blocking the canonical key would leave every node saved under an
+    alias unmatched, and the palette exposes only the canonical key, so that is
+    the one an administrator can find.
+
+    ``_resolve_catalog_policy_matches`` decides the write by resolving the node
+    side too and intersecting, so the same rule is applied here in reverse:
+    every alias whose canonical candidates meet the blocked identities is
+    reported. That keeps this answer identical to the one that decides whether
+    the save succeeds, which is the whole point of sending it.
+    """
+    blocked_keys = getattr(snapshot, "blocked_component_keys", None)
+    if not blocked_keys:
+        return []
+
+    types = set(blocked_keys)
+    try:
+        from lfx.utils.flow_validation import get_component_identity_index_for_validation
+
+        identity_index = get_component_identity_index_for_validation()
+    except Exception:  # noqa: BLE001
+        identity_index = None
+    if identity_index is not None:
+        blocked_identities = frozenset(identity_index.resolve_many(blocked_keys))
+        types |= blocked_identities
+        types |= {
+            alias
+            for alias, candidates in identity_index.aliases.items()
+            # Any overlap blocks the node server side, including an alias that
+            # is ambiguous across components.
+            if not blocked_identities.isdisjoint(candidates)
+        }
+    return sorted(types)
+
+
 @router.get("/config")
 async def get_config(
     user: Annotated[User | None, Depends(get_optional_user)] = None,
@@ -1896,14 +1953,21 @@ async def get_config(
     """
     try:
         settings_service: SettingsService = get_settings_service()
+        blocked_component_types: list[str] = []
         try:
-            catalog_governance_enabled = get_catalog_policy_service().enabled
+            catalog_policy_service = get_catalog_policy_service()
+            catalog_governance_enabled = catalog_policy_service.enabled
+            # A custom policy service need not expose a snapshot. Reporting no
+            # identities then simply leaves the editor unable to name a cause,
+            # which is the safe direction.
+            blocked_component_types = _blocked_component_types(getattr(catalog_policy_service, "snapshot", None))
         except Exception as exc:  # noqa: BLE001
             # Catalog governance is explicitly fail-open. A broken custom
             # policy implementation must not break the public config endpoint
             # or expose its internal exception text.
             await logger.aexception("Catalog policy status unavailable; reporting governance disabled", exception=exc)
             catalog_governance_enabled = False
+            blocked_component_types = []
 
         if user is None:
             return PublicConfigResponse.from_settings(
@@ -1916,6 +1980,7 @@ async def get_config(
             settings_service.settings,
             settings_service.auth_settings,
             catalog_governance_enabled=catalog_governance_enabled,
+            blocked_component_types=blocked_component_types,
         )
 
     except Exception as exc:

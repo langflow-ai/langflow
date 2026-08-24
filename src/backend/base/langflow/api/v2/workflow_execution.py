@@ -30,6 +30,7 @@ from fastapi import BackgroundTasks, Request
 from fastapi.responses import EventSourceResponse
 from fastapi.sse import format_sse_event
 from lfx.events.event_manager import create_default_event_manager
+from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.graph.checkpoint.store import CheckpointStore
 from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
@@ -439,7 +440,7 @@ async def _stream_event_frames(
         # Mirrors the v1 endpoints.py instrumentation for the streaming path.
         # Skip on: pause (run is resumable), client disconnect (not a failure).
         if not stream_paused and not _stream_cancelled:
-            with contextlib.suppress(Exception):
+            try:
                 from langflow.services.deps import get_telemetry_service
                 from langflow.services.telemetry.schema import RunPayload
 
@@ -455,6 +456,8 @@ async def _stream_event_frames(
                             run_id=run_id,
                         )
                     )
+            except Exception:  # noqa: BLE001
+                await logger.awarning("Telemetry hook failed for streaming run %s", run_id or flow_id, exc_info=True)
 
 
 def _execute_streaming_workflow(
@@ -698,6 +701,11 @@ async def execute_sync_workflow(
         if checkpoint_store is not None:
             graph.checkpointing_enabled = True
             graph.checkpoint_store = checkpoint_store
+    except TweakRefusedError:
+        # A refused tweak is a caller error, not a malformed flow. Wrapping it as
+        # a validation failure discards the structured body naming the refused
+        # keys, so let the app-level handler answer with 422.
+        raise
     except Exception as e:
         client_error = error_for_client(e, expose_details=expose_error_details)
         msg = f"Failed to build graph from flow data: {client_error!s}"
@@ -824,10 +832,8 @@ async def execute_sync_workflow(
         # Emit a RunPayload so Enterprise metering (run_event_store) and the
         # Scarf telemetry pipeline both see every v2 sync workflow run.
         # Mirrors the _stream_event_frames instrumentation for the SSE path.
-        import contextlib as _cl
-
         if not _sync_run_paused:
-            with _cl.suppress(Exception):
+            try:
                 from langflow.services.deps import get_telemetry_service
                 from langflow.services.telemetry.schema import RunPayload
 
@@ -842,3 +848,5 @@ async def execute_sync_workflow(
                             run_id=str(job_id),
                         )
                     )
+            except Exception:  # noqa: BLE001
+                await logger.awarning("Telemetry hook failed for sync run %s", job_id, exc_info=True)

@@ -1,5 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH } from "@/constants/constants";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { AssistantInput } from "../assistant-input";
 
 // --- Mocks ---
@@ -31,6 +33,9 @@ describe("AssistantInput", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     localStorage.clear();
+    useUtilityStore
+      .getState()
+      .setAssistantMaxMessageLength(DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH);
   });
 
   describe("rendering", () => {
@@ -462,6 +467,99 @@ describe("AssistantInput", () => {
       // Value did NOT get replaced by history; user keeps editing what
       // they typed.
       expect(textarea).toHaveValue("line one\nline two");
+    });
+  });
+  describe("message length limit", () => {
+    const primeModel = () =>
+      localStorage.setItem(
+        "langflow-assistant-selected-model",
+        JSON.stringify({
+          id: "openai/gpt-4",
+          name: "gpt-4",
+          provider: "openai",
+          displayName: "GPT-4",
+        }),
+      );
+
+    const setValue = (textarea: HTMLTextAreaElement, value: string) => {
+      fireEvent.change(textarea, { target: { value } });
+    };
+
+    it("should_accept_a_prompt_far_past_the_old_500_character_cap", () => {
+      // Regression: the composer hard-capped at 500 while the API accepted 2000,
+      // so longer prompts were clipped in the browser and never sent in full.
+      render(<AssistantInput {...defaultProps} />);
+      const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
+
+      setValue(textarea, "a".repeat(1600));
+
+      expect(textarea.value).toHaveLength(1600);
+      expect(textarea).toHaveAttribute(
+        "maxlength",
+        String(DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH),
+      );
+    });
+
+    it("should_always_show_the_character_count", () => {
+      render(<AssistantInput {...defaultProps} />);
+      const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
+
+      expect(
+        screen.getByTestId("assistant-input-char-count"),
+      ).toHaveTextContent(`0/${DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH}`);
+
+      setValue(textarea, "a".repeat(120));
+
+      expect(
+        screen.getByTestId("assistant-input-char-count"),
+      ).toHaveTextContent(`120/${DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH}`);
+    });
+
+    it("should_send_a_prompt_at_the_configured_limit", () => {
+      primeModel();
+      const onSend = jest.fn();
+      render(<AssistantInput {...defaultProps} onSend={onSend} />);
+      const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
+
+      const prompt = "a".repeat(DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH);
+      setValue(textarea, prompt);
+      fireEvent.keyDown(textarea, { key: "Enter" });
+
+      expect(onSend).toHaveBeenCalledWith(prompt, expect.anything());
+    });
+
+    it("should_name_the_environment_variable_when_the_limit_is_reached", () => {
+      render(<AssistantInput {...defaultProps} />);
+      const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
+
+      setValue(textarea, "a".repeat(DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH));
+
+      const hint = screen.getByTestId("assistant-input-limit-hint");
+      expect(hint).toBeVisible();
+      expect(hint).toHaveTextContent("LANGFLOW_ASSISTANT_MAX_MESSAGE_LENGTH");
+      expect(textarea).toHaveAttribute("aria-describedby", hint.id);
+    });
+
+    it("should_follow_the_limit_served_by_the_backend_config", () => {
+      primeModel();
+      useUtilityStore.getState().setAssistantMaxMessageLength(6000);
+      const onSend = jest.fn();
+      render(<AssistantInput {...defaultProps} onSend={onSend} />);
+      const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
+
+      expect(textarea).toHaveAttribute("maxlength", "6000");
+      expect(
+        screen.getByTestId("assistant-input-char-count"),
+      ).toHaveTextContent("0/6000");
+
+      const prompt = "a".repeat(4000);
+      setValue(textarea, prompt);
+      fireEvent.keyDown(textarea, { key: "Enter" });
+
+      expect(onSend).toHaveBeenCalledWith(prompt, expect.anything());
+      expect(
+        screen.queryByTestId("assistant-input-limit-hint"),
+      ).not.toBeInTheDocument();
     });
   });
 });

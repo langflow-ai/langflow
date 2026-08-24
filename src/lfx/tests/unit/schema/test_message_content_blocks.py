@@ -496,6 +496,30 @@ class TestBackwardsCompatibility:
         error_contents = [c for c in error_blocks[0].contents if isinstance(c, ErrorContent)]
         assert len(error_contents) == 1
 
+    def test_error_message_renders_reason_coded_exception_message(self):
+        """A reason-coded error shows its human message, not just the class name and code."""
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        exc = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.USE, model_name="claude-sonnet-5")
+        err_msg = ErrorMessage(exception=exc)
+
+        assert err_msg.text == str(exc) + "\n"
+        [error_block] = [block for block in err_msg.content_blocks if isinstance(block, ContentBlock)]
+        [error_content] = [content for content in error_block.contents if isinstance(content, ErrorContent)]
+        assert error_content.reason == f"**{exc}**\n - **Code: policy_blocked**\n"
+        assert "ModelProviderPolicyError" not in error_content.reason
+
+    def test_error_message_keeps_code_only_rendering_for_messageless_coded_errors(self):
+        class CodedError(Exception):
+            code = "rate_limited"
+
+        err_msg = ErrorMessage(exception=CodedError())
+
+        assert err_msg.text == "Code: rate_limited\n"
+        [error_block] = [block for block in err_msg.content_blocks if isinstance(block, ContentBlock)]
+        [error_content] = [content for content in error_block.contents if isinstance(content, ErrorContent)]
+        assert error_content.reason == "**CodedError**\n - **Code: rate_limited**\n"
+
     def test_error_message_can_omit_active_exception_traceback(self):
         """Public/delegated errors keep a generic reason without the caught traceback."""
         sensitive_detail = "owner-provider-secret"

@@ -156,7 +156,15 @@ const ModelProvidersContent = ({
           requiresConfiguration={requiresConfiguration}
         />
 
-        <div className="relative flex min-h-0 flex-1 flex-col">
+        {/* hidden while collapsed: the padded scroller inside has intrinsic
+            width, so it would stick out of the w-0 column and register as
+            clipped content at a 320px viewport (WCAG 1.4.10). */}
+        <div
+          className={cn(
+            "relative flex min-h-0 flex-1 flex-col",
+            !syncedSelectedProvider && "hidden",
+          )}
+        >
           <div className="flex h-full flex-col gap-3 overflow-y-auto px-4 pt-4 pb-6 transition-all duration-300 ease-in-out">
             <CustomModelProvidersEmptyState
               kind="models"

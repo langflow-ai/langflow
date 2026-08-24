@@ -227,17 +227,22 @@ class TestProductionProfileRejectsLocalChroma:
         Both modes share ``backend_type="chroma"``; only ``backend_config["mode"]``
         distinguishes them, so this guards against the guard being too broad.
         """
-        response = await client.post(
-            "api/v1/knowledge_bases",
-            headers=logged_in_headers,
-            json={
-                "name": "Prod_Cloud_KB",
-                "embedding_provider": "OpenAI",
-                "embedding_model": "text-embedding-3-small",
-                "backend_type": "chroma",
-                "backend_config": {"mode": "cloud"},
-            },
-        )
+        from lfx.base.knowledge_bases.backends.base import TestConnectionResult
+        from lfx.base.knowledge_bases.backends.chroma import ChromaCloudBackend
+
+        connection_result = TestConnectionResult(ok=True, message="Connected")
+        with patch.object(ChromaCloudBackend, "test_connection", new=AsyncMock(return_value=connection_result)):
+            response = await client.post(
+                "api/v1/knowledge_bases",
+                headers=logged_in_headers,
+                json={
+                    "name": "Prod_Cloud_KB",
+                    "embedding_provider": "OpenAI",
+                    "embedding_model": "text-embedding-3-small",
+                    "backend_type": "chroma",
+                    "backend_config": {"mode": "cloud"},
+                },
+            )
         assert response.status_code == 201, response.json()
         record = await knowledge_base_service.get_by_user_and_name(active_user.id, "Prod_Cloud_KB")
         assert record is not None
@@ -338,18 +343,23 @@ class TestKnowledgeBaseAPI:
             "provider": "OpenAI",
             "metadata": {"model_type": "embeddings"},
         }
-        response = await client.post(
-            "api/v1/knowledge_bases",
-            headers=logged_in_headers,
-            json={
-                "name": kb_name,
-                "embedding_provider": "OpenAI",
-                "embedding_model": "text-embedding-3-small",
-                "model_selection": model_selection,
-                "backend_type": "opensearch",
-                "backend_config": {"index_name": "new_kb_index"},
-            },
-        )
+        from lfx.base.knowledge_bases.backends.base import TestConnectionResult
+        from lfx.base.knowledge_bases.backends.opensearch import OpenSearchBackend
+
+        connection_result = TestConnectionResult(ok=True, message="Connected")
+        with patch.object(OpenSearchBackend, "test_connection", new=AsyncMock(return_value=connection_result)):
+            response = await client.post(
+                "api/v1/knowledge_bases",
+                headers=logged_in_headers,
+                json={
+                    "name": kb_name,
+                    "embedding_provider": "OpenAI",
+                    "embedding_model": "text-embedding-3-small",
+                    "model_selection": model_selection,
+                    "backend_type": "opensearch",
+                    "backend_config": {"index_name": "new_kb_index"},
+                },
+            )
         assert response.status_code == 201
         data = response.json()
         assert data["name"] == "New KB"
@@ -495,19 +505,24 @@ class TestKnowledgeBaseAPI:
         # ``backend_config``: the backend derives a unique index per KB from
         # its name and creates it lazily on first write. An empty
         # ``backend_config`` must therefore be accepted, not rejected.
+        from lfx.base.knowledge_bases.backends.base import TestConnectionResult
+        from lfx.base.knowledge_bases.backends.opensearch import OpenSearchBackend
+
         mock_fresh_client.return_value = MagicMock()
         mock_root.return_value = tmp_path
-        response = await client.post(
-            "api/v1/knowledge_bases",
-            headers=logged_in_headers,
-            json={
-                "name": "OpenSearch_No_Index_KB",
-                "embedding_provider": "OpenAI",
-                "embedding_model": "text-embedding-3-small",
-                "backend_type": "opensearch",
-                "backend_config": {},
-            },
-        )
+        connection_result = TestConnectionResult(ok=True, message="Connected")
+        with patch.object(OpenSearchBackend, "test_connection", new=AsyncMock(return_value=connection_result)):
+            response = await client.post(
+                "api/v1/knowledge_bases",
+                headers=logged_in_headers,
+                json={
+                    "name": "OpenSearch_No_Index_KB",
+                    "embedding_provider": "OpenAI",
+                    "embedding_model": "text-embedding-3-small",
+                    "backend_type": "opensearch",
+                    "backend_config": {},
+                },
+            )
 
         assert response.status_code == 201, response.text
         data = response.json()
@@ -550,6 +565,41 @@ class TestKnowledgeBaseAPI:
         assert record is not None
         assert record.backend_type == "postgres"
         assert record.backend_config == {}
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_create_knowledge_base_rejects_unreachable_remote_backend(
+        self, mock_root, client: AsyncClient, logged_in_headers, active_user, tmp_path
+    ):
+        """A KB create against an unreachable remote backend is refused with 422.
+
+        The availability gate now covers every remote backend, not just pgvector,
+        mirroring the Memory Base path: an OpenSearch cluster (or Chroma Cloud,
+        Mongo, Astra) that fails its connectivity probe is rejected up front
+        instead of persisting a KB that only errors on first ingestion.
+        """
+        from lfx.base.knowledge_bases.backends.base import TestConnectionResult
+        from lfx.base.knowledge_bases.backends.opensearch import OpenSearchBackend
+
+        mock_root.return_value = tmp_path
+        connection_result = TestConnectionResult(ok=False, message="Could not reach the cluster.")
+        with patch.object(OpenSearchBackend, "test_connection", new=AsyncMock(return_value=connection_result)):
+            response = await client.post(
+                "api/v1/knowledge_bases",
+                headers=logged_in_headers,
+                json={
+                    "name": "Unreachable_OS_KB",
+                    "embedding_provider": "OpenAI",
+                    "embedding_model": "text-embedding-3-small",
+                    "backend_type": "opensearch",
+                    "backend_config": {"index_name": "unreachable_idx"},
+                },
+            )
+
+        assert response.status_code == 422, response.text
+        assert "could not reach the cluster" in response.text.lower()
+        # The gate runs before persistence, so nothing is left behind.
+        record = await knowledge_base_service.get_by_user_and_name(active_user.id, "Unreachable_OS_KB")
+        assert record is None
 
     async def test_create_knowledge_base_rejects_stubbed_backend(self, client: AsyncClient, logged_in_headers):
         """Stubbed backends fail at the schema layer with a "not enabled" message.
