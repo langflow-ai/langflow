@@ -76,6 +76,14 @@ Highlights of this release include the following changes. For all changes, see t
 
 ### New features
 
+- Python Interpreter microVM sandbox
+
+    Set `LANGFLOW_SANDBOX_BACKEND=exec-sandbox` to run the [**Python Interpreter** component](/python-interpreter) in a dedicated [QEMU microVM](https://www.qemu.org/docs/master/system/i386/microvm.html) instead of in the Langflow server process.
+    The microVM is not included in a default `uv pip install langflow` installation.
+    To install it, run `uv pip install 'langflow[sandbox]'`.
+
+    For more information, see [Isolate executions in a microVM](/python-interpreter#sandbox).
+
 - Production preflight
 
     Set `LANGFLOW_DEPLOYMENT_PROFILE=prod` to probe your Langflow deployment before any workers start.
