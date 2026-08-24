@@ -27,6 +27,12 @@ export default defineConfig({
   workers: 2,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   timeout: 5 * 60 * 1000, // 5 minutes
+  expect: {
+    // Windows CI runners are markedly slower than Linux; assertions that poll
+    // the backend (toHaveCount after a delete, toBeVisible after a fetch)
+    // routinely blow the 5s default there.
+    timeout: process.platform === "win32" ? 15_000 : 5_000,
+  },
   // reporter: [
   //   ["html", { open: "never", outputFolder: "playwright-report/test-results" }],
   // ],
@@ -41,7 +47,9 @@ export default defineConfig({
     /* Base URL to use in actions like `await page.goto('/')`. */
     baseURL: `http://localhost:${PORT || 3000}/`,
 
-    actionTimeout: 20000,
+    // Also the default for page.waitForResponse/waitForSelector calls that
+    // pass no explicit timeout. Windows CI needs the extra headroom.
+    actionTimeout: process.platform === "win32" ? 40_000 : 20_000,
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",
     contextOptions: {
@@ -142,7 +150,10 @@ export default defineConfig({
       stderr: "pipe",
 
       reuseExistingServer: true,
-      timeout: 120 * 750,
+      // Windows CI runners can spend 60s+ on imports plus the Alembic
+      // migration chain against the fresh SQLite DB before the port opens;
+      // 90s boots are routinely lost there.
+      timeout: process.platform === "win32" ? 240_000 : 90_000,
     },
     {
       command: "npm start",
