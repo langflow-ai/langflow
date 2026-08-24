@@ -520,7 +520,7 @@ For more information, see [Docker image defaults](/deployment-docker#docker-imag
 | `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS` | Boolean | `False` | When `true`, blocks execution of any flow containing a built-in arbitrary-code-execution component, including the [**Python Interpreter**](/python-interpreter), Python REPL/Code tools, [**Smart Transform**](/smart-transform), [**CSV Agent**](/bundles-langchain#csv-agent), and code-running agents such as [**CodeAct**](/bundles-codeagents#codeact-agent-smolagents), [**CUGA**](/bundles-cuga), and [**OpenDsStar**](/bundles-codeagents#opendstar-agent). |
 | `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS` | Boolean | `False` | When `true`, built-in file-reading components, including the [**File**](/read-file), [**Directory**](/legacy-core-components#legacy-data-components), [**JSON/CSV-to-Data**](/legacy-core-components#legacy-data-components), and the [**CSV Agent**](/bundles-langchain#csv-agent), [**JSON Agent**](/bundles-langchain#legacy-langchain-components), and [**OpenAPI Agent**](/bundles-langchain#openapi-agent) can only read and write paths inside the [`LANGFLOW_CONFIG_DIR`](/memory) storage directory. This also blocks `sqlite` and `duckdb` dialects in the [**SQL Database**](/sql-database) components and local-filesystem Git clones. |
 | `LANGFLOW_MCP_SERVER_DOCKER_HARDENING` | Boolean | `False` | When `true`, applies a strict Docker-argument policy to MCP stdio servers that use the `docker` transport. Rejects host filesystem or device mounts, `host/another-container` namespaces, non-default networks, privilege flags, and sandbox-disabling `--security-opt` values. Forms such as `--network none` / `bridge` and `--security-opt no-new-privileges` remain allowed. |
-| `LANGFLOW_TWEAKS_POLICY` | String | `permissive` | Which component fields a run request may set through `tweaks`. For more information, see [Restrict which fields API callers can tweak](./api-governance-policy#tweaks-policy). |
+| `LANGFLOW_TWEAKS_POLICY` | String | `permissive` | Which component fields a run request may set through `tweaks`. For more information, see [Restrict API tweaks](./deployment-tweaks-policy). |
 
 Enable these flags when untrusted users can build flows on this server.
 
@@ -533,7 +533,7 @@ To enable these flags, set the following:
 * `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true`: blocks built-in code-execution components.
 * `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true`: confines built-in file access to the upload sandbox.
 * `LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true`: tightens Docker MCP server arguments.
-* `LANGFLOW_TWEAKS_POLICY=declared` or `off`: limits which component fields an API caller can override at run time. See [Restrict which fields API callers can tweak](./api-governance-policy#tweaks-policy).
+* `LANGFLOW_TWEAKS_POLICY=declared` or `off`: limits which component fields an API caller can override at run time. See [Restrict API tweaks](./deployment-tweaks-policy).
 
 To block named built-in components, starter templates, model providers, or models across the install, use the [catalog and model policy APIs](./api-governance-policy).
 
@@ -996,5 +996,6 @@ Superusers add, activate, list, and delete users, set **Superuser**, and reset p
 
 * [Langflow environment variables](/environment-variables)
 * [Users endpoints](/api-users)
-* [API governance policy](./api-governance-policy)
+* [Restrict API tweaks](./deployment-tweaks-policy)
+* [Catalog and model policy](./api-governance-policy)
 * [Langflow Security Policy](https://github.com/langflow-ai/langflow/blob/main/SECURITY.md) — reporting vulnerabilities, security configuration, and [secret key rotation](https://github.com/langflow-ai/langflow/blob/main/SECURITY.md#secret-key-rotation)

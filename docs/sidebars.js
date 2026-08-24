@@ -326,6 +326,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/deployment-tweaks-policy",
+          label: "Restrict API tweaks",
+        },
+        {
+          type: "doc",
           id: "Deployment/security",
           label: "Security",
         },
