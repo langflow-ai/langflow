@@ -403,7 +403,7 @@ For multi-worker tuning—including the Redis job queue and Gunicorn worker sett
 
 ### Monitoring and metrics
 
-For OpenTelemetry traces, metrics, and logs that describe Langflow service health, including `LANGFLOW_OTEL_*` and `OTEL_EXPORTER_OTLP_*`, see [OpenTelemetry](/observability-opentelemetry).
+For OpenTelemetry traces, metrics, and logs that describe Langflow service health, including `LANGFLOW_OTEL_*` and `OTEL_EXPORTER_OTLP_*`, see [OpenTelemetry](./observability-opentelemetry.mdx).
 
 For prompt-level LLM tracing, see [Langfuse](/integrations-langfuse) and the other monitoring integrations.
 For Prometheus on Kubernetes, see [Best practices for Langflow on Kubernetes](/deployment-prod-best-practices).
@@ -460,7 +460,7 @@ Set `OTEL_EXPORTER_OTLP_ENDPOINT` to enable export. If it is unset, Langflow ins
 Standard OpenTelemetry SDK variables such as `OTEL_SERVICE_NAME` and `OTEL_EXPORTER_OTLP_HEADERS` also apply.
 To verify the pipeline, run [`langflow observability doctor`](/configuration-cli#langflow-observability-doctor).
 
-For the full list, what Langflow does and does not export, and vendor setup, see [OpenTelemetry](/observability-opentelemetry).
+For the full list, what Langflow does and does not export, and vendor setup, see [OpenTelemetry](./observability-opentelemetry.mdx).
 
 ### Python Interpreter sandbox {#langflow-sandbox}
 
