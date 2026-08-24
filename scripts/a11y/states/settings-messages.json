@@ -5,6 +5,7 @@
       "states": [
         {
           "name": "grid-scrolled-to-bottom",
+          "requires": ".ag-body-viewport",
           "open": [
             { "waitFor": ".ag-body-viewport" },
             { "scroll": { "selector": ".ag-body-viewport", "to": "bottom" } },
@@ -13,6 +14,7 @@
         },
         {
           "name": "grid-scrolled-back-to-top",
+          "requires": ".ag-body-viewport",
           "open": [
             { "scroll": { "selector": ".ag-body-viewport", "to": "top" } },
             { "wait": 800 }
