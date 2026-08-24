@@ -10072,7 +10072,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-datastax"
-version = "0.1.4"
+version = "0.1.5"
 source = { editable = "src/bundles/datastax" }
 dependencies = [
     { name = "astrapy" },
