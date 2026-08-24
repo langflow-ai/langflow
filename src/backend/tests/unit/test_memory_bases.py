@@ -119,6 +119,13 @@ class TestInferEmbeddingProvider:
             # Other providers
             ("nomic-embed-text", "Ollama"),
             ("embed-english-v3.0", "Cohere"),
+            # Ollama models with :tag suffix (e.g. from /api/tags).
+            # The tag must be stripped before catalog + pattern matching
+            # so bge-m3:latest resolves to "Ollama", not "OpenAI".
+            ("bge-m3:latest", "Ollama"),
+            ("nomic-embed-text:latest", "Ollama"),
+            ("all-minilm:v2", "Ollama"),
+            ("snowflake-arctic-embed:latest", "Ollama"),
             # Unknown / empty fall back to the safe default.
             ("unknown-model", "OpenAI"),
             ("", "OpenAI"),
