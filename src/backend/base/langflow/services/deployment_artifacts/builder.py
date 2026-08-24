@@ -17,8 +17,10 @@ from sqlmodel import col, select
 
 from langflow.services.authorization import (
     FlowAction,
+    KnowledgeBaseAction,
     ProjectAction,
     ensure_flows_permission,
+    ensure_knowledge_base_permission,
     ensure_project_permission,
 )
 from langflow.services.authorization.fetch import authorized_or_owner_scoped
@@ -127,6 +129,7 @@ class _FlowSnapshot:
     flow_id: UUID
     name: str
     payload: dict[str, Any]
+    owner_id: UUID | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -291,7 +294,7 @@ def _snapshot_rows(
             raise ProjectArtifactLimitError(msg)
         estimated_bytes += flow_size
         item_count += flow_items
-        snapshots.append(_FlowSnapshot(flow_id=flow.id, name=flow.name, payload=payload))
+        snapshots.append(_FlowSnapshot(flow_id=flow.id, name=flow.name, payload=payload, owner_id=flow.user_id))
     return _SnapshotBatch(tuple(snapshots), estimated_bytes, item_count)
 
 
@@ -336,8 +339,9 @@ def _build_archive(
         )
 
     manifest = {
-        # v2 when dependencies are present; v1 (byte-identical to before) when not.
-        "schema_version": 2 if dependencies else 1,
+        # Dependencies travel as typed response metadata for the Enterprise
+        # deployment request. They are not part of the stable lfpkg v1 schema.
+        "schema_version": 1,
         "project": {"id": str(project_id), "name": project_name},
         # Names of every load_from_db-bound global variable the packaged flows
         # reference; the deploy target must provision each name before serving.
@@ -354,9 +358,6 @@ def _build_archive(
             for flow in flow_entries
         ],
     }
-    if dependencies:
-        # Sibling of required_variables: the MB/KB the deploy target must provision.
-        manifest["dependencies"] = dependencies
     manifest_bytes = _canonical_json_bytes(manifest)
     if len(manifest_bytes) > limits.max_flow_bytes:
         msg = f"manifest file is {len(manifest_bytes)} bytes, exceeding the {limits.max_flow_bytes}-byte limit"
@@ -452,94 +453,183 @@ def _collect_dependency_refs(payload: dict[str, Any]) -> tuple[set[str], set[str
     return mb_names, kb_names
 
 
-# Keys whose *value* would be a raw secret if inlined into backend_config. Legitimate KB/MB
-# config never stores a secret value: it stores a variable NAME reference (e.g.
-# ``api_key_variable``) that the serving plane resolves from its own env/variable store, or
-# it relies on a fixed env var (the Postgres backend reads ``PGVECTOR_CONNECTION_STRING`` and
-# deliberately never honors backend_config). backend_config is tenant-controlled, so this is
-# defense in depth: stripping these values can never change serving behaviour (the serving
-# plane resolves real credentials by name, not from these values), it only stops a raw secret
-# from ever riding into the packaged artifact.
-_RAW_SECRET_KEY_HINTS = ("password", "passwd", "secret", "token", "credential", "private_key")
-_RAW_SECRET_KEY_EXACT = frozenset({"api_key", "apikey", "connection_string", "connectionstring", "dsn", "conn_str"})
+# Non-secret backend routing fields used by the registered Chroma Cloud and
+# OpenSearch backends. Credential values are represented only by ``*_variable``
+# pointers, which are handled separately below.
+_SAFE_BACKEND_ROUTING_KEYS = frozenset(
+    {
+        "cloud_host",
+        "cloud_port",
+        "cloud_region",
+        "engine",
+        "index_name",
+        "mode",
+        "space_type",
+        "text_field",
+        "use_ssl",
+        "vector_field",
+        "verify_certs",
+    }
+)
+_SAFE_BACKEND_VALUE_TYPES = (str, int, float, bool)
 
 
 def _scrub_backend_config(backend_config: dict[str, Any] | None) -> dict[str, Any]:
-    """Return ``backend_config`` with any inlined raw-secret value removed.
-
-    A key ending in ``_variable`` is a name reference (not a secret) and is kept. A value
-    under a bare secret key (``api_key`` rather than ``api_key_variable``) is an inlined raw
-    credential and is dropped so it can never enter the manifest.
-    """
+    """Return only deployable routing fields and variable-name pointers."""
     if not isinstance(backend_config, dict):
         return {}
     scrubbed: dict[str, Any] = {}
     for key, value in backend_config.items():
+        if not isinstance(key, str):
+            continue
         lowered = key.lower()
         if lowered.endswith("_variable"):
+            if isinstance(value, str):
+                scrubbed[key] = value
+            continue
+        if lowered in _SAFE_BACKEND_ROUTING_KEYS and isinstance(value, _SAFE_BACKEND_VALUE_TYPES):
             scrubbed[key] = value
-            continue
-        if lowered in _RAW_SECRET_KEY_EXACT or any(hint in lowered for hint in _RAW_SECRET_KEY_HINTS):
-            continue
-        scrubbed[key] = value
     return scrubbed
+
+
+def _validated_backend_config(
+    backend_type: object,
+    backend_config: object,
+    *,
+    resource_kind: str,
+) -> tuple[str, dict[str, Any]]:
+    if not isinstance(backend_type, str) or not backend_type.strip():
+        msg = f"referenced {resource_kind} has no deployable backend type"
+        raise ProjectArtifactError(msg)
+    config = backend_config if isinstance(backend_config, dict) else {}
+    resolved_backend_type = backend_type.strip()
+    if resolved_backend_type.lower() == "chroma" and str(config.get("mode", "local")).lower() != "cloud":
+        msg = f"referenced {resource_kind} uses local Chroma, which cannot be provisioned on the deployment target"
+        raise ProjectArtifactError(msg)
+    return resolved_backend_type, _scrub_backend_config(config)
+
+
+def _required_dependency_string(value: object, *, field_name: str, resource_kind: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        msg = f"referenced {resource_kind} is missing {field_name}"
+        raise ProjectArtifactError(msg)
+    return value
+
+
+def _store_dependency(
+    items: dict[str, dict[str, Any]],
+    *,
+    name: str,
+    item: dict[str, Any],
+    resource_kind: str,
+) -> None:
+    existing = items.get(name)
+    if existing is not None and existing != item:
+        msg = f"referenced {resource_kind} name {name!r} is ambiguous across flow owners"
+        raise ProjectArtifactError(msg)
+    items[name] = item
 
 
 async def _resolve_dependencies(
     session: AsyncSession,
     *,
+    user: User | UserRead,
     owner_id: UUID,
+    workspace_id: UUID | None,
+    project_id: UUID,
     snapshots: tuple[_FlowSnapshot, ...],
 ) -> dict[str, list[dict[str, Any]]]:
     """Resolve the MB/KB names the packaged flows reference to their provisioning specs.
 
-    The names come from the flows; the specs come from the owner's ``memory_base`` /
-    ``knowledge_base`` rows. Each emitted item is shaped 1:1 with the Control Plane's
-    ``KnowledgeBaseItem`` / ``MemoryBaseItem`` so the deploy target passes it straight
-    through the same validation with no second schema to drift. A Memory Base's backend
-    lives on its auto-generated backing KB, so its ``backendType`` / ``backendConfig``
-    are read from that KB, and the backing KB is dropped from the KB list so it is never
-    provisioned twice. Returns ``{}`` when the flows reference no MB or KB (manifest stays
-    byte-identical to the pre-feature output).
+    The names come from the flows; the specs come from each flow author's
+    ``memory_base`` / ``knowledge_base`` rows. Each emitted item is shaped 1:1
+    with the Control Plane's ``KnowledgeBaseItem`` / ``MemoryBaseItem`` so the
+    deploy target passes it straight through the same validation with no second
+    schema to drift. A Memory Base's backend lives on its auto-generated backing
+    KB, so its ``backendType`` / ``backendConfig`` are read from that KB, and the
+    backing KB is dropped from the KB list so it is never provisioned twice.
+    Every resolved resource is authorized before its provisioning metadata is
+    returned. Returns ``{}`` when the flows reference no MB or KB.
     """
-    mb_names: set[str] = set()
-    kb_names: set[str] = set()
+    mb_refs: set[tuple[UUID, str]] = set()
+    kb_refs: set[tuple[UUID, str]] = set()
     for snapshot in snapshots:
         refs_mb, refs_kb = _collect_dependency_refs(snapshot.payload)
-        mb_names |= refs_mb
-        kb_names |= refs_kb
-    if not mb_names and not kb_names:
+        source_owner_id = getattr(snapshot, "owner_id", None) or owner_id
+        mb_refs.update((source_owner_id, name) for name in refs_mb)
+        kb_refs.update((source_owner_id, name) for name in refs_kb)
+    if not mb_refs and not kb_refs:
         return {}
 
-    memory_bases: list[dict[str, Any]] = []
-    mb_backing_kb_names: set[str] = set()
-    if mb_names:
-        mb_rows = (
+    memory_bases: dict[str, dict[str, Any]] = {}
+    mb_backing_kb_refs: set[tuple[UUID, str]] = set()
+    if mb_refs:
+        mb_owner_ids = {ref_owner_id for ref_owner_id, _name in mb_refs}
+        mb_names = {name for _ref_owner_id, name in mb_refs}
+        candidate_mb_rows = (
             await session.exec(
-                select(MemoryBase).where(MemoryBase.user_id == owner_id, col(MemoryBase.name).in_(mb_names))
+                select(MemoryBase).where(
+                    col(MemoryBase.user_id).in_(mb_owner_ids),
+                    col(MemoryBase.name).in_(mb_names),
+                )
             )
         ).all()
-        backing_names = {mb.kb_name for mb in mb_rows if mb.kb_name}
-        backend_by_kb: dict[str, tuple[str, dict[str, Any]]] = {}
-        if backing_names:
-            backing_rows = (
-                await session.exec(
-                    select(KnowledgeBaseRecord).where(
-                        KnowledgeBaseRecord.user_id == owner_id, col(KnowledgeBaseRecord.name).in_(backing_names)
-                    )
+        mb_rows = [mb for mb in candidate_mb_rows if (mb.user_id, mb.name) in mb_refs]
+        mb_by_ref = {(mb.user_id, mb.name): mb for mb in mb_rows}
+        if mb_refs - set(mb_by_ref):
+            msg = "one or more referenced Memory Bases were not found"
+            raise ProjectArtifactError(msg)
+
+        mb_backing_kb_refs = {(mb.user_id, mb.kb_name) for mb in mb_rows if mb.kb_name}
+        if len(mb_backing_kb_refs) != len(mb_rows):
+            msg = "a referenced Memory Base has no backing Knowledge Base"
+            raise ProjectArtifactError(msg)
+        backing_owner_ids = {backing_owner_id for backing_owner_id, _name in mb_backing_kb_refs}
+        backing_names = {name for _backing_owner_id, name in mb_backing_kb_refs}
+        candidate_backing_rows = (
+            await session.exec(
+                select(KnowledgeBaseRecord).where(
+                    col(KnowledgeBaseRecord.user_id).in_(backing_owner_ids),
+                    col(KnowledgeBaseRecord.name).in_(backing_names),
                 )
-            ).all()
-            backend_by_kb = {kb.name: (kb.backend_type, kb.backend_config or {}) for kb in backing_rows}
-        for mb in sorted(mb_rows, key=lambda row: row.name):
-            if mb.kb_name:
-                mb_backing_kb_names.add(mb.kb_name)
-            backend_type, backend_config = backend_by_kb.get(mb.kb_name, ("", {}))
+            )
+        ).all()
+        backing_rows = [kb for kb in candidate_backing_rows if (kb.user_id, kb.name) in mb_backing_kb_refs]
+        backing_by_ref = {(kb.user_id, kb.name): kb for kb in backing_rows}
+        if mb_backing_kb_refs - set(backing_by_ref):
+            msg = "a referenced Memory Base's backing Knowledge Base was not found"
+            raise ProjectArtifactError(msg)
+
+        for mb in sorted(mb_rows, key=lambda row: (row.name, str(row.user_id))):
+            await ensure_knowledge_base_permission(
+                user,
+                KnowledgeBaseAction.READ,
+                kb_id=mb.id,
+                kb_user_id=mb.user_id,
+                kb_name=mb.kb_name,
+                workspace_id=workspace_id,
+                project_id=project_id,
+            )
+            backing_kb = backing_by_ref[(mb.user_id, mb.kb_name)]
+            backend_type, backend_config = _validated_backend_config(
+                backing_kb.backend_type,
+                backing_kb.backend_config,
+                resource_kind="Memory Base",
+            )
+            embedding_model = _required_dependency_string(
+                mb.embedding_model,
+                field_name="embedding model",
+                resource_kind="Memory Base",
+            )
+            if mb.preprocessing and not mb.preproc_model:
+                msg = "referenced Memory Base is missing its preprocessing model"
+                raise ProjectArtifactError(msg)
             item: dict[str, Any] = {
                 "name": mb.name,
                 "flowId": str(mb.flow_id),
-                "embeddingModel": mb.embedding_model,
+                "embeddingModel": embedding_model,
                 "backendType": backend_type,
-                "backendConfig": _scrub_backend_config(backend_config),
+                "backendConfig": backend_config,
                 "threshold": mb.threshold,
                 "autoCapture": mb.auto_capture,
                 "preprocessing": mb.preprocessing,
@@ -550,30 +640,60 @@ async def _resolve_dependencies(
                 item["preprocInstructions"] = mb.preproc_instructions
             if mb.preproc_kill_phrase:
                 item["preprocKillPhrase"] = mb.preproc_kill_phrase
-            memory_bases.append(item)
+            _store_dependency(memory_bases, name=mb.name, item=item, resource_kind="Memory Base")
 
-    # Provisioning an MB creates its backing KB; never emit that KB on its own.
-    kb_names -= mb_backing_kb_names
-    knowledge_bases: list[dict[str, Any]] = []
-    if kb_names:
-        kb_rows = (
+    # Provisioning an MB creates its backing KB; never emit that exact KB on its own.
+    kb_refs -= mb_backing_kb_refs
+    knowledge_bases: dict[str, dict[str, Any]] = {}
+    if kb_refs:
+        kb_owner_ids = {ref_owner_id for ref_owner_id, _name in kb_refs}
+        kb_names = {name for _ref_owner_id, name in kb_refs}
+        candidate_kb_rows = (
             await session.exec(
                 select(KnowledgeBaseRecord).where(
-                    KnowledgeBaseRecord.user_id == owner_id, col(KnowledgeBaseRecord.name).in_(kb_names)
+                    col(KnowledgeBaseRecord.user_id).in_(kb_owner_ids),
+                    col(KnowledgeBaseRecord.name).in_(kb_names),
                 )
             )
         ).all()
-        for kb in sorted(kb_rows, key=lambda row: row.name):
+        kb_rows = [kb for kb in candidate_kb_rows if (kb.user_id, kb.name) in kb_refs]
+        kb_by_ref = {(kb.user_id, kb.name): kb for kb in kb_rows}
+        if kb_refs - set(kb_by_ref):
+            msg = "one or more referenced Knowledge Bases were not found"
+            raise ProjectArtifactError(msg)
+
+        for kb in sorted(kb_rows, key=lambda row: (row.name, str(row.user_id))):
+            await ensure_knowledge_base_permission(
+                user,
+                KnowledgeBaseAction.READ,
+                kb_id=kb.id,
+                kb_user_id=kb.user_id,
+                kb_name=kb.name,
+                workspace_id=workspace_id,
+                project_id=project_id,
+            )
+            backend_type, backend_config = _validated_backend_config(
+                kb.backend_type,
+                kb.backend_config,
+                resource_kind="Knowledge Base",
+            )
             model_selection = kb.model_selection if isinstance(kb.model_selection, dict) else {}
+            embedding_provider = _required_dependency_string(
+                model_selection.get("provider"),
+                field_name="embedding provider",
+                resource_kind="Knowledge Base",
+            )
+            embedding_model = _required_dependency_string(
+                model_selection.get("name"),
+                field_name="embedding model",
+                resource_kind="Knowledge Base",
+            )
             item = {
                 "name": kb.name,
-                "embeddingProvider": model_selection.get("provider", ""),
-                "embeddingModel": model_selection.get("name", ""),
-                "backendType": kb.backend_type,
-                # Non-secret routing only; the serving plane resolves credentials by variable
-                # name from its own environment. Scrubbed as defense in depth so a raw secret
-                # inlined into tenant-controlled backend_config can never leak into the artifact.
-                "backendConfig": _scrub_backend_config(kb.backend_config),
+                "embeddingProvider": embedding_provider,
+                "embeddingModel": embedding_model,
+                "backendType": backend_type,
+                "backendConfig": backend_config,
             }
             if kb.column_config:
                 item["columnConfig"] = [
@@ -585,13 +705,13 @@ async def _resolve_dependencies(
                     for entry in kb.column_config
                     if isinstance(entry, dict)
                 ]
-            knowledge_bases.append(item)
+            _store_dependency(knowledge_bases, name=kb.name, item=item, resource_kind="Knowledge Base")
 
     dependencies: dict[str, list[dict[str, Any]]] = {}
     if knowledge_bases:
-        dependencies["knowledgeBases"] = knowledge_bases
+        dependencies["knowledgeBases"] = [knowledge_bases[name] for name in sorted(knowledge_bases)]
     if memory_bases:
-        dependencies["memoryBases"] = memory_bases
+        dependencies["memoryBases"] = [memory_bases[name] for name in sorted(memory_bases)]
     return dependencies
 
 
@@ -749,7 +869,10 @@ async def build_project_artifact(
     # Enterprise package semaphore continues to account for its memory use.
     dependencies = await _resolve_dependencies(
         session,
+        user=user,
         owner_id=project.user_id,
+        workspace_id=project.workspace_id,
+        project_id=project_id,
         snapshots=tuple(snapshots),
     )
     return await _build_archive_non_abandoning(
