@@ -71,6 +71,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Pulls diskcache (via ragworkbench -> unitxt), which Mend flags for GHSA-w8v5-vhqr-4h9v.
+# 5.6.3 is diskcache's final release (2023, unmaintained), so there is nothing to bump to.
+# See .github/mend-scan-notes.md.
 opendsstar = [
     "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
 ]
