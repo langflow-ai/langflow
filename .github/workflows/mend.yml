@@ -35,7 +35,7 @@ jobs:
         run: npm ci
 
       - name: Set up Java (Semeru)
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: "semeru"
           java-version: "21"
