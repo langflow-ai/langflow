@@ -37,4 +37,3 @@ def test_password_context_bytes_input():
     assert isinstance(hashed, str)
     assert ctx.verify(secret_bytes, hashed) is True
     assert ctx.verify(b"wrong_bytes_secret", hashed) is False
-

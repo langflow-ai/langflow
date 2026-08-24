@@ -66,7 +66,6 @@ class PasswordContext:
             return False
 
 
-
 class AuthSettings(BaseSettings):
     # Login settings
     CONFIG_DIR: str
