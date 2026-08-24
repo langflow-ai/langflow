@@ -4,10 +4,9 @@ An APM keys its HTTP dashboards and service maps off the stable names, so emitti
 pre-stable ones leaves the curated views empty while ingest looks perfectly healthy. It is
 also a rename once corrected, so every dashboard built on the old names has to be rebuilt.
 
-``instrument_fastapi_app`` sets ``OTEL_SEMCONV_STABILITY_OPT_IN`` before instrumenting, which
-is necessary but not sufficient: OpenTelemetry reads that value when its instrumentation
-package first initialises and caches it for the life of the process. If anything has already
-imported that package, the helper's setdefault is too late and the cached value wins.
+Importing ``lfx.observability`` sets ``OTEL_SEMCONV_STABILITY_OPT_IN``. This must happen before
+OpenTelemetry's instrumentation package first initialises, because it reads the value once and
+caches it for the life of the process.
 
 Runs in a subprocess because the decision is cached process-wide and cannot be re-made.
 """
