@@ -202,33 +202,28 @@ def apply_tweaks(
         logger.warning(f"Template data for node {node.get('id')} should be a dictionary")
         return refused
 
-    # Security: tweaks must never inject executable code, widen the code sandbox,
-    # or repoint a protected sink configured by the flow author.
-    # The previous name-only block on "code" was bypassable because code-execution
-    # components expose their code under other field names (python_code, tool_code,
-    # filter_instruction) that serialize as plain "str". Refuse a tweak when the
-    # field is code-typed, literally named "code", or is a code/sandbox input on a
-    # code-execution component — while leaving benign fields (name, description,
-    # data, ...) on those components tweakable.
-    from lfx.utils.flow_validation import is_protected_tweak_field, is_tweak_refused_by_policy
+    # One function decides refusals, this one only applies them. Re-deriving the
+    # floor and the policy here is exactly the shape that produced the original
+    # bypass: two copies of a security predicate that drifted apart. In the
+    # two-pass callers this list is already empty by the time we get here, so the
+    # skip below only matters to direct callers of this function.
+    refused = _refused_tweak_names(
+        template_data,
+        node.get("data", {}).get("type"),
+        node_tweaks,
+        policy=policy,
+        flow_declares_allowlist=flow_declares_allowlist,
+        exempt_keys=exempt_keys,
+    )
+    refused_names = frozenset(refused)
 
-    component_type = node.get("data", {}).get("type")
     for tweak_name, tweak_value in node_tweaks.items():
-        if tweak_name not in template_data:
+        field = template_data.get(tweak_name)
+        if not isinstance(field, dict):
             continue
-        field_type = template_data[tweak_name].get("type", "")
-        if is_protected_tweak_field(component_type, tweak_name, field_type):
-            logger.warning(f"Security: refusing to override protected field {tweak_name!r} via tweaks.")
-            refused.append(tweak_name)
+        if tweak_name in refused_names:
             continue
-        if tweak_name not in exempt_keys and is_tweak_refused_by_policy(
-            policy,
-            flow_declares_allowlist=flow_declares_allowlist,
-            field_is_api_editable=template_data[tweak_name].get("api_editable") is True,
-        ):
-            logger.warning(f"Policy {policy!r}: refusing to override field {tweak_name!r} via tweaks.")
-            refused.append(tweak_name)
-            continue
+        field_type = field.get("type", "")
         if field_type == "NestedDict":
             value = validate_and_repair_json(tweak_value)
             template_data[tweak_name]["value"] = value
@@ -285,6 +280,7 @@ def _refused_tweak_names(
         if not isinstance(field, dict):
             continue
         if is_protected_tweak_field(component_type, tweak_name, field.get("type", "")):
+            logger.warning(f"Security: refusing to override protected field {tweak_name!r} via tweaks.")
             refused.append(tweak_name)
             continue
         if tweak_name not in exempt_keys and is_tweak_refused_by_policy(
@@ -292,6 +288,7 @@ def _refused_tweak_names(
             flow_declares_allowlist=flow_declares_allowlist,
             field_is_api_editable=field.get("api_editable") is True,
         ):
+            logger.warning(f"Policy {policy!r}: refusing to override field {tweak_name!r} via tweaks.")
             refused.append(tweak_name)
     return refused
 
@@ -312,6 +309,22 @@ def _resolve_tweak_policy() -> str:
         logger.warning(f"Unknown tweaks policy {policy!r}; falling back to {TWEAK_POLICY_PERMISSIVE!r}.")
         return TWEAK_POLICY_PERMISSIVE
     return policy
+
+
+def _effective_policy(*, caller_supplied: bool) -> str:
+    """Return the policy to enforce for this application of tweaks.
+
+    The deployment policy answers "what may a caller override". Tweaks the
+    runtime generated for itself are not a caller overriding anything, so they
+    are judged as ``permissive``: the protected-field floor still refuses, and
+    the policy layer stays out of it. This is the same reasoning that exempts
+    the injected ``stream`` key.
+    """
+    from lfx.utils.flow_validation import TWEAK_POLICY_PERMISSIVE
+
+    if not caller_supplied:
+        return TWEAK_POLICY_PERMISSIVE
+    return _resolve_tweak_policy()
 
 
 def _refusal_reason(policy: str, *, flow_declares_allowlist: bool) -> str:
@@ -345,16 +358,25 @@ def apply_tweaks_on_vertex(
     component at runtime, which is the bug the two former private copies of this
     function existed to work around.
     """
-    from lfx.utils.flow_validation import is_protected_tweak_field, is_tweak_refused_by_policy
-
     refused: list[str] = []
     template_data = vertex.data.get("node", {}).get("template", {})
-    component_type = vertex.data.get("type")
     if not isinstance(template_data, dict):
         # No usable template means nothing can be validated, so nothing is
         # applied. Refusing here instead would turn a malformed node into a
         # caller-facing error the caller cannot act on.
         return refused
+
+    # Same single-predicate rule as ``apply_tweaks``: this function applies, it
+    # does not re-decide. Two copies of the floor are what let the graph path
+    # accept tweaks the sync path refused in the first place.
+    refused = _refused_tweak_names(
+        template_data,
+        vertex.data.get("type"),
+        node_tweaks,
+        policy=policy,
+        flow_declares_allowlist=flow_declares_allowlist,
+    )
+    refused_names = frozenset(refused)
 
     accepted: dict[str, Any] = {}
     for tweak_name, tweak_value in node_tweaks.items():
@@ -365,19 +387,7 @@ def apply_tweaks_on_vertex(
         # caller who sends a tweak for a component the flow no longer has.
         if not isinstance(field, dict):
             continue
-        field_type = field.get("type", "")
-
-        if is_protected_tweak_field(component_type, tweak_name, field_type):
-            logger.warning(f"Security: refusing to override protected field {tweak_name!r} via tweaks.")
-            refused.append(tweak_name)
-            continue
-        if is_tweak_refused_by_policy(
-            policy,
-            flow_declares_allowlist=flow_declares_allowlist,
-            field_is_api_editable=isinstance(field, dict) and field.get("api_editable") is True,
-        ):
-            logger.warning(f"Policy {policy!r}: refusing to override field {tweak_name!r} via tweaks.")
-            refused.append(tweak_name)
+        if tweak_name in refused_names:
             continue
 
         accepted[tweak_name] = tweak_value
@@ -403,7 +413,11 @@ def apply_tweaks_on_vertex(
 
 
 def process_tweaks(
-    graph_data: dict[str, Any], tweaks: Tweaks | dict[str, dict[str, Any]], *, stream: bool = False
+    graph_data: dict[str, Any],
+    tweaks: Tweaks | dict[str, dict[str, Any]],
+    *,
+    stream: bool = False,
+    caller_supplied: bool = True,
 ) -> dict[str, Any]:
     """This function is used to tweak the graph data using the node id and the tweaks dict.
 
@@ -413,6 +427,11 @@ def process_tweaks(
                    The values can be a dictionary containing the tweaks for the node or the value of the tweak.
     :param stream: A boolean flag indicating whether streaming should be deactivated across all components or not.
                    Default is False.
+    :param caller_supplied: Whether these tweaks came from a run request. Pass False when the runtime
+                   generated them itself, e.g. resolved variable values. Runtime-generated tweaks skip
+                   the deployment policy for the same reason ``stream`` does: the policy governs what a
+                   caller may override, and refusing a value the runtime produced would disable internal
+                   machinery rather than restrict an API. The protected-field floor still applies.
     :return: The modified graph_data dictionary.
     :raises ValueError: If the input is not in the expected format.
     """
@@ -435,7 +454,7 @@ def process_tweaks(
     nodes_map = {node.get("id"): node for node in nodes}
     nodes_display_name_map = {node.get("data", {}).get("node", {}).get("display_name"): node for node in nodes}
 
-    policy = _resolve_tweak_policy()
+    policy = _effective_policy(caller_supplied=caller_supplied)
     flow_declares_allowlist = flow_declares_api_editable(nodes)
     refused: list[str] = []
 
@@ -480,18 +499,24 @@ def process_tweaks(
     return graph_data
 
 
-def process_tweaks_on_graph(graph: Graph, tweaks: dict[str, dict[str, Any]]):
+def process_tweaks_on_graph(graph: Graph, tweaks: dict[str, dict[str, Any]], *, caller_supplied: bool = True):
     """Apply tweaks to a built graph, enforcing the floor and the policy.
 
     This is the post-construction counterpart to ``process_tweaks``. The
     streaming and background run modes build the graph first, so they land here
     rather than there. Both paths must refuse the same tweaks, or the deployment
     policy would only govern the sync mode.
+
+    ``caller_supplied=False`` marks tweaks the runtime built rather than a caller
+    sending them. The Run Flow component passes its own declared inputs through
+    here to reach a sub-flow, so judging those against the deployment policy
+    would make ``off`` disable flow-as-tool orchestration instead of closing an
+    API surface. The floor still applies.
     """
     from lfx.exceptions.tweaks import TweakRefusedError
     from lfx.utils.flow_validation import flow_declares_api_editable
 
-    policy = _resolve_tweak_policy()
+    policy = _effective_policy(caller_supplied=caller_supplied)
     # ``flow_declares_api_editable`` reads node dicts shaped ``{"data": {...}}``.
     # ``vertex.data`` is already that inner mapping, so wrap it back up.
     flow_declares_allowlist = flow_declares_api_editable(
