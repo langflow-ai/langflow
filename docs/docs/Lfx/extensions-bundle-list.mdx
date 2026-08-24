@@ -39,14 +39,14 @@ The default `uv pip install langflow` includes the following curated standalone 
 
 ## Opt-in standalone packages
 
-These providers also ship as standalone `lfx-*` packages, but they are **not**
-included in `uv pip install langflow`. Install one package, or install all
-eight together with every no-Torch long-tail bundle by using
+These providers are available as standalone `lfx-*` packages, but they are **not** included in `uv pip install langflow`.
+Install one package, or install all of them together with the non-PyTorch providers in `lfx-bundles` by using
 `uv pip install "langflow[bundles]"`.
 
 | Bundle | Install command |
 | --- | --- |
 | [`arxiv`](/bundles-arxiv) (arXiv) | `uv pip install lfx-arxiv` |
+| [`confluent`](/bundles-confluent) (IBM Confluent) | `uv pip install lfx-confluent` |
 | [`duckduckgo`](/bundles-duckduckgo) (DuckDuckGo) | `uv pip install lfx-duckduckgo` |
 | [`empiriolabs`](/bundles-empiriolabs) (EmpirioLabs) | `uv pip install lfx-empiriolabs` |
 | [`exa`](/bundles-exa) (Exa) | `uv pip install lfx-exa` |
@@ -55,13 +55,14 @@ eight together with every no-Torch long-tail bundle by using
 | [`paddle`](/bundles-paddle) (Paddle) | `uv pip install lfx-paddle` |
 | [`valkey`](/bundles-valkey) (Valkey) | `uv pip install lfx-valkey` |
 
-## Long-tail bundles (`lfx-bundles`)
+## Providers in `lfx-bundles` {#lfx-bundles}
 
-These providers ship inside the `lfx-bundles` metapackage.
-Install one provider (with its SDK dependencies) with `uv pip install "lfx-bundles[<bundle>]"`.
-Install every long-tail provider with `uv pip install "lfx[bundles]"` or `uv pip install "lfx-bundles[all]"`.
-Install every no-Torch long-tail provider plus the eight opt-in standalone packages listed above with `uv pip install "langflow[bundles]"`.
-Bare `uv pip install lfx-bundles` registers the provider code only; add a per-provider extra when you need that provider's third-party SDK.
+These providers do not have their own `lfx-<provider>` package.
+
+To install one provider and its SDK, run `uv pip install "lfx-bundles[<bundle-name>]"`.
+To install every provider in `lfx-bundles`, run `uv pip install "lfx[bundles]"`.
+
+To install every provider, including providers that require PyTorch as a dependency, run `uv pip install "lfx-bundles[all]"`.
 
 | Bundle | Install command |
 | --- | --- |
@@ -107,6 +108,7 @@ Bare `uv pip install lfx-bundles` registers the provider code only; add a per-pr
 | [`nvidia`](/bundles-nvidia) (NVIDIA) | `uv pip install "lfx-bundles[nvidia]"` |
 | `olivya` | `uv pip install "lfx-bundles[olivya]"` |
 | [`openrouter`](/bundles-openrouter) (OpenRouter) | `uv pip install "lfx-bundles[openrouter]"` |
+| [`orcarouter`](/bundles-orcarouter) (OrcaRouter) | `uv pip install "lfx-bundles[orcarouter]"` |
 | [`perplexity`](/bundles-perplexity) (Perplexity) | `uv pip install "lfx-bundles[perplexity]"` |
 | [`pgvector`](/bundles-pgvector) (pgvector) | `uv pip install "lfx-bundles[pgvector]"` |
 | [`pinecone`](/bundles-pinecone) (Pinecone) | `uv pip install "lfx-bundles[pinecone]"` |

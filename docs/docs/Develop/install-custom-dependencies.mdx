@@ -54,8 +54,8 @@ To install multiple extras, use commas to separate each dependency group:
 uv pip install "langflow[postgresql,audio]"
 ```
 
-Use the `bundles` extra to install every no-Torch long-tail bundle plus the
-opt-in standalone extensions listed in
+Use the `bundles` extra to install the non-PyTorch providers from `lfx-bundles` plus the
+opt-in standalone packages listed in
 [Additional bundles](/extensions-bundle-list#additional-bundles):
 
 ```bash
@@ -66,8 +66,7 @@ uv pip install "langflow[bundles]"
 
 `langflow-base` is the minimal workable Langflow: the UI, API, platform
 services, and built-in components, without provider extensions. It is
-version-aligned with `langflow` starting with version 1.12.0. It includes platform
-services such as Redis, Chroma, MCP, Kubernetes, object storage, and
+version-aligned with `langflow` starting with version 1.12.0. It includes platform services such as Redis, Chroma, MCP, Kubernetes, object storage, and
 tracing support. The `langflow` package depends on this same version of
 `langflow-base` and adds curated standalone extensions.
 

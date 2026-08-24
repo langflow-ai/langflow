@@ -16,7 +16,7 @@ Choose the smallest profile that contains every extension used by your flows.
 | --- | --- | --- | --- |
 | Base | `langflowai/langflow:base-VERSION` | `ghcr.io/langflow-ai/langflow:base-VERSION` | `langflow-base` plus built-in LFX components. No `lfx-*` provider packages. |
 | Default | `langflowai/langflow:VERSION` | `ghcr.io/langflow-ai/langflow:VERSION` | Base plus the curated standalone `lfx-*` packages from `uv pip install langflow` |
-| Extended | `langflowai/langflow-all:VERSION` | `ghcr.io/langflow-ai/langflow-all:VERSION` | Default plus `langflow[bundles]`: the no-Torch long tail and opt-in standalones, including Confluent |
+| Extended | `langflowai/langflow-all:VERSION` | `ghcr.io/langflow-ai/langflow-all:VERSION` | Default plus `langflow[bundles]`: non-PyTorch providers from `lfx-bundles` and opt-in standalone packages, including Confluent |
 
 The base and default profiles use the `langflow` image repository. The extended
 profile uses the separate `langflow-all` repository. All three profiles use the
