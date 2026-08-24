@@ -231,6 +231,41 @@ Use this mode to previews the changes that would be made to the database schema 
   </TabItem>
 </Tabs>
 
+### langflow observability doctor {#langflow-observability-doctor}
+
+Sends a probe span, metric, and log to the configured OTLP endpoint and reports what the backend accepted.
+
+This command is also available as `lfx observability doctor`.
+It requires the `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable to be set.
+
+<Tabs groupId="Invocation">
+  <TabItem value="uv (recommended)" label="uv (recommended)" default>
+
+```bash
+uv run langflow observability doctor
+```
+
+  </TabItem>
+  <TabItem value="Direct" label="Direct">
+
+```bash
+langflow observability doctor
+```
+
+  </TabItem>
+</Tabs>
+
+#### Options
+
+| Option | Default | Type | Description |
+|--------|---------|--------|-------------|
+| `--timeout` | `OTEL_EXPORTER_OTLP_TIMEOUT` or the OpenTelemetry SDK default | Float | Per-export timeout in seconds. Must be greater than 0. |
+
+The doctor also prints whether log message bodies (`LANGFLOW_OTEL_LOG_BODIES`) and database spans (`LANGFLOW_OTEL_DB_SPANS`) are enabled.
+In your backend, search for items named `lfx.observability.doctor`.
+
+For more information, see [OpenTelemetry](/observability-opentelemetry#verify-your-configuration).
+
 ### langflow run {#langflow-run}
 
 Starts the Langflow server.
