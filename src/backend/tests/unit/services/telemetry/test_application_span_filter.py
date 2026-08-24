@@ -80,12 +80,12 @@ def test_application_and_llm_spans_together_export_only_the_application_span(exp
     assert SENTINEL not in str([dict(s.attributes or {}) for s in finished])
 
 
-def test_child_of_a_dropped_span_is_still_exported_and_orphaned(exporter_and_provider):
-    """Pins a known consequence rather than asserting it is desirable.
+def test_child_of_a_dropped_span_is_promoted_to_a_root(exporter_and_provider):
+    """A sub-flow run from inside an agent component, with nothing exported above it.
 
-    An application span nested inside a dropped LLM span (a sub-flow run from inside an agent
-    component) still reaches the APM, but its parent does not, so the trace renders with a
-    gap. Documented in ApplicationOnlySpanProcessor.
+    The dropped LLM span was its only ancestor, so there is nothing left to hang it from and
+    it becomes a root. Previously it kept pointing at the dropped parent and arrived at the
+    APM referencing a span that never showed up.
     """
     from opentelemetry.trace import use_span
 
@@ -98,9 +98,70 @@ def test_child_of_a_dropped_span_is_still_exported_and_orphaned(exporter_and_pro
     provider.force_flush()
     finished = exporter.get_finished_spans()
     assert [s.name for s in finished] == ["flow.execute"]
-    exported_ids = {s.context.span_id for s in finished}
-    assert finished[0].parent is not None
-    assert finished[0].parent.span_id not in exported_ids, "parent should be absent, not silently re-parented"
+    assert finished[0].parent is None, "should be a root, not pointing at a span that was never exported"
+
+
+def test_child_of_a_dropped_span_is_reparented_to_its_nearest_exported_ancestor(exporter_and_provider):
+    """The case that actually renders as a tree: an exported ancestor exists above the drop.
+
+    request -> openai.chat (dropped) -> flow.execute. The middle span never reaches the APM,
+    so flow.execute has to attach to the request or the trace has a hole in it.
+    """
+    from opentelemetry.trace import use_span
+
+    exporter, provider = exporter_and_provider
+    request = provider.get_tracer(APPLICATION_TRACER_NAME).start_span("POST /api/v1/run")
+    with use_span(request, end_on_exit=False):
+        llm_span = provider.get_tracer("opentelemetry.instrumentation.openai").start_span("openai.chat")
+        with use_span(llm_span, end_on_exit=False):
+            provider.get_tracer(APPLICATION_TRACER_NAME).start_span("flow.execute").end()
+        llm_span.end()
+    request.end()
+
+    provider.force_flush()
+    by_name = {s.name: s for s in exporter.get_finished_spans()}
+    assert sorted(by_name) == ["POST /api/v1/run", "flow.execute"]
+    assert by_name["flow.execute"].parent is not None
+    assert by_name["flow.execute"].parent.span_id == by_name["POST /api/v1/run"].context.span_id
+    # Same trace throughout: this moves a span within its tree, it does not relocate it.
+    assert by_name["flow.execute"].context.trace_id == by_name["POST /api/v1/run"].context.trace_id
+
+
+def test_a_span_under_two_dropped_levels_still_finds_the_exported_ancestor(exporter_and_provider):
+    """The walk has to continue past the first dropped parent, not stop at it."""
+    from opentelemetry.trace import use_span
+
+    exporter, provider = exporter_and_provider
+    request = provider.get_tracer(APPLICATION_TRACER_NAME).start_span("POST /api/v1/run")
+    with use_span(request, end_on_exit=False):
+        outer = provider.get_tracer("opentelemetry.instrumentation.openai").start_span("openai.chat")
+        with use_span(outer, end_on_exit=False):
+            inner = provider.get_tracer("opentelemetry.instrumentation.requests").start_span("HTTP POST")
+            with use_span(inner, end_on_exit=False):
+                provider.get_tracer(APPLICATION_TRACER_NAME).start_span("flow.execute").end()
+            inner.end()
+        outer.end()
+    request.end()
+
+    provider.force_flush()
+    by_name = {s.name: s for s in exporter.get_finished_spans()}
+    assert sorted(by_name) == ["POST /api/v1/run", "flow.execute"]
+    assert by_name["flow.execute"].parent.span_id == by_name["POST /api/v1/run"].context.span_id
+
+
+def test_a_real_parent_is_left_alone(exporter_and_provider):
+    """The control. Nothing was dropped, so nothing should be rewritten."""
+    from opentelemetry.trace import use_span
+
+    exporter, provider = exporter_and_provider
+    request = provider.get_tracer(APPLICATION_TRACER_NAME).start_span("POST /api/v1/run")
+    with use_span(request, end_on_exit=False):
+        provider.get_tracer(APPLICATION_TRACER_NAME).start_span("flow.execute").end()
+    request.end()
+
+    provider.force_flush()
+    by_name = {s.name: s for s in exporter.get_finished_spans()}
+    assert by_name["flow.execute"].parent.span_id == by_name["POST /api/v1/run"].context.span_id
 
 
 @pytest.mark.parametrize(
@@ -166,3 +227,62 @@ def test_llm_tracer_name_is_not_allowlisted():
     """The vendor integrations use the bare "langflow" tracer name; ours must differ."""
     assert "langflow" not in APPLICATION_INSTRUMENTATION_SCOPES
     assert APPLICATION_TRACER_NAME in APPLICATION_INSTRUMENTATION_SCOPES
+
+
+def test_a_remote_parent_is_never_rewritten():
+    """The safety case. An unknown parent is not evidence of a drop.
+
+    A parent from another process is absent from this processor's map for the same reason a
+    dropped one is: it was never seen at on_start. Treating absence as a drop would detach
+    every distributed trace from its caller and re-root it here, replacing a correct
+    cross-process link with an invented local one.
+    """
+    from opentelemetry import trace as otel_trace
+    from opentelemetry.trace import NonRecordingSpan, SpanContext, TraceFlags
+
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(ApplicationOnlySpanProcessor(exporter))
+
+    remote = SpanContext(
+        trace_id=0x1234567890ABCDEF1234567890ABCDEF,
+        span_id=0x1122334455667788,
+        is_remote=True,
+        trace_flags=TraceFlags(TraceFlags.SAMPLED),
+    )
+    context = otel_trace.set_span_in_context(NonRecordingSpan(remote))
+    provider.get_tracer(APPLICATION_TRACER_NAME).start_span("flow.execute", context=context).end()
+
+    provider.force_flush()
+    exported = exporter.get_finished_spans()
+    assert len(exported) == 1
+    assert exported[0].parent is not None, "a remote parent must survive; it is not an orphan"
+    assert exported[0].parent.span_id == remote.span_id
+    provider.shutdown()
+
+
+def test_the_lineage_map_does_not_grow_across_runs():
+    """Entries are removed as spans end, including the dropped ones.
+
+    The map is the only state this processor keeps, so an entry that outlives its span is a
+    leak in a long-running server.
+    """
+    from opentelemetry.trace import use_span
+
+    exporter = InMemorySpanExporter()
+    processor = ApplicationOnlySpanProcessor(exporter)
+    provider = TracerProvider()
+    provider.add_span_processor(processor)
+
+    for _ in range(25):
+        request = provider.get_tracer(APPLICATION_TRACER_NAME).start_span("POST /api/v1/run")
+        with use_span(request, end_on_exit=False):
+            llm = provider.get_tracer("opentelemetry.instrumentation.openai").start_span("openai.chat")
+            with use_span(llm, end_on_exit=False):
+                provider.get_tracer(APPLICATION_TRACER_NAME).start_span("flow.execute").end()
+            llm.end()
+        request.end()
+
+    provider.force_flush()
+    assert processor._lineage == {}, f"{len(processor._lineage)} entries left behind"
+    provider.shutdown()

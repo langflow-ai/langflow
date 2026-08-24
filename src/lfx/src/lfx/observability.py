@@ -401,6 +401,9 @@ except ImportError:
 
 
 if _OTEL_AVAILABLE:
+    # Distinct from None, which means "no exported ancestor, promote to root". This one means
+    # the chain left what this process saw, so the honest answer is to change nothing.
+    _UNKNOWN_ANCESTOR = object()
 
     class ApplicationOnlySpanProcessor(BatchSpanProcessor):
         """Exports only spans that describe the application, dropping everything else.
@@ -413,13 +416,28 @@ if _OTEL_AVAILABLE:
         Drops are logged once per scope at debug level; they are the expected case for LLM
         instrumentation, and logging every one would be noise.
 
-        Known consequence: an exported span whose parent was dropped arrives at the APM with a
-        parent that never shows up, so the trace renders with a gap. That follows from the
-        requirement of zero component spans in the APM, and it cannot be repaired here because
-        a child ends before its parent, so there is no way to know at the child's on_end that
-        the parent will be dropped. Scrubbing attributes instead of dropping would keep the
-        tree intact, but the requirement is no component spans, not merely no content.
+        A span whose parent is dropped is re-parented to its nearest exported ancestor, or
+        promoted to a root when it has none, so the trace still renders as a tree.
+
+        This is knowable at the child's on_end even though the child ends before its parent,
+        because the drop depends only on the instrumentation scope, which is fixed when the
+        span starts. ``on_start`` fires for every span, dropped ones included, so recording
+        scope and parentage there answers at the child's on_end what will happen to a parent
+        that has not ended yet.
+
+        Only rewrites when the parent is known to be dropped. A parent that is absent from the
+        map is left alone: that is a remote parent from another process, or one evicted by the
+        cap below, and neither is an orphan this can fix. Rewriting on a guess would invent a
+        relationship, which is worse than the gap.
+
+        Scrubbing attributes instead of dropping would also keep the tree intact, but the
+        requirement is no component spans, not merely no content.
         """
+
+        # Bounds the lineage map against spans that start and never end. Entries are removed
+        # as spans end, so a healthy process sits far below this; hitting it means something
+        # is leaking, and the cost of that is losing re-parenting, not memory.
+        _MAX_TRACKED_SPANS = 10_000
 
         def __init__(self, *args, **kwargs) -> None:
             super().__init__(*args, **kwargs)
@@ -427,17 +445,82 @@ if _OTEL_AVAILABLE:
             # Resolved once, at construction, so the set cannot change under a running
             # process and leave two spans of the same scope treated differently.
             self._scopes = exported_span_scopes()
+            # span_id -> (will be exported, parent span id, own span context). Written in
+            # on_start, read when a child ends, removed when the span itself ends. Children
+            # end before their parents, so a parent is still present when its child looks it
+            # up. No lock: dict get and set are atomic here, and a lost race costs one
+            # re-parenting, leaving the span exactly as it was exported before this existed.
+            self._lineage: dict[int, tuple[bool, int | None, Any]] = {}
+            self._lineage_capped = False
+
+        def on_start(self, span, parent_context=None) -> None:
+            super().on_start(span, parent_context)
+            if len(self._lineage) >= self._MAX_TRACKED_SPANS:
+                if not self._lineage_capped:
+                    self._lineage_capped = True
+                    logger.debug(
+                        f"Tracking more than {self._MAX_TRACKED_SPANS} in-flight spans; "
+                        "not re-parenting children of dropped spans beyond this point."
+                    )
+                return
+            scope = span.instrumentation_scope.name if span.instrumentation_scope else ""
+            context = span.get_span_context()
+            parent_id = span.parent.span_id if span.parent else None
+            self._lineage[context.span_id] = (scope in self._scopes, parent_id, context)
+
+        def _exported_ancestor(self, parent_id):
+            """The nearest ancestor that will be exported.
+
+            Returns its span context, or None when the chain reaches a root through dropped
+            spans only, or ``_UNKNOWN_ANCESTOR`` when the chain leaves what this process
+            recorded and the answer is genuinely not known.
+            """
+            seen: set[int] = set()
+            current = parent_id
+            while current is not None:
+                if current in seen:  # pragma: no cover - defensive, ids are unique
+                    return _UNKNOWN_ANCESTOR
+                seen.add(current)
+                entry = self._lineage.get(current)
+                if entry is None:
+                    return _UNKNOWN_ANCESTOR
+                exported, next_parent, context = entry
+                if exported:
+                    return context
+                current = next_parent
+            return None
+
+        def _reparent_over_dropped_ancestors(self, span) -> None:
+            parent = span.parent
+            if parent is None:
+                return
+            entry = self._lineage.get(parent.span_id)
+            if entry is None or entry[0]:
+                # Unknown parent, or one that is being exported. Either way, leave it.
+                return
+            ancestor = self._exported_ancestor(parent.span_id)
+            if ancestor is _UNKNOWN_ANCESTOR:
+                return
+            # Same trace either way, so this moves the span within its tree rather than
+            # relocating it. None promotes it to a root, which is what it effectively is once
+            # everything above it is dropped.
+            span._parent = ancestor  # noqa: SLF001
 
         def on_end(self, span) -> None:
             scope = span.instrumentation_scope.name if span.instrumentation_scope else ""
-            if scope in self._scopes:
-                _redact_url_attributes(span)
-                _redact_db_path_attributes(span)
-                super().on_end(span)
-                return
-            if scope not in self._dropped_scopes:
-                self._dropped_scopes.add(scope)
-                logger.debug(f"Not exporting spans from {scope!r}; only application telemetry is sent to the APM.")
+            try:
+                if scope in self._scopes:
+                    self._reparent_over_dropped_ancestors(span)
+                    _redact_url_attributes(span)
+                    _redact_db_path_attributes(span)
+                    super().on_end(span)
+                    return
+                if scope not in self._dropped_scopes:
+                    self._dropped_scopes.add(scope)
+                    logger.debug(f"Not exporting spans from {scope!r}; only application telemetry is sent to the APM.")
+            finally:
+                # After the export, and after any child has had the chance to read it.
+                self._lineage.pop(span.get_span_context().span_id, None)
 
     class ApplicationOnlyMetricExporter(MetricExporter):
         """Pushes only the service's own metrics, dropping every other instrumentation scope.
