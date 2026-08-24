@@ -72,6 +72,7 @@ from langflow.services.database.models.folder.model import (
     FolderUpdate,
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
+from langflow.services.database.models.folder.utils import validate_project_type
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service, get_settings_service
 from langflow.services.schema import ServiceType
@@ -117,6 +118,7 @@ async def _new_project(
     side effects operate on the owning user, not just their id.
     """
     new_project = Folder.model_validate(project, from_attributes=True)
+    new_project.project_type = validate_project_type(new_project.project_type)
     new_project.user_id = current_user.id
     # Apply the stable id: an explicit ``project_id`` (PUT upsert) overrides the uuid4 default.
     if project_id is not None:
@@ -614,6 +616,23 @@ async def _apply_project_update(
     if project.description is not None:
         existing_project.description = project.description
 
+    # An omitted project_type means "leave it alone". An explicit null is a value the caller
+    # asked for, and the column is NOT NULL, so it cannot be honoured. Answering 200 for a
+    # request that changed nothing is the same silent no-op this endpoint already avoids
+    # elsewhere, and `validate_project_type` already refuses every other invalid value.
+    if "project_type" in project.model_fields_set:
+        if project.project_type is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="project_type must not be null.",
+            )
+        existing_project.project_type = validate_project_type(project.project_type)
+
+    # project_config uses model_fields_set, not a None check: clearing the config and leaving
+    # it untouched are different requests, and a None check cannot tell them apart.
+    if "project_config" in project.model_fields_set:
+        existing_project.project_config = project.project_config
+
     if project.parent_id is not None:
         # Validate the supplied parent references a folder owned by the project owner, so
         # shared-project writes cannot create cross-owner folder hierarchies.
@@ -769,9 +788,11 @@ def _folder_create_to_update(project: FolderCreate) -> FolderUpdate:
     mapped because ``_apply_project_update`` recomputes them from the project's current DB
     contents; ``parent_id`` is not part of ``FolderCreate``.
     """
-    # exclude_unset carries only fields explicitly set on the body; include restricts to the three
+    # exclude_unset carries only fields explicitly set on the body; include restricts to the
     # fields FolderUpdate shares with FolderCreate (flows/components/parent_id handled per docstring).
-    data = project.model_dump(include={"name", "description", "auth_settings"}, exclude_unset=True)
+    data = project.model_dump(
+        include={"name", "description", "auth_settings", "project_type", "project_config"}, exclude_unset=True
+    )
     return FolderUpdate(**data)
 
 
