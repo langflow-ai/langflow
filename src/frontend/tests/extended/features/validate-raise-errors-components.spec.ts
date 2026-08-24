@@ -89,7 +89,7 @@ class CustomComponent(Component):
       .count();
 
     expect(numberOfErrorMessages).toBeGreaterThan(0);
-    const customNode = page.getByRole("group", {
+    const customNode = page.getByRole("application", {
       name: "Custom Component node",
     });
     await expect(customNode.getByTestId("icon-Loader2")).toBeHidden();

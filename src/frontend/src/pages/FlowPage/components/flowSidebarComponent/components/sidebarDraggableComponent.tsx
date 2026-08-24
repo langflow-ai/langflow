@@ -128,6 +128,18 @@ export const SidebarDraggableComponent = forwardRef(
       }
     }
 
+    // WCAG 2.5.3 Label in Name (LE-2235): the accessible name must contain
+    // the text the row shows, and the Beta / Legacy badge is part of that
+    // visible text — so it goes into the name too ("Add Listen Beta to
+    // canvas"), otherwise voice-control users saying "click Listen Beta"
+    // get no match. Keep these literals in sync with the badges below.
+    const visibleName = [display_name, beta && "Beta", legacy && "Legacy"]
+      .filter(Boolean)
+      .join(" ");
+    const addToCanvasLabel = t("sidebar.addComponentToCanvas", {
+      name: visibleName,
+    });
+
     const handleKeyDown = (e) => {
       if (isUnavailable) return;
       if (e.key === "Enter" || e.key === " ") {
@@ -169,9 +181,7 @@ export const SidebarDraggableComponent = forwardRef(
               data-testid={sectionName + display_name}
               id={sectionName + display_name}
               role="button"
-              aria-label={t("sidebar.addComponentToCanvas", {
-                name: display_name,
-              })}
+              aria-label={addToCanvasLabel}
               tabIndex={0}
               onKeyDown={handleKeyDown}
               className={cn(
@@ -241,9 +251,7 @@ export const SidebarDraggableComponent = forwardRef(
                   size="icon"
                   tabIndex={-1}
                   disabled={isReadOnly}
-                  aria-label={t("sidebar.addComponentToCanvas", {
-                    name: display_name,
-                  })}
+                  aria-label={addToCanvasLabel}
                   className="text-primary"
                   onClick={() => addComponent(apiClass, itemName)}
                 >

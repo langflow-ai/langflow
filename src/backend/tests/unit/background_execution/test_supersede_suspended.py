@@ -88,7 +88,7 @@ async def test_supersede_cancels_suspended_runs_of_same_flow_and_user(real_servi
     flow_id, user_id = uuid4(), uuid4()
     stale_job_id = await _suspend_a_job(job_service, flow_id=flow_id, user_id=user_id)
 
-    superseded = await _service().supersede_suspended_runs(flow_id=flow_id, user_id=user_id)
+    superseded = await _service().supersede_suspended_runs(flow_id=flow_id, user_id=user_id, session_id=str(flow_id))
 
     assert stale_job_id in superseded
     job = await job_service.get_job_by_job_id(stale_job_id)
@@ -102,7 +102,7 @@ async def test_supersede_leaves_other_flows_and_users_alone(real_services_job_se
     other_flow_job = await _suspend_a_job(job_service, flow_id=uuid4(), user_id=user_id)
     other_user_job = await _suspend_a_job(job_service, flow_id=flow_id, user_id=uuid4())
 
-    superseded = await _service().supersede_suspended_runs(flow_id=flow_id, user_id=user_id)
+    superseded = await _service().supersede_suspended_runs(flow_id=flow_id, user_id=user_id, session_id=str(flow_id))
 
     assert superseded == []
     for untouched in (other_flow_job, other_user_job):
@@ -141,7 +141,7 @@ async def test_supersede_returns_only_jobs_it_actually_cancelled(real_services_j
     resumed_job_id = await _suspend_a_job(job_service, flow_id=flow_id, user_id=user_id, request_id="req-2")
     assert await job_service.claim_suspended_for_resume(resumed_job_id) is True
 
-    superseded = await _service().supersede_suspended_runs(flow_id=flow_id, user_id=user_id)
+    superseded = await _service().supersede_suspended_runs(flow_id=flow_id, user_id=user_id, session_id=str(flow_id))
 
     assert superseded == [stale_job_id]
     resumed = await job_service.get_job_by_job_id(resumed_job_id)
@@ -182,7 +182,7 @@ async def test_supersede_resolves_the_persisted_human_input_card(real_services_j
         card_id = card.id
     await job_service.update_job_metadata(job_id, {"card_message_id": str(card_id)})
 
-    superseded = await _service().supersede_suspended_runs(flow_id=flow_id, user_id=user_id)
+    superseded = await _service().supersede_suspended_runs(flow_id=flow_id, user_id=user_id, session_id=str(flow_id))
     assert job_id in superseded
 
     async with session_scope() as session:

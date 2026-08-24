@@ -30,6 +30,11 @@ export interface ModelProviderSelectionProps {
   modelType: ModelTypeFilter;
   providerName?: string;
   isEnabledModel?: boolean;
+  /** True when the provider's model list is discovered from its endpoint
+   *  after credentials are configured (backend ``live_discovery`` flag). */
+  liveDiscovery?: boolean;
+  /** True when the provider's credentials are already configured. */
+  isConfigured?: boolean;
 }
 
 interface ModelRowProps {
@@ -193,6 +198,8 @@ const ModelSelection = ({
   onModelToggle,
   providerName,
   isEnabledModel,
+  liveDiscovery,
+  isConfigured,
 }: ModelProviderSelectionProps) => {
   const { t } = useTranslation();
   const { data: enabledModelsData } = useGetEnabledModels();
@@ -411,6 +418,11 @@ const ModelSelection = ({
   const providerOwnsEmptyState = hasProviderOwnedEmptyState(providerName);
   const isOllama =
     providerOwnsEmptyState && providerName?.toLowerCase() === "ollama";
+  // Live-discovery providers have nothing to list until credentials are
+  // configured; show a configure-credentials hint instead of the generic
+  // "no models" state. Ollama keeps its own specialized empty state.
+  const awaitsCredentialDiscovery =
+    !!liveDiscovery && !isConfigured && !isOllama;
   // Use the unfiltered list for the empty-state check so an
   // ollama-no-models warning still fires when the search field happens to be
   // populated.
@@ -540,6 +552,28 @@ const ModelSelection = ({
           >
             {t("modelProviders.checkOllamaLibrary")}
           </a>
+        </div>
+      ) : awaitsCredentialDiscovery && noModelsAvailable ? (
+        <div
+          className="flex flex-col items-center justify-center p-8 text-center border border-dashed rounded-lg bg-muted/30"
+          data-testid="live-discovery-empty-state"
+        >
+          <ForwardedIconComponent
+            name="Info"
+            className="w-10 h-10 mb-4 text-muted-foreground"
+          />
+          <h3 className="mb-2 text-sm font-semibold text-foreground">
+            {t("modelProviders.liveDiscoveryTitle", {
+              defaultValue: "No models yet",
+            })}
+          </h3>
+          <p className="max-w-[300px] text-xs text-muted-foreground leading-relaxed">
+            {t("modelProviders.liveDiscoveryHint", {
+              provider: providerName,
+              defaultValue:
+                "{{provider}} models are discovered from your account once credentials are configured. Save your credentials above to load the available models.",
+            })}
+          </p>
         </div>
       ) : (
         <>

@@ -11,7 +11,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.api.utils.core import remove_api_keys
+from langflow.api.utils.core import strip_secret_field_values
 from langflow.api.v1.flows import _validate_catalog_policy_for_write
 from langflow.api.v1.mappers.deployments.helpers import get_owned_provider_account_or_404
 from langflow.api.v1.mappers.deployments.sync import sync_flow_version_attachments
@@ -44,15 +44,18 @@ router = APIRouter(prefix="/flows/{flow_id}/versions", tags=["Flow Versions"], i
 
 
 def strip_version_data(data: dict | None) -> dict | None:
-    """Strip API keys from a version entry's flow data dict.
+    """Strip secret field values from a version entry's flow data dict.
+
+    Uses the metadata-driven scrubber, so ``password``-marked fields under
+    ordinary names and credential-bearing connection strings are cleared too --
+    not only fields whose name matches the legacy API-key pattern.
 
     Returns None if stripping fails, to prevent accidental secret leakage.
     """
     if data is None:
         return None
-    data_copy = copy.deepcopy(data)
     try:
-        return remove_api_keys({"data": data_copy}).get("data")
+        return strip_secret_field_values(data)
     except (KeyError, TypeError, AttributeError, ValueError):
         logger.warning(
             "Failed to strip API keys from version data — excluding data from response to prevent secret leakage",

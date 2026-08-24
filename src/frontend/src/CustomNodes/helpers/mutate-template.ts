@@ -2,17 +2,62 @@ import type { UseMutationResult } from "@tanstack/react-query";
 import { cloneDeep, debounce } from "lodash";
 import { SAVE_DEBOUNCE_TIME } from "@/constants/constants";
 import useFlowStore from "@/stores/flowStore";
-import type { APIClassType, ResponseErrorDetailAPI } from "@/types/api";
+import type {
+  APIClassType,
+  APITemplateType,
+  ResponseErrorDetailAPI,
+} from "@/types/api";
 import i18n from "../../i18n";
 import { updateHiddenOutputs } from "./update-hidden-outputs";
 
 const debouncedFunctions = new Map<string, ReturnType<typeof debounce>>();
 
-const getNodeCode = (nodeId: string): unknown => {
+const getNodeTemplate = (nodeId: string): APITemplateType | undefined => {
   const currentNode = useFlowStore
     .getState()
     .nodes.find((flowNode) => flowNode.id === nodeId);
-  return currentNode?.data?.node?.template?.code?.value;
+  return currentNode?.data?.node?.template;
+};
+
+const getNodeCode = (nodeId: string): unknown => {
+  return getNodeTemplate(nodeId)?.code?.value;
+};
+
+// Canvas visibility and API exposure are owned by the user through the
+// Parameters panel, never by a refresh. The response carries whatever these
+// were when the request left, so applying it wholesale reverts a flag the
+// user flipped meanwhile - the field vanishes off the node with no feedback.
+const USER_OWNED_FIELD_FLAGS = ["advanced", "api_editable"] as const;
+
+const keepUserFieldFlags = (
+  nodeId: string,
+  requestedTemplate: APITemplateType | undefined,
+  incomingTemplate: APITemplateType,
+): APITemplateType => {
+  const currentTemplate = getNodeTemplate(nodeId);
+  if (!requestedTemplate || !currentTemplate) return incomingTemplate;
+
+  const merged = cloneDeep(incomingTemplate);
+  for (const [fieldName, currentField] of Object.entries(currentTemplate)) {
+    const requestedField = requestedTemplate[fieldName];
+    const incomingField = merged[fieldName];
+    if (
+      typeof currentField !== "object" ||
+      currentField === null ||
+      typeof requestedField !== "object" ||
+      requestedField === null ||
+      typeof incomingField !== "object" ||
+      incomingField === null
+    ) {
+      continue;
+    }
+    for (const flag of USER_OWNED_FIELD_FLAGS) {
+      if (currentField[flag] !== requestedField[flag]) {
+        incomingField[flag] = currentField[flag];
+      }
+    }
+  }
+  return merged;
 };
 
 // A refresh answers for the code that was current when it left, and applying it
@@ -76,7 +121,11 @@ export const mutateTemplate = async (
               is_refresh: isRefresh ?? false,
             });
             if (newTemplate && !isStaleForNode(nodeId, node)) {
-              newNode.template = newTemplate.template;
+              newNode.template = keepUserFieldFlags(
+                nodeId,
+                node.template,
+                newTemplate.template,
+              );
               newNode.outputs = updateHiddenOutputs(
                 newNode.outputs ?? [],
                 newTemplate.outputs ?? [],

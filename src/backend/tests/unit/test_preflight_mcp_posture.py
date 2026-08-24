@@ -24,6 +24,7 @@ _HARDENED = {
     "connector_ssrf_allow_loopback": False,
     "disable_track_apikey_usage": True,
     "mcp_server_allowed_packages": "",
+    "mcp_server_env_allowlist": "",
 }
 
 
@@ -59,6 +60,7 @@ async def test_should_skip_when_mcp_server_is_disabled():
         ({"connector_ssrf_allow_loopback": True}, "LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK"),
         ({"disable_track_apikey_usage": False}, "LANGFLOW_DISABLE_TRACK_APIKEY_USAGE"),
         ({"mcp_server_allowed_packages": None}, "LANGFLOW_MCP_SERVER_ALLOWED_PACKAGES"),
+        ({"mcp_server_env_allowlist": None}, "LANGFLOW_MCP_SERVER_ENV_ALLOWLIST"),
     ],
 )
 async def test_should_name_each_permissive_setting(override, expected_env):
