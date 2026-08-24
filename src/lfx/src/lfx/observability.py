@@ -55,7 +55,7 @@ if TYPE_CHECKING:
     from opentelemetry.sdk._logs import LoggerProvider
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.trace import Link, Span
+    from opentelemetry.trace import Link, Span, SpanContext
 
 # The tracer name Langflow's own application spans are emitted under. Deliberately not
 # "langflow": the LLM tracer integrations already take a tracer under that name, and their
@@ -445,12 +445,12 @@ if _OTEL_AVAILABLE:
             # Resolved once, at construction, so the set cannot change under a running
             # process and leave two spans of the same scope treated differently.
             self._scopes = exported_span_scopes()
-            # span_id -> (will be exported, parent span id, own span context). Written in
+            # span_id -> (will be exported, parent span context, own span context). Written in
             # on_start, read when a child ends, removed when the span itself ends. Children
             # end before their parents, so a parent is still present when its child looks it
             # up. No lock: dict get and set are atomic here, and a lost race costs one
             # re-parenting, leaving the span exactly as it was exported before this existed.
-            self._lineage: dict[int, tuple[bool, int | None, Any]] = {}
+            self._lineage: dict[int, tuple[bool, SpanContext | None, SpanContext]] = {}
             self._lineage_capped = False
             self._reparent_failed = False
 
@@ -489,8 +489,7 @@ if _OTEL_AVAILABLE:
                 return
             scope = span.instrumentation_scope.name if span.instrumentation_scope else ""
             context = span.get_span_context()
-            parent_id = span.parent.span_id if span.parent else None
-            self._lineage[context.span_id] = (scope in self._scopes, parent_id, context)
+            self._lineage[context.span_id] = (scope in self._scopes, span.parent, context)
 
         def _exported_ancestor(self, parent_id):
             """The nearest ancestor that will be exported.
@@ -511,7 +510,9 @@ if _OTEL_AVAILABLE:
                 exported, next_parent, context = entry
                 if exported:
                     return context
-                current = next_parent
+                if next_parent is not None and next_parent.is_remote:
+                    return next_parent
+                current = next_parent.span_id if next_parent is not None else None
             return None
 
         def _reparent_over_dropped_ancestors(self, span) -> None:

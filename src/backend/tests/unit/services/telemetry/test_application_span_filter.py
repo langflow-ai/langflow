@@ -261,6 +261,36 @@ def test_a_remote_parent_is_never_rewritten():
     provider.shutdown()
 
 
+def test_a_remote_parent_above_a_dropped_span_is_preserved():
+    """A dropped local span must not sever an incoming distributed trace."""
+    from opentelemetry import trace as otel_trace
+    from opentelemetry.trace import NonRecordingSpan, SpanContext, TraceFlags, use_span
+
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(ApplicationOnlySpanProcessor(exporter))
+
+    remote = SpanContext(
+        trace_id=0x1234567890ABCDEF1234567890ABCDEF,
+        span_id=0x1122334455667788,
+        is_remote=True,
+        trace_flags=TraceFlags(TraceFlags.SAMPLED),
+    )
+    context = otel_trace.set_span_in_context(NonRecordingSpan(remote))
+    dropped = provider.get_tracer("opentelemetry.instrumentation.openai").start_span("openai.chat", context=context)
+    with use_span(dropped, end_on_exit=False):
+        provider.get_tracer(APPLICATION_TRACER_NAME).start_span("flow.execute").end()
+    dropped.end()
+
+    provider.force_flush()
+    exported = exporter.get_finished_spans()
+    assert len(exported) == 1
+    assert exported[0].parent is not None
+    assert exported[0].parent.span_id == remote.span_id
+    assert exported[0].context.trace_id == remote.trace_id
+    provider.shutdown()
+
+
 def test_the_lineage_map_does_not_grow_across_runs():
     """Entries are removed as spans end, including the dropped ones.
 
