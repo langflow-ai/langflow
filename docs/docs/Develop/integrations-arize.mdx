@@ -22,15 +22,15 @@ Instructions for integrating Langflow and Arize are also available in the Arize 
 
 ## Prerequisites
 
-* If you are using [Arize AX](https://arize.com/products/ax/), you need an **Arize Space ID** and **Arize API Key**.
-* If you are using [Arize Phoenix](https://arize.com/phoenix/), you need a running Phoenix instance. Local Phoenix can run without authentication; authenticated deployments also need a **Phoenix API key**.
+* If you are using [Arize AX](https://arize.com/products/ax/), you need an **Arize Space ID** and **Arize API Key**. Self-hosted deployments also need the base URL of their OTLP collector.
+* If you are using [Arize Phoenix](https://arize.com/phoenix/), you need a running Phoenix instance. Local Phoenix can run without authentication, but Langflow requires a **Phoenix API key** for non-local endpoints.
 
 ## Connect Arize to Langflow
 
 <Tabs>
 <TabItem value="platform" label="Arize AX" default>
 
-1. In your [Arize AX dashboard](https://app.arize.com/), copy your **Space ID** and [**API Key (Ingestion Service Account Key)**](https://arize.com/docs/ax/security-and-settings/api-keys).
+1. In your [Arize AX dashboard](https://app.arize.com/), copy your **Space ID** and [**API Key (Ingestion Service Account Key)**](https://arize.com/docs/ax/security-and-settings/api-keys). For self-hosted AX, use your deployment's dashboard instead.
 
 2. In the root of your Langflow application, edit your existing Langflow `.env` file or create a new one.
 
@@ -42,6 +42,14 @@ Instructions for integrating Langflow and Arize are also available in the Arize 
     ```
 
     Replace `SPACE_ID` and `API_KEY` with the values you copied from Arize AX.
+
+    For self-hosted AX, also add the base URL of your deployment's OTLP collector:
+
+    ```bash
+    ARIZE_COLLECTOR_ENDPOINT=https://arize-otlp.example.com
+    ```
+
+    Replace the example with your collector base URL. Don't include a trailing slash or `/v1`; Langflow appends `/v1` to the endpoint.
 
     You don't need to specify the Arize project name if you're using Arize AX.
 
@@ -64,7 +72,7 @@ Instructions for integrating Langflow and Arize are also available in the Arize 
     PHOENIX_COLLECTOR_ENDPOINT=http://localhost:6006
     ```
 
-    For authenticated Phoenix deployments, also add `PHOENIX_API_KEY`:
+    For a remote Phoenix deployment, replace the endpoint with your instance's base URL. Langflow also requires `PHOENIX_API_KEY` for non-local endpoints:
 
     ```bash
     PHOENIX_API_KEY=API_KEY
@@ -110,10 +118,12 @@ In Phoenix, go to the project traces view.
     A _span_ is a single operation within a trace.
     For example, a _span_ could be a single API call to OpenAI or a single function call to a custom tool.
 
-    For information about tracing metrics in Arize, see the [Arize AX tracing documentation](https://arize.com/docs/ax/observe/tracing).
+    For more information, see the [Arize AX tracing documentation](https://arize.com/docs/ax/observe/tracing) or the [Arize Phoenix tracing documentation](https://arize.com/docs/phoenix/integrations/platforms/langflow/langflow-tracing).
 
-6. To add a span to a [dataset](https://arize.com/docs/ax/develop/datasets), click **Add to Dataset**.
+6. To add a span to a dataset, click **Add to Dataset**.
 
-    All metrics on the **LLM Tracing** tab can be added to datasets.
+    For more information, see the [Arize AX dataset documentation](https://arize.com/docs/ax/develop/datasets) or the [Arize Phoenix dataset documentation](https://arize.com/docs/phoenix/datasets-and-experiments/how-to-datasets/creating-datasets).
+
+    In Arize AX, all metrics on the **LLM Tracing** tab can be added to datasets.
 
 7. To view a dataset, click the **Datasets** tab, and then select your dataset.
