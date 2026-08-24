@@ -219,6 +219,7 @@ EXPECTED_FIELDS = {
     "redis_queue_polling_watchdog_interval_s",
     "max_ingestion_timeout_secs",
     "executor_kind",
+    "dangerously_allow_multi_worker_without_shared_queue",
     # UiSettings
     "embedded_mode",
     "hide_getting_started_progress",
@@ -254,6 +255,7 @@ EXPECTED_FIELDS = {
     "mcp_server_docker_hardening",
     "mcp_server_allowed_packages",
     "mcp_server_interpreter_hardening",
+    "mcp_server_env_allowlist",
     # ---- Added in 1.12.0 ----
     # SecuritySettings: opt-in microVM sandbox backend (issue #12029)
     "sandbox_backend",
@@ -321,6 +323,7 @@ def test_critical_defaults_unchanged():
     assert settings.dev is False
     assert settings.agentic_experience is True
     assert settings.developer_api_enabled is False
+    assert settings.dangerously_allow_multi_worker_without_shared_queue is False
 
 
 def test_dict_defaults_unchanged():

@@ -10292,6 +10292,7 @@ name = "lfx-nextplaid"
 version = "0.1.2"
 source = { editable = "src/bundles/nextplaid" }
 dependencies = [
+    { name = "httpx" },
     { name = "langchain-plaid" },
     { name = "lfx" },
     { name = "pillow" },
@@ -10299,6 +10300,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "httpx", specifier = ">=0.28.1,<1.0.0" },
     { name = "langchain-plaid", specifier = ">=0.1.0,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
     { name = "pillow", specifier = ">=12.3.0,<13.0.0" },

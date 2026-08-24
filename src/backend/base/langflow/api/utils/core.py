@@ -31,6 +31,16 @@ remove_api_keys = _flow_secrets.remove_api_keys
 strip_secret_field_values = _flow_secrets.strip_secret_field_values
 strip_secret_field_values_in_place = _flow_secrets.strip_secret_field_values_in_place
 
+
+def strip_flow_secrets(flow: dict) -> dict:
+    """Return a detached flow envelope with persisted secrets removed."""
+    if not isinstance(flow, dict) or "data" not in flow:
+        return flow
+    scrubbed = dict(flow)
+    scrubbed["data"] = strip_secret_field_values(flow["data"])
+    return scrubbed
+
+
 MAX_PAGE_SIZE = 50
 MIN_PAGE_SIZE = 1
 

@@ -327,7 +327,11 @@ class TestV2WorkflowAdmission:
             )
         )
 
-        gated = workflow_module._apply_execution_gates(parsed, flow, SimpleNamespace(id=uuid4()))
+        gated = workflow_module._apply_execution_gates(
+            parsed,
+            flow,
+            SimpleNamespace(id=uuid4(), is_superuser=False),
+        )
 
         assert gated.data is None
         assert gated.input_value == "hi"
@@ -357,7 +361,11 @@ class TestV2WorkflowAdmission:
             )
         )
 
-        gated = workflow_module._apply_execution_gates(parsed, flow, SimpleNamespace(id=uuid4()))
+        gated = workflow_module._apply_execution_gates(
+            parsed,
+            flow,
+            SimpleNamespace(id=uuid4(), is_superuser=False),
+        )
 
         # Stored component parameters still win; only the denial shape changed.
         assert gated.tweaks == {}
@@ -388,7 +396,11 @@ class TestV2WorkflowAdmission:
             )
         )
 
-        gated = workflow_module._apply_execution_gates(parsed, flow, SimpleNamespace(id=owner_id))
+        gated = workflow_module._apply_execution_gates(
+            parsed,
+            flow,
+            SimpleNamespace(id=owner_id, is_superuser=False),
+        )
 
         assert gated.tweaks == parsed.tweaks
 
@@ -420,7 +432,7 @@ class TestV2WorkflowDelegatedErrorPolicy:
         parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=str(flow.id), input_value="hi", mode="sync"))
         monkeypatch.setattr(
             workflow_validation,
-            "validate_flow_for_current_settings",
+            "prepare_flow_build_for_user_from_cache",
             MagicMock(side_effect=CustomComponentValidationError(sensitive_detail)),
         )
 
@@ -704,18 +716,20 @@ class TestV2WorkflowDelegatedErrorPolicy:
             name="private",
         )
 
-        def _reject(_flow_data):
+        def _reject(_flow_data, *, is_superuser=False):  # noqa: ARG001
             message = "custom components are disabled"
             raise CustomComponentValidationError(message)
 
-        monkeypatch.setattr(wf_val, "validate_flow_for_current_settings", _reject)
+        # The stored-graph gate now runs the caller-aware policy, which is a strict superset of
+        # the old global validator, so the denial surfaces from there instead.
+        monkeypatch.setattr(wf_val, "prepare_flow_build_for_user_from_cache", _reject)
         parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=str(flow_id), input_value="hi", mode="stream"))
 
         with pytest.raises(HTTPException) as exc_info:
             workflow_module.build_stream_response(
                 parsed,
                 flow,
-                SimpleNamespace(id=flow.user_id),
+                SimpleNamespace(id=flow.user_id, is_superuser=False),
                 stream_protocol="langflow",
                 background_tasks=SimpleNamespace(),
             )
@@ -742,17 +756,17 @@ class TestV2WorkflowDelegatedErrorPolicy:
         )
         detail = "Catalog policy component identities are still initializing. Please try again in a few seconds."
 
-        def _retry(_flow_data):
+        def _retry(_flow_data, *, is_superuser=False):  # noqa: ARG001
             raise CatalogPolicyIdentityUnavailableError(detail)
 
-        monkeypatch.setattr(wf_val, "validate_flow_for_current_settings", _retry)
+        monkeypatch.setattr(wf_val, "prepare_flow_build_for_user_from_cache", _retry)
         parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=str(flow_id), input_value="hi", mode="stream"))
 
         with pytest.raises(HTTPException) as exc_info:
             workflow_module.build_stream_response(
                 parsed,
                 flow,
-                SimpleNamespace(id=flow.user_id),
+                SimpleNamespace(id=flow.user_id, is_superuser=False),
                 stream_protocol="langflow",
                 background_tasks=SimpleNamespace(),
             )

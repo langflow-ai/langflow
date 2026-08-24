@@ -35,9 +35,11 @@ class SecuritySettings(BaseModel):
     connector_ssrf_validation_enabled: bool = True
     """SSRF validation for CONNECTOR components that take a tenant-controlled host/URL:
     vector stores (Chroma/Qdrant/Elasticsearch/OpenSearch/Milvus/Weaviate/Supabase/Upstash/
-    ClickHouse), the SQL Database components, the Glean and AstraDB-CQL tools, model-provider
-    model discovery (LiteLLM/HuggingFace/xAI/DeepSeek/Groq/watsonx), the Ollama / LM Studio /
-    Home Assistant base-URL fields, the A2A Agent agent URL, and the PaddleOCR base URL.
+    ClickHouse), the SQL Database components, the Glean and AstraDB-CQL tools, the DataStax
+    Astra DB / HCD API endpoint (shared by the Data API, tool, vector store, graph and chat-memory
+    components), model-provider model discovery (LiteLLM/HuggingFace/xAI/DeepSeek/Groq/watsonx),
+    the Ollama / LM Studio / Home Assistant base-URL fields, the A2A Agent agent URL, and the
+    PaddleOCR base URL.
 
     Default True: connector host validation follows ssrf_protection_enabled / ssrf_allowed_hosts
     so tenant-controlled connector URLs cannot reach internal/cloud-metadata hosts by default.
@@ -46,8 +48,8 @@ class SecuritySettings(BaseModel):
     components, the separate LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS toggle still governs local-file
     dialects (e.g. sqlite) independently of this flag."""
     connector_ssrf_allow_loopback: bool = True
-    """Whether a literal loopback host (localhost, 127.0.0.0/8, ::1) is allowed for HTTP CONNECTOR
-    and model-provider URLs, even while connector SSRF validation is on.
+    """Whether a literal loopback host (localhost, 127.0.0.0/8, ::1) is allowed for ordinary HTTP
+    CONNECTOR URLs, even while connector SSRF validation is on.
 
     Default True because connectors routinely target a *local* service: Ollama and LM Studio
     default to http://localhost:11434 / http://localhost:1234, and local vector stores bind to
@@ -57,8 +59,10 @@ class SecuritySettings(BaseModel):
     Multi-tenant deployers, where a tenant pointing a connector at the *server's* loopback is an
     SSRF vector, set this to False to block loopback too. Only literal loopback references are
     exempted — a hostname that *resolves* to loopback is still blocked, so DNS-rebinding cannot
-    abuse this. Has no effect on the API Request component (always strict), database URLs, or git
-    URLs, which validate loopback independently."""
+    abuse this. When SSRF validation is enabled, credential-bearing URLs guarded by
+    ``lfx.base.models.provider_ssrf`` use the strict path and require an explicit
+    ``ssrf_allowed_hosts`` entry for loopback. Has no effect on the API Request component,
+    database URLs, or git URLs, which validate loopback independently."""
 
     # API key handling
     disable_track_apikey_usage: bool = False
