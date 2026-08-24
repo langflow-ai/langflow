@@ -470,7 +470,7 @@
   "components.astradbtool.inputs.semantic_search_instruction.display_name.94195073": "Semantic Search Instruction",
   "components.astradbtool.inputs.semantic_search_instruction.info.25559765": "The instruction to use for the semantic search.",
   "components.astradbtool.inputs.static_filters.display_name.51ccf976": "Static filters",
-  "components.astradbtool.inputs.static_filters.info.a58be9c3": "Attributes to filter and correspoding value",
+  "components.astradbtool.inputs.static_filters.info.a58be9c3": "Attributes to filter and corresponding value",
   "components.astradbtool.inputs.token.display_name.9d048d03": "Astra DB Application Token",
   "components.astradbtool.inputs.token.info.1e3c8180": "Authentication token for accessing Astra DB.",
   "components.astradbtool.inputs.tool_description.display_name.a6ae99b2": "Tool Description",
