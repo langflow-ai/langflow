@@ -2,6 +2,7 @@ import secrets
 from enum import Enum
 from pathlib import Path
 from typing import Literal
+from urllib.parse import urlparse
 
 import bcrypt
 from pydantic import Field, SecretStr, field_validator, model_validator
@@ -49,29 +50,21 @@ class PasswordContext:
 
     @staticmethod
     def hash(secret: str | bytes) -> str:
-        if isinstance(secret, str):
-            secret_bytes = secret.encode("utf-8")
-        else:
-            secret_bytes = secret
+        secret_bytes = secret.encode("utf-8") if isinstance(secret, str) else secret
         secret_bytes = secret_bytes[:72]
         salt = bcrypt.gensalt()
         return bcrypt.hashpw(secret_bytes, salt).decode("utf-8")
 
     @staticmethod
-    def verify(secret: str | bytes, hash: str | bytes) -> bool:
-        if isinstance(secret, str):
-            secret_bytes = secret.encode("utf-8")
-        else:
-            secret_bytes = secret
-        if isinstance(hash, str):
-            hash_bytes = hash.encode("utf-8")
-        else:
-            hash_bytes = hash
+    def verify(secret: str | bytes, hashed_secret: str | bytes) -> bool:
+        secret_bytes = secret.encode("utf-8") if isinstance(secret, str) else secret
+        hash_bytes = hashed_secret.encode("utf-8") if isinstance(hashed_secret, str) else hashed_secret
         secret_bytes = secret_bytes[:72]
         try:
             return bcrypt.checkpw(secret_bytes, hash_bytes)
-        except Exception:
+        except (ValueError, TypeError, Exception):
             return False
+
 
 
 class AuthSettings(BaseSettings):

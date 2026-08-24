@@ -28,3 +28,13 @@ def test_password_context_invalid_hash():
     ctx = PasswordContext()
     assert ctx.verify("some_password", "invalid_hash_string") is False
     assert ctx.verify("some_password", "") is False
+
+
+def test_password_context_bytes_input():
+    ctx = PasswordContext()
+    secret_bytes = b"bytes_password_secret_123"
+    hashed = ctx.hash(secret_bytes)
+    assert isinstance(hashed, str)
+    assert ctx.verify(secret_bytes, hashed) is True
+    assert ctx.verify(b"wrong_bytes_secret", hashed) is False
+
