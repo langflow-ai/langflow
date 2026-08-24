@@ -1,3 +1,5 @@
+"""Legacy Python REPL tool component, kept for flows that still reference it."""
+
 import importlib
 
 from langchain_core.tools import StructuredTool, ToolException
@@ -13,6 +15,12 @@ from lfx.utils.sandbox import is_sandbox_enabled, run_code_in_sandbox, sanitize_
 
 
 class PythonREPLToolComponent(LCToolComponent):
+    """Legacy tool that runs Python code in a REPL and returns the result as a tool observation.
+
+    Superseded by ``processing.PythonREPLComponent``. Kept so saved flows that still
+    reference this component continue to build and run.
+    """
+
     display_name = "Python REPL"
     description = "A tool for running Python code in a REPL environment."
     name = "PythonREPLTool"
@@ -51,25 +59,39 @@ class PythonREPLToolComponent(LCToolComponent):
 
     @staticmethod
     def _normalize_legacy_code_input(params: dict) -> dict:
-        # `code` is reserved for the component's source. Preserve programmatic
-        # callers that used the old input name while serializing the value separately.
+        """Rename a legacy ``code`` parameter to ``python_code`` in place.
+
+        `code` is reserved for the component's source. Preserve programmatic
+        callers that used the old input name while serializing the value separately.
+        """
         if "code" in params:
             params.setdefault("python_code", params.pop("code"))
         return params
 
     def set(self, **kwargs):
+        """Set component inputs, translating a legacy ``code`` keyword to ``python_code``."""
         return super().set(**self._normalize_legacy_code_input(kwargs))
 
     def set_attributes(self, params: dict) -> None:
+        """Set component attributes, translating a legacy ``code`` key to ``python_code``."""
         super().set_attributes(self._normalize_legacy_code_input(params))
 
     def set_input_value(self, name: str, value) -> None:
+        """Set a single input value, redirecting the legacy ``code`` name to ``python_code``."""
         super().set_input_value("python_code" if name == "code" else name, value)
 
     class PythonREPLSchema(BaseModel):
+        """Argument schema for the tool, exposing the code to execute as ``code``."""
+
         code: str = Field(..., description="The Python code to execute.")
 
     def get_globals(self, global_imports: str | list[str]) -> dict:
+        """Build the globals namespace for code execution from an allow-list of modules.
+
+        Imports each module named in ``global_imports`` and restricts ``__builtins__``
+        to the safe subset, so code cannot bypass the import allow-list through
+        ``__import__`` or other builtin escape gadgets.
+        """
         global_dict = {}
         if isinstance(global_imports, str):
             modules = [module.strip() for module in global_imports.split(",")]
@@ -105,7 +127,18 @@ class PythonREPLToolComponent(LCToolComponent):
         return str(value)
 
     def build_tool(self) -> Tool:
+        """Build the ``StructuredTool`` an agent calls to run Python code.
+
+        Wraps ``run_python_code`` with the tool name, description, and argument
+        schema taken from this component's inputs.
+        """
+
         def run_python_code(code: str) -> str:
+            """Run ``code`` in-process or in the configured sandbox, and return the observation string.
+
+            Raises ``ToolException`` on any failure so the agent sees a tool error
+            instead of an unhandled exception.
+            """
             try:
                 # Refuse to run user code when allow_custom_components is disabled
                 # (GHSA-8qpj-27x8-pwpq).
@@ -175,6 +208,7 @@ class PythonREPLToolComponent(LCToolComponent):
         return tool
 
     def run_model(self) -> list[Data]:
+        """Build the tool, run it against ``python_code``, and wrap the result in a ``Data`` list."""
         tool = self.build_tool()
         code_input = "" if self.python_code is None else self.python_code
         result = tool.run({"code": code_input})

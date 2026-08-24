@@ -36,6 +36,7 @@ from lfx.utils.sandbox.createos import (
 
 
 def _settings(backend, **extra):
+    """Return a settings stand-in with the given sandbox backend and overrides."""
     defaults = {
         "sandbox_backend": backend,
         "sandbox_timeout_seconds": 30,
@@ -86,6 +87,7 @@ class _FakeCreateosApi:
         artifact_archive=None,
         metrics=None,
     ):
+        """Store the canned responses and behavior this fake control plane serves."""
         self.calls: list[tuple[str, str]] = []
         self.bodies: dict[str, object] = {}
         self.uploaded: bytes | None = None
@@ -118,6 +120,7 @@ class _FakeCreateosApi:
 
     @staticmethod
     def _ok(data):
+        """Return a JSend success envelope wrapping the given data."""
         return httpx.Response(200, json={"status": "success", "data": data})
 
     def _stream_body(self) -> bytes:
@@ -141,6 +144,7 @@ class _FakeCreateosApi:
             yield chunk
 
     def handler(self, request: httpx.Request) -> httpx.Response:
+        """Route the request to the matching fake endpoint and record the call."""
         path = request.url.path
         self.calls.append((request.method, path))
 
@@ -219,6 +223,7 @@ def createos(monkeypatch):
     monkeypatch.setitem(registry_module._instances, "createos", executor)
 
     def _install(api: _FakeCreateosApi) -> _FakeCreateosApi:
+        """Wire the executor's client to the given fake control plane and return it."""
         monkeypatch.setattr(
             executor,
             "_client",
@@ -247,15 +252,20 @@ def _use_createos(monkeypatch, **extra):
 
 
 class TestCreateosRegistration:
+    """Verify that the createos backend registers with the shared sandbox machinery."""
+
     def test_backend_name_is_known(self):
+        """Verify that the createos backend name appears among the known sandbox backends."""
         assert SANDBOX_BACKEND_CREATEOS in known_sandbox_backends()
 
     def test_settings_accept_the_backend(self):
+        """Verify that SecuritySettings accepts "createos" as a valid sandbox_backend value."""
         from lfx.services.settings.groups.security import SecuritySettings
 
         assert SecuritySettings(sandbox_backend="createos").sandbox_backend == "createos"
 
     def test_settings_still_reject_typos(self):
+        """Verify that SecuritySettings rejects a misspelled sandbox_backend value."""
         from lfx.services.settings.groups.security import SecuritySettings
 
         with pytest.raises(ValueError, match="sandbox_backend must be one of"):
@@ -263,6 +273,8 @@ class TestCreateosRegistration:
 
 
 class TestEgressRuleGrammar:
+    """Verify that _is_valid_egress_rule accepts documented forms and rejects the rest."""
+
     @pytest.mark.parametrize(
         "rule",
         [
@@ -277,6 +289,7 @@ class TestEgressRuleGrammar:
         ],
     )
     def test_accepts_documented_forms(self, rule):
+        """Verify that a documented egress rule form is accepted."""
         assert _is_valid_egress_rule(rule)
 
     @pytest.mark.parametrize(
@@ -294,11 +307,15 @@ class TestEgressRuleGrammar:
         ],
     )
     def test_rejects_everything_else(self, rule):
+        """Verify that a malformed egress rule is rejected."""
         assert not _is_valid_egress_rule(rule)
 
 
 class TestCreateosExecution:
+    """Verify that the createos backend runs code and maps the result correctly."""
+
     def test_happy_path_maps_the_result(self, monkeypatch, createos):
+        """Verify that a successful run reports success, stdout, timing, and destroys the VM."""
         api = createos(_FakeCreateosApi())
         _use_createos(monkeypatch)
 
@@ -314,6 +331,7 @@ class TestCreateosExecution:
         assert ("DELETE", "/v1/sandboxes/sb-test") in api.calls
 
     def test_import_preamble_reaches_the_guest(self, monkeypatch, createos):
+        """Verify that global_imports are uploaded to the guest as import statements."""
         api = createos(_FakeCreateosApi())
         _use_createos(monkeypatch)
 
@@ -325,6 +343,7 @@ class TestCreateosExecution:
         assert "import json" in uploaded
 
     def test_user_code_failure_is_a_result_not_an_exception(self, monkeypatch, createos):
+        """Verify that a guest program error is reported as a failed result, not raised."""
         createos(_FakeCreateosApi(exec_result={"stdout": "", "stderr": "NameError: nope", "exit_code": 1}))
         _use_createos(monkeypatch)
 
@@ -334,6 +353,7 @@ class TestCreateosExecution:
         assert "NameError" in result.error_message()
 
     def test_blank_code_short_circuits_without_touching_the_api(self, monkeypatch, createos):
+        """Verify that blank code returns success without making any API call."""
         api = createos(_FakeCreateosApi())
         _use_createos(monkeypatch)
 
@@ -344,7 +364,10 @@ class TestCreateosExecution:
 
 
 class TestCreateosNetworkPolicy:
+    """Verify that sandbox network settings translate into the correct egress rules."""
+
     def test_network_disabled_sends_a_deny_all_rule(self, monkeypatch, createos):
+        """Verify that network disabled sends an explicit deny-all egress rule, not an empty list."""
         api = createos(_FakeCreateosApi())
         _use_createos(monkeypatch)
 
@@ -354,6 +377,7 @@ class TestCreateosNetworkPolicy:
         assert api.bodies["create"]["egress"] == ["240.0.0.0/4"]
 
     def test_allowed_domains_are_forwarded_with_a_resolver(self, monkeypatch, createos):
+        """Verify that an allowed-domain egress list also includes a reachable DNS resolver rule."""
         api = createos(_FakeCreateosApi())
         _use_createos(monkeypatch, sandbox_allow_network=True, sandbox_allowed_domains=["pypi.org"])
 
@@ -364,6 +388,7 @@ class TestCreateosNetworkPolicy:
         assert "1.1.1.1:53" in egress, "a domain allowlist is inert without a reachable resolver"
 
     def test_network_enabled_without_domains_is_allow_all(self, monkeypatch, createos):
+        """Verify that network enabled with no domain allowlist sends an allow-all egress rule."""
         api = createos(_FakeCreateosApi())
         _use_createos(monkeypatch, sandbox_allow_network=True)
 
@@ -372,6 +397,7 @@ class TestCreateosNetworkPolicy:
         assert api.bodies["create"]["egress"] == ["*"]
 
     def test_unparseable_domain_refuses_before_creating_a_vm(self, monkeypatch, createos):
+        """Verify that an unparseable allowed domain refuses before any sandbox is created."""
         api = createos(_FakeCreateosApi())
         _use_createos(monkeypatch, sandbox_allow_network=True, sandbox_allowed_domains=["not a domain"])
 
@@ -382,7 +408,10 @@ class TestCreateosNetworkPolicy:
 
 
 class TestCreateosShapeSelection:
+    """Verify that the configured memory floor selects the correct CreateOS shape."""
+
     def test_default_shape_is_2vcpu_4gb(self, monkeypatch, createos):
+        """Verify that the default memory setting selects the s-2vcpu-4gb shape."""
         api = createos(_FakeCreateosApi())
         _use_createos(monkeypatch)  # sandbox_memory_mb default is 192
 
@@ -393,6 +422,7 @@ class TestCreateosShapeSelection:
         assert api.bodies["create"]["shape"] == "s-2vcpu-4gb"
 
     def test_memory_below_the_default_does_not_shrink_the_vm(self, monkeypatch, createos):
+        """Verify that a memory setting below the default still selects the s-2vcpu-4gb shape."""
         api = createos(_FakeCreateosApi())
         _use_createos(monkeypatch, sandbox_memory_mb=300)
 
@@ -401,6 +431,7 @@ class TestCreateosShapeSelection:
         assert api.bodies["create"]["shape"] == "s-2vcpu-4gb"
 
     def test_memory_above_the_default_raises_the_floor(self, monkeypatch, createos):
+        """Verify that a memory setting above the default selects a larger shape."""
         api = createos(_FakeCreateosApi())
         _use_createos(monkeypatch, sandbox_memory_mb=6000)
 
@@ -409,6 +440,7 @@ class TestCreateosShapeSelection:
         assert api.bodies["create"]["shape"] == "s-4vcpu-8gb"
 
     def test_memory_beyond_the_catalog_refuses(self, monkeypatch, createos):
+        """Verify that a memory setting beyond every catalog shape refuses to run."""
         createos(_FakeCreateosApi())
         _use_createos(monkeypatch, sandbox_memory_mb=99999)
 
@@ -416,6 +448,7 @@ class TestCreateosShapeSelection:
             run_code_in_sandbox("print('hi')")
 
     def test_pinned_shape_is_used_verbatim(self, monkeypatch, createos):
+        """Verify that a pinned shape environment variable is used as-is."""
         api = createos(_FakeCreateosApi())
         monkeypatch.setenv("CREATEOS_SANDBOX_SHAPE", "s-1vcpu-1gb")
         _use_createos(monkeypatch)
@@ -425,6 +458,7 @@ class TestCreateosShapeSelection:
         assert api.bodies["create"]["shape"] == "s-1vcpu-1gb"
 
     def test_unknown_pinned_shape_refuses(self, monkeypatch, createos):
+        """Verify that a pinned shape absent from the catalog refuses to run."""
         createos(_FakeCreateosApi())
         monkeypatch.setenv("CREATEOS_SANDBOX_SHAPE", "s-nonexistent")
         _use_createos(monkeypatch)
@@ -433,6 +467,7 @@ class TestCreateosShapeSelection:
             run_code_in_sandbox("print('hi')")
 
     def test_pinned_shape_smaller_than_configured_memory_refuses(self, monkeypatch, createos):
+        """Verify that a pinned shape smaller than the configured memory floor refuses to run."""
         createos(_FakeCreateosApi())
         monkeypatch.setenv("CREATEOS_SANDBOX_SHAPE", "s-1vcpu-256mb")
         _use_createos(monkeypatch, sandbox_memory_mb=1024)
@@ -442,21 +477,27 @@ class TestCreateosShapeSelection:
 
 
 class TestCreateosFailsClosed:
+    """Verify that the createos backend refuses instead of running unsafely."""
+
     def test_missing_api_key_refuses(self, monkeypatch):
+        """Verify that a missing API key refuses with a message naming the environment variable."""
         monkeypatch.delenv("CREATEOS_SANDBOX_API_KEY", raising=False)
         with pytest.raises(SandboxUnavailableError, match="CREATEOS_SANDBOX_API_KEY"):
             createos_module._CreateosExecutor._api_key()
 
     def test_plaintext_base_url_refuses(self, monkeypatch):
+        """Verify that a non-loopback plaintext base URL refuses because it must use https."""
         monkeypatch.setenv("CREATEOS_SANDBOX_BASE_URL", "http://api.example.com")
         with pytest.raises(SandboxUnavailableError, match="must use https"):
             createos_module._CreateosExecutor._base_url()
 
     def test_loopback_over_http_is_allowed_for_development(self, monkeypatch):
+        """Verify that a loopback base URL over plain http is allowed and its trailing slash trimmed."""
         monkeypatch.setenv("CREATEOS_SANDBOX_BASE_URL", "http://localhost:8080/")
         assert createos_module._CreateosExecutor._base_url() == "http://localhost:8080"
 
     def test_client_error_is_unavailable(self, monkeypatch, createos):
+        """Verify that a 4xx exec response raises SandboxUnavailableError."""
         createos(_FakeCreateosApi(exec_status=403))
         _use_createos(monkeypatch)
 
@@ -464,6 +505,7 @@ class TestCreateosFailsClosed:
             run_code_in_sandbox("print('hi')")
 
     def test_server_error_is_an_execution_error(self, monkeypatch, createos):
+        """Verify that a 5xx exec response raises SandboxExecutionError."""
         createos(_FakeCreateosApi(exec_status=503))
         _use_createos(monkeypatch)
 
@@ -471,6 +513,7 @@ class TestCreateosFailsClosed:
             run_code_in_sandbox("print('hi')")
 
     def test_timeout_maps_to_the_shared_timeout_exit_code(self, monkeypatch, createos):
+        """Verify that a transport timeout maps to the shared timeout exit code and message."""
         createos(_FakeCreateosApi(exec_raises=httpx.ReadTimeout("too slow")))
         _use_createos(monkeypatch)
 
@@ -480,6 +523,7 @@ class TestCreateosFailsClosed:
         assert "timed out" in result.error_message()
 
     def test_the_vm_is_destroyed_even_when_execution_fails(self, monkeypatch, createos):
+        """Verify that the VM is destroyed even when the execution raises an error."""
         api = createos(_FakeCreateosApi(exec_status=503))
         _use_createos(monkeypatch)
 
@@ -493,6 +537,7 @@ class TestCreateosPolicyVerification:
     """Fixes raised by the Codex adversarial review, 2026-08-19."""
 
     def test_auto_pause_backstop_is_requested(self, monkeypatch, createos):
+        """Verify that create requests an auto-pause backstop past the default timeout."""
         api = createos(_FakeCreateosApi())
         _use_createos(monkeypatch)
 
@@ -505,6 +550,7 @@ class TestCreateosPolicyVerification:
         assert requested > 30, "must exceed the default sandbox_timeout_seconds"
 
     def test_rewritten_egress_refuses_before_running_code(self, monkeypatch, createos):
+        """Verify that a control plane that rewrites the egress policy refuses before code runs."""
         api = createos(_FakeCreateosApi(create_data={"id": "sb-test", "egress": ["*"], "mem_mib": 4096}))
         _use_createos(monkeypatch)
 
@@ -515,6 +561,7 @@ class TestCreateosPolicyVerification:
         assert ("DELETE", "/v1/sandboxes/sb-test") in api.calls
 
     def test_downgraded_memory_refuses(self, monkeypatch, createos):
+        """Verify that a control plane that grants less memory than requested refuses."""
         createos(_FakeCreateosApi(create_data={"id": "sb-test", "egress": ["240.0.0.0/4"], "mem_mib": 256}))
         _use_createos(monkeypatch, sandbox_memory_mb=1024)
 
@@ -522,6 +569,7 @@ class TestCreateosPolicyVerification:
             run_code_in_sandbox("print('hi')")
 
     def test_missing_create_id_says_a_vm_may_be_orphaned(self, monkeypatch, createos):
+        """Verify that a create response missing an id raises with a possible-orphan warning."""
         createos(_FakeCreateosApi(create_data={"egress": ["240.0.0.0/4"]}))
         _use_createos(monkeypatch)
 
@@ -529,6 +577,7 @@ class TestCreateosPolicyVerification:
             run_code_in_sandbox("print('hi')")
 
     def test_failed_teardown_is_logged_but_does_not_mask_the_result(self, monkeypatch, createos):
+        """Verify that a failed VM teardown does not prevent the execution result from being returned."""
         createos(_FakeCreateosApi(delete_status=500))
         _use_createos(monkeypatch)
 
@@ -539,6 +588,7 @@ class TestCreateosPolicyVerification:
         assert result.stdout == "2\n"
 
     def test_api_key_is_redacted_when_the_server_reflects_it(self, monkeypatch, createos):
+        """Verify that an API key echoed in the server's error body is redacted from the message."""
         # The endpoint echoes the credential back in its error body. Without
         # _redact this lands in the exception and then in tracebacks and logs.
         monkeypatch.setenv("CREATEOS_SANDBOX_API_KEY", "skp_supersecret")
@@ -553,6 +603,7 @@ class TestCreateosPolicyVerification:
         assert "***" in message, "the body reached the message but was not redacted"
 
     def test_api_key_is_redacted_from_the_policy_mismatch_path(self, monkeypatch, createos):
+        """Verify that an API key embedded in a mismatched egress echo is redacted from the message."""
         # A different message-building path than the response-body one above.
         monkeypatch.setenv("CREATEOS_SANDBOX_API_KEY", "skp_supersecret")
         createos(
@@ -570,6 +621,7 @@ class TestCreateosPolicyVerification:
         [(1, 3), (5, 10), (30, 45), (300, 315)],
     )
     def test_exec_deadline_scales_with_the_configured_timeout(self, timeout_seconds, expected):
+        """Verify that the exec deadline scales with the configured sandbox timeout."""
         # A 1s timeout must not silently become a 16s wait.
         assert createos_module._exec_deadline(timeout_seconds) == expected
 
@@ -579,10 +631,12 @@ class TestCreateosEgressGrammarEdgeCases:
 
     @pytest.mark.parametrize("rule", ["2001:db8::1", "::1", "2001:db8::/32", "*:443"])
     def test_forms_the_host_parser_mishandles_are_refused(self, rule):
+        """Verify that a form the host's own parser mishandles is refused."""
         assert not _is_valid_egress_rule(rule)
 
     @pytest.mark.parametrize("rule", ["pypi.org:https", "pypi.org:0", "pypi.org:99999"])
     def test_bad_ports_are_refused(self, rule):
+        """Verify that a rule with a bad port is refused."""
         # A bad port is the ONE input that makes the host fall back to allow-all.
         assert not _is_valid_egress_rule(rule)
 
@@ -594,6 +648,7 @@ class TestCreateosPolicyVerificationIsLoadBearing:
     """
 
     def test_omitted_egress_is_treated_as_a_mismatch(self, monkeypatch, createos):
+        """Verify that a create response with no egress field is treated as a policy mismatch."""
         # `egress` is omitempty on the control plane's response type, so a
         # server that silently dropped the policy returns no field at all.
         api = createos(_FakeCreateosApi(create_data={"id": "sb-test", "mem_mib": 4096}))
@@ -605,6 +660,7 @@ class TestCreateosPolicyVerificationIsLoadBearing:
         assert not any(p.endswith("/exec") for _, p in api.calls)
 
     def test_silently_widened_egress_is_caught(self, monkeypatch, createos):
+        """Verify that a control plane that silently widens the egress policy is caught."""
         api = createos(_FakeCreateosApi(create_data={"id": "sb-test", "egress": ["0.0.0.0/0"], "mem_mib": 4096}))
         _use_createos(monkeypatch)
 
@@ -614,6 +670,7 @@ class TestCreateosPolicyVerificationIsLoadBearing:
         assert not any(p.endswith("/exec") for _, p in api.calls)
 
     def test_verification_runs_before_the_code_is_uploaded(self, monkeypatch, createos):
+        """Verify that policy verification runs before the code is ever uploaded to the guest."""
         api = createos(_FakeCreateosApi(create_data={"id": "sb-test", "egress": ["*"], "mem_mib": 4096}))
         _use_createos(monkeypatch)
 
@@ -629,6 +686,7 @@ class TestCreateosAutoPause:
     """The orphan backstop must outlive the execution it protects."""
 
     def test_auto_pause_exceeds_the_configured_timeout(self, monkeypatch, createos):
+        """Verify that the requested auto-pause window exceeds the configured sandbox timeout."""
         # Regression: a backstop pinned at the 60s minimum paused healthy
         # executions, because the control plane touches the activity clock
         # only when /exec is accepted and a quiet program looks idle.
@@ -641,9 +699,11 @@ class TestCreateosAutoPause:
 
     @pytest.mark.parametrize("timeout_seconds", [1, 30, 300])
     def test_auto_pause_always_outlasts_the_execution_window(self, timeout_seconds):
+        """Verify that the auto-pause window always outlasts the exec deadline."""
         assert createos_module._auto_pause_seconds(timeout_seconds) > createos_module._exec_deadline(timeout_seconds)
 
     def test_auto_pause_respects_the_control_plane_minimum(self):
+        """Verify that the auto-pause window never drops below the control plane's 60s minimum."""
         # The API rejects anything below 60.
         assert createos_module._auto_pause_seconds(1) >= 60
 
@@ -654,6 +714,8 @@ class TestCreateosAutoPause:
 
 
 class TestCreateosStreamingExec:
+    """Verify that exec runs streamed and the NDJSON events are handled correctly."""
+
     def test_the_program_runs_streamed(self, monkeypatch, createos):
         """Streaming is the documented kill path; buffered mode has no timeout field."""
         api = createos(_FakeCreateosApi())
@@ -665,6 +727,7 @@ class TestCreateosStreamingExec:
         assert any(path.endswith("/exec") for _, path in api.calls)
 
     def test_heartbeats_do_not_reach_the_caller(self, monkeypatch, createos):
+        """Verify that heartbeat events are filtered out and never appear in the result stdout."""
         createos(
             _FakeCreateosApi(
                 exec_stream_lines=[{"hb": True}, {"stdout": "a"}, {"hb": True}, {"stdout": "b"}, {"exit_code": 0}]
@@ -678,6 +741,7 @@ class TestCreateosStreamingExec:
         assert "hb" not in result.stdout
 
     def test_stdout_and_stderr_stay_separate(self, monkeypatch, createos):
+        """Verify that interleaved stdout and stderr events stay separated in the result."""
         createos(
             _FakeCreateosApi(
                 exec_stream_lines=[{"stdout": "out"}, {"stderr": "err"}, {"stdout": "put"}, {"exit_code": 3}]
@@ -692,6 +756,7 @@ class TestCreateosStreamingExec:
         assert result.exit_code == 3
 
     def test_an_unparsable_line_does_not_lose_the_execution(self, monkeypatch, createos):
+        """Verify that an unparsable NDJSON line is skipped without losing the rest of the execution."""
         createos(_FakeCreateosApi(exec_stream_lines=[{"stdout": "kept"}, "not json", {"exit_code": 0}]))
         _use_createos(monkeypatch)
 
@@ -709,6 +774,7 @@ class TestCreateosStreamingExec:
             run_code_in_sandbox("print('partial')")
 
     def test_an_agent_level_error_event_raises(self, monkeypatch, createos):
+        """Verify that an agent-level error event raises SandboxExecutionError."""
         createos(_FakeCreateosApi(exec_stream_lines=[{"error": "no such command"}]))
         _use_createos(monkeypatch)
 
@@ -733,6 +799,7 @@ class TestCreateosStreamingExec:
 
 
 def _session(flow="flow-1", user="user-1"):
+    """Return a SessionKey for the given flow and user, defaulting to a fixed pair."""
     return SessionKey(flow_id=flow, user_id=user)
 
 
@@ -749,11 +816,15 @@ def _session_identity_for(session=None, egress=None, memory_mb=192):
 
 
 def _session_name_for(**kwargs):
+    """Return the guest name production would derive for the given session identity."""
     return createos_module._session_guest_name(_session_identity_for(**kwargs))
 
 
 class TestCreateosSessions:
+    """Verify that session mode controls whether a guest is reused, replaced, or destroyed."""
+
     def test_a_second_run_reuses_the_same_guest(self, monkeypatch, createos):
+        """Verify that a second run of the same session reuses the existing guest."""
         api = createos(_FakeCreateosApi(create_ids=["sb-one", "sb-two"]))
         _use_createos(monkeypatch, sandbox_session_mode="flow")
 
@@ -764,6 +835,7 @@ class TestCreateosSessions:
         assert api.deleted_ids == []
 
     def test_two_users_of_one_flow_get_separate_guests(self, monkeypatch, createos):
+        """Verify that two different users of the same flow get separate guests."""
         api = createos(_FakeCreateosApi(create_ids=["sb-alice", "sb-bob"]))
         _use_createos(monkeypatch, sandbox_session_mode="flow")
 
@@ -773,6 +845,7 @@ class TestCreateosSessions:
         assert api.created_ids == ["sb-alice", "sb-bob"]
 
     def test_sessions_off_destroys_the_guest_every_time(self, monkeypatch, createos):
+        """Verify that with sessions off every run creates and destroys its own guest."""
         api = createos(_FakeCreateosApi(create_ids=["sb-one", "sb-two"]))
         _use_createos(monkeypatch)
 
@@ -794,6 +867,7 @@ class TestCreateosSessions:
         assert "sb-one" in api.deleted_ids
 
     def test_an_idle_session_is_destroyed(self, monkeypatch, createos):
+        """Verify that a session past its idle window is destroyed on the next call."""
         api = createos(_FakeCreateosApi(create_ids=["sb-one", "sb-two"]))
         _use_createos(monkeypatch, sandbox_session_mode="flow", sandbox_session_idle_seconds=0)
 
@@ -823,6 +897,7 @@ class TestCreateosSessions:
         assert api.bodies["create"]["auto_pause_after_seconds"] > 3600
 
     def test_shutdown_destroys_session_guests(self, monkeypatch, createos):
+        """Verify that calling shutdown destroys every session guest the executor holds."""
         api = createos(_FakeCreateosApi(create_ids=["sb-one"]))
         _use_createos(monkeypatch, sandbox_session_mode="flow")
         executor = registry_module._instances["createos"]
@@ -860,6 +935,7 @@ class TestCreateosSessions:
 
 
 def _tarball(members: dict[str, bytes]) -> bytes:
+    """Return a gzip tar archive built from the given member name-to-content mapping."""
     import io
     import tarfile
 
@@ -873,7 +949,10 @@ def _tarball(members: dict[str, bytes]) -> bytes:
 
 
 class TestCreateosArtifacts:
+    """Verify that artifact collection returns the files the guest wrote, and only when asked."""
+
     def test_files_the_guest_wrote_come_back(self, monkeypatch, createos):
+        """Verify that files the guest wrote are returned in the result."""
         createos(_FakeCreateosApi(artifact_archive=_tarball({"./chart.png": b"PNG", "./out.csv": b"a,b\n"})))
         _use_createos(monkeypatch, sandbox_collect_artifacts=True)
 
@@ -883,6 +962,7 @@ class TestCreateosArtifacts:
         assert {file.content for file in result.files} == {b"PNG", b"a,b\n"}
 
     def test_nothing_is_collected_when_the_operator_did_not_ask(self, monkeypatch, createos):
+        """Verify that no files are collected and no download request is made without the setting."""
         api = createos(_FakeCreateosApi(artifact_archive=_tarball({"./chart.png": b"PNG"})))
         _use_createos(monkeypatch)
 
@@ -913,6 +993,7 @@ class TestCreateosArtifacts:
         assert program.startswith("rm -rf /workspace/artifacts;")
 
     def test_a_missing_archive_does_not_fail_the_run(self, monkeypatch, createos):
+        """Verify that a missing artifact archive does not fail the run and yields no files."""
         createos(_FakeCreateosApi(artifact_archive=None))
         _use_createos(monkeypatch, sandbox_collect_artifacts=True)
 
@@ -923,6 +1004,7 @@ class TestCreateosArtifacts:
         assert result.files == ()
 
     def test_collection_stops_at_the_size_cap(self, monkeypatch, createos):
+        """Verify that a file exceeding the configured artifact size cap is not returned."""
         createos(_FakeCreateosApi(artifact_archive=_tarball({"./big.bin": b"x" * 5000})))
         _use_createos(monkeypatch, sandbox_collect_artifacts=True, sandbox_max_artifact_bytes=100)
 
@@ -940,6 +1022,7 @@ class TestCreateosArtifacts:
         assert [file.path for file in result.files] == ["etc/passwd"]
 
     def test_an_absolute_member_name_is_normalized(self, monkeypatch, createos):
+        """Verify that an absolute member path is normalized to a relative one."""
         createos(_FakeCreateosApi(artifact_archive=_tarball({"/etc/shadow": b"x"})))
         _use_createos(monkeypatch, sandbox_collect_artifacts=True)
 
@@ -949,12 +1032,15 @@ class TestCreateosArtifacts:
 
 
 class TestCreateosCapabilities:
+    """Verify that the createos backend reports its capabilities accurately."""
+
     def test_the_link_local_hole_is_declared(self):
         """D12: the host always ACCEPTs 169.254.0.0/16, whatever the egress policy says."""
         capabilities = createos_module._CreateosExecutor.capabilities()
         assert "169.254.0.0/16" in capabilities.egress_exceptions
 
     def test_sessions_and_artifacts_are_offered(self):
+        """Verify that the reported capabilities include session and artifact support."""
         capabilities = createos_module._CreateosExecutor.capabilities()
         assert capabilities.supports_sessions
         assert capabilities.supports_artifacts
@@ -964,6 +1050,7 @@ class TestCreateosTimeoutTaintsTheSession:
     """A timeout is not proof the guest command stopped, so the guest is not reusable."""
 
     def test_a_timed_out_session_guest_is_destroyed(self, monkeypatch, createos):
+        """Verify that a session guest that timed out mid-execution is destroyed."""
         api = createos(_FakeCreateosApi(create_ids=["sb-one", "sb-two"], exec_stream_lines=[{"stdout": "tick"}] * 50))
         _use_createos(monkeypatch, sandbox_session_mode="flow", sandbox_timeout_seconds=1)
         monkeypatch.setattr(createos_module, "_exec_deadline", lambda _timeout: -1.0)
@@ -974,6 +1061,7 @@ class TestCreateosTimeoutTaintsTheSession:
         assert "sb-one" in api.deleted_ids
 
     def test_the_next_execution_gets_a_fresh_guest(self, monkeypatch, createos):
+        """Verify that the execution after a timeout gets a fresh guest, not the tainted one."""
         api = createos(_FakeCreateosApi(create_ids=["sb-one", "sb-two"], exec_stream_lines=[{"stdout": "tick"}] * 50))
         _use_createos(monkeypatch, sandbox_session_mode="flow", sandbox_timeout_seconds=1)
         monkeypatch.setattr(createos_module, "_exec_deadline", lambda _timeout: -1.0)
@@ -1005,6 +1093,7 @@ class TestCreateosTimeoutTaintsTheSession:
         assert executor._sessions == {}
 
     def test_a_throwaway_timeout_still_destroys_its_guest(self, monkeypatch, createos):
+        """Verify that a timeout on a throwaway (non-session) guest still destroys the VM."""
         api = createos(_FakeCreateosApi(exec_stream_lines=[{"stdout": "tick"}] * 50))
         _use_createos(monkeypatch, sandbox_timeout_seconds=1)
         monkeypatch.setattr(createos_module, "_exec_deadline", lambda _timeout: -1.0)
@@ -1032,6 +1121,7 @@ class TestCreateosArtifactDownloadIsBounded:
         assert api.artifact_bytes_served <= 1024 + api.artifact_chunk_size
 
     def test_an_archive_inside_the_budget_still_arrives(self, monkeypatch, createos):
+        """Verify that an archive within the size budget is still downloaded and returned."""
         createos(_FakeCreateosApi(artifact_archive=_tarball({"./small.txt": b"ok"})))
         _use_createos(monkeypatch, sandbox_collect_artifacts=True, sandbox_max_artifact_bytes=1024 * 1024)
 
@@ -1051,6 +1141,7 @@ class TestCreateosArtifactDownloadIsBounded:
         assert len(result.files) <= createos_module._CREATEOS_MAX_ARTIFACT_MEMBERS
 
     def test_the_member_cap_does_not_truncate_a_normal_archive(self, monkeypatch, createos):
+        """Verify that the member cap does not truncate an archive well under the limit."""
         members = {f"./f{index}.txt": b"x" for index in range(10)}
         createos(_FakeCreateosApi(artifact_archive=_tarball(members)))
         _use_createos(monkeypatch, sandbox_collect_artifacts=True)
@@ -1079,6 +1170,7 @@ class TestCreateosSessionsAreOwnedByTheControlPlane:
         return executor
 
     def test_a_second_worker_adopts_rather_than_duplicates(self, monkeypatch, createos):
+        """Verify that a second worker adopts the existing session guest instead of creating another."""
         api = createos(_FakeCreateosApi(create_ids=["sb-one", "sb-two"]))
         _use_createos(monkeypatch, sandbox_session_mode="flow")
         run_code_in_sandbox("print(1)", session=_session())
@@ -1090,6 +1182,7 @@ class TestCreateosSessionsAreOwnedByTheControlPlane:
         assert api.created_ids == ["sb-one"]
 
     def test_the_guest_is_named_from_the_session_token(self, monkeypatch, createos):
+        """Verify that the created guest's name is derived from the session token."""
         api = createos(_FakeCreateosApi())
         _use_createos(monkeypatch, sandbox_session_mode="flow")
 
@@ -1100,6 +1193,7 @@ class TestCreateosSessionsAreOwnedByTheControlPlane:
         assert name.startswith(createos_module._CREATEOS_SESSION_NAME_PREFIX)
 
     def test_the_name_leaks_neither_flow_nor_user(self, monkeypatch, createos):
+        """Verify that the guest name contains neither the flow id nor the user id."""
         api = createos(_FakeCreateosApi())
         _use_createos(monkeypatch, sandbox_session_mode="flow")
 
@@ -1110,6 +1204,7 @@ class TestCreateosSessionsAreOwnedByTheControlPlane:
         assert "secret-user" not in name
 
     def test_two_sessions_never_collide_on_a_name(self, monkeypatch, createos):
+        """Verify that two different sessions never collide on the same guest name."""
         api = createos(_FakeCreateosApi(create_ids=["sb-one", "sb-two"]))
         _use_createos(monkeypatch, sandbox_session_mode="flow")
 
@@ -1134,6 +1229,7 @@ class TestCreateosSessionsAreOwnedByTheControlPlane:
         calls = {"n": 0}
 
         def find_once(client, name):
+            """Return None on the first lookup, then delegate to the real lookup."""
             calls["n"] += 1
             return None if calls["n"] == 1 else real_find(client, name)
 
@@ -1173,6 +1269,7 @@ class TestCreateosProgramFileIsPerExecution:
     """A shared session guest can hold two executions at once."""
 
     def test_two_executions_use_different_program_files(self, monkeypatch, createos):
+        """Verify that two executions on the same session guest use different program file paths."""
         api = createos(_FakeCreateosApi())
         _use_createos(monkeypatch, sandbox_session_mode="flow")
 
@@ -1194,6 +1291,7 @@ class TestCreateosProgramFileIsPerExecution:
         assert "rm -f /workspace/.lf_run_" in program
 
     def test_the_exit_status_survives_the_cleanup(self, monkeypatch, createos):
+        """Verify that the program's exit status survives the program-file cleanup step."""
         createos(_FakeCreateosApi(exec_result={"stdout": "", "stderr": "boom", "exit_code": 42}))
         _use_createos(monkeypatch, sandbox_session_mode="flow")
 
@@ -1210,6 +1308,7 @@ class TestCreateosProgramFileIsPerExecution:
             assert _re.fullmatch(r"/workspace/\.lf_run_[0-9a-f]{32}\.py", path), path
 
     def test_the_upload_and_the_command_agree(self, monkeypatch, createos):
+        """Verify that the path the code is uploaded to matches the path the exec command reads."""
         api = createos(_FakeCreateosApi())
         _use_createos(monkeypatch)
 
@@ -1226,6 +1325,7 @@ class TestCreateosProgramFileIsPerExecution:
         assert len(name) == createos_module._CREATEOS_SESSION_NAME_MAX
 
     def test_the_name_is_still_unique_per_session(self):
+        """Verify that the guest name is still unique per session even after length truncation."""
         first = createos_module._session_guest_name(SessionKey(flow_id="a", user_id="b").token())
         second = createos_module._session_guest_name(SessionKey(flow_id="a", user_id="c").token())
         assert first != second
@@ -1241,6 +1341,7 @@ class TestCreateosIdleReaperSparesRunningGuests:
     """
 
     def test_a_running_session_is_not_reaped_by_another_session(self, monkeypatch, createos):
+        """Verify that a session mid-execution is not reaped by the idle reaper of another session."""
         api = createos(_FakeCreateosApi(create_ids=["sb-busy", "sb-other", "sb-third"]))
         # Idle window of zero makes every entry look stale the moment it exists,
         # which is the same condition a long execution reaches naturally.
@@ -1253,6 +1354,7 @@ class TestCreateosIdleReaperSparesRunningGuests:
         real_exec = executor._upload_and_exec
 
         def blocking_exec(client, sandbox_id, code, settings):
+            """Block the busy session's exec until released, then delegate to the real exec."""
             if sandbox_id == "sb-busy":
                 started.set()
                 # Hold the guest "mid-execution" while the other session reaps.
@@ -1273,6 +1375,7 @@ class TestCreateosIdleReaperSparesRunningGuests:
         failure: list[BaseException] = []
 
         def busy_run():
+            """Run the busy session's execution and capture any exception it raises."""
             try:
                 run_code_in_sandbox("print(1)", session=busy)
             except BaseException as exc:  # re-raised on the main thread
@@ -1314,6 +1417,7 @@ class TestCreateosSessionGuestIsBoundToItsPolicy:
     """
 
     def test_tightening_the_network_policy_does_not_reuse_the_open_guest(self, monkeypatch, createos):
+        """Verify that tightening the network policy to deny-all does not reuse the open guest."""
         api = createos(_FakeCreateosApi(create_ids=["sb-open", "sb-closed"]))
         _use_createos(monkeypatch, sandbox_session_mode="flow", sandbox_allow_network=True)
         run_code_in_sandbox("print(1)", session=_session())
@@ -1327,6 +1431,7 @@ class TestCreateosSessionGuestIsBoundToItsPolicy:
         assert api.created_ids == ["sb-open", "sb-closed"], "the guest built under open egress was reused"
 
     def test_narrowing_the_allowlist_does_not_reuse_the_wider_guest(self, monkeypatch, createos):
+        """Verify that narrowing the domain allowlist does not reuse the wider guest."""
         api = createos(_FakeCreateosApi(create_ids=["sb-wide", "sb-narrow"]))
         _use_createos(
             monkeypatch,
@@ -1347,6 +1452,7 @@ class TestCreateosSessionGuestIsBoundToItsPolicy:
         assert api.created_ids == ["sb-wide", "sb-narrow"]
 
     def test_raising_the_memory_floor_does_not_reuse_the_smaller_guest(self, monkeypatch, createos):
+        """Verify that raising the memory floor does not reuse the smaller guest."""
         api = createos(_FakeCreateosApi(create_ids=["sb-small", "sb-big"]))
         _use_createos(monkeypatch, sandbox_session_mode="flow", sandbox_memory_mb=192)
         run_code_in_sandbox("print(1)", session=_session())
@@ -1367,6 +1473,7 @@ class TestCreateosSessionGuestIsBoundToItsPolicy:
         assert api.created_ids == ["sb-one"]
 
     def test_the_allowlist_order_is_not_a_policy_change(self, monkeypatch, createos):
+        """Verify that reordering the same domain allowlist does not count as a policy change."""
         api = createos(_FakeCreateosApi(create_ids=["sb-one", "sb-two"]))
         _use_createos(
             monkeypatch,
@@ -1387,6 +1494,7 @@ class TestCreateosSessionGuestIsBoundToItsPolicy:
         assert api.created_ids == ["sb-one"]
 
     def test_the_policy_bound_name_still_fits_the_control_plane_limit(self):
+        """Verify that a policy-bound guest name still fits the control plane's name length limit."""
         identity = createos_module._session_identity(SessionKey(flow_id="a", user_id="b").token(), ("0.0.0.0/32",), 192)
         name = createos_module._session_guest_name(identity)
         assert len(name) == createos_module._CREATEOS_SESSION_NAME_MAX
@@ -1402,9 +1510,11 @@ class TestCreateosArtifactCollectionIsNeverFatal:
 
     @staticmethod
     def _archive_returning(monkeypatch, executor, blob):
+        """Patch the executor's archive download to return the given blob instead of fetching."""
         monkeypatch.setattr(executor, "_download_artifact_archive", lambda *_args, **_kwargs: blob)
 
     def test_a_corrupt_archive_returns_the_real_result(self, monkeypatch, createos):
+        """Verify that a corrupt archive does not fail the run and yields the real exec result."""
         createos(_FakeCreateosApi(exec_result={"stdout": "real output", "stderr": "", "exit_code": 0}))
         _use_createos(monkeypatch, sandbox_collect_artifacts=True)
         executor = registry_module._instances["createos"]
@@ -1417,6 +1527,7 @@ class TestCreateosArtifactCollectionIsNeverFatal:
         assert result.files == ()
 
     def test_a_truncated_archive_returns_the_real_result(self, monkeypatch, createos):
+        """Verify that a truncated gzip archive does not fail the run and yields the real exec result."""
         createos(_FakeCreateosApi(exec_result={"stdout": "real output", "stderr": "", "exit_code": 0}))
         _use_createos(monkeypatch, sandbox_collect_artifacts=True)
         executor = registry_module._instances["createos"]
@@ -1495,6 +1606,7 @@ class TestCatalogIsFetchedOutsideTheMutex:
         real_client = executor._client
 
         def slow_client(timeout):
+            """Signal that the fetch has started, then block until released."""
             inside.set()
             release.wait(timeout=5)
             return real_client(timeout)

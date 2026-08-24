@@ -1,3 +1,5 @@
+"""Security settings group: CORS, SSRF protection, sandbox, and custom-component policy."""
+
 from pydantic import BaseModel, Field, field_validator
 
 

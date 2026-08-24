@@ -172,6 +172,7 @@ class _ExecSandboxExecutor:
         )
 
     def __init__(self) -> None:
+        """Initialize empty loop, thread, and scheduler state."""
         self._loop: asyncio.AbstractEventLoop | None = None
         self._thread: threading.Thread | None = None
         self._scheduler = None
@@ -242,6 +243,15 @@ class _ExecSandboxExecutor:
         self._generation += 1
 
     async def _ensure_scheduler(self, *, allow_software_emulation: bool):
+        """Create the exec-sandbox Scheduler on first use, and return it.
+
+        Args:
+            allow_software_emulation: When False, the hardware-acceleration
+                check runs before any VM resources are created.
+
+        Returns:
+            The process-wide Scheduler instance.
+        """
         # Runs ON the sandbox loop, so scheduler state is loop-affine by
         # construction. exec_sandbox import errors are translated into the
         # fail-closed SandboxUnavailableError contract by run().
@@ -345,6 +355,11 @@ class _ExecSandboxExecutor:
         generation: int,
         env: dict[str, str] | None,
     ) -> SandboxResult:
+        """Run ``code`` on the sandbox loop and return its outcome.
+
+        Must run on the private event loop: the Scheduler and its VM
+        transports are loop-affine.
+        """
         # ``generation`` is the lifecycle epoch captured at ACCEPTANCE time
         # (in run(), under the thread mutex). Capturing it here instead would
         # be too late: a shutdown that lands between acceptance and this
@@ -392,6 +407,13 @@ class _ExecSandboxExecutor:
         )
 
     def run(self, code: str, *, env: dict[str, str] | None = None, session: SessionKey | None = None) -> SandboxResult:
+        """Run ``code`` to completion in a fresh exec-sandbox VM.
+
+        Raises:
+            SandboxUnavailableError: The 'exec-sandbox' package is missing,
+                or the operator's policy cannot be honored.
+            SandboxExecutionError: The infrastructure failed mid-run.
+        """
         # ``session`` is accepted and ignored: exec-sandbox builds one VM per
         # run and exposes no handle to reuse, so capabilities() reports
         # supports_sessions=False and the dispatcher never passes a real key.

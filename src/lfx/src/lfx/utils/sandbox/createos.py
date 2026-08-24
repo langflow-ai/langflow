@@ -355,6 +355,7 @@ class _CreateosExecutor:
         self._destroy_all_sessions()
 
     def __init__(self) -> None:
+        """Initialize empty shape cache, preflight flag, and session state."""
         self._lock = threading.Lock()
         self._shapes: tuple[tuple[int, str], ...] | None = None
         self._preflighted = False
@@ -368,6 +369,11 @@ class _CreateosExecutor:
 
     @staticmethod
     def _api_key() -> str:
+        """Return the CreateOS API key from the environment, or refuse to run.
+
+        Raises:
+            SandboxUnavailableError: The key is not set.
+        """
         key = os.environ.get("CREATEOS_SANDBOX_API_KEY", "").strip()
         if not key:
             msg = (
@@ -379,6 +385,11 @@ class _CreateosExecutor:
 
     @staticmethod
     def _base_url() -> str:
+        """Return the CreateOS control-plane URL, requiring https except on loopback.
+
+        Raises:
+            SandboxUnavailableError: The URL is not https and not loopback.
+        """
         url = os.environ.get("CREATEOS_SANDBOX_BASE_URL", _CREATEOS_DEFAULT_BASE_URL).strip().rstrip("/")
         parsed = httpx.URL(url)
         # Every request carries the API key in a header, so a plaintext
@@ -409,6 +420,7 @@ class _CreateosExecutor:
         return httpx.Timeout(budget, connect=short, pool=short)
 
     def _client(self, timeout: float) -> httpx.Client:
+        """Build an httpx client for the CreateOS control plane with the API key set."""
         return httpx.Client(
             base_url=self._base_url(),
             timeout=self._timeout(timeout),
@@ -564,6 +576,11 @@ class _CreateosExecutor:
 
     @staticmethod
     def _egress_for(settings: _SandboxSettings) -> tuple[str, ...]:
+        """Translate operator network settings into CreateOS egress rules.
+
+        Raises:
+            SandboxUnavailableError: An allowed-domain entry does not parse.
+        """
         if not settings.allow_network:
             return _CREATEOS_DENY_ALL_EGRESS
         if not settings.allowed_domains:
@@ -592,6 +609,7 @@ class _CreateosExecutor:
     # -- execution --------------------------------------------------------
 
     def run(self, code: str, *, env: dict[str, str] | None = None, session: SessionKey | None = None) -> SandboxResult:
+        """Run ``code`` in a throwaway VM, or in a reused session guest when ``session`` is given."""
         settings = _sandbox_settings()
         self.preflight()
         if session is None:
@@ -670,6 +688,7 @@ class _CreateosExecutor:
             return result
 
     def _session_lock(self, token: str) -> threading.Lock:
+        """Return the lock for one session token, creating it on first use."""
         with self._lock:
             lock = self._session_locks.get(token)
             if lock is None:
@@ -792,6 +811,7 @@ class _CreateosExecutor:
         return None
 
     def _is_running(self, client: httpx.Client, sandbox_id: str) -> bool:
+        """Return True when the CreateOS sandbox reports status "running"."""
         try:
             data = self._unwrap(client.get(f"/v1/sandboxes/{sandbox_id}"))
         except (httpx.HTTPError, SandboxExecutionError):
@@ -799,6 +819,7 @@ class _CreateosExecutor:
         return data.get("status") == "running"
 
     def _drop_session(self, client: httpx.Client, token: str) -> None:
+        """Forget one session's guest and its lock, then destroy the guest."""
         with self._lock:
             entry = self._sessions.pop(token, None)
             # The lock goes with the session. The identity encodes the policy
@@ -872,6 +893,7 @@ class _CreateosExecutor:
                 lock.release()
 
     def _destroy_all_sessions(self) -> None:
+        """Destroy every session guest this process is still holding."""
         with self._lock:
             tokens = list(self._sessions)
         if not tokens:
@@ -1036,6 +1058,12 @@ class _CreateosExecutor:
     def _upload_and_exec(
         self, client: httpx.Client, sandbox_id: str, code: str, settings: _SandboxSettings
     ) -> SandboxResult:
+        """Upload the code file, run it, and attach artifacts and metrics.
+
+        Returns:
+            SandboxResult: The outcome of the run, with artifacts attached
+                when collection is enabled.
+        """
         code_path = _guest_code_path()
         try:
             # Uploaded as a file rather than passed as `python3 -c <code>` so

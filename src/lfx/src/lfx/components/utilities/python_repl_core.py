@@ -1,3 +1,5 @@
+"""Python Interpreter component: runs Python code in-process or in a configured sandbox."""
+
 import base64
 import importlib
 
@@ -9,6 +11,12 @@ from lfx.utils.sandbox import is_sandbox_enabled, run_code_in_sandbox, sanitize_
 
 
 class PythonREPLComponent(Component):
+    """Run Python code with an allow-listed set of imports and return the printed output.
+
+    Runs in-process by default; when a sandbox backend is configured
+    (``LANGFLOW_SANDBOX_BACKEND``), the code runs in an isolated microVM instead.
+    """
+
     display_name = "Python Interpreter"
     description = "Run Python code with optional imports. Use print() to see the output."
     documentation: str = "https://docs.langflow.org/python-interpreter"
@@ -122,6 +130,12 @@ class PythonREPLComponent(Component):
         return Data(data=data)
 
     def run_python_repl(self) -> Data:
+        """Run ``python_code`` in-process or in the sandbox, and return the result as ``Data``.
+
+        Errors are caught and returned inside the ``Data`` payload as an "error"
+        key instead of being raised, except for the code-execution policy check,
+        which raises so the flow fails closed when custom-component execution is disabled.
+        """
         try:
             # Refuse to run user code when allow_custom_components is disabled
             # (GHSA-8qpj-27x8-pwpq). Raised before any sanitize/exec.
@@ -163,4 +177,5 @@ class PythonREPLComponent(Component):
             return Data(data={"error": error_message})
 
     def build(self):
+        """Return the callable this component's output should invoke."""
         return self.run_python_repl

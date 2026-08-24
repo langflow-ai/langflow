@@ -31,6 +31,7 @@ from lfx.utils.sandbox import registry as registry_module
 
 
 def _settings(backend, **extra):
+    """Return a fake settings service with the given sandbox backend and overrides."""
     defaults = {
         "sandbox_backend": backend,
         "sandbox_timeout_seconds": 30,
@@ -65,7 +66,10 @@ def fresh_executor(monkeypatch):
 
 
 class _FakeExecutionResult:
+    """Stand in for exec_sandbox's execution result value."""
+
     def __init__(self, stdout="", stderr="", exit_code=0, execution_time_ms=5):
+        """Store the fake stdout, stderr, exit code, and execution time."""
         self.stdout = stdout
         self.stderr = stderr
         self.exit_code = exit_code
@@ -78,6 +82,7 @@ class _FakeScheduler:
     instances: list = []
 
     def __init__(self, config=None):
+        """Store the config and record this instance for later inspection."""
         self.config = config
         self.run_calls: list[dict] = []
         self.entered = False
@@ -85,6 +90,7 @@ class _FakeScheduler:
         type(self).instances.append(self)
 
     async def __aenter__(self):
+        """Yield control, then mark the scheduler as entered."""
         # Yield control so concurrent first calls genuinely interleave here,
         # exercising the scheduler-creation lock.
         import asyncio
@@ -94,10 +100,12 @@ class _FakeScheduler:
         return self
 
     async def __aexit__(self, *args):
+        """Mark the scheduler as exited without suppressing an exception."""
         self.exited = True
         return False
 
     async def run(self, **kwargs):
+        """Record the run call and return a canned result based on the code sent."""
         # Yield once so lifecycle transitions (e.g. a concurrent shutdown)
         # can interleave between scheduler acquisition and completion.
         import asyncio
@@ -118,7 +126,10 @@ class _FakeScheduler:
 
 
 class _FakeSchedulerConfig:
+    """Stand in for exec_sandbox.SchedulerConfig; records the kwargs it received."""
+
     def __init__(self, **kwargs):
+        """Store the kwargs the config was built with."""
         self.kwargs = kwargs
 
 
@@ -138,11 +149,13 @@ def _install_fake_exec_sandbox(monkeypatch):
     _FakeScheduler.instances = []
 
     def _fake_upstream_settings():
+        """Return a fake upstream settings object reading EXEC_SANDBOX_FORCE_EMULATION."""
         # Mirrors upstream: a pydantic bool field fed by EXEC_SANDBOX_FORCE_EMULATION.
         raw = os.environ.get("EXEC_SANDBOX_FORCE_EMULATION", "").strip().lower()
         return SimpleNamespace(force_emulation=raw in {"1", "true", "yes", "on", "y", "t"})
 
     async def _detect_accel_type(kvm_available=None, hvf_available=None, *, force_emulation=False):  # noqa: ARG001
+        """Return "kvm", or "tcg" when emulation is forced."""
         return "tcg" if force_emulation else "kvm"
 
     accel_type = SimpleNamespace(KVM="kvm", HVF="hvf", TCG="tcg")
@@ -165,12 +178,16 @@ def _install_fake_exec_sandbox(monkeypatch):
 
 
 class TestBackendSelection:
+    """Verify how the configured sandbox backend is resolved."""
+
     def test_default_is_none(self, monkeypatch):
+        """Verify that the sandbox backend defaults to "none" and stays disabled."""
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("none"))
         assert get_sandbox_backend() == "none"
         assert not is_sandbox_enabled()
 
     def test_exec_sandbox_enables(self, monkeypatch):
+        """Verify that selecting exec-sandbox enables the sandbox."""
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
         assert get_sandbox_backend() == "exec-sandbox"
         assert is_sandbox_enabled()
@@ -180,16 +197,19 @@ class TestBackendSelection:
     # the variable. TestSettingsUnavailableFailsClosed covers the case where
     # the operator DID configure a backend and settings failed to build.
     def test_absent_services_layer_means_none(self, monkeypatch):
+        """Verify that a missing settings service with no env var means "none"."""
         monkeypatch.delenv("LANGFLOW_SANDBOX_BACKEND", raising=False)
         monkeypatch.delattr("lfx.services.deps.get_settings_service")
         assert get_sandbox_backend() == "none"
 
     def test_none_settings_service_means_none(self, monkeypatch):
+        """Verify that a settings service returning None means "none"."""
         monkeypatch.delenv("LANGFLOW_SANDBOX_BACKEND", raising=False)
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: None)
         assert get_sandbox_backend() == "none"
 
     def test_settings_without_field_means_none(self, monkeypatch):
+        """Verify that a settings object missing the sandbox_backend field means "none"."""
         monkeypatch.delenv("LANGFLOW_SANDBOX_BACKEND", raising=False)
         monkeypatch.setattr(
             "lfx.services.deps.get_settings_service",
@@ -199,23 +219,30 @@ class TestBackendSelection:
 
 
 class TestImportPreamble:
+    """Verify how build_import_preamble turns a module list into import statements."""
+
     def test_string_input(self):
+        """Verify that a comma-separated string builds one import per module."""
         assert build_import_preamble("math, json") == "import math\nimport json"
 
     def test_list_input(self):
+        """Verify that a list of module names builds one import per module."""
         assert build_import_preamble(["math", "os.path"]) == "import math\nimport os.path"
 
     def test_empty(self):
+        """Verify that an empty string or list builds an empty preamble."""
         assert build_import_preamble("") == ""
         assert build_import_preamble([]) == ""
 
     def test_rejects_injection(self):
+        """Verify that a module name with extra statements is rejected."""
         with pytest.raises(ValueError, match="Invalid module name"):
             build_import_preamble("math; import os")
         with pytest.raises(ValueError, match="Invalid module name"):
             build_import_preamble("os\nimport subprocess")
 
     def test_rejects_non_string_types(self):
+        """Verify that a non-string, non-list input raises TypeError."""
         with pytest.raises(TypeError):
             build_import_preamble(42)
 
@@ -234,21 +261,27 @@ class TestSanitizeCode:
         ],
     )
     def test_strips_fences(self, raw, expected):
+        """Verify that markdown code fences and surrounding whitespace are stripped."""
         assert sanitize_code(raw) == expected
 
 
 class TestRunCodeInSandbox:
+    """Verify run_code_in_sandbox's routing, result mapping, and fail-closed behavior."""
+
     def test_refuses_when_not_configured(self, monkeypatch):
+        """Verify that a "none" backend raises SandboxExecutionError."""
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("none"))
         with pytest.raises(SandboxExecutionError, match="no sandbox backend"):
             run_code_in_sandbox("print('hi')")
 
     def test_unknown_backend_fails_closed(self, monkeypatch):
+        """Verify that an unrecognized backend name raises SandboxUnavailableError."""
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("firecracker"))
         with pytest.raises(SandboxUnavailableError, match="Unknown sandbox backend"):
             run_code_in_sandbox("print('hi')")
 
     def test_missing_package_fails_closed(self, monkeypatch):
+        """Verify that a configured backend whose package cannot import fails closed."""
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
         monkeypatch.setitem(sys.modules, "exec_sandbox", None)  # import raises ImportError
         with pytest.raises(SandboxUnavailableError, match=r"exec-sandbox.*not installed"):
@@ -256,6 +289,7 @@ class TestRunCodeInSandbox:
 
     @pytest.mark.usefixtures("fake_exec_sandbox")
     def test_success_maps_result(self, monkeypatch):
+        """Verify that a successful run maps to a success result with stdout and exit code."""
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
         result = run_code_in_sandbox("print('hello from vm')")
         assert result.success
@@ -263,6 +297,7 @@ class TestRunCodeInSandbox:
         assert result.exit_code == 0
 
     def test_global_imports_prepended(self, monkeypatch, fake_exec_sandbox):
+        """Verify that global_imports are prepended as import statements before the code."""
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
         run_code_in_sandbox("print(math.pi)", global_imports="math, json")
         scheduler = fake_exec_sandbox.instances[-1]
@@ -271,6 +306,7 @@ class TestRunCodeInSandbox:
         assert code.endswith("print(math.pi)")
 
     def test_settings_forwarded_to_backend(self, monkeypatch, fake_exec_sandbox):
+        """Verify that timeout, memory, network, and domain settings reach the backend's run call."""
         monkeypatch.setattr(
             "lfx.services.deps.get_settings_service",
             lambda: _settings(
@@ -306,6 +342,7 @@ class TestRunCodeInSandbox:
 
     @pytest.mark.usefixtures("fake_exec_sandbox")
     def test_user_code_failure_is_result_not_exception(self, monkeypatch):
+        """Verify that user code failure returns a failed result, not a raised exception."""
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
         result = run_code_in_sandbox("FAIL_CODE")
         assert not result.success
@@ -314,6 +351,7 @@ class TestRunCodeInSandbox:
 
     @pytest.mark.usefixtures("fake_exec_sandbox")
     def test_timeout_exit_code_message(self, monkeypatch):
+        """Verify that a timeout exit code produces a "timed out" error message."""
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
         result = run_code_in_sandbox("TIMEOUT")
         assert not result.success
@@ -321,12 +359,14 @@ class TestRunCodeInSandbox:
 
     @pytest.mark.usefixtures("fake_exec_sandbox")
     def test_infrastructure_error_wrapped(self, monkeypatch):
+        """Verify that a scheduler exception is wrapped in SandboxExecutionError."""
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
         with pytest.raises(SandboxExecutionError, match="vm exploded"):
             run_code_in_sandbox("BOOM_INFRA")
 
     @pytest.mark.usefixtures("fake_exec_sandbox")
     def test_oom_exit_code_message(self, monkeypatch):
+        """Verify that an OOM exit code produces a "memory" error message."""
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
         result = run_code_in_sandbox("OOM_KILL")
         assert not result.success
@@ -365,6 +405,7 @@ class TestRunCodeInSandbox:
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
 
         async def _tcg_accel(**_kwargs):
+            """Return "tcg" regardless of arguments."""
             return "tcg"
 
         monkeypatch.setattr(sys.modules["exec_sandbox.system_probes"], "detect_accel_type", _tcg_accel)
@@ -377,6 +418,7 @@ class TestRunCodeInSandbox:
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
 
         async def _boom(**_kwargs):
+            """Raise RuntimeError to simulate a missing accelerator decision API."""
             msg = "probe API moved"
             raise RuntimeError(msg)
 
@@ -415,6 +457,7 @@ class TestRunCodeInSandbox:
         assert sent.index("from __future__") < sent.index("import math")
 
     def test_same_line_docstring_composes_correctly(self, monkeypatch, fake_exec_sandbox):
+        """Verify that a semicolon-joined statement after a docstring composes correctly."""
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
         code = '"""doc."""; print(math.pi)'
         run_code_in_sandbox(code, global_imports="math")
@@ -432,6 +475,7 @@ class TestRunCodeInSandbox:
 
     @pytest.mark.usefixtures("fake_exec_sandbox")
     def test_software_emulation_override_allows_tcg(self, monkeypatch):
+        """Verify that sandbox_allow_software_emulation lets a run proceed under TCG."""
         monkeypatch.setattr(
             "lfx.services.deps.get_settings_service",
             lambda: _settings("exec-sandbox", sandbox_allow_software_emulation=True),
@@ -468,6 +512,7 @@ class TestRunCodeInSandbox:
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
 
         async def _novel_accel(**_kwargs):
+            """Return an accelerator type that is neither KVM, HVF, nor TCG."""
             return "warp-drive"
 
         monkeypatch.setattr(sys.modules["exec_sandbox.system_probes"], "detect_accel_type", _novel_accel)
@@ -513,6 +558,7 @@ class TestRunCodeInSandbox:
         frozen = threading.Event()
 
         def freeze():
+            """Signal that the loop is frozen, then block until released."""
             frozen.set()
             release.wait(timeout=5)
 
@@ -605,6 +651,7 @@ class TestRunCodeInSandbox:
         frozen = threading.Event()
 
         def freeze():
+            """Signal that the loop is frozen, then block until released."""
             frozen.set()
             release.wait(timeout=5)
 
@@ -626,6 +673,7 @@ class TestRunCodeInSandbox:
         results = []
 
         def call():
+            """Run code in the sandbox and collect the result."""
             results.append(run_code_in_sandbox("print('hi')"))
 
         run_thread = threading.Thread(target=call, daemon=True)
@@ -701,6 +749,7 @@ class TestRunCodeInSandbox:
         results = []
 
         def call():
+            """Run code in the sandbox and collect the result."""
             results.append(run_code_in_sandbox("print('hi')"))
 
         worker = threading.Thread(target=call, daemon=True)
@@ -734,6 +783,7 @@ class TestRunCodeInSandbox:
         start_barrier = threading.Barrier(2)
 
         def call():
+            """Wait at the barrier, then run code in the sandbox, recording any exception."""
             try:
                 start_barrier.wait(timeout=5)
                 run_code_in_sandbox("print('hi')")
@@ -750,6 +800,7 @@ class TestRunCodeInSandbox:
         assert len(fake_exec_sandbox.instances) == 1
 
     def test_scheduler_reused_across_calls(self, monkeypatch, fake_exec_sandbox):
+        """Verify that a second call reuses the same scheduler instance."""
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
         run_code_in_sandbox("print('one')")
         run_code_in_sandbox("print('two')")
@@ -773,6 +824,7 @@ class TestComponentRouting:
         assert "`" not in sent
 
     def test_python_interpreter_sandbox_path(self, monkeypatch, fake_exec_sandbox):
+        """Verify that the Python Interpreter component routes code through the sandbox."""
         from lfx.components.utilities.python_repl_core import PythonREPLComponent
 
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
@@ -784,6 +836,7 @@ class TestComponentRouting:
 
     @pytest.mark.usefixtures("fake_exec_sandbox")
     def test_python_interpreter_sandbox_error(self, monkeypatch):
+        """Verify that a sandboxed user-code error surfaces in the component's error data."""
         from lfx.components.utilities.python_repl_core import PythonREPLComponent
 
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
@@ -792,6 +845,7 @@ class TestComponentRouting:
         assert "NameError" in data.data["error"]
 
     def test_python_interpreter_fails_closed_without_package(self, monkeypatch):
+        """Verify that the component raises SandboxUnavailableError when exec-sandbox is missing."""
         from lfx.components.utilities.python_repl_core import PythonREPLComponent
 
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
@@ -816,14 +870,19 @@ class TestComponentRouting:
         from lfx.components.utilities.python_repl_core import PythonREPLComponent
 
         class _FakePythonREPL:
+            """Stand in for langchain_experimental's PythonREPL, exec'ing in-process."""
+
             def __init__(self, _globals=None):
+                """Store the globals dict code will execute against."""
                 self._globals = _globals or {}
 
             @staticmethod
             def sanitize_input(code):
+                """Return the code stripped of surrounding whitespace."""
                 return code.strip()
 
             def run(self, code):
+                """Execute the code in-process and return captured stdout."""
                 out = io.StringIO()
                 with redirect_stdout(out):
                     exec(code, self._globals)  # noqa: S102
@@ -837,6 +896,7 @@ class TestComponentRouting:
         # Belt and suspenders: the in-process path must not call the sandbox
         # entry point at all, regardless of what the fake backend would do.
         def _explode(*_args, **_kwargs):
+            """Raise AssertionError to prove the sandbox entry point is never called."""
             msg = "run_code_in_sandbox must not be called when backend is none"
             raise AssertionError(msg)
 
@@ -865,6 +925,7 @@ class TestComponentRouting:
         assert fake_exec_sandbox.instances[-1].run_calls
 
     def test_repl_tool_sandbox_path(self, monkeypatch, fake_exec_sandbox):
+        """Verify that the Python REPL tool component routes code through the sandbox."""
         from lfx.components.tools.python_repl import PythonREPLToolComponent
 
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
@@ -888,14 +949,19 @@ class TestComponentRouting:
         from lfx.components.tools.python_repl import PythonREPLToolComponent
 
         class _FakePythonREPL:
+            """Stand in for langchain_experimental's PythonREPL, exec'ing in-process."""
+
             def __init__(self, _globals=None):
+                """Store the globals dict code will execute against."""
                 self._globals = _globals or {}
 
             @staticmethod
             def sanitize_input(code):
+                """Return the code stripped of surrounding whitespace."""
                 return code.strip()
 
             def run(self, code):
+                """Execute the code in-process and return captured stdout."""
                 out = io.StringIO()
                 with redirect_stdout(out):
                     exec(code, self._globals)  # noqa: S102
@@ -907,6 +973,7 @@ class TestComponentRouting:
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("none"))
 
         def _explode(*_args, **_kwargs):
+            """Raise AssertionError to prove the sandbox entry point is never called."""
             msg = "run_code_in_sandbox must not be called when backend is none"
             raise AssertionError(msg)
 
@@ -932,7 +999,10 @@ class TestComponentRouting:
 
 
 class TestSettingsValidation:
+    """Verify SecuritySettings validates and normalizes sandbox configuration."""
+
     def test_unknown_backend_rejected_at_settings_level(self):
+        """Verify that an unrecognized sandbox_backend is rejected at settings construction."""
         from lfx.services.settings.groups.security import SecuritySettings
 
         with pytest.raises(ValueError, match="sandbox_backend must be one of"):
@@ -972,6 +1042,7 @@ class TestSettingsValidation:
         assert SecuritySettings(sandbox_max_artifact_bytes=1024).sandbox_max_artifact_bytes == 1024
 
     def test_allowed_domains_normalized(self):
+        """Verify that allowed domains are trimmed and blanks are dropped."""
         from lfx.services.settings.groups.security import SecuritySettings
 
         settings = SecuritySettings(sandbox_allowed_domains=["api.example.com", " files.pythonhosted.org ", ""])
@@ -986,6 +1057,7 @@ class TestSettingsValidation:
         assert settings.sandbox_allowed_domains == ["api.example.com", "files.pythonhosted.org"]
 
     def test_backend_normalized(self):
+        """Verify that sandbox_backend is lowercased, and defaults to "none"."""
         from lfx.services.settings.groups.security import SecuritySettings
 
         assert SecuritySettings(sandbox_backend="Exec-Sandbox").sandbox_backend == "exec-sandbox"
@@ -1014,12 +1086,14 @@ class TestLiveExecSandbox:
     """
 
     def test_real_guest_execution(self, monkeypatch):
+        """Verify that real guest code executes successfully in a live microVM."""
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
         result = run_code_in_sandbox("print('sandbox ok')", global_imports="math")
         assert result.success
         assert result.stdout.strip() == "sandbox ok"
 
     def test_real_guest_user_error(self, monkeypatch):
+        """Verify that a real guest NameError is reported as a failed result."""
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
         result = run_code_in_sandbox("this_name_does_not_exist")
         assert not result.success
@@ -1037,23 +1111,26 @@ class _StubBackend:
     name = "stub"
 
     def __init__(self, capabilities=None):
+        """Store the given capabilities, or a fully-permissive default set."""
         self._capabilities = capabilities or base_module.Capabilities(
             isolation="hardware-virtualized", supports_deny_all_egress=True, supports_domain_allowlist=True
         )
         self.runs: list[tuple[str, object]] = []
 
     def capabilities(self):
+        """Return the stored capabilities."""
         return self._capabilities
 
     def run(self, code, *, env=None, session=None):  # noqa: ARG002
+        """Record the code and session, and return a canned success result."""
         self.runs.append((code, session))
         return base_module.SandboxResult(stdout="stub", stderr="", exit_code=0)
 
     def shutdown(self):
-        pass
+        """Do nothing; a no-op shutdown for the stub backend."""
 
     def reset_after_fork(self):
-        pass
+        """Do nothing; a no-op fork reset for the stub backend."""
 
 
 @pytest.fixture
@@ -1061,6 +1138,7 @@ def stub_backend(monkeypatch):
     """Register a stub under its own name and return an installer for it."""
 
     def _install(capabilities=None):
+        """Register and return a stub backend built with the given capabilities."""
         backend = _StubBackend(capabilities)
         monkeypatch.setitem(registry_module._factories, "stub", lambda: backend)
         monkeypatch.setitem(registry_module._instances, "stub", backend)
@@ -1070,17 +1148,22 @@ def stub_backend(monkeypatch):
 
 
 class TestRegistry:
+    """Verify how the sandbox backend registry registers and resolves backends."""
+
     def test_in_tree_backends_are_registered(self):
+        """Verify that "none", "exec-sandbox", and "createos" are known backends."""
         names = registry_module.known_sandbox_backends()
         assert "none" in names
         assert "exec-sandbox" in names
         assert "createos" in names
 
     def test_none_cannot_be_claimed_by_a_backend(self):
+        """Verify that registering a backend under the reserved name "none" is refused."""
         with pytest.raises(ValueError, match="reserved"):
             registry_module.register_sandbox_backend("none", _StubBackend)
 
     def test_a_registered_backend_is_dispatched_to(self, monkeypatch, stub_backend):
+        """Verify that a registered backend receives the run call and its result is returned."""
         backend = stub_backend()
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("stub"))
 
@@ -1090,14 +1173,17 @@ class TestRegistry:
         assert len(backend.runs) == 1
 
     def test_an_unregistered_backend_fails_closed(self, monkeypatch):
+        """Verify that an unregistered backend name raises SandboxUnavailableError."""
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("no-such-backend"))
         with pytest.raises(SandboxUnavailableError, match="Unknown sandbox backend"):
             run_code_in_sandbox("print(1)")
 
     def test_the_factory_is_called_once(self, monkeypatch):
+        """Verify that resolve_sandbox_backend caches the built instance across calls."""
         built = []
 
         def factory():
+            """Record a build and return a new stub backend."""
             built.append(1)
             return _StubBackend()
 
@@ -1123,6 +1209,7 @@ class TestPolicyGate:
     """The backend declares; the dispatcher decides. Every branch fails closed."""
 
     def test_software_isolation_is_refused(self, monkeypatch, stub_backend):
+        """Verify that a backend with process-level isolation is refused."""
         stub_backend(base_module.Capabilities(isolation="process", supports_deny_all_egress=True))
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("stub"))
 
@@ -1130,6 +1217,7 @@ class TestPolicyGate:
             run_code_in_sandbox("print(1)")
 
     def test_a_backend_that_cannot_deny_egress_is_refused(self, monkeypatch, stub_backend):
+        """Verify that a backend unable to deny all egress is refused."""
         stub_backend(base_module.Capabilities(isolation="hardware-virtualized", supports_deny_all_egress=False))
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("stub"))
 
@@ -1137,6 +1225,7 @@ class TestPolicyGate:
             run_code_in_sandbox("print(1)")
 
     def test_a_backend_without_domain_filtering_is_refused(self, monkeypatch, stub_backend):
+        """Verify that a backend without domain-allowlist support is refused when domains are configured."""
         stub_backend(
             base_module.Capabilities(
                 isolation="hardware-virtualized", supports_deny_all_egress=True, supports_domain_allowlist=False
@@ -1151,6 +1240,7 @@ class TestPolicyGate:
             run_code_in_sandbox("print(1)")
 
     def test_a_backend_without_artifacts_is_refused_when_they_are_requested(self, monkeypatch, stub_backend):
+        """Verify that a backend without artifact support is refused when artifacts are requested."""
         stub_backend(
             base_module.Capabilities(
                 isolation="hardware-virtualized",
@@ -1168,6 +1258,7 @@ class TestPolicyGate:
             run_code_in_sandbox("print(1)")
 
     def test_a_timeout_above_the_backend_cap_is_refused(self, monkeypatch, stub_backend):
+        """Verify that a configured timeout above the backend's max_timeout_seconds is refused."""
         stub_backend(
             base_module.Capabilities(
                 isolation="hardware-virtualized",
@@ -1189,6 +1280,7 @@ class TestSessionGate:
     """Reuse needs consent from the operator AND a claim from the backend."""
 
     def test_a_session_is_dropped_when_the_operator_left_sessions_off(self, monkeypatch, stub_backend):
+        """Verify that a session is dropped when the operator has not enabled session mode."""
         backend = stub_backend(
             base_module.Capabilities(
                 isolation="hardware-virtualized",
@@ -1204,6 +1296,7 @@ class TestSessionGate:
         assert backend.runs[0][1] is None
 
     def test_a_session_is_dropped_when_the_backend_cannot_hold_one(self, monkeypatch, stub_backend):
+        """Verify that a session is dropped when the backend does not support sessions."""
         backend = stub_backend(
             base_module.Capabilities(
                 isolation="hardware-virtualized",
@@ -1221,6 +1314,7 @@ class TestSessionGate:
         assert backend.runs[0][1] is None
 
     def test_a_session_survives_when_both_gates_are_open(self, monkeypatch, stub_backend):
+        """Verify that a session is forwarded when both operator and backend allow reuse."""
         backend = stub_backend(
             base_module.Capabilities(
                 isolation="hardware-virtualized",
@@ -1240,23 +1334,29 @@ class TestSessionGate:
 
 
 class TestSessionKey:
+    """Verify SessionKey's token derivation and identity separation."""
+
     def test_the_token_hides_the_identity_it_was_built_from(self):
+        """Verify that the token does not contain the flow_id or user_id it was built from."""
         key = base_module.SessionKey(flow_id="flow-123", user_id="user-456")
         token = key.token()
         assert "flow-123" not in token
         assert "user-456" not in token
 
     def test_the_token_is_stable(self):
+        """Verify that the same flow_id and user_id always produce the same token."""
         first = base_module.SessionKey(flow_id="f", user_id="u").token()
         second = base_module.SessionKey(flow_id="f", user_id="u").token()
         assert first == second
 
     def test_different_users_of_one_flow_never_share_a_guest(self):
+        """Verify that different users of the same flow get different tokens."""
         one = base_module.SessionKey(flow_id="f", user_id="alice").token()
         two = base_module.SessionKey(flow_id="f", user_id="bob").token()
         assert one != two
 
     def test_different_flows_never_share_a_guest(self):
+        """Verify that the same user on different flows gets different tokens."""
         one = base_module.SessionKey(flow_id="flow-a", user_id="u").token()
         two = base_module.SessionKey(flow_id="flow-b", user_id="u").token()
         assert one != two
@@ -1272,16 +1372,19 @@ class TestSessionStateCarryOver:
     """Reusing a guest keeps its filesystem, not its Python process."""
 
     def test_the_preamble_loads_and_saves(self):
+        """Verify that the composed code includes state-loading and atexit-save machinery."""
         composed = base_module.compose_session_code("print(1)")
         assert "_lf_state" in composed
         assert "atexit" in composed
         assert composed.endswith("print(1)")
 
     def test_future_imports_still_come_first(self):
+        """Verify that a leading `from __future__ import` stays first in the composed code."""
         composed = base_module.compose_session_code("from __future__ import annotations\nprint(1)")
         assert composed.startswith("from __future__ import annotations")
 
     def test_a_module_docstring_still_comes_first(self):
+        """Verify that a leading module docstring stays first in the composed code."""
         composed = base_module.compose_session_code('"""Doc."""\nprint(1)')
         assert composed.startswith('"""Doc."""')
 
@@ -1291,6 +1394,7 @@ class TestSessionStateCarryOver:
         assert '_lf_name.startswith("_lf_")' in composed
 
     def test_a_session_run_gets_the_preamble(self, monkeypatch, stub_backend):
+        """Verify that a run with a live session gets the state-saving preamble."""
         backend = stub_backend(
             base_module.Capabilities(
                 isolation="hardware-virtualized",
@@ -1308,6 +1412,7 @@ class TestSessionStateCarryOver:
         assert "_lf_save_state" in backend.runs[0][0]
 
     def test_a_cold_run_does_not(self, monkeypatch, stub_backend):
+        """Verify that a run without a session does not get the state-saving preamble."""
         backend = stub_backend()
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("stub"))
 
@@ -1325,6 +1430,7 @@ class TestSessionStateSurvivesOneBadValue:
 
     @staticmethod
     def _run(code, state_file):
+        """Run the composed code in a fresh interpreter subprocess and return the completed process."""
         import subprocess
         import sys
 
@@ -1354,6 +1460,7 @@ class TestSessionStateSurvivesOneBadValue:
         assert "could not read the saved session state" in run.stderr
 
     def test_a_state_file_that_is_not_a_mapping_says_so_too(self, tmp_path):
+        """Verify that a state file holding a non-mapping value reports the problem on stderr."""
         import pickle
 
         state = tmp_path / "session.pkl"
@@ -1376,6 +1483,7 @@ class TestSessionStateSurvivesOneBadValue:
         assert second.stdout.split() == ["5", "hello"]
 
     def test_the_uncarryable_name_is_reported_not_swallowed(self, tmp_path):
+        """Verify that a function defined in the session is reported as not carried."""
         state = tmp_path / "session.pkl"
         result = self._run("keep = 5\ndef helper():\n    return 1\n", state)
 
@@ -1383,6 +1491,7 @@ class TestSessionStateSurvivesOneBadValue:
         assert "helper" in result.stderr
 
     def test_an_unpicklable_value_costs_only_itself(self, tmp_path):
+        """Verify that an unpicklable value is dropped without losing other variables."""
         state = tmp_path / "session.pkl"
         first = self._run("keep = 7\nhandle = open(__file__ if False else '/dev/null')\n", state)
         assert first.returncode == 0, first.stderr
@@ -1393,6 +1502,7 @@ class TestSessionStateSurvivesOneBadValue:
         assert second.stdout.split() == ["7", "False"]
 
     def test_ordinary_values_round_trip(self, tmp_path):
+        """Verify that ordinary picklable values survive a save and reload."""
         state = tmp_path / "session.pkl"
         self._run("import json\nnumbers = [1, 2, 3]\nmapping = {'a': 1}\ntext = 'x'\n", state)
 
@@ -1402,6 +1512,7 @@ class TestSessionStateSurvivesOneBadValue:
         assert result.stdout.strip() == "[1, 2, 3] {'a': 1} x"
 
     def test_a_corrupt_state_file_does_not_break_the_run(self, tmp_path):
+        """Verify that a corrupt state file does not stop the code from running."""
         state = tmp_path / "session.pkl"
         state.write_bytes(b"not a pickle at all")
 
@@ -1411,6 +1522,7 @@ class TestSessionStateSurvivesOneBadValue:
         assert "ran anyway" in result.stdout
 
     def test_an_oversized_value_is_dropped_and_reported(self, tmp_path):
+        """Verify that a value over the size limit is dropped and reported on stderr."""
         state = tmp_path / "session.pkl"
         first = self._run(f"small = 1\nbig = 'x' * {base_module._SESSION_MAX_VALUE_BYTES + 1024}\n", state)
         assert "did not carry" in first.stderr
@@ -1426,6 +1538,7 @@ class TestSessionStateWriteIsAtomic:
 
     @staticmethod
     def _run(code, state_file):
+        """Start the composed code in a fresh interpreter subprocess and return the running process."""
         import subprocess
         import sys
 
@@ -1438,6 +1551,7 @@ class TestSessionStateWriteIsAtomic:
         )
 
     def test_concurrent_writers_never_leave_an_unreadable_state(self, tmp_path):
+        """Verify that many concurrent writers never leave the state file torn or unreadable."""
         import pickle
 
         state = tmp_path / "session.pkl"
@@ -1456,6 +1570,7 @@ class TestSessionStateWriteIsAtomic:
             pickle.loads(blob)  # noqa: S301
 
     def test_no_temporary_file_is_left_behind(self, tmp_path):
+        """Verify that the atomic write leaves no temporary file next to the state file."""
         state = tmp_path / "session.pkl"
         self._run("kept = 1\n", state).communicate(timeout=60)
 
@@ -1463,6 +1578,7 @@ class TestSessionStateWriteIsAtomic:
         assert leftovers == []
 
     def test_a_later_run_reads_a_whole_state(self, tmp_path):
+        """Verify that a later run reads back a large value written by an earlier run in full."""
         state = tmp_path / "session.pkl"
         self._run("payload = 'y' * 300000\n", state).communicate(timeout=60)
 
@@ -1477,12 +1593,14 @@ class _FakeEntryPoint:
     """Records whether load() ran, which is the thing that imports foreign code."""
 
     def __init__(self, name, factory=None, *, explode=False):
+        """Store the entry point name, factory, and whether load() should raise."""
         self.name = name
         self._factory = factory or (lambda: _StubBackend())
         self._explode = explode
         self.loaded = False
 
     def load(self):
+        """Mark the entry point as loaded, then return the factory or raise if configured to explode."""
         self.loaded = True
         if self._explode:
             msg = "hostile plugin"
@@ -1495,6 +1613,7 @@ def entry_points(monkeypatch):
     """Serve a canned set of lfx.sandbox_backends entry points to the registry."""
 
     def _install(*points):
+        """Register the given entry points as the registry's canned plugin list."""
         monkeypatch.setattr(registry_module, "_entry_points_loaded", False)
         monkeypatch.setattr(
             registry_module,
@@ -1518,6 +1637,7 @@ class TestSandboxBackendPlugins:
     """Loading a plugin imports foreign code into the security path, so it is opt-in."""
 
     def test_nothing_is_imported_without_the_allowlist(self, monkeypatch, entry_points):
+        """Verify that a plugin absent from the allowlist is never loaded."""
         monkeypatch.delenv("LANGFLOW_SANDBOX_BACKEND_PLUGINS", raising=False)
         (point,) = entry_points(_FakeEntryPoint("vendor"))
 
@@ -1527,6 +1647,7 @@ class TestSandboxBackendPlugins:
         assert "vendor" not in names
 
     def test_an_allowlisted_plugin_is_loaded(self, monkeypatch, entry_points):
+        """Verify that a plugin named in the allowlist is loaded and registered."""
         monkeypatch.setenv("LANGFLOW_SANDBOX_BACKEND_PLUGINS", "vendor")
         (point,) = entry_points(_FakeEntryPoint("vendor"))
 
@@ -1536,6 +1657,7 @@ class TestSandboxBackendPlugins:
         assert "vendor" in names
 
     def test_an_unlisted_plugin_is_skipped_while_a_listed_one_loads(self, monkeypatch, entry_points):
+        """Verify that only the allowlisted plugin loads when several entry points are present."""
         monkeypatch.setenv("LANGFLOW_SANDBOX_BACKEND_PLUGINS", "wanted")
         wanted, unwanted = entry_points(_FakeEntryPoint("wanted"), _FakeEntryPoint("unwanted"))
 
@@ -1557,10 +1679,12 @@ class TestSandboxBackendPlugins:
         assert registry_module._factories["exec-sandbox"] is exec_module._ExecSandboxExecutor
 
     def test_registering_over_a_builtin_is_refused(self):
+        """Verify that registering a plugin under a built-in backend name is refused."""
         with pytest.raises(ValueError, match="built-in sandbox backend"):
             registry_module.register_sandbox_backend("exec-sandbox", _StubBackend)
 
     def test_a_plugin_that_fails_to_load_does_not_break_startup(self, monkeypatch, entry_points):
+        """Verify that one plugin's load failure does not stop a working plugin from loading."""
         monkeypatch.setenv("LANGFLOW_SANDBOX_BACKEND_PLUGINS", "broken,fine")
         broken, fine = entry_points(_FakeEntryPoint("broken", explode=True), _FakeEntryPoint("fine"))
 
@@ -1581,6 +1705,7 @@ class TestSandboxBackendPlugins:
             run_code_in_sandbox("print(1)")
 
     def test_the_allowlist_ignores_blanks_and_spacing(self, monkeypatch, entry_points):
+        """Verify that blank entries and surrounding spaces in the allowlist are ignored."""
         monkeypatch.setenv("LANGFLOW_SANDBOX_BACKEND_PLUGINS", " vendor , , ")
         (point,) = entry_points(_FakeEntryPoint("vendor"))
 
@@ -1613,6 +1738,7 @@ class TestRegistryLockDiscipline:
         seen = {}
 
         def factory():
+            """Read the registry's known backends, then return a new stub backend."""
             seen["names"] = registry_module.known_sandbox_backends()
             return _StubBackend()
 
@@ -1623,6 +1749,7 @@ class TestRegistryLockDiscipline:
         result = {}
 
         def build():
+            """Resolve the callsback backend and signal completion."""
             result["backend"] = registry_module.resolve_sandbox_backend("callsback")
             done.set()
 
@@ -1642,6 +1769,7 @@ class TestRegistryLockDiscipline:
         release = threading.Event()
 
         def slow_factory():
+            """Block until released, then return a new stub backend."""
             release.wait(timeout=5)
             return _StubBackend()
 
@@ -1704,6 +1832,7 @@ class TestEntryPointLoadingIsAtomic:
             name = "slowplugin"
 
             def load(self):
+                """Signal that loading has started, then block until released."""
                 inside.set()
                 release.wait(timeout=5)
                 return _StubBackend
@@ -1777,6 +1906,7 @@ class TestSettingsUnavailableFailsClosed:
         assert is_sandbox_enabled()
 
     def test_an_unconfigured_deployment_still_reports_none(self, monkeypatch):
+        """Verify that an unresolvable settings service with no env var still reports "none"."""
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: None)
         monkeypatch.delenv("LANGFLOW_SANDBOX_BACKEND", raising=False)
 
@@ -1800,6 +1930,7 @@ class TestCapabilitiesDefaultsGrantNothing:
             run_code_in_sandbox("print(1)")
 
     def test_every_other_default_grants_nothing_either(self):
+        """Verify that every Capabilities field defaults to a value that grants nothing."""
         caps = base_module.Capabilities()
         assert caps.isolation != "hardware-virtualized"
         assert not caps.supports_deny_all_egress
@@ -1877,17 +2008,22 @@ class TestTheLosingInstanceIsShutDown:
         """
 
         class _Closable(_StubBackend):
+            """A stub backend that tracks whether shutdown() ran."""
+
             def __init__(self):
+                """Initialize the stub backend and clear the stopped flag."""
                 super().__init__()
                 self.stopped = False
 
             def shutdown(self):
+                """Mark this instance as stopped."""
                 self.stopped = True
 
         winner = _Closable()
         loser = _Closable()
 
         def factory():
+            """Simulate a concurrent winner claiming the slot, then return the loser."""
             # Stands in for another thread that finished first while this
             # factory was still building.
             registry_module._instances["racy"] = winner
@@ -1904,13 +2040,17 @@ class TestTheLosingInstanceIsShutDown:
         """Cleaning up the loser is best effort; it must not fail the caller."""
 
         class _Angry(_StubBackend):
+            """A stub backend whose shutdown() always raises."""
+
             def shutdown(self):
+                """Raise RuntimeError to simulate a broken shutdown."""
                 msg = "no"
                 raise RuntimeError(msg)
 
         winner = _Angry()
 
         def factory():
+            """Simulate a concurrent winner claiming the slot, then return a new loser."""
             registry_module._instances["angry"] = winner
             return _Angry()
 
@@ -1940,6 +2080,7 @@ class TestEgressExceptionsFailClosed:
 
     @staticmethod
     def _leaky():
+        """Return capabilities that declare a link-local egress exception."""
         return base_module.Capabilities(
             isolation="hardware-virtualized",
             supports_deny_all_egress=True,

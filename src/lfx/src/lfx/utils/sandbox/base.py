@@ -76,6 +76,7 @@ class SandboxResult:
 
     @property
     def success(self) -> bool:
+        """Return True when the execution exited with code 0."""
         return self.exit_code == 0
 
     def error_message(self) -> str:
@@ -101,6 +102,8 @@ KNOWN_SESSION_MODES = (SESSION_MODE_OFF, SESSION_MODE_FLOW)
 
 @dataclass(frozen=True)
 class _SandboxSettings:
+    """Operator-tunable sandbox settings, with safe defaults for every field."""
+
     timeout_seconds: int = 30
     memory_mb: int = 192
     allow_network: bool = False
@@ -176,6 +179,7 @@ class SandboxFile:
 
     @property
     def size(self) -> int:
+        """Return the file content size in bytes."""
         return len(self.content)
 
 
