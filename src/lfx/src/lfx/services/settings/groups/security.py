@@ -271,11 +271,11 @@ class SecuritySettings(BaseModel):
     Flow component and every flow used as an agent tool, which is not what closing an
     API surface should mean. The protected-field floor still applies to those.
 
-    MCP is the exception, and deliberately so. An MCP client calling a flow as a tool
-    is an external caller, so its inputs travel the caller-facing run API and this
-    setting judges them. Under ``off`` an MCP tool call cannot pass inputs at all,
-    because inputs are the only thing it sends. Leave the deployment on ``permissive``
-    or ``declared`` if MCP tool calls have to keep working."""
+    MCP deserves one qualification. Its primary ``input_value`` travels through the
+    normal graph-input channel and is not a tweak. Additional advertised input fields
+    are translated into tweaks, so this setting judges them. Under ``off`` those extra
+    fields are refused, while ``input_value``-only MCP tools continue to work. Use
+    ``permissive`` or ``declared`` for MCP tools that require tweak-backed parameters."""
     # Serving-plane end-user identity
     serving_end_user_header: str | None = None
     """Name of the trusted request header that carries the end-user identity on the serving plane
