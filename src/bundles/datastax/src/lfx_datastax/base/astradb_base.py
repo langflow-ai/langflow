@@ -172,7 +172,7 @@ class AstraDBBaseComponent(Component):
         DropdownInput(
             name="api_endpoint",
             display_name="Astra DB API Endpoint",
-            info="The API Endpoint for the Astra DB instance. Supercedes database selection.",
+            info="The API Endpoint for the Astra DB instance. Supersedes database selection.",
             advanced=True,
         ),
         DropdownInput(
