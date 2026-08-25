@@ -8531,7 +8531,7 @@ requires-dist = [
     { name = "needle-python", marker = "extra == 'needle'", specifier = ">=0.4.0" },
     { name = "nest-asyncio", specifier = ">=1.6.0,<2.0.0" },
     { name = "networkx", specifier = ">=3.4.2,<4.0.0" },
-    { name = "nltk", marker = "extra == 'nltk'", specifier = ">=3.9.4" },
+    { name = "nltk", marker = "extra == 'nltk'", specifier = ">=3.10.3" },
     { name = "numexpr", marker = "extra == 'numexpr'", specifier = ">=2.10.2" },
     { name = "onnxruntime", marker = "python_full_version < '3.14'", specifier = ">=1.20,<1.24" },
     { name = "onnxruntime", marker = "python_full_version >= '3.14'", specifier = ">=1.26" },

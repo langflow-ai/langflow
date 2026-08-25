@@ -303,7 +303,7 @@ fastavro = [
     'fastavro>=1.9.8,<2.0.0; python_version >= "3.13"',
 ]
 gitpython = ["GitPython>=3.1.58"]
-nltk = ["nltk>=3.9.4"]
+nltk = ["nltk>=3.10.3"]
 lark = ["lark==1.2.2"]
 
 # Additional dependencies from requirements
