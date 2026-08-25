@@ -1997,7 +1997,6 @@ async def test_watsonx_mapper_translates_create_bind_into_raw_tool_payload() -> 
     assert provider_data["operations"][0]["tool"]["name_of_raw"] == raw_provider_data["tool_name"]
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("flow_data", "expected_detail"),
     [

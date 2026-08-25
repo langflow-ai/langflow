@@ -1,6 +1,10 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ConnectionItem, SelectedFlowVersion } from "../types";
+import type {
+  ConnectionItem,
+  DeploymentProvider,
+  SelectedFlowVersion,
+} from "../types";
 
 // ---------------------------------------------------------------------------
 // Mocks — stepper context
@@ -8,6 +12,7 @@ import type { ConnectionItem, SelectedFlowVersion } from "../types";
 
 let mockIsEditMode = false;
 let mockInitialFlowId: string | undefined;
+let mockSelectedProvider: DeploymentProvider | null = null;
 let mockSelectedInstance: { id: string; provider_key?: string } | null = {
   id: "inst-1",
 };
@@ -27,6 +32,7 @@ jest.mock("../contexts/deployment-stepper-context", () => ({
   useDeploymentStepper: () => ({
     isEditMode: mockIsEditMode,
     initialFlowId: mockInitialFlowId,
+    selectedProvider: mockSelectedProvider,
     selectedInstance: mockSelectedInstance,
     connections: mockConnections,
     setConnections: mockSetConnections,
@@ -69,6 +75,10 @@ let mockFlowsData: Array<{
   folder_id: string;
   is_component: boolean;
   icon?: string;
+  data?: {
+    nodes: Array<{ data: { type: string } }>;
+    edges: unknown[];
+  };
 }> = [];
 
 jest.mock(
@@ -216,6 +226,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockIsEditMode = false;
   mockInitialFlowId = undefined;
+  mockSelectedProvider = null;
   mockSelectedInstance = { id: "inst-1" };
   mockConnections = [];
   mockSelectedVersionByFlow = new Map();
@@ -458,6 +469,99 @@ describe("Connection panel toggle", () => {
       versionId: "ver-1",
       versionTag: "v1",
       wxoEligibilityIssue: "missingChatOutput",
+    });
+  });
+
+  it("validates versions while creating a Watsonx provider account", async () => {
+    const user = userEvent.setup();
+    mockSelectedInstance = null;
+    mockSelectedProvider = {
+      id: "watsonx",
+      type: "watsonx",
+      name: "Watsonx Orchestrate",
+      icon: "Watsonx",
+    };
+    mockFlowsData[0].data = {
+      nodes: [{ data: { type: "ChatInput" } }],
+      edges: [],
+    };
+    render(<StepAttachFlows />);
+
+    expect(
+      screen.getByText(
+        "Add at least one Chat Output node for Watsonx Orchestrate.",
+      ),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByTestId("version-item-ver-1-select"));
+
+    await waitFor(() => {
+      expect(mockGetFlowVersionEntry).toHaveBeenCalledWith({
+        flowId: "flow-1",
+        versionId: "ver-1",
+      });
+    });
+  });
+
+  it("keeps the newest attachment when version lookups resolve out of order", async () => {
+    const user = userEvent.setup();
+    mockSelectedInstance = {
+      id: "inst-1",
+      provider_key: "watsonx-orchestrate",
+    };
+    let resolveVersionOne: (value: unknown) => void = () => undefined;
+    let resolveVersionTwo: (value: unknown) => void = () => undefined;
+    const versionOne = new Promise((resolve) => {
+      resolveVersionOne = resolve;
+    });
+    const versionTwo = new Promise((resolve) => {
+      resolveVersionTwo = resolve;
+    });
+    mockGetFlowVersionEntry.mockImplementation(
+      ({ versionId }: { versionId: string }) =>
+        versionId === "ver-1" ? versionOne : versionTwo,
+    );
+    render(<StepAttachFlows />);
+
+    await user.click(screen.getByTestId("version-item-ver-1-select"));
+    await user.click(screen.getByTestId("version-item-ver-2-select"));
+
+    await act(async () => {
+      resolveVersionTwo({
+        id: "ver-2",
+        data: {
+          nodes: [
+            { data: { type: "ChatInput" } },
+            { data: { type: "ChatOutput" } },
+          ],
+          edges: [],
+        },
+      });
+      await versionTwo;
+    });
+    await screen.findByTestId("connection-skip");
+
+    await act(async () => {
+      resolveVersionOne({
+        id: "ver-1",
+        data: {
+          nodes: [{ data: { type: "ChatInput" } }],
+          edges: [],
+        },
+      });
+      await versionOne;
+    });
+    await user.click(screen.getByTestId("connection-skip"));
+
+    expect(mockHandleSelectVersion).toHaveBeenCalledWith({
+      flowId: "flow-1",
+      flowName: "Sales Flow",
+      versionId: "ver-2",
+      versionTag: "v2",
+      wxoEligibilityIssue: null,
+    });
+    expect(mockDetectEnvVars).not.toHaveBeenCalledWith({
+      flow_version_ids: ["ver-1"],
     });
   });
 

@@ -16,7 +16,7 @@ export const FlowListPanel = memo(function FlowListPanel({
   selectedVersionByFlow,
   attachedConnectionByFlow,
   connections,
-  wxoEligibilityByFlow,
+  wxoDraftEligibilityByFlow,
   removedFlowIds,
   onSelectFlow,
 }: {
@@ -25,7 +25,7 @@ export const FlowListPanel = memo(function FlowListPanel({
   selectedVersionByFlow: Map<string, SelectedFlowVersion>;
   attachedConnectionByFlow: Map<string, string[]>;
   connections: ConnectionItem[];
-  wxoEligibilityByFlow?: Map<string, WatsonxFlowEligibilityIssue>;
+  wxoDraftEligibilityByFlow?: Map<string, WatsonxFlowEligibilityIssue>;
   removedFlowIds?: Set<string>;
   onSelectFlow: (flowId: string) => void;
 }) {
@@ -37,7 +37,6 @@ export const FlowListPanel = memo(function FlowListPanel({
       </div>
       <div className="flex-1 space-y-1 overflow-y-auto p-2">
         {flows.map((flow) => {
-          const wxoEligibilityIssue = wxoEligibilityByFlow?.get(flow.id);
           const entries = Array.from(selectedVersionByFlow.values()).filter(
             (entry) => entry.flowId === flow.id,
           );
@@ -48,6 +47,22 @@ export const FlowListPanel = memo(function FlowListPanel({
           const activeEntries = entries.filter(
             (entry) => !(removedFlowIds?.has(entry.key) ?? false),
           );
+          const draftEligibilityIssue = wxoDraftEligibilityByFlow?.get(flow.id);
+          const wxoEligibilityIssues = !wxoDraftEligibilityByFlow
+            ? []
+            : attached
+              ? Array.from(
+                  new Set(
+                    activeEntries.flatMap((entry) =>
+                      entry.wxoEligibilityIssue
+                        ? [entry.wxoEligibilityIssue]
+                        : [],
+                    ),
+                  ),
+                )
+              : draftEligibilityIssue
+                ? [draftEligibilityIssue]
+                : [];
           const isRemoved = attached && activeEntries.length === 0;
           const versionLabels = activeEntries.map((entry) => entry.versionTag);
           const connectionIds = activeEntries.flatMap(
@@ -132,8 +147,11 @@ export const FlowListPanel = memo(function FlowListPanel({
                       })}
                     </p>
                   )}
-                  {wxoEligibilityIssue && (
-                    <p className="mt-1 flex items-start gap-1 text-xs text-destructive">
+                  {wxoEligibilityIssues.map((wxoEligibilityIssue) => (
+                    <p
+                      key={wxoEligibilityIssue}
+                      className="mt-1 flex items-start gap-1 text-xs text-destructive"
+                    >
                       <ForwardedIconComponent
                         name="AlertTriangle"
                         className="mt-0.5 h-3 w-3 shrink-0"
@@ -144,7 +162,7 @@ export const FlowListPanel = memo(function FlowListPanel({
                         )}
                       </span>
                     </p>
-                  )}
+                  ))}
                 </div>
               </div>
             </div>
