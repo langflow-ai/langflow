@@ -21,6 +21,7 @@ from email.parser import BytesParser
 from pathlib import Path
 
 BASE_DISTRIBUTIONS = frozenset({"langflow-base", "langflow-sdk", "lfx"})
+CORE_DISTRIBUTIONS = BASE_DISTRIBUTIONS | {"langflow"}
 REQUIRED_DISTRIBUTIONS = {
     "base": frozenset({"langflow-base", "lfx"}),
     "main": frozenset({"langflow", "langflow-base", "lfx"}),
@@ -131,9 +132,9 @@ def install_release_wheels(
 
     wheels = _select_wheels(artifacts_dir, mode)
     if mode == "main":
-        installed_names = _installed_distribution_names(python)
-        skipped = [wheel for wheel in wheels if wheel.name not in installed_names]
-        wheels = [wheel for wheel in wheels if wheel.name in installed_names]
+        target_profile = _installed_distribution_names(python) | CORE_DISTRIBUTIONS
+        skipped = [wheel for wheel in wheels if wheel.name not in target_profile]
+        wheels = [wheel for wheel in wheels if wheel.name in target_profile]
         missing = REQUIRED_DISTRIBUTIONS[mode] - {wheel.name for wheel in wheels}
         if missing:
             msg = f"Target environment is missing required {mode} distributions: {', '.join(sorted(missing))}"
