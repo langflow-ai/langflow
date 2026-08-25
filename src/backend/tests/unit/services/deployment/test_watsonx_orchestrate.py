@@ -7612,9 +7612,7 @@ async def test_create_preserves_exception_chain_on_unexpected_error():
             ),
         )
 
-    inner = exc_info.value.__cause__
-    assert isinstance(inner, DeploymentError)
-    assert inner.__cause__ is original_error
+    assert exc_info.value.__cause__ is original_error
 
 
 @pytest.mark.anyio
