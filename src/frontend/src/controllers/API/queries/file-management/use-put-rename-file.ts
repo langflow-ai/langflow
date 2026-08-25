@@ -11,19 +11,23 @@ interface IPostRenameFile {
 
 export const usePostRenameFileV2: useMutationFunctionType<
   undefined,
-  IPostRenameFile
+  IPostRenameFile,
+  IPostRenameFile,
+  Error
 > = (options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
 
-  const postRenameFileFn = async (payload: IPostRenameFile): Promise<any> => {
-    const response = await api.put<any>(
+  const postRenameFileFn = async (
+    payload: IPostRenameFile,
+  ): Promise<IPostRenameFile> => {
+    const response = await api.put<IPostRenameFile>(
       `${getURL("FILE_MANAGEMENT", { id: payload.id }, true)}?name=${encodeURI(payload.name)}`,
     );
 
     return response.data;
   };
 
-  const mutation: UseMutationResult<IPostRenameFile, any, IPostRenameFile> =
+  const mutation: UseMutationResult<IPostRenameFile, Error, IPostRenameFile> =
     mutate(
       ["usePostRenameFileV2"],
       async (payload: IPostRenameFile) => {
