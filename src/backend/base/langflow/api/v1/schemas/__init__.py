@@ -496,6 +496,13 @@ class ConfigResponse(BaseConfigResponse):
     # truthfully. It reveals nothing the palette does not: these are exactly
     # the components already withheld from ``/all`` for this caller.
     blocked_component_types: list[str] = []
+    # Mirrors LANGFLOW_TWEAKS_POLICY so the parameter panel can state which
+    # policy is actually in force. The per-field "editable via API" toggle is
+    # only enforced under ``declared``; under ``permissive`` and ``off`` it
+    # records the author's intent and nothing more. Without this value the
+    # editor cannot tell an author which of the three it is looking at, so the
+    # toggle reads as a per-field guarantee the default does not give.
+    tweaks_policy: str = "permissive"
 
     @classmethod
     def from_settings(
@@ -554,6 +561,7 @@ class ConfigResponse(BaseConfigResponse):
             agentic_experience=settings.agentic_experience,
             assistant_max_message_length=settings.assistant_max_message_length,
             local_vector_store_available=settings.deployment_profile != "prod",
+            tweaks_policy=settings.tweaks_policy,
         )
 
 

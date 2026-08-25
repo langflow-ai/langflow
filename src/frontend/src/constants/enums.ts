@@ -44,3 +44,19 @@ export enum EventDeliveryType {
   POLLING = "polling",
   DIRECT = "direct",
 }
+
+/**
+ * Deployment tweak policy, mirroring LANGFLOW_TWEAKS_POLICY.
+ *
+ * The per-field "editable via API" toggle is only enforced under "declared",
+ * and only on flows whose author marked at least one field. Under "permissive"
+ * the toggle records intent and nothing else; under "off" every tweak is
+ * refused regardless of it. The protected-field floor applies in all three.
+ */
+export const TWEAKS_POLICIES = ["permissive", "declared", "off"] as const;
+
+export type TweaksPolicy = (typeof TWEAKS_POLICIES)[number];
+
+export const isTweaksPolicy = (value: unknown): value is TweaksPolicy =>
+  typeof value === "string" &&
+  (TWEAKS_POLICIES as readonly string[]).includes(value);
