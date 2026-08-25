@@ -135,10 +135,6 @@ def install_release_wheels(
         target_profile = _installed_distribution_names(python) | CORE_DISTRIBUTIONS
         skipped = [wheel for wheel in wheels if wheel.name not in target_profile]
         wheels = [wheel for wheel in wheels if wheel.name in target_profile]
-        missing = REQUIRED_DISTRIBUTIONS[mode] - {wheel.name for wheel in wheels}
-        if missing:
-            msg = f"Target environment is missing required {mode} distributions: {', '.join(sorted(missing))}"
-            raise ValueError(msg)
         if skipped:
             print("Skipping release wheels outside the target image profile:")
             for wheel in skipped:

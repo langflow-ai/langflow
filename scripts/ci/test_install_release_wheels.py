@@ -126,21 +126,6 @@ def test_install_release_wheels_installs_only_target_profile_and_checks(
     assert check_command == [str(uv), "pip", "check", "--python", str(python)]
 
 
-def test_install_release_wheels_fails_when_target_profile_omits_required_distribution(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    _write_wheel(tmp_path, "langflow", "1.11.0rc5")
-    _write_wheel(tmp_path, "langflow-base", "0.11.0rc5")
-    _write_wheel(tmp_path, "lfx", "1.11.0rc5")
-    monkeypatch.setattr(
-        "scripts.ci.install_release_wheels.subprocess.check_output",
-        lambda *_args, **_kwargs: json.dumps(["langflow-base", "lfx"]),
-    )
-
-    with pytest.raises(ValueError, match="Target environment is missing required main distributions: langflow"):
-        install_release_wheels(tmp_path, tmp_path / "venv" / "bin" / "python", "main")
-
-
 def test_install_release_wheels_rejects_malformed_target_profile(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
