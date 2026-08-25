@@ -25,7 +25,7 @@ from ag_ui.core import (
     ToolCallResultEvent,
     ToolCallStartEvent,
 )
-from lfx.schema.content_types import JSONContent, TextContent, ToolContent
+from lfx.schema.content_types import ContentBlock, JSONContent, TextContent, ToolContent
 from lfx.schema.message import Message
 from lfx.workflow.agui_translator import AGUITranslator
 
@@ -1238,3 +1238,88 @@ def test_custom_content_still_re_emits_when_the_block_changes():
     customs = [e for e in first + second if isinstance(e, CustomEvent)]
     assert len(customs) == 2
     assert [c.value["content"]["data"]["status"] for c in customs] == ["running", "done"]
+
+
+# A message can mix producer-stamped and unstamped leaves, so the stable-id and
+# ordinal fallbacks must not share a key namespace.
+def test_mixed_stamped_and_unstamped_tool_ids_do_not_collide():
+    """A stamped id of "1" must not swallow the leaf whose ordinal is 1."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    events = t.translate(
+        "add_message",
+        {
+            "id": "m1",
+            "text": "",
+            "properties": {"state": "partial"},
+            "content_blocks": [
+                {
+                    "type": "tool_use",
+                    "contents": [],
+                    "id": "1",
+                    "name": "alpha",
+                    "tool_input": {"a": 1},
+                    "output": "A",
+                    "error": None,
+                },
+                {
+                    "type": "tool_use",
+                    "contents": [],
+                    "name": "beta",
+                    "tool_input": {"b": 2},
+                    "output": "B",
+                    "error": None,
+                },
+            ],
+        },
+    )
+
+    starts = [e for e in events if isinstance(e, ToolCallStartEvent)]
+    assert [e.tool_call_name for e in starts] == ["alpha", "beta"]
+    assert len({e.tool_call_id for e in starts}) == 2
+
+
+def test_mixed_stamped_and_unstamped_custom_ids_do_not_re_emit():
+    """Colliding keys used to overwrite each other's fingerprint, re-emitting forever."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+    blocks = [
+        {"type": "json", "contents": [], "id": "1", "data": {"k": "first"}},
+        {"type": "json", "contents": [], "data": {"k": "second"}},
+    ]
+    payload = {"id": "m2", "text": "", "properties": {"state": "partial"}, "content_blocks": blocks}
+
+    first = [e for e in t.translate("add_message", payload) if isinstance(e, CustomEvent)]
+    second = [e for e in t.translate("add_message", payload) if isinstance(e, CustomEvent)]
+
+    assert len(first) == 2
+    assert second == []
+
+
+def test_grouped_leaves_survive_text_consolidation():
+    """Nested tool_use / custom leaves are keyed by the same traversal ordinal."""
+    message = Message(
+        text="",
+        content_blocks=[
+            TextContent(text="Working on it..."),
+            ContentBlock(
+                title="Agent steps",
+                contents=[
+                    ToolContent(name="search", tool_input={"q": "weather"}, output="sunny"),
+                    JSONContent(data={"city": "Lisbon"}),
+                ],
+            ),
+        ],
+    )
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    first = _fire_add_message(t, message, "m3")
+    message.text = "It is sunny in Lisbon."
+    assert [b.type for b in message.content_blocks] == ["group", "text"]
+
+    second = _fire_add_message(t, message, "m3")
+
+    assert len([e for e in first + second if isinstance(e, ToolCallStartEvent)]) == 1
+    assert len([e for e in first + second if isinstance(e, CustomEvent)]) == 1

@@ -354,6 +354,11 @@ class AGUITranslator:
         to ``tool_ordinal``: this call's rank among tool_use leaves encountered so
         far in the current ``content_blocks`` traversal, not its raw list index.
 
+        The two live in separate ``:id:`` / ``:ord:`` namespaces because a message
+        can mix stamped and unstamped leaves: with a shared namespace,
+        ``[tool(id="1"), tool(id=None)]`` collapses onto one key and the second
+        call's whole lifecycle is dropped.
+
         Raw list index was tried first and is unsound: ``Message.text``'s setter
         drops every ``TextContent`` block and appends one consolidated block at the
         end, which shifts every later block's absolute index whenever ``add_message``
@@ -365,7 +370,7 @@ class AGUITranslator:
         so tool_use leaves keep the same relative rank across re-fires.
         """
         content_id = content.get("id")
-        tool_call_id = f"{message_id}:tool:{content_id}" if content_id else f"{message_id}:tool:{tool_ordinal}"
+        tool_call_id = f"{message_id}:tool:id:{content_id}" if content_id else f"{message_id}:tool:ord:{tool_ordinal}"
         events: list[BaseEvent] = []
 
         if tool_call_id not in self._started_tool_calls:
@@ -410,10 +415,12 @@ class AGUITranslator:
         current traversal — for the same reason ``_translate_tool_use`` avoids raw
         list indices: ``Message.text``'s setter reindexes ``content_blocks``, and a
         shifted index reads as an unseen block, re-emitting a CUSTOM event that
-        consumers already have.
+        consumers already have. The ``:id:`` / ``:ord:`` namespaces are kept apart
+        for the same reason as there: a stamped and an unstamped block sharing one
+        key would overwrite each other's fingerprint and re-emit on every re-fire.
         """
         content_id = content.get("id")
-        key = f"{message_id}:content:{content_id}" if content_id else f"{message_id}:content:{custom_ordinal}"
+        key = f"{message_id}:content:id:{content_id}" if content_id else f"{message_id}:content:ord:{custom_ordinal}"
         fingerprint = json.dumps(content, sort_keys=True, default=str)
         if self._emitted_content_state.get(key) == fingerprint:
             return []
