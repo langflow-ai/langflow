@@ -40,7 +40,7 @@ dependencies = [
     "lfx-cohere>=0.1.0,<1.0.0",
     "lfx-oracle>=0.1.0,<1.0.0",
     "lfx-vllm>=0.1.0,<1.0.0",
-    "lfx-openai-compatible>=0.1.0,<1.0.0",
+    "lfx-openai-compatible>=0.1.2,<1.0.0",
     "lfx-google>=0.1.0,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
