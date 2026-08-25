@@ -435,7 +435,7 @@ async def test_resolve_dependencies_ignores_unreferenced_cross_product_rows():
     assert authorize.await_count == 2
 
 
-def test_build_archive_keeps_dependencies_out_of_the_v1_manifest():
+def test_build_archive_emits_dependencies_in_a_v3_manifest():
     project_id = uuid4()
     snapshot = _FlowSnapshot(
         flow_id=uuid4(),
@@ -454,6 +454,6 @@ def test_build_archive_keeps_dependencies_out_of_the_v1_manifest():
 
     with zipfile.ZipFile(io.BytesIO(artifact.content)) as archive:
         manifest = json.loads(archive.read("manifest.json"))
-    assert manifest["schema_version"] == 1
-    assert "dependencies" not in manifest
+    assert manifest["schema_version"] == 3
+    assert manifest["dependencies"] == dependencies
     assert artifact.dependencies == dependencies
