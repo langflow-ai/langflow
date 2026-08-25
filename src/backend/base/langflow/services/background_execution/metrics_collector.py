@@ -309,10 +309,23 @@ class BackgroundMetricsCollector:
             logger.warning(f"bg metrics collection tick skipped: {exc}")
 
     async def run(self) -> None:
-        """Loop: open a short-lived session per tick, collect, sleep the interval."""
+        """Loop: open a short-lived session per tick, collect, sleep the interval.
+
+        The whole body is guarded, not just the collection. ``collect_once`` swallows its
+        own errors, but ``session_scope()`` is outside it, so a database that is briefly
+        unavailable would raise here, end the task, and stop every later tick for the life
+        of the process. Nothing awaits this task, so that would surface only as a stray
+        "Task exception was never retrieved" and the metrics would go quietly flat.
+
+        ``CancelledError`` inherits from ``BaseException``, so ``stop()`` still cancels the
+        loop rather than being caught and retried here.
+        """
         while not self._stopped:
-            async with session_scope() as session:
-                await self.collect_once(session)
+            try:
+                async with session_scope() as session:
+                    await self.collect_once(session)
+            except Exception as exc:  # noqa: BLE001 - a bad tick must not end the loop
+                logger.warning(f"bg metrics tick failed, retrying next interval: {exc}")
             await asyncio.sleep(self.interval)
 
     def start(self) -> None:
