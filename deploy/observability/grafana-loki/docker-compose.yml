@@ -21,11 +21,9 @@ services:
       - ${LANGFLOW_LOG_DIR:-./logs}:/var/log/langflow:ro
     command:
       - run
-      - --server.http.listen-addr=0.0.0.0:12345
+      - --server.http.listen-addr=127.0.0.1:12345
       - --storage.path=/var/lib/alloy/data
       - /etc/alloy/config.alloy
-    ports:
-      - "12345:12345"
     depends_on:
       loki:
         condition: service_healthy
