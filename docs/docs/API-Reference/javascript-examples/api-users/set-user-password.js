@@ -1,13 +1,12 @@
-const url = `${process.env.LANGFLOW_URL ?? ""}/api/v1/users/10c1c6a2-ab8a-4748-8700-0e4832fd5ce8/reset-password`;
+const url = `${process.env.LANGFLOW_URL ?? ""}/api/v1/users/10c1c6a2-ab8a-4748-8700-0e4832fd5ce8`;
 
 const options = {
-  method: 'PATCH',
+  method: "PATCH",
   headers: {
-    "Content-Type": `application/json`,
+    "Content-Type": "application/json",
     "x-api-key": `${process.env.LANGFLOW_API_KEY ?? ""}`,
   },
   body: JSON.stringify({
-    current_password: "securepassword123",
     password: "newsecurepassword123",
   }),
 };

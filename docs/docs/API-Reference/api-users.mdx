@@ -11,6 +11,7 @@ import exampleApiUsersListAllUsers from '!!raw-loader!@site/docs/API-Reference/c
 import resultApiUsersResultListAllUsers from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/result-list-all-users.json';
 import exampleApiUsersUpdateUser from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/update-user.sh';
 import resultApiUsersResultUpdateUser from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/result-update-user.json';
+import exampleApiUsersSetUserPassword from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/set-user-password.sh';
 import exampleApiUsersResetPassword from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/reset-password.sh';
 import resultApiUsersResultResetPassword from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/result-reset-password.json';
 import exampleApiUsersDeleteUser from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/delete-user.sh';
@@ -25,6 +26,8 @@ import examplePythonApiUsersListAllUsers from '!!raw-loader!@site/docs/API-Refer
 import exampleJavascriptApiUsersListAllUsers from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-users/list-all-users.js';
 import examplePythonApiUsersUpdateUser from '!!raw-loader!@site/docs/API-Reference/python-examples/api-users/update-user.py';
 import exampleJavascriptApiUsersUpdateUser from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-users/update-user.js';
+import examplePythonApiUsersSetUserPassword from '!!raw-loader!@site/docs/API-Reference/python-examples/api-users/set-user-password.py';
+import exampleJavascriptApiUsersSetUserPassword from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-users/set-user-password.js';
 import examplePythonApiUsersResetPassword from '!!raw-loader!@site/docs/API-Reference/python-examples/api-users/reset-password.py';
 import exampleJavascriptApiUsersResetPassword from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-users/reset-password.js';
 import examplePythonApiUsersDeleteUser from '!!raw-loader!@site/docs/API-Reference/python-examples/api-users/delete-user.py';
@@ -35,7 +38,7 @@ import exampleJavascriptApiUsersDeleteUser from '!!raw-loader!@site/docs/API-Ref
 Use the `/users` endpoint to manage user accounts in Langflow.
 
 As of Langflow 1.12, there is no **Admin Page** in the visual editor.
-Superusers add, activate, list, and delete users, set **Superuser**, and reset passwords through the `/users` API.
+Superusers add, activate, list, and delete users, set **Superuser**, and set another user's password with `PATCH /api/v1/users/{id}`.
 
 ## Add user
 
@@ -132,7 +135,7 @@ Requires authentication as a superuser if the Langflow server has authentication
 
 </details>
 
-## Update user
+## Update user {#update-user}
 
 Modify an existing user's information with a PATCH request.
 
@@ -165,11 +168,34 @@ This example activates the specified user's account and makes them a superuser:
 
 </details>
 
+To set another user's password as an administrator, include `"password"` in the same `PATCH /api/v1/users/{id}` body.
+Only a superuser can set a password this way, and the current password is not required.
+Non-superusers cannot change passwords on this route.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeBlock language="python">{examplePythonApiUsersSetUserPassword}</CodeBlock>
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeBlock language="javascript">{exampleJavascriptApiUsersSetUserPassword}</CodeBlock>
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeBlock language="bash">{exampleApiUsersSetUserPassword}</CodeBlock>
+
+</TabItem>
+</Tabs>
+
 ## Reset password
 
-Change the specified user's password to a new secure value.
+Change **your own** password.
 
-Requires authentication as the target user.
+This route is self-service. Authenticate as the target user, send that user's `id` in the path, and include `current_password` plus the new `password`.
+A superuser resetting someone else's password must use [Update user](#update-user) instead.
 
 <Tabs>
 <TabItem value="Python" label="Python" default>
