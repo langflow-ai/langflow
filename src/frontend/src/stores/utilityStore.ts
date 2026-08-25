@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH } from "@/constants/constants";
-import { EventDeliveryType } from "@/constants/enums";
+import { EventDeliveryType, type TweaksPolicy } from "@/constants/enums";
 import type { Pagination, Tag } from "@/types/utils/types";
 import type { UtilityStoreType } from "@/types/zustand/utility";
 
@@ -77,6 +77,10 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
     set({ blockedComponentTypes: new Set(blockedComponentTypes) }),
   a2aEnabled: false,
   setA2aEnabled: (a2aEnabled: boolean) => set({ a2aEnabled }),
+  // Default matches the backend default, so the panel doesn't claim a stricter
+  // policy than the deployment has before the /config reply lands.
+  tweaksPolicy: "permissive",
+  setTweaksPolicy: (tweaksPolicy: TweaksPolicy) => set({ tweaksPolicy }),
   // Default true (backend default) so the panel doesn't flash the disabled
   // state before the /config reply lands.
   agenticExperienceEnabled: true,

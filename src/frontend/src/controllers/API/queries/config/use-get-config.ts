@@ -4,7 +4,11 @@ import {
   DEFAULT_POLLING_INTERVAL,
   DEFAULT_TIMEOUT,
 } from "@/constants/constants";
-import { EventDeliveryType } from "@/constants/enums";
+import {
+  EventDeliveryType,
+  isTweaksPolicy,
+  type TweaksPolicy,
+} from "@/constants/enums";
 import { recomputeComponentsToUpdateIfNeeded } from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -50,6 +54,8 @@ export interface ConfigResponse extends BaseConfig {
   mcp_servers_locked: boolean;
   custom_component_admin_only: boolean;
   a2a_enabled: boolean;
+  /** Active deployment tweak policy. Authenticated callers only. */
+  tweaks_policy?: TweaksPolicy;
   agentic_experience: boolean;
   assistant_max_message_length: number;
   local_vector_store_available: boolean;
@@ -135,6 +141,7 @@ export const useGetConfig: useQueryFunctionType<
     (state) => state.setCustomComponentAdminOnly,
   );
   const setA2aEnabled = useUtilityStore((state) => state.setA2aEnabled);
+  const setTweaksPolicy = useUtilityStore((state) => state.setTweaksPolicy);
   const setAgenticExperienceEnabled = useUtilityStore(
     (state) => state.setAgenticExperienceEnabled,
   );
@@ -206,6 +213,11 @@ export const useGetConfig: useQueryFunctionType<
         setMcpServersLocked(data.mcp_servers_locked ?? false);
         setCustomComponentAdminOnly(data.custom_component_admin_only ?? false);
         setA2aEnabled(data.a2a_enabled ?? false);
+        setTweaksPolicy(
+          isTweaksPolicy(data.tweaks_policy)
+            ? data.tweaks_policy
+            : "permissive",
+        );
         setAgenticExperienceEnabled(data.agentic_experience ?? true);
         setAssistantMaxMessageLength(
           data.assistant_max_message_length ??

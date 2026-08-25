@@ -21,6 +21,12 @@ jest.mock("@/utils/utils", () => ({
   cn: (...classes: string[]) => classes.filter(Boolean).join(" "),
 }));
 
+let mockTweaksPolicy = "permissive";
+jest.mock("@/stores/utilityStore", () => ({
+  useUtilityStore: (selector: (state: unknown) => unknown) =>
+    selector({ tweaksPolicy: mockTweaksPolicy }),
+}));
+
 const renderWithProviders = () =>
   render(
     <TooltipProvider>
@@ -31,6 +37,7 @@ const renderWithProviders = () =>
 describe("InspectionPanelHeader", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTweaksPolicy = "permissive";
   });
 
   it("renders the static title", () => {
@@ -56,6 +63,39 @@ describe("InspectionPanelHeader", () => {
     await user.click(screen.getByTestId("inspection-panel-close"));
 
     expect(mockSetInspectionPanelVisible).toHaveBeenCalledWith(false);
+  });
+
+  // The per-field API toggle is only enforced under "declared". A panel that
+  // stays silent about the active policy lets the toggle read as a guarantee
+  // the default deployment does not give.
+  it("states that the default policy does not restrict API inputs per field", () => {
+    renderWithProviders();
+
+    expect(
+      screen.getByTestId("panel-tweaks-policy-permissive"),
+    ).toHaveTextContent(
+      "Tweaks policy: permissive. The API can set any unprotected field, marked or not.",
+    );
+  });
+
+  it("states that the toggle is enforced under the declared policy", () => {
+    mockTweaksPolicy = "declared";
+    renderWithProviders();
+
+    expect(
+      screen.getByTestId("panel-tweaks-policy-declared"),
+    ).toHaveTextContent(
+      "Tweaks policy: declared. Once one field is marked, the API can set only the marked fields.",
+    );
+  });
+
+  it("states that an off deployment refuses every API input", () => {
+    mockTweaksPolicy = "off";
+    renderWithProviders();
+
+    expect(screen.getByTestId("panel-tweaks-policy-off")).toHaveTextContent(
+      "Tweaks policy: off. This deployment refuses every API input.",
+    );
   });
 
   it("renders no field-editing or code affordances", () => {

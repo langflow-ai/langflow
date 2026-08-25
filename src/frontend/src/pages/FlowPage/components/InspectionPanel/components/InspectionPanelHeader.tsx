@@ -4,12 +4,17 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import useFlowStore from "@/stores/flowStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 
 export default function InspectionPanelHeader() {
   const { t } = useTranslation();
   const setInspectionPanelVisible = useFlowStore(
     (state) => state.setInspectionPanelVisible,
   );
+  // The per-field API toggle below is only enforced under the "declared"
+  // policy. Stating the active one keeps the toggle from reading as a
+  // guarantee the default deployment does not give.
+  const tweaksPolicy = useUtilityStore((state) => state.tweaksPolicy);
 
   return (
     <div
@@ -41,6 +46,12 @@ export default function InspectionPanelHeader() {
         data-testid="panel-subtitle"
       >
         {t("inspectionPanel.subtitle")}
+      </span>
+      <span
+        className="text-xs text-muted-foreground"
+        data-testid={`panel-tweaks-policy-${tweaksPolicy}`}
+      >
+        {t(`inspectionPanel.policy.${tweaksPolicy}`)}
       </span>
     </div>
   );

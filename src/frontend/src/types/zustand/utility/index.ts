@@ -1,4 +1,4 @@
-import type { EventDeliveryType } from "@/constants/enums";
+import type { EventDeliveryType, TweaksPolicy } from "@/constants/enums";
 import type { Pagination, Tag } from "@/types/utils/types";
 
 export type UtilityStoreType = {
@@ -49,6 +49,10 @@ export type UtilityStoreType = {
   setBlockedComponentTypes: (blockedComponentTypes: Iterable<string>) => void;
   a2aEnabled: boolean;
   setA2aEnabled: (a2aEnabled: boolean) => void;
+  /** Deployment tweak policy (LANGFLOW_TWEAKS_POLICY). The per-field "editable
+   *  via API" toggle is only enforced under "declared". */
+  tweaksPolicy: TweaksPolicy;
+  setTweaksPolicy: (tweaksPolicy: TweaksPolicy) => void;
   agenticExperienceEnabled: boolean;
   setAgenticExperienceEnabled: (agenticExperienceEnabled: boolean) => void;
   // Mirror of LANGFLOW_ASSISTANT_MAX_MESSAGE_LENGTH — the Assistant composer enforces the

@@ -55,6 +55,36 @@ async def test_get_config_mirrors_assistant_message_length(client: AsyncClient, 
     assert response.json()["assistant_max_message_length"] == 6000
 
 
+async def test_get_config_mirrors_tweaks_policy(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """The parameter panel states which tweak policy is in force, so /config has to carry it.
+
+    The per-field "editable via API" toggle is only enforced under ``declared``. Without the
+    policy on the config response the editor cannot tell an author that, and the toggle reads
+    as a per-field guarantee the default deployment does not give.
+    """
+    from lfx.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+
+    default_response = await client.get("api/v1/config", headers=logged_in_headers)
+    assert default_response.status_code == status.HTTP_200_OK
+    assert default_response.json()["tweaks_policy"] == "permissive"
+
+    monkeypatch.setattr(settings, "tweaks_policy", "declared")
+    declared_response = await client.get("api/v1/config", headers=logged_in_headers)
+
+    assert declared_response.status_code == status.HTTP_200_OK
+    assert declared_response.json()["tweaks_policy"] == "declared"
+
+
+async def test_public_config_withholds_tweaks_policy(client: AsyncClient):
+    """The public playground renders no parameter panel, so the policy stays off the public shape."""
+    response = await client.get("api/v1/config")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert "tweaks_policy" not in response.json()
+
+
 @pytest.mark.parametrize("path", ["api/v1/custom_component", "api/v1/custom_component/update"])
 async def test_catalog_blocks_known_template_before_custom_component_build(
     client: AsyncClient,
