@@ -53,6 +53,10 @@ def test_top_k_omitted_when_unset():
         "amazon.titan-text-premier-v1:0",
         "cohere.command-r-plus-v1:0",
         "ai21.jamba-1-5-large-v1:0",
+        # Mistral Large speaks the chat-completion schema, which has no top_k, and the
+        # text-completion models cap it below this component's default of 250.
+        "mistral.mistral-large-2407-v1:0",
+        "mistral.mistral-7b-instruct-v0:2",
     ],
 )
 def test_top_k_not_sent_to_providers_without_it(model_id):
@@ -65,8 +69,10 @@ def test_top_k_not_sent_to_providers_without_it(model_id):
     "model_id",
     [
         "anthropic.claude-3-5-sonnet-20241022-v2:0",
-        "mistral.mistral-large-2407-v1:0",
+        # Cross-region and worldwide inference profiles prefix the provider segment.
         "us.anthropic.claude-3-5-sonnet-20240620-v1:0",
+        "eu.anthropic.claude-3-5-sonnet-20240620-v1:0",
+        "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
     ],
 )
 def test_top_k_sent_to_providers_that_support_it(model_id):

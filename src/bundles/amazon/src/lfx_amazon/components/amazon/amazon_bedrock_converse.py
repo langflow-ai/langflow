@@ -4,15 +4,20 @@ from lfx.field_typing import LanguageModel
 from lfx.inputs.inputs import BoolInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
 from lfx.io import DictInput, DropdownInput
 
-# Providers whose Bedrock models document a "top_k" inference parameter. The Converse
-# API only accepts additionalModelRequestFields the target model actually supports, and
-# Meta (prompt/temperature/top_p/max_gen_len), Amazon Titan and AI21 have no top_k at
-# all, while Cohere spells it "k" - sending it to those makes Bedrock reject the whole
-# call. Anything outside this set can still opt in through Additional Model Fields.
-TOP_K_PROVIDERS = frozenset({"anthropic", "mistral"})
+# Providers whose Bedrock models document "top_k" as an inference parameter, in the
+# range this component's default sits in. The Converse API only accepts
+# additionalModelRequestFields the target model actually supports, so sending it
+# anywhere else makes Bedrock reject the whole call: Meta takes only
+# prompt/temperature/top_p/max_gen_len, Amazon Titan and AI21 have no top_k, and Cohere
+# spells it "k". Mistral is excluded too, despite listing top_k for text completion:
+# Mistral Large uses the chat-completion schema, which has no top_k at all, and the
+# text-completion models cap it below this component's default of 250. Anything outside
+# this set can still opt in explicitly through Additional Model Fields.
+TOP_K_PROVIDERS = frozenset({"anthropic"})
 
-# Cross-region inference profile ids are prefixed with the geography, e.g. "us.anthropic...".
-_INFERENCE_PROFILE_PREFIXES = frozenset({"us", "eu", "apac"})
+# Cross-region inference profile ids are prefixed with the geography, e.g.
+# "us.anthropic..."; "global" is the worldwide-routing profile.
+_INFERENCE_PROFILE_PREFIXES = frozenset({"us", "eu", "apac", "global"})
 
 
 def _model_provider(model_id: str) -> str:
@@ -115,8 +120,8 @@ class AmazonBedrockConverseComponent(LCModelComponent):
             display_name="Top K",
             value=250,
             info="Limits the number of highest probability vocabulary tokens to consider. "
-            "Only sent to providers that support it (Anthropic, Mistral); it is ignored for the "
-            "others. Use 'Additional Model Fields' to pass a provider's own equivalent.",
+            "Only sent to Anthropic models, the ones that document it for the Converse API; it is "
+            "ignored for the others. Use 'Additional Model Fields' to pass a provider's own equivalent.",
             advanced=True,
         ),
         BoolInput(
