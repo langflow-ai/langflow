@@ -10023,16 +10023,18 @@ requires-dist = [
 
 [[package]]
 name = "lfx-openai-compatible"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/openai-compatible" }
 dependencies = [
     { name = "httpx" },
+    { name = "langchain-openai" },
     { name = "lfx" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
+    { name = "langchain-openai", specifier = ">=1.1.6" },
     { name = "lfx", editable = "src/lfx" },
 ]
 

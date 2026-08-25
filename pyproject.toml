@@ -46,7 +46,7 @@ dependencies = [
     "lfx-paddle>=0.1.0,<1.0.0",
     "lfx-vllm>=0.1.0,<1.0.0",
     "lfx-empiriolabs>=0.1.0,<1.0.0",
-    "lfx-openai-compatible>=0.1.0,<1.0.0",
+    "lfx-openai-compatible>=0.1.1,<1.0.0",
     "lfx-exa>=0.1.0,<1.0.0",
     "lfx-valkey>=0.1.0,<1.0.0",
     # langflow-extensions:bundle-deps-end

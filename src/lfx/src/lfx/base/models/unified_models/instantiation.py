@@ -619,6 +619,10 @@ def _compose_embedding_kwargs(
 
     kwargs: dict[str, Any] = {}
     connection_url_param: str | None = None
+    if provider == "OpenAI Compatible" and embedding_class_name == "OpenAIEmbeddings":
+        # Non-OpenAI servers expect strings and commonly reject the token-ID
+        # arrays produced by LangChain's client-side context-length handling.
+        kwargs["check_embedding_ctx_length"] = False
     if "model" in param_mapping:
         kwargs[param_mapping["model"]] = model_name
     elif "model_id" in param_mapping:
