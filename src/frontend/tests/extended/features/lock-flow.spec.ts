@@ -12,6 +12,16 @@ test(
   "user must be able to lock a flow and it must be saved",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
+    // Four lock/unlock round trips, each a settings save plus a full editor
+    // reload, then twenty click-and-assert iterations. That is ~1 minute on
+    // Linux/macOS and lands right on the 5-minute wall on Windows CI, where
+    // every step costs 3-5x as much — the test times out mid-loop rather than
+    // finding anything. Nothing here is Windows-specific except the pace.
+    test.slow(
+      process.platform === "win32",
+      "Windows CI runners are 3-5x slower",
+    );
+
     await openStarterProject(page, TEXTS.templateBasicPrompting);
     const flowId = new URL(page.url()).pathname.match(/\/flow\/([^/]+)/)?.[1];
     if (!flowId) {
