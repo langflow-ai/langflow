@@ -56,6 +56,16 @@ def test_missing_required_wheel_fails_closed(tmp_path: Path) -> None:
         _select_wheels(tmp_path, "main")
 
 
+def test_duplicate_release_wheels_fail_closed(tmp_path: Path) -> None:
+    _write_wheel(tmp_path, "langflow", "1.11.0rc4")
+    _write_wheel(tmp_path, "langflow", "1.11.0rc5")
+    _write_wheel(tmp_path, "langflow-base", "0.11.0rc5")
+    _write_wheel(tmp_path, "lfx", "1.11.0rc5")
+
+    with pytest.raises(ValueError, match="Duplicate release wheels for langflow"):
+        _select_wheels(tmp_path, "main")
+
+
 def test_install_release_wheels_installs_only_target_profile_and_checks(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -124,6 +134,35 @@ def test_install_release_wheels_fails_when_target_profile_omits_required_distrib
     )
 
     with pytest.raises(ValueError, match="Target environment is missing required main distributions: langflow"):
+        install_release_wheels(tmp_path, tmp_path / "venv" / "bin" / "python", "main")
+
+
+def test_install_release_wheels_rejects_malformed_target_profile(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write_wheel(tmp_path, "langflow", "1.11.0rc5")
+    _write_wheel(tmp_path, "langflow-base", "0.11.0rc5")
+    _write_wheel(tmp_path, "lfx", "1.11.0rc5")
+    monkeypatch.setattr(
+        "scripts.ci.install_release_wheels.subprocess.check_output",
+        lambda *_args, **_kwargs: json.dumps({"langflow": "1.11.0rc5"}),
+    )
+
+    with pytest.raises(ValueError, match="Expected installed distribution names as a JSON string list"):
+        install_release_wheels(tmp_path, tmp_path / "venv" / "bin" / "python", "main")
+
+
+def test_install_release_wheels_requires_uv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _write_wheel(tmp_path, "langflow", "1.11.0rc5")
+    _write_wheel(tmp_path, "langflow-base", "0.11.0rc5")
+    _write_wheel(tmp_path, "lfx", "1.11.0rc5")
+    monkeypatch.setattr(
+        "scripts.ci.install_release_wheels.subprocess.check_output",
+        lambda *_args, **_kwargs: json.dumps(["langflow", "langflow-base", "lfx"]),
+    )
+    monkeypatch.setattr("scripts.ci.install_release_wheels.shutil.which", lambda _name: None)
+
+    with pytest.raises(FileNotFoundError, match="uv is required"):
         install_release_wheels(tmp_path, tmp_path / "venv" / "bin" / "python", "main")
 
 
