@@ -1549,6 +1549,8 @@ class AuthService(BaseAuthService):
     async def authenticate_user(
         self, username: str, password: str, db: AsyncSession, request: Request | None = None
     ) -> User | None:
+        from langflow.api.utils.core import release_db_transaction
+
         user = await get_user_by_username(db, username)
 
         if not user:
@@ -1591,7 +1593,18 @@ class AuthService(BaseAuthService):
                 )
             return None
 
-        if not self.verify_password(password, user.password):
+        # bcrypt is CPU-bound by design (measured ~274 ms per verify at the
+        # configured cost). Called inline from this async function it blocks the
+        # event loop for that whole time, stalling every other concurrent
+        # request on this worker — not just this login. Offload it to a thread.
+        #
+        # The session's read transaction is also ended first: otherwise the
+        # pooled connection stays checked out (Postgres: ``idle in transaction``)
+        # for the duration of the hash. ``create_user_tokens`` below simply
+        # begins a fresh short transaction on the same session.
+        await release_db_transaction(db)
+        password_ok = await asyncio.to_thread(self.verify_password, password, user.password)
+        if not password_ok:
             if request and request.client:
                 logger.warning(
                     "Login failed: incorrect password",
