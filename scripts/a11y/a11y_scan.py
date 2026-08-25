@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
+from playwright.async_api import Error as PlaywrightError
 from playwright.async_api import Page, Request, async_playwright
 
 # Pinned to the same engine the Playwright a11y suite uses (see src/frontend/.achecker.yml,
@@ -518,6 +519,33 @@ async def scan_route(
         )
     ]
 
+    # Result entry for a state phase that carries no scan of its own
+    # (closed / skipped / failed); `extra` holds the reason or error.
+    def state_result(
+        state_name: str,
+        phase: str,
+        *,
+        started_at: float,
+        api_start: int,
+        failure_start: int,
+        diagnostics: dict[str, Any],
+        **extra: Any,
+    ) -> dict[str, Any]:
+        return {
+            "route": route,
+            "state": state_name,
+            "phase": phase,
+            "requestedUrl": target_url,
+            "finalUrl": page.url,
+            "durationMs": round((time.monotonic() - started_at) * 1000),
+            "apiRequests": list(api_requests[api_start:]),
+            "requestFailures": list(failures[failure_start:]),
+            "visibleText": "",
+            "diagnostics": diagnostics,
+            "issues": [],
+            **extra,
+        }
+
     for state in states:
         state_name = state.get("name")
         if not isinstance(state_name, str) or not state_name:
@@ -530,46 +558,56 @@ async def scan_route(
         state_started_at = time.monotonic()
         api_start = len(api_requests)
         failure_start = len(failures)
-        before_open_focus = await describe_active_element(page)
-        await run_actions(page, open_actions, pending, timeout_ms, quiet_ms)
-        open_diagnostics = await modal_diagnostics(page)
-        open_diagnostics["beforeOpenActiveElement"] = before_open_focus
-        route_results.append(
-            await scan_current_dom(
-                page,
-                ace_script=ace_script,
-                levels=levels,
-                policies=policies,
-                timeout_ms=timeout_ms,
-                route=route,
-                requested_url=target_url,
-                state_name=state_name,
-                phase="open",
-                started_at=state_started_at,
-                api_requests=list(api_requests[api_start:]),
-                failures=list(failures[failure_start:]),
-                diagnostics=open_diagnostics,
-            )
-        )
+        window = {"started_at": state_started_at, "api_start": api_start, "failure_start": failure_start}
 
-        if close_actions:
-            await run_actions(page, close_actions, pending, timeout_ms, quiet_ms)
-            close_diagnostics = await modal_diagnostics(page)
+        # A state can declare the DOM it needs (e.g. a data grid that only
+        # renders once the backend has rows). Against a fresh backend that
+        # element may legitimately be absent, so the state is reported as
+        # skipped rather than treated as a scan failure.
+        requires = state.get("requires")
+        if isinstance(requires, str) and requires and await page.locator(requires).count() == 0:
             route_results.append(
-                {
-                    "route": route,
-                    "state": state_name,
-                    "phase": "closed",
-                    "requestedUrl": target_url,
-                    "finalUrl": page.url,
-                    "durationMs": round((time.monotonic() - state_started_at) * 1000),
-                    "apiRequests": list(api_requests[api_start:]),
-                    "requestFailures": list(failures[failure_start:]),
-                    "visibleText": await read_visible_text(page),
-                    "diagnostics": close_diagnostics,
-                    "issues": [],
-                }
+                state_result(
+                    state_name, "skipped", diagnostics={}, reason=f"required element not present: {requires}", **window
+                )
             )
+            continue
+
+        # A broken state must not abort the whole run: record it and keep
+        # scanning, so the other routes' findings still reach the report.
+        try:
+            before_open_focus = await describe_active_element(page)
+            await run_actions(page, open_actions, pending, timeout_ms, quiet_ms)
+            open_diagnostics = await modal_diagnostics(page)
+            open_diagnostics["beforeOpenActiveElement"] = before_open_focus
+            route_results.append(
+                await scan_current_dom(
+                    page,
+                    ace_script=ace_script,
+                    levels=levels,
+                    policies=policies,
+                    timeout_ms=timeout_ms,
+                    route=route,
+                    requested_url=target_url,
+                    state_name=state_name,
+                    phase="open",
+                    started_at=state_started_at,
+                    api_requests=list(api_requests[api_start:]),
+                    failures=list(failures[failure_start:]),
+                    diagnostics=open_diagnostics,
+                )
+            )
+
+            if close_actions:
+                await run_actions(page, close_actions, pending, timeout_ms, quiet_ms)
+                closed = state_result(state_name, "closed", diagnostics=await modal_diagnostics(page), **window)
+                closed["visibleText"] = await read_visible_text(page)
+                route_results.append(closed)
+        except PlaywrightError as exc:
+            route_results.append(
+                state_result(state_name, "failed", diagnostics={}, error=shortened(str(exc), 600), **window)
+            )
+            print(f"  fail: {route}#{state_name}: {shortened(str(exc), 200)}")
 
     await page.close()
     return route_results
@@ -640,6 +678,14 @@ def write_markdown_report(report: dict[str, Any], output_path: Path) -> None:
             f"{len(result['requestFailures'])} | "
             f"{diagnostics.get('dialogCount', '')} | "
             f"{diagnostics.get('focusedWithinDialog', '')} |"
+        )
+
+    problems = [result for result in results if result["phase"] in ("skipped", "failed")]
+    if problems:
+        lines.extend(["", "## Skipped / Failed States", ""])
+        lines.extend(
+            f"- `{markdown_cell(result_name(result))}` - {shortened(result.get('reason') or result.get('error'))}"
+            for result in problems
         )
 
     lines.extend(["", "## Top Rules", "", markdown_rule_table(rule_counts(results)), ""])
@@ -1079,7 +1125,9 @@ async def main() -> None:
                         f"  {label} api={len(result['apiRequests'])} "
                         f"issues={len(result['issues'])} final={result['finalUrl']}"
                     )
-                    if not result["apiRequests"] and result["phase"] != "closed":
+                    if result["phase"] in ("skipped", "failed"):
+                        print(f"  {result['phase']}: {result.get('reason') or result.get('error')}")
+                    elif not result["apiRequests"] and result["phase"] != "closed":
                         print("  warn: no same-origin API/config/health requests observed")
                 results.extend(route_results)
         finally:
@@ -1093,6 +1141,8 @@ async def main() -> None:
         "policies": policies,
         "aceUrl": args.ace_url,
         "totalIssues": sum(len(result["issues"]) for result in results),
+        "skippedStates": sum(result["phase"] == "skipped" for result in results),
+        "failedStates": sum(result["phase"] == "failed" for result in results),
         "results": results,
     }
 
