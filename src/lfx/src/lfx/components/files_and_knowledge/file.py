@@ -662,9 +662,12 @@ class FileComponent(BaseFileComponent):
                     Output(display_name="File Path", name="path", method="load_files_path", tool_mode=True),
                 )
         else:
-            # Multiple files => DataFrame output; advanced parser disabled
+            # Multiple files => DataFrame and Message outputs; advanced parser disabled
             frontend_node["outputs"].append(
                 Output(display_name="Files", name="dataframe", method="load_files", tool_mode=True)
+            )
+            frontend_node["outputs"].append(
+                Output(display_name="Raw Content", name="message", method="load_files_message", tool_mode=True)
             )
 
         return frontend_node
