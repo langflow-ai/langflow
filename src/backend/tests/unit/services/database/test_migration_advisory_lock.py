@@ -15,7 +15,7 @@ in what order, on which kinds of URLs.
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langflow.services.database.service import (
@@ -279,7 +279,7 @@ def test_run_migrations_probes_inside_lock_and_skips_init_when_already_migrated(
     service.alembic_log_path = None
     service.script_location = "/fake/script_location"
 
-    engine_mock, conn_mock = _engine_with_conn(scalar_returns=True)  # lock acquired immediately
+    engine_mock, _ = _engine_with_conn(scalar_returns=True)  # lock acquired immediately
 
     init_alembic_mock = MagicMock()
     check_mock = MagicMock()  # command.check succeeds (no diffs detected)
@@ -368,7 +368,7 @@ def test_concurrent_workers_only_one_calls_init_alembic():
     init_alembic_call_count = 0
     init_alembic_lock = threading.Lock()
 
-    def _init_alembic(cfg):
+    def _init_alembic(_cfg):
         nonlocal init_alembic_call_count
         with init_alembic_lock:
             init_alembic_call_count += 1
@@ -377,7 +377,7 @@ def test_concurrent_workers_only_one_calls_init_alembic():
     heads_call_count = 0
     heads_lock = threading.Lock()
 
-    def _heads_probe(cfg):
+    def _heads_probe(_cfg):
         nonlocal heads_call_count
         with heads_lock:
             heads_call_count += 1
@@ -387,7 +387,7 @@ def test_concurrent_workers_only_one_calls_init_alembic():
 
     errors: list[Exception] = []
 
-    def _run(fix=False):
+    def _run(*, fix: bool = False):
         try:
             service._run_migrations(fix=fix)
         except Exception as exc:
@@ -408,8 +408,57 @@ def test_concurrent_workers_only_one_calls_init_alembic():
         t1.join(timeout=5)
         t2.join(timeout=5)
 
+    assert not t1.is_alive(), "Worker thread 1 did not terminate"
+    assert not t2.is_alive(), "Worker thread 2 did not terminate"
     assert not errors, f"Worker(s) raised: {errors}"
     assert init_alembic_call_count == 1, (
         f"Expected init_alembic to be called exactly once; called {init_alembic_call_count} times. "
         "This is the TOCTOU race: both workers decided to initialise before the fix."
     )
+
+
+@pytest.mark.parametrize(
+    ("raw_url", "expected_normalized"),
+    [
+        ("sqlite+aiosqlite:///test.db", "sqlite:///test.db"),
+        ("postgresql+asyncpg://user:pass@localhost/db", "postgresql://user:pass@localhost/db"),
+    ],
+)
+def test_current_alembic_heads_sync_normalizes_url_and_disposes_engine(raw_url, expected_normalized):
+    """Verify _current_alembic_heads_sync normalizes async driver URLs and queries heads."""
+    from alembic.config import Config
+    from langflow.services.database.service import DatabaseService
+
+    alembic_cfg = Config()
+    alembic_cfg.set_main_option("sqlalchemy.url", raw_url.replace("%", "%%"))
+
+    engine_mock = MagicMock()
+    conn_mock = MagicMock()
+    engine_mock.connect.return_value.__enter__.return_value = conn_mock
+
+    ctx_mock = MagicMock()
+    ctx_mock.get_current_heads.return_value = ("rev123",)
+
+    with (
+        patch("sqlalchemy.create_engine", return_value=engine_mock) as create_engine_mock,
+        patch("alembic.migration.MigrationContext.configure", return_value=ctx_mock) as ctx_config_mock,
+    ):
+        heads = DatabaseService._current_alembic_heads_sync(alembic_cfg)
+
+    create_engine_mock.assert_called_once_with(expected_normalized)
+    ctx_config_mock.assert_called_once_with(conn_mock)
+    assert heads == ("rev123",)
+    engine_mock.dispose.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_run_migrations_async_delegates_to_thread():
+    """Verify run_migrations runs _run_migrations in a worker thread."""
+    from langflow.services.database.service import DatabaseService
+
+    service = DatabaseService.__new__(DatabaseService)
+    fix_flag = True
+    with patch("asyncio.to_thread", new_callable=AsyncMock) as to_thread_mock:
+        await service.run_migrations(fix=fix_flag)
+
+    to_thread_mock.assert_called_once_with(service._run_migrations, fix_flag)

@@ -704,7 +704,7 @@ class DatabaseService(Service):
         from sqlalchemy import create_engine
 
         url = alembic_cfg.get_main_option("sqlalchemy.url", default="").replace("%%", "%")
-        engine = create_engine(url)
+        engine = create_engine(_normalize_sync_postgres_url(url))
         try:
             with engine.connect() as conn:
                 ctx = MigrationContext.configure(conn)
