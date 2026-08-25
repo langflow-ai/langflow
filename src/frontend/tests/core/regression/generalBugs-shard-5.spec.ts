@@ -3,6 +3,7 @@ import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
+import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
@@ -19,33 +20,25 @@ test(
 
     await addLegacyComponents(page);
 
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchTextInput);
-    await page.waitForSelector('[data-testid="input_outputText Input"]', {
-      timeout: 3000,
+    await addComponentFromSidebar(page, {
+      search: TEXTS.searchTextInput,
+      testId: "input_outputText Input",
+      position: { x: 200, y: 200 },
     });
-
-    await page
-      .getByTestId("input_outputText Input")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {});
 
     await zoomOut(page, 4);
 
-    await page.waitForTimeout(500);
+    await addComponentFromSidebar(page, {
+      search: TEXTS.searchTextInput,
+      testId: "input_outputText Input",
+      position: { x: 500, y: 150 },
+    });
 
-    await page
-      .getByTestId("input_outputText Input")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 500, y: 150 },
-      });
-
-    await page.waitForTimeout(500);
-
-    await page
-      .getByTestId("input_outputText Input")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 670, y: 200 },
-      });
+    await addComponentFromSidebar(page, {
+      search: TEXTS.searchTextInput,
+      testId: "input_outputText Input",
+      position: { x: 670, y: 200 },
+    });
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("combine text");
