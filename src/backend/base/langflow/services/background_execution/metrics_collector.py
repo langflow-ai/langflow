@@ -25,6 +25,7 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
+from sqlalchemy import case
 from sqlmodel import col, func, select
 
 from langflow.services.background_execution.metrics import current_backend
@@ -35,9 +36,10 @@ if TYPE_CHECKING:
     from fastapi import FastAPI
 
 # Non-terminal statuses: a job in one of these is still occupying the system.
-# QUEUED/IN_PROGRESS are the only non-terminal states; COMPLETED / FAILED /
-# TIMED_OUT / CANCELLED are terminal.
-NONTERMINAL_STATUSES = (JobStatus.QUEUED, JobStatus.IN_PROGRESS)
+# SUSPENDED belongs here: a run waiting on human input has not finished, and leaving it
+# out made those jobs vanish from a gauge documented as a count by status. COMPLETED /
+# FAILED / TIMED_OUT / CANCELLED are terminal.
+NONTERMINAL_STATUSES = (JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.SUSPENDED)
 
 
 def _has_job_events():
@@ -64,18 +66,21 @@ async def count_nonterminal_jobs(session) -> dict[str, int]:
     it would inflate the in_progress count. A status with zero rows is omitted
     (the collector loop fills in the canonical set with 0 when it sets gauges).
     """
-    queued = (await session.exec(select(func.count()).select_from(Job).where(Job.status == JobStatus.QUEUED))).one()
-    in_progress = (
-        await session.exec(
-            select(func.count()).select_from(Job).where(Job.status == JobStatus.IN_PROGRESS).where(_has_job_events())
-        )
-    ).one()
-    counts: dict[str, int] = {}
-    if int(queued):
-        counts[JobStatus.QUEUED.value] = int(queued)
-    if int(in_progress):
-        counts[JobStatus.IN_PROGRESS.value] = int(in_progress)
-    return counts
+    # One grouped scan rather than one per status. This runs every tick against a table
+    # with no retention, so the number of passes over it is the cost that matters.
+    #
+    # QUEUED is exempt from the events filter and the others are not, which is why the
+    # predicate is a disjunction rather than a plain WHERE: a queued background job has not
+    # emitted anything yet, while a run job is briefly IN_PROGRESS with no events and would
+    # otherwise inflate that count.
+    stmt = (
+        select(Job.status, func.count())
+        .where(col(Job.status).in_(NONTERMINAL_STATUSES))
+        .where((Job.status == JobStatus.QUEUED) | _has_job_events())
+        .group_by(Job.status)
+    )
+    rows = (await session.exec(stmt)).all()
+    return {status.value if hasattr(status, "value") else str(status): int(count) for status, count in rows if count}
 
 
 async def oldest_queued_seconds(session, now: datetime) -> float:
@@ -138,42 +143,40 @@ async def terminal_counts(session) -> dict[str, int]:
     worker_lost split uses a dialect-aware JSON extract (see ``_error_type_expr``)
     so it stays a single bounded SQL aggregate on both SQLite and Postgres.
     """
+    # One grouped scan, with worker_lost as a conditional sum inside it. This replaced six
+    # separate counts, each of which was its own pass over an unbounded table.
     has_events = _has_job_events()
-    started_stmt = select(func.count()).select_from(Job).where(Job.status != JobStatus.QUEUED).where(has_events)
-    completed_stmt = select(func.count()).select_from(Job).where(Job.status == JobStatus.COMPLETED).where(has_events)
-    timed_out_stmt = select(func.count()).select_from(Job).where(Job.status == JobStatus.TIMED_OUT).where(has_events)
-    cancelled_stmt = select(func.count()).select_from(Job).where(Job.status == JobStatus.CANCELLED).where(has_events)
-
     error_type = _error_type_expr(session)
-    worker_lost_stmt = (
-        select(func.count())
-        .select_from(Job)
-        .where(Job.status == JobStatus.FAILED)
-        .where(has_events)
-        .where(error_type == "worker_lost")
-    )
+    worker_lost_flag = case((error_type == "worker_lost", 1), else_=0)
 
-    started = (await session.exec(started_stmt)).one()
-    completed = (await session.exec(completed_stmt)).one()
-    timed_out = (await session.exec(timed_out_stmt)).one()
-    cancelled = (await session.exec(cancelled_stmt)).one()
-    failed_worker_lost = (await session.exec(worker_lost_stmt)).one()
-    # ``error_type != 'worker_lost'`` is NULL (and thus excluded) for FAILED rows
-    # with a NULL error or no ``type`` key, so count FAILED-not-worker_lost as the
-    # complement of worker_lost to capture those rows too.
-    failed_total = (
-        await session.exec(
-            select(func.count()).select_from(Job).where(Job.status == JobStatus.FAILED).where(has_events)
-        )
-    ).one()
+    stmt = (
+        select(Job.status, func.count(), func.coalesce(func.sum(worker_lost_flag), 0))
+        .where(Job.status != JobStatus.QUEUED)
+        .where(has_events)
+        .group_by(Job.status)
+    )
+    rows = (await session.exec(stmt)).all()
+
+    by_status: dict[str, int] = {}
+    worker_lost_by_status: dict[str, int] = {}
+    for status, count, worker_lost in rows:
+        key = status.value if hasattr(status, "value") else str(status)
+        by_status[key] = int(count)
+        worker_lost_by_status[key] = int(worker_lost or 0)
+
+    failed_total = by_status.get(JobStatus.FAILED.value, 0)
+    failed_worker_lost = worker_lost_by_status.get(JobStatus.FAILED.value, 0)
 
     return {
-        "started": int(started),
-        "completed": int(completed),
-        "failed_error": int(failed_total) - int(failed_worker_lost),
-        "failed_worker_lost": int(failed_worker_lost),
-        "timed_out": int(timed_out),
-        "cancelled": int(cancelled),
+        # Everything past QUEUED has started, which is the sum of the grouped rows.
+        "started": sum(by_status.values()),
+        "completed": by_status.get(JobStatus.COMPLETED.value, 0),
+        # error_type != 'worker_lost' is NULL for FAILED rows with a NULL error or no type
+        # key, so the plain-error count is the complement rather than its own predicate.
+        "failed_error": failed_total - failed_worker_lost,
+        "failed_worker_lost": failed_worker_lost,
+        "timed_out": by_status.get(JobStatus.TIMED_OUT.value, 0),
+        "cancelled": by_status.get(JobStatus.CANCELLED.value, 0),
     }
 
 
@@ -275,7 +278,7 @@ class BackgroundMetricsCollector:
 
             # Zero-fill the canonical non-terminal set so a status that drops to 0
             # overwrites the gauge's stale prior value (last-value-wins semantics).
-            for status in (JobStatus.QUEUED, JobStatus.IN_PROGRESS):
+            for status in NONTERMINAL_STATUSES:
                 ot.update_gauge(
                     "langflow_bg_jobs",
                     counts.get(status.value, 0),
