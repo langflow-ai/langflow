@@ -93,6 +93,14 @@ export const CONFIGS_MOCK = {
   total: 0,
 };
 
+export const ELIGIBLE_FLOW_DATA_MOCK = {
+  nodes: [
+    { id: "chat-input", data: { type: "ChatInput" } },
+    { id: "chat-output", data: { type: "ChatOutput" } },
+  ],
+  edges: [],
+};
+
 export const FLOWS_MOCK = [
   {
     id: "f1",
@@ -101,7 +109,7 @@ export const FLOWS_MOCK = [
     folder_id: "my-collection",
     icon: "Workflow",
     description: "",
-    data: null,
+    data: ELIGIBLE_FLOW_DATA_MOCK,
   },
 ];
 
@@ -116,6 +124,14 @@ export const FLOW_VERSIONS_MOCK = {
       is_current: true,
     },
   ],
+  max_entries: 1,
+};
+
+export const FLOW_VERSION_DETAIL_MOCK = {
+  ...FLOW_VERSIONS_MOCK.entries[0],
+  user_id: "user-1",
+  description: null,
+  data: ELIGIBLE_FLOW_DATA_MOCK,
 };
 
 export const DEPLOY_RESPONSE = {
@@ -303,6 +319,16 @@ export async function setupDeploymentMocks(
   // Flows list — inject the captured folderId so the component's folder filter passes
   await page.route("**/api/v1/flows/**", (route) => {
     const url = route.request().url();
+    const isVersionDetail =
+      /\/api\/v1\/flows\/[^/]+\/versions\/[^/?]+(?:\?.*)?$/.test(url);
+    if (isVersionDetail) {
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(FLOW_VERSION_DETAIL_MOCK),
+      });
+      return;
+    }
     if (url.includes("/versions/")) {
       route.fulfill({
         status: 200,
