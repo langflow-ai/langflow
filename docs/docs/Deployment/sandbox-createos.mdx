@@ -129,12 +129,20 @@ Two rules are enforced strictly, both to keep the policy honest:
   `pypi.org:https` — **refuses the run**. It is not sent, because the platform
   responds to a rule set it cannot parse by allowing all traffic.
 
-:::note
+:::warning DNS is not restricted by the allowlist
 When an allowlist is set, a public DNS resolver is added so names can be
-resolved at all. That resolver answers for any name, so a sandbox can still
-*resolve* hosts it cannot *reach*. DNS therefore remains a low-bandwidth
-exfiltration channel under this backend. The `exec-sandbox` backend filters DNS
-inside the guest and does not have this property.
+resolved at all. The allowlist is enforced on the destination **address**, not
+on the query name, so that resolver answers for any name. A guest that cannot
+*connect* to `evil.example` can still ask about `<secret>.evil.example`, and the
+query itself carries the data out. DNS is therefore a low-bandwidth exfiltration
+channel under this backend. The `exec-sandbox` backend filters DNS inside the
+guest and refuses the lookup, so the two backends do not mean the same thing by
+"allowlist".
+
+Langflow declares this resolver as an egress exception, alongside the link-local
+range. When you restrict egress at all, the run is refused unless you set
+`LANGFLOW_SANDBOX_ACCEPT_EGRESS_EXCEPTIONS=true`. The refusal names both
+destinations, so nobody adopts an allowlist believing it is tighter than it is.
 :::
 
 ## Packages in the guest
@@ -202,6 +210,14 @@ all. Even so, leave this `off` unless the flow's executions are meant to trust
 each other.
 :::
 
+On the serving plane every request to a deployed flow runs as one shared service
+account, so the flow and the user are the same for every caller. There the
+session is keyed on the authenticated end user as well
+(`LANGFLOW_SERVING_END_USER_HEADER`), so two callers of one deployment never
+share a guest. A served request that carries no end-user identity runs cold: it
+gets no session, because the only key left would be the shared account and that
+is the guest every other anonymous caller would land on.
+
 A session guest is destroyed after `LANGFLOW_SANDBOX_SESSION_IDLE_SECONDS` of
 inactivity, when Langflow shuts down, when an execution fails in a way that
 leaves the guest's state unknown, or when an execution times out. Idle sessions
@@ -218,25 +234,28 @@ legitimate work is being cut off.
 
 ### Sessions across workers
 
-Langflow runs more than one worker, and each has its own memory. The session
-guest is therefore registered with CreateOS rather than only in the worker that
-made it: it is created under a name derived from the session token, and because
-a sandbox name is unique per account among non-terminal sandboxes, the first
-worker to create it wins and every other worker adopts that same guest.
+Langflow runs more than one worker, and each has its own memory. A session guest
+belongs to the worker process that created it and is never taken over by
+another. So a flow that is served by three workers has up to three guests for
+one user, and you are billed for each.
 
-So one flow has one guest per user, whichever worker takes the request, and you
-are billed for one. This works across replicas as long as they share a CreateOS
-API key.
+That is deliberate. Everything that keeps one guest consistent — the lock that
+stops two executions of a session from running at once, the idle reaper, and the
+shutdown teardown — lives inside one process and cannot reach another. A guest
+shared between workers would be a guest that nothing serializes: two executions
+could run in it at the same time, racing on `/workspace`, on the artifact
+directory, and on the state pickle, and either worker could destroy it while the
+other was mid-execution.
 
-:::warning Overlapping executions are not serialized across workers
-Executions of one session are serialized within a worker. Two that overlap on
-different workers are not: they share one guest, so they see each other's
-variables and files partway through.
+The cost is extra VMs. `LANGFLOW_SANDBOX_SESSION_IDLE_SECONDS` and the CreateOS
+auto-pause backstop bound it, and both are needed anyway for the case where a
+worker dies. If a flow must see one continuous session, pin it to one worker or
+leave sessions `off`.
 
-Each execution uploads its program under its own name and the state file is
-replaced atomically, so neither can corrupt the other. The result is still
-last-writer-wins on any variable both touch. Enable `flow` sessions only where
-executions of one flow either do not overlap or tolerate sharing.
+:::note One flow can see more than one session state
+Two executions of one flow that land on different workers use different guests,
+so the variables and files one leaves behind are not visible to the other.
+Enable `flow` sessions only where that is acceptable.
 :::
 
 The guest is **not** paused between executions. Measured on the live control
@@ -283,10 +302,21 @@ server heartbeats every 5 seconds, notices the client is gone, and kills the
 guest command. A timed-out execution reports the same result as it would under
 `exec-sandbox`, and it keeps whatever the program had already printed.
 
-A margin is added for network transport, scaled to the configured value, so a
-short timeout is not multiplied into a long wait. Treat the setting as a close
-bound rather than an exact one: the margin, the upload, and VM teardown are not
-inside it.
+The deadline is the configured value. A separate, longer margin is allowed for
+network transport so that the deadline is what fires rather than a transport
+timeout some seconds later, but that margin is not added to the program's own
+clock. Treat the setting as a close bound rather than an exact one: the upload
+and VM teardown sit outside it.
+
+After the deadline Langflow does nothing else to the guest. It does not collect
+artifacts and it does not read metrics, because the program was very likely not
+stopped yet — closing the connection only asks the server to kill it — and an
+artifact pass would run alongside a program still writing files. Langflow
+destroys the guest instead, which is the one kill it can actually issue.
+
+Guest output is capped at 8 MiB of `stdout` and `stderr` combined. Past that the
+remaining output is dropped and a truncation notice is appended. The execution
+is not stopped and its exit code is still the program's own.
 
 ## What this backend does and does not give you
 

@@ -8,6 +8,7 @@ from lfx.io import MultilineInput, Output, StrInput
 from lfx.schema.data import Data
 from lfx.utils.python_repl_security import ensure_code_execution_enabled, safe_builtins, validate_code_safety
 from lfx.utils.sandbox import is_sandbox_enabled, run_code_in_sandbox, sanitize_code, session_for
+from lfx.workflow.end_user_identity import end_user_id_from_graph
 
 
 class PythonREPLComponent(Component):
@@ -105,7 +106,9 @@ class PythonREPLComponent(Component):
         result = run_code_in_sandbox(
             sanitize_code(self.python_code),
             global_imports=self.global_imports,
-            session=session_for(self.flow_id, self.user_id),
+            session=session_for(
+                self.flow_id, self.user_id, end_user_id_from_graph(getattr(self, "graph", None))
+            ),
         )
         if not result.success:
             error_message = result.error_message()

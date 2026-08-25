@@ -77,6 +77,11 @@ a statement that you trust that package.
 A plugin that reuses the name of a built-in backend is refused, not loaded in
 its place.
 
+If two installed packages publish the same entry-point name, that name is
+refused and neither package is imported. `LANGFLOW_SANDBOX_BACKEND_PLUGINS`
+names a backend, not a distribution, so it cannot say which of the two you
+meant. Langflow logs both distribution names. Uninstall one of them.
+
 ## Related
 
 * [Run code in CreateOS microVMs](./sandbox-createos.mdx)

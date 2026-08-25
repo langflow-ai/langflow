@@ -172,16 +172,58 @@ def run_code_in_sandbox(
     return backend.run(full_code, env=env, session=effective_session)
 
 
-def session_for(flow_id: str | None, user_id: str | None) -> SessionKey | None:
+def session_for(flow_id: str | None, user_id: str | None, end_user_id: str | None = None) -> SessionKey | None:
     """Build the session key for a component run, or None when it has no identity.
 
-    Both halves are required. A guest keyed on a flow alone would be shared by
-    every user of that flow, and one keyed on a user alone would be shared by
-    every flow they run. When either is missing the answer is no session at
-    all, so an unidentified caller can never join someone else's guest.
+    ``flow_id`` and ``user_id`` are both required. A guest keyed on a flow alone
+    would be shared by every user of that flow, and one keyed on a user alone
+    would be shared by every flow they run. When either is missing the answer is
+    no session at all, so an unidentified caller can never join someone else's
+    guest.
+
+    On the serving plane those two are not enough. Every request to a deployed
+    flow executes as one shared service account, so ``user_id`` is a constant
+    there and the pair ``(flow, user)`` names ONE guest for every caller of that
+    deployment. Session reuse keeps the guest filesystem -- ``/workspace``, the
+    artifact directory, and the pickled variables carried between executions --
+    so that guest would hand each caller whatever the previous one left behind.
+    ``end_user_id`` is the gateway-authenticated caller, and it is what keeps
+    them apart.
+
+    An anonymous served request has no such id, and there is no safe key to give
+    it: falling back to the service account is exactly the shared guest above,
+    and anything derived from the request would collide with the next anonymous
+    caller. So it runs cold -- no session, no reuse, nothing inherited. That is
+    the same answer :func:`lfx.workflow.end_user_identity.scope_session_for_identity`
+    gives an anonymous request for chat memory, and the same one this function
+    already gives a run with no flow or user at all.
+
+    Off the serving plane (the default, and the flow editor) ``user_id`` is the
+    person, ``serving_end_user_enabled()`` is False, and the key is unchanged.
     """
     if not flow_id or not user_id:
         return None
+    # Imported here rather than at module scope: this module is imported by the
+    # sandbox dispatch path, and lfx.workflow pulls in the serving plane.
+    from lfx.workflow.end_user_identity import serving_end_user_enabled
+
+    # The DEPLOYMENT-level switch, not "did this request carry a header". A
+    # served request without the header is anonymous, which is the case that
+    # must run cold -- reading per-request state here would let exactly that
+    # request fall back to the shared service-account guest.
+    try:
+        serving = serving_end_user_enabled()
+    except Exception:  # noqa: BLE001 - an unreadable settings stack must not decide for reuse
+        # Cannot tell which plane this is. Assume the serving one: that branch
+        # only reuses a guest when an end-user id is present, so the unknown
+        # case degrades to a cold run instead of to the shared service account.
+        logger.debug("Could not read the serving end-user setting; treating the run as served", exc_info=True)
+        serving = True
+    if serving:
+        if not end_user_id:
+            logger.debug("Serving request has no end-user identity; running the sandbox cold")
+            return None
+        return SessionKey(flow_id=str(flow_id), user_id=str(user_id), end_user_id=str(end_user_id))
     return SessionKey(flow_id=str(flow_id), user_id=str(user_id))
 
 

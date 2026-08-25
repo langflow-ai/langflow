@@ -1368,6 +1368,71 @@ class TestSessionKey:
         assert one != two
 
 
+class TestServedSessionsAreScopedToTheEndUser:
+    """On the serving plane the executing user is one shared service account."""
+
+    @staticmethod
+    def _serving(monkeypatch, *, enabled=True):
+        """Turn the deployment-level serving end-user switch on or off."""
+        monkeypatch.setattr(
+            "lfx.workflow.end_user_identity.serving_end_user_enabled",
+            lambda: enabled,
+        )
+
+    def test_off_the_serving_plane_the_key_is_unchanged(self, monkeypatch):
+        """The editor plane already keys on the person, so nothing moves."""
+        self._serving(monkeypatch, enabled=False)
+        key = sandbox_module.session_for("flow-1", "user-1")
+        assert key == base_module.SessionKey(flow_id="flow-1", user_id="user-1")
+
+    def test_two_end_users_of_one_deployment_never_share_a_guest(self, monkeypatch):
+        """The service account is identical for both, so only the end user separates them."""
+        self._serving(monkeypatch)
+        alice = sandbox_module.session_for("flow-1", "svc-account", "alice")
+        bob = sandbox_module.session_for("flow-1", "svc-account", "bob")
+        assert alice.token() != bob.token()
+
+    def test_an_anonymous_served_call_runs_cold(self, monkeypatch):
+        """No end-user id means no safe key, so there is no session at all.
+
+        Falling back to the service account here is the whole bug: every
+        anonymous caller of a deployment would land on one guest and read
+        whatever the previous one left in /workspace and in the state pickle.
+        """
+        self._serving(monkeypatch)
+        assert sandbox_module.session_for("flow-1", "svc-account") is None
+        assert sandbox_module.session_for("flow-1", "svc-account", "") is None
+
+    def test_an_unreadable_setting_runs_cold_rather_than_shared(self, monkeypatch):
+        """Fail closed: an unknown plane must not resolve to the shared account."""
+
+        def boom():
+            """Fail the way a half-built settings stack does."""
+            msg = "settings unavailable"
+            raise RuntimeError(msg)
+
+        monkeypatch.setattr("lfx.workflow.end_user_identity.serving_end_user_enabled", boom)
+        assert sandbox_module.session_for("flow-1", "svc-account") is None
+
+    def test_a_missing_flow_or_user_is_still_cold(self, monkeypatch):
+        """Verify that an incomplete identity yields no session on either plane."""
+        self._serving(monkeypatch)
+        assert sandbox_module.session_for(None, "svc-account", "alice") is None
+        assert sandbox_module.session_for("flow-1", None, "alice") is None
+
+    def test_the_end_user_id_does_not_leak_into_the_token(self):
+        """Verify that the end-user id cannot be read back out of the token."""
+        key = base_module.SessionKey(flow_id="f", user_id="svc", end_user_id="secret-person")
+        assert "secret-person" not in key.token()
+
+    def test_an_absent_end_user_id_keeps_the_old_token(self):
+        """Verify that a key with no end user is unchanged from the two-field form."""
+        assert (
+            base_module.SessionKey(flow_id="f", user_id="u").token()
+            == base_module.SessionKey(flow_id="f", user_id="u", end_user_id=None).token()
+        )
+
+
 class TestSessionStateCarryOver:
     """Reusing a guest keeps its filesystem, not its Python process."""
 
@@ -1592,9 +1657,10 @@ class TestSessionStateWriteIsAtomic:
 class _FakeEntryPoint:
     """Records whether load() ran, which is the thing that imports foreign code."""
 
-    def __init__(self, name, factory=None, *, explode=False):
-        """Store the entry point name, factory, and whether load() should raise."""
+    def __init__(self, name, factory=None, *, explode=False, dist=None):
+        """Store the entry point name, factory, distribution, and whether load() should raise."""
         self.name = name
+        self.dist = SimpleNamespace(name=dist) if dist else None
         self._factory = factory or (lambda: _StubBackend())
         self._explode = explode
         self.loaded = False
@@ -1667,6 +1733,53 @@ class TestSandboxBackendPlugins:
         assert not unwanted.loaded
         assert "wanted" in names
         assert "unwanted" not in names
+
+    def test_two_distributions_claiming_one_name_are_both_refused(self, monkeypatch, entry_points):
+        """The allowlist names a backend, not a distribution, so it cannot choose.
+
+        Loading either would be a guess decided by whatever order
+        importlib.metadata returns, and the old loop imported BOTH and let the
+        second overwrite the first -- so the code that ran an import was not
+        even the code that ended up registered.
+        """
+        monkeypatch.setenv("LANGFLOW_SANDBOX_BACKEND_PLUGINS", "vendor")
+        first, second = entry_points(
+            _FakeEntryPoint("vendor", dist="vendor-a"),
+            _FakeEntryPoint("vendor", dist="vendor-b"),
+        )
+
+        names = registry_module.known_sandbox_backends()
+
+        assert not first.loaded, "a contested name must not import anything"
+        assert not second.loaded, "a contested name must not import anything"
+        assert "vendor" not in names
+
+    def test_a_contested_name_does_not_stop_an_uncontested_one(self, monkeypatch, entry_points):
+        """Verify that one contested plugin name does not block another that is unambiguous."""
+        monkeypatch.setenv("LANGFLOW_SANDBOX_BACKEND_PLUGINS", "contested,clear")
+        one, two, clear = entry_points(
+            _FakeEntryPoint("contested", dist="a"),
+            _FakeEntryPoint("contested", dist="b"),
+            _FakeEntryPoint("clear", dist="c"),
+        )
+
+        names = registry_module.known_sandbox_backends()
+
+        assert not one.loaded
+        assert not two.loaded
+        assert clear.loaded
+        assert "contested" not in names
+        assert "clear" in names
+
+    def test_a_duplicate_name_nobody_allowlisted_is_still_never_loaded(self, monkeypatch, entry_points):
+        """Verify that an unlisted contested name is skipped without any import."""
+        monkeypatch.delenv("LANGFLOW_SANDBOX_BACKEND_PLUGINS", raising=False)
+        first, second = entry_points(_FakeEntryPoint("vendor"), _FakeEntryPoint("vendor"))
+
+        registry_module.known_sandbox_backends()
+
+        assert not first.loaded
+        assert not second.loaded
 
     def test_a_plugin_cannot_take_over_a_builtin_name(self, monkeypatch, entry_points):
         """Otherwise an installed package becomes exec-sandbox while settings still say so."""

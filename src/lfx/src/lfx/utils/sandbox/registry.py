@@ -23,6 +23,7 @@ from lfx.log.logger import logger
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from importlib.metadata import EntryPoint
 
     from lfx.utils.sandbox.base import SandboxBackend
 
@@ -234,13 +235,32 @@ def _load_entry_points_locked() -> None:
         logger.warning("Could not enumerate %s entry points", _ENTRY_POINT_GROUP, exc_info=True)
         return
 
+    # Grouped by name BEFORE anything is loaded. Two installed distributions can
+    # publish the same entry-point name, and the allowlist names a backend, not a
+    # distribution -- so it cannot say which of the two the operator meant.
+    # Loading either one would be a guess, and the guess is made by whatever order
+    # importlib.metadata happens to return, which the operator cannot see or pin.
+    # Worse, the loop would import BOTH and let the second overwrite the first, so
+    # the code that ran an import is not even the code that ends up registered.
+    # Refusing the name is the only answer that never runs unintended code.
+    by_name: dict[str, list[EntryPoint]] = {}
     for entry_point in discovered:
-        plugin_name = entry_point.name.strip().lower()
+        by_name.setdefault(entry_point.name.strip().lower(), []).append(entry_point)
+
+    for plugin_name, candidates in by_name.items():
         if plugin_name not in allowed:
-            logger.debug(
-                "Ignoring sandbox backend %r: not listed in LANGFLOW_SANDBOX_BACKEND_PLUGINS", entry_point.name
+            logger.debug("Ignoring sandbox backend %r: not listed in LANGFLOW_SANDBOX_BACKEND_PLUGINS", plugin_name)
+            continue
+        if len(candidates) > 1:
+            logger.warning(
+                "Refusing sandbox backend plugin %r: %d installed distributions provide that name (%s). "
+                "Uninstall all but one, because the allowlist names a backend and cannot choose between them.",
+                plugin_name,
+                len(candidates),
+                ", ".join(sorted(_distribution_of(candidate) for candidate in candidates)),
             )
             continue
+        entry_point = candidates[0]
         if plugin_name in _builtin_names:
             logger.warning(
                 "Refusing sandbox backend plugin %r: that name belongs to a built-in backend", entry_point.name
@@ -260,6 +280,17 @@ def _load_entry_points_locked() -> None:
             logger.warning("Refusing sandbox backend plugin %r", entry_point.name, exc_info=True)
             continue
         logger.info("Registered out-of-tree sandbox backend %r", entry_point.name)
+
+
+def _distribution_of(entry_point: EntryPoint) -> str:
+    """Name the installed distribution an entry point came from, for a refusal message.
+
+    Best effort: ``EntryPoint.dist`` is populated by ``entry_points()`` but is
+    documented as optional, and the operator still has to be told the name is
+    contested even when we cannot say by whom.
+    """
+    dist = getattr(entry_point, "dist", None)
+    return getattr(dist, "name", None) or "unknown distribution"
 
 
 def get_sandbox_backend() -> str:

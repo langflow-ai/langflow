@@ -13,6 +13,7 @@ the check existed.
 
 import io
 import json
+import re
 import tarfile
 import threading
 from types import SimpleNamespace
@@ -620,10 +621,11 @@ class TestCreateosPolicyVerification:
         ("timeout_seconds", "expected"),
         [(1, 3), (5, 10), (30, 45), (300, 315)],
     )
-    def test_exec_deadline_scales_with_the_configured_timeout(self, timeout_seconds, expected):
-        """Verify that the exec deadline scales with the configured sandbox timeout."""
-        # A 1s timeout must not silently become a 16s wait.
-        assert createos_module._exec_deadline(timeout_seconds) == expected
+    def test_the_transport_budget_scales_with_the_configured_timeout(self, timeout_seconds, expected):
+        """Verify that the transport budget scales with the configured sandbox timeout."""
+        # A 1s timeout must not silently become a 16s wait, and the budget must
+        # still exceed the execution deadline it is there to outlast.
+        assert createos_module._exec_transport_budget(timeout_seconds) == expected
 
 
 class TestCreateosEgressGrammarEdgeCases:
@@ -699,8 +701,10 @@ class TestCreateosAutoPause:
 
     @pytest.mark.parametrize("timeout_seconds", [1, 30, 300])
     def test_auto_pause_always_outlasts_the_execution_window(self, timeout_seconds):
-        """Verify that the auto-pause window always outlasts the exec deadline."""
-        assert createos_module._auto_pause_seconds(timeout_seconds) > createos_module._exec_deadline(timeout_seconds)
+        """Verify that the auto-pause window always outlasts the whole execution window."""
+        assert createos_module._auto_pause_seconds(timeout_seconds) > createos_module._exec_transport_budget(
+            timeout_seconds
+        )
 
     def test_auto_pause_respects_the_control_plane_minimum(self):
         """Verify that the auto-pause window never drops below the control plane's 60s minimum."""
@@ -784,8 +788,7 @@ class TestCreateosStreamingExec:
     def test_the_deadline_stops_a_stream_that_never_ends(self, monkeypatch, createos):
         """Abandoning the stream is what kills the guest command."""
         createos(_FakeCreateosApi(exec_stream_lines=[{"stdout": "tick"}] * 50))
-        _use_createos(monkeypatch, sandbox_timeout_seconds=1)
-        monkeypatch.setattr(createos_module, "_exec_deadline", lambda _timeout: -1.0)
+        _use_createos(monkeypatch, sandbox_timeout_seconds=0)
 
         result = run_code_in_sandbox("while True: pass")
 
@@ -803,21 +806,17 @@ def _session(flow="flow-1", user="user-1"):
     return SessionKey(flow_id=flow, user_id=user)
 
 
-def _session_identity_for(session=None, egress=None, memory_mb=192):
-    """The cache/name key production derives, policy included.
+def _session_identity_for(session=None, egress=None, memory_mb=192, rootfs=None):
+    """The cache key production derives, policy and image included.
 
-    Mirrors _run_in_session: the identity binds the session to the egress and
-    memory the guest was built under, so a test cannot assert a name that
-    production would never ask for.
+    Mirrors _run_in_session: the identity binds the session to the egress, the
+    memory, and the rootfs the guest was built under, so a test cannot assert a
+    key that production would never ask for.
     """
     session = session or _session()
     egress = createos_module._CREATEOS_DENY_ALL_EGRESS if egress is None else egress
-    return createos_module._session_identity(session.token(), egress, memory_mb)
-
-
-def _session_name_for(**kwargs):
-    """Return the guest name production would derive for the given session identity."""
-    return createos_module._session_guest_name(_session_identity_for(**kwargs))
+    rootfs = createos_module._CREATEOS_DEFAULT_ROOTFS if rootfs is None else rootfs
+    return createos_module._session_identity(session.token(), egress, memory_mb, rootfs)
 
 
 class TestCreateosSessions:
@@ -909,13 +908,13 @@ class TestCreateosSessions:
 
         assert api.deleted_ids == ["sb-one"]
 
-    def test_a_fork_child_adopts_the_guest_instead_of_building_a_second_one(self, monkeypatch, createos):
-        """The in-process map is a cache; the control plane is the registry.
+    def test_a_fork_child_keeps_the_parents_guest_out_of_its_own_map(self, monkeypatch, createos):
+        """A child inherits no guests, because a guest belongs to one process.
 
-        A fork gives the child an empty map. Without adoption it would create a
-        second VM for the same (flow, user), so the state a flow sees would
-        depend on which worker took the request and each worker would hold its
-        own billed guest.
+        The map IS the registry here. The child's locks and teardown do not
+        reach the parent's guest, so taking it over would mean two processes
+        executing in one VM with nothing serializing them. The child builds its
+        own and the parent's is left to the parent.
         """
         api = createos(_FakeCreateosApi(create_ids=["sb-one", "sb-two"]))
         _use_createos(monkeypatch, sandbox_session_mode="flow")
@@ -923,10 +922,10 @@ class TestCreateosSessions:
 
         run_code_in_sandbox("print(1)", session=_session())
         executor.reset_after_fork()
+        executor._sessions.clear()
         run_code_in_sandbox("print(1)", session=_session())
 
-        assert api.created_ids == ["sb-one"]
-        assert api.deleted_ids == []
+        assert api.created_ids == ["sb-one", "sb-two"]
 
 
 # ---------------------------------------------------------------------------
@@ -1046,14 +1045,150 @@ class TestCreateosCapabilities:
         assert capabilities.supports_artifacts
 
 
+class TestCreateosDeclaresTheDnsHole:
+    """A domain allowlist is enforced on the destination address, not on the query name."""
+
+    def test_the_resolver_is_declared_as_an_egress_exception(self):
+        """The allowlist opens 1.1.1.1:53, and that resolver answers for any name.
+
+        So a guest that cannot CONNECT to evil.example can still ask about
+        <secret>.evil.example, and the query carries the data out. exec-sandbox
+        refuses the lookup itself, so the two backends do not mean the same
+        thing by "allowlist".
+        """
+        exceptions = createos_module._CreateosExecutor.capabilities().egress_exceptions
+        assert any(createos_module._CREATEOS_DNS_EGRESS in entry for entry in exceptions)
+        assert any("DNS" in entry for entry in exceptions)
+
+    def test_an_allowlist_still_refuses_to_run_unaccepted(self, monkeypatch, createos):
+        """The declared hole is a decision, so the operator has to accept it once."""
+        createos(_FakeCreateosApi())
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: _settings(
+                "createos",
+                sandbox_allow_network=True,
+                sandbox_allowed_domains=["pypi.org"],
+                sandbox_accept_egress_exceptions=False,
+            ),
+        )
+
+        with pytest.raises(SandboxUnavailableError, match=re.escape("1.1.1.1:53")):
+            run_code_in_sandbox("print(1)")
+
+
+class TestCreateosDeadlineIsTheConfiguredTimeout:
+    """The transport budget is not the execution deadline."""
+
+    def test_the_transport_budget_outlasts_the_execution_deadline(self):
+        """Otherwise the transport fires first and reports a timeout the guest never reached."""
+        for timeout_seconds in (1, 5, 30, 300):
+            assert createos_module._exec_transport_budget(timeout_seconds) > timeout_seconds
+
+
+class TestCreateosOutputIsBounded:
+    """The guest decides how much it prints; it must not decide how much memory that costs."""
+
+    def test_a_flood_of_output_is_truncated(self, monkeypatch, createos):
+        """Verify that stdout past the byte cap is dropped instead of accumulated."""
+        monkeypatch.setattr(createos_module, "_CREATEOS_MAX_OUTPUT_BYTES", 1024)
+        createos(_FakeCreateosApi(exec_stream_lines=[{"stdout": "x" * 512} for _ in range(100)] + [{"exit_code": 0}]))
+        _use_createos(monkeypatch)
+
+        result = run_code_in_sandbox("print('x' * 51200)")
+
+        assert len(result.stdout) < 4096
+        assert "truncated" in result.stdout
+
+    def test_stderr_is_bounded_too(self, monkeypatch, createos):
+        """Verify that stderr is capped on the same budget as stdout."""
+        monkeypatch.setattr(createos_module, "_CREATEOS_MAX_OUTPUT_BYTES", 1024)
+        createos(_FakeCreateosApi(exec_stream_lines=[{"stderr": "e" * 512} for _ in range(100)] + [{"exit_code": 0}]))
+        _use_createos(monkeypatch)
+
+        result = run_code_in_sandbox("import sys; sys.stderr.write('e' * 51200)")
+
+        assert len(result.stderr) < 4096
+        assert "truncated" in result.stderr
+
+    def test_the_exit_code_still_comes_from_the_guest(self, monkeypatch, createos):
+        """Truncation shortens the text; it does not fail the execution."""
+        monkeypatch.setattr(createos_module, "_CREATEOS_MAX_OUTPUT_BYTES", 16)
+        createos(_FakeCreateosApi(exec_stream_lines=[{"stdout": "x" * 4096}, {"exit_code": 0}]))
+        _use_createos(monkeypatch)
+
+        result = run_code_in_sandbox("print('x')")
+
+        assert result.exit_code == 0
+        assert result.success
+
+    def test_output_under_the_cap_is_untouched(self, monkeypatch, createos):
+        """Verify that ordinary output is returned whole, with no notice appended."""
+        createos(_FakeCreateosApi(exec_result={"stdout": "hello\n", "stderr": "", "exit_code": 0}))
+        _use_createos(monkeypatch)
+
+        result = run_code_in_sandbox("print('hello')")
+
+        assert result.stdout == "hello\n"
+
+    def test_the_budget_counts_bytes_not_characters(self):
+        """One astral-plane character is four bytes; a character count would allow four times the cap."""
+        bounded = createos_module._BoundedOutput(8)
+        bounded.append("\U0001f600" * 4)
+        assert bounded.truncated
+
+
+class TestCreateosTimeoutStartsTeardownImmediately:
+    """After the deadline the guest program is very likely still running."""
+
+    @staticmethod
+    def _timed_out(createos, monkeypatch, **extra):
+        """Run one execution that hits its deadline, and return the fake API."""
+        api = createos(_FakeCreateosApi(exec_stream_lines=[{"stdout": "tick"}] * 50))
+        # Metrics are opt-in, so a test that asserts they are skipped has to
+        # turn them on first or it passes for the wrong reason.
+        monkeypatch.setenv("CREATEOS_SANDBOX_METRICS", "1")
+        _use_createos(monkeypatch, sandbox_timeout_seconds=0, **extra)
+        run_code_in_sandbox("while True: pass")
+        return api
+
+    def test_no_artifact_pass_runs_after_a_timeout(self, monkeypatch, createos):
+        """A tar alongside a still-running program yields a half-written archive."""
+        api = self._timed_out(createos, monkeypatch, sandbox_collect_artifacts=True)
+
+        assert not any(path.endswith("/download") for _method, path in api.calls)
+
+    def test_no_metrics_call_runs_after_a_timeout(self, monkeypatch, createos):
+        """Every round trip here stands between the deadline and the teardown."""
+        api = self._timed_out(createos, monkeypatch)
+
+        assert not any(path.endswith("/metrics") for _method, path in api.calls)
+
+    def test_the_guest_is_still_destroyed(self, monkeypatch, createos):
+        """Teardown is the one kill this process can actually issue."""
+        api = self._timed_out(createos, monkeypatch)
+
+        assert api.deleted_ids == ["sb-test"]
+
+    def test_a_normal_run_still_collects_artifacts_and_metrics(self, monkeypatch, createos):
+        """Verify that the skip is limited to the timeout path."""
+        api = createos(_FakeCreateosApi(artifact_archive=_tarball({"./out.txt": b"hi"})))
+        monkeypatch.setenv("CREATEOS_SANDBOX_METRICS", "1")
+        _use_createos(monkeypatch, sandbox_collect_artifacts=True)
+
+        result = run_code_in_sandbox("print(1)")
+
+        assert len(result.files) == 1
+        assert any(path.endswith("/metrics") for _method, path in api.calls)
+
+
 class TestCreateosTimeoutTaintsTheSession:
     """A timeout is not proof the guest command stopped, so the guest is not reusable."""
 
     def test_a_timed_out_session_guest_is_destroyed(self, monkeypatch, createos):
         """Verify that a session guest that timed out mid-execution is destroyed."""
         api = createos(_FakeCreateosApi(create_ids=["sb-one", "sb-two"], exec_stream_lines=[{"stdout": "tick"}] * 50))
-        _use_createos(monkeypatch, sandbox_session_mode="flow", sandbox_timeout_seconds=1)
-        monkeypatch.setattr(createos_module, "_exec_deadline", lambda _timeout: -1.0)
+        _use_createos(monkeypatch, sandbox_session_mode="flow", sandbox_timeout_seconds=0)
 
         result = run_code_in_sandbox("while True: pass", session=_session())
 
@@ -1063,13 +1198,12 @@ class TestCreateosTimeoutTaintsTheSession:
     def test_the_next_execution_gets_a_fresh_guest(self, monkeypatch, createos):
         """Verify that the execution after a timeout gets a fresh guest, not the tainted one."""
         api = createos(_FakeCreateosApi(create_ids=["sb-one", "sb-two"], exec_stream_lines=[{"stdout": "tick"}] * 50))
-        _use_createos(monkeypatch, sandbox_session_mode="flow", sandbox_timeout_seconds=1)
-        monkeypatch.setattr(createos_module, "_exec_deadline", lambda _timeout: -1.0)
+        _use_createos(monkeypatch, sandbox_session_mode="flow", sandbox_timeout_seconds=0)
         run_code_in_sandbox("while True: pass", session=_session())
 
         # Second execution completes normally, so it must not land on the
         # tainted guest.
-        monkeypatch.setattr(createos_module, "_exec_deadline", lambda timeout: timeout + 5)
+        _use_createos(monkeypatch, sandbox_session_mode="flow", sandbox_timeout_seconds=30)
         api.exec_stream_lines = None
         result = run_code_in_sandbox("print(1+1)", session=_session())
 
@@ -1085,8 +1219,7 @@ class TestCreateosTimeoutTaintsTheSession:
                 delete_status=500,
             )
         )
-        _use_createos(monkeypatch, sandbox_session_mode="flow", sandbox_timeout_seconds=1)
-        monkeypatch.setattr(createos_module, "_exec_deadline", lambda _timeout: -1.0)
+        _use_createos(monkeypatch, sandbox_session_mode="flow", sandbox_timeout_seconds=0)
         run_code_in_sandbox("while True: pass", session=_session())
 
         executor = registry_module._instances["createos"]
@@ -1095,8 +1228,7 @@ class TestCreateosTimeoutTaintsTheSession:
     def test_a_throwaway_timeout_still_destroys_its_guest(self, monkeypatch, createos):
         """Verify that a timeout on a throwaway (non-session) guest still destroys the VM."""
         api = createos(_FakeCreateosApi(exec_stream_lines=[{"stdout": "tick"}] * 50))
-        _use_createos(monkeypatch, sandbox_timeout_seconds=1)
-        monkeypatch.setattr(createos_module, "_exec_deadline", lambda _timeout: -1.0)
+        _use_createos(monkeypatch, sandbox_timeout_seconds=0)
 
         result = run_code_in_sandbox("while True: pass")
 
@@ -1151,8 +1283,8 @@ class TestCreateosArtifactDownloadIsBounded:
         assert len(result.files) == 10
 
 
-class TestCreateosSessionsAreOwnedByTheControlPlane:
-    """One guest per (flow, user), even across workers that share no memory."""
+class TestCreateosSessionsAreOwnedByTheProcess:
+    """A session guest belongs to the process that created it, and to no other."""
 
     @staticmethod
     def _second_worker(monkeypatch, api):
@@ -1169,8 +1301,14 @@ class TestCreateosSessionsAreOwnedByTheControlPlane:
         )
         return executor
 
-    def test_a_second_worker_adopts_rather_than_duplicates(self, monkeypatch, createos):
-        """Verify that a second worker adopts the existing session guest instead of creating another."""
+    def test_a_second_worker_builds_its_own_guest(self, monkeypatch, createos):
+        """A guest is never shared between processes.
+
+        Every mechanism that keeps one guest consistent -- the per-session lock,
+        the idle reaper, the shutdown teardown -- is process-local, so a second
+        worker that adopted this guest would run in it with nothing serializing
+        the two. It creates its own instead.
+        """
         api = createos(_FakeCreateosApi(create_ids=["sb-one", "sb-two"]))
         _use_createos(monkeypatch, sandbox_session_mode="flow")
         run_code_in_sandbox("print(1)", session=_session())
@@ -1179,18 +1317,45 @@ class TestCreateosSessionsAreOwnedByTheControlPlane:
         monkeypatch.setitem(registry_module._instances, "createos", other)
         run_code_in_sandbox("print(1)", session=_session())
 
-        assert api.created_ids == ["sb-one"]
+        assert api.created_ids == ["sb-one", "sb-two"]
 
-    def test_the_guest_is_named_from_the_session_token(self, monkeypatch, createos):
-        """Verify that the created guest's name is derived from the session token."""
-        api = createos(_FakeCreateosApi())
+    def test_the_guest_name_is_not_derived_from_the_session(self, monkeypatch, createos):
+        """Nothing looks a guest up by name, so the name carries no session identity."""
+        api = createos(_FakeCreateosApi(create_ids=["sb-one", "sb-two"]))
+        _use_createos(monkeypatch, sandbox_session_mode="flow")
+        executor = registry_module._instances["createos"]
+
+        run_code_in_sandbox("print(1)", session=_session())
+        first = api.bodies["create"]["name"]
+        # A fresh process asking for the SAME session derives the same identity
+        # but must not derive the same name.
+        executor.reset_after_fork()
+        executor._sessions.clear()
+        run_code_in_sandbox("print(1)", session=_session())
+        second = api.bodies["create"]["name"]
+
+        assert first != second
+        assert first.startswith(createos_module._CREATEOS_SESSION_NAME_PREFIX)
+        assert len(first) <= createos_module._CREATEOS_SESSION_NAME_MAX
+
+    def test_a_replacement_guest_gets_a_fresh_name(self, monkeypatch, createos):
+        """A destroyed guest is only ``destroying``, and its name is still taken.
+
+        A name is unique among non-terminal sandboxes, so a replacement that
+        reused the dropped guest's name would collide with the corpse it is
+        replacing and the session could never recover.
+        """
+        api = createos(_FakeCreateosApi(create_ids=["sb-one", "sb-two"], status_after_create="paused"))
         _use_createos(monkeypatch, sandbox_session_mode="flow")
 
         run_code_in_sandbox("print(1)", session=_session())
+        first = api.bodies["create"]["name"]
+        # The guest reports itself not running, so the next execution replaces it.
+        run_code_in_sandbox("print(1)", session=_session())
+        second = api.bodies["create"]["name"]
 
-        name = api.bodies["create"]["name"]
-        assert name == _session_name_for()
-        assert name.startswith(createos_module._CREATEOS_SESSION_NAME_PREFIX)
+        assert api.created_ids == ["sb-one", "sb-two"]
+        assert first != second
 
     def test_the_name_leaks_neither_flow_nor_user(self, monkeypatch, createos):
         """Verify that the guest name contains neither the flow id nor the user id."""
@@ -1216,47 +1381,8 @@ class TestCreateosSessionsAreOwnedByTheControlPlane:
         assert first != second
         assert api.created_ids == ["sb-one", "sb-two"]
 
-    def test_a_lost_create_race_adopts_the_winner(self, monkeypatch, createos):
-        """Two workers can both find nothing, then both create; only one wins."""
-        api = createos(_FakeCreateosApi(create_ids=["sb-winner", "sb-loser"]))
-        _use_createos(monkeypatch, sandbox_session_mode="flow")
-        loser = self._second_worker(monkeypatch, api)
-        monkeypatch.setitem(registry_module._instances, "createos", loser)
-
-        # Hide the winner from the lookup so the loser goes straight to create
-        # and takes the 409 path, which is the race this guards.
-        real_find = loser._find_session_vm
-        calls = {"n": 0}
-
-        def find_once(client, name):
-            """Return None on the first lookup, then delegate to the real lookup."""
-            calls["n"] += 1
-            return None if calls["n"] == 1 else real_find(client, name)
-
-        monkeypatch.setattr(loser, "_find_session_vm", find_once)
-        api.names[_session_name_for()] = "sb-winner"
-
-        run_code_in_sandbox("print(1)", session=_session())
-
-        assert api.conflicts == 1
-        assert loser._sessions[_session_identity_for()][0] == "sb-winner"
-        assert "sb-loser" not in api.created_ids
-
-    def test_an_unresolvable_conflict_fails_closed(self, monkeypatch, createos):
-        """Never build a second guest for a session just because lookup failed."""
-        api = createos(_FakeCreateosApi(create_ids=["sb-one"]))
-        _use_createos(monkeypatch, sandbox_session_mode="flow")
-        executor = registry_module._instances["createos"]
-        api.names[_session_name_for()] = "sb-ghost"
-        monkeypatch.setattr(executor, "_find_session_vm", lambda _client, _name: None)
-
-        with pytest.raises(SandboxExecutionError, match="cannot be found"):
-            run_code_in_sandbox("print(1)", session=_session())
-
-        assert api.created_ids == []
-
     def test_a_throwaway_guest_is_not_named(self, monkeypatch, createos):
-        """Only session guests are registered; a throwaway must not take a name."""
+        """Only session guests are named; a throwaway has no need of one."""
         api = createos(_FakeCreateosApi())
         _use_createos(monkeypatch)
 
@@ -1320,15 +1446,13 @@ class TestCreateosProgramFileIsPerExecution:
 
     def test_the_name_fits_the_control_plane_limit(self):
         """The API rejects a name over 22 characters with 400; found live, not by a mock."""
-        name = createos_module._session_guest_name("f" * 64)
-        assert len(name) <= createos_module._CREATEOS_SESSION_NAME_MAX
+        name = createos_module._session_guest_name()
         assert len(name) == createos_module._CREATEOS_SESSION_NAME_MAX
 
-    def test_the_name_is_still_unique_per_session(self):
-        """Verify that the guest name is still unique per session even after length truncation."""
-        first = createos_module._session_guest_name(SessionKey(flow_id="a", user_id="b").token())
-        second = createos_module._session_guest_name(SessionKey(flow_id="a", user_id="c").token())
-        assert first != second
+    def test_every_name_is_fresh(self):
+        """A name is never reused, so a replacement cannot collide with its predecessor."""
+        names = {createos_module._session_guest_name() for _ in range(100)}
+        assert len(names) == 100
 
 
 class TestCreateosIdleReaperSparesRunningGuests:
@@ -1493,11 +1617,29 @@ class TestCreateosSessionGuestIsBoundToItsPolicy:
 
         assert api.created_ids == ["sb-one"]
 
-    def test_the_policy_bound_name_still_fits_the_control_plane_limit(self):
-        """Verify that a policy-bound guest name still fits the control plane's name length limit."""
-        identity = createos_module._session_identity(SessionKey(flow_id="a", user_id="b").token(), ("0.0.0.0/32",), 192)
-        name = createos_module._session_guest_name(identity)
-        assert len(name) == createos_module._CREATEOS_SESSION_NAME_MAX
+    def test_a_rootfs_change_derives_a_different_identity(self):
+        """A guest carries the image it booted plus what the session wrote on it.
+
+        Reusing it across a CREATEOS_SANDBOX_ROOTFS change would run the new
+        image's flows on the old image's filesystem, and read back a state
+        pickle the old image's interpreter wrote.
+        """
+        token = SessionKey(flow_id="a", user_id="b").token()
+        first = createos_module._session_identity(token, ("0.0.0.0/32",), 192, "devbox:1")
+        second = createos_module._session_identity(token, ("0.0.0.0/32",), 192, "devbox:2")
+        assert first != second
+
+    def test_a_rootfs_change_starts_a_new_guest(self, monkeypatch, createos):
+        """Verify that changing the rootfs image builds a fresh guest instead of reusing one."""
+        api = createos(_FakeCreateosApi(create_ids=["sb-one", "sb-two"]))
+        _use_createos(monkeypatch, sandbox_session_mode="flow")
+
+        monkeypatch.setenv("CREATEOS_SANDBOX_ROOTFS", "devbox:1")
+        run_code_in_sandbox("print(1)", session=_session())
+        monkeypatch.setenv("CREATEOS_SANDBOX_ROOTFS", "devbox:2")
+        run_code_in_sandbox("print(1)", session=_session())
+
+        assert api.created_ids == ["sb-one", "sb-two"]
 
 
 class TestCreateosArtifactCollectionIsNeverFatal:

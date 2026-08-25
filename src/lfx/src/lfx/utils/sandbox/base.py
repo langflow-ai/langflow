@@ -159,14 +159,21 @@ class SessionKey:
 
     flow_id: str
     user_id: str
+    # The serving-plane end user, when there is one. On the serving plane
+    # ``user_id`` is the shared service account every request executes as, so it
+    # is the same value for every caller of a deployed flow -- a guest keyed on
+    # it alone would hand one caller's leftover files and pickled state to the
+    # next. This field is what separates them. ``None`` off the serving plane,
+    # where ``user_id`` already IS the person, so the token is unchanged there.
+    end_user_id: str | None = None
 
     def token(self) -> str:
-        """A stable, opaque id for this (flow, user) pair.
+        """A stable, opaque id for this (flow, user, end user) triple.
 
         Hashed rather than concatenated so a backend cannot reconstruct the
-        flow or user id from a VM name it stores or logs.
+        flow, user, or end-user id from a VM name it stores or logs.
         """
-        digest = hashlib.sha256(f"{self.flow_id}\x00{self.user_id}".encode())
+        digest = hashlib.sha256(f"{self.flow_id}\x00{self.user_id}\x00{self.end_user_id or ''}".encode())
         return digest.hexdigest()[:32]
 
 
