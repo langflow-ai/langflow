@@ -70,6 +70,7 @@ const defaultProps = {
   selectedVersionByFlow: new Map<string, ReturnType<typeof selectedVersion>>(),
   attachedConnectionByFlow: new Map<string, string[]>(),
   connections,
+  wxoEligibilityByFlow: new Map(),
   removedFlowIds: new Set<string>(),
   onSelectFlow: jest.fn(),
 };
@@ -93,6 +94,18 @@ describe("Rendering flow items", () => {
     expect(screen.getByText("Alpha Flow")).toBeInTheDocument();
     expect(screen.getByText("Beta Flow")).toBeInTheDocument();
     expect(screen.getByText("Gamma Flow")).toBeInTheDocument();
+  });
+
+  it("shows an actionable Watsonx eligibility warning", () => {
+    renderPanel({
+      wxoEligibilityByFlow: new Map([["f1", "missingChatInput"]]),
+    });
+
+    expect(
+      screen.getByText(
+        "Add one Chat Input node. Watsonx Orchestrate requires exactly one.",
+      ),
+    ).toBeInTheDocument();
   });
 });
 

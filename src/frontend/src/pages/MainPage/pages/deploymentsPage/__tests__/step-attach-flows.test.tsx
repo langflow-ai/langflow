@@ -8,7 +8,9 @@ import type { ConnectionItem, SelectedFlowVersion } from "../types";
 
 let mockIsEditMode = false;
 let mockInitialFlowId: string | undefined;
-let mockSelectedInstance: { id: string } | null = { id: "inst-1" };
+let mockSelectedInstance: { id: string; provider_key?: string } | null = {
+  id: "inst-1",
+};
 let mockConnections: ConnectionItem[] = [];
 const mockSetConnections = jest.fn();
 let mockSelectedVersionByFlow = new Map<string, SelectedFlowVersion>();
@@ -100,6 +102,15 @@ let mockVersionsData: {
 } | null = null;
 let mockIsLoadingVersions = false;
 const mockCreateSnapshot = jest.fn();
+const mockGetFlowVersionEntry = jest.fn();
+
+jest.mock(
+  "@/controllers/API/queries/flow-version/use-get-flow-version-entry",
+  () => ({
+    getFlowVersionEntry: (...args: unknown[]) =>
+      mockGetFlowVersionEntry(...args),
+  }),
+);
 
 jest.mock(
   "@/controllers/API/queries/flow-version/use-get-flow-versions",
@@ -236,6 +247,16 @@ beforeEach(() => {
   mockCreateSnapshot.mockResolvedValue({
     id: "ver-new",
     version_tag: "v3",
+  });
+  mockGetFlowVersionEntry.mockResolvedValue({
+    id: "ver-1",
+    data: {
+      nodes: [
+        { data: { type: "ChatInput" } },
+        { data: { type: "ChatOutput" } },
+      ],
+      edges: [],
+    },
   });
 });
 
@@ -409,6 +430,34 @@ describe("Connection panel toggle", () => {
       expect(mockDetectEnvVars).toHaveBeenCalledWith({
         flow_version_ids: ["ver-1"],
       });
+    });
+  });
+
+  it("carries the selected version's Watsonx eligibility warning into review state", async () => {
+    const user = userEvent.setup();
+    mockSelectedInstance = {
+      id: "inst-1",
+      provider_key: "watsonx-orchestrate",
+    };
+    mockGetFlowVersionEntry.mockResolvedValue({
+      id: "ver-1",
+      data: {
+        nodes: [{ data: { type: "ChatInput" } }],
+        edges: [],
+      },
+    });
+    render(<StepAttachFlows />);
+
+    await user.click(screen.getByTestId("version-item-ver-1-select"));
+    await screen.findByTestId("connection-skip");
+    await user.click(screen.getByTestId("connection-skip"));
+
+    expect(mockHandleSelectVersion).toHaveBeenCalledWith({
+      flowId: "flow-1",
+      flowName: "Sales Flow",
+      versionId: "ver-1",
+      versionTag: "v1",
+      wxoEligibilityIssue: "missingChatOutput",
     });
   });
 
