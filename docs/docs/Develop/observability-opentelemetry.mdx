@@ -85,8 +85,8 @@ Two settings widen this, and both warn when set:
 
 | Variable | Effect |
 |----------|--------|
-| `LANGFLOW_OTEL_LOG_LEVEL=DEBUG` | Exports `DEBUG` records. Langflow logs flow inputs and outputs at `DEBUG`, so prompt and completion content reaches your backend. |
-| `LANGFLOW_OTEL_LOG_BODIES=all` | Exports log message bodies, including completions, chat history, and provider error text. |
+| `LANGFLOW_OTEL_LOG_LEVEL=DEBUG` | Exports `DEBUG` records. Langflow logs flow inputs and outputs at `DEBUG`, so this raises export volume. Prompt and completion **bodies** stay withheld unless `LANGFLOW_OTEL_LOG_BODIES=all` is also set. |
+| `LANGFLOW_OTEL_LOG_BODIES=all` | Exports log message bodies, including completions, chat history, and provider error text. With `LANGFLOW_OTEL_LOG_LEVEL=DEBUG`, prompt and completion content reaches your backend. |
 
 ## Control span volume
 

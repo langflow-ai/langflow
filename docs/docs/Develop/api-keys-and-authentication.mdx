@@ -836,7 +836,7 @@ Next, add users with the Users API so they can collaborate on flows.
 ### Manage users as an administrator
 
 As of Langflow 1.12, Langflow OSS has no **Admin Page** in the visual editor.
-Superusers add, activate, list, and delete users, set **Superuser**, and reset passwords with the [Users API](/api-users).
+Superusers add, activate, list, and delete users, set **Superuser**, and set other users' passwords with `PATCH /api/v1/users/{id}`. For more information, see [Users endpoints](/api-users).
 
 1. To complete your first-time login as a superuser, navigate to `http://localhost:7860/login`.
 
@@ -984,7 +984,8 @@ Superusers add, activate, list, and delete users, set **Superuser**, and reset p
     </Tabs>
 
     To grant administrative privileges, include `"is_superuser": true` in the same request.
-    To list, deactivate, reset a password, or delete a user, see [Users endpoints](/api-users).
+    To reset another user's password, `PATCH /api/v1/users/{id}` with `"password": "<new password>"`. That path does not require the current password. `PATCH /api/v1/users/{id}/reset-password` is self-service: it must be called as that user and requires `current_password`. See [Update user](./api-users#update-user).
+    To list, deactivate, or delete a user, see [Users endpoints](/api-users).
 
 6. Send the username and password to the user.
     The superuser sets the initial password when creating the account.
@@ -996,6 +997,4 @@ Superusers add, activate, list, and delete users, set **Superuser**, and reset p
 
 * [Langflow environment variables](/environment-variables)
 * [Users endpoints](/api-users)
-* [Restrict API tweaks](./deployment-tweaks-policy)
-* [Catalog and model policy](./api-governance-policy)
 * [Langflow Security Policy](https://github.com/langflow-ai/langflow/blob/main/SECURITY.md) — reporting vulnerabilities, security configuration, and [secret key rotation](https://github.com/langflow-ai/langflow/blob/main/SECURITY.md#secret-key-rotation)

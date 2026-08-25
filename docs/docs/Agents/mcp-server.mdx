@@ -419,7 +419,7 @@ Superusers retain full access to MCP server configuration.
 
 Locking the MCP server configuration for users does not disable Langflow's built-in MCP server for serving flows as MCP tools.
 
-## MCP server environment variables
+## MCP server environment variables {#mcp-server-environment-variables}
 
 The following environment variables set behaviors related to your Langflow projects' MCP servers:
 
@@ -436,6 +436,7 @@ The following environment variables set behaviors related to your Langflow proje
 | `LANGFLOW_ADD_PROJECTS_TO_MCP_SERVERS` | Boolean | `True` | Whether to automatically add newly created projects to the user's MCP servers configuration. If `false`, projects must be manually added to MCP servers. |
 | `LANGFLOW_MCP_SERVERS_LOCKED` | Boolean | `False` | If `true`, non-superusers cannot add, edit, or remove MCP server connections through the UI or API. Superusers retain full access. For more information, see [Restrict MCP server management to superusers](#restrict-mcp-server-management). |
 | `LANGFLOW_MCP_SERVER_ALLOWED_PACKAGES` | String | Not set | Comma-separated allowlist of package names that MCP `npx`/`uvx` stdio servers may download and run. Leave unset for single-tenant compatibility. An empty value blocks all package runners. |
+| `LANGFLOW_MCP_SERVER_ENV_ALLOWLIST` | String | Not set | Comma-separated allowlist of environment-variable names an MCP stdio config may set. Leave unset for single-tenant compatibility; production preflight warns when it is unset. An empty value blocks all tenant-supplied environment variables. |
 | `LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING` | Boolean | `False` | If `true`, blocks tenant-controlled Python, Node.js, and shell MCP entrypoints. Package wrappers and the authenticated internal Langflow MCP server still work. |
 | `LANGFLOW_MCP_SERVER_DOCKER_HARDENING` | Boolean | `False` | If `true`, applies a strict argument policy to MCP `docker` stdio servers so tenants cannot mount the host filesystem or use privileged flags. |
 

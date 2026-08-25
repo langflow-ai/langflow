@@ -454,7 +454,7 @@ Set `OTEL_EXPORTER_OTLP_ENDPOINT` to enable export. If it is unset, Langflow ins
 |----------|--------|---------|-------------|
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | String | Not set | OTLP collector or APM endpoint. Required to enable export. |
 | `LANGFLOW_OTEL_DB_SPANS` | Boolean | `True` | Whether to export SQLAlchemy database spans. Set to `false` to send flow and request spans only. |
-| `LANGFLOW_OTEL_LOG_LEVEL` | String | `INFO` | Minimum severity exported over OTLP. `DEBUG` includes flow inputs and outputs. |
+| `LANGFLOW_OTEL_LOG_LEVEL` | String | `INFO` | Minimum severity exported over OTLP. `DEBUG` exports more records (flow inputs and outputs are logged at `DEBUG`) but withholds their bodies unless `LANGFLOW_OTEL_LOG_BODIES=all` is also set. |
 | `LANGFLOW_OTEL_LOG_BODIES` | String | `allowlist` | Set to `all` to export log message bodies, including completions and chat history. |
 
 Standard OpenTelemetry SDK variables such as `OTEL_SERVICE_NAME` and `OTEL_EXPORTER_OTLP_HEADERS` also apply.
@@ -494,6 +494,7 @@ They are not included in a default `uv pip install langflow` installation. Insta
 | `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS` | Boolean | `False` | If `true`, blocks built-in code-execution components (Python Interpreter, REPL/Code tools, Smart Transform, and code-running agents). See [Component hardening for untrusted users](/api-keys-and-authentication#multi-tenant-component-hardening). |
 | `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS` | Boolean | `False` | If `true`, confines built-in file components to the upload storage directory and blocks local-file SQL dialects and local Git clones. See [Component hardening for untrusted users](/api-keys-and-authentication#multi-tenant-component-hardening). |
 | `LANGFLOW_MCP_SERVER_DOCKER_HARDENING` | Boolean | `False` | If `true`, applies a strict Docker-argument policy to MCP stdio servers that use the `docker` transport. See [Component hardening for untrusted users](/api-keys-and-authentication#multi-tenant-component-hardening). |
+| `LANGFLOW_MCP_SERVER_ENV_ALLOWLIST` | String | Not set | Comma-separated allowlist of environment-variable names an MCP stdio config may set. Production preflight warns when this is unset. An empty value blocks all tenant-supplied environment variables. See [MCP server environment variables](/mcp-server#mcp-server-environment-variables). |
 | `LANGFLOW_TWEAKS_POLICY` | String | `permissive` | Which component fields a run request may set through `tweaks`. For more information, see [Restrict API tweaks](./deployment-tweaks-policy). |
 | `LANGFLOW_LOAD_FLOWS_PATH` | String | Not set | Path to a directory containing flow JSON files to be loaded on startup. Typically used when creating a Docker image with prepackaged flows. Requires `LANGFLOW_AUTO_LOGIN=True`. |
 | `LANGFLOW_LOAD_FLOWS_OVERWRITE_ON_NAME_MATCH` | Boolean | `False` | When a flow file in `LANGFLOW_LOAD_FLOWS_PATH` shares a name with an existing DB row but has a different `id`, controls whether to overwrite the existing row. `False` (default) skips with a warning so UI edits are preserved on restart when file UUIDs regenerate. Set to `True` to opt into prepackaged-flows-are-source-of-truth semantics, typically for CI/CD pipelines. |
