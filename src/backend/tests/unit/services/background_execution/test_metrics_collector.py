@@ -13,6 +13,7 @@ a label value the schema already supports, and it reads zero until then.
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -497,3 +498,42 @@ async def test_collect_once_sets_counters_and_duration_gauges():
     # wires p50/p95 from a real finished-job sample).
     assert _gauge_value("langflow_bg_job_duration_p50_seconds", {"backend": backend}) > 0.0
     assert _gauge_value("langflow_bg_job_duration_p95_seconds", {"backend": backend}) > 0.0
+
+
+async def test_a_failing_tick_does_not_end_the_collector_loop(client):  # noqa: ARG001
+    """A brief database outage must cost one tick, not every future one.
+
+    ``collect_once`` guards itself, but the session is opened outside it. Without the guard
+    in ``run``, a raising ``session_scope()`` ends the task, no later tick runs for the life
+    of the process, and because nothing awaits the task it surfaces only as a stray
+    "Task exception was never retrieved" while the metrics quietly go flat.
+
+    Drives the real loop and makes the first session fail, rather than asserting on the
+    presence of a try block.
+    """
+    import langflow.services.background_execution.metrics_collector as mc
+
+    calls = {"n": 0}
+    real_session_scope = mc.session_scope
+
+    def flaky_session_scope():
+        calls["n"] += 1
+        if calls["n"] == 1:
+            msg = "database is briefly unavailable"
+            raise RuntimeError(msg)
+        return real_session_scope()
+
+    collector = BackgroundMetricsCollector(interval=0.01)
+    mc.session_scope = flaky_session_scope
+    try:
+        collector.start()
+        # Long enough for the failing tick plus several successful ones.
+        for _ in range(100):
+            await asyncio.sleep(0.01)
+            if calls["n"] >= 3:
+                break
+        await collector.stop()
+    finally:
+        mc.session_scope = real_session_scope
+
+    assert calls["n"] >= 3, f"the loop stopped after the failing tick (only {calls['n']} attempts)"
