@@ -28,11 +28,11 @@ export const useDeleteMessages: useMutationFunctionType<
     DeleteMessagesParams
   > = mutate(["useDeleteMessages"], deleteMessage, {
     ...options,
-    onSettled: (data, error, variables, context) => {
+    onSettled: (...args) => {
       queryClient.invalidateQueries({
         queryKey: ["useGetSessionsFromFlowQuery"],
       });
-      options?.onSettled?.(data, error, variables, context);
+      options?.onSettled?.(...args);
     },
   });
 
