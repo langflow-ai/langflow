@@ -13,6 +13,7 @@ Covers:
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -46,6 +47,54 @@ def test_bundle_registers_provider_end_to_end():
         assert provider_registry.is_api_key_optional("OpenAI Compatible")
         assert provider_registry.live_discovery_for("OpenAI Compatible") is not None
         assert provider_registry.validator_for("OpenAI Compatible") is not None
+    finally:
+        provider_registry.clear()
+
+
+def test_embeddings_send_string_input_to_compatible_endpoint(monkeypatch):
+    """OpenAI-compatible servers receive text, not OpenAI-only token arrays."""
+    from lfx.base.models import provider_registry, unified_models
+    from lfx.base.models.unified_models import instantiation
+    from lfx.base.models.unified_models.instantiation import get_embeddings
+    from lfx.extension import load_extension
+
+    captured_inputs = []
+
+    def handle_request(request: httpx.Request) -> httpx.Response:
+        captured_inputs.append(json.loads(request.content)["input"])
+        return httpx.Response(
+            200,
+            json={
+                "data": [{"embedding": [0.1], "index": 0}],
+                "model": "nomic-embed-text",
+                "usage": {"prompt_tokens": 2, "total_tokens": 2},
+            },
+            request=request,
+        )
+
+    provider_registry.clear()
+    try:
+        root = Path(__file__).resolve().parents[1] / "src" / "lfx_openai_compatible"
+        result = load_extension(root)
+        assert result.ok, (result.errors, result.warnings)
+
+        monkeypatch.setattr(unified_models, "get_api_key_for_provider", lambda *_args, **_kwargs: None)
+        monkeypatch.setattr(
+            unified_models,
+            "get_all_variables_for_provider",
+            lambda *_args, **_kwargs: {"OPENAI_COMPATIBLE_BASE_URL": "http://compatible.example/v1"},
+        )
+
+        with httpx.Client(transport=httpx.MockTransport(handle_request)) as client:
+            monkeypatch.setattr(
+                instantiation,
+                "ssrf_protected_openai_clients_for_url",
+                lambda _url: {"http_client": client},
+            )
+            embeddings = get_embeddings([{"name": "nomic-embed-text", "provider": "OpenAI Compatible", "metadata": {}}])
+            embeddings.embed_query("hello world")
+
+        assert captured_inputs == [["hello world"]]
     finally:
         provider_registry.clear()
 
