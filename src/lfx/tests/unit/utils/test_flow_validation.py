@@ -1558,6 +1558,30 @@ def test_public_flow_ignores_ordinary_dict_field_with_command_key():
 
 
 @pytest.mark.asyncio
+async def test_prepare_public_flow_build_blocks_mcp_stdio_after_trusted_substitution(monkeypatch):
+    """Trusted-code substitution rewrites ``code`` only; the stdio config must still be refused.
+
+    This is the end-to-end default-mode shape: the server's own MCPTools source is swapped in
+    (so the component that spawns the subprocess is trusted code), while the attacker-authored
+    ``mcp_server`` value survives sanitization untouched.
+    """
+    from lfx.utils import flow_validation as fv
+
+    trusted_mcp_code = "class MCPToolsComponent(Component):\n    name = 'MCPTools'\n"
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _public_settings())
+    monkeypatch.setattr(
+        fv,
+        "_ensure_public_component_lookup_snapshot",
+        AsyncMock(return_value=_public_lookup_snapshot({"MCPTools": trusted_mcp_code})),
+    )
+
+    flow = _mcp_flow({"name": "srv", "config": dict(STDIO_CONFIG)})
+    with pytest.raises(PublicFlowValidationError) as exc_info:
+        await fv.prepare_public_flow_build(flow)
+    assert "MCP" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
 async def test_prepare_public_flow_build_blocks_mcp_stdio_under_custom_component_optin(monkeypatch):
     """The public custom-component opt-in must not reopen the MCP stdio spawn path."""
     from lfx.utils import flow_validation as fv

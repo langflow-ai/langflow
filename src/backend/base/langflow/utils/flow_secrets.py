@@ -100,9 +100,31 @@ def remove_api_keys(flow: dict) -> dict:
 
 def strip_secret_field_values(flow_data: dict | None) -> dict | None:
     """Return a deep-copied flow-data mapping with persisted secrets removed."""
+    # Only ``None`` short-circuits. An empty mapping must still be copied: callers such as
+    # ``strip_flow_secrets`` promise the returned ``data`` is detached from the ORM-backed
+    # payload, and returning the original ``{}`` would alias it.
     if flow_data is None:
         return flow_data
     return strip_secret_field_values_in_place(deepcopy(flow_data))
+
+
+def strip_flow_secrets(flow: dict) -> dict:
+    """Return a copy of a serialized flow *envelope* with persisted secrets removed.
+
+    ``strip_secret_field_values`` scrubs a bare flow-data mapping; export paths
+    hold the surrounding flow dict (``{"name": ..., "data": {...}}``) instead.
+    This wrapper keeps those call sites on the metadata-driven scrubber rather
+    than the legacy :func:`remove_api_keys`, which only nulled fields that were
+    both ``password``-marked *and* named like an API key.
+
+    The returned envelope is a shallow copy whose ``data`` is detached, so the
+    caller never mutates the ORM-backed payload it serialized from.
+    """
+    if not isinstance(flow, dict) or "data" not in flow:
+        return flow
+    scrubbed = dict(flow)
+    scrubbed["data"] = strip_secret_field_values(flow["data"])
+    return scrubbed
 
 
 def _normalized_secret_name(value: object) -> str:
@@ -370,6 +392,7 @@ __all__ = [
     "API_WORDS",
     "has_api_terms",
     "remove_api_keys",
+    "strip_flow_secrets",
     "strip_secret_field_values",
     "strip_secret_field_values_in_place",
 ]

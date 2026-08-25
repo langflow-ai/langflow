@@ -130,9 +130,17 @@ export function StepConfiguration({
             data-testid="kb-source-name-input"
             disabled={isAddSourcesMode}
             className={validationErrors.sourceName ? "border-destructive" : ""}
+            aria-invalid={Boolean(validationErrors.sourceName)}
+            aria-describedby={
+              validationErrors.sourceName ? "kb-source-name-error" : undefined
+            }
           />
           {validationErrors.sourceName && (
-            <span className="text-xs text-destructive">
+            <span
+              id="kb-source-name-error"
+              className="text-xs text-destructive"
+              role="alert"
+            >
               {validationErrors.sourceName}
             </span>
           )}
@@ -167,6 +175,12 @@ export function StepConfiguration({
             >
               <ModelInputComponent
                 id="kb-embedding-model"
+                ariaInvalid={Boolean(validationErrors.embeddingModel)}
+                ariaDescribedBy={
+                  validationErrors.embeddingModel
+                    ? "kb-embedding-model-error"
+                    : undefined
+                }
                 value={selectedEmbeddingModel}
                 editNode={false}
                 disabled={false}
@@ -206,6 +220,10 @@ export function StepConfiguration({
           >
             <DBProviderInput
               id="kb-db-provider"
+              ariaInvalid={Boolean(validationErrors.backend)}
+              ariaDescribedBy={
+                validationErrors.backend ? "kb-backend-error" : undefined
+              }
               value={backendType}
               globalVariables={globalVariables}
               disabled={isAddSourcesMode}
@@ -287,6 +305,9 @@ export function StepConfiguration({
                       <Button
                         variant="outline"
                         data-testid="kb-browse-btn"
+                        aria-describedby={
+                          validationErrors.files ? "kb-files-error" : undefined
+                        }
                         className={cn(
                           "w-full justify-between focus-visible:outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                           validationErrors.files && "border-destructive",
@@ -336,7 +357,11 @@ export function StepConfiguration({
                   </DropdownMenu>
 
                   {validationErrors.files && (
-                    <span className="text-xs text-destructive">
+                    <span
+                      id="kb-files-error"
+                      className="text-xs text-destructive"
+                      role="alert"
+                    >
                       {validationErrors.files}
                     </span>
                   )}
@@ -527,6 +552,7 @@ export function StepConfiguration({
                 <span
                   className="text-xs text-destructive"
                   data-testid="kb-run-metadata-form-error"
+                  role="alert"
                 >
                   {validationErrors.metadata}
                 </span>

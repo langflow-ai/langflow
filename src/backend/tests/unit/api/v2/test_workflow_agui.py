@@ -327,11 +327,7 @@ class TestV2WorkflowAdmission:
             )
         )
 
-        gated = workflow_module._apply_execution_gates(
-            parsed,
-            flow,
-            SimpleNamespace(id=uuid4(), is_superuser=False),
-        )
+        gated = workflow_module._apply_execution_gates(parsed, flow, SimpleNamespace(id=uuid4(), is_superuser=False))
 
         assert gated.data is None
         assert gated.input_value == "hi"
@@ -361,11 +357,7 @@ class TestV2WorkflowAdmission:
             )
         )
 
-        gated = workflow_module._apply_execution_gates(
-            parsed,
-            flow,
-            SimpleNamespace(id=uuid4(), is_superuser=False),
-        )
+        gated = workflow_module._apply_execution_gates(parsed, flow, SimpleNamespace(id=uuid4(), is_superuser=False))
 
         # Stored component parameters still win; only the denial shape changed.
         assert gated.tweaks == {}
@@ -396,11 +388,9 @@ class TestV2WorkflowAdmission:
             )
         )
 
-        gated = workflow_module._apply_execution_gates(
-            parsed,
-            flow,
-            SimpleNamespace(id=owner_id, is_superuser=False),
-        )
+        # ``is_superuser`` is part of ``UserRead``; the component policy gate reads it for
+        # both the inline and the stored-graph branch.
+        gated = workflow_module._apply_execution_gates(parsed, flow, SimpleNamespace(id=owner_id, is_superuser=False))
 
         assert gated.tweaks == parsed.tweaks
 
@@ -430,6 +420,8 @@ class TestV2WorkflowDelegatedErrorPolicy:
             name="shared",
         )
         parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=str(flow.id), input_value="hi", mode="sync"))
+        # The stored-graph branch runs the caller-aware policy gate, so a stored-flow
+        # rejection surfaces from there.
         monkeypatch.setattr(
             workflow_validation,
             "prepare_flow_build_for_user_from_cache",
@@ -716,12 +708,12 @@ class TestV2WorkflowDelegatedErrorPolicy:
             name="private",
         )
 
-        def _reject(_flow_data, *, is_superuser=False):  # noqa: ARG001
+        def _reject(_flow_data, *, is_superuser):  # noqa: ARG001
             message = "custom components are disabled"
             raise CustomComponentValidationError(message)
 
-        # The stored-graph gate now runs the caller-aware policy, which is a strict superset of
-        # the old global validator, so the denial surfaces from there instead.
+        # The stored-graph branch runs the caller-aware gate, which also carries the
+        # global policy this test asserts on.
         monkeypatch.setattr(wf_val, "prepare_flow_build_for_user_from_cache", _reject)
         parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=str(flow_id), input_value="hi", mode="stream"))
 
@@ -756,7 +748,7 @@ class TestV2WorkflowDelegatedErrorPolicy:
         )
         detail = "Catalog policy component identities are still initializing. Please try again in a few seconds."
 
-        def _retry(_flow_data, *, is_superuser=False):  # noqa: ARG001
+        def _retry(_flow_data, *, is_superuser):  # noqa: ARG001
             raise CatalogPolicyIdentityUnavailableError(detail)
 
         monkeypatch.setattr(wf_val, "prepare_flow_build_for_user_from_cache", _retry)

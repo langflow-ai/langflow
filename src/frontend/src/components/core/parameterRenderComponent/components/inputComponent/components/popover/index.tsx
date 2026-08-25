@@ -208,7 +208,10 @@ const CustomInputPopover = ({
   hasRefreshButton,
   inspectionPanel,
   ariaLabelledBy,
-  nodeId = undefined,
+  inputProps = undefined as
+    | React.InputHTMLAttributes<HTMLInputElement>
+    | undefined,
+  nodeId = undefined as string | undefined,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
@@ -353,6 +356,7 @@ const CustomInputPopover = ({
 
           {(!selectedOption?.length && !selectedOptions?.length) || disabled ? (
             <input
+              {...inputProps}
               autoComplete={getSuppressedAutoComplete(!!password)}
               {...PASSWORD_MANAGER_IGNORE_PROPS}
               onFocus={() => setIsFocused(true)}

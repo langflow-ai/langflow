@@ -13,7 +13,7 @@ const toActionId = (label: string) =>
   label.trim().toLowerCase().replace(/ /g, "_");
 
 const baseInputClass =
-  "h-7 rounded-full border border-border bg-background px-2.5 text-sm outline-none focus:border-ring";
+  "h-7 rounded-full border border-control bg-background px-2.5 text-sm outline-none focus:border-ring";
 const inputClass = `${baseInputClass} w-32`;
 
 export default function ActionPickerComponent({

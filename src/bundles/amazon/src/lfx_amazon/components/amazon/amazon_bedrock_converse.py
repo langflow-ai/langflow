@@ -4,6 +4,29 @@ from lfx.field_typing import LanguageModel
 from lfx.inputs.inputs import BoolInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
 from lfx.io import DictInput, DropdownInput
 
+# Providers whose Bedrock models document "top_k" as an inference parameter, in the
+# range this component's default sits in. The Converse API only accepts
+# additionalModelRequestFields the target model actually supports, so sending it
+# anywhere else makes Bedrock reject the whole call: Meta takes only
+# prompt/temperature/top_p/max_gen_len, Amazon Titan and AI21 have no top_k, and Cohere
+# spells it "k". Mistral is excluded too, despite listing top_k for text completion:
+# Mistral Large uses the chat-completion schema, which has no top_k at all, and the
+# text-completion models cap it below this component's default of 250. Anything outside
+# this set can still opt in explicitly through Additional Model Fields.
+TOP_K_PROVIDERS = frozenset({"anthropic"})
+
+# Cross-region inference profile ids are prefixed with the geography, e.g.
+# "us.anthropic..."; "global" is the worldwide-routing profile.
+_INFERENCE_PROFILE_PREFIXES = frozenset({"us", "eu", "apac", "global"})
+
+
+def _model_provider(model_id: str) -> str:
+    """Provider segment of a Bedrock model id, ignoring any cross-region prefix."""
+    parts = str(model_id or "").split(".")
+    if len(parts) > 1 and parts[0] in _INFERENCE_PROFILE_PREFIXES:
+        parts = parts[1:]
+    return parts[0] if parts else ""
+
 
 class AmazonBedrockConverseComponent(LCModelComponent):
     display_name: str = "Amazon Bedrock Converse"
@@ -97,7 +120,8 @@ class AmazonBedrockConverseComponent(LCModelComponent):
             display_name="Top K",
             value=250,
             info="Limits the number of highest probability vocabulary tokens to consider. "
-            "Note: Not all models support top_k. Use 'Additional Model Fields' for manual configuration if needed.",
+            "Only sent to Anthropic models, the ones that document it for the Converse API; it is "
+            "ignored for the others. Use 'Additional Model Fields' to pass a provider's own equivalent.",
             advanced=True,
         ),
         BoolInput(
@@ -153,18 +177,18 @@ class AmazonBedrockConverseComponent(LCModelComponent):
         if hasattr(self, "disable_streaming") and self.disable_streaming:
             init_params["disable_streaming"] = True
 
-        # Handle additional model request fields carefully
-        # Based on the error, inferenceConfig should not be passed as additional fields for some models
+        # top_k is not part of the universal Converse API inferenceConfig, so it is
+        # passed through additional_model_request_fields like other provider-specific fields.
         additional_model_request_fields = {}
+        if hasattr(self, "top_k") and self.top_k is not None and _model_provider(self.model_id) in TOP_K_PROVIDERS:
+            additional_model_request_fields["top_k"] = self.top_k
 
-        # Only add top_k if user explicitly provided additional fields or if needed for specific models
+        # additional_model_fields lets users override or extend provider-specific fields,
+        # including using a different key for providers that don't accept "top_k".
         if hasattr(self, "additional_model_fields") and self.additional_model_fields:
             for field in self.additional_model_fields:
                 if isinstance(field, dict):
                     additional_model_request_fields.update(field)
-
-        # For now, don't automatically add inferenceConfig for top_k to avoid validation errors
-        # Users can manually add it via additional_model_fields if their model supports it
 
         # Only add if we have actual additional fields
         if additional_model_request_fields:

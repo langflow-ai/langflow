@@ -84,9 +84,16 @@ const ModelProvidersContent = ({
   const typedModelCount = (syncedSelectedProvider?.models ?? []).filter(
     (model) => modelType === "all" || model.metadata?.model_type === modelType,
   ).length;
+  // Providers whose catalog is discovered from their endpoint have no models
+  // to show until credentials are configured; ModelSelection renders a
+  // configure-credentials hint for them instead of the generic empty state.
+  const awaitingLiveDiscovery =
+    !!syncedSelectedProvider?.live_discovery &&
+    !syncedSelectedProvider?.is_configured;
   const showNoAvailableModels =
     !!syncedSelectedProvider &&
     typedModelCount === 0 &&
+    !awaitingLiveDiscovery &&
     !hasProviderOwnedEmptyState(syncedSelectedProvider.provider);
 
   return (
@@ -149,7 +156,15 @@ const ModelProvidersContent = ({
           requiresConfiguration={requiresConfiguration}
         />
 
-        <div className="relative flex min-h-0 flex-1 flex-col">
+        {/* hidden while collapsed: the padded scroller inside has intrinsic
+            width, so it would stick out of the w-0 column and register as
+            clipped content at a 320px viewport (WCAG 1.4.10). */}
+        <div
+          className={cn(
+            "relative flex min-h-0 flex-1 flex-col",
+            !syncedSelectedProvider && "hidden",
+          )}
+        >
           <div className="flex h-full flex-col gap-3 overflow-y-auto px-4 pt-4 pb-6 transition-all duration-300 ease-in-out">
             <CustomModelProvidersEmptyState
               kind="models"
@@ -166,6 +181,8 @@ const ModelProvidersContent = ({
                     syncedSelectedProvider?.is_configured
                   )
                 }
+                liveDiscovery={!!syncedSelectedProvider?.live_discovery}
+                isConfigured={!!syncedSelectedProvider?.is_configured}
               />
             </CustomModelProvidersEmptyState>
           </div>

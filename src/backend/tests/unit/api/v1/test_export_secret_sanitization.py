@@ -20,9 +20,9 @@ import zipfile
 import pytest
 from fastapi import status
 from httpx import AsyncClient
-from langflow.api.utils.core import strip_flow_secrets, strip_secret_field_values
 from langflow.api.v1.flow_version import strip_version_data
 from langflow.services.database.models.flow.model import Flow, FlowCreate
+from langflow.utils.flow_secrets import strip_flow_secrets, strip_secret_field_values
 from lfx.services.deps import session_scope
 
 # Values that must never survive an export.

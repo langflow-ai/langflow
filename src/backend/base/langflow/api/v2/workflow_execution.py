@@ -30,11 +30,12 @@ from fastapi import BackgroundTasks, Request
 from fastapi.responses import EventSourceResponse
 from fastapi.sse import format_sse_event
 from lfx.events.event_manager import create_default_event_manager
+from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.graph.checkpoint.store import CheckpointStore
 from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
-from lfx.observability import execution_protocol
+from lfx.observability import execution_protocol, extract_trace_link, queued_trace_link, tracing_is_available
 from lfx.schema.schema import InputValueRequest
 from lfx.schema.workflow import JobStatus, WorkflowExecutionResponse
 from lfx.workflow.adapters import StreamAdapter, StreamEvent
@@ -177,6 +178,26 @@ class _WorkflowEventQueue:
                 await self._overflow_task
 
 
+async def _queued_trace_link_for(job_id: UUID | None):
+    """Return a link to the request that enqueued *job_id*, or None.
+
+    None for a synchronous run, which has no job row, and for a job enqueued while nothing was
+    tracing. Never raises: a run must not fail because its telemetry could not be looked up.
+    """
+    if job_id is None:
+        return None
+    if not tracing_is_available():
+        # The row would be read, parsed, and thrown away. A deployment without the telemetry
+        # extra should not pay a SELECT per run and per resume for a link nothing can render.
+        return None
+    try:
+        job = await get_job_service().get_job_by_job_id(job_id)
+    except Exception:  # noqa: BLE001
+        await logger.adebug("could not read the job row for its trace carrier", exc_info=True)
+        return None
+    return extract_trace_link(job.job_metadata if job else None)
+
+
 async def _stream_event_frames(
     *,
     adapter: StreamAdapter,
@@ -248,7 +269,11 @@ async def _stream_event_frames(
             # Bound here rather than in the enclosing generator: drive() runs as its own task, so
             # the set/reset pair cannot straddle a generator suspension point and leak into the
             # consumer task that resumes it.
-            with execution_protocol(protocol):
+            #
+            # The queued-run link rides alongside for the same reason and in the same place. It
+            # is None for a run with a live request above it, and the context manager is a no-op
+            # then, so this costs a synchronous path nothing.
+            with execution_protocol(protocol), queued_trace_link(await _queued_trace_link_for(job_id)):
                 await asyncio.wait_for(
                     generate_flow_events(
                         flow_id=flow_id,
@@ -279,6 +304,9 @@ async def _stream_event_frames(
                         # Anonymous serving runs are ephemeral: thread the no-persist
                         # decision onto the graph so astore_message skips the DB write.
                         persist_messages=parsed.persist_messages,
+                        # Carry the end-user identity onto the graph so per-user state
+                        # (chat memory) scopes to the end user.
+                        end_user_id=parsed.end_user_id,
                     ),
                     timeout=execution_timeout,
                 )
@@ -412,7 +440,7 @@ async def _stream_event_frames(
         # Mirrors the v1 endpoints.py instrumentation for the streaming path.
         # Skip on: pause (run is resumable), client disconnect (not a failure).
         if not stream_paused and not _stream_cancelled:
-            with contextlib.suppress(Exception):
+            try:
                 from langflow.services.deps import get_telemetry_service
                 from langflow.services.telemetry.schema import RunPayload
 
@@ -428,6 +456,8 @@ async def _stream_event_frames(
                             run_id=run_id,
                         )
                     )
+            except Exception:  # noqa: BLE001
+                await logger.awarning("Telemetry hook failed for streaming run %s", run_id or flow_id, exc_info=True)
 
 
 def _execute_streaming_workflow(
@@ -629,11 +659,16 @@ async def execute_sync_workflow(
     try:
         flow_id_str = str(flow.id)
         user_id = str(current_user.id)
+        # Caller-supplied ``data`` is rejected for sync mode before the execution gates run,
+        # so a value here is the server-sanitized stored graph produced by the caller-aware
+        # component policy. It must win over ``flow.data``, and it must bypass the warm
+        # template — which is built from the unsanitized stored row.
+        sanitized_flow_data = parsed.data
         # Opt-in warm fast-path: serve a deepcopy of the pre-built template
         # instead of rebuilding. Cold-fall-back (None) for tweaks, request context/globals,
         # or a HITL/checkpointed run — none of which fit a shared user-agnostic template.
         graph = None
-        if not tweaks and context is None and checkpoint_store is None:
+        if sanitized_flow_data is None and not tweaks and context is None and checkpoint_store is None:
             graph = await warm_deepcopy(
                 flow_id_str,
                 expected_version=flow_version(flow.updated_at),
@@ -644,7 +679,7 @@ async def execute_sync_workflow(
         if graph is None:
             # Use deepcopy to prevent mutation of the original flow.data
             # process_tweaks modifies nested dictionaries in-place
-            graph_data = deepcopy(flow.data)
+            graph_data = deepcopy(sanitized_flow_data if sanitized_flow_data is not None else flow.data)
             graph_data = process_tweaks(graph_data, tweaks, stream=False)
             # Pass context to graph (similar to V1's simple_run_flow)
             # This allows components to access request metadata via graph.context
@@ -655,6 +690,9 @@ async def execute_sync_workflow(
         # graph non-persisting (astore_message honors this per component). Defaults
         # True for every other run.
         graph.persist_messages = parsed.persist_messages
+        # Carry the end-user identity onto the graph so services (chat memory) scope
+        # per-user state to the end user. None for anonymous / feature-off / editor runs.
+        graph.end_user_id = parsed.end_user_id
         # Set run_id for tracing/logging (similar to V1's simple_run_flow)
         graph.set_run_id(job_id)
         # HITL: when a checkpoint store is supplied, a pausing node (HumanInput) durably
@@ -663,6 +701,11 @@ async def execute_sync_workflow(
         if checkpoint_store is not None:
             graph.checkpointing_enabled = True
             graph.checkpoint_store = checkpoint_store
+    except TweakRefusedError:
+        # A refused tweak is a caller error, not a malformed flow. Wrapping it as
+        # a validation failure discards the structured body naming the refused
+        # keys, so let the app-level handler answer with 422.
+        raise
     except Exception as e:
         client_error = error_for_client(e, expose_details=expose_error_details)
         msg = f"Failed to build graph from flow data: {client_error!s}"
@@ -678,7 +721,11 @@ async def execute_sync_workflow(
 
     # Execute graph - component errors are caught and returned in response body
     job_service = get_job_service()
-    await job_service.create_job(job_id=job_id, flow_id=flow_id_str, user_id=current_user.id)
+    # user_id stays the executing service account (flow fetch / resume rely on it); the end
+    # user is recorded in job_metadata so status/stop isolate to it. See F8 / create_job.
+    await job_service.create_job(
+        job_id=job_id, flow_id=flow_id_str, user_id=current_user.id, end_user_id=parsed.end_user_id
+    )
     _sync_run_paused = False
     _sync_run_success = False
     _sync_run_error: str = ""
@@ -785,10 +832,8 @@ async def execute_sync_workflow(
         # Emit a RunPayload so Enterprise metering (run_event_store) and the
         # Scarf telemetry pipeline both see every v2 sync workflow run.
         # Mirrors the _stream_event_frames instrumentation for the SSE path.
-        import contextlib as _cl
-
         if not _sync_run_paused:
-            with _cl.suppress(Exception):
+            try:
                 from langflow.services.deps import get_telemetry_service
                 from langflow.services.telemetry.schema import RunPayload
 
@@ -803,3 +848,5 @@ async def execute_sync_workflow(
                             run_id=str(job_id),
                         )
                     )
+            except Exception:  # noqa: BLE001
+                await logger.awarning("Telemetry hook failed for sync run %s", job_id, exc_info=True)

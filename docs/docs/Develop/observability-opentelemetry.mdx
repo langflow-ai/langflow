@@ -115,6 +115,29 @@ The doctor also reports what you are about to send, including whether log bodies
 
 A successful send is not proof that your backend kept the data. Some backends acknowledge a payload and then discard invalid records during asynchronous validation. Always confirm by querying the backend for the trace or metric you expect.
 
+## Migrating from the pre-1.0 metric names {#semconv-migration}
+
+Langflow opts into the stable OpenTelemetry HTTP semantic conventions, because APMs key their HTTP dashboards and service maps off the stable names. Dashboards or alerts built on the older names need updating.
+
+| Before | After |
+|---|---|
+| `http.server.duration` (milliseconds) | `http.server.request.duration` (seconds) |
+| `http.method` | `http.request.method` |
+| `http.status_code` | `http.response.status_code` |
+| `http.target` | `url.path` and `url.query`, split into two |
+
+Note the unit change on the first row. A latency threshold carried over unchanged is out by a factor of 1000, and it will not look broken: it will simply stop firing.
+
+To emit both generations while you migrate, set:
+
+```text
+OTEL_SEMCONV_STABILITY_OPT_IN=http/dup
+```
+
+Langflow only sets that variable when it is unset, so a value you provide always wins.
+
+`http.route` is not part of that rename. It is a separate attribute that existed before and after, and it carries the templated path, such as `/api/v1/flows/{flow_id}`, so distinct flow IDs collapse into one time series rather than creating one per ID. If you were grouping by `http.target`, note that you get the concrete path and query rather than the template, which is a different cardinality.
+
 ## Vendor guides
 
 - [New Relic](./observability-new-relic.mdx)

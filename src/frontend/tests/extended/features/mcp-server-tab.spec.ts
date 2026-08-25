@@ -2,6 +2,7 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { TEXTS } from "../../utils/constants/texts";
 import { fillLocalMcpServerCommand } from "../../utils/fill-local-mcp-server-command";
+import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { openAddMcpServerModal } from "../../utils/open-add-mcp-server-modal";
 
@@ -10,24 +11,11 @@ test(
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
     await openBlankFlow(page);
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("api request");
-
-    await page.waitForSelector('[data-testid="data_sourceAPI Request"]', {
-      timeout: 30000,
+    await addComponentFromSidebar(page, {
+      search: "api request",
+      testId: "data_sourceAPI Request",
+      hoverAdd: true,
     });
-
-    // Use dragTo which is more reliable than click on add-component-button
-    await page
-      .getByTestId("data_sourceAPI Request")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-    await page.waitForSelector(
-      '[data-testid="generic-node-title-arrangement"]',
-      {
-        timeout: 30000,
-      },
-    );
 
     // Exit the flow
     await page.getByTestId("icon-ChevronLeft").last().click();
@@ -77,7 +65,8 @@ test(
     await page.reload();
 
     // Navigate to MCP server tab
-    await page.getByTestId("mcp-btn").click({ timeout: 10000 });
+    await expect(page.getByTestId("mcp-btn")).toBeVisible({ timeout: 30000 });
+    await page.getByTestId("mcp-btn").click();
 
     // Verify MCP server tab is visible
     await expect(page.getByTestId("mcp-server-title")).toBeVisible();
@@ -232,7 +221,7 @@ test(
     // Create a new flow with MCP component
     const mcpFlowId = await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
-    const mcpNodes = page.getByRole("group", { name: "MCP Tools node" });
+    const mcpNodes = page.getByRole("application", { name: "MCP Tools node" });
     const previousMcpNodeCount = await mcpNodes.count();
     await expect(page.getByTestId("canvas-add-note-button")).toBeEnabled({
       timeout: 30_000,

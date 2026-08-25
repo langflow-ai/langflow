@@ -144,6 +144,61 @@ def is_protected_tweak_field(component_type: str | None, field_name: str, field_
     )
 
 
+# ---------------------------------------------------------------------------
+# Deployment tweak policy
+# ---------------------------------------------------------------------------
+# Two lists with two owners. The deployment owns the floor above
+# (``is_protected_tweak_field``), a denylist nothing can bypass. The flow author
+# owns the allowlist below, the per-field ``api_editable`` flag. The policy
+# setting only chooses which of the two is consulted; it never supplies list
+# content itself, because an operator cannot anticipate every flow.
+
+TWEAK_POLICY_PERMISSIVE = "permissive"
+TWEAK_POLICY_DECLARED = "declared"
+TWEAK_POLICY_OFF = "off"
+TWEAK_POLICIES = frozenset({TWEAK_POLICY_PERMISSIVE, TWEAK_POLICY_DECLARED, TWEAK_POLICY_OFF})
+
+
+def flow_declares_api_editable(nodes: list[dict[str, Any]]) -> bool:
+    """Return whether any node in the flow marks a template field ``api_editable``.
+
+    This is the derived form of the per-flow enforcement opt-in. A flow whose
+    author has toggled at least one field has declared an allowlist, so the
+    remaining fields are closed under ``declared``. A flow with no toggles has
+    declared nothing and keeps permissive behavior, which is what stops a
+    deployment-wide switch from breaking every flow nobody prepared.
+
+    A later release replaces this derived value with a stored flag on the flow.
+    """
+    for node in nodes:
+        template = node.get("data", {}).get("node", {}).get("template")
+        if not isinstance(template, dict):
+            continue
+        for field in template.values():
+            if isinstance(field, dict) and field.get("api_editable") is True:
+                return True
+    return False
+
+
+def is_tweak_refused_by_policy(
+    policy: str,
+    *,
+    flow_declares_allowlist: bool,
+    field_is_api_editable: bool,
+) -> bool:
+    """Return whether the deployment policy refuses a tweak on this field.
+
+    The caller checks ``is_protected_tweak_field`` separately. That floor refuses
+    in every policy, including ``permissive``. This function only decides the
+    policy layer above the floor.
+    """
+    if policy == TWEAK_POLICY_OFF:
+        return True
+    if policy == TWEAK_POLICY_DECLARED and flow_declares_allowlist:
+        return not field_is_api_editable
+    return False
+
+
 # Component node ``type`` values that load and execute *another* saved flow by
 # id or name at build/run time. On the unauthenticated public path these are an
 # indirect code-execution primitive: a public wrapper flow with none of the
@@ -1535,7 +1590,11 @@ def _is_mcp_server_field(field_name: Any, field: Mapping[str, Any]) -> bool:
 
 
 def _collect_mcp_stdio_components(nodes: list[dict]) -> list[str]:
-    """Return ``display_name (id)`` labels for nodes configuring an MCP stdio server."""
+    """Return ``display_name (id)`` labels for nodes configuring an MCP stdio server.
+
+    Recurses into inlined nested flow definitions for the same reason as
+    ``_collect_blocked_components``.
+    """
     found: list[str] = []
     for node in nodes:
         if not isinstance(node, dict):
@@ -1588,19 +1647,27 @@ def validate_public_flow_no_code_execution(
       database and never re-validated, so a public wrapper flow with no blocked
       nodes could otherwise invoke a private flow containing a code-execution
       component, bypassing the check above (the transitive case).
+    * MCP **stdio** server configuration — a node that launches an operating-system
+      process to speak MCP over stdin/stdout. The command and arguments live in an
+      ``McpInput`` field's VALUE (``mcp_server``), not in the ``code`` field, so
+      neither the two blocklists above nor ``prepare_public_flow_build``'s
+      trusted-code substitution touches them: the server would run the flow author's
+      chosen command for an anonymous visitor. Remote MCP transports (HTTP/SSE) spawn
+      nothing and remain allowed, so only the stdio selection is refused.
 
-    Each class is matched both by the node's declared ``type`` and by its
+    The first two classes are matched both by the node's declared ``type`` and by its
     ``code``-hash, so relabelling a node's ``type`` to an alias cannot smuggle a
     blocked component past the check (the build runs the stored ``code``, not the
-    ``type`` label).
+    ``type`` label). The MCP check matches the stored configuration's shape rather
+    than the node type, because the same component type is safe over HTTP.
 
     This is enforced only on the unauthenticated public build path; authenticated
     builds (``/api/v1/build/{flow_id}/flow``) are unaffected and may still use
     these components.
 
     Raises:
-        PublicFlowValidationError: if the flow contains a code-execution or
-            flow-invoking component.
+        PublicFlowValidationError: if the flow contains a code-execution component,
+            a flow-invoking component, or an MCP stdio server configuration.
     """
     normalized_flow_data = _extract_flow_data(target)
     if not normalized_flow_data:

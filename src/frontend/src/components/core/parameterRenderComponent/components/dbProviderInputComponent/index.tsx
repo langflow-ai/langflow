@@ -51,6 +51,10 @@ interface DBProviderInputProps {
    * visible label rather than a generic string.
    */
   ariaLabelledBy?: string;
+  /** Id of the error text describing this field (aria-describedby, WCAG 3.3.1). */
+  ariaDescribedBy?: string;
+  /** Marks the combobox trigger invalid when the field failed validation. */
+  ariaInvalid?: boolean;
   onValueChange: (
     backendType: AvailableDBProviderId,
     backendConfig: Record<string, DBProviderConfigValue>,
@@ -120,6 +124,8 @@ export function DBProviderInput({
   disabled,
   "aria-label": ariaLabel,
   ariaLabelledBy,
+  ariaDescribedBy,
+  ariaInvalid,
   onValueChange,
 }: DBProviderInputProps) {
   const { t } = useTranslation();
@@ -199,6 +205,8 @@ export function DBProviderInput({
           // one is ever emitted — otherwise the aria-label is dead weight.
           aria-label={!ariaLabelledBy ? ariaLabel : undefined}
           aria-labelledby={ariaLabelledBy}
+          aria-describedby={ariaDescribedBy}
+          aria-invalid={ariaInvalid || undefined}
           data-testid={id}
           className={cn(
             "dropdown-component-false-outline py-2",
