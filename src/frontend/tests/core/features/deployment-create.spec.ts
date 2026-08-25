@@ -79,12 +79,10 @@ async function goToStepReview(page: Page) {
   // Click version item
   await page.waitForSelector('[data-testid="version-item-fv1"]');
   await page.getByTestId("version-item-fv1-select").click();
-  // After clicking version, a connection panel may appear - skip it if present
-  const skipBtn = page.getByRole("button", { name: /skip/i });
-  const skipVisible = await skipBtn.isVisible().catch(() => false);
-  if (skipVisible) {
-    await skipBtn.click();
-  }
+  // Wait for the async eligibility check before skipping the connection step
+  const skipButton = page.getByTestId("connection-skip");
+  await expect(skipButton).toBeVisible();
+  await skipButton.click();
   // Advance to review
   await page.getByTestId("deployment-stepper-next").click();
   await expect(
@@ -202,12 +200,10 @@ test(
     await page.waitForSelector('[data-testid="version-item-fv1"]');
     await page.getByTestId("version-item-fv1-select").click();
 
-    // Skip connection if prompted
-    const skipBtn = page.getByRole("button", { name: /skip/i });
-    const skipVisible = await skipBtn.isVisible().catch(() => false);
-    if (skipVisible) {
-      await skipBtn.click();
-    }
+    // Wait for the async eligibility check before skipping the connection step
+    const skipButton = page.getByTestId("connection-skip");
+    await expect(skipButton).toBeVisible();
+    await skipButton.click();
 
     // Next should be enabled after version selection
     await expect(page.getByTestId("deployment-stepper-next")).toBeEnabled();
