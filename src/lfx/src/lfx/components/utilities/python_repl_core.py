@@ -106,9 +106,7 @@ class PythonREPLComponent(Component):
         result = run_code_in_sandbox(
             sanitize_code(self.python_code),
             global_imports=self.global_imports,
-            session=session_for(
-                self.flow_id, self.user_id, end_user_id_from_graph(getattr(self, "graph", None))
-            ),
+            session=session_for(self.flow_id, self.user_id, end_user_id_from_graph(getattr(self, "graph", None))),
         )
         if not result.success:
             error_message = result.error_message()
