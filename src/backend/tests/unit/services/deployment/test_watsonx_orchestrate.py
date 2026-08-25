@@ -76,6 +76,16 @@ ListConfigsResponse = importlib.import_module(
 TEST_WXO_LLM = "ibm/granite-3.3-8b"
 
 
+def _valid_wxo_flow_data() -> dict:
+    return {
+        "nodes": [
+            {"data": {"type": "ChatInput"}},
+            {"data": {"type": "ChatOutput"}},
+        ],
+        "edges": [],
+    }
+
+
 def _normalized_provider_app_id(app_id: str) -> str:
     return payloads_module.validate_wxo_name(app_id, field_label="Connection app id")
 
@@ -3345,6 +3355,7 @@ def test_create_wxo_flow_tool_keeps_load_from_db_global_values_unprefixed(monkey
             "nodes": [
                 {
                     "data": {
+                        "type": "ChatInput",
                         "node": {
                             "template": {
                                 "api_key": {
@@ -3356,9 +3367,10 @@ def test_create_wxo_flow_tool_keeps_load_from_db_global_values_unprefixed(monkey
                                     "value": "DO_NOT_TOUCH",
                                 },
                             }
-                        }
+                        },
                     }
-                }
+                },
+                {"data": {"type": "ChatOutput"}},
             ],
             "edges": [],
         },
@@ -3470,6 +3482,49 @@ def test_create_wxo_flow_tool_excludes_provider_data_from_artifact(monkeypatch):
     assert "description" in captured_flow_definition
 
 
+@pytest.mark.parametrize(
+    ("nodes", "expected_detail"),
+    [
+        ([{"data": {"type": "ChatOutput"}}], "Add one Chat Input ('ChatInput') node"),
+        (
+            [
+                {"data": {"type": "ChatInput"}},
+                {"data": {"type": "ChatInput"}},
+                {"data": {"type": "ChatOutput"}},
+            ],
+            "Remove extra Chat Input ('ChatInput') nodes",
+        ),
+        ([{"data": {"type": "ChatInput"}}], "Add at least one Chat Output ('ChatOutput') node"),
+    ],
+)
+def test_create_wxo_flow_tool_rejects_ineligible_flow_before_sdk_conversion(
+    monkeypatch,
+    nodes: list[dict],
+    expected_detail: str,
+):
+    flow_payload = BaseFlowArtifact[payloads_module.WatsonxFlowArtifactProviderData](
+        id="00000000-0000-0000-0000-000000000001",
+        name="ineligible-flow",
+        description="desc",
+        data={"nodes": nodes, "edges": []},
+        tags=[],
+        provider_data=payloads_module.WatsonxFlowArtifactProviderData(
+            project_id="project-123",
+            source_ref="src-ref-1",
+            tool_display_name="Ineligible Flow",
+        ),
+    )
+
+    def unexpected_sdk_conversion(**_kwargs):
+        pytest.fail("create_langflow_tool should not be called for an ineligible flow")
+
+    monkeypatch.setattr(tools_module, "create_langflow_tool", unexpected_sdk_conversion)
+
+    with pytest.raises(InvalidContentError) as exc_info:
+        tools_module.create_wxo_flow_tool(flow_payload=flow_payload, connections={})
+    assert expected_detail in str(exc_info.value)
+
+
 def test_create_wxo_flow_tool_requires_provider_data_project_id():
     flow_payload = BaseFlowArtifact(
         id="00000000-0000-0000-0000-000000000001",
@@ -3496,7 +3551,7 @@ def test_create_wxo_flow_tool_normalizes_name_for_raw_payload(monkeypatch):
         id="00000000-0000-0000-0000-000000000001",
         name="basicllmwxo",
         description="desc",
-        data={"nodes": [], "edges": []},
+        data=_valid_wxo_flow_data(),
         tags=[],
         provider_data=payloads_module.WatsonxFlowArtifactProviderData(
             project_id="project-123",
@@ -3539,7 +3594,7 @@ def test_create_wxo_flow_tool_uses_provider_data_technical_name(monkeypatch):
         id="00000000-0000-0000-0000-000000000001",
         name="raw-correlation-key",
         description="desc",
-        data={"nodes": [], "edges": []},
+        data=_valid_wxo_flow_data(),
         tags=[],
         provider_data=payloads_module.WatsonxFlowArtifactProviderData(
             project_id="project-123",
