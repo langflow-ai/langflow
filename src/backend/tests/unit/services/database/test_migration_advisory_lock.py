@@ -390,7 +390,7 @@ def test_concurrent_workers_only_one_calls_init_alembic():
     def _run(fix=False):
         try:
             service._run_migrations(fix=fix)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             errors.append(exc)
 
     check_mock = MagicMock()
