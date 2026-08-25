@@ -153,20 +153,19 @@ class AmazonBedrockConverseComponent(LCModelComponent):
         if hasattr(self, "disable_streaming") and self.disable_streaming:
             init_params["disable_streaming"] = True
 
-        # Handle additional model request fields carefully
-        # Based on the error, inferenceConfig should not be passed as additional fields for some models
+        # Handle additional model request fields
+        # top_k is not part of the Converse API inferenceConfig (unlike temperature/top_p/max_tokens),
+        # so it must be passed via additional_model_request_fields as a model-specific parameter.
         additional_model_request_fields = {}
 
-        # Only add top_k if user explicitly provided additional fields or if needed for specific models
+        if hasattr(self, "top_k") and self.top_k is not None:
+            additional_model_request_fields["top_k"] = self.top_k
+
         if hasattr(self, "additional_model_fields") and self.additional_model_fields:
             for field in self.additional_model_fields:
                 if isinstance(field, dict):
                     additional_model_request_fields.update(field)
 
-        # For now, don't automatically add inferenceConfig for top_k to avoid validation errors
-        # Users can manually add it via additional_model_fields if their model supports it
-
-        # Only add if we have actual additional fields
         if additional_model_request_fields:
             init_params["additional_model_request_fields"] = additional_model_request_fields
 
