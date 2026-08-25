@@ -61,6 +61,7 @@ If the measurement values are additive and you want to observe the distribution 
 
 class MetricType(Enum):
     COUNTER = "counter"
+    OBSERVABLE_COUNTER = "observable_counter"
     OBSERVABLE_GAUGE = "observable_gauge"
     HISTOGRAM = "histogram"
     UP_DOWN_COUNTER = "up_down_counter"
@@ -88,6 +89,30 @@ class ObservableGaugeWrapper:
         return [Observation(value, attributes=dict(labels)) for labels, value in self._values.items()]
 
         # return [Observation(self._value)]
+
+    def set_value(self, value: float, labels: Mapping[str, str]) -> None:
+        self._values[tuple(sorted(labels.items()))] = value
+
+
+class ObservableCounterWrapper:
+    """Wrapper class for ObservableCounter.
+
+    Like ObservableGauge, OpenTelemetry exposes observable counters via a callback
+    rather than a setter, so we keep the latest absolute value per label-set and
+    report it from the callback. Callers (e.g. the DB-derived collector) must feed
+    monotonically non-decreasing cumulative values per label-set for correct
+    Prometheus rate() semantics.
+    """
+
+    def __init__(self, name: str, description: str, unit: str):
+        self._values: dict[tuple[tuple[str, str], ...], float] = {}
+        self._meter = metrics.get_meter(langflow_meter_name)
+        self._counter = self._meter.create_observable_counter(
+            name=name, description=description, unit=unit, callbacks=[self._callback]
+        )
+
+    def _callback(self, _options: CallbackOptions):
+        return [Observation(value, attributes=dict(labels)) for labels, value in self._values.items()]
 
     def set_value(self, value: float, labels: Mapping[str, str]) -> None:
         self._values[tuple(sorted(labels.items()))] = value
@@ -151,7 +176,7 @@ class ThreadSafeSingletonMetaUsingWeakref(type):
 
 class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
     _metrics_registry: dict[str, Metric] = {}
-    _metrics: dict[str, Counter | ObservableGaugeWrapper | Histogram | UpDownCounter] = {}
+    _metrics: dict[str, Counter | ObservableCounterWrapper | ObservableGaugeWrapper | Histogram | UpDownCounter] = {}
     _meter_provider: MeterProvider | None = None
     _tracer_provider: TracerProvider | None = None
     _logger_provider: LoggerProvider | None = None
@@ -208,6 +233,55 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             metric_type=MetricType.UP_DOWN_COUNTER,
             labels={"backend": mandatory_label},
         )
+        self._add_metric(
+            name="langflow_bg_jobs",
+            description="Current count of non-terminal background jobs",
+            unit="",
+            metric_type=MetricType.OBSERVABLE_GAUGE,
+            labels={"status": mandatory_label, "backend": mandatory_label},
+        )
+        self._add_metric(
+            name="langflow_bg_oldest_queued_seconds",
+            description="Age of the oldest queued background job",
+            unit="s",
+            metric_type=MetricType.OBSERVABLE_GAUGE,
+            labels={"backend": mandatory_label},
+        )
+        self._add_metric(
+            name="langflow_bg_jobs_started_total",
+            description="Background jobs started",
+            unit="",
+            metric_type=MetricType.OBSERVABLE_COUNTER,
+            labels={"backend": mandatory_label},
+        )
+        self._add_metric(
+            name="langflow_bg_jobs_completed_total",
+            description="Background jobs completed",
+            unit="",
+            metric_type=MetricType.OBSERVABLE_COUNTER,
+            labels={"backend": mandatory_label},
+        )
+        self._add_metric(
+            name="langflow_bg_jobs_failed_total",
+            description="Background jobs failed",
+            unit="",
+            metric_type=MetricType.OBSERVABLE_COUNTER,
+            labels={"reason": mandatory_label, "backend": mandatory_label},
+        )
+        self._add_metric(
+            name="langflow_bg_job_duration_p50_seconds",
+            description="Median background job run duration over a recent window",
+            unit="s",
+            metric_type=MetricType.OBSERVABLE_GAUGE,
+            labels={"backend": mandatory_label},
+        )
+        self._add_metric(
+            name="langflow_bg_job_duration_p95_seconds",
+            description="p95 background job run duration over a recent window",
+            unit="s",
+            metric_type=MetricType.OBSERVABLE_GAUGE,
+            labels={"backend": mandatory_label},
+        )
 
     def __init__(self, *, prometheus_enabled: bool = True):
         # Only initialize once. The _metrics check is a self-heal: shutdown() (or a service
@@ -235,7 +309,6 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
         # the bootstrap declines to install a reader-less provider. Fall back to the global API
         # proxy so the custom metrics still register on a no-op meter rather than crashing here.
         self.meter = (self._meter_provider or metrics.get_meter_provider()).get_meter(langflow_meter_name)
-
         for name, metric in self._metrics_registry.items():
             if name != metric.name:
                 msg = f"Key '{name}' does not match metric name '{metric.name}'"
@@ -255,6 +328,12 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
                 name=metric.name,
                 unit=metric.unit,
                 description=metric.description,
+            )
+        if metric.type == MetricType.OBSERVABLE_COUNTER:
+            return ObservableCounterWrapper(
+                name=metric.name,
+                description=metric.description,
+                unit=metric.unit,
             )
         if metric.type == MetricType.OBSERVABLE_GAUGE:
             return ObservableGaugeWrapper(
@@ -309,6 +388,15 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             gauge.set_value(value, labels)
         else:
             msg = f"Metric '{metric_name}' is not a gauge"
+            raise TypeError(msg)
+
+    def set_observable_counter(self, metric_name: str, value: float, labels: Mapping[str, str]) -> None:
+        self.validate_labels(metric_name, labels)
+        counter = self._metrics.get(metric_name)
+        if isinstance(counter, ObservableCounterWrapper):
+            counter.set_value(value, labels)
+        else:
+            msg = f"Metric '{metric_name}' is not an observable counter"
             raise TypeError(msg)
 
     def observe_histogram(self, metric_name: str, value: float, labels: Mapping[str, str]) -> None:

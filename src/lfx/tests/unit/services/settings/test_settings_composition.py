@@ -124,6 +124,7 @@ EXPECTED_FIELDS = {
     # ObservabilitySettings
     "prometheus_enabled",
     "prometheus_port",
+    "background_metrics_interval",
     "max_transactions_to_keep",
     "max_vertex_builds_to_keep",
     "max_vertex_builds_per_vertex",

@@ -9,6 +9,9 @@ class ObservabilitySettings(BaseModel):
     prometheus_port: int = 9090
     """The port on which Langflow will expose Prometheus metrics. 9090 is the default port."""
 
+    background_metrics_interval: int = 15
+    """Seconds between background-execution DB-derived metric collector ticks."""
+
     max_transactions_to_keep: int = 3000
     """The maximum number of transactions to keep in the database."""
     max_vertex_builds_to_keep: int = 3000
