@@ -4,6 +4,24 @@ from lfx.field_typing import LanguageModel
 from lfx.inputs.inputs import BoolInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
 from lfx.io import DictInput, DropdownInput
 
+# Providers whose Bedrock models document a "top_k" inference parameter. The Converse
+# API only accepts additionalModelRequestFields the target model actually supports, and
+# Meta (prompt/temperature/top_p/max_gen_len), Amazon Titan and AI21 have no top_k at
+# all, while Cohere spells it "k" - sending it to those makes Bedrock reject the whole
+# call. Anything outside this set can still opt in through Additional Model Fields.
+TOP_K_PROVIDERS = frozenset({"anthropic", "mistral"})
+
+# Cross-region inference profile ids are prefixed with the geography, e.g. "us.anthropic...".
+_INFERENCE_PROFILE_PREFIXES = frozenset({"us", "eu", "apac"})
+
+
+def _model_provider(model_id: str) -> str:
+    """Provider segment of a Bedrock model id, ignoring any cross-region prefix."""
+    parts = str(model_id or "").split(".")
+    if len(parts) > 1 and parts[0] in _INFERENCE_PROFILE_PREFIXES:
+        parts = parts[1:]
+    return parts[0] if parts else ""
+
 
 class AmazonBedrockConverseComponent(LCModelComponent):
     display_name: str = "Amazon Bedrock Converse"
@@ -97,7 +115,8 @@ class AmazonBedrockConverseComponent(LCModelComponent):
             display_name="Top K",
             value=250,
             info="Limits the number of highest probability vocabulary tokens to consider. "
-            "Note: Not all models support top_k. Use 'Additional Model Fields' for manual configuration if needed.",
+            "Only sent to providers that support it (Anthropic, Mistral); it is ignored for the "
+            "others. Use 'Additional Model Fields' to pass a provider's own equivalent.",
             advanced=True,
         ),
         BoolInput(
@@ -153,18 +172,18 @@ class AmazonBedrockConverseComponent(LCModelComponent):
         if hasattr(self, "disable_streaming") and self.disable_streaming:
             init_params["disable_streaming"] = True
 
-        # Handle additional model request fields carefully
-        # Based on the error, inferenceConfig should not be passed as additional fields for some models
+        # top_k is not part of the universal Converse API inferenceConfig, so it is
+        # passed through additional_model_request_fields like other provider-specific fields.
         additional_model_request_fields = {}
+        if hasattr(self, "top_k") and self.top_k is not None and _model_provider(self.model_id) in TOP_K_PROVIDERS:
+            additional_model_request_fields["top_k"] = self.top_k
 
-        # Only add top_k if user explicitly provided additional fields or if needed for specific models
+        # additional_model_fields lets users override or extend provider-specific fields,
+        # including using a different key for providers that don't accept "top_k".
         if hasattr(self, "additional_model_fields") and self.additional_model_fields:
             for field in self.additional_model_fields:
                 if isinstance(field, dict):
                     additional_model_request_fields.update(field)
-
-        # For now, don't automatically add inferenceConfig for top_k to avoid validation errors
-        # Users can manually add it via additional_model_fields if their model supports it
 
         # Only add if we have actual additional fields
         if additional_model_request_fields:
