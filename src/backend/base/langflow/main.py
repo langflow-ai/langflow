@@ -645,6 +645,20 @@ def get_lifespan(*, fix_migration=False, version=None):
             # registered after the database service exists.
             try:
                 instrument_db_pool(telemetry_service.ot.meter_provider, get_db_service().engine)
+                # The telemetry writer runs its OWN dedicated engine, deliberately kept off the
+                # request-handling pool. Registering it too means the gauges describe the
+                # process's actual connection usage rather than one engine's share of it.
+                try:
+                    from langflow.services.deps import get_telemetry_writer_service
+
+                    _tw = get_telemetry_writer_service()
+                    _tw_engine = getattr(_tw, "_engine", None) if _tw is not None else None
+                    if _tw_engine is not None:
+                        instrument_db_pool(
+                            telemetry_service.ot.meter_provider, _tw_engine, engine_name="telemetry_writer"
+                        )
+                except Exception as e:  # noqa: BLE001 - instrumentation must never block startup
+                    await logger.awarning(f"Telemetry-writer pool metrics failed to register: {e}")
             except Exception as e:  # noqa: BLE001
                 await logger.awarning(f"DB pool metrics failed to register: {e}")
 
