@@ -4,14 +4,11 @@ from __future__ import annotations
 
 import json
 import zipfile
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 
 from scripts.ci.install_release_wheels import _restore_frontend, _select_wheels, install_release_wheels
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def _write_wheel(directory: Path, name: str, version: str) -> None:
@@ -59,10 +56,14 @@ def test_missing_required_wheel_fails_closed(tmp_path: Path) -> None:
         _select_wheels(tmp_path, "main")
 
 
-def test_install_release_wheels_installs_verifies_and_checks(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_install_release_wheels_installs_only_target_profile_and_checks(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     _write_wheel(tmp_path, "langflow", "1.11.0rc5")
     _write_wheel(tmp_path, "langflow-base", "0.11.0rc5")
     _write_wheel(tmp_path, "lfx", "1.11.0rc5")
+    _write_wheel(tmp_path, "lfx-firecrawl", "0.1.1")
+    _write_wheel(tmp_path, "lfx-duckduckgo", "0.1.3")
     python = tmp_path / "venv" / "bin" / "python"
     uv = tmp_path / "bin" / "uv"
     commands: list[tuple[list[object], bool]] = []
@@ -72,6 +73,10 @@ def test_install_release_wheels_installs_verifies_and_checks(tmp_path: Path, mon
 
     monkeypatch.setattr("scripts.ci.install_release_wheels._find_uv", lambda: str(uv))
     monkeypatch.setattr("scripts.ci.install_release_wheels.subprocess.run", record_run)
+    monkeypatch.setattr(
+        "scripts.ci.install_release_wheels.subprocess.check_output",
+        lambda *_args, **_kwargs: json.dumps(["langflow", "langflow-base", "lfx", "lfx-firecrawl"]),
+    )
 
     install_release_wheels(tmp_path, python, "main")
 
@@ -87,7 +92,12 @@ def test_install_release_wheels_installs_verifies_and_checks(tmp_path: Path, mon
         "--no-deps",
         "--force-reinstall",
     ]
-    assert {str(path) for path in install_command[7:]} == {str(path) for path in tmp_path.glob("*.whl")}
+    assert {Path(str(path)).name for path in install_command[7:]} == {
+        "langflow-1.11.0rc5-py3-none-any.whl",
+        "langflow_base-0.11.0rc5-py3-none-any.whl",
+        "lfx-1.11.0rc5-py3-none-any.whl",
+        "lfx_firecrawl-0.1.1-py3-none-any.whl",
+    }
     assert verify_command[:2] == [python, "-c"]
     assert "assert actual == expected" in str(verify_command[2])
     assert json.loads(str(verify_command[3])) == {
