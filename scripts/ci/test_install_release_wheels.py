@@ -19,7 +19,7 @@ def _write_wheel(directory: Path, name: str, version: str) -> None:
         archive.writestr(metadata_path, f"Metadata-Version: 2.4\nName: {name}\nVersion: {version}\n")
 
 
-def test_main_installs_every_release_artifact(tmp_path: Path) -> None:
+def test_main_selects_every_release_artifact(tmp_path: Path) -> None:
     _write_wheel(tmp_path, "langflow", "1.11.0rc5")
     _write_wheel(tmp_path, "langflow-base", "0.11.0rc5")
     _write_wheel(tmp_path, "lfx", "1.11.0rc5")
@@ -67,19 +67,22 @@ def test_install_release_wheels_installs_only_target_profile_and_checks(
     python = tmp_path / "venv" / "bin" / "python"
     uv = tmp_path / "bin" / "uv"
     commands: list[tuple[list[object], bool]] = []
+    profile_commands: list[list[object]] = []
 
     def record_run(command: list[object], *, check: bool) -> None:
         commands.append((command, check))
 
+    def installed_profile(command: list[object], **_kwargs: object) -> str:
+        profile_commands.append(command)
+        return json.dumps(["langflow", "langflow-base", "lfx", "lfx-firecrawl"])
+
     monkeypatch.setattr("scripts.ci.install_release_wheels._find_uv", lambda: str(uv))
     monkeypatch.setattr("scripts.ci.install_release_wheels.subprocess.run", record_run)
-    monkeypatch.setattr(
-        "scripts.ci.install_release_wheels.subprocess.check_output",
-        lambda *_args, **_kwargs: json.dumps(["langflow", "langflow-base", "lfx", "lfx-firecrawl"]),
-    )
+    monkeypatch.setattr("scripts.ci.install_release_wheels.subprocess.check_output", installed_profile)
 
     install_release_wheels(tmp_path, python, "main")
 
+    assert profile_commands[0][:3] == [python, "-I", "-c"]
     assert len(commands) == 3
     assert all(check for _, check in commands)
     install_command, verify_command, check_command = (command for command, _ in commands)
@@ -104,8 +107,24 @@ def test_install_release_wheels_installs_only_target_profile_and_checks(
         "langflow": "1.11.0rc5",
         "langflow-base": "0.11.0rc5",
         "lfx": "1.11.0rc5",
+        "lfx-firecrawl": "0.1.1",
     }
     assert check_command == [str(uv), "pip", "check", "--python", str(python)]
+
+
+def test_install_release_wheels_fails_when_target_profile_omits_required_distribution(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write_wheel(tmp_path, "langflow", "1.11.0rc5")
+    _write_wheel(tmp_path, "langflow-base", "0.11.0rc5")
+    _write_wheel(tmp_path, "lfx", "1.11.0rc5")
+    monkeypatch.setattr(
+        "scripts.ci.install_release_wheels.subprocess.check_output",
+        lambda *_args, **_kwargs: json.dumps(["langflow-base", "lfx"]),
+    )
+
+    with pytest.raises(ValueError, match="Target environment is missing required main distributions: langflow"):
+        install_release_wheels(tmp_path, tmp_path / "venv" / "bin" / "python", "main")
 
 
 def test_install_release_wheels_without_artifacts_is_a_noop(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

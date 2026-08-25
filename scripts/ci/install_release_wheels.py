@@ -83,6 +83,20 @@ def _select_wheels(artifacts_dir: Path, mode: str) -> list[Wheel]:
     return sorted(by_name.values(), key=lambda wheel: wheel.name)
 
 
+def _installed_distribution_names(python: Path) -> frozenset[str]:
+    command = (
+        "import importlib.metadata as metadata, json; "
+        "names = {dist.metadata.get('Name') for dist in metadata.distributions()}; "
+        "print(json.dumps(sorted(name for name in names if name)))"
+    )
+    output = subprocess.check_output([python, "-I", "-c", command], text=True)  # noqa: S603
+    names = json.loads(output)
+    if not isinstance(names, list) or not all(isinstance(name, str) for name in names):
+        msg = f"Expected installed distribution names as a JSON string list, got {names!r}"
+        raise ValueError(msg)
+    return frozenset(_canonicalize_name(name) for name in names)
+
+
 def _restore_frontend(python: Path, frontend_source: Path) -> None:
     command = (
         "from importlib.util import find_spec; "
@@ -116,6 +130,19 @@ def install_release_wheels(
         return
 
     wheels = _select_wheels(artifacts_dir, mode)
+    if mode == "main":
+        installed_names = _installed_distribution_names(python)
+        skipped = [wheel for wheel in wheels if wheel.name not in installed_names]
+        wheels = [wheel for wheel in wheels if wheel.name in installed_names]
+        missing = REQUIRED_DISTRIBUTIONS[mode] - {wheel.name for wheel in wheels}
+        if missing:
+            msg = f"Target environment is missing required {mode} distributions: {', '.join(sorted(missing))}"
+            raise ValueError(msg)
+        if skipped:
+            print("Skipping release wheels outside the target image profile:")
+            for wheel in skipped:
+                print(f"  {wheel.name}=={wheel.version} ({wheel.path})")
+
     expected_versions = {wheel.name: wheel.version for wheel in wheels}
     uv = _find_uv()
     print("Installing release wheels:")
