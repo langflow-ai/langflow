@@ -244,3 +244,172 @@ async def test_create_db_and_tables_skips_lock_on_sqlite():
 
     locked_mock.assert_not_called()
     async_engine.begin.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Regression tests for the TOCTOU race in run_migrations (GitHub issue:
+# "postgres multi-worker migration race").
+#
+# Root cause: ``should_initialize_alembic`` was evaluated *before* the
+# advisory lock was acquired, so Worker 2 could carry a stale "yes, needs
+# init" answer into ``_run_migrations``, try to call ``init_alembic`` on an
+# already-migrated DB, and crash when ``command.check()`` detected the
+# mismatch.  The fix moves the probe inside the lock so each worker makes its
+# decision on fresh data.
+# ---------------------------------------------------------------------------
+
+
+def test_run_migrations_probes_inside_lock_and_skips_init_when_already_migrated():
+    """Worker 2 path: _current_alembic_heads_sync returns heads inside the lock.
+
+    After Worker 1 completes the migration, Worker 2 acquires the lock and
+    calls ``_current_alembic_heads_sync``.  That probe must return the current
+    heads, causing the branch to skip ``init_alembic`` entirely.  Before the
+    fix, ``should_initialize_alembic`` was computed outside the lock, so
+    Worker 2 always called ``init_alembic`` even when the DB was already
+    migrated, crashing on the subsequent ``command.check()``.
+    """
+    from langflow.services.database.service import DatabaseService
+
+    service = DatabaseService.__new__(DatabaseService)
+    service.database_url = _PG_URL
+
+    # Simulate the log buffer path.
+    service.alembic_log_to_stdout = True
+    service.alembic_log_path = None
+    service.script_location = "/fake/script_location"
+
+    engine_mock, conn_mock = _engine_with_conn(scalar_returns=True)  # lock acquired immediately
+
+    init_alembic_mock = MagicMock()
+    check_mock = MagicMock()  # command.check succeeds (no diffs detected)
+
+    # _current_alembic_heads_sync returns a non-empty tuple → already migrated.
+    heads_mock = MagicMock(return_value=("abc123",))
+
+    with (
+        patch(_CREATE_ENGINE_PATH, return_value=engine_mock),
+        patch.object(DatabaseService, "init_alembic", staticmethod(init_alembic_mock)),
+        patch.object(DatabaseService, "_current_alembic_heads_sync", staticmethod(heads_mock)),
+        patch(f"{_SERVICE}.command.check", check_mock),
+    ):
+        service._run_migrations(fix=False)
+
+    # init_alembic must NOT have been called — the DB was already migrated.
+    init_alembic_mock.assert_not_called()
+    # The in-lock probe must have been called exactly once.
+    heads_mock.assert_called_once()
+
+
+def test_run_migrations_calls_init_alembic_when_db_is_empty():
+    """Worker 1 path: _current_alembic_heads_sync returns () inside the lock.
+
+    When the DB is genuinely empty (fresh deployment), the probe returns an
+    empty tuple and ``init_alembic`` must be called.
+    """
+    from langflow.services.database.service import DatabaseService
+
+    service = DatabaseService.__new__(DatabaseService)
+    service.database_url = _PG_URL
+
+    service.alembic_log_to_stdout = True
+    service.alembic_log_path = None
+    service.script_location = "/fake/script_location"
+
+    engine_mock, _ = _engine_with_conn(scalar_returns=True)
+
+    init_alembic_mock = MagicMock()
+    check_mock = MagicMock()
+
+    # Empty DB → _current_alembic_heads_sync returns ().
+    heads_mock = MagicMock(return_value=())
+
+    with (
+        patch(_CREATE_ENGINE_PATH, return_value=engine_mock),
+        patch.object(DatabaseService, "init_alembic", staticmethod(init_alembic_mock)),
+        patch.object(DatabaseService, "_current_alembic_heads_sync", staticmethod(heads_mock)),
+        patch(f"{_SERVICE}.command.check", check_mock),
+    ):
+        service._run_migrations(fix=False)
+
+    # init_alembic must have been called exactly once.
+    init_alembic_mock.assert_called_once()
+
+
+def test_concurrent_workers_only_one_calls_init_alembic():
+    """Concurrency regression: two threads racing on a fresh DB.
+
+    This is the concrete scenario that caused the original crash.  Before the
+    fix, both threads pre-computed ``should_initialize_alembic = True`` outside
+    the lock, so both called ``init_alembic`` and the second crashed.
+
+    After the fix the probe is inside the lock.  We simulate this by making
+    ``_current_alembic_heads_sync`` return ``()`` only on the *first* call
+    (Worker 1 sees an empty DB) and ``("head",)`` on all subsequent calls
+    (Worker 2 re-probes inside the lock and finds the already-migrated state).
+    Both workers run ``_run_migrations`` concurrently in threads; we assert
+    that ``init_alembic`` is called exactly once and neither thread raises.
+    """
+    import threading
+
+    from langflow.services.database.service import DatabaseService
+
+    service = DatabaseService.__new__(DatabaseService)
+    service.database_url = _PG_URL
+    service.alembic_log_to_stdout = True
+    service.alembic_log_path = None
+    service.script_location = "/fake/script_location"
+
+    # Alternate lock acquisition: first call acquires, second polls once then acquires.
+    lock_engine_1, _ = _engine_with_conn(scalar_returns=True)
+    lock_engine_2, _ = _engine_with_conn(scalar_returns=True)
+    lock_engines = iter([lock_engine_1, lock_engine_2])
+
+    init_alembic_call_count = 0
+    init_alembic_lock = threading.Lock()
+
+    def _init_alembic(cfg):
+        nonlocal init_alembic_call_count
+        with init_alembic_lock:
+            init_alembic_call_count += 1
+
+    # First call returns () (empty DB); all subsequent calls return a head.
+    heads_call_count = 0
+    heads_lock = threading.Lock()
+
+    def _heads_probe(cfg):
+        nonlocal heads_call_count
+        with heads_lock:
+            heads_call_count += 1
+            if heads_call_count == 1:
+                return ()  # Worker 1 sees empty DB
+            return ("head_abc",)  # Worker 2 sees already-migrated DB
+
+    errors: list[Exception] = []
+
+    def _run(fix=False):
+        try:
+            service._run_migrations(fix=fix)
+        except Exception as exc:  # noqa: BLE001
+            errors.append(exc)
+
+    check_mock = MagicMock()
+
+    with (
+        patch(_CREATE_ENGINE_PATH, side_effect=lock_engines),
+        patch.object(DatabaseService, "init_alembic", staticmethod(_init_alembic)),
+        patch.object(DatabaseService, "_current_alembic_heads_sync", staticmethod(_heads_probe)),
+        patch(f"{_SERVICE}.command.check", check_mock),
+    ):
+        t1 = threading.Thread(target=_run)
+        t2 = threading.Thread(target=_run)
+        t1.start()
+        t2.start()
+        t1.join(timeout=5)
+        t2.join(timeout=5)
+
+    assert not errors, f"Worker(s) raised: {errors}"
+    assert init_alembic_call_count == 1, (
+        f"Expected init_alembic to be called exactly once; called {init_alembic_call_count} times. "
+        "This is the TOCTOU race: both workers decided to initialise before the fix."
+    )

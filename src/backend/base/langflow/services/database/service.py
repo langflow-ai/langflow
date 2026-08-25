@@ -35,7 +35,6 @@ from langflow.services.database.constants import (
     MIN_POSTGRESQL_MAJOR_VERSION,
     POSTGRESQL_VERSION_REQUIRED_MESSAGE,
 )
-from langflow.services.database.migration import get_current_alembic_heads
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.session import NoopSession
 from langflow.services.database.utils import Result, TableResults
@@ -630,26 +629,34 @@ class DatabaseService(Service):
             )
             return nullcontext(sys.stdout)
 
-    def _run_migrations(self, should_initialize_alembic, fix) -> None:
-        # First we need to check if alembic has been initialized
-        # If not, we need to initialize it
-        # if not self.script_location.exists(): # this is not the correct way to check if alembic has been initialized
-        # We need to check if the alembic_version table exists
-        # if not, we need to initialize alembic
-        # stdout should be something like sys.stdout
-        # which is a buffer
-        # I don't want to output anything
-        # subprocess.DEVNULL is an int
+    def _run_migrations(self, fix) -> None:
+        """Run Alembic migrations under the advisory lock.
+
+        The ``should_initialize_alembic`` probe is intentionally performed
+        *inside* the advisory lock rather than before it.  If it were computed
+        outside the lock, a classic TOCTOU race would allow two concurrent
+        workers to both observe an empty ``alembic_version`` table, both decide
+        they need to initialise Alembic, and then have the second worker crash
+        when ``command.check()`` detects the schema already migrated by the
+        first.  Computing the probe inside the lock means only one worker ever
+        sees the uninitialised state and runs ``init_alembic``; all subsequent
+        waiters re-check *after* the migration is complete and correctly take
+        the already-initialised path.
+        """
         buffer_context = self._open_alembic_log_buffer()
         # The advisory lock serialises concurrent migration runs across workers
         # so they do not race on CREATE TYPE / CREATE TABLE against a fresh PG.
         with _postgres_migration_lock(self.database_url), buffer_context as buffer:
             alembic_cfg = Config(stdout=buffer)
-            # alembic_cfg.attributes["connection"] = session
             alembic_cfg.set_main_option("script_location", str(self.script_location))
             alembic_cfg.set_main_option("sqlalchemy.url", self.database_url.replace("%", "%%"))
 
+            # Re-probe inside the lock: a concurrent worker may have already run
+            # the full migration by the time we acquire it, so we must not rely
+            # on a stale snapshot taken before lock acquisition.
+            should_initialize_alembic = not self._current_alembic_heads_sync(alembic_cfg)
             if should_initialize_alembic:
+                logger.debug("Alembic not initialized; running initial migration inside lock.")
                 try:
                     self.init_alembic(alembic_cfg)
                 except Exception as exc:
@@ -657,7 +664,7 @@ class DatabaseService(Service):
                     logger.exception(msg)
                     raise RuntimeError(msg) from exc
             else:
-                logger.debug("Alembic initialized")
+                logger.debug("Alembic already initialized; skipping init_alembic.")
 
             try:
                 buffer.write(f"{datetime.now(tz=timezone.utc).astimezone().isoformat()}: Checking migrations\n")
@@ -680,12 +687,34 @@ class DatabaseService(Service):
             if fix:
                 self.try_downgrade_upgrade_until_success(alembic_cfg)
 
+    @staticmethod
+    def _current_alembic_heads_sync(alembic_cfg: Config) -> tuple[str, ...]:
+        """Return the current Alembic heads from the database using a sync connection.
+
+        This is called *inside* the advisory lock so that the initialisation
+        decision is made on fresh data, not a pre-lock snapshot that may have
+        been stale by the time the lock was actually acquired.
+
+        Uses the sync SQLAlchemy URL already configured on *alembic_cfg* so we
+        do not need to construct a second engine; Alembic's own
+        ``MigrationContext`` is used for consistency with the rest of the
+        migration path.
+        """
+        from alembic.migration import MigrationContext
+        from sqlalchemy import create_engine
+
+        url = alembic_cfg.get_main_option("sqlalchemy.url", default="").replace("%%", "%")
+        engine = create_engine(url)
+        try:
+            with engine.connect() as conn:
+                ctx = MigrationContext.configure(conn)
+                heads = ctx.get_current_heads()
+                return heads or ()
+        finally:
+            engine.dispose()
+
     async def run_migrations(self, *, fix=False) -> None:
-        async with session_scope() as session:
-            should_initialize_alembic = not await get_current_alembic_heads(session)
-            if should_initialize_alembic:
-                await logger.adebug("Alembic not initialized")
-        await asyncio.to_thread(self._run_migrations, should_initialize_alembic, fix)
+        await asyncio.to_thread(self._run_migrations, fix)
 
     def _current_alembic_revisions(self) -> set[str]:
         """Read current revisions from the configured database, never alembic.ini."""
