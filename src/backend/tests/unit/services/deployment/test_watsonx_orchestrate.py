@@ -5170,6 +5170,12 @@ def test_is_retryable_create_exception_domain_exceptions_not_retryable():
     assert is_retryable_create_exception(InvalidDeploymentOperationError()) is False
 
 
+def test_is_retryable_create_exception_value_error_is_not_retryable():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import is_retryable_create_exception
+
+    assert is_retryable_create_exception(ValueError("invalid flow definition")) is False
+
+
 def test_is_retryable_create_exception_generic_exception_is_retryable():
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import is_retryable_create_exception
 
@@ -7293,6 +7299,39 @@ async def test_create_maps_422_to_invalid_content_error():
         )
 
 
+@pytest.mark.anyio
+async def test_create_maps_value_error_to_invalid_content_without_retry():
+    """Deterministic local create errors are actionable client errors and must not be retried."""
+    error_message = "No 'ChatInput' node found in langflow tool"
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    agent = FakeAgentClient(
+        {"id": "dep-1", "tools": []},
+        create_exception=ValueError(error_message),
+    )
+    clients = FakeWXOClients(
+        agent=agent,
+        tool=FakeToolClient([{"id": "tool-existing-1", "binding": {"langflow": {}}}]),
+        connections=FakeConnectionsClient(existing_app_id="app-existing-1"),
+    )
+    _attach_provider_clients(service, clients)
+
+    with pytest.raises(InvalidContentError, match=error_message):
+        await service.create(
+            user_id="user-1",
+            db=object(),
+            payload=DeploymentCreate(
+                spec=BaseDeploymentData(
+                    name="my_deployment",
+                    description="desc",
+                    type=DeploymentType.AGENT,
+                ),
+                provider_data=_create_provider_spec(),
+            ),
+        )
+
+    assert len(agent.create_calls) == 1
+
+
 # ---------------------------------------------------------------------------
 # Test Coverage Gap #2: create — unsupported deployment type rejection
 # ---------------------------------------------------------------------------
@@ -7573,9 +7612,7 @@ async def test_create_preserves_exception_chain_on_unexpected_error():
             ),
         )
 
-    inner = exc_info.value.__cause__
-    assert isinstance(inner, DeploymentError)
-    assert inner.__cause__ is original_error
+    assert exc_info.value.__cause__ is original_error
 
 
 @pytest.mark.anyio
