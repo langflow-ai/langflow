@@ -33,7 +33,7 @@ from langflow.api.utils import (
     normalize_code_for_import,
     validate_is_component,
 )
-from langflow.api.utils.core import strip_secret_field_values
+from langflow.api.utils.core import release_db_transaction, strip_secret_field_values
 from langflow.api.utils.mcp.flow_secrets import (
     extract_and_strip_mcp_secrets,
     mcp_server_names,
@@ -449,9 +449,17 @@ async def read_flows(
             if header_flows:
                 # Convert to FlowHeader objects and compress the response
                 flow_headers = [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
+                await release_db_transaction(session)
                 return compress_response(flow_headers)
 
-            # Convert to FlowRead while session is still active to avoid detached instance errors
+            # All DB work for this path is done. Release the pooled connection
+            # before the CPU-bound validation + gzip below, which can take an
+            # order of magnitude longer than the queries themselves and would
+            # otherwise hold the connection (and its transaction) for the whole
+            # request. Safe because the sessionmaker sets expire_on_commit=False,
+            # so the loaded instances below are not expired by the commit.
+            await release_db_transaction(session)
+
             flow_reads = [FlowRead.model_validate(flow, from_attributes=True) for flow in flows]
             return compress_response(flow_reads)
 
