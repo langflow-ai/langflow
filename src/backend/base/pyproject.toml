@@ -116,7 +116,7 @@ dependencies = [
     # positive. Do not raise past 5.9.0: docling-ibm-models>=3.13.3 caps transformers<5.9.0 on macOS,
     # and a higher floor silently backtracks the whole docling stack to older releases on darwin only.
     # See .github/mend-scan-notes.md.
-    "transformers>=5.6.0,<6.0.0",
+    "transformers>=5.8.0,<6.0.0",
 ]
 
 [dependency-groups]
@@ -303,7 +303,7 @@ fastavro = [
     'fastavro>=1.9.8,<2.0.0; python_version >= "3.13"',
 ]
 gitpython = ["GitPython>=3.1.58"]
-nltk = ["nltk>=3.9.4"]
+nltk = ["nltk>=3.10.3"]
 lark = ["lark==1.2.2"]
 
 # Additional dependencies from requirements
