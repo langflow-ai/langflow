@@ -53,6 +53,7 @@ const ProviderList = ({
           model_count: matchingModels.length,
           models: matchingModels,
           api_docs_url: provider.api_docs_url,
+          live_discovery: provider.live_discovery,
         };
       });
   }, [rawProviders, modelType, trimmedQuery]);

@@ -1693,6 +1693,16 @@ class AuthService(BaseAuthService):
                     detail="Missing first superuser credentials",
                 )
             if not query_param and not header_param:
+                # AUTO_LOGIN parity with _api_key_security_impl / ws_api_key_security:
+                # AUTO_LOGIN on its own is not a credential. Only an explicit
+                # skip_auth_auto_login opt-in may resolve a credential-less caller to
+                # the superuser; otherwise the MCP transport endpoints would accept
+                # anonymous requests that every other authenticated route rejects.
+                if not settings_service.auth_settings.skip_auth_auto_login:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=AUTO_LOGIN_ERROR,
+                    )
                 result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
                 if result:
                     logger.warning(AUTO_LOGIN_WARNING)

@@ -66,7 +66,7 @@ overrides = [
     { name = "lxml", specifier = ">=6.1.0,<7.0.0" },
     { name = "mako", specifier = ">=1.3.12,<2.0.0" },
     { name = "markdown", specifier = ">=3.8.0" },
-    { name = "nltk", specifier = ">=3.9.4" },
+    { name = "nltk", specifier = ">=3.10.3" },
     { name = "orjson", specifier = ">=3.11.6" },
     { name = "pillow", specifier = ">=12.3.0" },
     { name = "playwright", specifier = ">=1.59.0" },
@@ -8724,7 +8724,7 @@ requires-dist = [
     { name = "needle-python", marker = "extra == 'needle'", specifier = ">=0.4.0" },
     { name = "nest-asyncio", specifier = ">=1.6.0,<2.0.0" },
     { name = "networkx", specifier = ">=3.4.2,<4.0.0" },
-    { name = "nltk", marker = "extra == 'nltk'", specifier = ">=3.9.4" },
+    { name = "nltk", marker = "extra == 'nltk'", specifier = ">=3.10.3" },
     { name = "numexpr", marker = "extra == 'numexpr'", specifier = ">=2.10.2" },
     { name = "onnxruntime", marker = "python_full_version < '3.14'", specifier = ">=1.20,<1.24" },
     { name = "onnxruntime", marker = "python_full_version >= '3.14'", specifier = ">=1.26" },
@@ -8795,7 +8795,7 @@ requires-dist = [
     { name = "tiktoken", marker = "extra == 'docling-chunking'", specifier = ">=0.7.0" },
     { name = "traceloop-sdk", specifier = ">=0.43.1,<1.0.0" },
     { name = "traceloop-sdk", marker = "extra == 'traceloop'", specifier = ">=0.43.1,<1.0.0" },
-    { name = "transformers", specifier = ">=5.6.0,<6.0.0" },
+    { name = "transformers", specifier = ">=5.8.0,<6.0.0" },
     { name = "trustcall", specifier = ">=0.0.38,<1.0.0" },
     { name = "twelvelabs", marker = "extra == 'twelvelabs'", specifier = ">=0.4.7,<1.0.0" },
     { name = "typer", specifier = ">=0.13.0,<1.0.0" },
@@ -9343,7 +9343,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-anthropic"
-version = "0.1.3"
+version = "0.1.5"
 source = { editable = "src/bundles/anthropic" }
 dependencies = [
     { name = "langchain-anthropic" },
@@ -9392,7 +9392,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.1.14"
+version = "1.1.16"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -9445,6 +9445,7 @@ all = [
     { name = "langchain-weaviate" },
     { name = "markdown" },
     { name = "mem0ai" },
+    { name = "mrscraper-sdk" },
     { name = "needle-python" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12'" },
     { name = "openai" },
@@ -9512,6 +9513,7 @@ all-no-torch = [
     { name = "langchain-weaviate" },
     { name = "markdown" },
     { name = "mem0ai" },
+    { name = "mrscraper-sdk" },
     { name = "needle-python" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12'" },
     { name = "openai" },
@@ -9661,6 +9663,9 @@ mistral = [
 mongodb = [
     { name = "langchain-mongodb" },
     { name = "pymongo" },
+]
+mrscraper = [
+    { name = "mrscraper-sdk" },
 ]
 needle = [
     { name = "langchain-community" },
@@ -9918,6 +9923,8 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["mistral"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["mongodb"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["mongodb"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["mrscraper"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["mrscraper"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["needle"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["needle"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["notdiamond"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -9988,6 +9995,7 @@ requires-dist = [
     { name = "lfx-ollama", marker = "extra == 'ollama'", editable = "src/bundles/ollama" },
     { name = "markdown", marker = "extra == 'notion'", specifier = ">=3.8.0" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=2.0.2,<3.0.0" },
+    { name = "mrscraper-sdk", marker = "extra == 'mrscraper'", specifier = ">=0.2.1,<0.3.0" },
     { name = "needle-python", marker = "extra == 'needle'", specifier = ">=0.4.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nvidia'", specifier = ">=26.1.0,<26.3.0" },
     { name = "openai", marker = "extra == 'aiml'", specifier = ">=1.68.2,<3.0.0" },
@@ -10024,7 +10032,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "faiss", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "needle", "notdiamond", "notion", "novita", "nvidia", "olivya", "ollama", "openrouter", "orcarouter", "perplexity", "pgvector", "pinecone", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "tavily", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vlmrun", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all", "all-no-torch"]
+provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "faiss", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "mrscraper", "needle", "notdiamond", "notion", "novita", "nvidia", "olivya", "ollama", "openrouter", "orcarouter", "perplexity", "pgvector", "pinecone", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "tavily", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vlmrun", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all", "all-no-torch"]
 
 [[package]]
 name = "lfx-cohere"
@@ -10064,7 +10072,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-datastax"
-version = "0.1.3"
+version = "0.1.5"
 source = { editable = "src/bundles/datastax" }
 dependencies = [
     { name = "astrapy" },
@@ -10259,7 +10267,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-ibm"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/bundles/ibm" }
 dependencies = [
     { name = "ibm-cloud-sdk-core" },
@@ -10289,9 +10297,10 @@ requires-dist = [
 
 [[package]]
 name = "lfx-nextplaid"
-version = "0.1.2"
+version = "0.1.4"
 source = { editable = "src/bundles/nextplaid" }
 dependencies = [
+    { name = "httpx" },
     { name = "langchain-plaid" },
     { name = "lfx" },
     { name = "pillow" },
@@ -10299,6 +10308,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "httpx", specifier = ">=0.28.1,<1.0.0" },
     { name = "langchain-plaid", specifier = ">=0.1.0,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
     { name = "pillow", specifier = ">=12.3.0,<13.0.0" },
@@ -10323,7 +10333,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-openai"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "src/bundles/openai" }
 dependencies = [
     { name = "langchain-openai" },
@@ -11649,6 +11659,18 @@ wheels = [
 ]
 
 [[package]]
+name = "mrscraper-sdk"
+version = "0.2.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/66/b2/8082b588e11e8769b69dbe92d674996d8a3415d25c0634a8806deaa4a322/mrscraper_sdk-0.2.1.tar.gz", hash = "sha256:34ae2e5eba684536773132484daea65d889a878967650d82ee43ae96f67595e6", size = 10992, upload-time = "2026-06-02T06:59:58.512Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8a/2f/6a67ad17bcd220b9e7ed2666f5f2cc5ffe1517be5cdd491ebb519b01395c/mrscraper_sdk-0.2.1-py3-none-any.whl", hash = "sha256:9d740d6516f4ca7efaad0a5540061a8c00b5fbe2d44566f486084cfc622be8c3", size = 11455, upload-time = "2026-06-02T06:59:57.221Z" },
+]
+
+[[package]]
 name = "msal"
 version = "1.37.0"
 source = { registry = "https://pypi.org/simple" }
@@ -12194,7 +12216,7 @@ wheels = [
 
 [[package]]
 name = "nltk"
-version = "3.10.0"
+version = "3.10.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -12203,9 +12225,9 @@ dependencies = [
     { name = "regex" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/96/02/df4f105b28a7c16b0e41423bc09cf0f1b8a305df4ef0b10ca74a2e4c648c/nltk-3.10.0.tar.gz", hash = "sha256:4fbac1d98203cbcd1b5d94a2877fb822300072d80604a5e7fae49d2c5f84e8c1", size = 3089244, upload-time = "2026-07-08T02:39:13.562Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e0/e6/fe51d2bb1a3b446f59c5c8165999a9fee208bc346af90a7cbf7657bc0d75/nltk-3.10.3.tar.gz", hash = "sha256:bb9327a461c3811c2fa4900e03840401f2126adfb30c0072827c433bd2444ea4", size = 5137152, upload-time = "2026-08-12T23:46:37.258Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6e/89/a0b0f35e2820d6a99d75ea1c11977ee6d5c9e6658eceb45b0c7620881faa/nltk-3.10.0-py3-none-any.whl", hash = "sha256:54ff84d4916d3ef127e8953bee0023f6a6b320b75d634a19e06ef056d3d244bf", size = 1716144, upload-time = "2026-07-08T02:39:09.753Z" },
+    { url = "https://files.pythonhosted.org/packages/b6/6d/ebd2af4640b12168fdf0cb74b6118df2f32a2f62ec7e0c06fbfd80706639/nltk-3.10.3-py3-none-any.whl", hash = "sha256:ff9598a8e20518ee0d557745890cc4435b9578489e2dcbc69c4f81fa060caf7c", size = 1798643, upload-time = "2026-08-12T23:44:13.478Z" },
 ]
 
 [[package]]

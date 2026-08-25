@@ -1004,6 +1004,13 @@ export const OPENAI_VOICES = [
   { name: "verse", value: "verse" },
 ];
 
+/**
+ * Fallback for the Assistant composer's character cap, used until /config replies.
+ * Matches the backend default of LANGFLOW_ASSISTANT_MAX_MESSAGE_LENGTH so the two
+ * agree even when the config request is in flight or unauthenticated.
+ */
+export const DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH = 2000;
+
 export const DEFAULT_POLLING_INTERVAL = 5000;
 export const DEFAULT_TIMEOUT = 30000;
 export const DEFAULT_FILE_PICKER_TIMEOUT = 60000;

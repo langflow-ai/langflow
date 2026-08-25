@@ -307,14 +307,31 @@ def test_root_error_type_keeps_a_multi_exception_group():
 
 
 @requires_otel
-def test_instrument_fastapi_app_sets_stable_semconv():
-    """The shared FastAPI helper opts into the stable HTTP conventions before instrumenting."""
-    os.environ.pop("OTEL_SEMCONV_STABILITY_OPT_IN", None)
-    from fastapi import FastAPI
-    from lfx.observability import instrument_fastapi_app
+@pytest.mark.parametrize(
+    ("env_overrides", "expected"),
+    [
+        pytest.param({}, "http", id="default"),
+        pytest.param({"OTEL_SEMCONV_STABILITY_OPT_IN": "http/dup"}, "http/dup", id="operator-override"),
+    ],
+)
+def test_importing_observability_opts_into_stable_semconv(env_overrides: dict[str, str], expected: str):
+    """The opt-in happens at import, which is the only point early enough.
 
-    instrument_fastapi_app(FastAPI())
-    assert os.environ.get("OTEL_SEMCONV_STABILITY_OPT_IN") == "http"
+    It used to live in ``instrument_fastapi_app``. That reads as early enough and is not:
+    ``bootstrap_application_telemetry`` runs first on both runtimes and loads OpenTelemetry's
+    instrumentation package, which caches the decision for the process while the variable is
+    still unset. Popping the variable and re-calling the helper cannot restore the old
+    behaviour, because the cache is already set by then.
+
+    Each case runs in a subprocess because the import and the OpenTelemetry decision are both
+    process-wide. The default is stable-only, while an operator can request both conventions
+    during a dashboard migration.
+    """
+    probe = "import os\nimport lfx.observability\nprint(os.environ['OTEL_SEMCONV_STABILITY_OPT_IN'])\n"
+    completed = _run(probe, env_overrides)
+
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == expected
 
 
 @requires_otel

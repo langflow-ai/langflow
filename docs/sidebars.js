@@ -172,9 +172,10 @@ module.exports = {
           type: "category",
           label: "Observability",
           items: [
+            "Develop/logging",
             "Develop/observability-opentelemetry",
             "Develop/observability-new-relic",
-            "Develop/logging",
+            "Develop/observability-instana",
             "Develop/observability-grafana-loki",
             "Develop/traces",
             {

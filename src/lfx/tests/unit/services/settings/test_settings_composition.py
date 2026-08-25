@@ -140,6 +140,7 @@ EXPECTED_FIELDS = {
     "disable_track_apikey_usage",
     "remove_api_keys",
     "allow_custom_components",
+    "tweaks_policy",
     # ComponentsSettings
     "components_path",
     "components_index_path",
@@ -219,6 +220,7 @@ EXPECTED_FIELDS = {
     "redis_queue_polling_watchdog_interval_s",
     "max_ingestion_timeout_secs",
     "executor_kind",
+    "dangerously_allow_multi_worker_without_shared_queue",
     # UiSettings
     "embedded_mode",
     "hide_getting_started_progress",
@@ -254,6 +256,7 @@ EXPECTED_FIELDS = {
     "mcp_server_docker_hardening",
     "mcp_server_allowed_packages",
     "mcp_server_interpreter_hardening",
+    "mcp_server_env_allowlist",
     # ---- Added in 1.12.0 ----
     # SecuritySettings: opt-in microVM sandbox backend (issue #12029)
     "sandbox_backend",
@@ -264,11 +267,15 @@ EXPECTED_FIELDS = {
     "sandbox_allow_software_emulation",
     # SecuritySettings: rebuild drifted built-ins with this server's code (issue #14455)
     "substitute_outdated_component_code",
+    # VariablesSettings: operator-tunable Langflow Assistant prompt length
+    "assistant_max_message_length",
     # ---- Serving-plane end-user identity ----
     # SecuritySettings
     "serving_end_user_header",
     "serving_trust_proxy_headers",
     "serving_end_user_required",
+    "serving_trace_end_user",
+    "serving_internal_mcp_hosts",
 }
 
 
@@ -321,6 +328,7 @@ def test_critical_defaults_unchanged():
     assert settings.dev is False
     assert settings.agentic_experience is True
     assert settings.developer_api_enabled is False
+    assert settings.dangerously_allow_multi_worker_without_shared_queue is False
 
 
 def test_dict_defaults_unchanged():
