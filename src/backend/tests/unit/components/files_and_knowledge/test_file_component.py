@@ -51,16 +51,19 @@ class TestFileComponentDynamicOutputs:
         assert "message" in output_names  # Raw content
         assert "path" in output_names  # File path
 
-    def test_update_outputs_multiple_files(self):
-        """Test multiple files show only Files output."""
+    async def test_update_outputs_multiple_files_preserves_raw_content(self):
+        """Test multiple files keep the Message output alongside Files."""
         component = FileComponent()
         frontend_node = {"outputs": [], "template": {"path": {"file_path": ["file1.txt", "file2.txt"]}}}
 
-        result = component.update_outputs(frontend_node, "path", ["file1.txt", "file2.txt"])
+        result = await component.run_and_validate_update_outputs(frontend_node, "path", ["file1.txt", "file2.txt"])
 
-        assert len(result["outputs"]) == 1
-        assert result["outputs"][0].name == "dataframe"
-        assert result["outputs"][0].display_name == "Files"
+        assert [
+            (output["name"], output["display_name"], output["method"], output["types"]) for output in result["outputs"]
+        ] == [
+            ("dataframe", "Files", "load_files", ["Table"]),
+            ("message", "Raw Content", "load_files_message", ["Message"]),
+        ]
 
     def test_update_outputs_empty_path(self):
         """Test empty path results in no outputs."""
