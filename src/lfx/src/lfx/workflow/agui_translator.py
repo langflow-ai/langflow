@@ -69,9 +69,15 @@ class AGUITranslator:
     :meth:`translate` for each ``EventManager`` event.
     """
 
-    def __init__(self, run_id: str, thread_id: str) -> None:
+    def __init__(self, run_id: str, thread_id: str, *, disable_custom_events: bool = False) -> None:
         self.run_id = run_id
         self.thread_id = thread_id
+        # When set, Langflow-specific content blocks (json/code/media/error) are
+        # dropped instead of riding as namespaced ``langflow.*`` CUSTOM events, so
+        # the stream carries only the standard AG-UI vocabulary. Read by the caller
+        # from ``LANGFLOW_AGUI_DISABLE_CUSTOM_EVENTS`` — the translator stays pure
+        # (no env/I/O access of its own), so it takes the resolved flag as an arg.
+        self._disable_custom_events = disable_custom_events
         # Id of the text message currently open on the wire, or ``None``.
         self._open_message_id: str | None = None
         # Message ids whose TEXT_MESSAGE_END has been emitted; the protocol
@@ -273,21 +279,23 @@ class AGUITranslator:
         events: list[BaseEvent] = []
 
         # Content blocks: tool_use becomes tool-call events, the Langflow-specific
-        # content types become namespaced CUSTOM events. They arrive in two shapes:
-        # the legacy/grouped shape nests leaves inside a group's ``contents``, while
-        # the agent's flat log (the content-blocks-as-source-of-truth design) carries
-        # ``tool_use`` / custom leaves at the TOP level with empty ``contents``. Handle
-        # both: translate a top-level leaf by its own type, and still walk a group's
-        # nested contents. ``text`` leaves are skipped here (text rides ``data["text"]``
-        # below); a block is either a leaf or a group, so a leaf's empty ``contents``
-        # makes the nested loop a no-op and the two paths cannot double-emit.
+        # content types become namespaced CUSTOM events (unless disabled — see
+        # ``__init__``). They arrive in two shapes: the legacy/grouped shape nests
+        # leaves inside a group's ``contents``, while the agent's flat log (the
+        # content-blocks-as-source-of-truth design) carries ``tool_use`` / custom
+        # leaves at the TOP level with empty ``contents``. Handle both: translate a
+        # top-level leaf by its own type, and still walk a group's nested contents.
+        # ``text`` leaves are skipped here (text rides ``data["text"]`` below); a
+        # block is either a leaf or a group, so a leaf's empty ``contents`` makes
+        # the nested loop a no-op and the two paths cannot double-emit.
+        emit_custom = not self._disable_custom_events
         for block_index, block in enumerate(data.get("content_blocks") or []):
             if not isinstance(block, dict):
                 continue
             block_type = block.get("type")
             if block_type == "tool_use":
                 events.extend(self._translate_tool_use(message_id, block_index, 0, block))
-            elif block_type in _CUSTOM_CONTENT_TYPES:
+            elif block_type in _CUSTOM_CONTENT_TYPES and emit_custom:
                 events.extend(self._translate_custom_content(message_id, block, block_index, 0, block))
             for content_index, content in enumerate(block.get("contents") or []):
                 if not isinstance(content, dict):
@@ -295,7 +303,7 @@ class AGUITranslator:
                 content_type = content.get("type")
                 if content_type == "tool_use":
                     events.extend(self._translate_tool_use(message_id, block_index, content_index, content))
-                elif content_type in _CUSTOM_CONTENT_TYPES:
+                elif content_type in _CUSTOM_CONTENT_TYPES and emit_custom:
                     events.extend(
                         self._translate_custom_content(message_id, block, block_index, content_index, content)
                     )

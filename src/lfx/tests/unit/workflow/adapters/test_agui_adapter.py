@@ -8,6 +8,7 @@ The agui adapter wraps the existing ``AGUITranslator`` and frames its
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 
 import pytest
 from lfx.workflow.adapters import (
@@ -203,3 +204,69 @@ def test_unknown_event_types_yield_no_events(unknown_event_type):
     adapter = get_stream_adapter("agui", _ctx())
     events = list(adapter.translate(unknown_event_type, {}))
     assert events == []
+
+
+class TestDisableCustomEventsSetting:
+    """``agui_disable_custom_events`` (bound from ``LANGFLOW_AGUI_DISABLE_CUSTOM_EVENTS``) gates CUSTOM content events.
+
+    The settings service is STUBBED (``get_settings_service`` is monkeypatched to a
+    ``SimpleNamespace``) for the per-flag matrix, matching the convention in
+    ``test_router_end_user_scoping.py``; ``test_real_settings_env_binding_...`` drives
+    a real env-built ``Settings`` object through the adapter to cover the
+    operator-facing contract end to end.
+    """
+
+    _CONTENT_BLOCKS = [{"title": "Steps", "contents": [{"type": "json", "data": {"k": "v"}}]}]
+
+    def _stub_settings(self, monkeypatch, settings_ns):
+        from lfx.services import deps as deps_module
+
+        # ``AGUIAdapter.__init__`` imports ``get_settings_service`` from
+        # ``lfx.services.deps`` at call time, so the stub belongs on that module.
+        monkeypatch.setattr(deps_module, "get_settings_service", lambda: SimpleNamespace(settings=settings_ns))
+
+    def test_setting_false_still_emits_custom_content_events(self, monkeypatch):
+        self._stub_settings(monkeypatch, SimpleNamespace(agui_disable_custom_events=False))
+        adapter = get_stream_adapter("agui", _ctx())
+
+        events = list(adapter.translate("add_message", {"id": "m1", "content_blocks": self._CONTENT_BLOCKS}))
+
+        assert any(e.type == "CUSTOM" for e in events)
+
+    def test_setting_true_suppresses_custom_content_events(self, monkeypatch):
+        self._stub_settings(monkeypatch, SimpleNamespace(agui_disable_custom_events=True))
+        adapter = get_stream_adapter("agui", _ctx())
+
+        events = list(adapter.translate("add_message", {"id": "m1", "content_blocks": self._CONTENT_BLOCKS}))
+
+        assert not any(e.type == "CUSTOM" for e in events)
+
+    def test_no_settings_service_defaults_to_emitting_custom_events(self, monkeypatch):
+        """A bare context without a registered settings service keeps today's behavior."""
+        from lfx.services import deps as deps_module
+
+        monkeypatch.setattr(deps_module, "get_settings_service", lambda: None)
+        adapter = get_stream_adapter("agui", _ctx())
+
+        events = list(adapter.translate("add_message", {"id": "m1", "content_blocks": self._CONTENT_BLOCKS}))
+
+        assert any(e.type == "CUSTOM" for e in events)
+
+    def test_real_settings_env_binding_suppresses_custom_content_events(self, monkeypatch):
+        """Operator contract end to end: the real ``Settings`` binds the env var, not just the stub.
+
+        The rest of this class stubs the settings namespace; this case builds the
+        actual env-bound ``Settings`` object so a typo in the field name or the
+        ``LANGFLOW_`` prefix cannot silently disable the feature with every other
+        test still green.
+        """
+        from lfx.services import deps as deps_module
+        from lfx.services.settings.base import Settings
+
+        monkeypatch.setenv("LANGFLOW_AGUI_DISABLE_CUSTOM_EVENTS", "true")
+        monkeypatch.setattr(deps_module, "get_settings_service", lambda: SimpleNamespace(settings=Settings()))
+
+        adapter = get_stream_adapter("agui", _ctx())
+        events = list(adapter.translate("add_message", {"id": "m1", "content_blocks": self._CONTENT_BLOCKS}))
+
+        assert not any(e.type == "CUSTOM" for e in events)
