@@ -40,6 +40,7 @@ def test_main_selects_every_release_artifact(tmp_path: Path) -> None:
 def test_base_excludes_main_and_bundle_wheels(tmp_path: Path) -> None:
     _write_wheel(tmp_path, "langflow", "1.11.0rc5")
     _write_wheel(tmp_path, "langflow-base", "0.11.0rc5")
+    _write_wheel(tmp_path, "langflow-sdk", "0.3.0rc5")
     _write_wheel(tmp_path, "lfx", "1.11.0rc5")
     _write_wheel(tmp_path, "langflow-sdk", "0.3.0rc5")
     _write_wheel(tmp_path, "lfx-arxiv", "0.1.3rc5")
@@ -71,6 +72,7 @@ def test_install_release_wheels_installs_only_target_profile_and_checks(
 ) -> None:
     _write_wheel(tmp_path, "langflow", "1.11.0rc5")
     _write_wheel(tmp_path, "langflow-base", "0.11.0rc5")
+    _write_wheel(tmp_path, "langflow-sdk", "0.3.0rc5")
     _write_wheel(tmp_path, "lfx", "1.11.0rc5")
     _write_wheel(tmp_path, "lfx-firecrawl", "0.1.1")
     _write_wheel(tmp_path, "lfx-duckduckgo", "0.1.3")
@@ -108,6 +110,7 @@ def test_install_release_wheels_installs_only_target_profile_and_checks(
     assert {Path(str(path)).name for path in install_command[7:]} == {
         "langflow-1.11.0rc5-py3-none-any.whl",
         "langflow_base-0.11.0rc5-py3-none-any.whl",
+        "langflow_sdk-0.3.0rc5-py3-none-any.whl",
         "lfx-1.11.0rc5-py3-none-any.whl",
         "lfx_firecrawl-0.1.1-py3-none-any.whl",
     }
@@ -116,6 +119,7 @@ def test_install_release_wheels_installs_only_target_profile_and_checks(
     assert json.loads(str(verify_command[3])) == {
         "langflow": "1.11.0rc5",
         "langflow-base": "0.11.0rc5",
+        "langflow-sdk": "0.3.0rc5",
         "lfx": "1.11.0rc5",
         "lfx-firecrawl": "0.1.1",
     }
