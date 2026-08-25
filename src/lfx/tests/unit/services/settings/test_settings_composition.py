@@ -220,6 +220,7 @@ EXPECTED_FIELDS = {
     "redis_queue_polling_watchdog_interval_s",
     "max_ingestion_timeout_secs",
     "executor_kind",
+    "dangerously_allow_multi_worker_without_shared_queue",
     # UiSettings
     "embedded_mode",
     "hide_getting_started_progress",
@@ -327,6 +328,7 @@ def test_critical_defaults_unchanged():
     assert settings.dev is False
     assert settings.agentic_experience is True
     assert settings.developer_api_enabled is False
+    assert settings.dangerously_allow_multi_worker_without_shared_queue is False
 
 
 def test_dict_defaults_unchanged():

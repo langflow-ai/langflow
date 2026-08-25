@@ -233,7 +233,12 @@ async def _build_graph_from_authorized_flow(
         msg = f"Flow {flow_id} not found"
         raise ValueError(msg)
     if tweaks:
-        graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
+        # Component-side, not caller-side. The only routes here are the generated
+        # flow-as-tool function below and ``CustomComponent.run_flow``, both of
+        # which build these tweaks from their own declared inputs. Judging them
+        # against the deployment policy would make ``off`` stop an agent from
+        # calling a flow as a tool. The protected-field floor still applies.
+        graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks, caller_supplied=False)
     return Graph.from_payload(graph_data, flow_id=flow_id, user_id=user_id)
 
 

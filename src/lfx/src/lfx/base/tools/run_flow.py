@@ -534,7 +534,12 @@ class RunFlowBaseComponent(Component):
             if tweaks := self._build_flow_tweak_data():
                 from lfx.processing.process import process_tweaks_on_graph
 
-                graph = process_tweaks_on_graph(graph, tweaks)
+                # These tweaks are this component's own declared inputs, not a
+                # caller overriding the sub-flow, so the deployment policy does
+                # not judge them. Without this, ``off`` would stop the Run Flow
+                # component and every flow used as an agent tool from working.
+                # The protected-field floor still applies.
+                graph = process_tweaks_on_graph(graph, tweaks, caller_supplied=False)
 
             result = await run_flow(
                 inputs=self._build_inputs(tweaks),

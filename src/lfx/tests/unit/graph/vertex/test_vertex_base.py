@@ -1145,6 +1145,28 @@ class TestFileInputStorageNamespaceOwnership:
 
         assert params["path"] == unrestricted_storage.resolve_component_path(str(outside))
 
+    @pytest.mark.parametrize(
+        "windows_path",
+        [
+            pytest.param("C:/data/report.csv", id="drive-letter-forward-slashes"),
+            pytest.param("C:\\data\\report.csv", id="drive-letter-backslashes"),
+            pytest.param("//fileserver/share/report.csv", id="unc-share"),
+        ],
+    )
+    def test_windows_absolute_paths_are_not_treated_as_storage_keys(self, unrestricted_storage, windows_path):
+        """A Windows absolute path is a local path, not a "<namespace>/<file_name>" key.
+
+        "C:/data/report.csv" is not POSIX-absolute, so a POSIX-only absoluteness test splits it
+        into namespace "C:" plus a file name carrying a separator and denies a legitimate local
+        path -- while the backslash spelling of the same path was already exempt for having no
+        "/" at all. Absolute paths belong to ``_enforce_file_paths``, in either spelling.
+        """
+        handler = self._handler(unrestricted_storage, user_id=self.ATTACKER_ID, flow_id=self.FLOW_ID)
+
+        params = handler.process_file_field("path", {"type": "file", "file_path": windows_path}, {})
+
+        assert params["path"] == unrestricted_storage.resolve_component_path(windows_path)
+
     def test_unscoped_graph_keeps_legacy_behavior(self, unrestricted_storage, tmp_path):
         """Standalone graphs carry no user or flow id and have no tenant boundary."""
         handler = self._handler(unrestricted_storage, user_id=None, flow_id=None)
