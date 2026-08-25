@@ -273,6 +273,108 @@ describe("mutateTemplate", () => {
     );
   });
 
+  it("keeps a tool action edited while the refresh was in flight (LE-2272)", async () => {
+    const preEdit = [
+      {
+        name: "fetch_content",
+        description: "Fetch content from one or more web pages.",
+        approval_actions: [],
+        status: true,
+      },
+    ];
+    const edited = [
+      {
+        name: "web_fetch",
+        description: "custom description",
+        approval_actions: ["approve", "reject"],
+        status: true,
+      },
+    ];
+    const node = {
+      template: {
+        code: { value: "original source" },
+        tools_metadata: { value: preEdit },
+      },
+      outputs: [],
+    } as unknown as APIClassType;
+    const setNodeClass = jest.fn();
+    // The editor closes while the request is in flight, so the store already
+    // holds the edits by the time the pre-edit response lands.
+    const mutateAsync = jest.fn().mockImplementation(async () => {
+      setStoreNodeTemplate("url-node", {
+        code: { value: "original source" },
+        tools_metadata: { value: edited },
+      });
+      return {
+        template: {
+          code: { value: "original source" },
+          tools_metadata: { value: preEdit },
+        },
+        outputs: [],
+      } as unknown as APIClassType;
+    });
+    setStoreNodeTemplate("url-node", node.template);
+
+    await mutateTemplate(
+      preEdit,
+      "url-node",
+      node,
+      setNodeClass,
+      { mutateAsync } as never,
+      jest.fn(),
+      "tools_metadata",
+    );
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    expect(setNodeClass).toHaveBeenCalledWith(
+      expect.objectContaining({
+        template: expect.objectContaining({
+          tools_metadata: expect.objectContaining({ value: edited }),
+        }),
+      }),
+    );
+  });
+
+  it("applies a backend-driven value change the user did not touch", async () => {
+    const node = {
+      template: {
+        code: { value: "original source" },
+        agent_llm: { value: "OpenAI" },
+        model_name: { value: "gpt-4" },
+      },
+      outputs: [],
+    } as unknown as APIClassType;
+    const setNodeClass = jest.fn();
+    const mutateAsync = jest.fn().mockResolvedValue({
+      template: {
+        code: { value: "original source" },
+        agent_llm: { value: "OpenAI" },
+        model_name: { value: "gpt-5" },
+      },
+      outputs: [],
+    } as unknown as APIClassType);
+    setStoreNodeTemplate("agent-node", node.template);
+
+    await mutateTemplate(
+      "OpenAI",
+      "agent-node",
+      node,
+      setNodeClass,
+      { mutateAsync } as never,
+      jest.fn(),
+      "agent_llm",
+    );
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    expect(setNodeClass).toHaveBeenCalledWith(
+      expect.objectContaining({
+        template: expect.objectContaining({
+          model_name: expect.objectContaining({ value: "gpt-5" }),
+        }),
+      }),
+    );
+  });
+
   it("applies a backend-driven visibility change the user did not touch", async () => {
     const node = {
       template: {

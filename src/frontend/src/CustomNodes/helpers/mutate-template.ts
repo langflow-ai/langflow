@@ -1,5 +1,5 @@
 import type { UseMutationResult } from "@tanstack/react-query";
-import { cloneDeep, debounce } from "lodash";
+import { cloneDeep, debounce, isEqual } from "lodash";
 import { SAVE_DEBOUNCE_TIME } from "@/constants/constants";
 import useFlowStore from "@/stores/flowStore";
 import type {
@@ -29,7 +29,41 @@ const getNodeCode = (nodeId: string): unknown => {
 // user flipped meanwhile - the field vanishes off the node with no feedback.
 const USER_OWNED_FIELD_FLAGS = ["advanced", "api_editable"] as const;
 
-const keepUserFieldFlags = (
+// The field values the last applied response wrote, per node. A store value
+// that no longer matches this baseline was changed locally, which is what makes
+// an older in-flight response stale for that field. Comparing against the
+// baseline rather than the request snapshot keeps concurrent refreshes working:
+// several mount refreshes share one snapshot, so the first response to land
+// would otherwise look like a local edit and suppress the others.
+const lastAppliedValues = new Map<string, Record<string, unknown>>();
+const LAST_APPLIED_PRUNE_THRESHOLD = 100;
+
+const rememberAppliedValues = (
+  nodeId: string,
+  template: APITemplateType,
+): void => {
+  if (lastAppliedValues.size > LAST_APPLIED_PRUNE_THRESHOLD) {
+    const liveIds = new Set(useFlowStore.getState().nodes.map((n) => n.id));
+    for (const id of lastAppliedValues.keys()) {
+      if (!liveIds.has(id)) lastAppliedValues.delete(id);
+    }
+  }
+  const values: Record<string, unknown> = {};
+  for (const [fieldName, field] of Object.entries(template)) {
+    if (typeof field === "object" && field !== null) {
+      values[fieldName] = cloneDeep(field.value);
+    }
+  }
+  lastAppliedValues.set(nodeId, values);
+};
+
+// LE-2272: a response answers for the field values that were current when the
+// request left. Anything the user edited meanwhile (a tool action's slug,
+// description or approval_actions; any field typed while a refresh is in
+// flight) is newer than the response, so the local value wins. When the user
+// did not touch the field, the backend value still applies - a legitimate
+// refresh that recomputes a value is unaffected.
+const keepUserEdits = (
   nodeId: string,
   requestedTemplate: APITemplateType | undefined,
   incomingTemplate: APITemplateType,
@@ -38,6 +72,7 @@ const keepUserFieldFlags = (
   if (!requestedTemplate || !currentTemplate) return incomingTemplate;
 
   const merged = cloneDeep(incomingTemplate);
+  const baseline = lastAppliedValues.get(nodeId);
   for (const [fieldName, currentField] of Object.entries(currentTemplate)) {
     const requestedField = requestedTemplate[fieldName];
     const incomingField = merged[fieldName];
@@ -55,6 +90,13 @@ const keepUserFieldFlags = (
       if (currentField[flag] !== requestedField[flag]) {
         incomingField[flag] = currentField[flag];
       }
+    }
+    const appliedValue =
+      baseline && fieldName in baseline
+        ? baseline[fieldName]
+        : requestedField.value;
+    if (!isEqual(currentField.value, appliedValue)) {
+      incomingField.value = cloneDeep(currentField.value);
     }
   }
   return merged;
@@ -121,11 +163,12 @@ export const mutateTemplate = async (
               is_refresh: isRefresh ?? false,
             });
             if (newTemplate && !isStaleForNode(nodeId, node)) {
-              newNode.template = keepUserFieldFlags(
+              newNode.template = keepUserEdits(
                 nodeId,
                 node.template,
                 newTemplate.template,
               );
+              rememberAppliedValues(nodeId, newNode.template);
               newNode.outputs = updateHiddenOutputs(
                 newNode.outputs ?? [],
                 newTemplate.outputs ?? [],
