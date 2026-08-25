@@ -28,7 +28,7 @@ Alloy scrapes a directory of `*.log` files, so `LANGFLOW_LOG_FILE` must point at
 
 In JSON mode the file is a single JSON stream: application logs and third-party stdlib loggers (`uvicorn`, `sqlalchemy`, `httpx`, `langchain`) are all rendered as JSON and run through PII redaction, so the `stage.json` parse stage and the **Stdlib intercept routing** panel work against it directly. This stack scrapes a file, so `LANGFLOW_LOG_FILE` is required. If you instead run Langflow as a container, you can drop the file and scrape its stdout by swapping Alloy's `loki.source.file` target for [`loki.source.docker`](https://grafana.com/docs/alloy/latest/reference/components/loki/loki.source.docker/).
 
-See [Logs and observability](/docs/Develop/observability-grafana-loki.mdx) for the full list of environment variables (per-logger overrides, extra PII redaction keys, trace correlation, etc.).
+See [Logs and observability](../../../docs/docs/Develop/observability-grafana-loki.mdx) for the full list of environment variables (per-logger overrides, extra PII redaction keys, trace correlation, etc.).
 
 ## Run
 
