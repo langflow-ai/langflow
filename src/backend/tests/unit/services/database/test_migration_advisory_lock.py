@@ -434,7 +434,7 @@ def test_current_alembic_heads_sync_normalizes_url_and_disposes_engine(raw_url, 
 
     engine_mock = MagicMock()
     conn_mock = MagicMock()
-    
+
     engine_mock.connect.return_value.__enter__.return_value = conn_mock
 
     ctx_mock = MagicMock()
