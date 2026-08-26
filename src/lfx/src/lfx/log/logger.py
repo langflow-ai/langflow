@@ -11,7 +11,7 @@ from collections import deque
 from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
-from threading import Lock, Semaphore
+from threading import Lock, Semaphore, local
 from typing import Any, TypedDict
 
 import orjson
@@ -1314,9 +1314,29 @@ class InterceptHandler(logging.Handler):
     sqlalchemy, langchain, uvicorn) survive into the JSON output. Without
     this, errors raised inside third-party libraries log a one-line message
     with no stack trace.
+
+    ``emit`` is guarded against re-entry on the same thread. Whenever a log
+    file is configured, ``configure`` installs ``structlog.stdlib.LoggerFactory``,
+    so the structlog logger this handler resolves from ``record.name`` writes
+    straight back out to the stdlib logger of that same name. If that logger
+    is itself handled by an ``InterceptHandler`` -- which ``Logger.__init__``
+    in ``langflow.server`` does unconditionally for ``gunicorn.error`` and
+    ``gunicorn.access`` -- the record re-enters here and cycles. Each lap
+    renders the previous lap's already-rendered payload into the next event,
+    so the message doubles in size per lap and resident memory follows it;
+    a container is exhausted long before the interpreter's recursion limit
+    would fire. Dropping the re-entrant record is the correct outcome for a
+    logging handler: instrumentation must never take down the process it
+    instruments, and the record still reaches the root handlers on the lap
+    that caused the re-entry.
     """
 
+    _reentrancy = local()
+
     def emit(self, record: logging.LogRecord) -> None:
+        if getattr(self._reentrancy, "active", False):
+            return
+        self._reentrancy.active = True
         # Mirrors the stdlib Handler.emit safety net: a malformed third-party
         # log call (e.g. mismatched %-format args) must not propagate up and
         # crash the request path. Anything that raises here is routed to
@@ -1338,6 +1358,8 @@ class InterceptHandler(logging.Handler):
             getattr(structlog_logger, method_name)(record.getMessage(), **kwargs)
         except Exception:  # noqa: BLE001 - logging must never break the caller
             self.handleError(record)
+        finally:
+            self._reentrancy.active = False
 
 
 def _install_stdlib_intercept(numeric_level: int) -> None:
