@@ -751,6 +751,13 @@ If the deployment is headless and never uses the visual editor or MCP over SSE, 
 
 The polling watchdog reclaims builds whose client heartbeat has gone stale. The default threshold is 90 seconds (`LANGFLOW_REDIS_QUEUE_POLLING_STALE_THRESHOLD_S=90`). If legitimate long-running builds are being cancelled, increase this value or set it to `0` to disable the watchdog entirely.
 
+## Voice mode {#voice-mode}
+
+Voice mode is deprecated as of Langflow 1.10.
+The Playground microphone now provides speech-to-text only.
+
+For setup, remaining WebSocket endpoints, and current behavior, see [Use voice mode](/concepts-voice-mode).
+
 ## Intel Mac issues {#intel-mac-issues}
 
 The following issues can occur when running Langflow on Intel-based Macs.

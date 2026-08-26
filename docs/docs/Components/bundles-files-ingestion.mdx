@@ -55,7 +55,7 @@ The **File Description Generator** component runs the OpenDsStar Docling-based i
 
 For each file, the pipeline converts the document with [Docling](https://docling-project.github.io/docling/), shortens the Markdown output, and prompts the connected LLM to write a searchable description. Processing runs in a subprocess to avoid memory pressure when handling large files.
 
-The component outputs a list of [`Data`](/data-types#data) objects, each containing `file_path` and the generated description text. Connect this output to a vector store's **Ingest Data** input to make the files searchable by an agent.
+The component outputs a list of [`Data`](/data-types#json) objects, each containing `file_path` and the generated description text. Connect this output to a vector store's **Ingest Data** input to make the files searchable by an agent.
 
 Descriptions are cached in the **Cache Directory** to avoid regenerating them on subsequent runs with the same files.
 

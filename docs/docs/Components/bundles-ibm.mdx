@@ -153,7 +153,7 @@ For information about accepted values and functionality, see the provider's docu
 
 ## IBM watsonx.data Presto {#ibm-watsonxdata-presto}
 
-The **IBM watsonx.data Presto** component runs a SQL query on an [IBM watsonx.data](https://www.ibm.com/products/watsonx-data) Presto engine (Java or C++) and returns the rows as a [DataFrame](/data-types#dataframe). Use it to bring lakehouse data — Iceberg tables, federated sources, and [Confluent Tableflow tables registered as an Iceberg REST datasource](https://www.ibm.com/docs/en/watsonxdata/standard/2.3.x?topic=integrations-integrating-confluent-tableflow-in-watsonxdata) — into a flow, or expose it to an Agent in Tool Mode so the Agent writes the SQL.
+The **IBM watsonx.data Presto** component runs a SQL query on an [IBM watsonx.data](https://www.ibm.com/products/watsonx-data) Presto engine (Java or C++) and returns the rows as a [DataFrame](/data-types#table). Use it to bring lakehouse data — Iceberg tables, federated sources, and [Confluent Tableflow tables registered as an Iceberg REST datasource](https://www.ibm.com/docs/en/watsonxdata/standard/2.3.x?topic=integrations-integrating-confluent-tableflow-in-watsonxdata) — into a flow, or expose it to an Agent in Tool Mode so the Agent writes the SQL.
 
 The component uses the Presto DBAPI client (`presto-python-client`) over HTTPS. On watsonx.data on IBM Cloud, authenticate with **api_key**: the user name is `ibmlhapikey` and the password is an IBM Cloud IAM API key. On watsonx.data software, choose **basic** and provide the user name and password your instance expects, plus the instance CA certificate.
 
@@ -178,7 +178,7 @@ The component uses the Presto DBAPI client (`presto-python-client`) over HTTPS. 
 | Verify SSL Certificate (`verify_ssl`) | Boolean | Input parameter. Default: `true`. |
 | SSL CA Certificate (`ssl_ca_file`) | String | Input parameter. Path or `https` URL of the CA bundle for software instances. |
 | Request Timeout (seconds) (`request_timeout`) | Integer | Input parameter. Default: `60`. |
-| Result Table | [DataFrame](/data-types#dataframe) | Output. Query rows. |
+| Result Table | [DataFrame](/data-types#table) | Output. Query rows. |
 
 ## IBM watsonx.data MCP {#ibm-watsonxdata-mcp}
 
@@ -205,7 +205,7 @@ The component builds the `/api/v2/mcp/` endpoint from the instance URL, authenti
 | Tool Execution Timeout (seconds) (`tool_execution_timeout`) | Float | Input parameter. `0` uses the system-configured MCP timeout. |
 | Verify SSL Certificate (`verify_ssl`) | Boolean | Input parameter. Default: `true`. |
 | Toolset | [Tools](/data-types#tool) | Output. Available when Tool Mode is on. |
-| Response | [DataFrame](/data-types#dataframe) | Output. Result of running the selected tool once. |
+| Response | [DataFrame](/data-types#table) | Output. Result of running the selected tool once. |
 
 ### Use other watsonx.data services from Langflow
 

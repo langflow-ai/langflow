@@ -62,11 +62,11 @@ The Real-Time Context Engine is available for Confluent Cloud clusters on AWS. I
 | Tool Execution Timeout (seconds) (`tool_execution_timeout`) | Float | Input parameter. `0` uses the system-configured MCP timeout. |
 | Verify SSL Certificate (`verify_ssl`) | Boolean | Input parameter. Default: `true`. |
 | Toolset | [Tools](/data-types#tool) | Output. Available when Tool Mode is on. Connect to an Agent's **Tools** input. |
-| Response | [DataFrame](/data-types#dataframe) | Output. Result of running the selected tool once. |
+| Response | [DataFrame](/data-types#table) | Output. Result of running the selected tool once. |
 
 ## Confluent Kafka Producer
 
-This component publishes a [Message](/data-types#message), a [Data](/data-types#data) object, or every row of a [DataFrame](/data-types#dataframe) to a Kafka topic and returns the delivery report. Use it to write agent decisions, enriched records, or flow results back to a topic.
+This component publishes a [Message](/data-types#message), a [Data](/data-types#json) object, or every row of a [DataFrame](/data-types#table) to a Kafka topic and returns the delivery report. Use it to write agent decisions, enriched records, or flow results back to a topic.
 
 Values are serialized as UTF-8 JSON by default (`string` publishes text as-is). Records are acknowledged with `flush`; the delivery report lists partition, offset, and timestamp per record.
 
@@ -86,7 +86,7 @@ Values are serialized as UTF-8 JSON by default (`string` publishes text as-is). 
 | Record Headers (`headers`) | Dictionary | Input parameter. Optional Kafka record headers added to every record. |
 | Flush Timeout (seconds) (`flush_timeout`) | Integer | Input parameter. Default: `10`. |
 | Extra Client Config (`client_config`) | Dictionary | Input parameter. Additional librdkafka producer settings, for example `acks: all`. |
-| Delivery Report | [Data](/data-types#data) | Output. `records_sent`, `delivered`, `failed`, and per-record `reports`. |
+| Delivery Report | [Data](/data-types#json) | Output. `records_sent`, `delivered`, `failed`, and per-record `reports`. |
 
 ## Confluent Kafka Consumer
 
@@ -114,7 +114,7 @@ Record values are decoded as JSON by default (falling back to text); `string` ke
 | Value Format (`value_format`) | Dropdown | Input parameter. `json` (default), `string`, `avro`, or `json_schema`. |
 | Schema Registry URL / API Key / API Secret | String, SecretString | Input parameters. Shown for `avro` and `json_schema`. |
 | Extra Client Config (`client_config`) | Dictionary | Input parameter. Additional librdkafka consumer settings. |
-| Records | [DataFrame](/data-types#dataframe) | Output. One row per record. |
+| Records | [DataFrame](/data-types#table) | Output. One row per record. |
 
 ## Confluent Tableflow Reader
 
@@ -149,8 +149,8 @@ To use it, enable Tableflow on the topic in Confluent Cloud, capture the REST ca
 | Snapshot ID (`snapshot_id`) | String | Input parameter. Optional Iceberg snapshot ID for a point-in-time read. |
 | Catalog URI Override (`catalog_uri_override`) | String | Input parameter. Full Iceberg REST catalog URI. Leave empty to build it from the region and IDs. |
 | Cloud Provider (`cloud`) | String | Input parameter. Default: `aws`. |
-| Result Table | [DataFrame](/data-types#dataframe) | Output. Rows of the table after filter, projection, and limit. |
-| Tables | [Data](/data-types#data) | Output. The tables in the namespace. |
+| Result Table | [DataFrame](/data-types#table) | Output. Rows of the table after filter, projection, and limit. |
+| Tables | [Data](/data-types#json) | Output. The tables in the namespace. |
 
 ## Connect Confluent and Langflow without new components
 
