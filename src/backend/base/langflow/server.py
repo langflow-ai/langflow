@@ -72,14 +72,25 @@ class Logger(glogging.Logger):
     def __init__(self, cfg) -> None:
         super().__init__(cfg)
         routes_to_stdlib = structlog_routes_to_stdlib()
+        # The handlers configure() installed on the root logger for file mode: a
+        # RotatingFileHandler carrying the ProcessorFormatter that renders foreign
+        # stdlib records through the same processor chain as application logs.
+        root_handlers = [h for h in logging.root.handlers if not isinstance(h, InterceptHandler)]
         for name in ("gunicorn.error", "gunicorn.access"):
             gunicorn_logger = logging.getLogger(name)
             gunicorn_logger.setLevel(logging.WARNING)
-            if routes_to_stdlib:
+            if not routes_to_stdlib:
+                gunicorn_logger.handlers = [InterceptHandler()]
+            elif root_handlers:
+                # Hand these loggers the file handler directly rather than relying on
+                # propagation: UvicornWorker.__init__ copies whatever sits here onto
+                # uvicorn.error / uvicorn.access and sets propagate = False, so a
+                # propagate-only wiring would drop every uvicorn record.
+                gunicorn_logger.handlers = list(root_handlers)
+                gunicorn_logger.propagate = False
+            else:
                 gunicorn_logger.handlers = []
                 gunicorn_logger.propagate = True
-            else:
-                gunicorn_logger.handlers = [InterceptHandler()]
 
     def error(self, msg, *args, **kwargs):
         """Override error method to filter out SIGSEGV messages."""
