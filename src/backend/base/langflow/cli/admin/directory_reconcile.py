@@ -104,8 +104,16 @@ class DirectoryReconciler:
 
     def _build_plan(self, state: DirectoryState, *, prune: bool) -> list[_Operation]:
         current_connection = self._current_connection()
-        groups = self.client.list_directory_groups()
-        mappings = self.client.list_directory_role_mappings()
+        has_desired_mappings = bool(state.team_links or state.role_mappings)
+        if current_connection is None:
+            if has_desired_mappings:
+                msg = "Configure the directory connection and provision its SCIM catalog before applying mappings"
+                raise ValueError(msg)
+            groups: list[dict[str, Any]] = []
+            mappings: list[dict[str, Any]] = []
+        else:
+            groups = self.client.list_directory_groups()
+            mappings = self.client.list_directory_role_mappings()
         group_ids = {str(group["id"]) for group in groups}
         operations: list[_Operation] = []
 
