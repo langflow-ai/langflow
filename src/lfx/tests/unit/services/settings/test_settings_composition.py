@@ -338,8 +338,11 @@ def test_dict_defaults_unchanged():
         "busy_timeout": 30000,
     }
     assert settings.db_connection_settings == {
-        "pool_size": 20,
-        "max_overflow": 30,
+        # 10/40 rather than 20/30: same total ceiling per worker, but half as many
+        # connections retained at rest, since pool_size is a permanent floor while
+        # max_overflow is released on return.
+        "pool_size": 10,
+        "max_overflow": 40,
         "pool_timeout": 30,
         "pool_pre_ping": True,
         "pool_recycle": 1800,
