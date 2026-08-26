@@ -16,7 +16,7 @@ from langflow.services.database.models.user.model import User
 
 _UUID = "11111111-1111-1111-1111-111111111111"
 
-# Every superuser-gated route that takes a body, with a payload that fails
+# Every administration-gated route that takes a body, with a payload that fails
 # schema validation. Each must answer the denial before describing the schema.
 # (router module, HTTP method, path, malformed body)
 MALFORMED_BODY_ROUTES = [
@@ -64,7 +64,7 @@ def test_malformed_body_from_superuser_still_reports_schema_errors(module, metho
     assert response.status_code == 422, response.text
 
 
-def test_every_superuser_gated_body_route_is_covered():
+def test_every_administrator_gated_body_route_is_covered():
     """A new gated route with a body must be added to the matrix above.
 
     Without this the matrix silently stops tracking the surface it exists to
@@ -74,15 +74,18 @@ def test_every_superuser_gated_body_route_is_covered():
     covered = {(method.upper(), path) for _module, method, path, _body in MALFORMED_BODY_ROUTES}
 
     gated: set[tuple[str, str]] = set()
-    for module in (authz_roles, authz_teams, authz_role_assignments):
+    module_dependencies = (
+        (authz_roles, authz_roles._require_role_administrator_dependency),
+        (authz_teams, authz_teams._require_team_administrator_dependency),
+        (authz_role_assignments, authz_role_assignments._require_role_administrator_dependency),
+    )
+    for module, administration_dependency in module_dependencies:
         for route in module.router.routes:
             takes_body = any(
                 dependant.body_params for dependant in [route.dependant] if hasattr(dependant, "body_params")
             )
             is_gated = any(
-                dep.call is module._require_superuser_dependency
-                for dep in route.dependant.dependencies
-                if dep.call is not None
+                dep.call is administration_dependency for dep in route.dependant.dependencies if dep.call is not None
             )
             if takes_body and is_gated:
                 for method in route.methods - {"HEAD", "OPTIONS"}:
@@ -95,5 +98,5 @@ def test_every_superuser_gated_body_route_is_covered():
         for method, path in gated
     }
     assert normalized_gated - normalized_covered == set(), (
-        f"superuser-gated body routes missing from MALFORMED_BODY_ROUTES: {normalized_gated - normalized_covered}"
+        f"administrator-gated body routes missing from MALFORMED_BODY_ROUTES: {normalized_gated - normalized_covered}"
     )

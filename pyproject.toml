@@ -429,6 +429,13 @@ external = ["RUF027"]
 "src/backend/base/langflow/__main__.py" = [
     "B008",  # Typer CLI requires function calls in defaults
 ]
+"src/backend/base/langflow/cli/admin/commands.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT002", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+    "TC003",  # Typer resolves Path annotations at runtime
+]
 "src/backend/base/langflow/services/cache/*" = [
     "S301",  # Pickle usage is intentional for caching
 ]

@@ -68,15 +68,15 @@ async def add_user(
     * Public sign up (unauthenticated). Allowed only when public registration is
       enabled for the deployment, i.e. AUTO_LOGIN is off (multi-user mode) and
       ENABLE_SIGNUP is True.
-    * Admin "add user" (authenticated active superuser). Always allowed,
+    * Admin "add user" (authenticated active administrator). Always allowed,
       regardless of the sign up settings, so disabling public sign up does not
-      break superuser-driven user creation.
+      break administrator-driven user creation.
 
     User activation is controlled by the NEW_USER_IS_ACTIVE setting.
     """
     settings_service = get_settings_service()
     auth_settings = settings_service.auth_settings
-    # An authenticated active superuser (the admin "add user" flow) may always
+    # An authenticated active administrator (the admin "add user" flow) may always
     # create users. For every other caller this endpoint is effectively
     # unauthenticated, so refuse it unless public sign up is intended for this
     # deployment. get_current_user_optional returns None for credential-less
@@ -338,7 +338,24 @@ async def patch_user(
             try:
                 await validate_identity_mutation(authorization_service, session, lifecycle_mutation)
             except AuthorizationMutationRejected as exc:
-                raise HTTPException(status_code=409, detail=exc.public_detail) from exc
+                await audit_decision(
+                    user_id=user.id,
+                    action="user:update",
+                    obj=f"user:{user_db.id}",
+                    result="deny",
+                    details=administration_audit_details(
+                        {
+                            "fields_changed": list(lifecycle_mutation.policy_relevant_fields),
+                            "reason": "access_ceiling",
+                        },
+                        operation_id=operation_id,
+                    ),
+                )
+                raise HTTPException(
+                    status_code=409,
+                    detail=exc.public_detail,
+                    headers={"X-Langflow-Error-Code": "access_ceiling"},
+                ) from exc
 
         if not update_password:
             user_update.password = user_db.password
@@ -467,7 +484,21 @@ async def delete_user(
     try:
         await validate_identity_mutation(authorization_service, session, lifecycle_mutation)
     except AuthorizationMutationRejected as exc:
-        raise HTTPException(status_code=409, detail=exc.public_detail) from exc
+        await audit_decision(
+            user_id=current_user.id,
+            action="user:delete",
+            obj=f"user:{user_id}",
+            result="deny",
+            details=administration_audit_details(
+                {"reason": "access_ceiling"},
+                operation_id=operation_id,
+            ),
+        )
+        raise HTTPException(
+            status_code=409,
+            detail=exc.public_detail,
+            headers={"X-Langflow-Error-Code": "access_ceiling"},
+        ) from exc
 
     # IMPORTANT:
     # This endpoint intentionally performs a DB-cascade delete only and does

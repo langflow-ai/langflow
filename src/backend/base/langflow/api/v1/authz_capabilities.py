@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from langflow.api.utils import CurrentActiveUser
 from langflow.services.deps import get_authorization_service
@@ -12,18 +12,31 @@ router = APIRouter(prefix="/authz/capabilities", tags=["Authorization"])
 
 
 class AdministrationCapabilities(BaseModel):
-    user: bool
-    team: bool
-    role: bool
+    user: bool = Field(description="Caller may administer other users through user:manage.")
+    team: bool = Field(description="Caller may administer teams and membership through team:manage.")
+    role: bool = Field(description="Caller may administer roles and assignments through role:manage.")
 
 
 class AuthorizationFeatures(BaseModel):
-    team_role_assignments: bool
+    team_role_assignments: bool = Field(
+        description="The installed authorization service supports team-role assignments."
+    )
 
 
 class AuthorizationCapabilities(BaseModel):
     administration: AdministrationCapabilities
     features: AuthorizationFeatures
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "administration": {"user": True, "team": False, "role": False},
+                    "features": {"team_role_assignments": False},
+                }
+            ]
+        }
+    }
 
 
 @router.get("", response_model=AuthorizationCapabilities)
