@@ -6,7 +6,10 @@ resolves those names back to the same stdlib loggers, so every intercepted
 record was handed straight back to the handler that intercepted it.
 """
 
+import contextlib
+import importlib
 import logging
+import logging.handlers
 
 import pytest
 import structlog
@@ -20,22 +23,54 @@ UVICORN_LOGGERS = ("uvicorn.error", "uvicorn.access")
 
 @pytest.fixture(autouse=True)
 def _restore_logging_state():
-    """Put back the process-wide logging state these tests rewire."""
-    original_root_handlers = list(logging.root.handlers)
-    original_gunicorn_state = {
-        name: (list(logging.getLogger(name).handlers), logging.getLogger(name).level, logging.getLogger(name).propagate)
+    """Put back the process-wide logging state these tests rewire.
+
+    ``configure(log_file=...)`` adds a ``RotatingFileHandler`` to the root logger,
+    raises the root level and parks the handler in ``lfx.log.logger._file_handler``.
+    Left behind, that handler holds an open file inside a since-deleted tmp_path and
+    whatever test the xdist worker picks up next logs into it. Mirrors the module
+    fixture in ``test_logger.py``.
+    """
+    # ``import lfx.log.logger as ...`` would bind the logger object ``lfx.log``
+    # re-exports under that name, not the module.
+    lfx_log = importlib.import_module("lfx.log.logger")
+
+    orig_structlog_config = dict(structlog.get_config())
+    orig_root_handlers = logging.root.handlers[:]
+    orig_root_level = logging.root.level
+    orig_file_handler = lfx_log._file_handler
+    orig_logger_state = {
+        name: (logging.getLogger(name).handlers[:], logging.getLogger(name).level, logging.getLogger(name).propagate)
         for name in GUNICORN_LOGGERS + UVICORN_LOGGERS
     }
 
-    yield
+    try:
+        yield
+    finally:
+        structlog.configure(**orig_structlog_config)
 
-    structlog.reset_defaults()
-    logging.root.handlers = original_root_handlers
-    for name, (handlers, level, propagate) in original_gunicorn_state.items():
-        gunicorn_logger = logging.getLogger(name)
-        gunicorn_logger.handlers = handlers
-        gunicorn_logger.setLevel(level)
-        gunicorn_logger.propagate = propagate
+        # Drop handlers these tests added, closing file handlers so they stop
+        # pointing into deleted temp dirs. If configure() replaced the lfx-managed
+        # file handler, setup_log_file() already closed the original, so it must
+        # not be reinstalled.
+        for handler in logging.root.handlers[:]:
+            if handler not in orig_root_handlers:
+                logging.root.removeHandler(handler)
+                if isinstance(handler, logging.handlers.RotatingFileHandler):
+                    with contextlib.suppress(OSError, ValueError):
+                        handler.close()
+        restored_handlers = orig_root_handlers
+        if lfx_log._file_handler is not orig_file_handler:
+            restored_handlers = [h for h in orig_root_handlers if h is not orig_file_handler]
+            lfx_log._file_handler = None
+        logging.root.handlers[:] = restored_handlers
+        logging.root.setLevel(orig_root_level)
+
+        for name, (handlers, level, propagate) in orig_logger_state.items():
+            named_logger = logging.getLogger(name)
+            named_logger.handlers = handlers
+            named_logger.setLevel(level)
+            named_logger.propagate = propagate
 
 
 def test_intercepts_when_structlog_writes_to_the_stream():
@@ -79,6 +114,7 @@ def test_uvicorn_loggers_inherit_a_terminating_handler(tmp_path, monkeypatch):
     emit_cap = 8
 
     def counting_emit(handler_self, record):
+        """Record every interception and cap the laps a regression could run."""
         emitted.append(record.name)
         if len(emitted) > emit_cap:
             return None
@@ -115,6 +151,7 @@ def test_gunicorn_error_reaches_the_log_file_exactly_once(tmp_path, monkeypatch)
     emit_cap = 8
 
     def counting_emit(handler_self, record):
+        """Record every interception and cap the laps a regression could run."""
         emitted.append(record.name)
         # Hard stop so a regression cannot exhaust CI memory: each lap of the
         # cycle renders the previous lap's payload into the next event.

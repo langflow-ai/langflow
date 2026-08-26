@@ -503,6 +503,7 @@ class TestInterceptHandlerReentrancy:
 
     @staticmethod
     def _record(name="gunicorn.error", msg="boom"):
+        """Build an ERROR record named after a logger that server.py intercepts."""
         return logging.LogRecord(
             name=name,
             level=logging.ERROR,
@@ -523,6 +524,7 @@ class TestInterceptHandlerReentrancy:
             """Stands in for a structlog logger backed by structlog.stdlib.LoggerFactory."""
 
             def error(self, message, **_kwargs):
+                """Dispatch, then route the record back into the handler."""
                 dispatched.append(message)
                 handler.emit(record)
 
@@ -562,6 +564,7 @@ class TestInterceptHandlerReentrancy:
         emit_cap = 8
 
         def counting_emit(handler_self, record):
+            """Track emit depth and stop the cycle before it can exhaust memory."""
             depth["current"] += 1
             depth["max"] = max(depth["max"], depth["current"])
             try:
