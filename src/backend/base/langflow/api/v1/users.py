@@ -265,6 +265,16 @@ async def patch_user(
         )
     if update_password:
         if not is_user_administrator:
+            await audit_decision(
+                user_id=user.id,
+                action="user:update",
+                obj=f"user:{user_id}",
+                result="deny",
+                details=administration_audit_details(
+                    {"fields_changed": ["password"], "reason": "administration_required"},
+                    operation_id=operation_id,
+                ),
+            )
             raise HTTPException(status_code=400, detail="You can't change your password here")
         user_update.password = get_auth_service().get_password_hash(user_update.password)
 
