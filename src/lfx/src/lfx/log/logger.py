@@ -1362,6 +1362,24 @@ class InterceptHandler(logging.Handler):
             self._reentrancy.active = False
 
 
+def structlog_routes_to_stdlib() -> bool:
+    """Report whether structlog is configured to write back out to stdlib logging.
+
+    ``configure`` installs ``structlog.stdlib.LoggerFactory`` whenever a log file
+    is configured, which makes every structlog call resolve to the stdlib logger
+    of the same name. Callers that are about to attach an ``InterceptHandler`` to
+    a *named* stdlib logger need to know this: interception in that direction
+    closes a cycle, because the handler routes the record to a structlog logger
+    that writes it straight back to the logger it came from.
+
+    Returns:
+        ``True`` when the configured structlog logger factory is a
+        ``structlog.stdlib.LoggerFactory``, ``False`` otherwise (the print
+        factory writes to the stream directly and cannot cycle).
+    """
+    return isinstance(structlog.get_config().get("logger_factory"), structlog.stdlib.LoggerFactory)
+
+
 def _install_stdlib_intercept(numeric_level: int) -> None:
     """Install (or refresh) the InterceptHandler on the stdlib root logger.
 

@@ -6,7 +6,7 @@ from typing import Any
 
 from gunicorn import glogging
 from gunicorn.app.base import BaseApplication
-from lfx.log.logger import InterceptHandler
+from lfx.log.logger import InterceptHandler, structlog_routes_to_stdlib
 from uvicorn.workers import UvicornWorker
 
 
@@ -55,18 +55,31 @@ class LangflowUvicornWorker(UvicornWorker):
 class Logger(glogging.Logger):
     """Implements and overrides the gunicorn logging interface.
 
-    This class inherits from the standard gunicorn logger and overrides it by
-    replacing the handlers with `InterceptHandler` in order to route the
-    gunicorn logs to loguru.
+    This class inherits from the standard gunicorn logger and overrides it so
+    the gunicorn logs join the structlog stream the rest of the process emits.
+
+    How they join it depends on what ``lfx.log.logger.configure`` selected. With
+    no log file, structlog writes to the stream directly, so an
+    ``InterceptHandler`` on each gunicorn logger routes the records into it.
+    With a log file, structlog is backed by ``structlog.stdlib.LoggerFactory``
+    and resolves ``gunicorn.error`` back to this very stdlib logger: an
+    ``InterceptHandler`` here would hand each record back to itself and cycle,
+    doubling the rendered payload every lap until the process runs out of
+    memory. In that mode the records propagate to the root file handler
+    instead, which renders foreign records through the same processor chain.
     """
 
     def __init__(self, cfg) -> None:
         super().__init__(cfg)
-        logging.getLogger("gunicorn.error").setLevel(logging.WARNING)
-        logging.getLogger("gunicorn.access").setLevel(logging.WARNING)
-
-        logging.getLogger("gunicorn.error").handlers = [InterceptHandler()]
-        logging.getLogger("gunicorn.access").handlers = [InterceptHandler()]
+        routes_to_stdlib = structlog_routes_to_stdlib()
+        for name in ("gunicorn.error", "gunicorn.access"):
+            gunicorn_logger = logging.getLogger(name)
+            gunicorn_logger.setLevel(logging.WARNING)
+            if routes_to_stdlib:
+                gunicorn_logger.handlers = []
+                gunicorn_logger.propagate = True
+            else:
+                gunicorn_logger.handlers = [InterceptHandler()]
 
     def error(self, msg, *args, **kwargs):
         """Override error method to filter out SIGSEGV messages."""

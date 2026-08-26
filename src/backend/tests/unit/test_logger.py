@@ -32,6 +32,7 @@ from lfx.log.logger import (
     log_buffer,
     setup_gunicorn_logger,
     setup_uvicorn_logger,
+    structlog_routes_to_stdlib,
 )
 from loguru import logger as loguru_logger
 
@@ -592,6 +593,25 @@ class TestInterceptHandlerReentrancy:
         contents = log_file.read_text()
         assert "boom" in contents
         assert len(contents) < 10_000
+
+
+class TestStructlogRoutesToStdlib:
+    """Tests for the predicate that reports whether structlog writes back to stdlib."""
+
+    def teardown_method(self):
+        structlog.reset_defaults()
+
+    def test_true_when_a_log_file_is_configured(self, tmp_path):
+        """A log file selects structlog.stdlib.LoggerFactory, which can cycle."""
+        configure(log_level="ERROR", log_file=tmp_path / "langflow.log", cache=False)
+
+        assert structlog_routes_to_stdlib() is True
+
+    def test_false_without_a_log_file(self):
+        """Without a log file the print factory writes to the stream directly."""
+        configure(log_level="ERROR", cache=False)
+
+        assert structlog_routes_to_stdlib() is False
 
 
 class TestSetupFunctions:
