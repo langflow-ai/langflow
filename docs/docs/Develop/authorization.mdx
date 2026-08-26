@@ -22,7 +22,7 @@ The following steps apply when you have a registered enforcement plugin.
 
 3. Set `LANGFLOW_AUTHZ_ENABLED=true`. The plugin reads the role and share tables and applies its policy.
 
-4. Use the [roles API](#roles-api) and [role assignments API](#role-assignments-api) to assign the built-in `viewer`, `developer`, or `admin` roles to your users, or create custom roles.
+4. Use the [roles API](#roles-api), [role assignments API](#role-assignments-api), or [`langflow admin`](/admin-api-cli) to assign the built-in `viewer`, `developer`, or `admin` roles to your users, or create custom roles.
 
 5. Use the [shares API](#shares-api) to grant cross-user access where needed.
 
@@ -56,9 +56,17 @@ Langflow seeds three built-in system roles that an enforcement plugin uses as a 
 
 You can create additional roles with the [roles API](#roles-api). Role assignments take effect only after an enforcement plugin is registered.
 
+## Administration delegation
+
+Superusers can use every administration route. An installed authorization plugin can also delegate narrow administration rights with `user:manage`, `team:manage`, and `role:manage`. The OSS pass-through service deliberately returns false for all three administration checks, even when normal resource authorization is configured to allow requests.
+
+Delegated user administrators cannot promote or demote platform superusers. IdP-derived memberships and grants remain read-only through the manual administration API.
+
+Use `GET /api/v1/authz/capabilities` to discover the caller's administration resources and whether the installed plugin supports team-role assignments. For complete REST and CLI usage, see [Administer users and teams with the API and CLI](/admin-api-cli).
+
 ## Authorization API reference
 
-All authorization endpoints are under `/api/v1/authz/`. Write operations require superuser privileges.
+All authorization endpoints are under `/api/v1/authz/`. Write operations require a superuser or the matching delegated administration permission.
 
 These endpoints manage the RBAC data model. An enforcement plugin consumes roles, assignments, and shares when evaluating requests. Without a plugin, API responses succeed but access is not restricted.
 
@@ -128,7 +136,7 @@ Each share write fires an invalidation call to the authorization plugin so cache
 
 ### Roles API
 
-`/api/v1/authz/roles` — superuser only for writes
+`/api/v1/authz/roles` — requires a superuser or `role:manage` for writes
 
 | Method | Path | Description |
 |---|---|---|
@@ -140,7 +148,7 @@ Each share write fires an invalidation call to the authorization plugin so cache
 
 ### Role assignments API
 
-`/api/v1/authz/role-assignments` — superuser only for writes
+`/api/v1/authz/role-assignments` — requires a superuser or `role:manage` for writes
 
 | Method | Path | Description |
 |---|---|---|
@@ -150,7 +158,7 @@ Each share write fires an invalidation call to the authorization plugin so cache
 
 ### Teams API
 
-`/api/v1/authz/teams` — superuser only for writes
+`/api/v1/authz/teams` — requires a superuser or `team:manage` for writes
 
 | Method | Path | Description |
 |---|---|---|

@@ -59,16 +59,16 @@ async def _require_role_administrator(user, *, operation_id: str | None = None) 
     )
 
 
-async def _require_superuser_dependency(
+async def _require_role_administrator_dependency(
     current_user: CurrentActiveUser,
     operation_id: OperationId = None,
 ) -> None:
-    """Run the superuser gate as a route dependency, i.e. before body validation.
+    """Run the role-administrator gate as a route dependency before body validation.
 
     FastAPI solves a route's ``dependencies`` before validating that route's own
     body, so an unauthorised caller is refused whatever they post. Gated only in
     the endpoint body, they first receive the same 422 field names and enum
-    values a superuser would, which lets them map the request contract of a
+    values an administrator would, which lets them map the request contract of a
     route they cannot invoke.
 
     The in-body call is kept as well: it is the gate for anything that reaches
@@ -77,7 +77,7 @@ async def _require_superuser_dependency(
     await _require_role_administrator(current_user, operation_id=operation_id)
 
 
-SUPERUSER_ONLY = [Depends(_require_superuser_dependency)]
+ROLE_ADMINISTRATOR_ONLY = [Depends(_require_role_administrator_dependency)]
 
 
 async def _assignment_reads(session, assignments: list[AuthzRoleAssignment]) -> list[RoleAssignmentRead]:
@@ -163,8 +163,18 @@ async def list_assignments(
     return await _assignment_reads(session, list(rows))
 
 
-@router.post("", response_model=RoleAssignmentRead, status_code=status.HTTP_201_CREATED, dependencies=SUPERUSER_ONLY)
-@router.post("/", response_model=RoleAssignmentRead, status_code=status.HTTP_201_CREATED, dependencies=SUPERUSER_ONLY)
+@router.post(
+    "",
+    response_model=RoleAssignmentRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=ROLE_ADMINISTRATOR_ONLY,
+)
+@router.post(
+    "/",
+    response_model=RoleAssignmentRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=ROLE_ADMINISTRATOR_ONLY,
+)
 async def create_assignment(
     payload: RoleAssignmentCreate,
     current_user: CurrentActiveUser,
@@ -172,7 +182,7 @@ async def create_assignment(
     response: Response,
     operation_id: OperationId = None,
 ) -> RoleAssignmentRead:
-    """Assign a role to a user. Superuser-only."""
+    """Assign a role to a user as a role administrator."""
     await _require_role_administrator(current_user, operation_id=operation_id)
     authorization_service = get_authorization_service()
     # Let authorization plugins acquire their transaction-scoped policy-write
@@ -205,7 +215,6 @@ async def create_assignment(
     if assignment is None:
         assignment = candidate
         session.add(assignment)
-        await session.flush()
     else:
         existing_manual = (
             await session.exec(
@@ -239,10 +248,28 @@ async def create_assignment(
         policy_relevant_fields=("user_id", "role_id", "domain_type", "domain_id"),
     )
     try:
+        if effective_assignment_created:
+            await validate_identity_mutation(authorization_service, session, mutation)
         await session.flush()
         if effective_assignment_created:
             await stage_identity_mutation(authorization_service, session, mutation)
         await session.commit()
+    except AuthorizationMutationRejected as exc:
+        await audit_decision(
+            user_id=current_user.id,
+            action="role_assignment:create",
+            obj=f"user:{payload.user_id}",
+            result="deny",
+            details=administration_audit_details(
+                {"role_id": str(payload.role_id), "reason": "access_ceiling"},
+                operation_id=operation_id,
+            ),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=exc.public_detail,
+            headers={"X-Langflow-Error-Code": "access_ceiling"},
+        ) from exc
     except IntegrityError as exc:
         await session.rollback()
         raise HTTPException(
@@ -284,7 +311,7 @@ async def create_assignment(
     response_model=RoleAssignmentRead,
     status_code=status.HTTP_200_OK,
     responses={status.HTTP_204_NO_CONTENT: {"description": "Manual assignment fully revoked."}},
-    dependencies=SUPERUSER_ONLY,
+    dependencies=ROLE_ADMINISTRATOR_ONLY,
 )
 async def delete_assignment(
     assignment_id: UUID,
@@ -400,7 +427,11 @@ async def delete_assignment(
                 operation_id=operation_id,
             ),
         )
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=exc.public_detail) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=exc.public_detail,
+            headers={"X-Langflow-Error-Code": "access_ceiling"},
+        ) from exc
 
     await session.delete(assignment)
     await session.flush()

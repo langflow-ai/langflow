@@ -1,0 +1,145 @@
+---
+title: Administer users and teams with the API and CLI
+slug: /admin-api-cli
+---
+
+Langflow 1.13 provides matching REST and command-line surfaces for user, team, role, and role-assignment administration. Existing `/api/v1` routes remain canonical; the CLI calls those routes with a Langflow API key.
+
+The open-source authorization service is fail-closed for delegated administration. Superusers retain access. A non-superuser can administer a resource only when an installed authorization plugin implements the corresponding permission:
+
+| Permission | Allows | Does not allow |
+|---|---|---|
+| `user:manage` | Cross-user directory reads and user lifecycle changes | Promoting or demoting platform superusers |
+| `team:manage` | Team CRUD and manual membership changes | Role CRUD or role assignments |
+| `role:manage` | Custom role CRUD and user or team role assignments | User or team CRUD |
+
+Check the caller's permissions and optional Enterprise features with `GET /api/v1/authz/capabilities`.
+
+## Authenticate the CLI
+
+The administration CLI sends `X-API-Key` and a unique `X-Langflow-Operation-ID` on every API request. Connection settings use this precedence:
+
+1. `--url` and `--api-key` flags.
+2. A profile selected with `--profile`.
+3. `LANGFLOW_URL` and `LANGFLOW_API_KEY`.
+
+Profiles are JSON documents in the platform-specific Langflow configuration directory. A profile stores the URL and the **name** of the environment variable that contains the API key; it never stores the credential.
+
+```json
+{
+  "profiles": {
+    "production": {
+      "url": "https://langflow.example.com",
+      "api_key_env": "LANGFLOW_PRODUCTION_API_KEY"
+    }
+  }
+}
+```
+
+Use the profile after setting the referenced variable:
+
+```bash
+export LANGFLOW_PRODUCTION_API_KEY="..."
+langflow admin --profile production users list
+```
+
+Use `--profile-file` to select a different profile document. Use `--output json` for stable automation output; tables are the default for interactive use.
+
+## CLI command surface
+
+```text
+langflow admin users list|get|create|update|disable|set-password|delete
+langflow admin teams list|get|create|update|disable|delete
+langflow admin teams members list|add|remove
+langflow admin roles list|get|create|update|delete
+langflow admin role-assignments list|grant|revoke
+langflow admin export|diff|apply
+```
+
+`groups` is an alias of `teams`. API paths, manifests, and JSON output always use `team` or `teams`.
+
+Passwords are accepted only from standard input or a manifest environment-variable reference. For example:
+
+```bash
+printf '%s\n' "$NEW_USER_PASSWORD" \
+  | langflow admin --profile production --output json users create alice --password-stdin
+```
+
+Normal deprovisioning disables a user:
+
+```bash
+langflow admin --profile production users disable alice
+```
+
+Hard deletion requires both an explicit hard-delete flag and the exact username:
+
+```bash
+langflow admin --profile production users delete alice --hard --confirm alice
+```
+
+The CLI uses these exit codes:
+
+| Code | Meaning |
+|---|---|
+| `0` | Success, including a diff with no drift |
+| `1` | Authorization, transport, server, or partial-apply failure |
+| `2` | CLI usage or manifest validation failure |
+| `3` | `diff` found drift |
+
+## Declarative administration state
+
+`export`, `diff`, and `apply` use the stable `langflow.ai/v1` `AdminState` YAML or JSON contract.
+
+```yaml
+apiVersion: langflow.ai/v1
+kind: AdminState
+users:
+  - username: alice
+    state: active
+    password_env: ALICE_INITIAL_PASSWORD
+teams:
+  - adom_name: operators
+    display_name: Operators
+    description: Production operators
+    state: active
+    members:
+      - alice
+roles:
+  - name: user-operator
+    description: Delegated user administrator
+    permissions:
+      - user:manage
+assignments:
+  - subject:
+      type: user
+      name: alice
+    role: user-operator
+    domain:
+      type: global
+```
+
+`password_env` is creation-only. The manifest is rejected if a plaintext `password` field is present. Optional IDs let a manifest rename users, teams, and custom roles; natural keys make manifests portable between deployments. System roles can be read and assigned but cannot be edited.
+
+`apply` resolves and validates the entire manifest before it writes. It then applies changes in dependency order: roles, users, teams, memberships, and assignments. The default is create/update-only. `--prune` removes only absent **manual** memberships and assignments for subjects and teams named in the manifest. IdP-owned records are reported as skipped and are never removed. Non-interactive pruning also requires `--yes`.
+
+There is no server-side bulk transaction. If an operation fails, apply stops and reports applied, skipped, failed, and pending operations. Rerun the same manifest after correcting the failure; successful operations converge and are not repeated.
+
+## REST administration routes
+
+All routes authenticate with `X-API-Key`. Collection routes are deterministically ordered and accept pagination up to 200 rows per request; the CLI follows all pages automatically. Successful creates include a `Location` header.
+
+| Resource | Routes |
+|---|---|
+| Users | `/api/v1/users/`, `/api/v1/users/{user_id}` |
+| Teams | `/api/v1/authz/teams`, `/api/v1/authz/teams/{team_id}/members` |
+| Roles | `/api/v1/authz/roles` |
+| User role assignments | `/api/v1/authz/role-assignments` |
+| Capabilities | `/api/v1/authz/capabilities` |
+
+Exact collection filters include user `username`, user `role_name`, team `adom_name`, and role `exact_name`.
+
+Manual membership and role-assignment mutations cannot remove IdP-only state. These conflicts return `409`, preserve the existing `detail` message, and add the stable `X-Langflow-Error-Code: externally_managed` response header. Administration denials use `403` and `X-Langflow-Error-Code: administration_denied`.
+
+Before a membership or effective role assignment changes, the installed authorization plugin can enforce its access ceiling. A rejected privilege escalation returns `409` with `X-Langflow-Error-Code: access_ceiling`.
+
+Every administration mutation supplies its operation ID to the audit path. Audit details include the actor, target, action, source, and changed field names. Passwords, API keys, and secret values are never included.

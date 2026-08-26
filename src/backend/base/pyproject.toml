@@ -44,6 +44,7 @@ dependencies = [
     "typer>=0.13.0,<1.0.0",
     "cachetools>=6.0.0",
     "platformdirs>=4.2.0,<5.0.0",
+    "pyyaml>=6.0.2,<7.0.0",
     "python-multipart>=0.0.12,<1.0.0",
     "orjson>=3.11.6,<4.0.0",
     "alembic>=1.13.0,<1.19.0",

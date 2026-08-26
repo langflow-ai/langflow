@@ -883,7 +883,7 @@ async def test_create_assignment_emits_lifecycle_for_target_user(stub_authz):
     assert session.added[1].assignment_id == session.added[0].id
     assert session.committed == 1
     assert authz.staged_mutations == authz.committed_mutations
-    assert authz.validated_mutations == []
+    assert authz.validated_mutations == authz.staged_mutations
     assert len(authz.lock_requests) == 1
     assert authz.lock_requests[0]["affected_user_ids"] == (target_user.id,)
     assert authz.staged_mutations[0].affected_user_ids == (target_user.id,)
@@ -891,7 +891,44 @@ async def test_create_assignment_emits_lifecycle_for_target_user(stub_authz):
     assert authz.staged_mutations[0].domain_type == "global"
     assert authz.staged_mutations[0].domain_id is None
     assert session.events.index("lock") < session.events.index("exec")
-    assert session.events.index("lock") < session.events.index("flush")
+    assert session.events.index("lock") < session.events.index("validate") < session.events.index("flush")
+
+
+@pytest.mark.asyncio
+async def test_create_assignment_enforces_plugin_access_ceiling(stub_authz):
+    from langflow.api.v1 import authz_role_assignments
+    from langflow.api.v1.schemas.authz_role_assignments import RoleAssignmentCreate
+    from langflow.services.database.models.auth import AuthzRole
+    from langflow.services.database.models.user.model import User
+    from lfx.services.authorization import AuthorizationMutationRejected
+
+    authz = stub_authz(admin_resources={"role"})
+
+    async def reject_assignment(*, session, mutation) -> None:  # noqa: ARG001
+        detail = "Assignment exceeds the actor's access ceiling"
+        raise AuthorizationMutationRejected(detail)
+
+    authz.validate_identity_mutation = reject_assignment
+    target_user = SimpleNamespace(id=uuid4())
+    role = SimpleNamespace(id=uuid4(), name="admin")
+    session = _FakeAsyncSession(
+        {(User, target_user.id): target_user, (AuthzRole, role.id): role},
+    )
+    actor = _make_user(is_superuser=False)
+    payload = RoleAssignmentCreate(user_id=target_user.id, role_id=role.id)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await authz_role_assignments.create_assignment(
+            payload=payload,
+            current_user=actor,
+            session=session,
+            response=Response(),
+        )
+
+    assert exc_info.value.status_code == 409
+    assert exc_info.value.headers == {"X-Langflow-Error-Code": "access_ceiling"}
+    assert session.committed == 0
+    assert authz.staged_mutations == []
 
 
 @pytest.mark.asyncio

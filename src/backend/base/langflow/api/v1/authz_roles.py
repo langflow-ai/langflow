@@ -46,16 +46,16 @@ async def _require_role_administrator(user, *, operation_id: str | None = None) 
     )
 
 
-async def _require_superuser_dependency(
+async def _require_role_administrator_dependency(
     current_user: CurrentActiveUser,
     operation_id: OperationId = None,
 ) -> None:
-    """Run the superuser gate as a route dependency, i.e. before body validation.
+    """Run the role-administrator gate as a route dependency before body validation.
 
     FastAPI solves a route's ``dependencies`` before validating that route's own
     body, so an unauthorised caller is refused whatever they post. Gated only in
     the endpoint body, they first receive the same 422 field names and enum
-    values a superuser would, which lets them map the request contract of a
+    values an administrator would, which lets them map the request contract of a
     route they cannot invoke.
 
     The in-body call is kept as well: it is the gate for anything that reaches
@@ -64,7 +64,7 @@ async def _require_superuser_dependency(
     await _require_role_administrator(current_user, operation_id=operation_id)
 
 
-SUPERUSER_ONLY = [Depends(_require_superuser_dependency)]
+ROLE_ADMINISTRATOR_ONLY = [Depends(_require_role_administrator_dependency)]
 
 
 async def _detect_parent_cycle(
@@ -132,8 +132,8 @@ async def read_role(
     return RoleRead.model_validate(role)
 
 
-@router.post("", response_model=RoleRead, status_code=status.HTTP_201_CREATED, dependencies=SUPERUSER_ONLY)
-@router.post("/", response_model=RoleRead, status_code=status.HTTP_201_CREATED, dependencies=SUPERUSER_ONLY)
+@router.post("", response_model=RoleRead, status_code=status.HTTP_201_CREATED, dependencies=ROLE_ADMINISTRATOR_ONLY)
+@router.post("/", response_model=RoleRead, status_code=status.HTTP_201_CREATED, dependencies=ROLE_ADMINISTRATOR_ONLY)
 async def create_role(
     payload: RoleCreate,
     current_user: CurrentActiveUser,
@@ -205,7 +205,7 @@ async def create_role(
     return RoleRead.model_validate(role)
 
 
-@router.patch("/{role_id}", response_model=RoleRead, dependencies=SUPERUSER_ONLY)
+@router.patch("/{role_id}", response_model=RoleRead, dependencies=ROLE_ADMINISTRATOR_ONLY)
 async def update_role(
     role_id: UUID,
     payload: RoleUpdate,
@@ -321,7 +321,7 @@ async def update_role(
     return RoleRead.model_validate(role)
 
 
-@router.delete("/{role_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=SUPERUSER_ONLY)
+@router.delete("/{role_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=ROLE_ADMINISTRATOR_ONLY)
 async def delete_role(
     role_id: UUID,
     current_user: CurrentActiveUser,
