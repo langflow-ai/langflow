@@ -112,6 +112,48 @@ class AdminState(ManifestModel):
         return self
 
 
+class DirectoryConnectionTrust(ManifestModel):
+    """Credential-free external OAuth trust metadata."""
+
+    tenant_id: str = Field(min_length=1, max_length=64)
+    issuer: str = Field(min_length=1, max_length=512)
+    audience: str = Field(min_length=1, max_length=512)
+    jwks_url: str = Field(min_length=1, max_length=2048)
+    allowed_client_id: str = Field(min_length=1, max_length=256)
+
+
+class DirectoryTeamLink(ManifestModel):
+    group_id: UUID
+    team_id: UUID
+    origin: Literal["created", "linked"] = "linked"
+
+
+class DirectoryRoleMapping(ManifestModel):
+    group_id: UUID
+    role_id: UUID
+    domain: ManifestDomain = Field(default_factory=ManifestDomain)
+
+
+class DirectoryState(ManifestModel):
+    """Reviewed directory mapping intent; never contains SCIM catalog state."""
+
+    api_version: Literal["langflow.ai/v1"] = Field(alias="apiVersion")
+    kind: Literal["DirectoryState"]
+    connection: DirectoryConnectionTrust | None = None
+    team_links: list[DirectoryTeamLink] = Field(default_factory=list, alias="teamLinks")
+    role_mappings: list[DirectoryRoleMapping] = Field(default_factory=list, alias="roleMappings")
+
+    @model_validator(mode="after")
+    def validate_mapping_keys(self) -> DirectoryState:
+        _require_unique("directory group Team link", [item.group_id for item in self.team_links])
+        _require_unique("directory-backed Team", [item.team_id for item in self.team_links])
+        _require_unique(
+            "directory role mapping",
+            [(item.group_id, item.role_id, item.domain.type, item.domain.domain_id) for item in self.role_mappings],
+        )
+        return self
+
+
 def _require_unique(label: str, values: list[object]) -> None:
     seen: set[object] = set()
     duplicates: set[object] = set()
@@ -138,8 +180,34 @@ def load_admin_state(path: Path) -> AdminState:
     return AdminState.model_validate(raw)
 
 
+def load_directory_state(path: Path) -> DirectoryState:
+    """Load a strict credential-free directory mapping manifest."""
+    text = path.read_text(encoding="utf-8")
+    try:
+        raw = json.loads(text) if path.suffix.lower() == ".json" else yaml.safe_load(text)
+    except json.JSONDecodeError as exc:
+        msg = f"Invalid JSON directory manifest at line {exc.lineno}, column {exc.colno}"
+        raise ManifestDocumentError(msg) from exc
+    except yaml.YAMLError as exc:
+        msg = "Invalid YAML directory manifest"
+        raise ManifestDocumentError(msg) from exc
+    return DirectoryState.model_validate(raw)
+
+
 def dump_admin_state(state: AdminState, *, format_name: Annotated[Literal["yaml", "json"], Field()] = "yaml") -> str:
     """Serialize a manifest without introducing aliases or secret values."""
+    data = state.model_dump(mode="json", by_alias=True, exclude_none=True)
+    if format_name == "json":
+        return json.dumps(data, indent=2, sort_keys=True) + "\n"
+    return yaml.safe_dump(data, sort_keys=False)
+
+
+def dump_directory_state(
+    state: DirectoryState,
+    *,
+    format_name: Annotated[Literal["yaml", "json"], Field()] = "yaml",
+) -> str:
+    """Serialize reviewed directory intent without catalog identities or secrets."""
     data = state.model_dump(mode="json", by_alias=True, exclude_none=True)
     if format_name == "json":
         return json.dumps(data, indent=2, sort_keys=True) + "\n"
