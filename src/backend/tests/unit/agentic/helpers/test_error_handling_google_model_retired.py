@@ -39,3 +39,33 @@ class TestGoogleRetiredModelDetection:
         error = "429 Resource has been exhausted (e.g. check quota)."
 
         assert is_model_unavailable_error(error) is False
+
+
+class TestUnrelatedResourceRetirementIsNotModelUnavailable:
+    """A bare "no longer available" also describes non-LLM resources.
+
+    Matching it would send the streamer into the model-fallback chain: the whole
+    turn re-runs on each candidate — replaying every tool side effect the attempt
+    already had — and once the candidates are exhausted the real, actionable error
+    is replaced by "No accessible model".
+    """
+
+    def test_should_not_flag_retired_knowledge_base_embedding_model(self):
+        # Raised verbatim by lfx.components.files_and_knowledge.knowledge.
+        error = (
+            "Embedding model 'text-embedding-ada-002' (provider 'OpenAI') recorded for this "
+            "knowledge base is no longer available in the model registry. Please re-create the "
+            "knowledge base with a supported embedding model."
+        )
+
+        assert is_model_unavailable_error(error) is False
+
+    def test_should_not_flag_withdrawn_tool(self):
+        error = "The requested tool is no longer available."
+
+        assert is_model_unavailable_error(error) is False
+
+    def test_should_not_flag_removed_component_in_catalog(self):
+        error = "The following components are no longer available in the approved catalog: ChatInput"
+
+        assert is_model_unavailable_error(error) is False

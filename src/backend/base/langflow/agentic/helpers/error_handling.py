@@ -20,7 +20,13 @@ _MODEL_UNAVAILABLE_MARKERS: tuple[str, ...] = (
     # Google retires a model for newly issued keys while still listing it, so the name
     # resolves everywhere and only the call fails: "This model models/gemini-2.5-pro is
     # no longer available to new users." (LE-2310)
-    "no longer available",
+    # Kept as the full phrase on purpose: a bare "no longer available" also matches
+    # non-LLM resources (a knowledge base's embedding model dropped from the registry,
+    # a withdrawn tool), and a false positive here re-runs the whole turn — replaying
+    # tool side effects — before burying the real error under "No accessible model".
+    # Cost of the narrow match: a wording change on Google's side stops matching, which
+    # is the LE-2310 behaviour we started from, not a worse one.
+    "no longer available to new users",
     "does not have access to model",
     "model is not available",
     "the model does not exist",
