@@ -235,8 +235,17 @@ async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession
             if asyncio.iscoroutine(result):
                 await result
         await session.commit()
-        for message in messages:
-            await session.refresh(message)
+        # No refresh: it would issue one SELECT per message to re-read values the
+        # objects already hold. MessageTable declares no server_default -- every
+        # default is Python-side (default_factory=uuid4, default=False, ...) and
+        # so is set at construction -- and SQLAlchemy already fetches any
+        # server-generated value via implicit RETURNING on the INSERT. Combined
+        # with the sessionmaker's expire_on_commit=False, the attributes stay
+        # loaded for the caller, which reads them via model_dump() after this
+        # session closes.
+        #
+        # If a server_default or onupdate is ever added to MessageTable, this
+        # needs revisiting -- those values would only exist in the database.
     except asyncio.CancelledError:
         try:
             await session.rollback()
