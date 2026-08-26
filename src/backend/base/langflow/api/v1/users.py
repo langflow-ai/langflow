@@ -17,7 +17,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import PasswordResetRequest, UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
-from langflow.services.auth.utils import get_current_user_optional
+from langflow.services.auth.utils import get_current_user, get_current_user_optional
 from langflow.services.authorization.admin import administration_audit_details, ensure_administration_permission
 from langflow.services.authorization.lifecycle import (
     acquire_identity_mutation_lock,
@@ -33,9 +33,15 @@ from langflow.services.deps import get_auth_service, get_authorization_service, 
 
 router = APIRouter(tags=["Users"], prefix="/users")
 OperationId = Annotated[str | None, Header(alias="X-Langflow-Operation-ID", max_length=128)]
+_LEGACY_SUPERUSER_DENIAL = "The user doesn't have enough privileges"
 
 
-async def _require_user_administrator(user: User, *, operation_id: str | None = None) -> None:
+async def _require_user_administrator(
+    user: User,
+    *,
+    operation_id: str | None = None,
+    denial_detail: str | None = None,
+) -> None:
     await ensure_administration_permission(
         user,
         resource="user",
@@ -43,14 +49,25 @@ async def _require_user_administrator(user: User, *, operation_id: str | None = 
         action="user:manage",
         obj="user:*",
         operation_id=operation_id,
+        denial_detail=denial_detail,
     )
 
 
 async def _require_user_administrator_dependency(
-    current_user: CurrentActiveUser,
+    current_user: Annotated[User, Depends(get_current_user)],
     operation_id: OperationId = None,
 ) -> None:
-    await _require_user_administrator(current_user, operation_id=operation_id)
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail=_LEGACY_SUPERUSER_DENIAL,
+            headers={"X-Langflow-Error-Code": "administration_denied"},
+        )
+    await _require_user_administrator(
+        current_user,
+        operation_id=operation_id,
+        denial_detail=_LEGACY_SUPERUSER_DENIAL,
+    )
 
 
 @router.post("/", response_model=UserRead, status_code=201)
@@ -448,7 +465,11 @@ async def delete_user(
             ),
         )
         raise HTTPException(status_code=400, detail="You can't delete your own user account")
-    await _require_user_administrator(current_user, operation_id=operation_id)
+    await _require_user_administrator(
+        current_user,
+        operation_id=operation_id,
+        denial_detail=_LEGACY_SUPERUSER_DENIAL,
+    )
 
     authorization_service = get_authorization_service()
     await acquire_identity_mutation_lock(
