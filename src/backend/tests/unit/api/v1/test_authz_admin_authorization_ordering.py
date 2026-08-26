@@ -18,14 +18,38 @@ _UUID = "11111111-1111-1111-1111-111111111111"
 
 # Every administration-gated route that takes a body, with a payload that fails
 # schema validation. Each must answer the denial before describing the schema.
-# (router module, HTTP method, path, malformed body)
+# (router module, HTTP method, path, malformed body, legacy denial detail)
 MALFORMED_BODY_ROUTES = [
-    (authz_roles, "post", "/authz/roles", {"bogus": 1}),
-    (authz_roles, "patch", f"/authz/roles/{_UUID}", {"permissions": "not-a-list"}),
-    (authz_teams, "post", "/authz/teams", {"bogus": 1}),
-    (authz_teams, "patch", f"/authz/teams/{_UUID}", {"is_active": "not-a-bool"}),
-    (authz_teams, "post", f"/authz/teams/{_UUID}/members", {"bogus": 1}),
-    (authz_role_assignments, "post", "/authz/role-assignments", {"bogus": 1}),
+    (authz_roles, "post", "/authz/roles", {"bogus": 1}, "Superuser required to administer roles."),
+    (
+        authz_roles,
+        "patch",
+        f"/authz/roles/{_UUID}",
+        {"permissions": "not-a-list"},
+        "Superuser required to administer roles.",
+    ),
+    (authz_teams, "post", "/authz/teams", {"bogus": 1}, "Superuser required to administer teams."),
+    (
+        authz_teams,
+        "patch",
+        f"/authz/teams/{_UUID}",
+        {"is_active": "not-a-bool"},
+        "Superuser required to administer teams.",
+    ),
+    (
+        authz_teams,
+        "post",
+        f"/authz/teams/{_UUID}/members",
+        {"bogus": 1},
+        "Superuser required to administer teams.",
+    ),
+    (
+        authz_role_assignments,
+        "post",
+        "/authz/role-assignments",
+        {"bogus": 1},
+        "Superuser required to administer role assignments.",
+    ),
 ]
 
 
@@ -43,20 +67,19 @@ def _client(module, *, is_superuser: bool) -> TestClient:
     return TestClient(app, raise_server_exceptions=False)
 
 
-@pytest.mark.parametrize(("module", "method", "path", "body"), MALFORMED_BODY_ROUTES)
-def test_malformed_body_from_non_superuser_is_403_not_422(module, method, path, body):
+@pytest.mark.parametrize(("module", "method", "path", "body", "denial_detail"), MALFORMED_BODY_ROUTES)
+def test_malformed_body_from_non_superuser_is_403_not_422(module, method, path, body, denial_detail):
     """The denial comes first, so the schema is never described to the caller."""
     with _client(module, is_superuser=False) as client:
         response = getattr(client, method)(path, json=body)
 
     assert response.status_code == 403, response.text
-    # No field names, no accepted literals.
-    assert "detail" in response.json()
-    assert isinstance(response.json()["detail"], str)
+    assert response.json() == {"detail": denial_detail}
+    assert response.headers["X-Langflow-Error-Code"] == "administration_denied"
 
 
-@pytest.mark.parametrize(("module", "method", "path", "body"), MALFORMED_BODY_ROUTES)
-def test_malformed_body_from_superuser_still_reports_schema_errors(module, method, path, body):
+@pytest.mark.parametrize(("module", "method", "path", "body", "_denial_detail"), MALFORMED_BODY_ROUTES)
+def test_malformed_body_from_superuser_still_reports_schema_errors(module, method, path, body, _denial_detail):
     """The gate moved earlier; it did not swallow validation for callers who pass it."""
     with _client(module, is_superuser=True) as client:
         response = getattr(client, method)(path, json=body)
@@ -71,7 +94,7 @@ def test_every_administrator_gated_body_route_is_covered():
     protect: the property is "every privileged body route authorizes first",
     not "these six do".
     """
-    covered = {(method.upper(), path) for _module, method, path, _body in MALFORMED_BODY_ROUTES}
+    covered = {(method.upper(), path) for _module, method, path, _body, _detail in MALFORMED_BODY_ROUTES}
 
     gated: set[tuple[str, str]] = set()
     module_dependencies = (

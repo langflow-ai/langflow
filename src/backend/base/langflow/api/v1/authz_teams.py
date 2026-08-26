@@ -44,6 +44,7 @@ router = APIRouter(prefix="/authz/teams", tags=["Authorization"])
 _LIST_MAX_LIMIT = 200
 _LIST_DEFAULT_LIMIT = 100
 OperationId = Annotated[str | None, Header(alias="X-Langflow-Operation-ID", max_length=128)]
+_LEGACY_SUPERUSER_DENIAL = "Superuser required to administer teams."
 
 
 async def _require_team_administrator(user, *, operation_id: str | None = None) -> None:
@@ -54,6 +55,7 @@ async def _require_team_administrator(user, *, operation_id: str | None = None) 
         action="team:manage",
         obj="team:*",
         operation_id=operation_id,
+        denial_detail=_LEGACY_SUPERUSER_DENIAL,
     )
 
 
