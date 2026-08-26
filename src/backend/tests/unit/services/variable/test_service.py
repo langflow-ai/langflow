@@ -19,6 +19,7 @@ from lfx.services.model_provider_policy import (
     ModelProviderPolicySnapshot,
 )
 from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
+from lfx.services.variable import VariableNotFoundError
 from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
@@ -242,7 +243,7 @@ async def test_get_variable__valueerror(service, session: AsyncSession):
     name = "name"
     field = ""
 
-    with pytest.raises(ValueError, match=f"{name} variable not found."):
+    with pytest.raises(VariableNotFoundError, match=f"{name} variable not found."):
         await service.get_variable(user_id, name, field, session=session)
 
 
@@ -317,7 +318,7 @@ async def test_get_variable_fails_closed_for_domain_only_runtime_scope(service, 
 
     with (
         patch("langflow.services.deps.get_authorization_service", return_value=authz),
-        pytest.raises(ValueError, match="DOMAIN_ONLY_TOKEN variable not found"),
+        pytest.raises(VariableNotFoundError, match="DOMAIN_ONLY_TOKEN variable not found"),
     ):
         await service.get_variable(actor_id, "DOMAIN_ONLY_TOKEN", "", session=session)
 

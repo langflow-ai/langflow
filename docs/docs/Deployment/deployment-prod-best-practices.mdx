@@ -120,6 +120,73 @@ Follow industry best practices and use secure Langflow configurations, such as t
 * **Encryption and privacy**: Follow industry best practices and legal requirements for data privacy and encryption of data in transit and at rest, including GDPR requirements, HTTPS, TLS, and SSL. For example, configure PostgreSQL with valid SSL certificates and append `?sslmode=require` or `?sslmode=verify-full` to the connection string to enable SSL for database connections.
 * **Security posture maintenance**: Conduct regular security audits, keep current with software updates, and monitor for suspicious activity using intrusion detection systems.
 
+## Production preflight checks {#production-preflight}
+
+To verify production infrastructure before any workers start, set the `LANGFLOW_DEPLOYMENT_PROFILE` environment variable to `prod`.
+
+By default, `LANGFLOW_DEPLOYMENT_PROFILE` is set to `dev` and skips these checks.
+When set to `prod`, Langflow runs every check once and prints the full result. A `fail` aborts boot with a non-zero exit, so a misconfigured server never starts up.
+A `warn` does not abort and allows startup.
+
+Preflight checks run for any Langflow process started with the `prod` profile enabled, not only Kubernetes.
+
+To enable preflight checks, set the following in your `.env` file:
+
+```text
+LANGFLOW_DEPLOYMENT_PROFILE=prod
+```
+
+Alternatively, pass the CLI option, which overrides the environment variable:
+
+```bash
+uv run langflow run --deployment-profile prod
+```
+
+### Required checks
+
+These checks abort boot when they fail:
+
+| Check | What must be true |
+|-------|-------------------|
+| Database | `LANGFLOW_DATABASE_URL` is a reachable **PostgreSQL** database. SQLite fails this check. |
+| File storage | `LANGFLOW_STORAGE_TYPE` is an external object store such as `s3`, not local disk. |
+| Encryption secret | `LANGFLOW_SECRET_KEY` is set in the environment to a usable Fernet key. An auto-generated key or a node-local `config_dir/secret_key` file is not enough. See [`LANGFLOW_SECRET_KEY`](/api-keys-and-authentication#langflow-secret-key). |
+| pgVector | `PGVECTOR_CONNECTION_STRING` is set, the database is reachable, and the Postgres `vector` extension is installed (`CREATE EXTENSION vector;`). Production Langflow requires pgVector even if you are not creating knowledge bases yet. |
+
+### Degraded checks
+
+These checks report reduced capability. Telemetry and MCP only `warn`. Cache and the shared job queue abort boot if you selected an external backend that is unreachable.
+
+| Check | `ok` | `warn` | `fail` (aborts) |
+|-------|------|--------|-----------------|
+| Cache | `LANGFLOW_CACHE_TYPE=redis` and Redis is reachable | In-memory default (`async` or `memory`). Caches are not shared across replicas. | Redis selected but unreachable. Unset `LANGFLOW_CACHE_TYPE` to boot with the in-memory fallback. |
+| Shared queue | `LANGFLOW_JOB_QUEUE_TYPE=redis` and Redis is reachable | In-process default (`asyncio`). Jobs stay on a single pod. | Redis selected but unreachable. Unset `LANGFLOW_JOB_QUEUE_TYPE` to boot with the in-process fallback. |
+| Telemetry | Product telemetry is enabled | `LANGFLOW_DO_NOT_TRACK` is set | Never fails |
+| MCP serving posture | MCP is disabled, or the serving knobs below match the multi-tenant values | One or more knobs are still at a single-tenant default | Never fails |
+
+If this plane does not serve MCP, set `LANGFLOW_MCP_SERVER_ENABLED=false`. Otherwise, production preflight expects these values when MCP is enabled:
+
+| Variable | Expected in `prod` | Default |
+|----------|--------------------|---------|
+| `LANGFLOW_SKIP_MCP_AUTO_INIT` | `true` | `false` |
+| `LANGFLOW_ADD_PROJECTS_TO_MCP_SERVERS` | `false` | `true` |
+| `LANGFLOW_MCP_COMPOSER_ENABLED` | `false` | `true` |
+| `LANGFLOW_MCP_SERVERS_LOCKED` | `true` | `false` |
+| `LANGFLOW_MCP_SSE_ENABLED` | `false` | `true` |
+| `LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING` | `true` | `false` |
+| `LANGFLOW_MCP_SERVER_DOCKER_HARDENING` | `true` | `false` |
+| `LANGFLOW_SSRF_PROTECTION_ENABLED` | `true` | `true` |
+| `LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED` | `true` | `true` |
+| `LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK` | `false` | `true` |
+| `LANGFLOW_DISABLE_TRACK_APIKEY_USAGE` | `true` | `false` |
+| `LANGFLOW_MCP_SERVER_ALLOWED_PACKAGES` | Set to an allowlist (empty string blocks all package runners) | Unset |
+| `LANGFLOW_MCP_SERVER_ENV_ALLOWLIST` | Set to an allowlist (empty string blocks all tenant-supplied environment variables) | Unset |
+
+### Local Chroma in `prod`
+
+The `prod` profile blocks new knowledge bases and memory bases that use local Chroma.
+For local storage, use a shared pgVector, OpenSearch, or Chroma Cloud store, or run Langflow with `LANGFLOW_DEPLOYMENT_PROFILE=dev` 
+
 ## See also
 
 * [Deploy the Langflow production environment on Kubernetes](/deployment-kubernetes-prod)

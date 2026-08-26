@@ -38,6 +38,15 @@ def test_schema_metadata_published_form() -> None:
     assert "$defs" in schema
 
 
+def test_schema_documents_provider_base_url_suffix() -> None:
+    schema = build_schema()
+    metadata_schema = schema["$defs"]["ProviderManifestEntry"]["properties"]["metadata"]
+    suffix_schema = metadata_schema["properties"]["variables"]["items"]["properties"]["base_url_suffix"]
+
+    assert suffix_schema["type"] == "string"
+    assert suffix_schema["minLength"] == 1
+
+
 def _published_deferred_names() -> list[str]:
     """Resolve DEFERRED_FIELDS to the alias-aware names seen in the published schema."""
     fields = ExtensionManifest.model_fields

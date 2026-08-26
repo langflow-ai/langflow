@@ -283,6 +283,25 @@ class ProviderEmbeddingRef(BaseModel):
     )
 
 
+_PROVIDER_VARIABLE_KEYS: frozenset[str] = frozenset(
+    {
+        "base_url_suffix",
+        "combobox",
+        "component_metadata",
+        "description",
+        "header_name",
+        "is_header",
+        "is_list",
+        "is_secret",
+        "langchain_param",
+        "options",
+        "required",
+        "variable_key",
+        "variable_name",
+    }
+)
+
+
 class ProviderManifestEntry(BaseModel):
     """A model provider contributed by an extension bundle (``providers[]``).
 
@@ -320,6 +339,26 @@ class ProviderManifestEntry(BaseModel):
     metadata: dict[str, Any] = Field(
         ...,
         description="MODEL_PROVIDER_METADATA value: icon, variables, mapping (with model_class), api_docs_url, etc.",
+        json_schema_extra={
+            "properties": {
+                "variables": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "base_url_suffix": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": (
+                                    "Optional path suffix appended to a variable mapped to the base_url LangChain "
+                                    "parameter when the configured URL does not already end with it."
+                                ),
+                            }
+                        },
+                    },
+                }
+            }
+        },
     )
     model_class: ProviderClassRef | None = Field(
         default=None,
@@ -371,11 +410,34 @@ class ProviderManifestEntry(BaseModel):
 
     @field_validator("metadata")
     @classmethod
-    def _metadata_has_model_class(cls, value: dict[str, Any]) -> dict[str, Any]:
+    def _metadata_is_valid(cls, value: dict[str, Any]) -> dict[str, Any]:
         mapping = value.get("mapping") if isinstance(value, dict) else None
         if not isinstance(mapping, dict) or not mapping.get("model_class"):
             msg = "provider.metadata must include a 'mapping' object with a non-empty 'model_class'"
             raise ValueError(msg)
+        variables = value.get("variables", [])
+        if isinstance(variables, list):
+            for index, variable in enumerate(variables):
+                if not isinstance(variable, dict):
+                    continue
+                langchain_param = variable.get("langchain_param")
+                if langchain_param == "base_url":
+                    unknown_keys = sorted(set(variable) - _PROVIDER_VARIABLE_KEYS)
+                    if unknown_keys:
+                        msg = (
+                            f"provider.metadata.variables[{index}] contains unrecognized base_url variable key(s): "
+                            f"{', '.join(unknown_keys)}"
+                        )
+                        raise ValueError(msg)
+                suffix = variable.get("base_url_suffix")
+                if suffix is None:
+                    continue
+                if langchain_param != "base_url":
+                    msg = f"provider.metadata.variables[{index}].base_url_suffix requires langchain_param='base_url'"
+                    raise ValueError(msg)
+                if not isinstance(suffix, str) or not suffix.strip("/"):
+                    msg = f"provider.metadata.variables[{index}].base_url_suffix must contain a non-empty path suffix"
+                    raise ValueError(msg)
         return value
 
     @model_validator(mode="after")

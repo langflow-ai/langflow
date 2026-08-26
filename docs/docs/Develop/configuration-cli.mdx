@@ -231,6 +231,41 @@ Use this mode to previews the changes that would be made to the database schema 
   </TabItem>
 </Tabs>
 
+### langflow observability doctor {#langflow-observability-doctor}
+
+Sends a probe span, metric, and log to the configured OTLP endpoint and reports what the backend accepted.
+
+This command is also available as `lfx observability doctor`.
+It requires the `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable to be set.
+
+<Tabs groupId="Invocation">
+  <TabItem value="uv (recommended)" label="uv (recommended)" default>
+
+```bash
+uv run langflow observability doctor
+```
+
+  </TabItem>
+  <TabItem value="Direct" label="Direct">
+
+```bash
+langflow observability doctor
+```
+
+  </TabItem>
+</Tabs>
+
+#### Options
+
+| Option | Default | Type | Description |
+|--------|---------|--------|-------------|
+| `--timeout` | `OTEL_EXPORTER_OTLP_TIMEOUT` or the OpenTelemetry SDK default | Float | Per-export timeout in seconds. Must be greater than 0. |
+
+The doctor also prints whether log message bodies (`LANGFLOW_OTEL_LOG_BODIES`) and database spans (`LANGFLOW_OTEL_DB_SPANS`) are enabled.
+In your backend, search for items named `lfx.observability.doctor`.
+
+For more information, see [OpenTelemetry](./observability-opentelemetry.mdx#verify-your-configuration).
+
 ### langflow run {#langflow-run}
 
 Starts the Langflow server.
@@ -266,6 +301,7 @@ For more information Langflow configuration options, see [Langflow environment v
 | `--cache` | `async` | String | The type of [cache storage](/memory) to use. One of `async`, `redis`, `memory`, or `disk`. |
 | `--components-path` | Not set | String | The path to the directory containing your custom components. |
 | `--dev` | `--no-dev` (false) | Boolean | Whether to run in development mode (may contain bugs). |
+| `--deployment-profile` | `dev` | String | Deployment profile: `dev` or `prod`. `prod` runs [production preflight](/deployment-prod-best-practices#production-preflight) before the server starts and aborts boot if a required service is missing. |
 | `--env-file` | Not set | String | The path to the `.env` file containing Langflow environment variables. See [Start Langflow with a specific .env file](#start-langflow-with-a-specific-env-file). |
 | `--frontend-path` | Not set | String | The path to the frontend directory containing build files. This is only used when [contributing to the Langflow codebase](/contributing-how-to-contribute) or developing a custom Langflow image that includes customized frontend code. |
 | `--health-check-max-retries` | `5` | Integer | The maximum number of retries for your Langflow server's health check. |
