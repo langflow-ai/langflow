@@ -871,12 +871,13 @@ async def test_create_assignment_emits_lifecycle_for_target_user(stub_authz):
     )
     actor = _make_user(is_superuser=True)
     payload = RoleAssignmentCreate(user_id=target_user.id, role_id=role.id)
+    response = Response()
 
     await authz_role_assignments.create_assignment(
         payload=payload,
         current_user=actor,
         session=session,
-        response=Response(),
+        response=response,
     )
     assert len(session.added) == 2
     assert session.added[1].source_kind == "manual"
@@ -892,6 +893,7 @@ async def test_create_assignment_emits_lifecycle_for_target_user(stub_authz):
     assert authz.staged_mutations[0].domain_id is None
     assert session.events.index("lock") < session.events.index("exec")
     assert session.events.index("lock") < session.events.index("validate") < session.events.index("flush")
+    assert response.headers["Location"] == f"/api/v1/authz/role-assignments?user_id={target_user.id}"
 
 
 @pytest.mark.asyncio
@@ -1416,6 +1418,7 @@ async def test_idp_team_membership_cannot_be_removed(stub_authz):
 
     assert excinfo.value.status_code == 409
     assert excinfo.value.detail == "Externally managed memberships cannot be removed through the manual membership API"
+    assert excinfo.value.headers == {"X-Langflow-Error-Code": "externally_managed"}
     assert session.deleted == []
 
 
@@ -1434,13 +1437,14 @@ async def test_add_member_emits_lifecycle_for_target_user(stub_authz):
     )
     actor = _make_user(is_superuser=True)
     payload = TeamMemberCreate(user_id=target_user.id)
+    response = Response()
 
     await authz_teams.add_member(
         team_id=team.id,
         payload=payload,
         current_user=actor,
         session=session,
-        response=Response(),
+        response=response,
     )
     from langflow.services.database.models.auth import AuthzTeamMember, AuthzTeamMemberGrant
 
@@ -1448,6 +1452,7 @@ async def test_add_member_emits_lifecycle_for_target_user(stub_authz):
     assert len([item for item in session.added if isinstance(item, AuthzTeamMemberGrant)]) == 1
     assert authz.staged_mutations == authz.committed_mutations
     assert authz.staged_mutations[0].affected_user_ids == (target_user.id,)
+    assert response.headers["Location"] == f"/api/v1/authz/teams/{team.id}/members"
 
 
 @pytest.mark.asyncio

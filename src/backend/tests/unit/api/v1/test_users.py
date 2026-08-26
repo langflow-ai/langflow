@@ -234,6 +234,62 @@ async def test_read_all_users_exact_username_filter(client: AsyncClient, logged_
             await client.delete(f"api/v1/users/{user_id}", headers=logged_in_headers_super_user)
 
 
+async def test_read_all_users_exact_role_name_filter(client: AsyncClient, logged_in_headers_super_user):
+    suffix = uuid4().hex
+    users = []
+    roles = []
+    assignments = []
+    for index, role_name in enumerate((f"role-filter-{suffix}", f"role-filter-{suffix}-suffix")):
+        user_response = await client.post(
+            "api/v1/users/",
+            json={"username": f"role-filter-user-{index}-{suffix}", "password": "password123"},
+            headers=logged_in_headers_super_user,
+        )
+        assert user_response.status_code == status.HTTP_201_CREATED
+        users.append(user_response.json())
+
+        role_response = await client.post(
+            "api/v1/authz/roles/",
+            json={"name": role_name, "permissions": ["flow:read"]},
+            headers=logged_in_headers_super_user,
+        )
+        assert role_response.status_code == status.HTTP_201_CREATED
+        roles.append(role_response.json())
+
+        assignment_response = await client.post(
+            "api/v1/authz/role-assignments/",
+            json={"user_id": users[-1]["id"], "role_id": roles[-1]["id"]},
+            headers=logged_in_headers_super_user,
+        )
+        assert assignment_response.status_code == status.HTTP_201_CREATED
+        assignments.append(assignment_response.json())
+
+    response = await client.get(
+        f"api/v1/users/?role_name={roles[0]['name']}",
+        headers=logged_in_headers_super_user,
+    )
+    missing_response = await client.get(
+        f"api/v1/users/?role_name=missing-{suffix}",
+        headers=logged_in_headers_super_user,
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["total_count"] == 1
+    assert [row["id"] for row in response.json()["users"]] == [users[0]["id"]]
+    assert missing_response.status_code == status.HTTP_200_OK
+    assert missing_response.json() == {"total_count": 0, "users": []}
+
+    for assignment in assignments:
+        await client.delete(
+            f"api/v1/authz/role-assignments/{assignment['id']}",
+            headers=logged_in_headers_super_user,
+        )
+    for role in roles:
+        await client.delete(f"api/v1/authz/roles/{role['id']}", headers=logged_in_headers_super_user)
+    for user in users:
+        await client.delete(f"api/v1/users/{user['id']}", headers=logged_in_headers_super_user)
+
+
 async def test_authz_capabilities_are_fail_closed_in_oss(client: AsyncClient, logged_in_headers):
     response = await client.get("api/v1/authz/capabilities", headers=logged_in_headers)
 

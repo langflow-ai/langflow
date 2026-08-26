@@ -161,6 +161,30 @@ async def test_directory_reconciliation_is_idempotent_and_source_scoped(grant_se
 
 
 @pytest.mark.asyncio
+async def test_directory_reconciliation_refreshes_legacy_membership_source(grant_session: AsyncSession) -> None:
+    team, users = await _seed(grant_session)
+    change = await ensure_team_member_grant(
+        grant_session,
+        team_id=team.id,
+        user_id=users[0].id,
+        source_kind="legacy",
+        legacy_source="legacy-group-name",
+    )
+    assert change.membership.source == "legacy"
+
+    await reconcile_directory_team_members(
+        grant_session,
+        team_id=team.id,
+        desired_user_ids={users[0].id},
+        provider_id="entra:tenant-a",
+        external_group_id="group-a",
+    )
+
+    await grant_session.refresh(change.membership)
+    assert change.membership.source == "directory"
+
+
+@pytest.mark.asyncio
 async def test_directory_groups_are_independent_grant_sources(grant_session: AsyncSession) -> None:
     team, users = await _seed(grant_session)
     for group_id in ("group-a", "group-b"):

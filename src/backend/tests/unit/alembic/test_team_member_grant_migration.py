@@ -66,6 +66,7 @@ def test_upgrade_backfills_manual_and_unresolved_legacy_without_name_linking(mon
         _MIGRATION.upgrade()
         grant = sa.Table("authz_team_member_grant", sa.MetaData(), autoload_with=connection)
         rows = connection.execute(sa.select(grant).order_by(grant.c.membership_id)).mappings().all()
+        assert len(rows) == 2
         by_membership = {UUID(str(row["membership_id"])): row for row in rows}
         assert by_membership[manual_id]["source_kind"] == "manual"
         assert by_membership[legacy_id]["source_kind"] == "legacy"
