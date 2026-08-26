@@ -22,7 +22,7 @@ The following steps apply when you have a registered enforcement plugin.
 
 3. Set `LANGFLOW_AUTHZ_ENABLED=true`. The plugin reads the role and share tables and applies its policy.
 
-4. Use the [roles API](#roles-api), [role assignments API](#role-assignments-api), or [`langflow admin`](/admin-api-cli) to assign the built-in `viewer`, `developer`, or `admin` roles to your users, or create custom roles.
+4. Use the [roles API](#roles-api), [role assignments API](#role-assignments-api), or [`langflow admin`](./admin-api-cli) to assign the built-in `viewer`, `developer`, or `admin` roles to your users, or create custom roles.
 
 5. Use the [shares API](#shares-api) to grant cross-user access where needed.
 
@@ -62,7 +62,7 @@ Superusers can use every administration route. An installed authorization plugin
 
 Delegated user administrators cannot promote or demote platform superusers. IdP-derived memberships and grants remain read-only through the manual administration API.
 
-Use `GET /api/v1/authz/capabilities` to discover the caller's administration resources and whether the installed plugin supports team-role assignments. For complete REST and CLI usage, see [Administer users and teams with the API and CLI](/admin-api-cli).
+Use `GET /api/v1/authz/capabilities` to discover the caller's administration resources and whether the installed plugin supports team-role assignments. For complete REST and CLI usage, see [Administer users and teams with the API and CLI](./admin-api-cli).
 
 ## Authorization API reference
 
