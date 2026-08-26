@@ -29,13 +29,22 @@ const getNodeCode = (nodeId: string): unknown => {
 // user flipped meanwhile - the field vanishes off the node with no feedback.
 const USER_OWNED_FIELD_FLAGS = ["advanced", "api_editable"] as const;
 
+// A field can carry its value across more than one attribute: a file input
+// stores the selection as names in `value` and as the paths the node actually
+// reads in `file_path`. Guarding `value` alone lets a stale response restore
+// `file_path`, and the file input reconciles back to it - the file the user
+// just removed reappears.
+const VALUE_ATTRIBUTES = ["value", "file_path"] as const;
+
+type AppliedFieldValues = Record<string, unknown>;
+
 // The field values the last applied response wrote, per node. A store value
 // that no longer matches this baseline was changed locally, which is what makes
 // an older in-flight response stale for that field. Comparing against the
 // baseline rather than the request snapshot keeps concurrent refreshes working:
 // several mount refreshes share one snapshot, so the first response to land
 // would otherwise look like a local edit and suppress the others.
-const lastAppliedValues = new Map<string, Record<string, unknown>>();
+const lastAppliedValues = new Map<string, Record<string, AppliedFieldValues>>();
 const LAST_APPLIED_PRUNE_THRESHOLD = 100;
 
 const rememberAppliedValues = (
@@ -48,10 +57,15 @@ const rememberAppliedValues = (
       if (!liveIds.has(id)) lastAppliedValues.delete(id);
     }
   }
-  const values: Record<string, unknown> = {};
+  const values: Record<string, AppliedFieldValues> = {};
   for (const [fieldName, field] of Object.entries(template)) {
     if (typeof field === "object" && field !== null) {
-      values[fieldName] = cloneDeep(field.value);
+      const applied: AppliedFieldValues = {};
+      for (const attribute of VALUE_ATTRIBUTES) {
+        if (attribute in field)
+          applied[attribute] = cloneDeep(field[attribute]);
+      }
+      values[fieldName] = applied;
     }
   }
   lastAppliedValues.set(nodeId, values);
@@ -59,10 +73,10 @@ const rememberAppliedValues = (
 
 // LE-2272: a response answers for the field values that were current when the
 // request left. Anything the user edited meanwhile (a tool action's slug,
-// description or approval_actions; any field typed while a refresh is in
-// flight) is newer than the response, so the local value wins. When the user
-// did not touch the field, the backend value still applies - a legitimate
-// refresh that recomputes a value is unaffected.
+// description or approval_actions; a file removed from a file input; any field
+// typed while a refresh is in flight) is newer than the response, so the local
+// value wins. When the user did not touch the field, the backend value still
+// applies - a legitimate refresh that recomputes a value is unaffected.
 const keepUserEdits = (
   nodeId: string,
   requestedTemplate: APITemplateType | undefined,
@@ -91,12 +105,20 @@ const keepUserEdits = (
         incomingField[flag] = currentField[flag];
       }
     }
-    const appliedValue =
-      baseline && fieldName in baseline
-        ? baseline[fieldName]
-        : requestedField.value;
-    if (!isEqual(currentField.value, appliedValue)) {
-      incomingField.value = cloneDeep(currentField.value);
+    const appliedField = baseline?.[fieldName];
+    const editedLocally = VALUE_ATTRIBUTES.some((attribute) => {
+      const appliedValue =
+        appliedField && attribute in appliedField
+          ? appliedField[attribute]
+          : requestedField[attribute];
+      return !isEqual(currentField[attribute], appliedValue);
+    });
+    if (editedLocally) {
+      for (const attribute of VALUE_ATTRIBUTES) {
+        if (attribute in currentField) {
+          incomingField[attribute] = cloneDeep(currentField[attribute]);
+        }
+      }
     }
   }
   return merged;

@@ -899,10 +899,27 @@ test(
 
     await page.getByTestId(`remove-file-button-${file2}`).click();
 
-    await page.getByTestId("dropdown-output-file").click();
-    await page
-      .getByTestId("dropdown-item-output-file-file path")
-      .click({ force: true });
+    // Removing a file kicks off a backend outputs refresh: with two files the
+    // component exposes a single "Files" output, with one it exposes "Raw
+    // Content" + "File Path". Opening the dropdown before that refresh lands
+    // shows the stale two-file options, and when it does land the output field
+    // remounts (its React key is the selected output name), silently closing
+    // the popover. Wait for the refreshed outputs and re-open the dropdown if a
+    // late refresh closed it.
+    const outputDropdown = page.getByTestId("dropdown-output-file");
+    const filePathOption = page.getByTestId(
+      "dropdown-item-output-file-file path",
+    );
+    await expect(outputDropdown).toContainText("Raw Content", {
+      timeout: 30000,
+    });
+    await expect(async () => {
+      if ((await outputDropdown.getAttribute("aria-expanded")) !== "true") {
+        await outputDropdown.click();
+      }
+      await expect(filePathOption).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 30000, intervals: [500] });
+    await filePathOption.click({ force: true });
     await page.getByTestId("button_run_read file").click();
     await expect(page.getByText("Built successfully")).toBeVisible({
       timeout: 30000,

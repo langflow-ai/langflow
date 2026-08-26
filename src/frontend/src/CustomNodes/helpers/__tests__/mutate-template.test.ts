@@ -335,6 +335,60 @@ describe("mutateTemplate", () => {
     );
   });
 
+  it("keeps a file removed while the refresh was in flight", async () => {
+    const bothFiles = {
+      value: ["first", "second"],
+      file_path: ["folder/first.txt", "folder/second.txt"],
+    };
+    const oneFile = {
+      value: ["first"],
+      file_path: ["folder/first.txt"],
+    };
+    const node = {
+      template: {
+        code: { value: "original source" },
+        path: { ...bothFiles },
+      },
+      outputs: [],
+    } as unknown as APIClassType;
+    const setNodeClass = jest.fn();
+    // The user removes the second file while the selection refresh is in
+    // flight, so the store holds one file when the two-file response lands.
+    const mutateAsync = jest.fn().mockImplementation(async () => {
+      setStoreNodeTemplate("file-node", {
+        code: { value: "original source" },
+        path: { ...oneFile },
+      });
+      return {
+        template: {
+          code: { value: "original source" },
+          path: { ...bothFiles },
+        },
+        outputs: [],
+      } as unknown as APIClassType;
+    });
+    setStoreNodeTemplate("file-node", node.template);
+
+    await mutateTemplate(
+      bothFiles.value,
+      "file-node",
+      node,
+      setNodeClass,
+      { mutateAsync } as never,
+      jest.fn(),
+      "path",
+    );
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    expect(setNodeClass).toHaveBeenCalledWith(
+      expect.objectContaining({
+        template: expect.objectContaining({
+          path: expect.objectContaining(oneFile),
+        }),
+      }),
+    );
+  });
+
   it("applies a backend-driven value change the user did not touch", async () => {
     const node = {
       template: {
