@@ -181,6 +181,16 @@ async def test_read_all_users(client: AsyncClient, logged_in_headers_super_user)
     assert "users" in result, "The result must have an 'users' key"
 
 
+async def test_read_all_users_denial_preserves_legacy_detail_and_adds_error_code(
+    client: AsyncClient, logged_in_headers
+):
+    response = await client.get("api/v1/users/", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json() == {"detail": "The user doesn't have enough privileges"}
+    assert response.headers["X-Langflow-Error-Code"] == "administration_denied"
+
+
 async def test_read_user_by_id(client: AsyncClient, logged_in_headers_super_user):
     create_response = await client.post(
         "api/v1/users/",
