@@ -151,6 +151,7 @@ async def test_add_user(client: AsyncClient, logged_in_headers_super_user):
     assert "store_api_key" in result, "The result must have an 'store_api_key' key"
     assert "updated_at" in result, "The result must have an 'updated_at' key"
     assert "username" in result, "The result must have an 'username' key"
+    assert response.headers["location"] == f"/api/v1/users/{result['id']}"
 
 
 async def test_read_current_user(client: AsyncClient, logged_in_headers):
@@ -177,6 +178,54 @@ async def test_read_all_users(client: AsyncClient, logged_in_headers_super_user)
     assert isinstance(result, dict), "The result must be a dictionary"
     assert "total_count" in result, "The result must have an 'total_count' key"
     assert "users" in result, "The result must have an 'users' key"
+
+
+async def test_read_user_by_id(client: AsyncClient, logged_in_headers_super_user):
+    create_response = await client.post(
+        "api/v1/users/",
+        json={"username": "read-user-by-id", "password": "password123"},
+        headers=logged_in_headers_super_user,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    user_id = create_response.json()["id"]
+
+    response = await client.get(f"api/v1/users/{user_id}", headers=logged_in_headers_super_user)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["username"] == "read-user-by-id"
+    await client.delete(f"api/v1/users/{user_id}", headers=logged_in_headers_super_user)
+
+
+async def test_read_all_users_exact_username_filter(client: AsyncClient, logged_in_headers_super_user):
+    created_ids = []
+    for username in ("exact-user", "exact-user-suffix"):
+        response = await client.post(
+            "api/v1/users/",
+            json={"username": username, "password": "password123"},
+            headers=logged_in_headers_super_user,
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+        created_ids.append(response.json()["id"])
+
+    response = await client.get(
+        "api/v1/users/?username=exact-user",
+        headers=logged_in_headers_super_user,
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert [row["username"] for row in response.json()["users"]] == ["exact-user"]
+    for user_id in created_ids:
+        await client.delete(f"api/v1/users/{user_id}", headers=logged_in_headers_super_user)
+
+
+async def test_authz_capabilities_are_fail_closed_in_oss(client: AsyncClient, logged_in_headers):
+    response = await client.get("api/v1/authz/capabilities", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {
+        "administration": {"user": False, "team": False, "role": False},
+        "features": {"team_role_assignments": False},
+    }
 
 
 async def test_patch_user(client: AsyncClient, logged_in_headers_super_user):

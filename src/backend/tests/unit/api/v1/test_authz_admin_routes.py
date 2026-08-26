@@ -91,8 +91,9 @@ class _ExecResult:
 
 
 class _StubAuthz:
-    def __init__(self, *, allow: bool = True) -> None:
+    def __init__(self, *, allow: bool = True, admin_resources: set[str] | None = None) -> None:
         self._allow = allow
+        self._admin_resources = admin_resources or set()
         self.invalidate_user_calls: list[UUID] = []
         self.invalidate_role_calls: list[UUID] = []
         self.invalidate_all_calls = 0
@@ -104,6 +105,13 @@ class _StubAuthz:
         self._staged_session: _FakeAsyncSession | None = None
 
     async def supports_cross_user_fetch(self) -> bool:
+        return False
+
+    async def can_administer(self, *, user_id: UUID, resource: str) -> bool:
+        del user_id
+        return resource in self._admin_resources
+
+    async def supports_team_role_assignments(self) -> bool:
         return False
 
     async def is_enabled(self) -> bool:
@@ -184,8 +192,8 @@ def _make_role_row(
 def stub_authz(monkeypatch):
     from langflow.api.v1 import authz_me, authz_role_assignments, authz_roles, authz_teams
 
-    def _apply(*, allow: bool = True) -> _StubAuthz:
-        stub = _StubAuthz(allow=allow)
+    def _apply(*, allow: bool = True, admin_resources: set[str] | None = None) -> _StubAuthz:
+        stub = _StubAuthz(allow=allow, admin_resources=admin_resources)
         for module in (authz_roles, authz_role_assignments, authz_teams, authz_me):
             monkeypatch.setattr(module, "get_authorization_service", lambda s=stub: s)
         return stub
@@ -216,6 +224,14 @@ def test_role_create_accepts_canonical_permission_slugs():
     )
     # Wildcard action survives intact, no normalization surprises.
     assert payload.permissions[-1] == "file:*"
+
+
+def test_role_create_accepts_administration_permission_slugs():
+    """Delegated administration uses the canonical resource:manage vocabulary."""
+    from langflow.api.v1.schemas.authz_roles import RoleCreate
+
+    payload = RoleCreate(name="delegated-admin", permissions=["user:manage", "team:manage", "role:manage"])
+    assert payload.permissions == ["user:manage", "team:manage", "role:manage"]
 
 
 @pytest.mark.parametrize(
@@ -1294,6 +1310,72 @@ async def test_create_team_requires_superuser(stub_authz):
 
 
 @pytest.mark.asyncio
+async def test_delegated_team_administrator_can_create_team(stub_authz):
+    from langflow.api.v1 import authz_teams
+    from langflow.api.v1.schemas.authz_teams import TeamCreate
+
+    stub_authz(admin_resources={"team"})
+    session = _FakeAsyncSession()
+    user = _make_user(is_superuser=False)
+
+    created = await authz_teams.create_team(
+        payload=TeamCreate(team_name="Engineering", adom_name="engineering"),
+        current_user=user,
+        session=session,
+    )
+
+    assert created.adom_name == "engineering"
+
+
+@pytest.mark.asyncio
+async def test_delegated_team_administrator_cannot_create_roles(stub_authz):
+    from langflow.api.v1 import authz_roles
+    from langflow.api.v1.schemas.authz_roles import RoleCreate
+
+    stub_authz(admin_resources={"team"})
+    user = _make_user(is_superuser=False)
+
+    with pytest.raises(HTTPException) as excinfo:
+        await authz_roles.create_role(
+            payload=RoleCreate(name="ops", permissions=["flow:read"]),
+            current_user=user,
+            session=_FakeAsyncSession(),
+        )
+    assert excinfo.value.status_code == 403
+
+
+def test_team_membership_mutations_accept_manual_source_only():
+    from langflow.api.v1.schemas.authz_teams import TeamMemberCreate
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        TeamMemberCreate(user_id=uuid4(), source="sso")
+
+
+@pytest.mark.asyncio
+async def test_idp_team_membership_cannot_be_removed(stub_authz):
+    from langflow.api.v1 import authz_teams
+
+    stub_authz()
+    team_id = uuid4()
+    target_user_id = uuid4()
+    membership = SimpleNamespace(id=uuid4(), team_id=team_id, user_id=target_user_id, source="sso")
+    session = _FakeAsyncSession(exec_results=[[membership]])
+
+    with pytest.raises(HTTPException) as excinfo:
+        await authz_teams.remove_member(
+            team_id=team_id,
+            user_id=target_user_id,
+            current_user=_make_user(is_superuser=True),
+            session=session,
+        )
+
+    assert excinfo.value.status_code == 409
+    assert excinfo.value.detail == "externally_managed"
+    assert session.deleted == []
+
+
+@pytest.mark.asyncio
 async def test_add_member_emits_lifecycle_for_target_user(stub_authz):
     from langflow.api.v1 import authz_teams
     from langflow.api.v1.schemas.authz_teams import TeamMemberCreate
@@ -1885,3 +1967,45 @@ def test_list_endpoint_pagination_bounds_match_convention(endpoint_module):
     module = importlib.import_module(endpoint_module)
     assert module._LIST_MAX_LIMIT == 200
     assert module._LIST_DEFAULT_LIMIT == 100
+
+
+@pytest.mark.asyncio
+async def test_team_list_supports_exact_adom_name_filter(stub_authz):
+    from langflow.api.v1 import authz_teams
+
+    stub_authz()
+    captured: dict[str, Any] = {}
+
+    class _RecordingSession(_FakeAsyncSession):
+        async def exec(self, stmt):  # type: ignore[override]
+            captured["stmt"] = stmt
+            return _ExecResult([])
+
+    await authz_teams.list_teams(
+        session=_RecordingSession(),
+        current_user=_make_user(),
+        adom_name="engineering",
+    )
+    compiled = str(captured["stmt"].compile(compile_kwargs={"literal_binds": True}))
+    assert "authz_team.adom_name = 'engineering'" in compiled
+
+
+@pytest.mark.asyncio
+async def test_role_list_supports_exact_name_filter(stub_authz):
+    from langflow.api.v1 import authz_roles
+
+    stub_authz()
+    captured: dict[str, Any] = {}
+
+    class _RecordingSession(_FakeAsyncSession):
+        async def exec(self, stmt):  # type: ignore[override]
+            captured["stmt"] = stmt
+            return _ExecResult([])
+
+    await authz_roles.list_roles(
+        session=_RecordingSession(),
+        current_user=_make_user(),
+        exact_name="administrator",
+    )
+    compiled = str(captured["stmt"].compile(compile_kwargs={"literal_binds": True}))
+    assert "authz_role.name = 'administrator'" in compiled
