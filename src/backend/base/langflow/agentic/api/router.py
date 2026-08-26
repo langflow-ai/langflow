@@ -46,7 +46,7 @@ from langflow.agentic.services.provider_service import (
 )
 from langflow.api.utils.core import CurrentActiveUser, DbSession, release_db_transaction
 
-router = APIRouter(prefix="/agentic", tags=["Agentic"])
+router = APIRouter(prefix="/agentic", tags=["Agentic"], include_in_schema=False)
 
 
 @dataclass(frozen=True)
@@ -379,7 +379,7 @@ async def assist_stream(
     )
 
 
-@router.post("/assist/run", dependencies=[Depends(require_agentic_experience)])
+@router.post("/assist/run", dependencies=[Depends(require_agentic_experience)], include_in_schema=False)
 async def assist_headless(
     request: HeadlessAssistantRequest,
     current_user: CurrentActiveUser,
