@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import urlparse
 
-from passlib.context import CryptContext
+import bcrypt
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -43,6 +43,27 @@ class JWTAlgorithm(str, Enum):
     def is_asymmetric(self) -> bool:
         """Return True if this algorithm uses asymmetric (public/private key) cryptography."""
         return self in (JWTAlgorithm.RS256, JWTAlgorithm.RS512)
+
+
+class PasswordContext:
+    """Password hashing and verification context using bcrypt directly."""
+
+    @staticmethod
+    def hash(secret: str | bytes) -> str:
+        secret_bytes = secret.encode("utf-8") if isinstance(secret, str) else secret
+        secret_bytes = secret_bytes[:72]
+        salt = bcrypt.gensalt()
+        return bcrypt.hashpw(secret_bytes, salt).decode("utf-8")
+
+    @staticmethod
+    def verify(secret: str | bytes, hashed_secret: str | bytes) -> bool:
+        secret_bytes = secret.encode("utf-8") if isinstance(secret, str) else secret
+        hash_bytes = hashed_secret.encode("utf-8") if isinstance(hashed_secret, str) else hashed_secret
+        secret_bytes = secret_bytes[:72]
+        try:
+            return bcrypt.checkpw(secret_bytes, hash_bytes)
+        except (ValueError, TypeError, Exception):
+            return False
 
 
 class AuthSettings(BaseSettings):
@@ -329,7 +350,7 @@ class AuthSettings(BaseSettings):
         ),
     )
 
-    pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    pwd_context: PasswordContext = Field(default_factory=PasswordContext)
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
