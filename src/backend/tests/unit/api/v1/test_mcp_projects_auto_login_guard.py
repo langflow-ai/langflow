@@ -30,15 +30,15 @@ def _settings(*, auto_login: bool, skip_auth: bool, superuser: str = "admin") ->
     )
 
 
-def _session_scope_yielding(project, *, user=None):
-    """Build the short-lived session scope used by ``verify_project_auth``."""
-    db = MagicMock()
-    db.exec = AsyncMock(return_value=SimpleNamespace(first=lambda: project))
-    db.get = AsyncMock(return_value=user)
+def _session_scope_yielding(project, *, user=None) -> object:
+    """Build a ``session_scope`` replacement whose session resolves to ``project``."""
 
     @asynccontextmanager
     async def _scope():
-        yield db
+        session = MagicMock()
+        session.exec = AsyncMock(return_value=SimpleNamespace(first=lambda: project))
+        session.get = AsyncMock(return_value=user)
+        yield session
 
     return _scope
 
@@ -110,6 +110,7 @@ async def test_verify_project_auth_rejects_presented_key_from_another_owner():
     """A valid key belonging to a different user must not unlock this project."""
     project = SimpleNamespace(id=uuid4(), user_id=uuid4(), auth_settings=None)
     other_user = SimpleNamespace(id=uuid4(), username="someone-else")
+
     with (
         patch(f"{MODULE}.get_settings_service", return_value=_settings(auto_login=True, skip_auth=False)),
         patch(f"{MODULE}.session_scope", _session_scope_yielding(project)),

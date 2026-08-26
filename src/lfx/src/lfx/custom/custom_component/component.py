@@ -2016,15 +2016,19 @@ class Component(CustomComponent):
         user_id: str | None = None
         session_metadata = dict(message.session_metadata or {})
         if hasattr(self, "graph"):
+            from lfx.memory.flow_context import resolve_message_owner_id
+
             # Convert UUID to str if needed
             flow_id = str(self.graph.flow_id) if self.graph.flow_id else None
             graph_run_id = str(self.graph.run_id) if self.graph.run_id else None
             run_id = graph_run_id
-            # Stamp the executing user so chat-history retrieval can be scoped to its owner,
-            # closing cross-user disclosure via session_id collision. PlaceholderGraph stores
-            # user_id as ``str(...)``, so guard against the literal "None".
-            graph_user_id = self.graph.user_id
-            user_id = str(graph_user_id) if graph_user_id and str(graph_user_id) != "None" else None
+            # Stamp the message owner so chat-history retrieval can be scoped to it,
+            # closing cross-user disclosure via session_id collision. On the serving
+            # plane this is the end user (graph.end_user_id); otherwise the executing
+            # user. The read path (_safe_graph_user_id) resolves identically so the
+            # stored owner and the retrieval predicate always agree.
+            owner_id = resolve_message_owner_id(self.graph)
+            user_id = str(owner_id) if owner_id is not None else None
             if self.tracing_service:
                 langfuse_tracer = self.tracing_service.get_tracer("langfuse")
                 langfuse_trace_id = getattr(langfuse_tracer, "langfuse_trace_id", None)

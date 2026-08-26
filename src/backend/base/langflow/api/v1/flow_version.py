@@ -44,7 +44,11 @@ router = APIRouter(prefix="/flows/{flow_id}/versions", tags=["Flow Versions"], i
 
 
 def strip_version_data(data: dict | None) -> dict | None:
-    """Strip API keys from a version entry's flow data dict.
+    """Strip secret field values from a version entry's flow data dict.
+
+    Uses the metadata-driven scrubber, so ``password``-marked fields under
+    ordinary names and credential-bearing connection strings are cleared too --
+    not only fields whose name matches the legacy API-key pattern.
 
     Returns None if stripping fails, to prevent accidental secret leakage.
     """

@@ -138,6 +138,8 @@ export default defineConfig({
         LANGFLOW_LOG_LEVEL: "ERROR",
         OPENAI_API_KEY: "langflow-loopback-test-key", // pragma: allowlist secret
         OPENAI_BASE_URL: "http://127.0.0.1:8787/v1",
+        // The E2E harness intentionally routes provider calls to its local OpenAI stub.
+        LANGFLOW_SSRF_ALLOWED_HOSTS: "127.0.0.1",
         DO_NOT_TRACK: "true",
         // Serve the A2A discovery + JSON-RPC endpoints so the Agent tab tests
         // can publish and exercise a live agent.

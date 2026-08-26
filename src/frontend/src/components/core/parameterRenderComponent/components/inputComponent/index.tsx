@@ -270,6 +270,7 @@ export default function InputComponent({
               options={options}
               disabledOptions={disabledOptions}
               optionsPlaceholder={optionsPlaceholder}
+              inputProps={inputProps}
               nodeStyle={nodeStyle}
               popoverWidth={popoverWidth}
               commandWidth={commandWidth}
@@ -336,8 +337,10 @@ export default function InputComponent({
           type="button"
           aria-label={pwdVisible ? "Hide password" : "Show password"}
           aria-pressed={pwdVisible}
+          // w-6 + centering gives the toggle the 24px minimum target width
+          // (WCAG 2.5.8); mr-2.5 keeps the 20px icon where mr-3 put it.
           className={classNames(
-            "mb-px mr-3 p-0",
+            "mb-px mr-2.5 flex w-6 items-center justify-center p-0",
             editNode
               ? "input-component-true-button"
               : "input-component-false-button",

@@ -45,7 +45,7 @@ test(
       hoverAdd: true,
     });
     await expect(
-      page.getByRole("group", { name: "Read File node" }),
+      page.getByRole("application", { name: "Read File node" }),
     ).toHaveCount(1);
     await adjustScreenView(page);
     await page.waitForTimeout(2000);
@@ -464,7 +464,7 @@ test(
       hoverAdd: true,
     });
     await expect(
-      page.getByRole("group", { name: "Read File node" }),
+      page.getByRole("application", { name: "Read File node" }),
     ).toHaveCount(1);
     await adjustScreenView(page);
 
@@ -786,7 +786,7 @@ test(
       hoverAdd: true,
     });
     await expect(
-      page.getByRole("group", { name: "Read File node" }),
+      page.getByRole("application", { name: "Read File node" }),
     ).toHaveCount(1);
     await adjustScreenView(page);
 

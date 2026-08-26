@@ -35,7 +35,7 @@ const SearchBarComponent = ({
   };
 
   return (
-    <div className="flex w-full items-center rounded-md border">
+    <div className="flex w-full items-center rounded-md border border-control">
       {searchCategories && searchCategories.length > 0 && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

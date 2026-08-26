@@ -73,8 +73,8 @@ async def download_project_flows(
         if not flows:
             raise HTTPException(status_code=404, detail="No flows found in project")
 
-        # Strip API keys then normalise for git-friendly export (sorted keys,
-        # volatile fields removed, code fields as line arrays).
+        # Strip secret field values then normalise for git-friendly export
+        # (sorted keys, volatile fields removed, code fields as line arrays).
         normalised_flows = [normalize_flow_for_export(strip_flow_secrets(flow.model_dump())) for flow in flows]
         zip_stream = io.BytesIO()
 

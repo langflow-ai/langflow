@@ -1003,3 +1003,35 @@ class TestEmptyRootPathDoesNotLeakCwd:
 
         assert "error" in result, f"Isolated mode without user_id must refuse: {result}"
         assert "user" in result["error"].lower() or "authenticated" in result["error"].lower()
+
+
+class TestResolveUserIdEndUser:
+    """Serving-plane: the end user owns files they write, so their id wins the sandbox namespace.
+
+    ``_resolve_user_id`` picks the namespace the sandbox tool reads/writes under. On a serving run
+    the graph carries ``end_user_id`` (an identified end user); it must beat the executing service
+    account. When absent (editor / anonymous / feature-off) it falls through to the SID (strict BC).
+    """
+
+    def test_end_user_wins_over_sid(self, component: FileSystemToolComponent) -> None:
+        from types import SimpleNamespace
+
+        component._user_id = "sid-1111"
+        component._vertex = SimpleNamespace(graph=SimpleNamespace(end_user_id="alice", user_id="sid-1111"))
+        assert component._resolve_user_id() == "alice"
+
+    def test_falls_back_to_sid_without_end_user(self, component: FileSystemToolComponent) -> None:
+        from types import SimpleNamespace
+
+        component._user_id = "sid-1111"
+        component._vertex = SimpleNamespace(graph=SimpleNamespace(end_user_id=None, user_id="sid-1111"))
+        assert component._resolve_user_id() == "sid-1111"
+
+    def test_placeholder_end_user_is_ignored(self, component: FileSystemToolComponent) -> None:
+        # A PlaceholderGraph stringifies a missing end user as "None"; it must not create a
+        # spurious namespace — fall through to the SID.
+        from types import SimpleNamespace
+
+        component._user_id = "sid-1111"
+        component._vertex = SimpleNamespace(graph=SimpleNamespace(end_user_id="None", user_id="sid-1111"))
+        assert component._resolve_user_id() == "sid-1111"
