@@ -249,7 +249,7 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
                     value = secret_value_to_str(value, strip=True)
                     if value:
                         values[var_key] = value
-                except (ValueError, Exception):  # noqa: BLE001
+                except ValueError:
                     # Variable not found - check environment, unless the request disables
                     # env fallback (keeps served flows isolated from process-wide credentials).
                     if is_env_fallback_disabled():
