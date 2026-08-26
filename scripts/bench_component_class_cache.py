@@ -26,6 +26,27 @@ import time
 
 os.environ.setdefault("LANGFLOW_LOG_LEVEL", "ERROR")
 
+# A component that keeps state in its MODULE namespace rather than on the class.
+# ``prepare_global_scope`` execs module-level statements into ``exec_globals``, and
+# the cached class carries that dict as its ``__globals__``, so caching the class
+# shares this list across every build that has the same source.
+LEAKY_SOURCE = """
+from lfx.custom.custom_component.component import Component
+from lfx.io import MessageTextInput, Output
+
+_SEEN = []
+
+class LeakyComp(Component):
+    display_name = "Leaky"
+    inputs = [MessageTextInput(name="t", display_name="t")]
+    outputs = [Output(name="o", display_name="o", method="run")]
+
+    def run(self):
+        _SEEN.append(self.t)
+        return _SEEN
+"""
+
+
 REPEATS = 5  # independent samples per arm; we report the median
 INNER = 20  # flow runs per sample
 
@@ -270,6 +291,21 @@ async def safety_checks(data) -> list[tuple[str, bool, str]]:
             f"no class mutation across {checked} component classes",
             not violations,
             f"violations: {violations or 'none'}",
+        )
+    )
+    # 5. module-level state does not survive across builds
+    from lfx.interface.initialize import loading
+
+    seen = []
+    for token in ("REQ1", "REQ2"):
+        inst = loading.eval_custom_component_code(LEAKY_SOURCE)(_code=LEAKY_SOURCE)
+        inst.set(t=token)
+        seen.append(list(inst.run()))
+    results.append(
+        (
+            "module-level state not shared across builds",
+            len(seen[-1]) == 1,
+            f"second build saw {seen[-1]}",
         )
     )
     return results
