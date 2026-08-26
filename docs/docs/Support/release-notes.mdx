@@ -76,6 +76,12 @@ Highlights of this release include the following changes. For all changes, see t
 
 ### New features
 
+- OpenTelemetry export
+
+    Langflow can export health traces, metrics, and logs over OTLP to your own backend.
+
+    For more information, see [OpenTelemetry](./observability-opentelemetry), [New Relic](./observability-new-relic), and [Instana](./observability-instana).
+
 - Python Interpreter microVM sandbox
 
     Set `LANGFLOW_SANDBOX_BACKEND=exec-sandbox` to run the [**Python Interpreter** component](/python-interpreter) in a dedicated [QEMU microVM](https://www.qemu.org/docs/master/system/i386/microvm.html) instead of in the Langflow server process.
@@ -97,12 +103,6 @@ Highlights of this release include the following changes. For all changes, see t
     Streamable HTTP is not affected.
 
     For more information, see [Disable the legacy MCP SSE transport](/mcp-server#disable-legacy-sse).
-
-- OpenTelemetry export
-
-    Langflow can export health traces, metrics, and logs over OTLP to your own backend.
-
-    For more information, see [OpenTelemetry](./observability-opentelemetry).
 
 - OrcaRouter bundle
 
