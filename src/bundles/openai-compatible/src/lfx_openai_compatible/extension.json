@@ -23,6 +23,7 @@
             "is_list": false,
             "options": [],
             "langchain_param": "base_url",
+            "base_url_suffix": "/v1",
             "component_metadata": {
               "mapping_field": "openai_compatible_base_url",
               "required": false,
