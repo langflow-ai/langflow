@@ -50,8 +50,17 @@ router = APIRouter(prefix="/authz/teams", tags=["Authorization"])
 # See ``authz_roles._LIST_MAX_LIMIT`` — same bound, applied to teams + members.
 _LIST_MAX_LIMIT = 200
 _LIST_DEFAULT_LIMIT = 100
+_EXTERNALLY_MANAGED_DETAIL = "Externally managed memberships cannot be removed through the manual membership API"
 OperationId = Annotated[str | None, Header(alias="X-Langflow-Operation-ID", max_length=128)]
 _LEGACY_SUPERUSER_DENIAL = "Superuser required to administer teams."
+
+
+def _externally_managed_conflict() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail=_EXTERNALLY_MANAGED_DETAIL,
+        headers={"X-Langflow-Error-Code": "externally_managed"},
+    )
 
 
 async def _require_team_administrator(user, *, operation_id: str | None = None) -> None:
@@ -440,7 +449,7 @@ async def add_member(
             operation_id=operation_id,
         ),
     )
-    response.headers["Location"] = f"/api/v1/authz/teams/{team_id}/members/{payload.user_id}"
+    response.headers["Location"] = f"/api/v1/authz/teams/{team_id}/members"
     logger.info("Added user=%s to team=%s", payload.user_id, team_id)
     return TeamMemberRead.model_validate(member)
 
@@ -483,22 +492,14 @@ async def remove_member(
                 source=member.source,
             ),
         )
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Externally managed memberships cannot be removed through the manual membership API",
-            headers={"X-Langflow-Error-Code": "externally_managed"},
-        )
+        raise _externally_managed_conflict()
     manual_grant = await get_team_member_grant(
         session,
         membership_id=member.id,
         source_kind="manual",
     )
     if manual_grant is None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="externally_managed",
-            headers={"X-Langflow-Error-Code": "externally_managed"},
-        )
+        raise _externally_managed_conflict()
     mutation = AuthorizationMutation(
         kind=AuthorizationMutationKind.TEAM_MEMBER_REMOVED,
         entity_id=member.id,
@@ -535,7 +536,7 @@ async def remove_member(
             grant=manual_grant,
         )
     except TeamMemberGrantNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="externally_managed") from exc
+        raise _externally_managed_conflict() from exc
     await stage_identity_mutation(authorization_service, session, mutation)
     await session.commit()
     await safe_identity_mutation_committed(authorization_service, mutation)

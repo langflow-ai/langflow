@@ -40,6 +40,13 @@ class DirectoryReconciler:
 
     def export_state(self) -> DirectoryState:
         connection = self.client.get_directory_connection()
+        missing = sorted(field for field in _TRUST_FIELDS if connection.get(field) is None)
+        if missing:
+            raise AdminAPIError(
+                status_code=HTTPStatus.BAD_GATEWAY,
+                detail=f"Directory connection response is missing trust fields: {', '.join(missing)}",
+                error_code="invalid_directory_connection",
+            )
         groups = self.client.list_directory_groups()
         mappings = self.client.list_directory_role_mappings()
         return DirectoryState(
