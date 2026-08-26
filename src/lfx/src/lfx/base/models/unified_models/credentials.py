@@ -177,10 +177,7 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
                 except ValueError:
                     return None
 
-        try:
-            api_key = run_until_complete(_get_variable())
-        except (ValueError, Exception):  # noqa: BLE001
-            api_key = None
+        api_key = run_until_complete(_get_variable())
 
     api_key = secret_value_to_str(api_key, strip=True)
     if api_key:
