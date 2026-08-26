@@ -744,6 +744,8 @@ Polling and streaming delivery use a follow-up `GET /api/v1/build/<job_id>/event
 
 Set `LANGFLOW_JOB_QUEUE_TYPE=redis` on all workers so queue state is shared. This supports all `LANGFLOW_EVENT_DELIVERY` modes.
 
+If the deployment is headless and never uses the visual editor or MCP over SSE, you can set `LANGFLOW_DANGEROUSLY_ALLOW_MULTI_WORKER_WITHOUT_SHARED_QUEUE=true` to start anyway. This is unsupported with the Langflow UI and with MCP over SSE, and several subsystems become per-worker. Read [Run multiple workers without Redis](./deployment-multi-worker#run-multiple-workers-without-redis) before enabling it.
+
 ### Builds are cancelled unexpectedly
 
 The polling watchdog reclaims builds whose client heartbeat has gone stale. The default threshold is 90 seconds (`LANGFLOW_REDIS_QUEUE_POLLING_STALE_THRESHOLD_S=90`). If legitimate long-running builds are being cancelled, increase this value or set it to `0` to disable the watchdog entirely.

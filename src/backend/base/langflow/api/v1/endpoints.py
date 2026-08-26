@@ -1552,6 +1552,12 @@ async def experimental_run_flow(
                 # than chaining the exception to itself.
                 raise
             raise error_for_client(exc, expose_details=expose_error_details) from exc
+        except TweakRefusedError:
+            # Third run route that applies tweaks, and the generic handler below
+            # would turn a refused tweak into a redacted 500 with a stack trace
+            # in the logs. Let it through so the app-level handler answers 422
+            # naming the refused keys, as the setting documents for every mode.
+            raise
         except Exception as exc:
             await logger.aexception("Failed to build advanced-run graph for flow %s", flow.id)
             client_error = error_for_client(exc, expose_details=expose_error_details)
@@ -1892,16 +1898,21 @@ async def custom_component_update(
 
 
 def _blocked_component_types(snapshot) -> list[str]:
-    """Return the component types the editor should treat as policy-blocked.
+    """Return every component type the editor should treat as policy-blocked.
 
-    A blocked key is whatever the administrator entered, which may be an alias
-    rather than the registry's canonical name, so it is resolved the same way
-    the enforcement path resolves it. Both the raw key and its canonical
-    candidates are reported: a node's ``type`` can carry either.
+    The editor compares a node's ``type`` against this set, and a saved node
+    carries whichever identity it was saved under -- ``Prompt`` rather than the
+    registry key ``Prompt Template``. Alias resolution only runs one way, so
+    reporting the administrator's key and its canonical candidates is not
+    enough: blocking the canonical key would leave every node saved under an
+    alias unmatched, and the palette exposes only the canonical key, so that is
+    the one an administrator can find.
 
-    A node whose ``type`` is some *third* alias of a blocked component is not
-    listed and the editor will not name a policy for it. That under-claims
-    rather than over-claims, and the server still refuses the run.
+    ``_resolve_catalog_policy_matches`` decides the write by resolving the node
+    side too and intersecting, so the same rule is applied here in reverse:
+    every alias whose canonical candidates meet the blocked identities is
+    reported. That keeps this answer identical to the one that decides whether
+    the save succeeds, which is the whole point of sending it.
     """
     blocked_keys = getattr(snapshot, "blocked_component_keys", None)
     if not blocked_keys:
@@ -1915,7 +1926,15 @@ def _blocked_component_types(snapshot) -> list[str]:
     except Exception:  # noqa: BLE001
         identity_index = None
     if identity_index is not None:
-        types |= set(identity_index.resolve_many(blocked_keys))
+        blocked_identities = frozenset(identity_index.resolve_many(blocked_keys))
+        types |= blocked_identities
+        types |= {
+            alias
+            for alias, candidates in identity_index.aliases.items()
+            # Any overlap blocks the node server side, including an alias that
+            # is ambiguous across components.
+            if not blocked_identities.isdisjoint(candidates)
+        }
     return sorted(types)
 
 

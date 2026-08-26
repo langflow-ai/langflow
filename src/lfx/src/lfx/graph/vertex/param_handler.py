@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import ast
 from collections.abc import Mapping
-from pathlib import PurePosixPath
+from pathlib import PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
@@ -333,7 +333,11 @@ class ParameterHandler:
         * Absolute paths and values without a separator are not storage keys. Reading a local
           server file by absolute path is the documented single-tenant behavior that
           ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` governs, so they stay with
-          ``_enforce_file_paths``.
+          ``_enforce_file_paths``. Absoluteness is tested against both flavours: a Windows
+          drive-letter path written with forward slashes ("C:/data/report.csv") is not
+          POSIX-absolute, so testing only ``PurePosixPath`` would split it into namespace
+          "C:" and reject a legitimate local path -- while the backslash spelling of the
+          same path was already exempt for having no "/" at all.
         * Restricted mode, where ``_enforce_file_paths`` already pins the resolved local path and
           the S3 logical key to the graph's own scopes. This check exists to close the
           unrestricted default, and skipping it keeps restricted behavior byte-identical.
@@ -341,6 +345,8 @@ class ParameterHandler:
         if is_local_file_access_restricted():
             return file_path
         if "/" not in file_path or PurePosixPath(file_path).is_absolute():
+            return file_path
+        if PureWindowsPath(file_path).is_absolute():
             return file_path
         enforce_storage_key_scope(file_path, self._file_access_scopes())
         return file_path
