@@ -26,7 +26,7 @@ PREFERRED_PROVIDERS = ["Anthropic", "OpenAI", "Google Generative AI", "Groq"]
 ASSISTANT_PREFERRED_MODELS: dict[str, tuple[str, ...]] = {
     "OpenAI": ("gpt-5.4", "gpt-5.2", "gpt-5.1", "gpt-5", "gpt-4o"),
     "Anthropic": ("claude-opus-4-6", "claude-sonnet-4-6", "claude-opus-4-5-20251101"),
-    "Google Generative AI": ("gemini-2.5-pro", "gemini-1.5-pro"),
+    "Google Generative AI": ("gemini-2.5-pro", "gemini-3.1-pro-preview"),
     "Azure AI Foundry": ("gpt-4o",),
     "OpenRouter": ("anthropic/claude-opus-4.7", "openai/gpt-5.4"),
 }
@@ -40,7 +40,9 @@ tasks". The assistant drives a multi-step tool-calling loop, so its default must
 provider's strongest general agent model, not its fastest or its newest.
 
 The first name the provider actually offers wins. Providers absent here — and names that
-no longer exist — fall back to the catalog default.
+no longer exist — fall back to the catalog default. Every entry must be a model the catalog
+still offers: a deprecated name is filtered out before the lookup, so it silently reduces the
+list rather than acting as a fallback.
 """
 
 
@@ -290,6 +292,25 @@ def build_live_only_provider_entries(
     return entries
 
 
+def _preferred_first(provider: str, names: list[str]) -> list[str]:
+    """Order ``names`` so this provider's curated preferences come first.
+
+    The assistant walks this order when the chosen model turns out to be unusable. Catalog
+    order puts a provider's small flash SKUs ahead of its other pro-class models, so without
+    this a blocked default drops to a weaker model than ``ASSISTANT_PREFERRED_MODELS`` already
+    says to prefer. Names absent from the preference list keep their relative order.
+    """
+    preferences = ASSISTANT_PREFERRED_MODELS.get(provider, ())
+    if not preferences:
+        return names
+    offered = set(names)
+    front = [name for name in preferences if name in offered]
+    if not front:
+        return names
+    promoted = set(front)
+    return [*front, *(name for name in names if name not in promoted)]
+
+
 def get_provider_model_candidates(provider: str, user_id: UUID | str | None = None) -> list[str]:
     """Return the ordered model candidates the assistant may try on this provider.
 
@@ -307,7 +328,7 @@ def get_provider_model_candidates(provider: str, user_id: UUID | str | None = No
 
     installed = list_installed_tool_calling_models(provider, user_id)
     if installed:
-        return installed
+        return _preferred_first(provider, installed)
 
     models_by_provider = get_unified_models_detailed(
         providers=[provider],
@@ -331,4 +352,4 @@ def get_provider_model_candidates(provider: str, user_id: UUID | str | None = No
             ordered.append(name)
             seen.add(name)
 
-    return ordered
+    return _preferred_first(provider, ordered)

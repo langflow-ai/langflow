@@ -13,9 +13,14 @@ MIN_MEANINGFUL_PART_LENGTH = 10
 MAX_RAW_CAUSE_LENGTH = 2000
 
 # Case-insensitive markers of a *model unavailable* error (OpenAI 403 model_not_found,
-# Anthropic equivalent, Ollama not-installed 404 / cloud-only 403) — drives model fallback.
+# Anthropic equivalent, Ollama not-installed 404 / cloud-only 403, Google 404 for a model
+# retired for new keys) — drives model fallback.
 _MODEL_UNAVAILABLE_MARKERS: tuple[str, ...] = (
     "model_not_found",
+    # Google retires a model for newly issued keys while still listing it, so the name
+    # resolves everywhere and only the call fails: "This model models/gemini-2.5-pro is
+    # no longer available to new users." (LE-2310)
+    "no longer available",
     "does not have access to model",
     "model is not available",
     "the model does not exist",
