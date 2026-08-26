@@ -134,7 +134,18 @@ const useSaveFlow = () => {
                   // When saving from the list page (e.g., renaming via settings modal),
                   // setting this would leave stale unprocessed flow data in the store,
                   // causing a crash when the user later navigates to the flow page.
-                  if (useFlowStore.getState().onFlowPage) {
+                  //
+                  // And only when the canvas still holds the graph this request
+                  // carried. `currentFlow` is the baseline the next autosave
+                  // diffs against, so adopting the response of a save that
+                  // started before an edit makes that edit look persisted and
+                  // the follow-up save is skipped — the edit is lost. The
+                  // store swaps these arrays on every change, so identity is
+                  // an exact "nothing moved while we were away" check.
+                  const liveState = useFlowStore.getState();
+                  const graphUnchanged =
+                    liveState.nodes === nodes && liveState.edges === edges;
+                  if (liveState.onFlowPage && graphUnchanged) {
                     setCurrentFlow(updatedFlow);
                   }
                   resolve();

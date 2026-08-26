@@ -148,7 +148,7 @@
   "components.amazonbedrockconversemodel.inputs.temperature.display_name.b958ce8b": "Temperature",
   "components.amazonbedrockconversemodel.inputs.temperature.info.68912596": "Controls randomness in output. Higher values make output more random.",
   "components.amazonbedrockconversemodel.inputs.top_k.display_name.74fc1150": "Top K",
-  "components.amazonbedrockconversemodel.inputs.top_k.info.319f2f9d": "Limits the number of highest probability vocabulary tokens to consider. Note: Not all models support top_k. Use 'Additional Model Fields' for manual configuration if needed.",
+  "components.amazonbedrockconversemodel.inputs.top_k.info.a93c6652": "Limits the number of highest probability vocabulary tokens to consider. Only sent to Anthropic models, the ones that document it for the Converse API; it is ignored for the others. Use 'Additional Model Fields' to pass a provider's own equivalent.",
   "components.amazonbedrockconversemodel.inputs.top_p.display_name.c7a8872a": "Top P",
   "components.amazonbedrockconversemodel.inputs.top_p.info.62d5228d": "Nucleus sampling parameter. Controls diversity of output.",
   "components.amazonbedrockconversemodel.outputs.model_output.display_name.698eabeb": "Language Model",
