@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING
 
 import anyio
 import sqlalchemy as sa
-from alembic import command, util
 from alembic.config import Config
 from lfx.log.logger import logger
 from lfx.observability import instrument_database
@@ -27,6 +26,7 @@ from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 from tenacity import retry, stop_after_attempt, wait_fixed
 
+from alembic import command, util
 from langflow.helpers.windows_postgres_helper import configure_windows_postgres_event_loop
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.base import Service
@@ -845,6 +845,58 @@ class DatabaseService(Service):
         # acquired synchronously; run in a worker thread so a contended-lock
         # poll does not block the event loop.
         await asyncio.to_thread(self._create_db_and_tables_with_lock)
+
+    async def warn_if_connection_budget_exceeds_server_limit(self) -> None:
+        """Warn when this deployment can demand more connections than Postgres allows.
+
+        The pool ceiling is per WORKER PROCESS: every uvicorn worker builds its
+        own engine and therefore its own pool, so the deployment-wide ceiling is
+        ``workers * (pool_size + max_overflow)``. With the shipped defaults
+        (20 + 30) and 4 workers that is 200, while a stock Postgres allows 100 --
+        so a deployment can exhaust the server without any single setting looking
+        wrong. The resulting failure ("FATAL: sorry, too many clients already")
+        surfaces inside an unrelated request, far from its cause, which is why it
+        is worth stating plainly at startup rather than leaving operators to infer it.
+
+        Note this is the CEILING, not steady-state demand. It is still the number
+        that matters, because ``pool_size`` connections per worker are retained
+        once opened -- SQLAlchemy's QueuePool has no idle reaper.
+
+        Diagnostic only: failing to probe the server must not prevent startup, so
+        the probe error is logged and swallowed rather than raised.
+        """
+        settings = self.settings_service.settings
+        kwargs = self._build_connection_kwargs()
+        # Mirror SQLAlchemy's own defaults when the keys are absent.
+        pool_size = kwargs.get("pool_size", 5)
+        max_overflow = kwargs.get("max_overflow", 10)
+        workers = max(getattr(settings, "workers", 1) or 1, 1)
+        ceiling = workers * (pool_size + max_overflow)
+
+        try:
+            async with self.engine.connect() as conn:
+                max_conn = int((await conn.exec_driver_sql("SHOW max_connections")).scalar_one())
+                reserved = int((await conn.exec_driver_sql("SHOW superuser_reserved_connections")).scalar_one())
+        except Exception as exc:  # noqa: BLE001 - a diagnostic must never block startup
+            logger.debug(f"Could not read server connection limits for the pool budget check: {exc}")
+            return
+
+        available = max_conn - reserved
+        if ceiling > available:
+            logger.warning(
+                f"Database connection budget exceeds the server limit: this deployment can open up to "
+                f"{ceiling} connections ({workers} worker(s) x (pool_size={pool_size} + "
+                f"max_overflow={max_overflow})), but the server allows {available} "
+                f"(max_connections={max_conn} minus superuser_reserved_connections={reserved}). "
+                f"Under load this fails with 'too many clients already'. Lower pool_size/max_overflow via "
+                f"LANGFLOW_DB_CONNECTION_SETTINGS, reduce LANGFLOW_WORKERS, or raise the server's "
+                f"max_connections. Note pool_size connections per worker are retained once opened."
+            )
+        else:
+            logger.debug(
+                f"Database connection budget OK: ceiling {ceiling} <= {available} available "
+                f"({workers} worker(s) x (pool_size={pool_size} + max_overflow={max_overflow}))."
+            )
 
     def _create_db_and_tables_with_lock(self) -> None:
         """Postgres path: hold the migration advisory lock for the DDL.
