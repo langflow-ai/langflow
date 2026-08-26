@@ -159,6 +159,8 @@ To share a flow's **Playground** with another user, do the following:
 This window's URL is the flow's **Shareable Playground** address, such as `https://3f7c-73-64-93-151.ngrok-free.app/playground/d764c4b8-5cec-4c0f-9de0-4b419b11901a`.
 4. Send the URL to another user to give them access to the flow's **Playground**.
 
+By default, a shared **Playground** can't run flows that contain custom components, because the run is unauthenticated and Langflow executes only its own copy of each component on that path. For more information, see [Custom components in publicly shared flows](/deployment-block-custom-components#public-flow-custom-components).
+
 ## See also
 
 - [Upload images](/concepts-file-management#upload-images)
