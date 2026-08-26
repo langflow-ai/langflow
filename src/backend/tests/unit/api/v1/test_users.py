@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
@@ -288,6 +289,39 @@ async def test_reset_password(client: AsyncClient, logged_in_headers, active_use
         data={"username": active_user.username, "password": REPLACEMENT_CREDENTIAL},
     )
     assert login_response.status_code == status.HTTP_200_OK
+
+
+async def test_external_identity_credentials_cannot_be_changed_locally(
+    client: AsyncClient,
+    logged_in_headers,
+    logged_in_headers_super_user,
+    active_user,
+    monkeypatch,
+) -> None:
+    authorization_service = SimpleNamespace(
+        can_administer=AsyncMock(return_value=True),
+        is_user_credentials_managed_externally=AsyncMock(return_value=True),
+    )
+    monkeypatch.setattr(
+        "langflow.api.v1.users.get_authorization_service",
+        lambda: authorization_service,
+    )
+
+    admin_response = await client.patch(
+        f"api/v1/users/{active_user.id}",
+        json={"password": REPLACEMENT_CREDENTIAL},
+        headers=logged_in_headers_super_user,
+    )
+    self_response = await client.patch(
+        f"api/v1/users/{active_user.id}/reset-password",
+        json={"current_password": CURRENT_CREDENTIAL, "password": REPLACEMENT_CREDENTIAL},
+        headers=logged_in_headers,
+    )
+
+    assert admin_response.status_code == status.HTTP_409_CONFLICT
+    assert self_response.status_code == status.HTTP_409_CONFLICT
+    assert admin_response.headers["X-Langflow-Error-Code"] == "external_credentials_managed"
+    assert self_response.headers["X-Langflow-Error-Code"] == "external_credentials_managed"
 
 
 async def test_reset_password_rejects_incorrect_current_password(client: AsyncClient, logged_in_headers, active_user):
