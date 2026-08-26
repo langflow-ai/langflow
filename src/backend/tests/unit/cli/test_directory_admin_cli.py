@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from http import HTTPStatus
 from typing import Any
 
 import httpx
 import pytest
 from langflow.__main__ import app
-from langflow.cli.admin.client import AdminClient
+from langflow.cli.admin.client import AdminAPIError, AdminClient
 from langflow.cli.admin.directory_reconcile import DirectoryReconciler
 from langflow.cli.admin.manifest import DirectoryState
 from pydantic import ValidationError
@@ -205,3 +206,38 @@ def test_directory_prune_unlinks_only_directory_mappings() -> None:
     assert {item["resource"] for item in drift} == {"team_link", "role_mapping"}
     assert report["status"] == "success"
     assert client.calls[-2:] == ["unlink:00000000-0000-0000-0000-000000000001", "mapping:delete:mapping-1"]
+
+
+def test_initial_connection_only_apply_does_not_require_a_provisioned_catalog() -> None:
+    class EmptyTarget:
+        def __init__(self) -> None:
+            self.calls: list[str] = []
+
+        def get_directory_connection(self) -> dict[str, Any]:
+            raise AdminAPIError(status_code=HTTPStatus.NOT_FOUND, detail="not configured")
+
+        def list_directory_groups(self) -> list[dict[str, Any]]:
+            raise AssertionError
+
+        def list_directory_role_mappings(self) -> list[dict[str, Any]]:
+            raise AssertionError
+
+        def configure_directory_connection(self, **_trust: str) -> dict[str, Any]:
+            self.calls.append("connection:configure")
+            return {}
+
+        def validate_directory_connection(self) -> dict[str, Any]:
+            self.calls.append("connection:validate")
+            return {}
+
+        def enable_directory_connection(self) -> dict[str, Any]:
+            self.calls.append("connection:enable")
+            return {"state": "preview"}
+
+    client = EmptyTarget()
+    desired = _state().model_copy(update={"team_links": [], "role_mappings": []})
+    reconciler = DirectoryReconciler(client)
+
+    assert [item["action"] for item in reconciler.diff(desired)] == ["configure", "validate", "enable"]
+    assert reconciler.apply(desired)["status"] == "success"
+    assert client.calls == ["connection:configure", "connection:validate", "connection:enable"]
