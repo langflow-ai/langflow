@@ -320,6 +320,41 @@ def test_password_is_read_from_stdin_and_never_rendered(monkeypatch) -> None:
     assert json.loads(result.output)["username"] == "alice"
 
 
+def test_json_output_is_written_as_complete_canonical_json(monkeypatch) -> None:
+    payload = {"id": "user-id", "username": "x" * 1000}
+
+    class FakeClient:
+        def get_user(self, _user: str) -> dict:
+            return payload
+
+    monkeypatch.setattr("langflow.cli.admin.commands._client_from_context", lambda _ctx: FakeClient())
+
+    result = CliRunner().invoke(app, ["admin", "--output", "json", "users", "get", "alice"])
+
+    assert result.exit_code == 0
+    assert result.output == f"{json.dumps(payload, default=str, sort_keys=True)}\n"
+
+
+def test_team_assignment_capability_failures_use_api_error_handling(monkeypatch) -> None:
+    class FakeClient:
+        def capabilities(self) -> dict:
+            raise AdminAPIError(
+                status_code=503,
+                detail="Capabilities are temporarily unavailable",
+                error_code="capabilities_unavailable",
+            )
+
+    monkeypatch.setattr("langflow.cli.admin.commands._client_from_context", lambda _ctx: FakeClient())
+
+    result = CliRunner().invoke(
+        app,
+        ["admin", "role-assignments", "grant", "--role", "viewer", "--team", "operators"],
+    )
+
+    assert result.exit_code == 1
+    assert result.output == "Error [capabilities_unavailable]: Capabilities are temporarily unavailable\n"
+
+
 def test_update_commands_can_explicitly_clear_nullable_and_collection_fields(monkeypatch) -> None:
     captured: list[tuple[str, str, dict]] = []
 
