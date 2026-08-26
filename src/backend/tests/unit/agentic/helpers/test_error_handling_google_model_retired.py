@@ -42,7 +42,7 @@ class TestGoogleRetiredModelDetection:
 
 
 class TestUnrelatedResourceRetirementIsNotModelUnavailable:
-    """A bare "no longer available" also describes non-LLM resources.
+    """Availability wording also describes non-LLM resources.
 
     Matching it would send the streamer into the model-fallback chain: the whole
     turn re-runs on each candidate — replaying every tool side effect the attempt
@@ -61,11 +61,16 @@ class TestUnrelatedResourceRetirementIsNotModelUnavailable:
         assert is_model_unavailable_error(error) is False
 
     def test_should_not_flag_withdrawn_tool(self):
-        error = "The requested tool is no longer available."
+        error = "The requested tool is no longer available to new users."
 
         assert is_model_unavailable_error(error) is False
 
     def test_should_not_flag_removed_component_in_catalog(self):
-        error = "The following components are no longer available in the approved catalog: ChatInput"
+        error = "The following components are no longer available to new users: ChatInput"
+
+        assert is_model_unavailable_error(error) is False
+
+    def test_should_not_flag_retired_embedding_model_for_new_users(self):
+        error = "This embedding model is no longer available to new users."
 
         assert is_model_unavailable_error(error) is False

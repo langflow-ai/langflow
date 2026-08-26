@@ -12,21 +12,18 @@ MAX_ERROR_MESSAGE_LENGTH = 150
 MIN_MEANINGFUL_PART_LENGTH = 10
 MAX_RAW_CAUSE_LENGTH = 2000
 
+# Google retires models for new keys with "This model models/<name> is no longer
+# available to new users." Keep the model-specific framing: matching only the
+# availability phrase would also classify retired tools and embedding models as LLM errors.
+_GOOGLE_RETIRED_MODEL_RE = re.compile(
+    r"\bthis model models/\S+ is no longer available to new users\b",
+    re.IGNORECASE,
+)
+
 # Case-insensitive markers of a *model unavailable* error (OpenAI 403 model_not_found,
-# Anthropic equivalent, Ollama not-installed 404 / cloud-only 403, Google 404 for a model
-# retired for new keys) — drives model fallback.
+# Anthropic equivalent, Ollama not-installed 404 / cloud-only 403) — drives model fallback.
 _MODEL_UNAVAILABLE_MARKERS: tuple[str, ...] = (
     "model_not_found",
-    # Google retires a model for newly issued keys while still listing it, so the name
-    # resolves everywhere and only the call fails: "This model models/gemini-2.5-pro is
-    # no longer available to new users." (LE-2310)
-    # Kept as the full phrase on purpose: a bare "no longer available" also matches
-    # non-LLM resources (a knowledge base's embedding model dropped from the registry,
-    # a withdrawn tool), and a false positive here re-runs the whole turn — replaying
-    # tool side effects — before burying the real error under "No accessible model".
-    # Cost of the narrow match: a wording change on Google's side stops matching, which
-    # is the LE-2310 behaviour we started from, not a worse one.
-    "no longer available to new users",
     "does not have access to model",
     "model is not available",
     "the model does not exist",
@@ -243,7 +240,9 @@ def is_model_unavailable_error(error_msg: str | None) -> bool:
     if not error_msg:
         return False
     lowered = error_msg.lower()
-    return any(marker in lowered for marker in _MODEL_UNAVAILABLE_MARKERS)
+    return bool(_GOOGLE_RETIRED_MODEL_RE.search(error_msg)) or any(
+        marker in lowered for marker in _MODEL_UNAVAILABLE_MARKERS
+    )
 
 
 def is_transient_tool_call_error(error_msg: str | None) -> bool:
