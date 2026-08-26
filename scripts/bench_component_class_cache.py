@@ -26,8 +26,8 @@ import time
 
 os.environ.setdefault("LANGFLOW_LOG_LEVEL", "ERROR")
 
-REPEATS = 5          # independent samples per arm; we report the median
-INNER = 20           # flow runs per sample
+REPEATS = 5  # independent samples per arm; we report the median
+INNER = 20  # flow runs per sample
 
 
 # --------------------------------------------------------------------------
@@ -35,8 +35,8 @@ INNER = 20           # flow runs per sample
 # --------------------------------------------------------------------------
 def install_cache() -> None:
     """Install the lru_cache on the eval boundary, mirroring the patch."""
-    import lfx.interface.initialize.loading as loading
     from lfx.custom import validate
+    from lfx.interface.initialize import loading
 
     # Keyed on ``code`` alone, exactly as the shipped patch is: on a cache hit
     # neither create_class NOR extract_class_name runs, so a hit costs zero
@@ -59,8 +59,8 @@ def uninstall_cache() -> None:
     uncached body here makes the arm correct on patched and unpatched checkouts
     alike.
     """
-    import lfx.interface.initialize.loading as loading
     from lfx.custom import validate
+    from lfx.interface.initialize import loading
 
     def eval_uncached(code: str):
         return validate.create_class(code, validate.extract_class_name(code))
@@ -79,14 +79,12 @@ def install_parse_dedup() -> None:
     """
     import ast
 
-    import lfx.interface.initialize.loading as loading
     from lfx.custom import validate
     from lfx.field_typing.constants import DEFAULT_IMPORT_STRING
+    from lfx.interface.initialize import loading
 
     def augment(code: str) -> str:
-        code = code.replace(
-            "from langflow import CustomComponent", "from langflow.custom import CustomComponent"
-        )
+        code = code.replace("from langflow import CustomComponent", "from langflow.custom import CustomComponent")
         code = code.replace(
             "from langflow.interface.custom.custom_component import CustomComponent",
             "from langflow.custom import CustomComponent",
@@ -106,12 +104,10 @@ def install_parse_dedup() -> None:
         if not hasattr(ast, "TypeIgnore"):
             ast.TypeIgnore = validate.create_type_ignore_class()
         try:
-            module = ast.parse(augment(code))          # ONE parse instead of two
+            module = ast.parse(augment(code))  # ONE parse instead of two
             class_name = name_from_module(module, code)
             exec_globals = validate.prepare_global_scope(module)
-            future_imports = [
-                n for n in module.body if isinstance(n, ast.ImportFrom) and n.module == "__future__"
-            ]
+            future_imports = [n for n in module.body if isinstance(n, ast.ImportFrom) and n.module == "__future__"]
             class_code = validate.extract_class_code(module, class_name)
             compiled = validate.compile_class_code(class_code, future_imports)
             return validate.build_class_constructor(compiled, exec_globals, class_name)
@@ -125,7 +121,7 @@ def install_parse_dedup() -> None:
 
 def install_both() -> None:
     """Cache AND single-parse together."""
-    import lfx.interface.initialize.loading as loading
+    from lfx.interface.initialize import loading
 
     single = install_parse_dedup()
     loading.eval_custom_component_code = functools.lru_cache(maxsize=512)(single)
@@ -149,9 +145,7 @@ def build_payload():
     ci.set(input_value="hello world")
     co = ChatOutput(_id="co")
     co.set(input_value=ci.message_response)
-    payload = Graph(
-        start=ci, end=co, flow_id="00000000-0000-0000-0000-000000000001", flow_name="bench"
-    ).dump()
+    payload = Graph(start=ci, end=co, flow_id="00000000-0000-0000-0000-000000000001", flow_name="bench").dump()
     return payload.get("data", payload)
 
 
@@ -237,9 +231,7 @@ async def safety_checks(data) -> list[tuple[str, bool, str]]:
                 v.update_raw_params({"input_value": token}, overwrite=True)
         async for _ in g.async_start():
             pass
-        got = next(
-            (str(v.built_object) for v in g.vertices if v.id.startswith("co")), ""
-        )
+        got = next((str(v.built_object) for v in g.vertices if v.id.startswith("co")), "")
         outs.append(token in got)
     results.append(("distinct inputs -> distinct outputs", all(outs), f"{sum(outs)}/3 correct"))
 
@@ -322,9 +314,7 @@ async def main() -> int:
     build = {}
     for label, setup in arms:
         setup()
-        build[label] = statistics.median(
-            [bench_build_only(args.flow) for _ in range(args.repeats)]
-        )
+        build[label] = statistics.median([bench_build_only(args.flow) for _ in range(args.repeats)])
 
     peak = max(max(build.values()), a_e2e)
     print("CPU per request (lower is better)\n")
