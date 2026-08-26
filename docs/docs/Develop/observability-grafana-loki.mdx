@@ -3,14 +3,15 @@ title: Grafana Loki
 slug: /observability-grafana-loki
 ---
 
-
-This demonstration scrapes Langflow log files with [Promtail](https://grafana.com/docs/loki/latest/send-data/promtail/), and then sends JSON logs to [Grafana Loki](https://grafana.com/oss/loki/) to be viewed in a Grafana dashboard.
+This demonstration scrapes Langflow log files with [Grafana Alloy](https://grafana.com/oss/alloy/), and then sends JSON logs to [Grafana Loki](https://grafana.com/oss/loki/) to be viewed in a Grafana dashboard.
 
 It is _not_ OpenTelemetry.
 For traces, metrics, and OTLP logs to Grafana Cloud or an OpenTelemetry Collector, see [OpenTelemetry](./observability-opentelemetry.mdx).
 
 This page demonstrates how to connect Langflow to the [reference Grafana stack](https://github.com/langflow-ai/langflow/tree/main/deploy/observability/grafana-loki) shipped with the Langflow repository.
 For more information, see the [README](https://github.com/langflow-ai/langflow/tree/main/deploy/observability/grafana-loki).
+
+Grafana Alloy replaced [Promtail](https://grafana.com/docs/alloy/latest/set-up/migrate/from-promtail/), which reached end of life on March 2, 2026.
 
 To consume structured Langflow logs with other ingestion providers, see [Logs](/logging).
 
@@ -35,9 +36,9 @@ To consume structured Langflow logs with other ingestion providers, see [Logs](/
 
    Setting `LANGFLOW_LOG_ENV=container` switches structlog's terminal processor to [`JSONRenderer`](https://www.structlog.org/en/stable/api.html#structlog.processors.JSONRenderer), so every line written to stdout is a JSON object containing the event message, level, timestamp, logger name, exception structure, and service metadata. For more information, see [Logs](/logging).
 
-   The shipped Promtail configuration scrapes `*.log` files from a directory rather than stdout. `LANGFLOW_LOG_FILE` must point at a file inside the directory that Promtail watches. Set `LANGFLOW_LOG_DIR` to that same directory so Langflow creates the file in the right place.
+   The shipped Alloy configuration scrapes `*.log` files from a directory rather than stdout. `LANGFLOW_LOG_FILE` must point at a file inside the directory that Alloy watches. Set `LANGFLOW_LOG_DIR` to that same directory so Langflow creates the file in the right place.
 
-3. Start the reference Loki + Promtail + Grafana stack from the repository:
+3. Start the reference Loki + Alloy + Grafana stack from the repository:
 
    ```bash
    cd deploy/observability/grafana-loki
