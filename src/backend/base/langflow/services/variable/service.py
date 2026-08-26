@@ -8,6 +8,7 @@ from uuid import UUID
 from lfx.log.logger import logger
 from lfx.services.authorization.base import ResourceVisibilityScope
 from lfx.services.settings.constants import AGENTIC_VARIABLES
+from lfx.services.variable import VariableNotFoundError
 from sqlmodel import col, select
 
 from langflow.services.auth import utils as auth_utils
@@ -164,7 +165,7 @@ class DatabaseVariableService(VariableService, Service):
 
         if not variable or not variable.value:
             msg = f"{name} variable not found."
-            raise ValueError(msg)
+            raise VariableNotFoundError(msg)
 
         return variable
 
@@ -179,7 +180,7 @@ class DatabaseVariableService(VariableService, Service):
         # credential = session.query(Variable).filter(Variable.user_id == user_id, Variable.name == name).first()
         try:
             variable = await self.get_variable_object(user_id, name, session)
-        except ValueError as owned_lookup_error:
+        except VariableNotFoundError as owned_lookup_error:
             # Runtime resolution may use an explicitly shared variable, but it
             # must never broaden administrative get/update/delete lookups. An
             # owned variable wins on name collisions; otherwise require one
