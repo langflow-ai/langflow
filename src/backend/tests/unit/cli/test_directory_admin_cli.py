@@ -208,6 +208,18 @@ def test_directory_prune_unlinks_only_directory_mappings() -> None:
     assert client.calls[-2:] == ["unlink:00000000-0000-0000-0000-000000000001", "mapping:delete:mapping-1"]
 
 
+def test_directory_export_rejects_incomplete_trust_without_key_error() -> None:
+    client = _FakeDirectoryClient()
+    del client.connection["issuer"]
+
+    with pytest.raises(AdminAPIError) as exc_info:
+        DirectoryReconciler(client).export_state()
+
+    assert exc_info.value.status_code == HTTPStatus.BAD_GATEWAY
+    assert exc_info.value.error_code == "invalid_directory_connection"
+    assert exc_info.value.detail == "Directory connection response is missing trust fields: issuer"
+
+
 def test_initial_connection_only_apply_does_not_require_a_provisioned_catalog() -> None:
     class EmptyTarget:
         def __init__(self) -> None:

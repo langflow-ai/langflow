@@ -497,3 +497,40 @@ def test_apply_reports_partial_failure_without_losing_pending_operations(monkeyp
     report = json.loads(result.output)
     assert report["failed"][0]["key"] == "alice"
     assert report["pending"][0]["key"] == "operators"
+
+
+def test_pruning_preview_maps_api_errors_to_stable_cli_output(monkeypatch, tmp_path: Path) -> None:
+    manifest = tmp_path / "admin-state.yaml"
+    manifest.write_text("apiVersion: langflow.ai/v1\nkind: AdminState\n", encoding="utf-8")
+
+    class FakeReconciler:
+        def diff(self, _state, *, prune: bool = False):
+            assert prune is True
+            raise AdminAPIError(
+                status_code=503,
+                detail="Directory catalog is unavailable",
+                error_code="directory_unavailable",
+            )
+
+        def apply(self, _state, **_kwargs):
+            raise AssertionError
+
+    monkeypatch.setattr("langflow.cli.admin.commands._reconciler_from_context", lambda _ctx: FakeReconciler())
+    result = CliRunner().invoke(
+        app,
+        [
+            "admin",
+            "--url",
+            "https://langflow.example",
+            "--api-key",
+            "test-key",
+            "apply",
+            str(manifest),
+            "--prune",
+            "--yes",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "Error [directory_unavailable]: Directory catalog is unavailable" in result.output
+    assert "Traceback" not in result.output

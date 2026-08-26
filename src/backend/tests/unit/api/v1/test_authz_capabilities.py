@@ -37,6 +37,9 @@ async def test_capabilities_include_plugin_owned_directory_actions(monkeypatch: 
     user = SimpleNamespace(id=uuid4(), is_superuser=False)
 
     result = await authz_capabilities.get_authorization_capabilities(user)
+    superuser_result = await authz_capabilities.get_authorization_capabilities(
+        SimpleNamespace(id=uuid4(), is_superuser=True)
+    )
 
     assert result.model_dump() == {
         "administration": {"user": False, "team": True, "role": False},
@@ -49,3 +52,4 @@ async def test_capabilities_include_plugin_owned_directory_actions(monkeypatch: 
             },
         },
     }
+    assert superuser_result.model_dump()["features"]["directory"]["actions"]["configure_connection"] is True
