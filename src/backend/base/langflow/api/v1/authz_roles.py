@@ -33,6 +33,7 @@ router = APIRouter(prefix="/authz/roles", tags=["Authorization"])
 _LIST_MAX_LIMIT = 200
 _LIST_DEFAULT_LIMIT = 100
 OperationId = Annotated[str | None, Header(alias="X-Langflow-Operation-ID", max_length=128)]
+_LEGACY_SUPERUSER_DENIAL = "Superuser required to administer roles."
 
 
 async def _require_role_administrator(user, *, operation_id: str | None = None) -> None:
@@ -43,6 +44,7 @@ async def _require_role_administrator(user, *, operation_id: str | None = None) 
         action="role:manage",
         obj="role:*",
         operation_id=operation_id,
+        denial_detail=_LEGACY_SUPERUSER_DENIAL,
     )
 
 
