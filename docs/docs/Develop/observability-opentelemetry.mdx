@@ -1,14 +1,13 @@
 ---
 title: OpenTelemetry
 slug: /observability-opentelemetry
-description: Export Langflow service health, flow execution spans, and runtime metrics to any OpenTelemetry backend.
 ---
 
 Langflow emits OpenTelemetry traces, metrics, and logs describing the health of the Langflow service itself: request rate, error rate, duration, runtime health, and one span per flow run.
 
 This telemetry answers operator questions, such as which flows are failing, whether the service is slow, and where the time went. It is not LLM tracing. Langflow deliberately withholds prompts, completions, and other flow payloads from this export. For prompt-level tracing, use one of the [monitoring integrations](/integrations-langfuse) instead.
 
-There is no vendor code in the Langflow runtime. Langflow speaks plain OTLP, so any OpenTelemetry-compatible backend works, either directly or through an OpenTelemetry Collector.
+Langflow speaks plain OTLP, so any OpenTelemetry-compatible backend works, either directly or through an OpenTelemetry Collector.
 
 ## Prerequisites
 
@@ -86,8 +85,8 @@ Two settings widen this, and both warn when set:
 
 | Variable | Effect |
 |----------|--------|
-| `LANGFLOW_OTEL_LOG_LEVEL=DEBUG` | Exports `DEBUG` records. Langflow logs flow inputs and outputs at `DEBUG`, so prompt and completion content reaches your backend. |
-| `LANGFLOW_OTEL_LOG_BODIES=all` | Exports log message bodies, including completions, chat history, and provider error text. |
+| `LANGFLOW_OTEL_LOG_LEVEL=DEBUG` | Exports `DEBUG` records. Langflow logs flow inputs and outputs at `DEBUG`, so this raises export volume. Prompt and completion **bodies** stay withheld unless `LANGFLOW_OTEL_LOG_BODIES=all` is also set. |
+| `LANGFLOW_OTEL_LOG_BODIES=all` | Exports log message bodies, including completions, chat history, and provider error text. With `LANGFLOW_OTEL_LOG_LEVEL=DEBUG`, prompt and completion content reaches your backend. |
 
 ## Control span volume
 
@@ -140,8 +139,7 @@ Langflow only sets that variable when it is unset, so a value you provide always
 
 ## Vendor guides
 
-- [New Relic](./observability-new-relic.mdx)
-- [Grafana and Loki](/observability-grafana-loki)
+- [New Relic](./observability-new-relic.mdx) — OTLP export to New Relic.
 
 ## See also
 
