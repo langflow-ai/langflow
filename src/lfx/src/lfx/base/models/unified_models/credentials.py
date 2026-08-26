@@ -11,6 +11,7 @@ from uuid import UUID
 
 from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
+from lfx.services.variable import VariableNotFoundError
 from lfx.services.variable.request_scope import is_env_fallback_disabled
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.env_var_security import safe_getenv
@@ -111,7 +112,7 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
                             field="",
                             session=session,
                         )
-                    except ValueError:
+                    except VariableNotFoundError:
                         return None
 
             value = run_until_complete(_get_by_var_name())
@@ -174,7 +175,7 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
                         field="",
                         session=session,
                     )
-                except ValueError:
+                except VariableNotFoundError:
                     return None
 
         api_key = run_until_complete(_get_variable())
