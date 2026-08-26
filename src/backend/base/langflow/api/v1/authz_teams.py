@@ -33,6 +33,13 @@ from langflow.services.authorization.lifecycle import (
     stage_identity_mutation,
     validate_identity_mutation,
 )
+from langflow.services.authorization.team_member_grants import (
+    TeamMemberGrantNotFoundError,
+    ensure_team_member_grant,
+    get_effective_team_member,
+    get_team_member_grant,
+    remove_team_member_grant,
+)
 from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.auth import AuthzTeam, AuthzTeamMember
 from langflow.services.database.models.user.model import User
@@ -358,12 +365,25 @@ async def add_member(
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user_id not found")
 
-    member = AuthzTeamMember(
-        team_id=team_id,
-        user_id=payload.user_id,
-        source=payload.source,
-    )
-    session.add(member)
+    member = await get_effective_team_member(session, team_id=team_id, user_id=payload.user_id)
+    member_is_new = member is None
+    if member is not None:
+        existing_manual_grant = await get_team_member_grant(
+            session,
+            membership_id=member.id,
+            source_kind="manual",
+        )
+        if existing_manual_grant is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="User is already a manual member of this team",
+            )
+    if member is None:
+        member = AuthzTeamMember(
+            team_id=team_id,
+            user_id=payload.user_id,
+            source=payload.source,
+        )
     mutation = AuthorizationMutation(
         kind=AuthorizationMutationKind.TEAM_MEMBER_ADDED,
         entity_id=member.id,
@@ -374,7 +394,16 @@ async def add_member(
     )
     try:
         await validate_identity_mutation(authorization_service, session, mutation)
-        await session.flush()
+        change = await ensure_team_member_grant(
+            session,
+            team_id=team_id,
+            user_id=payload.user_id,
+            source_kind="manual",
+            administrative_actor=current_user.id,
+            membership=member,
+            membership_is_new=member_is_new,
+        )
+        member = change.membership
         await stage_identity_mutation(authorization_service, session, mutation)
         await session.commit()
     except AuthorizationMutationRejected as exc:
@@ -436,14 +465,7 @@ async def remove_member(
         kind=AuthorizationMutationKind.TEAM_MEMBER_REMOVED,
         affected_user_ids=(user_id,),
     )
-    member = (
-        await session.exec(
-            select(AuthzTeamMember).where(
-                AuthzTeamMember.team_id == team_id,
-                AuthzTeamMember.user_id == user_id,
-            )
-        )
-    ).first()
+    member = await get_effective_team_member(session, team_id=team_id, user_id=user_id)
     if member is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -464,6 +486,17 @@ async def remove_member(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Externally managed memberships cannot be removed through the manual membership API",
+            headers={"X-Langflow-Error-Code": "externally_managed"},
+        )
+    manual_grant = await get_team_member_grant(
+        session,
+        membership_id=member.id,
+        source_kind="manual",
+    )
+    if manual_grant is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="externally_managed",
             headers={"X-Langflow-Error-Code": "externally_managed"},
         )
     mutation = AuthorizationMutation(
@@ -492,8 +525,17 @@ async def remove_member(
             detail=exc.public_detail,
             headers={"X-Langflow-Error-Code": "access_ceiling"},
         ) from exc
-    await session.delete(member)
-    await session.flush()
+    try:
+        await remove_team_member_grant(
+            session,
+            team_id=team_id,
+            user_id=user_id,
+            source_kind="manual",
+            membership=member,
+            grant=manual_grant,
+        )
+    except TeamMemberGrantNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="externally_managed") from exc
     await stage_identity_mutation(authorization_service, session, mutation)
     await session.commit()
     await safe_identity_mutation_committed(authorization_service, mutation)
