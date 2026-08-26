@@ -89,10 +89,11 @@ def _reconciler_from_context(ctx: typer.Context) -> AdminReconciler:
 
 def _emit(ctx: typer.Context, value: Any, *, stderr: bool = False) -> None:
     invocation: AdminInvocation = ctx.ensure_object(AdminInvocation)
-    console = Console(stderr=stderr)
     if invocation.output == "json":
-        console.print_json(json.dumps(value, default=str, sort_keys=True))
+        stream = sys.stderr if stderr else sys.stdout
+        stream.write(f"{json.dumps(value, default=str, sort_keys=True)}\n")
         return
+    console = Console(stderr=stderr)
     records = value if isinstance(value, list) else [value]
     if not records:
         console.print("No results")
@@ -453,7 +454,7 @@ def assignments_grant(
         msg = "--domain-id is required for workspace/project and forbidden for global"
         raise typer.BadParameter(msg)
     client = _api_call(lambda: _client_from_context(ctx))
-    if team and not client.capabilities().get("features", {}).get("team_role_assignments", False):
+    if team and not _api_call(client.capabilities).get("features", {}).get("team_role_assignments", False):
         _fail(ManifestResolutionError("This target does not support team-role assignments"), usage=True)
     _emit(
         ctx,
