@@ -13,7 +13,7 @@ an external identity.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -124,7 +124,7 @@ def _backfill(conn) -> None:
         rows = conn.execute(statement).mappings().all()
         if not rows:
             return
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         conn.execute(
             grant.insert(),
             [

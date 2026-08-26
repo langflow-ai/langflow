@@ -324,6 +324,12 @@ async def reconcile_directory_team_members(
             for user_id in sorted(added, key=str)
         )
         await session.flush()
+        for user_id in sorted(added, key=str):
+            membership = by_user[user_id]
+            if membership.source != "manual":
+                membership.source = "directory"
+                session.add(membership)
+        await session.flush()
 
     if removed:
         removed_grant_ids = [existing_by_user[user_id][0].id for user_id in removed]

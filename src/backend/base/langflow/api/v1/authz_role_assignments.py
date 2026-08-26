@@ -143,7 +143,8 @@ async def list_assignments(
 
     * Omitting ``user_id`` defaults to the caller — no superuser needed.
     * Passing ``user_id == self.id`` is the same as omitting it.
-    * Passing a different ``user_id`` requires superuser; otherwise 403.
+    * Passing a different ``user_id`` requires ``role_assignment:manage``;
+      otherwise 403.
 
     Results are always filtered by the resolved ``user_id``. Admins who need
     cross-user lookups make one call per user. Paginated via ``limit`` /
@@ -297,7 +298,7 @@ async def create_assignment(
             operation_id=operation_id,
         ),
     )
-    response.headers["Location"] = f"/api/v1/authz/role-assignments/{assignment.id}"
+    response.headers["Location"] = f"/api/v1/authz/role-assignments?user_id={payload.user_id}"
     logger.info(
         "Assigned role=%s to user=%s (domain=%s/%s)",
         role.name,

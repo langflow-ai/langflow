@@ -559,6 +559,8 @@ def apply_state(
             drift = reconciler.diff(state, prune=True)
         except ManifestResolutionError as exc:
             _fail(exc, usage=True)
+        except (AdminAPIError, httpx.HTTPError, ConnectionConfigurationError) as exc:
+            _fail(exc, usage=isinstance(exc, ConnectionConfigurationError))
         _emit(ctx, drift, stderr=True)
         if not yes:
             if not sys.stdin.isatty():
