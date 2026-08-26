@@ -507,6 +507,12 @@ the deserialize half is covered by
   provider-only extension with `DiscoveredExtension.bundle_name = None`, and
   `registry.Extension.bundle_name` is likewise now `str | None` (the
   `lfx extension list` BUNDLE column shows `—` for such extensions).
+- **Provider base-URL suffixes (additive).**  A provider metadata variable whose
+  `langchain_param` is `base_url` may declare `base_url_suffix` (for example,
+  `/v1`).  Runtime chat and embedding clients append the normalized suffix only
+  when the configured URL does not already end with it.  The field is published
+  in the extension JSON Schema, and unrecognized sibling keys on base-URL
+  variables are rejected so misspellings cannot silently disable normalization.
 - **Provider identity and static catalogs (additive).**  A `providers[]` entry
   may now declare a stable lowercase `provider_id`, an independent
   `display_name`, legacy `aliases`, and a dotted-path `catalog_loader`.  The
