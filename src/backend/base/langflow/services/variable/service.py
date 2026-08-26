@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from lfx.log.logger import logger
+from lfx.services.variable import VariableNotFoundError
 from sqlmodel import select
 
 from langflow.services.auth import utils as auth_utils
@@ -131,7 +132,7 @@ class DatabaseVariableService(VariableService, Service):
 
         if not variable or not variable.value:
             msg = f"{name} variable not found."
-            raise ValueError(msg)
+            raise VariableNotFoundError(msg)
 
         return variable
 
