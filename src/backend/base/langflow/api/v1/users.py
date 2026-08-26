@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from lfx.services.authorization import (
     AuthorizationMutation,
     AuthorizationMutationKind,
@@ -17,7 +17,8 @@ from sqlmodel.sql.expression import SelectOfScalar
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import PasswordResetRequest, UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
-from langflow.services.auth.utils import get_current_active_superuser, get_current_user_optional
+from langflow.services.auth.utils import get_current_user_optional
+from langflow.services.authorization.admin import administration_audit_details, ensure_administration_permission
 from langflow.services.authorization.lifecycle import (
     acquire_identity_mutation_lock,
     safe_identity_mutation_committed,
@@ -25,11 +26,31 @@ from langflow.services.authorization.lifecycle import (
     validate_identity_mutation,
 )
 from langflow.services.authorization.utils import audit_decision
+from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
 from langflow.services.database.models.user.model import User, UserCreate, UserRead, UserUpdate
 from langflow.services.deps import get_auth_service, get_authorization_service, get_settings_service
 
 router = APIRouter(tags=["Users"], prefix="/users")
+OperationId = Annotated[str | None, Header(alias="X-Langflow-Operation-ID", max_length=128)]
+
+
+async def _require_user_administrator(user: User, *, operation_id: str | None = None) -> None:
+    await ensure_administration_permission(
+        user,
+        resource="user",
+        authorization_service=get_authorization_service(),
+        action="user:manage",
+        obj="user:*",
+        operation_id=operation_id,
+    )
+
+
+async def _require_user_administrator_dependency(
+    current_user: CurrentActiveUser,
+    operation_id: OperationId = None,
+) -> None:
+    await _require_user_administrator(current_user, operation_id=operation_id)
 
 
 @router.post("/", response_model=UserRead, status_code=201)
@@ -37,6 +58,8 @@ async def add_user(
     user: UserCreate,
     session: DbSession,
     current_user: Annotated[User | None, Depends(get_current_user_optional)],
+    response: Response,
+    operation_id: OperationId = None,
 ) -> User:
     """Add a new user to the database.
 
@@ -58,12 +81,19 @@ async def add_user(
     # unauthenticated, so refuse it unless public sign up is intended for this
     # deployment. get_current_user_optional returns None for credential-less
     # requests, so the anonymous path can never be promoted to superuser.
-    is_superuser_caller = current_user is not None and current_user.is_active and current_user.is_superuser
-    if not is_superuser_caller and (auth_settings.AUTO_LOGIN or not auth_settings.ENABLE_SIGNUP):
+    authorization_service = get_authorization_service()
+    is_admin_caller = bool(
+        current_user is not None
+        and current_user.is_active
+        and (
+            current_user.is_superuser
+            or await authorization_service.can_administer(user_id=current_user.id, resource="user")
+        )
+    )
+    if not is_admin_caller and (auth_settings.AUTO_LOGIN or not auth_settings.ENABLE_SIGNUP):
         raise HTTPException(status_code=403, detail="Public user registration is disabled.")
 
     new_user = User.model_validate(user, from_attributes=True)
-    authorization_service = get_authorization_service()
     try:
         new_user.password = get_auth_service().get_password_hash(user.password)
         new_user.is_active = settings_service.auth_settings.NEW_USER_IS_ACTIVE
@@ -109,8 +139,13 @@ async def add_user(
         action="user:create",
         obj=f"user:{new_user.id}",
         result="allow",
-        details={"created_by": "admin" if is_superuser_caller else "signup"},
+        details=administration_audit_details(
+            {"created_by": "admin" if is_admin_caller else "signup"},
+            operation_id=operation_id,
+            source="manual" if is_admin_caller else "signup",
+        ),
     )
+    response.headers["Location"] = f"/api/v1/users/{new_user.id}"
     return new_user
 
 
@@ -122,12 +157,14 @@ async def read_current_user(
     return current_user
 
 
-@router.get("/", dependencies=[Depends(get_current_active_superuser)])
+@router.get("/", dependencies=[Depends(_require_user_administrator_dependency)])
 async def read_all_users(
     *,
-    skip: int = 0,
-    limit: int = 10,
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=200)] = 10,
     search: str | None = None,
+    username: Annotated[str | None, Query(description="Exact username match")] = None,
+    role_name: Annotated[str | None, Query(description="Exact assigned role-name match")] = None,
     session: DbSession,
 ) -> UsersResponse:
     """Retrieve a list of users from the database with pagination."""
@@ -139,7 +176,20 @@ async def read_all_users(
         query = query.where(search_filter)
         count_query = count_query.where(search_filter)
 
-    query = query.offset(skip).limit(limit)
+    if username is not None:
+        query = query.where(User.username == username)
+        count_query = count_query.where(User.username == username)
+
+    if role_name is not None:
+        assigned_user_ids = (
+            select(AuthzRoleAssignment.user_id)
+            .join(AuthzRole, AuthzRole.id == AuthzRoleAssignment.role_id)
+            .where(AuthzRole.name == role_name)
+        )
+        query = query.where(User.id.in_(assigned_user_ids))
+        count_query = count_query.where(User.id.in_(assigned_user_ids))
+
+    query = query.order_by(User.username, User.id).offset(skip).limit(limit)
     users = (await session.exec(query)).fetchall()
     total_count = (await session.exec(count_query)).first()
 
@@ -149,31 +199,75 @@ async def read_all_users(
     )
 
 
+@router.get("/{user_id}", response_model=UserRead)
+async def read_user(
+    user_id: UUID,
+    current_user: CurrentActiveUser,
+    session: DbSession,
+    operation_id: OperationId = None,
+) -> User:
+    """Read the current user or a specific user with ``user:manage``."""
+    if current_user.id != user_id:
+        await _require_user_administrator(current_user, operation_id=operation_id)
+    user = await get_user_by_id(session, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
 @router.patch("/{user_id}", response_model=UserRead)
 async def patch_user(
     user_id: UUID,
     user_update: UserUpdate,
     user: CurrentActiveUser,
     session: DbSession,
+    operation_id: OperationId = None,
 ) -> User:
     """Update an existing user's data."""
     update_password = bool(user_update.password)
 
     # Prevent users from deactivating their own account to avoid lockout
     if user.id == user_id and user_update.is_active is False:
+        await audit_decision(
+            user_id=user.id,
+            action="user:update",
+            obj=f"user:{user_id}",
+            result="deny",
+            details=administration_audit_details(
+                {"fields_changed": ["is_active"], "reason": "self_deactivation"},
+                operation_id=operation_id,
+            ),
+        )
         raise HTTPException(status_code=403, detail="You can't deactivate your own user account")
 
-    if not user.is_superuser and user_update.is_superuser:
-        raise HTTPException(status_code=403, detail="Permission denied")
-
-    if not user.is_superuser and user.id != user_id:
-        raise HTTPException(status_code=403, detail="Permission denied")
+    authorization_service = get_authorization_service()
+    is_user_administrator = user.is_superuser or await authorization_service.can_administer(
+        user_id=user.id,
+        resource="user",
+    )
+    if user.id != user_id and not is_user_administrator:
+        await _require_user_administrator(user, operation_id=operation_id)
+    if user_update.is_superuser is not None and not user.is_superuser:
+        await audit_decision(
+            user_id=user.id,
+            action="user:update",
+            obj=f"user:{user_id}",
+            result="deny",
+            details=administration_audit_details(
+                {"fields_changed": ["is_superuser"], "reason": "superuser_required"},
+                operation_id=operation_id,
+            ),
+        )
+        raise HTTPException(
+            status_code=403,
+            detail="Only a superuser may promote or demote platform superusers",
+            headers={"X-Langflow-Error-Code": "superuser_required"},
+        )
     if update_password:
-        if not user.is_superuser:
+        if not is_user_administrator:
             raise HTTPException(status_code=400, detail="You can't change your password here")
         user_update.password = get_auth_service().get_password_hash(user_update.password)
 
-    authorization_service = get_authorization_service()
     # Pre-read lock hint; canonical user state may produce a different staged kind.
     possible_lifecycle_kind: AuthorizationMutationKind | None = None
     if user_update.is_active is False:
@@ -190,6 +284,23 @@ async def patch_user(
         )
 
     if user_db := await get_user_by_id(session, user_id):
+        if user_db.is_superuser and not user.is_superuser and user.id != user_id:
+            await audit_decision(
+                user_id=user.id,
+                action="user:update",
+                obj=f"user:{user_id}",
+                result="deny",
+                details=administration_audit_details(
+                    {"fields_changed": sorted(user_update.model_fields_set), "reason": "superuser_required"},
+                    operation_id=operation_id,
+                ),
+            )
+            raise HTTPException(
+                status_code=403,
+                detail="Only a superuser may modify another platform superuser",
+                headers={"X-Langflow-Error-Code": "superuser_required"},
+            )
+        requested_fields = sorted(user_update.model_dump(exclude_unset=True))
         lifecycle_mutation: AuthorizationMutation | None = None
         next_is_active = user_db.is_active if user_update.is_active is None else user_update.is_active
         next_is_superuser = user_db.is_superuser if user_update.is_superuser is None else user_update.is_superuser
@@ -241,8 +352,21 @@ async def patch_user(
                 action=lifecycle_mutation.kind.value.replace(".", ":"),
                 obj=f"user:{user_db.id}",
                 result="allow",
-                details={"fields_changed": list(lifecycle_mutation.policy_relevant_fields)},
+                details=administration_audit_details(
+                    {"fields_changed": list(lifecycle_mutation.policy_relevant_fields)},
+                    operation_id=operation_id,
+                ),
             )
+        await audit_decision(
+            user_id=user.id,
+            action="user:update",
+            obj=f"user:{user_db.id}",
+            result="allow",
+            details=administration_audit_details(
+                {"fields_changed": requested_fields},
+                operation_id=operation_id,
+            ),
+        )
         return updated_user
     raise HTTPException(status_code=404, detail="User not found")
 
@@ -280,14 +404,24 @@ async def reset_password(
 @router.delete("/{user_id}")
 async def delete_user(
     user_id: UUID,
-    current_user: Annotated[User, Depends(get_current_active_superuser)],
+    current_user: CurrentActiveUser,
     session: DbSession,
+    operation_id: OperationId = None,
 ) -> dict:
     """Delete a user from the database."""
     if current_user.id == user_id:
+        await audit_decision(
+            user_id=current_user.id,
+            action="user:delete",
+            obj=f"user:{user_id}",
+            result="deny",
+            details=administration_audit_details(
+                {"reason": "self_deletion"},
+                operation_id=operation_id,
+            ),
+        )
         raise HTTPException(status_code=400, detail="You can't delete your own user account")
-    if not current_user.is_superuser:
-        raise HTTPException(status_code=403, detail="Permission denied")
+    await _require_user_administrator(current_user, operation_id=operation_id)
 
     authorization_service = get_authorization_service()
     await acquire_identity_mutation_lock(
@@ -301,6 +435,22 @@ async def delete_user(
     user_db = (await session.exec(stmt)).first()
     if not user_db:
         raise HTTPException(status_code=404, detail="User not found")
+    if user_db.is_superuser and not current_user.is_superuser:
+        await audit_decision(
+            user_id=current_user.id,
+            action="user:delete",
+            obj=f"user:{user_id}",
+            result="deny",
+            details=administration_audit_details(
+                {"reason": "superuser_required"},
+                operation_id=operation_id,
+            ),
+        )
+        raise HTTPException(
+            status_code=403,
+            detail="Only a superuser may delete another platform superuser",
+            headers={"X-Langflow-Error-Code": "superuser_required"},
+        )
 
     lifecycle_mutation = AuthorizationMutation(
         kind=AuthorizationMutationKind.USER_DELETED,
@@ -334,9 +484,12 @@ async def delete_user(
         action="user:delete",
         obj=f"user:{user_id}",
         result="allow",
-        details={
-            "target_was_active": lifecycle_mutation.user_before.is_active,
-            "target_was_superuser": lifecycle_mutation.user_before.is_superuser,
-        },
+        details=administration_audit_details(
+            {
+                "target_was_active": lifecycle_mutation.user_before.is_active,
+                "target_was_superuser": lifecycle_mutation.user_before.is_superuser,
+            },
+            operation_id=operation_id,
+        ),
     )
     return {"detail": "User deleted"}
