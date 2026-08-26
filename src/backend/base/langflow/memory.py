@@ -198,6 +198,19 @@ async def aadd_messages(
 
 
 async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
+    """Update messages, reading each row before mutating it.
+
+    The SELECT before each UPDATE looks removable -- ``UPDATE ... RETURNING``
+    would collapse the pair into one round trip -- but it is load-bearing.
+    ``Message.timestamp`` is a ``str`` while ``MessageTable.timestamp`` is a
+    ``datetime`` column, and the conversion is performed by a SQLModel validator
+    that only runs when the value is ASSIGNED TO AN ORM INSTANCE (here, via
+    ``sqlmodel_update``). A Core-level ``.values()`` update bypasses model
+    validation and sends the raw string to the driver: PostgreSQL casts it and
+    appears to work, while SQLite -- the default database -- raises
+    "SQLite DateTime type only accepts Python datetime and date objects".
+    Any future attempt to skip the read must reproduce that coercion first.
+    """
     if not isinstance(messages, list):
         messages = [messages]
 
