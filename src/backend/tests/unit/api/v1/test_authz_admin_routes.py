@@ -16,7 +16,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
-from fastapi import HTTPException
+from fastapi import HTTPException, Response
 from sqlalchemy.exc import IntegrityError
 
 # --- shared fakes ----------------------------------------------------- #
@@ -360,7 +360,7 @@ async def test_create_role_requires_superuser(stub_authz):
     payload = RoleCreate(name="custom", description=None, permissions=["flow:read"])
 
     with pytest.raises(HTTPException) as excinfo:
-        await authz_roles.create_role(payload=payload, current_user=user, session=session)
+        await authz_roles.create_role(payload=payload, current_user=user, session=session, response=Response())
     assert excinfo.value.status_code == 403
     assert session.added == []
     assert session.committed == 0
@@ -377,7 +377,7 @@ async def test_create_role_persists_and_emits_lifecycle(stub_authz):
     user = _make_user(is_superuser=True)
     payload = RoleCreate(name="runner", description="x", permissions=["flow:execute"])
 
-    result = await authz_roles.create_role(payload=payload, current_user=user, session=session)
+    result = await authz_roles.create_role(payload=payload, current_user=user, session=session, response=Response())
     assert result.name == "runner"
     assert result.is_system is False
     assert len(session.added) == 1
@@ -397,7 +397,7 @@ async def test_create_role_409_on_name_conflict(stub_authz):
     payload = RoleCreate(name="viewer", permissions=[])
 
     with pytest.raises(HTTPException) as excinfo:
-        await authz_roles.create_role(payload=payload, current_user=user, session=session)
+        await authz_roles.create_role(payload=payload, current_user=user, session=session, response=Response())
     assert excinfo.value.status_code == 409
     assert "already exists" in excinfo.value.detail
     assert session.rolled_back == 1
@@ -850,6 +850,7 @@ async def test_create_assignment_invalid_user_404(stub_authz):
             payload=payload,
             current_user=user,
             session=session,
+            response=Response(),
         )
     assert excinfo.value.status_code == 404
     assert "user_id" in excinfo.value.detail
@@ -875,6 +876,7 @@ async def test_create_assignment_emits_lifecycle_for_target_user(stub_authz):
         payload=payload,
         current_user=actor,
         session=session,
+        response=Response(),
     )
     assert len(session.added) == 2
     assert session.added[1].source_kind == "manual"
@@ -919,6 +921,7 @@ async def test_create_assignment_duplicate_manual_source_is_409(stub_authz):
             payload=RoleAssignmentCreate(user_id=target_user.id, role_id=role.id),
             current_user=actor,
             session=session,
+            response=Response(),
         )
 
     assert excinfo.value.status_code == 409
@@ -967,6 +970,7 @@ async def test_create_assignment_adds_manual_source_to_idp_assignment_without_li
         payload=RoleAssignmentCreate(user_id=target_user.id, role_id=role.id),
         current_user=actor,
         session=session,
+        response=Response(),
     )
 
     assert len(session.added) == 1
@@ -1087,6 +1091,7 @@ async def test_delete_assignment_returns_surviving_idp_assignment(stub_authz, mo
                 "external_group": "corp-dev",
             }
         ],
+        "source": "manual",
     }
 
 
@@ -1305,7 +1310,7 @@ async def test_create_team_requires_superuser(stub_authz):
     payload = TeamCreate(team_name="Eng", adom_name="eng")
 
     with pytest.raises(HTTPException) as excinfo:
-        await authz_teams.create_team(payload=payload, current_user=user, session=session)
+        await authz_teams.create_team(payload=payload, current_user=user, session=session, response=Response())
     assert excinfo.value.status_code == 403
 
 
@@ -1322,6 +1327,7 @@ async def test_delegated_team_administrator_can_create_team(stub_authz):
         payload=TeamCreate(team_name="Engineering", adom_name="engineering"),
         current_user=user,
         session=session,
+        response=Response(),
     )
 
     assert created.adom_name == "engineering"
@@ -1340,6 +1346,7 @@ async def test_delegated_team_administrator_cannot_create_roles(stub_authz):
             payload=RoleCreate(name="ops", permissions=["flow:read"]),
             current_user=user,
             session=_FakeAsyncSession(),
+            response=Response(),
         )
     assert excinfo.value.status_code == 403
 
@@ -1396,6 +1403,7 @@ async def test_add_member_emits_lifecycle_for_target_user(stub_authz):
         payload=payload,
         current_user=actor,
         session=session,
+        response=Response(),
     )
     assert len(session.added) == 1
     assert authz.staged_mutations == authz.committed_mutations
@@ -1425,6 +1433,7 @@ async def test_add_member_duplicate_returns_409(stub_authz):
             payload=payload,
             current_user=actor,
             session=session,
+            response=Response(),
         )
     assert excinfo.value.status_code == 409
     assert "already a member" in excinfo.value.detail
@@ -1700,6 +1709,7 @@ async def test_create_assignment_succeeds_when_committed_hook_fails(failing_comm
         payload=payload,
         current_user=actor,
         session=session,
+        response=Response(),
     )
     assert session.committed == 1
     assert authz.staged_mutations == authz.committed_attempts
@@ -1770,7 +1780,7 @@ async def test_remove_member_succeeds_when_committed_hook_fails(failing_committe
     authz = failing_committed_hook_authz()
     team_id = uuid4()
     user_id = uuid4()
-    member = SimpleNamespace(id=uuid4(), team_id=team_id, user_id=user_id)
+    member = SimpleNamespace(id=uuid4(), team_id=team_id, user_id=user_id, source="manual")
     session = _FakeAsyncSession(exec_results=[[member]])
     actor = _make_user(is_superuser=True)
 

@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
 from lfx.log.logger import logger
 from lfx.services.authorization import AuthorizationMutation, AuthorizationMutationKind
 from lfx.utils.util_strings import escape_like_pattern
@@ -15,6 +15,7 @@ from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas.authz_roles import RoleCreate, RoleRead, RoleUpdate
+from langflow.services.authorization.admin import administration_audit_details, ensure_administration_permission
 from langflow.services.authorization.lifecycle import (
     acquire_identity_mutation_lock,
     safe_identity_mutation_committed,
@@ -31,18 +32,24 @@ router = APIRouter(prefix="/authz/roles", tags=["Authorization"])
 # request. 100 default / 200 max is enough for typical UI dropdowns.
 _LIST_MAX_LIMIT = 200
 _LIST_DEFAULT_LIMIT = 100
+OperationId = Annotated[str | None, Header(alias="X-Langflow-Operation-ID", max_length=128)]
 
 
-def _require_superuser(user) -> None:
-    """Superuser-only gate. Role admin is an operations action."""
-    if not getattr(user, "is_superuser", False):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Superuser required to administer roles.",
-        )
+async def _require_role_administrator(user, *, operation_id: str | None = None) -> None:
+    await ensure_administration_permission(
+        user,
+        resource="role",
+        authorization_service=get_authorization_service(),
+        action="role:manage",
+        obj="role:*",
+        operation_id=operation_id,
+    )
 
 
-async def _require_superuser_dependency(current_user: CurrentActiveUser) -> None:
+async def _require_superuser_dependency(
+    current_user: CurrentActiveUser,
+    operation_id: OperationId = None,
+) -> None:
     """Run the superuser gate as a route dependency, i.e. before body validation.
 
     FastAPI solves a route's ``dependencies`` before validating that route's own
@@ -54,7 +61,7 @@ async def _require_superuser_dependency(current_user: CurrentActiveUser) -> None
     The in-body call is kept as well: it is the gate for anything that reaches
     the endpoint function without FastAPI resolving dependencies.
     """
-    _require_superuser(current_user)
+    await _require_role_administrator(current_user, operation_id=operation_id)
 
 
 SUPERUSER_ONLY = [Depends(_require_superuser_dependency)]
@@ -91,6 +98,7 @@ async def list_roles(
     current_user: CurrentActiveUser,  # noqa: ARG001 — any authenticated user can list
     is_system: Annotated[bool | None, Query(description="Filter by is_system flag")] = None,
     name: Annotated[str | None, Query(description="Substring match on role name")] = None,
+    exact_name: Annotated[str | None, Query(description="Exact match on role name")] = None,
     limit: Annotated[int, Query(ge=1, le=_LIST_MAX_LIMIT)] = _LIST_DEFAULT_LIMIT,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[RoleRead]:
@@ -105,6 +113,8 @@ async def list_roles(
         stmt = stmt.where(AuthzRole.is_system == is_system)
     if name:
         stmt = stmt.where(AuthzRole.name.ilike(f"%{escape_like_pattern(name)}%", escape="\\"))
+    if exact_name is not None:
+        stmt = stmt.where(AuthzRole.name == exact_name)
     stmt = stmt.order_by(AuthzRole.name, AuthzRole.id).offset(offset).limit(limit)
     rows = (await session.exec(stmt)).all()
     return [RoleRead.model_validate(row) for row in rows]
@@ -128,9 +138,11 @@ async def create_role(
     payload: RoleCreate,
     current_user: CurrentActiveUser,
     session: DbSession,
+    response: Response,
+    operation_id: OperationId = None,
 ) -> RoleRead:
-    """Create a custom (non-system) role. Superuser-only."""
-    _require_superuser(current_user)
+    """Create a custom (non-system) role."""
+    await _require_role_administrator(current_user, operation_id=operation_id)
     authorization_service = get_authorization_service()
     await acquire_identity_mutation_lock(
         authorization_service,
@@ -179,12 +191,16 @@ async def create_role(
         action="role:create",
         obj=f"role:{role.id}",
         result="allow",
-        details={
-            "role_name": role.name,
-            "permissions": list(role.permissions),
-            "parent_role_id": str(role.parent_role_id) if role.parent_role_id else None,
-        },
+        details=administration_audit_details(
+            {
+                "role_name": role.name,
+                "permissions": list(role.permissions),
+                "parent_role_id": str(role.parent_role_id) if role.parent_role_id else None,
+            },
+            operation_id=operation_id,
+        ),
     )
+    response.headers["Location"] = f"/api/v1/authz/roles/{role.id}"
     logger.info("Created role %s (id=%s)", role.name, role.id)
     return RoleRead.model_validate(role)
 
@@ -195,9 +211,10 @@ async def update_role(
     payload: RoleUpdate,
     current_user: CurrentActiveUser,
     session: DbSession,
+    operation_id: OperationId = None,
 ) -> RoleRead:
     """Update fields on a custom role. System roles are read-only."""
-    _require_superuser(current_user)
+    await _require_role_administrator(current_user, operation_id=operation_id)
     authorization_service = get_authorization_service()
     await acquire_identity_mutation_lock(
         authorization_service,
@@ -295,10 +312,10 @@ async def update_role(
         action="role:update",
         obj=f"role:{role.id}",
         result="allow",
-        details={
-            "role_name": role.name,
-            "fields_changed": sorted(fields_set),
-        },
+        details=administration_audit_details(
+            {"role_name": role.name, "fields_changed": sorted(fields_set)},
+            operation_id=operation_id,
+        ),
     )
     logger.info("Updated role %s (id=%s)", role.name, role.id)
     return RoleRead.model_validate(role)
@@ -309,13 +326,14 @@ async def delete_role(
     role_id: UUID,
     current_user: CurrentActiveUser,
     session: DbSession,
+    operation_id: OperationId = None,
 ) -> None:
     """Delete a custom role.
 
     System roles cannot be deleted; roles with active assignments return 409
     (delete the assignments first).
     """
-    _require_superuser(current_user)
+    await _require_role_administrator(current_user, operation_id=operation_id)
     authorization_service = get_authorization_service()
     await acquire_identity_mutation_lock(
         authorization_service,
@@ -361,6 +379,6 @@ async def delete_role(
         action="role:delete",
         obj=f"role:{role_id}",
         result="allow",
-        details={"role_name": role_name},
+        details=administration_audit_details({"role_name": role_name}, operation_id=operation_id),
     )
     logger.info("Deleted role id=%s", role_id)

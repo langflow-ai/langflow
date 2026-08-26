@@ -9,6 +9,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field, field_validator
 
 from langflow.services.authorization.actions import (
+    AdministrationAction,
     DeploymentAction,
     FileAction,
     FlowAction,
@@ -38,6 +39,9 @@ from langflow.services.authorization.actions import (
 # every resource is effectively superuser and should not be expressible
 # as a slug.
 _RESOURCE_ACTIONS: dict[str, frozenset[str]] = {
+    "user": frozenset({a.value for a in AdministrationAction}),
+    "team": frozenset({a.value for a in AdministrationAction}),
+    "role": frozenset({a.value for a in AdministrationAction}),
     "flow": frozenset({a.value for a in FlowAction}) | {"*"},
     "deployment": frozenset({a.value for a in DeploymentAction}) | {"*"},
     "project": frozenset({a.value for a in ProjectAction}) | {"*"},
@@ -95,7 +99,7 @@ class RoleCreate(BaseModel):
         description=(
             "Permission slugs in the canonical ``<resource>:<action>`` form — for "
             "example ``flow:read``, ``deployment:execute``, ``share:create``. "
-            "Resources must be one of flow, deployment, project, knowledge_base, "
+            "Resources must be one of user, team, role, flow, deployment, project, knowledge_base, "
             "variable, file, share, provider_account, voice, plus the narrow model-provider form "
             "``component:models/<provider-id>:read``. Actions are constrained per-resource (see "
             "``services/authorization/actions.py``): e.g. ``deploy`` is only valid "

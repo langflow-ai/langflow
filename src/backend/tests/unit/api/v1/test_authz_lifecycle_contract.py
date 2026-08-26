@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 import pytest
-from fastapi import HTTPException
+from fastapi import HTTPException, Response
 from lfx.services.authorization import AuthorizationMutationKind, AuthorizationMutationRejected
 
 _RECOVERY_DETAIL = "At least one recovery administrator is required."
@@ -78,6 +78,7 @@ async def test_user_create_stages_default_folder_and_identity_in_one_transaction
         user=UserCreate(username="new-user", password="not-a-real-password"),  # noqa: S106
         session=session,
         current_user=None,
+        response=Response(),
     )
 
     assert events == ["lock", "mutate", "flush", "folder", "stage", "commit", "committed", "audit"]
