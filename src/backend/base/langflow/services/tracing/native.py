@@ -45,6 +45,60 @@ TYPE_MAP = {
 }
 
 
+
+def _orm_row(obj) -> dict:
+    """Every mapped column value from a constructed ORM object.
+
+    The object must be built first so Python-side defaults (``span_kind``,
+    ``latency_ms``, ...) are applied. A hand-written dict silently omits them
+    and hits a NOT NULL violation at insert time -- and because the flush runs
+    in a background task, that failure is easy to miss.
+    """
+    from sqlalchemy import inspect as sa_inspect
+
+    mapper = sa_inspect(type(obj)).mapper
+    return {c.key: getattr(obj, c.key) for c in mapper.column_attrs}
+
+
+def _conflict_free_insert(session, model_cls, rows: list[dict], *, update_on_conflict: bool):
+    """Build a single INSERT ... ON CONFLICT statement for ``rows``.
+
+    Replaces a per-object ``session.merge()`` loop. ``merge()`` issues a SELECT
+    per object to discover whether the row already exists, then an INSERT or
+    UPDATE. Traces and spans here are always constructed fresh with
+    deterministic uuid5 primary keys, so on a first flush that SELECT can never
+    find anything -- one wasted round trip per span, and span count scales with
+    flow size.
+
+    ON CONFLICT preserves merge()'s idempotency (a re-flush recomputes identical
+    UUIDs and collides) at one round trip instead of two, and inserts every span
+    in a single statement rather than N.
+
+    Returns None for dialects without ON CONFLICT support so the caller falls
+    back to merge() rather than losing data.
+    """
+    # getattr rather than attribute access: with LANGFLOW_USE_NOOP_DATABASE the
+    # session's bind is a stub with no ``dialect``, and instrumentation must not
+    # turn a supported no-op mode into an AttributeError. Falling through to
+    # None makes the caller use merge(), i.e. exactly the previous behaviour.
+    dialect_obj = getattr(getattr(session, "bind", None), "dialect", None)
+    dialect = getattr(dialect_obj, "name", "")
+    if dialect == "postgresql":
+        from sqlalchemy.dialects.postgresql import insert as _dialect_insert
+    elif dialect == "sqlite":
+        from sqlalchemy.dialects.sqlite import insert as _dialect_insert
+    else:
+        return None
+
+    stmt = _dialect_insert(model_cls).values(rows)
+    if not update_on_conflict:
+        return stmt.on_conflict_do_nothing(index_elements=["id"])
+    # Mirror merge()'s update-on-existing behaviour for the trace row, whose
+    # terminal fields (status, end_time, latency, tokens) are only known at the
+    # end and could legitimately differ across two flushes of the same trace.
+    updatable = {k: stmt.excluded[k] for k in rows[0] if k != "id"}
+    return stmt.on_conflict_do_update(index_elements=["id"], set_=updatable)
+
 class NativeTracer(BaseTracer):
     """Tracer that stores execution traces in Langflow's database.
 
@@ -348,15 +402,19 @@ class NativeTracer(BaseTracer):
                     total_latency_ms=total_latency_ms,
                     total_tokens=total_tokens,
                 )
-                await session.merge(trace)
+                trace_stmt = _conflict_free_insert(session, TraceTable, [_orm_row(trace)], update_on_conflict=True)
+                if trace_stmt is not None:
+                    await session.execute(trace_stmt)
+                else:
+                    await session.merge(trace)
 
                 # Pre-compute UUIDs and topologically sort so parents are inserted before children
                 # (required by PostgreSQL's immediate FK enforcement on span.parent_span_id → span.id).
                 resolved = resolve_span_uuids(self.completed_spans, self.trace_id)
                 resolved = topological_sort_spans(resolved)
 
-                for span_data, span_uuid, parent_uuid in resolved:
-                    span = SpanTable(
+                span_objs = [
+                    SpanTable(
                         id=span_uuid,
                         trace_id=self.trace_id,
                         parent_span_id=parent_uuid,
@@ -371,7 +429,21 @@ class NativeTracer(BaseTracer):
                         error=span_data.get("error"),
                         attributes=span_data.get("attributes") or {},
                     )
-                    await session.merge(span)
+                    for span_data, span_uuid, parent_uuid in resolved
+                ]
+                if span_objs:
+                    # ``resolved`` is topologically sorted so parents precede children;
+                    # a single multi-VALUES INSERT preserves that order, which
+                    # PostgreSQL's immediate FK enforcement on parent_span_id -> id
+                    # requires.
+                    span_stmt = _conflict_free_insert(
+                        session, SpanTable, [_orm_row(o) for o in span_objs], update_on_conflict=False
+                    )
+                    if span_stmt is not None:
+                        await session.execute(span_stmt)
+                    else:
+                        for obj in span_objs:
+                            await session.merge(obj)
 
                 logger.debug("Flushed %d spans to database", len(self.completed_spans))
 
