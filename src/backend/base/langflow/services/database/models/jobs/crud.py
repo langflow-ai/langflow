@@ -80,12 +80,23 @@ async def update_job_status(
     if finished_timestamp is not None:
         values["finished_timestamp"] = finished_timestamp
 
+    # RETURNING gives back the updated row in the same round trip. The previous
+    # form issued the UPDATE and then a separate SELECT purely to return the Job,
+    # costing two round trips per status change -- and a workflow run changes
+    # status at least twice (start, finish), so it was ~2 extra queries per run.
+    # Same pattern already used by deployment/crud.py.
     result = await db.exec(
-        update(Job).where(Job.job_id == job_id).values(**values).execution_options(synchronize_session=False)
+        update(Job)
+        .where(Job.job_id == job_id)
+        .values(**values)
+        .returning(Job)
+        .execution_options(synchronize_session=False)
     )
-    if result.rowcount == 0:
+    row = result.first()
+    if row is None:
+        # No row matched -- same signal the previous ``rowcount == 0`` check gave.
         return None
-    return await get_job_by_job_id(db, job_id)
+    return row[0]
 
 
 async def get_latest_jobs_by_asset_ids(db: AsyncSession, asset_ids: Sequence[UUID]) -> dict[UUID, Job]:
