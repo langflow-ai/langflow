@@ -53,7 +53,7 @@ def test_bundle_registers_provider_end_to_end():
 
 
 @contextmanager
-def _openai_compatible_embeddings(monkeypatch, handler):
+def _openai_compatible_embeddings(monkeypatch, handler, base_url="https://compatible.example/v1"):
     """Yield real OpenAI-compatible embeddings backed by a mock HTTP transport."""
     from lfx.base.models import provider_registry, unified_models
     from lfx.base.models.unified_models import instantiation
@@ -70,7 +70,7 @@ def _openai_compatible_embeddings(monkeypatch, handler):
         monkeypatch.setattr(
             unified_models,
             "get_all_variables_for_provider",
-            lambda *_args, **_kwargs: {"OPENAI_COMPATIBLE_BASE_URL": "https://compatible.example/v1"},
+            lambda *_args, **_kwargs: {"OPENAI_COMPATIBLE_BASE_URL": base_url},
         )
 
         with httpx.Client(transport=httpx.MockTransport(handler)) as client:
@@ -158,6 +158,38 @@ def test_chat_runtime_normalizes_openai_compatible_base_url(monkeypatch, base_ur
         chat_model.invoke("hello world")
 
     assert captured_urls == ["https://compatible.example/v1/chat/completions"]
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    [
+        "https://compatible.example",
+        "https://compatible.example/",
+        "https://compatible.example/v1",
+        "https://compatible.example/v1/",
+    ],
+)
+def test_embeddings_runtime_normalizes_openai_compatible_base_url(monkeypatch, base_url):
+    """Embedding requests use the same normalized /v1 API root as chat requests."""
+    captured_urls = []
+
+    def handle_request(request: httpx.Request) -> httpx.Response:
+        """Capture one successful embedding request."""
+        captured_urls.append(str(request.url))
+        return httpx.Response(
+            200,
+            json={
+                "data": [{"embedding": [0.1], "index": 0}],
+                "model": "nomic-embed-text",
+                "usage": {"prompt_tokens": 2, "total_tokens": 2},
+            },
+            request=request,
+        )
+
+    with _openai_compatible_embeddings(monkeypatch, handle_request, base_url) as embeddings:
+        embeddings.embed_query("hello world")
+
+    assert captured_urls == ["https://compatible.example/v1/embeddings"]
 
 
 def test_embeddings_send_string_input_to_compatible_endpoint(monkeypatch):
