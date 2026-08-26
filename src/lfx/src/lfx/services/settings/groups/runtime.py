@@ -137,12 +137,15 @@ class RuntimeSettings(BaseModel):
     execution mode. Sync runs raise a 408; stream, background, and public runs emit
     the protocol's terminal-error event and (for background) mark the job failed."""
 
-    model_provider_policy_refresh_interval_s: float = Field(default=10.0, gt=0)
+    model_provider_policy_refresh_interval_s: float = Field(default=60.0, gt=0)
     """How often each backend worker refreshes the install-wide model-provider policy.
 
-    A several-second default limits steady-state database traffic while still
-    converging policy updates promptly across workers. Must be positive so the
-    refresh loop cannot spin continuously.
+    Each tick is one SELECT per worker, unconditionally. At the previous 10s default
+    this poll plus the filesystem-flow poll accounted for roughly half of all database
+    traffic on a completely idle instance (measured: 72 of 154 queries per two minutes,
+    4 workers). A 60s interval cuts that six-fold; the policy is admin-changed and
+    rarely edited, so the slower convergence is not user-visible in practice.
+    Must be positive so the refresh loop cannot spin continuously.
     """
 
     public_flow_cleanup_interval: int = Field(default=3600, gt=600)
@@ -154,8 +157,17 @@ class RuntimeSettings(BaseModel):
 
     webhook_polling_interval: int = 0
     """The polling interval for the webhook in ms. Set to 0 to disable (SSE provides real-time updates)."""
-    fs_flows_polling_interval: int = 10000
-    """The polling interval in milliseconds for synchronizing flows from the file system."""
+    fs_flows_polling_interval: int = 60000
+    """The polling interval in milliseconds for synchronizing flows from the file system.
+
+    Every tick queries ``flow`` for rows with a non-null ``fs_path``, in every worker,
+    whether or not any such flow exists -- and most deployments have none. Measured on
+    an idle 4-worker instance, this poll and the model-provider policy poll together
+    produced 72 of 154 queries per two minutes; moving both from 10s to 60s took total
+    idle traffic from 76.5 to 16.0 queries/minute (-79%).
+
+    The cost of the larger interval is that a flow edited on disk takes up to a minute
+    to be picked up, which matters only for filesystem-linked flows during development."""
 
     health_check_max_retries: int = 5
     """The maximum number of retries for the health check."""

@@ -302,7 +302,9 @@ def test_critical_defaults_unchanged():
     assert settings.cache_type == "async"
     assert settings.storage_type == "local"
     assert settings.event_delivery == "streaming"
-    assert settings.model_provider_policy_refresh_interval_s == 10.0
+    # 60s rather than 10s: at 10s this poll plus the filesystem-flow poll were
+    # roughly half of all query traffic on a completely idle instance.
+    assert settings.model_provider_policy_refresh_interval_s == 60.0
     assert settings.cors_origins == "*"
     assert settings.cors_allow_credentials is True
     assert settings.ssrf_protection_enabled is True
