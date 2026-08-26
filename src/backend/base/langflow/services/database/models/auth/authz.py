@@ -246,6 +246,72 @@ class AuthzTeamMember(SQLModel, table=True):  # type: ignore[call-arg]
     created_at: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column())
 
 
+class AuthzTeamMemberGrant(SQLModel, table=True):  # type: ignore[call-arg]
+    """Independent provenance keeping one effective Team membership alive."""
+
+    __tablename__ = "authz_team_member_grant"
+    __table_args__ = (
+        CheckConstraint(
+            "(source_kind = 'manual' AND provider_id IS NULL AND external_group_id IS NULL "
+            "AND legacy_source IS NULL) OR "
+            "(source_kind = 'directory' AND provider_id IS NOT NULL AND external_group_id IS NOT NULL "
+            "AND legacy_source IS NULL) OR "
+            "(source_kind = 'legacy' AND provider_id IS NULL AND external_group_id IS NULL "
+            "AND legacy_source IS NOT NULL)",
+            name="ck_authz_team_member_grant_source",
+        ),
+        Index(
+            "uq_authz_team_member_grant_manual",
+            "membership_id",
+            unique=True,
+            postgresql_where=text("source_kind = 'manual'"),
+            sqlite_where=text("source_kind = 'manual'"),
+        ),
+        Index(
+            "uq_authz_team_member_grant_directory",
+            "membership_id",
+            "provider_id",
+            "external_group_id",
+            unique=True,
+            postgresql_where=text("source_kind = 'directory'"),
+            sqlite_where=text("source_kind = 'directory'"),
+        ),
+        Index(
+            "uq_authz_team_member_grant_legacy",
+            "membership_id",
+            "legacy_source",
+            unique=True,
+            postgresql_where=text("source_kind = 'legacy'"),
+            sqlite_where=text("source_kind = 'legacy'"),
+        ),
+        Index(
+            "ix_authz_team_member_grant_provider_group",
+            "provider_id",
+            "external_group_id",
+        ),
+    )
+
+    id: UUIDstr = Field(default_factory=uuid4, primary_key=True)
+    membership_id: UUIDstr = Field(
+        sa_column=Column(
+            sa.Uuid(),
+            ForeignKey("authz_team_member.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        ),
+    )
+    source_kind: str = Field(description="manual, directory, or unresolved legacy")
+    provider_id: str | None = Field(default=None, max_length=256)
+    external_group_id: str | None = Field(default=None, max_length=512)
+    legacy_source: str | None = Field(default=None, max_length=512)
+    administrative_actor: UUIDstr | None = Field(
+        default=None,
+        sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="SET NULL"), nullable=True),
+    )
+    created_at: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column())
+    updated_at: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column())
+
+
 class AuthzShare(SQLModel, table=True):  # type: ignore[call-arg]
     """Resource share record granting access at a specific scope/permission level.
 

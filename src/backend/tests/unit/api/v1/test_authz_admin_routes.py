@@ -1442,7 +1442,10 @@ async def test_add_member_emits_lifecycle_for_target_user(stub_authz):
         session=session,
         response=Response(),
     )
-    assert len(session.added) == 1
+    from langflow.services.database.models.auth import AuthzTeamMember, AuthzTeamMemberGrant
+
+    assert len([item for item in session.added if isinstance(item, AuthzTeamMember)]) == 1
+    assert len([item for item in session.added if isinstance(item, AuthzTeamMemberGrant)]) == 1
     assert authz.staged_mutations == authz.committed_mutations
     assert authz.staged_mutations[0].affected_user_ids == (target_user.id,)
 
@@ -1474,6 +1477,57 @@ async def test_add_member_duplicate_returns_409(stub_authz):
         )
     assert excinfo.value.status_code == 409
     assert "already a member" in excinfo.value.detail
+
+
+@pytest.mark.asyncio
+async def test_add_member_adds_manual_grant_to_directory_membership(stub_authz):
+    from langflow.api.v1 import authz_teams
+    from langflow.api.v1.schemas.authz_teams import TeamMemberCreate
+    from langflow.services.database.models.auth import AuthzTeam, AuthzTeamMember, AuthzTeamMemberGrant
+    from langflow.services.database.models.user.model import User
+
+    stub_authz()
+    team = SimpleNamespace(id=uuid4(), team_name="Eng")
+    target_user = SimpleNamespace(id=uuid4())
+    member = AuthzTeamMember(team_id=team.id, user_id=target_user.id, source="directory")
+    session = _FakeAsyncSession(
+        {(AuthzTeam, team.id): team, (User, target_user.id): target_user},
+        exec_results=[[member], [], [], ["directory", "manual"]],
+    )
+
+    result = await authz_teams.add_member(
+        team_id=team.id,
+        payload=TeamMemberCreate(user_id=target_user.id),
+        current_user=_make_user(is_superuser=True),
+        session=session,
+        response=Response(),
+    )
+
+    assert result.id == member.id
+    assert member.source == "manual"
+    assert len([item for item in session.added if isinstance(item, AuthzTeamMemberGrant)]) == 1
+
+
+@pytest.mark.asyncio
+async def test_remove_manual_grant_preserves_directory_membership(stub_authz):
+    from langflow.api.v1 import authz_teams
+
+    stub_authz()
+    team_id = uuid4()
+    user_id = uuid4()
+    member = SimpleNamespace(id=uuid4(), team_id=team_id, user_id=user_id, source="manual")
+    manual_grant = SimpleNamespace(membership_id=member.id)
+    session = _FakeAsyncSession(exec_results=[[member], [manual_grant], ["directory"]])
+
+    await authz_teams.remove_member(
+        team_id=team_id,
+        user_id=user_id,
+        current_user=_make_user(is_superuser=True),
+        session=session,
+    )
+
+    assert session.deleted == [manual_grant]
+    assert member.source == "directory"
 
 
 # =====================================================================
@@ -1818,7 +1872,8 @@ async def test_remove_member_succeeds_when_committed_hook_fails(failing_committe
     team_id = uuid4()
     user_id = uuid4()
     member = SimpleNamespace(id=uuid4(), team_id=team_id, user_id=user_id, source="manual")
-    session = _FakeAsyncSession(exec_results=[[member]])
+    manual_grant = SimpleNamespace(membership_id=member.id)
+    session = _FakeAsyncSession(exec_results=[[member], [manual_grant], []])
     actor = _make_user(is_superuser=True)
 
     await authz_teams.remove_member(
@@ -1827,7 +1882,7 @@ async def test_remove_member_succeeds_when_committed_hook_fails(failing_committe
         current_user=actor,
         session=session,
     )
-    assert session.deleted == [member]
+    assert session.deleted == [manual_grant, member]
     assert session.committed == 1
     assert authz.staged_mutations == authz.committed_attempts
 

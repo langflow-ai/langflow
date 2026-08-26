@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import importlib
-import types
 from datetime import datetime, timezone
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import sqlalchemy as sa
+from alembic.migration import MigrationContext
+from alembic.operations import Operations
 
 _MIGRATION = importlib.import_module("langflow.alembic.versions.b8e1d4f6a2c9_add_team_member_grants")
 
@@ -15,6 +16,11 @@ _MIGRATION = importlib.import_module("langflow.alembic.versions.b8e1d4f6a2c9_add
 def _database():
     engine = sa.create_engine("sqlite:///:memory:")
     metadata = sa.MetaData()
+    sa.Table(
+        "user",
+        metadata,
+        sa.Column("id", sa.Uuid(), primary_key=True),
+    )
     membership = sa.Table(
         "authz_team_member",
         metadata,
@@ -28,29 +34,7 @@ def _database():
     return engine, membership
 
 
-def _run(engine, action: str) -> None:
-    with engine.begin() as connection:
-        original_op = _MIGRATION.op
-        try:
-            _MIGRATION.op = types.SimpleNamespace(
-                get_bind=lambda: connection,
-                create_table=lambda *args, **kwargs: sa.Table(args[0], sa.MetaData(), *args[1:], **kwargs).create(
-                    connection
-                ),
-                create_index=lambda name, table, columns, **kwargs: sa.Index(
-                    name,
-                    *[sa.Table(table, sa.MetaData(), autoload_with=connection).c[column] for column in columns],
-                    **kwargs,
-                ).create(connection),
-                drop_index=lambda name, _table_name=None: sa.Index(name).drop(connection),
-                drop_table=lambda name: sa.Table(name, sa.MetaData(), autoload_with=connection).drop(connection),
-            )
-            getattr(_MIGRATION, action)()
-        finally:
-            _MIGRATION.op = original_op
-
-
-def test_upgrade_backfills_manual_and_unresolved_legacy_without_name_linking() -> None:
+def test_upgrade_backfills_manual_and_unresolved_legacy_without_name_linking(monkeypatch) -> None:
     engine, membership = _database()
     manual_id = uuid4()
     legacy_id = uuid4()
@@ -76,18 +60,18 @@ def test_upgrade_backfills_manual_and_unresolved_legacy_without_name_linking() -
             ],
         )
 
-    _run(engine, "upgrade")
-    _run(engine, "upgrade")
-
-    grant = sa.Table("authz_team_member_grant", sa.MetaData(), autoload_with=engine)
-    with engine.connect() as connection:
+    with engine.begin() as connection:
+        monkeypatch.setattr(_MIGRATION, "op", Operations(MigrationContext.configure(connection)))
+        _MIGRATION.upgrade()
+        _MIGRATION.upgrade()
+        grant = sa.Table("authz_team_member_grant", sa.MetaData(), autoload_with=connection)
         rows = connection.execute(sa.select(grant).order_by(grant.c.membership_id)).mappings().all()
-    by_membership = {row["membership_id"]: row for row in rows}
-    assert by_membership[manual_id]["source_kind"] == "manual"
-    assert by_membership[legacy_id]["source_kind"] == "legacy"
-    assert by_membership[legacy_id]["legacy_source"] == "engineering-group-name"
-    assert by_membership[legacy_id]["provider_id"] is None
-    assert by_membership[legacy_id]["external_group_id"] is None
+        by_membership = {UUID(str(row["membership_id"])): row for row in rows}
+        assert by_membership[manual_id]["source_kind"] == "manual"
+        assert by_membership[legacy_id]["source_kind"] == "legacy"
+        assert by_membership[legacy_id]["legacy_source"] == "engineering-group-name"
+        assert by_membership[legacy_id]["provider_id"] is None
+        assert by_membership[legacy_id]["external_group_id"] is None
 
-    _run(engine, "downgrade")
-    assert "authz_team_member_grant" not in sa.inspect(engine).get_table_names()
+        _MIGRATION.downgrade()
+        assert "authz_team_member_grant" not in sa.inspect(connection).get_table_names()
