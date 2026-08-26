@@ -36,6 +36,7 @@ async def ensure_administration_permission(
     action: str,
     obj: str,
     operation_id: str | None = None,
+    denial_detail: str | None = None,
 ) -> None:
     """Allow superusers or a plugin-authorized delegated administrator.
 
@@ -53,6 +54,6 @@ async def ensure_administration_permission(
     )
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail=f"Permission denied: {resource}:manage is required.",
+        detail=denial_detail or f"Permission denied: {resource}:manage is required.",
         headers={"X-Langflow-Error-Code": "administration_denied"},
     )
