@@ -33,6 +33,7 @@ export interface ModelProviderWithStatus extends ModelProviderInfo {
 export interface GetModelProvidersParams extends ProviderScopeParams {
   includeDeprecated?: boolean;
   includeUnsupported?: boolean;
+  purpose?: "discover" | "configure";
 }
 
 export const getModelProvidersQueryOptions = (
@@ -46,6 +47,9 @@ export const getModelProvidersQueryOptions = (
     queryParams.append("include_unsupported", "true");
   }
   appendProviderScope(queryParams, params);
+  if (params?.purpose) {
+    queryParams.append("purpose", params.purpose);
+  }
 
   const url = `${getURL("MODELS")}${
     queryParams.toString() ? `?${queryParams.toString()}` : ""
@@ -57,6 +61,7 @@ export const getModelProvidersQueryOptions = (
       params?.includeDeprecated,
       params?.includeUnsupported,
       ...providerScopeQueryKey(params),
+      params?.purpose,
     ] as const,
     queryFn: async (): Promise<ModelProviderWithStatus[]> => {
       const response = await api.get<ModelProviderInfo[]>(url);

@@ -171,7 +171,7 @@ describe("usePatchUpdateFlow", () => {
 
     const staleFlowAKeys = [
       ["useGetTypes", "flow-1", undefined],
-      ["useGetModelProviders", true, undefined, "flow-1", undefined],
+      ["useGetModelProviders", true, undefined, "flow-1", undefined, undefined],
       ["useGetEnabledModels", "flow-1", undefined],
       ["useGetProviderVariables", "flow-1", undefined],
       ["useGetGlobalVariables", "flow-1", undefined],
@@ -185,6 +185,7 @@ describe("usePatchUpdateFlow", () => {
         queryKey: [
           "useGetModelProviders",
           true,
+          undefined,
           undefined,
           undefined,
           undefined,

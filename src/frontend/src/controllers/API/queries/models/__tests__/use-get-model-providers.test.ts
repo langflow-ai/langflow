@@ -125,6 +125,7 @@ describe("useGetModelProviders", () => {
         undefined,
         "flow-one",
         undefined,
+        undefined,
       ]);
     });
 
@@ -158,6 +159,7 @@ describe("useGetModelProviders", () => {
     it("keeps global settings in a distinct unscoped cache entry", () => {
       expect(getModelProvidersQueryOptions({}).queryKey).toEqual([
         "useGetModelProviders",
+        undefined,
         undefined,
         undefined,
         undefined,

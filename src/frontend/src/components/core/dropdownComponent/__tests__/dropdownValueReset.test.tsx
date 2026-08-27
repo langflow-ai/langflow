@@ -8,9 +8,10 @@ interface MockChildrenProps {
   children: ReactNode;
 }
 
-interface MockCommandItemProps {
+interface MockCommandItemProps extends Record<string, unknown> {
   children: ReactNode;
-  onSelect?: () => void;
+  onSelect?: (value: string) => void;
+  value?: string;
 }
 
 interface MockButtonProps extends Record<string, unknown> {
@@ -119,8 +120,15 @@ jest.mock("@/components/ui/button", () => ({
 jest.mock("@/components/ui/command", () => ({
   Command: ({ children }: MockChildrenProps) => <div>{children}</div>,
   CommandGroup: ({ children }: MockChildrenProps) => <div>{children}</div>,
-  CommandItem: ({ children, onSelect }: MockCommandItemProps) => (
-    <div onClick={onSelect}>{children}</div>
+  CommandItem: ({
+    children,
+    onSelect,
+    value,
+    ...props
+  }: MockCommandItemProps) => (
+    <button type="button" onClick={() => onSelect?.(value ?? "")} {...props}>
+      {children}
+    </button>
   ),
   CommandList: ({ children }: MockChildrenProps) => <div>{children}</div>,
   CommandSeparator: () => <hr />,

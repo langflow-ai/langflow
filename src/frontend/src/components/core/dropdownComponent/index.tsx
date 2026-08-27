@@ -23,6 +23,10 @@ import { DropdownTrigger } from "./components/DropdownTrigger";
 import { useDropdownMutations } from "./hooks/useDropdownMutations";
 import { useDropdownOptions } from "./hooks/useDropdownOptions";
 
+const LEGACY_PROVIDER_OPTION_ALIASES: Record<string, string> = {
+  "IBM watsonx.ai": "IBM WatsonX",
+};
+
 export default function Dropdown({
   disabled,
   isLoading,
@@ -54,39 +58,28 @@ export default function Dropdown({
     data: scopedModelProviders,
     isLoading: isLoadingScopedModelProviders,
     isFetching: isFetchingScopedModelProviders,
+    isError: scopedModelProvidersError,
   } = useGetModelProviders(
-    { flowId: currentFlowId },
+    { flowId: currentFlowId, purpose: "configure" },
     { enabled: isLegacyProviderSelector && Boolean(currentFlowId) },
   );
-  const lastScopedProviders = useRef<{
-    flowId: string;
-    names: Set<string>;
-  } | null>(null);
-  const resolvedProviderNames = useMemo(
+  const allowedProviderNames = useMemo(
     () =>
-      scopedModelProviders === undefined
-        ? null
-        : new Set(scopedModelProviders.map(({ provider }) => provider)),
-    [scopedModelProviders],
+      isLegacyProviderSelector &&
+      Boolean(currentFlowId) &&
+      !isFetchingScopedModelProviders &&
+      !scopedModelProvidersError &&
+      scopedModelProviders !== undefined
+        ? new Set(scopedModelProviders.map(({ provider }) => provider))
+        : null,
+    [
+      currentFlowId,
+      isFetchingScopedModelProviders,
+      isLegacyProviderSelector,
+      scopedModelProviders,
+      scopedModelProvidersError,
+    ],
   );
-
-  let allowedProviderNames: Set<string> | null = null;
-  if (
-    isLegacyProviderSelector &&
-    currentFlowId &&
-    resolvedProviderNames !== null
-  ) {
-    allowedProviderNames = resolvedProviderNames;
-    lastScopedProviders.current = {
-      flowId: currentFlowId,
-      names: allowedProviderNames,
-    };
-  } else if (
-    isLegacyProviderSelector &&
-    lastScopedProviders.current?.flowId === currentFlowId
-  ) {
-    allowedProviderNames = lastScopedProviders.current.names;
-  }
 
   const { policyOptions, policyOptionsMetaData } = useMemo(() => {
     if (!isLegacyProviderSelector) {
@@ -94,7 +87,12 @@ export default function Dropdown({
     }
 
     const keepIndexes = options.reduce<number[]>((indexes, option, index) => {
-      if (option === "Custom" || allowedProviderNames?.has(option)) {
+      const policyProviderName =
+        LEGACY_PROVIDER_OPTION_ALIASES[option] ?? option;
+      if (
+        option === "Custom" ||
+        allowedProviderNames?.has(policyProviderName)
+      ) {
         indexes.push(index);
       }
       return indexes;
