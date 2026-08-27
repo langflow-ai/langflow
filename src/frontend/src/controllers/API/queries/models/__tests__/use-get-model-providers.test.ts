@@ -128,6 +128,33 @@ describe("useGetModelProviders", () => {
       ]);
     });
 
+    it("keys and requests provider reads by authorization purpose", async () => {
+      mockApiGet.mockResolvedValue({ data: [] });
+
+      const configureOptions = getModelProvidersQueryOptions({
+        flowId: "flow-one",
+        purpose: "configure",
+      });
+      const discoverOptions = getModelProvidersQueryOptions({
+        flowId: "flow-one",
+        purpose: "discover",
+      });
+      await configureOptions.queryFn();
+
+      expect(mockApiGet).toHaveBeenCalledWith(
+        "/api/v1/models?flow_id=flow-one&purpose=configure",
+      );
+      expect(configureOptions.queryKey).toEqual([
+        "useGetModelProviders",
+        undefined,
+        undefined,
+        "flow-one",
+        undefined,
+        "configure",
+      ]);
+      expect(discoverOptions.queryKey).not.toEqual(configureOptions.queryKey);
+    });
+
     it("keeps global settings in a distinct unscoped cache entry", () => {
       expect(getModelProvidersQueryOptions({}).queryKey).toEqual([
         "useGetModelProviders",

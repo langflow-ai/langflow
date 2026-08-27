@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import type { APIClassType } from "@/types/api";
@@ -288,7 +288,7 @@ describe("legacy provider dropdown policy", () => {
     renderProviderDropdown();
 
     expect(mockUseGetModelProviders).toHaveBeenCalledWith(
-      { flowId: "flow-one" },
+      { flowId: "flow-one", purpose: "configure" },
       { enabled: true },
     );
     expect(screen.queryByText("OpenAI")).not.toBeInTheDocument();
@@ -308,6 +308,47 @@ describe("legacy provider dropdown policy", () => {
     expect(screen.getAllByText("OpenAI").length).toBeGreaterThan(0);
     expect(screen.getByText("Custom")).toBeInTheDocument();
     expect(screen.queryByText("Anthropic")).not.toBeInTheDocument();
+  });
+
+  it("keeps the legacy WatsonX alias and its aligned metadata", () => {
+    const onSelect = jest.fn();
+    mockUseGetModelProviders.mockReturnValue({
+      data: [{ provider: "IBM WatsonX" }],
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+    });
+
+    render(
+      <Dropdown
+        value=""
+        options={["OpenAI", "IBM watsonx.ai", "Custom"]}
+        optionsMetaData={[
+          { icon: "OpenAI" },
+          { icon: "WatsonxAI" },
+          { icon: "brain" },
+        ]}
+        onSelect={onSelect}
+        name="agent_llm"
+        nodeId="test-node"
+        nodeClass={mockNodeClass}
+        handleNodeClass={jest.fn()}
+        id="provider-dropdown"
+        editNode={false}
+        handleOnNewValue={jest.fn()}
+        disabled={false}
+      />,
+    );
+
+    expect(screen.getByText("IBM watsonx.ai")).toBeInTheDocument();
+    expect(screen.queryByText("OpenAI")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("IBM watsonx.ai-0-option"));
+    expect(onSelect).toHaveBeenCalledWith(
+      "IBM watsonx.ai",
+      undefined,
+      undefined,
+      { icon: "WatsonxAI" },
+    );
   });
 
   it("hides a revoked saved provider without clearing it and keeps it hidden through a later error", () => {
@@ -382,6 +423,7 @@ describe("legacy provider dropdown policy", () => {
     );
 
     expect(screen.queryByText("Anthropic")).not.toBeInTheDocument();
+    expect(screen.queryByText("OpenAI")).not.toBeInTheDocument();
     expect(onSelect).not.toHaveBeenCalledWith("", undefined, true);
   });
 
@@ -420,10 +462,49 @@ describe("legacy provider dropdown policy", () => {
     );
 
     expect(mockUseGetModelProviders).toHaveBeenLastCalledWith(
-      { flowId: "flow-two" },
+      { flowId: "flow-two", purpose: "configure" },
       { enabled: true },
     );
     expect(screen.queryByText("OpenAI")).not.toBeInTheDocument();
+
+    mockUseGetModelProviders.mockReturnValue({
+      data: [{ provider: "Anthropic" }],
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+    });
+    rerender(
+      <Dropdown
+        value="Anthropic"
+        options={["OpenAI", "Anthropic", "Custom"]}
+        onSelect={jest.fn()}
+        name="agent_llm"
+        nodeId="test-node"
+        nodeClass={mockNodeClass}
+        handleNodeClass={jest.fn()}
+        id="provider-dropdown"
+        editNode={false}
+        handleOnNewValue={jest.fn()}
+        disabled={false}
+      />,
+    );
+
+    expect(screen.getAllByText("Anthropic").length).toBeGreaterThan(0);
+    expect(screen.queryByText("OpenAI")).not.toBeInTheDocument();
+  });
+
+  it("fails closed when no stored flow scope is available", () => {
+    mockCurrentFlowId = "";
+
+    renderProviderDropdown("OpenAI");
+
+    expect(mockUseGetModelProviders).toHaveBeenCalledWith(
+      { flowId: "", purpose: "configure" },
+      { enabled: false },
+    );
+    expect(screen.queryByText("OpenAI")).not.toBeInTheDocument();
+    expect(screen.queryByText("Anthropic")).not.toBeInTheDocument();
+    expect(screen.getByText("Custom")).toBeInTheDocument();
   });
 
   it("leaves ordinary dropdowns unchanged", () => {
