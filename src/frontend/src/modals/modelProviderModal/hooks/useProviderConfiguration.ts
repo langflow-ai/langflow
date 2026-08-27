@@ -306,12 +306,28 @@ export const useProviderConfiguration = ({
       });
   }, [providerVariables, variableValues, globalVariables]);
 
-  // Check if there are any new values to save
+  const isConfiguredOptionalVariableCleared = useCallback(
+    (variable: ProviderVariable): boolean => {
+      const draftValue = variableValues[variable.variable_key];
+      return (
+        !variable.required &&
+        !variable.is_secret &&
+        draftValue !== undefined &&
+        draftValue.trim() === "" &&
+        globalVariables.some((v) => v.name === variable.variable_key)
+      );
+    },
+    [globalVariables, variableValues],
+  );
+
+  // Check if there are any new values or explicit optional-value clears to save
   const hasNewValuesToSave = useMemo(() => {
-    return providerVariables.some((v) =>
-      variableValues[v.variable_key]?.trim(),
+    return providerVariables.some(
+      (v) =>
+        Boolean(variableValues[v.variable_key]?.trim()) ||
+        isConfiguredOptionalVariableCleared(v),
     );
-  }, [providerVariables, variableValues]);
+  }, [providerVariables, variableValues, isConfiguredOptionalVariableCleared]);
 
   // Build the variables object for validation
   const getVariablesForValidation = useCallback((): Record<string, string> => {
@@ -320,7 +336,7 @@ export const useProviderConfiguration = ({
       const newValue = variableValues[v.variable_key]?.trim();
       if (newValue) {
         variables[v.variable_key] = newValue;
-      } else {
+      } else if (!(v.variable_key in variableValues)) {
         // Use existing configured value
         const existing = globalVariables.find(
           (gv) => gv.name === v.variable_key,
@@ -414,16 +430,33 @@ export const useProviderConfiguration = ({
           Number(a.variable_key === primaryVariableKey) -
           Number(b.variable_key === primaryVariableKey),
       );
+    const variableKeysToDelete = new Set(
+      providerVariables
+        .filter(isConfiguredOptionalVariableCleared)
+        .map((v) => v.variable_key),
+    );
+    const variablesToDelete = globalVariables.filter((v) =>
+      variableKeysToDelete.has(v.name),
+    );
 
-    if (variablesToSave.length === 0) return;
+    if (variablesToSave.length === 0 && variablesToDelete.length === 0) return;
 
-    // Validate first
-    const isValid = await validateCredentials();
-    if (!isValid) return;
+    // Deletion-only resets do not introduce credentials to validate. When
+    // another value is being saved, validate the effective post-clear config.
+    if (variablesToSave.length > 0) {
+      const isValid = await validateCredentials();
+      if (!isValid) return;
+    }
     setIsSaving(true);
     setValidationFailed(false);
 
     try {
+      // Remove explicit optional-value clears first so a following primary
+      // credential write is validated against the post-clear configuration.
+      for (const variable of variablesToDelete) {
+        await deleteGlobalVariable({ id: variable.id });
+      }
+
       // Persist each companion field before starting the primary-variable
       // request so backend validation can read the complete configuration.
       for (const variable of variablesToSave) {
@@ -472,8 +505,10 @@ export const useProviderConfiguration = ({
     providerVariables,
     variableValues,
     globalVariables,
+    isConfiguredOptionalVariableCleared,
     createGlobalVariable,
     updateGlobalVariable,
+    deleteGlobalVariable,
     setSuccessData,
     setErrorData,
     invalidateProviderQueries,
