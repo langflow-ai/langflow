@@ -358,6 +358,8 @@ async def maybe_start_metrics_collector(app: FastAPI, settings: Any, *, promethe
     Best-effort: never block or crash startup on observability — a failure logs a
     warning and leaves ``app.state.background_metrics_collector`` as ``None``.
     """
+    if not hasattr(app, "state"):  # pragma: no cover - defensive, a real app always has it
+        return
     app.state.background_metrics_collector = None
     if not (prometheus_started and getattr(settings, "prometheus_enabled", False)):
         return
@@ -378,7 +380,11 @@ async def stop_metrics_collector(app: FastAPI) -> None:
     The attribute may be unset if startup failed before it ran, so we read it
     with ``getattr`` and swallow any stop error — shutdown must finish regardless.
     """
-    collector = getattr(app.state, "background_metrics_collector", None)
+    # getattr through ``state`` as well as through it. This runs in the lifespan's finally
+    # block, which is also reached when startup failed early enough that ``state`` was never
+    # populated, and an AttributeError raised here would replace the original startup error
+    # with a misleading one. Shutdown cleanup must not be able to mask why startup failed.
+    collector = getattr(getattr(app, "state", None), "background_metrics_collector", None)
     if collector is not None:
         with contextlib.suppress(Exception):
             await collector.stop()
