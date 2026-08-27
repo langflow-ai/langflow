@@ -13,6 +13,7 @@ import {
 } from "@/utils/customComponentGuards";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
+import { appendProviderScope } from "../../helpers/provider-scope";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 interface IPostTemplateValue {
@@ -80,8 +81,12 @@ export const usePostTemplateValue: useMutationFunctionType<
 
     let response;
     try {
+      const queryParams = new URLSearchParams();
+      appendProviderScope(queryParams, { flowId });
       response = await api.post<APIClassType>(
-        getURL("CUSTOM_COMPONENT", { update: "update" }),
+        `${getURL("CUSTOM_COMPONENT", { update: "update" })}${
+          queryParams.toString() ? `?${queryParams.toString()}` : ""
+        }`,
         {
           code: template.code.value,
           template: preparedTemplate,

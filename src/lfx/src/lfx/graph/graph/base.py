@@ -2275,6 +2275,10 @@ class Graph:
             if not vertex.frozen or is_loop_component:
                 should_build = True
             else:
+                # Frozen results can outlive a role or provider-policy change.
+                # Reauthorize before even consulting the result cache so a
+                # revoked provider cannot reuse output from an earlier run.
+                vertex.require_model_provider_policy(user_id)
                 # Check the cache for the vertex
                 if get_cache is not None:
                     cached_result = await get_cache(key=vertex.id)

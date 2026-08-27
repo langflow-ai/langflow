@@ -392,6 +392,15 @@ class Vertex:
                 vertex=self,
             )
 
+    def require_model_provider_policy(self, user_id=None) -> None:
+        """Reauthorize a model vertex before any built or frozen result can be reused."""
+        if not self.custom_component:
+            self.instantiate_component(user_id=user_id)
+        if self.custom_component:
+            from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+            self.custom_component.require_model_provider_policy(ModelProviderPolicyPurpose.USE)
+
     async def _build(
         self,
         fallback_to_env_vars,
@@ -839,10 +848,12 @@ class Vertex:
             # because they need to iterate through their data
             is_loop_component = self.display_name == "Loop" or self.is_loop
             if self.frozen and self.built and not is_loop_component:
+                self.require_model_provider_policy(user_id)
                 return await self.get_requester_result(requester)
             if self.built and requester is not None:
                 # This means that the vertex has already been built
                 # and we are just getting the result for the requester
+                self.require_model_provider_policy(user_id)
                 return await self.get_requester_result(requester)
             self._reset()
 

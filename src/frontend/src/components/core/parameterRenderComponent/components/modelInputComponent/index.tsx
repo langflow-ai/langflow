@@ -8,6 +8,7 @@ import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-t
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ModelProviderModal from "@/modals/modelProviderModal";
 import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { APIClassType } from "@/types/api";
 import type { NodeDataType } from "@/types/flow";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
@@ -153,6 +154,7 @@ export default function ModelInputComponent({
     if (entries.length === 0) return undefined;
     return Object.fromEntries(entries) as Record<string, unknown>;
   }, [nodeClass]);
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
   const {
     data: providersData = [],
@@ -160,14 +162,14 @@ export default function ModelInputComponent({
     isFetching: isFetchingProviders,
     error: providersError,
     refetch: refetchProviders,
-  } = useGetModelProviders({});
+  } = useGetModelProviders({ flowId: currentFlowId });
   const {
     data: enabledModelsData,
     isLoading: isLoadingEnabledModels,
     isFetching: isFetchingEnabledModels,
     error: enabledModelsError,
     refetch: refetchEnabledModels,
-  } = useGetEnabledModels();
+  } = useGetEnabledModels({ flowId: currentFlowId });
 
   const isLoading = isLoadingProviders || isLoadingEnabledModels;
   const isFetching = isFetchingProviders || isFetchingEnabledModels;
@@ -454,6 +456,7 @@ export default function ModelInputComponent({
           open={openManageProvidersDialog}
           onClose={handleManageProvidersDialogClose}
           modelType={modelType || "llm"}
+          flowId={currentFlowId}
         />
       )}
     </>

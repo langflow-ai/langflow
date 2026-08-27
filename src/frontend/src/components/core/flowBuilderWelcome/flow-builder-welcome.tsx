@@ -62,6 +62,7 @@ export function FlowBuilderWelcome({
   // AppInitPage holds every route back until the examples fetch settles, so an
   // empty list here means a policy blocked them, never "still loading".
   const examples = useFlowsManagerStore((state) => state.examples);
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const hasSimpleAgent = findStarterTemplate(examples, "simple_agent") !== null;
   const hasVectorStoreRag =
     findStarterTemplate(examples, "vector_store_rag") !== null;
@@ -276,6 +277,7 @@ export function FlowBuilderWelcome({
             open={isProviderModalOpen}
             onClose={() => setIsProviderModalOpen(false)}
             modelType="llm"
+            flowId={currentFlowId}
           />
         )}
 

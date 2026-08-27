@@ -59,7 +59,7 @@ export function useCreateMemoryModal({
   const hasAppliedBackendDefaults = useRef(false);
 
   const { t } = useTranslation();
-  const { data: modelProviders = [] } = useGetModelProviders({});
+  const { data: modelProviders = [] } = useGetModelProviders({ flowId });
   const { data: globalVariables = [], isFetched: areGlobalVariablesFetched } =
     useGetGlobalVariables();
   const localVectorStoreAvailable = useUtilityStore(

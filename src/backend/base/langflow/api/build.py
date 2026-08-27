@@ -4,6 +4,7 @@ import time
 import traceback
 import uuid
 from collections.abc import AsyncIterator
+from functools import wraps
 
 from fastapi import BackgroundTasks, HTTPException, Response
 from lfx.exceptions.tweaks import TweakRefusedError
@@ -28,6 +29,7 @@ from langflow.api.utils import (
     parse_exception,
 )
 from langflow.api.utils.execution_errors import error_details_for_client, error_for_client
+from langflow.api.v1.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.api.v1.schemas import (
     FlowDataRequest,
     ResultDataResponse,
@@ -191,6 +193,7 @@ async def start_flow_build(
     start_component_id: str | None,
     log_builds: bool,
     current_user: User | UserRead,
+    provider_policy_flow: Flow,
     queue_service: JobQueueService,
     flow_name: str | None = None,
     source_flow_id: uuid.UUID | None = None,
@@ -209,6 +212,8 @@ async def start_flow_build(
         start_component_id: Optional component ID to start from.
         log_builds: Whether to log build events.
         current_user: The currently authenticated user.
+        provider_policy_flow: Server-loaded flow whose project/workspace scope
+            governs provider use for the queued graph.
         queue_service: The job queue service instance.
         flow_name: Optional flow name override.
         source_flow_id: If provided, the actual flow ID to load from DB.
@@ -234,6 +239,7 @@ async def start_flow_build(
             start_component_id=start_component_id,
             log_builds=log_builds,
             current_user=current_user,
+            provider_policy_flow=provider_policy_flow,
             flow_name=flow_name,
             source_flow_id=source_flow_id,
             source_flow_owner_id=source_flow_owner_id,
@@ -437,7 +443,7 @@ async def create_flow_response(
     )
 
 
-async def generate_flow_events(
+async def _generate_flow_events(
     *,
     flow_id: uuid.UUID,
     background_tasks: BackgroundTasks,
@@ -1049,6 +1055,23 @@ async def generate_flow_events(
             await logger.awarning("Memory base hook scheduling failed for flow %s", flow_id, exc_info=True)
 
     await event_manager.queue.put((None, None, time.time()))
+
+
+@wraps(_generate_flow_events)
+async def generate_flow_events(*args, provider_policy_flow: Flow | None = None, **kwargs) -> None:
+    """Run the build driver under a trusted, required provider-policy scope.
+
+    Production callers pass the exact server-loaded flow they authorized. A
+    missing flow remains a required unresolved scope so provider-bearing test
+    or internal callers fail closed in the Enterprise policy implementation.
+    """
+    current_user = kwargs.get("current_user")
+    with scoped_model_provider_policy_for_flow(
+        provider_policy_flow,
+        user_id=getattr(current_user, "id", None),
+        is_superuser=bool(getattr(current_user, "is_superuser", False)),
+    ):
+        await _generate_flow_events(*args, **kwargs)
 
 
 async def cancel_flow_build(

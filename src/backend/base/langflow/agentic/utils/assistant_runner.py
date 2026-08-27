@@ -25,6 +25,7 @@ from langflow.agentic.services.assistant_service import execute_flow_with_valida
 from langflow.agentic.services.flow_types import LANGFLOW_ASSISTANT_FLOW
 from langflow.api.utils.core import release_db_transaction
 from langflow.api.v1.flows import _new_flow, _save_flow_to_fs, _validate_catalog_policy_for_write
+from langflow.api.v1.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.database.models.flow.guards import ensure_flow_unlocked, lock_flow_for_update
 from langflow.services.database.models.flow.model import Flow, FlowCreate
@@ -212,33 +213,43 @@ async def run_assistant_and_persist(
         session_id=session_id,
         max_retries=None,
     )
-    ctx = await _resolve_assistant_context(request, user_id, session)
     # raw_cause on SSE error details is superuser-only; headless MCP callers
-    # authenticate as a real user, so read the flag from the DB row.
+    # authenticate as a real user, so read the flag from the DB row before the
+    # long-running stream releases this transaction.
     acting_user = await session.get(User, user_id)
+    is_superuser = bool(getattr(acting_user, "is_superuser", False))
+    with scoped_model_provider_policy_for_flow(
+        flow,
+        user_id=user_id,
+        is_superuser=is_superuser,
+    ):
+        # Resolve provider authorization before credential reads, then retain
+        # the same trusted scope while the Assistant builds and verifies the
+        # working graph.
+        ctx = await _resolve_assistant_context(request, user_id, session)
 
-    # The agent loop below can run for minutes; end the read transaction now
-    # so it doesn't pin a pooled connection (Postgres: idle-in-transaction)
-    # for the whole run (#14445). Persistence re-reads under a fresh short
-    # transaction (the FOR UPDATE below), so the lock ordering is preserved.
-    await release_db_transaction(session)
+        # The agent loop below can run for minutes; end the read transaction now
+        # so it doesn't pin a pooled connection (Postgres: idle-in-transaction)
+        # for the whole run (#14445). Persistence re-reads under a fresh short
+        # transaction (the FOR UPDATE below), so the lock ordering is preserved.
+        await release_db_transaction(session)
 
-    stream = execute_flow_with_validation_streaming(
-        flow_filename=LANGFLOW_ASSISTANT_FLOW,
-        input_value=instruction,
-        global_variables=ctx.global_vars,
-        max_retries=ctx.max_retries,
-        user_id=str(user_id),
-        session_id=ctx.session_id,
-        provider=ctx.provider,
-        model_name=ctx.model_name,
-        api_key_var=ctx.api_key_name,
-        apply_edits_immediately=True,
-        is_superuser=bool(getattr(acting_user, "is_superuser", False)),
-    )
-    canvas, working_snapshot, result_text, error_text, field_edits = await _consume_stream(
-        stream, flow.data, on_progress
-    )
+        stream = execute_flow_with_validation_streaming(
+            flow_filename=LANGFLOW_ASSISTANT_FLOW,
+            input_value=instruction,
+            global_variables=ctx.global_vars,
+            max_retries=ctx.max_retries,
+            user_id=str(user_id),
+            session_id=ctx.session_id,
+            provider=ctx.provider,
+            model_name=ctx.model_name,
+            api_key_var=ctx.api_key_name,
+            apply_edits_immediately=True,
+            is_superuser=is_superuser,
+        )
+        canvas, working_snapshot, result_text, error_text, field_edits = await _consume_stream(
+            stream, flow.data, on_progress
+        )
 
     if canvas.changed:
         if not created_new:

@@ -7,6 +7,7 @@ import {
   VARIABLE_CATEGORY,
 } from "@/constants/providerConstants";
 import { getAxiosErrorMessage } from "@/controllers/API/helpers/get-axios-error-message";
+import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { useGetProviderVariables } from "@/controllers/API/queries/models/use-get-provider-variables";
 import { useValidateProvider } from "@/controllers/API/queries/models/use-validate-provider";
@@ -25,7 +26,7 @@ import { useModelToggleQueue } from "./useModelToggleQueue";
 // Masked value shown for configured secret fields
 const MASKED_VALUE = "••••••••";
 
-interface UseProviderConfigurationOptions {
+interface UseProviderConfigurationOptions extends ProviderScopeParams {
   selectedProvider: Provider | null;
 }
 
@@ -75,6 +76,8 @@ interface UseProviderConfigurationReturn {
 
 export const useProviderConfiguration = ({
   selectedProvider,
+  flowId,
+  projectId,
 }: UseProviderConfigurationOptions): UseProviderConfigurationReturn => {
   const [variableValues, setVariableValues] = useState<Record<string, string>>(
     {},
@@ -115,13 +118,19 @@ export const useProviderConfiguration = ({
     usePatchGlobalVariables();
   const { mutateAsync: deleteGlobalVariable, isPending: isDeleting } =
     useDeleteGlobalVariables();
-  const { data: globalVariables = [] } = useGetGlobalVariables();
+  const { data: globalVariables = [] } = useGetGlobalVariables({
+    flowId,
+    projectId,
+  });
   const { mutateAsync: validateProvider } = useValidateProvider();
-  const { data: providerVariablesMapping = {} } = useGetProviderVariables();
+  const { data: providerVariablesMapping = {} } = useGetProviderVariables({
+    flowId,
+    projectId,
+  });
   const { refreshAllModelInputs } = useRefreshModelInputs();
   const { data: modelProviders = [], isFetching: isFetchingModels } =
     useGetModelProviders(
-      { includeDeprecated: true },
+      { includeDeprecated: true, flowId, projectId },
       {
         // Issue #13137: the previous 10s ``refetchInterval`` polled
         // ``/api/v1/models`` continuously while the Ollama card was
@@ -347,6 +356,8 @@ export const useProviderConfiguration = ({
       const result = await validateProvider({
         provider: selectedProvider.provider,
         variables,
+        flowId,
+        projectId,
       });
 
       // Ensure minimum 500ms duration for better UX (prevent flickering)
@@ -375,7 +386,13 @@ export const useProviderConfiguration = ({
       setValidationError(getAxiosErrorMessage(error, "Validation failed"));
       return false;
     }
-  }, [selectedProvider, getVariablesForValidation, validateProvider]);
+  }, [
+    selectedProvider,
+    getVariablesForValidation,
+    validateProvider,
+    flowId,
+    projectId,
+  ]);
 
   // Debounced validation removed — validation now happens only on save button click
 
@@ -436,7 +453,12 @@ export const useProviderConfiguration = ({
           : VARIABLE_CATEGORY.GLOBAL;
 
         if (existingVariable) {
-          await updateGlobalVariable({ id: existingVariable.id, value });
+          await updateGlobalVariable({
+            id: existingVariable.id,
+            value,
+            flowId,
+            projectId,
+          });
         } else {
           await createGlobalVariable({
             name: variable.variable_key,
@@ -444,6 +466,8 @@ export const useProviderConfiguration = ({
             type: variableType,
             category: VARIABLE_CATEGORY.GLOBAL,
             default_fields: [],
+            flowId,
+            projectId,
           });
         }
       }
@@ -474,6 +498,8 @@ export const useProviderConfiguration = ({
     globalVariables,
     createGlobalVariable,
     updateGlobalVariable,
+    flowId,
+    projectId,
     setSuccessData,
     setErrorData,
     invalidateProviderQueries,
@@ -512,6 +538,8 @@ export const useProviderConfiguration = ({
         await updateGlobalVariable({
           id: existingVariable.id,
           value: placeholderValue,
+          flowId,
+          projectId,
         });
       } else {
         await createGlobalVariable({
@@ -520,6 +548,8 @@ export const useProviderConfiguration = ({
           type: VARIABLE_CATEGORY.CREDENTIAL,
           category: VARIABLE_CATEGORY.GLOBAL,
           default_fields: [],
+          flowId,
+          projectId,
         });
       }
 
@@ -544,6 +574,8 @@ export const useProviderConfiguration = ({
     globalVariables,
     createGlobalVariable,
     updateGlobalVariable,
+    flowId,
+    projectId,
     setSuccessData,
     setErrorData,
     invalidateProviderQueries,
@@ -581,7 +613,9 @@ export const useProviderConfiguration = ({
       // and disabled model lists on the primary credential delete, so order
       // does not matter.
       await Promise.all(
-        variablesToDelete.map((v) => deleteGlobalVariable({ id: v.id })),
+        variablesToDelete.map((v) =>
+          deleteGlobalVariable({ id: v.id, flowId, projectId }),
+        ),
       );
 
       hasUserMadeChangesRef.current = true;
@@ -605,6 +639,8 @@ export const useProviderConfiguration = ({
     providerVariables,
     globalVariables,
     deleteGlobalVariable,
+    flowId,
+    projectId,
     setSuccessData,
     setErrorData,
     invalidateProviderQueries,
@@ -613,6 +649,8 @@ export const useProviderConfiguration = ({
   const { handleModelToggle: queueModelToggle, flushPendingChanges } =
     useModelToggleQueue({
       providerName: syncedSelectedProvider?.provider,
+      flowId,
+      projectId,
     });
 
   const handleModelToggle = useCallback(

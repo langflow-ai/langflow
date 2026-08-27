@@ -12,12 +12,13 @@ import type {
 } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
+import { appendProviderScope } from "../../helpers/provider-scope";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 export const useGetTypes: useQueryFunctionType<
   undefined,
   APIObjectType,
-  { checkCache?: boolean }
+  { checkCache?: boolean; flowId?: string; projectId?: string }
 > = (options) => {
   const { query } = UseRequestProcessor();
   const setLoading = useFlowsManagerStore((state) => state.setIsLoading);
@@ -25,6 +26,7 @@ export const useGetTypes: useQueryFunctionType<
   const setComponentDisplayNames = useTypesStore(
     (state) => state.setComponentDisplayNames,
   );
+  const { flowId, projectId, ...queryOptions } = options ?? {};
 
   const getTypesFn = async (checkCache = false) => {
     try {
@@ -35,8 +37,10 @@ export const useGetTypes: useQueryFunctionType<
         }
       }
 
+      const queryParams = new URLSearchParams({ force_refresh: "true" });
+      appendProviderScope(queryParams, { flowId, projectId });
       const response = await api.get<APIObjectType>(
-        `${getURL("ALL")}?force_refresh=true`,
+        `${getURL("ALL")}?${queryParams.toString()}`,
       );
       const raw = response?.data as Record<string, unknown>;
 
@@ -65,11 +69,11 @@ export const useGetTypes: useQueryFunctionType<
   };
 
   const queryResult = query(
-    ["useGetTypes"],
+    ["useGetTypes", flowId, projectId],
     () => getTypesFn(options?.checkCache),
     {
       refetchOnWindowFocus: false,
-      ...options,
+      ...queryOptions,
     },
   );
 

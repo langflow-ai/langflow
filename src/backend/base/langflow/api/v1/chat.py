@@ -43,6 +43,7 @@ from langflow.api.utils import (
     verify_public_flow_and_get_user,
 )
 from langflow.api.utils.core import strip_secret_field_values
+from langflow.api.v1.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.api.v1.schemas import (
     CancelFlowResponse,
     FlowDataRequest,
@@ -200,19 +201,24 @@ async def retrieve_vertices_order(
     components_count = None
     run_id = str(uuid.uuid4())
     try:
-        if not data:
-            graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
-        else:
-            sanitized_data = await prepare_flow_build_for_user(
-                data.model_dump(),
-                is_superuser=current_user.is_superuser,
-            )
-            if sanitized_data is not None:
-                data = FlowDataRequest.model_validate(sanitized_data)
-            graph = await build_and_cache_graph_from_data(
-                flow_id=flow_id, graph_data=data.model_dump(), chat_service=chat_service
-            )
-        graph = graph.prepare(stop_component_id, start_component_id)
+        with scoped_model_provider_policy_for_flow(
+            flow,
+            user_id=current_user.id,
+            is_superuser=bool(current_user.is_superuser),
+        ):
+            if not data:
+                graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
+            else:
+                sanitized_data = await prepare_flow_build_for_user(
+                    data.model_dump(),
+                    is_superuser=current_user.is_superuser,
+                )
+                if sanitized_data is not None:
+                    data = FlowDataRequest.model_validate(sanitized_data)
+                graph = await build_and_cache_graph_from_data(
+                    flow_id=flow_id, graph_data=data.model_dump(), chat_service=chat_service
+                )
+            graph = graph.prepare(stop_component_id, start_component_id)
         graph.set_run_id(run_id)
 
         # Now vertices is a list of lists
@@ -401,6 +407,7 @@ async def build_flow(
     with execution_protocol("v1.build"):
         job_id = await start_flow_build(
             flow_id=flow_id,
+            provider_policy_flow=flow,
             background_tasks=background_tasks,
             inputs=inputs,
             data=data,
@@ -554,12 +561,17 @@ async def build_vertex(
         if isinstance(cache, CacheMiss):
             # If there's no cache
             await logger.awarning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
-            async with session_scope() as session:
-                graph = await build_graph_from_db(
-                    flow_id=flow_id,
-                    session=session,
-                    chat_service=chat_service,
-                )
+            with scoped_model_provider_policy_for_flow(
+                flow,
+                user_id=current_user.id,
+                is_superuser=bool(current_user.is_superuser),
+            ):
+                async with session_scope() as session:
+                    graph = await build_graph_from_db(
+                        flow_id=flow_id,
+                        session=session,
+                        chat_service=chat_service,
+                    )
             run_id = str(uuid.uuid4())
             graph.set_run_id(run_id)
         else:
@@ -570,20 +582,30 @@ async def build_vertex(
             await _clear_invalid_graph_cache(chat_service, flow_id_str)
             raise
         if not isinstance(cache, CacheMiss):
-            await graph.initialize_run()
+            with scoped_model_provider_policy_for_flow(
+                flow,
+                user_id=current_user.id,
+                is_superuser=bool(current_user.is_superuser),
+            ):
+                await graph.initialize_run()
             run_id = graph.run_id
         vertex = graph.get_vertex(vertex_id)
 
         try:
             lock = chat_service.async_cache_locks[flow_id_str]
-            vertex_build_result = await graph.build_vertex(
-                vertex_id=vertex_id,
-                user_id=str(current_user.id),
-                inputs_dict=inputs.model_dump() if inputs else {},
-                files=files,
-                get_cache=chat_service.get_cache,
-                set_cache=chat_service.set_cache,
-            )
+            with scoped_model_provider_policy_for_flow(
+                flow,
+                user_id=current_user.id,
+                is_superuser=bool(current_user.is_superuser),
+            ):
+                vertex_build_result = await graph.build_vertex(
+                    vertex_id=vertex_id,
+                    user_id=str(current_user.id),
+                    inputs_dict=inputs.model_dump() if inputs else {},
+                    files=files,
+                    get_cache=chat_service.get_cache,
+                    set_cache=chat_service.set_cache,
+                )
             result_dict = vertex_build_result.result_dict
             params = vertex_build_result.params
             valid = vertex_build_result.valid
@@ -779,6 +801,24 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
         yield str(StreamData(event="close", data={"message": "Stream closed"}))
 
 
+async def _stream_vertex_with_provider_scope(
+    flow_id: str,
+    vertex_id: str,
+    chat_service: ChatService,
+    graph: Graph | None,
+    flow: Flow,
+    current_user: User,
+):
+    """Retain the trusted flow scope while the response generator is consumed."""
+    with scoped_model_provider_policy_for_flow(
+        flow,
+        user_id=current_user.id,
+        is_superuser=bool(current_user.is_superuser),
+    ):
+        async for event in _stream_vertex(flow_id, vertex_id, chat_service, graph):
+            yield event
+
+
 @router.get(
     "/build/{flow_id}/{vertex_id}/stream",
     response_class=StreamingResponse,
@@ -844,7 +884,14 @@ async def build_vertex_stream(
                 await _clear_invalid_graph_cache(chat_service, str(flow_id))
                 raise
         return StreamingResponse(
-            _stream_vertex(str(flow_id), vertex_id, chat_service, graph),
+            _stream_vertex_with_provider_scope(
+                str(flow_id),
+                vertex_id,
+                chat_service,
+                graph,
+                flow,
+                current_user,
+            ),
             media_type="text/event-stream",
         )
     except HTTPException:
@@ -1019,6 +1066,7 @@ async def build_public_tmp(
             job_id = await start_flow_build(
                 flow_id=new_flow_id,
                 source_flow_id=flow_id,
+                provider_policy_flow=flow,
                 background_tasks=background_tasks,
                 inputs=inputs,
                 # Build from a detached server-sanitized graph. The default path also

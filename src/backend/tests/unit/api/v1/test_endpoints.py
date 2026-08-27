@@ -98,6 +98,66 @@ async def test_simple_run_flow_binds_trusted_required_provider_scope(
     assert captured == [(user.id, expected_attributes)]
 
 
+async def test_build_driver_rebinds_scope_for_reused_graph_execution(monkeypatch):
+    """A warm/session graph never inherits the provider scope from an earlier run."""
+    from langflow.api import build
+    from lfx.services.model_provider_policy import current_model_provider_policy_context
+
+    reused_graph = object()
+    observed = []
+
+    async def _reuse_graph(**_kwargs):
+        observed.append((reused_graph, current_model_provider_policy_context()))
+
+    monkeypatch.setattr(build, "_generate_flow_events", _reuse_graph)
+    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+    first_flow = SimpleNamespace(folder_id=uuid4(), workspace_id=uuid4())
+    second_flow = SimpleNamespace(folder_id=uuid4(), workspace_id=uuid4())
+
+    await build.generate_flow_events(provider_policy_flow=first_flow, current_user=user)
+    await build.generate_flow_events(provider_policy_flow=second_flow, current_user=user)
+
+    assert [graph for graph, _context in observed] == [reused_graph, reused_graph]
+    assert [context.user_id for _graph, context in observed] == [user.id, user.id]
+    assert [context.attributes for _graph, context in observed] == [
+        {
+            "is_superuser": False,
+            "project_id": first_flow.folder_id,
+            "workspace_id": first_flow.workspace_id,
+            "provider_scope_required": True,
+        },
+        {
+            "is_superuser": False,
+            "project_id": second_flow.folder_id,
+            "workspace_id": second_flow.workspace_id,
+            "provider_scope_required": True,
+        },
+    ]
+
+
+async def test_build_driver_marks_missing_provider_scope_as_required(monkeypatch):
+    """An internal caller that omits its stored flow cannot fall back to global policy."""
+    from langflow.api import build
+    from lfx.services.model_provider_policy import current_model_provider_policy_context
+
+    observed = []
+
+    async def _capture_context(**_kwargs):
+        observed.append(current_model_provider_policy_context())
+
+    monkeypatch.setattr(build, "_generate_flow_events", _capture_context)
+    user = SimpleNamespace(id=uuid4(), is_superuser=True)
+
+    await build.generate_flow_events(current_user=user)
+
+    assert len(observed) == 1
+    assert observed[0].user_id == user.id
+    assert observed[0].attributes == {
+        "is_superuser": True,
+        "provider_scope_required": True,
+    }
+
+
 @pytest.mark.parametrize("path", ["api/v1/custom_component", "api/v1/custom_component/update"])
 async def test_catalog_blocks_known_template_before_custom_component_build(
     client: AsyncClient,

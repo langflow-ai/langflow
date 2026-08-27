@@ -1,6 +1,11 @@
 import { useQueryFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
+import {
+  appendProviderScope,
+  type ProviderScopeParams,
+  providerScopeQueryKey,
+} from "../../helpers/provider-scope";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 export interface ModelProviderInfo {
@@ -23,7 +28,7 @@ export interface ModelProviderWithStatus extends ModelProviderInfo {
   icon?: string;
 }
 
-export interface GetModelProvidersParams {
+export interface GetModelProvidersParams extends ProviderScopeParams {
   includeDeprecated?: boolean;
   includeUnsupported?: boolean;
 }
@@ -38,6 +43,7 @@ export const getModelProvidersQueryOptions = (
   if (params?.includeUnsupported) {
     queryParams.append("include_unsupported", "true");
   }
+  appendProviderScope(queryParams, params);
 
   const url = `${getURL("MODELS")}${
     queryParams.toString() ? `?${queryParams.toString()}` : ""
@@ -48,6 +54,7 @@ export const getModelProvidersQueryOptions = (
       "useGetModelProviders",
       params?.includeDeprecated,
       params?.includeUnsupported,
+      ...providerScopeQueryKey(params),
     ] as const,
     queryFn: async (): Promise<ModelProviderWithStatus[]> => {
       const response = await api.get<ModelProviderInfo[]>(url);

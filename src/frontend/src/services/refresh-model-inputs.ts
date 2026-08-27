@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
+import { appendProviderScope } from "@/controllers/API/helpers/provider-scope";
 import {
   getModelProvidersQueryOptions,
   type ModelProviderWithStatus,
@@ -81,7 +82,7 @@ export async function refreshAllModelInputs(
     if (queryClient) {
       try {
         const providers = await queryClient.fetchQuery(
-          getModelProvidersQueryOptions({}),
+          getModelProvidersQueryOptions({ flowId }),
         );
         providerConfiguration = buildProviderConfiguration(providers);
       } catch {
@@ -174,8 +175,12 @@ async function refreshSingleNode(
 
     let response;
     try {
+      const queryParams = new URLSearchParams();
+      appendProviderScope(queryParams, { flowId });
       response = await api.post<APIClassType>(
-        getURL("CUSTOM_COMPONENT", { update: "update" }),
+        `${getURL("CUSTOM_COMPONENT", { update: "update" })}${
+          queryParams.toString() ? `?${queryParams.toString()}` : ""
+        }`,
         {
           code: nodeData.template.code?.value,
           template: requestPayload,

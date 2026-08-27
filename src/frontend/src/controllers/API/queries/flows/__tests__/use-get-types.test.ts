@@ -101,7 +101,7 @@ describe("useGetTypes", () => {
     expect(mockQuery).toHaveBeenCalledWith(
       ["useGetTypes", "flow-one", undefined],
       expect.any(Function),
-      {},
+      { refetchOnWindowFocus: false },
     );
   });
 });

@@ -2,6 +2,11 @@ import { ProviderVariable } from "@/constants/providerConstants";
 import { useQueryFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
+import {
+  appendProviderScope,
+  type ProviderScopeParams,
+  providerScopeQueryKey,
+} from "../../helpers/provider-scope";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 export type ProviderVariablesMapping = Record<string, ProviderVariable[]>;
@@ -21,15 +26,19 @@ export type ProviderVariablesMapping = Record<string, ProviderVariable[]>;
  * }
  */
 export const useGetProviderVariables: useQueryFunctionType<
-  undefined,
+  ProviderScopeParams | undefined,
   ProviderVariablesMapping
-> = (_, options) => {
+> = (params, options) => {
   const { query } = UseRequestProcessor();
 
   const getProviderVariablesFn =
     async (): Promise<ProviderVariablesMapping> => {
       try {
-        const url = `${getURL("MODELS")}/provider-variable-mapping`;
+        const queryParams = new URLSearchParams();
+        appendProviderScope(queryParams, params);
+        const url = `${getURL("MODELS")}/provider-variable-mapping${
+          queryParams.toString() ? `?${queryParams.toString()}` : ""
+        }`;
         const response = await api.get<ProviderVariablesMapping>(url);
         return response.data;
       } catch (error) {
@@ -39,7 +48,7 @@ export const useGetProviderVariables: useQueryFunctionType<
     };
 
   const queryResult = query(
-    ["useGetProviderVariables"],
+    ["useGetProviderVariables", ...providerScopeQueryKey(params)],
     getProviderVariablesFn,
     {
       refetchOnWindowFocus: false,

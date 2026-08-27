@@ -1,13 +1,14 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
+import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import CustomModelProvidersEmptyState from "@/customization/components/custom-model-providers-empty-state";
 import type { ModelTypeFilter } from "@/types/models";
 import ProviderListItem from "./ProviderListItem";
 import { Provider } from "./types";
 
-export interface ProviderListProps {
+export interface ProviderListProps extends ProviderScopeParams {
   modelType: ModelTypeFilter;
   onProviderSelect?: (provider: Provider) => void;
   selectedProviderName?: string | null;
@@ -20,13 +21,15 @@ const ProviderList = ({
   onProviderSelect,
   selectedProviderName,
   query,
+  flowId,
+  projectId,
 }: ProviderListProps) => {
   const { t } = useTranslation();
   const {
     data: rawProviders = [],
     isLoading,
     isFetching,
-  } = useGetModelProviders({ includeDeprecated: true });
+  } = useGetModelProviders({ includeDeprecated: true, flowId, projectId });
 
   const trimmedQuery = (query ?? "").trim().toLowerCase();
 

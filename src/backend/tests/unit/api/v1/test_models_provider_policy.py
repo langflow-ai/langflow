@@ -164,7 +164,10 @@ async def test_provider_descriptors_union_stamped_palette_ids_without_duplicates
     monkeypatch.setattr(models_module, "get_model_providers", lambda: ["OpenAI"])
     monkeypatch.setattr(models_module, "get_and_cache_all_types_dict", AsyncMock(return_value=palette))
 
-    descriptors = await models_module.list_model_provider_descriptors(SimpleNamespace(id="user-1"))
+    descriptors = await models_module.list_model_provider_descriptors(
+        SimpleNamespace(id="user-1"),
+        {"is_superuser": False},
+    )
 
     assert [descriptor.model_dump() for descriptor in descriptors] == [
         {"provider_id": "mistral", "display_name": "Mistral", "provider": "mistral"},

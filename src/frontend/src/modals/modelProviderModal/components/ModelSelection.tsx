@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 
 import { Model } from "@/modals/modelProviderModal/components/types";
@@ -20,7 +21,7 @@ export const hasProviderOwnedEmptyState = (providerName?: string): boolean =>
   (CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName) ||
     providerName.toLowerCase() === "ollama");
 
-export interface ModelProviderSelectionProps {
+export interface ModelProviderSelectionProps extends ProviderScopeParams {
   availableModels: Model[];
   onModelToggle: (
     modelName: string,
@@ -200,9 +201,14 @@ const ModelSelection = ({
   isEnabledModel,
   liveDiscovery,
   isConfigured,
+  flowId,
+  projectId,
 }: ModelProviderSelectionProps) => {
   const { t } = useTranslation();
-  const { data: enabledModelsData } = useGetEnabledModels();
+  const { data: enabledModelsData } = useGetEnabledModels({
+    flowId,
+    projectId,
+  });
   const [modelQuery, setModelQuery] = useState<string>("");
   const [showDeprecated, setShowDeprecated] = useState<boolean>(false);
 

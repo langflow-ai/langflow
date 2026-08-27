@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 
 interface FilteredProvider {
   provider: string;
@@ -15,8 +16,13 @@ interface UseEnabledModelsReturn {
 }
 
 export function useEnabledModels(): UseEnabledModelsReturn {
-  const { data: providersData = [], isLoading } = useGetModelProviders({});
-  const { data: enabledModelsData } = useGetEnabledModels();
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const { data: providersData = [], isLoading } = useGetModelProviders({
+    flowId: currentFlowId,
+  });
+  const { data: enabledModelsData } = useGetEnabledModels({
+    flowId: currentFlowId,
+  });
 
   const filteredProviders = useMemo(() => {
     const enabledModels = enabledModelsData?.enabled_models || {};

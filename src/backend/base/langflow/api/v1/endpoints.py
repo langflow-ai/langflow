@@ -63,6 +63,11 @@ from langflow.api.v1.custom_component_policy import (
 )
 from langflow.api.v1.files import get_flow
 from langflow.api.v1.global_variable_defaults import apply_global_variable_defaults
+from langflow.api.v1.model_provider_policy_scope import (
+    ProviderPolicyAttributesDependency,
+    provider_policy_attributes_for_flow,
+    scoped_model_provider_policy_for_flow,
+)
 from langflow.api.v1.run_validation import raise_if_hitl_unsupported
 from langflow.api.v1.schemas import (
     ConfigResponse,
@@ -228,7 +233,13 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
 
 
 @router.get("/all")
-async def get_all(request: Request, current_user: CurrentActiveUser, *, include_blocked: bool = False):
+async def get_all(
+    request: Request,
+    current_user: CurrentActiveUser,
+    provider_policy_attributes: ProviderPolicyAttributesDependency,
+    *,
+    include_blocked: bool = False,
+):
     """Retrieve all component types with compression for better performance.
 
     Returns a compressed response containing all available component types,
@@ -250,7 +261,7 @@ async def get_all(request: Request, current_user: CurrentActiveUser, *, include_
         visible_types_en = _filter_component_palette_by_provider_policy(
             all_types_en,
             user_id=current_user.id,
-            attributes={"is_superuser": bool(current_user.is_superuser)},
+            attributes=provider_policy_attributes,
         )
         if not include_blocked:
             visible_types_en = _filter_component_palette_by_catalog_policy(
@@ -382,7 +393,11 @@ async def simple_run_flow(
     validate_input_and_tweaks(input_request)
     policy_context_token = set_current_model_provider_policy_context(
         user_id=getattr(api_key_user, "id", None),
-        attributes={"is_superuser": bool(getattr(api_key_user, "is_superuser", False))},
+        attributes=provider_policy_attributes_for_flow(
+            flow,
+            is_superuser=bool(getattr(api_key_user, "is_superuser", False)),
+            required=True,
+        ),
     )
     try:
         task_result: list[RunOutputs] = []
@@ -1535,12 +1550,17 @@ async def experimental_run_flow(
             graph_data = deepcopy(sanitized_flow_data if sanitized_flow_data is not None else flow.data)
             graph_data = process_tweaks(graph_data, tweaks or {})
             raise_if_hitl_unsupported(graph_data)
-            graph = Graph.from_payload(
-                graph_data,
-                flow_id=flow_id_str,
-                user_id=str(api_key_user.id),
-                flow_name=flow.name,
-            )
+            with scoped_model_provider_policy_for_flow(
+                flow,
+                user_id=api_key_user.id,
+                is_superuser=bool(getattr(api_key_user, "is_superuser", False)),
+            ):
+                graph = Graph.from_payload(
+                    graph_data,
+                    flow_id=flow_id_str,
+                    user_id=str(api_key_user.id),
+                    flow_name=flow.name,
+                )
         except CustomComponentValidationError as exc:
             await logger.aexception("Advanced-run flow validation failed for flow %s", flow.id)
             http_error = HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
@@ -1569,7 +1589,14 @@ async def experimental_run_flow(
     await release_db_transaction(session)
 
     try:
-        with execution_protocol("v1.advanced"):
+        with (
+            scoped_model_provider_policy_for_flow(
+                flow,
+                user_id=api_key_user.id,
+                is_superuser=bool(getattr(api_key_user, "is_superuser", False)),
+            ),
+            execution_protocol("v1.advanced"),
+        ):
             task_result, session_id = await run_graph_internal(
                 graph=graph,
                 flow_id=flow_id_str,
@@ -1705,6 +1732,7 @@ async def custom_component(
     raw_code: CustomComponentRequest,
     user: CurrentActiveUser,
     request: Request,
+    provider_policy_attributes: ProviderPolicyAttributesDependency,
 ) -> CustomComponentResponse:
     # Building a custom component instantiates (and partially executes) posted
     # code. That is a create/write-class action, so enforce the external access
@@ -1731,21 +1759,31 @@ async def custom_component(
         admin_only_detail="Custom component creation is restricted to administrators",
     )
 
-    component = Component(_code=effective_code)
+    policy_context_token = set_current_model_provider_policy_context(
+        user_id=user.id,
+        attributes=provider_policy_attributes,
+    )
+    try:
+        component = Component(_code=effective_code)
 
-    built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
-    type_ = get_instance_name(component_instance)
-    enforce_catalog_policy_for_component_type(type_, snapshot=catalog_policy_snapshot)
-    if raw_code.frontend_node is not None:
-        built_frontend_node = await component_instance.update_frontend_node(built_frontend_node, raw_code.frontend_node)
+        built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
+        type_ = get_instance_name(component_instance)
+        enforce_catalog_policy_for_component_type(type_, snapshot=catalog_policy_snapshot)
+        if raw_code.frontend_node is not None:
+            built_frontend_node = await component_instance.update_frontend_node(
+                built_frontend_node,
+                raw_code.frontend_node,
+            )
 
-    tool_mode: bool = built_frontend_node.get("tool_mode", False)
-    if isinstance(component_instance, Component):
-        await component_instance.run_and_validate_update_outputs(
-            frontend_node=built_frontend_node,
-            field_name="tool_mode",
-            field_value=tool_mode,
-        )
+        tool_mode: bool = built_frontend_node.get("tool_mode", False)
+        if isinstance(component_instance, Component):
+            await component_instance.run_and_validate_update_outputs(
+                frontend_node=built_frontend_node,
+                field_name="tool_mode",
+                field_value=tool_mode,
+            )
+    finally:
+        reset_current_model_provider_policy_context(policy_context_token)
     locale = getattr(request.state, "locale", "en")
     if locale != "en":
         from langflow.utils.i18n import translate_component_node
@@ -1762,6 +1800,7 @@ async def custom_component_update(
     code_request: UpdateCustomComponentRequest,
     user: CurrentActiveUser,
     request: Request,
+    provider_policy_attributes: ProviderPolicyAttributesDependency,
 ):
     """Update an existing custom component with new code and configuration.
 
@@ -1797,7 +1836,7 @@ async def custom_component_update(
 
     policy_context_token = set_current_model_provider_policy_context(
         user_id=user.id,
-        attributes={"is_superuser": bool(user.is_superuser)},
+        attributes=provider_policy_attributes,
     )
     try:
         component = Component(_code=effective_code)

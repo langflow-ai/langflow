@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ModelProviderModal from "@/modals/modelProviderModal";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "@/utils/utils";
 import type { AssistantModel } from "../assistant-panel.types";
 import { classifyModelStrength } from "../helpers/model-strength";
@@ -30,6 +31,7 @@ export function ModelSelector({
   const [isOpen, setIsOpen] = useState(false);
   const [isManageProvidersOpen, setIsManageProvidersOpen] = useState(false);
   const { filteredProviders: enabledProviders, isLoading } = useEnabledModels();
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const { refresh: refreshAllModelInputs } = useRefreshModelInputs();
 
   const handleRefreshList = async () => {
@@ -271,6 +273,7 @@ export function ModelSelector({
           open={isManageProvidersOpen}
           onClose={() => setIsManageProvidersOpen(false)}
           modelType="llm"
+          flowId={currentFlowId}
         />
       )}
     </div>

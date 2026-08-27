@@ -60,7 +60,10 @@ def _capturing_resolver(captured: dict):
     """
 
     async def resolve(_request, _user_id, session):
+        from lfx.services.model_provider_policy import current_model_provider_policy_context
+
         captured["session"] = session
+        captured["provider_policy_preflight"] = current_model_provider_policy_context()
         assert session.in_transaction(), "precondition: the auth/context reads must have opened a transaction"
         return _ctx_stub()
 
@@ -87,6 +90,7 @@ async def test_assist_releases_transaction_before_model_run(client: AsyncClient,
 
     assert response.status_code == 200, response.text
     assert captured["in_transaction"] is False, "the request transaction must be committed before the model run"
+    assert captured["provider_policy_preflight"].attributes["provider_scope_required"] is True
 
 
 @pytest.mark.usefixtures("_agentic_enabled")
@@ -97,9 +101,12 @@ async def test_assist_stream_releases_transaction_before_streaming(
 
     def fake_stream(**_kwargs):
         async def gen():
+            from lfx.services.model_provider_policy import current_model_provider_policy_context
+
             # Runs while the SSE body is streaming — after the handler returned
             # but before FastAPI tears down the session dependency.
             captured["in_transaction"] = captured["session"].in_transaction()
+            captured["provider_policy_stream"] = current_model_provider_policy_context()
             yield 'data: {"event": "complete", "data": {"result": "ok"}}\n\n'
 
         return gen()
@@ -116,6 +123,8 @@ async def test_assist_stream_releases_transaction_before_streaming(
 
     assert response.status_code == 200, response.text
     assert captured["in_transaction"] is False, "the request transaction must not span the assistant's SSE stream"
+    assert captured["provider_policy_preflight"].attributes["provider_scope_required"] is True
+    assert captured["provider_policy_stream"].attributes["provider_scope_required"] is True
 
 
 @pytest.mark.usefixtures("_agentic_enabled")
