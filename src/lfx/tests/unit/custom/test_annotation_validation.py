@@ -6,6 +6,7 @@ from types import ModuleType
 from typing import TypeVar, get_args
 
 import pytest
+from lfx.components.processing.output_parser import OutputParserComponent
 from lfx.custom.annotation_validation import (
     UnsafeReturnAnnotationError,
     is_safe_return_annotation,
@@ -15,6 +16,7 @@ from lfx.custom.annotation_validation import (
 )
 from lfx.custom.code_parser.code_parser import CodeParser
 from lfx.custom.eval import eval_custom_component_code
+from lfx.field_typing.constants import OutputParser
 from lfx.helpers.custom import format_type
 from lfx.schema import Data
 from lfx.type_extraction import post_process_type
@@ -213,6 +215,38 @@ def test_format_type_preserves_trusted_typevar_name() -> None:
     ProviderType = TypeVar("ProviderType")
 
     assert format_type(ProviderType) == "ProviderType"
+
+
+def test_callable_resolver_preserves_server_owned_output_parser_typevar() -> None:
+    return_type = resolve_callable_return_annotation(OutputParserComponent.build_parser)
+
+    assert return_type is OutputParser
+    assert format_type(return_type) == "OutputParser"
+
+
+def test_static_resolvers_preserve_server_owned_output_parser_typevar() -> None:
+    node = ast.parse("def build() -> OutputParser:\n    pass\n").body[0]
+    assert isinstance(node, ast.FunctionDef)
+
+    assert resolve_type_annotation("OutputParser") is OutputParser
+    return_type = CodeParser("").parse_callable_details(node)["return_type"]
+    assert return_type is OutputParser
+    assert format_type(return_type) == "OutputParser"
+
+
+def test_output_parser_frontend_metadata_preserves_output_type() -> None:
+    node = OutputParserComponent().to_frontend_node()["data"]["node"]
+    output = next(output for output in node["outputs"] if output["name"] == "output_parser")
+
+    assert output["types"] == ["OutputParser"]
+    assert output["selected"] == "OutputParser"
+    assert "OutputParser" in node["base_classes"]
+
+
+def test_runtime_resolver_does_not_trust_user_output_parser_typevar() -> None:
+    user_output_parser = TypeVar("OutputParser")  # noqa: PLC0132 - intentionally spoofs the trusted name
+
+    assert resolve_type_annotation("OutputParser", globalns={"OutputParser": user_output_parser}) is None
 
 
 def test_format_type_preserves_generic_alias_origin_name() -> None:

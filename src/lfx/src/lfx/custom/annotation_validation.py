@@ -130,12 +130,13 @@ def validate_return_annotations(tree: ast.AST) -> None:
 @lru_cache(maxsize=1)
 def _safe_type_bindings() -> dict[str, Any]:
     """Return server-owned type objects that static annotation resolution may use."""
-    from lfx.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
+    from lfx.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, OutputParser
     from lfx.schema.message import Message
 
     bindings = {name: value for name, value in vars(builtins).items() if isinstance(value, type)}
     bindings.update(CUSTOM_COMPONENT_SUPPORTED_TYPES)
     bindings["Message"] = Message
+    bindings["OutputParser"] = OutputParser
     for name in (
         "Annotated",
         "Any",
