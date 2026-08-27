@@ -1,27 +1,31 @@
+import { renderHook, waitFor } from "@testing-library/react";
+import { useEffect, useState } from "react";
+
 const mockApiGet = jest.fn();
-const mockSetTypes = jest.fn();
+const mockActivateScope = jest.fn();
+const mockSetScopedTypes = jest.fn(() => true);
 const mockRecomputeComponentsToUpdateIfNeeded = jest.fn();
-const mockQuery = jest.fn((_key, fn, _options) => {
-  const result = {
-    data: null,
-    isLoading: false,
-    error: null,
-  };
-  fn()
-    .then((data: unknown) => {
-      result.data = data;
-    })
-    .catch((error: unknown) => {
-      result.error = error;
-    });
-  return result;
+const mockQuery = jest.fn((key, fn, _options) => {
+  const [data, setData] = useState<unknown>();
+  const keyString = JSON.stringify(key);
+  useEffect(() => {
+    void fn().then(setData);
+  }, [keyString]);
+  return { data, isLoading: data === undefined, error: null };
 });
 
 const mockUseTypesStore = Object.assign(
-  jest.fn((selector: (state: { setTypes: typeof mockSetTypes }) => unknown) =>
-    selector({
-      setTypes: mockSetTypes,
-    }),
+  jest.fn(
+    (
+      selector: (state: {
+        activateScope: typeof mockActivateScope;
+        setScopedTypes: typeof mockSetScopedTypes;
+      }) => unknown,
+    ) =>
+      selector({
+        activateScope: mockActivateScope,
+        setScopedTypes: mockSetScopedTypes,
+      }),
   ),
   {
     getState: () => ({
@@ -81,19 +85,23 @@ describe("useGetTypes", () => {
     };
     mockApiGet.mockResolvedValue({ data: responseData });
 
-    useGetTypes();
-    await Promise.resolve();
-    await Promise.resolve();
+    renderHook(() => useGetTypes());
 
-    expect(mockSetTypes).toHaveBeenCalledWith(responseData);
-    expect(mockRecomputeComponentsToUpdateIfNeeded).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(mockSetScopedTypes).toHaveBeenCalledWith(
+        "global",
+        responseData,
+        {},
+      ),
+    );
+    expect(mockRecomputeComponentsToUpdateIfNeeded).toHaveBeenCalled();
   });
 
   it("scopes the palette request and cache key by flow", async () => {
     mockApiGet.mockResolvedValue({ data: {} });
 
-    useGetTypes({ flowId: "flow-one" });
-    await Promise.resolve();
+    renderHook(() => useGetTypes({ flowId: "flow-one" }));
+    await waitFor(() => expect(mockApiGet).toHaveBeenCalled());
 
     expect(mockApiGet).toHaveBeenCalledWith(
       "/api/v1/all?force_refresh=true&flow_id=flow-one",
@@ -101,7 +109,10 @@ describe("useGetTypes", () => {
     expect(mockQuery).toHaveBeenCalledWith(
       ["useGetTypes", "flow-one", undefined],
       expect.any(Function),
-      { refetchOnWindowFocus: false },
+      {
+        refetchOnWindowFocus: false,
+        staleTime: Number.POSITIVE_INFINITY,
+      },
     );
   });
 });

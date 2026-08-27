@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
 import {
   useDeleteGlobalVariables,
   useGetGlobalVariables,
@@ -11,23 +12,25 @@ import { cn } from "@/utils/utils";
 interface GlobalVariableDeleteConfirmationProps {
   option: string;
   onConfirmDelete: () => void;
+  providerScope?: ProviderScopeParams;
 }
 
 const GlobalVariableDeleteConfirmation = ({
   option,
   onConfirmDelete,
+  providerScope,
 }: GlobalVariableDeleteConfirmationProps) => {
   const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { mutate: mutateDeleteGlobalVariable } = useDeleteGlobalVariables();
-  const { data: globalVariables } = useGetGlobalVariables();
+  const { data: globalVariables } = useGetGlobalVariables(providerScope);
 
   async function handleDelete(key: string) {
     if (!globalVariables) return;
     const id = globalVariables.find((variable) => variable.name === key)?.id;
     if (id !== undefined) {
       mutateDeleteGlobalVariable(
-        { id },
+        { id, ...(providerScope ?? {}) },
         {
           onSuccess: () => {
             onConfirmDelete();

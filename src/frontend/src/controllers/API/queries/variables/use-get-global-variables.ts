@@ -1,33 +1,42 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import useAuthStore from "@/stores/authStore";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
-import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
 import type { useQueryFunctionType } from "@/types/api";
 import type { GlobalVariable } from "@/types/global_variables";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
-import { appendProviderScope } from "../../helpers/provider-scope";
+import {
+  appendProviderScope,
+  type ProviderScopeParams,
+  providerScopeQueryKey,
+} from "../../helpers/provider-scope";
 import { UseRequestProcessor } from "../../services/request-processor";
+
+interface GetGlobalVariablesOptions extends ProviderScopeParams {
+  mirrorToStore?: boolean;
+}
+
+export const getGlobalVariablesQueryKey = (scope?: ProviderScopeParams) =>
+  ["useGetGlobalVariables", ...providerScopeQueryKey(scope)] as const;
 
 export const useGetGlobalVariables: useQueryFunctionType<
   undefined,
   GlobalVariable[],
-  { flowId?: string; projectId?: string }
+  GetGlobalVariablesOptions
 > = (options?) => {
   const { query } = UseRequestProcessor();
 
-  const setGlobalVariablesEntries = useGlobalVariablesStore(
-    (state) => state.setGlobalVariablesEntries,
-  );
-  const setUnavailableFields = useGlobalVariablesStore(
-    (state) => state.setUnavailableFields,
-  );
-  const setGlobalVariablesEntities = useGlobalVariablesStore(
-    (state) => state.setGlobalVariablesEntities,
+  const setGlobalVariables = useGlobalVariablesStore(
+    (state) => state.setGlobalVariables,
   );
 
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const { flowId, projectId, ...queryOptions } = options ?? {};
+  const {
+    flowId,
+    projectId,
+    mirrorToStore = false,
+    ...queryOptions
+  } = options ?? {};
 
   const getGlobalVariablesFn = async (): Promise<GlobalVariable[]> => {
     if (!isAuthenticated) return [];
@@ -38,14 +47,14 @@ export const useGetGlobalVariables: useQueryFunctionType<
         queryParams.toString() ? `?${queryParams.toString()}` : ""
       }`,
     );
-    setGlobalVariablesEntries(res.data.map((entry) => entry.name));
-    setUnavailableFields(getUnavailableFields(res.data));
-    setGlobalVariablesEntities(res.data);
+    if (mirrorToStore && !flowId && !projectId) {
+      setGlobalVariables(res.data);
+    }
     return res.data;
   };
 
   const queryResult: UseQueryResult<GlobalVariable[], Error> = query(
-    ["useGetGlobalVariables", flowId, projectId],
+    getGlobalVariablesQueryKey({ flowId, projectId }),
     getGlobalVariablesFn,
     {
       refetchOnWindowFocus: false,

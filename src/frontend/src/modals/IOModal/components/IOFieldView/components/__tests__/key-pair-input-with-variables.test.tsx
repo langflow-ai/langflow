@@ -2,20 +2,29 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import IOKeyPairInputWithVariables from "../key-pair-input-with-variables";
 
+const mockUseGetGlobalVariables = jest.fn((_options?: unknown) => ({
+  data: [
+    { name: "API_KEY_1", type: "CREDENTIAL" },
+    { name: "API_KEY_2", type: "GENERIC" },
+    { name: "TOKEN", type: "CREDENTIAL" },
+  ],
+  isLoading: false,
+}));
+
 // Mock the useGetGlobalVariables hook
 jest.mock(
   "@/controllers/API/queries/variables/use-get-global-variables",
   () => ({
-    useGetGlobalVariables: jest.fn(() => ({
-      data: [
-        { name: "API_KEY_1", type: "CREDENTIAL" },
-        { name: "API_KEY_2", type: "GENERIC" },
-        { name: "TOKEN", type: "CREDENTIAL" },
-      ],
-      isLoading: false,
-    })),
+    useGetGlobalVariables: (options?: unknown) =>
+      mockUseGetGlobalVariables(options),
   }),
 );
+
+jest.mock("@/stores/flowsManagerStore", () => ({
+  __esModule: true,
+  default: (selector: (state: { currentFlowId: string }) => unknown) =>
+    selector({ currentFlowId: "flow-project-a" }),
+}));
 
 // Mock nanoid
 jest.mock("nanoid", () => ({
@@ -125,6 +134,10 @@ describe("IOKeyPairInputWithVariables", () => {
 
     const keyInputs = screen.getAllByPlaceholderText("Type key...");
     expect(keyInputs).toHaveLength(1);
+    expect(mockUseGetGlobalVariables).toHaveBeenCalledWith({
+      flowId: "flow-project-a",
+      enabled: true,
+    });
   });
 
   it("renders with existing key-value pairs", () => {
@@ -136,11 +149,11 @@ describe("IOKeyPairInputWithVariables", () => {
       ],
     };
 
-    render(<IOKeyPairInputWithVariables {...defaultProps} />, {
+    render(<IOKeyPairInputWithVariables {...props} />, {
       wrapper: createWrapper(),
     });
 
-    expect(screen.getAllByPlaceholderText("Type key...")).toHaveLength(1);
+    expect(screen.getAllByPlaceholderText("Type key...")).toHaveLength(2);
   });
 
   it("calls onChange when key input changes", () => {

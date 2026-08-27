@@ -3,12 +3,21 @@ import { MemoryRouter } from "react-router-dom";
 import { axe } from "@/utils/a11y-test";
 import DBProviderInputComponent, { DBProviderInput } from "..";
 
+const mockUseGetGlobalVariables = jest.fn((_options?: unknown) => ({
+  data: [],
+  isFetched: true,
+  isFetching: false,
+}));
+
 jest.mock("@/controllers/API/queries/variables", () => ({
-  useGetGlobalVariables: () => ({
-    data: [],
-    isFetched: true,
-    isFetching: false,
-  }),
+  useGetGlobalVariables: (options?: unknown) =>
+    mockUseGetGlobalVariables(options),
+}));
+
+jest.mock("@/stores/flowsManagerStore", () => ({
+  __esModule: true,
+  default: (selector: (state: { currentFlowId: string }) => unknown) =>
+    selector({ currentFlowId: "flow-project-a" }),
 }));
 
 const baseProps = {
@@ -107,5 +116,9 @@ describe("DBProviderInputComponent", () => {
     expect(
       screen.getByRole("combobox", { name: "Knowledge Base" }),
     ).toBeInTheDocument();
+    expect(mockUseGetGlobalVariables).toHaveBeenCalledWith({
+      flowId: "flow-project-a",
+      enabled: true,
+    });
   });
 });

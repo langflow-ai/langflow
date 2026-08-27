@@ -14,7 +14,6 @@ import { customUseStartConversation } from "@/customization/hooks/use-custom-sta
 import { customUseStartRecording } from "@/customization/hooks/use-custom-start-recording";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
-import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
@@ -83,27 +82,26 @@ export function VoiceAssistant({
   const clearEdgesRunningByNodes = useFlowStore(
     (state) => state.clearEdgesRunningByNodes,
   );
-  const variables = useGlobalVariablesStore(
-    (state) => state.globalVariablesEntries,
-  );
   const createVariable = usePostGlobalVariables();
   const updateVariable = usePatchGlobalVariables();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const currentSessionId = useUtilityStore((state) => state.currentSessionId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const { data: globalVariables } = useGetGlobalVariables();
+  const { data: globalVariables } = useGetGlobalVariables({ flowId });
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const currentFlowId = currentFlow?.id;
 
   const hasOpenAIAPIKey = useMemo(() => {
-    return (
-      variables?.find((variable) => variable === "OPENAI_API_KEY")?.length! > 0
+    return Boolean(
+      globalVariables?.some((variable) => variable.name === "OPENAI_API_KEY"),
     );
-  }, [variables, open, addKey]);
+  }, [globalVariables, addKey]);
 
   const openaiApiKey = useMemo(() => {
-    return variables?.find((variable) => variable === "OPENAI_API_KEY");
-  }, [variables, addKey]);
+    return globalVariables?.find(
+      (variable) => variable.name === "OPENAI_API_KEY",
+    )?.name;
+  }, [globalVariables, addKey]);
 
   const openaiApiKeyGlobalVariable = useMemo(() => {
     return globalVariables?.find(
@@ -119,7 +117,7 @@ export function VoiceAssistant({
 
   const hasElevenLabsApiKeyEnv = useMemo(() => {
     return Boolean(import.meta?.env?.ELEVENLABS_API_KEY);
-  }, [variables, addKey]);
+  }, [globalVariables, addKey]);
 
   useEffect(() => {
     if (!isRecording && hasOpenAIAPIKey && !showSettingsModal) {
@@ -249,6 +247,7 @@ export function VoiceAssistant({
           id: elevenLabsKey
             ? elevenLabsApiKeyGlobalVariable?.id!
             : openaiApiKeyGlobalVariable?.id!,
+          flowId,
         },
         {
           onSuccess: () => {
@@ -269,6 +268,7 @@ export function VoiceAssistant({
         value: apiKey,
         type: "secret",
         default_fields: ["voice_mode"],
+        flowId,
       },
       {
         onSuccess: () => {
@@ -434,6 +434,7 @@ export function VoiceAssistant({
 
           <div>
             <SettingsVoiceModal
+              flowId={flowId}
               userOpenaiApiKey={openaiApiKey}
               userElevenLabsApiKey={elevenLabsApiKeyGlobalVariable?.name}
               hasElevenLabsApiKeyEnv={hasElevenLabsApiKeyEnv}

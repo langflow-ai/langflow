@@ -1,3 +1,4 @@
+import { useLayoutEffect } from "react";
 import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
 import {
   recomputeComponentsToUpdateIfNeeded,
@@ -12,8 +13,16 @@ import type {
 } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
-import { appendProviderScope } from "../../helpers/provider-scope";
+import {
+  appendProviderScope,
+  providerScopeStoreKey,
+} from "../../helpers/provider-scope";
 import { UseRequestProcessor } from "../../services/request-processor";
+
+const displayNamesByPalette = new WeakMap<
+  APIObjectType,
+  ComponentDisplayNamesType
+>();
 
 export const useGetTypes: useQueryFunctionType<
   undefined,
@@ -22,21 +31,18 @@ export const useGetTypes: useQueryFunctionType<
 > = (options) => {
   const { query } = UseRequestProcessor();
   const setLoading = useFlowsManagerStore((state) => state.setIsLoading);
-  const setTypes = useTypesStore((state) => state.setTypes);
-  const setComponentDisplayNames = useTypesStore(
-    (state) => state.setComponentDisplayNames,
-  );
-  const { flowId, projectId, ...queryOptions } = options ?? {};
+  const activateScope = useTypesStore((state) => state.activateScope);
+  const setScopedTypes = useTypesStore((state) => state.setScopedTypes);
+  const {
+    flowId,
+    projectId,
+    checkCache: _checkCache,
+    ...queryOptions
+  } = options ?? {};
+  const scopeKey = providerScopeStoreKey({ flowId, projectId });
 
-  const getTypesFn = async (checkCache = false) => {
+  const getTypesFn = async () => {
     try {
-      if (checkCache) {
-        const data = useTypesStore.getState().types;
-        if (data && Object.keys(data).length > 0) {
-          return data;
-        }
-      }
-
       const queryParams = new URLSearchParams({ force_refresh: "true" });
       appendProviderScope(queryParams, { flowId, projectId });
       const response = await api.get<APIObjectType>(
@@ -54,12 +60,7 @@ export const useGetTypes: useQueryFunctionType<
         delete data.knowledge_bases;
       }
 
-      if (componentDisplayNames) {
-        setComponentDisplayNames(componentDisplayNames);
-      }
-      setTypes(data);
-      syncNodeTranslations();
-      recomputeComponentsToUpdateIfNeeded();
+      displayNamesByPalette.set(data, componentDisplayNames ?? {});
       return data;
     } catch (error) {
       console.error("[Types] Error fetching types:", error);
@@ -68,14 +69,26 @@ export const useGetTypes: useQueryFunctionType<
     }
   };
 
-  const queryResult = query(
-    ["useGetTypes", flowId, projectId],
-    () => getTypesFn(options?.checkCache),
-    {
-      refetchOnWindowFocus: false,
-      ...queryOptions,
-    },
-  );
+  const queryResult = query(["useGetTypes", flowId, projectId], getTypesFn, {
+    refetchOnWindowFocus: false,
+    staleTime: Number.POSITIVE_INFINITY,
+    ...queryOptions,
+  });
+
+  useLayoutEffect(() => {
+    activateScope(scopeKey);
+    if (
+      queryResult.data &&
+      setScopedTypes(
+        scopeKey,
+        queryResult.data,
+        displayNamesByPalette.get(queryResult.data) ?? {},
+      )
+    ) {
+      syncNodeTranslations();
+      recomputeComponentsToUpdateIfNeeded();
+    }
+  }, [activateScope, queryResult.data, scopeKey, setScopedTypes]);
 
   return queryResult;
 };

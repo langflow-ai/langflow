@@ -24,6 +24,7 @@ import {
   resolveUIBackendType,
 } from "@/constants/dbProviderConstants";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { GlobalVariable } from "@/types/global_variables";
 import { cn } from "@/utils/utils";
@@ -68,11 +69,15 @@ export default function DBProviderInputComponent({
   handleOnNewValue,
   ariaLabelledBy,
 }: BaseInputProps<DBProviderSelection | AvailableDBProviderId>) {
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const {
     data: globalVariables = [],
     isFetched,
     isFetching,
-  } = useGetGlobalVariables();
+  } = useGetGlobalVariables({
+    flowId: currentFlowId || undefined,
+    enabled: Boolean(currentFlowId),
+  });
   const localVectorStoreAvailable = useUtilityStore(
     (state) => state.localVectorStoreAvailable,
   );

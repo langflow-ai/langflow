@@ -2,7 +2,7 @@ const mockPostMutateAsync = jest.fn();
 const mockPostMutate = jest.fn();
 const mockPatchMutateAsync = jest.fn();
 const mockPatchMutate = jest.fn();
-const mockUseGetGlobalVariablesHook = jest.fn(() => ({
+const mockUseGetGlobalVariablesHook = jest.fn((_options?: unknown) => ({
   data: mockGlobalVariables,
 }));
 
@@ -17,8 +17,8 @@ let mockGlobalVariables:
   | undefined;
 
 jest.mock("../use-get-global-variables", () => ({
-  useGetGlobalVariables: (...args: unknown[]) =>
-    mockUseGetGlobalVariablesHook(...args),
+  useGetGlobalVariables: (options?: unknown) =>
+    mockUseGetGlobalVariablesHook(options),
 }));
 
 jest.mock("../use-post-global-variables", () => ({
@@ -259,10 +259,19 @@ describe("useGlobalVariableUpsert", () => {
   });
 
   describe("passthroughs", () => {
-    it("exposes the patch mutate as updateGlobalVariable for the edit path", () => {
+    it("forwards updateGlobalVariable to patch without adding scope", () => {
+      const options = { onSuccess: jest.fn() };
       const { result } = renderHook(() => useGlobalVariableUpsert());
 
-      expect(result.current.updateGlobalVariable).toBe(mockPatchMutate);
+      result.current.updateGlobalVariable(
+        { id: "var-1", name: "MY_VAR" },
+        options,
+      );
+
+      expect(mockPatchMutate).toHaveBeenCalledWith(
+        { id: "var-1", name: "MY_VAR" },
+        options,
+      );
     });
   });
 
@@ -276,7 +285,7 @@ describe("useGlobalVariableUpsert", () => {
       });
 
       const { result } = renderHook(() =>
-        useGlobalVariableUpsert(providerScope as never),
+        useGlobalVariableUpsert(providerScope),
       );
       await act(async () => {
         await result.current.upsertGlobalVariable({
@@ -297,7 +306,7 @@ describe("useGlobalVariableUpsert", () => {
       mockPatchMutateAsync.mockResolvedValue({ name: "PROJECT_KEY" });
 
       const { result } = renderHook(() =>
-        useGlobalVariableUpsert(providerScope as never),
+        useGlobalVariableUpsert(providerScope),
       );
       await act(async () => {
         await result.current.upsertGlobalVariable({
@@ -316,7 +325,7 @@ describe("useGlobalVariableUpsert", () => {
     it("binds the trusted flow scope to edit-path updates", () => {
       const options = { onSuccess: jest.fn() };
       const { result } = renderHook(() =>
-        useGlobalVariableUpsert(providerScope as never),
+        useGlobalVariableUpsert(providerScope),
       );
 
       result.current.updateGlobalVariable(

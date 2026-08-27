@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
-import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
+import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
 import type { GlobalVariable } from "./types";
 
 // Custom hook for managing global variable value existence
@@ -18,9 +18,11 @@ export const useGlobalVariableValue = (
 export const useUnavailableField = (
   displayName: string | undefined,
   value: string,
+  globalVariables: GlobalVariable[],
 ) => {
-  const unavailableFields = useGlobalVariablesStore(
-    (state) => state.unavailableFields,
+  const unavailableFields = useMemo(
+    () => getUnavailableFields(globalVariables),
+    [globalVariables],
   );
 
   return useMemo(() => {

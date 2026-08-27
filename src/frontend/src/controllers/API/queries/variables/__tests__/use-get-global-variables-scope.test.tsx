@@ -44,6 +44,16 @@ const makeWrapper = (queryClient: QueryClient) =>
   };
 
 describe("useGetGlobalVariables store isolation", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useAuthStore.setState({ isAuthenticated: true });
+    useGlobalVariablesStore.setState({
+      globalVariablesEntries: undefined,
+      globalVariablesEntities: undefined,
+      unavailableFields: {},
+    });
+  });
+
   it("keeps the explicitly mirrored global snapshot when a scoped request settles later", async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
@@ -57,16 +67,9 @@ describe("useGetGlobalVariables store isolation", () => {
         ? flowRequest.promise
         : globalRequest.promise,
     );
-    useAuthStore.setState({ isAuthenticated: true });
-    useGlobalVariablesStore.setState({
-      globalVariablesEntries: undefined,
-      globalVariablesEntities: undefined,
-      unavailableFields: {},
-    });
-
     renderHook(
       () => {
-        useGetGlobalVariables({ mirrorToStore: true } as never);
+        useGetGlobalVariables({ mirrorToStore: true });
         useGetGlobalVariables({ flowId: "flow-a" });
       },
       { wrapper: makeWrapper(queryClient) },
@@ -96,4 +99,57 @@ describe("useGetGlobalVariables store isolation", () => {
     expect(state.unavailableFields).toEqual({ System: "GLOBAL_KEY" });
     queryClient.clear();
   });
+
+  it("keeps A, B, and global responses in separate query entries", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const flowA = [variable("a-id", "FLOW_A_KEY", "A Field")];
+    const flowB = [variable("b-id", "FLOW_B_KEY", "B Field")];
+    const global = [variable("global-id", "GLOBAL_KEY", "System")];
+    mockApiGet.mockImplementation((url: string) => {
+      if (url.includes("flow_id=flow-a"))
+        return Promise.resolve({ data: flowA });
+      if (url.includes("flow_id=flow-b"))
+        return Promise.resolve({ data: flowB });
+      return Promise.resolve({ data: global });
+    });
+
+    const { result, rerender } = renderHook(
+      ({ flowId, mirrorToStore }: ScopeProps) =>
+        useGetGlobalVariables({ flowId, mirrorToStore }),
+      {
+        initialProps: {
+          flowId: "flow-a",
+          mirrorToStore: false,
+        } as ScopeProps,
+        wrapper: makeWrapper(queryClient),
+      },
+    );
+
+    await waitFor(() => expect(result.current.data).toEqual(flowA));
+    rerender({ flowId: "flow-b", mirrorToStore: false });
+    await waitFor(() => expect(result.current.data).toEqual(flowB));
+    rerender({ flowId: undefined, mirrorToStore: true });
+    await waitFor(() => expect(result.current.data).toEqual(global));
+
+    expect(
+      queryClient.getQueryData(["useGetGlobalVariables", "flow-a", undefined]),
+    ).toEqual(flowA);
+    expect(
+      queryClient.getQueryData(["useGetGlobalVariables", "flow-b", undefined]),
+    ).toEqual(flowB);
+    expect(
+      queryClient.getQueryData(["useGetGlobalVariables", undefined, undefined]),
+    ).toEqual(global);
+    expect(useGlobalVariablesStore.getState().globalVariablesEntries).toEqual([
+      "GLOBAL_KEY",
+    ]);
+    queryClient.clear();
+  });
 });
+
+interface ScopeProps {
+  flowId?: string;
+  mirrorToStore: boolean;
+}

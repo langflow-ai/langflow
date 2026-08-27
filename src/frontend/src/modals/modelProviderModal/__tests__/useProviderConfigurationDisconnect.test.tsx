@@ -47,6 +47,10 @@ jest.mock("@tanstack/react-query", () => ({
 }));
 
 jest.mock("@/controllers/API/queries/variables", () => ({
+  getGlobalVariablesQueryKey: (scope?: {
+    flowId?: string;
+    projectId?: string;
+  }) => ["useGetGlobalVariables", scope?.flowId, scope?.projectId],
   useDeleteGlobalVariables: () => ({
     mutateAsync: mockDeleteMutateAsync,
     isPending: false,

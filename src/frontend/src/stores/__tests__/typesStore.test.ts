@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import type { APIClassType, APIDataType } from "../../types/api";
+import type { APIDataType } from "../../types/api";
 import { useTypesStore } from "../typesStore";
 
 // Mock the complex utility functions
@@ -233,7 +233,7 @@ describe("useTypesStore", () => {
       );
     });
 
-    it("should merge with existing data", () => {
+    it("should replace existing data", () => {
       const { result } = renderHook(() => useTypesStore());
 
       act(() => {
@@ -244,11 +244,10 @@ describe("useTypesStore", () => {
         result.current.setTypes(mockAPIData2);
       });
 
-      expect(result.current.data).toEqual({ ...mockAPIData, ...mockAPIData2 });
-      expect(mockExtractSecretFieldsFromComponents).toHaveBeenCalledWith({
-        ...mockAPIData,
-        ...mockAPIData2,
-      });
+      expect(result.current.data).toEqual(mockAPIData2);
+      expect(mockExtractSecretFieldsFromComponents).toHaveBeenCalledWith(
+        mockAPIData2,
+      );
     });
 
     it("should handle empty API data", () => {
@@ -466,9 +465,6 @@ describe("useTypesStore", () => {
         result.current.addComponentField("field2");
       });
 
-      // setData will call setComponentFields internally, so track the fields before
-      const fieldsBeforeSetData = new Set(result.current.ComponentFields);
-
       act(() => {
         result.current.setData(mockAPIData);
         result.current.addComponentField("field3");
@@ -485,7 +481,7 @@ describe("useTypesStore", () => {
       const { result } = renderHook(() => useTypesStore());
 
       act(() => {
-        result.current.setData(null as any);
+        result.current.setData(null as unknown as APIDataType);
       });
 
       expect(result.current.data).toBeNull();

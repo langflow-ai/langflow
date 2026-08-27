@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import GlobalVariableDeleteConfirmation from "@/components/core/globalVariableDeleteConfirmation";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "../../../../../utils/utils";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { CommandItem } from "../../../../ui/command";
@@ -43,12 +44,17 @@ export default function InputGlobalComponent({
   _input_type?: string;
 }): JSX.Element | null {
   const { t } = useTranslation();
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const providerScope = currentFlowId ? { flowId: currentFlowId } : undefined;
   const {
     data: globalVariables,
     isFetchedAfterMount: isGlobalVariablesFetchedAfterMount,
     isFetching: isGlobalVariablesFetching,
     isSuccess: isGlobalVariablesFetchSuccessful,
-  } = useGetGlobalVariables();
+  } = useGetGlobalVariables({
+    ...providerScope,
+    enabled: Boolean(currentFlowId),
+  });
 
   // // Safely cast the data to our typed interface
   const typedGlobalVariables: GlobalVariable[] = globalVariables ?? [];
@@ -61,8 +67,13 @@ export default function InputGlobalComponent({
     currentValue,
     typedGlobalVariables,
   );
-  const unavailableField = useUnavailableField(display_name, currentValue);
+  const unavailableField = useUnavailableField(
+    display_name,
+    currentValue,
+    typedGlobalVariables,
+  );
   const canValidateMissingVariable =
+    Boolean(currentFlowId) &&
     isGlobalVariablesFetchSuccessful &&
     !isGlobalVariablesFetching &&
     isGlobalVariablesFetchedAfterMount;
@@ -134,7 +145,11 @@ export default function InputGlobalComponent({
 
   // Render add new variable button
   const renderAddVariableButton = () => (
-    <GlobalVariableModal referenceField={display_name} disabled={disabled}>
+    <GlobalVariableModal
+      referenceField={display_name}
+      disabled={disabled}
+      providerScope={providerScope}
+    >
       <CommandItem value="doNotFilter-addNewVariable">
         <ForwardedIconComponent
           name="Plus"
@@ -151,6 +166,7 @@ export default function InputGlobalComponent({
     <GlobalVariableDeleteConfirmation
       option={option}
       onConfirmDelete={() => handlers.handleVariableDelete(option)}
+      providerScope={providerScope}
     />
   );
 

@@ -8,6 +8,7 @@ import {
   type ProviderScopeParams,
 } from "../../helpers/provider-scope";
 import { UseRequestProcessor } from "../../services/request-processor";
+import { getGlobalVariablesQueryKey } from "./use-get-global-variables";
 
 type VariableCategory = (typeof VALID_CATEGORIES)[number];
 
@@ -63,7 +64,10 @@ export const usePostGlobalVariables: useMutationFunctionType<
     PostGlobalVariablesParams
   > = mutate(["usePostGlobalVariables"], postGlobalVariablesFunction, {
     onSettled: (data, error, variables) => {
-      queryClient.refetchQueries({ queryKey: ["useGetGlobalVariables"] });
+      queryClient.refetchQueries({
+        queryKey: getGlobalVariablesQueryKey(variables),
+        exact: true,
+      });
       if (variables.category) {
         queryClient.refetchQueries({
           queryKey: ["category-variable", variables.category],

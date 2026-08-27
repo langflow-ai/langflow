@@ -7,6 +7,7 @@ import {
   type ProviderScopeParams,
 } from "../../helpers/provider-scope";
 import { UseRequestProcessor } from "../../services/request-processor";
+import { getGlobalVariablesQueryKey } from "./use-get-global-variables";
 
 interface DeleteGlobalVariablesParams extends ProviderScopeParams {
   id: string | undefined;
@@ -37,8 +38,11 @@ export const useDeleteGlobalVariables: useMutationFunctionType<
     unknown,
     DeleteGlobalVariablesParams
   > = mutate(["useDeleteGlobalVariables"], deleteGlobalVariables, {
-    onSettled: () => {
-      queryClient.refetchQueries({ queryKey: ["useGetGlobalVariables"] });
+    onSettled: (data, error, variables) => {
+      queryClient.refetchQueries({
+        queryKey: getGlobalVariablesQueryKey(variables),
+        exact: true,
+      });
     },
     ...options,
   });

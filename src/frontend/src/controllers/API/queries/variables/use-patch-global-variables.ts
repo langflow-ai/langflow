@@ -8,6 +8,7 @@ import {
   type ProviderScopeParams,
 } from "../../helpers/provider-scope";
 import { UseRequestProcessor } from "../../services/request-processor";
+import { getGlobalVariablesQueryKey } from "./use-get-global-variables";
 
 interface PatchGlobalVariablesParams extends ProviderScopeParams {
   name?: string;
@@ -43,8 +44,11 @@ export const usePatchGlobalVariables: useMutationFunctionType<
     unknown,
     PatchGlobalVariablesParams
   > = mutate(["usePatchGlobalVariables"], patchGlobalVariables, {
-    onSettled: () => {
-      queryClient.refetchQueries({ queryKey: ["useGetGlobalVariables"] });
+    onSettled: (data, error, variables) => {
+      queryClient.refetchQueries({
+        queryKey: getGlobalVariablesQueryKey(variables),
+        exact: true,
+      });
     },
     ...options,
     retry: false,

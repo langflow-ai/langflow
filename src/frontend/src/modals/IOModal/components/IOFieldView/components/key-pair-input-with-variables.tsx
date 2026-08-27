@@ -5,6 +5,7 @@ import IconComponent from "../../../../../components/common/genericIconComponent
 import InputComponent from "../../../../../components/core/parameterRenderComponent/components/inputComponent";
 import { Input } from "../../../../../components/ui/input";
 import { useGetGlobalVariables } from "../../../../../controllers/API/queries/variables";
+import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import { classNames } from "../../../../../utils/utils";
 
 export type KeyPairRow = {
@@ -34,7 +35,11 @@ const IOKeyPairInputWithVariables = ({
   enableGlobalVariables = false,
 }: IOKeyPairInputWithVariablesProps) => {
   const { t } = useTranslation();
-  const { data: globalVariables = [] } = useGetGlobalVariables();
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const { data: globalVariables = [] } = useGetGlobalVariables({
+    flowId: currentFlowId || undefined,
+    enabled: Boolean(currentFlowId),
+  });
   const [selectedGlobalVariables, setSelectedGlobalVariables] = useState<
     Record<string, string>
   >({});

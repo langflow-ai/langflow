@@ -12,6 +12,7 @@ import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-m
 import { useGetProviderVariables } from "@/controllers/API/queries/models/use-get-provider-variables";
 import { useValidateProvider } from "@/controllers/API/queries/models/use-validate-provider";
 import {
+  getGlobalVariablesQueryKey,
   useDeleteGlobalVariables,
   useGetGlobalVariables,
   usePatchGlobalVariables,
@@ -150,9 +151,12 @@ export const useProviderConfiguration = ({
   const invalidateProviderQueries = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["useGetModelProviders"] });
     queryClient.invalidateQueries({ queryKey: ["useGetEnabledModels"] });
-    queryClient.invalidateQueries({ queryKey: ["useGetGlobalVariables"] });
+    queryClient.invalidateQueries({
+      queryKey: getGlobalVariablesQueryKey({ flowId, projectId }),
+      exact: true,
+    });
     queryClient.refetchQueries({ queryKey: ["flows"] });
-  }, [queryClient]);
+  }, [flowId, projectId, queryClient]);
 
   // Clear isFetchingAfterSave/Disconnect once the models refetch settles
   // We use fetchingSeenRef to avoid clearing prematurely on the first render

@@ -3,6 +3,8 @@ import InputGlobalComponent from "..";
 
 const mockUseGetGlobalVariables = jest.fn();
 const mockInputComponent = jest.fn().mockReturnValue(null);
+const mockDeleteConfirmation = jest.fn();
+const mockGlobalVariableModal = jest.fn();
 let mockCurrentFlowId = "flow-project-a";
 
 jest.mock("@/controllers/API/queries/variables", () => ({
@@ -18,13 +20,23 @@ jest.mock("@/stores/flowsManagerStore", () => ({
 
 jest.mock(
   "@/components/core/globalVariableDeleteConfirmation",
-  () => () => null,
+  () => (props: Record<string, unknown>) => {
+    mockDeleteConfirmation(props);
+    return null;
+  },
 );
 
 jest.mock(
   "@/components/core/GlobalVariableModal/GlobalVariableModal",
   () =>
-    function GlobalVariableModal({ children }: { children?: React.ReactNode }) {
+    function GlobalVariableModal({
+      children,
+      ...props
+    }: {
+      children?: React.ReactNode;
+      providerScope?: { flowId?: string };
+    }) {
+      mockGlobalVariableModal(props);
       return <>{children}</>;
     },
 );
@@ -46,7 +58,15 @@ jest.mock(
     __esModule: true,
     default: (props: Record<string, unknown>) => {
       mockInputComponent(props);
-      return null;
+      const optionButton = props.optionButton as
+        | ((option: string) => React.ReactNode)
+        | undefined;
+      return (
+        <>
+          {props.optionsButton as React.ReactNode}
+          {optionButton?.("PROJECT_ONLY")}
+        </>
+      );
     },
   }),
 );
@@ -98,6 +118,12 @@ describe("InputGlobalComponent", () => {
       flowId: "flow-project-a",
       enabled: true,
     });
+    expect(mockGlobalVariableModal).toHaveBeenCalledWith(
+      expect.objectContaining({ providerScope: { flowId: "flow-project-a" } }),
+    );
+    expect(mockDeleteConfirmation).toHaveBeenCalledWith(
+      expect.objectContaining({ providerScope: { flowId: "flow-project-a" } }),
+    );
     await waitFor(() => expect(handleOnNewValue).not.toHaveBeenCalled());
   });
 
