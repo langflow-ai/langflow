@@ -198,7 +198,7 @@ async def test_component_palette_policy_filters_models_without_mutating_shared_c
         msg = "scoped palette discovery must refresh hierarchy asynchronously"
         raise AssertionError(msg)
 
-    monkeypatch.setattr(endpoints, "resolve_model_provider_policy", _sync_resolver_must_not_run)
+    monkeypatch.setattr(endpoints, "resolve_model_provider_policy", _sync_resolver_must_not_run, raising=False)
     monkeypatch.setattr(endpoints, "aresolve_model_provider_policy", _openai_only, raising=False)
 
     filtered = await endpoints._filter_component_palette_by_provider_policy(
@@ -314,10 +314,14 @@ async def test_get_all_filters_catalog_policy_and_uses_current_snapshot(
 
     monkeypatch.setattr(components_module, "get_and_cache_all_types_dict", get_cached_types)
     monkeypatch.setattr(endpoints, "get_catalog_policy_service", lambda: service)
+
+    async def allow_all_providers(all_types, **_kwargs):
+        return {category: dict(components) for category, components in all_types.items()}
+
     monkeypatch.setattr(
         endpoints,
         "_filter_component_palette_by_provider_policy",
-        lambda all_types, **_kwargs: {category: dict(components) for category, components in all_types.items()},
+        allow_all_providers,
     )
 
     blocked_response = await client.get("api/v1/all", headers=logged_in_headers)
@@ -407,7 +411,7 @@ async def test_get_all_superuser_override_skips_only_catalog_filter_without_cach
         _ = settings_service
         return cached
 
-    def filter_provider_policy(all_types, *, user_id, attributes=None):
+    async def filter_provider_policy(all_types, *, user_id, attributes=None):
         nonlocal provider_filter_calls
         _ = user_id
         provider_filter_calls += 1

@@ -31,8 +31,8 @@ from lfx.schema.schema import InputValueRequest
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyError,
     ModelProviderPolicyPurpose,
+    aresolve_model_provider_policy,
     reset_current_model_provider_policy_context,
-    resolve_model_provider_policy,
     set_current_model_provider_policy_context,
 )
 from lfx.services.settings.service import SettingsService
@@ -259,7 +259,7 @@ async def get_all(
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
         all_types_en = await get_and_cache_all_types_dict(settings_service=get_settings_service())
         component_identity_index = get_component_identity_index(all_types_en)
-        visible_types_en = _filter_component_palette_by_provider_policy(
+        visible_types_en = await _filter_component_palette_by_provider_policy(
             all_types_en,
             user_id=current_user.id,
             attributes=provider_policy_attributes,
@@ -281,7 +281,7 @@ async def get_all(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-def _filter_component_palette_by_provider_policy(
+async def _filter_component_palette_by_provider_policy(
     all_types: dict[str, dict[str, dict]],
     *,
     user_id: UUID | str | None,
@@ -303,7 +303,7 @@ def _filter_component_palette_by_provider_policy(
         and isinstance((provider_id := metadata.get("model_provider_id")), str)
         and provider_id
     }
-    policy = resolve_model_provider_policy(
+    policy = await aresolve_model_provider_policy(
         user_id=user_id,
         providers=provider_ids,
         purpose=ModelProviderPolicyPurpose.DISCOVER,
