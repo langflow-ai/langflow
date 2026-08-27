@@ -12,6 +12,7 @@ import { useGetTagsQuery } from "@/controllers/API/queries/store";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import { useGetVersionQuery } from "@/controllers/API/queries/version";
 import { CustomLoadingPage } from "@/customization/components/custom-loading-page";
+import { ENABLE_LANGFLOW_STORE } from "@/customization/feature-flags";
 import { useCustomPrimaryLoading } from "@/customization/hooks/use-custom-primary-loading";
 import useAuthStore from "@/stores/authStore";
 import { useDarkStore } from "@/stores/darkStore";
@@ -48,7 +49,9 @@ export function AppInitPage() {
     enabled: isFetched && isAuthReady,
   });
   useGetGlobalVariables({ enabled: isFetched && isAuthReady });
-  useGetTagsQuery({ enabled: isFetched && isAuthReady });
+  useGetTagsQuery({
+    enabled: ENABLE_LANGFLOW_STORE && isFetched && isAuthReady,
+  });
   useGetFoldersQuery({ enabled: isFetched && isAuthReady });
   const { isFetched: isExamplesFetched, refetch: refetchExamples } =
     useGetBasicExamplesQuery();
