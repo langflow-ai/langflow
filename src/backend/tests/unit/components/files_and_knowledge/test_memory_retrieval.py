@@ -308,7 +308,7 @@ class TestMemoryBaseProviderPolicyPreflight:
             with (
                 _patched_session_scope(db),
                 patch(f"{MR_MODULE}.resolve_embedding_selection", selection_lookup),
-                patch(f"{MR_MODULE}.KBIngestionHelper.build_embeddings", owner_embedding_build),
+                patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", owner_embedding_build),
                 pytest.raises(ModelProviderPolicyError),
             ):
                 await component.arequire_model_provider_policy(
@@ -368,7 +368,7 @@ class TestMemoryBaseProviderPolicyPreflight:
                 patch(f"{MR_MODULE}.resolve_embedding_selection", selection_lookup),
                 patch(f"{MR_MODULE}.resolve_backend_selection", new=AsyncMock(return_value=("chroma", {}))),
                 patch(f"{MR_MODULE}.resolve_local_store_path", return_value=None),
-                patch(f"{MR_MODULE}.KBIngestionHelper.build_embeddings", owner_embedding_build),
+                patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", owner_embedding_build),
                 patch("lfx.base.models.unified_models.get_embeddings", get_embeddings),
                 patch(f"{MR_MODULE}.create_backend", return_value=backend),
             ):
@@ -684,10 +684,7 @@ class TestMemoryBaseRetrievalBehavior:
                 "lfx.components.files_and_knowledge.memory_retrieval.resolve_embedding_selection",
                 new=AsyncMock(return_value=(provider, model)),
             ),
-            patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.KBIngestionHelper.build_embeddings",
-                new=AsyncMock(return_value=MagicMock()),
-            ),
+            patch("lfx.base.models.unified_models.get_embeddings", return_value=MagicMock()),
             patch(
                 "lfx.components.files_and_knowledge.memory_retrieval.resolve_backend_selection",
                 new=AsyncMock(return_value=("chroma", {})),
