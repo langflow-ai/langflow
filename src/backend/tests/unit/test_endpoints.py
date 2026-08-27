@@ -165,7 +165,7 @@ async def test_get_all(client: AsyncClient, logged_in_headers):
     assert "ChatOutput" in json_response["input_output"]
 
 
-def test_component_palette_policy_filters_models_without_mutating_shared_cache(monkeypatch):
+async def test_component_palette_policy_filters_models_without_mutating_shared_cache(monkeypatch):
     from langflow.api.v1 import endpoints
     from lfx.services.model_provider_policy import (
         ModelProviderPolicyContext,
@@ -181,8 +181,11 @@ def test_component_palette_policy_filters_models_without_mutating_shared_cache(m
         }
     }
 
-    def _openai_only(*, user_id, providers, purpose, attributes=None):
+    project_id = uuid4()
+
+    async def _openai_only(*, user_id, providers, purpose, attributes=None):
         assert purpose is ModelProviderPolicyPurpose.DISCOVER
+        assert attributes == {"project_id": project_id}
         candidates = frozenset(providers)
         return ModelProviderPolicySnapshot(
             context=ModelProviderPolicyContext(user_id=user_id, attributes=attributes or {}),
@@ -191,9 +194,18 @@ def test_component_palette_policy_filters_models_without_mutating_shared_cache(m
             allowed_provider_ids=frozenset({"openai"}),
         )
 
-    monkeypatch.setattr(endpoints, "resolve_model_provider_policy", _openai_only)
+    def _sync_resolver_must_not_run(**_kwargs):
+        msg = "scoped palette discovery must refresh hierarchy asynchronously"
+        raise AssertionError(msg)
 
-    filtered = endpoints._filter_component_palette_by_provider_policy(cached, user_id="user-1")
+    monkeypatch.setattr(endpoints, "resolve_model_provider_policy", _sync_resolver_must_not_run)
+    monkeypatch.setattr(endpoints, "aresolve_model_provider_policy", _openai_only, raising=False)
+
+    filtered = await endpoints._filter_component_palette_by_provider_policy(
+        cached,
+        user_id="user-1",
+        attributes={"project_id": project_id},
+    )
 
     assert set(filtered["mixed"]) == {"AllowedModel", "Utility"}
     assert "DeniedModel" in cached["mixed"]
