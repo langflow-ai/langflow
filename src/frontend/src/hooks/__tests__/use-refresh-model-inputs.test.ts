@@ -929,7 +929,13 @@ describe("refreshAllModelInputs — disconnected provider", () => {
     expect(getRefreshedModelValue()).toEqual(ANTHROPIC_SAVED_VALUE);
     expect(mockQueryClient.fetchQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ["useGetModelProviders", undefined, undefined],
+        queryKey: [
+          "useGetModelProviders",
+          undefined,
+          undefined,
+          "flow-123",
+          undefined,
+        ],
       }),
     );
     expect(
