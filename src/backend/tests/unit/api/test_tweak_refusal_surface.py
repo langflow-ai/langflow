@@ -91,7 +91,6 @@ async def test_off_does_not_break_a_flow_called_as_a_tool(simple_api_test, activ
     with patch("lfx.processing.process._resolve_tweak_policy", return_value="off"):
         try:
             await _build_graph_from_authorized_flow(
-                caller=active_user,
                 flow=flow,
                 flow_id=simple_api_test["id"],
                 user_id=str(active_user.id),

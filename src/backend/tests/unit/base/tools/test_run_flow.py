@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, Mock, PropertyMock, patch
 from uuid import uuid4
 
@@ -13,6 +14,12 @@ from lfx.schema.dotdict import dotdict
 from lfx.services.cache.utils import CacheMiss
 from lfx.template.field.base import Output
 from lfx.utils.flow_validation import CustomComponentValidationError
+
+
+@asynccontextmanager
+async def _authorized_target_scope(**_kwargs):
+    """Unit-test seam; target-scope behavior has dedicated DB-backed coverage."""
+    yield
 
 
 @pytest.fixture
@@ -70,6 +77,14 @@ class TestRunFlowBaseComponentInitialization:
 
 class TestRunFlowBaseComponentFlowRetrieval:
     """Test flow retrieval methods."""
+
+    @pytest.fixture(autouse=True)
+    def _target_scope(self):
+        with patch(
+            "lfx.base.tools.run_flow.scoped_model_provider_policy_for_target_flow",
+            _authorized_target_scope,
+        ):
+            yield
 
     @pytest.mark.asyncio
     async def test_get_flow_with_id(self):
@@ -143,6 +158,7 @@ class TestRunFlowBaseComponentFlowRetrieval:
         updated_at = "2024-01-01T00:00:00Z"
 
         mock_graph = MagicMock(spec=Graph)
+        mock_graph.flow_id = flow_id
         mock_graph.updated_at = updated_at
 
         with (
@@ -200,6 +216,7 @@ class TestRunFlowBaseComponentFlowRetrieval:
         new_updated_at = "2024-01-02T00:00:00Z"
 
         stale_graph = MagicMock(spec=Graph)
+        stale_graph.flow_id = flow_id
         stale_graph.updated_at = old_updated_at
 
         flow_data = Data(

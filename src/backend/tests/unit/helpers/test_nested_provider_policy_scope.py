@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
+from langchain_core.tools import ToolException
 from langflow.helpers.flow import generate_function_for_flow, load_flow, run_flow
 from langflow.services.database.models import Folder
 from langflow.services.database.models.flow.model import Flow
@@ -179,7 +180,8 @@ async def test_cold_nested_entry_denies_target_before_provider_io(entry, nested_
         function = generate_function_for_flow([], str(nested_flow_rows.target_flow), nested_flow_rows.user_id)
         return await function()
 
-    with _outer_scope(nested_flow_rows), pytest.raises(ModelProviderPolicyError):
+    expected_error = ToolException if entry == "generated" else ModelProviderPolicyError
+    with _outer_scope(nested_flow_rows), pytest.raises(expected_error):
         await _invoke()
 
     probe.assert_not_called()
