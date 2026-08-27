@@ -647,6 +647,136 @@ class TestMemoryBaseProviderPolicy:
         db.add.assert_not_called()
         db.commit.assert_not_awaited()
 
+    @pytest.mark.asyncio
+    async def test_create_uses_stored_project_scope_when_global_access_is_denied(self, service):
+        """A project grant must be evaluated in the stored Flow's current domain."""
+        from langflow.services.database.models.flow.model import Flow
+        from lfx.services.model_provider_policy import current_model_provider_policy_context
+
+        user_id = uuid.uuid4()
+        flow_id = uuid.uuid4()
+        project_id = uuid.uuid4()
+        workspace_id = uuid.uuid4()
+        flow = Flow(
+            id=flow_id,
+            user_id=user_id,
+            name="scoped flow",
+            folder_id=project_id,
+            workspace_id=workspace_id,
+        )
+        payload = MemoryBaseCreate(name="mb", flow_id=flow_id, embedding_model="text-embedding-3-small")
+
+        flow_result = MagicMock()
+        flow_result.first.return_value = flow
+        missing_result = MagicMock()
+        missing_result.first.return_value = None
+        db = AsyncMock()
+        db.exec = AsyncMock(side_effect=[flow_result, missing_result, missing_result])
+        db.add = MagicMock()
+        db.commit = AsyncMock()
+        db.refresh = AsyncMock()
+        observed_contexts = []
+
+        def allow_only_current_project(**_kwargs):
+            context = current_model_provider_policy_context()
+            observed_contexts.append(context)
+            assert context is not None
+            assert context.attributes["project_id"] == project_id
+            assert context.attributes["workspace_id"] == workspace_id
+            assert context.attributes["provider_scope_required"] is True
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
+            patch("langflow.services.memory_base.service.resolve_kb_username", AsyncMock(return_value="testuser")),
+            patch(
+                "langflow.services.memory_base.service.require_model_provider",
+                side_effect=allow_only_current_project,
+            ),
+            patch("langflow.services.memory_base.service.initialize_kb", AsyncMock()),
+            patch("langflow.services.memory_base.service._create_kb_record_for_memory_base", AsyncMock()),
+        ):
+            created = await service.create(payload, user_id=user_id)
+
+        assert created.flow_id == flow_id
+        assert observed_contexts
+
+    @pytest.mark.asyncio
+    async def test_update_reloads_moved_flow_and_project_deny_precedes_secrets_and_network(self, service):
+        """A current project denial wins over a stale/global grant before provider work."""
+        from langflow.services.database.models.flow.model import Flow
+        from lfx.services.model_provider_policy import (
+            ModelProviderPolicyError,
+            ModelProviderPolicyPurpose,
+            current_model_provider_policy_context,
+        )
+
+        user_id = uuid.uuid4()
+        moved_project_id = uuid.uuid4()
+        moved_workspace_id = uuid.uuid4()
+        mb = _make_mb(user_id=user_id, threshold=10)
+        mb.preprocessing = True
+        mb.preproc_model = "gpt-4o-mini"
+        flow = Flow(
+            id=mb.flow_id,
+            user_id=user_id,
+            name="moved flow",
+            folder_id=moved_project_id,
+            workspace_id=moved_workspace_id,
+        )
+        mb_result = MagicMock()
+        mb_result.first.return_value = mb
+        flow_result = MagicMock()
+        flow_result.first.return_value = flow
+        db = AsyncMock()
+        db.exec = AsyncMock(side_effect=[mb_result, flow_result])
+        db.add = MagicMock()
+        denial = ModelProviderPolicyError("openai", ModelProviderPolicyPurpose.CONFIGURE)
+
+        def deny_current_project(**_kwargs):
+            context = current_model_provider_policy_context()
+            assert context is not None
+            assert context.attributes["project_id"] == moved_project_id
+            assert context.attributes["workspace_id"] == moved_workspace_id
+            raise denial
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
+            patch("langflow.services.memory_base.service.require_model_provider", side_effect=deny_current_project),
+            patch("langflow.services.memory_base.service.get_api_key_for_provider") as get_api_key,
+            pytest.raises(ModelProviderPolicyError),
+        ):
+            await service.update(mb.id, user_id, MemoryBaseUpdate(threshold=99))
+
+        assert mb.threshold == 10
+        get_api_key.assert_not_called()
+        db.add.assert_not_called()
+        db.commit.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_update_missing_stored_flow_fails_before_provider_or_persistence(self, service):
+        user_id = uuid.uuid4()
+        mb = _make_mb(user_id=user_id, threshold=10)
+        mb_result = MagicMock()
+        mb_result.first.return_value = mb
+        missing_flow = MagicMock()
+        missing_flow.first.return_value = None
+        db = AsyncMock()
+        db.exec = AsyncMock(side_effect=[mb_result, missing_flow])
+        db.add = MagicMock()
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
+            patch("langflow.services.memory_base.service.require_model_provider") as require,
+            patch("langflow.services.memory_base.service.get_api_key_for_provider") as get_api_key,
+            pytest.raises(PermissionError, match=r"Flow .* not found"),
+        ):
+            await service.update(mb.id, user_id, MemoryBaseUpdate(threshold=99))
+
+        require.assert_not_called()
+        get_api_key.assert_not_called()
+        db.add.assert_not_called()
+        db.commit.assert_not_awaited()
+
 
 class TestMemoryBaseGuardPassesRealKbIdentity:
     """The ID-bearing guards must pass the REAL kb identity, not actor-as-owner.

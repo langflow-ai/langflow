@@ -5,6 +5,8 @@ import { useCreateMemoryModal } from "../useCreateMemoryModal";
 const mockSetErrorData = jest.fn();
 const mockSetSuccessData = jest.fn();
 const mockMutate = jest.fn();
+const mockUseGetModelProviders = jest.fn();
+const mockUseGetGlobalVariables = jest.fn();
 
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
@@ -36,7 +38,10 @@ const mockProviders = [
 ];
 
 jest.mock("@/controllers/API/queries/models/use-get-model-providers", () => ({
-  useGetModelProviders: () => ({ data: mockProviders }),
+  useGetModelProviders: (options: unknown) => {
+    mockUseGetModelProviders(options);
+    return { data: mockProviders };
+  },
 }));
 
 jest.mock("@/controllers/API/queries/memories/use-create-memory", () => ({
@@ -46,12 +51,26 @@ jest.mock("@/controllers/API/queries/memories/use-create-memory", () => ({
 // No DB providers configured in the test env → default to local Chroma, which
 // `isDBProviderConfigured` always treats as configured.
 jest.mock("@/controllers/API/queries/variables", () => ({
-  useGetGlobalVariables: () => ({ data: [], isFetched: true }),
+  useGetGlobalVariables: (options: unknown) => {
+    mockUseGetGlobalVariables(options);
+    return { data: [], isFetched: true };
+  },
 }));
 
 describe("useCreateMemoryModal", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  it("scopes provider and global-variable discovery to the current flow", () => {
+    renderHook(() =>
+      useCreateMemoryModal({ flowId: "flow-1", onClose: jest.fn() }),
+    );
+
+    expect(mockUseGetModelProviders).toHaveBeenCalledWith({ flowId: "flow-1" });
+    expect(mockUseGetGlobalVariables).toHaveBeenCalledWith({
+      flowId: "flow-1",
+    });
   });
 
   it("builds filtered model options", () => {

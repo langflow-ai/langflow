@@ -18,6 +18,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langflow.services.database.models.message.model import MessageTable
+from lfx.services.model_provider_policy import (
+    ModelProviderPolicyError,
+    ModelProviderPolicyPurpose,
+    ModelProviderPolicySnapshot,
+)
 
 # ------------------------------------------------------------------ #
 #  Shared helpers                                                      #
@@ -57,6 +62,167 @@ def _fake_scope(mock_db):
     scope = MagicMock()
     scope.return_value = _FakeCtx()
     return scope
+
+
+def _request(*, flow_id: uuid.UUID, user_id: uuid.UUID):
+    from langflow.services.memory_base.task import IngestionRequest
+
+    return IngestionRequest(
+        memory_base_id=uuid.uuid4(),
+        session_id="scope-test",
+        flow_id=flow_id,
+        kb_name="kb",
+        kb_username="user",
+        user_id=user_id,
+        embedding_provider="OpenAI",
+        embedding_model="text-embedding-3-small",
+        cursor_id=None,
+        task_job_id=uuid.uuid4(),
+        job_service=MagicMock(),
+    )
+
+
+class _ScopePolicy:
+    def __init__(self, *, allowed_project_id: uuid.UUID | None) -> None:
+        self.allowed_project_id = allowed_project_id
+        self.calls = []
+
+    def resolve(self, *, context, candidate_provider_ids, purpose):
+        self.calls.append((context, candidate_provider_ids, purpose))
+        allowed = (
+            candidate_provider_ids if context.attributes.get("project_id") == self.allowed_project_id else frozenset()
+        )
+        return ModelProviderPolicySnapshot(
+            context=context,
+            purpose=purpose,
+            candidate_provider_ids=candidate_provider_ids,
+            allowed_provider_ids=allowed,
+        )
+
+
+class TestIngestionProviderScope:
+    @staticmethod
+    def _flow_db(flow, user):
+        result = MagicMock()
+        result.first.return_value = flow
+        db = AsyncMock()
+        db.exec = AsyncMock(return_value=result)
+        db.get = AsyncMock(return_value=user)
+        return db
+
+    @staticmethod
+    def _early_exit_patches():
+        return (
+            patch("langflow.services.memory_base.task._acquire_session_lock", AsyncMock(return_value=asyncio.Lock())),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[])),
+        )
+
+    @pytest.mark.asyncio
+    async def test_project_grant_overrides_global_deny_using_server_flow_scope(self):
+        from langflow.services.database.models.flow.model import Flow
+        from langflow.services.memory_base.task import ingest_memory_task
+
+        user_id = uuid.uuid4()
+        flow_id = uuid.uuid4()
+        project_id = uuid.uuid4()
+        workspace_id = uuid.uuid4()
+        flow = Flow(
+            id=flow_id,
+            user_id=user_id,
+            name="stored flow",
+            folder_id=project_id,
+            workspace_id=workspace_id,
+        )
+        user = MagicMock(id=user_id, is_superuser=False)
+        db = self._flow_db(flow, user)
+        policy = _ScopePolicy(allowed_project_id=project_id)
+        lock, release, cursor, pending = self._early_exit_patches()
+
+        with (
+            patch("langflow.services.memory_base.task.session_scope", _fake_scope(db)),
+            patch("lfx.services.deps.get_model_provider_policy_service", return_value=policy),
+            lock,
+            release,
+            cursor,
+            pending,
+        ):
+            result = await ingest_memory_task(request=_request(flow_id=flow_id, user_id=user_id))
+
+        assert result["ingested"] == 0
+        context, _candidates, purpose = policy.calls[0]
+        assert context.attributes["project_id"] == project_id
+        assert context.attributes["workspace_id"] == workspace_id
+        assert context.attributes["provider_scope_required"] is True
+        assert purpose is ModelProviderPolicyPurpose.USE
+
+    @pytest.mark.asyncio
+    async def test_project_deny_overrides_global_grant_before_lock_or_provider_work(self):
+        from langflow.services.database.models.flow.model import Flow
+        from langflow.services.memory_base.task import ingest_memory_task
+
+        user_id = uuid.uuid4()
+        flow_id = uuid.uuid4()
+        denied_project_id = uuid.uuid4()
+        flow = Flow(id=flow_id, user_id=user_id, name="stored flow", folder_id=denied_project_id)
+        user = MagicMock(id=user_id, is_superuser=False)
+        db = self._flow_db(flow, user)
+        policy = _ScopePolicy(allowed_project_id=uuid.uuid4())
+        acquire = AsyncMock(return_value=asyncio.Lock())
+
+        with (
+            patch("langflow.services.memory_base.task.session_scope", _fake_scope(db)),
+            patch("lfx.services.deps.get_model_provider_policy_service", return_value=policy),
+            patch("langflow.services.memory_base.task._acquire_session_lock", acquire),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[])),
+            patch("langflow.services.memory_base.task.KBIngestionHelper.build_embeddings", AsyncMock()) as embeddings,
+            patch("langflow.services.memory_base.task.create_backend") as create_backend,
+            pytest.raises(ModelProviderPolicyError),
+        ):
+            await ingest_memory_task(request=_request(flow_id=flow_id, user_id=user_id))
+
+        acquire.assert_not_awaited()
+        embeddings.assert_not_awaited()
+        create_backend.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_missing_flow_fails_closed_before_lock_or_provider_work(self):
+        from langflow.services.memory_base.task import ingest_memory_task
+
+        user_id = uuid.uuid4()
+        flow_id = uuid.uuid4()
+        user = MagicMock(id=user_id, is_superuser=False)
+        db = self._flow_db(None, user)
+        acquire = AsyncMock(return_value=asyncio.Lock())
+
+        with (
+            patch("langflow.services.memory_base.task.session_scope", _fake_scope(db)),
+            patch("langflow.services.memory_base.task._acquire_session_lock", acquire),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[])),
+            patch("langflow.services.memory_base.task.KBIngestionHelper.build_embeddings", AsyncMock()) as embeddings,
+            patch("langflow.services.memory_base.task.create_backend") as create_backend,
+            pytest.raises(PermissionError, match=r"Flow .* not found"),
+        ):
+            await ingest_memory_task(request=_request(flow_id=flow_id, user_id=user_id))
+
+        acquire.assert_not_awaited()
+        embeddings.assert_not_awaited()
+        create_backend.assert_not_called()
+
+    def test_distributed_job_payload_has_no_client_supplied_scope_fields(self):
+        from dataclasses import fields
+
+        from langflow.services.memory_base.task import IngestionRequest
+
+        field_names = {field.name for field in fields(IngestionRequest)}
+
+        assert "workspace_id" not in field_names
+        assert "project_id" not in field_names
 
 
 # ------------------------------------------------------------------ #
