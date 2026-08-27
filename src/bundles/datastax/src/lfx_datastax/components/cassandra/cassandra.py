@@ -14,6 +14,8 @@ from lfx.io import (
 )
 from lfx.schema.data import Data
 
+DEFAULT_BATCH_SIZE = 16
+
 
 class CassandraVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Cassandra"
@@ -60,7 +62,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             name="batch_size",
             display_name="Batch Size",
             info="Optional number of data to process in a single batch.",
-            value=16,
+            value=DEFAULT_BATCH_SIZE,
             advanced=True,
         ),
         DropdownInput(
@@ -180,28 +182,32 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
         else:
             setup_mode = SetupMode.ASYNC
 
+        # The ingest write is synchronous, so ASYNC (async_setup plus an un-awaited
+        # coroutine dimension) degrades to SYNC. OFF is kept: it drives skip_provisioning,
+        # so overriding it would re-run the DDL against a pre-provisioned table.
+        if documents and setup_mode is SetupMode.ASYNC:
+            setup_mode = SetupMode.SYNC
+
+        table = Cassandra(
+            embedding=self.embedding,
+            table_name=self.table_name,
+            keyspace=self.keyspace,
+            ttl_seconds=self.ttl_seconds or None,
+            body_index_options=body_index_options,
+            setup_mode=setup_mode,
+        )
+
         if documents:
             self.log(f"Adding {len(documents)} documents to the Vector Store.")
             # batch_size is an add_texts parameter: from_documents leaked it through
-            # **kwargs into Cassandra.__init__ and raised TypeError (#6255).
-            table = Cassandra(
-                embedding=self.embedding,
-                table_name=self.table_name,
-                keyspace=self.keyspace,
-                ttl_seconds=self.ttl_seconds or None,
-                body_index_options=body_index_options,
-            )
-            table.add_documents(documents=documents, batch_size=self.batch_size)
+            # **kwargs into Cassandra.__init__ and raised TypeError (#6255). add_texts
+            # slices with range(0, n, batch_size), where a cleared field (IntInput
+            # coerces to 0) raises and a negative value writes nothing while reporting
+            # success -- both only after the table DDL has already run.
+            batch_size = max(int(self.batch_size or DEFAULT_BATCH_SIZE), 1)
+            table.add_documents(documents=documents, batch_size=batch_size)
         else:
             self.log("No documents to add to the Vector Store.")
-            table = Cassandra(
-                embedding=self.embedding,
-                table_name=self.table_name,
-                keyspace=self.keyspace,
-                ttl_seconds=self.ttl_seconds or None,
-                body_index_options=body_index_options,
-                setup_mode=setup_mode,
-            )
         return table
 
     def _map_search_type(self) -> str:
