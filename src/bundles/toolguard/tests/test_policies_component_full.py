@@ -1,3 +1,4 @@
+import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -7,6 +8,7 @@ from lfx_toolguard.components.models_and_agents.policies_component import (
     MODE_GENERATE,
     MODE_GUARD,
     STEP2,
+    TOOLGUARD_WORK_DIR,
     PoliciesComponent,
 )
 
@@ -266,6 +268,8 @@ def test_work_dir_property():
     component.project = "test project"
     work_dir = component.work_dir
 
+    assert Path(tempfile.gettempdir()) / "tmp_toolguard" == TOOLGUARD_WORK_DIR
+    assert work_dir.is_absolute()
     assert "test_project" in str(work_dir)
     assert work_dir.name == "test_project"
 
