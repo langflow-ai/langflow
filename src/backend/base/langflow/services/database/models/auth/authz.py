@@ -300,7 +300,7 @@ class AuthzTeamMemberGrant(SQLModel, table=True):  # type: ignore[call-arg]
             index=True,
         ),
     )
-    source_kind: str = Field(description="manual, directory, or unresolved legacy")
+    source_kind: str = Field(max_length=16, description="manual, directory, or unresolved legacy")
     provider_id: str | None = Field(default=None, max_length=256)
     external_group_id: str | None = Field(default=None, max_length=512)
     legacy_source: str | None = Field(default=None, max_length=512)
