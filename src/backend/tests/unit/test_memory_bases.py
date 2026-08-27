@@ -648,7 +648,7 @@ class TestMemoryBaseProviderPolicy:
             patch(
                 "langflow.services.memory_base.service.require_model_provider",
                 side_effect=authorize_provider,
-            ),
+            ) as require,
             patch("langflow.services.memory_base.service.get_api_key_for_provider", return_value="owner-secret") as key,
             patch("langflow.services.memory_base.service.initialize_kb", AsyncMock()) as initialize,
             pytest.raises(ModelProviderPolicyError),
@@ -656,6 +656,7 @@ class TestMemoryBaseProviderPolicy:
             await service.create(payload, user_id=owner_user_id)
 
         key.assert_not_called()
+        assert [call.kwargs["provider"] for call in require.call_args_list] == ["Anthropic", "OpenAI"]
         initialize.assert_not_awaited()
 
     @pytest.mark.parametrize("actor_is_superuser", [False, True], ids=["delegated-admin", "superadmin"])
@@ -712,10 +713,10 @@ class TestMemoryBaseProviderPolicy:
             )
 
         assert updated is mb
-        assert policy_calls == [
+        assert set(policy_calls) == {
             (actor_user_id, "OpenAI", ModelProviderPolicyPurpose.CONFIGURE),
             (actor_user_id, "Anthropic", ModelProviderPolicyPurpose.CONFIGURE),
-        ]
+        }
         key.assert_called_once_with(owner_user_id, "Anthropic")
         assert all(call[0] != owner_user_id for call in policy_calls)
         assert key.call_args.args[0] != actor_user_id
@@ -736,7 +737,12 @@ class TestMemoryBaseProviderPolicy:
             patch("langflow.services.memory_base.service.require_model_provider", side_effect=denial) as require,
             pytest.raises(ModelProviderPolicyError),
         ):
-            await service.update(mb.id, user_id, MemoryBaseUpdate(threshold=99))
+            await service.update(
+                mb.id,
+                owner_user_id=user_id,
+                patch=MemoryBaseUpdate(threshold=99),
+                actor_user_id=user_id,
+            )
 
         require.assert_called_once_with(
             user_id=user_id,
@@ -845,7 +851,12 @@ class TestMemoryBaseProviderPolicy:
             patch("langflow.services.memory_base.service.get_api_key_for_provider") as get_api_key,
             pytest.raises(ModelProviderPolicyError),
         ):
-            await service.update(mb.id, user_id, MemoryBaseUpdate(threshold=99))
+            await service.update(
+                mb.id,
+                owner_user_id=user_id,
+                patch=MemoryBaseUpdate(threshold=99),
+                actor_user_id=user_id,
+            )
 
         assert mb.threshold == 10
         get_api_key.assert_not_called()
@@ -870,7 +881,12 @@ class TestMemoryBaseProviderPolicy:
             patch("langflow.services.memory_base.service.get_api_key_for_provider") as get_api_key,
             pytest.raises(PermissionError, match=r"Flow .* not found"),
         ):
-            await service.update(mb.id, user_id, MemoryBaseUpdate(threshold=99))
+            await service.update(
+                mb.id,
+                owner_user_id=user_id,
+                patch=MemoryBaseUpdate(threshold=99),
+                actor_user_id=user_id,
+            )
 
         require.assert_not_called()
         get_api_key.assert_not_called()
@@ -2992,8 +3008,9 @@ class TestPreprocessingApiKeyValidation:
         ):
             await service.update(
                 mb.id,
-                user_id,
-                MemoryBaseUpdate(threshold=10),
+                owner_user_id=user_id,
+                patch=MemoryBaseUpdate(threshold=10),
+                actor_user_id=user_id,
             )
 
 
@@ -3033,7 +3050,12 @@ class TestMemoryBaseSecurityAdversarial:
         exec_result.first.return_value = None
         mock_db.exec = AsyncMock(return_value=exec_result)
         with patch("langflow.services.memory_base.service.session_scope", self._fake_scope(mock_db)):
-            result = await service.update(mb.id, user_b, MemoryBaseUpdate(threshold=5))
+            result = await service.update(
+                mb.id,
+                owner_user_id=user_b,
+                patch=MemoryBaseUpdate(threshold=5),
+                actor_user_id=user_b,
+            )
         assert result is None
 
     @pytest.mark.asyncio

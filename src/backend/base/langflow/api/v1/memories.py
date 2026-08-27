@@ -381,9 +381,10 @@ async def update_memory_base(
     try:
         mb = await get_memory_base_service().update(
             memory_base_id,
-            user_id=mb.user_id,
+            owner_user_id=mb.user_id,
             patch=patch,
-            is_superuser=bool(current_user.is_superuser),
+            actor_user_id=current_user.id,
+            actor_is_superuser=bool(current_user.is_superuser),
         )
     except MemoryBaseFlowNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

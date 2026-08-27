@@ -95,11 +95,20 @@ def _require_preprocessing_model_provider(user_id: uuid.UUID, preproc_model: str
 def _validate_preprocessing_api_key(user_id: uuid.UUID, preproc_model: str | None) -> None:
     """Raise PreprocessingValidationError if the preprocessing provider API key is missing."""
     provider = _require_preprocessing_model_provider(user_id, preproc_model)
+    _validate_preprocessing_provider_api_key(user_id, preproc_model, provider)
+
+
+def _validate_preprocessing_provider_api_key(
+    owner_user_id: uuid.UUID,
+    preproc_model: str | None,
+    provider: str | None,
+) -> None:
+    """Validate an owner's credential after the actor's provider preflight succeeds."""
     if provider is None:
         return
     if provider == "Ollama" or is_api_key_optional(provider):
         return
-    api_key = get_api_key_for_provider(user_id, provider)
+    api_key = get_api_key_for_provider(owner_user_id, provider)
     if not api_key:
         msg = (
             f"No API key found for provider '{provider}' (required for preprocessing model "
@@ -177,19 +186,22 @@ class MemoryBaseService(Service):
             user_id=user_id,
             is_superuser=is_superuser,
         ):
-            if payload.preprocessing:
-                _validate_preprocessing_api_key(user_id, payload.preproc_model)
-            elif payload.preproc_model:
-                _require_preprocessing_model_provider(user_id, payload.preproc_model)
-
-            # 1c. Resolve and authorize the embedding provider before filesystem
-            # initialization or any persistence work.
+            # Resolve and authorize every supplied provider before reading any
+            # owner credential. This prevents a later embedding denial from
+            # becoming a preprocessing-secret oracle.
+            preprocessing_provider = _require_preprocessing_model_provider(user_id, payload.preproc_model)
             embedding_provider = infer_embedding_provider(payload.embedding_model)
             require_model_provider(
                 user_id=user_id,
                 provider=embedding_provider,
                 purpose=ModelProviderPolicyPurpose.CONFIGURE,
             )
+            if payload.preprocessing:
+                _validate_preprocessing_provider_api_key(
+                    user_id,
+                    payload.preproc_model,
+                    preprocessing_provider,
+                )
 
         # 2. Resolve username — needed for the KB path.
         async with session_scope() as db:
@@ -340,38 +352,53 @@ class MemoryBaseService(Service):
     async def update(
         self,
         memory_base_id: uuid.UUID,
-        user_id: uuid.UUID,
+        owner_user_id: uuid.UUID,
         patch: MemoryBaseUpdate,
         *,
-        is_superuser: bool = False,
+        actor_user_id: uuid.UUID,
+        actor_is_superuser: bool = False,
     ) -> MemoryBase | None:
         """Update mutable fields.
+
+        ``owner_user_id`` scopes resource and credential access, while
+        ``actor_user_id`` and ``actor_is_superuser`` identify the principal
+        whose provider permission is evaluated.
 
         Threshold changes take effect on the NEXT auto-capture trigger; any
         already-running ingestion task ignores the change (immutable args).
         """
         async with session_scope() as db:
-            stmt = select(MemoryBase).where(MemoryBase.id == memory_base_id).where(MemoryBase.user_id == user_id)
+            stmt = select(MemoryBase).where(MemoryBase.id == memory_base_id).where(MemoryBase.user_id == owner_user_id)
             result = await db.exec(stmt)
             mb = result.first()
             if mb is None:
                 return None
 
-            flow = await resolve_owned_memory_flow(db, flow_id=mb.flow_id, user_id=user_id)
+            flow = await resolve_owned_memory_flow(db, flow_id=mb.flow_id, user_id=owner_user_id)
             with scoped_model_provider_policy_for_flow(
                 flow,
-                user_id=user_id,
-                is_superuser=is_superuser,
+                user_id=actor_user_id,
+                is_superuser=actor_is_superuser,
             ):
+                preprocessing_provider = None
+                if mb.preprocessing:
+                    preprocessing_provider = _require_preprocessing_model_provider(
+                        actor_user_id,
+                        mb.preproc_model,
+                    )
                 embedding_provider = infer_embedding_provider(mb.embedding_model)
                 require_model_provider(
-                    user_id=user_id,
+                    user_id=actor_user_id,
                     provider=embedding_provider,
                     purpose=ModelProviderPolicyPurpose.CONFIGURE,
                 )
 
                 if mb.preprocessing:
-                    _validate_preprocessing_api_key(user_id, mb.preproc_model)
+                    _validate_preprocessing_provider_api_key(
+                        owner_user_id,
+                        mb.preproc_model,
+                        preprocessing_provider,
+                    )
 
             for field, value in patch.model_dump(exclude_unset=True).items():
                 setattr(mb, field, value)
