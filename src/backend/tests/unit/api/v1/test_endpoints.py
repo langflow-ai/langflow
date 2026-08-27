@@ -3,7 +3,7 @@ import hashlib
 import inspect
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -551,10 +551,10 @@ async def test_custom_component_create_denies_provider_before_dynamic_update_hoo
 
     provider_denial = ModelProviderPolicyError("openai", ModelProviderPolicyPurpose.CONFIGURE)
     component_instance = Component(_code="")
-    require_policy = Mock(side_effect=provider_denial)
+    require_policy = AsyncMock(side_effect=provider_denial)
     update_frontend_node = AsyncMock(return_value={"tool_mode": False})
     run_update_outputs = AsyncMock()
-    monkeypatch.setattr(component_instance, "require_model_provider_policy", require_policy)
+    monkeypatch.setattr(component_instance, "arequire_model_provider_policy", require_policy)
     monkeypatch.setattr(component_instance, "update_frontend_node", update_frontend_node)
     monkeypatch.setattr(component_instance, "run_and_validate_update_outputs", run_update_outputs)
     monkeypatch.setattr(endpoints, "get_current_external_access_context", lambda: None)
@@ -586,9 +586,66 @@ async def test_custom_component_create_denies_provider_before_dynamic_update_hoo
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json() == {"detail": "Model provider not found"}
-    require_policy.assert_called_once_with(ModelProviderPolicyPurpose.CONFIGURE)
+    assert require_policy.await_args.args == (ModelProviderPolicyPurpose.CONFIGURE,)
     update_frontend_node.assert_not_awaited()
     run_update_outputs.assert_not_awaited()
+
+
+async def test_custom_component_update_denies_selected_provider_before_secret_hydration(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    from langflow.api.v1 import endpoints
+    from lfx.custom.custom_component.component import Component
+    from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+    component_instance = Component(_code="")
+    denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.CONFIGURE)
+    require_policy = AsyncMock(side_effect=denial)
+    hydrate = AsyncMock(side_effect=AssertionError("secret hydration reached after provider denial"))
+    monkeypatch.setattr(component_instance, "arequire_model_provider_policy", require_policy)
+    monkeypatch.setattr(endpoints, "update_params_with_load_from_db_fields", hydrate)
+    monkeypatch.setattr(endpoints, "get_current_external_access_context", lambda: None)
+    monkeypatch.setattr(endpoints, "get_settings_service", lambda: SimpleNamespace(settings=SimpleNamespace()))
+    monkeypatch.setattr(endpoints, "get_catalog_policy_service", lambda: SimpleNamespace(snapshot=object()))
+    monkeypatch.setattr(endpoints, "resolve_component_code_for_action", lambda code, **_kwargs: code)
+    monkeypatch.setattr(
+        endpoints,
+        "build_custom_component_template",
+        lambda *_args, **_kwargs: ({"template": {}, "outputs": []}, component_instance),
+    )
+    monkeypatch.setattr(endpoints, "get_instance_name", lambda _component: "SelectedModel")
+    monkeypatch.setattr(endpoints, "enforce_catalog_policy_for_component_type", lambda *_args, **_kwargs: None)
+
+    request = UpdateCustomComponentRequest(
+        code="class SelectedModel: pass",
+        frontend_node={"outputs": []},
+        field="model",
+        field_value=[{"provider": "Anthropic", "model_name": "claude-test"}],
+        template={
+            "model": {
+                "value": [{"provider": "Anthropic", "model_name": "claude-test"}],
+                "_input_type": "ModelInput",
+            },
+            "api_key": {
+                "value": "ANTHROPIC_API_KEY",
+                "_input_type": "SecretStrInput",
+                "load_from_db": True,
+            },
+        },
+    )
+    response = await client.post(
+        "api/v1/custom_component/update",
+        json=request.model_dump(),
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json() == {"detail": "Model provider not found"}
+    assert require_policy.await_args.args == (ModelProviderPolicyPurpose.CONFIGURE,)
+    assert require_policy.await_args.kwargs["parameters"]["model"][0]["provider"] == "Anthropic"
+    hydrate.assert_not_awaited()
 
 
 async def test_custom_component_endpoint_returns_metadata(client: AsyncClient, logged_in_headers: dict):
