@@ -34,6 +34,7 @@ jest.mock("@xyflow/react", () => ({
     </div>
   ),
   useReactFlow: () => reactFlowFns,
+  useUpdateNodeInternals: () => jest.fn(),
   useStore: () => ({
     isInteractive: true,
     minZoomReached: false,
@@ -45,7 +46,15 @@ jest.mock("@xyflow/react", () => ({
 
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
-  default: jest.fn(() => false),
+  default: jest.fn((selector) => {
+    const state = {
+      nodes: [],
+      edges: [],
+      setNodes: jest.fn(),
+      currentFlow: { locked: false },
+    };
+    return typeof selector === "function" ? selector(state) : false;
+  }),
 }));
 
 jest.mock("@/stores/flowsManagerStore", () => ({

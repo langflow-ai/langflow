@@ -11,15 +11,17 @@ PUBLISHED_DOCKERFILES = (
     "build_and_push_ep.Dockerfile",
     "build_and_push_with_extras.Dockerfile",
 )
-EXPECTED_RUNTIME_ENV = {
-    "LANGFLOW_ALLOW_CUSTOM_COMPONENTS": "false",
-    "LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS": "true",
-    "LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS": "true",
-    "LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK": "false",
-    "LANGFLOW_MCP_SERVER_DOCKER_HARDENING": "true",
-    "LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING": "true",
-    "LANGFLOW_MCP_SERVER_ALLOWED_PACKAGES": "mcp-proxy,lfx",
-}
+RESTRICTIVE_RUNTIME_ENV_VARS = frozenset(
+    {
+        "LANGFLOW_ALLOW_CUSTOM_COMPONENTS",
+        "LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS",
+        "LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS",
+        "LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK",
+        "LANGFLOW_MCP_SERVER_DOCKER_HARDENING",
+        "LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING",
+        "LANGFLOW_MCP_SERVER_ALLOWED_PACKAGES",
+    }
+)
 
 
 def _logical_instructions(dockerfile: Path) -> list[str]:
@@ -65,10 +67,11 @@ def _final_stage_env(dockerfile: Path) -> dict[str, str]:
 
 
 @pytest.mark.parametrize("dockerfile", PUBLISHED_DOCKERFILES)
-def test_published_images_enable_multi_tenant_hardening(dockerfile: str) -> None:
+def test_published_images_do_not_force_restrictive_runtime_defaults(dockerfile: str) -> None:
     runtime_env = _final_stage_env(REPO_ROOT / "docker" / dockerfile)
 
-    assert {key: runtime_env.get(key) for key in EXPECTED_RUNTIME_ENV} == EXPECTED_RUNTIME_ENV
+    assert runtime_env["LANGFLOW_AUTO_LOGIN"] == "false"
+    assert RESTRICTIVE_RUNTIME_ENV_VARS.isdisjoint(runtime_env)
 
 
 def test_final_stage_env_parses_overrides_multiple_assignments_and_continuations(tmp_path: Path) -> None:

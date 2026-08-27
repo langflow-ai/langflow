@@ -154,25 +154,30 @@ export function isHumanInputCardAnswered(
  * selection is derived from a stable source — local React state is lost when the
  * resume reattach replays the stream and re-renders the message list.
  */
+function stampSubmittedAction(
+  blocks: ContentBlockItem[] | undefined,
+  actionId: string,
+): ContentBlockItem[] {
+  return (blocks ?? []).map((block) => {
+    if (block.type === "human_input")
+      return { ...block, submitted_action: actionId };
+    const contents = (block as ContentBlock).contents;
+    if (!Array.isArray(contents)) return block;
+    return {
+      ...block,
+      contents: contents.map((c) =>
+        c?.type === "human_input" ? { ...c, submitted_action: actionId } : c,
+      ),
+    };
+  });
+}
+
 export function markHumanInputSubmitted(
   requestId: string,
   actionId: string,
 ): void {
-  const stampBlocks = (
-    blocks: ContentBlockItem[] | undefined,
-  ): ContentBlockItem[] =>
-    (blocks ?? []).map((block) => {
-      if (block.type === "human_input")
-        return { ...block, submitted_action: actionId };
-      const contents = (block as ContentBlock).contents;
-      if (!Array.isArray(contents)) return block;
-      return {
-        ...block,
-        contents: contents.map((c) =>
-          c?.type === "human_input" ? { ...c, submitted_action: actionId } : c,
-        ),
-      };
-    });
+  const stampBlocks = (blocks: ContentBlockItem[] | undefined) =>
+    stampSubmittedAction(blocks, actionId);
   forEachMessageCache((key, messages) => {
     if (!messages.some((m) => isCardMessageFor(m, requestId))) return;
     queryClient.setQueryData(key, (old: Message[] = []) =>
@@ -193,6 +198,41 @@ export function markHumanInputSubmitted(
       content_blocks: stampBlocks(target.content_blocks),
     });
   }
+}
+
+/**
+ * Adopt decisions the backend already recorded but this cache never saw.
+ *
+ * The chat's session cache is a subscription-only query (staleTime Infinity, fed by
+ * setQueryData) and it re-hydrates from the backend only while empty, so a pause
+ * answered on another surface — the canvas badge, the trace bar, another tab — leaves
+ * an answered card still rendering its buttons until a full page reload.
+ */
+export function withAnsweredHumanInputCards(
+  cachedMessages: Message[],
+  backendMessages: Message[],
+): Message[] | null {
+  const answeredByRequest = new Map<string, string>();
+  for (const message of backendMessages) {
+    const content = findHumanInputContent(message.content_blocks);
+    if (content?.submitted_action)
+      answeredByRequest.set(content.request_id, content.submitted_action);
+  }
+  if (answeredByRequest.size === 0) return null;
+
+  let changed = false;
+  const reconciled = cachedMessages.map((message) => {
+    const content = findHumanInputContent(message.content_blocks);
+    if (!content || content.submitted_action) return message;
+    const action = answeredByRequest.get(content.request_id);
+    if (!action) return message;
+    changed = true;
+    return {
+      ...message,
+      content_blocks: stampSubmittedAction(message.content_blocks, action),
+    };
+  });
+  return changed ? reconciled : null;
 }
 
 /** Render the pause as an interactive card in the chat and flag awaiting-input. */

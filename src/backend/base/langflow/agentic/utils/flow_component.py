@@ -7,6 +7,7 @@ from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
 
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
+from langflow.services.database.models.flow.guards import ensure_flow_unlocked, lock_flow_for_update
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import session_scope
 
@@ -231,6 +232,8 @@ async def update_component_field_value(
         if flow.data is None:
             return {"error": f"Flow {flow_id_or_name} has no data", "success": False}
 
+        ensure_flow_unlocked(flow)
+
         flow_id_str = str(flow.id)
 
         # Find the component in the flow data
@@ -271,9 +274,14 @@ async def update_component_field_value(
             if not db_flow:
                 return {"error": f"Flow {flow_id_str} not found in database", "success": False}
 
+            await lock_flow_for_update(session, db_flow)
+
             # Verify user has permission
             if str(db_flow.user_id) != str(user_id):
                 return {"error": "User does not have permission to update this flow", "success": False}
+
+            # Check the row while its write lock is held through commit.
+            ensure_flow_unlocked(db_flow)
 
             # Update the flow data
             db_flow.data = flow_data

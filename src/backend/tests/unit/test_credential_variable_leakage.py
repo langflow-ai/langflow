@@ -24,7 +24,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from lfx.components.input_output import TextInputComponent
 from lfx.custom import Component
-from lfx.inputs.inputs import SecretStrInput
+from lfx.inputs.inputs import IntInput, SecretStrInput, StrInput
 from lfx.interface.initialize.loading import update_params_with_load_from_db_fields
 from lfx.io import Output
 from lfx.schema.message import Message
@@ -149,6 +149,52 @@ async def test_credential_variable_in_password_field_preserves_runtime_string_co
     assert component._output_logs["output"][0].message == "**********"
     assert component.status == "**********"
     assert component.repr_value == "**********"
+
+
+@pytest.mark.asyncio
+async def test_secret_inputs_are_redacted_at_tracing_boundary_by_field_metadata():
+    """Secret input metadata, not field-name guesses, controls trace redaction."""
+
+    class _TraceSecretsComponent(Component):
+        display_name = "TraceSecretsTest"
+        name = "TraceSecretsTest"
+        inputs = [
+            SecretStrInput(name="aws_secret_access_key", display_name="AWS Secret Access Key"),
+            SecretStrInput(name="access_token", display_name="Access Token"),
+            IntInput(name="token_budget", display_name="Token Budget"),
+            StrInput(name="region", display_name="Region"),
+        ]
+        outputs = [Output(display_name="Output", name="output", method="build_output")]
+
+        def build_output(self) -> str:
+            return self.region
+
+    component = _TraceSecretsComponent(_user_id=str(uuid.uuid4()))
+    component.set_attributes(
+        {
+            "aws_secret_access_key": "aws-secret-sentinel",  # pragma: allowlist secret
+            "access_token": "token-secret-sentinel",  # pragma: allowlist secret
+            "token_budget": 4096,
+            "region": "us-west-2",
+        }
+    )
+
+    tracing_service = MagicMock()
+    trace_context = MagicMock()
+    trace_context.__aenter__ = AsyncMock(return_value=tracing_service)
+    trace_context.__aexit__ = AsyncMock(return_value=None)
+    tracing_service.trace_component.return_value = trace_context
+    component._tracing_service = tracing_service
+
+    await component._build_with_tracing()
+
+    traced_inputs = tracing_service.trace_component.call_args.args[2]
+    assert traced_inputs == {
+        "aws_secret_access_key": "**********",
+        "access_token": "**********",
+        "token_budget": 4096,
+        "region": "us-west-2",
+    }
 
 
 @pytest.mark.asyncio

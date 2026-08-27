@@ -28,7 +28,8 @@
     "serialize-javascript": ">=7.0.3",
     "undici": ">=7.24.0",
     "postcss-selector-parser": "^6.1.3",
-    "form-data": "^4.0.6"
+    "form-data": "^4.0.6",
+    "fast-uri": "^4.1.1"
   },
   "dependencies": {
     "@ag-ui/client": "0.0.53",

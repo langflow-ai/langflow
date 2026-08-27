@@ -140,6 +140,25 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             metric_type=MetricType.COUNTER,
             labels={"flow_id": mandatory_label},
         )
+        self._add_metric(
+            name="langflow_job_queue_cancel_events_total",
+            description=(
+                "Job queue cancel-channel and watchdog events. event_type is one of: "
+                "published, marker_hit, dispatched_owned, dispatched_foreign, publish_errors, "
+                "dispatcher_reconnects, dispatcher_internal_errors, polling_watchdog_kills, "
+                "activity_touch_errors, activity_get_errors, activity_parse_errors."
+            ),
+            unit="",
+            metric_type=MetricType.COUNTER,
+            labels={"event_type": mandatory_label},
+        )
+        self._add_metric(
+            name="langflow_job_queue_active_jobs",
+            description="Active jobs tracked by the job queue on this worker.",
+            unit="",
+            metric_type=MetricType.UP_DOWN_COUNTER,
+            labels={"backend": mandatory_label},
+        )
 
     def __init__(self, *, prometheus_enabled: bool = True):
         # Only initialize once
@@ -154,8 +173,10 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             # Get existing meter provider if any
             existing_provider = metrics.get_meter_provider()
 
-            # Check if FastAPI instrumentation is already set up
-            if hasattr(existing_provider, "get_meter") and existing_provider.get_meter("http.server"):
+            # Reuse a concrete SDK provider installed by another integration. The
+            # default API proxy also returns meters, but it has no readers and must
+            # be replaced so Prometheus can collect Langflow metrics.
+            if isinstance(existing_provider, MeterProvider):
                 self._meter_provider = existing_provider
             else:
                 resource = Resource.create({"service.name": "langflow"})

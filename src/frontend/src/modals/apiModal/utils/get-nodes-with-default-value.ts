@@ -1,14 +1,11 @@
 import { cloneDeep } from "lodash";
-import type { AllNodeType } from "@/types/flow";
+import type { AllNodeType, EdgeType } from "@/types/flow";
 import { LANGFLOW_SUPPORTED_TYPES } from "../../../constants/constants";
+import { isFieldExposable } from "./is-field-exposable";
 
 export const getNodesWithDefaultValue = (
   nodes: AllNodeType[],
-  oldTweaks: {
-    [key: string]: {
-      [key: string]: any;
-    };
-  },
+  edges: EdgeType[],
 ) => {
   const filteredNodes: AllNodeType[] = [];
 
@@ -25,10 +22,19 @@ export const getNodesWithDefaultValue = (
       );
       const newNode = cloneDeep(node);
       if (newNode?.data?.node?.template) {
+        // API exposure is the persisted per-field api_editable flag on the
+        // real node (LE-1810) — the tweaks copy carries it verbatim, except
+        // that a field failing the exposure predicate (off-node, connected,
+        // tool-mode-disabled) is copied as NOT exposed. The real node's flag
+        // is never mutated; exposure resumes once the precondition holds.
         newNode.data.node.template = templateKeys.reduce((acc, key) => {
           acc[key] = cloneDeep(node?.data?.node?.template[key]);
-          acc[key].advanced =
-            node.id in oldTweaks && key in oldTweaks[node.id] ? false : true;
+          if (
+            acc[key].api_editable === true &&
+            !isFieldExposable(node, key, edges)
+          ) {
+            acc[key].api_editable = false;
+          }
           return acc;
         }, {});
       }

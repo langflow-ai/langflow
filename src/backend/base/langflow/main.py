@@ -606,6 +606,13 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await stop_streamable_http_manager()
                     except Exception as e:  # noqa: BLE001
                         await logger.aerror(f"Failed to stop MCP server streamable-http session manager: {e}")
+                    # Close the shared A2A push-notification webhook client.
+                    try:
+                        from langflow.api.v1.a2a import close_push_client
+
+                        await close_push_client()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to close A2A push notification client: {e}")
                     # Stop the authz audit-log retention worker (best-effort;
                     # no-op when it was never scheduled).
                     try:
@@ -964,6 +971,22 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
     # get a native 405, and real API routes are registered earlier so they win.
     @app.api_route("/api/{_path:path}", include_in_schema=False, methods=["GET", "HEAD"])
     async def api_not_found(_path: str):
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    # Serve the favicon from an explicit high-priority route instead of relying on
+    # the low-priority app.frontend() static route. Browsers request /favicon.ico
+    # with an image Accept header, which app.frontend() does not treat as a
+    # navigation request; if the file is ever missed there the request falls
+    # through to the 404 handler, which returns index.html (HTML) and the browser
+    # renders no icon. A dedicated route always answers with the file and the
+    # correct media type, or a clean 404 when it is absent, independent of the
+    # frontend fallback heuristics.
+    favicon_path = static_files_dir / "favicon.ico"
+
+    @app.get("/favicon.ico", include_in_schema=False)
+    async def favicon():
+        if await anyio.Path(favicon_path).exists():
+            return FileResponse(favicon_path, media_type="image/x-icon")
         raise HTTPException(status_code=404, detail="Not Found")
 
     # FastAPI >=0.138 serves the frontend build as low-priority routes: path

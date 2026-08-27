@@ -17,20 +17,10 @@ const HelpDropdown = () => {
   const setHelperLineEnabled = useFlowStore(
     (state) => state.setHelperLineEnabled,
   );
-  const inspectionPanelVisible = useFlowStore(
-    (state) => state.inspectionPanelVisible,
-  );
-  const setInspectionPanelVisible = useFlowStore(
-    (state) => state.setInspectionPanelVisible,
-  );
 
   const onToggleHelperLines = useCallback(() => {
     setHelperLineEnabled(!helperLineEnabled);
   }, [helperLineEnabled]);
-
-  const onToggleInspectionPanel = useCallback(() => {
-    setInspectionPanelVisible(!inspectionPanelVisible);
-  }, [inspectionPanelVisible]);
 
   const docsUrl = ENABLE_DATASTAX_LANGFLOW ? DATASTAX_DOCS_URL : DOCS_URL;
 
@@ -40,8 +30,6 @@ const HelpDropdown = () => {
       onOpenChange={setIsHelpMenuOpen}
       helperLineEnabled={helperLineEnabled}
       onToggleHelperLines={onToggleHelperLines}
-      inspectionPanelVisible={inspectionPanelVisible}
-      onToggleInspectionPanel={onToggleInspectionPanel}
       navigateTo={(path) => navigate(path)}
       openLink={(url) => window.open(url, "_blank")}
       urls={{ docs: docsUrl, bugReport: BUG_REPORT_URL, desktop: DESKTOP_URL }}

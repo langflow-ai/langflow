@@ -47,6 +47,17 @@ def s3_service_offline(mock_session_service, mock_settings_service, monkeypatch)
     return service
 
 
+def test_get_client_uses_aiobotocore_create_client(mock_session_service, mock_settings_service):
+    service = S3StorageService(mock_session_service, mock_settings_service)
+    session = Mock()
+    service.session = session
+
+    client_context = service._get_client()
+
+    session.create_client.assert_called_once_with("s3")
+    assert client_context is session.create_client.return_value
+
+
 _MALICIOUS_FLOW_IDS = [
     "/etc",
     "..",

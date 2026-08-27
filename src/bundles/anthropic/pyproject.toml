@@ -1,6 +1,6 @@
 [project]
 name = "lfx-anthropic"
-version = "0.1.0"
+version = "0.1.2"
 description = "Anthropic component(s) as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"

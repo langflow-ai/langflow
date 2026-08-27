@@ -1,0 +1,127 @@
+---
+title: Best practices for Langflow on Kubernetes
+slug: /deployment-prod-best-practices
+---
+
+This guide provides best practices for deploying Langflow in production environments on Kubernetes.
+
+## Resources and scaling
+
+Langflow's minimum resource requirements vary by deployment type:
+
+* **IDE (development)**: Deploy both the Langflow visual editor (frontend) and API (backend). Typically, this is used for development environments where developers use the visual editor to create and manage flows before packaging and serving them through a production runtime deployment.
+
+    The frontend service requires a minimum of 512Mi RAM and 0.3 CPU per instance with 1 replica.
+
+    The backend service requires a minimum of 1Gi RAM and 0.5 CPU per instance with 1 replica.
+
+* **Runtime (production)**: Deploy the Langflow runtime for production flows, which is headless (backend only) service focused on serving the Langflow API. This is used for production environments where flows are executed programmatically without the need for the visual editor.
+
+    Minimum requirements include 2Gi RAM and 1000m (1 CPU) per instance with 3 replicas.
+
+For more information about Langflow deployment types, see [Langflow architecture on Kubernetes](/deployment-architecture).
+
+### Estimate, test, and adjust
+
+Start with the minimum recommended resources and replicas, then monitor and scale as needed based on your deployment's requirements and performance testing.
+Consider the following factors in your resource estimation and performance testing:
+
+* Flow complexity.
+* Volume of concurrent users and requests.
+
+   For IDE (development) deployments, consider that frontend activity also pings the backend service, so you typically need to scale both the frontend and backend together.
+
+* Request payload content and size, particularly for file uploads in production deployments.
+* Storage requirements for cache, file management, and the Langflow database.
+
+    An [external PostgreSQL database](#use-an-external-postgresql-database) is recommended for production deployments.
+
+* Infrastructure options that might require more resources, such as multi-core CPUs.
+
+### Use an external PostgreSQL database
+
+An external PostgreSQL database is recommended for production deployments to improve scalability and reliability as compared to the default SQLite database.
+
+Your resource allocation and replication strategy must be able to support the PostgreSQL service and storage.
+For example, for a runtime (production) deployment, you might allocate 4Gi RAM, 2 CPU, and multiple replicas for high availability.
+Tune PostgreSQL parameters, such as `work_mem` and `shared_buffers`, as needed based on resource requirements and usage metrics.
+
+Recommended configurations include:
+
+* Persistent storage to prevent data loss on container shutdown
+* High Availability (HA) or Active-Active for automatic failover, scaling, and load balancing
+* Shared databases for multi-instance deployments
+* Shared storage, such as NFS or cloud storage, for multi-instance deployments to access large files stored on disk, such as in `/opt/langflow/data/`.
+
+For more information, see [Configure an external PostgreSQL database](/configuration-custom-database) and [Langflow database guide for enterprise DBAs](/enterprise-database-guide).
+
+### Use HPA for dynamic scaling
+
+Load balancing and dynamic scaling are recommended for runtime (production) deployments.
+
+For example, consider using Horizontal Pod Autoscaler (HPA) in Kubernetes to dynamically scale based on CPU or memory usage.
+The following example shows a Langflow HPA configuration with CPU-based scaling:
+
+```yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: langflow-runtime-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: langflow-runtime
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+```
+
+## Failure points
+
+Langflow's reliability in production depends on mitigating key failure points, particularly around the database, file system, and instance availability:
+
+* **Database failures**: See [Langflow database guide for enterprise DBAs](/enterprise-database-guide).
+* **File system failures**: Concurrency issues in file caching, such as `/app/data/.cache`, can cause IO errors in multi-instance setups.
+To avoid this, use a shared, POSIX-compliant file system or cloud storage.
+Use persistent volumes instead of ramdisk solutions that result in data loss on container shutdown.
+* **Instance failures**: Deploy multiple replicas to avoid service disruptions when a single instance fails. Use health checks to detect and replace failed pods.
+* **Network and dependency failures**: External APIs or services used in flows may fail, causing flow errors. Implement retry logic and error handling in flows or application code. Monitor network latency and dependency health.
+
+## Monitoring
+
+Effective monitoring ensures Langflow operates reliably and performs well under varying loads:
+
+* **Database monitoring**: See [Langflow database guide for enterprise DBAs](/enterprise-database-guide).
+* **Application logs**: Collect and analyze logs for errors, warnings, and flow execution issues. Centralize logs using tools like ELK Stack or Fluentd. You can also inspect [Langflow logs](/logging).
+* **Resource usage**: Track CPU, memory, and disk usage of Langflow instances. Use Prometheus and Grafana for real-time metrics collection and monitoring in Kubernetes.
+
+    To expose your Langflow server's Prometheus metrics, set `LANGFLOW_PROMETHEUS_ENABLED=True` (the default is `false`).
+    The default port for the Prometheus metrics is 9090.
+    To change the port, set `LANGFLOW_PROMETHEUS_PORT`.
+
+* **API performance**: Monitor response times, error rates, and request throughput. Set alerts for high latency or error spikes.
+* **Observability tools**: Integrate with [LangWatch](/integrations-langwatch) or [Opik](/integrations-opik) for detailed flow tracing and metrics. Use these tools to debug flow performance and optimize execution.
+
+## Security
+
+Running Langflow in production requires robust security measures to protect the application, data, and users.
+Follow industry best practices and use secure Langflow configurations, such as the following:
+
+* **Container security**: Apply security best practices for containerized applications. For example, set `readOnlyRootFilesystem: true` in runtime (production) containers to prevent unauthorized modifications. Restrict access to files and codebases containing sensitive data and configuration files that shouldn't be exposed to unauthorized users.
+* **Secrets management**: Store sensitive data like API keys and PostgreSQL credentials in Kubernetes secrets or external secrets managers like HashiCorp Vault.
+* **Authentication, authorization, and access control**: Start your Langflow server with authentication enabled, as explained in [API keys and authentication](/api-keys-and-authentication). Restrict network and resource access with firewalls, network policies, network security groups, or VPCs. For example, restrict PostgreSQL database access to Langflow instances.
+* **Encryption and privacy**: Follow industry best practices and legal requirements for data privacy and encryption of data in transit and at rest, including GDPR requirements, HTTPS, TLS, and SSL. For example, configure PostgreSQL with valid SSL certificates and append `?sslmode=require` or `?sslmode=verify-full` to the connection string to enable SSL for database connections.
+* **Security posture maintenance**: Conduct regular security audits, keep current with software updates, and monitor for suspicious activity using intrusion detection systems.
+
+## See also
+
+* [Deploy the Langflow production environment on Kubernetes](/deployment-kubernetes-prod)
+* [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts)
+* [Langflow environment variables](/environment-variables)

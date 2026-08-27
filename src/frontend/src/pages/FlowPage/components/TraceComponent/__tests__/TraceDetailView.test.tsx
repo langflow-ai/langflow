@@ -53,14 +53,25 @@ jest.mock("@/components/ui/loading", () => ({
 }));
 
 jest.mock("../TraceHitlBar", () => ({
-  TraceHitlBar: ({ onDecision }: { onDecision?: (a: string) => void }) => (
-    <button
-      type="button"
-      data-testid="hitl-bar"
-      onClick={() => onDecision?.("approve")}
-    >
-      bar
-    </button>
+  TraceHitlBar: ({
+    pending,
+    onDecision,
+  }: {
+    pending?: { allowed_decisions?: string[] };
+    onDecision?: (a: string) => void;
+  }) => (
+    <div data-testid="hitl-bar">
+      {(pending?.allowed_decisions ?? ["approve"]).map((id: string) => (
+        <button
+          key={id}
+          type="button"
+          data-testid={`hitl-bar-${id}`}
+          onClick={() => onDecision?.(id)}
+        >
+          {id}
+        </button>
+      ))}
+    </div>
   ),
 }));
 
@@ -285,11 +296,56 @@ describe("TraceDetailView", () => {
       screen.getByTestId("span-node-hitl-Agent-oYRYa:job-1"),
     ).toBeInTheDocument();
 
-    // Approve → the gate stays as a resolved "— Approved" step, not removed.
-    fireEvent.click(screen.getByTestId("hitl-bar"));
+    // Approve → the gate stays as a resolved "— Approve" step (the action's label), not removed.
+    fireEvent.click(screen.getByTestId("hitl-bar-approve"));
+    expect(screen.getByText(/Human In The Loop — Approve/)).toBeInTheDocument();
+  });
+
+  it("labels the resolved gate with the actual action, not a hardcoded Approved (LE-1851)", () => {
+    // A "remove" decision must not be mislabeled "Approved"; the gate reflects the chosen action.
+    mockTrace = {
+      id: "trace-1",
+      name: "Gated Trace",
+      status: "ok",
+      startTime: "2024-01-01T00:00:00Z",
+      endTime: "2024-01-01T00:00:01Z",
+      totalLatencyMs: 1234,
+      totalTokens: 0,
+      totalCost: 0,
+      flowId: "flow-1",
+      sessionId: "session-1",
+      input: {},
+      output: {},
+      spans: [],
+    };
+
+    render(
+      <TraceDetailView
+        traceId="trace-1"
+        flowName="Flow"
+        hasTrace
+        pendingRequest={{
+          job_id: "job-1",
+          flow_id: "flow-1",
+          session_id: "session-1",
+          created_at: null,
+          request_id: "Node-abc:job-1",
+          kind: "node_input",
+          prompt: null,
+          options: [
+            { action_id: "approve", label: "Approve" },
+            { action_id: "remove", label: "Remove" },
+          ],
+          allowed_decisions: ["approve", "remove"],
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("hitl-bar-remove"));
+    expect(screen.getByText(/Human In The Loop — Remove/)).toBeInTheDocument();
     expect(
-      screen.getByText(/Human In The Loop — Approved/),
-    ).toBeInTheDocument();
+      screen.queryByText(/Human In The Loop — Approved/),
+    ).not.toBeInTheDocument();
   });
 
   it("renders the resolved gate from the backend trace span after reopen", () => {

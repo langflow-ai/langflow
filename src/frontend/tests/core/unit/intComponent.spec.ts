@@ -4,10 +4,10 @@ import { TEXTS } from "../../utils/constants/texts";
 
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import {
-  closeAdvancedOptions,
-  disableInspectPanel,
-  enableInspectPanel,
-  openAdvancedOptions,
+  addParameterToNode,
+  closeParametersPanel,
+  openParametersPanel,
+  toggleParameterOnNode,
 } from "../../utils/open-advanced-options";
 import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 
@@ -26,14 +26,13 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await adjustScreenView(page, { numberOfZoomOut: 2 });
 
-  await disableInspectPanel(page);
-
   await page.getByTestId("div-generic-node").click();
 
-  await openAdvancedOptions(page);
-  await page.getByTestId("showmax_tokens").click();
+  // LE-1810: the parameters panel adds hidden fields to the node; values are
+  // edited on the node itself.
+  await addParameterToNode(page, "max_tokens");
+  await closeParametersPanel(page);
 
-  await closeAdvancedOptions(page);
   await page.getByTestId("int_int_max_tokens").click();
   await page.getByTestId("int_int_max_tokens").fill("100000");
 
@@ -53,92 +52,72 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
   await adjustScreenView(page, { numberOfZoomOut: 3 });
 
-  await openAdvancedOptions(page);
-
-  value = await page.getByTestId("int_int_edit_max_tokens").inputValue();
+  // max_tokens is on the node — the value stays editable there
+  value = await page.getByTestId("int_int_max_tokens").inputValue();
 
   // max_tokens displays "" (empty) when value is 0 = no limit
   expect(value).toBe("");
 
-  await page.getByTestId("int_int_edit_max_tokens").click();
-  await page.getByTestId("int_int_edit_max_tokens").fill("50000");
+  await page.getByTestId("int_int_max_tokens").click();
+  await page.getByTestId("int_int_max_tokens").fill("50000");
 
-  await page.locator('//*[@id="showmodel_kwargs"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_kwargs"]').isChecked(),
-  ).toBeTruthy();
+  // LE-1810: visibility rounds now happen through the panel Add/Remove
+  // actions — the row swaps between the two buttons.
+  await openParametersPanel(page);
 
-  await page.locator('//*[@id="showmodel_name"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_name"]').isChecked(),
-  ).toBeFalsy();
+  await toggleParameterOnNode(page, "model_kwargs");
+  await expect(page.getByTestId("inspector-remove-model_kwargs")).toBeVisible();
 
-  await page.locator('//*[@id="showopenai_api_base"]').click();
-  expect(
-    await page.locator('//*[@id="showopenai_api_base"]').isChecked(),
-  ).toBeTruthy();
+  await toggleParameterOnNode(page, "model_name");
+  await expect(page.getByTestId("inspector-add-model_name")).toBeVisible();
 
-  await page.locator('//*[@id="showtemperature"]').click();
-  expect(
-    await page.locator('//*[@id="showtemperature"]').isChecked(),
-  ).toBeFalsy();
+  await toggleParameterOnNode(page, "openai_api_base");
+  await expect(
+    page.getByTestId("inspector-remove-openai_api_base"),
+  ).toBeVisible();
 
-  await page.locator('//*[@id="showmodel_kwargs"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_kwargs"]').isChecked(),
-  ).toBeFalsy();
+  await toggleParameterOnNode(page, "temperature");
+  await expect(page.getByTestId("inspector-add-temperature")).toBeVisible();
 
-  await page.locator('//*[@id="showmodel_name"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_name"]').isChecked(),
-  ).toBeTruthy();
+  await toggleParameterOnNode(page, "model_kwargs");
+  await expect(page.getByTestId("inspector-add-model_kwargs")).toBeVisible();
 
-  await page.locator('//*[@id="showopenai_api_base"]').click();
-  expect(
-    await page.locator('//*[@id="showopenai_api_base"]').isChecked(),
-  ).toBeFalsy();
+  await toggleParameterOnNode(page, "model_name");
+  await expect(page.getByTestId("inspector-remove-model_name")).toBeVisible();
 
-  await page.locator('//*[@id="showtemperature"]').click();
-  expect(
-    await page.locator('//*[@id="showtemperature"]').isChecked(),
-  ).toBeTruthy();
+  await toggleParameterOnNode(page, "openai_api_base");
+  await expect(page.getByTestId("inspector-add-openai_api_base")).toBeVisible();
 
-  await page.locator('//*[@id="showmodel_kwargs"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_kwargs"]').isChecked(),
-  ).toBeTruthy();
+  await toggleParameterOnNode(page, "temperature");
+  await expect(page.getByTestId("inspector-remove-temperature")).toBeVisible();
 
-  await page.locator('//*[@id="showmodel_name"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_name"]').isChecked(),
-  ).toBeFalsy();
+  await toggleParameterOnNode(page, "model_kwargs");
+  await expect(page.getByTestId("inspector-remove-model_kwargs")).toBeVisible();
 
-  await page.locator('//*[@id="showopenai_api_base"]').click();
-  expect(
-    await page.locator('//*[@id="showopenai_api_base"]').isChecked(),
-  ).toBeTruthy();
+  await toggleParameterOnNode(page, "model_name");
+  await expect(page.getByTestId("inspector-add-model_name")).toBeVisible();
 
-  await page.locator('//*[@id="showtemperature"]').click();
-  expect(
-    await page.locator('//*[@id="showtemperature"]').isChecked(),
-  ).toBeFalsy();
+  await toggleParameterOnNode(page, "openai_api_base");
+  await expect(
+    page.getByTestId("inspector-remove-openai_api_base"),
+  ).toBeVisible();
 
-  await closeAdvancedOptions(page);
+  await toggleParameterOnNode(page, "temperature");
+  await expect(page.getByTestId("inspector-add-temperature")).toBeVisible();
+
+  await closeParametersPanel(page);
 
   const plusButtonLocator = page.getByTestId("int-input-max_tokens");
   const elementCount = await plusButtonLocator?.count();
   if (elementCount === 0) {
     expect(true).toBeTruthy();
 
-    await openAdvancedOptions(page);
-
-    const valueEditNode = await page
+    const valueOnNode = await page
       .getByTestId("int_int_max_tokens")
       .inputValue();
 
-    expect(valueEditNode).toBe("50000");
+    expect(valueOnNode).toBe("50000");
 
-    await closeAdvancedOptions(page);
     await page.getByTestId("int_int_max_tokens").click();
     await page.getByTestId("int_int_max_tokens").fill("3");
 
@@ -155,6 +134,4 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
     // -3 clamps to 0; max_tokens displays "" when value is 0 = no limit
     expect(value).toBe("");
   }
-
-  await enableInspectPanel(page);
 });

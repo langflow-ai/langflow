@@ -6,6 +6,7 @@ from lfx.workflow.host import WorkflowHost
 from lfx.workflow.router import create_workflow_router
 
 from langflow.api.v1 import (
+    a2a_router,
     api_key_router,
     authz_audit_router,
     authz_me_router,
@@ -85,6 +86,10 @@ router_v1.include_router(memories_router)
 router_v1.include_router(mcp_router)
 router_v1.include_router(voice_mode_router)
 router_v1.include_router(mcp_projects_router)
+# Always mounted; the per-request guard in langflow.api.v1.a2a returns 404 when
+# LANGFLOW_A2A_ENABLED is off, so the route is indistinguishable from "not
+# mounted" until the flag is set (mirrors the extensions router below).
+router_v1.include_router(a2a_router)
 router_v1.include_router(openai_responses_router)
 router_v1.include_router(models_router)
 router_v1.include_router(model_options_router)

@@ -6,8 +6,9 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
 import {
-  closeAdvancedOptions,
-  openAdvancedOptions,
+  closeParametersPanel,
+  openParametersPanel,
+  toggleParameterOnNode,
 } from "../../utils/open-advanced-options";
 import { selectGptModel } from "../../utils/select-gpt-model";
 import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
@@ -322,17 +323,17 @@ test(
       .getByTestId(/^popover-anchor-input-input_message.*/)
       .nth(0)
       .fill("You're Happy! 🤪");
-    await openAdvancedOptions(page);
-    await page.getByTestId("showignored_message").last().click();
-    await closeAdvancedOptions(page);
+    await openParametersPanel(page);
+    await toggleParameterOnNode(page, "ignored_message");
+    await closeParametersPanel(page);
     await page.getByTestId("title-Pass").nth(0).click();
     await page
       .getByTestId(/^popover-anchor-input-input_message.*/)
       .nth(0)
       .fill("You're Sad! 🥲");
-    await openAdvancedOptions(page);
-    await page.getByTestId("showignored_message").last().click();
-    await closeAdvancedOptions(page);
+    await openParametersPanel(page);
+    await toggleParameterOnNode(page, "ignored_message");
+    await closeParametersPanel(page);
 
     await page
       .getByTestId("handle-conditionalrouter-shownode-true-right")

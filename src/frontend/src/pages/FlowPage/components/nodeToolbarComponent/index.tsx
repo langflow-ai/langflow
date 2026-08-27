@@ -10,6 +10,7 @@ import ToggleShadComponent from "@/components/core/parameterRenderComponent/comp
 import { Button } from "@/components/ui/button";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
+import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import type { APIClassType } from "@/types/api";
@@ -51,7 +52,6 @@ const NodeToolbarComponent = memo(
     numberOfOutputHandles,
     showNode,
     name = "code",
-    onCloseAdvancedModal,
     updateNode,
     isOutdated,
     isUserEdited,
@@ -63,7 +63,6 @@ const NodeToolbarComponent = memo(
   }): JSX.Element => {
     const { t } = useTranslation();
     const version = useDarkStore((state) => state.version);
-    const [showModalAdvanced, setShowModalAdvanced] = useState(false);
     const [showconfirmShare, setShowconfirmShare] = useState(false);
     const [showOverrideModal, setShowOverrideModal] = useState(false);
     const [flowComponent, setFlowComponent] = useState<FlowType>(
@@ -87,7 +86,6 @@ const NodeToolbarComponent = memo(
     const paste = useFlowStore((state) => state.paste);
     const setNodes = useFlowStore((state) => state.setNodes);
     const setEdges = useFlowStore((state) => state.setEdges);
-    const edges = useFlowStore((state) => state.edges);
     const getNodePosition = useFlowStore((state) => state.getNodePosition);
     const flows = useFlowsManagerStore((state) => state.flows);
     const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
@@ -131,20 +129,6 @@ const NodeToolbarComponent = memo(
     );
     const addFlow = useAddFlow();
 
-    const hasGroupOutputs = data.node?.outputs?.some?.(
-      (output) => output.group_outputs,
-    );
-    const hasOutputs =
-      data.node?.outputs?.length && data.node?.outputs?.length > 1;
-
-    const hasSelectOutput = hasOutputs && !hasGroupOutputs;
-    const hasOnlyOneOutput = data.node?.outputs?.length === 1;
-    const hasMaximumOneConnectedInput =
-      edges.filter((edge) => edge.target === data.id).length <= 1;
-
-    const isMinimal =
-      (hasSelectOutput || hasOnlyOneOutput) && hasMaximumOneConnectedInput;
-
     const [toolMode, setToolMode] = useState(
       () =>
         data.node?.tool_mode ||
@@ -155,6 +139,12 @@ const NodeToolbarComponent = memo(
     );
 
     useEffect(() => {
+      // Keep the optimistic toggle state while the server rebuilds the node.
+      // Other in-flight field refreshes can update the same node first with
+      // its previous tool_mode value; syncing that transient value makes the
+      // toggle appear to turn itself off.
+      if (postToolModeValue.isPending) return;
+
       if (data.node?.tool_mode !== undefined) {
         setToolMode(
           data.node?.tool_mode ||
@@ -164,7 +154,7 @@ const NodeToolbarComponent = memo(
             false,
         );
       }
-    }, [data.node?.tool_mode, data.node?.outputs]);
+    }, [data.node?.tool_mode, data.node?.outputs, postToolModeValue.isPending]);
 
     const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
       data.id,
@@ -190,22 +180,12 @@ const NodeToolbarComponent = memo(
       );
     };
 
+    // LE-1810: any component can be minimized, regardless of how many
+    // input/output handles it has.
     const handleMinimize = useCallback(() => {
-      if (isMinimal || !showNode) {
-        setShowNode(!showNode);
-        updateNodeInternals(data.id);
-        return;
-      }
-      setNoticeData({ title: t("node.minimizeNotAvailable") });
-    }, [isMinimal, showNode, data.id]);
-
-    useEffect(() => {
-      if (!isMinimal && !showNode) {
-        setShowNode(true);
-        updateNodeInternals(data.id);
-        return;
-      }
-    }, [isMinimal, showNode, data.id]);
+      setShowNode(!showNode);
+      updateNodeInternals(data.id);
+    }, [showNode, data.id]);
 
     const handleungroup = useCallback(() => {
       if (isGroup) {
@@ -292,9 +272,20 @@ const NodeToolbarComponent = memo(
       }
     }, [flowComponent]);
 
+    const inspectionPanelVisible = useFlowStore(
+      (state) => state.inspectionPanelVisible,
+    );
+    const setInspectionPanelVisible = useFlowStore(
+      (state) => state.setInspectionPanelVisible,
+    );
+
+    const handleToggleInspectionPanel = useCallback(() => {
+      setInspectionPanelVisible(!inspectionPanelVisible);
+    }, [inspectionPanelVisible, setInspectionPanelVisible]);
+
     useShortcuts({
       showOverrideModal,
-      showModalAdvanced,
+      advancedSurfaceOpen: inspectionPanelVisible,
       openModal,
       showconfirmShare,
       FreezeAllVertices: () => {
@@ -303,7 +294,7 @@ const NodeToolbarComponent = memo(
       downloadFunction: () => downloadNode(flowComponent!),
       displayDocs: openDocs,
       saveComponent,
-      showAdvance: () => setShowModalAdvanced((state) => !state),
+      showAdvance: handleToggleInspectionPanel,
       handleCodeModal,
       shareComponent,
       ungroup: handleungroup,
@@ -311,12 +302,6 @@ const NodeToolbarComponent = memo(
       activateToolMode: handleActivateToolMode,
       hasToolMode,
     });
-
-    useEffect(() => {
-      if (!showModalAdvanced) {
-        onCloseAdvancedModal!(false);
-      }
-    }, [showModalAdvanced]);
 
     // Open dropdown when right-clicked
     useEffect(() => {
@@ -343,7 +328,6 @@ const NodeToolbarComponent = memo(
       data.node?.display_name,
       data.node?.description,
       data.node?.template,
-      showModalAdvanced,
       showconfirmShare,
     ]);
 
@@ -371,9 +355,6 @@ const NodeToolbarComponent = memo(
             break;
           case "code":
             handleCodeModal();
-            break;
-          case "advanced":
-            setShowModalAdvanced(true);
             break;
           case "show":
             takeSnapshot();
@@ -440,7 +421,6 @@ const NodeToolbarComponent = memo(
         saveComponent,
         FreezeAllVertices,
         setOpenModal,
-        setShowModalAdvanced,
         handleMinimize,
         shareComponent,
         downloadNode,
@@ -466,10 +446,6 @@ const NodeToolbarComponent = memo(
     const handleOnNewValue = (value: string | string[]) => {
       handleOnNewValueHook({ value });
     };
-
-    const inspectionPanelVisible = useFlowStore(
-      (state) => state.inspectionPanelVisible,
-    );
 
     const selectTriggerRef = useRef(null);
 
@@ -512,18 +488,22 @@ const NodeToolbarComponent = memo(
               dataTestId="code-button-modal"
             />
           )}
-          {nodeLength > 0 && !inspectionPanelVisible && (
+          {/* Gated on the same flag the panel itself honors — without it the
+              button would render and do nothing (setInspectionPanelVisible
+              early-returns when the flag is off). */}
+          {ENABLE_INSPECTION_PANEL && (
             <ToolbarButton
               icon="SlidersHorizontal"
-              label={t("nodeToolbar.controls")}
-              onClick={() => setShowModalAdvanced(true)}
+              label={t("nodeToolbar.parameters")}
+              onClick={handleToggleInspectionPanel}
               shortcut={shortcuts.find((s) =>
                 s.name.toLowerCase().startsWith("advanced"),
               )}
-              dataTestId="edit-button-modal"
+              isActive={inspectionPanelVisible}
+              dataTestId="parameters-button"
             />
           )}
-          {(!hasToolMode || inspectionPanelVisible) && (
+          {!hasToolMode && (
             <ToolbarButton
               icon="FreezeAll"
               label={t("nodeToolbar.freeze")}
@@ -739,27 +719,25 @@ const NodeToolbarComponent = memo(
                   />
                 </SelectItem>
 
-                {(isMinimal || !showNode) && (
-                  <SelectItem
-                    value={"show"}
-                    data-testid={`${
-                      showNode ? "minimize" : "expand"
-                    }-button-modal`}
-                  >
-                    <ToolbarSelectItem
-                      shortcut={
-                        shortcuts.find((obj) => obj.name === "Minimize")
-                          ?.shortcut!
-                      }
-                      value={
-                        showNode
-                          ? t("nodeToolbar.minimize")
-                          : t("nodeToolbar.expand")
-                      }
-                      icon={showNode ? "Minimize2" : "Maximize2"}
-                    />
-                  </SelectItem>
-                )}
+                <SelectItem
+                  value={"show"}
+                  data-testid={`${
+                    showNode ? "minimize" : "expand"
+                  }-button-modal`}
+                >
+                  <ToolbarSelectItem
+                    shortcut={
+                      shortcuts.find((obj) => obj.name === "Minimize")
+                        ?.shortcut!
+                    }
+                    value={
+                      showNode
+                        ? t("nodeToolbar.minimize")
+                        : t("nodeToolbar.expand")
+                    }
+                    icon={showNode ? "Minimize2" : "Maximize2"}
+                  />
+                </SelectItem>
                 {isGroup && (
                   <SelectItem value="ungroup">
                     <ToolbarSelectItem
@@ -772,7 +750,7 @@ const NodeToolbarComponent = memo(
                     />
                   </SelectItem>
                 )}
-                {hasToolMode && !inspectionPanelVisible && (
+                {hasToolMode && (
                   <SelectItem
                     value="freezeAll"
                     data-testid="freeze-all-button-modal"
@@ -826,12 +804,10 @@ const NodeToolbarComponent = memo(
           </div>
 
           <ToolbarModals
-            showModalAdvanced={showModalAdvanced}
             showconfirmShare={showconfirmShare}
             showOverrideModal={showOverrideModal}
             openModal={openModal}
             hasCode={hasCode}
-            setShowModalAdvanced={setShowModalAdvanced}
             setShowconfirmShare={setShowconfirmShare}
             setShowOverrideModal={setShowOverrideModal}
             setOpenModal={setOpenModal}

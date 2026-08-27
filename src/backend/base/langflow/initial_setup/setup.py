@@ -66,6 +66,7 @@ from langflow.services.deps import (
 # importable via the bundle shims) -- it is what the migration table and the
 # template tests resolve.
 _RUNTIME_EXT_MODULE_PREFIX = "_lfx_ext."
+_PROMPT_COMPONENT_TYPES = frozenset({"Prompt", "Prompt Template"})
 
 
 def _merge_node_metadata(current_metadata, latest_metadata):
@@ -96,6 +97,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
     for node in project_data_copy.get("nodes", []):
         node_data = node.get("data").get("node")
         node_type = node.get("data").get("type")
+        is_prompt_component = node_type in _PROMPT_COMPONENT_TYPES
 
         if node_type in all_types_dict_flat:
             latest_node = all_types_dict_flat.get(node_type)
@@ -142,7 +144,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
 
             if node_data["template"]["_type"] != latest_template["_type"]:
                 node_data["template"]["_type"] = latest_template["_type"]
-                if node_type != "Prompt":
+                if not is_prompt_component:
                     node_data["template"] = deepcopy(latest_template)
                 else:
                     for key, value in latest_template.items():
@@ -227,7 +229,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                             )
                             node_data["template"][field_name][attr] = deepcopy(field_dict[attr])
             # Remove fields that are not in the latest template
-            if node_type != "Prompt":
+            if not is_prompt_component:
                 for field_name in list(node_data["template"].keys()):
                     is_tool_mode_and_field_is_tools_metadata = (
                         node_data.get("tool_mode", False) and field_name == "tools_metadata"

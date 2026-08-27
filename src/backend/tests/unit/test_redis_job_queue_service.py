@@ -943,7 +943,11 @@ async def test_redis_service_cancel_marker_closes_signal_before_subscribe_race()
                 raise
 
         producer.start_job(job_id, _long_running())
-        await asyncio.wait_for(cancelled.wait(), timeout=2)
+        # Generous hang-guard, not a latency assertion: the marker path runs an
+        # extra spawned task (exists + delete + handle_cancel) so it needs more
+        # event-loop hops than the direct-cancel tests, and a 2s bound flaked
+        # under CI load on py3.14. The cancel still fires in ms when healthy.
+        await asyncio.wait_for(cancelled.wait(), timeout=5)
         assert cancelled.is_set()
         assert producer._cancel_stats["marker_hit"] == 1
     finally:
@@ -2585,6 +2589,9 @@ async def test_build_public_tmp_returns_503_when_public_marker_persist_fails(mon
             yield _FakeSession()
 
         class _FakeSettingsService:
+            class settings:  # noqa: N801
+                rate_limit_enabled = False
+
             class auth_settings:  # noqa: N801
                 AUTO_LOGIN = True
 
@@ -2900,3 +2907,119 @@ async def test_initialize_services_fails_fast_when_redis_queue_unreachable(monke
     finally:
         manager.factories.clear()
         manager.services.clear()
+
+
+# ---------------------------------------------------------------------------
+# OpenTelemetry instrumentation
+# ---------------------------------------------------------------------------
+
+
+class _OtelRecorder:
+    """Capture OTel emissions so tests can assert what the queue exported.
+
+    Substituted for the real OT singleton via ``service._otel``. Mirrors the
+    surface area used by ``_emit_otel_counter`` and ``_emit_otel_up_down``.
+    """
+
+    def __init__(self) -> None:
+        self.counters: list[tuple[str, dict[str, str], float]] = []
+        self.up_downs: list[tuple[str, float, dict[str, str]]] = []
+
+    def increment_counter(self, name: str, labels: dict[str, str], value: float = 1.0) -> None:
+        self.counters.append((name, dict(labels), value))
+
+    def up_down_counter(self, name: str, value: float, labels: dict[str, str]) -> None:
+        self.up_downs.append((name, value, dict(labels)))
+
+
+def _attach_recorder(service: Any) -> _OtelRecorder:
+    """Bypass the lazy OTel resolver and inject a recorder."""
+    recorder = _OtelRecorder()
+    service._otel = recorder
+    service._otel_resolved = True
+    return recorder
+
+
+@pytest.mark.asyncio
+async def test_bump_cancel_stat_updates_dict_and_otel_counter():
+    service, _client = await _make_service(cancel_channel_enabled=False)
+    recorder = _attach_recorder(service)
+    try:
+        service._bump_cancel_stat("published")
+        service._bump_cancel_stat("marker_hit", value=2)
+
+        # Dict mirror still works for /monitor/job_queue.
+        assert service._cancel_stats["published"] == 1
+        assert service._cancel_stats["marker_hit"] == 2
+
+        # OTel counter received both bumps with event_type label.
+        assert (
+            "langflow_job_queue_cancel_events_total",
+            {"event_type": "published"},
+            1.0,
+        ) in recorder.counters
+        assert (
+            "langflow_job_queue_cancel_events_total",
+            {"event_type": "marker_hit"},
+            2.0,
+        ) in recorder.counters
+    finally:
+        await _stop_service(service)
+
+
+@pytest.mark.asyncio
+async def test_create_and_cleanup_move_active_jobs_up_down_counter():
+    service, _client = await _make_service(cancel_channel_enabled=False)
+    recorder = _attach_recorder(service)
+    try:
+        job_id = uuid.uuid4().hex
+        service.create_queue(job_id)
+        await service.cleanup_job(job_id)
+
+        deltas = [
+            (value, labels) for name, value, labels in recorder.up_downs if name == "langflow_job_queue_active_jobs"
+        ]
+        assert (1, {"backend": "redis"}) in deltas
+        assert (-1, {"backend": "redis"}) in deltas
+    finally:
+        await _stop_service(service)
+
+
+@pytest.mark.asyncio
+async def test_otel_emit_is_silent_when_telemetry_unavailable():
+    """A broken OT handle must never propagate out of the emit helpers."""
+    service, _client = await _make_service(cancel_channel_enabled=False)
+    try:
+        explosion = "telemetry exploded"
+
+        class _BrokenOt:
+            def increment_counter(self, *_a, **_kw):
+                raise RuntimeError(explosion)
+
+            def up_down_counter(self, *_a, **_kw):
+                raise RuntimeError(explosion)
+
+        service._otel = _BrokenOt()
+        service._otel_resolved = True
+
+        # These must not raise even though OT itself does.
+        service._bump_cancel_stat("published")
+        service._emit_otel_up_down("langflow_job_queue_active_jobs", 1, {"backend": "redis"})
+        # Dict mirror still updated despite OT failure.
+        assert service._cancel_stats["published"] == 1
+    finally:
+        await _stop_service(service)
+
+
+@pytest.mark.asyncio
+async def test_all_cancel_stat_keys_route_through_helper():
+    """Every key initialized in _cancel_stats must be a valid argument to _bump_cancel_stat."""
+    service, _client = await _make_service(cancel_channel_enabled=False)
+    recorder = _attach_recorder(service)
+    try:
+        for key in list(service._cancel_stats):
+            service._bump_cancel_stat(key)
+        emitted_event_types = {labels["event_type"] for _, labels, _ in recorder.counters}
+        assert emitted_event_types == set(service._cancel_stats.keys())
+    finally:
+        await _stop_service(service)

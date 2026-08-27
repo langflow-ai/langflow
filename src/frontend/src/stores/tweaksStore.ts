@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { getChangesType } from "@/modals/apiModal/utils/get-changes-types";
 import { getNodesWithDefaultValue } from "@/modals/apiModal/utils/get-nodes-with-default-value";
+import { isFieldExposable } from "@/modals/apiModal/utils/is-field-exposable";
 import type { AllNodeType, NodeDataType } from "@/types/flow";
-import { getLocalStorage, setLocalStorage } from "@/utils/local-storage-util";
 import type { TweaksStoreType } from "../types/zustand/tweaks";
 import useFlowStore from "./flowStore";
 
@@ -40,26 +40,41 @@ export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
   },
   currentFlowId: "",
   initialSetup: (nodes: AllNodeType[], flowId: string) => {
+    // LE-1810: the lf_tweaks_* localStorage scratch state was retired in
+    // favor of the persisted per-field api_editable flag. Clear any orphaned
+    // keys left behind by older builds (intentionally no migration — the old
+    // state was per-browser scratch, not flow data).
+    try {
+      Object.keys(window.localStorage)
+        .filter((key) => key.startsWith("lf_tweaks_"))
+        .forEach((key) => window.localStorage.removeItem(key));
+    } catch {
+      // localStorage unavailable (SSR/embedded) — nothing to clean.
+    }
     useFlowStore.getState().unselectAll();
     set({
       currentFlowId: flowId,
     });
-    const tweaks = JSON.parse(getLocalStorage(`lf_tweaks_${flowId}`) || "{}");
     set({
-      nodes: getNodesWithDefaultValue(nodes, tweaks),
+      nodes: getNodesWithDefaultValue(
+        nodes,
+        useFlowStore.getState().edges ?? [],
+      ),
     });
     get().updateTweaks();
   },
   updateTweaks: () => {
     const nodes = get().nodes;
+    const edges = useFlowStore.getState().edges ?? [];
     const tweak = {};
-    const flowId = get().currentFlowId;
     nodes.forEach((node) => {
       const nodeTemplate = node.data?.node?.template;
       if (nodeTemplate && node.type === "genericNode") {
         const currentTweak = {};
         Object.keys(nodeTemplate).forEach((name) => {
-          if (!nodeTemplate[name].advanced) {
+          // Single exposure predicate (LE-1810): api_editable AND on-node AND
+          // not connected AND not tool-mode-disabled — see is-field-exposable.
+          if (isFieldExposable(node, name, edges)) {
             currentTweak[name] = getChangesType(
               nodeTemplate[name].value,
               nodeTemplate[name],
@@ -71,7 +86,6 @@ export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
         }
       }
     });
-    setLocalStorage(`lf_tweaks_${flowId}`, JSON.stringify(tweak));
     set({
       tweaks: tweak,
     });

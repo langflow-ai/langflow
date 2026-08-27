@@ -86,6 +86,7 @@ DIRECT_TYPES = [
     "tools",
     "mcp",
     "model",
+    "data_display",
 ]
 
 

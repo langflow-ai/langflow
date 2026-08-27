@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 
 import jwt
 import pytest
+from cryptography.fernet import Fernet, InvalidToken
 from fastapi import HTTPException, WebSocketException, status
 from langflow.services.auth.constants import AUTO_LOGIN_WARNING
 from langflow.services.auth.context import (
@@ -471,6 +472,40 @@ def test_encrypt_decrypt_roundtrip_with_short_key(tmp_path):
 
     encrypted = svc.encrypt_api_key("sk-test-key-12345")  # pragma: allowlist secret
     assert svc.decrypt_api_key(encrypted) == "sk-test-key-12345"  # pragma: allowlist secret
+
+
+def test_short_key_decrypts_legacy_ciphertext_without_using_legacy_key_for_new_writes(tmp_path):
+    """Short-key upgrades retain read compatibility without regressing new encryption.
+
+    Before 1.10.1, ``shortkey123`` produced the fixed Fernet key below via
+    ``random.seed(secret)`` and 32 calls to ``random.getrandbits(8)``. The
+    current SHA-256 key must decrypt that legacy ciphertext as a fallback, but
+    encryption must continue to use the SHA-256-derived primary key.
+    """
+    from langflow.services.auth.utils import ensure_fernet_key
+
+    raw_key = "shortkey123"  # pragma: allowlist secret
+    legacy_key = b"qeA9wdDv6i0_4s4YpmYkg7mByqBIVqF5L8On7wINNmo="  # pragma: allowlist secret
+    plaintext = "credential-written-before-1.10.1"  # pragma: allowlist secret
+
+    settings = AuthSettings(CONFIG_DIR=str(tmp_path))
+    settings.SECRET_KEY = SecretStr(raw_key)
+    settings_service = SimpleNamespace(
+        auth_settings=settings,
+        settings=SimpleNamespace(config_dir=str(tmp_path)),
+    )
+    svc = AuthService(settings_service)
+
+    legacy_ciphertext = Fernet(legacy_key).encrypt(plaintext.encode()).decode()
+    assert svc.decrypt_api_key(legacy_ciphertext) == plaintext
+
+    with patch("langflow.services.auth.utils._ensure_legacy_fernet_key") as mock_legacy_derivation:
+        current_ciphertext = svc.encrypt_api_key(plaintext)
+
+    mock_legacy_derivation.assert_not_called()
+    assert Fernet(ensure_fernet_key(raw_key)).decrypt(current_ciphertext.encode()).decode() == plaintext
+    with pytest.raises(InvalidToken):
+        Fernet(legacy_key).decrypt(current_ciphertext.encode())
 
 
 def test_decrypt_api_key_returns_empty_on_undecryptable_token(auth_service: AuthService):

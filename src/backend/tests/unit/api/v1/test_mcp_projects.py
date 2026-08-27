@@ -982,6 +982,62 @@ async def test_v2_mcp_servers_locked_allows_superuser_add_patch_delete(
     assert response.status_code == status.HTTP_200_OK
 
 
+@pytest.mark.usefixtures("active_user")
+@pytest.mark.parametrize(
+    ("allow_custom_components", "custom_component_admin_only"),
+    [(False, False), (True, True)],
+)
+async def test_v2_mcp_stdio_registration_follows_code_execution_lockdown(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+    allow_custom_components,
+    custom_component_admin_only,
+):
+    """A non-superuser cannot register a process-spawning MCP server under code-exec lockdown."""
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "mcp_servers_locked", False)
+    monkeypatch.setattr(settings, "allow_custom_components", allow_custom_components)
+    monkeypatch.setattr(settings, "custom_component_admin_only", custom_component_admin_only)
+
+    stdio_name = f"lf-lockdown-stdio-{uuid4().hex[:8]}"
+    response = await client.post(
+        f"/api/v2/mcp/servers/{stdio_name}",
+        json={"command": "uvx", "args": ["attacker-controlled-package"]},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_v2_mcp_action_count_does_not_spawn_stdio_under_code_execution_lockdown(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    """Existing stdio configs cannot bypass a newly enabled code-exec lockdown via action_count."""
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "mcp_servers_locked", False)
+    monkeypatch.setattr(settings, "allow_custom_components", False)
+    monkeypatch.setattr(settings, "custom_component_admin_only", False)
+
+    get_server_list = AsyncMock(
+        return_value={
+            "mcpServers": {
+                "blocked-stdio": {"command": "uvx", "args": ["attacker-controlled-package"]},
+            }
+        }
+    )
+    monkeypatch.setattr("langflow.api.v2.mcp.get_server_list", get_server_list)
+    update_tools = AsyncMock()
+    monkeypatch.setattr("langflow.api.v2.mcp.update_tools", update_tools)
+
+    response = await client.get("/api/v2/mcp/servers?action_count=true", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    update_tools.assert_not_awaited()
+
+
 async def test_install_mcp_config_defaults_to_sse_transport(
     client: AsyncClient,
     user_test_project,

@@ -626,7 +626,7 @@ module = object()
 
 def bind_locally():
     module = os
-    return module
+    return None
 
 module.system('not the os module')
 """
@@ -820,9 +820,9 @@ module.getenv('not the os module')
 import os
 module = object()
 try:
-    def deferred():
-        module = os
-        return module
+        def deferred():
+            module = os
+            return None
 finally:
     module.getenv('not the os module')
 """
@@ -859,6 +859,152 @@ except* TypeError:
         result = scan_code_security(code)
         assert result.is_safe is False
         assert any("os.getenv()" in violation for violation in result.violations)
+
+
+class TestScanCodeSecurityIndirectReferenceBypass:
+    """Restricted modules and builtins must stay restricted through indirection."""
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import os\ndef run(module):\n    module.system('id')\nrun(os)",
+            "import os\ndef run(module=os):\n    module.system('id')\nrun()",
+            "import os\nmodules = {}\nmodules['os'] = os\nmodules['os'].system('id')",
+            "import os\nmodules = [os]\nmodules[0].system('id')",
+            "import os\nclass Holder:\n    pass\nholder = Holder()\nholder.module = os\nholder.module.system('id')",
+            "dangerous = exec\ndangerous(\"import os\\nos.system('id')\")",
+            "import builtins\nbuiltins.exec(\"import os\\nos.system('id')\")",
+            'import builtins\ngetattr(builtins, "exec")("import os\\nos.system(\'id\')")',
+            "import builtins\nvars(builtins)[\"eval\"](\"__import__('os').system('id')\")",
+            "import os\ndangerous = os.system\ndangerous('id')",
+            "import os\nmodule = os\ndef run(value):\n    value.system('id')\nrun(module)",
+            "import os\ndef run(module):\n    module.system('id')\nrun(os if True else object())",
+            "import os\ngetattr(os if True else object(), 'system')('id')",
+            "import os\ndef run(module):\n    module.system('id')\nrun([module for module in (os,)][0])",
+            "import os\ndef run(module):\n    module.system('id')\nrun(next(module for module in (os,)))",
+            "def expose():\n    return exec\nexpose()(\"print('unsafe')\")",
+            "import os\ndef expose():\n    return os\nexpose().system('id')",
+            "def expose():\n    yield exec\nnext(expose())(\"print('unsafe')\")",
+            "import os\ndef expose():\n    yield from (os,)\nnext(expose()).system('id')",
+            "(lambda: exec)()(\"print('unsafe')\")",
+            "import os\nmodule = os if flag else object()\nmodule.system('id')",
+            "import os\nmodule = [os][0]\nmodule.system('id')",
+            "import os\nmodule = [item for item in (os,)][0]\nmodule.system('id')",
+            "import os\n(module,) = ([os][0],)\nmodule.system('id')",
+            "import os\nif module := [os][0]:\n    module.system('id')",
+            "import os\nmodule: object = os if flag else object()\nmodule.system('id')",
+            "import os\ngetattr(os.system, '__call__')('id')",
+        ],
+        ids=[
+            "function-argument",
+            "function-default",
+            "dict-entry",
+            "list-entry",
+            "object-attribute",
+            "builtin-alias",
+            "builtins-attribute",
+            "builtins-getattr",
+            "builtins-vars",
+            "module-callable-alias",
+            "module-alias-as-argument",
+            "conditional-expression-as-argument",
+            "conditional-expression-in-getattr",
+            "list-comprehension-as-argument",
+            "generator-expression-as-argument",
+            "returned-builtin",
+            "returned-module",
+            "yielded-builtin",
+            "yielded-module",
+            "lambda-returned-builtin",
+            "conditional-assignment",
+            "subscript-assignment",
+            "comprehension-assignment",
+            "nested-unpacking-assignment",
+            "named-expression-assignment",
+            "annotated-assignment",
+            "getattr-dangerous-callable-receiver",
+        ],
+    )
+    def test_should_detect_indirect_dangerous_reference(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+
+    def test_should_detect_indirection_in_component_shaped_code(self):
+        code = """
+import os
+from lfx.custom import Component
+from lfx.io import Output
+from lfx.schema import Message
+
+class IndirectCommandComponent(Component):
+    outputs = [Output(name="result", display_name="Result", method="run_command")]
+
+    def run_command(self) -> Message:
+        def invoke(module):
+            module.system("id")
+
+        invoke(os)
+        return Message(text="done")
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import os\nmodules = [os.path]\npath = modules[0].join('a', 'b')",
+            "import os\ndef join(path_module=os.path):\n    return path_module.join('a', 'b')\njoin()",
+            "import os\ndef join(path_module):\n    return path_module.join('a', 'b')\njoin(os.path)",
+            "import os\nconsume(getattr(os, 'path'))",
+        ],
+        ids=[
+            "module-reexport-in-list",
+            "module-reexport-default",
+            "module-reexport-argument",
+            "getattr-module-reexport-argument",
+        ],
+    )
+    def test_should_preserve_restricted_module_reexport_boundary(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("os.path" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            (
+                "class Client:\n"
+                "    def system(self, value):\n"
+                "        return value\n"
+                "client = Client()\n"
+                "def run(obj):\n"
+                "    obj.system('status')\n"
+                "run(client)"
+            ),
+            "import requests\nclass Holder:\n    pass\nholder = Holder()\nholder.client = requests\nholder.client.get('https://example.com')",
+            "import builtins\nsize = builtins.len([1, 2, 3])",
+            'import builtins\nsize = getattr(builtins, "len")([1, 2, 3])',
+            "dangerous = exec\ndangerous = print\ndangerous('safe')",
+            "import os\nmodule = os\nconsume([module for module in (object(),)])",
+            "import requests\ndef expose():\n    return requests\nexpose().get('https://example.com')",
+            "import os\n(module,) = (os.path,)\nmodule.join('a', 'b')",
+            "import os\ngetattr(os.path.join, '__call__')('a', 'b')",
+        ],
+        ids=[
+            "ordinary-object-method",
+            "safe-module-in-attribute",
+            "safe-builtin-attribute",
+            "safe-builtin-getattr",
+            "dangerous-alias-rebound",
+            "comprehension-target-shadows-restricted-module",
+            "returned-safe-module",
+            "unpacked-safe-module-attribute",
+            "getattr-safe-callable-receiver",
+        ],
+    )
+    def test_should_allow_safe_indirect_reference(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is True
 
 
 class TestScanCodeSecurityRuntimeModuleBypass:

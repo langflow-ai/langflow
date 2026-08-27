@@ -528,11 +528,11 @@ def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: 
     """Fetch models from a custom OpenAI-compatible endpoint (OPENAI_BASE_URL).
 
     Returns [] when no custom base URL is configured, so api.openai.com
-    users keep the curated static catalog. ``tool_calling`` is assumed
-    True: ``/models`` carries no capability data and the OpenAI wire
-    format implies tools support.
+    users keep the curated static catalog. Because ``/models`` carries no
+    capability data, the endpoint's models are offered in whichever picker
+    requested them. ``tool_calling`` is assumed only for language models.
     """
-    if model_type != "llm":
+    if model_type not in {"llm", "embeddings"}:
         return []
 
     base_url = get_provider_variable_value(user_id, "OPENAI_BASE_URL")
@@ -566,8 +566,8 @@ def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: 
             provider="OpenAI",
             name=entry["id"],
             icon="OpenAI",
-            model_type="llm",
-            tool_calling=True,
+            model_type=model_type,
+            tool_calling=model_type == "llm",
             default=index < MIN_DEFAULT_MODELS,
         )
         for index, entry in enumerate(entries)

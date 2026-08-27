@@ -19,6 +19,7 @@ export default function TableAdvancedToggleCellRender({
   const parameter = node?.data?.node?.template?.[parameterId];
 
   const setNode = useTweaksStore((state) => state.setNode);
+  const isApiEditable = parameter?.api_editable === true;
 
   const disabled = isTargetHandleConnected(
     edges,
@@ -33,6 +34,26 @@ export default function TableAdvancedToggleCellRender({
     name: parameterId,
     setNode: isTweaks ? setNode : undefined,
   });
+
+  // LE-1810: in the tweaks table the toggle drives the persisted
+  // api_editable flag on the real flow node, mirrored to the tweaks copy so
+  // the snippets recompute. The flow write must clone the REAL node — the
+  // tweaks copy carries a filtered template.
+  const flowNode = useFlowStore((state) => state.getNode(nodeId));
+  const { handleOnNewValue: handleOnNewValueOnFlowNode } = useHandleOnNewValue({
+    node: flowNode?.data.node as APIClassType,
+    nodeId,
+    name: parameterId,
+  });
+
+  const handleToggle = () => {
+    if (isTweaks) {
+      handleOnNewValueOnFlowNode({ api_editable: !isApiEditable });
+      handleOnNewValue({ api_editable: !isApiEditable });
+      return;
+    }
+    handleOnNewValue({ advanced: !parameter.advanced });
+  };
 
   return (
     parameter && (
@@ -51,9 +72,9 @@ export default function TableAdvancedToggleCellRender({
         <div className="flex h-full w-full items-center justify-center">
           <VisibilityToggleButton
             id={"show" + parameterId}
-            checked={!parameter.advanced}
+            checked={isTweaks ? isApiEditable : !parameter.advanced}
             disabled={disabled}
-            onToggle={() => handleOnNewValue({ advanced: !parameter.advanced })}
+            onToggle={handleToggle}
           />
         </div>
       </ShadTooltip>

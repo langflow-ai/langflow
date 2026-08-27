@@ -21,6 +21,11 @@ on:
         type: string
         default: ""
         description: "Resolved version to use for image tags. When omitted, the workflow computes the version from the checked-out ref and registry history."
+      release_artifacts:
+        required: false
+        type: boolean
+        default: false
+        description: "Download release-built wheels and install them into Python images so their distributions match the PyPI artifacts."
       push_to_registry:
         required: false
         type: boolean
@@ -54,6 +59,11 @@ on:
         required: false
         type: string
         default: ""
+      release_artifacts:
+        description: "Install release-built wheels into Python images. Only valid when called from a package release run."
+        required: false
+        type: boolean
+        default: false
       push_to_registry:
         description: "Whether to push images to registries. Set to false for testing builds without publishing."
         required: false
@@ -188,6 +198,14 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
+      - name: Download release wheel artifacts
+        if: ${{ inputs.release_artifacts }}
+        uses: actions/download-artifact@v7
+        with:
+          pattern: dist-*
+          path: .release-artifacts
+          merge-multiple: true
+
       - name: Set tags
         id: tags
         run: |
@@ -258,6 +276,14 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
+
+      - name: Download release wheel artifacts
+        if: ${{ inputs.release_artifacts }}
+        uses: actions/download-artifact@v7
+        with:
+          pattern: dist-*
+          path: .release-artifacts
+          merge-multiple: true
 
       - name: Set tags
         id: tags
@@ -476,6 +502,14 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
+      - name: Download release wheel artifacts
+        if: ${{ inputs.release_artifacts }}
+        uses: actions/download-artifact@v7
+        with:
+          pattern: dist-*
+          path: .release-artifacts
+          merge-multiple: true
+
       - name: Set tags
         id: tags
         run: |
@@ -546,6 +580,14 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
+
+      - name: Download release wheel artifacts
+        if: ${{ inputs.release_artifacts }}
+        uses: actions/download-artifact@v7
+        with:
+          pattern: dist-*
+          path: .release-artifacts
+          merge-multiple: true
 
       - name: Set tags
         id: tags

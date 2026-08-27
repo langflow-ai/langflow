@@ -52,7 +52,7 @@ export const TID = {
   popoverAnchorInputApiKey: "popover-anchor-input-api_key",
 
   // Edit / inspect
-  editFieldsButton: "edit-fields-button",
+  parametersButton: "parameters-button",
   codeButtonModal: "code-button-modal",
 } as const;
 

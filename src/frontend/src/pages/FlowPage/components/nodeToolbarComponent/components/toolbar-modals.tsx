@@ -2,21 +2,18 @@ import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import CodeAreaModal from "@/modals/codeAreaModal";
 import ConfirmationModal from "@/modals/confirmationModal";
-import EditNodeModal from "@/modals/editNodeModal";
 import ShareModal from "@/modals/shareModal";
 import type { APIClassType } from "@/types/api";
 import type { FlowType } from "@/types/flow";
 
 interface ToolbarModalsProps {
   // Modal visibility states
-  showModalAdvanced: boolean;
   showconfirmShare: boolean;
   showOverrideModal: boolean;
   openModal: boolean;
   hasCode: boolean;
 
   // Setters for modal states
-  setShowModalAdvanced: (value: boolean) => void;
   setShowconfirmShare: (value: boolean) => void;
   setShowOverrideModal: (value: boolean) => void;
   setOpenModal: (value: boolean) => void;
@@ -35,12 +32,10 @@ interface ToolbarModalsProps {
 
 const ToolbarModals = memo(
   ({
-    showModalAdvanced,
     showconfirmShare,
     showOverrideModal,
     openModal,
     hasCode,
-    setShowModalAdvanced,
     setShowconfirmShare,
     setShowOverrideModal,
     setOpenModal,
@@ -81,14 +76,6 @@ const ToolbarModals = memo(
 
     return (
       <>
-        {showModalAdvanced && (
-          <EditNodeModal
-            data={data}
-            open={showModalAdvanced}
-            setOpen={setShowModalAdvanced}
-          />
-        )}
-
         {showconfirmShare && (
           <ShareModal
             open={showconfirmShare}

@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import CodeAreaComponent from "@/components/core/parameterRenderComponent/components/codeAreaComponent";
+import DataDisplayComponent from "@/components/core/parameterRenderComponent/components/dataDisplayComponent";
 import DBProviderInputComponent from "@/components/core/parameterRenderComponent/components/dbProviderInputComponent";
 import ModelInputComponent from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
@@ -368,6 +369,15 @@ export function ParameterRenderComponent({
           <DBProviderInputComponent
             {...baseInputProps}
             id={`dbprovider_${id}`}
+          />
+        );
+      case "data_display":
+        return (
+          <DataDisplayComponent
+            {...baseInputProps}
+            buttonText={templateData?.button_text}
+            buttonIcon={templateData?.button_icon}
+            id={`data_display_${id}`}
           />
         );
       default:

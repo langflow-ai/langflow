@@ -8,8 +8,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from limits import parse
 from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
+from slowapi.wrappers import Limit
 
 from langflow.services.deps import get_settings_service
 
@@ -57,6 +60,48 @@ def get_rate_limiter() -> Limiter:
         )
 
     return _limiter
+
+
+def check_rate_limit(
+    request: Request,
+    *,
+    scope: str | None = None,
+    limit_per_minute: int | None = None,
+) -> None:
+    """Enforce the configured rate limit for a request.
+
+    A scope creates a distinct counter namespace while retaining the configured
+    client-IP key. This lets public flows have independent build counters without
+    consuming the login-attempt counter for the same client.
+
+    Args:
+        request: FastAPI request whose app owns the configured limiter.
+        scope: Optional counter namespace, such as a public flow identifier.
+        limit_per_minute: Optional endpoint-specific limit. When omitted, the
+            configured login limit is used.
+
+    Raises:
+        RateLimitExceeded: If the configured limit has been exceeded.
+    """
+    limiter = request.app.state.limiter
+    limit_string = f"{limit_per_minute}/minute" if limit_per_minute is not None else get_rate_limit_string()
+    limit_item = parse(limit_string)
+    client_key = limiter._key_func(request)  # noqa: SLF001
+    identifiers = (scope, client_key) if scope is not None else (client_key,)
+
+    if not limiter._limiter.hit(limit_item, *identifiers):  # noqa: SLF001
+        limit_wrapper = Limit(
+            limit=limit_item,
+            key_func=limiter._key_func,  # noqa: SLF001
+            scope=scope,
+            per_method=False,
+            methods=None,
+            error_message=None,
+            exempt_when=None,
+            cost=1,
+            override_defaults=False,
+        )
+        raise RateLimitExceeded(limit_wrapper)
 
 
 def get_client_ip(request: Request) -> str:

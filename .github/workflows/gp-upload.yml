@@ -14,9 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Upload frontend strings to GP
     environment: GP-test
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      contains(toJSON(github.event.commits.*.modified), 'src/frontend/src/locales/en.json')
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
 
     steps:
       - name: Checkout repository
@@ -64,10 +62,8 @@ jobs:
     name: Upload backend strings to GP
     environment: GP-test
     if: >-
-      github.actor != 'github-actions[bot]' && (
-        github.event_name == 'workflow_dispatch' ||
-        contains(toJSON(github.event.commits.*.modified), 'src/backend/base/langflow/locales/en.json')
-      )
+      github.actor != 'github-actions[bot]' &&
+      (github.event_name == 'workflow_dispatch' || github.event_name == 'push')
 
     steps:
       - name: Checkout repository

@@ -1178,9 +1178,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ helperLineEnabled });
   },
   inspectionPanelVisible: ENABLE_INSPECTION_PANEL
-    ? localStorage.getItem("inspectionPanelVisible") !== null
-      ? localStorage.getItem("inspectionPanelVisible") === "true"
-      : true
+    ? localStorage.getItem("inspectionPanelVisible") === "true"
     : false,
   setInspectionPanelVisible: (visible: boolean) => {
     if (!ENABLE_INSPECTION_PANEL) return;

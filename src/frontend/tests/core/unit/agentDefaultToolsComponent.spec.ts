@@ -2,8 +2,9 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
-  closeAdvancedOptions,
-  openAdvancedOptions,
+  closeParametersPanel,
+  openParametersPanel,
+  toggleParameterOnNode,
 } from "../../utils/open-advanced-options";
 
 /**
@@ -45,26 +46,29 @@ test(
   async ({ page }) => {
     await dragAgentOntoCanvas(page);
 
-    // Focus the Agent node so its advanced-field drawer is reachable.
+    // Focus the Agent node so its parameters panel is reachable (LE-1810).
     await page.getByTestId("div-generic-node").click();
 
-    await openAdvancedOptions(page);
+    await openParametersPanel(page);
 
-    // Both advanced toggles exist as show-on-canvas checkboxes.
+    // Both advanced toggles are listed as manageable parameters in the panel.
     // Their default `value=True` is validated by the pytest suite
     // (`test_should_have_placeholders_in_default_system_prompt` covers the
     // default contract of the inputs list).
     await expect(
-      page.locator('//*[@id="showadd_current_date_tool"]'),
+      page.getByTestId("inspector-param-add_current_date_tool"),
     ).toBeVisible({ timeout: 10000 });
     await expect(
-      page.locator('//*[@id="showadd_calculator_tool"]'),
+      page.getByTestId("inspector-param-add_calculator_tool"),
     ).toBeVisible({ timeout: 10000 });
 
     // Flip the Calculator field visible on canvas so we can assert the toggle
     // is active and can be switched off and on (S3).
-    await page.locator('//*[@id="showadd_calculator_tool"]').click();
-    await closeAdvancedOptions(page);
+    await toggleParameterOnNode(page, "add_calculator_tool");
+    await expect(
+      page.getByTestId("inspector-remove-add_calculator_tool"),
+    ).toBeVisible();
+    await closeParametersPanel(page);
 
     await adjustScreenView(page);
 

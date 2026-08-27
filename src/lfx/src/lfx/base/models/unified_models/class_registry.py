@@ -16,7 +16,11 @@ import importlib
 
 _MODEL_CLASS_IMPORTS: dict[str, tuple[str, str, str | None]] = {
     "ChatOpenAI": ("langchain_openai", "ChatOpenAI", None),
-    "ChatAnthropic": ("langchain_anthropic", "ChatAnthropic", None),
+    "ChatAnthropic": (
+        "lfx.base.models.anthropic_chat_model",
+        "ChatAnthropicThinkingCompat",
+        "langchain-anthropic",
+    ),
     "ChatGoogleGenerativeAIFixed": (
         "lfx.base.models.google_generative_ai_model",
         "ChatGoogleGenerativeAIFixed",

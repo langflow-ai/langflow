@@ -138,6 +138,11 @@ async def aget_messages(
     Returns:
         List[Data]: A list of Data objects representing the retrieved messages.
     """
+    if flow_id is None:
+        # Default to the executing graph's flow_id so old saved flows (frozen code calls this without one) cannot surface another flow's history on a colliding session_id (issue #13059).  # noqa: E501
+        from lfx.memory.flow_context import coerce_flow_id, get_current_flow_id
+
+        flow_id = coerce_flow_id(get_current_flow_id())
     async with session_scope() as session:
         stmt = _get_variable_query(
             sender, sender_name, session_id, context_id, order_by, order, flow_id, limit, user_id=user_id

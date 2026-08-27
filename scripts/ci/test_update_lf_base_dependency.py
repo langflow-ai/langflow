@@ -31,7 +31,7 @@ def pyproject(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         "\n"
         "[project.optional-dependencies]\n"
         'cassandra = ["lfx[cassandra]~=1.11.0"]\n'
-        "toolguard = [\"lfx[toolguard]~=1.11.0; python_version < '3.14'\"]\n"
+        "toolguard = [\"lfx[toolguard]~=1.11.0; sys_platform != 'win32'\"]\n"
         'beautifulsoup = ["lfx~=1.11.0"]\n'
     )
     path = tmp_path / "pyproject.toml"
@@ -48,7 +48,7 @@ def test_pins_bare_and_extras_lfx_to_exact_dev(pyproject: Path) -> None:
     # Every lfx reference -- bare and with extras -- is pinned to the exact dev version.
     assert '"lfx==1.11.0.dev26"' in result
     assert '"lfx[cassandra]==1.11.0.dev26"' in result
-    assert "\"lfx[toolguard]==1.11.0.dev26; python_version < '3.14'\"" in result
+    assert "\"lfx[toolguard]==1.11.0.dev26; sys_platform != 'win32'\"" in result
 
     # No `~=` floor survives -- a surviving floor is exactly what makes the nightly
     # resolve unsatisfiable.
