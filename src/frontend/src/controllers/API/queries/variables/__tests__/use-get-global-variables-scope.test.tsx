@@ -15,7 +15,10 @@ jest.mock("@/controllers/API/helpers/constants", () => ({
   getURL: () => "/api/v1/variables",
 }));
 
-import { useGetGlobalVariables } from "../use-get-global-variables";
+import {
+  getGlobalVariablesQueryKey,
+  useGetGlobalVariables,
+} from "../use-get-global-variables";
 
 const variable = (
   id: string,
@@ -145,6 +148,50 @@ describe("useGetGlobalVariables store isolation", () => {
     expect(useGlobalVariablesStore.getState().globalVariablesEntries).toEqual([
       "GLOBAL_KEY",
     ]);
+    queryClient.clear();
+  });
+
+  it("refreshes the mirrored store when a later plain observer owns the query function", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const initialVariables = [
+      variable("initial-id", "INITIAL_KEY", "Initial Field"),
+    ];
+    const refreshedVariables = [
+      variable("refreshed-id", "REFRESHED_KEY", "Refreshed Field"),
+    ];
+    mockApiGet
+      .mockResolvedValueOnce({ data: initialVariables })
+      .mockResolvedValueOnce({ data: refreshedVariables });
+
+    renderHook(
+      () => {
+        useGetGlobalVariables({ mirrorToStore: true });
+        useGetGlobalVariables();
+      },
+      { wrapper: makeWrapper(queryClient) },
+    );
+
+    await waitFor(() =>
+      expect(useGlobalVariablesStore.getState().globalVariablesEntries).toEqual(
+        ["INITIAL_KEY"],
+      ),
+    );
+
+    await act(async () => {
+      await queryClient.refetchQueries({
+        queryKey: getGlobalVariablesQueryKey({}),
+        exact: true,
+      });
+    });
+
+    await waitFor(() =>
+      expect(useGlobalVariablesStore.getState().globalVariablesEntries).toEqual(
+        ["REFRESHED_KEY"],
+      ),
+    );
+    expect(mockApiGet).toHaveBeenCalledTimes(2);
     queryClient.clear();
   });
 });
