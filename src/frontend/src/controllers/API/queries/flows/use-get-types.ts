@@ -23,6 +23,7 @@ const displayNamesByPalette = new WeakMap<
   APIObjectType,
   ComponentDisplayNamesType
 >();
+const PALETTE_STALE_TIME_MS = 30_000;
 
 export const useGetTypes: useQueryFunctionType<
   undefined,
@@ -70,8 +71,8 @@ export const useGetTypes: useQueryFunctionType<
   };
 
   const queryResult = query(["useGetTypes", flowId, projectId], getTypesFn, {
-    refetchOnWindowFocus: false,
-    staleTime: Number.POSITIVE_INFINITY,
+    refetchOnWindowFocus: true,
+    staleTime: PALETTE_STALE_TIME_MS,
     ...queryOptions,
   });
 

@@ -110,8 +110,8 @@ describe("useGetTypes", () => {
       ["useGetTypes", "flow-one", undefined],
       expect.any(Function),
       {
-        refetchOnWindowFocus: false,
-        staleTime: Number.POSITIVE_INFINITY,
+        refetchOnWindowFocus: true,
+        staleTime: 30_000,
       },
     );
   });
