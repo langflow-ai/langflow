@@ -29,6 +29,7 @@ from lfx.observability import execution_protocol
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
 from lfx.services.model_provider_policy import (
+    ModelProviderPolicyError,
     ModelProviderPolicyPurpose,
     reset_current_model_provider_policy_context,
     resolve_model_provider_policy,
@@ -1786,6 +1787,10 @@ async def custom_component(
                 field_name="tool_mode",
                 field_value=tool_mode,
             )
+    except ModelProviderPolicyError as exc:
+        # Keep scoped denials indistinguishable from unavailable providers and
+        # avoid surfacing an authorization decision as a retryable server error.
+        raise HTTPException(status_code=404, detail="Model provider not found") from exc
     finally:
         reset_current_model_provider_policy_context(policy_context_token)
     locale = getattr(request.state, "locale", "en")
