@@ -1788,3 +1788,97 @@ async def test_should_not_probe_interrupts_when_agent_has_no_checkpointer() -> N
 
     langflow_graph.request_pause.assert_not_called()
     assert result.properties.state == "complete"
+
+
+@pytest.mark.asyncio
+async def test_legacy_agent_llm_selection_participates_in_async_provider_policy(monkeypatch) -> None:
+    from lfx.components.models_and_agents.agent import AgentComponent
+    from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+    component = AgentComponent(
+        model=[],
+        agent_llm="Anthropic",
+        model_name="claude-test",
+        _user_id="resource-owner",
+        _parameters={"model": [], "agent_llm": "Anthropic", "model_name": "claude-test"},
+    )
+    denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.USE)
+    snapshot = SimpleNamespace(require=MagicMock(side_effect=denial))
+    resolve_policy = AsyncMock(return_value=snapshot)
+    monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+
+    with pytest.raises(ModelProviderPolicyError):
+        await component.arequire_model_provider_policy(
+            ModelProviderPolicyPurpose.USE,
+            user_id="policy-actor",
+            parameters={"model": [], "agent_llm": "Anthropic", "model_name": "claude-test"},
+        )
+
+    resolve_policy.assert_awaited_once_with(
+        user_id="policy-actor",
+        providers=["anthropic"],
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
+
+
+@pytest.mark.asyncio
+async def test_legacy_agent_runtime_denial_precedes_model_resolution(monkeypatch) -> None:
+    from lfx.components.models_and_agents.agent import AgentComponent
+    from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+    component = AgentComponent(model=[], agent_llm="Anthropic", model_name="claude-test", _user_id="policy-actor")
+    denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.USE)
+    require_policy = AsyncMock(side_effect=denial)
+    resolve_model = MagicMock(side_effect=AssertionError("legacy model resolved after policy denial"))
+    monkeypatch.setattr(component, "arequire_model_provider_policy", require_policy)
+    monkeypatch.setattr(component, "_resolve_selected_model", resolve_model)
+
+    with pytest.raises(ModelProviderPolicyError):
+        await component.get_agent_requirements()
+
+    require_policy.assert_awaited_once_with(ModelProviderPolicyPurpose.USE)
+    resolve_model.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_legacy_agent_config_denial_precedes_model_update_hook(monkeypatch) -> None:
+    from lfx.components.models_and_agents import agent as agent_module
+    from lfx.components.models_and_agents.agent import AgentComponent
+    from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+    component = AgentComponent(model=[], agent_llm="Anthropic", _user_id="policy-actor")
+    denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.CONFIGURE)
+    require_policy = AsyncMock(side_effect=denial)
+    update_hook = MagicMock(side_effect=AssertionError("model update hook reached after policy denial"))
+    monkeypatch.setattr(component, "arequire_model_provider_policy", require_policy)
+    monkeypatch.setattr(agent_module, "handle_model_input_update", update_hook)
+
+    with pytest.raises(ModelProviderPolicyError):
+        await component.update_build_config({}, "Anthropic", "agent_llm")
+
+    require_policy.assert_awaited_once_with(
+        ModelProviderPolicyPurpose.CONFIGURE,
+        parameters={"agent_llm": "Anthropic"},
+    )
+    update_hook.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_legacy_agent_provider_options_are_filtered_by_active_scope(monkeypatch) -> None:
+    from lfx.components.models_and_agents.agent import AgentComponent
+
+    component = AgentComponent(_user_id="policy-actor")
+    snapshot = SimpleNamespace(filter=lambda providers: [provider for provider in providers if provider == "OpenAI"])
+    resolve_policy = AsyncMock(return_value=snapshot)
+    monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+    build_config = {
+        "agent_llm": {
+            "options": ["Anthropic", "OpenAI"],
+            "options_metadata": [{"icon": "Anthropic"}, {"icon": "OpenAI"}],
+        }
+    }
+
+    await component._filter_legacy_provider_options(build_config)
+
+    assert build_config["agent_llm"]["options"] == ["OpenAI"]
+    assert build_config["agent_llm"]["options_metadata"] == [{"icon": "OpenAI"}]
