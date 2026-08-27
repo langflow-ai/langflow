@@ -97,6 +97,22 @@ class DatabaseSettings(BaseModel):
     - echo: Enable SQL query logging (development only)
     """
 
+    pool_pre_ping_idle_threshold_s: float = 20.0
+    """Skip ``pool_pre_ping`` validation for connections idle less than this many seconds.
+
+    ``pool_pre_ping`` costs a network round trip on EVERY pool checkout. Against a
+    remote database that is expensive: one flow run takes roughly a dozen checkouts,
+    so at 15ms RTT the pings alone are ~200ms of the request. A connection returned
+    to the pool moments ago is not plausibly dead, so validating it buys nothing.
+
+    Above this threshold the connection is validated as usual, which keeps the
+    protection that matters -- a connection killed server-side while sitting idle
+    (restart, failover, proxy idle-timeout) is still replaced transparently.
+
+    Set to 0 to restore stock behaviour and validate on every checkout. Has no
+    effect when ``pool_pre_ping`` is False.
+    """
+
     use_noop_database: bool = False
     """If True, disables all database operations and uses a no-op session.
     Controlled by LANGFLOW_USE_NOOP_DATABASE env variable."""

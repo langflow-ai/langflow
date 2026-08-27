@@ -72,6 +72,7 @@ EXPECTED_FIELDS = {
     "save_db_in_config_dir",
     "database_url",
     "database_connection_retry",
+    "pool_pre_ping_idle_threshold_s",
     "pool_size",
     "max_overflow",
     "db_connect_timeout",
