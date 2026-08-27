@@ -119,6 +119,7 @@ class BackgroundExecutionService(Service):
         self._owner = f"api:{os.getpid()}:{uuid4().hex[:8]}"
         self._frame_source_factory = frame_source_factory
         self._deadline_task: asyncio.Task | None = None
+        self._orphan_task: asyncio.Task | None = None
         self.set_ready()
 
     @property
@@ -151,16 +152,21 @@ class BackgroundExecutionService(Service):
         return select_background_backend(self._settings, client=client, job_service=get_job_service())
 
     async def start(self) -> None:
-        # Scaled mode: nothing to start in the API process - the worker owns execution.
+        # Scaled mode: the external worker owns execution and its watchdogs.
         if self._scaled:
             return
         await self._executor.start()
         self._start_deadline_watchdog()
+        self._start_orphan_watchdog()
 
     async def stop(self) -> None:
-        if self._deadline_task is not None:
-            self._deadline_task.cancel()
-            self._deadline_task = None
+        watchdogs = [task for task in (self._deadline_task, self._orphan_task) if task is not None]
+        for task in watchdogs:
+            task.cancel()
+        self._deadline_task = None
+        self._orphan_task = None
+        if watchdogs:
+            await asyncio.gather(*watchdogs, return_exceptions=True)
         await self._executor.stop()
 
     def _start_deadline_watchdog(self) -> None:
@@ -181,6 +187,33 @@ class BackgroundExecutionService(Service):
                     await self.sweep_input_deadlines()
 
         self._deadline_task = asyncio.create_task(_loop())
+
+    def _start_orphan_watchdog(self) -> None:
+        """Periodically reconcile dead owners when Redis mode fell back in-process.
+
+        The release branch intentionally omits the scaled worker modules. Redis
+        queue configuration therefore falls back to the in-process executor, but
+        still sets ``_is_redis``. The startup path historically returned early in
+        that state, leaving a dead replica's IN_PROGRESS rows stranded forever.
+        Keep the fallback fleet self-healing without competing with a real scaled
+        backend, whose worker owns its own retry-aware watchdog.
+        """
+        if not self._is_redis or self._scaled or self._orphan_task is not None:
+            return
+        interval = self._settings.background_watchdog_interval_s
+        lease_ttl = self._settings.background_lease_ttl_s
+
+        async def _loop() -> None:
+            while True:
+                await asyncio.sleep(interval)
+                try:
+                    await get_job_service().sweep_orphans(lease_ttl_s=lease_ttl)
+                except asyncio.CancelledError:
+                    raise
+                except Exception:  # noqa: BLE001 -- a later watchdog tick must still run
+                    await logger.aexception("Periodic background orphan sweep failed")
+
+        self._orphan_task = asyncio.create_task(_loop())
 
     async def teardown(self) -> None:
         await self.stop()
@@ -752,13 +785,17 @@ class BackgroundExecutionService(Service):
         worker_lost + terminal event). QUEUED workflow rows never started, so
         under at-least-once we re-enqueue them onto this worker's executor with a
         reconstructed request. Best-effort per job so one bad row can't block the
-        rest. Redis backend reconciles via its own watchdog.
+        rest. A real scaled Redis backend reconciles via its own watchdog; when
+        those modules are unavailable, the in-process fallback starts its local
+        periodic watchdog and performs this initial sweep.
         """
-        if self._is_redis:
-            return
         await self.start()
         job_service = get_job_service()
         lease_ttl = self._settings.background_lease_ttl_s
+        if self._is_redis:
+            if not self._scaled:
+                await job_service.sweep_orphans(lease_ttl_s=lease_ttl)
+            return
         # Single-flight the IN_PROGRESS reconcile: only the worker that wins the
         # lock fails orphans; the others skip (a non-blocking try-acquire). The
         # QUEUED re-enqueue below stays per-worker because each row is lease-claimed
