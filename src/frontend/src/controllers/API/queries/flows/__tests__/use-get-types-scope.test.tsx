@@ -143,13 +143,40 @@ describe("useGetTypes scoped store ownership", () => {
 
   it("restores the active store after an equal scoped palette refetch", async () => {
     const flowA = palette("provider_a", "AComponent");
-    mockApiGet.mockResolvedValue({ data: flowA });
+    const initialDisplayNames = {
+      acomponent: {
+        display_name: ["A Component"],
+        description: ["Initial description"],
+      },
+    };
+    const refreshedDisplayNames = {
+      acomponent: {
+        display_name: ["Localized A Component"],
+        description: ["Localized description"],
+      },
+    };
+    mockApiGet
+      .mockResolvedValueOnce({
+        data: {
+          ...flowA,
+          component_display_names: initialDisplayNames,
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          ...flowA,
+          component_display_names: refreshedDisplayNames,
+        },
+      });
 
     renderHook(() => useGetTypes({ flowId: "flow-a" }), {
       wrapper: makeWrapper(queryClient),
     });
 
     await waitFor(() => expect(useTypesStore.getState().data).toEqual(flowA));
+    expect(useTypesStore.getState().componentDisplayNames).toEqual(
+      initialDisplayNames,
+    );
 
     act(() => useTypesStore.getState().setTypes({}));
     expect(useTypesStore.getState().data).toEqual({});
@@ -162,6 +189,9 @@ describe("useGetTypes scoped store ownership", () => {
     });
 
     await waitFor(() => expect(useTypesStore.getState().data).toEqual(flowA));
+    expect(useTypesStore.getState().componentDisplayNames).toEqual(
+      refreshedDisplayNames,
+    );
     expect(mockApiGet).toHaveBeenCalledTimes(2);
   });
 

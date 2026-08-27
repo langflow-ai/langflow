@@ -73,6 +73,12 @@ export const useGetTypes: useQueryFunctionType<
   const queryResult = query(["useGetTypes", flowId, projectId], getTypesFn, {
     refetchOnWindowFocus: true,
     staleTime: PALETTE_STALE_TIME_MS,
+    // Each successful fetch must carry its matching display-name metadata and
+    // rehydrate the active Zustand palette. React Query's structural sharing
+    // can otherwise retain the previous data reference for an equal response,
+    // so the layout effect below would not run after callers clear the store
+    // and invalidate this query (for example, language or bundle reloads).
+    structuralSharing: false,
     ...queryOptions,
   });
 
@@ -89,7 +95,13 @@ export const useGetTypes: useQueryFunctionType<
       syncNodeTranslations();
       recomputeComponentsToUpdateIfNeeded();
     }
-  }, [activateScope, queryResult.data, scopeKey, setScopedTypes]);
+  }, [
+    activateScope,
+    queryResult.data,
+    queryResult.dataUpdatedAt,
+    scopeKey,
+    setScopedTypes,
+  ]);
 
   return queryResult;
 };
