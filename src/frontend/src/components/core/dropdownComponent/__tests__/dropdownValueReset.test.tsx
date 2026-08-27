@@ -21,6 +21,8 @@ interface MockStoreSelectorFn<T> {
   (state: T): unknown;
 }
 
+let mockCurrentFlowId = "flow-one";
+
 jest.mock("@radix-ui/react-popover", () => ({
   PopoverAnchor: ({ children }: MockChildrenProps) => <div>{children}</div>,
 }));
@@ -76,7 +78,7 @@ jest.mock("@/stores/flowsManagerStore", () => ({
     selector?: MockStoreSelectorFn<{
       currentFlowId: string;
     }>,
-  ) => (selector ? selector({ currentFlowId: "flow-one" }) : {}),
+  ) => (selector ? selector({ currentFlowId: mockCurrentFlowId }) : {}),
 }));
 
 jest.mock("@/stores/typesStore", () => ({
@@ -144,6 +146,7 @@ const mockUseGetModelProviders = useGetModelProviders as jest.Mock;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockCurrentFlowId = "flow-one";
   mockUseGetModelProviders.mockReturnValue({
     data: undefined,
     isLoading: false,
@@ -380,6 +383,47 @@ describe("legacy provider dropdown policy", () => {
 
     expect(screen.queryByText("Anthropic")).not.toBeInTheDocument();
     expect(onSelect).not.toHaveBeenCalledWith("", undefined, true);
+  });
+
+  it("does not reuse a previous flow's provider grants while the next scope loads", () => {
+    mockUseGetModelProviders.mockReturnValue({
+      data: [{ provider: "OpenAI" }],
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+    });
+    const { rerender } = renderProviderDropdown("OpenAI");
+
+    expect(screen.getAllByText("OpenAI").length).toBeGreaterThan(0);
+
+    mockCurrentFlowId = "flow-two";
+    mockUseGetModelProviders.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isFetching: true,
+      isError: false,
+    });
+    rerender(
+      <Dropdown
+        value="OpenAI"
+        options={["OpenAI", "Anthropic", "Custom"]}
+        onSelect={jest.fn()}
+        name="agent_llm"
+        nodeId="test-node"
+        nodeClass={mockNodeClass}
+        handleNodeClass={jest.fn()}
+        id="provider-dropdown"
+        editNode={false}
+        handleOnNewValue={jest.fn()}
+        disabled={false}
+      />,
+    );
+
+    expect(mockUseGetModelProviders).toHaveBeenLastCalledWith(
+      { flowId: "flow-two" },
+      { enabled: true },
+    );
+    expect(screen.queryByText("OpenAI")).not.toBeInTheDocument();
   });
 
   it("leaves ordinary dropdowns unchanged", () => {

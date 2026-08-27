@@ -14,6 +14,8 @@ from lfx.io import (
     StrInput,
 )
 
+_LEGACY_PROVIDER_IDS = {"Azure": "azure-openai"}
+
 
 class ChatLiteLLMModelComponent(LCModelComponent):
     # This legacy wrapper selects the real provider through its dropdown.
@@ -131,7 +133,9 @@ class ChatLiteLLMModelComponent(LCModelComponent):
             provider = getattr(self, "provider", None)
         if not isinstance(provider, str) or not provider.strip():
             return ()
-        return (resolve_provider_id(provider.strip()),)
+        provider = provider.strip()
+        provider_id = _LEGACY_PROVIDER_IDS.get(provider)
+        return (provider_id or resolve_provider_id(provider),)
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMException

@@ -3,7 +3,9 @@ import { useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { BUILD_PANEL_COLLISION_PADDING_PX } from "@/constants/constants";
+import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { DropDownComponent } from "../../../types/components";
 import { cn, filterNullOptions, formatName } from "../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../common/genericIconComponent";
@@ -46,9 +48,74 @@ export default function Dropdown({
   ...baseInputProps
 }: BaseInputProps & DropDownComponent): JSX.Element {
   const { t } = useTranslation();
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const isLegacyProviderSelector = name === "agent_llm";
+  const {
+    data: scopedModelProviders,
+    isLoading: isLoadingScopedModelProviders,
+    isFetching: isFetchingScopedModelProviders,
+  } = useGetModelProviders(
+    { flowId: currentFlowId },
+    { enabled: isLegacyProviderSelector && Boolean(currentFlowId) },
+  );
+  const lastScopedProviders = useRef<{
+    flowId: string;
+    names: Set<string>;
+  } | null>(null);
+  const resolvedProviderNames = useMemo(
+    () =>
+      scopedModelProviders === undefined
+        ? null
+        : new Set(scopedModelProviders.map(({ provider }) => provider)),
+    [scopedModelProviders],
+  );
+
+  let allowedProviderNames: Set<string> | null = null;
+  if (
+    isLegacyProviderSelector &&
+    currentFlowId &&
+    resolvedProviderNames !== null
+  ) {
+    allowedProviderNames = resolvedProviderNames;
+    lastScopedProviders.current = {
+      flowId: currentFlowId,
+      names: allowedProviderNames,
+    };
+  } else if (
+    isLegacyProviderSelector &&
+    lastScopedProviders.current?.flowId === currentFlowId
+  ) {
+    allowedProviderNames = lastScopedProviders.current.names;
+  }
+
+  const { policyOptions, policyOptionsMetaData } = useMemo(() => {
+    if (!isLegacyProviderSelector) {
+      return { policyOptions: options, policyOptionsMetaData: optionsMetaData };
+    }
+
+    const keepIndexes = options.reduce<number[]>((indexes, option, index) => {
+      if (option === "Custom" || allowedProviderNames?.has(option)) {
+        indexes.push(index);
+      }
+      return indexes;
+    }, []);
+    return {
+      policyOptions: keepIndexes.map((index) => options[index]),
+      policyOptionsMetaData: optionsMetaData
+        ? keepIndexes.map((index) => optionsMetaData[index])
+        : undefined,
+    };
+  }, [
+    allowedProviderNames,
+    isLegacyProviderSelector,
+    options,
+    optionsMetaData,
+  ]);
+  const visibleValue =
+    isLegacyProviderSelector && !policyOptions.includes(value) ? "" : value;
   const validOptions = useMemo(
-    () => filterNullOptions(options),
-    [options, value],
+    () => filterNullOptions(policyOptions),
+    [policyOptions, visibleValue],
   );
 
   // Options / filtering state and its sync effects
@@ -67,15 +134,47 @@ export default function Dropdown({
     setPendingSelect,
     searchRoleByTerm,
   } = useDropdownOptions({
-    value,
-    options,
+    value: visibleValue,
+    options: policyOptions,
     validOptions,
-    optionsMetaData,
+    optionsMetaData: policyOptionsMetaData,
     combobox,
     disabled,
     hasChildren: Boolean(children),
     onSelect,
   });
+  const { visibleFilteredOptions, visibleFilteredMetadata } = useMemo(() => {
+    if (!isLegacyProviderSelector) {
+      return {
+        visibleFilteredOptions: filteredOptions,
+        visibleFilteredMetadata: filteredMetadata,
+      };
+    }
+
+    const allowedOptions = new Set(policyOptions);
+    const keepIndexes = filteredOptions.reduce<number[]>(
+      (indexes, option, index) => {
+        if (allowedOptions.has(option)) {
+          indexes.push(index);
+        }
+        return indexes;
+      },
+      [],
+    );
+    return {
+      visibleFilteredOptions: keepIndexes.map(
+        (index) => filteredOptions[index],
+      ),
+      visibleFilteredMetadata: filteredMetadata
+        ? keepIndexes.map((index) => filteredMetadata[index])
+        : undefined,
+    };
+  }, [
+    filteredMetadata,
+    filteredOptions,
+    isLegacyProviderSelector,
+    policyOptions,
+  ]);
   const _nodes = useFlowStore((state) => state.nodes);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const buildInfo = useFlowStore((state) => state.buildInfo);
@@ -97,7 +196,7 @@ export default function Dropdown({
   // Template mutation flows (create-from-source, refresh list)
   const { handleSourceOptions, handleRefreshButtonPress } =
     useDropdownMutations({
-      value,
+      value: visibleValue,
       name,
       nodeId,
       nodeClass,
@@ -147,17 +246,17 @@ export default function Dropdown({
       }
     >
       <Command className="flex flex-col">
-        {options?.length > 0 && (
+        {policyOptions.length > 0 && (
           <DropdownSearchInput
             onSearch={searchRoleByTerm}
             onKeyDown={handleInputKeyDown}
           />
         )}
         <DropdownOptionsList
-          filteredOptions={filteredOptions}
-          filteredMetadata={filteredMetadata}
+          filteredOptions={visibleFilteredOptions}
+          filteredMetadata={visibleFilteredMetadata}
           firstWord={firstWord}
-          value={value}
+          value={visibleValue}
           onSelect={onSelect}
           setOpen={setOpen}
           setWaitingForResponse={setWaitingForResponse}
@@ -199,8 +298,18 @@ export default function Dropdown({
     </PopoverContentDropdown>
   );
 
+  const isLegacyProviderPolicyPending =
+    isLegacyProviderSelector &&
+    allowedProviderNames === null &&
+    (isLoadingScopedModelProviders || isFetchingScopedModelProviders);
+  const effectiveIsLoading = isLoading || isLegacyProviderPolicyPending;
+
   // Loading state
-  if (Object.keys(validOptions).length === 0 && !combobox && isLoading) {
+  if (
+    Object.keys(validOptions).length === 0 &&
+    !combobox &&
+    effectiveIsLoading
+  ) {
     return (
       <div>
         <span className="text-sm italic">{t("dropdown.loadingOptions")}</span>
@@ -213,20 +322,20 @@ export default function Dropdown({
     <Popover open={open} onOpenChange={children ? () => {} : setOpen}>
       {children ? (
         <PopoverAnchor>{children}</PopoverAnchor>
-      ) : refreshOptions || isLoading ? (
+      ) : refreshOptions || effectiveIsLoading ? (
         renderLoadingButton()
       ) : validOptions.length === 1 &&
         toggle &&
         !combobox &&
-        value === validOptions[0] ? (
+        visibleValue === validOptions[0] ? (
         <div className="flex w-full items-center gap-2 truncate">
-          {optionsMetaData?.[0]?.icon && (
+          {policyOptionsMetaData?.[0]?.icon && (
             <ForwardedIconComponent
-              name={optionsMetaData?.[0]?.icon}
+              name={policyOptionsMetaData?.[0]?.icon}
               className="h-4 w-4 flex-shrink-0"
             />
           )}
-          <span className="truncate text-sm">{value}</span>
+          <span className="truncate text-sm">{visibleValue}</span>
         </div>
       ) : (
         <div className="w-full truncate">
@@ -240,12 +349,12 @@ export default function Dropdown({
             open={open}
             refButton={refButton}
             id={id}
-            value={value}
-            options={options}
+            value={visibleValue}
+            options={policyOptions}
             placeholder={placeholder}
             helperText={helperText}
-            filteredOptions={filteredOptions}
-            filteredMetadata={filteredMetadata}
+            filteredOptions={visibleFilteredOptions}
+            filteredMetadata={visibleFilteredMetadata}
             ariaLabelledBy={ariaLabelledBy}
           />
         </div>
