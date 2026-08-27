@@ -26033,7 +26033,7 @@
         "OutputParser": {
           "base_classes": [
             "Message",
-            "OutputParser"
+            "NoneType"
           ],
           "beta": false,
           "conditional_paths": [],
@@ -26089,10 +26089,10 @@
               "group_outputs": false,
               "method": "build_parser",
               "name": "output_parser",
-              "selected": "OutputParser",
+              "selected": "NoneType",
               "tool_mode": true,
               "types": [
-                "OutputParser"
+                "NoneType"
               ],
               "value": "__UNDEFINED__"
             }
@@ -31039,6 +31039,6 @@
     "num_components": 127,
     "num_modules": 16
   },
-  "sha256": "3aff0c15487215baf3250e716d0cbd73ccad88d05ba3e244ef2b7a20026f1ca1",
+  "sha256": "a700ef2a57e4144e1c9e3bdec90f9727e2412f86aeb7a51624702e75a61427c4",
   "version": "1.12.0"
 }
