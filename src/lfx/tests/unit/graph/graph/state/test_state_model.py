@@ -2,7 +2,7 @@ import pytest
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph import Graph
 from lfx.graph.graph.constants import Finish
-from lfx.graph.state.model import create_state_model
+from lfx.graph.state.model import build_output_getter, create_state_model
 from lfx.template.field.base import UNDEFINED
 from pydantic import Field
 
@@ -27,6 +27,28 @@ class TestCreateStateModel:
         assert state_instance.method_one is UNDEFINED
         chat_input_component.set_output_value("message", "test")
         assert state_instance.method_one == "test"
+
+    def test_output_getter_resolves_runtime_alias_from_function_globals(self):
+        namespace = {}
+        exec(  # noqa: S102
+            """\
+from __future__ import annotations
+from lfx.schema import Data as Payload
+
+class AliasComponent:
+    def get_output_by_method(self, _method):
+        raise AssertionError
+
+    def build(self) -> Payload:
+        raise AssertionError
+""",
+            namespace,
+        )
+        component = namespace["AliasComponent"]()
+
+        getter = build_output_getter(component.build)
+
+        assert getter.__annotations__["return"] is namespace["Payload"]
 
     def test_create_model_and_assign_values_fails(self, chat_input_component):
         state_model = create_state_model(method_one=chat_input_component.message_response)

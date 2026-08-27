@@ -9,6 +9,7 @@ from typing import Optional, Union
 from langchain_core._api.deprecation import LangChainDeprecationWarning
 from pydantic import ValidationError
 
+from lfx.custom.annotation_validation import UnsafeReturnAnnotationError, validate_return_annotations
 from lfx.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
 from lfx.log.logger import logger
 
@@ -216,6 +217,21 @@ def create_class(code, class_name):
     code = DEFAULT_IMPORT_STRING + "\n" + code
     try:
         module = ast.parse(code)
+        # Return annotations are evaluated by Python during class creation and
+        # later by typing.get_type_hints. Reject active syntax before imports,
+        # compilation, or component construction can execute it.
+        validate_return_annotations(module)
+        if not any(
+            isinstance(node, ast.ImportFrom)
+            and node.module == "__future__"
+            and any(alias.name == "annotations" for alias in node.names)
+            for node in module.body
+        ):
+            module.body.insert(
+                0,
+                ast.ImportFrom(module="__future__", names=[ast.alias(name="annotations")], level=0),
+            )
+            ast.fix_missing_locations(module)
         exec_globals = prepare_global_scope(module)
 
         future_imports = [n for n in module.body if isinstance(n, ast.ImportFrom) and n.module == "__future__"]
@@ -234,6 +250,8 @@ def create_class(code, class_name):
         messages = [error["msg"].split(",", 1) for error in e.errors()]
         error_message = "\n".join([message[1] if len(message) > 1 else message[0] for message in messages])
         raise ValueError(error_message) from e
+    except UnsafeReturnAnnotationError as e:
+        raise ValueError(str(e)) from e
     except Exception as e:
         msg = f"Error creating class. {type(e).__name__}({e!s})."
         raise ValueError(msg) from e
