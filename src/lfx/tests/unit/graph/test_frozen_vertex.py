@@ -1,6 +1,7 @@
 import copy
 import json
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from lfx.graph import Graph
@@ -44,3 +45,23 @@ async def test_frozen_vertex_rebuilds_when_no_cache_service(frozen_chat_flow):
     # Use arun which goes through process(), the same path as arun_flow_from_json
     results = await graph.arun(inputs=[{"input_value": "hello"}])
     assert len(results) > 0
+
+
+@pytest.mark.asyncio
+async def test_frozen_cached_vertex_reauthorizes_before_cache_lookup(monkeypatch):
+    """A policy revocation must stop a frozen vertex before its prior result is reused."""
+    graph = Graph()
+    vertex = MagicMock()
+    vertex.id = "cached-model"
+    vertex.display_name = "Cached Model"
+    vertex.frozen = True
+    vertex.is_loop = False
+    vertex.require_model_provider_policy.side_effect = RuntimeError("provider revoked")
+    monkeypatch.setattr(graph, "get_vertex", lambda _vertex_id: vertex)
+    get_cache = AsyncMock(side_effect=AssertionError("cache read before provider reauthorization"))
+
+    with pytest.raises(RuntimeError, match="provider revoked"):
+        await graph.build_vertex(vertex.id, get_cache=get_cache, user_id="user-1")
+
+    vertex.require_model_provider_policy.assert_called_once_with("user-1")
+    get_cache.assert_not_awaited()
