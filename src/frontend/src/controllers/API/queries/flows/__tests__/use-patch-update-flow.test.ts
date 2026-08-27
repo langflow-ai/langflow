@@ -7,6 +7,26 @@ const mockQueryClient = {
   invalidateQueries: jest.fn(),
 };
 
+interface PatchPayload {
+  id: string;
+  folder_id?: string | null;
+  name?: string;
+}
+
+interface MutationCallbacks {
+  onSuccess?: (
+    result: unknown,
+    payload: PatchPayload,
+    context: unknown,
+  ) => void;
+  onSettled?: (
+    result: unknown,
+    error: unknown,
+    payload: PatchPayload,
+    context: unknown,
+  ) => void;
+}
+
 jest.mock("@/controllers/API/api", () => ({
   api: {
     patch: mockApiPatch,
@@ -19,13 +39,20 @@ jest.mock("@/controllers/API/helpers/constants", () => ({
 
 jest.mock("@/controllers/API/services/request-processor", () => ({
   UseRequestProcessor: jest.fn(() => ({
-    mutate: jest.fn((_key: any, fn: any, options: any) => ({
-      mutate: async (payload: any) => {
-        const result = await fn(payload);
-        options?.onSettled?.(result);
-        return result;
-      },
-    })),
+    mutate: jest.fn(
+      (
+        _key: unknown,
+        fn: (payload: PatchPayload) => Promise<unknown>,
+        options: MutationCallbacks,
+      ) => ({
+        mutate: async (payload: PatchPayload) => {
+          const result = await fn(payload);
+          options?.onSuccess?.(result, payload, undefined);
+          options?.onSettled?.(result, null, payload, undefined);
+          return result;
+        },
+      }),
+    ),
     queryClient: mockQueryClient,
   })),
 }));
@@ -122,5 +149,63 @@ describe("usePatchUpdateFlow", () => {
       return Array.isArray(queryKey) && queryKey[0] === "useGetFolder";
     });
     expect(matchesIndividualFolder).toBe(true);
+  });
+
+  it("invalidates only flow-scoped provider caches after a successful project move", async () => {
+    mockApiPatch.mockResolvedValue({
+      data: { id: "flow-1", folder_id: "folder-B" },
+    });
+
+    const mutation = usePatchUpdateFlow();
+
+    // The flow-scoped keys below hold data resolved while flow-1 belonged to
+    // folder-A. The key only contains the flow id, so moving to folder-B must
+    // explicitly invalidate each policy-filtered view.
+    await mutation.mutate({ id: "flow-1", folder_id: "folder-B" });
+
+    const predicateCall = mockQueryClient.invalidateQueries.mock.calls.find(
+      ([filters]) => typeof filters?.predicate === "function",
+    );
+    expect(predicateCall).toBeDefined();
+    const predicate = predicateCall?.[0].predicate;
+
+    const staleFlowAKeys = [
+      ["useGetTypes", "flow-1", undefined],
+      ["useGetModelProviders", true, undefined, "flow-1", undefined],
+      ["useGetEnabledModels", "flow-1", undefined],
+      ["useGetProviderVariables", "flow-1", undefined],
+      ["useGetGlobalVariables", "flow-1", undefined],
+    ];
+    for (const queryKey of staleFlowAKeys) {
+      expect(predicate({ queryKey })).toBe(true);
+    }
+
+    expect(
+      predicate({
+        queryKey: [
+          "useGetModelProviders",
+          true,
+          undefined,
+          undefined,
+          undefined,
+        ],
+      }),
+    ).toBe(false);
+    expect(
+      predicate({ queryKey: ["useGetTypes", "different-flow", undefined] }),
+    ).toBe(false);
+  });
+
+  it("does not invalidate flow-scoped provider caches for a metadata-only patch", async () => {
+    mockApiPatch.mockResolvedValue({ data: { id: "flow-1", name: "Renamed" } });
+
+    const mutation = usePatchUpdateFlow();
+    await mutation.mutate({ id: "flow-1", name: "Renamed" });
+
+    expect(
+      mockQueryClient.invalidateQueries.mock.calls.some(
+        ([filters]) => typeof filters?.predicate === "function",
+      ),
+    ).toBe(false);
   });
 });

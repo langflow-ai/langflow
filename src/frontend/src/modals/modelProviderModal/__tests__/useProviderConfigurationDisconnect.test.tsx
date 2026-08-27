@@ -26,6 +26,9 @@ let mockModelProviders: Array<{
   is_configured?: boolean;
   models?: unknown[];
 }> = [];
+let mockModelProvidersIsFetched = false;
+let mockModelProvidersIsFetching = false;
+let mockModelProvidersIsError = false;
 
 const deleteCalls: Array<{ id: string | undefined }> = [];
 const mockDeleteMutateAsync = jest.fn((params: { id: string | undefined }) => {
@@ -69,7 +72,9 @@ jest.mock("@/controllers/API/queries/variables", () => ({
 jest.mock("@/controllers/API/queries/models/use-get-model-providers", () => ({
   useGetModelProviders: () => ({
     data: mockModelProviders,
-    isFetching: false,
+    isFetched: mockModelProvidersIsFetched,
+    isFetching: mockModelProvidersIsFetching,
+    isError: mockModelProvidersIsError,
   }),
 }));
 
@@ -130,6 +135,9 @@ describe("useProviderConfiguration.handleDisconnect", () => {
       (k) => delete mockProviderVariablesMapping[k],
     );
     mockModelProviders = [];
+    mockModelProvidersIsFetched = false;
+    mockModelProvidersIsFetching = false;
+    mockModelProvidersIsError = false;
     deleteCalls.length = 0;
     mockDeleteMutateAsync.mockClear();
     mockDeleteMutateAsync.mockImplementation((params) => {
@@ -318,6 +326,59 @@ describe("useProviderConfiguration.handleDisconnect", () => {
   });
 });
 
+describe("useProviderConfiguration policy refresh", () => {
+  beforeEach(() => {
+    mockModelProviders = [];
+    mockModelProvidersIsFetched = false;
+    mockModelProvidersIsFetching = false;
+    mockModelProvidersIsError = false;
+    mockInvalidateQueries.mockClear();
+    mockRefetchQueries.mockClear();
+  });
+
+  it("clears an open provider when a settled refetch omits it", async () => {
+    const selectedProvider: Provider = {
+      provider: "OpenAI",
+      icon: "OpenAI",
+      is_enabled: true,
+      is_configured: true,
+      models: [],
+    };
+    mockModelProviders = [selectedProvider];
+    mockModelProvidersIsFetched = true;
+
+    const { result, rerender } = renderProviderConfiguration(selectedProvider);
+    await waitFor(() =>
+      expect(result.current.syncedSelectedProvider?.provider).toBe("OpenAI"),
+    );
+
+    // Enterprise revoked OpenAI in the same flow. The mounted query settled
+    // successfully with no matching provider while the dialog remained open.
+    mockModelProviders = [];
+    rerender({ provider: selectedProvider });
+
+    await waitFor(() =>
+      expect(result.current.syncedSelectedProvider).toBeNull(),
+    );
+  });
+
+  it("invalidates provider-variable mappings with the other provider caches", () => {
+    const { result } = renderProviderConfiguration({
+      provider: "OpenAI",
+      icon: "OpenAI",
+      is_enabled: true,
+      is_configured: true,
+      models: [],
+    });
+
+    act(() => result.current.invalidateProviderQueries());
+
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["useGetProviderVariables"],
+    });
+  });
+});
+
 describe("useProviderConfiguration.handleSaveAllVariables", () => {
   beforeEach(() => {
     mockGlobalVariables.length = 0;
@@ -325,6 +386,9 @@ describe("useProviderConfiguration.handleSaveAllVariables", () => {
       (k) => delete mockProviderVariablesMapping[k],
     );
     mockModelProviders = [];
+    mockModelProvidersIsFetched = false;
+    mockModelProvidersIsFetching = false;
+    mockModelProvidersIsError = false;
     mockCreateMutateAsync.mockReset();
     mockSetSuccessData.mockClear();
     mockSetErrorData.mockClear();

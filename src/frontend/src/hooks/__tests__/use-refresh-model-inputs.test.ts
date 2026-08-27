@@ -358,6 +358,9 @@ describe("refreshAllModelInputs", () => {
     expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["useGetEnabledModels"],
     });
+    expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["useGetProviderVariables"],
+    });
   });
 
   it("should not invalidate cache when queryClient is not provided", async () => {

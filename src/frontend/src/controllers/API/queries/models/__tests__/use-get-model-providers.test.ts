@@ -1,5 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
+import {
+  focusManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import React from "react";
 
 // Mock API before imports
@@ -132,6 +136,44 @@ describe("useGetModelProviders", () => {
         undefined,
         undefined,
       ]);
+    });
+
+    it("removes a revoked provider from a mounted flow picker on stale focus", async () => {
+      const dateNow = jest.spyOn(Date, "now").mockReturnValue(1_000_000);
+      mockApiGet
+        .mockResolvedValueOnce({
+          data: [
+            {
+              provider: "OpenAI",
+              models: [],
+              is_enabled: true,
+            },
+          ],
+        })
+        .mockResolvedValueOnce({ data: [] });
+
+      try {
+        const { result } = renderHook(
+          () => useGetModelProviders({ flowId: "flow-one" }),
+          { wrapper: createWrapper() },
+        );
+
+        await waitFor(() =>
+          expect(result.current.data?.map(({ provider }) => provider)).toEqual([
+            "OpenAI",
+          ]),
+        );
+
+        dateNow.mockReturnValue(1_030_001);
+        act(() => focusManager.setFocused(false));
+        act(() => focusManager.setFocused(true));
+
+        await waitFor(() => expect(result.current.data).toEqual([]));
+        expect(mockApiGet).toHaveBeenCalledTimes(2);
+      } finally {
+        focusManager.setFocused(undefined);
+        dateNow.mockRestore();
+      }
     });
   });
 
