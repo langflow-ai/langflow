@@ -1415,7 +1415,7 @@ async def test_idp_team_membership_cannot_be_removed(stub_authz):
         )
 
     assert excinfo.value.status_code == 409
-    assert excinfo.value.detail == "externally_managed"
+    assert excinfo.value.detail == "Externally managed memberships cannot be removed through the manual membership API"
     assert session.deleted == []
 
 

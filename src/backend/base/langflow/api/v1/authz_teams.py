@@ -463,7 +463,7 @@ async def remove_member(
         )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="externally_managed",
+            detail="Externally managed memberships cannot be removed through the manual membership API",
             headers={"X-Langflow-Error-Code": "externally_managed"},
         )
     mutation = AuthorizationMutation(
