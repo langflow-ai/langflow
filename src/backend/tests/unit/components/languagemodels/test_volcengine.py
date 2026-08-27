@@ -86,6 +86,38 @@ def test_get_models_drops_internal_entries():
     assert models == ["doubao-seed-2-1-pro-260628", "doubao-seed-evolving"]
 
 
+@pytest.mark.parametrize(
+    ("payload", "side_effect"),
+    [
+        (None, ValueError("Expecting value: line 1 column 1 (char 0)")),
+        (["not", "a", "dict"], None),
+        ({"data": [{"name": "missing-id-field"}]}, None),
+        ({"data": None}, None),
+    ],
+)
+def test_get_models_survives_bad_payloads(payload, side_effect):
+    """A 200 can still carry unparseable or oddly shaped JSON; refresh must not break."""
+    component = VolcengineModelComponent()
+    component.api_key = "test-key-not-real"
+    component.api_base = "https://ark.cn-beijing.volces.com/api/v3"
+
+    response = MagicMock()
+    response.raise_for_status.return_value = None
+    if side_effect is not None:
+        response.json.side_effect = side_effect
+    else:
+        response.json.return_value = payload
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(
+            "lfx_bundles.volcengine.volcengine.ssrf_safe_httpx_get",
+            lambda *_args, **_kwargs: response,
+        )
+        models = component.get_models()
+
+    assert models == VOLCENGINE_MODELS
+
+
 def test_get_models_falls_back_without_api_key():
     component = VolcengineModelComponent()
     component.api_key = ""

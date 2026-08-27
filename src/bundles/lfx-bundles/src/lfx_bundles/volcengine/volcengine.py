@@ -123,12 +123,21 @@ class VolcengineModelComponent(LCModelComponent):
             response = ssrf_safe_httpx_get(url, headers=headers, timeout=10)
             response.raise_for_status()
             model_list = response.json()
-            listed = [model["id"] for model in model_list.get("data", [])]
+            if not isinstance(model_list, dict):
+                msg = f"expected a JSON object, got {type(model_list).__name__}"
+                raise TypeError(msg)
+            data = model_list.get("data") or []
+            listed = [model["id"] for model in data if isinstance(model, dict) and "id" in model]
         except SSRFProtectionError as e:
             self.status = f"SSRF Protection: {e}"
             return VOLCENGINE_MODELS
         except httpx.HTTPError as e:
             self.status = f"Error fetching models: {e}"
+            return VOLCENGINE_MODELS
+        except (TypeError, ValueError) as e:
+            # A 200 can still carry unparseable or unexpectedly shaped JSON; keep the
+            # picker working instead of letting it break the refresh.
+            self.status = f"Unexpected model list payload: {e}"
             return VOLCENGINE_MODELS
         else:
             # Keep the catalogue usable: see VOLCENGINE_SUPPORTED_MODELS above.
