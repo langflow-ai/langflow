@@ -46,11 +46,14 @@ export default function NodeUpdateComponent({
         <div className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-accent-amber" />
         <div className="min-w-0 flex-1">
           <p className="text-mmd font-medium">{blockedLabel}</p>
-          {showNode ? (
-            <p className="mt-0.5 text-xs leading-4 text-muted-foreground">
-              {blockedMessage}
-            </p>
-          ) : null}
+          <p
+            className={cn(
+              "mt-0.5 text-xs leading-4 text-muted-foreground",
+              !showNode && "sr-only",
+            )}
+          >
+            {blockedMessage}
+          </p>
         </div>
       </div>
     );

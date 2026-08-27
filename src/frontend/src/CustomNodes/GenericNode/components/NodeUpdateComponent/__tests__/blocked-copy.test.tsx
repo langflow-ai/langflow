@@ -111,6 +111,9 @@ describe("NodeUpdateComponent blocked copy", () => {
     expect(
       screen.getByText(copy["node.updateBlockedByPolicyLabel"]),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(copy["node.updateBlockedByPolicyMessage"]),
+    ).toHaveClass("sr-only");
   });
 
   it("leaves an unblocked banner untouched", () => {
