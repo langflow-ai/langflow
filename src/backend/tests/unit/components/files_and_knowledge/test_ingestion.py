@@ -220,10 +220,12 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert component.is_valid_collection_name("valid_name") is True
         assert component.is_valid_collection_name("valid-name") is True
         assert component.is_valid_collection_name("ValidName123") is True
+        assert component.is_valid_collection_name("docs.v2") is True
+        assert component.is_valid_collection_name("a" * 512) is True
 
         # Invalid names
         assert component.is_valid_collection_name("ab") is False  # Too short
-        assert component.is_valid_collection_name("a" * 64) is False  # Too long
+        assert component.is_valid_collection_name("a" * 513) is False  # Too long
         assert component.is_valid_collection_name("_invalid") is False  # Starts with underscore
         assert component.is_valid_collection_name("invalid_") is False  # Ends with underscore
         assert component.is_valid_collection_name("invalid@name") is False  # Invalid character
@@ -364,7 +366,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
             "03_knowledge_backend": {"backend_type": "chroma", "backend_config": {}},
         }
 
-        with pytest.raises(ValueError, match="Invalid knowledge base name"):
+        with pytest.raises(ValueError, match="Chroma naming rules"):
             await component.update_build_config(build_config, field_value, "knowledge_base")
 
     @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
