@@ -223,6 +223,192 @@ class TestIngestionProviderScope:
 
         assert "workspace_id" not in field_names
         assert "project_id" not in field_names
+        assert "owner_user_id" in field_names
+        assert "actor_user_id" in field_names
+        assert "user_id" not in field_names
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("actor_state", [None, False], ids=["deleted", "inactive"])
+    async def test_scope_resolution_rejects_deleted_or_inactive_actor(self, actor_state):
+        from langflow.services.database.models.flow.model import Flow
+        from langflow.services.database.models.memory_base.model import MemoryBase
+        from langflow.services.database.models.user.model import User
+        from langflow.services.memory_base.provider_scope import resolve_memory_provider_scope
+
+        owner_user_id = uuid.uuid4()
+        actor_user_id = uuid.uuid4()
+        flow = Flow(id=uuid.uuid4(), user_id=owner_user_id, name="stored flow")
+        memory_base = MemoryBase(
+            id=uuid.uuid4(),
+            name="memory",
+            flow_id=flow.id,
+            user_id=owner_user_id,
+            kb_name="kb",
+        )
+        mb_result = MagicMock()
+        mb_result.first.return_value = memory_base
+        flow_result = MagicMock()
+        flow_result.first.return_value = flow
+        db = AsyncMock()
+        db.exec = AsyncMock(side_effect=[mb_result, flow_result])
+        db.get = AsyncMock(
+            return_value=None
+            if actor_state is None
+            else User(id=actor_user_id, username="actor", is_active=actor_state)
+        )
+
+        with pytest.raises(PermissionError, match="actor"):
+            await resolve_memory_provider_scope(
+                db,
+                memory_base_id=memory_base.id,
+                owner_user_id=owner_user_id,
+                actor_user_id=actor_user_id,
+            )
+
+    @pytest.mark.asyncio
+    async def test_worker_reloads_moved_flow_for_actor_and_resets_context(self):
+        from langflow.services.database.models.flow.model import Flow
+        from langflow.services.database.models.memory_base.model import MemoryBase
+        from langflow.services.memory_base.provider_scope import MemoryProviderScope
+        from langflow.services.memory_base.task import IngestionRequest, ingest_memory_task
+        from lfx.services.model_provider_policy import current_model_provider_policy_context
+
+        owner_user_id = uuid.uuid4()
+        actor_user_id = uuid.uuid4()
+        current_project_id = uuid.uuid4()
+        flow = Flow(
+            id=uuid.uuid4(),
+            user_id=owner_user_id,
+            name="moved flow",
+            folder_id=current_project_id,
+        )
+        memory_base = MemoryBase(
+            id=uuid.uuid4(),
+            name="memory",
+            flow_id=flow.id,
+            user_id=owner_user_id,
+            kb_name="kb",
+        )
+        scope = MemoryProviderScope(
+            memory_base=memory_base,
+            flow=flow,
+            actor_user_id=actor_user_id,
+            is_superuser=False,
+        )
+        policy = _ScopePolicy(allowed_project_id=current_project_id)
+        acquire = AsyncMock(return_value=asyncio.Lock())
+
+        with (
+            patch("langflow.services.memory_base.task.session_scope", _fake_scope(AsyncMock())),
+            patch("langflow.services.memory_base.task.resolve_memory_provider_scope", AsyncMock(return_value=scope)),
+            patch(
+                "langflow.services.memory_base.task.resolve_embedding_selection",
+                AsyncMock(return_value=("OpenAI", "text-embedding-3-small")),
+            ),
+            patch("lfx.services.deps.get_model_provider_policy_service", return_value=policy),
+            patch("langflow.services.memory_base.task._acquire_session_lock", acquire),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[])),
+        ):
+            result = await ingest_memory_task(
+                request=IngestionRequest(
+                    memory_base_id=memory_base.id,
+                    session_id="moved",
+                    flow_id=uuid.uuid4(),  # stale dispatch snapshot; current MB row wins
+                    kb_name="stale-kb",
+                    kb_username="owner",
+                    owner_user_id=owner_user_id,
+                    actor_user_id=actor_user_id,
+                    embedding_provider="stale-provider",
+                    embedding_model="stale-model",
+                    cursor_id=None,
+                    task_job_id=uuid.uuid4(),
+                    job_service=MagicMock(),
+                )
+            )
+
+        assert result["ingested"] == 0
+        assert acquire.await_count == 1
+        context, _candidates, _purpose = policy.calls[0]
+        assert context.user_id == actor_user_id
+        assert context.attributes["project_id"] == current_project_id
+        assert current_model_provider_policy_context() is None
+
+    @pytest.mark.asyncio
+    async def test_worker_revocation_fails_before_lock_secrets_or_network(self):
+        from langflow.services.memory_base.task import IngestionRequest, ingest_memory_task
+
+        owner_user_id = uuid.uuid4()
+        actor_user_id = uuid.uuid4()
+        acquire = AsyncMock()
+        preproc = AsyncMock()
+        embeddings = AsyncMock()
+        create_backend = MagicMock()
+
+        with (
+            patch("langflow.services.memory_base.task.session_scope", _fake_scope(AsyncMock())),
+            patch(
+                "langflow.services.memory_base.task.resolve_memory_provider_scope",
+                AsyncMock(side_effect=PermissionError("memory provider actor is inactive")),
+            ),
+            patch("langflow.services.memory_base.task._acquire_session_lock", acquire),
+            patch("langflow.services.memory_base.task.run_preprocessing", preproc),
+            patch("langflow.services.memory_base.task._build_embeddings_for_owner", embeddings),
+            patch("langflow.services.memory_base.task.create_backend", create_backend),
+            pytest.raises(PermissionError, match="inactive"),
+        ):
+            await ingest_memory_task(
+                request=IngestionRequest(
+                    memory_base_id=uuid.uuid4(),
+                    session_id="revoked",
+                    flow_id=uuid.uuid4(),
+                    kb_name="kb",
+                    kb_username="owner",
+                    owner_user_id=owner_user_id,
+                    actor_user_id=actor_user_id,
+                    embedding_provider="OpenAI",
+                    embedding_model="text-embedding-3-small",
+                    cursor_id=None,
+                    task_job_id=uuid.uuid4(),
+                    job_service=MagicMock(),
+                )
+            )
+
+        acquire.assert_not_awaited()
+        preproc.assert_not_awaited()
+        embeddings.assert_not_awaited()
+        create_backend.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_preprocessing_uses_actor_policy_and_owner_credentials(self):
+        from langflow.services.memory_base.preprocessing import run_preprocessing
+
+        owner_user_id = uuid.uuid4()
+        actor_user_id = uuid.uuid4()
+        mock_llm = MagicMock()
+        mock_llm.text_response = AsyncMock(return_value=MagicMock(text="summary"))
+
+        with (
+            patch("langflow.services.memory_base.preprocessing.infer_llm_provider", return_value="Anthropic"),
+            patch("lfx.services.model_provider_policy.require_model_provider") as require,
+            patch(
+                "langflow.services.memory_base.preprocessing.get_api_key_for_provider",
+                return_value="owner-secret",
+            ) as get_key,
+            patch("langflow.services.memory_base.preprocessing.LanguageModelComponent", return_value=mock_llm),
+        ):
+            await run_preprocessing(
+                messages=[_make_message()],
+                preproc_model="claude-test",
+                preproc_instructions=None,
+                kill_phrase="NO_INGEST",
+                owner_user_id=owner_user_id,
+                actor_user_id=actor_user_id,
+            )
+
+        require.assert_called_once_with(user_id=actor_user_id, provider="Anthropic")
+        get_key.assert_called_once_with(owner_user_id, "Anthropic")
 
 
 @pytest.fixture(autouse=True)
