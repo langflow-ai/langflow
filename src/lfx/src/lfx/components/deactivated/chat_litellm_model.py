@@ -1,3 +1,5 @@
+from collections.abc import Mapping
+
 from lfx.base.constants import STREAM_INFO_TEXT
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
@@ -14,6 +16,8 @@ from lfx.io import (
 
 
 class ChatLiteLLMModelComponent(LCModelComponent):
+    # This legacy wrapper selects the real provider through its dropdown.
+    model_provider_policy_mode = "delegate"
     display_name = "LiteLLM"
     description = "`LiteLLM` collection of large language models."
     documentation = "https://python.langchain.com/docs/integrations/chat/litellm"
@@ -115,6 +119,19 @@ class ChatLiteLLMModelComponent(LCModelComponent):
             advanced=True,
         ),
     ]
+
+    async def _additional_model_provider_policy_ids(self, purpose, parameters=None) -> tuple[str, ...]:
+        """Resolve LiteLLM's raw provider dropdown before credentials load."""
+        _ = purpose
+        from lfx.base.models.provider_registry import resolve_provider_id
+
+        effective_parameters = parameters if isinstance(parameters, Mapping) else getattr(self, "_parameters", None)
+        provider = effective_parameters.get("provider") if isinstance(effective_parameters, Mapping) else None
+        if provider is None:
+            provider = getattr(self, "provider", None)
+        if not isinstance(provider, str) or not provider.strip():
+            return ()
+        return (resolve_provider_id(provider.strip()),)
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMException
