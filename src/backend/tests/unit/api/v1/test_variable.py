@@ -653,6 +653,39 @@ async def test_delete_provider_credential_cleans_up_enabled_models(client: Async
 
 
 @pytest.mark.usefixtures("active_user")
+async def test_delete_optional_provider_variable_does_not_cleanup_models(client: AsyncClient, logged_in_headers):
+    """Deleting an optional provider setting must preserve that provider's model selections."""
+    all_vars = await client.get("api/v1/variables/", headers=logged_in_headers)
+    for var in all_vars.json():
+        if var.get("name") == "OPENAI_BASE_URL":
+            await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
+
+    create_response = await client.post(
+        "api/v1/variables/",
+        json={
+            "name": "OPENAI_BASE_URL",
+            "value": "https://example.com/v1",
+            "type": GENERIC_TYPE,
+            "default_fields": [],
+        },
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+
+    with mock.patch(
+        "langflow.api.v1.variable._cleanup_provider_models",
+        new_callable=mock.AsyncMock,
+    ) as cleanup_provider_models:
+        delete_response = await client.delete(
+            f"api/v1/variables/{create_response.json()['id']}",
+            headers=logged_in_headers,
+        )
+
+    assert delete_response.status_code == status.HTTP_204_NO_CONTENT
+    cleanup_provider_models.assert_not_awaited()
+
+
+@pytest.mark.usefixtures("active_user")
 async def test_delete_non_provider_credential_does_not_cleanup_models(client: AsyncClient, logged_in_headers):
     """Test that deleting a non-provider credential does not affect model lists."""
     # Create a generic variable (not a provider credential)
