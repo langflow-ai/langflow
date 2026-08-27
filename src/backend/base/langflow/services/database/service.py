@@ -934,6 +934,19 @@ class DatabaseService(Service):
         workers = max(getattr(settings, "workers", 1) or 1, 1)
         ceiling = workers * (pool_size + max_overflow)
 
+        # The telemetry writer builds its OWN engine with its own pool, so its
+        # connections are additional to the main pool's and must be counted here.
+        # Omitting them made this check under-report the real ceiling by
+        # workers * 2 whenever the writer was enabled -- which is the default --
+        # and a budget check that says "you fit" when you do not is worse than
+        # no check at all.
+        writer_per_worker = 0
+        if getattr(settings, "telemetry_writer_enabled", False):
+            # Mirrors _create_dedicated_engine: 1 connection on sqlite, 2 otherwise,
+            # with no overflow.
+            writer_per_worker = 1 if self.database_url.startswith("sqlite") else 2
+            ceiling += workers * writer_per_worker
+
         try:
             async with self.engine.connect() as conn:
                 max_conn = int((await conn.exec_driver_sql("SHOW max_connections")).scalar_one())
@@ -947,7 +960,9 @@ class DatabaseService(Service):
             logger.warning(
                 f"Database connection budget exceeds the server limit: this deployment can open up to "
                 f"{ceiling} connections ({workers} worker(s) x (pool_size={pool_size} + "
-                f"max_overflow={max_overflow})), but the server allows {available} "
+                f"max_overflow={max_overflow}"
+                + (f" + {writer_per_worker} telemetry-writer" if writer_per_worker else "")
+                + f")), but the server allows {available} "
                 f"(max_connections={max_conn} minus superuser_reserved_connections={reserved}). "
                 f"Under load this fails with 'too many clients already'. Lower pool_size/max_overflow via "
                 f"LANGFLOW_DB_CONNECTION_SETTINGS, reduce LANGFLOW_WORKERS, or raise the server's "
@@ -956,7 +971,9 @@ class DatabaseService(Service):
         else:
             logger.debug(
                 f"Database connection budget OK: ceiling {ceiling} <= {available} available "
-                f"({workers} worker(s) x (pool_size={pool_size} + max_overflow={max_overflow}))."
+                f"({workers} worker(s) x (pool_size={pool_size} + max_overflow={max_overflow}"
+                + (f" + {writer_per_worker} telemetry-writer" if writer_per_worker else "")
+                + "))."
             )
 
     def _create_db_and_tables_with_lock(self) -> None:

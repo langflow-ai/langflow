@@ -40,7 +40,8 @@ class _Conn:
         return _Result(self._answers[sql])
 
 
-def _service(*, pool_size, max_overflow, workers, max_connections=100, reserved=3, fail=False):
+def _service(*, pool_size, max_overflow, workers, max_connections=100, reserved=3, fail=False,
+             telemetry_writer=False, database_url="postgresql://x/y"):
     conn = _Conn(max_connections, reserved, fail=fail)
 
     @asynccontextmanager
@@ -54,7 +55,10 @@ def _service(*, pool_size, max_overflow, workers, max_connections=100, reserved=
         kwargs["max_overflow"] = max_overflow
 
     return SimpleNamespace(
-        settings_service=SimpleNamespace(settings=SimpleNamespace(workers=workers)),
+        database_url=database_url,
+        settings_service=SimpleNamespace(
+            settings=SimpleNamespace(workers=workers, telemetry_writer_enabled=telemetry_writer)
+        ),
         _build_connection_kwargs=lambda: kwargs,
         engine=SimpleNamespace(connect=_connect),
     )
@@ -144,3 +148,40 @@ async def test_workers_none_is_treated_as_one(captured):
 
     # 1 * 50 = 50 <= 97 -> no warning, and crucially no crash on None
     assert captured["warning"] == []
+
+
+async def test_telemetry_writer_pool_is_counted(captured):
+    """The writer builds its OWN engine; omitting it under-reports the real ceiling.
+
+    A check that says "you fit" when the deployment actually does not is worse
+    than no check, so its connections must be in the arithmetic.
+    """
+    # 4 x (10 + 12) = 88 fits in 97; adding 4 x 2 writer connections makes 96, still fits.
+    svc = _service(pool_size=10, max_overflow=12, workers=4, telemetry_writer=True)
+    await DatabaseService.warn_if_connection_budget_exceeds_server_limit(svc)
+    assert captured["warning"] == []
+
+    # 4 x (10 + 14) = 96 fits, but + 4 x 2 writer = 104 does NOT.
+    out = captured["debug"], captured["warning"]
+    svc2 = _service(pool_size=10, max_overflow=14, workers=4, telemetry_writer=True)
+    await DatabaseService.warn_if_connection_budget_exceeds_server_limit(svc2)
+    assert len(captured["warning"]) == 1, "writer connections must push this over the limit"
+    assert "104" in captured["warning"][0]
+    assert "telemetry-writer" in captured["warning"][0], "the message must show where the extra came from"
+    assert out is not None
+
+
+async def test_sqlite_writer_counts_one_not_two(captured):
+    """_create_dedicated_engine uses pool_size=1 on sqlite; the check must match."""
+    svc = _service(pool_size=10, max_overflow=14, workers=4, telemetry_writer=True,
+                   database_url="sqlite:///x.db")
+    await DatabaseService.warn_if_connection_budget_exceeds_server_limit(svc)
+    # 96 + 4 x 1 = 100 > 97
+    assert len(captured["warning"]) == 1
+    assert "100" in captured["warning"][0]
+
+
+async def test_writer_disabled_is_not_counted(captured):
+    svc = _service(pool_size=10, max_overflow=14, workers=4, telemetry_writer=False)
+    await DatabaseService.warn_if_connection_budget_exceeds_server_limit(svc)
+    assert captured["warning"] == [], "96 fits in 97 when the writer is off"
