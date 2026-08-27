@@ -1,4 +1,5 @@
 import type { UseQueryResult } from "@tanstack/react-query";
+import { useEffect } from "react";
 import useAuthStore from "@/stores/authStore";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import type { useQueryFunctionType } from "@/types/api";
@@ -46,9 +47,6 @@ export const useGetGlobalVariables: useQueryFunctionType<
         queryParams.toString() ? `?${queryParams.toString()}` : ""
       }`,
     );
-    if (mirrorToStore && !flowId && !projectId) {
-      setGlobalVariables(res.data);
-    }
     return res.data;
   };
 
@@ -61,6 +59,25 @@ export const useGetGlobalVariables: useQueryFunctionType<
       ...queryOptions,
     },
   );
+
+  useEffect(() => {
+    if (
+      mirrorToStore &&
+      !flowId &&
+      !projectId &&
+      isAuthenticated &&
+      queryResult.data !== undefined
+    ) {
+      setGlobalVariables(queryResult.data);
+    }
+  }, [
+    flowId,
+    isAuthenticated,
+    mirrorToStore,
+    projectId,
+    queryResult.data,
+    setGlobalVariables,
+  ]);
 
   return queryResult;
 };
