@@ -444,7 +444,8 @@ async def flush_memory_base(
     try:
         job_id = await get_memory_base_service().trigger_ingestion(
             memory_base_id=memory_base_id,
-            user_id=mb.user_id,
+            owner_user_id=mb.user_id,
+            actor_user_id=current_user.id,
             session_id=body.session_id,
         )
     except ValueError as exc:
@@ -503,7 +504,11 @@ async def regenerate_memory_base(
             action=KnowledgeBaseAction.INGEST,
         )
     try:
-        job_ids = await get_memory_base_service().regenerate(memory_base_id, user_id=mb.user_id)
+        job_ids = await get_memory_base_service().regenerate(
+            memory_base_id=memory_base_id,
+            owner_user_id=mb.user_id,
+            actor_user_id=current_user.id,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return RegenerateResponse(job_ids=job_ids)

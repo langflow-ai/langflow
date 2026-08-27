@@ -91,6 +91,14 @@ def _make_message(
     )
 
 
+def _owner_actor_fields(user_id: uuid.UUID | None = None) -> dict:
+    resolved_user_id = user_id or uuid.uuid4()
+    return {
+        "owner_user_id": resolved_user_id,
+        "actor_user_id": resolved_user_id,
+    }
+
+
 # ------------------------------------------------------------------ #
 #  Model tests                                                         #
 # ------------------------------------------------------------------ #
@@ -1207,6 +1215,10 @@ class TestMemoryBaseServiceConcurrency:
             patch.object(service, "get_memory_base_or_404", AsyncMock(return_value=mb)),
             patch.object(service, "_get_or_create_session", AsyncMock(return_value=mbs)),
             patch(
+                "langflow.services.memory_base.ingestion.resolve_memory_provider_scope",
+                AsyncMock(return_value=MagicMock(memory_base=mb)),
+            ),
+            patch(
                 "langflow.services.memory_base.ingestion._get_latest_pending_workflow_job_id",
                 AsyncMock(return_value=uuid.uuid4()),
             ),
@@ -1215,10 +1227,16 @@ class TestMemoryBaseServiceConcurrency:
                 "langflow.services.memory_base.ingestion.resolve_embedding_selection",
                 AsyncMock(return_value=("OpenAI", "text-embedding-3-small")),
             ),
+            patch("langflow.services.memory_base.ingestion.preflight_memory_provider_use"),
             patch("langflow.services.memory_base.ingestion.get_job_service", return_value=mock_job_svc),
             pytest.raises(DuplicateJobError),
         ):
-            await service.trigger_ingestion(mb.id, mb.user_id, "sess-1")
+            await service.trigger_ingestion(
+                memory_base_id=mb.id,
+                owner_user_id=mb.user_id,
+                actor_user_id=mb.user_id,
+                session_id="sess-1",
+            )
 
     @pytest.mark.asyncio
     async def test_trigger_succeeds_when_no_active_job(self, service):
@@ -1236,6 +1254,10 @@ class TestMemoryBaseServiceConcurrency:
             patch.object(service, "get_memory_base_or_404", AsyncMock(return_value=mb)),
             patch.object(service, "_get_or_create_session", AsyncMock(return_value=mbs)),
             patch(
+                "langflow.services.memory_base.ingestion.resolve_memory_provider_scope",
+                AsyncMock(return_value=MagicMock(memory_base=mb)),
+            ),
+            patch(
                 "langflow.services.memory_base.ingestion._get_latest_pending_workflow_job_id",
                 AsyncMock(return_value=uuid.uuid4()),
             ),
@@ -1244,14 +1266,23 @@ class TestMemoryBaseServiceConcurrency:
                 "langflow.services.memory_base.ingestion.resolve_embedding_selection",
                 AsyncMock(return_value=("OpenAI", "text-embedding-3-small")),
             ),
+            patch("langflow.services.memory_base.ingestion.preflight_memory_provider_use"),
             patch("langflow.services.memory_base.ingestion.get_job_service", return_value=mock_job_svc),
             patch("langflow.services.memory_base.ingestion.get_task_service", return_value=mock_task_svc),
         ):
-            job_id = await service.trigger_ingestion(mb.id, mb.user_id, "sess-1")
+            job_id = await service.trigger_ingestion(
+                memory_base_id=mb.id,
+                owner_user_id=mb.user_id,
+                actor_user_id=mb.user_id,
+                session_id="sess-1",
+            )
 
         assert isinstance(job_id, str)
         mock_job_svc.create_job.assert_awaited_once()
         mock_task_svc.fire_and_forget_task.assert_awaited_once()
+        request = mock_task_svc.fire_and_forget_task.call_args.kwargs["request"]
+        assert request.owner_user_id == mb.user_id
+        assert request.actor_user_id == mb.user_id
 
     @pytest.mark.asyncio
     async def test_manual_trigger_denial_precedes_session_job_secrets_and_network(self, service):
@@ -1352,9 +1383,9 @@ class TestMemoryBaseServiceMismatch:
             patch(
                 "langflow.services.memory_base.ingestion.resolve_embedding_selection",
                 AsyncMock(return_value=("OpenAI", "text-embedding-3-small")),
-            ),
+            ) as resolve_embedding,
             patch(
-                "langflow.services.memory_base.ingestion.KBIngestionHelper.build_embeddings",
+                "langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings",
                 AsyncMock(return_value=MagicMock()),
             ) as build_embeddings,
             patch(
@@ -1382,6 +1413,7 @@ class TestMemoryBaseServiceMismatch:
             result = await service.check_mismatch(mb.id, mb.user_id)
 
         assert result is True
+        resolve_embedding.assert_not_awaited()
         build_embeddings.assert_not_awaited()
         assert backend_factory.call_args.kwargs["embedding_function"] is None
 
@@ -1484,13 +1516,13 @@ class TestMemoryBaseServicePurgeSessionData:
                 return_value=kb_root,
             ),
             patch(
-                "langflow.services.memory_base.ingestion.KBIngestionHelper.build_embeddings",
+                "langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings",
                 AsyncMock(return_value=MagicMock()),
             ) as build_embeddings,
             patch(
                 "langflow.services.memory_base.ingestion.resolve_embedding_selection",
                 AsyncMock(return_value=("OpenAI", "text-embedding-3-small")),
-            ),
+            ) as resolve_embedding,
             patch(
                 "langflow.services.memory_base.ingestion.resolve_backend_selection",
                 AsyncMock(return_value=("chroma", {})),
@@ -1508,6 +1540,7 @@ class TestMemoryBaseServicePurgeSessionData:
         # {"$eq": ...} operator dict is not portable — a remote backend treats it
         # as a literal value and silently matches nothing.
         fake_backend.delete_by.assert_awaited_once_with({"session_id": "sess-x"})
+        resolve_embedding.assert_not_awaited()
         build_embeddings.assert_not_awaited()
         assert backend_factory.call_args.kwargs["embedding_function"] is None
         # Tracking-row deletes were committed.
@@ -1579,13 +1612,25 @@ class TestMemoryBaseServiceRegenerate:
 
         triggered_sessions: list[str] = []
 
-        async def fake_trigger(_mb_id, _user_id, session_id):
+        async def fake_trigger(*, memory_base_id, owner_user_id, actor_user_id, session_id):
+            assert memory_base_id == mb.id
+            assert owner_user_id == mb.user_id
+            assert actor_user_id == mb.user_id
             triggered_sessions.append(session_id)
             return str(uuid.uuid4())
 
         with (
             patch("langflow.services.memory_base.ingestion.session_scope") as mock_scope,
             patch.object(service, "trigger_ingestion", side_effect=fake_trigger),
+            patch(
+                "langflow.services.memory_base.ingestion.resolve_memory_provider_scope",
+                AsyncMock(return_value=MagicMock(memory_base=mb)),
+            ),
+            patch(
+                "langflow.services.memory_base.ingestion.resolve_embedding_selection",
+                AsyncMock(return_value=("OpenAI", "text-embedding-3-small")),
+            ),
+            patch("langflow.services.memory_base.ingestion.preflight_memory_provider_use"),
         ):
             mock_db = AsyncMock()
             mock_mb_result = MagicMock()
@@ -1605,7 +1650,11 @@ class TestMemoryBaseServiceRegenerate:
 
             mock_scope.return_value = FakeCtx()
 
-            job_ids = await service.regenerate(mb.id, mb.user_id)
+            job_ids = await service.regenerate(
+                memory_base_id=mb.id,
+                owner_user_id=mb.user_id,
+                actor_user_id=mb.user_id,
+            )
 
         assert len(job_ids) == 2
         assert set(triggered_sessions) == {"s1", "s2"}
@@ -1675,11 +1724,21 @@ class TestIngestMemoryTask:
     def _stored_flow_scope(self, monkeypatch):
         import langflow.services.memory_base.task as task_module
         from langflow.services.database.models.flow.model import Flow
+        from langflow.services.database.models.memory_base.model import MemoryBase
         from langflow.services.memory_base.provider_scope import MemoryProviderScope
 
-        async def resolve_scope(_db, *, flow_id, user_id):
+        async def resolve_scope(_db, *, memory_base_id, owner_user_id, actor_user_id):
+            flow = Flow(id=uuid.uuid4(), user_id=owner_user_id, name="stored test flow")
             return MemoryProviderScope(
-                flow=Flow(id=flow_id, user_id=user_id, name="stored test flow"),
+                memory_base=MemoryBase(
+                    id=memory_base_id,
+                    name="memory",
+                    flow_id=flow.id,
+                    user_id=owner_user_id,
+                    kb_name="kb",
+                ),
+                flow=flow,
+                actor_user_id=actor_user_id,
                 is_superuser=False,
             )
 
@@ -1714,7 +1773,7 @@ class TestIngestMemoryTask:
                     flow_id=uuid.uuid4(),
                     kb_name="kb",
                     kb_username="user",
-                    user_id=uuid.uuid4(),
+                    **_owner_actor_fields(),
                     embedding_provider="OpenAI",
                     embedding_model="text-embedding-3-small",
                     cursor_id=None,
@@ -1796,7 +1855,7 @@ class TestIngestMemoryTask:
                     flow_id=flow_id,
                     kb_name="kb",
                     kb_username="user",
-                    user_id=uuid.uuid4(),
+                    **_owner_actor_fields(),
                     embedding_provider="OpenAI",
                     embedding_model="text-embedding-3-small",
                     cursor_id=old_cursor,
@@ -1875,7 +1934,7 @@ class TestIngestMemoryTask:
                     flow_id=flow_id,
                     kb_name="kb",
                     kb_username="user",
-                    user_id=uuid.uuid4(),
+                    **_owner_actor_fields(),
                     embedding_provider="OpenAI",
                     embedding_model="text-embedding-3-small",
                     cursor_id=None,
@@ -1951,7 +2010,7 @@ class TestIngestMemoryTask:
                     flow_id=flow_id,
                     kb_name="kb",
                     kb_username="user",
-                    user_id=uuid.uuid4(),
+                    **_owner_actor_fields(),
                     embedding_provider="OpenAI",
                     embedding_model="text-embedding-3-small",
                     cursor_id=None,
@@ -2029,7 +2088,7 @@ class TestIngestMemoryTask:
                     flow_id=flow_id,
                     kb_name="kb",
                     kb_username="user",
-                    user_id=uuid.uuid4(),
+                    **_owner_actor_fields(),
                     embedding_provider="OpenAI",
                     embedding_model="text-embedding-3-small",
                     cursor_id=None,
@@ -2148,13 +2207,16 @@ class TestOnFlowOutputHook:
                 "langflow.services.memory_base.ingestion._get_latest_pending_workflow_job_id",
                 AsyncMock(return_value=uuid.uuid4()),
             ),
+            patch("langflow.services.memory_base.ingestion.resolve_kb_username", AsyncMock(return_value="testuser")),
             patch(
-                "langflow.services.memory_base.kb_path_helpers.resolve_kb_username", AsyncMock(return_value="testuser")
+                "langflow.services.memory_base.ingestion.resolve_memory_provider_scope",
+                AsyncMock(return_value=MagicMock(memory_base=mb)),
             ),
             patch(
                 "langflow.services.memory_base.ingestion.resolve_embedding_selection",
                 AsyncMock(return_value=("OpenAI", "text-embedding-3-small")),
             ),
+            patch("langflow.services.memory_base.ingestion.preflight_memory_provider_use"),
             patch("langflow.services.memory_base.ingestion.get_job_service", return_value=mock_job_svc),
             patch("langflow.services.memory_base.ingestion.get_task_service", return_value=mock_task_svc),
         ):
@@ -3199,7 +3261,11 @@ class TestMemoryBaseSecurityAdversarial:
             patch("langflow.services.memory_base.ingestion.session_scope", self._fake_scope(mock_db)),
             pytest.raises(ValueError, match="not found"),
         ):
-            await service.regenerate(mb_id, user_b)
+            await service.regenerate(
+                memory_base_id=mb_id,
+                owner_user_id=user_b,
+                actor_user_id=user_b,
+            )
 
     @pytest.mark.asyncio
     async def test_check_mismatch_rejects_unowned_memory_base(self, service):

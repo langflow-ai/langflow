@@ -530,12 +530,14 @@ class MemoryBaseService(Service):
     async def trigger_ingestion(
         self,
         memory_base_id: uuid.UUID,
-        user_id: uuid.UUID,
+        owner_user_id: uuid.UUID,
+        actor_user_id: uuid.UUID,
         session_id: str,
     ) -> str:
         return await _trigger_ingestion(
             memory_base_id,
-            user_id,
+            owner_user_id,
+            actor_user_id,
             session_id,
             get_mb_or_raise=self.get_memory_base_or_404,
             get_or_create_session=self._get_or_create_session,
@@ -561,10 +563,16 @@ class MemoryBaseService(Service):
             get_mb_or_raise=self.get_memory_base_or_404,
         )
 
-    async def regenerate(self, memory_base_id: uuid.UUID, user_id: uuid.UUID) -> list[str]:
+    async def regenerate(
+        self,
+        memory_base_id: uuid.UUID,
+        owner_user_id: uuid.UUID,
+        actor_user_id: uuid.UUID,
+    ) -> list[str]:
         return await _regenerate(
             memory_base_id,
-            user_id,
+            owner_user_id,
+            actor_user_id,
             get_mb_or_raise=self.get_memory_base_or_404,
             trigger_ingestion_fn=self.trigger_ingestion,
         )
