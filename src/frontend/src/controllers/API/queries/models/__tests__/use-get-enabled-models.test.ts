@@ -1,5 +1,22 @@
 // Mock API before imports
 const mockApiGet = jest.fn();
+const mockQuery = jest.fn(
+  (_key: unknown, fn: () => Promise<unknown>, _options: unknown) => {
+    const result: {
+      data: unknown;
+      isLoading: boolean;
+      error: unknown;
+    } = { data: null, isLoading: false, error: null };
+    fn()
+      .then((data: unknown) => {
+        result.data = data;
+      })
+      .catch((error: unknown) => {
+        result.error = error;
+      });
+    return result;
+  },
+);
 
 jest.mock("@/controllers/API/api", () => ({
   api: {
@@ -13,18 +30,7 @@ jest.mock("@/controllers/API/helpers/constants", () => ({
 
 jest.mock("@/controllers/API/services/request-processor", () => ({
   UseRequestProcessor: jest.fn(() => ({
-    query: jest.fn((_key, fn, _options) => {
-      // Immediately call the query function and return mock result
-      const result = { data: null, isLoading: false, error: null } as any;
-      fn()
-        .then((data: any) => {
-          result.data = data;
-        })
-        .catch((err: any) => {
-          result.error = err;
-        });
-      return result;
-    }),
+    query: mockQuery,
   })),
 }));
 
@@ -50,6 +56,21 @@ describe("useGetEnabledModels", () => {
       useGetEnabledModels();
 
       expect(mockApiGet).toHaveBeenCalledWith("/api/v1/models/enabled_models");
+    });
+
+    it("scopes the endpoint and cache key without accepting a workspace id", async () => {
+      mockApiGet.mockResolvedValue({ data: { enabled_models: {} } });
+
+      useGetEnabledModels({ flowId: "flow-one" });
+
+      expect(mockApiGet).toHaveBeenCalledWith(
+        "/api/v1/models/enabled_models?flow_id=flow-one",
+      );
+      expect(mockQuery).toHaveBeenCalledWith(
+        ["useGetEnabledModels", "flow-one", undefined],
+        expect.any(Function),
+        undefined,
+      );
     });
 
     it("should return enabled models data", async () => {

@@ -1,6 +1,21 @@
 const mockApiGet = jest.fn();
 const mockSetTypes = jest.fn();
 const mockRecomputeComponentsToUpdateIfNeeded = jest.fn();
+const mockQuery = jest.fn((_key, fn, _options) => {
+  const result = {
+    data: null,
+    isLoading: false,
+    error: null,
+  };
+  fn()
+    .then((data: unknown) => {
+      result.data = data;
+    })
+    .catch((error: unknown) => {
+      result.error = error;
+    });
+  return result;
+});
 
 const mockUseTypesStore = Object.assign(
   jest.fn((selector: (state: { setTypes: typeof mockSetTypes }) => unknown) =>
@@ -27,21 +42,7 @@ jest.mock("@/controllers/API/helpers/constants", () => ({
 
 jest.mock("@/controllers/API/services/request-processor", () => ({
   UseRequestProcessor: jest.fn(() => ({
-    query: jest.fn((_key, fn, _options) => {
-      const result = {
-        data: null,
-        isLoading: false,
-        error: null,
-      };
-      fn()
-        .then((data: unknown) => {
-          result.data = data;
-        })
-        .catch((error: unknown) => {
-          result.error = error;
-        });
-      return result;
-    }),
+    query: mockQuery,
   })),
 }));
 
@@ -86,5 +87,21 @@ describe("useGetTypes", () => {
 
     expect(mockSetTypes).toHaveBeenCalledWith(responseData);
     expect(mockRecomputeComponentsToUpdateIfNeeded).toHaveBeenCalledTimes(1);
+  });
+
+  it("scopes the palette request and cache key by flow", async () => {
+    mockApiGet.mockResolvedValue({ data: {} });
+
+    useGetTypes({ flowId: "flow-one" });
+    await Promise.resolve();
+
+    expect(mockApiGet).toHaveBeenCalledWith(
+      "/api/v1/all?force_refresh=true&flow_id=flow-one",
+    );
+    expect(mockQuery).toHaveBeenCalledWith(
+      ["useGetTypes", "flow-one", undefined],
+      expect.any(Function),
+      {},
+    );
   });
 });

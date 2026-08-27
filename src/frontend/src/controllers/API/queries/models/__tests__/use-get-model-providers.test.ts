@@ -16,6 +16,7 @@ jest.mock("@/controllers/API/helpers/constants", () => ({
 }));
 
 import {
+  getModelProvidersQueryOptions,
   ModelProviderInfo,
   useGetModelProviders,
 } from "../use-get-model-providers";
@@ -100,6 +101,37 @@ describe("useGetModelProviders", () => {
           "/api/v1/models?include_deprecated=true&include_unsupported=true",
         );
       });
+    });
+
+    it("scopes both the request and cache key by flow", async () => {
+      mockApiGet.mockResolvedValue({ data: [] });
+
+      const options = getModelProvidersQueryOptions({
+        includeDeprecated: true,
+        flowId: "flow-one",
+      });
+      await options.queryFn();
+
+      expect(mockApiGet).toHaveBeenCalledWith(
+        "/api/v1/models?include_deprecated=true&flow_id=flow-one",
+      );
+      expect(options.queryKey).toEqual([
+        "useGetModelProviders",
+        true,
+        undefined,
+        "flow-one",
+        undefined,
+      ]);
+    });
+
+    it("keeps global settings in a distinct unscoped cache entry", () => {
+      expect(getModelProvidersQueryOptions({}).queryKey).toEqual([
+        "useGetModelProviders",
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+      ]);
     });
   });
 

@@ -3,12 +3,13 @@ import hashlib
 import inspect
 from types import SimpleNamespace
 from typing import Any
+from uuid import uuid4
 
 import pytest
 from anyio import Path
 from fastapi import status
 from httpx import AsyncClient
-from langflow.api.v1.schemas import CustomComponentRequest, UpdateCustomComponentRequest
+from langflow.api.v1.schemas import CustomComponentRequest, SimplifiedAPIRequest, UpdateCustomComponentRequest
 from lfx.components.models_and_agents.agent import AgentComponent
 from lfx.custom.utils import build_custom_component_template
 from lfx.services.catalog_policy.base import CatalogPolicySnapshot
@@ -53,6 +54,48 @@ async def test_get_config_mirrors_assistant_message_length(client: AsyncClient, 
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["assistant_max_message_length"] == 6000
+
+
+@pytest.mark.parametrize(
+    ("project_id", "workspace_id"),
+    [(uuid4(), uuid4()), (None, None)],
+)
+async def test_simple_run_flow_binds_trusted_required_provider_scope(
+    monkeypatch,
+    project_id,
+    workspace_id,
+):
+    from langflow.api.v1 import endpoints
+
+    captured = []
+    token = object()
+
+    def _capture_context(*, user_id, attributes=None):
+        captured.append((user_id, attributes))
+        return token
+
+    monkeypatch.setattr(endpoints, "set_current_model_provider_policy_context", _capture_context)
+    monkeypatch.setattr(endpoints, "reset_current_model_provider_policy_context", lambda _token: None)
+    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+    flow = SimpleNamespace(
+        id=uuid4(),
+        folder_id=project_id,
+        workspace_id=workspace_id,
+        data=None,
+    )
+
+    with pytest.raises(ValueError, match="has no data"):
+        await endpoints.simple_run_flow(flow, SimplifiedAPIRequest(), api_key_user=user)
+
+    expected_attributes = {
+        "is_superuser": False,
+        "provider_scope_required": True,
+    }
+    if project_id is not None:
+        expected_attributes["project_id"] = project_id
+    if workspace_id is not None:
+        expected_attributes["workspace_id"] = workspace_id
+    assert captured == [(user.id, expected_attributes)]
 
 
 @pytest.mark.parametrize("path", ["api/v1/custom_component", "api/v1/custom_component/update"])
