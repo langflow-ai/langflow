@@ -13,7 +13,7 @@ class _UnhydratedSecret:
 
 @pytest.mark.parametrize(
     ("provider", "provider_id"),
-    [("OpenAI", "openai"), ("Azure", "azure")],
+    [("OpenAI", "openai"), ("Azure", "azure-openai")],
 )
 @pytest.mark.parametrize(
     "purpose",
