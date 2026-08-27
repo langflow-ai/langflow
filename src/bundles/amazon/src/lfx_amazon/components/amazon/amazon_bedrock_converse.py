@@ -177,8 +177,10 @@ class AmazonBedrockConverseComponent(LCModelComponent):
         if hasattr(self, "top_p") and self.top_p is not None:
             init_params["top_p"] = self.top_p
 
-        # Handle streaming - only disable if explicitly requested
-        if hasattr(self, "disable_streaming") and self.disable_streaming:
+        # Handle streaming - disable if explicitly requested via disable_streaming or stream=False
+        if hasattr(self, "disable_streaming") and self.disable_streaming is not None:
+            init_params["disable_streaming"] = self.disable_streaming
+        elif hasattr(self, "stream") and not self.stream:
             init_params["disable_streaming"] = True
 
         # top_k is not part of the universal Converse API inferenceConfig, so it is
