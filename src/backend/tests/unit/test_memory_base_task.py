@@ -95,7 +95,7 @@ class _ScopePolicy:
         self.allowed_project_id = allowed_project_id
         self.calls = []
 
-    def resolve(self, *, context, candidate_provider_ids, purpose):
+    def _decision(self, *, context, candidate_provider_ids, purpose):
         self.calls.append((context, candidate_provider_ids, purpose))
         allowed = (
             candidate_provider_ids if context.attributes.get("project_id") == self.allowed_project_id else frozenset()
@@ -105,6 +105,20 @@ class _ScopePolicy:
             purpose=purpose,
             candidate_provider_ids=candidate_provider_ids,
             allowed_provider_ids=allowed,
+        )
+
+    def resolve(self, *, context, candidate_provider_ids, purpose):
+        return self._decision(
+            context=context,
+            candidate_provider_ids=candidate_provider_ids,
+            purpose=purpose,
+        )
+
+    async def aresolve(self, *, context, candidate_provider_ids, purpose):
+        return self._decision(
+            context=context,
+            candidate_provider_ids=candidate_provider_ids,
+            purpose=purpose,
         )
 
 
@@ -514,7 +528,7 @@ class TestIngestionProviderScope:
         calls: list[str] = []
 
         class _DenyPreprocessingPolicy:
-            def resolve(self, *, context, candidate_provider_ids, purpose):
+            async def aresolve(self, *, context, candidate_provider_ids, purpose):
                 provider_id = next(iter(candidate_provider_ids))
                 calls.append(f"policy:{provider_id}")
                 allowed = candidate_provider_ids if provider_id == resolve_provider_id("OpenAI") else frozenset()

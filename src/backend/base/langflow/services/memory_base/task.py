@@ -211,7 +211,7 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
             actor_user_id=request.actor_user_id,
         )
 
-    provider_policies = preflight_memory_provider_use(
+    provider_policies = await preflight_memory_provider_use(
         provider_scope,
         embedding_provider=request.embedding_provider,
         preprocessing=request.preprocessing,

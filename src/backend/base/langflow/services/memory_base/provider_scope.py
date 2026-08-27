@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, require_model_provider
+from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, aresolve_model_provider_policy
 from sqlmodel import select
 
 from langflow.api.v1.model_provider_policy_scope import scoped_model_provider_policy_for_flow
@@ -90,7 +90,7 @@ async def resolve_memory_provider_scope(
     )
 
 
-def preflight_memory_provider_use(
+async def preflight_memory_provider_use(
     scope: MemoryProviderScope,
     *,
     embedding_provider: str,
@@ -107,18 +107,20 @@ def preflight_memory_provider_use(
         user_id=scope.actor_user_id,
         is_superuser=scope.is_superuser,
     ):
-        embedding_policy = require_model_provider(
+        embedding_policy = await aresolve_model_provider_policy(
             user_id=scope.actor_user_id,
-            provider=embedding_provider,
+            providers=[embedding_provider],
             purpose=ModelProviderPolicyPurpose.USE,
         )
+        embedding_policy.require(embedding_provider)
         preprocessing_policy = None
         if preprocessing_provider is not None:
-            preprocessing_policy = require_model_provider(
+            preprocessing_policy = await aresolve_model_provider_policy(
                 user_id=scope.actor_user_id,
-                provider=preprocessing_provider,
+                providers=[preprocessing_provider],
                 purpose=ModelProviderPolicyPurpose.USE,
             )
+            preprocessing_policy.require(preprocessing_provider)
     return MemoryProviderPolicies(
         embedding=embedding_policy,
         preprocessing=preprocessing_policy,

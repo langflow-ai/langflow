@@ -73,7 +73,7 @@ async def trigger_ingestion(
         user_id=owner_user_id,
         kb_name=mb.kb_name,
     )
-    preflight_memory_provider_use(
+    await preflight_memory_provider_use(
         provider_scope,
         embedding_provider=embedding_provider,
         preprocessing=mb.preprocessing,
@@ -208,7 +208,7 @@ async def _maybe_trigger(
         )
 
     embedding_provider, embedding_model = await resolve_embedding_selection(user_id=mb.user_id, kb_name=mb.kb_name)
-    preflight_memory_provider_use(
+    await preflight_memory_provider_use(
         provider_scope,
         embedding_provider=embedding_provider,
         preprocessing=mb.preprocessing,
@@ -358,7 +358,7 @@ async def regenerate(
             user_id=owner_user_id,
             kb_name=mb.kb_name,
         )
-        preflight_memory_provider_use(
+        await preflight_memory_provider_use(
             provider_scope,
             embedding_provider=embedding_provider,
             preprocessing=mb.preprocessing,
