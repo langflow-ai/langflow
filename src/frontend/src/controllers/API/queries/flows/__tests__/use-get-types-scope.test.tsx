@@ -141,6 +141,30 @@ describe("useGetTypes scoped store ownership", () => {
     expect(useTypesStore.getState().data).toEqual(flowB);
   });
 
+  it("restores the active store after an equal scoped palette refetch", async () => {
+    const flowA = palette("provider_a", "AComponent");
+    mockApiGet.mockResolvedValue({ data: flowA });
+
+    renderHook(() => useGetTypes({ flowId: "flow-a" }), {
+      wrapper: makeWrapper(queryClient),
+    });
+
+    await waitFor(() => expect(useTypesStore.getState().data).toEqual(flowA));
+
+    act(() => useTypesStore.getState().setTypes({}));
+    expect(useTypesStore.getState().data).toEqual({});
+
+    await act(async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["useGetTypes", "flow-a", undefined],
+        exact: true,
+      });
+    });
+
+    await waitFor(() => expect(useTypesStore.getState().data).toEqual(flowA));
+    expect(mockApiGet).toHaveBeenCalledTimes(2);
+  });
+
   it("refreshes a stale scoped palette on focus after provider revocation", async () => {
     const now = 1_000_000;
     const dateNow = jest.spyOn(Date, "now").mockReturnValue(now);
