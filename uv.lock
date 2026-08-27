@@ -10317,7 +10317,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-ollama"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/ollama" }
 dependencies = [
     { name = "httpx" },

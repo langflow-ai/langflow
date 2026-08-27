@@ -98,9 +98,9 @@
       "providers": [
         "lfx-ollama"
       ],
-      "requested": ">=0.1.0,<1.0.0",
-      "requirement": "lfx-ollama==0.1.0",
-      "resolved_version": "0.1.0"
+      "requested": ">=0.1.1,<1.0.0",
+      "requirement": "lfx-ollama==0.1.1",
+      "resolved_version": "0.1.1"
     },
     {
       "distribution": "lfx-openai",
@@ -160,7 +160,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:0f79376f3d9fca0b",
+  "profile_digest": "sha256:49ffb56ddfa1c349",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
