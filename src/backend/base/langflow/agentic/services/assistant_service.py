@@ -32,6 +32,7 @@ from langflow.agentic.helpers.content_safety import REFUSAL_MESSAGE as CONTENT_R
 from langflow.agentic.helpers.content_safety import check_content
 from langflow.agentic.helpers.error_handling import (
     PARTIAL_WORK_KEPT_SUFFIX,
+    PARTIAL_WORK_PROPOSED_SUFFIX,
     build_error_detail,
     build_recovered_notice,
     extract_friendly_error,
@@ -1271,13 +1272,29 @@ async def execute_flow_with_validation_streaming(
                         )
                         continue
                     _rollback_provisional_remediations()
-                    # A turn that dies mid-loop may already have built part of the canvas
-                    # that no token followed, so only this drain can still hand it over.
-                    partial_updates = drain_flow_events()
+                    # Only this drain still sees work no token followed. It goes through the
+                    # reconciler like every other: raw events leak `flow_ran`, lose `auto_apply`.
+                    (
+                        partial_updates,
+                        auto_apply_flow,
+                        saw_set_flow,
+                        saw_run,
+                        last_set_flow,
+                        set_flow_applied,
+                    ) = _reconcile_flow_updates(
+                        drain_flow_events(),
+                        auto_apply_flow=auto_apply_flow,
+                        saw_set_flow=saw_set_flow,
+                        saw_run=saw_run,
+                        last_set_flow=last_set_flow,
+                        set_flow_applied=set_flow_applied,
+                    )
                     for update in partial_updates:
                         yield format_flow_update_event(update)
                     if partial_updates:
-                        execution_error = f"{execution_error} {PARTIAL_WORK_KEPT_SUFFIX}"
+                        applied = any(u.get("auto_apply") for u in partial_updates)
+                        suffix = PARTIAL_WORK_KEPT_SUFFIX if applied else PARTIAL_WORK_PROPOSED_SUFFIX
+                        execution_error = f"{execution_error} {suffix}"
                     yield format_error_event(
                         execution_error,
                         detail=build_error_detail(execution_error_raw, step=step_name, include_raw_cause=is_superuser),

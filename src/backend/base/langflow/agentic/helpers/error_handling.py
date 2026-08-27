@@ -10,9 +10,12 @@ if TYPE_CHECKING:
 
 MAX_ERROR_MESSAGE_LENGTH = 150
 
-# Appended when a failed turn still handed the canvas it managed to build back to the
-# user, so an interrupted multi-stage build reads as resumable rather than as a dead end.
+# Which suffix applies is decided by the flow-update reconciler, never guessed: a flow the
+# agent already RAN lands on the canvas, anything else keeps its consent gate.
 PARTIAL_WORK_KEPT_SUFFIX = "The part of the flow that was already built is kept on the canvas — continue from there."
+PARTIAL_WORK_PROPOSED_SUFFIX = (
+    "The part of the flow that was already built is offered above — add it to the canvas to continue from there."
+)
 
 MIN_MEANINGFUL_PART_LENGTH = 10
 MAX_RAW_CAUSE_LENGTH = 2000

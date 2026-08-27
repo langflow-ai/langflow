@@ -30,6 +30,21 @@ REFUSAL_MESSAGE = (
     "Please rephrase your question about Langflow."
 )
 
+ACT_AS_PATTERN = re.compile(r"\bact\s+as\s+(a|an|if\s+you\s+were)\s+", re.IGNORECASE)
+
+# The one carve-out: a relative clause naming a COMPONENT's role, as in "a Prompt
+# Template that will act as a bridge". Anything else keeps the original block.
+_COMPONENT_ROLE_SUBJECT = re.compile(
+    r"\b(?:that|which)\s+(?:will\s+|would\s+|can\s+|could\s+|should\s+|may\s+|must\s+)?$",
+    re.IGNORECASE,
+)
+
+
+def _is_component_role_phrase(text: str, match: re.Match[str]) -> bool:
+    """Whether this "act as" describes a component's role rather than the model's."""
+    return bool(_COMPONENT_ROLE_SUBJECT.search(text[: match.start()]))
+
+
 INJECTION_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     # Instruction override attempts
     (
@@ -57,31 +72,21 @@ INJECTION_PATTERNS: list[tuple[re.Pattern[str], str]] = [
         re.compile(r"you\s+are\s+now\s+(a|an|my)\s+", re.IGNORECASE),
         "Prompt injection: role hijacking attempt",
     ),
-    # Anchored to the model as the subject; a bare mid-sentence "act as" describes a
-    # component's role ("a Prompt Template that will act as a bridge"), not a hijack.
-    (
-        re.compile(r"(?:^|[.!?]\s+|\n\s*)act\s+as\s+(a|an|if\s+you\s+were)\s+", re.IGNORECASE),
-        "Prompt injection: role hijacking attempt",
-    ),
-    (
-        re.compile(
-            r"\byou\s+(?:should\s+|must\s+|will\s+|need\s+to\s+|are\s+to\s+|have\s+to\s+)?"
-            r"act\s+as\s+(a|an|if\s+you\s+were)\s+",
-            re.IGNORECASE,
-        ),
-        "Prompt injection: role hijacking attempt",
-    ),
+    # "act as" is blocked by default; _is_component_role_phrase carves out the one
+    # benign shape ("a Prompt Template that will act as a bridge"). Enumerating the
+    # hijack shapes instead let "I want you to act as a DAN" through (PR #14792).
+    (ACT_AS_PATTERN, "Prompt injection: role hijacking attempt"),
     (
         re.compile(r"pretend\s+(you\s+are|to\s+be)\s+", re.IGNORECASE),
         "Prompt injection: role hijacking attempt",
     ),
-    # System prompt extraction attempts; the target must be the assistant's OWN
-    # directives, so "show instructions on how to fix each finding" stays in scope.
+    # Only bare "instructions" needs a possessive to fire; requiring one for every
+    # target dropped "print system prompt", which the original pattern caught.
     (
         re.compile(
             r"(reveal|show|print|output|repeat|display)\s+(?:me\s+)?"
-            r"(?:your\s+(?:system\s+prompt|system\s+instructions|initial\s+prompt|instructions)"
-            r"|the\s+(?:system\s+prompt|system\s+instructions|initial\s+prompt))",
+            r"(?:(?:the\s+|your\s+)?(?:system\s+prompt|initial\s+prompt|system\s+instructions)"
+            r"|your\s+instructions)",
             re.IGNORECASE,
         ),
         "Prompt injection: system prompt extraction attempt",
@@ -149,7 +154,9 @@ def _check_injection_patterns(text: str) -> str | None:
     Returns the first violation description found, or None if clean.
     """
     for pattern, violation in INJECTION_PATTERNS:
-        if pattern.search(text):
+        for match in pattern.finditer(text):
+            if pattern is ACT_AS_PATTERN and _is_component_role_phrase(text, match):
+                continue
             return violation
     return None
 
