@@ -489,7 +489,7 @@ async def test_custom_component_update_admin_only_allows_superuser(
     policy_contexts = []
     original_set_context = endpoints.set_current_model_provider_policy_context
     original_reset_context = endpoints.reset_current_model_provider_policy_context
-    original_require_policy = Component.require_model_provider_policy
+    original_require_policy = Component.arequire_model_provider_policy
 
     def capture_set_context(*, user_id, attributes=None):
         bound_contexts.append((user_id, attributes))
@@ -499,13 +499,13 @@ async def test_custom_component_update_admin_only_allows_superuser(
         reset_tokens.append(token)
         original_reset_context(token)
 
-    def capture_require_policy(self, purpose):
+    async def capture_require_policy(self, purpose, **kwargs):
         policy_contexts.append(current_model_provider_policy_context())
-        return original_require_policy(self, purpose)
+        return await original_require_policy(self, purpose, **kwargs)
 
     monkeypatch.setattr(endpoints, "set_current_model_provider_policy_context", capture_set_context)
     monkeypatch.setattr(endpoints, "reset_current_model_provider_policy_context", capture_reset_context)
-    monkeypatch.setattr(Component, "require_model_provider_policy", capture_require_policy)
+    monkeypatch.setattr(Component, "arequire_model_provider_policy", capture_require_policy)
 
     component_code = """
 from lfx.custom import Component
@@ -581,12 +581,23 @@ async def test_custom_component_create_denies_provider_before_dynamic_update_hoo
     monkeypatch.setattr(endpoints, "get_instance_name", lambda _component: "DeniedModel")
     monkeypatch.setattr(endpoints, "enforce_catalog_policy_for_component_type", lambda *_args, **_kwargs: None)
 
-    request = CustomComponentRequest(code="class DeniedModel: pass", frontend_node={})
+    request = CustomComponentRequest(
+        code="class DeniedModel: pass",
+        frontend_node={
+            "template": {
+                "model": {
+                    "value": [{"provider": "OpenAI", "name": "gpt-test"}],
+                    "_input_type": "ModelInput",
+                }
+            }
+        },
+    )
     response = await client.post("api/v1/custom_component", json=request.model_dump(), headers=logged_in_headers)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json() == {"detail": "Model provider not found"}
     assert require_policy.await_args.args == (ModelProviderPolicyPurpose.CONFIGURE,)
+    assert require_policy.await_args.kwargs["parameters"]["model"][0]["provider"] == "OpenAI"
     update_frontend_node.assert_not_awaited()
     run_update_outputs.assert_not_awaited()
 

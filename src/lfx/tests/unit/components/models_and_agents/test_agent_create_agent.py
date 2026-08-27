@@ -1858,7 +1858,7 @@ async def test_legacy_agent_config_denial_precedes_model_update_hook(monkeypatch
 
     require_policy.assert_awaited_once_with(
         ModelProviderPolicyPurpose.CONFIGURE,
-        parameters={"agent_llm": "Anthropic"},
+        parameters={"model": [], "agent_llm": "Anthropic"},
     )
     update_hook.assert_not_called()
 

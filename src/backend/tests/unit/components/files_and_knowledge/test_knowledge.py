@@ -512,10 +512,11 @@ class TestKnowledgeProviderPolicyPreflight:
         )
         metadata_lookup.assert_not_awaited()
 
-    async def test_saved_kb_provider_uses_owner_metadata_and_explicit_policy_actor(self, monkeypatch) -> None:
+    @pytest.mark.parametrize("mode", [MODE_INGEST, MODE_RETRIEVE])
+    async def test_saved_kb_provider_uses_owner_metadata_and_explicit_policy_actor(self, monkeypatch, mode) -> None:
         from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 
-        component = KnowledgeComponent(knowledge_base="support_docs", _user_id=self.USER_ID)
+        component = KnowledgeComponent(knowledge_base="support_docs", mode=mode, _user_id=self.USER_ID)
         snapshot = SimpleNamespace(require=Mock())
         resolve_policy = AsyncMock(return_value=snapshot)
         metadata_lookup = AsyncMock(
@@ -530,7 +531,7 @@ class TestKnowledgeProviderPolicyPreflight:
         await component.arequire_model_provider_policy(
             ModelProviderPolicyPurpose.USE,
             user_id="policy-actor",
-            parameters={"knowledge_base": "support_docs"},
+            parameters={"knowledge_base": "support_docs", "mode": mode},
         )
 
         metadata_lookup.assert_awaited_once_with("support_docs")

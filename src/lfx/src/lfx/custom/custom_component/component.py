@@ -1360,6 +1360,21 @@ class Component(CustomComponent):
         """Return the first selected ModelInput provider for compatibility."""
         return next(iter(self._selected_model_provider_policy_ids(parameters)), None)
 
+    async def _additional_model_provider_policy_ids(
+        self,
+        purpose: ModelProviderPolicyPurpose,
+        parameters: Mapping[str, Any] | None = None,
+    ) -> tuple[str, ...]:
+        """Resolve provider identities not represented by top-level ModelInputs.
+
+        Components with legacy provider selectors or provider metadata stored
+        behind another resource can override this hook. It runs before input
+        hydration, so implementations must only inspect raw parameters or
+        non-secret metadata.
+        """
+        _ = purpose, parameters
+        return ()
+
     def require_model_provider_policy(self, purpose: ModelProviderPolicyPurpose) -> None:
         """Gate standalone model/embedding components before sensitive work."""
         provider_id = self._model_provider_policy_id()
@@ -1383,6 +1398,9 @@ class Component(CustomComponent):
     ) -> None:
         """Gate runtime use through the hierarchy-refreshing async policy hook."""
         provider_ids = list(self._selected_model_provider_policy_ids(parameters))
+        for provider_id in await self._additional_model_provider_policy_ids(purpose, parameters):
+            if provider_id not in provider_ids:
+                provider_ids.append(provider_id)
         if (standalone_provider_id := self._model_provider_policy_id()) and standalone_provider_id not in provider_ids:
             provider_ids.insert(0, standalone_provider_id)
         if not provider_ids:

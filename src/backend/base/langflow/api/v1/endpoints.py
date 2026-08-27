@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
-from collections.abc import AsyncGenerator, Collection
+from collections.abc import AsyncGenerator, Collection, Mapping
 from copy import deepcopy
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated, Any
@@ -1728,6 +1728,28 @@ async def get_version():
     return get_version_info()
 
 
+def _raw_component_parameters(
+    template: Mapping[str, Any] | None,
+    *,
+    field: str | None = None,
+    field_value: Any = None,
+) -> dict[str, Any]:
+    """Parse non-secret component form values for provider preflight."""
+    params: dict[str, Any] = {}
+    if isinstance(template, Mapping):
+        for key, value_dict in template.items():
+            if isinstance(value_dict, Mapping):
+                params[key] = parse_value(value_dict.get("value"), str(value_dict.get("_input_type")))
+
+    # A real-time-refresh event can be newer than the template snapshot sent
+    # beside it, so its value wins for the changed field.
+    if field:
+        field_template = template.get(field) if isinstance(template, Mapping) else None
+        field_input_type = str(field_template.get("_input_type")) if isinstance(field_template, Mapping) else "None"
+        params[field] = parse_value(field_value, field_input_type)
+    return params
+
+
 @router.post("/custom_component", status_code=HTTPStatus.OK, include_in_schema=False)
 async def custom_component(
     raw_code: CustomComponentRequest,
@@ -1772,8 +1794,16 @@ async def custom_component(
         enforce_catalog_policy_for_component_type(type_, snapshot=catalog_policy_snapshot)
         if isinstance(component_instance, Component):
             # Dynamic configuration may resolve DB-backed credentials or call
-            # provider APIs. Enforce provider policy before either hook runs.
-            component_instance.require_model_provider_policy(ModelProviderPolicyPurpose.CONFIGURE)
+            # provider APIs. Refresh the active hierarchy before either hook
+            # runs so moved-project and newly inherited grants are current.
+            current_template = (
+                raw_code.frontend_node.get("template") if isinstance(raw_code.frontend_node, Mapping) else None
+            )
+            await component_instance.arequire_model_provider_policy(
+                ModelProviderPolicyPurpose.CONFIGURE,
+                user_id=user.id,
+                parameters=_raw_component_parameters(current_template),
+            )
         if raw_code.frontend_node is not None:
             built_frontend_node = await component_instance.update_frontend_node(
                 built_frontend_node,
@@ -1856,24 +1886,25 @@ async def custom_component_update(
         component_type = get_instance_name(cc_instance)
         enforce_catalog_policy_for_component_type(component_type, snapshot=catalog_policy_snapshot)
 
+        template = code_request.get_template()
+        params = _raw_component_parameters(
+            template,
+            field=code_request.field,
+            field_value=code_request.field_value,
+        )
+
         if isinstance(cc_instance, Component):
-            # Dynamic configuration may resolve DB-backed credentials or call
-            # provider APIs. Apply the same standalone-component policy before
-            # either can happen.
-            cc_instance.require_model_provider_policy(ModelProviderPolicyPurpose.CONFIGURE)
+            # Authorize both fixed-provider components and the raw selected
+            # ModelInput provider before load_from_db can hydrate any secret.
+            await cc_instance.arequire_model_provider_policy(
+                ModelProviderPolicyPurpose.CONFIGURE,
+                user_id=user.id,
+                parameters=params,
+            )
 
         component_node["tool_mode"] = code_request.tool_mode
 
         if hasattr(cc_instance, "set_attributes"):
-            template = code_request.get_template()
-            params = {}
-
-            for key, value_dict in template.items():
-                if isinstance(value_dict, dict):
-                    value = value_dict.get("value")
-                    input_type = str(value_dict.get("_input_type"))
-                    params[key] = parse_value(value, input_type)
-
             load_from_db_fields = [
                 field_name
                 for field_name, field_dict in template.items()
@@ -1925,6 +1956,8 @@ async def custom_component_update(
 
     except CatalogPolicyHTTPException:
         raise
+    except ModelProviderPolicyError as exc:
+        raise HTTPException(status_code=404, detail="Model provider not found") from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     finally:

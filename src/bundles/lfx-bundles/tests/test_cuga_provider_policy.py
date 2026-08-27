@@ -72,3 +72,18 @@ async def test_config_denial_precedes_provider_dynamic_update(monkeypatch) -> No
         parameters={"agent_llm": "OpenAI"},
     )
     dynamic_update.assert_not_awaited()
+
+
+async def test_custom_provider_options_are_filtered_by_active_scope(monkeypatch) -> None:
+    agent = cuga_agent.CugaComponent(agent_llm="Custom", _user_id="policy-actor")
+    snapshot = SimpleNamespace(filter=lambda providers: [provider for provider in providers if provider == "OpenAI"])
+    resolve_policy = AsyncMock(return_value=snapshot)
+    monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+    build_config = {input_.name: input_.to_dict() for input_ in agent.inputs if hasattr(input_, "name")}
+    build_config.update({"code": {"value": ""}, "_type": {"value": "Component"}})
+
+    updated = await agent.update_build_config(build_config, "Custom", "agent_llm")
+
+    resolve_policy.assert_awaited_once()
+    assert updated["agent_llm"]["options"] == ["OpenAI", "Custom"]
+    assert len(updated["agent_llm"]["options_metadata"]) == 2
