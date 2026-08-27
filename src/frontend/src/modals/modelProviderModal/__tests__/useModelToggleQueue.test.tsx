@@ -59,6 +59,7 @@ jest.mock("@tanstack/react-query", () => ({
 // react when a refetch lands. The shared mock starts with the same baseline
 // the trackingQueryClient holds.
 jest.mock("@/controllers/API/queries/models/use-get-enabled-models", () => ({
+  getEnabledModelsQueryKey: jest.fn(() => ["useGetEnabledModels"]),
   useGetEnabledModels: jest.fn(() => ({
     data: { enabled_models: { OpenAI: { "gpt-4": true } } },
   })),
