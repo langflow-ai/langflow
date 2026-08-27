@@ -94,7 +94,9 @@ class SQLComponent(ComponentWithCache):
     def __execute_query(self) -> list[dict[str, Any]]:
         self.maybe_create_db()
         try:
-            cursor: Result[Any] = self.db.run(self.query, fetch="cursor")
+            cursor: Result[Any] | list[dict[str, Any]] = self.db.run(self.query, fetch="cursor")
+            if isinstance(cursor, list):
+                return cursor
             return [x._asdict() for x in cursor.fetchall()]
         except SQLAlchemyError as e:
             msg = f"An error occurred while running the SQL Query: {e}"
