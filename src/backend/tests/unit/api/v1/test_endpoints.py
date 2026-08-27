@@ -540,12 +540,16 @@ class SuperUserUpdateMetadataComponent(Component):
     assert policy_contexts[0].attributes["is_superuser"] is True
 
 
-async def test_custom_component_create_denies_provider_before_dynamic_update_hooks(monkeypatch):
+async def test_custom_component_create_denies_provider_before_dynamic_update_hooks(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
     from langflow.api.v1 import endpoints
     from lfx.custom.custom_component.component import Component
-    from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+    from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
 
-    provider_denial = RuntimeError("provider denied")
+    provider_denial = ModelProviderPolicyError("openai", ModelProviderPolicyPurpose.CONFIGURE)
     component_instance = Component(_code="")
     require_policy = Mock(side_effect=provider_denial)
     update_frontend_node = AsyncMock(return_value={"tool_mode": False})
@@ -577,14 +581,11 @@ async def test_custom_component_create_denies_provider_before_dynamic_update_hoo
     monkeypatch.setattr(endpoints, "get_instance_name", lambda _component: "DeniedModel")
     monkeypatch.setattr(endpoints, "enforce_catalog_policy_for_component_type", lambda *_args, **_kwargs: None)
 
-    with pytest.raises(RuntimeError, match="provider denied"):
-        await endpoints.custom_component(
-            raw_code=CustomComponentRequest(code="class DeniedModel: pass", frontend_node={}),
-            user=SimpleNamespace(id=uuid4(), is_superuser=False),
-            request=SimpleNamespace(state=SimpleNamespace(locale="en")),
-            provider_policy_attributes={"project_id": uuid4()},
-        )
+    request = CustomComponentRequest(code="class DeniedModel: pass", frontend_node={})
+    response = await client.post("api/v1/custom_component", json=request.model_dump(), headers=logged_in_headers)
 
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json() == {"detail": "Model provider not found"}
     require_policy.assert_called_once_with(ModelProviderPolicyPurpose.CONFIGURE)
     update_frontend_node.assert_not_awaited()
     run_update_outputs.assert_not_awaited()
