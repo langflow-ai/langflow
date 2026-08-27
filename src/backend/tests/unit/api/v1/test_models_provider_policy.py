@@ -88,7 +88,6 @@ async def scoped_flow(active_user):
 
 @pytest.fixture(autouse=True)
 def _restrict_to_openai(monkeypatch):
-    monkeypatch.setattr("langflow.api.v1.models.resolve_model_provider_policy", _openai_only_policy)
     monkeypatch.setattr("langflow.api.v1.models.aresolve_model_provider_policy", _aopenai_only_policy)
     monkeypatch.setattr("langflow.api.v1.model_options.aresolve_model_provider_policy", _aopenai_only_policy)
 
@@ -190,11 +189,6 @@ async def test_denied_provider_mutations_return_non_enumerating_not_found(
         nonlocal provider_validation_called
         provider_validation_called = True
 
-    def _unexpected_sync_policy(**_kwargs):
-        msg = "scope-sensitive provider routes must resolve the policy asynchronously"
-        raise AssertionError(msg)
-
-    monkeypatch.setattr("langflow.api.v1.models.resolve_model_provider_policy", _unexpected_sync_policy)
     monkeypatch.setattr("langflow.api.v1.variable.validate_model_provider_key", _provider_validation)
     monkeypatch.setattr("lfx.base.models.unified_models.validate_model_provider_key", _provider_validation)
     validate_response = await client.post(

@@ -17,8 +17,8 @@ from langflow.api.v1.model_provider_policy_scope import ProviderPolicyAttributes
 from langflow.api.v1.models import (
     DISABLED_MODELS_VAR,
     ENABLED_MODELS_VAR,
+    _aresolve_policy,
     _require_provider,
-    _resolve_policy,
     build_model_providers_by_name,
     get_provider_from_variable_name,
     normalize_model_status_entries,
@@ -160,7 +160,7 @@ async def create_variable(
     # before credential lookup, SDK import, validation, or persistence.
     provider = get_provider_from_variable_name(variable.name)
     if provider is not None:
-        _require_provider(
+        await _require_provider(
             current_user,
             provider,
             ModelProviderPolicyPurpose.CONFIGURE,
@@ -221,6 +221,11 @@ async def read_variables(
         VariableAction.READ,
         variable_user_id=current_user.id,
     )
+    provider_policy = await _aresolve_policy(
+        current_user,
+        ModelProviderPolicyPurpose.CONFIGURE,
+        provider_policy_attributes,
+    )
     variable_service = get_variable_service()
     if not isinstance(variable_service, DatabaseVariableService):
         msg = "Variable service is not an instance of DatabaseVariableService"
@@ -238,11 +243,6 @@ async def read_variables(
         )
 
         # Filter out internal variables (those starting and ending with __)
-        provider_policy = _resolve_policy(
-            current_user,
-            ModelProviderPolicyPurpose.CONFIGURE,
-            provider_policy_attributes,
-        )
         filtered_variables = []
         for var in all_variables:
             if var.name and var.name.startswith("__") and var.name.endswith("__"):
@@ -318,7 +318,7 @@ async def update_variable(
         effective_name = variable.name or existing_variable.name
         provider = get_provider_from_variable_name(effective_name)
         if provider is not None:
-            _require_provider(
+            await _require_provider(
                 current_user,
                 provider,
                 ModelProviderPolicyPurpose.CONFIGURE,
@@ -478,6 +478,11 @@ async def detect_env_vars(
         VariableAction.READ,
         variable_user_id=current_user.id,
     )
+    provider_policy = await _aresolve_policy(
+        current_user,
+        ModelProviderPolicyPurpose.CONFIGURE,
+        provider_policy_attributes,
+    )
     variable_service = get_variable_service()
     existing_variable_names = {
         name
@@ -500,11 +505,6 @@ async def detect_env_vars(
         data = _validate_flow_or_422(version_id=version_id, data=version.data)
         candidate_keys.update(_collect_candidate_variable_keys_from_flow_data(data))
 
-    provider_policy = _resolve_policy(
-        current_user,
-        ModelProviderPolicyPurpose.CONFIGURE,
-        provider_policy_attributes,
-    )
     visible_candidate_keys = {
         variable_key
         for variable_key in candidate_keys

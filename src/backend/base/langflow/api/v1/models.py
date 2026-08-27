@@ -32,7 +32,6 @@ from lfx.services.model_provider_policy import (
     ModelProviderPolicyPurpose,
     ModelProviderPolicySnapshot,
     aresolve_model_provider_policy,
-    resolve_model_provider_policy,
 )
 from loguru import logger
 from pydantic import BaseModel, field_validator
@@ -60,19 +59,6 @@ MAX_STRING_LENGTH = 200  # Maximum length for model IDs and provider names
 MAX_BATCH_UPDATE_SIZE = 100  # Maximum number of models that can be updated at once
 
 ProviderReadPurpose = Literal["use", "configure"]
-
-
-def _resolve_policy(
-    current_user: CurrentActiveUser,
-    purpose: ModelProviderPolicyPurpose,
-    attributes: ProviderPolicyAttributes,
-):
-    return resolve_model_provider_policy(
-        user_id=current_user.id,
-        providers=get_model_providers(),
-        purpose=purpose,
-        attributes=attributes,
-    )
 
 
 async def _aresolve_policy(
@@ -124,17 +110,22 @@ async def _aresolve_read_policy(
     )
 
 
-def _require_provider(
+def _require_provider_from_policy(provider_policy: ModelProviderPolicySnapshot, provider: str) -> None:
+    try:
+        provider_policy.require(provider)
+    except ModelProviderPolicyError as exc:
+        # Do not confirm whether a hidden provider is registered or merely blocked.
+        raise HTTPException(status_code=404, detail="Model provider not found") from exc
+
+
+async def _require_provider(
     current_user: CurrentActiveUser,
     provider: str,
     purpose: ModelProviderPolicyPurpose,
     attributes: ProviderPolicyAttributes,
 ) -> None:
-    try:
-        _resolve_policy(current_user, purpose, attributes).require(provider)
-    except ModelProviderPolicyError as exc:
-        # Do not confirm whether a hidden provider is registered or merely blocked.
-        raise HTTPException(status_code=404, detail="Model provider not found") from exc
+    provider_policy = await _aresolve_policy(current_user, purpose, attributes)
+    _require_provider_from_policy(provider_policy, provider)
 
 
 def get_provider_from_variable_name(variable_name: str) -> str | None:
@@ -609,7 +600,7 @@ async def validate_provider(
     This endpoint checks if the provided credentials are valid by attempting
     to connect to the provider. Use this for real-time validation in the UI.
     """
-    _require_provider(
+    await _require_provider(
         current_user,
         request.provider,
         ModelProviderPolicyPurpose.CONFIGURE,
@@ -1118,6 +1109,15 @@ async def update_enabled_models(
             detail="Variable service is not an instance of DatabaseVariableService",
         )
 
+    # Resolve the hierarchy once before reading credentials or mutating model
+    # status. Reuse the snapshot throughout the request so authorization cannot
+    # change between validation, persistence, and response filtering.
+    provider_policy = await _aresolve_policy(
+        current_user,
+        ModelProviderPolicyPurpose.CONFIGURE,
+        provider_policy_attributes,
+    )
+
     # Limit batch size to prevent abuse
     if len(updates) > MAX_BATCH_UPDATE_SIZE:
         raise HTTPException(
@@ -1163,12 +1163,7 @@ async def update_enabled_models(
     # For any model being enabled, validate the provider credentials
     for update in updates:
         if update.enabled:
-            _require_provider(
-                current_user,
-                update.provider,
-                ModelProviderPolicyPurpose.CONFIGURE,
-                provider_policy_attributes,
-            )
+            _require_provider_from_policy(provider_policy, update.provider)
             unavailable_reason = unavailable_models.get((update.provider, update.model_id))
             if unavailable_reason:
                 raise HTTPException(
@@ -1220,12 +1215,6 @@ async def update_enabled_models(
 
     # Cleanup of a now-hidden provider remains allowed, but the response must
     # not echo hidden provider identities from persisted legacy state.
-    provider_policy = _resolve_policy(
-        current_user,
-        ModelProviderPolicyPurpose.CONFIGURE,
-        provider_policy_attributes,
-    )
-
     def _visible_status_entries(entries: set[str]) -> list[str]:
         visible = []
         for entry in entries:
@@ -1278,6 +1267,11 @@ async def get_default_model(
     model_type: Annotated[str, Query(description="Type of model: 'language' or 'embedding'")] = "language",
 ):
     """Get the default model for the current user."""
+    provider_policy = await _aresolve_policy(
+        current_user,
+        ModelProviderPolicyPurpose.USE,
+        provider_policy_attributes,
+    )
     variable_service = get_variable_service()
     if not isinstance(variable_service, DatabaseVariableService):
         return {"default_model": None}
@@ -1299,12 +1293,7 @@ async def get_default_model(
                 ):
                     logger.warning("Invalid default model format for user %s", current_user.id)
                     return {"default_model": None}
-                policy = _resolve_policy(
-                    current_user,
-                    ModelProviderPolicyPurpose.USE,
-                    provider_policy_attributes,
-                )
-                if not policy.allows(parsed_value["provider"]):
+                if not provider_policy.allows(parsed_value["provider"]):
                     return {"default_model": None}
                 return {"default_model": parsed_value}
     except ValueError:
@@ -1322,7 +1311,7 @@ async def set_default_model(
     request: DefaultModelRequest,
 ):
     """Set the default model for the current user."""
-    _require_provider(
+    await _require_provider(
         current_user,
         request.provider,
         ModelProviderPolicyPurpose.USE,
