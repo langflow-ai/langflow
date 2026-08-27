@@ -867,6 +867,56 @@ class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
         component._delete_after_processing(base_file)
         assert not base_file.path.exists()
 
+    @patch("boto3.client")
+    def test_s3_read_falls_back_to_environment_credentials(self, mock_boto_client, monkeypatch):
+        """Read File should use the same AWS environment fallbacks as Write File."""
+        monkeypatch.setenv("AWS_ACCESS_KEY_ID", "environment-access-key")
+        monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "environment-secret-key")
+        monkeypatch.setenv("AWS_SESSION_TOKEN", "environment-session-token")
+        monkeypatch.setenv("AWS_REGION", "us-east-2")
+
+        settings_service = MagicMock()
+        settings_service.settings.object_storage_bucket_name = "configured-bucket"
+        mock_s3_client = MagicMock()
+        mock_s3_client.download_fileobj.side_effect = lambda _bucket, _key, target: target.write(b"SAFE_CANARY")
+        mock_boto_client.return_value = mock_s3_client
+
+        component = FileComponent()
+        component.set_attributes(
+            {
+                "storage_location": [{"name": "AWS"}],
+                "aws_access_key_id": "",
+                "aws_secret_access_key": "",
+                "bucket_name": "",
+                "aws_region": "",
+                "s3_file_key": "test-file.txt",
+            }
+        )
+
+        with patch("lfx.services.deps.get_settings_service", return_value=settings_service):
+            base_file = component._read_from_aws_s3()[0]
+
+        mock_boto_client.assert_called_once_with(
+            "s3",
+            aws_access_key_id="environment-access-key",
+            aws_secret_access_key="environment-secret-key",  # noqa: S106  # pragma: allowlist secret
+            aws_session_token="environment-session-token",  # noqa: S106  # pragma: allowlist secret
+            region_name="us-east-2",
+        )
+        mock_s3_client.download_fileobj.assert_called_once()
+        assert mock_s3_client.download_fileobj.call_args.args[:2] == ("configured-bucket", "test-file.txt")
+
+        component._delete_after_processing(base_file)
+        assert not base_file.path.exists()
+
+    def test_s3_credentials_are_optional_component_inputs(self):
+        """Environment-backed AWS fields must not be blocked by input validation."""
+        inputs = {input_.name: input_ for input_ in FileComponent.inputs}
+
+        assert inputs["aws_access_key_id"].required is False
+        assert inputs["aws_secret_access_key"].required is False
+        assert inputs["bucket_name"].required is False
+
     @patch("lfx.base.data.cloud_storage_utils.create_google_drive_service")
     @pytest.mark.usefixtures("fake_googleapiclient")
     def test_google_drive_temp_file_cleanup_on_download_failure(self, mock_create_service):

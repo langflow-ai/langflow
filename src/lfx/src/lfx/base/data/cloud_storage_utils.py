@@ -7,9 +7,37 @@ to avoid code duplication.
 from __future__ import annotations
 
 import json
+import os
 from typing import Any
 
 from lfx.utils.secrets import secret_value_to_str
+
+
+def _resolve_aws_credentials(component: Any) -> tuple[str | None, str | None, bool, bool]:
+    aws_access_key_id = secret_value_to_str(getattr(component, "aws_access_key_id", None))
+    access_key_from_environment = not aws_access_key_id
+    if access_key_from_environment:
+        aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+
+    aws_secret_access_key = secret_value_to_str(getattr(component, "aws_secret_access_key", None))
+    secret_key_from_environment = not aws_secret_access_key
+    if secret_key_from_environment:
+        aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+
+    return aws_access_key_id, aws_secret_access_key, access_key_from_environment, secret_key_from_environment
+
+
+def get_s3_bucket_name(component: Any) -> str | None:
+    """Resolve the S3 bucket from the component input or storage settings."""
+    bucket_name = getattr(component, "bucket_name", None)
+    if bucket_name:
+        return str(bucket_name)
+
+    from lfx.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    configured_bucket = getattr(settings_service.settings, "object_storage_bucket_name", None)
+    return str(configured_bucket) if configured_bucket else None
 
 
 def validate_aws_credentials(component: Any) -> None:
@@ -21,14 +49,24 @@ def validate_aws_credentials(component: Any) -> None:
     Raises:
         ValueError: If any required credential is missing
     """
-    if not getattr(component, "aws_access_key_id", None):
-        msg = "AWS Access Key ID is required for S3 storage"
+    aws_access_key_id, aws_secret_access_key, _, _ = _resolve_aws_credentials(component)
+    if not aws_access_key_id:
+        msg = (
+            "AWS Access Key ID is required for S3 storage. Provide it as a component input "
+            "or set AWS_ACCESS_KEY_ID environment variable."
+        )
         raise ValueError(msg)
-    if not getattr(component, "aws_secret_access_key", None):
-        msg = "AWS Secret Key is required for S3 storage"
+    if not aws_secret_access_key:
+        msg = (
+            "AWS Secret Key is required for S3 storage. Provide it as a component input "
+            "or set AWS_SECRET_ACCESS_KEY environment variable."
+        )
         raise ValueError(msg)
-    if not getattr(component, "bucket_name", None):
-        msg = "S3 Bucket Name is required for S3 storage"
+    if not get_s3_bucket_name(component):
+        msg = (
+            "S3 Bucket Name is required for S3 storage. Provide it as a component input "
+            "or set LANGFLOW_OBJECT_STORAGE_BUCKET_NAME environment variable."
+        )
         raise ValueError(msg)
 
 
@@ -50,13 +88,22 @@ def create_s3_client(component: Any):
         msg = "boto3 is not installed. Please install it using `uv pip install boto3`."
         raise ImportError(msg) from e
 
-    client_config = {
-        "aws_access_key_id": component.aws_access_key_id,
-        "aws_secret_access_key": component.aws_secret_access_key,
+    aws_access_key_id, aws_secret_access_key, access_key_from_environment, secret_key_from_environment = (
+        _resolve_aws_credentials(component)
+    )
+    client_config: dict[str, str] = {
+        "aws_access_key_id": str(aws_access_key_id),
+        "aws_secret_access_key": str(aws_secret_access_key),
     }
 
-    if hasattr(component, "aws_region") and component.aws_region:
-        client_config["region_name"] = component.aws_region
+    if access_key_from_environment and secret_key_from_environment:
+        aws_session_token = os.getenv("AWS_SESSION_TOKEN")
+        if aws_session_token:
+            client_config["aws_session_token"] = aws_session_token
+
+    aws_region = getattr(component, "aws_region", None) or os.getenv("AWS_DEFAULT_REGION") or os.getenv("AWS_REGION")
+    if aws_region:
+        client_config["region_name"] = str(aws_region)
 
     return boto3.client("s3", **client_config)
 
