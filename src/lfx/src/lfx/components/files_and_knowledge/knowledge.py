@@ -18,7 +18,6 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
-import re
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -27,7 +26,7 @@ from typing import TYPE_CHECKING, Any
 import pandas as pd
 from langchain_chroma import Chroma
 
-from lfx.base.knowledge_bases.backends import BackendType, BaseVectorStoreBackend, create_backend
+from lfx.base.knowledge_bases.backends import BackendType, BaseVectorStoreBackend, create_backend, is_local_chroma
 from lfx.base.knowledge_bases.ingestion_sources.base import (
     IngestionItemResult,
     IngestionItemStatus,
@@ -36,6 +35,12 @@ from lfx.base.knowledge_bases.ingestion_sources.base import (
 )
 from lfx.base.knowledge_bases.ingestion_sources.flow_component import FlowComponentSource
 from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
+from lfx.base.knowledge_bases.validation import (
+    is_valid_collection_name as is_valid_kb_collection_name,
+)
+from lfx.base.knowledge_bases.validation import (
+    validate_collection_name,
+)
 from lfx.base.models.unified_models import get_embedding_model_options, get_embeddings
 from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.components.processing.converter import convert_to_dataframe
@@ -505,10 +510,6 @@ class KnowledgeComponent(Component):
                     raise ValueError(msg)
                 kb_user = current_user.username
             if isinstance(field_value, dict) and "01_new_kb_name" in field_value:
-                if not self.is_valid_collection_name(field_value["01_new_kb_name"]):
-                    msg = f"Invalid knowledge base name: {field_value['01_new_kb_name']}"
-                    raise ValueError(msg)
-
                 model_selection = field_value["02_embedding_model"]
                 if isinstance(model_selection, dict):
                     model_selection = [model_selection]
@@ -516,6 +517,13 @@ class KnowledgeComponent(Component):
                 backend_type, backend_config = self._normalize_backend_selection(
                     field_value.get("03_knowledge_backend")
                 )
+                new_kb_name = field_value["01_new_kb_name"]
+                if backend_type == BackendType.CHROMA.value:
+                    validate_collection_name(
+                        new_kb_name,
+                        resource="Knowledge base",
+                        local=is_local_chroma(backend_type, backend_config),
+                    )
 
                 embed_model = get_embeddings(
                     model=model_selection,
@@ -534,7 +542,6 @@ class KnowledgeComponent(Component):
                     msg = f"Embedding validation failed: {e!s}"
                     raise ValueError(msg) from e
 
-                new_kb_name = field_value["01_new_kb_name"]
                 # Only local Chroma gets a directory; every remote backend
                 # returns None here and creates its collection on first write.
                 from langflow.api.utils.kb_helpers import resolve_local_store_path
@@ -981,20 +988,9 @@ class KnowledgeComponent(Component):
 
         return data_objects
 
-    def is_valid_collection_name(self, name, min_length: int = 3, max_length: int = 63) -> bool:
-        """Validate collection name.
-
-        1. Contains 3-63 characters
-        2. Starts and ends with alphanumeric character
-        3. Contains only alphanumeric characters, underscores, or hyphens.
-        """
-        if not (min_length <= len(name) <= max_length):
-            return False
-
-        if not (name[0].isalnum() and name[-1].isalnum()):
-            return False
-
-        return re.match(r"^[a-zA-Z0-9_-]+$", name) is not None
+    def is_valid_collection_name(self, name: str) -> bool:
+        """Return whether ``name`` satisfies the shared collection-name contract."""
+        return is_valid_kb_collection_name(name)
 
     def _resolve_store_path(
         self,
