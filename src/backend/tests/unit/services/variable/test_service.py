@@ -685,6 +685,47 @@ async def test_get_all__empty_value_warns_and_skips(service, session: AsyncSessi
     assert any("no stored value" in c for c in warning_calls)
 
 
+async def test_get_all__empty_provider_setting_preserves_row_identity(service, session: AsyncSession):
+    """Cleared provider settings remain addressable so later edits reuse their UUID."""
+    user_id = uuid4()
+    variable = await service.create_variable(
+        user_id,
+        "OPENAI_BASE_URL",
+        "https://example.com/v1",
+        type_=GENERIC_TYPE,
+        session=session,
+    )
+    variable.value = ""
+    session.add(variable)
+    await session.flush()
+
+    result = await service.get_all(user_id, session=session)
+    cleared = next(item for item in result if item.name == "OPENAI_BASE_URL")
+
+    assert cleared.id == variable.id
+    assert cleared.value == ""
+    assert cleared.has_value is False
+
+
+async def test_get_all__empty_required_provider_variable_stays_hidden(service, session: AsyncSession):
+    """An empty required provider row must not make the provider look configured."""
+    user_id = uuid4()
+    variable = await service.create_variable(
+        user_id,
+        "WATSONX_PROJECT_ID",
+        "project-id",
+        type_=GENERIC_TYPE,
+        session=session,
+    )
+    variable.value = ""
+    session.add(variable)
+    await session.flush()
+
+    result = await service.get_all(user_id, session=session)
+
+    assert not any(item.name == "WATSONX_PROJECT_ID" for item in result)
+
+
 async def test_get_all__empty_agentic_placeholder_is_debug_only(service, session: AsyncSession):
     """Known agentic placeholders are intentionally empty until an agent run populates them."""
     user_id = uuid4()
