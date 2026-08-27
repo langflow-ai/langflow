@@ -182,8 +182,9 @@ const PROJECT_CREDENTIAL_NODE: AllNodeType = {
 const FLOW_WITH_PROJECT_CREDENTIAL: FlowType = {
   ...FLOW_STUB,
   data: {
-    ...FLOW_STUB.data,
     nodes: [PROJECT_CREDENTIAL_NODE],
+    edges: [],
+    viewport: { x: 0, y: 0, zoom: 1 },
   },
 };
 
