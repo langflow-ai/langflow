@@ -15,6 +15,7 @@ const opt = (
 
 const base = {
   enabledModels: undefined,
+  enabledModelsByType: undefined,
   providers: undefined,
   modelType: "llm",
   savedValue: undefined,
@@ -194,5 +195,89 @@ describe("buildGroupedOptions", () => {
     });
     expect(grouped.OpenAI).toHaveLength(1);
     expect(grouped.OpenAI[0].metadata?.not_enabled_locally).toBeUndefined();
+  });
+
+  describe("typed enabled-models map", () => {
+    // An OpenAI-compatible gateway serves chat and embedding models under one
+    // provider. Live discovery cannot tell them apart (`/models` carries no
+    // capability data), so it stamps every model with the type that was
+    // requested — leaving the typed enabled-map as the only usable signal.
+    const CHAT = "gpt-4o-mini";
+    const EMBED = "text-embedding-3-small";
+
+    const gateway: ModelProviderWithStatus[] = [
+      {
+        provider: "OpenAI",
+        is_enabled: true,
+        is_configured: true,
+        models: [
+          { model_name: CHAT, metadata: { model_type: "embeddings" } },
+          { model_name: EMBED, metadata: { model_type: "embeddings" } },
+        ],
+      } as ModelProviderWithStatus,
+    ];
+
+    const flat = { OpenAI: { [CHAT]: true, [EMBED]: true } };
+    const typed = {
+      OpenAI: {
+        llm: { [CHAT]: true, [EMBED]: false },
+        embeddings: { [CHAT]: false, [EMBED]: true },
+      },
+    };
+
+    it("keeps a chat model out of the embedding picker", () => {
+      const grouped = buildGroupedOptions({
+        ...base,
+        modelType: "embeddings",
+        options: [
+          opt(CHAT, "OpenAI", { model_type: "embeddings" }),
+          opt(EMBED, "OpenAI", { model_type: "embeddings" }),
+        ],
+        enabledModels: flat,
+        enabledModelsByType: typed,
+      });
+      expect(grouped.OpenAI.map((o) => o.name)).toEqual([EMBED]);
+    });
+
+    it("scopes the augment pass too, not just the saved options", () => {
+      // Nothing saved: every candidate arrives from the provider registry,
+      // which is how the picker is normally populated.
+      const grouped = buildGroupedOptions({
+        ...base,
+        modelType: "embeddings",
+        options: [],
+        providers: gateway,
+        enabledModels: flat,
+        enabledModelsByType: typed,
+      });
+      expect(grouped.OpenAI.map((o) => o.name)).toEqual([EMBED]);
+    });
+
+    it("falls back to the flat map when no typed map is reported", () => {
+      // Older servers omit `enabled_models_by_type`; behaviour is unchanged,
+      // including the pre-existing cross-type leak.
+      const grouped = buildGroupedOptions({
+        ...base,
+        modelType: "embeddings",
+        options: [],
+        providers: gateway,
+        enabledModels: flat,
+      });
+      expect(grouped.OpenAI.map((o) => o.name).sort()).toEqual(
+        [CHAT, EMBED].sort(),
+      );
+    });
+
+    it("treats a provider with no entry for the requested type as having none enabled", () => {
+      const grouped = buildGroupedOptions({
+        ...base,
+        modelType: "embeddings",
+        options: [opt(CHAT, "OpenAI", { model_type: "embeddings" })],
+        providers: gateway,
+        enabledModels: flat,
+        enabledModelsByType: { OpenAI: { llm: { [CHAT]: true } } },
+      });
+      expect(grouped).toEqual({});
+    });
   });
 });
