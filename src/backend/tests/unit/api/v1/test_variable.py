@@ -653,6 +653,39 @@ async def test_delete_provider_credential_cleans_up_enabled_models(client: Async
 
 
 @pytest.mark.usefixtures("active_user")
+async def test_delete_required_provider_variable_cleans_up_models(client: AsyncClient, logged_in_headers):
+    """Deleting a required provider companion must still clean up that provider's model selections."""
+    all_vars = await client.get("api/v1/variables/", headers=logged_in_headers)
+    for var in all_vars.json():
+        if var.get("name") == "WATSONX_PROJECT_ID":
+            await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
+
+    create_response = await client.post(
+        "api/v1/variables/",
+        json={
+            "name": "WATSONX_PROJECT_ID",
+            "value": "test-project-id",
+            "type": GENERIC_TYPE,
+            "default_fields": [],
+        },
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+
+    with mock.patch(
+        "langflow.api.v1.variable._cleanup_provider_models",
+        new_callable=mock.AsyncMock,
+    ) as cleanup_provider_models:
+        delete_response = await client.delete(
+            f"api/v1/variables/{create_response.json()['id']}",
+            headers=logged_in_headers,
+        )
+
+    assert delete_response.status_code == status.HTTP_204_NO_CONTENT
+    cleanup_provider_models.assert_awaited_once()
+
+
+@pytest.mark.usefixtures("active_user")
 async def test_delete_optional_provider_variable_does_not_cleanup_models(client: AsyncClient, logged_in_headers):
     """Deleting an optional provider setting must preserve that provider's model selections."""
     all_vars = await client.get("api/v1/variables/", headers=logged_in_headers)
