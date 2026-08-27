@@ -70,9 +70,19 @@ def _conflict_free_insert(session, model_cls, rows: list[dict], *, update_on_con
     find anything -- one wasted round trip per span, and span count scales with
     flow size.
 
-    ON CONFLICT preserves merge()'s idempotency (a re-flush recomputes identical
-    UUIDs and collides) at one round trip instead of two, and inserts every span
-    in a single statement rather than N.
+    ON CONFLICT keeps a re-flush safe (identical uuid5 keys collide rather than
+    duplicating) at one round trip instead of two, and inserts every span in a
+    single statement rather than N.
+
+    The two callers differ deliberately, and this is NOT identical to merge() in
+    both cases. The trace passes update_on_conflict=True, so a re-flush refreshes
+    its end time and status exactly as merge() did. Spans pass False -- they are
+    immutable once written, so the first write wins. That means a second flush of
+    the same trace would silently DROP the new span data instead of overwriting
+    it, where merge() would have updated. The current call path flushes once per
+    trace from end(), so this cannot happen today, but a future retry or a double
+    end() would lose span updates with no error -- visible only as missing
+    observability data.
 
     Returns None for dialects without ON CONFLICT support so the caller falls
     back to merge() rather than losing data.

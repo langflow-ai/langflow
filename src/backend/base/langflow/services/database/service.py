@@ -429,11 +429,16 @@ class DatabaseService(Service):
         from a checkout handler is SQLAlchemy's documented hook for this -- the pool
         discards the connection and transparently retries with a new one.
 
-        The honest limit: this narrows, but does not close, the window. If the server
-        drops connections that were checked in more recently than the threshold, those
-        checkouts raise rather than recover. SQLAlchemy invalidates the whole pool on
-        the first such error, so the blast radius is the requests in flight at that
-        instant rather than a sustained failure.
+        The honest limit: this narrows, but does not close, the window. A connection
+        killed within the threshold is handed out unvalidated, and the failure then
+        surfaces from the query rather than being caught at checkout.
+
+        That window is smaller than it first appears, though. Raising
+        ``DisconnectionError`` from a checkout handler does NOT invalidate the pool:
+        ``DisconnectionError.invalidate_pool`` defaults to False, so only the offending
+        connection is discarded, and SQLAlchemy retries the checkout up to three times
+        before giving up. So even a mass kill is absorbed connection-by-connection
+        rather than failing every in-flight request at once.
         """
         threshold = getattr(self.settings_service.settings, "pool_pre_ping_idle_threshold_s", None)
         # Only meaningful when the caller asked for pre-ping in the first place, and
@@ -444,6 +449,13 @@ class DatabaseService(Service):
 
         # Take over validation entirely: SQLAlchemy's own pre-ping would otherwise
         # still run on every checkout and the saving would not materialise.
+        #
+        # This writes a private attribute on the live pool, which holds only because
+        # the main async engine is never disposed and recreated while in use -- every
+        # engine.dispose() in this module targets a throwaway sync engine or is final
+        # teardown. A future change that recycles self.engine must re-apply this, or
+        # pre-ping silently returns on every checkout and the saving disappears with
+        # no visible failure.
         engine.pool._pre_ping = False  # noqa: SLF001
 
         @event.listens_for(engine.sync_engine, "checkin")
@@ -966,7 +978,10 @@ class DatabaseService(Service):
                 f"(max_connections={max_conn} minus superuser_reserved_connections={reserved}). "
                 f"Under load this fails with 'too many clients already'. Lower pool_size/max_overflow via "
                 f"LANGFLOW_DB_CONNECTION_SETTINGS, reduce LANGFLOW_WORKERS, or raise the server's "
-                f"max_connections. Note pool_size connections per worker are retained once opened."
+                f"max_connections. Note pool_size connections per worker are retained once opened. "
+                f"If a pooling proxy (PgBouncer, RDS Proxy) sits in front of this database, "
+                f"this comparison does not apply: the proxy multiplexes client connections onto "
+                f"fewer backend ones, so the limit that matters is the proxy's, not the server's."
             )
         else:
             logger.debug(
