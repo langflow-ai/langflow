@@ -92,7 +92,7 @@ class TestDetectEnvVars:
             }
         )
 
-        def _openai_only_policy(_current_user, purpose, attributes):
+        async def _openai_only_policy(_current_user, purpose, attributes):
             from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 
             assert purpose is ModelProviderPolicyPurpose.CONFIGURE
@@ -109,7 +109,7 @@ class TestDetectEnvVars:
                 f"{MODULE}.get_variable_service",
                 return_value=_variable_service_with_names(["ANTHROPIC_API_KEY", "MY_GENERIC_KEY"]),
             ),
-            patch(f"{MODULE}._resolve_policy", side_effect=_openai_only_policy),
+            patch(f"{MODULE}._aresolve_policy", side_effect=_openai_only_policy),
         ):
             result = await detect_env_vars(
                 payload=DetectVarsRequest(flow_version_ids=[fv_id]),
@@ -466,7 +466,7 @@ class TestDetectEnvVars:
                 f"{MODULE}.get_variable_service",
                 return_value=_variable_service_with_names(["OPENAI_API_KEY"]),
             ),
-            patch(f"{MODULE}._resolve_policy", return_value=policy) as resolve_policy,
+            patch(f"{MODULE}._aresolve_policy", new_callable=AsyncMock, return_value=policy) as resolve_policy,
         ):
             result = await detect_env_vars(
                 payload=DetectVarsRequest(flow_version_ids=[fv_id]),
@@ -476,7 +476,7 @@ class TestDetectEnvVars:
             )
 
         assert result.variables == ["OPENAI_API_KEY"]
-        resolve_policy.assert_called_once_with(
+        resolve_policy.assert_awaited_once_with(
             current_user,
             ModelProviderPolicyPurpose.CONFIGURE,
             provider_policy_attributes,

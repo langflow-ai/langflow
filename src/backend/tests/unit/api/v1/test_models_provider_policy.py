@@ -49,6 +49,10 @@ async def _aopenai_only_policy(**kwargs):
     return _openai_only_policy(**kwargs)
 
 
+async def _aallow_all_policy(**kwargs):
+    return _allow_all_policy(**kwargs)
+
+
 @pytest.fixture
 async def scoped_flow(active_user):
     workspace_id = uuid4()
@@ -186,6 +190,11 @@ async def test_denied_provider_mutations_return_non_enumerating_not_found(
         nonlocal provider_validation_called
         provider_validation_called = True
 
+    def _unexpected_sync_policy(**_kwargs):
+        msg = "scope-sensitive provider routes must resolve the policy asynchronously"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr("langflow.api.v1.models.resolve_model_provider_policy", _unexpected_sync_policy)
     monkeypatch.setattr("langflow.api.v1.variable.validate_model_provider_key", _provider_validation)
     monkeypatch.setattr("lfx.base.models.unified_models.validate_model_provider_key", _provider_validation)
     validate_response = await client.post(
@@ -529,7 +538,7 @@ async def test_provider_credential_check_uses_server_resolved_flow_scope_before_
     captured_attributes = []
     validation_called = False
 
-    def _capture_policy(**kwargs):
+    async def _capture_policy(**kwargs):
         captured_attributes.append(kwargs.get("attributes"))
         return _allow_all_policy(**kwargs)
 
@@ -537,7 +546,7 @@ async def test_provider_credential_check_uses_server_resolved_flow_scope_before_
         nonlocal validation_called
         validation_called = True
 
-    monkeypatch.setattr("langflow.api.v1.models.resolve_model_provider_policy", _capture_policy)
+    monkeypatch.setattr("langflow.api.v1.models.aresolve_model_provider_policy", _capture_policy)
     monkeypatch.setattr("lfx.base.models.unified_models.validate_model_provider_key", _validate)
 
     response = await client.post(
@@ -697,7 +706,7 @@ async def test_model_catalog_uses_configure_policy_for_configuration_status(
 async def test_hidden_provider_variables_are_omitted_but_can_be_deleted(
     client: AsyncClient, logged_in_headers, monkeypatch
 ):
-    monkeypatch.setattr("langflow.api.v1.models.resolve_model_provider_policy", _allow_all_policy)
+    monkeypatch.setattr("langflow.api.v1.models.aresolve_model_provider_policy", _aallow_all_policy)
     existing_response = await client.get("api/v1/variables/", headers=logged_in_headers)
     for variable in existing_response.json():
         if variable["name"] == "ANTHROPIC_API_KEY":
@@ -717,7 +726,7 @@ async def test_hidden_provider_variables_are_omitted_but_can_be_deleted(
     assert create_response.status_code == status.HTTP_201_CREATED
     variable_id = create_response.json()["id"]
 
-    monkeypatch.setattr("langflow.api.v1.models.resolve_model_provider_policy", _openai_only_policy)
+    monkeypatch.setattr("langflow.api.v1.models.aresolve_model_provider_policy", _aopenai_only_policy)
     hidden_response = await client.get("api/v1/variables/", headers=logged_in_headers)
     delete_response = await client.delete(f"api/v1/variables/{variable_id}", headers=logged_in_headers)
 
