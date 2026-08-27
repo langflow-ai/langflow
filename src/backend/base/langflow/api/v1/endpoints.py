@@ -1769,6 +1769,10 @@ async def custom_component(
         built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
         type_ = get_instance_name(component_instance)
         enforce_catalog_policy_for_component_type(type_, snapshot=catalog_policy_snapshot)
+        if isinstance(component_instance, Component):
+            # Dynamic configuration may resolve DB-backed credentials or call
+            # provider APIs. Enforce provider policy before either hook runs.
+            component_instance.require_model_provider_policy(ModelProviderPolicyPurpose.CONFIGURE)
         if raw_code.frontend_node is not None:
             built_frontend_node = await component_instance.update_frontend_node(
                 built_frontend_node,
