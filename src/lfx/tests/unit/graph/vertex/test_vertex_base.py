@@ -142,6 +142,63 @@ async def test_worker_restored_component_refreshes_current_hierarchy_with_explic
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("mode", ["Ingest", "Retrieve"])
+async def test_knowledge_metadata_provider_denial_precedes_secret_hydration(monkeypatch, mode):
+    """Both Knowledge runtime modes gate the stored embedding provider before inputs."""
+    from lfx.components.files_and_knowledge.knowledge import KnowledgeComponent
+
+    policy = _HierarchyRefreshingPolicy(allowed_provider_ids=set())
+    monkeypatch.setattr("lfx.services.deps.get_model_provider_policy_service", lambda: policy)
+    component = KnowledgeComponent(
+        knowledge_base="support_docs",
+        mode=mode,
+        _user_id="resource-owner",
+        _parameters={"knowledge_base": "support_docs", "mode": mode},
+    )
+    component._get_kb_metadata = AsyncMock(
+        return_value={
+            "model_selection": {"name": "text-embedding-3-small", "provider": "OpenAI"},
+            "embedding_provider": "OpenAI",
+        }
+    )
+    vertex = object.__new__(Vertex)
+    vertex.display_name = "Knowledge"
+    vertex.base_type = "component"
+    vertex.params = {
+        "knowledge_base": "support_docs",
+        "mode": mode,
+        "api_key": "stored-variable-reference",  # pragma: allowlist secret
+    }
+    vertex.custom_component = component
+    vertex._validate_built_object = Mock()
+    vertex._build_each_vertex_in_params_dict = AsyncMock(
+        side_effect=AssertionError("upstream credential hydrated before provider denial")
+    )
+    vertex._build_results = AsyncMock(side_effect=AssertionError("local credential hydrated before provider denial"))
+
+    token = set_current_model_provider_policy_context(
+        user_id="policy-actor",
+        attributes={"project_id": "project-current", "workspace_id": "workspace-current"},
+    )
+    try:
+        with pytest.raises(ModelProviderPolicyError):
+            await vertex._build(fallback_to_env_vars=False, user_id="policy-actor")
+    finally:
+        reset_current_model_provider_policy_context(token)
+
+    component._get_kb_metadata.assert_awaited_once_with("support_docs")
+    assert policy.async_candidates == [frozenset({"openai"})]
+    assert policy.async_contexts == [
+        ModelProviderPolicyContext(
+            user_id="policy-actor",
+            attributes={"project_id": "project-current", "workspace_id": "workspace-current"},
+        )
+    ]
+    vertex._build_each_vertex_in_params_dict.assert_not_awaited()
+    vertex._build_results.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("component_kind", ["language", "embedding"])
 async def test_delegate_provider_override_denied_before_local_credential_hydration(monkeypatch, component_kind):
     """Unified selectors must refresh only the selected provider before loading their API key."""
