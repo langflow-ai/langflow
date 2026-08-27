@@ -535,6 +535,23 @@ async def build_vertex(
         folder_id=flow.folder_id,
     )
 
+    # The stored graph is caller-controlled: any user who can write a flow can persist
+    # component source through the ordinary flow API and reach this seam with it. The
+    # global validator does not know the caller, so it cannot enforce
+    # ``custom_component_admin_only`` -- run the same caller-aware policy the whole-flow
+    # build runs. A permissive policy returns ``None`` and the stored graph stands.
+    try:
+        sanitized_data = await prepare_flow_build_for_user(
+            flow.data,
+            is_superuser=current_user.is_superuser,
+        )
+    except CatalogPolicyIdentityUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except CustomComponentValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
     flow_id_str = str(flow_id)
@@ -551,7 +568,18 @@ async def build_vertex(
 
     try:
         cache = await chat_service.get_cache(flow_id_str)
-        if isinstance(cache, CacheMiss):
+        if sanitized_data is not None:
+            # Cache keys carry no policy generation, so a graph cached while the policy was
+            # off still embeds the caller's own source. Rebuild from the trusted copy the
+            # policy returned rather than reusing that compilation.
+            graph = await build_and_cache_graph_from_data(
+                flow_id=flow_id_str,
+                chat_service=chat_service,
+                graph_data=sanitized_data,
+            )
+            run_id = str(uuid.uuid4())
+            graph.set_run_id(run_id)
+        elif isinstance(cache, CacheMiss):
             # If there's no cache
             await logger.awarning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
             async with session_scope() as session:
@@ -569,7 +597,7 @@ async def build_vertex(
         except HTTPException:
             await _clear_invalid_graph_cache(chat_service, flow_id_str)
             raise
-        if not isinstance(cache, CacheMiss):
+        if sanitized_data is None and not isinstance(cache, CacheMiss):
             await graph.initialize_run()
             run_id = graph.run_id
         vertex = graph.get_vertex(vertex_id)
