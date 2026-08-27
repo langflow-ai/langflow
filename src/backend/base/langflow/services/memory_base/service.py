@@ -24,6 +24,7 @@ from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, requi
 from sqlmodel import col, select
 
 from langflow.api.utils.kb_helpers import local_chroma_rejection_reason
+from langflow.api.v1.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.services.base import Service
 from langflow.services.database.models.memory_base.model import (
     MemoryBase,
@@ -61,6 +62,9 @@ from langflow.services.memory_base.kb_path_helpers import (
     initialize_kb,
     resolve_kb_username,
     sanitize_kb_name,
+)
+from langflow.services.memory_base.provider_scope import (
+    resolve_owned_memory_flow,
 )
 
 if TYPE_CHECKING:
@@ -144,7 +148,13 @@ class MemoryBaseService(Service):
     #  CRUD                                                                #
     # ------------------------------------------------------------------ #
 
-    async def create(self, payload: MemoryBaseCreate, user_id: uuid.UUID) -> MemoryBase:
+    async def create(
+        self,
+        payload: MemoryBaseCreate,
+        user_id: uuid.UUID,
+        *,
+        is_superuser: bool = False,
+    ) -> MemoryBase:
         backend_type = payload.backend_type or resolve_default_kb_backend()
         backend_config = payload.backend_config or {}
 
@@ -158,28 +168,28 @@ class MemoryBaseService(Service):
 
         # 1. Verify that the referenced flow belongs to this user.
         async with session_scope() as db:
-            from langflow.services.database.models.flow.model import Flow
-
-            flow_result = await db.exec(select(Flow).where(Flow.id == payload.flow_id).where(Flow.user_id == user_id))
-            if flow_result.first() is None:
-                msg = f"Flow {payload.flow_id} not found"
-                raise PermissionError(msg)
+            flow = await resolve_owned_memory_flow(db, flow_id=payload.flow_id, user_id=user_id)
 
         # 1b. Validate every supplied preprocessing identity even while the
         # feature is disabled; enabling it additionally requires credentials.
-        if payload.preprocessing:
-            _validate_preprocessing_api_key(user_id, payload.preproc_model)
-        elif payload.preproc_model:
-            _require_preprocessing_model_provider(user_id, payload.preproc_model)
-
-        # 1c. Resolve and authorize the embedding provider before filesystem
-        # initialization or any persistence work.
-        embedding_provider = infer_embedding_provider(payload.embedding_model)
-        require_model_provider(
+        with scoped_model_provider_policy_for_flow(
+            flow,
             user_id=user_id,
-            provider=embedding_provider,
-            purpose=ModelProviderPolicyPurpose.CONFIGURE,
-        )
+            is_superuser=is_superuser,
+        ):
+            if payload.preprocessing:
+                _validate_preprocessing_api_key(user_id, payload.preproc_model)
+            elif payload.preproc_model:
+                _require_preprocessing_model_provider(user_id, payload.preproc_model)
+
+            # 1c. Resolve and authorize the embedding provider before filesystem
+            # initialization or any persistence work.
+            embedding_provider = infer_embedding_provider(payload.embedding_model)
+            require_model_provider(
+                user_id=user_id,
+                provider=embedding_provider,
+                purpose=ModelProviderPolicyPurpose.CONFIGURE,
+            )
 
         # 2. Resolve username — needed for the KB path.
         async with session_scope() as db:
@@ -332,6 +342,8 @@ class MemoryBaseService(Service):
         memory_base_id: uuid.UUID,
         user_id: uuid.UUID,
         patch: MemoryBaseUpdate,
+        *,
+        is_superuser: bool = False,
     ) -> MemoryBase | None:
         """Update mutable fields.
 
@@ -345,15 +357,21 @@ class MemoryBaseService(Service):
             if mb is None:
                 return None
 
-            embedding_provider = infer_embedding_provider(mb.embedding_model)
-            require_model_provider(
+            flow = await resolve_owned_memory_flow(db, flow_id=mb.flow_id, user_id=user_id)
+            with scoped_model_provider_policy_for_flow(
+                flow,
                 user_id=user_id,
-                provider=embedding_provider,
-                purpose=ModelProviderPolicyPurpose.CONFIGURE,
-            )
+                is_superuser=is_superuser,
+            ):
+                embedding_provider = infer_embedding_provider(mb.embedding_model)
+                require_model_provider(
+                    user_id=user_id,
+                    provider=embedding_provider,
+                    purpose=ModelProviderPolicyPurpose.CONFIGURE,
+                )
 
-            if mb.preprocessing:
-                _validate_preprocessing_api_key(user_id, mb.preproc_model)
+                if mb.preprocessing:
+                    _validate_preprocessing_api_key(user_id, mb.preproc_model)
 
             for field, value in patch.model_dump(exclude_unset=True).items():
                 setattr(mb, field, value)

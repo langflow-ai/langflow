@@ -225,6 +225,25 @@ class TestIngestionProviderScope:
         assert "project_id" not in field_names
 
 
+@pytest.fixture(autouse=True)
+def _stored_flow_scope_for_legacy_ingestion_tests(monkeypatch, request):
+    """Keep older task-unit fixtures focused below the new scope preflight."""
+    if request.cls is TestIngestionProviderScope:
+        return
+
+    import langflow.services.memory_base.task as task_module
+    from langflow.services.database.models.flow.model import Flow
+    from langflow.services.memory_base.provider_scope import MemoryProviderScope
+
+    async def resolve_scope(_db, *, flow_id, user_id):
+        return MemoryProviderScope(
+            flow=Flow(id=flow_id, user_id=user_id, name="stored test flow"),
+            is_superuser=False,
+        )
+
+    monkeypatch.setattr(task_module, "resolve_memory_provider_scope", resolve_scope)
+
+
 # ------------------------------------------------------------------ #
 #  ingest_memory_task — orchestrator edge cases                       #
 # ------------------------------------------------------------------ #

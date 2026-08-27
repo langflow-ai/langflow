@@ -36,11 +36,13 @@ from typing import TYPE_CHECKING
 
 from lfx.base.knowledge_bases.backends import create_backend
 from lfx.log.logger import logger
+from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, require_model_provider
 from lfx.workflow.end_user_identity import end_user_id_from_scoped_session
 from sqlalchemy import text
 from sqlmodel import Session, col, select
 
 from langflow.api.utils.kb_helpers import KBIngestionHelper, resolve_backend_selection, resolve_local_store_path
+from langflow.api.v1.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.services.database.models.memory_base.model import (
     MemoryBasePreprocessingOutput,
     MemoryBaseSession,
@@ -55,6 +57,7 @@ from langflow.services.memory_base.document_builders import (
 )
 from langflow.services.memory_base.kb_path_helpers import hash_session_id
 from langflow.services.memory_base.preprocessing import DEFAULT_KILL_PHRASE, run_preprocessing
+from langflow.services.memory_base.provider_scope import resolve_memory_provider_scope
 
 if TYPE_CHECKING:
     import uuid
@@ -190,6 +193,28 @@ async def _read_live_cursor(db: Session, memory_base_id: uuid.UUID, session_id: 
 
 
 async def ingest_memory_task(*, request: IngestionRequest) -> dict:
+    """Re-resolve and bind trusted provider scope before distributed ingestion."""
+    async with session_scope() as db:
+        provider_scope = await resolve_memory_provider_scope(
+            db,
+            flow_id=request.flow_id,
+            user_id=request.user_id,
+        )
+
+    with scoped_model_provider_policy_for_flow(
+        provider_scope.flow,
+        user_id=request.user_id,
+        is_superuser=provider_scope.is_superuser,
+    ):
+        require_model_provider(
+            user_id=request.user_id,
+            provider=request.embedding_provider,
+            purpose=ModelProviderPolicyPurpose.USE,
+        )
+        return await _ingest_memory_task_in_scope(request=request)
+
+
+async def _ingest_memory_task_in_scope(*, request: IngestionRequest) -> dict:
     """Ingest pending output messages from a session into the target Knowledge Base.
 
     Accepts a single ``IngestionRequest`` dataclass that bundles all required parameters.

@@ -508,10 +508,11 @@ class TestMemoryBaseCreateFlowOwnership:
         from fastapi import HTTPException
         from langflow.api.v1.memories import create_memory_base
         from langflow.services.database.models.user.model import User
+        from langflow.services.memory_base.provider_scope import MemoryBaseFlowNotFoundError
 
         fake_user = User(id=uuid.uuid4(), username="alice")
         mock_service = MagicMock()
-        mock_service.create = AsyncMock(side_effect=PermissionError("Flow abc not found"))
+        mock_service.create = AsyncMock(side_effect=MemoryBaseFlowNotFoundError("Flow abc not found"))
 
         with (
             patch("langflow.api.v1.memories.get_memory_base_service", return_value=mock_service),
@@ -1404,6 +1405,20 @@ class TestMemoryBaseServiceRegenerate:
 
 
 class TestIngestMemoryTask:
+    @pytest.fixture(autouse=True)
+    def _stored_flow_scope(self, monkeypatch):
+        import langflow.services.memory_base.task as task_module
+        from langflow.services.database.models.flow.model import Flow
+        from langflow.services.memory_base.provider_scope import MemoryProviderScope
+
+        async def resolve_scope(_db, *, flow_id, user_id):
+            return MemoryProviderScope(
+                flow=Flow(id=flow_id, user_id=user_id, name="stored test flow"),
+                is_superuser=False,
+            )
+
+        monkeypatch.setattr(task_module, "resolve_memory_provider_scope", resolve_scope)
+
     async def test_no_op_when_no_pending_messages(self, tmp_path):
         from langflow.services.memory_base.task import IngestionRequest, ingest_memory_task
 

@@ -45,6 +45,7 @@ from langflow.services.database.models.memory_base.model import (
 from langflow.services.deps import get_authorization_service, get_memory_base_service, session_scope
 from langflow.services.jobs import DuplicateJobError
 from langflow.services.memory_base.kb_path_helpers import BackendProvisioningError
+from langflow.services.memory_base.provider_scope import MemoryBaseFlowNotFoundError
 from langflow.services.memory_base.service import PreprocessingValidationError
 
 router = APIRouter(tags=["Memories"], prefix="/memories", include_in_schema=False)
@@ -147,8 +148,12 @@ async def create_memory_base(
         kb_user_id=current_user.id,
     )
     try:
-        mb = await get_memory_base_service().create(payload, user_id=current_user.id)
-    except PermissionError as exc:
+        mb = await get_memory_base_service().create(
+            payload,
+            user_id=current_user.id,
+            is_superuser=bool(current_user.is_superuser),
+        )
+    except MemoryBaseFlowNotFoundError as exc:
         # Flow not found or belongs to another user — return 404 to avoid info-leak
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PreprocessingValidationError as exc:
@@ -374,7 +379,14 @@ async def update_memory_base(
             action=KnowledgeBaseAction.WRITE,
         )
     try:
-        mb = await get_memory_base_service().update(memory_base_id, user_id=mb.user_id, patch=patch)
+        mb = await get_memory_base_service().update(
+            memory_base_id,
+            user_id=mb.user_id,
+            patch=patch,
+            is_superuser=bool(current_user.is_superuser),
+        )
+    except MemoryBaseFlowNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PreprocessingValidationError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     if mb is None:
