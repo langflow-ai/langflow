@@ -2,6 +2,9 @@ const mockPostMutateAsync = jest.fn();
 const mockPostMutate = jest.fn();
 const mockPatchMutateAsync = jest.fn();
 const mockPatchMutate = jest.fn();
+const mockUseGetGlobalVariablesHook = jest.fn(() => ({
+  data: mockGlobalVariables,
+}));
 
 let mockGlobalVariables:
   | Array<{
@@ -14,7 +17,8 @@ let mockGlobalVariables:
   | undefined;
 
 jest.mock("../use-get-global-variables", () => ({
-  useGetGlobalVariables: () => ({ data: mockGlobalVariables }),
+  useGetGlobalVariables: (...args: unknown[]) =>
+    mockUseGetGlobalVariablesHook(...args),
 }));
 
 jest.mock("../use-post-global-variables", () => ({
@@ -259,6 +263,71 @@ describe("useGlobalVariableUpsert", () => {
       const { result } = renderHook(() => useGlobalVariableUpsert());
 
       expect(result.current.updateGlobalVariable).toBe(mockPatchMutate);
+    });
+  });
+
+  describe("provider scope", () => {
+    const providerScope = { flowId: "flow-project-a" };
+
+    it("uses the same trusted flow scope for the lookup and create", async () => {
+      mockPostMutateAsync.mockResolvedValue({
+        id: "var-2",
+        name: "PROJECT_KEY",
+      });
+
+      const { result } = renderHook(() =>
+        useGlobalVariableUpsert(providerScope as never),
+      );
+      await act(async () => {
+        await result.current.upsertGlobalVariable({
+          name: "PROJECT_KEY",
+          value: "secret",
+          type: "Credential",
+        });
+      });
+
+      expect(mockUseGetGlobalVariablesHook).toHaveBeenCalledWith(providerScope);
+      expect(mockPostMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining(providerScope),
+      );
+    });
+
+    it("uses the trusted flow scope for an existing variable update", async () => {
+      mockGlobalVariables = [{ id: "var-1", name: "PROJECT_KEY" }];
+      mockPatchMutateAsync.mockResolvedValue({ name: "PROJECT_KEY" });
+
+      const { result } = renderHook(() =>
+        useGlobalVariableUpsert(providerScope as never),
+      );
+      await act(async () => {
+        await result.current.upsertGlobalVariable({
+          name: "PROJECT_KEY",
+          value: "replacement",
+        });
+      });
+
+      expect(mockPatchMutateAsync).toHaveBeenCalledWith({
+        id: "var-1",
+        value: "replacement",
+        ...providerScope,
+      });
+    });
+
+    it("binds the trusted flow scope to edit-path updates", () => {
+      const options = { onSuccess: jest.fn() };
+      const { result } = renderHook(() =>
+        useGlobalVariableUpsert(providerScope as never),
+      );
+
+      result.current.updateGlobalVariable(
+        { id: "var-1", name: "PROJECT_KEY" },
+        options,
+      );
+
+      expect(mockPatchMutate).toHaveBeenCalledWith(
+        { id: "var-1", name: "PROJECT_KEY", ...providerScope },
+        options,
+      );
     });
   });
 });

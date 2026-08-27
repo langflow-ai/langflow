@@ -3,9 +3,17 @@ import InputGlobalComponent from "..";
 
 const mockUseGetGlobalVariables = jest.fn();
 const mockInputComponent = jest.fn().mockReturnValue(null);
+let mockCurrentFlowId = "flow-project-a";
 
 jest.mock("@/controllers/API/queries/variables", () => ({
-  useGetGlobalVariables: () => mockUseGetGlobalVariables(),
+  useGetGlobalVariables: (...args: unknown[]) =>
+    mockUseGetGlobalVariables(...args),
+}));
+
+jest.mock("@/stores/flowsManagerStore", () => ({
+  __esModule: true,
+  default: (selector: (state: { currentFlowId: string }) => unknown) =>
+    selector({ currentFlowId: mockCurrentFlowId }),
 }));
 
 jest.mock(
@@ -62,6 +70,35 @@ describe("InputGlobalComponent", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCurrentFlowId = "flow-project-a";
+  });
+
+  it("loads variables in the trusted flow scope and preserves a project-only reference", async () => {
+    mockUseGetGlobalVariables.mockReturnValue({
+      data: [{ id: "project-var", name: "PROJECT_ONLY" }],
+      isFetchedAfterMount: true,
+      isFetching: false,
+      isSuccess: true,
+    });
+
+    render(
+      <InputGlobalComponent
+        id="project-variable"
+        value="PROJECT_ONLY"
+        display_name="API Key"
+        handleOnNewValue={handleOnNewValue}
+        load_from_db
+        password
+        editNode={false}
+        disabled={false}
+      />,
+    );
+
+    expect(mockUseGetGlobalVariables).toHaveBeenCalledWith({
+      flowId: "flow-project-a",
+      enabled: true,
+    });
+    await waitFor(() => expect(handleOnNewValue).not.toHaveBeenCalled());
   });
 
   it("clears missing saved variables only after a successful settled fetch", async () => {
