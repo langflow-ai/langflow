@@ -248,6 +248,18 @@ class TestScanCodeSecurityDangerousAttrCalls:
     @pytest.mark.parametrize(
         "code",
         [
+            "import logging\nlogging.os.system('id')",
+            "import logging\nsecret = logging.os.environ",
+            "import logging\ngetattr(logging, 'os').spawnv()",
+        ],
+        ids=["dangerous-call", "dangerous-read", "reflective-access"],
+    )
+    def test_should_detect_restricted_os_access_through_logging(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
             "from os import *\ndef write(value):\n    return value\nwrite('ok')",
             "from os import *\nwrite = lambda value: value\nwrite('ok')",
             "from os import *\ndef run(write):\n    return write('ok')",
@@ -1426,11 +1438,20 @@ class TestScanCodeSecurityRuntimeModuleBypass:
         "code",
         [
             "import example_module\nexample_module.os.system('ordinary object')",
+            "import example_module\nsecret = example_module.os.environ",
+            "import example_module\ngetattr(example_module, 'os').system('ordinary object')",
             "import example_module\nitems = example_module.sys.modules",
             "from example_module import os\nos.system('ordinary object')",
             "from example_module import sys\nitems = sys.modules",
         ],
-        ids=["module-os-attribute", "module-sys-attribute", "imported-os", "imported-sys"],
+        ids=[
+            "module-os-call",
+            "module-os-read",
+            "module-os-reflection",
+            "module-sys-attribute",
+            "imported-os",
+            "imported-sys",
+        ],
     )
     def test_should_not_canonicalize_unknown_module_attributes(self, code):
         assert scan_code_security(code).is_safe is True

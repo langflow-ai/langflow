@@ -300,6 +300,7 @@ _DANGEROUS_CALL_MEMBERS, _DANGEROUS_READ_MEMBERS = _build_dangerous_members()
 # module's ``.os`` or ``.sys`` attribute is not necessarily the stdlib module.
 _RESTRICTED_MODULE_REEXPORTS: dict[str, frozenset[str]] = {
     "glob": frozenset({"os", "sys"}),
+    "logging": frozenset({"os"}),
     "os": frozenset({"sys"}),
     "os.path": frozenset({"os", "sys"}),
     "pathlib": frozenset({"os", "sys"}),
