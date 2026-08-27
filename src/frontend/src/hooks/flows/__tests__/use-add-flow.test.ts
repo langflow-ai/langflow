@@ -13,6 +13,17 @@ const mockSetMyCollectionId = jest.fn();
 const mockDeleteFlow = jest.fn();
 const mockPostAddFlow = jest.fn();
 const mockPostAddFolder = jest.fn();
+const mockUpdateGroupRecursion = jest.fn();
+const mockUseGetGlobalVariables = jest.fn(() => ({
+  data: [
+    {
+      id: "project-variable",
+      name: "PROJECT_KEY",
+      type: "Credential",
+      default_fields: ["API Key"],
+    },
+  ],
+}));
 
 jest.mock("react-router-dom", () => ({
   useParams: () => ({ folderId: "folder-1" }),
@@ -24,6 +35,11 @@ jest.mock("@/controllers/API/queries/flows/use-post-add-flow", () => ({
 
 jest.mock("@/controllers/API/queries/folders", () => ({
   usePostFolders: () => ({ mutateAsync: mockPostAddFolder }),
+}));
+
+jest.mock("@/controllers/API/queries/variables", () => ({
+  useGetGlobalVariables: (options: unknown) =>
+    mockUseGetGlobalVariables(options),
 }));
 
 type Selector<T> = (state: T) => unknown;
@@ -38,8 +54,8 @@ type FolderState = {
 type AuthState = { userData: { optins: { dialog_dismissed: boolean } } };
 type UtilityState = { hideGettingStartedProgress: boolean };
 type GlobalVariablesState = {
-  unavailableFields: never[];
-  globalVariablesEntries: never[];
+  unavailableFields: Record<string, string>;
+  globalVariablesEntries: string[];
 };
 
 jest.mock("@/stores/alertStore", () => {
@@ -90,7 +106,10 @@ jest.mock("@/stores/utilityStore", () => ({
 
 jest.mock("@/stores/globalVariablesStore/globalVariables", () => ({
   useGlobalVariablesStore: (selector: Selector<GlobalVariablesState>) =>
-    selector({ unavailableFields: [], globalVariablesEntries: [] }),
+    selector({
+      unavailableFields: { System: "GLOBAL_KEY" },
+      globalVariablesEntries: ["GLOBAL_KEY"],
+    }),
 }));
 
 jest.mock("@/stores/typesStore", () => ({
@@ -120,7 +139,8 @@ jest.mock("@/utils/reactflowUtils", () => ({
     },
   })),
   addVersionToDuplicates: jest.fn((flow) => flow.name),
-  updateGroupRecursion: jest.fn(),
+  updateGroupRecursion: (...args: unknown[]) =>
+    mockUpdateGroupRecursion(...args),
   processFlows: jest.fn((flows) => ({ data: {}, flows })),
   extractFieldsFromComponenents: jest.fn(() => ({})),
 }));
@@ -267,5 +287,48 @@ describe("useAddFlow — success path", () => {
     await result.current({ flow: FLOW_STUB });
 
     expect(mockSetFlows).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves project-only credentials when duplicating into that project", async () => {
+    const flowWithProjectCredential = {
+      ...FLOW_STUB,
+      data: {
+        ...FLOW_STUB.data,
+        nodes: [
+          {
+            id: "credential-node",
+            type: "genericNode",
+            position: { x: 0, y: 0 },
+            data: {
+              type: "CredentialComponent",
+              node: {
+                template: {
+                  api_key: {
+                    display_name: "API Key",
+                    load_from_db: true,
+                    value: "PROJECT_KEY",
+                  },
+                },
+              },
+            },
+          },
+        ],
+      },
+    } as FlowType;
+    resolveAddFlow(flowWithProjectCredential);
+
+    const { result } = renderHook(() => useAddFlow());
+    await result.current({ flow: flowWithProjectCredential });
+
+    expect(mockUseGetGlobalVariables).toHaveBeenCalledWith({
+      enabled: true,
+      projectId: "folder-1",
+    });
+    expect(mockUpdateGroupRecursion).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "credential-node" }),
+      [],
+      { "API Key": "PROJECT_KEY" },
+      ["PROJECT_KEY"],
+    );
   });
 });

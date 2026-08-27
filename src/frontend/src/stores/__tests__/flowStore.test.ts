@@ -1,5 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { v5 as uuidv5 } from "uuid";
+import { queryClient } from "@/contexts";
+import { getGlobalVariablesQueryKey } from "@/controllers/API/queries/variables";
 
 // Mock all the complex dependencies
 jest.mock("@xyflow/react", () => ({
@@ -53,8 +55,12 @@ jest.mock("../darkStore", () => ({
 }));
 
 jest.mock("../flowsManagerStore", () => {
-  const state: { currentFlow: { id: string; name: string } | undefined } = {
+  const state: {
+    currentFlow: { id: string; name: string } | undefined;
+    currentFlowId: string | undefined;
+  } = {
     currentFlow: undefined,
+    currentFlowId: undefined,
   };
   return {
     __esModule: true,
@@ -66,15 +72,20 @@ jest.mock("../flowsManagerStore", () => {
       }),
       __setCurrentFlow: (flow: { id: string; name: string } | undefined) => {
         state.currentFlow = flow;
+        state.currentFlowId = flow?.id;
       },
     },
   };
 });
 
+let mockGlobalVariablesEntries: string[] | undefined;
+let mockUnavailableFields: Record<string, string> | undefined;
+
 jest.mock("../globalVariablesStore/globalVariables", () => ({
   useGlobalVariablesStore: {
     getState: () => ({
-      globalVariables: {},
+      globalVariablesEntries: mockGlobalVariablesEntries,
+      unavailableFields: mockUnavailableFields,
     }),
   },
 }));
@@ -163,6 +174,9 @@ describe("useFlowStore", () => {
   beforeEach(() => {
     // Clear all mocks
     jest.clearAllMocks();
+    queryClient.clear();
+    mockGlobalVariablesEntries = undefined;
+    mockUnavailableFields = undefined;
 
     // Reset store state to basics
     act(() => {
@@ -208,6 +222,69 @@ describe("useFlowStore", () => {
       expect(result.current.inputs).toEqual([]);
       expect(result.current.outputs).toEqual([]);
       expect(result.current.hasIO).toBe(false);
+    });
+  });
+
+  describe("scoped global variables", () => {
+    it("preserves a project-only credential when copying and pasting within its flow", () => {
+      const flowsManager = jest.requireMock("../flowsManagerStore") as {
+        default: {
+          __setCurrentFlow: (
+            flow: { id: string; name: string } | undefined,
+          ) => void;
+        };
+      };
+      flowsManager.default.__setCurrentFlow({
+        id: "project-flow",
+        name: "Project Flow",
+      });
+      mockGlobalVariablesEntries = ["GLOBAL_KEY"];
+      mockUnavailableFields = {};
+      queryClient.setQueryData(
+        getGlobalVariablesQueryKey({ flowId: "project-flow" }),
+        [
+          {
+            id: "project-variable",
+            name: "PROJECT_KEY",
+            type: "Credential",
+            default_fields: ["API Key"],
+          },
+        ],
+      );
+
+      const credentialNode = {
+        id: "credential-node",
+        type: "genericNode",
+        position: { x: 0, y: 0 },
+        data: {
+          type: "CredentialComponent",
+          node: {
+            template: {
+              api_key: {
+                display_name: "API Key",
+                load_from_db: true,
+                value: "PROJECT_KEY",
+              },
+            },
+          },
+        },
+      } as AllNodeType;
+
+      act(() => {
+        useFlowStore.setState({ currentFlow: undefined });
+        useFlowStore
+          .getState()
+          .paste(
+            { nodes: [credentialNode], edges: [] },
+            { x: 0, y: 0, paneX: 1, paneY: 1 },
+          );
+      });
+
+      const pastedField =
+        useFlowStore.getState().nodes[0].data.node?.template.api_key;
+      expect(pastedField?.value).toBe("PROJECT_KEY");
+      expect(pastedField?.load_from_db).toBe(true);
+      flowsManager.default.__setCurrentFlow(undefined);
     });
   });
 
