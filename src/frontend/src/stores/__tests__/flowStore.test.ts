@@ -171,6 +171,25 @@ describe("useFlowStore", () => {
     target: "node-2",
   } as EdgeType;
 
+  const createCredentialNode = (value: string) =>
+    ({
+      id: "credential-node",
+      type: "genericNode",
+      position: { x: 0, y: 0 },
+      data: {
+        type: "CredentialComponent",
+        node: {
+          template: {
+            api_key: {
+              display_name: "API Key",
+              load_from_db: true,
+              value,
+            },
+          },
+        },
+      },
+    }) as AllNodeType;
+
   beforeEach(() => {
     // Clear all mocks
     jest.clearAllMocks();
@@ -252,30 +271,12 @@ describe("useFlowStore", () => {
         ],
       );
 
-      const credentialNode = {
-        id: "credential-node",
-        type: "genericNode",
-        position: { x: 0, y: 0 },
-        data: {
-          type: "CredentialComponent",
-          node: {
-            template: {
-              api_key: {
-                display_name: "API Key",
-                load_from_db: true,
-                value: "PROJECT_KEY",
-              },
-            },
-          },
-        },
-      } as AllNodeType;
-
       act(() => {
         useFlowStore.setState({ currentFlow: undefined });
         useFlowStore
           .getState()
           .paste(
-            { nodes: [credentialNode], edges: [] },
+            { nodes: [createCredentialNode("PROJECT_KEY")], edges: [] },
             { x: 0, y: 0, paneX: 1, paneY: 1 },
           );
       });
@@ -284,6 +285,93 @@ describe("useFlowStore", () => {
         useFlowStore.getState().nodes[0].data.node?.template.api_key;
       expect(pastedField?.value).toBe("PROJECT_KEY");
       expect(pastedField?.load_from_db).toBe(true);
+      flowsManager.default.__setCurrentFlow(undefined);
+    });
+
+    it("does not treat global or sibling-flow snapshots as authoritative", () => {
+      const flowsManager = jest.requireMock("../flowsManagerStore") as {
+        default: {
+          __setCurrentFlow: (
+            flow: { id: string; name: string } | undefined,
+          ) => void;
+        };
+      };
+      flowsManager.default.__setCurrentFlow({
+        id: "target-flow",
+        name: "Target Flow",
+      });
+      mockGlobalVariablesEntries = ["GLOBAL_KEY"];
+      mockUnavailableFields = { System: "GLOBAL_KEY" };
+      queryClient.setQueryData(getGlobalVariablesQueryKey(), [
+        {
+          id: "global-variable",
+          name: "GLOBAL_KEY",
+          type: "Credential",
+          default_fields: ["System"],
+        },
+      ]);
+      queryClient.setQueryData(
+        getGlobalVariablesQueryKey({ flowId: "sibling-flow" }),
+        [
+          {
+            id: "sibling-variable",
+            name: "SIBLING_KEY",
+            type: "Credential",
+            default_fields: ["API Key"],
+          },
+        ],
+      );
+
+      act(() => {
+        useFlowStore.setState({ currentFlow: undefined });
+        useFlowStore
+          .getState()
+          .paste(
+            { nodes: [createCredentialNode("PROJECT_KEY")], edges: [] },
+            { x: 0, y: 0, paneX: 1, paneY: 1 },
+          );
+      });
+
+      const pastedField =
+        useFlowStore.getState().nodes[0].data.node?.template.api_key;
+      expect(pastedField?.value).toBe("PROJECT_KEY");
+      expect(pastedField?.load_from_db).toBe(true);
+      flowsManager.default.__setCurrentFlow(undefined);
+    });
+
+    it("uses an exact empty flow snapshot to clear invalid references", () => {
+      const flowsManager = jest.requireMock("../flowsManagerStore") as {
+        default: {
+          __setCurrentFlow: (
+            flow: { id: string; name: string } | undefined,
+          ) => void;
+        };
+      };
+      flowsManager.default.__setCurrentFlow({
+        id: "target-flow",
+        name: "Target Flow",
+      });
+      mockGlobalVariablesEntries = ["PROJECT_KEY"];
+      mockUnavailableFields = { "API Key": "PROJECT_KEY" };
+      queryClient.setQueryData(
+        getGlobalVariablesQueryKey({ flowId: "target-flow" }),
+        [],
+      );
+
+      act(() => {
+        useFlowStore.setState({ currentFlow: undefined });
+        useFlowStore
+          .getState()
+          .paste(
+            { nodes: [createCredentialNode("PROJECT_KEY")], edges: [] },
+            { x: 0, y: 0, paneX: 1, paneY: 1 },
+          );
+      });
+
+      const pastedField =
+        useFlowStore.getState().nodes[0].data.node?.template.api_key;
+      expect(pastedField?.value).toBe("");
+      expect(pastedField?.load_from_db).toBe(false);
       flowsManager.default.__setCurrentFlow(undefined);
     });
   });

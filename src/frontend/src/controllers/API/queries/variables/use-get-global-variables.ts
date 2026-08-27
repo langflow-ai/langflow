@@ -5,10 +5,10 @@ import type { useQueryFunctionType } from "@/types/api";
 import type { GlobalVariable } from "@/types/global_variables";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
+import { getGlobalVariablesQueryKey } from "../../helpers/global-variable-scope";
 import {
   appendProviderScope,
   type ProviderScopeParams,
-  providerScopeQueryKey,
 } from "../../helpers/provider-scope";
 import { UseRequestProcessor } from "../../services/request-processor";
 
@@ -16,8 +16,7 @@ interface GetGlobalVariablesOptions extends ProviderScopeParams {
   mirrorToStore?: boolean;
 }
 
-export const getGlobalVariablesQueryKey = (scope?: ProviderScopeParams) =>
-  ["useGetGlobalVariables", ...providerScopeQueryKey(scope)] as const;
+export { getGlobalVariablesQueryKey };
 
 export const useGetGlobalVariables: useQueryFunctionType<
   undefined,
