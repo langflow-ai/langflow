@@ -1,4 +1,8 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  focusManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { useTypesStore } from "@/stores/typesStore";
@@ -135,5 +139,37 @@ describe("useGetTypes scoped store ownership", () => {
       ).toEqual(flowA),
     );
     expect(useTypesStore.getState().data).toEqual(flowB);
+  });
+
+  it("refreshes a stale scoped palette on focus after provider revocation", async () => {
+    const now = 1_000_000;
+    const dateNow = jest.spyOn(Date, "now").mockReturnValue(now);
+    const allowed = palette("openai", "OpenAIComponent");
+    const revoked = palette("core", "PromptComponent");
+    mockApiGet
+      .mockResolvedValueOnce({ data: allowed })
+      .mockResolvedValueOnce({ data: revoked });
+
+    try {
+      renderHook(() => useGetTypes({ flowId: "flow-a" }), {
+        wrapper: makeWrapper(queryClient),
+      });
+
+      await waitFor(() =>
+        expect(useTypesStore.getState().data).toEqual(allowed),
+      );
+
+      dateNow.mockReturnValue(now + 60_001);
+      act(() => focusManager.setFocused(false));
+      act(() => focusManager.setFocused(true));
+
+      await waitFor(() =>
+        expect(useTypesStore.getState().data).toEqual(revoked),
+      );
+      expect(mockApiGet).toHaveBeenCalledTimes(2);
+    } finally {
+      focusManager.setFocused(undefined);
+      dateNow.mockRestore();
+    }
   });
 });
