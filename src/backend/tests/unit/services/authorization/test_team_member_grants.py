@@ -22,6 +22,10 @@ from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 
+def test_source_kind_schema_matches_migration() -> None:
+    assert AuthzTeamMemberGrant.__table__.c.source_kind.type.length == 16
+
+
 @pytest_asyncio.fixture
 async def grant_session():
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
