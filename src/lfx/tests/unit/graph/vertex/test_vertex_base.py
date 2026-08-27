@@ -222,6 +222,54 @@ async def test_plain_component_model_selection_denied_before_local_credential_hy
     vertex._build_results.assert_not_awaited()
 
 
+@pytest.mark.asyncio
+async def test_renamed_model_input_denied_before_local_credential_hydration(monkeypatch):
+    """Every actual ModelInput name is preflighted; generic provider overrides apply only to ``model``."""
+    from lfx.custom.custom_component.component import Component
+    from lfx.io import ModelInput, SecretStrInput
+
+    class AstraLikeVectorStoreComponent(Component):
+        display_name = "Astra-like Vector Store"
+        inputs = [
+            ModelInput(name="embedding_model", model_type="embedding"),
+            SecretStrInput(name="api_key"),
+        ]
+
+    params = {
+        "embedding_model": [{"name": "text-embedding-3-small", "provider": "OpenAI", "metadata": {}}],
+        # Only the canonical ``model`` selector consumes this override. An unrelated
+        # component field must not redirect the embedding_model policy identity.
+        "provider": "Anthropic",
+        "api_key": "stored-variable-reference",  # pragma: allowlist secret
+    }
+    component = AstraLikeVectorStoreComponent(_user_id="owner-1", _parameters=params)
+    policy = _HierarchyRefreshingPolicy(allowed_provider_ids=set())
+    monkeypatch.setattr("lfx.services.deps.get_model_provider_policy_service", lambda: policy)
+    vertex = object.__new__(Vertex)
+    vertex.display_name = component.display_name
+    vertex.base_type = "component"
+    vertex.params = params
+    vertex.custom_component = component
+    vertex._upstream_secret_values = set()
+    vertex._validate_built_object = Mock()
+    vertex._build_each_vertex_in_params_dict = AsyncMock()
+    vertex._build_results = AsyncMock(side_effect=AssertionError("local credential hydrated before provider denial"))
+
+    token = set_current_model_provider_policy_context(
+        user_id="owner-1",
+        attributes={"project_id": "project-new", "workspace_id": "workspace-new"},
+    )
+    try:
+        with pytest.raises(ModelProviderPolicyError):
+            await vertex._build(fallback_to_env_vars=False, user_id="owner-1")
+    finally:
+        reset_current_model_provider_policy_context(token)
+
+    assert policy.async_candidates == [frozenset({"openai"})]
+    vertex._build_each_vertex_in_params_dict.assert_not_awaited()
+    vertex._build_results.assert_not_awaited()
+
+
 def test_vertex_getstate_drops_custom_component_runtime_state():
     """Graph cache serialization should rebuild component instances instead of pickling live runtime state."""
 
