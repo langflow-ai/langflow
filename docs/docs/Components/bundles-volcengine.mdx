@@ -1,0 +1,46 @@
+---
+title: Volcengine Ark
+slug: /bundles-volcengine
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Volcengine Ark** bundle.
+
+Volcengine Ark serves ByteDance's Doubao models over an OpenAI-compatible API. For more information, see the [Volcengine Ark documentation](https://www.volcengine.com/docs/82379/1099455).
+
+## Volcengine Ark text generation
+
+The **Volcengine Ark** component generates text using ByteDance's Doubao models.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use a Doubao model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Transform** component.
+
+For more information, see [Language model components](/components-models).
+
+:::important
+Ark only resolves fully versioned model IDs. The short names shown in the Volcengine console, such as `doubao-seed-2.1-pro`, return `InvalidEndpointOrModel.NotFound`. Use the dated IDs offered in the **Model Name** list, for example `doubao-seed-2-1-pro-260628`. The only unversioned ID that resolves is `doubao-seed-evolving`.
+:::
+
+### Volcengine Ark text generation parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| max_tokens | Integer | Input parameter. Maximum number of tokens to generate. Set to `0` for unlimited. Range: `0-128000`. |
+| model_kwargs | Dictionary | Input parameter. Additional keyword arguments for the model. |
+| json_mode | Boolean | Input parameter. If `true`, outputs JSON regardless of passing a schema. |
+| model_name | String | Input parameter. The Volcengine Ark model to use. Default: `doubao-seed-2-1-pro-260628`. |
+| api_base | String | Input parameter. Base URL for API requests. Default: `https://ark.cn-beijing.volces.com/api/v3`. |
+| api_key | SecretString | Input parameter. Your Volcengine Ark API key for authentication. |
+| temperature | Float | Input parameter. Controls randomness in responses. Range: `[0.0, 2.0]`. Default: `1.0`. |
+| reasoning_effort | String | Input parameter. Depth of thinking. Support is per-model: the Doubao entries accept `none` through `max`, where `none` and `minimal` both switch thinking off. Leave empty to use the model default. |
+| seed | Integer | Input parameter. Number initialized for random number generation. Use the same seed integer for more reproducible results, and use a different seed number for more random results. |
