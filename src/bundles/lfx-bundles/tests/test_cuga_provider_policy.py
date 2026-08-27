@@ -76,6 +76,11 @@ async def test_config_denial_precedes_provider_dynamic_update(monkeypatch) -> No
 
 async def test_custom_provider_options_are_filtered_by_active_scope(monkeypatch) -> None:
     agent = cuga_agent.CugaComponent(agent_llm="Custom", _user_id="policy-actor")
+    # Cross-bundle tests intentionally install lfx-bundles without the
+    # graduated lfx-openai package, so the discovered provider catalog can be
+    # empty. Keep this policy regression independent of optional packages.
+    monkeypatch.setattr(cuga_agent, "MODEL_PROVIDERS", ["OpenAI"])
+    monkeypatch.setattr(cuga_agent, "MODELS_METADATA", {"OpenAI": {"icon": "OpenAI"}})
     snapshot = SimpleNamespace(filter=lambda providers: [provider for provider in providers if provider == "OpenAI"])
     resolve_policy = AsyncMock(return_value=snapshot)
     monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
