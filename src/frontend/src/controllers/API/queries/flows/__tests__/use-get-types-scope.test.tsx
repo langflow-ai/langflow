@@ -142,6 +142,7 @@ describe("useGetTypes scoped store ownership", () => {
   });
 
   it("restores the active store after an equal scoped palette refetch", async () => {
+    const dateNow = jest.spyOn(Date, "now").mockReturnValue(1_000_000);
     const flowA = palette("provider_a", "AComponent");
     const initialDisplayNames = {
       acomponent: {
@@ -169,30 +170,34 @@ describe("useGetTypes scoped store ownership", () => {
         },
       });
 
-    renderHook(() => useGetTypes({ flowId: "flow-a" }), {
-      wrapper: makeWrapper(queryClient),
-    });
-
-    await waitFor(() => expect(useTypesStore.getState().data).toEqual(flowA));
-    expect(useTypesStore.getState().componentDisplayNames).toEqual(
-      initialDisplayNames,
-    );
-
-    act(() => useTypesStore.getState().setTypes({}));
-    expect(useTypesStore.getState().data).toEqual({});
-
-    await act(async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["useGetTypes", "flow-a", undefined],
-        exact: true,
+    try {
+      renderHook(() => useGetTypes({ flowId: "flow-a" }), {
+        wrapper: makeWrapper(queryClient),
       });
-    });
 
-    await waitFor(() => expect(useTypesStore.getState().data).toEqual(flowA));
-    expect(useTypesStore.getState().componentDisplayNames).toEqual(
-      refreshedDisplayNames,
-    );
-    expect(mockApiGet).toHaveBeenCalledTimes(2);
+      await waitFor(() => expect(useTypesStore.getState().data).toEqual(flowA));
+      expect(useTypesStore.getState().componentDisplayNames).toEqual(
+        initialDisplayNames,
+      );
+
+      act(() => useTypesStore.getState().setTypes({}));
+      expect(useTypesStore.getState().data).toEqual({});
+
+      await act(async () => {
+        await queryClient.invalidateQueries({
+          queryKey: ["useGetTypes", "flow-a", undefined],
+          exact: true,
+        });
+      });
+
+      await waitFor(() => expect(useTypesStore.getState().data).toEqual(flowA));
+      expect(useTypesStore.getState().componentDisplayNames).toEqual(
+        refreshedDisplayNames,
+      );
+      expect(mockApiGet).toHaveBeenCalledTimes(2);
+    } finally {
+      dateNow.mockRestore();
+    }
   });
 
   it("refreshes a stale scoped palette on focus after provider revocation", async () => {

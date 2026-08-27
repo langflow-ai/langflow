@@ -32,10 +32,15 @@ const isPaletteObject = (value: unknown): value is APIObjectType =>
 const sharePaletteAndMetadata = (oldData: unknown, newData: unknown) => {
   const sharedData = replaceEqualDeep(oldData, newData);
   if (isPaletteObject(newData) && isPaletteObject(sharedData)) {
+    // A fresh root guarantees observers see an equal successful fetch even
+    // when dataUpdatedAt falls in the same millisecond. Nested palette data
+    // remains structurally shared.
+    const paletteData = sharedData === oldData ? { ...sharedData } : sharedData;
     const displayNames = displayNamesByPalette.get(newData);
     if (displayNames !== undefined) {
-      displayNamesByPalette.set(sharedData, displayNames);
+      displayNamesByPalette.set(paletteData, displayNames);
     }
+    return paletteData;
   }
   return sharedData;
 };
