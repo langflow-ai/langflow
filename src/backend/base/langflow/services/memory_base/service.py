@@ -20,7 +20,11 @@ from typing import TYPE_CHECKING
 from lfx.base.knowledge_bases.backends.postgres import resolve_default_kb_backend
 from lfx.base.models.provider_registry import is_api_key_optional
 from lfx.base.models.unified_models import get_api_key_for_provider
-from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, require_model_provider
+from lfx.services.model_provider_policy import (
+    ModelProviderPolicyPurpose,
+    aresolve_model_provider_policy,
+    require_model_provider,
+)
 from sqlmodel import col, select
 
 from langflow.api.utils.kb_helpers import local_chroma_rejection_reason
@@ -78,18 +82,52 @@ class PreprocessingValidationError(ValueError):
 
 def _require_preprocessing_model_provider(user_id: uuid.UUID, preproc_model: str | None) -> str | None:
     """Require CONFIGURE access for a supplied preprocessing model identity."""
-    if not preproc_model:
+    provider = _infer_preprocessing_model_provider(preproc_model)
+    if provider is None:
         return None
-    try:
-        provider = infer_llm_provider(preproc_model)
-    except ValueError as exc:
-        raise PreprocessingValidationError(str(exc)) from exc
     require_model_provider(
         user_id=user_id,
         provider=provider,
         purpose=ModelProviderPolicyPurpose.CONFIGURE,
     )
     return provider
+
+
+def _infer_preprocessing_model_provider(preproc_model: str | None) -> str | None:
+    """Resolve a supplied preprocessing model without accessing credentials."""
+    if not preproc_model:
+        return None
+    try:
+        return infer_llm_provider(preproc_model)
+    except ValueError as exc:
+        raise PreprocessingValidationError(str(exc)) from exc
+
+
+async def _preflight_memory_provider_configuration(
+    *,
+    flow,
+    actor_user_id: uuid.UUID,
+    actor_is_superuser: bool,
+    embedding_model: str,
+    preproc_model: str | None,
+) -> tuple[str | None, str]:
+    """Authorize selected configuration providers before any owner credential read."""
+    preprocessing_provider = _infer_preprocessing_model_provider(preproc_model)
+    embedding_provider = infer_embedding_provider(embedding_model)
+    providers = list(dict.fromkeys(provider for provider in (preprocessing_provider, embedding_provider) if provider))
+    with scoped_model_provider_policy_for_flow(
+        flow,
+        user_id=actor_user_id,
+        is_superuser=actor_is_superuser,
+    ):
+        provider_policy = await aresolve_model_provider_policy(
+            user_id=actor_user_id,
+            providers=providers,
+            purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        )
+        for provider in providers:
+            provider_policy.require(provider)
+    return preprocessing_provider, embedding_provider
 
 
 def _validate_preprocessing_api_key(user_id: uuid.UUID, preproc_model: str | None) -> None:
@@ -181,27 +219,22 @@ class MemoryBaseService(Service):
 
         # 1b. Validate every supplied preprocessing identity even while the
         # feature is disabled; enabling it additionally requires credentials.
-        with scoped_model_provider_policy_for_flow(
-            flow,
-            user_id=user_id,
-            is_superuser=is_superuser,
-        ):
-            # Resolve and authorize every supplied provider before reading any
-            # owner credential. This prevents a later embedding denial from
-            # becoming a preprocessing-secret oracle.
-            preprocessing_provider = _require_preprocessing_model_provider(user_id, payload.preproc_model)
-            embedding_provider = infer_embedding_provider(payload.embedding_model)
-            require_model_provider(
-                user_id=user_id,
-                provider=embedding_provider,
-                purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        # Resolve and authorize every supplied provider before reading any
+        # owner credential. This prevents a later embedding denial from
+        # becoming a preprocessing-secret oracle.
+        preprocessing_provider, embedding_provider = await _preflight_memory_provider_configuration(
+            flow=flow,
+            actor_user_id=user_id,
+            actor_is_superuser=is_superuser,
+            embedding_model=payload.embedding_model,
+            preproc_model=payload.preproc_model,
+        )
+        if payload.preprocessing:
+            _validate_preprocessing_provider_api_key(
+                user_id,
+                payload.preproc_model,
+                preprocessing_provider,
             )
-            if payload.preprocessing:
-                _validate_preprocessing_provider_api_key(
-                    user_id,
-                    payload.preproc_model,
-                    preprocessing_provider,
-                )
 
         # 2. Resolve username — needed for the KB path.
         async with session_scope() as db:
@@ -221,7 +254,6 @@ class MemoryBaseService(Service):
                 raise ValueError(msg)
 
         # 3. Auto-generate kb_name: sanitized_name_<8hex>
-        embedding_provider = infer_embedding_provider(payload.embedding_model)
         kb_name = f"{sanitize_kb_name(payload.name)}_{uuid.uuid4().hex[:8]}"
 
         # 4-5. Provision the backing KB (vector-store collection + ``knowledge_base``
@@ -375,30 +407,20 @@ class MemoryBaseService(Service):
                 return None
 
             flow = await resolve_owned_memory_flow(db, flow_id=mb.flow_id, user_id=owner_user_id)
-            with scoped_model_provider_policy_for_flow(
-                flow,
-                user_id=actor_user_id,
-                is_superuser=actor_is_superuser,
-            ):
-                preprocessing_provider = None
-                if mb.preprocessing:
-                    preprocessing_provider = _require_preprocessing_model_provider(
-                        actor_user_id,
-                        mb.preproc_model,
-                    )
-                embedding_provider = infer_embedding_provider(mb.embedding_model)
-                require_model_provider(
-                    user_id=actor_user_id,
-                    provider=embedding_provider,
-                    purpose=ModelProviderPolicyPurpose.CONFIGURE,
-                )
+            preprocessing_provider, _embedding_provider = await _preflight_memory_provider_configuration(
+                flow=flow,
+                actor_user_id=actor_user_id,
+                actor_is_superuser=actor_is_superuser,
+                embedding_model=mb.embedding_model,
+                preproc_model=mb.preproc_model if mb.preprocessing else None,
+            )
 
-                if mb.preprocessing:
-                    _validate_preprocessing_provider_api_key(
-                        owner_user_id,
-                        mb.preproc_model,
-                        preprocessing_provider,
-                    )
+            if mb.preprocessing:
+                _validate_preprocessing_provider_api_key(
+                    owner_user_id,
+                    mb.preproc_model,
+                    preprocessing_provider,
+                )
 
             for field, value in patch.model_dump(exclude_unset=True).items():
                 setattr(mb, field, value)

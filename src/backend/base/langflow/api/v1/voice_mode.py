@@ -25,7 +25,7 @@ from lfx.schema.schema import InputValueRequest
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyError,
     ModelProviderPolicyPurpose,
-    require_model_provider,
+    aresolve_model_provider_policy,
 )
 from lfx.utils.secrets import secret_value_to_str
 from sqlmodel import select
@@ -115,11 +115,12 @@ async def authenticate_and_get_openai_key(session: DbSession, user: User, websoc
         return None, None
 
     try:
-        require_model_provider(
+        provider_policy = await aresolve_model_provider_policy(
             user_id=user.id,
-            provider="OpenAI",
+            providers=["OpenAI"],
             purpose=ModelProviderPolicyPurpose.USE,
         )
+        provider_policy.require("OpenAI")
     except ModelProviderPolicyError as exc:
         await websocket.send_json(
             {

@@ -573,21 +573,25 @@ class TestMemoryBaseProviderPolicy:
         db = self._db_returning(object())
         initialize = AsyncMock()
         denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.CONFIGURE)
+        policy = MagicMock()
+        policy.require.side_effect = denial
+        resolve_policy = AsyncMock(return_value=policy)
 
         with (
             patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
             patch("langflow.services.memory_base.service.infer_embedding_provider", return_value="Anthropic"),
-            patch("langflow.services.memory_base.service.require_model_provider", side_effect=denial) as require,
+            patch("langflow.services.memory_base.service.aresolve_model_provider_policy", resolve_policy),
             patch("langflow.services.memory_base.service.initialize_kb", initialize),
             pytest.raises(ModelProviderPolicyError),
         ):
             await service.create(payload, user_id=user_id)
 
-        require.assert_called_once_with(
+        resolve_policy.assert_awaited_once_with(
             user_id=user_id,
-            provider="Anthropic",
+            providers=["Anthropic"],
             purpose=ModelProviderPolicyPurpose.CONFIGURE,
         )
+        policy.require.assert_called_once_with("Anthropic")
         initialize.assert_not_awaited()
         db.add.assert_not_called()
         db.commit.assert_not_awaited()
@@ -608,23 +612,26 @@ class TestMemoryBaseProviderPolicy:
         initialize = AsyncMock()
         denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.CONFIGURE)
 
-        def require_provider(*, provider, **_kwargs):
+        def require_provider(provider):
             if provider == "Anthropic":
                 raise denial
+
+        policy = MagicMock()
+        policy.require.side_effect = require_provider
+        resolve_policy = AsyncMock(return_value=policy)
 
         with (
             patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
             patch("langflow.services.memory_base.service.infer_llm_provider", return_value="Anthropic"),
-            patch(
-                "langflow.services.memory_base.service.require_model_provider",
-                side_effect=require_provider,
-            ) as require,
+            patch("langflow.services.memory_base.service.aresolve_model_provider_policy", resolve_policy),
             patch("langflow.services.memory_base.service.initialize_kb", initialize),
             pytest.raises(ModelProviderPolicyError),
         ):
             await service.create(payload, user_id=user_id)
 
-        assert require.call_args.kwargs["purpose"] is ModelProviderPolicyPurpose.CONFIGURE
+        assert resolve_policy.await_args.kwargs["purpose"] is ModelProviderPolicyPurpose.CONFIGURE
+        assert resolve_policy.await_args.kwargs["providers"][0] == "Anthropic"
+        policy.require.assert_called_once_with("Anthropic")
         initialize.assert_not_awaited()
         db.add.assert_not_called()
         db.commit.assert_not_awaited()
@@ -645,18 +652,19 @@ class TestMemoryBaseProviderPolicy:
         db = self._db_returning(object())
         denial = ModelProviderPolicyError("openai", ModelProviderPolicyPurpose.CONFIGURE)
 
-        def authorize_provider(*, provider, **_kwargs):
+        def authorize_provider(provider):
             if provider == "OpenAI":
                 raise denial
+
+        policy = MagicMock()
+        policy.require.side_effect = authorize_provider
+        resolve_policy = AsyncMock(return_value=policy)
 
         with (
             patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
             patch("langflow.services.memory_base.service.infer_llm_provider", return_value="Anthropic"),
             patch("langflow.services.memory_base.service.infer_embedding_provider", return_value="OpenAI"),
-            patch(
-                "langflow.services.memory_base.service.require_model_provider",
-                side_effect=authorize_provider,
-            ) as require,
+            patch("langflow.services.memory_base.service.aresolve_model_provider_policy", resolve_policy),
             patch("langflow.services.memory_base.service.get_api_key_for_provider", return_value="owner-secret") as key,
             patch("langflow.services.memory_base.service.initialize_kb", AsyncMock()) as initialize,
             pytest.raises(ModelProviderPolicyError),
@@ -664,7 +672,8 @@ class TestMemoryBaseProviderPolicy:
             await service.create(payload, user_id=owner_user_id)
 
         key.assert_not_called()
-        assert [call.kwargs["provider"] for call in require.call_args_list] == ["Anthropic", "OpenAI"]
+        assert resolve_policy.await_args.kwargs["providers"] == ["Anthropic", "OpenAI"]
+        assert [call.args[0] for call in policy.require.call_args_list] == ["Anthropic", "OpenAI"]
         initialize.assert_not_awaited()
 
     @pytest.mark.parametrize("actor_is_superuser", [False, True], ids=["delegated-admin", "superadmin"])
@@ -691,21 +700,23 @@ class TestMemoryBaseProviderPolicy:
         db.exec = AsyncMock(side_effect=[mb_result, flow_result])
         db.add = MagicMock()
         policy_calls = []
+        policy = MagicMock()
 
-        def authorize_provider(*, user_id, provider, purpose):
+        async def authorize_providers(*, user_id, providers, purpose):
             context = current_model_provider_policy_context()
             assert context is not None
             assert context.user_id == actor_user_id
             assert context.attributes["is_superuser"] is actor_is_superuser
-            policy_calls.append((user_id, provider, purpose))
+            policy_calls.append((user_id, tuple(providers), purpose))
+            return policy
 
         with (
             patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
             patch("langflow.services.memory_base.service.infer_embedding_provider", return_value="OpenAI"),
             patch("langflow.services.memory_base.service.infer_llm_provider", return_value="Anthropic"),
             patch(
-                "langflow.services.memory_base.service.require_model_provider",
-                side_effect=authorize_provider,
+                "langflow.services.memory_base.service.aresolve_model_provider_policy",
+                side_effect=authorize_providers,
             ),
             patch(
                 "langflow.services.memory_base.service.get_api_key_for_provider",
@@ -721,10 +732,10 @@ class TestMemoryBaseProviderPolicy:
             )
 
         assert updated is mb
-        assert set(policy_calls) == {
-            (actor_user_id, "OpenAI", ModelProviderPolicyPurpose.CONFIGURE),
-            (actor_user_id, "Anthropic", ModelProviderPolicyPurpose.CONFIGURE),
-        }
+        assert policy_calls == [
+            (actor_user_id, ("Anthropic", "OpenAI"), ModelProviderPolicyPurpose.CONFIGURE),
+        ]
+        assert [call.args[0] for call in policy.require.call_args_list] == ["Anthropic", "OpenAI"]
         key.assert_called_once_with(owner_user_id, "Anthropic")
         assert all(call[0] != owner_user_id for call in policy_calls)
         assert key.call_args.args[0] != actor_user_id
@@ -738,11 +749,14 @@ class TestMemoryBaseProviderPolicy:
         mb.embedding_model = "denied-embed"
         db = self._db_returning(mb)
         denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.CONFIGURE)
+        policy = MagicMock()
+        policy.require.side_effect = denial
+        resolve_policy = AsyncMock(return_value=policy)
 
         with (
             patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
             patch("langflow.services.memory_base.service.infer_embedding_provider", return_value="Anthropic"),
-            patch("langflow.services.memory_base.service.require_model_provider", side_effect=denial) as require,
+            patch("langflow.services.memory_base.service.aresolve_model_provider_policy", resolve_policy),
             pytest.raises(ModelProviderPolicyError),
         ):
             await service.update(
@@ -752,11 +766,12 @@ class TestMemoryBaseProviderPolicy:
                 actor_user_id=user_id,
             )
 
-        require.assert_called_once_with(
+        resolve_policy.assert_awaited_once_with(
             user_id=user_id,
-            provider="Anthropic",
+            providers=["Anthropic"],
             purpose=ModelProviderPolicyPurpose.CONFIGURE,
         )
+        policy.require.assert_called_once_with("Anthropic")
         assert mb.threshold == 10
         db.add.assert_not_called()
         db.commit.assert_not_awaited()
