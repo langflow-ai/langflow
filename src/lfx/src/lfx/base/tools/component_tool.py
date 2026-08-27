@@ -102,6 +102,21 @@ def patch_components_send_message(component: Component):
     return old_send_message
 
 
+def _get_output_method_from_copy(component: Component, output_method: Callable, method_name: str) -> Callable:
+    """Resolve an output method against the per-invocation component copy."""
+    if local_method := getattr(component, method_name, None):
+        return local_method
+
+    # Runtime-generated methods (for example RunFlow's dynamic output
+    # resolvers) are not present on the instance reconstructed by
+    # Component.__deepcopy__. Rebind the captured method function so inputs set
+    # on the isolated copy are also read from that copy during execution.
+    if method_function := getattr(output_method, "__func__", None):
+        return method_function.__get__(component, type(component))
+
+    return output_method
+
+
 def _build_output_function(
     component: Component,
     output_method: Callable,
@@ -125,7 +140,7 @@ def _build_output_function(
         # overlapping calls: the second call recorded the first call's no-op as the method
         # to restore, and restored it once the first call had put the real one back.
         # Suppressing the tool run's own messages is a separate change, tracked on its own.
-        local_method = getattr(comp, method_name, output_method)
+        local_method = _get_output_method_from_copy(comp, output_method, method_name)
         build_started = False
         result = None
         try:
@@ -183,7 +198,7 @@ def _build_output_async_function(
         # tool is invoked concurrently by an agent (GitHub issue #8791)
         comp = deepcopy(component)
         # See _build_output_function: a tool call must not patch send_message anywhere.
-        local_method = getattr(comp, method_name, output_method)
+        local_method = _get_output_method_from_copy(comp, output_method, method_name)
         build_started = False
         result = None
         try:
