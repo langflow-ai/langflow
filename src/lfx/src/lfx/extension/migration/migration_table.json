@@ -1517,6 +1517,11 @@
       "added_in": "1.12.0"
     },
     {
+      "bare_class_name": "IFlytekSparkComponent",
+      "target": "ext:iflytek:IFlytekSparkComponent@official",
+      "added_in": "1.12.0"
+    },
+    {
       "bare_class_name": "VllmComponent",
       "target": "ext:vllm:VllmComponent@official",
       "added_in": "1.11.0"

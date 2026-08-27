@@ -1,0 +1,42 @@
+---
+title: IFlytek Spark
+slug: /bundles-iflytek
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **IFlytek Spark** bundle.
+
+IFlytek Spark exposes an OpenAI-compatible HTTP API, so you can also use the [**OpenAI Compatible**](./bundles-openai-compatible) model provider with the base URL `https://spark-api-open.xf-yun.com/v1`.
+
+For more information about the Spark models and API, see the [iFlytek Spark documentation](https://www.xfyun.cn/doc/spark/HTTP%E8%B0%83%E7%94%A8%E6%96%87%E6%A1%A3.html).
+
+## IFlytek Spark text generation
+
+This component generates text using iFlytek Spark's OpenAI-compatible chat completion API.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use a Spark model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Transform** component.
+
+For more information, see [Language model components](/components-models).
+
+### IFlytek Spark text generation parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. The HTTP service API password used as the Bearer token. |
+| model_name | Dropdown | Input parameter. The Spark model to use. Options: `4.0Ultra`, `generalv3.5`, `max-32k`, `generalv3`, `pro-128k`, `lite`. Default: `4.0Ultra`. |
+| api_base | String | Input parameter. Base URL for the OpenAI-compatible Spark HTTP endpoint. Default: `https://spark-api-open.xf-yun.com/v1`. |
+| temperature | Float | Input parameter. Controls randomness in the output. Range: [0.0, 2.0]. Default: 0.7. |
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. Set to 0 for unlimited. |
+| model_kwargs | Dictionary | Input parameter. Additional keyword arguments to pass to the model. |
+| json_mode | Boolean | Input parameter. If enabled, the model outputs JSON regardless of whether a schema is passed. |
