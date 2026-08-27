@@ -622,6 +622,105 @@ class TestMemoryBaseProviderPolicy:
         db.commit.assert_not_awaited()
 
     @pytest.mark.asyncio
+    async def test_create_denied_embedding_precedes_preprocessing_secret_lookup(self, service):
+        """Every supplied provider is authorized before any credential is read."""
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        owner_user_id = uuid.uuid4()
+        payload = MemoryBaseCreate(
+            name="mb",
+            flow_id=uuid.uuid4(),
+            embedding_model="denied-embed",
+            preprocessing=True,
+            preproc_model="allowed-chat",
+        )
+        db = self._db_returning(object())
+        denial = ModelProviderPolicyError("openai", ModelProviderPolicyPurpose.CONFIGURE)
+
+        def authorize_provider(*, provider, **_kwargs):
+            if provider == "OpenAI":
+                raise denial
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
+            patch("langflow.services.memory_base.service.infer_llm_provider", return_value="Anthropic"),
+            patch("langflow.services.memory_base.service.infer_embedding_provider", return_value="OpenAI"),
+            patch(
+                "langflow.services.memory_base.service.require_model_provider",
+                side_effect=authorize_provider,
+            ),
+            patch("langflow.services.memory_base.service.get_api_key_for_provider", return_value="owner-secret") as key,
+            patch("langflow.services.memory_base.service.initialize_kb", AsyncMock()) as initialize,
+            pytest.raises(ModelProviderPolicyError),
+        ):
+            await service.create(payload, user_id=owner_user_id)
+
+        key.assert_not_called()
+        initialize.assert_not_awaited()
+
+    @pytest.mark.parametrize("actor_is_superuser", [False, True], ids=["delegated-admin", "superadmin"])
+    @pytest.mark.asyncio
+    async def test_update_separates_actor_policy_from_owner_credentials(self, service, actor_is_superuser):
+        """Cross-user writes evaluate the actor while retaining owner-scoped secrets."""
+        from langflow.services.database.models.flow.model import Flow
+        from lfx.services.model_provider_policy import (
+            ModelProviderPolicyPurpose,
+            current_model_provider_policy_context,
+        )
+
+        owner_user_id = uuid.uuid4()
+        actor_user_id = uuid.uuid4()
+        mb = _make_mb(user_id=owner_user_id, threshold=10)
+        mb.preprocessing = True
+        mb.preproc_model = "allowed-chat"
+        flow = Flow(id=mb.flow_id, user_id=owner_user_id, name="owner flow")
+        mb_result = MagicMock()
+        mb_result.first.return_value = mb
+        flow_result = MagicMock()
+        flow_result.first.return_value = flow
+        db = AsyncMock()
+        db.exec = AsyncMock(side_effect=[mb_result, flow_result])
+        db.add = MagicMock()
+        policy_calls = []
+
+        def authorize_provider(*, user_id, provider, purpose):
+            context = current_model_provider_policy_context()
+            assert context is not None
+            assert context.user_id == actor_user_id
+            assert context.attributes["is_superuser"] is actor_is_superuser
+            policy_calls.append((user_id, provider, purpose))
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
+            patch("langflow.services.memory_base.service.infer_embedding_provider", return_value="OpenAI"),
+            patch("langflow.services.memory_base.service.infer_llm_provider", return_value="Anthropic"),
+            patch(
+                "langflow.services.memory_base.service.require_model_provider",
+                side_effect=authorize_provider,
+            ),
+            patch(
+                "langflow.services.memory_base.service.get_api_key_for_provider",
+                return_value="owner-secret",
+            ) as key,
+        ):
+            updated = await service.update(
+                mb.id,
+                owner_user_id=owner_user_id,
+                patch=MemoryBaseUpdate(threshold=99),
+                actor_user_id=actor_user_id,
+                actor_is_superuser=actor_is_superuser,
+            )
+
+        assert updated is mb
+        assert policy_calls == [
+            (actor_user_id, "OpenAI", ModelProviderPolicyPurpose.CONFIGURE),
+            (actor_user_id, "Anthropic", ModelProviderPolicyPurpose.CONFIGURE),
+        ]
+        key.assert_called_once_with(owner_user_id, "Anthropic")
+        assert all(call[0] != owner_user_id for call in policy_calls)
+        assert key.call_args.args[0] != actor_user_id
+
+    @pytest.mark.asyncio
     async def test_update_denied_embedding_provider_stops_before_mutation_or_persist(self, service):
         from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
 
@@ -820,6 +919,42 @@ class TestMemoryBaseGuardPassesRealKbIdentity:
         assert captured["kb_id"] == mb.id
         assert captured["kb_user_id"] == owner_id, "guard must receive the real owner, not the actor"
         assert captured["kb_name"] == mb.kb_name
+
+    @pytest.mark.parametrize("actor_is_superuser", [False, True], ids=["delegated-admin", "superadmin"])
+    @pytest.mark.asyncio
+    async def test_update_routes_actor_and_owner_identities_separately(self, actor_is_superuser):
+        from langflow.api.v1.memories import update_memory_base
+        from langflow.services.database.models.user.model import User
+
+        owner_id = uuid.uuid4()
+        mb = _make_mb(user_id=owner_id)
+        actor = User(id=uuid.uuid4(), username="actor", is_superuser=actor_is_superuser)
+        patch_payload = MemoryBaseUpdate(threshold=99)
+
+        mock_service = MagicMock()
+        mock_service.get = AsyncMock(return_value=mb)
+        mock_service.update = AsyncMock(return_value=mb)
+
+        async def _allow_guard(*_args, **_kwargs):
+            return None
+
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=mock_service),
+            patch("langflow.api.v1.memories.ensure_knowledge_base_permission", _allow_guard),
+        ):
+            await update_memory_base(
+                memory_base_id=mb.id,
+                current_user=actor,
+                patch=patch_payload,
+            )
+
+        mock_service.update.assert_awaited_once_with(
+            mb.id,
+            owner_user_id=owner_id,
+            patch=patch_payload,
+            actor_user_id=actor.id,
+            actor_is_superuser=actor_is_superuser,
+        )
 
     async def test_shared_memory_base_falls_back_to_unscoped_id_lookup(self):
         from langflow.api.v1.memories import _get_memory_base_for_action
