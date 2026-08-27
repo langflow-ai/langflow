@@ -23,6 +23,7 @@ from lfx.base.models.unified_models import (
 )
 from lfx.log.logger import logger
 from lfx.services.deps import get_settings_service
+from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from langflow.agentic.api.deps import require_agentic_experience
@@ -72,7 +73,11 @@ async def _resolve_assistant_context(
     Raises:
         HTTPException: If provider is not configured or API key is missing.
     """
-    enabled_providers, _ = await get_enabled_providers_for_user(user_id, session)
+    enabled_providers, _ = await get_enabled_providers_for_user(
+        user_id,
+        session,
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
 
     if not enabled_providers:
         raise HTTPException(
@@ -153,7 +158,7 @@ async def _validate_flow_access(flow_id: str | None, user_id: UUID, session: Asy
     per-user 404 of the /run and webhook endpoints; not-found and cross-user
     both surface 404 so a flow's existence is not leaked by id.
     """
-    if not flow_id:
+    if flow_id is None:
         return None
 
     from langflow.services.database.models.flow import Flow
@@ -182,29 +187,35 @@ async def execute_named_flow(
     context. Resolving it here (instead of running the raw file) turns a
     silent 500 into a successful run, or a clear 4xx when no provider is set.
     """
-    ctx = await _resolve_assistant_context(request, current_user.id, session)
+    flow = await _validate_flow_access(request.flow_id, current_user.id, session)
+    with scoped_model_provider_policy_for_flow(
+        flow,
+        user_id=current_user.id,
+        is_superuser=bool(current_user.is_superuser),
+    ):
+        ctx = await _resolve_assistant_context(request, current_user.id, session)
 
-    # The flow run below can wait on a model for minutes; don't hold the
-    # request transaction (and its pooled connection) open across it (#14445).
-    await release_db_transaction(session)
+        # The flow run below can wait on a model for minutes; don't hold the
+        # request transaction (and its pooled connection) open across it (#14445).
+        await release_db_transaction(session)
 
-    global_vars = dict(ctx.global_vars)
-    if request.component_id:
-        global_vars["COMPONENT_ID"] = request.component_id
-    if request.field_name:
-        global_vars["FIELD_NAME"] = request.field_name
+        global_vars = dict(ctx.global_vars)
+        if request.component_id:
+            global_vars["COMPONENT_ID"] = request.component_id
+        if request.field_name:
+            global_vars["FIELD_NAME"] = request.field_name
 
-    return await execute_flow_file(
-        flow_filename=f"{flow_name}.json",
-        input_value=request.input_value,
-        global_variables=global_vars,
-        verbose=True,
-        user_id=str(current_user.id),
-        session_id=ctx.session_id,
-        provider=ctx.provider,
-        model_name=ctx.model_name,
-        api_key_var=ctx.api_key_name,
-    )
+        return await execute_flow_file(
+            flow_filename=f"{flow_name}.json",
+            input_value=request.input_value,
+            global_variables=global_vars,
+            verbose=True,
+            user_id=str(current_user.id),
+            session_id=ctx.session_id,
+            provider=ctx.provider,
+            model_name=ctx.model_name,
+            api_key_var=ctx.api_key_name,
+        )
 
 
 @router.get("/check-config")
@@ -222,7 +233,11 @@ async def check_assistant_config(
     """
     user_id = current_user.id
     enabled = get_settings_service().settings.agentic_experience
-    enabled_providers, _ = await get_enabled_providers_for_user(user_id, session)
+    enabled_providers, _ = await get_enabled_providers_for_user(
+        user_id,
+        session,
+        purpose=ModelProviderPolicyPurpose.CONFIGURE,
+    )
 
     all_providers = []
 

@@ -54,6 +54,8 @@ def _get_registered_provider_names() -> list[str]:
 async def get_enabled_providers_for_user(
     user_id: UUID | str,
     session: AsyncSession,
+    *,
+    purpose: ModelProviderPolicyPurpose = ModelProviderPolicyPurpose.CONFIGURE,
 ) -> tuple[list[str], dict[str, bool]]:
     """Get enabled providers for a user.
 
@@ -81,7 +83,7 @@ async def get_enabled_providers_for_user(
     provider_policy = await aresolve_model_provider_policy(
         user_id=user_id,
         providers=[*registered_providers, *provider_candidates],
-        purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        purpose=purpose,
     )
     provider_candidates = provider_policy.filter(provider_candidates)
     if not provider_candidates:
