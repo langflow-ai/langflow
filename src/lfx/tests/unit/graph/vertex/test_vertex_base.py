@@ -121,6 +121,7 @@ async def test_worker_restored_component_refreshes_current_hierarchy_with_explic
     component = StandaloneOpenAIComponent(_user_id=None)
     vertex = object.__new__(Vertex)
     vertex.custom_component = component
+    vertex.params = {}
 
     token = set_current_model_provider_policy_context(
         user_id="actor-1",
@@ -153,7 +154,10 @@ async def test_delegate_provider_override_denied_before_local_credential_hydrati
         "provider": "Anthropic",
         "api_key": "stored-variable-reference",  # pragma: allowlist secret
     }
-    component = component_class(_user_id="owner-1", _parameters=params)
+    component = component_class(
+        _user_id="owner-1",
+        _parameters={"model": params["model"], "api_key": params["api_key"]},
+    )
     policy = _HierarchyRefreshingPolicy(allowed_provider_ids=set())
     monkeypatch.setattr("lfx.services.deps.get_model_provider_policy_service", lambda: policy)
     vertex = object.__new__(Vertex)

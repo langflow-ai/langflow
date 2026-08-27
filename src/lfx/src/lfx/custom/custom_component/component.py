@@ -4,7 +4,7 @@ import ast
 import asyncio
 import inspect
 import logging
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Iterator, Mapping
 from copy import deepcopy
 from pathlib import Path
 from textwrap import dedent
@@ -1296,28 +1296,87 @@ class Component(CustomComponent):
     async def _build_without_tracing(self):
         return await self._build_results()
 
-    def require_model_provider_policy(self, purpose: ModelProviderPolicyPurpose) -> None:
-        """Gate standalone model/embedding components before sensitive work."""
+    def _model_provider_policy_id(self) -> str | None:
+        """Return the stable policy identity for a standalone model component."""
         # Enforce provider policy before tracing, input setup, output methods,
         # credential lookup, or provider imports. This closes the legacy saved
         # standalone-node path that does not use unified_models.get_llm().
         from lfx.base.embeddings.model import LCEmbeddingsModel
         from lfx.base.models.model import LCModelComponent
 
-        if isinstance(self, LCModelComponent | LCEmbeddingsModel):
-            from lfx.base.models.provider_registry import (
-                model_component_provider_id,
-                uses_standalone_model_provider_policy,
-            )
-            from lfx.services.model_provider_policy import require_model_provider
+        if not isinstance(self, LCModelComponent | LCEmbeddingsModel):
+            return None
 
-            if not uses_standalone_model_provider_policy(self):
-                return
-            require_model_provider(
-                user_id=self.user_id,
-                provider=model_component_provider_id(self),
-                purpose=purpose,
-            )
+        from lfx.base.models.provider_registry import (
+            model_component_provider_id,
+            uses_standalone_model_provider_policy,
+        )
+
+        if not uses_standalone_model_provider_policy(self):
+            return None
+        return model_component_provider_id(self)
+
+    def _selected_model_provider_policy_id(self, parameters: Mapping[str, Any] | None = None) -> str | None:
+        """Return the raw ModelInput provider available before input hydration."""
+        from lfx.base.models.provider_registry import model_component_policy_mode, resolve_provider_id
+        from lfx.inputs.inputs import ModelInput
+
+        if model_component_policy_mode(self) == "none":
+            return None
+        model_input = getattr(self, "_inputs", {}).get("model")
+        if not isinstance(model_input, ModelInput):
+            return None
+        effective_parameters = parameters if parameters is not None else getattr(self, "_parameters", None)
+        if not isinstance(effective_parameters, Mapping):
+            return None
+        model_selection = effective_parameters.get("model")
+        if not isinstance(model_selection, list) or not model_selection or not isinstance(model_selection[0], Mapping):
+            return None
+
+        # This mirrors apply_model_overrides: a non-empty raw provider override
+        # wins over the saved ModelInput provider. StrInput overrides are never
+        # load_from_db, so this identity is safe to inspect before secrets.
+        provider_override = effective_parameters.get("provider")
+        provider = provider_override.strip() if isinstance(provider_override, str) else ""
+        if not provider:
+            selected_provider = model_selection[0].get("provider")
+            provider = selected_provider.strip() if isinstance(selected_provider, str) else ""
+        return resolve_provider_id(provider) if provider else None
+
+    def require_model_provider_policy(self, purpose: ModelProviderPolicyPurpose) -> None:
+        """Gate standalone model/embedding components before sensitive work."""
+        provider_id = self._model_provider_policy_id()
+        if provider_id is None:
+            return
+
+        from lfx.services.model_provider_policy import require_model_provider
+
+        require_model_provider(
+            user_id=self.user_id,
+            provider=provider_id,
+            purpose=purpose,
+        )
+
+    async def arequire_model_provider_policy(
+        self,
+        purpose: ModelProviderPolicyPurpose,
+        *,
+        user_id: UUID | str | None = None,
+        parameters: Mapping[str, Any] | None = None,
+    ) -> None:
+        """Gate runtime use through the hierarchy-refreshing async policy hook."""
+        provider_id = self._model_provider_policy_id() or self._selected_model_provider_policy_id(parameters)
+        if provider_id is None:
+            return
+
+        from lfx.services.model_provider_policy import aresolve_model_provider_policy
+
+        snapshot = await aresolve_model_provider_policy(
+            user_id=self.user_id if user_id is None else user_id,
+            providers=[provider_id],
+            purpose=purpose,
+        )
+        snapshot.require(provider_id)
 
     async def build_results(self):
         """Build the results of the component."""
