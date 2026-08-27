@@ -320,7 +320,7 @@ async def scoped_model_provider_policy_for_target_flow(
     revocation and project moves take effect immediately. ContextVar nesting
     restores the caller's scope on success, failure, and concurrent tasks.
     """
-    from langflow.api.v1.model_provider_policy_scope import scoped_model_provider_policy_for_flow
+    from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 
     caller, flow = await _resolve_authorized_target_flow(
         user_id=user_id,

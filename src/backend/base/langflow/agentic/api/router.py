@@ -46,7 +46,7 @@ from langflow.agentic.services.provider_service import (
     list_installed_tool_calling_models,
 )
 from langflow.api.utils.core import CurrentActiveUser, DbSession, release_db_transaction
-from langflow.api.v1.model_provider_policy_scope import scoped_model_provider_policy_for_flow
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 
 router = APIRouter(prefix="/agentic", tags=["Agentic"])
 

@@ -8,11 +8,11 @@ from typing import TYPE_CHECKING
 from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, aresolve_model_provider_policy
 from sqlmodel import select
 
-from langflow.api.v1.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.memory_base.model import MemoryBase
 from langflow.services.database.models.user.model import User
 from langflow.services.memory_base.embedding_helpers import infer_llm_provider
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 
 if TYPE_CHECKING:
     import uuid

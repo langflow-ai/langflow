@@ -25,12 +25,12 @@ from langflow.agentic.services.assistant_service import execute_flow_with_valida
 from langflow.agentic.services.flow_types import LANGFLOW_ASSISTANT_FLOW
 from langflow.api.utils.core import release_db_transaction
 from langflow.api.v1.flows import _new_flow, _save_flow_to_fs, _validate_catalog_policy_for_write
-from langflow.api.v1.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.database.models.flow.guards import ensure_flow_unlocked, lock_flow_for_update
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_catalog_policy_service, get_storage_service
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable

@@ -5,8 +5,10 @@ It does NOT rely on `LCAgentComponent.run_agent()` or `ToolCallingAgentComponent
 internally — those code paths still exist for legacy components but are bypassed here.
 """
 
+import json
 import os
 from collections.abc import AsyncIterator
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -1819,6 +1821,56 @@ async def test_legacy_agent_llm_selection_participates_in_async_provider_policy(
         providers=["anthropic"],
         purpose=ModelProviderPolicyPurpose.USE,
     )
+
+
+@pytest.mark.asyncio
+async def test_historical_embedded_agent_llm_selection_uses_base_provider_policy(monkeypatch) -> None:
+    """A saved 1.6 Agent lacks today's override but inherits the current base gate."""
+    from lfx.base.models import model_input_constants
+    from lfx.custom.custom_component.component import Component
+    from lfx.custom.utils import build_custom_component_template
+    from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+    fixture = Path(__file__).parents[3] / "data" / "starter_projects_1_6_0" / "News Aggregator.json"
+    flow = json.loads(fixture.read_text(encoding="utf-8"))["data"]
+    agent_template = next(
+        node["data"]["node"]["template"] for node in flow["nodes"] if "agent_llm" in node["data"]["node"]["template"]
+    )
+    source = agent_template["code"]["value"]
+    # The fixture's provider catalog predates the current compatibility module.
+    # Supply only the inert metadata needed to evaluate its class definition.
+    monkeypatch.setattr(
+        model_input_constants,
+        "MODEL_PROVIDERS_DICT",
+        {provider: {"inputs": []} for provider in ("Anthropic", "Google Generative AI", "OpenAI")},
+    )
+    monkeypatch.setattr(
+        model_input_constants,
+        "MODELS_METADATA",
+        {provider: {} for provider in ("Anthropic", "Google Generative AI", "OpenAI")},
+    )
+    _frontend_node, historical_agent = build_custom_component_template(Component(_code=source))
+
+    denial = ModelProviderPolicyError("openai", ModelProviderPolicyPurpose.USE)
+    snapshot = SimpleNamespace(require=MagicMock(side_effect=denial))
+    resolve_policy = AsyncMock(return_value=snapshot)
+    credential_read = MagicMock(side_effect=AssertionError("credential read reached after policy denial"))
+    monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+    monkeypatch.setattr("lfx.base.models.unified_models.get_api_key_for_provider", credential_read)
+
+    with pytest.raises(ModelProviderPolicyError):
+        await historical_agent.arequire_model_provider_policy(
+            ModelProviderPolicyPurpose.USE,
+            user_id="policy-actor",
+            parameters={"agent_llm": "OpenAI", "model_name": "gpt-4o"},
+        )
+
+    resolve_policy.assert_awaited_once_with(
+        user_id="policy-actor",
+        providers=["openai"],
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
+    credential_read.assert_not_called()
 
 
 @pytest.mark.asyncio

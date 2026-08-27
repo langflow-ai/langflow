@@ -35,7 +35,6 @@ from websockets.asyncio.client import ClientConnection
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.chat import build_flow_and_stream
 from langflow.api.v1.flows_helpers import _read_flow
-from langflow.api.v1.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.memory import aadd_messagetables
 from langflow.schema.properties import Properties
 from langflow.services.auth.utils import get_current_user_for_websocket
@@ -45,6 +44,7 @@ from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_variable_service
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.utils.voice_utils import BYTES_PER_24K_FRAME, VAD_SAMPLE_RATE_16K, resample_24k_to_16k
 
 router = APIRouter(prefix="/voice", tags=["Voice"], include_in_schema=False)

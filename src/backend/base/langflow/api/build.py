@@ -29,7 +29,6 @@ from langflow.api.utils import (
     parse_exception,
 )
 from langflow.api.utils.execution_errors import error_details_for_client, error_for_client
-from langflow.api.v1.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.api.v1.schemas import (
     FlowDataRequest,
     ResultDataResponse,
@@ -51,6 +50,7 @@ from langflow.services.deps import (
     session_scope,
 )
 from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.services.telemetry.schema import (
     ComponentInputsPayload,
     ComponentPayload,

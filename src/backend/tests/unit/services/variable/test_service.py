@@ -8,7 +8,7 @@ from cryptography.fernet import Fernet
 from langflow.services.auth.service import AuthService
 from langflow.services.auth.utils import ensure_fernet_key
 from langflow.services.database.models.user.model import User
-from langflow.services.database.models.variable.model import VariableUpdate
+from langflow.services.database.models.variable.model import Variable, VariableUpdate
 from langflow.services.deps import get_settings_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService, has_variable_value
@@ -107,6 +107,28 @@ async def test_initialize_user_variables__not_found_variable(service, session: A
         m.side_effect = Exception()
         await service.initialize_user_variables(uuid4(), session=session)
     assert True
+
+
+async def test_get_default_field_bindings_never_decrypts_values(service, session: AsyncSession):
+    user_id = uuid4()
+    session.add(
+        Variable(
+            user_id=user_id,
+            name="OPENAI_API_KEY",
+            value="encrypted-secret",  # pragma: allowlist secret
+            type=CREDENTIAL_TYPE,
+            default_fields=["OpenAI API Key"],
+        )
+    )
+    await session.flush()
+
+    with patch(
+        "langflow.services.auth.utils.decrypt_api_key",
+        side_effect=AssertionError("default-field lookup must not decrypt values"),
+    ):
+        result = await service.get_default_field_bindings(user_id, session)
+
+    assert result == [("OPENAI_API_KEY", ["OpenAI API Key"])]
 
 
 async def test_initialize_user_variables__skipping_environment_variable_storage(service, session: AsyncSession):

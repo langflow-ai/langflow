@@ -43,7 +43,6 @@ from langflow.api.utils import (
     verify_public_flow_and_get_user,
 )
 from langflow.api.utils.core import strip_secret_field_values
-from langflow.api.v1.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.api.v1.schemas import (
     CancelFlowResponse,
     FlowDataRequest,
@@ -77,6 +76,7 @@ from langflow.services.job_queue.service import (
     JobQueueNotFoundError,
     JobQueueService,
 )
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.services.rate_limit import check_rate_limit
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 

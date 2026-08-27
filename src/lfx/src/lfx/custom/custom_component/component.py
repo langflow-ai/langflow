@@ -1354,6 +1354,18 @@ class Component(CustomComponent):
                 provider_id = resolve_provider_id(provider)
                 if provider_id not in provider_ids:
                     provider_ids.append(provider_id)
+
+        # Historical Agent/ALTK nodes used a plain DropdownInput named
+        # ``agent_llm`` instead of ModelInput. Saved flows execute their
+        # embedded component source, so they do not inherit a newer Agent
+        # override; recognize the stable legacy selector in the shared base.
+        legacy_provider = effective_parameters.get("agent_llm")
+        if isinstance(legacy_provider, str):
+            legacy_provider = legacy_provider.strip()
+            if legacy_provider and legacy_provider != "Custom":
+                provider_id = resolve_provider_id(legacy_provider)
+                if provider_id not in provider_ids:
+                    provider_ids.append(provider_id)
         return tuple(provider_ids)
 
     def _selected_model_provider_policy_id(self, parameters: Mapping[str, Any] | None = None) -> str | None:

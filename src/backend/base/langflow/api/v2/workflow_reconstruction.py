@@ -12,9 +12,9 @@ from lfx.graph.graph.base import Graph
 from lfx.graph.schema import ResultData, RunOutputs
 from lfx.workflow.converters import run_response_to_workflow_response
 
-from langflow.api.v1.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.api.v1.schemas import RunResponse
 from langflow.services.database.models.vertex_builds.crud import get_vertex_builds_by_job_id
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession

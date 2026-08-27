@@ -78,7 +78,6 @@ from langflow.api.v1.a2a_utils import (
     validate_webhook_url,
     webhook_pin_host,
 )
-from langflow.api.v1.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.services.auth.context import AuthCredentialContext, set_current_auth_context
@@ -104,6 +103,7 @@ from langflow.services.database.models.api_key.crud import authenticate_api_key
 from langflow.services.database.models.flow.model import FlowType
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User, UserRead
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 
 router = APIRouter(prefix="/a2a", tags=["a2a"])
 

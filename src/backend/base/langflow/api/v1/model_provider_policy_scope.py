@@ -2,16 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-from contextlib import contextmanager
-from typing import Annotated, Any
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, Query, status
-from lfx.services.model_provider_policy import (
-    reset_current_model_provider_policy_context,
-    set_current_model_provider_policy_context,
-)
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.authorization import (
@@ -22,64 +16,13 @@ from langflow.services.authorization import (
     ensure_flow_permission,
     ensure_project_permission,
 )
-from langflow.services.database.models.flow.model import Flow, FlowRead
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.model import Folder
-
-ProviderPolicyAttributes = dict[str, Any]
-
-
-def provider_policy_attributes_for_flow(
-    flow: Flow | FlowRead,
-    *,
-    is_superuser: bool,
-    required: bool = False,
-) -> ProviderPolicyAttributes:
-    """Build policy attributes only from a flow row loaded by the server."""
-    attributes: ProviderPolicyAttributes = {"is_superuser": is_superuser}
-    project_id = getattr(flow, "folder_id", None)
-    workspace_id = getattr(flow, "workspace_id", None)
-    if project_id is not None:
-        attributes["project_id"] = project_id
-    if workspace_id is not None:
-        attributes["workspace_id"] = workspace_id
-    if required:
-        attributes["provider_scope_required"] = True
-    return attributes
-
-
-@contextmanager
-def scoped_model_provider_policy_for_flow(
-    flow: Flow | FlowRead | None,
-    *,
-    user_id: UUID | str | None,
-    is_superuser: bool,
-) -> Iterator[None]:
-    """Bind a required stored-flow scope for graph construction and execution.
-
-    ``None`` deliberately binds a *required but unresolved* scope.  The
-    Enterprise policy service rejects that context before a provider can read
-    credentials or initialize a client, so an internal runtime caller that
-    forgets to pass its server-loaded flow fails closed instead of silently
-    falling back to a global grant.
-    """
-    attributes: ProviderPolicyAttributes = {
-        "is_superuser": is_superuser,
-        "provider_scope_required": True,
-    }
-    if flow is not None:
-        attributes = provider_policy_attributes_for_flow(
-            flow,
-            is_superuser=is_superuser,
-            required=True,
-        )
-    token = set_current_model_provider_policy_context(
-        user_id=user_id,
-        attributes=attributes,
-    )
-    try:
-        yield
-    finally:
-        reset_current_model_provider_policy_context(token)
+from langflow.services.model_provider_policy_scope import (
+    ProviderPolicyAttributes,
+    provider_policy_attributes_for_flow,
+    scoped_model_provider_policy_for_flow,
+)
 
 
 async def resolve_provider_policy_attributes(

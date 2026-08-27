@@ -28,7 +28,6 @@ from lfx.services.model_provider_policy import (
 from sqlmodel import col, select
 
 from langflow.api.utils.kb_helpers import local_chroma_rejection_reason
-from langflow.api.v1.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.services.base import Service
 from langflow.services.database.models.memory_base.model import (
     MemoryBase,
@@ -70,6 +69,7 @@ from langflow.services.memory_base.kb_path_helpers import (
 from langflow.services.memory_base.provider_scope import (
     resolve_owned_memory_flow,
 )
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 
 if TYPE_CHECKING:
     from lfx.services.authorization.base import ResourceVisibilityScope

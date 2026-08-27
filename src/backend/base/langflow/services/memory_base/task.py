@@ -44,7 +44,6 @@ from langflow.api.utils.kb_helpers import (
     resolve_backend_selection,
     resolve_local_store_path,
 )
-from langflow.api.v1.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.services.database.models.memory_base.model import (
     MemoryBasePreprocessingOutput,
     MemoryBaseSession,
@@ -64,6 +63,7 @@ from langflow.services.memory_base.provider_scope import (
     preflight_memory_provider_use,
     resolve_memory_provider_scope,
 )
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 
 if TYPE_CHECKING:
     import uuid

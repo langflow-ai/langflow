@@ -44,7 +44,6 @@ from lfx.workflow.converters import ParsedWorkflowRun, create_error_response, ru
 
 from langflow.api.utils import extract_global_variables_from_headers
 from langflow.api.utils.execution_errors import caller_owns_flow, error_for_client
-from langflow.api.v1.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.api.v1.schemas import FlowDataRequest, RunResponse
 from langflow.api.v2.workflow_validation import _validate_output_ids
 from langflow.api.warm_graph import warm_deepcopy
@@ -53,6 +52,7 @@ from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_job_service, get_memory_base_service, get_settings_service, get_task_service
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.services.warm_registry.service import flow_version
 
 # Configuration constants
