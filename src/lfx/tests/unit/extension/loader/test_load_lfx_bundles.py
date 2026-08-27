@@ -134,6 +134,8 @@ def test_mrscraper_provider_loads_with_production_bundle_loader(monkeypatch) -> 
         for name, module in sys.modules.items()
         if name == "lfx_bundles" or name.startswith(tuple(f"{prefix}." for prefix in module_prefixes))
     }
+    for name in prior_modules:
+        sys.modules.pop(name, None)
 
     monkeypatch.syspath_prepend(str(bundles_source))
     importlib.invalidate_caches()
