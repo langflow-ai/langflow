@@ -269,7 +269,7 @@ export const useProviderConfiguration = ({
     (variableKey: string): string | null => {
       const variable = globalVariables.find((v) => v.name === variableKey);
       if (variable) {
-        return variable.value || MASKED_VALUE;
+        return variable.value ?? MASKED_VALUE;
       }
       return null;
     },
@@ -279,7 +279,8 @@ export const useProviderConfiguration = ({
   // Helper to check if a variable is already configured
   const isVariableConfigured = useCallback(
     (variableKey: string): boolean => {
-      return globalVariables.some((v) => v.name === variableKey);
+      const variable = globalVariables.find((v) => v.name === variableKey);
+      return Boolean(variable && variable.has_value !== false);
     },
     [globalVariables],
   );
@@ -299,12 +300,10 @@ export const useProviderConfiguration = ({
         const currentValue = variableValues[v.variable_key];
         const hasNewValue =
           currentValue !== undefined && currentValue.trim() !== "";
-        const isAlreadyConfigured = globalVariables.some(
-          (gv) => gv.name === v.variable_key,
-        );
+        const isAlreadyConfigured = isVariableConfigured(v.variable_key);
         return hasNewValue || isAlreadyConfigured;
       });
-  }, [providerVariables, variableValues, globalVariables]);
+  }, [providerVariables, variableValues, isVariableConfigured]);
 
   const isConfiguredOptionalVariableCleared = useCallback(
     (variable: ProviderVariable): boolean => {
@@ -314,10 +313,10 @@ export const useProviderConfiguration = ({
         !variable.is_secret &&
         draftValue !== undefined &&
         draftValue.trim() === "" &&
-        globalVariables.some((v) => v.name === variable.variable_key)
+        isVariableConfigured(variable.variable_key)
       );
     },
-    [globalVariables, variableValues],
+    [isVariableConfigured, variableValues],
   );
 
   // Check if there are any new values or explicit optional-value clears to save
@@ -430,18 +429,18 @@ export const useProviderConfiguration = ({
           Number(a.variable_key === primaryVariableKey) -
           Number(b.variable_key === primaryVariableKey),
       );
-    const variableKeysToDelete = new Set(
+    const variableKeysToReset = new Set(
       providerVariables
         .filter(isConfiguredOptionalVariableCleared)
         .map((v) => v.variable_key),
     );
-    const variablesToDelete = globalVariables.filter((v) =>
-      variableKeysToDelete.has(v.name),
+    const variablesToReset = globalVariables.filter((v) =>
+      variableKeysToReset.has(v.name),
     );
 
-    if (variablesToSave.length === 0 && variablesToDelete.length === 0) return;
+    if (variablesToSave.length === 0 && variablesToReset.length === 0) return;
 
-    // Deletion-only resets do not introduce credentials to validate. When
+    // Reset-only saves do not introduce credentials to validate. When
     // another value is being saved, validate the effective post-clear config.
     if (variablesToSave.length > 0) {
       const isValid = await validateCredentials();
@@ -449,12 +448,15 @@ export const useProviderConfiguration = ({
     }
     setIsSaving(true);
     setValidationFailed(false);
+    let hasPersistedChanges = false;
 
     try {
-      // Remove explicit optional-value clears first so a following primary
-      // credential write is validated against the post-clear configuration.
-      for (const variable of variablesToDelete) {
-        await deleteGlobalVariable({ id: variable.id });
+      // Reset optional values first so a following primary credential write is
+      // validated against the effective post-reset configuration. Keeping the
+      // row preserves its UUID and any resource shares attached to it.
+      for (const variable of variablesToReset) {
+        await updateGlobalVariable({ id: variable.id, value: "" });
+        hasPersistedChanges = true;
       }
 
       // Persist each companion field before starting the primary-variable
@@ -479,6 +481,7 @@ export const useProviderConfiguration = ({
             default_fields: [],
           });
         }
+        hasPersistedChanges = true;
       }
 
       // All succeeded — defer toast and value clear until after models refetch
@@ -490,6 +493,10 @@ export const useProviderConfiguration = ({
       clearValuesAfterFetchRef.current = true;
       invalidateProviderQueries();
     } catch (error: unknown) {
+      if (hasPersistedChanges) {
+        hasUserMadeChangesRef.current = true;
+        invalidateProviderQueries();
+      }
       setValidationFailed(true);
       setErrorData({
         title: t("modelProviders.errorSavingConfiguration"),
@@ -508,7 +515,6 @@ export const useProviderConfiguration = ({
     isConfiguredOptionalVariableCleared,
     createGlobalVariable,
     updateGlobalVariable,
-    deleteGlobalVariable,
     setSuccessData,
     setErrorData,
     invalidateProviderQueries,

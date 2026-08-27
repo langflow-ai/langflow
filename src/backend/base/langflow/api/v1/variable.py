@@ -7,6 +7,8 @@ from fastapi import APIRouter, HTTPException
 from lfx.base.models.unified_models import (
     get_all_variables_for_provider,
     get_model_provider_variable_mapping,
+    get_model_providers,
+    get_provider_all_variables,
     validate_model_provider_key,
 )
 from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
@@ -223,10 +225,19 @@ async def read_variables(
             resource_type="variable",
             act=VariableAction.READ,
         )
+        resettable_provider_variables = {
+            variable["variable_key"]
+            for provider in get_model_providers()
+            for variable in get_provider_all_variables(provider)
+            if not variable.get("required")
+            and not variable.get("is_secret")
+            and isinstance(variable.get("variable_key"), str)
+        }
         all_variables = await variable_service.get_all(
             user_id=current_user.id,
             session=session,
             visibility=visibility,
+            include_empty_names=resettable_provider_variables,
         )
 
         # Filter out internal variables (those starting and ending with __)
@@ -385,13 +396,8 @@ async def delete_variable(
         except HTTPException as exc:
             raise deny_to_404(exc, detail="Variable not found") from exc
 
-        # Only the provider's primary variable represents its credential.
-        # Optional companion settings (for example OPENAI_BASE_URL) can be
-        # removed without disconnecting the provider or resetting model choices.
+        # Check if this variable is a model provider credential
         provider = get_provider_from_variable_name(variable_to_delete.name)
-        is_primary_provider_variable = provider is not None and (
-            variable_to_delete.name == get_model_provider_variable_mapping().get(provider)
-        )
 
         # Delete the variable, scoped to the resolved owner so a shared delete
         # removes the owner's row.
@@ -399,7 +405,7 @@ async def delete_variable(
 
         # If this was a provider credential, clean up the *owner's* disabled and
         # enabled model lists for that provider.
-        if is_primary_provider_variable and provider and isinstance(variable_service, DatabaseVariableService):
+        if provider and isinstance(variable_service, DatabaseVariableService):
             await _cleanup_provider_models(variable_service, owner_id, provider, session)
 
     except Exception as e:

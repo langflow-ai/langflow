@@ -699,7 +699,7 @@ async def test_get_all__empty_provider_setting_preserves_row_identity(service, s
     session.add(variable)
     await session.flush()
 
-    result = await service.get_all(user_id, session=session)
+    result = await service.get_all(user_id, session=session, include_empty_names={"OPENAI_BASE_URL"})
     cleared = next(item for item in result if item.name == "OPENAI_BASE_URL")
 
     assert cleared.id == variable.id

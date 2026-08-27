@@ -265,6 +265,29 @@ async def test_clear_optional_provider_variable_preserves_identity(client: Async
 
 
 @pytest.mark.usefixtures("active_user")
+async def test_clear_required_provider_variable_stays_hidden(client: AsyncClient, logged_in_headers):
+    variable = {
+        "name": "WATSONX_PROJECT_ID",
+        "value": "project-id",
+        "type": GENERIC_TYPE,
+        "default_fields": [],
+    }
+    create_response = await client.post("api/v1/variables/", json=variable, headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    variable_id = create_response.json()["id"]
+
+    clear_response = await client.patch(
+        f"api/v1/variables/{variable_id}",
+        json={"id": variable_id, "value": ""},
+        headers=logged_in_headers,
+    )
+    assert clear_response.status_code == status.HTTP_200_OK
+
+    list_response = await client.get("api/v1/variables/", headers=logged_in_headers)
+    assert not any(item["name"] == "WATSONX_PROJECT_ID" for item in list_response.json())
+
+
+@pytest.mark.usefixtures("active_user")
 async def test_update_variable__exception(client: AsyncClient, generic_variable, logged_in_headers):
     wrong_id = uuid4()
     generic_variable["id"] = str(wrong_id)
@@ -686,72 +709,6 @@ async def test_delete_provider_credential_cleans_up_enabled_models(client: Async
 
         enabled_models = json.loads(enabled_models_var["value"])
         assert "gpt-4.1-mini" not in enabled_models
-
-
-@pytest.mark.usefixtures("active_user")
-async def test_delete_required_provider_variable_cleans_up_models(client: AsyncClient, logged_in_headers):
-    """Deleting a required provider companion must still clean up that provider's model selections."""
-    all_vars = await client.get("api/v1/variables/", headers=logged_in_headers)
-    for var in all_vars.json():
-        if var.get("name") == "WATSONX_PROJECT_ID":
-            await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
-
-    create_response = await client.post(
-        "api/v1/variables/",
-        json={
-            "name": "WATSONX_PROJECT_ID",
-            "value": "test-project-id",
-            "type": GENERIC_TYPE,
-            "default_fields": [],
-        },
-        headers=logged_in_headers,
-    )
-    assert create_response.status_code == status.HTTP_201_CREATED
-
-    with mock.patch(
-        "langflow.api.v1.variable._cleanup_provider_models",
-        new_callable=mock.AsyncMock,
-    ) as cleanup_provider_models:
-        delete_response = await client.delete(
-            f"api/v1/variables/{create_response.json()['id']}",
-            headers=logged_in_headers,
-        )
-
-    assert delete_response.status_code == status.HTTP_204_NO_CONTENT
-    cleanup_provider_models.assert_awaited_once()
-
-
-@pytest.mark.usefixtures("active_user")
-async def test_delete_optional_provider_variable_does_not_cleanup_models(client: AsyncClient, logged_in_headers):
-    """Deleting an optional provider setting must preserve that provider's model selections."""
-    all_vars = await client.get("api/v1/variables/", headers=logged_in_headers)
-    for var in all_vars.json():
-        if var.get("name") == "OPENAI_BASE_URL":
-            await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
-
-    create_response = await client.post(
-        "api/v1/variables/",
-        json={
-            "name": "OPENAI_BASE_URL",
-            "value": "https://example.com/v1",
-            "type": GENERIC_TYPE,
-            "default_fields": [],
-        },
-        headers=logged_in_headers,
-    )
-    assert create_response.status_code == status.HTTP_201_CREATED
-
-    with mock.patch(
-        "langflow.api.v1.variable._cleanup_provider_models",
-        new_callable=mock.AsyncMock,
-    ) as cleanup_provider_models:
-        delete_response = await client.delete(
-            f"api/v1/variables/{create_response.json()['id']}",
-            headers=logged_in_headers,
-        )
-
-    assert delete_response.status_code == status.HTTP_204_NO_CONTENT
-    cleanup_provider_models.assert_not_awaited()
 
 
 @pytest.mark.usefixtures("active_user")

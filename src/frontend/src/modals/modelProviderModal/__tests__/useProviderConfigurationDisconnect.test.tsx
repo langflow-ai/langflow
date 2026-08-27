@@ -125,6 +125,59 @@ const renderProviderConfiguration = (selectedProvider: Provider) =>
     { initialProps: { provider: selectedProvider } },
   );
 
+const openAIProviderVariables = [
+  {
+    variable_name: "OpenAI API Key",
+    variable_key: "OPENAI_API_KEY",
+    required: true,
+    is_secret: true,
+    is_list: false,
+    options: [],
+  },
+  {
+    variable_name: "OpenAI Base URL",
+    variable_key: "OPENAI_BASE_URL",
+    required: false,
+    is_secret: false,
+    is_list: false,
+    options: [],
+  },
+];
+
+const renderConfiguredOpenAI = ({
+  baseUrl = "https://example.com/v1",
+  baseUrlHasValue = true,
+}: {
+  baseUrl?: string;
+  baseUrlHasValue?: boolean;
+} = {}) => {
+  mockProviderVariablesMapping.OpenAI = openAIProviderVariables;
+  mockGlobalVariables.push(
+    { id: "var-key", name: "OPENAI_API_KEY", has_value: true },
+    {
+      id: "var-url",
+      name: "OPENAI_BASE_URL",
+      value: baseUrl,
+      has_value: baseUrlHasValue,
+    },
+  );
+  mockModelProviders = [
+    {
+      provider: "OpenAI",
+      is_configured: true,
+      is_enabled: true,
+      models: [],
+    },
+  ];
+  return renderProviderConfiguration({
+    provider: "OpenAI",
+    icon: "OpenAI",
+    is_enabled: true,
+    is_configured: true,
+    models: [],
+  });
+};
+
 describe("useProviderConfiguration.handleDisconnect", () => {
   beforeEach(() => {
     mockGlobalVariables.length = 0;
@@ -341,48 +394,7 @@ describe("useProviderConfiguration.handleSaveAllVariables", () => {
   });
 
   it("resets a configured optional variable without deleting its identity", async () => {
-    mockProviderVariablesMapping.OpenAI = [
-      {
-        variable_name: "OpenAI API Key",
-        variable_key: "OPENAI_API_KEY",
-        required: true,
-        is_secret: true,
-        is_list: false,
-        options: [],
-      },
-      {
-        variable_name: "OpenAI Base URL",
-        variable_key: "OPENAI_BASE_URL",
-        required: false,
-        is_secret: false,
-        is_list: false,
-        options: [],
-      },
-    ];
-    mockGlobalVariables.push(
-      { id: "var-key", name: "OPENAI_API_KEY" },
-      {
-        id: "var-url",
-        name: "OPENAI_BASE_URL",
-        value: "https://example.com/v1",
-      },
-    );
-    mockModelProviders = [
-      {
-        provider: "OpenAI",
-        is_configured: true,
-        is_enabled: true,
-        models: [],
-      },
-    ];
-
-    const { result } = renderProviderConfiguration({
-      provider: "OpenAI",
-      icon: "OpenAI",
-      is_enabled: true,
-      is_configured: true,
-      models: [],
-    });
+    const { result } = renderConfiguredOpenAI();
 
     act(() => {
       result.current.handleVariableChange("OPENAI_BASE_URL", "");
@@ -404,48 +416,7 @@ describe("useProviderConfiguration.handleSaveAllVariables", () => {
   });
 
   it("does not validate a replacement credential against an explicitly cleared URL", async () => {
-    mockProviderVariablesMapping.OpenAI = [
-      {
-        variable_name: "OpenAI API Key",
-        variable_key: "OPENAI_API_KEY",
-        required: true,
-        is_secret: true,
-        is_list: false,
-        options: [],
-      },
-      {
-        variable_name: "OpenAI Base URL",
-        variable_key: "OPENAI_BASE_URL",
-        required: false,
-        is_secret: false,
-        is_list: false,
-        options: [],
-      },
-    ];
-    mockGlobalVariables.push(
-      { id: "var-key", name: "OPENAI_API_KEY" },
-      {
-        id: "var-url",
-        name: "OPENAI_BASE_URL",
-        value: "https://example.com/v1",
-      },
-    );
-    mockModelProviders = [
-      {
-        provider: "OpenAI",
-        is_configured: true,
-        is_enabled: true,
-        models: [],
-      },
-    ];
-
-    const { result } = renderProviderConfiguration({
-      provider: "OpenAI",
-      icon: "OpenAI",
-      is_enabled: true,
-      is_configured: true,
-      models: [],
-    });
+    const { result } = renderConfiguredOpenAI();
     const replacementApiKey = "replacement-api-key"; // pragma: allowlist secret
 
     act(() => {
@@ -471,50 +442,20 @@ describe("useProviderConfiguration.handleSaveAllVariables", () => {
         id: "var-url",
         value: "",
       });
-      expect(mockUpdateMutateAsync).toHaveBeenCalledWith({
+      expect(mockUpdateMutateAsync).toHaveBeenNthCalledWith(2, {
         id: "var-key",
         value: replacementApiKey,
       });
+      expect(mockUpdateMutateAsync).toHaveBeenCalledTimes(2);
     } finally {
       dateNowSpy.mockRestore();
     }
   });
 
   it("reuses the preserved variable after a cleared value is reopened", async () => {
-    mockProviderVariablesMapping.OpenAI = [
-      {
-        variable_name: "OpenAI API Key",
-        variable_key: "OPENAI_API_KEY",
-        required: true,
-        is_secret: true,
-        is_list: false,
-        options: [],
-      },
-      {
-        variable_name: "OpenAI Base URL",
-        variable_key: "OPENAI_BASE_URL",
-        required: false,
-        is_secret: false,
-        is_list: false,
-        options: [],
-      },
-    ];
-    mockGlobalVariables.push(
-      { id: "var-key", name: "OPENAI_API_KEY", has_value: true },
-      {
-        id: "var-url",
-        name: "OPENAI_BASE_URL",
-        value: "",
-        has_value: false,
-      },
-    );
-
-    const { result } = renderProviderConfiguration({
-      provider: "OpenAI",
-      icon: "OpenAI",
-      is_enabled: true,
-      is_configured: true,
-      models: [],
+    const { result } = renderConfiguredOpenAI({
+      baseUrl: "",
+      baseUrlHasValue: false,
     });
 
     expect(result.current.getConfiguredValue("OPENAI_BASE_URL")).toBe("");
@@ -548,44 +489,11 @@ describe("useProviderConfiguration.handleSaveAllVariables", () => {
   });
 
   it("refreshes provider state when a later write fails after a reset", async () => {
-    mockProviderVariablesMapping.OpenAI = [
-      {
-        variable_name: "OpenAI API Key",
-        variable_key: "OPENAI_API_KEY",
-        required: true,
-        is_secret: true,
-        is_list: false,
-        options: [],
-      },
-      {
-        variable_name: "OpenAI Base URL",
-        variable_key: "OPENAI_BASE_URL",
-        required: false,
-        is_secret: false,
-        is_list: false,
-        options: [],
-      },
-    ];
-    mockGlobalVariables.push(
-      { id: "var-key", name: "OPENAI_API_KEY", has_value: true },
-      {
-        id: "var-url",
-        name: "OPENAI_BASE_URL",
-        value: "https://example.com/v1",
-        has_value: true,
-      },
-    );
     mockUpdateMutateAsync
       .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new Error("credential write failed"));
 
-    const { result } = renderProviderConfiguration({
-      provider: "OpenAI",
-      icon: "OpenAI",
-      is_enabled: true,
-      is_configured: true,
-      models: [],
-    });
+    const { result } = renderConfiguredOpenAI();
 
     act(() => {
       result.current.handleVariableChange("OPENAI_BASE_URL", "");
