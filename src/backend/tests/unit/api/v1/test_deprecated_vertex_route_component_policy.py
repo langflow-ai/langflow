@@ -118,6 +118,12 @@ async def test_should_build_from_the_sanitized_copy_not_the_stored_bytes(
         graph = MagicMock()
         graph.set_run_id = MagicMock()
         graph.initialize_run = AsyncMock()
+        # A real graph exposes a string run_id; the seam reads it back after
+        # initialize_run and hands it to the telemetry payload, which validates it.
+        graph.run_id = "00000000-0000-0000-0000-000000000000"
+        # raw_graph_data must not look like the sanitized payload, or the seam would
+        # (correctly) reuse this compilation instead of rebuilding.
+        graph.raw_graph_data = {"nodes": [], "edges": []}
         return graph
 
     monkeypatch.setattr(chat_module, "prepare_flow_build_for_user", substitute)

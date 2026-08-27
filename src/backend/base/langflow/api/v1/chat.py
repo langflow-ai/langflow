@@ -145,6 +145,19 @@ async def _register_job_owner_or_cancel(queue_service: JobQueueService, job_id: 
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+def _compiled_from(graph: object, graph_data: dict) -> bool:
+    """Whether this compilation was produced from exactly this payload.
+
+    ``raw_graph_data`` is part of ``Graph.__getstate__``, so this survives a serialized
+    cache — a marker attribute would be dropped there and silently reintroduce the
+    rebuild-per-request behaviour on Redis-backed deployments only.
+    """
+    raw = getattr(graph, "raw_graph_data", None)
+    if not isinstance(raw, dict):
+        return False
+    return raw.get("nodes") == graph_data.get("nodes") and raw.get("edges") == graph_data.get("edges")
+
+
 async def _trusted_stored_graph(flow_data, *, is_superuser: bool) -> dict | None:
     """Run the caller-aware component policy over a STORED graph.
 
@@ -582,10 +595,15 @@ async def build_vertex(
 
     try:
         cache = await chat_service.get_cache(flow_id_str)
-        if sanitized_data is not None:
-            # Cache keys carry no policy generation, so a graph cached while the policy was
-            # off still embeds the caller's own source. Rebuild from the trusted copy the
-            # policy returned rather than reusing that compilation.
+        cached_graph = None if isinstance(cache, CacheMiss) else cache.get("result")
+        # This seam is incremental: it is called once per vertex and carries built state in
+        # the cache between calls. The policy hands back a copy on EVERY request from a
+        # non-superuser, so rebuilding on that alone discarded the previous vertex's result
+        # and the next one reported its upstream as unbuilt. Rebuild only when the cached
+        # compilation did not come from this copy — which still covers the case the rebuild
+        # exists for, a graph compiled while the policy was off.
+        needs_initialize_run = True
+        if sanitized_data is not None and not _compiled_from(cached_graph, sanitized_data):
             graph = await build_and_cache_graph_from_data(
                 flow_id=flow_id_str,
                 chat_service=chat_service,
@@ -593,7 +611,7 @@ async def build_vertex(
             )
             run_id = str(uuid.uuid4())
             graph.set_run_id(run_id)
-        elif isinstance(cache, CacheMiss):
+        elif cached_graph is None:
             # If there's no cache
             await logger.awarning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
             async with session_scope() as session:
@@ -604,14 +622,16 @@ async def build_vertex(
                 )
             run_id = str(uuid.uuid4())
             graph.set_run_id(run_id)
+            # build_graph_from_db initializes the run itself.
+            needs_initialize_run = False
         else:
-            graph = cache.get("result")
+            graph = cached_graph
         try:
             _validate_graph_for_execution(graph)
         except HTTPException:
             await _clear_invalid_graph_cache(chat_service, flow_id_str)
             raise
-        if sanitized_data is None and not isinstance(cache, CacheMiss):
+        if needs_initialize_run:
             await graph.initialize_run()
             run_id = graph.run_id
         vertex = graph.get_vertex(vertex_id)
