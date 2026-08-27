@@ -139,6 +139,74 @@ class TestIngestionProviderScope:
         )
 
     @pytest.mark.asyncio
+    async def test_preflight_uses_async_hierarchy_refresh_for_both_providers(self):
+        from langflow.services.database.models.flow.model import Flow
+        from langflow.services.database.models.memory_base.model import MemoryBase
+        from langflow.services.memory_base.provider_scope import (
+            MemoryProviderScope,
+            preflight_memory_provider_use,
+        )
+
+        owner_user_id = uuid.uuid4()
+        actor_user_id = uuid.uuid4()
+        project_id = uuid.uuid4()
+        workspace_id = uuid.uuid4()
+        flow = Flow(
+            id=uuid.uuid4(),
+            user_id=owner_user_id,
+            name="moved flow",
+            folder_id=project_id,
+            workspace_id=workspace_id,
+        )
+        scope = MemoryProviderScope(
+            memory_base=MemoryBase(
+                id=uuid.uuid4(),
+                name="memory",
+                flow_id=flow.id,
+                user_id=owner_user_id,
+                kb_name="kb",
+            ),
+            flow=flow,
+            actor_user_id=actor_user_id,
+            is_superuser=False,
+        )
+        async_calls = []
+
+        class _AsyncHierarchyPolicy:
+            def resolve(self, **_kwargs):
+                msg = "Memory preflight must not use the stale synchronous policy path"
+                raise AssertionError(msg)
+
+            async def aresolve(self, *, context, candidate_provider_ids, purpose):
+                async_calls.append((context, candidate_provider_ids, purpose))
+                return ModelProviderPolicySnapshot(
+                    context=context,
+                    purpose=purpose,
+                    candidate_provider_ids=candidate_provider_ids,
+                    allowed_provider_ids=candidate_provider_ids,
+                )
+
+        with (
+            patch("lfx.services.deps.get_model_provider_policy_service", return_value=_AsyncHierarchyPolicy()),
+            patch("langflow.services.memory_base.provider_scope.infer_llm_provider", return_value="Anthropic"),
+        ):
+            policies = await preflight_memory_provider_use(
+                scope,
+                embedding_provider="OpenAI",
+                preprocessing=True,
+                preproc_model="claude-test",
+            )
+
+        assert len(async_calls) == 2
+        assert all(call[0].user_id == actor_user_id for call in async_calls)
+        assert all(call[0].attributes["project_id"] == project_id for call in async_calls)
+        assert all(call[0].attributes["workspace_id"] == workspace_id for call in async_calls)
+        assert all(call[2] is ModelProviderPolicyPurpose.USE for call in async_calls)
+        assert policies.embedding.context == async_calls[0][0]
+        assert policies.preprocessing is not None
+        assert policies.preprocessing.context == async_calls[1][0]
+
+    @pytest.mark.asyncio
     async def test_project_grant_overrides_global_deny_using_server_flow_scope(self):
         from langflow.services.database.models.flow.model import Flow
         from langflow.services.memory_base.task import ingest_memory_task

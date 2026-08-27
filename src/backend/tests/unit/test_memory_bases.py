@@ -1311,7 +1311,7 @@ class TestMemoryBaseServiceConcurrency:
             ),
             patch(
                 "langflow.services.memory_base.ingestion.preflight_memory_provider_use",
-                side_effect=ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.USE),
+                AsyncMock(side_effect=ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.USE)),
             ),
             patch("langflow.services.memory_base.ingestion.resolve_kb_username") as resolve_username,
             patch("langflow.services.memory_base.ingestion.get_job_service", return_value=job_service),
@@ -1697,7 +1697,7 @@ class TestMemoryBaseServiceRegenerate:
             ),
             patch(
                 "langflow.services.memory_base.ingestion.preflight_memory_provider_use",
-                side_effect=ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.USE),
+                AsyncMock(side_effect=ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.USE)),
             ),
             patch.object(service, "trigger_ingestion", AsyncMock()) as trigger,
             pytest.raises(ModelProviderPolicyError),
