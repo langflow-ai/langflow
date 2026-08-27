@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import type { APIClassType } from "@/types/api";
 import Dropdown from "../index";
 
@@ -53,6 +54,10 @@ jest.mock("@/controllers/API/queries/nodes/use-post-template-value", () => ({
   usePostTemplateValue: () => ({ mutateAsync: jest.fn() }),
 }));
 
+jest.mock("@/controllers/API/queries/models/use-get-model-providers", () => ({
+  useGetModelProviders: jest.fn(),
+}));
+
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
   default: (selector?: MockStoreSelectorFn<{ setErrorData: jest.Mock }>) =>
@@ -63,6 +68,15 @@ jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
   default: (selector?: MockStoreSelectorFn<{ nodes: unknown[] }>) =>
     selector ? selector({ nodes: [] }) : {},
+}));
+
+jest.mock("@/stores/flowsManagerStore", () => ({
+  __esModule: true,
+  default: (
+    selector?: MockStoreSelectorFn<{
+      currentFlowId: string;
+    }>,
+  ) => (selector ? selector({ currentFlowId: "flow-one" }) : {}),
 }));
 
 jest.mock("@/stores/typesStore", () => ({
@@ -125,6 +139,18 @@ const mockNodeClass: APIClassType = {
   documentation: "",
   description: "",
 };
+
+const mockUseGetModelProviders = useGetModelProviders as jest.Mock;
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockUseGetModelProviders.mockReturnValue({
+    data: undefined,
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+  });
+});
 
 describe("Dropdown value reset bug", () => {
   /**
@@ -223,5 +249,178 @@ describe("Dropdown accessibility", () => {
     expect(screen.getByTestId("dropdown_search_input")).toHaveAccessibleName(
       "Search options...",
     );
+  });
+});
+
+describe("legacy provider dropdown policy", () => {
+  const renderProviderDropdown = (
+    value = "Anthropic",
+    options = ["OpenAI", "Anthropic", "Custom"],
+  ) =>
+    render(
+      <Dropdown
+        value={value}
+        options={options}
+        optionsMetaData={options.map((option) => ({ icon: option }))}
+        onSelect={jest.fn()}
+        name="agent_llm"
+        nodeId="test-node"
+        nodeClass={mockNodeClass}
+        handleNodeClass={jest.fn()}
+        id="provider-dropdown"
+        editNode={false}
+        handleOnNewValue={jest.fn()}
+        disabled={false}
+      />,
+    );
+
+  it("hides static provider options until the active flow policy resolves", () => {
+    mockUseGetModelProviders.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isFetching: true,
+      isError: false,
+    });
+
+    renderProviderDropdown();
+
+    expect(mockUseGetModelProviders).toHaveBeenCalledWith(
+      { flowId: "flow-one" },
+      { enabled: true },
+    );
+    expect(screen.queryByText("OpenAI")).not.toBeInTheDocument();
+    expect(screen.queryByText("Anthropic")).not.toBeInTheDocument();
+  });
+
+  it("shows only scoped providers while preserving the custom option", () => {
+    mockUseGetModelProviders.mockReturnValue({
+      data: [{ provider: "OpenAI" }],
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+    });
+
+    renderProviderDropdown("OpenAI");
+
+    expect(screen.getAllByText("OpenAI").length).toBeGreaterThan(0);
+    expect(screen.getByText("Custom")).toBeInTheDocument();
+    expect(screen.queryByText("Anthropic")).not.toBeInTheDocument();
+  });
+
+  it("hides a revoked saved provider without clearing it and keeps it hidden through a later error", () => {
+    const onSelect = jest.fn();
+    mockUseGetModelProviders.mockReturnValue({
+      data: [{ provider: "OpenAI" }, { provider: "Anthropic" }],
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+    });
+    const { rerender } = render(
+      <Dropdown
+        value="Anthropic"
+        options={["OpenAI", "Anthropic", "Custom"]}
+        onSelect={onSelect}
+        name="agent_llm"
+        nodeId="test-node"
+        nodeClass={mockNodeClass}
+        handleNodeClass={jest.fn()}
+        id="provider-dropdown"
+        editNode={false}
+        handleOnNewValue={jest.fn()}
+        disabled={false}
+      />,
+    );
+
+    mockUseGetModelProviders.mockReturnValue({
+      data: [{ provider: "OpenAI" }],
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+    });
+    rerender(
+      <Dropdown
+        value="Anthropic"
+        options={["OpenAI", "Anthropic", "Custom"]}
+        onSelect={onSelect}
+        name="agent_llm"
+        nodeId="test-node"
+        nodeClass={mockNodeClass}
+        handleNodeClass={jest.fn()}
+        id="provider-dropdown"
+        editNode={false}
+        handleOnNewValue={jest.fn()}
+        disabled={false}
+      />,
+    );
+
+    expect(screen.queryByText("Anthropic")).not.toBeInTheDocument();
+    expect(onSelect).not.toHaveBeenCalledWith("", undefined, true);
+
+    mockUseGetModelProviders.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isFetching: false,
+      isError: true,
+    });
+    rerender(
+      <Dropdown
+        value="Anthropic"
+        options={["OpenAI", "Anthropic", "Custom"]}
+        onSelect={onSelect}
+        name="agent_llm"
+        nodeId="test-node"
+        nodeClass={mockNodeClass}
+        handleNodeClass={jest.fn()}
+        id="provider-dropdown"
+        editNode={false}
+        handleOnNewValue={jest.fn()}
+        disabled={false}
+      />,
+    );
+
+    expect(screen.queryByText("Anthropic")).not.toBeInTheDocument();
+    expect(onSelect).not.toHaveBeenCalledWith("", undefined, true);
+  });
+
+  it("leaves ordinary dropdowns unchanged", () => {
+    mockUseGetModelProviders.mockReturnValue({
+      data: [{ provider: "OpenAI" }],
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+    });
+
+    render(
+      <Dropdown
+        value="tool_b"
+        options={["tool_a", "tool_b"]}
+        onSelect={jest.fn()}
+        name="tool"
+        nodeId="test-node"
+        nodeClass={mockNodeClass}
+        handleNodeClass={jest.fn()}
+        id="ordinary-dropdown"
+        editNode={false}
+        handleOnNewValue={jest.fn()}
+        disabled={false}
+      />,
+    );
+
+    expect(screen.getAllByText("tool_a").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("tool_b").length).toBeGreaterThan(0);
+  });
+
+  it("handles an empty scoped result for an ALTK dropdown without Custom", () => {
+    mockUseGetModelProviders.mockReturnValue({
+      data: [],
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+    });
+
+    renderProviderDropdown("Anthropic", ["Anthropic"]);
+
+    expect(screen.queryByText("Anthropic")).not.toBeInTheDocument();
+    expect(screen.getByTestId("provider-dropdown")).toBeDisabled();
   });
 });
