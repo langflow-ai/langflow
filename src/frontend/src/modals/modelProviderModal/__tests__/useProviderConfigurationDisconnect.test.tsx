@@ -33,6 +33,7 @@ const mockDeleteMutateAsync = jest.fn((params: { id: string | undefined }) => {
   return Promise.resolve(undefined);
 });
 const mockCreateMutateAsync = jest.fn();
+const mockValidateMutateAsync = jest.fn(() => Promise.resolve({ valid: true }));
 
 const mockSetSuccessData = jest.fn();
 const mockSetErrorData = jest.fn();
@@ -78,7 +79,7 @@ jest.mock(
 
 jest.mock("@/controllers/API/queries/models/use-validate-provider", () => ({
   useValidateProvider: () => ({
-    mutateAsync: jest.fn(() => Promise.resolve({ valid: true })),
+    mutateAsync: mockValidateMutateAsync,
   }),
 }));
 
@@ -322,10 +323,73 @@ describe("useProviderConfiguration.handleSaveAllVariables", () => {
     );
     mockModelProviders = [];
     mockCreateMutateAsync.mockReset();
+    mockValidateMutateAsync.mockReset();
+    mockValidateMutateAsync.mockResolvedValue({ valid: true });
+    deleteCalls.length = 0;
+    mockDeleteMutateAsync.mockClear();
     mockSetSuccessData.mockClear();
     mockSetErrorData.mockClear();
     mockInvalidateQueries.mockClear();
     mockRefetchQueries.mockClear();
+  });
+
+  it("deletes a configured optional variable when it is explicitly cleared", async () => {
+    mockProviderVariablesMapping.OpenAI = [
+      {
+        variable_name: "OpenAI API Key",
+        variable_key: "OPENAI_API_KEY",
+        required: true,
+        is_secret: true,
+        is_list: false,
+        options: [],
+      },
+      {
+        variable_name: "OpenAI Base URL",
+        variable_key: "OPENAI_BASE_URL",
+        required: false,
+        is_secret: false,
+        is_list: false,
+        options: [],
+      },
+    ];
+    mockGlobalVariables.push(
+      { id: "var-key", name: "OPENAI_API_KEY" },
+      {
+        id: "var-url",
+        name: "OPENAI_BASE_URL",
+        value: "https://example.com/v1",
+      },
+    );
+    mockModelProviders = [
+      {
+        provider: "OpenAI",
+        is_configured: true,
+        is_enabled: true,
+        models: [],
+      },
+    ];
+
+    const { result } = renderProviderConfiguration({
+      provider: "OpenAI",
+      icon: "OpenAI",
+      is_enabled: true,
+      is_configured: true,
+      models: [],
+    });
+
+    act(() => {
+      result.current.handleVariableChange("OPENAI_BASE_URL", "");
+    });
+
+    expect(result.current.canSave).toBe(true);
+
+    await act(async () => {
+      await result.current.handleSaveAllVariables();
+    });
+
+    expect(deleteCalls).toEqual([{ id: "var-url" }]);
+    expect(mockCreateMutateAsync).not.toHaveBeenCalled();
+    expect(mockValidateMutateAsync).not.toHaveBeenCalled();
   });
 
   it("waits for the base URL write before creating the API key", async () => {
