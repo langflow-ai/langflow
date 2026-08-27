@@ -9,6 +9,11 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 MAX_ERROR_MESSAGE_LENGTH = 150
+
+# Appended when a failed turn still handed the canvas it managed to build back to the
+# user, so an interrupted multi-stage build reads as resumable rather than as a dead end.
+PARTIAL_WORK_KEPT_SUFFIX = "The part of the flow that was already built is kept on the canvas — continue from there."
+
 MIN_MEANINGFUL_PART_LENGTH = 10
 MAX_RAW_CAUSE_LENGTH = 2000
 

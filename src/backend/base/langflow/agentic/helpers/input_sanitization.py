@@ -6,6 +6,13 @@ content_safety, slurs and explicit profanity.
 
 Injection patterns are intentionally specific, to avoid firing on legitimate Langflow
 questions such as "how do I ignore errors".
+
+Trust boundary (LE-2323): the injection patterns describe what an UNTRUSTED party may
+try to do to the assistant, so they only apply to a user turn. Text the assistant itself
+authored -- the spec it writes for its own ``generate_component`` tool -- passes
+``trusted_source=True``: a spec for a guardrail or sanitizer component legitimately
+enumerates attack phrasings, and checking it rejected in-scope builds mid-flight. The
+content guardrail and normalization still run for both.
 """
 
 import re
@@ -50,18 +57,31 @@ INJECTION_PATTERNS: list[tuple[re.Pattern[str], str]] = [
         re.compile(r"you\s+are\s+now\s+(a|an|my)\s+", re.IGNORECASE),
         "Prompt injection: role hijacking attempt",
     ),
+    # Anchored to the model as the subject; a bare mid-sentence "act as" describes a
+    # component's role ("a Prompt Template that will act as a bridge"), not a hijack.
     (
-        re.compile(r"act\s+as\s+(a|an|if\s+you\s+were)\s+", re.IGNORECASE),
+        re.compile(r"(?:^|[.!?]\s+|\n\s*)act\s+as\s+(a|an|if\s+you\s+were)\s+", re.IGNORECASE),
+        "Prompt injection: role hijacking attempt",
+    ),
+    (
+        re.compile(
+            r"\byou\s+(?:should\s+|must\s+|will\s+|need\s+to\s+|are\s+to\s+|have\s+to\s+)?"
+            r"act\s+as\s+(a|an|if\s+you\s+were)\s+",
+            re.IGNORECASE,
+        ),
         "Prompt injection: role hijacking attempt",
     ),
     (
         re.compile(r"pretend\s+(you\s+are|to\s+be)\s+", re.IGNORECASE),
         "Prompt injection: role hijacking attempt",
     ),
-    # System prompt extraction attempts
+    # System prompt extraction attempts; the target must be the assistant's OWN
+    # directives, so "show instructions on how to fix each finding" stays in scope.
     (
         re.compile(
-            r"(reveal|show|print|output|repeat|display)\s+(your\s+)?(system\s+prompt|instructions|initial\s+prompt)",
+            r"(reveal|show|print|output|repeat|display)\s+(?:me\s+)?"
+            r"(?:your\s+(?:system\s+prompt|system\s+instructions|initial\s+prompt|instructions)"
+            r"|the\s+(?:system\s+prompt|system\s+instructions|initial\s+prompt))",
             re.IGNORECASE,
         ),
         "Prompt injection: system prompt extraction attempt",
@@ -92,17 +112,21 @@ class SanitizationResult:
     """What to tell the user. Defaults to the injection wording; content violations override it."""
 
 
-def sanitize_input(text: str) -> SanitizationResult:
-    """Validate and sanitize user input before it reaches the LLM.
+def sanitize_input(text: str, *, trusted_source: bool = False) -> SanitizationResult:
+    """Validate and sanitize input before it reaches the LLM.
 
     Checks for prompt injection and abusive content, then normalizes the input. Returns a
     SanitizationResult with is_safe=False on either. The two are separate refusals: an
     injection attempt and a slur are different problems and read differently to the user.
+
+    ``trusted_source=True`` marks text the assistant authored itself (the spec its agent
+    writes for ``generate_component``) rather than a user turn, and skips the injection
+    patterns only — see the module docstring for why.
     """
     if not text:
         return SanitizationResult(is_safe=True, sanitized_input="")
 
-    violation = _check_injection_patterns(text)
+    violation = None if trusted_source else _check_injection_patterns(text)
     if violation:
         return SanitizationResult(is_safe=False, sanitized_input=text, violation=violation)
 
