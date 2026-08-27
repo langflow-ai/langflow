@@ -8,6 +8,8 @@ import {
 } from "../../helpers/provider-scope";
 import { UseRequestProcessor } from "../../services/request-processor";
 
+const PROVIDER_POLICY_STALE_TIME_MS = 30_000;
+
 export interface ModelProviderInfo {
   provider: string;
   models: Array<{
@@ -65,8 +67,8 @@ export const getModelProvidersQueryOptions = (
         icon: providerInfo.icon || getProviderIcon(providerInfo.provider),
       }));
     },
-    refetchOnWindowFocus: false,
-    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: true,
+    staleTime: PROVIDER_POLICY_STALE_TIME_MS,
   };
 };
 

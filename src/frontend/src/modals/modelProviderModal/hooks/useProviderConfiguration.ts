@@ -96,6 +96,8 @@ export const useProviderConfiguration = ({
   const _validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  const previousSelectedProviderNameRef = useRef(selectedProvider?.provider);
+  const unavailableSelectedProviderNameRef = useRef<string | null>(null);
 
   // Tracks whether the user has made any persisted changes during this dialog
   // session (save / activate / disconnect / model toggle). Read synchronously
@@ -129,28 +131,33 @@ export const useProviderConfiguration = ({
     projectId,
   });
   const { refreshAllModelInputs } = useRefreshModelInputs();
-  const { data: modelProviders = [], isFetching: isFetchingModels } =
-    useGetModelProviders(
-      { includeDeprecated: true, flowId, projectId },
-      {
-        // Issue #13137: the previous 10s ``refetchInterval`` polled
-        // ``/api/v1/models`` continuously while the Ollama card was
-        // selected. Each backend call serially probed every Ollama model
-        // (GET /api/tags + POST /api/show per model), so with many models
-        // the request took longer than the interval and the queue grew
-        // unbounded. The catalog already refreshes on credential save and
-        // disconnect via ``invalidateProviderQueries``, so the timer is
-        // unnecessary — leaving it removed makes the list update on
-        // demand instead of on a fixed schedule.
-        refetchInterval: false,
-        staleTime: 1000 * 30, // 30 seconds
-      },
-    );
+  const {
+    data: modelProviders = [],
+    isError: isModelProvidersError,
+    isFetched: areModelProvidersFetched,
+    isFetching: isFetchingModels,
+  } = useGetModelProviders(
+    { includeDeprecated: true, flowId, projectId },
+    {
+      // Issue #13137: the previous 10s ``refetchInterval`` polled
+      // ``/api/v1/models`` continuously while the Ollama card was
+      // selected. Each backend call serially probed every Ollama model
+      // (GET /api/tags + POST /api/show per model), so with many models
+      // the request took longer than the interval and the queue grew
+      // unbounded. The catalog already refreshes on credential save and
+      // disconnect via ``invalidateProviderQueries``, so the timer is
+      // unnecessary — leaving it removed makes the list update on
+      // demand instead of on a fixed schedule.
+      refetchInterval: false,
+      staleTime: 1000 * 30, // 30 seconds
+    },
+  );
 
   // Invalidate all provider-related caches after successful create/update
   const invalidateProviderQueries = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["useGetModelProviders"] });
     queryClient.invalidateQueries({ queryKey: ["useGetEnabledModels"] });
+    queryClient.invalidateQueries({ queryKey: ["useGetProviderVariables"] });
     queryClient.invalidateQueries({
       queryKey: getGlobalVariablesQueryKey({ flowId, projectId }),
       exact: true,
@@ -201,7 +208,12 @@ export const useProviderConfiguration = ({
 
   // Keep syncedSelectedProvider in sync with prop and reset state on provider change
   useEffect(() => {
-    if (selectedProvider?.provider !== syncedSelectedProvider?.provider) {
+    const selectedProviderName = selectedProvider?.provider;
+    const didSelectedProviderChange =
+      selectedProviderName !== previousSelectedProviderNameRef.current;
+    previousSelectedProviderNameRef.current = selectedProviderName;
+
+    if (didSelectedProviderChange) {
       setVariableValues({});
       setValidationState("idle");
       setValidationError(null);
@@ -210,11 +222,31 @@ export const useProviderConfiguration = ({
       // Force refetch models when switching providers
       invalidateProviderQueries();
     }
-    setSyncedSelectedProvider(selectedProvider);
+
+    const hasSettledProviderCatalog =
+      areModelProvidersFetched && !isFetchingModels && !isModelProvidersError;
+    if (selectedProviderName && hasSettledProviderCatalog) {
+      unavailableSelectedProviderNameRef.current = modelProviders.some(
+        (provider) => provider.provider === selectedProviderName,
+      )
+        ? null
+        : selectedProviderName;
+    } else if (!selectedProviderName) {
+      unavailableSelectedProviderNameRef.current = null;
+    }
+
+    setSyncedSelectedProvider(
+      selectedProviderName === unavailableSelectedProviderNameRef.current
+        ? null
+        : selectedProvider,
+    );
   }, [
     selectedProvider,
+    modelProviders,
+    areModelProvidersFetched,
+    isFetchingModels,
+    isModelProvidersError,
     invalidateProviderQueries,
-    syncedSelectedProvider?.provider,
   ]);
 
   // Sync selectedProvider with fresh data when model providers are refetched

@@ -19,6 +19,23 @@ interface IPatchUpdateFlow {
   a2a_card_overrides?: Record<string, unknown> | null;
 }
 
+const isFlowScopedProviderQuery = (
+  queryKey: readonly unknown[],
+  flowId: string,
+): boolean => {
+  switch (queryKey[0]) {
+    case "useGetTypes":
+    case "useGetEnabledModels":
+    case "useGetProviderVariables":
+    case "useGetGlobalVariables":
+      return queryKey[1] === flowId;
+    case "useGetModelProviders":
+      return queryKey[3] === flowId;
+    default:
+      return false;
+  }
+};
+
 export const usePatchUpdateFlow: useMutationFunctionType<
   undefined,
   IPatchUpdateFlow
@@ -38,7 +55,18 @@ export const usePatchUpdateFlow: useMutationFunctionType<
   // biome-ignore lint/suspicious/noExplicitAny: legacy
   const mutation: UseMutationResult<IPatchUpdateFlow, any, IPatchUpdateFlow> =
     mutate(["usePatchUpdateFlow"], PatchUpdateFlowFn, {
-      onSettled: () => {
+      ...options,
+      onSuccess: (...args) => {
+        const [, variables] = args;
+        if (Object.hasOwn(variables, "folder_id")) {
+          queryClient.invalidateQueries({
+            predicate: ({ queryKey }) =>
+              isFlowScopedProviderQuery(queryKey, variables.id),
+          });
+        }
+        options?.onSuccess?.(...args);
+      },
+      onSettled: (...args) => {
         queryClient.invalidateQueries({
           queryKey: ["useGetRefreshFlowsQuery"],
         });
@@ -48,8 +76,8 @@ export const usePatchUpdateFlow: useMutationFunctionType<
         queryClient.invalidateQueries({
           queryKey: ["useGetFolder"],
         });
+        options?.onSettled?.(...args);
       },
-      ...options,
     });
 
   return mutation;

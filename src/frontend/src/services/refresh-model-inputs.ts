@@ -66,6 +66,9 @@ export async function refreshAllModelInputs(
       await queryClient.invalidateQueries({
         queryKey: ["useGetEnabledModels"],
       });
+      await queryClient.invalidateQueries({
+        queryKey: ["useGetProviderVariables"],
+      });
     }
 
     const nodesWithModelFields = allNodes.filter(isModelNode);

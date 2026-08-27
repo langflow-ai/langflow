@@ -360,6 +360,22 @@ describe("useProviderConfiguration policy refresh", () => {
     await waitFor(() =>
       expect(result.current.syncedSelectedProvider).toBeNull(),
     );
+
+    mockModelProvidersIsFetching = true;
+    rerender({ provider: selectedProvider });
+    expect(result.current.syncedSelectedProvider).toBeNull();
+
+    mockModelProvidersIsFetching = false;
+    mockModelProvidersIsError = true;
+    rerender({ provider: selectedProvider });
+    expect(result.current.syncedSelectedProvider).toBeNull();
+
+    mockModelProviders = [selectedProvider];
+    mockModelProvidersIsError = false;
+    rerender({ provider: selectedProvider });
+    await waitFor(() =>
+      expect(result.current.syncedSelectedProvider?.provider).toBe("OpenAI"),
+    );
   });
 
   it("invalidates provider-variable mappings with the other provider caches", () => {

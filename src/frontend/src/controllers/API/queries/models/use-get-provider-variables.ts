@@ -11,6 +11,8 @@ import { UseRequestProcessor } from "../../services/request-processor";
 
 export type ProviderVariablesMapping = Record<string, ProviderVariable[]>;
 
+const PROVIDER_POLICY_STALE_TIME_MS = 30_000;
+
 /**
  * Hook to fetch provider variables mapping from the API.
  * Returns a mapping of provider names to their required variables.
@@ -51,8 +53,8 @@ export const useGetProviderVariables: useQueryFunctionType<
     ["useGetProviderVariables", ...providerScopeQueryKey(params)],
     getProviderVariablesFn,
     {
-      refetchOnWindowFocus: false,
-      staleTime: 1000 * 60 * 60, // 1 hour - this data rarely changes
+      refetchOnWindowFocus: true,
+      staleTime: PROVIDER_POLICY_STALE_TIME_MS,
       ...options,
     },
   );
