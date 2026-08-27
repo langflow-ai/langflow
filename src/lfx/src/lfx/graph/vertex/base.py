@@ -393,7 +393,7 @@ class Vertex:
             )
 
     def require_model_provider_policy(self, user_id=None) -> None:
-        """Reauthorize a model vertex before any built or frozen result can be reused."""
+        """Authorize a model vertex before graph inputs, credentials, or cached results are used."""
         if not self.custom_component:
             self.instantiate_component(user_id=user_id)
         if self.custom_component:
@@ -409,6 +409,10 @@ class Vertex:
     ) -> None:
         """Initiate the build process."""
         await logger.adebug(f"Building {self.display_name}")
+        # Upstream parameters may themselves hydrate load_from_db credentials.
+        # Preflight the target model before building any input vertex so a
+        # scoped denial cannot observe either upstream or local secrets.
+        self.require_model_provider_policy(user_id=user_id)
         await self._build_each_vertex_in_params_dict()
         if self.base_type is None:
             msg = f"Base type for vertex {self.display_name} not found"
