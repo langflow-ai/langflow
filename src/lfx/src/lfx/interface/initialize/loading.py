@@ -314,6 +314,16 @@ async def update_params_with_load_from_db_fields(
     *,
     fallback_to_env_vars=False,
 ):
+    # Nothing to resolve means nothing to query. Opening the session first cost a
+    # pool checkout per vertex on every run, including the common case of a
+    # component with no load-from-db fields at all: with an empty field list both
+    # the loop below and load_from_env_vars are no-ops, so the session was
+    # acquired, held, and returned without ever executing a statement. Measured
+    # on a two-component flow this was the single zero-query checkout appearing
+    # in every request's connection census.
+    if not load_from_db_fields:
+        return params
+
     async with session_scope() as session:
         settings_service = get_settings_service()
         is_noop_session = isinstance(session, NoopSession) or (
