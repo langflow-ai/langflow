@@ -461,6 +461,7 @@ async def detect_env_vars(
     payload: DetectVarsRequest,
     session: DbSession,
     current_user: CurrentActiveUser,
+    provider_policy_attributes: ProviderPolicyAttributesDependency,
 ):
     """Detect global variable references used by the given flow version IDs.
 
@@ -499,7 +500,11 @@ async def detect_env_vars(
         data = _validate_flow_or_422(version_id=version_id, data=version.data)
         candidate_keys.update(_collect_candidate_variable_keys_from_flow_data(data))
 
-    provider_policy = _resolve_policy(current_user, ModelProviderPolicyPurpose.CONFIGURE)
+    provider_policy = _resolve_policy(
+        current_user,
+        ModelProviderPolicyPurpose.CONFIGURE,
+        provider_policy_attributes,
+    )
     visible_candidate_keys = {
         variable_key
         for variable_key in candidate_keys

@@ -66,6 +66,7 @@ class TestDetectEnvVars:
                 payload=DetectVarsRequest(flow_version_ids=[fv_id]),
                 session=AsyncMock(),
                 current_user=SimpleNamespace(id=uuid4()),
+                provider_policy_attributes={},
             )
         assert result.variables == ["MY_OPENAI_KEY"]
 
@@ -91,10 +92,11 @@ class TestDetectEnvVars:
             }
         )
 
-        def _openai_only_policy(_current_user, purpose):
+        def _openai_only_policy(_current_user, purpose, attributes):
             from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 
             assert purpose is ModelProviderPolicyPurpose.CONFIGURE
+            assert attributes == {}
             return SimpleNamespace(allows=lambda provider: provider == "OpenAI")
 
         with (
@@ -113,6 +115,7 @@ class TestDetectEnvVars:
                 payload=DetectVarsRequest(flow_version_ids=[fv_id]),
                 session=AsyncMock(),
                 current_user=SimpleNamespace(id=uuid4()),
+                provider_policy_attributes={},
             )
 
         assert result.variables == ["MY_GENERIC_KEY"]
@@ -136,6 +139,7 @@ class TestDetectEnvVars:
                 payload=DetectVarsRequest(flow_version_ids=[fv_id]),
                 session=AsyncMock(),
                 current_user=SimpleNamespace(id=uuid4()),
+                provider_policy_attributes={},
             )
         assert result.variables == []
 
@@ -170,6 +174,7 @@ class TestDetectEnvVars:
                 payload=DetectVarsRequest(flow_version_ids=[fv_id]),
                 session=AsyncMock(),
                 current_user=SimpleNamespace(id=uuid4()),
+                provider_policy_attributes={},
             )
         assert result.variables == ["API_KEY"]
 
@@ -194,6 +199,7 @@ class TestDetectEnvVars:
                 payload=DetectVarsRequest(flow_version_ids=[fv1, fv2]),
                 session=AsyncMock(),
                 current_user=SimpleNamespace(id=uuid4()),
+                provider_policy_attributes={},
             )
         assert result.variables == ["MY_KEY"]
 
@@ -217,6 +223,7 @@ class TestDetectEnvVars:
                 payload=DetectVarsRequest(flow_version_ids=[fv_id]),
                 session=AsyncMock(),
                 current_user=SimpleNamespace(id=uuid4()),
+                provider_policy_attributes={},
             )
 
     @pytest.mark.asyncio
@@ -244,6 +251,7 @@ class TestDetectEnvVars:
                 payload=DetectVarsRequest(flow_version_ids=[fv_id]),
                 session=AsyncMock(),
                 current_user=SimpleNamespace(id=uuid4()),
+                provider_policy_attributes={},
             )
 
     @pytest.mark.asyncio
@@ -271,6 +279,7 @@ class TestDetectEnvVars:
                 payload=DetectVarsRequest(flow_version_ids=[fv_id]),
                 session=AsyncMock(),
                 current_user=SimpleNamespace(id=uuid4()),
+                provider_policy_attributes={},
             )
 
     @pytest.mark.asyncio
@@ -298,6 +307,7 @@ class TestDetectEnvVars:
                 payload=DetectVarsRequest(flow_version_ids=[fv_id]),
                 session=AsyncMock(),
                 current_user=SimpleNamespace(id=uuid4()),
+                provider_policy_attributes={},
             )
 
     @pytest.mark.asyncio
@@ -348,6 +358,7 @@ class TestDetectEnvVars:
                 payload=DetectVarsRequest(flow_version_ids=[fv_id]),
                 session=AsyncMock(),
                 current_user=SimpleNamespace(id=uuid4()),
+                provider_policy_attributes={},
             )
         assert result.variables == ["MY_OPENAI_KEY"]
 
@@ -383,6 +394,7 @@ class TestDetectEnvVars:
                 payload=DetectVarsRequest(flow_version_ids=[fv_id]),
                 session=AsyncMock(),
                 current_user=SimpleNamespace(id=uuid4()),
+                provider_policy_attributes={},
             )
         assert result.variables == ["VALID_KEY"]
 
@@ -416,6 +428,7 @@ class TestDetectEnvVars:
                 payload=DetectVarsRequest(flow_version_ids=[fv_id]),
                 session=AsyncMock(),
                 current_user=SimpleNamespace(id=uuid4()),
+                provider_policy_attributes={},
             )
 
         assert result.variables == []
