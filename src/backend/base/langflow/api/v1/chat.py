@@ -145,6 +145,25 @@ async def _register_job_owner_or_cancel(queue_service: JobQueueService, job_id: 
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+async def _trusted_stored_graph(flow_data, *, is_superuser: bool) -> dict | None:
+    """Run the caller-aware component policy over a STORED graph.
+
+    The stored graph is caller-controlled -- any user who can write a flow can persist
+    component source through the ordinary flow API -- and the global validator does not
+    know who is asking, so it cannot enforce ``custom_component_admin_only`` on its own.
+    Returns the trusted copy to build from, or ``None`` when the policy is permissive and
+    the stored graph stands. The status mapping matches the whole-flow build seam.
+    """
+    try:
+        return await prepare_flow_build_for_user(flow_data, is_superuser=is_superuser)
+    except CatalogPolicyIdentityUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except CustomComponentValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 @router.post(
     "/build/{flow_id}/vertices",
     deprecated=True,
@@ -201,9 +220,15 @@ async def retrieve_vertices_order(
     run_id = str(uuid.uuid4())
     try:
         if not data:
-            graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
+            trusted_data = await _trusted_stored_graph(flow.data, is_superuser=current_user.is_superuser)
+            if trusted_data is not None:
+                graph = await build_and_cache_graph_from_data(
+                    flow_id=flow_id, graph_data=trusted_data, chat_service=chat_service
+                )
+            else:
+                graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
         else:
-            sanitized_data = await prepare_flow_build_for_user(
+            sanitized_data = await _trusted_stored_graph(
                 data.model_dump(),
                 is_superuser=current_user.is_superuser,
             )
@@ -242,6 +267,10 @@ async def retrieve_vertices_order(
                 playground_run_id=run_id,
             ),
         )
+        # A policy refusal already carries its status; re-wrapping it as 500 would report
+        # an authorization decision as a server fault. Telemetry above still records it.
+        if isinstance(exc, HTTPException):
+            raise
         if "stream or streaming set to True" in str(exc):
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         if isinstance(exc, CustomComponentValidationError):
@@ -535,22 +564,7 @@ async def build_vertex(
         folder_id=flow.folder_id,
     )
 
-    # The stored graph is caller-controlled: any user who can write a flow can persist
-    # component source through the ordinary flow API and reach this seam with it. The
-    # global validator does not know the caller, so it cannot enforce
-    # ``custom_component_admin_only`` -- run the same caller-aware policy the whole-flow
-    # build runs. A permissive policy returns ``None`` and the stored graph stands.
-    try:
-        sanitized_data = await prepare_flow_build_for_user(
-            flow.data,
-            is_superuser=current_user.is_superuser,
-        )
-    except CatalogPolicyIdentityUnavailableError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except CustomComponentValidationError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except RuntimeError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    sanitized_data = await _trusted_stored_graph(flow.data, is_superuser=current_user.is_superuser)
 
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()

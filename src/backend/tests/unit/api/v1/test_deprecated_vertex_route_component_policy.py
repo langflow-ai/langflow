@@ -179,3 +179,137 @@ async def test_should_keep_building_normally_under_a_permissive_policy(
 
     assert response.status_code == 200
     assert response.json()["id"] == vertex_id
+
+
+CALLER_AUTHORED_SOURCE = """
+from lfx.custom import Component
+from lfx.io import Output
+from lfx.schema import Data
+
+
+class LE2356Probe(Component):
+    display_name = "LE2356 Probe"
+    name = "LE2356Probe"
+    inputs = []
+    outputs = [Output(name="result", display_name="Result", method="run_probe")]
+
+    def run_probe(self) -> Data:
+        return Data(data={"marker": "OWN_CODE_RAN"})
+"""
+
+
+def _flow_with_caller_authored_source() -> dict:
+    """A flow whose component source is the caller's own, matching no registry hash."""
+    node_id = "LE2356Probe-1"
+    return {
+        "name": "le2356 caller authored",
+        "description": "regression fixture",
+        "data": {
+            "nodes": [
+                {
+                    "id": node_id,
+                    "type": "genericNode",
+                    "position": {"x": 0, "y": 0},
+                    "data": {
+                        "id": node_id,
+                        "type": "CustomComponent",
+                        "node": {
+                            "base_classes": ["Data"],
+                            "display_name": "LE2356 Probe",
+                            "template": {
+                                "_type": "Component",
+                                "code": {"type": "code", "name": "code", "value": CALLER_AUTHORED_SOURCE, "show": True},
+                            },
+                            "outputs": [
+                                {
+                                    "types": ["Data"],
+                                    "selected": "Data",
+                                    "name": "result",
+                                    "display_name": "Result",
+                                    "method": "run_probe",
+                                    "value": "__UNDEFINED__",
+                                    "cache": True,
+                                }
+                            ],
+                        },
+                    },
+                }
+            ],
+            "edges": [],
+            "viewport": {"x": 0, "y": 0, "zoom": 1},
+        },
+    }
+
+
+@pytest.mark.security
+@pytest.mark.parametrize("route", ["order", "build"])
+async def test_real_policy_refuses_caller_authored_source_on_the_deprecated_seams(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch: pytest.MonkeyPatch,
+    route: str,
+):
+    """End-to-end with the REAL policy: no stand-in for prepare_flow_build_for_user.
+
+    The mocked tests above prove the seam honours the policy's outcomes; this one runs the
+    real policy so a regression INSIDE it cannot pass unnoticed.
+
+    Discrimination, measured against release-1.12.0 rather than assumed: the ``order``
+    case fails there (that route had no caller-aware policy at all). The ``build`` case
+    passes there too, because in this test environment the registry hash lookups are warm
+    and the global validator already refuses this payload -- so for that route the
+    discriminating evidence is the mocked tests above, which do fail, plus the live HTTP
+    probe in the PR description. Keeping it here still pins the end-to-end contract.
+    """
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "custom_component_admin_only", True)
+    monkeypatch.setattr(settings, "allow_custom_components", True)
+
+    created = await client.post("api/v1/flows/", json=_flow_with_caller_authored_source(), headers=logged_in_headers)
+    assert created.status_code == 201
+    flow_id = created.json()["id"]
+    node_id = created.json()["data"]["nodes"][0]["id"]
+
+    path = f"api/v1/build/{flow_id}/vertices" if route == "order" else f"api/v1/build/{flow_id}/vertices/{node_id}"
+    response = await client.post(path, headers=logged_in_headers)
+
+    assert response.status_code == 400, f"non-admin executed their own source on {path}: {response.text[:300]}"
+    assert "OWN_CODE_RAN" not in response.text
+
+    await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+
+
+@pytest.mark.security
+@pytest.mark.parametrize("route", ["order", "build"])
+async def test_real_policy_leaves_a_superuser_alone_on_the_deprecated_seams(
+    client: AsyncClient,
+    logged_in_headers_super_user,
+    monkeypatch: pytest.MonkeyPatch,
+    route: str,
+):
+    """The contrast that makes the denial meaningful: the gate is caller-aware.
+
+    If an admin were refused too, the change would be a blanket outage rather than a
+    policy, and the test above would pass for the wrong reason.
+    """
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "custom_component_admin_only", True)
+    monkeypatch.setattr(settings, "allow_custom_components", True)
+
+    created = await client.post(
+        "api/v1/flows/", json=_flow_with_caller_authored_source(), headers=logged_in_headers_super_user
+    )
+    assert created.status_code == 201
+    flow_id = created.json()["id"]
+    node_id = created.json()["data"]["nodes"][0]["id"]
+
+    path = f"api/v1/build/{flow_id}/vertices" if route == "order" else f"api/v1/build/{flow_id}/vertices/{node_id}"
+    response = await client.post(path, headers=logged_in_headers_super_user)
+
+    assert response.status_code != 400, f"the admin-only policy refused an admin on {path}: {response.text[:300]}"
+
+    await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers_super_user)
