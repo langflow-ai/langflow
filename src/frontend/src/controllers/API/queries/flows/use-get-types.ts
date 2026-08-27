@@ -1,3 +1,4 @@
+import { replaceEqualDeep } from "@tanstack/react-query";
 import { useLayoutEffect } from "react";
 import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
 import {
@@ -24,6 +25,20 @@ const displayNamesByPalette = new WeakMap<
   ComponentDisplayNamesType
 >();
 const PALETTE_STALE_TIME_MS = 30_000;
+
+const isPaletteObject = (value: unknown): value is APIObjectType =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const sharePaletteAndMetadata = (oldData: unknown, newData: unknown) => {
+  const sharedData = replaceEqualDeep(oldData, newData);
+  if (isPaletteObject(newData) && isPaletteObject(sharedData)) {
+    const displayNames = displayNamesByPalette.get(newData);
+    if (displayNames !== undefined) {
+      displayNamesByPalette.set(sharedData, displayNames);
+    }
+  }
+  return sharedData;
+};
 
 export const useGetTypes: useQueryFunctionType<
   undefined,
@@ -73,12 +88,9 @@ export const useGetTypes: useQueryFunctionType<
   const queryResult = query(["useGetTypes", flowId, projectId], getTypesFn, {
     refetchOnWindowFocus: true,
     staleTime: PALETTE_STALE_TIME_MS,
-    // Each successful fetch must carry its matching display-name metadata and
-    // rehydrate the active Zustand palette. React Query's structural sharing
-    // can otherwise retain the previous data reference for an equal response,
-    // so the layout effect below would not run after callers clear the store
-    // and invalidate this query (for example, language or bundle reloads).
-    structuralSharing: false,
+    // Preserve React Query's structural sharing while transferring display-name
+    // metadata from the fresh response to the shared palette root.
+    structuralSharing: sharePaletteAndMetadata,
     ...queryOptions,
   });
 

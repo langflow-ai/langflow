@@ -112,7 +112,7 @@ describe("useGetTypes", () => {
       {
         refetchOnWindowFocus: true,
         staleTime: 30_000,
-        structuralSharing: false,
+        structuralSharing: expect.any(Function),
       },
     );
   });
