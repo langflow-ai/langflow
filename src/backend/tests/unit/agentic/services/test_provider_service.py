@@ -401,6 +401,47 @@ class TestGetEnabledProvidersForUser:
         assert resolve_policy.await_args.kwargs["purpose"] is ModelProviderPolicyPurpose.CONFIGURE
 
     @pytest.mark.asyncio
+    async def test_runtime_provider_discovery_uses_use_policy(self):
+        """Runtime discovery authorizes provider use; check-config remains configuration discovery."""
+        from langflow.services.variable.service import DatabaseVariableService
+
+        variable = MagicMock(name="OPENAI_API_KEY")
+        variable.name = "OPENAI_API_KEY"
+        mock_db_service = MagicMock(spec=DatabaseVariableService)
+        mock_db_service.get_all = AsyncMock(return_value=[variable])
+        policy = MagicMock()
+        policy.filter.side_effect = list
+
+        with (
+            patch("langflow.agentic.services.provider_service.get_variable_service", return_value=mock_db_service),
+            patch(
+                "langflow.agentic.services.provider_service.get_model_provider_variable_mapping",
+                return_value={"OpenAI": "OPENAI_API_KEY"},
+            ),
+            patch(
+                "langflow.agentic.services.provider_service._get_registered_provider_names",
+                return_value=["OpenAI"],
+            ),
+            patch(
+                "langflow.agentic.services.provider_service.get_provider_required_variable_keys",
+                return_value=["OPENAI_API_KEY"],
+            ),
+            patch(
+                "langflow.agentic.services.provider_service.aresolve_model_provider_policy",
+                new=AsyncMock(return_value=policy),
+            ) as resolve_policy,
+        ):
+            enabled, status = await get_enabled_providers_for_user(
+                "user-1",
+                MagicMock(),
+                purpose=ModelProviderPolicyPurpose.USE,
+            )
+
+        assert enabled == ["OpenAI"]
+        assert status == {"OpenAI": True}
+        assert resolve_policy.await_args.kwargs["purpose"] is ModelProviderPolicyPurpose.USE
+
+    @pytest.mark.asyncio
     async def test_credentialless_extension_provider_is_enabled(self):
         from langflow.services.variable.service import DatabaseVariableService
 
