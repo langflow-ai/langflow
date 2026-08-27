@@ -341,8 +341,9 @@ async def get_servers(
             # Data parsing and access errors
             await logger.aerror(f"Data error for server {server_name}: {e}")
             server_info["error"] = f"Configuration data error: {e}"
-        except (RuntimeError, ProcessLookupError, PermissionError) as e:
-            # Runtime and process-related errors
+        except RuntimeError as e:
+            # Runtime errors. ProcessLookupError and PermissionError are OSError
+            # subclasses and are handled by the OSError branch above.
             await logger.aerror(f"Runtime error for server {server_name}: {e}")
             server_info["error"] = f"Runtime error: {e}"
         except Exception as e:  # noqa: BLE001
