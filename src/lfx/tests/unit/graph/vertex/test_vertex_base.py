@@ -6,7 +6,8 @@ which is responsible for processing and managing parameters in vertices.
 
 import copy
 import pickle
-from unittest.mock import Mock, patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
 import pytest
@@ -22,6 +23,39 @@ from lfx.services.storage.local import LocalStorageService
 from lfx.services.storage.service import StorageService
 from lfx.utils.file_path_security import LocalFileAccessError
 from lfx.utils.util import unescape_string
+
+
+@pytest.mark.asyncio
+async def test_build_denies_model_provider_before_upstream_or_local_credentials():
+    """Normal model builds must authorize USE before any load_from_db resolution."""
+    provider_denial = RuntimeError("provider denied")
+    component = SimpleNamespace(
+        _user_id="user-1",
+        get_variable=AsyncMock(),
+        require_model_provider_policy=Mock(side_effect=provider_denial),
+    )
+    vertex = object.__new__(Vertex)
+    vertex.display_name = "Denied Model"
+    vertex.base_type = "component"
+    vertex.params = {}
+    vertex.custom_component = component
+    vertex._validate_built_object = Mock()
+
+    async def hydrate_upstream_credentials():
+        await component.get_variable(name="UPSTREAM_API_KEY", field="upstream_api_key")
+
+    async def hydrate_credentials(**_kwargs):
+        await component.get_variable(name="OPENAI_API_KEY", field="api_key")
+
+    vertex._build_each_vertex_in_params_dict = AsyncMock(side_effect=hydrate_upstream_credentials)
+    vertex._build_results = AsyncMock(side_effect=hydrate_credentials)
+
+    with pytest.raises(RuntimeError, match="provider denied"):
+        await vertex._build(fallback_to_env_vars=False, user_id="user-1")
+
+    component.get_variable.assert_not_awaited()
+    vertex._build_each_vertex_in_params_dict.assert_not_awaited()
+    vertex._build_results.assert_not_awaited()
 
 
 def test_vertex_getstate_drops_custom_component_runtime_state():
