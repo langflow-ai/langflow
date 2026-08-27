@@ -296,9 +296,24 @@ describe("legacy provider dropdown policy", () => {
     renderProviderDropdown();
 
     expect(mockUseGetModelProviders).toHaveBeenCalledWith(
-      { flowId: "flow-one", purpose: "configure" },
+      { flowId: "flow-one", purpose: "use" },
       { enabled: true },
     );
+    expect(screen.queryByText("OpenAI")).not.toBeInTheDocument();
+    expect(screen.queryByText("Anthropic")).not.toBeInTheDocument();
+  });
+
+  it("hides cached provider options while the active flow policy is paused", () => {
+    mockUseGetModelProviders.mockReturnValue({
+      data: [{ provider: "OpenAI" }],
+      isLoading: false,
+      isFetching: false,
+      fetchStatus: "paused",
+      isError: false,
+    });
+
+    renderProviderDropdown("OpenAI");
+
     expect(screen.queryByText("OpenAI")).not.toBeInTheDocument();
     expect(screen.queryByText("Anthropic")).not.toBeInTheDocument();
   });
@@ -470,7 +485,7 @@ describe("legacy provider dropdown policy", () => {
     );
 
     expect(mockUseGetModelProviders).toHaveBeenLastCalledWith(
-      { flowId: "flow-two", purpose: "configure" },
+      { flowId: "flow-two", purpose: "use" },
       { enabled: true },
     );
     expect(screen.queryByText("OpenAI")).not.toBeInTheDocument();
@@ -507,7 +522,7 @@ describe("legacy provider dropdown policy", () => {
     renderProviderDropdown("OpenAI");
 
     expect(mockUseGetModelProviders).toHaveBeenCalledWith(
-      { flowId: "", purpose: "configure" },
+      { flowId: "", purpose: "use" },
       { enabled: false },
     );
     expect(screen.queryByText("OpenAI")).not.toBeInTheDocument();

@@ -3,6 +3,7 @@ import { cloneDeep } from "lodash";
 import { useParams } from "react-router-dom";
 import { UUID_PARSING_ERROR } from "@/constants/constants";
 import { getGlobalVariablesQueryKey } from "@/controllers/API/helpers/global-variable-scope";
+import { getSettledSuccessfulQueryData } from "@/controllers/API/helpers/query-cache";
 import { usePostAddFlow } from "@/controllers/API/queries/flows/use-post-add-flow";
 import { usePostFolders } from "@/controllers/API/queries/folders";
 import useAlertStore from "@/stores/alertStore";
@@ -92,7 +93,8 @@ const useAddFlow = () => {
     // just created), preserving the reference is safer than treating a global
     // or sibling-project list as authoritative and silently clearing it.
     const cleanupVariables = folder_id
-      ? queryClient.getQueryData<GlobalVariable[]>(
+      ? getSettledSuccessfulQueryData<GlobalVariable[]>(
+          queryClient,
           getGlobalVariablesQueryKey({ projectId: folder_id }),
         )
       : undefined;

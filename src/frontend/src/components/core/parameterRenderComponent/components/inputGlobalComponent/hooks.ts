@@ -42,7 +42,6 @@ export const useUnavailableField = (
 export const useInitialLoad = (
   disabled: boolean,
   loadFromDb: boolean,
-  globalVariables: GlobalVariable[],
   canValidateMissingVariable: boolean,
   valueExists: boolean,
   unavailableField: string | null,
@@ -62,13 +61,7 @@ export const useInitialLoad = (
   // global variables query is still in flight, during background refetches,
   // or after failed fetches.
   useEffect(() => {
-    if (
-      disabled ||
-      !loadFromDb ||
-      !canValidateMissingVariable ||
-      !globalVariables.length ||
-      valueExists
-    ) {
+    if (disabled || !loadFromDb || !canValidateMissingVariable || valueExists) {
       return;
     }
 
@@ -76,13 +69,7 @@ export const useInitialLoad = (
       { value: "", load_from_db: false },
       { skipSnapshot: true },
     );
-  }, [
-    disabled,
-    loadFromDb,
-    canValidateMissingVariable,
-    globalVariables.length,
-    valueExists,
-  ]);
+  }, [disabled, loadFromDb, canValidateMissingVariable, valueExists]);
 
   // Handle unavailable field initialization
   useEffect(() => {

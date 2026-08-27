@@ -36,6 +36,7 @@ jest.mock("@/controllers/API/services/request-processor", () => ({
 
 import {
   EnabledModelsResponse,
+  getEnabledModelsQueryKey,
   useGetEnabledModels,
 } from "../use-get-enabled-models";
 
@@ -70,6 +71,45 @@ describe("useGetEnabledModels", () => {
         ["useGetEnabledModels", "flow-one", undefined],
         expect.any(Function),
         undefined,
+      );
+    });
+
+    it("separates runtime and configuration policy in both the URL and cache key", async () => {
+      mockApiGet.mockResolvedValue({ data: { enabled_models: {} } });
+
+      useGetEnabledModels({
+        flowId: "flow-one",
+        projectId: "project-one",
+        purpose: "use",
+      });
+      useGetEnabledModels({
+        flowId: "flow-one",
+        projectId: "project-one",
+        purpose: "configure",
+      });
+
+      expect(mockApiGet).toHaveBeenNthCalledWith(
+        1,
+        "/api/v1/models/enabled_models?flow_id=flow-one&project_id=project-one&purpose=use",
+      );
+      expect(mockApiGet).toHaveBeenNthCalledWith(
+        2,
+        "/api/v1/models/enabled_models?flow_id=flow-one&project_id=project-one&purpose=configure",
+      );
+      expect(mockQuery).toHaveBeenNthCalledWith(
+        1,
+        ["useGetEnabledModels", "flow-one", "project-one", "use"],
+        expect.any(Function),
+        undefined,
+      );
+      expect(mockQuery).toHaveBeenNthCalledWith(
+        2,
+        ["useGetEnabledModels", "flow-one", "project-one", "configure"],
+        expect.any(Function),
+        undefined,
+      );
+      expect(getEnabledModelsQueryKey({ purpose: "use" })).not.toEqual(
+        getEnabledModelsQueryKey({ purpose: "configure" }),
       );
     });
 

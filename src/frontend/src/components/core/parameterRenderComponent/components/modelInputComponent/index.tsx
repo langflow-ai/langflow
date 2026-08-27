@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { BUILD_PANEL_COLLISION_PADDING_PX } from "@/constants/constants";
+import { getEnabledModelsForType } from "@/controllers/API/helpers/enabled-model-policy";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
@@ -155,61 +156,90 @@ export default function ModelInputComponent({
     return Object.fromEntries(entries) as Record<string, unknown>;
   }, [nodeClass]);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const hasFlowScope = Boolean(currentFlowId);
 
   const {
     data: providersData = [],
     isLoading: isLoadingProviders,
     isFetching: isFetchingProviders,
+    fetchStatus: providersFetchStatus,
     error: providersError,
     refetch: refetchProviders,
-  } = useGetModelProviders({ flowId: currentFlowId });
+  } = useGetModelProviders(
+    { flowId: currentFlowId, purpose: "use" },
+    { enabled: hasFlowScope },
+  );
   const {
     data: enabledModelsData,
     isLoading: isLoadingEnabledModels,
     isFetching: isFetchingEnabledModels,
+    fetchStatus: enabledModelsFetchStatus,
     error: enabledModelsError,
     refetch: refetchEnabledModels,
-  } = useGetEnabledModels({ flowId: currentFlowId });
+  } = useGetEnabledModels({
+    flowId: currentFlowId,
+    purpose: "use",
+    enabled: hasFlowScope,
+  });
 
-  const isLoading = isLoadingProviders || isLoadingEnabledModels;
-  const isFetching = isFetchingProviders || isFetchingEnabledModels;
-  const providersUnusable =
-    !!providersError && (!providersData || providersData.length === 0);
-  const enabledModelsUnusable =
-    !!enabledModelsError && enabledModelsData === undefined;
-  const hasInitialLoadError =
-    !isFetching && (providersUnusable || enabledModelsUnusable);
-  const providerStatusIsReliable = !isFetchingProviders && !providersError;
+  const isLoading =
+    !hasFlowScope || isLoadingProviders || isLoadingEnabledModels;
+  const isPolicyPaused =
+    providersFetchStatus === "paused" || enabledModelsFetchStatus === "paused";
+  const isFetching =
+    isFetchingProviders || isFetchingEnabledModels || isPolicyPaused;
+  const hasPolicyError = !!providersError || !!enabledModelsError;
+  const providerStatusIsReliable =
+    hasFlowScope &&
+    !isFetchingProviders &&
+    providersFetchStatus !== "paused" &&
+    !providersError;
   const modelStatusIsReliable =
-    providerStatusIsReliable && !isFetchingEnabledModels && !enabledModelsError;
+    providerStatusIsReliable &&
+    !isFetchingEnabledModels &&
+    enabledModelsFetchStatus !== "paused" &&
+    !enabledModelsError;
+  const enabledModelsForType = useMemo(
+    () =>
+      enabledModelsData
+        ? getEnabledModelsForType(enabledModelsData, modelType)
+        : undefined,
+    [enabledModelsData, modelType],
+  );
 
   const hasEnabledProviders = useMemo(() => {
-    return providersData?.some(
-      (provider) => provider.is_enabled || provider.is_configured,
+    return (
+      modelStatusIsReliable &&
+      providersData?.some(
+        (provider) => provider.is_enabled || provider.is_configured,
+      )
     );
-  }, [providersData]);
+  }, [modelStatusIsReliable, providersData]);
 
-  const groupedOptions = useMemo(
-    () =>
-      buildGroupedOptions({
-        options,
-        enabledModels: enabledModelsData?.enabled_models,
-        providers: providersData,
-        modelType,
-        savedValue: value?.[0],
-        modelFilters,
-        providerStatusIsReliable,
-      }),
-    [
+  const groupedOptions = useMemo(() => {
+    // Query data remains cached during background refreshes and after
+    // refresh errors. Do not turn that potentially revoked snapshot into
+    // selectable options until both policy queries have settled cleanly.
+    if (!modelStatusIsReliable) return {};
+    return buildGroupedOptions({
       options,
-      enabledModelsData,
-      providersData,
+      enabledModels: enabledModelsForType,
+      providers: providersData,
       modelType,
-      value,
+      savedValue: value?.[0],
       modelFilters,
       providerStatusIsReliable,
-    ],
-  );
+    });
+  }, [
+    options,
+    enabledModelsForType,
+    providersData,
+    modelType,
+    value,
+    modelFilters,
+    providerStatusIsReliable,
+    modelStatusIsReliable,
+  ]);
 
   const flatOptions = useMemo(
     () => Object.values(groupedOptions).flat(),
@@ -226,7 +256,7 @@ export default function ModelInputComponent({
         flatOptions,
         providers: providersData,
         providerStatusIsReliable,
-        enabledModels: enabledModelsData?.enabled_models,
+        enabledModels: enabledModelsForType,
         modelStatusIsReliable,
       }),
     [
@@ -236,7 +266,7 @@ export default function ModelInputComponent({
       externalOptions,
       providersData,
       providerStatusIsReliable,
-      enabledModelsData,
+      enabledModelsForType,
       modelStatusIsReliable,
     ],
   );
@@ -248,7 +278,7 @@ export default function ModelInputComponent({
     isConnectionMode,
     providers: providersData,
     modelStatusIsReliable,
-    enabledModels: enabledModelsData?.enabled_models,
+    enabledModels: enabledModelsForType,
   });
 
   /**
@@ -256,6 +286,7 @@ export default function ModelInputComponent({
    */
   const handleModelSelect = useCallback(
     (modelName: string, provider?: string) => {
+      if (!modelStatusIsReliable) return;
       setConnectionMode(false);
       if (nodeId) {
         const store = useFlowStore.getState();
@@ -303,7 +334,7 @@ export default function ModelInputComponent({
       handleOnNewValue({ value: newValue });
       setOpen(false);
     },
-    [flatOptions, handleOnNewValue],
+    [flatOptions, handleOnNewValue, modelStatusIsReliable],
   );
 
   const handleRefreshButtonPress = useCallback(async () => {
@@ -385,7 +416,7 @@ export default function ModelInputComponent({
     return null;
   }
 
-  if (hasInitialLoadError) {
+  if (hasPolicyError && !isFetching) {
     return (
       <div className="w-full">
         <ModelInputErrorButton onRetry={handleRetryLoad} />
@@ -393,7 +424,7 @@ export default function ModelInputComponent({
     );
   }
 
-  if (isLoading || isRefreshingAfterClose || refreshOptions) {
+  if (isLoading || isFetching || isRefreshingAfterClose || refreshOptions) {
     return (
       <div className="w-full">
         <ModelInputLoadingButton />

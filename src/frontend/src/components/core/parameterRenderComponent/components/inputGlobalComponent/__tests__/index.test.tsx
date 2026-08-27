@@ -124,6 +124,13 @@ describe("InputGlobalComponent", () => {
     expect(mockDeleteConfirmation).toHaveBeenCalledWith(
       expect.objectContaining({ providerScope: { flowId: "flow-project-a" } }),
     );
+    expect(mockInputComponent).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        value: "PROJECT_ONLY",
+        options: ["PROJECT_ONLY"],
+        selectedOption: "PROJECT_ONLY",
+      }),
+    );
     await waitFor(() => expect(handleOnNewValue).not.toHaveBeenCalled());
   });
 
@@ -145,6 +152,24 @@ describe("InputGlobalComponent", () => {
     });
   });
 
+  it("clears a missing saved variable exactly once when other variables exist", async () => {
+    mockUseGetGlobalVariables.mockReturnValue({
+      data: [{ name: "OTHER_VAR" }],
+      isFetchedAfterMount: true,
+      isFetching: false,
+      fetchStatus: "idle",
+      isSuccess: true,
+    });
+
+    renderComponent();
+
+    await waitFor(() => expect(handleOnNewValue).toHaveBeenCalledTimes(1));
+    expect(handleOnNewValue).toHaveBeenCalledWith(
+      { value: "", load_from_db: false },
+      { skipSnapshot: true },
+    );
+  });
+
   it("does not clear while a background refetch is still in flight", async () => {
     mockUseGetGlobalVariables.mockReturnValue({
       data: [{ name: "OTHER_VAR" }],
@@ -158,6 +183,39 @@ describe("InputGlobalComponent", () => {
     await waitFor(() => {
       expect(handleOnNewValue).not.toHaveBeenCalled();
     });
+    expect(mockInputComponent).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        value: "",
+        options: [],
+        selectedOption: "",
+      }),
+    );
+
+    const staleSelect = mockInputComponent.mock.calls[0][0]
+      .setSelectedOption as (value: string) => void;
+    staleSelect("OTHER_VAR");
+    expect(handleOnNewValue).not.toHaveBeenCalled();
+  });
+
+  it("hides cached credentials while an offline policy refresh is paused", async () => {
+    mockUseGetGlobalVariables.mockReturnValue({
+      data: [{ name: "MISSING_VAR" }],
+      isFetchedAfterMount: true,
+      isFetching: false,
+      fetchStatus: "paused",
+      isSuccess: true,
+    });
+
+    renderComponent();
+
+    await waitFor(() => expect(handleOnNewValue).not.toHaveBeenCalled());
+    expect(mockInputComponent).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        value: "",
+        options: [],
+        selectedOption: "",
+      }),
+    );
   });
 
   it("does not clear when the global variables query fails", async () => {
@@ -173,6 +231,35 @@ describe("InputGlobalComponent", () => {
     await waitFor(() => {
       expect(handleOnNewValue).not.toHaveBeenCalled();
     });
+    expect(mockInputComponent).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        value: "",
+        options: [],
+        selectedOption: "",
+      }),
+    );
+  });
+
+  it("hides a cached saved reference until this mount has fetched its scope", async () => {
+    mockUseGetGlobalVariables.mockReturnValue({
+      data: [{ name: "MISSING_VAR" }],
+      isFetchedAfterMount: false,
+      isFetching: false,
+      isSuccess: true,
+    });
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(handleOnNewValue).not.toHaveBeenCalled();
+    });
+    expect(mockInputComponent).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        value: "",
+        options: [],
+        selectedOption: "",
+      }),
+    );
   });
 
   it("forwards ariaLabelledBy through to the underlying InputComponent", () => {
@@ -274,7 +361,7 @@ describe("InputGlobalComponent", () => {
       expect(getRenderedOptions()).toEqual(["MY_API_KEY", "ANOTHER_VAR"]);
     });
 
-    it("temporarily includes an orphaned variable reference while it is being cleared", () => {
+    it("does not present an orphaned saved reference while it is being cleared", () => {
       render(
         <InputGlobalComponent
           id="test"
@@ -288,7 +375,10 @@ describe("InputGlobalComponent", () => {
         />,
       );
 
-      expect(getRenderedOptions()).toContain("DELETED_VAR");
+      expect(getRenderedOptions()).not.toContain("DELETED_VAR");
+      expect(mockInputComponent).toHaveBeenLastCalledWith(
+        expect.objectContaining({ value: "", selectedOption: "" }),
+      );
     });
 
     it("does not duplicate a variable that already exists in the configured list", () => {

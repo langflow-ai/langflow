@@ -7,18 +7,27 @@ import {
   typesGenerator,
 } from "../utils/reactflowUtils";
 
+const emptyPaletteState = () => ({
+  types: {},
+  templates: {},
+  data: {},
+  ComponentFields: new Set<string>(),
+  componentDisplayNames: {} as ComponentDisplayNamesType,
+});
+
 export const useTypesStore = create<TypesStoreType>((set, get) => ({
   activeScopeKey: null,
   activateScope: (scopeKey) => {
     if (get().activeScopeKey === scopeKey) return;
     set({
       activeScopeKey: scopeKey,
-      types: {},
-      templates: {},
-      data: {},
-      ComponentFields: new Set(),
-      componentDisplayNames: {} as ComponentDisplayNamesType,
+      ...emptyPaletteState(),
     });
+  },
+  clearScopedTypes: (scopeKey) => {
+    if (get().activeScopeKey !== scopeKey) return false;
+    set(emptyPaletteState());
+    return true;
   },
   setScopedTypes: (scopeKey, data, componentDisplayNames) => {
     if (get().activeScopeKey !== scopeKey) return false;

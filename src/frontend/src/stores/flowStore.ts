@@ -19,6 +19,7 @@ import {
   runFlowHITL,
 } from "@/controllers/API/agui/run-flow-bridge";
 import { getGlobalVariablesQueryKey } from "@/controllers/API/helpers/global-variable-scope";
+import { getSettledSuccessfulQueryData } from "@/controllers/API/helpers/query-cache";
 import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import { track, trackFlowBuild } from "@/customization/utils/analytics";
 import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
@@ -640,7 +641,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
     const currentFlowId = useFlowsManagerStore.getState().currentFlowId;
     const scopedGlobalVariables = currentFlowId
-      ? queryClient.getQueryData<GlobalVariable[]>(
+      ? getSettledSuccessfulQueryData<GlobalVariable[]>(
+          queryClient,
           getGlobalVariablesQueryKey({ flowId: currentFlowId }),
         )
       : undefined;

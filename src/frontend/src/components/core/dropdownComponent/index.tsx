@@ -58,9 +58,10 @@ export default function Dropdown({
     data: scopedModelProviders,
     isLoading: isLoadingScopedModelProviders,
     isFetching: isFetchingScopedModelProviders,
+    fetchStatus: scopedModelProvidersFetchStatus,
     isError: scopedModelProvidersError,
   } = useGetModelProviders(
-    { flowId: currentFlowId, purpose: "configure" },
+    { flowId: currentFlowId, purpose: "use" },
     { enabled: isLegacyProviderSelector && Boolean(currentFlowId) },
   );
   const allowedProviderNames = useMemo(
@@ -68,6 +69,7 @@ export default function Dropdown({
       isLegacyProviderSelector &&
       Boolean(currentFlowId) &&
       !isFetchingScopedModelProviders &&
+      scopedModelProvidersFetchStatus !== "paused" &&
       !scopedModelProvidersError &&
       scopedModelProviders !== undefined
         ? new Set(scopedModelProviders.map(({ provider }) => provider))
@@ -78,6 +80,7 @@ export default function Dropdown({
       isLegacyProviderSelector,
       scopedModelProviders,
       scopedModelProvidersError,
+      scopedModelProvidersFetchStatus,
     ],
   );
 
@@ -299,7 +302,9 @@ export default function Dropdown({
   const isLegacyProviderPolicyPending =
     isLegacyProviderSelector &&
     allowedProviderNames === null &&
-    (isLoadingScopedModelProviders || isFetchingScopedModelProviders);
+    (isLoadingScopedModelProviders ||
+      isFetchingScopedModelProviders ||
+      scopedModelProvidersFetchStatus === "paused");
   const effectiveIsLoading = isLoading || isLegacyProviderPolicyPending;
 
   // Loading state

@@ -1,5 +1,6 @@
 import {
   focusManager,
+  onlineManager,
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
@@ -29,7 +30,8 @@ jest.mock("@/stores/flowsManagerStore", () => ({
 }));
 
 jest.mock("@/utils/reactflowUtils", () => ({
-  extractSecretFieldsFromComponents: () => new Set<string>(),
+  extractSecretFieldsFromComponents: (data: Record<string, unknown>) =>
+    new Set(Object.keys(data)),
   templatesGenerator: (data: Record<string, unknown>) => data,
   typesGenerator: (data: Record<string, unknown>) =>
     Object.fromEntries(
@@ -52,10 +54,21 @@ const palette = (category: string, component: string) => ({
 
 const deferred = <T,>() => {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((promiseResolve) => {
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
     resolve = promiseResolve;
+    reject = promiseReject;
   });
-  return { promise, resolve };
+  return { promise, reject, resolve };
+};
+
+const expectPaletteStoreToBeEmpty = () => {
+  const state = useTypesStore.getState();
+  expect(state.data).toEqual({});
+  expect(state.types).toEqual({});
+  expect(state.templates).toEqual({});
+  expect(state.ComponentFields).toEqual(new Set());
+  expect(state.componentDisplayNames).toEqual({});
 };
 
 const makeWrapper = (queryClient: QueryClient) =>
@@ -73,7 +86,9 @@ describe("useGetTypes scoped store ownership", () => {
     queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
+    onlineManager.setOnline(true);
     useTypesStore.setState({
+      activeScopeKey: null,
       types: {},
       templates: {},
       data: {},
@@ -82,7 +97,10 @@ describe("useGetTypes scoped store ownership", () => {
     });
   });
 
-  afterEach(() => queryClient.clear());
+  afterEach(() => {
+    onlineManager.setOnline(undefined);
+    queryClient.clear();
+  });
 
   it("replaces narrower scope data and reinstalls cached A on A to B to A", async () => {
     const flowA = palette("provider_a", "AComponent");
@@ -205,9 +223,10 @@ describe("useGetTypes scoped store ownership", () => {
     const dateNow = jest.spyOn(Date, "now").mockReturnValue(now);
     const allowed = palette("openai", "OpenAIComponent");
     const revoked = palette("core", "PromptComponent");
+    const refresh = deferred<{ data: typeof revoked }>();
     mockApiGet
       .mockResolvedValueOnce({ data: allowed })
-      .mockResolvedValueOnce({ data: revoked });
+      .mockImplementationOnce(() => refresh.promise);
 
     try {
       renderHook(() => useGetTypes({ flowId: "flow-a" }), {
@@ -223,12 +242,150 @@ describe("useGetTypes scoped store ownership", () => {
       act(() => focusManager.setFocused(true));
 
       await waitFor(() =>
+        expect(
+          queryClient.getQueryState(["useGetTypes", "flow-a", undefined])
+            ?.fetchStatus,
+        ).toBe("fetching"),
+      );
+      expectPaletteStoreToBeEmpty();
+
+      await act(async () => refresh.resolve({ data: revoked }));
+      await waitFor(() =>
         expect(useTypesStore.getState().data).toEqual(revoked),
       );
       expect(mockApiGet).toHaveBeenCalledTimes(2);
     } finally {
       focusManager.setFocused(undefined);
       dateNow.mockRestore();
+    }
+  });
+
+  it("clears a cached scoped palette while an offline refresh is paused", async () => {
+    const allowed = palette("openai", "OpenAIComponent");
+    mockApiGet.mockResolvedValue({ data: allowed });
+
+    renderHook(() => useGetTypes({ flowId: "flow-a" }), {
+      wrapper: makeWrapper(queryClient),
+    });
+    await waitFor(() => expect(useTypesStore.getState().data).toEqual(allowed));
+
+    act(() => onlineManager.setOnline(false));
+    act(() => {
+      void queryClient.invalidateQueries({
+        queryKey: ["useGetTypes", "flow-a", undefined],
+        exact: true,
+      });
+    });
+
+    await waitFor(() =>
+      expect(
+        queryClient.getQueryState(["useGetTypes", "flow-a", undefined])
+          ?.fetchStatus,
+      ).toBe("paused"),
+    );
+    expectPaletteStoreToBeEmpty();
+
+    onlineManager.setOnline(true);
+  });
+
+  it("clears a scoped palette when a project move resets its flow cache", async () => {
+    const projectA = palette("provider_a", "AComponent");
+    const projectB = deferred<{ data: ReturnType<typeof palette> }>();
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    mockApiGet
+      .mockResolvedValueOnce({
+        data: {
+          ...projectA,
+          component_display_names: {
+            acomponent: {
+              display_name: ["A Component"],
+              description: ["Project A"],
+            },
+          },
+        },
+      })
+      .mockImplementationOnce(() => projectB.promise);
+
+    try {
+      renderHook(() => useGetTypes({ flowId: "flow-a", retry: false }), {
+        wrapper: makeWrapper(queryClient),
+      });
+
+      await waitFor(() =>
+        expect(useTypesStore.getState().data).toEqual(projectA),
+      );
+      expect(useTypesStore.getState().ComponentFields).toEqual(
+        new Set(["provider_a"]),
+      );
+      expect(useTypesStore.getState().componentDisplayNames).not.toEqual({});
+
+      act(() => {
+        void queryClient.resetQueries({
+          queryKey: ["useGetTypes", "flow-a", undefined],
+          exact: true,
+        });
+      });
+
+      await waitFor(() =>
+        expect(
+          queryClient.getQueryState(["useGetTypes", "flow-a", undefined])
+            ?.fetchStatus,
+        ).toBe("fetching"),
+      );
+      expectPaletteStoreToBeEmpty();
+
+      await act(async () => projectB.reject(new Error("project B denied")));
+      await waitFor(() =>
+        expect(
+          queryClient.getQueryState(["useGetTypes", "flow-a", undefined])
+            ?.status,
+        ).toBe("error"),
+      );
+      expectPaletteStoreToBeEmpty();
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("preserves the unscoped palette during a background refresh failure", async () => {
+    const globalPalette = palette("global_provider", "GlobalComponent");
+    const refresh = deferred<{ data: ReturnType<typeof palette> }>();
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    mockApiGet
+      .mockResolvedValueOnce({ data: globalPalette })
+      .mockImplementationOnce(() => refresh.promise);
+
+    try {
+      renderHook(() => useGetTypes({ retry: false }), {
+        wrapper: makeWrapper(queryClient),
+      });
+
+      await waitFor(() =>
+        expect(useTypesStore.getState().data).toEqual(globalPalette),
+      );
+
+      void queryClient.invalidateQueries({
+        queryKey: ["useGetTypes", undefined, undefined],
+        exact: true,
+      });
+      await waitFor(() =>
+        expect(
+          queryClient.getQueryState(["useGetTypes", undefined, undefined])
+            ?.fetchStatus,
+        ).toBe("fetching"),
+      );
+      expect(useTypesStore.getState().data).toEqual(globalPalette);
+
+      await act(async () => refresh.reject(new Error("refresh failed")));
+      await waitFor(() =>
+        expect(
+          queryClient.getQueryState(["useGetTypes", undefined, undefined])
+            ?.status,
+        ).toBe("error"),
+      );
+      expect(useTypesStore.getState().data).toEqual(globalPalette);
+    } finally {
+      errorSpy.mockRestore();
     }
   });
 });

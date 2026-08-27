@@ -13,6 +13,9 @@ export type ProviderVariablesMapping = Record<string, ProviderVariable[]>;
 
 const PROVIDER_POLICY_STALE_TIME_MS = 30_000;
 
+export const getProviderVariablesQueryKey = (params?: ProviderScopeParams) =>
+  ["useGetProviderVariables", ...providerScopeQueryKey(params)] as const;
+
 /**
  * Hook to fetch provider variables mapping from the API.
  * Returns a mapping of provider names to their required variables.
@@ -45,12 +48,12 @@ export const useGetProviderVariables: useQueryFunctionType<
         return response.data;
       } catch (error) {
         console.error("Error fetching provider variables mapping:", error);
-        return {};
+        throw error;
       }
     };
 
   const queryResult = query(
-    ["useGetProviderVariables", ...providerScopeQueryKey(params)],
+    getProviderVariablesQueryKey(params),
     getProviderVariablesFn,
     {
       refetchOnWindowFocus: true,

@@ -60,6 +60,7 @@ const ModelProviderModal = ({
 
         <div className="h-[513px] overflow-hidden">
           <ModelProvidersContent
+            key={`${flowId ?? ""}:${projectId ?? ""}`}
             modelType={modelType}
             flowId={flowId}
             projectId={projectId}

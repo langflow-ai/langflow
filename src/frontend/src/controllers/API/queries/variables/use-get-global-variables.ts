@@ -37,6 +37,7 @@ export const useGetGlobalVariables: useQueryFunctionType<
     mirrorToStore = false,
     ...queryOptions
   } = options ?? {};
+  const isScoped = !!flowId || !!projectId;
 
   const getGlobalVariablesFn = async (): Promise<GlobalVariable[]> => {
     if (!isAuthenticated) return [];
@@ -54,9 +55,14 @@ export const useGetGlobalVariables: useQueryFunctionType<
     getGlobalVariablesQueryKey({ flowId, projectId }),
     getGlobalVariablesFn,
     {
-      refetchOnWindowFocus: false,
-      enabled: isAuthenticated && (options?.enabled ?? true),
       ...queryOptions,
+      // Scoped credentials are part of the active provider policy. Revalidate
+      // them when focus returns so revocation does not wait for a remount. A
+      // caller cannot disable that scoped safety refresh.
+      refetchOnWindowFocus: isScoped
+        ? true
+        : (queryOptions.refetchOnWindowFocus ?? false),
+      enabled: isAuthenticated && (queryOptions.enabled ?? true),
     },
   );
 
@@ -78,6 +84,24 @@ export const useGetGlobalVariables: useQueryFunctionType<
     queryResult.data,
     setGlobalVariables,
   ]);
+
+  const shouldMaskScopedData =
+    isScoped &&
+    (queryResult.fetchStatus !== "idle" ||
+      queryResult.isFetching ||
+      queryResult.isError ||
+      !queryResult.isSuccess);
+
+  if (shouldMaskScopedData) {
+    // React Query intentionally retains the last successful payload during a
+    // refetch and after a refetch error. For scoped credentials that snapshot
+    // can contain grants revoked since the last response, so callers must not
+    // receive it until a new scoped request settles successfully.
+    return {
+      ...queryResult,
+      data: undefined,
+    } as UseQueryResult<GlobalVariable[], Error>;
+  }
 
   return queryResult;
 };

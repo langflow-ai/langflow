@@ -382,6 +382,81 @@ describe("useFlowStore", () => {
       expect(pastedField?.load_from_db).toBe(false);
       flowsManager.default.__setCurrentFlow(undefined);
     });
+
+    it("does not trust invalidated flow-scoped credentials during paste", () => {
+      const flowsManager = jest.requireMock("../flowsManagerStore") as {
+        default: {
+          __setCurrentFlow: (
+            flow: { id: string; name: string } | undefined,
+          ) => void;
+        };
+      };
+      flowsManager.default.__setCurrentFlow({
+        id: "target-flow",
+        name: "Target Flow",
+      });
+      const scopedKey = getGlobalVariablesQueryKey({ flowId: "target-flow" });
+      queryClient.setQueryData(scopedKey, []);
+      void queryClient.invalidateQueries({
+        queryKey: scopedKey,
+        refetchType: "none",
+      });
+
+      act(() => {
+        useFlowStore.setState({ currentFlow: undefined });
+        useFlowStore
+          .getState()
+          .paste(
+            { nodes: [createCredentialNode("PROJECT_KEY")], edges: [] },
+            { x: 0, y: 0, paneX: 1, paneY: 1 },
+          );
+      });
+
+      const pastedField =
+        useFlowStore.getState().nodes[0].data.node?.template.api_key;
+      expect(pastedField?.value).toBe("PROJECT_KEY");
+      expect(pastedField?.load_from_db).toBe(true);
+      flowsManager.default.__setCurrentFlow(undefined);
+    });
+
+    it("does not trust a flow-scoped credential snapshot during refetch", () => {
+      const flowsManager = jest.requireMock("../flowsManagerStore") as {
+        default: {
+          __setCurrentFlow: (
+            flow: { id: string; name: string } | undefined,
+          ) => void;
+        };
+      };
+      flowsManager.default.__setCurrentFlow({
+        id: "target-flow",
+        name: "Target Flow",
+      });
+      const scopedKey = getGlobalVariablesQueryKey({ flowId: "target-flow" });
+      queryClient.setQueryData(scopedKey, []);
+      const scopedQuery = queryClient.getQueryCache().find({
+        queryKey: scopedKey,
+      });
+      scopedQuery?.setState({
+        ...scopedQuery.state,
+        fetchStatus: "fetching",
+      });
+
+      act(() => {
+        useFlowStore.setState({ currentFlow: undefined });
+        useFlowStore
+          .getState()
+          .paste(
+            { nodes: [createCredentialNode("PROJECT_KEY")], edges: [] },
+            { x: 0, y: 0, paneX: 1, paneY: 1 },
+          );
+      });
+
+      const pastedField =
+        useFlowStore.getState().nodes[0].data.node?.template.api_key;
+      expect(pastedField?.value).toBe("PROJECT_KEY");
+      expect(pastedField?.load_from_db).toBe(true);
+      flowsManager.default.__setCurrentFlow(undefined);
+    });
   });
 
   describe("playground page management", () => {

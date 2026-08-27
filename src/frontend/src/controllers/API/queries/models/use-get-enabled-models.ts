@@ -21,23 +21,32 @@ export interface EnabledModelsResponse {
   >;
 }
 
-export const getEnabledModelsQueryKey = (params?: ProviderScopeParams) =>
-  params?.flowId || params?.projectId
-    ? (["useGetEnabledModels", ...providerScopeQueryKey(params)] as const)
+export interface EnabledModelsQueryParams extends ProviderScopeParams {
+  purpose?: "use" | "configure";
+}
+
+export const getEnabledModelsQueryKey = (params?: EnabledModelsQueryParams) =>
+  params?.flowId || params?.projectId || params?.purpose
+    ? ([
+        "useGetEnabledModels",
+        ...providerScopeQueryKey(params),
+        params?.purpose,
+      ] as const)
     : (["useGetEnabledModels"] as const);
 
 export const useGetEnabledModels: useQueryFunctionType<
   undefined,
   EnabledModelsResponse,
-  ProviderScopeParams
+  EnabledModelsQueryParams
 > = (options) => {
   const { query } = UseRequestProcessor();
-  const { flowId, projectId, ...queryOptions } = options ?? {};
-  const params = { flowId, projectId };
+  const { flowId, projectId, purpose, ...queryOptions } = options ?? {};
+  const params = { flowId, projectId, purpose };
 
   const getEnabledModelsFn = async (): Promise<EnabledModelsResponse> => {
     const queryParams = new URLSearchParams();
     appendProviderScope(queryParams, params);
+    if (purpose) queryParams.set("purpose", purpose);
     const response = await api.get<EnabledModelsResponse>(
       `${getURL("MODELS")}/enabled_models${
         queryParams.toString() ? `?${queryParams.toString()}` : ""

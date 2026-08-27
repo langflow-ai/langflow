@@ -8,8 +8,15 @@ import {
 } from "@/constants/providerConstants";
 import { getAxiosErrorMessage } from "@/controllers/API/helpers/get-axios-error-message";
 import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
-import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
-import { useGetProviderVariables } from "@/controllers/API/queries/models/use-get-provider-variables";
+import { isSettledSuccessfulQuery } from "@/controllers/API/helpers/query-cache";
+import {
+  getModelProvidersQueryOptions,
+  useGetModelProviders,
+} from "@/controllers/API/queries/models/use-get-model-providers";
+import {
+  getProviderVariablesQueryKey,
+  useGetProviderVariables,
+} from "@/controllers/API/queries/models/use-get-provider-variables";
 import { useValidateProvider } from "@/controllers/API/queries/models/use-validate-provider";
 import {
   getGlobalVariablesQueryKey,
@@ -83,8 +90,6 @@ export const useProviderConfiguration = ({
   const [variableValues, setVariableValues] = useState<Record<string, string>>(
     {},
   );
-  const [syncedSelectedProvider, setSyncedSelectedProvider] =
-    useState<Provider | null>(selectedProvider);
   const [validationFailed, setValidationFailed] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [validationState, setValidationState] =
@@ -96,8 +101,23 @@ export const useProviderConfiguration = ({
   const _validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
-  const previousSelectedProviderNameRef = useRef(selectedProvider?.provider);
-  const unavailableSelectedProviderNameRef = useRef<string | null>(null);
+  const configurationContextKey = `${flowId ?? ""}\0${projectId ?? ""}\0${selectedProvider?.provider ?? ""}`;
+  const previousConfigurationContextRef = useRef(configurationContextKey);
+  const activeConfigurationContextRef = useRef<string | null>(
+    configurationContextKey,
+  );
+  activeConfigurationContextRef.current = configurationContextKey;
+  const localStateMatchesContext =
+    previousConfigurationContextRef.current === configurationContextKey;
+
+  useEffect(() => {
+    activeConfigurationContextRef.current = configurationContextKey;
+    return () => {
+      if (activeConfigurationContextRef.current === configurationContextKey) {
+        activeConfigurationContextRef.current = null;
+      }
+    };
+  }, [configurationContextKey]);
 
   // Tracks whether the user has made any persisted changes during this dialog
   // session (save / activate / disconnect / model toggle). Read synchronously
@@ -121,6 +141,19 @@ export const useProviderConfiguration = ({
     usePatchGlobalVariables();
   const { mutateAsync: deleteGlobalVariable, isPending: isDeleting } =
     useDeleteGlobalVariables();
+  const providerScope = { flowId, projectId };
+  const providerCatalogParams = {
+    includeDeprecated: true,
+    flowId,
+    projectId,
+    purpose: "configure" as const,
+  };
+  const providerCatalogQueryKey = getModelProvidersQueryOptions(
+    providerCatalogParams,
+  ).queryKey;
+  const globalVariablesQueryKey = getGlobalVariablesQueryKey(providerScope);
+  const providerVariablesQueryKey = getProviderVariablesQueryKey(providerScope);
+
   const { data: globalVariables = [] } = useGetGlobalVariables({
     flowId,
     projectId,
@@ -136,21 +169,58 @@ export const useProviderConfiguration = ({
     isError: isModelProvidersError,
     isFetched: areModelProvidersFetched,
     isFetching: isFetchingModels,
-  } = useGetModelProviders(
-    { includeDeprecated: true, flowId, projectId },
-    {
-      // Issue #13137: the previous 10s ``refetchInterval`` polled
-      // ``/api/v1/models`` continuously while the Ollama card was
-      // selected. Each backend call serially probed every Ollama model
-      // (GET /api/tags + POST /api/show per model), so with many models
-      // the request took longer than the interval and the queue grew
-      // unbounded. The catalog already refreshes on credential save and
-      // disconnect via ``invalidateProviderQueries``, so the timer is
-      // unnecessary — leaving it removed makes the list update on
-      // demand instead of on a fixed schedule.
-      refetchInterval: false,
-      staleTime: 1000 * 30, // 30 seconds
-    },
+    isSuccess: isModelProvidersSuccess,
+    fetchStatus: modelProvidersFetchStatus,
+  } = useGetModelProviders(providerCatalogParams, {
+    // Issue #13137: the previous 10s ``refetchInterval`` polled
+    // ``/api/v1/models`` continuously while the Ollama card was
+    // selected. Each backend call serially probed every Ollama model
+    // (GET /api/tags + POST /api/show per model), so with many models
+    // the request took longer than the interval and the queue grew
+    // unbounded. The catalog already refreshes on credential save and
+    // disconnect via ``invalidateProviderQueries``, so the timer is
+    // unnecessary — leaving it removed makes the list update on
+    // demand instead of on a fixed schedule.
+    refetchInterval: false,
+    staleTime: 1000 * 30, // 30 seconds
+  });
+  const hasSettledProviderCatalog =
+    areModelProvidersFetched &&
+    isModelProvidersSuccess &&
+    !isFetchingModels &&
+    modelProvidersFetchStatus === "idle" &&
+    !isModelProvidersError;
+
+  const trustedSelectedProvider = useMemo((): Provider | null => {
+    if (!selectedProvider || !hasSettledProviderCatalog) return null;
+    const freshProvider = modelProviders.find(
+      (provider) => provider.provider === selectedProvider.provider,
+    );
+    if (!freshProvider) return null;
+    return {
+      ...selectedProvider,
+      is_enabled: freshProvider.is_enabled,
+      is_configured: freshProvider.is_configured,
+      models: freshProvider.models || selectedProvider.models,
+    };
+  }, [hasSettledProviderCatalog, modelProviders, selectedProvider]);
+
+  const canUseCurrentProviderPolicy = useCallback(
+    (providerName: string): boolean =>
+      activeConfigurationContextRef.current === configurationContextKey &&
+      previousConfigurationContextRef.current === configurationContextKey &&
+      trustedSelectedProvider?.provider === providerName &&
+      isSettledSuccessfulQuery(queryClient, providerCatalogQueryKey) &&
+      isSettledSuccessfulQuery(queryClient, globalVariablesQueryKey) &&
+      isSettledSuccessfulQuery(queryClient, providerVariablesQueryKey),
+    [
+      globalVariablesQueryKey,
+      providerCatalogQueryKey,
+      providerVariablesQueryKey,
+      queryClient,
+      configurationContextKey,
+      trustedSelectedProvider,
+    ],
   );
 
   // Invalidate all provider-related caches after successful create/update
@@ -206,80 +276,41 @@ export const useProviderConfiguration = ({
     refreshAllModelInputs,
   ]);
 
-  // Keep syncedSelectedProvider in sync with prop and reset state on provider change
+  // Reset every local value/ref when either the provider or its authorization
+  // scope changes. A credential typed in flow/project A must never repaint or
+  // be persisted after the same provider becomes available in scope B.
   useEffect(() => {
-    const selectedProviderName = selectedProvider?.provider;
-    const didSelectedProviderChange =
-      selectedProviderName !== previousSelectedProviderNameRef.current;
-    previousSelectedProviderNameRef.current = selectedProviderName;
+    const didConfigurationContextChange =
+      configurationContextKey !== previousConfigurationContextRef.current;
+    previousConfigurationContextRef.current = configurationContextKey;
 
-    if (didSelectedProviderChange) {
+    if (didConfigurationContextChange) {
       setVariableValues({});
       setValidationState("idle");
       setValidationError(null);
       setValidationFailed(false);
+      setIsSaving(false);
+      setIsFetchingAfterSave(false);
+      setIsFetchingAfterDisconnect(false);
+      clearValuesAfterFetchRef.current = false;
+      pendingSuccessTitleRef.current = null;
+      fetchingSeenRef.current = false;
+      hasUserMadeChangesRef.current = false;
+      if (_validationTimeoutRef.current) {
+        clearTimeout(_validationTimeoutRef.current);
+        _validationTimeoutRef.current = null;
+      }
 
-      // Force refetch models when switching providers
+      // Force refetch models when switching provider or authorization scope.
       invalidateProviderQueries();
     }
-
-    const hasSettledProviderCatalog =
-      areModelProvidersFetched && !isFetchingModels && !isModelProvidersError;
-    if (selectedProviderName && hasSettledProviderCatalog) {
-      unavailableSelectedProviderNameRef.current = modelProviders.some(
-        (provider) => provider.provider === selectedProviderName,
-      )
-        ? null
-        : selectedProviderName;
-    } else if (!selectedProviderName) {
-      unavailableSelectedProviderNameRef.current = null;
-    }
-
-    setSyncedSelectedProvider(
-      selectedProviderName === unavailableSelectedProviderNameRef.current
-        ? null
-        : selectedProvider,
-    );
-  }, [
-    selectedProvider,
-    modelProviders,
-    areModelProvidersFetched,
-    isFetchingModels,
-    isModelProvidersError,
-    invalidateProviderQueries,
-  ]);
-
-  // Sync selectedProvider with fresh data when model providers are refetched
-  useEffect(() => {
-    if (syncedSelectedProvider && modelProviders.length > 0) {
-      const freshProvider = modelProviders.find(
-        (p) => p.provider === syncedSelectedProvider.provider,
-      );
-      if (freshProvider) {
-        const hasModelsChanged =
-          JSON.stringify(freshProvider.models) !==
-          JSON.stringify(syncedSelectedProvider.models);
-        const hasStatusChanged =
-          freshProvider.is_enabled !== syncedSelectedProvider.is_enabled ||
-          freshProvider.is_configured !== syncedSelectedProvider.is_configured;
-
-        if (hasModelsChanged || hasStatusChanged) {
-          setSyncedSelectedProvider({
-            ...syncedSelectedProvider,
-            is_enabled: freshProvider.is_enabled,
-            is_configured: freshProvider.is_configured,
-            models: freshProvider.models || syncedSelectedProvider.models,
-          });
-        }
-      }
-    }
-  }, [modelProviders, syncedSelectedProvider]);
+  }, [configurationContextKey, invalidateProviderQueries]);
 
   // Calculate provider variables
   const providerVariables = useMemo((): ProviderVariable[] => {
-    if (!syncedSelectedProvider) return [];
+    if (!trustedSelectedProvider) return [];
 
-    const providerName = syncedSelectedProvider.provider;
+    const providerName = trustedSelectedProvider.provider;
     const apiVariables = providerVariablesMapping[providerName];
     if (Array.isArray(apiVariables) && apiVariables.length > 0) {
       return apiVariables;
@@ -300,7 +331,7 @@ export const useProviderConfiguration = ({
     }
 
     return [];
-  }, [syncedSelectedProvider, providerVariablesMapping]);
+  }, [trustedSelectedProvider, providerVariablesMapping]);
 
   const isPending =
     isCreating ||
@@ -331,10 +362,10 @@ export const useProviderConfiguration = ({
 
   // Check if provider requires configuration (has any required variable)
   const requiresConfiguration = useMemo(() => {
-    if (!selectedProvider) return true;
+    if (!trustedSelectedProvider) return true;
     // A provider requires configuration if it has any required variable
     return providerVariables.some((v) => v.required);
-  }, [selectedProvider, providerVariables]);
+  }, [trustedSelectedProvider, providerVariables]);
 
   // Check if all required variables are filled in the form currently
   const allRequiredFilled = useMemo(() => {
@@ -380,7 +411,10 @@ export const useProviderConfiguration = ({
 
   // Validate credentials with the backend
   const validateCredentials = useCallback(async (): Promise<boolean> => {
-    if (!selectedProvider) return false;
+    const providerName = trustedSelectedProvider?.provider;
+    if (!providerName || !canUseCurrentProviderPolicy(providerName)) {
+      return false;
+    }
 
     const variables = getVariablesForValidation();
     setValidationState("validating");
@@ -390,7 +424,7 @@ export const useProviderConfiguration = ({
 
     try {
       const result = await validateProvider({
-        provider: selectedProvider.provider,
+        provider: providerName,
         variables,
         flowId,
         projectId,
@@ -400,6 +434,15 @@ export const useProviderConfiguration = ({
       const elapsedTime = Date.now() - startTime;
       if (elapsedTime < 500) {
         await new Promise((resolve) => setTimeout(resolve, 500 - elapsedTime));
+      }
+
+      if (activeConfigurationContextRef.current !== configurationContextKey) {
+        return false;
+      }
+      if (!canUseCurrentProviderPolicy(providerName)) {
+        setValidationState("invalid");
+        setValidationError(t("modelProviders.errorUnexpected"));
+        return false;
       }
 
       if (result.valid) {
@@ -418,24 +461,30 @@ export const useProviderConfiguration = ({
         await new Promise((resolve) => setTimeout(resolve, 500 - elapsedTime));
       }
 
+      if (activeConfigurationContextRef.current !== configurationContextKey) {
+        return false;
+      }
       setValidationState("invalid");
       setValidationError(getAxiosErrorMessage(error, "Validation failed"));
       return false;
     }
   }, [
-    selectedProvider,
+    trustedSelectedProvider,
+    canUseCurrentProviderPolicy,
     getVariablesForValidation,
     validateProvider,
     flowId,
     projectId,
+    configurationContextKey,
+    t,
   ]);
 
   // Debounced validation removed — validation now happens only on save button click
 
   // Can save when all required fields are filled and there are new values
   const canSave = useMemo(() => {
-    return hasNewValuesToSave && allRequiredFilled;
-  }, [hasNewValuesToSave, allRequiredFilled]);
+    return localStateMatchesContext && hasNewValuesToSave && allRequiredFilled;
+  }, [localStateMatchesContext, hasNewValuesToSave, allRequiredFilled]);
 
   // Handle variable input change
   const handleVariableChange = useCallback((key: string, value: string) => {
@@ -451,7 +500,8 @@ export const useProviderConfiguration = ({
   // Save all variables with the primary provider variable last — validates first,
   // then saves if valid
   const handleSaveAllVariables = useCallback(async () => {
-    if (!selectedProvider) return;
+    const providerName = trustedSelectedProvider?.provider;
+    if (!providerName || !canUseCurrentProviderPolicy(providerName)) return;
 
     // Match the backend's primary-variable selection: required secret, then
     // any secret, then the first provider variable. The variables API validates
@@ -472,7 +522,7 @@ export const useProviderConfiguration = ({
 
     // Validate first
     const isValid = await validateCredentials();
-    if (!isValid) return;
+    if (!isValid || !canUseCurrentProviderPolicy(providerName)) return;
     setIsSaving(true);
     setValidationFailed(false);
 
@@ -480,6 +530,7 @@ export const useProviderConfiguration = ({
       // Persist each companion field before starting the primary-variable
       // request so backend validation can read the complete configuration.
       for (const variable of variablesToSave) {
+        if (!canUseCurrentProviderPolicy(providerName)) return;
         const value = variableValues[variable.variable_key].trim();
         const existingVariable = globalVariables.find(
           (v) => v.name === variable.variable_key,
@@ -508,10 +559,12 @@ export const useProviderConfiguration = ({
         }
       }
 
+      if (!canUseCurrentProviderPolicy(providerName)) return;
+
       // All succeeded — defer toast and value clear until after models refetch
       hasUserMadeChangesRef.current = true;
       pendingSuccessTitleRef.current = t("modelProviders.configurationSaved", {
-        provider: selectedProvider.provider,
+        provider: providerName,
       });
       setIsFetchingAfterSave(true);
       clearValuesAfterFetchRef.current = true;
@@ -528,7 +581,8 @@ export const useProviderConfiguration = ({
       setIsSaving(false);
     }
   }, [
-    selectedProvider,
+    trustedSelectedProvider,
+    canUseCurrentProviderPolicy,
     providerVariables,
     variableValues,
     globalVariables,
@@ -543,20 +597,20 @@ export const useProviderConfiguration = ({
 
   // Activate providers that don't need API keys (e.g., Ollama)
   const handleActivateProvider = useCallback(async () => {
-    if (!syncedSelectedProvider) return;
+    const providerName = trustedSelectedProvider?.provider;
+    if (!providerName || !canUseCurrentProviderPolicy(providerName)) return;
 
     // Get the first variable (usually the base URL for providers like Ollama)
     const firstVariable = providerVariables[0];
     const variableName =
-      firstVariable?.variable_key ||
-      PROVIDER_VARIABLE_MAPPING[syncedSelectedProvider.provider];
+      firstVariable?.variable_key || PROVIDER_VARIABLE_MAPPING[providerName];
 
     if (!variableName) {
       setErrorData({
         title: t("modelProviders.errorInvalidProvider"),
         list: [
           t("modelProviders.errorInvalidProviderMessage", {
-            provider: syncedSelectedProvider.provider,
+            provider: providerName,
           }),
         ],
       });
@@ -592,7 +646,7 @@ export const useProviderConfiguration = ({
       hasUserMadeChangesRef.current = true;
       setSuccessData({
         title: t("modelProviders.providerActivated", {
-          provider: syncedSelectedProvider.provider,
+          provider: providerName,
         }),
       });
       invalidateProviderQueries();
@@ -605,7 +659,8 @@ export const useProviderConfiguration = ({
       });
     }
   }, [
-    syncedSelectedProvider,
+    trustedSelectedProvider,
+    canUseCurrentProviderPolicy,
     providerVariables,
     globalVariables,
     createGlobalVariable,
@@ -619,7 +674,8 @@ export const useProviderConfiguration = ({
 
   // Disconnect / Deactivate provider
   const handleDisconnect = useCallback(async () => {
-    if (!syncedSelectedProvider) return;
+    const providerName = trustedSelectedProvider?.provider;
+    if (!providerName || !canUseCurrentProviderPolicy(providerName)) return;
 
     // Resolve every variable key associated with this provider so
     // multi-variable providers (e.g. OpenRouter's API key + attribution
@@ -634,8 +690,7 @@ export const useProviderConfiguration = ({
       if (v.variable_key) variableKeys.add(v.variable_key);
     }
     if (variableKeys.size === 0) {
-      const staticKey =
-        PROVIDER_VARIABLE_MAPPING[syncedSelectedProvider.provider];
+      const staticKey = PROVIDER_VARIABLE_MAPPING[providerName];
       if (staticKey) variableKeys.add(staticKey);
     }
 
@@ -657,7 +712,7 @@ export const useProviderConfiguration = ({
       hasUserMadeChangesRef.current = true;
       setSuccessData({
         title: t("modelProviders.providerDisconnected", {
-          provider: syncedSelectedProvider.provider,
+          provider: providerName,
         }),
       });
       setIsFetchingAfterDisconnect(true);
@@ -671,7 +726,8 @@ export const useProviderConfiguration = ({
       });
     }
   }, [
-    syncedSelectedProvider,
+    trustedSelectedProvider,
+    canUseCurrentProviderPolicy,
     providerVariables,
     globalVariables,
     deleteGlobalVariable,
@@ -684,22 +740,22 @@ export const useProviderConfiguration = ({
 
   const { handleModelToggle: queueModelToggle, flushPendingChanges } =
     useModelToggleQueue({
-      providerName: syncedSelectedProvider?.provider,
+      providerName: trustedSelectedProvider?.provider,
       flowId,
       projectId,
     });
 
   const handleModelToggle = useCallback(
     (modelName: string, enabled: boolean, modelType: ModelType) => {
-      if (!syncedSelectedProvider?.provider) return;
+      if (!trustedSelectedProvider?.provider) return;
       hasUserMadeChangesRef.current = true;
       queueModelToggle(modelName, enabled, modelType);
     },
-    [syncedSelectedProvider, queueModelToggle],
+    [trustedSelectedProvider, queueModelToggle],
   );
 
   return {
-    variableValues,
+    variableValues: localStateMatchesContext ? variableValues : {},
     validationFailed,
     isSaving,
     isPending,
@@ -707,7 +763,7 @@ export const useProviderConfiguration = ({
     validationState,
     validationError,
     providerVariables,
-    syncedSelectedProvider,
+    syncedSelectedProvider: trustedSelectedProvider,
 
     // Handlers
     handleVariableChange,

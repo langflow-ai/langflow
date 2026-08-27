@@ -85,7 +85,7 @@ export async function refreshAllModelInputs(
     if (queryClient) {
       try {
         const providers = await queryClient.fetchQuery(
-          getModelProvidersQueryOptions({ flowId }),
+          getModelProvidersQueryOptions({ flowId, purpose: "configure" }),
         );
         providerConfiguration = buildProviderConfiguration(providers);
       } catch {
@@ -216,6 +216,17 @@ async function refreshSingleNode(
       modelFieldKey,
       providerConfiguration,
     );
+
+    // This response was authorized for the flow/project snapshot captured at
+    // refresh start. Never let it update a same-id node after navigation (or a
+    // project move) changes the active scope while the request is in flight.
+    const activeFlow = useFlowsManagerStore.getState();
+    if (
+      activeFlow.currentFlowId !== flowId ||
+      activeFlow.currentFlow?.folder_id !== folderId
+    ) {
+      return;
+    }
 
     setNode(
       node.id,

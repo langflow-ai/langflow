@@ -53,6 +53,7 @@ export const useGetTypes: useQueryFunctionType<
   const { query } = UseRequestProcessor();
   const setLoading = useFlowsManagerStore((state) => state.setIsLoading);
   const activateScope = useTypesStore((state) => state.activateScope);
+  const clearScopedTypes = useTypesStore((state) => state.clearScopedTypes);
   const setScopedTypes = useTypesStore((state) => state.setScopedTypes);
   const {
     flowId,
@@ -61,6 +62,7 @@ export const useGetTypes: useQueryFunctionType<
     ...queryOptions
   } = options ?? {};
   const scopeKey = providerScopeStoreKey({ flowId, projectId });
+  const isScoped = Boolean(flowId || projectId);
 
   const getTypesFn = async () => {
     try {
@@ -102,6 +104,18 @@ export const useGetTypes: useQueryFunctionType<
   useLayoutEffect(() => {
     activateScope(scopeKey);
     if (
+      isScoped &&
+      (queryResult.fetchStatus !== "idle" ||
+        queryResult.isFetching ||
+        !queryResult.isSuccess)
+    ) {
+      if (clearScopedTypes(scopeKey)) {
+        syncNodeTranslations();
+        recomputeComponentsToUpdateIfNeeded();
+      }
+      return;
+    }
+    if (
       queryResult.data &&
       setScopedTypes(
         scopeKey,
@@ -114,8 +128,13 @@ export const useGetTypes: useQueryFunctionType<
     }
   }, [
     activateScope,
+    clearScopedTypes,
+    isScoped,
     queryResult.data,
     queryResult.dataUpdatedAt,
+    queryResult.fetchStatus,
+    queryResult.isFetching,
+    queryResult.isSuccess,
     scopeKey,
     setScopedTypes,
   ]);

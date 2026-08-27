@@ -51,9 +51,21 @@ export const usePostTemplateValue: useMutationFunctionType<
     (state) => state.currentFlow?.folder_id,
   );
 
+  const capturedScopeIsCurrent = (): boolean => {
+    const current = useFlowsManagerStore.getState();
+    return (
+      current.currentFlowId === flowId &&
+      current.currentFlow?.folder_id === folderId
+    );
+  };
+
   const postTemplateValueFn = async (
     payload: IPostTemplateValue,
   ): Promise<APIClassType | undefined> => {
+    // The hook may remain mounted briefly after navigation. Do not issue an
+    // edit under the flow/project scope captured by a previous render.
+    if (!capturedScopeIsCurrent()) return undefined;
+
     const template = payload.template ?? node.template;
 
     if (!template) return;
@@ -109,6 +121,10 @@ export const usePostTemplateValue: useMutationFunctionType<
       }
       throw e;
     }
+
+    // The response is authorized only for the captured scope. A same-id node
+    // in the newly active flow must never receive this template.
+    if (!capturedScopeIsCurrent()) return undefined;
 
     const newTemplate = response.data;
     newTemplate.last_updated = lastUpdated;

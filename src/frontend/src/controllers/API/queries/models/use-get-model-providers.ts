@@ -33,7 +33,7 @@ export interface ModelProviderWithStatus extends ModelProviderInfo {
 export interface GetModelProvidersParams extends ProviderScopeParams {
   includeDeprecated?: boolean;
   includeUnsupported?: boolean;
-  purpose?: "discover" | "configure";
+  purpose?: "use" | "configure";
 }
 
 export const getModelProvidersQueryOptions = (

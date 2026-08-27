@@ -7,6 +7,7 @@ import type {
 export type TypesStoreType = {
   activeScopeKey: string | null;
   activateScope: (scopeKey: string) => void;
+  clearScopedTypes: (scopeKey: string) => boolean;
   setScopedTypes: (
     scopeKey: string,
     data: APIDataType,

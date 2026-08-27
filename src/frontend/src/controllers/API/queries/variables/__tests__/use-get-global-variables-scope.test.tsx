@@ -1,4 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  focusManager,
+  onlineManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import useAuthStore from "@/stores/authStore";
@@ -33,10 +38,12 @@ const variable = (
 
 const deferred = <T,>() => {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((promiseResolve) => {
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
     resolve = promiseResolve;
+    reject = promiseReject;
   });
-  return { promise, resolve };
+  return { promise, resolve, reject };
 };
 
 const makeWrapper = (queryClient: QueryClient) =>
@@ -47,14 +54,25 @@ const makeWrapper = (queryClient: QueryClient) =>
   };
 
 describe("useGetGlobalVariables store isolation", () => {
+  beforeAll(() => {
+    focusManager.setFocused(false);
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
+    focusManager.setFocused(false);
+    onlineManager.setOnline(true);
     useAuthStore.setState({ isAuthenticated: true });
     useGlobalVariablesStore.setState({
       globalVariablesEntries: undefined,
       globalVariablesEntities: undefined,
       unavailableFields: {},
     });
+  });
+
+  afterAll(() => {
+    focusManager.setFocused(undefined);
+    onlineManager.setOnline(undefined);
   });
 
   it("keeps the explicitly mirrored global snapshot when a scoped request settles later", async () => {
@@ -148,6 +166,153 @@ describe("useGetGlobalVariables store isolation", () => {
     expect(useGlobalVariablesStore.getState().globalVariablesEntries).toEqual([
       "GLOBAL_KEY",
     ]);
+    queryClient.clear();
+  });
+
+  it("revalidates scoped credentials when the window regains focus", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const initialVariables = [
+      variable("initial-id", "INITIAL_KEY", "Initial Field"),
+    ];
+    const refreshedVariables = [
+      variable("refreshed-id", "REFRESHED_KEY", "Refreshed Field"),
+    ];
+    const refreshRequest = deferred<{ data: GlobalVariable[] }>();
+    mockApiGet.mockResolvedValue({ data: initialVariables });
+
+    const { result } = renderHook(
+      () =>
+        useGetGlobalVariables({
+          flowId: "flow-a",
+          refetchOnWindowFocus: false,
+          retry: false,
+        }),
+      { wrapper: makeWrapper(queryClient) },
+    );
+
+    await waitFor(() => expect(result.current.data).toEqual(initialVariables));
+    mockApiGet.mockReset();
+    mockApiGet.mockImplementationOnce(() => refreshRequest.promise);
+
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+
+    await waitFor(() => expect(mockApiGet).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(result.current.isFetching).toBe(true));
+    expect(result.current.data).toBeUndefined();
+
+    await act(async () => refreshRequest.resolve({ data: refreshedVariables }));
+    await waitFor(() =>
+      expect(result.current.data).toEqual(refreshedVariables),
+    );
+    focusManager.setFocused(false);
+    queryClient.clear();
+  });
+
+  it("keeps scoped credentials hidden after a focus refetch fails", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const initialVariables = [
+      variable("initial-id", "INITIAL_KEY", "Initial Field"),
+    ];
+    const refreshRequest = deferred<{ data: GlobalVariable[] }>();
+    mockApiGet.mockResolvedValue({ data: initialVariables });
+
+    const { result } = renderHook(
+      () => useGetGlobalVariables({ flowId: "flow-a", retry: false }),
+      { wrapper: makeWrapper(queryClient) },
+    );
+    await waitFor(() => expect(result.current.data).toEqual(initialVariables));
+    mockApiGet.mockReset();
+    mockApiGet.mockImplementationOnce(() => refreshRequest.promise);
+
+    act(() => {
+      focusManager.setFocused(true);
+    });
+    await waitFor(() => expect(result.current.isFetching).toBe(true));
+    expect(result.current.data).toBeUndefined();
+
+    await act(async () => refreshRequest.reject(new Error("scope denied")));
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.data).toBeUndefined();
+    focusManager.setFocused(false);
+    queryClient.clear();
+  });
+
+  it("keeps cached scoped credentials hidden while an offline refresh is paused", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const initialVariables = [
+      variable("initial-id", "INITIAL_KEY", "Initial Field"),
+    ];
+    mockApiGet.mockResolvedValue({ data: initialVariables });
+
+    const { result } = renderHook(
+      () => useGetGlobalVariables({ flowId: "flow-a", retry: false }),
+      { wrapper: makeWrapper(queryClient) },
+    );
+    await waitFor(() => expect(result.current.data).toEqual(initialVariables));
+
+    act(() => onlineManager.setOnline(false));
+    act(() => {
+      void queryClient.invalidateQueries({
+        queryKey: getGlobalVariablesQueryKey({ flowId: "flow-a" }),
+        exact: true,
+      });
+    });
+
+    await waitFor(() => expect(result.current.fetchStatus).toBe("paused"));
+    expect(result.current.data).toBeUndefined();
+
+    onlineManager.setOnline(true);
+    queryClient.clear();
+  });
+
+  it("preserves unscoped Settings data during an explicit refresh", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const initialVariables = [
+      variable("initial-id", "INITIAL_KEY", "Initial Field"),
+    ];
+    const refreshedVariables = [
+      variable("refreshed-id", "REFRESHED_KEY", "Refreshed Field"),
+    ];
+    const refreshRequest = deferred<{ data: GlobalVariable[] }>();
+    mockApiGet.mockResolvedValue({ data: initialVariables });
+
+    const { result } = renderHook(() => useGetGlobalVariables(), {
+      wrapper: makeWrapper(queryClient),
+    });
+    await waitFor(() => expect(result.current.data).toEqual(initialVariables));
+    // Track isFetching before the refresh so React Query notifies this
+    // observer when only the fetch status changes.
+    expect(result.current.isFetching).toBe(false);
+    mockApiGet.mockReset();
+    mockApiGet.mockImplementationOnce(() => refreshRequest.promise);
+    focusManager.setFocused(true);
+
+    act(() => {
+      void queryClient.refetchQueries({
+        queryKey: getGlobalVariablesQueryKey({}),
+        exact: true,
+      });
+    });
+    await waitFor(() => expect(mockApiGet).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(result.current.isFetching).toBe(true));
+    expect(result.current.data).toEqual(initialVariables);
+
+    await act(async () => refreshRequest.resolve({ data: refreshedVariables }));
+    await waitFor(() =>
+      expect(result.current.data).toEqual(refreshedVariables),
+    );
+    focusManager.setFocused(false);
     queryClient.clear();
   });
 

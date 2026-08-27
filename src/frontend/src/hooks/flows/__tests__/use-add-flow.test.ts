@@ -17,6 +17,7 @@ const mockPostAddFlow = jest.fn();
 const mockPostAddFolder = jest.fn();
 const mockUpdateGroupRecursion = jest.fn();
 const mockGetQueryData = jest.fn();
+const mockGetQueryState = jest.fn();
 const PROJECT_VARIABLES: GlobalVariable[] = [
   {
     id: "project-variable",
@@ -34,6 +35,7 @@ jest.mock("@tanstack/react-query", () => ({
   ...jest.requireActual("@tanstack/react-query"),
   useQueryClient: () => ({
     getQueryData: (queryKey: unknown) => mockGetQueryData(queryKey),
+    getQueryState: (queryKey: unknown) => mockGetQueryState(queryKey),
   }),
 }));
 
@@ -197,6 +199,16 @@ beforeEach(() => {
     JSON.stringify(queryKey) ===
     JSON.stringify(getGlobalVariablesQueryKey({ projectId: "folder-1" }))
       ? mockScopedGlobalVariables
+      : undefined,
+  );
+  mockGetQueryState.mockImplementation((queryKey) =>
+    JSON.stringify(queryKey) ===
+    JSON.stringify(getGlobalVariablesQueryKey({ projectId: "folder-1" }))
+      ? {
+          status: "success",
+          fetchStatus: "idle",
+          isInvalidated: false,
+        }
       : undefined,
   );
 });
@@ -365,6 +377,46 @@ describe("useAddFlow — success path", () => {
     );
   });
 
+  it("skips cleanup when the exact project snapshot is invalidated", async () => {
+    mockScopedGlobalVariables = [];
+    mockGetQueryState.mockReturnValue({
+      status: "success",
+      fetchStatus: "idle",
+      isInvalidated: true,
+    });
+    resolveAddFlow(FLOW_WITH_PROJECT_CREDENTIAL);
+
+    const { result } = renderHook(() => useAddFlow());
+    await result.current({ flow: FLOW_WITH_PROJECT_CREDENTIAL });
+
+    expect(mockUpdateGroupRecursion).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "credential-node" }),
+      [],
+      undefined,
+      undefined,
+    );
+  });
+
+  it("skips cleanup while the exact project snapshot is refetching", async () => {
+    mockScopedGlobalVariables = [];
+    mockGetQueryState.mockReturnValue({
+      status: "success",
+      fetchStatus: "fetching",
+      isInvalidated: false,
+    });
+    resolveAddFlow(FLOW_WITH_PROJECT_CREDENTIAL);
+
+    const { result } = renderHook(() => useAddFlow());
+    await result.current({ flow: FLOW_WITH_PROJECT_CREDENTIAL });
+
+    expect(mockUpdateGroupRecursion).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "credential-node" }),
+      [],
+      undefined,
+      undefined,
+    );
+  });
+
   it("uses an exact empty snapshot to clear invalid imported references", async () => {
     mockScopedGlobalVariables = [];
     resolveAddFlow(FLOW_WITH_PROJECT_CREDENTIAL);
@@ -390,9 +442,10 @@ describe("useAddFlow — success path", () => {
     const { result } = renderHook(() => useAddFlow());
     await result.current({ flow: FLOW_WITH_PROJECT_CREDENTIAL });
 
-    expect(mockGetQueryData).toHaveBeenCalledWith(
+    expect(mockGetQueryState).toHaveBeenCalledWith(
       getGlobalVariablesQueryKey({ projectId: "new-folder" }),
     );
+    expect(mockGetQueryData).not.toHaveBeenCalled();
     expect(mockUpdateGroupRecursion).toHaveBeenCalledWith(
       expect.objectContaining({ id: "credential-node" }),
       [],

@@ -1,8 +1,12 @@
 import type { APIClassType, CustomComponentRequest } from "@/types/api";
 
 const mockApiPost = jest.fn();
-const mockFlowState: { currentFlowId: string | undefined } = {
+const mockFlowState: {
+  currentFlowId: string | undefined;
+  currentFlow: { folder_id?: string } | undefined;
+} = {
   currentFlowId: undefined,
+  currentFlow: undefined,
 };
 
 jest.mock("@/controllers/API/api", () => ({
@@ -13,11 +17,12 @@ jest.mock("@/controllers/API/helpers/constants", () => ({
   getURL: jest.fn(() => "/api/v1/custom_component"),
 }));
 
-jest.mock("@/stores/flowsManagerStore", () => ({
-  __esModule: true,
-  default: (selector: (state: typeof mockFlowState) => unknown) =>
-    selector(mockFlowState),
-}));
+jest.mock("@/stores/flowsManagerStore", () => {
+  const store = (selector: (state: typeof mockFlowState) => unknown) =>
+    selector(mockFlowState);
+  store.getState = () => mockFlowState;
+  return { __esModule: true, default: store };
+});
 
 jest.mock("@/controllers/API/services/request-processor", () => ({
   UseRequestProcessor: jest.fn(() => ({
@@ -52,6 +57,7 @@ describe("usePostValidateComponentCode provider scope", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockFlowState.currentFlowId = undefined;
+    mockFlowState.currentFlow = undefined;
     mockApiPost.mockResolvedValue({ data: response });
   });
 
@@ -75,5 +81,77 @@ describe("usePostValidateComponentCode provider scope", () => {
       "/api/v1/custom_component",
       payload,
     );
+  });
+
+  it("discards an unscoped response after navigation enters a flow", async () => {
+    let resolveResponse: ((value: unknown) => void) | undefined;
+    mockApiPost.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveResponse = resolve;
+        }),
+    );
+    const mutation = usePostValidateComponentCode();
+
+    const pending = mutation.mutateAsync(payload);
+    await Promise.resolve();
+    mockFlowState.currentFlowId = "flow-one";
+    mockFlowState.currentFlow = { folder_id: "project-one" };
+    resolveResponse?.({ data: response });
+
+    await expect(pending).resolves.toBeUndefined();
+  });
+
+  it("does not start scoped validation after navigation changes the captured scope", async () => {
+    mockFlowState.currentFlowId = "flow-one";
+    mockFlowState.currentFlow = { folder_id: "project-one" };
+    const mutation = usePostValidateComponentCode();
+    mockFlowState.currentFlowId = "flow-two";
+    mockFlowState.currentFlow = { folder_id: "project-two" };
+
+    await expect(mutation.mutateAsync(payload)).resolves.toBeUndefined();
+    expect(mockApiPost).not.toHaveBeenCalled();
+  });
+
+  it("discards a scoped response after the active flow changes", async () => {
+    mockFlowState.currentFlowId = "flow-one";
+    mockFlowState.currentFlow = { folder_id: "project-one" };
+    let resolveResponse: ((value: unknown) => void) | undefined;
+    mockApiPost.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveResponse = resolve;
+        }),
+    );
+    const mutation = usePostValidateComponentCode();
+
+    const pending = mutation.mutateAsync(payload);
+    await Promise.resolve();
+    expect(mockApiPost).toHaveBeenCalledTimes(1);
+    mockFlowState.currentFlowId = "flow-two";
+    mockFlowState.currentFlow = { folder_id: "project-two" };
+    resolveResponse?.({ data: response });
+
+    await expect(pending).resolves.toBeUndefined();
+  });
+
+  it("discards a scoped response after the flow moves projects", async () => {
+    mockFlowState.currentFlowId = "flow-one";
+    mockFlowState.currentFlow = { folder_id: "project-one" };
+    let resolveResponse: ((value: unknown) => void) | undefined;
+    mockApiPost.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveResponse = resolve;
+        }),
+    );
+    const mutation = usePostValidateComponentCode();
+
+    const pending = mutation.mutateAsync(payload);
+    await Promise.resolve();
+    mockFlowState.currentFlow = { folder_id: "project-two" };
+    resolveResponse?.({ data: response });
+
+    await expect(pending).resolves.toBeUndefined();
   });
 });

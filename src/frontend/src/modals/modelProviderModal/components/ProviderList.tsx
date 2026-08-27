@@ -29,7 +29,14 @@ const ProviderList = ({
     data: rawProviders = [],
     isLoading,
     isFetching,
-  } = useGetModelProviders({ includeDeprecated: true, flowId, projectId });
+    fetchStatus,
+    isError,
+  } = useGetModelProviders({
+    includeDeprecated: true,
+    flowId,
+    projectId,
+    purpose: "configure",
+  });
 
   const trimmedQuery = (query ?? "").trim().toLowerCase();
 
@@ -66,7 +73,7 @@ const ProviderList = ({
   };
 
   const isLoadingProviders =
-    isLoading || (isFetching && filteredProviders.length === 0);
+    isLoading || isFetching || fetchStatus === "paused";
 
   if (isLoadingProviders) {
     return (
@@ -75,6 +82,18 @@ const ProviderList = ({
         data-testid="provider-list-loading"
       >
         <LoadingTextComponent text={t("modelProviders.loadingProviders")} />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div
+        role="alert"
+        className="text-muted-foreground px-4 py-2 text-sm"
+        data-testid="provider-list-error"
+      >
+        {t("modelProviders.errorUnexpected")}
       </div>
     );
   }

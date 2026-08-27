@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import GlobalVariableDeleteConfirmation from "@/components/core/globalVariableDeleteConfirmation";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
@@ -50,17 +49,29 @@ export default function InputGlobalComponent({
     data: globalVariables,
     isFetchedAfterMount: isGlobalVariablesFetchedAfterMount,
     isFetching: isGlobalVariablesFetching,
+    fetchStatus: globalVariablesFetchStatus,
     isSuccess: isGlobalVariablesFetchSuccessful,
   } = useGetGlobalVariables({
     ...providerScope,
     enabled: Boolean(currentFlowId),
   });
 
-  // // Safely cast the data to our typed interface
-  const typedGlobalVariables: GlobalVariable[] = globalVariables ?? [];
   const currentValue = value ?? "";
   const isDisabled = disabled ?? false;
   const loadFromDb = load_from_db ?? false;
+  const canUseScopedGlobalVariables =
+    Boolean(currentFlowId) &&
+    isGlobalVariablesFetchSuccessful &&
+    !isGlobalVariablesFetching &&
+    globalVariablesFetchStatus !== "paused" &&
+    isGlobalVariablesFetchedAfterMount;
+
+  // Cached credentials are authorization-sensitive. Keep saved references in
+  // the flow data, but do not surface them or any cached options until the
+  // exact flow-scoped query has succeeded and settled for this mount.
+  const typedGlobalVariables: GlobalVariable[] = canUseScopedGlobalVariables
+    ? (globalVariables ?? [])
+    : [];
 
   // // Extract complex logic into custom hooks
   const valueExists = useGlobalVariableValue(
@@ -72,47 +83,16 @@ export default function InputGlobalComponent({
     currentValue,
     typedGlobalVariables,
   );
-  const canValidateMissingVariable =
-    Boolean(currentFlowId) &&
-    isGlobalVariablesFetchSuccessful &&
-    !isGlobalVariablesFetching &&
-    isGlobalVariablesFetchedAfterMount;
+  const canValidateMissingVariable = canUseScopedGlobalVariables;
 
   useInitialLoad(
     isDisabled,
     loadFromDb,
-    typedGlobalVariables,
     canValidateMissingVariable,
     valueExists,
     unavailableField,
     handleOnNewValue,
   );
-
-  // Clean up when selected variable no longer exists.
-  // Only validate against a successful, settled query result for this mount.
-  // This avoids clearing values during the initial fetch, during background
-  // refetches against cached data, or after failed requests.
-  useEffect(() => {
-    if (
-      canValidateMissingVariable &&
-      loadFromDb &&
-      currentValue &&
-      !valueExists &&
-      !isDisabled
-    ) {
-      handleOnNewValue(
-        { value: "", load_from_db: false },
-        { skipSnapshot: true },
-      );
-    }
-  }, [
-    canValidateMissingVariable,
-    loadFromDb,
-    currentValue,
-    valueExists,
-    isDisabled,
-    handleOnNewValue,
-  ]);
 
   // Create handlers object for better organization
   const handlers: GlobalVariableHandlers = {
@@ -128,6 +108,7 @@ export default function InputGlobalComponent({
 
     // Handler for selecting a global variable
     handleVariableSelect: (selectedValue: string) => {
+      if (!canUseScopedGlobalVariables) return;
       handleOnNewValue({
         value: selectedValue,
         load_from_db: selectedValue !== "",
@@ -170,16 +151,7 @@ export default function InputGlobalComponent({
     />
   );
 
-  let variableOptions = typedGlobalVariables.map((variable) => variable.name);
-
-  if (
-    loadFromDb &&
-    currentValue &&
-    !valueExists &&
-    !variableOptions.includes(currentValue)
-  ) {
-    variableOptions = [...variableOptions, currentValue];
-  }
+  const variableOptions = typedGlobalVariables.map((variable) => variable.name);
 
   // Disable Credential-typed variables unless this is a true secret field
   // (SecretStrInput / MultilineSecretInput by intrinsic class). Falls back to
@@ -200,7 +172,11 @@ export default function InputGlobalComponent({
           ]),
       );
 
-  const selectedOption = loadFromDb ? currentValue : "";
+  const selectedOption =
+    loadFromDb && canUseScopedGlobalVariables && valueExists
+      ? currentValue
+      : "";
+  const visibleValue = loadFromDb && !selectedOption ? "" : currentValue;
 
   if (!showParameter) {
     return null;
@@ -216,7 +192,7 @@ export default function InputGlobalComponent({
       editNode={editNode}
       disabled={disabled}
       password={password ?? false}
-      value={currentValue}
+      value={visibleValue}
       options={variableOptions}
       disabledOptions={disabledOptions}
       optionsPlaceholder={t("globalVars.pageTitle")}

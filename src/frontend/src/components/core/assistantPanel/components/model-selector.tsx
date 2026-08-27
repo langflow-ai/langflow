@@ -30,7 +30,11 @@ export function ModelSelector({
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [isManageProvidersOpen, setIsManageProvidersOpen] = useState(false);
-  const { filteredProviders: enabledProviders, isLoading } = useEnabledModels();
+  const {
+    filteredProviders: enabledProviders,
+    isLoading,
+    isError,
+  } = useEnabledModels();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const { refresh: refreshAllModelInputs } = useRefreshModelInputs();
 
@@ -123,6 +127,21 @@ export function ModelSelector({
       >
         <span className="text-accent-emerald-foreground">•</span>
         <span>{t("assistant.loading")}</span>
+      </Button>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        data-testid="assistant-model-catalog-error"
+        className="h-7 gap-1.5 px-2 text-xs text-muted-foreground"
+        disabled
+      >
+        <span className="text-destructive">•</span>
+        <span>{t("errors.failedToLoadModels")}</span>
       </Button>
     );
   }

@@ -1,4 +1,8 @@
-import type { UseMutationResult } from "@tanstack/react-query";
+import type {
+  Query,
+  QueryClient,
+  UseMutationResult,
+} from "@tanstack/react-query";
 import type { ReactFlowJsonObject } from "@xyflow/react";
 import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
@@ -17,6 +21,8 @@ interface IPatchUpdateFlow {
   flow_type?: "agent" | "workflow";
   a2a_enabled?: boolean;
   a2a_card_overrides?: Record<string, unknown> | null;
+  /** Internal signal; stripped before PATCHing the API. */
+  providerScopeChanged?: boolean;
 }
 
 const isFlowScopedProviderQuery = (
@@ -36,6 +42,21 @@ const isFlowScopedProviderQuery = (
   }
 };
 
+export const clearFlowScopedProviderQueries = async (
+  queryClient: QueryClient,
+  flowId: string,
+): Promise<void> => {
+  const predicate = ({ queryKey }: Query) =>
+    isFlowScopedProviderQuery(queryKey, flowId);
+
+  // A project move changes the trusted scope behind these flow-id-only keys.
+  // Cancel first so an in-flight response from the previous project cannot
+  // repopulate the cache. Reset (rather than only invalidate/remove) also
+  // clears data held by active observers before their project-B refetch.
+  await queryClient.cancelQueries({ predicate });
+  await queryClient.resetQueries({ predicate });
+};
+
 export const usePatchUpdateFlow: useMutationFunctionType<
   undefined,
   IPatchUpdateFlow
@@ -44,6 +65,7 @@ export const usePatchUpdateFlow: useMutationFunctionType<
 
   const PatchUpdateFlowFn = async ({
     id,
+    providerScopeChanged: _providerScopeChanged,
     ...payload
     // biome-ignore lint/suspicious/noExplicitAny: legacy
   }: IPatchUpdateFlow): Promise<any> => {
@@ -56,15 +78,12 @@ export const usePatchUpdateFlow: useMutationFunctionType<
   const mutation: UseMutationResult<IPatchUpdateFlow, any, IPatchUpdateFlow> =
     mutate(["usePatchUpdateFlow"], PatchUpdateFlowFn, {
       ...options,
-      onSuccess: (...args) => {
+      onSuccess: async (...args) => {
         const [, variables] = args;
-        if (Object.hasOwn(variables, "folder_id")) {
-          queryClient.invalidateQueries({
-            predicate: ({ queryKey }) =>
-              isFlowScopedProviderQuery(queryKey, variables.id),
-          });
+        if (variables.providerScopeChanged) {
+          await clearFlowScopedProviderQueries(queryClient, variables.id);
         }
-        options?.onSuccess?.(...args);
+        await options?.onSuccess?.(...args);
       },
       onSettled: (...args) => {
         queryClient.invalidateQueries({

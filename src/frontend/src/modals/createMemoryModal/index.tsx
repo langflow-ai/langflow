@@ -42,6 +42,10 @@ export default function CreateMemoryModal({
     setPreprocessingPrompt,
     embeddingModelOptions,
     llmModelOptions,
+    modelCatalogReady,
+    globalVariablesReady,
+    embeddingSelectionAuthorized,
+    preprocessingSelectionAuthorized,
     backendType,
     handleBackendProviderChange,
     globalVariables,
@@ -99,7 +103,7 @@ export default function CreateMemoryModal({
                 id="memory-embedding-model"
                 value={selectedEmbeddingModel}
                 editNode={false}
-                disabled={false}
+                disabled={!modelCatalogReady}
                 handleOnNewValue={({ value }) => {
                   setSelectedEmbeddingModel(value);
                 }}
@@ -133,6 +137,7 @@ export default function CreateMemoryModal({
                 id="memory-db-provider"
                 value={backendType}
                 globalVariables={globalVariables}
+                disabled={!globalVariablesReady}
                 onValueChange={handleBackendProviderChange}
               />
             </div>
@@ -210,7 +215,7 @@ export default function CreateMemoryModal({
                     id="memory-preprocessing-model"
                     value={selectedPreprocessingModel}
                     editNode={false}
-                    disabled={false}
+                    disabled={!modelCatalogReady}
                     handleOnNewValue={({ value }) => {
                       setSelectedPreprocessingModel(value);
                     }}
@@ -282,9 +287,11 @@ export default function CreateMemoryModal({
           loading: createMemoryMutation.isPending,
           disabled:
             !name.trim() ||
-            selectedEmbeddingModel.length === 0 ||
+            !modelCatalogReady ||
+            !globalVariablesReady ||
+            !embeddingSelectionAuthorized ||
             !backendConfigured ||
-            (preprocessingEnabled && selectedPreprocessingModel.length === 0) ||
+            (preprocessingEnabled && !preprocessingSelectionAuthorized) ||
             (preprocessingEnabled && !preprocessingPrompt.trim()),
         }}
       />

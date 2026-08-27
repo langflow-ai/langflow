@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 
 const mockApiGet = jest.fn();
 const mockActivateScope = jest.fn();
+const mockClearScopedTypes = jest.fn(() => true);
 const mockSetScopedTypes = jest.fn(() => true);
 const mockRecomputeComponentsToUpdateIfNeeded = jest.fn();
 const mockQuery = jest.fn((key, fn, _options) => {
@@ -11,7 +12,13 @@ const mockQuery = jest.fn((key, fn, _options) => {
   useEffect(() => {
     void fn().then(setData);
   }, [keyString]);
-  return { data, isLoading: data === undefined, error: null };
+  return {
+    data,
+    isFetching: data === undefined,
+    isLoading: data === undefined,
+    isSuccess: data !== undefined,
+    error: null,
+  };
 });
 
 const mockUseTypesStore = Object.assign(
@@ -19,11 +26,13 @@ const mockUseTypesStore = Object.assign(
     (
       selector: (state: {
         activateScope: typeof mockActivateScope;
+        clearScopedTypes: typeof mockClearScopedTypes;
         setScopedTypes: typeof mockSetScopedTypes;
       }) => unknown,
     ) =>
       selector({
         activateScope: mockActivateScope,
+        clearScopedTypes: mockClearScopedTypes,
         setScopedTypes: mockSetScopedTypes,
       }),
   ),

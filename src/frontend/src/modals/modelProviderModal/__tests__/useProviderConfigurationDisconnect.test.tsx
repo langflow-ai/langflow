@@ -29,6 +29,9 @@ let mockModelProviders: Array<{
 let mockModelProvidersIsFetched = false;
 let mockModelProvidersIsFetching = false;
 let mockModelProvidersIsError = false;
+let mockModelProvidersIsSuccess = true;
+let mockModelProvidersFetchStatus: "idle" | "fetching" | "paused" = "idle";
+let mockQueryStateTrusted = true;
 
 const deleteCalls: Array<{ id: string | undefined }> = [];
 const mockDeleteMutateAsync = jest.fn((params: { id: string | undefined }) => {
@@ -36,16 +39,31 @@ const mockDeleteMutateAsync = jest.fn((params: { id: string | undefined }) => {
   return Promise.resolve(undefined);
 });
 const mockCreateMutateAsync = jest.fn();
+const mockValidateMutateAsync = jest.fn(() => Promise.resolve({ valid: true }));
 
 const mockSetSuccessData = jest.fn();
 const mockSetErrorData = jest.fn();
 const mockInvalidateQueries = jest.fn();
 const mockRefetchQueries = jest.fn();
+const mockUseGetModelProviders = jest.fn(
+  (_params?: unknown, _options?: unknown) => ({
+    data: mockModelProviders,
+    isFetched: mockModelProvidersIsFetched,
+    isFetching: mockModelProvidersIsFetching,
+    isError: mockModelProvidersIsError,
+    isSuccess: mockModelProvidersIsSuccess,
+    fetchStatus: mockModelProvidersFetchStatus,
+  }),
+);
 
 jest.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({
     invalidateQueries: mockInvalidateQueries,
     refetchQueries: mockRefetchQueries,
+    getQueryState: () =>
+      mockQueryStateTrusted
+        ? { status: "success", fetchStatus: "idle", isInvalidated: false }
+        : { status: "success", fetchStatus: "idle", isInvalidated: true },
   }),
 }));
 
@@ -70,24 +88,34 @@ jest.mock("@/controllers/API/queries/variables", () => ({
 }));
 
 jest.mock("@/controllers/API/queries/models/use-get-model-providers", () => ({
-  useGetModelProviders: () => ({
-    data: mockModelProviders,
-    isFetched: mockModelProvidersIsFetched,
-    isFetching: mockModelProvidersIsFetching,
-    isError: mockModelProvidersIsError,
+  getModelProvidersQueryOptions: (params?: Record<string, unknown>) => ({
+    queryKey: [
+      "useGetModelProviders",
+      params?.includeDeprecated,
+      params?.includeUnsupported,
+      params?.flowId,
+      params?.projectId,
+      params?.purpose,
+    ],
   }),
+  useGetModelProviders: (params?: unknown, options?: unknown) =>
+    mockUseGetModelProviders(params, options),
 }));
 
 jest.mock(
   "@/controllers/API/queries/models/use-get-provider-variables",
   () => ({
+    getProviderVariablesQueryKey: (scope?: {
+      flowId?: string;
+      projectId?: string;
+    }) => ["useGetProviderVariables", scope?.flowId, scope?.projectId],
     useGetProviderVariables: () => ({ data: mockProviderVariablesMapping }),
   }),
 );
 
 jest.mock("@/controllers/API/queries/models/use-validate-provider", () => ({
   useValidateProvider: () => ({
-    mutateAsync: jest.fn(() => Promise.resolve({ valid: true })),
+    mutateAsync: mockValidateMutateAsync,
   }),
 }));
 
@@ -128,6 +156,27 @@ const renderProviderConfiguration = (selectedProvider: Provider) =>
     { initialProps: { provider: selectedProvider } },
   );
 
+const renderScopedProviderConfiguration = (
+  selectedProvider: Provider,
+  flowId: string,
+  projectId: string,
+) =>
+  renderHook(
+    ({ provider, flow, project }) =>
+      useProviderConfiguration({
+        selectedProvider: provider,
+        flowId: flow,
+        projectId: project,
+      }),
+    {
+      initialProps: {
+        provider: selectedProvider,
+        flow: flowId,
+        project: projectId,
+      },
+    },
+  );
+
 describe("useProviderConfiguration.handleDisconnect", () => {
   beforeEach(() => {
     mockGlobalVariables.length = 0;
@@ -135,9 +184,14 @@ describe("useProviderConfiguration.handleDisconnect", () => {
       (k) => delete mockProviderVariablesMapping[k],
     );
     mockModelProviders = [];
-    mockModelProvidersIsFetched = false;
+    mockModelProvidersIsFetched = true;
     mockModelProvidersIsFetching = false;
     mockModelProvidersIsError = false;
+    mockModelProvidersIsSuccess = true;
+    mockModelProvidersFetchStatus = "idle";
+    mockQueryStateTrusted = true;
+    mockValidateMutateAsync.mockReset();
+    mockValidateMutateAsync.mockResolvedValue({ valid: true });
     deleteCalls.length = 0;
     mockDeleteMutateAsync.mockClear();
     mockDeleteMutateAsync.mockImplementation((params) => {
@@ -148,6 +202,29 @@ describe("useProviderConfiguration.handleDisconnect", () => {
     mockSetErrorData.mockClear();
     mockInvalidateQueries.mockClear();
     mockRefetchQueries.mockClear();
+    mockUseGetModelProviders.mockClear();
+  });
+
+  it("loads the configuration catalog with configure authorization", () => {
+    renderHook(() =>
+      useProviderConfiguration({
+        selectedProvider: null,
+        flowId: "flow-one",
+        projectId: "project-one",
+      }),
+    );
+
+    expect(mockUseGetModelProviders).toHaveBeenCalledWith(
+      {
+        includeDeprecated: true,
+        flowId: "flow-one",
+        projectId: "project-one",
+        purpose: "configure",
+      },
+      expect.objectContaining({
+        refetchInterval: false,
+      }),
+    );
   });
 
   it("deletes every variable for a multi-variable provider (OpenRouter)", async () => {
@@ -328,12 +405,301 @@ describe("useProviderConfiguration.handleDisconnect", () => {
 
 describe("useProviderConfiguration policy refresh", () => {
   beforeEach(() => {
+    mockGlobalVariables.length = 0;
+    Object.keys(mockProviderVariablesMapping).forEach(
+      (key) => delete mockProviderVariablesMapping[key],
+    );
+    mockDeleteMutateAsync.mockClear();
     mockModelProviders = [];
     mockModelProvidersIsFetched = false;
     mockModelProvidersIsFetching = false;
     mockModelProvidersIsError = false;
+    mockModelProvidersIsSuccess = true;
+    mockModelProvidersFetchStatus = "idle";
+    mockQueryStateTrusted = true;
+    mockCreateMutateAsync.mockClear();
+    mockValidateMutateAsync.mockReset();
+    mockValidateMutateAsync.mockResolvedValue({ valid: true });
     mockInvalidateQueries.mockClear();
     mockRefetchQueries.mockClear();
+  });
+
+  it.each([
+    {
+      state: "has not completed its first request",
+      isFetched: false,
+      isFetching: false,
+      isError: false,
+    },
+    {
+      state: "is refetching retained data",
+      isFetched: true,
+      isFetching: true,
+      isError: false,
+    },
+    {
+      state: "failed with retained data",
+      isFetched: true,
+      isFetching: false,
+      isError: true,
+    },
+  ])(
+    "withholds a stale selected provider while the scoped catalog $state",
+    async ({ isFetched, isFetching, isError }) => {
+      const selectedProvider: Provider = {
+        provider: "OpenAI",
+        icon: "OpenAI",
+        is_enabled: true,
+        is_configured: true,
+        models: [],
+      };
+      mockModelProviders = [selectedProvider];
+      mockModelProvidersIsFetched = isFetched;
+      mockModelProvidersIsFetching = isFetching;
+      mockModelProvidersIsError = isError;
+
+      const { result } = renderProviderConfiguration(selectedProvider);
+
+      await waitFor(() =>
+        expect(result.current.syncedSelectedProvider).toBeNull(),
+      );
+    },
+  );
+
+  it("restores the selected provider only after a successful applicable catalog settles", async () => {
+    const selectedProvider: Provider = {
+      provider: "OpenAI",
+      icon: "OpenAI",
+      is_enabled: true,
+      is_configured: true,
+      models: [],
+    };
+    mockModelProviders = [selectedProvider];
+    mockModelProvidersIsFetched = true;
+    mockModelProvidersIsFetching = true;
+
+    const { result, rerender } = renderProviderConfiguration(selectedProvider);
+    await waitFor(() =>
+      expect(result.current.syncedSelectedProvider).toBeNull(),
+    );
+
+    mockModelProvidersIsFetching = false;
+    rerender({ provider: selectedProvider });
+
+    await waitFor(() =>
+      expect(result.current.syncedSelectedProvider?.provider).toBe("OpenAI"),
+    );
+  });
+
+  it("masks the open provider and blocks handlers while a cached catalog refresh is paused", async () => {
+    const selectedProvider: Provider = {
+      provider: "OpenAI",
+      icon: "OpenAI",
+      is_enabled: true,
+      is_configured: true,
+      models: [],
+    };
+    mockModelProviders = [selectedProvider];
+    mockModelProvidersIsFetched = true;
+
+    const { result, rerender } = renderProviderConfiguration(selectedProvider);
+    await waitFor(() =>
+      expect(result.current.syncedSelectedProvider?.provider).toBe("OpenAI"),
+    );
+
+    mockModelProvidersFetchStatus = "paused";
+    rerender({ provider: selectedProvider });
+
+    expect(result.current.syncedSelectedProvider).toBeNull();
+    await act(async () => result.current.handleDisconnect());
+    expect(mockDeleteMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("blocks a credential handler when the exact policy query is invalidated", async () => {
+    const selectedProvider: Provider = {
+      provider: "OpenAI",
+      icon: "OpenAI",
+      is_enabled: true,
+      is_configured: true,
+      models: [],
+    };
+    mockModelProviders = [selectedProvider];
+    mockModelProvidersIsFetched = true;
+    mockGlobalVariables.push({
+      id: "openai-key",
+      name: "OPENAI_API_KEY",
+    });
+    mockProviderVariablesMapping.OpenAI = [
+      {
+        variable_name: "API Key",
+        variable_key: "OPENAI_API_KEY",
+        required: true,
+        is_secret: true,
+        is_list: false,
+        options: [],
+      },
+    ];
+
+    const { result } = renderProviderConfiguration(selectedProvider);
+    await waitFor(() =>
+      expect(result.current.syncedSelectedProvider?.provider).toBe("OpenAI"),
+    );
+    mockQueryStateTrusted = false;
+
+    await act(async () => result.current.handleDisconnect());
+
+    expect(mockDeleteMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("does not persist credentials when policy is invalidated during validation", async () => {
+    const selectedProvider: Provider = {
+      provider: "OpenAI",
+      icon: "OpenAI",
+      is_enabled: true,
+      is_configured: false,
+      models: [],
+    };
+    mockModelProviders = [selectedProvider];
+    mockModelProvidersIsFetched = true;
+    mockProviderVariablesMapping.OpenAI = [
+      {
+        variable_name: "API Key",
+        variable_key: "OPENAI_API_KEY",
+        required: true,
+        is_secret: true,
+        is_list: false,
+        options: [],
+      },
+    ];
+    let resolveValidation!: (value: { valid: boolean }) => void;
+    mockValidateMutateAsync.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveValidation = resolve;
+        }),
+    );
+
+    const { result } = renderProviderConfiguration(selectedProvider);
+    await waitFor(() =>
+      expect(result.current.syncedSelectedProvider?.provider).toBe("OpenAI"),
+    );
+    act(() => result.current.handleVariableChange("OPENAI_API_KEY", "secret"));
+
+    let savePromise!: Promise<void>;
+    act(() => {
+      savePromise = result.current.handleSaveAllVariables();
+    });
+    await waitFor(() => expect(mockValidateMutateAsync).toHaveBeenCalled());
+    mockQueryStateTrusted = false;
+    resolveValidation({ valid: true });
+    await act(async () => savePromise);
+
+    expect(mockCreateMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("clears typed credentials when the same provider changes authorization scope", async () => {
+    const selectedProvider: Provider = {
+      provider: "OpenAI",
+      icon: "OpenAI",
+      is_enabled: true,
+      is_configured: false,
+      models: [],
+    };
+    mockModelProviders = [selectedProvider];
+    mockModelProvidersIsFetched = true;
+    mockProviderVariablesMapping.OpenAI = [
+      {
+        variable_name: "API Key",
+        variable_key: "OPENAI_API_KEY",
+        required: true,
+        is_secret: true,
+        is_list: false,
+        options: [],
+      },
+    ];
+
+    const { result, rerender } = renderScopedProviderConfiguration(
+      selectedProvider,
+      "flow-a",
+      "project-a",
+    );
+    act(() =>
+      result.current.handleVariableChange(
+        "OPENAI_API_KEY",
+        "placeholder-value", // pragma: allowlist secret
+      ),
+    );
+    expect(result.current.variableValues).toEqual({
+      OPENAI_API_KEY: "placeholder-value", // pragma: allowlist secret
+    });
+
+    rerender({
+      provider: selectedProvider,
+      flow: "flow-b",
+      project: "project-b",
+    });
+
+    expect(result.current.variableValues).toEqual({});
+    await act(async () => result.current.handleSaveAllVariables());
+    expect(mockValidateMutateAsync).not.toHaveBeenCalled();
+    expect(mockCreateMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("does not persist a captured credential after the scoped hook unmounts", async () => {
+    const selectedProvider: Provider = {
+      provider: "OpenAI",
+      icon: "OpenAI",
+      is_enabled: true,
+      is_configured: false,
+      models: [],
+    };
+    mockModelProviders = [selectedProvider];
+    mockModelProvidersIsFetched = true;
+    mockProviderVariablesMapping.OpenAI = [
+      {
+        variable_name: "API Key",
+        variable_key: "OPENAI_API_KEY",
+        required: true,
+        is_secret: true,
+        is_list: false,
+        options: [],
+      },
+    ];
+    let resolveValidation!: (value: { valid: boolean }) => void;
+    mockValidateMutateAsync.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveValidation = resolve;
+        }),
+    );
+    const dateNowSpy = jest
+      .spyOn(Date, "now")
+      .mockImplementationOnce(() => 0)
+      .mockImplementation(() => 500);
+    const { result, unmount } = renderScopedProviderConfiguration(
+      selectedProvider,
+      "flow-a",
+      "project-a",
+    );
+
+    try {
+      act(() =>
+        result.current.handleVariableChange("OPENAI_API_KEY", "secret-a"),
+      );
+      let savePromise!: Promise<void>;
+      act(() => {
+        savePromise = result.current.handleSaveAllVariables();
+      });
+      await waitFor(() => expect(mockValidateMutateAsync).toHaveBeenCalled());
+
+      unmount();
+      resolveValidation({ valid: true });
+      await savePromise;
+
+      expect(mockCreateMutateAsync).not.toHaveBeenCalled();
+    } finally {
+      dateNowSpy.mockRestore();
+    }
   });
 
   it("clears an open provider when a settled refetch omits it", async () => {
@@ -402,7 +768,7 @@ describe("useProviderConfiguration.handleSaveAllVariables", () => {
       (k) => delete mockProviderVariablesMapping[k],
     );
     mockModelProviders = [];
-    mockModelProvidersIsFetched = false;
+    mockModelProvidersIsFetched = true;
     mockModelProvidersIsFetching = false;
     mockModelProvidersIsError = false;
     mockCreateMutateAsync.mockReset();
@@ -429,6 +795,14 @@ describe("useProviderConfiguration.handleSaveAllVariables", () => {
         is_secret: true,
         is_list: false,
         options: [],
+      },
+    ];
+    mockModelProviders = [
+      {
+        provider: "OpenAI Compatible",
+        is_enabled: false,
+        is_configured: false,
+        models: [],
       },
     ];
 
@@ -512,6 +886,14 @@ describe("useProviderConfiguration.handleSaveAllVariables", () => {
         is_secret: false,
         is_list: false,
         options: [],
+      },
+    ];
+    mockModelProviders = [
+      {
+        provider: "OpenAI",
+        is_enabled: false,
+        is_configured: false,
+        models: [],
       },
     ];
 
