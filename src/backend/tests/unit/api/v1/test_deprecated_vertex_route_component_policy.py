@@ -27,6 +27,7 @@ import pytest
 if TYPE_CHECKING:
     from httpx import AsyncClient
 
+
 def _vertex_route(flow_id: str, vertex_id: str) -> str:
     return f"api/v1/build/{flow_id}/vertices/{vertex_id}"
 
