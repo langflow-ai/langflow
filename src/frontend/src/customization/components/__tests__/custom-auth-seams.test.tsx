@@ -6,6 +6,7 @@ import CustomLoginBrandTitle from "../custom-login-brand-title";
 import CustomLoginSignupPrompt from "../custom-login-signup-prompt";
 import CustomLoginSsoOptions from "../custom-login-sso-options";
 import CustomResourceShareAction from "../custom-resource-share-action";
+import CustomSettingsPasswordFormGate from "../custom-settings-password-form-gate";
 
 describe("OSS auth customization seams", () => {
   it("does not render admin navigation", () => {
@@ -32,6 +33,16 @@ describe("OSS auth customization seams", () => {
     expect(
       screen.getByText("Don't have an account? Sign Up"),
     ).toBeInTheDocument();
+  });
+
+  it("passes the settings password form through", () => {
+    render(
+      <CustomSettingsPasswordFormGate>
+        <p>Password settings</p>
+      </CustomSettingsPasswordFormGate>,
+    );
+
+    expect(screen.getByText("Password settings")).toBeInTheDocument();
   });
 
   it("renders no SSO login options", () => {
