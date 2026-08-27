@@ -4,7 +4,9 @@ import httpx
 import pytest
 from langchain_core.tools import ToolException
 from langflow.custom import Component
+from lfx.components.tools.wikidata_api import WIKIDATA_API_TIMEOUT, WikidataAPIWrapper
 from lfx.components.wikipedia import WikidataComponent
+from lfx.components.wikipedia.wikidata import WIKIDATA_API_TIMEOUT as WIKIPEDIA_WIKIDATA_API_TIMEOUT
 from lfx.custom.utils import build_custom_component_template
 
 # Import the base test class
@@ -45,7 +47,7 @@ class TestWikidataComponent(ComponentTestBaseWithoutClient):
         input_names = [input_["name"] for input_ in frontend_node["template"].values() if isinstance(input_, dict)]
         assert "query" in input_names
 
-    @patch("lfx.components.tools.wikidata_api.httpx.get")
+    @patch("lfx.components.wikipedia.wikidata.httpx.get")
     def test_fetch_content_success(self, mock_httpx, component_class, mock_query):
         component = component_class()
         component.query = mock_query
@@ -67,13 +69,18 @@ class TestWikidataComponent(ComponentTestBaseWithoutClient):
 
         result = component.fetch_content()
 
+        mock_httpx.assert_called_once_with(
+            "https://www.wikidata.org/w/api.php",
+            params={"action": "wbsearchentities", "format": "json", "search": mock_query, "language": "en"},
+            timeout=WIKIPEDIA_WIKIDATA_API_TIMEOUT,
+        )
         assert isinstance(result, list)
         assert len(result) == 1
         assert result[0].text == "Test Label: Test Description"
         assert result[0].data["label"] == "Test Label"
         assert result[0].data["id"] == "Q123"
 
-    @patch("lfx.components.tools.wikidata_api.httpx.get")
+    @patch("lfx.components.wikipedia.wikidata.httpx.get")
     def test_fetch_content_empty_response(self, mock_httpx, component_class, mock_query):
         component = component_class()
         component.query = mock_query
@@ -90,7 +97,7 @@ class TestWikidataComponent(ComponentTestBaseWithoutClient):
         assert "error" in result[0].data
         assert "No search results found" in result[0].data["error"]
 
-    @patch("lfx.components.tools.wikidata_api.httpx.get")
+    @patch("lfx.components.wikipedia.wikidata.httpx.get")
     def test_fetch_content_error_handling(self, mock_httpx, component_class, mock_query):
         component = component_class()
         component.query = mock_query
@@ -100,3 +107,18 @@ class TestWikidataComponent(ComponentTestBaseWithoutClient):
 
         with pytest.raises(ToolException):
             component.fetch_content()
+
+    @patch("lfx.components.tools.wikidata_api.httpx.get")
+    def test_legacy_tool_uses_bounded_timeout(self, mock_httpx, mock_query):
+        wrapper = WikidataAPIWrapper()
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"search": [{"label": "Test Label"}]}
+        mock_httpx.return_value = mock_response
+
+        assert wrapper.results(mock_query) == [{"label": "Test Label"}]
+        mock_httpx.assert_called_once_with(
+            wrapper.wikidata_api_url,
+            params={"action": "wbsearchentities", "format": "json", "search": mock_query, "language": "en"},
+            timeout=WIKIDATA_API_TIMEOUT,
+        )
