@@ -171,24 +171,32 @@ describe("useFlowStore", () => {
     target: "node-2",
   } as EdgeType;
 
-  const createCredentialNode = (value: string) =>
-    ({
+  const createCredentialNode = (value: string): AllNodeType => ({
+    id: "credential-node",
+    type: "genericNode",
+    position: { x: 0, y: 0 },
+    data: {
       id: "credential-node",
-      type: "genericNode",
-      position: { x: 0, y: 0 },
-      data: {
-        type: "CredentialComponent",
-        node: {
-          template: {
-            api_key: {
-              display_name: "API Key",
-              load_from_db: true,
-              value,
-            },
+      type: "CredentialComponent",
+      node: {
+        description: "",
+        display_name: "Credential",
+        documentation: "",
+        template: {
+          api_key: {
+            display_name: "API Key",
+            type: "str",
+            required: false,
+            list: false,
+            show: true,
+            readonly: false,
+            load_from_db: true,
+            value,
           },
         },
       },
-    }) as AllNodeType;
+    },
+  });
 
   beforeEach(() => {
     // Clear all mocks

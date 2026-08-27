@@ -1,6 +1,6 @@
 import { renderHook } from "@testing-library/react";
 import { getGlobalVariablesQueryKey } from "@/controllers/API/helpers/global-variable-scope";
-import type { FlowType } from "@/types/flow";
+import type { AllNodeType, FlowType } from "@/types/flow";
 import type { GlobalVariable } from "@/types/global_variables";
 import useAddFlow from "../use-add-flow";
 
@@ -152,31 +152,40 @@ const FLOW_STUB: FlowType = {
   folder_id: "folder-1",
 };
 
-const FLOW_WITH_PROJECT_CREDENTIAL = {
+const PROJECT_CREDENTIAL_NODE: AllNodeType = {
+  id: "credential-node",
+  type: "genericNode",
+  position: { x: 0, y: 0 },
+  data: {
+    id: "credential-node",
+    type: "CredentialComponent",
+    node: {
+      description: "",
+      display_name: "Credential",
+      documentation: "",
+      template: {
+        api_key: {
+          display_name: "API Key",
+          type: "str",
+          required: false,
+          list: false,
+          show: true,
+          readonly: false,
+          load_from_db: true,
+          value: "PROJECT_KEY",
+        },
+      },
+    },
+  },
+};
+
+const FLOW_WITH_PROJECT_CREDENTIAL: FlowType = {
   ...FLOW_STUB,
   data: {
     ...FLOW_STUB.data,
-    nodes: [
-      {
-        id: "credential-node",
-        type: "genericNode",
-        position: { x: 0, y: 0 },
-        data: {
-          type: "CredentialComponent",
-          node: {
-            template: {
-              api_key: {
-                display_name: "API Key",
-                load_from_db: true,
-                value: "PROJECT_KEY",
-              },
-            },
-          },
-        },
-      },
-    ],
+    nodes: [PROJECT_CREDENTIAL_NODE],
   },
-} as FlowType;
+};
 
 beforeEach(() => {
   mockScopedGlobalVariables = PROJECT_VARIABLES;
