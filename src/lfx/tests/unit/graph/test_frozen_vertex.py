@@ -56,12 +56,14 @@ async def test_frozen_cached_vertex_reauthorizes_before_cache_lookup(monkeypatch
     vertex.display_name = "Cached Model"
     vertex.frozen = True
     vertex.is_loop = False
-    vertex.require_model_provider_policy.side_effect = RuntimeError("provider revoked")
+    vertex.require_model_provider_policy.side_effect = AssertionError("stale synchronous provider check")
+    vertex.arequire_model_provider_policy = AsyncMock(side_effect=RuntimeError("provider revoked"))
     monkeypatch.setattr(graph, "get_vertex", lambda _vertex_id: vertex)
     get_cache = AsyncMock(side_effect=AssertionError("cache read before provider reauthorization"))
 
     with pytest.raises(RuntimeError, match="provider revoked"):
         await graph.build_vertex(vertex.id, get_cache=get_cache, user_id="user-1")
 
-    vertex.require_model_provider_policy.assert_called_once_with("user-1")
+    vertex.arequire_model_provider_policy.assert_awaited_once_with("user-1")
+    vertex.require_model_provider_policy.assert_not_called()
     get_cache.assert_not_awaited()
