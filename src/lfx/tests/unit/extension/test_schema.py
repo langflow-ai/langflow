@@ -132,6 +132,14 @@ def test_schema_rejects_trailing_newline_versions(version: str) -> None:
     assert list(_validator().iter_errors({**_VALID, "version": version}))
 
 
+@pytest.mark.parametrize(
+    "version",
+    ["1.2.3a01", "1.2.3b01", "1.2.3rc01", "1.2.3.dev01", "1.2.\u0663", "\uff11.2.3"],
+)
+def test_schema_rejects_noncanonical_numeric_versions(version: str) -> None:
+    assert list(_validator().iter_errors({**_VALID, "version": version}))
+
+
 # ---------------------------------------------------------------------------
 # At least 10 malformed manifests with DISTINCT error paths.
 # ---------------------------------------------------------------------------
