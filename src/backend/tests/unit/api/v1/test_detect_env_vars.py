@@ -10,6 +10,7 @@ import pytest
 from fastapi import HTTPException
 from langflow.api.v1.schemas.deployments import DetectVarsRequest
 from langflow.api.v1.variable import detect_env_vars
+from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 from pydantic import ValidationError
 
 MODULE = "langflow.api.v1.variable"
@@ -418,3 +419,52 @@ class TestDetectEnvVars:
             )
 
         assert result.variables == []
+
+    @pytest.mark.asyncio
+    async def test_passes_server_resolved_scope_to_provider_policy(self):
+        fv_id = uuid4()
+        current_user = SimpleNamespace(id=uuid4())
+        provider_policy_attributes = {
+            "project_id": uuid4(),
+            "workspace_id": uuid4(),
+        }
+        version = _flow_version_with_data(
+            {
+                "nodes": [
+                    _node(
+                        {
+                            "api_key": {
+                                "load_from_db": True,
+                                "value": "OPENAI_API_KEY",
+                            }
+                        }
+                    )
+                ]
+            }
+        )
+        policy = SimpleNamespace(allows=lambda _provider: True)
+        with (
+            patch(
+                f"{MODULE}.get_flow_version_entries_by_ids",
+                new_callable=AsyncMock,
+                return_value={fv_id: version},
+            ),
+            patch(
+                f"{MODULE}.get_variable_service",
+                return_value=_variable_service_with_names(["OPENAI_API_KEY"]),
+            ),
+            patch(f"{MODULE}._resolve_policy", return_value=policy) as resolve_policy,
+        ):
+            result = await detect_env_vars(
+                payload=DetectVarsRequest(flow_version_ids=[fv_id]),
+                session=AsyncMock(),
+                current_user=current_user,
+                provider_policy_attributes=provider_policy_attributes,
+            )
+
+        assert result.variables == ["OPENAI_API_KEY"]
+        resolve_policy.assert_called_once_with(
+            current_user,
+            ModelProviderPolicyPurpose.CONFIGURE,
+            provider_policy_attributes,
+        )
