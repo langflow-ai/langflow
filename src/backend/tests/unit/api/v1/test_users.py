@@ -200,33 +200,37 @@ async def test_read_user_by_id(client: AsyncClient, logged_in_headers_super_user
     assert create_response.status_code == status.HTTP_201_CREATED
     user_id = create_response.json()["id"]
 
-    response = await client.get(f"api/v1/users/{user_id}", headers=logged_in_headers_super_user)
+    try:
+        response = await client.get(f"api/v1/users/{user_id}", headers=logged_in_headers_super_user)
 
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json()["username"] == "read-user-by-id"
-    await client.delete(f"api/v1/users/{user_id}", headers=logged_in_headers_super_user)
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["username"] == "read-user-by-id"
+    finally:
+        await client.delete(f"api/v1/users/{user_id}", headers=logged_in_headers_super_user)
 
 
 async def test_read_all_users_exact_username_filter(client: AsyncClient, logged_in_headers_super_user):
     created_ids = []
-    for username in ("exact-user", "exact-user-suffix"):
-        response = await client.post(
-            "api/v1/users/",
-            json={"username": username, "password": "password123"},
+    try:
+        for username in ("exact-user", "exact-user-suffix"):
+            response = await client.post(
+                "api/v1/users/",
+                json={"username": username, "password": "password123"},
+                headers=logged_in_headers_super_user,
+            )
+            assert response.status_code == status.HTTP_201_CREATED
+            created_ids.append(response.json()["id"])
+
+        response = await client.get(
+            "api/v1/users/?username=exact-user",
             headers=logged_in_headers_super_user,
         )
-        assert response.status_code == status.HTTP_201_CREATED
-        created_ids.append(response.json()["id"])
 
-    response = await client.get(
-        "api/v1/users/?username=exact-user",
-        headers=logged_in_headers_super_user,
-    )
-
-    assert response.status_code == status.HTTP_200_OK
-    assert [row["username"] for row in response.json()["users"]] == ["exact-user"]
-    for user_id in created_ids:
-        await client.delete(f"api/v1/users/{user_id}", headers=logged_in_headers_super_user)
+        assert response.status_code == status.HTTP_200_OK
+        assert [row["username"] for row in response.json()["users"]] == ["exact-user"]
+    finally:
+        for user_id in created_ids:
+            await client.delete(f"api/v1/users/{user_id}", headers=logged_in_headers_super_user)
 
 
 async def test_authz_capabilities_are_fail_closed_in_oss(client: AsyncClient, logged_in_headers):
