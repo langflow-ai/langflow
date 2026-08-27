@@ -47,17 +47,19 @@ async def test_openai_voice_policy_denial_precedes_secret_lookup(monkeypatch):
         get_variable=AsyncMock(side_effect=AssertionError("secret lookup reached after provider denial"))
     )
     require_provider = Mock(side_effect=ModelProviderPolicyError("openai", ModelProviderPolicyPurpose.USE))
+    resolve_policy = AsyncMock(return_value=SimpleNamespace(require=require_provider))
     monkeypatch.setattr(voice_mode, "get_variable_service", Mock(return_value=variable_service))
-    monkeypatch.setattr(voice_mode, "require_model_provider", require_provider, raising=False)
+    monkeypatch.setattr(voice_mode, "aresolve_model_provider_policy", resolve_policy, raising=False)
 
     result = await voice_mode.authenticate_and_get_openai_key(SimpleNamespace(), user, websocket)
 
     assert result == (None, None)
-    require_provider.assert_called_once_with(
+    resolve_policy.assert_awaited_once_with(
         user_id=user.id,
-        provider="OpenAI",
+        providers=["OpenAI"],
         purpose=ModelProviderPolicyPurpose.USE,
     )
+    require_provider.assert_called_once_with("OpenAI")
     variable_service.get_variable.assert_not_awaited()
     websocket.send_json.assert_awaited_once_with(
         {
@@ -74,17 +76,19 @@ async def test_openai_voice_policy_allows_secret_lookup(monkeypatch):
     websocket = SimpleNamespace(send_json=AsyncMock())
     variable_service = SimpleNamespace(get_variable=AsyncMock(return_value="sk-test"))
     require_provider = Mock()
+    resolve_policy = AsyncMock(return_value=SimpleNamespace(require=require_provider))
     monkeypatch.setattr(voice_mode, "get_variable_service", Mock(return_value=variable_service))
-    monkeypatch.setattr(voice_mode, "require_model_provider", require_provider, raising=False)
+    monkeypatch.setattr(voice_mode, "aresolve_model_provider_policy", resolve_policy, raising=False)
 
     result = await voice_mode.authenticate_and_get_openai_key(session, user, websocket)
 
     assert result == (user, "sk-test")
-    require_provider.assert_called_once_with(
+    resolve_policy.assert_awaited_once_with(
         user_id=user.id,
-        provider="OpenAI",
+        providers=["OpenAI"],
         purpose=ModelProviderPolicyPurpose.USE,
     )
+    require_provider.assert_called_once_with("OpenAI")
     variable_service.get_variable.assert_awaited_once_with(
         user_id=user.id,
         name="OPENAI_API_KEY",
@@ -306,15 +310,17 @@ async def test_voice_websocket_uses_target_scope_before_provider_secret_or_netwo
     observed_contexts = []
     provider_id = "openai"
 
-    def _deny_openai(**_kwargs):
+    async def _resolve_openai(**_kwargs):
         observed_contexts.append(current_model_provider_policy_context())
-        raise ModelProviderPolicyError(provider_id, ModelProviderPolicyPurpose.USE)
+        return SimpleNamespace(
+            require=Mock(side_effect=ModelProviderPolicyError(provider_id, ModelProviderPolicyPurpose.USE))
+        )
 
     connect = Mock(side_effect=AssertionError("OpenAI socket reached after target policy denial"))
     monkeypatch.setattr(voice_mode, "get_current_user_for_websocket", AsyncMock(return_value=user))
     monkeypatch.setattr(voice_mode, "_get_authorized_voice_flow", AsyncMock(return_value=flow))
     monkeypatch.setattr(voice_mode, "get_variable_service", Mock(return_value=variable_service))
-    monkeypatch.setattr(voice_mode, "require_model_provider", _deny_openai)
+    monkeypatch.setattr(voice_mode, "aresolve_model_provider_policy", _resolve_openai, raising=False)
     monkeypatch.setattr(voice_mode.websockets, "connect", connect)
 
     kwargs = {

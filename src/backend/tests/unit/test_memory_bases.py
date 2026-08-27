@@ -791,20 +791,22 @@ class TestMemoryBaseProviderPolicy:
         db.refresh = AsyncMock()
         observed_contexts = []
 
-        def allow_only_current_project(**_kwargs):
+        async def allow_only_current_project(**_kwargs):
             context = current_model_provider_policy_context()
             observed_contexts.append(context)
             assert context is not None
             assert context.attributes["project_id"] == project_id
             assert context.attributes["workspace_id"] == workspace_id
             assert context.attributes["provider_scope_required"] is True
+            return MagicMock()
 
         with (
             patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
             patch("langflow.services.memory_base.service.resolve_kb_username", AsyncMock(return_value="testuser")),
             patch(
-                "langflow.services.memory_base.service.require_model_provider",
+                "langflow.services.memory_base.service.aresolve_model_provider_policy",
                 side_effect=allow_only_current_project,
+                create=True,
             ),
             patch("langflow.services.memory_base.service.initialize_kb", AsyncMock()),
             patch("langflow.services.memory_base.service._create_kb_record_for_memory_base", AsyncMock()),
@@ -846,7 +848,7 @@ class TestMemoryBaseProviderPolicy:
         db.add = MagicMock()
         denial = ModelProviderPolicyError("openai", ModelProviderPolicyPurpose.CONFIGURE)
 
-        def deny_current_project(**_kwargs):
+        async def deny_current_project(**_kwargs):
             context = current_model_provider_policy_context()
             assert context is not None
             assert context.attributes["project_id"] == moved_project_id
@@ -855,7 +857,11 @@ class TestMemoryBaseProviderPolicy:
 
         with (
             patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
-            patch("langflow.services.memory_base.service.require_model_provider", side_effect=deny_current_project),
+            patch(
+                "langflow.services.memory_base.service.aresolve_model_provider_policy",
+                side_effect=deny_current_project,
+                create=True,
+            ),
             patch("langflow.services.memory_base.service.get_api_key_for_provider") as get_api_key,
             pytest.raises(ModelProviderPolicyError),
         ):
