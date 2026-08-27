@@ -98,6 +98,17 @@ class TestKnowledgeComponentShape:
         assert "mode" in component.default_keys
         assert "knowledge_base" in component.default_keys
 
+    @pytest.mark.parametrize("name", ["docs.v2", "a" * 100, "a" * 512, "topology+collection"])
+    def test_collection_name_validation_accepts_shared_contract(self, name: str) -> None:
+        assert KnowledgeComponent().is_valid_collection_name(name)
+
+    @pytest.mark.parametrize(
+        "name",
+        ["Q&A docs", "trailing_", "catálogo", "a" * 513, "docs..v2", "127.0.0.1"],
+    )
+    def test_collection_name_validation_rejects_chroma_incompatible_names(self, name: str) -> None:
+        assert not KnowledgeComponent().is_valid_collection_name(name)
+
 
 # ---------------------------------------------------------------------------
 # update_build_config — input visibility toggling
