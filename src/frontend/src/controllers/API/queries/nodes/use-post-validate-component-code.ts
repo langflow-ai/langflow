@@ -1,4 +1,5 @@
 import type { UseMutationResult } from "@tanstack/react-query";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type {
   APIClassType,
   CustomComponentRequest,
@@ -7,6 +8,7 @@ import type {
 } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
+import { appendProviderScope } from "../../helpers/provider-scope";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 interface IPostValidateComponentCode {
@@ -21,12 +23,17 @@ export const usePostValidateComponentCode: useMutationFunctionType<
   ResponseErrorTypeAPI
 > = (options?) => {
   const { mutate } = UseRequestProcessor();
+  const flowId = useFlowsManagerStore((state) => state.currentFlowId);
 
   const postValidateComponentCodeFn = async (
     payload: IPostValidateComponentCode,
   ): Promise<CustomComponentRequest> => {
+    const queryParams = new URLSearchParams();
+    appendProviderScope(queryParams, { flowId });
     const response = await api.post<CustomComponentRequest>(
-      getURL("CUSTOM_COMPONENT"),
+      `${getURL("CUSTOM_COMPONENT")}${
+        queryParams.toString() ? `?${queryParams.toString()}` : ""
+      }`,
       {
         code: payload.code,
         frontend_node: payload.frontend_node,
