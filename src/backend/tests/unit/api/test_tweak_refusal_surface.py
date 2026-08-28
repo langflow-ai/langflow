@@ -27,8 +27,12 @@ async def test_refused_tweak_returns_422_on_the_v1_sync_run(client, simple_api_t
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
     detail = response.json()["detail"]
-    assert detail["code"] == "TWEAKS_REFUSED"
-    assert detail["fields"] == ["code"]
+    assert detail == {
+        "error": "Refused tweaks",
+        "code": "TWEAKS_REFUSED",
+        "message": "The field is protected and keeps the value set by the flow author.",
+        "fields": ["code"],
+    }
 
 
 async def test_an_allowed_tweak_still_runs_on_the_v1_sync_run(client, simple_api_test, created_api_key):

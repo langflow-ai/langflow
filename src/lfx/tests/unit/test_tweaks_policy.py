@@ -19,6 +19,12 @@ from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.processing.process import apply_tweaks, process_tweaks
 from lfx.utils.flow_validation import flow_declares_api_editable
 
+PROTECTED_TWEAK_REASON = "The field is protected and keeps the value set by the flow author."
+DECLARED_TWEAK_REASON = (
+    "This flow declares which fields the API may set. Only fields marked editable via API accept a tweak."
+)
+OFF_TWEAK_REASON = "This deployment does not accept tweaks."
+
 
 def _node(template: dict, *, node_type: str | None = None, node_id: str = "n") -> dict:
     data: dict = {"node": {"template": template}}
@@ -153,6 +159,76 @@ def test_process_tweaks_raises_naming_every_refused_key():
     ):
         process_tweaks(graph, {"n1": {"a": "x"}, "n2": {"b": "y"}})
     assert exc.value.refused == ["a", "b"]
+
+
+@pytest.mark.parametrize("policy", ["permissive", "declared", "off"])
+def test_process_tweaks_reports_protected_reason_under_every_policy(policy):
+    graph = _graph(
+        [
+            _node(
+                {"database_url": {"value": "stored", "type": "str", "api_editable": True}},
+                node_type="SQLComponent",
+            )
+        ]
+    )
+
+    with (
+        patch("lfx.processing.process._resolve_tweak_policy", return_value=policy),
+        pytest.raises(TweakRefusedError) as exc,
+    ):
+        process_tweaks(graph, {"n": {"database_url": "postgresql://attacker/db"}})
+
+    assert exc.value.refused == ["database_url"]
+    assert exc.value.reason == PROTECTED_TWEAK_REASON
+
+
+@pytest.mark.parametrize(
+    ("policy", "expected_reason"),
+    [("declared", DECLARED_TWEAK_REASON), ("off", OFF_TWEAK_REASON)],
+)
+def test_process_tweaks_reports_policy_reason_for_ordinary_field(policy, expected_reason):
+    graph = _graph(
+        [
+            _node(
+                {
+                    "allowed": {"value": "old", "type": "str", "api_editable": True},
+                    "ordinary": {"value": "old", "type": "str"},
+                }
+            )
+        ]
+    )
+
+    with (
+        patch("lfx.processing.process._resolve_tweak_policy", return_value=policy),
+        pytest.raises(TweakRefusedError) as exc,
+    ):
+        process_tweaks(graph, {"n": {"ordinary": "new"}})
+
+    assert exc.value.refused == ["ordinary"]
+    assert exc.value.reason == expected_reason
+
+
+def test_process_tweaks_reports_protected_and_policy_reasons_together():
+    graph = _graph(
+        [
+            _node(
+                {
+                    "database_url": {"value": "stored", "type": "str", "api_editable": True},
+                    "ordinary": {"value": "old", "type": "str"},
+                },
+                node_type="SQLComponent",
+            )
+        ]
+    )
+
+    with (
+        patch("lfx.processing.process._resolve_tweak_policy", return_value="declared"),
+        pytest.raises(TweakRefusedError) as exc,
+    ):
+        process_tweaks(graph, {"n": {"ordinary": "new", "database_url": "postgresql://attacker/db"}})
+
+    assert exc.value.refused == ["database_url", "ordinary"]
+    assert exc.value.reason == f"{PROTECTED_TWEAK_REASON} {DECLARED_TWEAK_REASON}"
 
 
 def test_process_tweaks_does_not_refuse_the_injected_stream_key():
