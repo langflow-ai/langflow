@@ -1887,7 +1887,8 @@ async def custom_component_update(
         enforce_catalog_policy_for_component_type(component_type, snapshot=catalog_policy_snapshot)
 
         template = code_request.get_template()
-        params = _raw_component_parameters(
+        params = _raw_component_parameters(template)
+        policy_params = _raw_component_parameters(
             template,
             field=code_request.field,
             field_value=code_request.field_value,
@@ -1899,7 +1900,7 @@ async def custom_component_update(
             await cc_instance.arequire_model_provider_policy(
                 ModelProviderPolicyPurpose.CONFIGURE,
                 user_id=user.id,
-                parameters=params,
+                parameters=policy_params,
             )
 
         component_node["tool_mode"] = code_request.tool_mode
