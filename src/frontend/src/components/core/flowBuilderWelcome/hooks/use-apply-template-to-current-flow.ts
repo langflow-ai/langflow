@@ -127,15 +127,10 @@ export function useApplyTemplateToCurrentFlow() {
       // A template's nodes measure across several ResizeObserver batches, and a
       // fit that runs before they all have dimensions silently drops the ones
       // still pending — the flow would open framed around a subset. The canvas
-      // performs the fit once the graph is fully measured and then uncovers
-      // itself through `onFitted`.
-      requestFitView(() => {
-        // Uncovering returns the sidebar to the layout, which narrows the
-        // canvas the fit was just computed for — so frame it again against the
-        // size it actually ends up with.
-        onFitted?.();
-        requestFitView();
-      });
+      // fits once the graph is fully measured and then uncovers itself through
+      // `onFitted`; uncovering returns the sidebar to the layout and narrows
+      // the canvas, which `useFitViewWhenMeasured` corrects on its own.
+      requestFitView(() => onFitted?.());
       return true;
     },
     [

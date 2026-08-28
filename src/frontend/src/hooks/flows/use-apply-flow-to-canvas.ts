@@ -19,7 +19,7 @@ const useApplyFlowToCanvas = () => {
   const { refreshAllModelInputs } = useRefreshModelInputs();
 
   const applyFlowToCanvas = useCallback(
-    (flow: FlowType) => {
+    (flow: FlowType, { fitView = true }: { fitView?: boolean } = {}) => {
       // Clone so processFlows' in-place mutations don't corrupt the caller's data.
       const clonedFlow = cloneDeep(flow);
       const hadNodes = (clonedFlow.data?.nodes?.length ?? 0) > 0;
@@ -34,7 +34,15 @@ const useApplyFlowToCanvas = () => {
       // measured yet, and a fit over unmeasured nodes silently drops them from
       // the bounding box. `useFitViewWhenMeasured` runs it once they all have
       // dimensions.
-      useFlowStore.getState().requestFitView();
+      //
+      // An empty flow has nothing to frame, and a request left pending on one
+      // would be answered by the first component the user drops — moving the
+      // canvas out from under them mid-edit. Callers that merely refresh the
+      // graph in place opt out entirely: re-framing a canvas the user is
+      // working in is not theirs to do.
+      if (fitView && clonedFlow.data?.nodes?.length) {
+        useFlowStore.getState().requestFitView();
+      }
       refreshAllModelInputs({ silent: true }).catch((err) => {
         console.error(
           "useApplyFlowToCanvas: failed to refresh model inputs",

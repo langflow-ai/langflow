@@ -332,6 +332,9 @@ describe("useApplyTemplateToCurrentFlow", () => {
     });
 
     expect(onFitted).toHaveBeenCalledTimes(1);
+    // The canvas corrects the framing itself when uncovering narrows it, so
+    // uncovering must not queue a second fit that races that resize.
+    expect(requestFitView).toHaveBeenCalledTimes(1);
   });
 
   it("should_not_rename_or_persist_when_there_is_no_current_flow", () => {

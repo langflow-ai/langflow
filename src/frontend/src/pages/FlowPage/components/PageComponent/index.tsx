@@ -304,14 +304,9 @@ export default function Page({
             return;
           }
 
-          applyFlowToCanvas(response.data);
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              reactFlowInstance?.fitView({
-                padding: { left: "20px", right: "20px", top: "80px" },
-              });
-            });
-          });
+          // A settle refresh is a background sync of a canvas the user is
+          // already working in, so it reloads the graph without re-framing it.
+          applyFlowToCanvas(response.data, { fitView: false });
 
           const nonSettleEvents = settleEvents.filter(
             (e) => e.type !== "flow_settled",

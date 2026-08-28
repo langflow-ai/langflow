@@ -83,6 +83,34 @@ describe("useApplyFlowToCanvas", () => {
     expect(useFlowStore.getState().fitViewRequest.id).toBe(2);
   });
 
+  // A request left pending on an empty flow would be answered by the first
+  // component the user drops, re-framing the canvas mid-edit.
+  it("should not request a fit for a flow with no nodes", () => {
+    const { result } = renderHook(() => useApplyFlowToCanvas());
+    const empty = makeFlow();
+    empty.data!.nodes = [];
+
+    act(() => {
+      result.current(empty);
+    });
+
+    expect(setCurrentFlowMock).toHaveBeenCalledTimes(1);
+    expect(useFlowStore.getState().fitViewRequest.id).toBe(0);
+  });
+
+  // The flow-events refresh re-applies the graph under a canvas the user is
+  // already working in.
+  it("should not request a fit when the caller opts out", () => {
+    const { result } = renderHook(() => useApplyFlowToCanvas());
+
+    act(() => {
+      result.current(makeFlow(), { fitView: false });
+    });
+
+    expect(setCurrentFlowMock).toHaveBeenCalledTimes(1);
+    expect(useFlowStore.getState().fitViewRequest.id).toBe(0);
+  });
+
   it("should not touch the canvas when processFlows destroys every node", () => {
     const { processFlows } = jest.requireMock("@/utils/reactflowUtils");
     processFlows.mockImplementationOnce((flows: FlowType[]) => {
