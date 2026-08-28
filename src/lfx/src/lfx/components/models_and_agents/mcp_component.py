@@ -519,7 +519,11 @@ class MCPToolsComponent(ComponentWithCache):
                         "MCP update_tool_list: no server_config after resolve server=%r",
                         server_name,
                     )
-                    return [], {"name": server_name, "config": server_config}
+                    msg = (
+                        f"MCP server '{server_name}' is not configured. "
+                        "Add a server with this name in Settings > MCP Servers before running this flow."
+                    )
+                    raise ValueError(msg)
 
                 # The REST API applies this policy when a stdio server is registered,
                 # but imported flows can carry the same process-spawning config in the
