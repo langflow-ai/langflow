@@ -4,7 +4,7 @@ import SvgIFlytek from "./IFlytekIcon";
 
 export const IFlytekIcon = forwardRef<
   SVGSVGElement,
-  React.PropsWithChildren<{}>
->((props, ref) => {
-  return <SvgIFlytek ref={ref} {...props} />;
-});
+  React.SVGProps<SVGSVGElement> & { isDark?: boolean }
+>(({ isDark: _isDark, ...props }, ref) => (
+  <SvgIFlytek ref={ref} {...props} />
+));
