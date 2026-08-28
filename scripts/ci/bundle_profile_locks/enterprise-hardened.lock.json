@@ -160,7 +160,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:49ffb56ddfa1c349",
+  "profile_digest": "sha256:d19368cbcc794677",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
