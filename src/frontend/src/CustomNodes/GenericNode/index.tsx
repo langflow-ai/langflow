@@ -337,8 +337,8 @@ function GenericNode({
   );
 
   const handleSelectOutput = useCallback(
-    (output) => {
-      if (isReadOnly) return;
+    (output: OutputFieldType | null) => {
+      if (isReadOnly || !output) return;
       setSelectedOutput(output);
 
       setEdges((eds) => {
@@ -404,9 +404,11 @@ function GenericNode({
         0) <= 1
     )
       return;
-    handleSelectOutput(
-      data.node?.outputs?.find((output) => output.selected) || null,
-    );
+    const defaultOutput =
+      data.node?.outputs?.find((output) => output.selected) ??
+      data.node?.outputs?.find((output) => !output.group_outputs) ??
+      null;
+    handleSelectOutput(defaultOutput);
   }, [data.node?.outputs, data?.selected_output, handleSelectOutput]);
 
   // Sync local `selectedOutput` state when `data.selected_output` is mutated

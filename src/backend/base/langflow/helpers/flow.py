@@ -680,8 +680,67 @@ def _get_flow_input_nodes(flow: Flow) -> list[Vertex]:
     return [vertex for vertex in graph.vertices if vertex.is_input]
 
 
-def _is_mcp_input_field(field_data: Any) -> bool:
+def _is_visible_input_field(field_data: Any) -> bool:
     return isinstance(field_data, dict) and field_data.get("show", False) and not field_data.get("advanced", False)
+
+
+def _is_mcp_input_field(field_data: Any) -> bool:
+    return _is_visible_input_field(field_data) and field_data.get("api_editable") is True
+
+
+_JSON_SCHEMA_TYPE_BY_FIELD_TYPE = {
+    "str": "string",
+    "string": "string",
+    "int": "integer",
+    "integer": "integer",
+    "float": "number",
+    "number": "number",
+    "slider": "number",
+    "bool": "boolean",
+    "boolean": "boolean",
+    "dict": "object",
+    "NestedDict": "object",
+    "duration": "object",
+    "auth": "object",
+    "mcp": "object",
+    "data_display": "object",
+    "object": "object",
+    "array": "array",
+    "connect": "string",
+    "file": "string",
+    "prompt": "string",
+    "mustache": "string",
+    "code": "string",
+    "other": "string",
+    "link": "string",
+    "tab": "string",
+    "query": "string",
+    "knowledge_backend": "string",
+}
+
+_JSON_SCHEMA_ARRAY_ITEM_TYPE_BY_FIELD_TYPE = {
+    "sortableList": "object",
+    "actionPicker": "string",
+    "table": "object",
+    "tools": "object",
+    "model": "object",
+}
+
+
+def _json_schema_type_for_field(field_data: dict[str, Any]) -> dict[str, Any]:
+    field_type = field_data.get("type", "string")
+    array_item_type = _JSON_SCHEMA_ARRAY_ITEM_TYPE_BY_FIELD_TYPE.get(field_type)
+    if array_item_type is not None:
+        return {"type": "array", "items": {"type": array_item_type}}
+
+    json_schema_type = _JSON_SCHEMA_TYPE_BY_FIELD_TYPE.get(field_type)
+    if json_schema_type is None:
+        logger.warning(f"Unknown field type: {field_type} defaulting to string")
+        json_schema_type = "string"
+
+    if field_data.get("list") is True or field_data.get("is_list") is True:
+        return {"type": "array", "items": {"type": json_schema_type}}
+    return {"type": json_schema_type}
 
 
 def get_flow_input_tweaks(flow: Flow, inputs: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -700,34 +759,25 @@ def get_flow_input_tweaks(flow: Flow, inputs: dict[str, Any]) -> dict[str, dict[
     return tweaks
 
 
-def json_schema_from_flow(flow: Flow) -> dict:
-    """Generate JSON schema from flow input nodes."""
+def json_schema_from_flow(flow: Flow, *, require_api_editable: bool = True) -> dict:
+    """Generate JSON schema from flow input nodes.
+
+    MCP schemas expose only API-editable fields. Other consumers, such as A2A,
+    can include every visible, non-advanced field in their input contract.
+    """
     properties = {}
     required = []
+    is_input_field = _is_mcp_input_field if require_api_editable else _is_visible_input_field
     for node in _get_flow_input_nodes(flow):
         node_data = node.data["node"]
         template = node_data["template"]
 
         for field_name, field_data in template.items():
-            if _is_mcp_input_field(field_data):
-                field_type = field_data.get("type", "string")
+            if is_input_field(field_data):
                 properties[field_name] = {
-                    "type": field_type,
+                    **_json_schema_type_for_field(field_data),
                     "description": field_data.get("info", f"Input for {field_name}"),
                 }
-                # Update field_type in properties after determining the JSON Schema type
-                if field_type == "str":
-                    field_type = "string"
-                elif field_type == "int":
-                    field_type = "integer"
-                elif field_type == "float":
-                    field_type = "number"
-                elif field_type == "bool":
-                    field_type = "boolean"
-                else:
-                    logger.warning(f"Unknown field type: {field_type} defaulting to string")
-                    field_type = "string"
-                properties[field_name]["type"] = field_type
 
                 if field_data.get("required", False):
                     required.append(field_name)

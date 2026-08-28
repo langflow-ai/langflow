@@ -58,9 +58,9 @@
       "providers": [
         "lfx-datastax"
       ],
-      "requested": ">=0.1.5,<1.0.0",
-      "requirement": "lfx-datastax==0.1.5",
-      "resolved_version": "0.1.5"
+      "requested": ">=0.1.6,<1.0.0",
+      "requirement": "lfx-datastax==0.1.6",
+      "resolved_version": "0.1.6"
     },
     {
       "distribution": "lfx-docling",
@@ -98,9 +98,9 @@
       "providers": [
         "lfx-ollama"
       ],
-      "requested": ">=0.1.0,<1.0.0",
-      "requirement": "lfx-ollama==0.1.0",
-      "resolved_version": "0.1.0"
+      "requested": ">=0.1.1,<1.0.0",
+      "requirement": "lfx-ollama==0.1.1",
+      "resolved_version": "0.1.1"
     },
     {
       "distribution": "lfx-openai",
@@ -138,9 +138,9 @@
       "providers": [
         "lfx-toolguard"
       ],
-      "requested": ">=0.1.1,<1.0.0",
-      "requirement": "lfx-toolguard==0.1.1",
-      "resolved_version": "0.1.1"
+      "requested": ">=0.1.2,<1.0.0",
+      "requirement": "lfx-toolguard==0.1.2",
+      "resolved_version": "0.1.2"
     },
     {
       "distribution": "lfx-vllm",
@@ -160,7 +160,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:0050268ca7e6a038",
+  "profile_digest": "sha256:d19368cbcc794677",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",

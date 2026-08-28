@@ -10075,7 +10075,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-datastax"
-version = "0.1.5"
+version = "0.1.6"
 source = { editable = "src/bundles/datastax" }
 dependencies = [
     { name = "astrapy" },
@@ -10319,7 +10319,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-ollama"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/ollama" }
 dependencies = [
     { name = "httpx" },
@@ -10404,7 +10404,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-toolguard"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "src/bundles/toolguard" }
 dependencies = [
     { name = "lfx" },
