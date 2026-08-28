@@ -318,6 +318,11 @@ const SettingsVoiceModal = ({
                         optionButton={(option) => (
                           <GlobalVariableDeleteConfirmation
                             option={option}
+                            variableId={
+                              globalVariablesEntities.find(
+                                (variable) => variable.name === option,
+                              )?.id
+                            }
                             onConfirmDelete={() => {}}
                             providerScope={{ flowId }}
                           />
@@ -412,6 +417,11 @@ const SettingsVoiceModal = ({
                         optionButton={(option) => (
                           <GlobalVariableDeleteConfirmation
                             option={option}
+                            variableId={
+                              globalVariablesEntities.find(
+                                (variable) => variable.name === option,
+                              )?.id
+                            }
                             onConfirmDelete={() => {}}
                             providerScope={{ flowId }}
                           />

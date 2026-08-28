@@ -123,7 +123,10 @@ describe("InputGlobalComponent", () => {
       expect.objectContaining({ providerScope: { flowId: "flow-project-a" } }),
     );
     expect(mockDeleteConfirmation).toHaveBeenCalledWith(
-      expect.objectContaining({ providerScope: { flowId: "flow-project-a" } }),
+      expect.objectContaining({
+        providerScope: { flowId: "flow-project-a" },
+        variableId: "project-var",
+      }),
     );
     expect(mockInputComponent).toHaveBeenLastCalledWith(
       expect.objectContaining({

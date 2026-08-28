@@ -1,7 +1,6 @@
 import { VALID_CATEGORIES } from "@/constants/constants";
-import type { TAB_TYPES } from "@/types/global_variables";
+import type { GlobalVariable, TAB_TYPES } from "@/types/global_variables";
 import type { ProviderScopeParams } from "../../helpers/provider-scope";
-import { useGetGlobalVariables } from "./use-get-global-variables";
 import { usePatchGlobalVariables } from "./use-patch-global-variables";
 import { usePostGlobalVariables } from "./use-post-global-variables";
 
@@ -44,8 +43,12 @@ function withAction(
  * not part of this façade — the settings page owns it via
  * useDeleteGlobalVariables.
  */
-export function useGlobalVariableUpsert(providerScope?: ProviderScopeParams) {
-  const { data: globalVariables } = useGetGlobalVariables(providerScope);
+export function useGlobalVariableUpsert(
+  providerScope?: ProviderScopeParams,
+  // The modal already owns the query. Reusing its settled snapshot avoids a
+  // second observer racing the same scoped request when the modal mounts.
+  globalVariables?: GlobalVariable[],
+) {
   const postMutation = usePostGlobalVariables();
   const patchMutation = usePatchGlobalVariables();
 

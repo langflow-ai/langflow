@@ -150,6 +150,7 @@ export default function InputGlobalComponent({
   const renderDeleteButton = (option: string) => (
     <GlobalVariableDeleteConfirmation
       option={option}
+      variableId={typedGlobalVariables.find((v) => v.name === option)?.id}
       onConfirmDelete={() => handlers.handleVariableDelete(option)}
       providerScope={providerScope}
     />

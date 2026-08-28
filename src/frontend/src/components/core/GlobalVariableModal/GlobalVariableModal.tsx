@@ -65,9 +65,9 @@ export default function GlobalVariableModal({
   // (WCAG 3.3.1) instead of living only in the transient toast.
   const [serverError, setServerError] = useState<string | null>(null);
   const componentFields = useTypesStore((state) => state.ComponentFields);
-  const { upsertGlobalVariable, updateGlobalVariable } =
-    useGlobalVariableUpsert(providerScope);
   const { data: globalVariables } = useGetGlobalVariables(providerScope);
+  const { upsertGlobalVariable, updateGlobalVariable } =
+    useGlobalVariableUpsert(providerScope, globalVariables);
   const [availableFields, setAvailableFields] = useState<string[]>([]);
   useGetTypes({ ...providerScope, enabled: !!globalVariables });
 

@@ -12,10 +12,12 @@ const mockGlobalVariablesData: unknown[] = [];
 const mockUseGetGlobalVariables = jest.fn((_options?: unknown) => ({
   data: mockGlobalVariablesData,
 }));
-const mockUseGlobalVariableUpsert = jest.fn((_scope?: unknown) => ({
-  upsertGlobalVariable: mockUpsert,
-  updateGlobalVariable: jest.fn(),
-}));
+const mockUseGlobalVariableUpsert = jest.fn(
+  (_scope?: unknown, _variables?: unknown) => ({
+    upsertGlobalVariable: mockUpsert,
+    updateGlobalVariable: jest.fn(),
+  }),
+);
 
 // BaseModal is mocked to a passthrough that renders the modal body plus a
 // stand-in submit button wired to onSubmit, so the test drives handleSaveVariable
@@ -96,8 +98,8 @@ jest.mock("@/controllers/API/queries/variables", () => {
   return {
     useGetGlobalVariables: (options?: unknown) =>
       mockUseGetGlobalVariables(options),
-    useGlobalVariableUpsert: (scope?: unknown) =>
-      mockUseGlobalVariableUpsert(scope),
+    useGlobalVariableUpsert: (scope?: unknown, variables?: unknown) =>
+      mockUseGlobalVariableUpsert(scope, variables),
   };
 });
 
@@ -245,7 +247,10 @@ describe("GlobalVariableModal - provider scope", () => {
       />,
     );
 
-    expect(mockUseGlobalVariableUpsert).toHaveBeenCalledWith(providerScope);
+    expect(mockUseGlobalVariableUpsert).toHaveBeenCalledWith(
+      providerScope,
+      mockGlobalVariablesData,
+    );
     expect(mockUseGetGlobalVariables).toHaveBeenCalledWith(providerScope);
     expect(mockUseGetTypes).toHaveBeenCalledWith({
       ...providerScope,
