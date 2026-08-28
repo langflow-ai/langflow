@@ -47,7 +47,7 @@
         {
           "distribution": "lfx-datastax",
           "extras": [],
-          "version": ">=0.1.5,<1.0.0",
+          "version": ">=0.1.6,<1.0.0",
           "providers": [
             "lfx-datastax"
           ]
@@ -87,7 +87,7 @@
         {
           "distribution": "lfx-ollama",
           "extras": [],
-          "version": ">=0.1.0,<1.0.0",
+          "version": ">=0.1.1,<1.0.0",
           "providers": [
             "lfx-ollama"
           ]
@@ -135,7 +135,7 @@
         {
           "distribution": "lfx-google",
           "extras": [],
-          "version": ">=0.1.0,<1.0.0",
+          "version": ">=0.1.1,<1.0.0",
           "providers": [
             "lfx-google"
           ]

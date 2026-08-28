@@ -9393,7 +9393,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.1.16"
+version = "1.1.18"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -10073,7 +10073,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-datastax"
-version = "0.1.5"
+version = "0.1.6"
 source = { editable = "src/bundles/datastax" }
 dependencies = [
     { name = "astrapy" },
@@ -10235,7 +10235,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-google"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/google" }
 dependencies = [
     { name = "google-api-python-client" },
@@ -10317,7 +10317,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-ollama"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/ollama" }
 dependencies = [
     { name = "httpx" },
