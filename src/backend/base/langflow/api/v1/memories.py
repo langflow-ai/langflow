@@ -29,6 +29,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.schema.legacy_render import render_v1_content_blocks
+from lfx.services.model_provider_policy import ModelProviderPolicyError
 from pydantic import BaseModel
 
 from langflow.api.utils import CurrentActiveUser, knowledge_base_service
@@ -156,6 +157,9 @@ async def create_memory_base(
     except MemoryBaseFlowNotFoundError as exc:
         # Flow not found or belongs to another user — return 404 to avoid info-leak
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ModelProviderPolicyError as exc:
+        # Keep a hidden provider indistinguishable from one that does not exist.
+        raise HTTPException(status_code=404, detail="Model provider not found") from exc
     except PreprocessingValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except BackendProvisioningError as exc:
