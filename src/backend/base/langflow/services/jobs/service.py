@@ -725,6 +725,8 @@ class JobService(Service):
 
         Returns the ids of the jobs transitioned to FAILED.
         """
+        from sqlmodel import update
+
         error_payload = {"type": "worker_lost"}
         reconciled: list[UUID] = []
         async with session_scope() as session:
@@ -732,15 +734,29 @@ class JobService(Service):
             result = await session.exec(stmt)
             in_progress = list(result.all())
             now = datetime.now(timezone.utc)
+            hb_expr = col(Job.job_metadata)["heartbeat_at"].as_string()
             for job in in_progress:
                 if not self.is_lease_stale(job, lease_ttl_s=lease_ttl_s):
                     # Live owner still heartbeating — leave the run alone.
                     continue
-                job.status = JobStatus.FAILED
-                job.error = dict(error_payload)
-                job.finished_timestamp = now
-                session.add(job)
-                reconciled.append(job.job_id)
+                prior_heartbeat = (job.job_metadata or {}).get("heartbeat_at")
+                heartbeat_unchanged = hb_expr.is_(None) if prior_heartbeat is None else hb_expr == prior_heartbeat
+                claim = (
+                    update(Job)
+                    .where(
+                        Job.job_id == job.job_id,
+                        Job.status == JobStatus.IN_PROGRESS,
+                        heartbeat_unchanged,
+                    )
+                    .values(
+                        status=JobStatus.FAILED,
+                        error=dict(error_payload),
+                        finished_timestamp=now,
+                    )
+                )
+                claim_result = await session.exec(claim)  # type: ignore[call-overload]
+                if claim_result.rowcount == 1:
+                    reconciled.append(job.job_id)
             await session.flush()
         # Why: append the terminal milestone via append_event (own session) so its seq-collision retry
         # applies — a collision with a concurrent appender can no longer roll back the whole sweep.

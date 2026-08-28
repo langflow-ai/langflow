@@ -54,6 +54,8 @@ export default function KnowledgeBaseUploadModal({
             selectedEmbeddingModel={form.selectedEmbeddingModel}
             onEmbeddingModelChange={form.setSelectedEmbeddingModel}
             embeddingModelOptions={form.embeddingModelOptions}
+            modelCatalogReady={form.modelCatalogReady}
+            globalVariablesReady={form.globalVariablesReady}
             existingEmbeddingModel={existingKnowledgeBase?.embeddingModel}
             existingEmbeddingIcon={form.selectedEmbeddingModel[0]?.icon}
             chunkSize={form.chunkSize}
@@ -158,11 +160,19 @@ export default function KnowledgeBaseUploadModal({
           onBack={form.handleBack}
           onNext={form.handleNext}
           onSubmit={form.handleSubmit}
-          nextDisabled={false}
+          nextDisabled={
+            !form.modelCatalogReady ||
+            !form.globalVariablesReady ||
+            (form.isAddSourcesMode
+              ? !form.selectedEmbeddingModelAuthorized
+              : form.selectedEmbeddingModel.length > 0 &&
+                !form.selectedEmbeddingModelAuthorized)
+          }
           submitDisabled={
             !form.sourceName.trim() ||
-            (!form.isAddSourcesMode &&
-              form.selectedEmbeddingModel.length === 0) ||
+            !form.modelCatalogReady ||
+            !form.globalVariablesReady ||
+            !form.selectedEmbeddingModelAuthorized ||
             form.chunkPreviewFailed
           }
           isSubmitting={form.isSubmitting}

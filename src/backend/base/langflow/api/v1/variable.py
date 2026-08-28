@@ -15,11 +15,12 @@ from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 from sqlalchemy.exc import NoResultFound
 
 from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.v1.model_provider_policy_scope import ProviderPolicyAttributesDependency
 from langflow.api.v1.models import (
     DISABLED_MODELS_VAR,
     ENABLED_MODELS_VAR,
+    _aresolve_policy,
     _require_provider,
-    _resolve_policy,
     build_model_providers_by_name,
     get_provider_from_variable_name,
     normalize_model_status_entries,
@@ -139,6 +140,7 @@ async def create_variable(
     session: DbSession,
     variable: VariableCreate,
     current_user: CurrentActiveUser,
+    provider_policy_attributes: ProviderPolicyAttributesDependency,
 ):
     """Create a new variable."""
     await ensure_variable_permission(
@@ -160,7 +162,12 @@ async def create_variable(
     # before credential lookup, SDK import, validation, or persistence.
     provider = get_provider_from_variable_name(variable.name)
     if provider is not None:
-        _require_provider(current_user, provider, ModelProviderPolicyPurpose.CONFIGURE)
+        await _require_provider(
+            current_user,
+            provider,
+            ModelProviderPolicyPurpose.CONFIGURE,
+            provider_policy_attributes,
+        )
 
     if variable.name in await variable_service.list_variables(user_id=current_user.id, session=session):
         raise HTTPException(status_code=400, detail="Variable name already exists")
@@ -202,6 +209,7 @@ async def read_variables(
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
+    provider_policy_attributes: ProviderPolicyAttributesDependency,
 ):
     """Read all variables.
 
@@ -214,6 +222,11 @@ async def read_variables(
         current_user,
         VariableAction.READ,
         variable_user_id=current_user.id,
+    )
+    provider_policy = await _aresolve_policy(
+        current_user,
+        ModelProviderPolicyPurpose.CONFIGURE,
+        provider_policy_attributes,
     )
     variable_service = get_variable_service()
     if not isinstance(variable_service, DatabaseVariableService):
@@ -241,7 +254,6 @@ async def read_variables(
         )
 
         # Filter out internal variables (those starting and ending with __)
-        provider_policy = _resolve_policy(current_user, ModelProviderPolicyPurpose.CONFIGURE)
         filtered_variables = []
         for var in all_variables:
             if var.name and var.name.startswith("__") and var.name.endswith("__"):
@@ -277,6 +289,7 @@ async def update_variable(
     variable_id: UUID,
     variable: VariableUpdate,
     current_user: CurrentActiveUser,
+    provider_policy_attributes: ProviderPolicyAttributesDependency,
 ):
     """Update a variable."""
     variable_service = get_variable_service()
@@ -316,7 +329,12 @@ async def update_variable(
         effective_name = variable.name or existing_variable.name
         provider = get_provider_from_variable_name(effective_name)
         if provider is not None:
-            _require_provider(current_user, provider, ModelProviderPolicyPurpose.CONFIGURE)
+            await _require_provider(
+                current_user,
+                provider,
+                ModelProviderPolicyPurpose.CONFIGURE,
+                provider_policy_attributes,
+            )
             if variable.value and effective_name == get_model_provider_variable_mapping().get(provider):
                 # Run validation off the event loop; owner context (not caller) for share-aware updates.
                 provider_vars = await asyncio.to_thread(get_all_variables_for_provider, owner_id, provider)
@@ -365,6 +383,7 @@ async def delete_variable(
     session: DbSession,
     variable_id: UUID,
     current_user: CurrentActiveUser,
+    _provider_policy_attributes: ProviderPolicyAttributesDependency,
 ) -> None:
     """Delete a variable.
 
@@ -453,6 +472,7 @@ async def detect_env_vars(
     payload: DetectVarsRequest,
     session: DbSession,
     current_user: CurrentActiveUser,
+    provider_policy_attributes: ProviderPolicyAttributesDependency,
 ):
     """Detect global variable references used by the given flow version IDs.
 
@@ -468,6 +488,11 @@ async def detect_env_vars(
         current_user,
         VariableAction.READ,
         variable_user_id=current_user.id,
+    )
+    provider_policy = await _aresolve_policy(
+        current_user,
+        ModelProviderPolicyPurpose.CONFIGURE,
+        provider_policy_attributes,
     )
     variable_service = get_variable_service()
     existing_variable_names = {
@@ -491,7 +516,6 @@ async def detect_env_vars(
         data = _validate_flow_or_422(version_id=version_id, data=version.data)
         candidate_keys.update(_collect_candidate_variable_keys_from_flow_data(data))
 
-    provider_policy = _resolve_policy(current_user, ModelProviderPolicyPurpose.CONFIGURE)
     visible_candidate_keys = {
         variable_key
         for variable_key in candidate_keys

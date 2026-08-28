@@ -6,6 +6,7 @@ import time
 import traceback
 import uuid
 from collections import defaultdict
+from contextlib import ExitStack
 from datetime import datetime, timezone
 from functools import lru_cache, partial
 from typing import Any
@@ -24,7 +25,7 @@ from lfx.schema.schema import InputValueRequest
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyError,
     ModelProviderPolicyPurpose,
-    require_model_provider,
+    aresolve_model_provider_policy,
 )
 from lfx.utils.secrets import secret_value_to_str
 from sqlmodel import select
@@ -43,6 +44,7 @@ from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_variable_service
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.utils.voice_utils import BYTES_PER_24K_FRAME, VAD_SAMPLE_RATE_16K, resample_24k_to_16k
 
 router = APIRouter(prefix="/voice", tags=["Voice"], include_in_schema=False)
@@ -113,12 +115,12 @@ async def authenticate_and_get_openai_key(session: DbSession, user: User, websoc
         return None, None
 
     try:
-        require_model_provider(
+        provider_policy = await aresolve_model_provider_policy(
             user_id=user.id,
-            provider="OpenAI",
+            providers=["OpenAI"],
             purpose=ModelProviderPolicyPurpose.USE,
-            attributes={"is_superuser": bool(getattr(user, "is_superuser", False))},
         )
+        provider_policy.require("OpenAI")
     except ModelProviderPolicyError as exc:
         await websocket.send_json(
             {
@@ -781,12 +783,13 @@ async def flow_as_tool_websocket(
     session_id: str,
 ):
     """WebSocket endpoint registering the flow as a tool for real-time interaction."""
+    provider_policy_scope = ExitStack()
+    vad_task: asyncio.Task | None = None
     try:
         await client_websocket.accept()
 
         log_event = create_event_logger()
 
-        vad_task: asyncio.Task | None = None
         current_user: User = await get_current_user_for_websocket(client_websocket, session)
         try:
             flow = await _get_authorized_voice_flow(flow_id, current_user, session)
@@ -807,6 +810,13 @@ async def flow_as_tool_websocket(
             await logger.aerror(f"Failed to load flow: {e}")
             return
 
+        provider_policy_scope.enter_context(
+            scoped_model_provider_policy_for_flow(
+                flow,
+                user_id=current_user.id,
+                is_superuser=bool(getattr(current_user, "is_superuser", False)),
+            )
+        )
         current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_websocket)
         if current_user is None or openai_key is None:
             return
@@ -1183,6 +1193,7 @@ async def flow_as_tool_websocket(
         await logger.aerror(f"Unexpected error: {e}")
         await logger.aerror(traceback.format_exc())
     finally:
+        provider_policy_scope.close()
         # Make sure to clean up the task
         if vad_task and not vad_task.done():
             vad_task.cancel()
@@ -1214,6 +1225,7 @@ async def flow_tts_websocket(
     session_id: str,
 ):
     """WebSocket endpoint for direct flow text-to-speech interaction."""
+    provider_policy_scope = ExitStack()
     try:
         await client_websocket.accept()
 
@@ -1264,13 +1276,20 @@ async def flow_tts_websocket(
 
         current_user: User = await get_current_user_for_websocket(client_websocket, session)
         try:
-            await _get_authorized_voice_flow(flow_id, current_user, session)
+            flow = await _get_authorized_voice_flow(flow_id, current_user, session)
         except Exception as e:  # noqa: BLE001
             err_msg = {"error": f"Failed to load flow: {e!s}"}
             await client_websocket.send_json(err_msg)
             await logger.aerror(f"Failed to load flow: {e}")
             return
 
+        provider_policy_scope.enter_context(
+            scoped_model_provider_policy_for_flow(
+                flow,
+                user_id=current_user.id,
+                is_superuser=bool(getattr(current_user, "is_superuser", False)),
+            )
+        )
         current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_websocket)
         if current_user is None or openai_key is None:
             return
@@ -1400,6 +1419,8 @@ async def flow_tts_websocket(
     except Exception as e:  # noqa: BLE001
         await logger.aerror(f"Unexpected error: {e}")
         await logger.aerror(traceback.format_exc())
+    finally:
+        provider_policy_scope.close()
 
 
 def extract_transcript(json_data):

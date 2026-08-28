@@ -13,7 +13,7 @@ from lfx.base.models.unified_models import (
     get_unified_models_detailed,
 )
 from lfx.log.logger import logger
-from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
+from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, aresolve_model_provider_policy
 from lfx.utils.secrets import secret_value_to_str
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -54,6 +54,8 @@ def _get_registered_provider_names() -> list[str]:
 async def get_enabled_providers_for_user(
     user_id: UUID | str,
     session: AsyncSession,
+    *,
+    purpose: ModelProviderPolicyPurpose = ModelProviderPolicyPurpose.CONFIGURE,
 ) -> tuple[list[str], dict[str, bool]]:
     """Get enabled providers for a user.
 
@@ -63,11 +65,6 @@ async def get_enabled_providers_for_user(
     variable_service = get_variable_service()
     if not isinstance(variable_service, DatabaseVariableService):
         return [], {}
-
-    all_variables = await variable_service.get_all(user_id=user_id, session=session)
-    # Include all variable types (credentials and regular variables)
-    # so providers like Ollama (which use non-secret variables) are detected
-    all_variable_names = {var.name for var in all_variables}
 
     provider_variable_map = get_model_provider_variable_mapping()
     registered_providers = _get_registered_provider_names()
@@ -79,18 +76,28 @@ async def get_enabled_providers_for_user(
             if provider not in provider_variable_map and is_api_key_optional(provider)
         ),
     ]
-    provider_policy = resolve_model_provider_policy(
+    # Resolve authorization before reading any credential-bearing variables or
+    # probing environment-backed providers. Assistant requests bind their
+    # trusted stored-flow scope in the router, and the async policy path keeps
+    # inherited team/workspace role materialization current.
+    provider_policy = await aresolve_model_provider_policy(
         user_id=user_id,
         providers=[*registered_providers, *provider_candidates],
-        purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        purpose=purpose,
     )
+    provider_candidates = provider_policy.filter(provider_candidates)
+    if not provider_candidates:
+        return [], {}
+
+    all_variables = await variable_service.get_all(user_id=user_id, session=session)
+    # Include all variable types (credentials and regular variables)
+    # so providers like Ollama (which use non-secret variables) are detected
+    all_variable_names = {var.name for var in all_variables}
 
     enabled_providers = []
     provider_status = {}
 
     for provider in provider_candidates:
-        if not provider_policy.allows(provider):
-            continue
         # Check if ALL required variables for this provider are present
         # in either database variables or environment variables
         required_keys = get_provider_required_variable_keys(provider)

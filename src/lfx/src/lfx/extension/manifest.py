@@ -85,11 +85,32 @@ BUNDLE_NAME_RE: re.Pattern[str] = re.compile(r"^[a-z][a-z0-9_]{1,63}$")
 _PROVIDER_ID_RE: re.Pattern[str] = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 
 _SEMVER_RE: re.Pattern[str] = re.compile(
-    r"^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)"
+    r"^(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
     r"(?:-(?:[0-9A-Za-z-]+)(?:\.[0-9A-Za-z-]+)*)?"
     r"(?:\+(?:[0-9A-Za-z-]+)(?:\.[0-9A-Za-z-]+)*)?$"
 )
 """SemVer 2.0.0 pattern (https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string)."""
+
+_REPOSITORY_PEP440_RE: re.Pattern[str] = re.compile(
+    r"^(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
+    r"(?:(?:a|b|rc)(?:0|[1-9][0-9]*)|\.dev(?:0|[1-9][0-9]*))?$"
+)
+"""Canonical PEP 440 forms emitted by the repository's bundle release tooling."""
+
+
+def _json_schema_fullmatch(pattern: re.Pattern[str]) -> str:
+    """Adapt a Python-anchored regex to JSON Schema's search semantics.
+
+    The trailing lookahead prevents ``$`` from accepting a match immediately
+    before a final newline, keeping the authoring schema aligned with the
+    runtime validator's ``fullmatch`` behavior.
+    """
+    return rf"(?:{pattern.pattern})(?![\s\S])"
+
+
+_EXTENSION_VERSION_JSON_SCHEMA: dict[str, list[dict[str, str]]] = {
+    "anyOf": [{"pattern": _json_schema_fullmatch(pattern)} for pattern in (_SEMVER_RE, _REPOSITORY_PEP440_RE)]
+}
 
 # Deferred manifest fields.  Validators reject any non-null value with
 # ``field-deferred-in-this-milestone``.  Listed here so tests can iterate and so
@@ -484,8 +505,11 @@ class ExtensionManifest(BaseModel):
     )
     version: StrictStr = Field(
         ...,
-        pattern=_SEMVER_RE.pattern,
-        description="SemVer 2.0.0 version string for this extension release.",
+        description=(
+            "SemVer 2.0.0 or repository-supported PEP 440 stable/dev/alpha/beta/rc version string "
+            "for this extension release."
+        ),
+        json_schema_extra=_EXTENSION_VERSION_JSON_SCHEMA,
     )
     name: StrictStr = Field(
         ...,
@@ -561,6 +585,17 @@ class ExtensionManifest(BaseModel):
     # ------------------------------------------------------------------
     # Validators
     # ------------------------------------------------------------------
+
+    @field_validator("version")
+    @classmethod
+    def _validate_version(cls, value: str) -> str:
+        if not any(pattern.fullmatch(value) for pattern in (_SEMVER_RE, _REPOSITORY_PEP440_RE)):
+            msg = (
+                "version must be SemVer 2.0.0 or a supported PEP 440 form: "
+                "X.Y.Z, X.Y.Z.devN, X.Y.ZaN, X.Y.ZbN, or X.Y.ZrcN"
+            )
+            raise ValueError(msg)
+        return value
 
     @model_validator(mode="after")
     def _validate_declares_something(self) -> ExtensionManifest:
