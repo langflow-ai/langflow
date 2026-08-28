@@ -123,6 +123,7 @@ class JobService(Service):
         asset_type: str | None = None,
         user_id: UUID | None = None,
         dedupe_key: str | None = None,
+        initial_metadata: dict | None = None,
     ) -> Job:
         """Create a new job record with QUEUED status.
 
@@ -135,6 +136,10 @@ class JobService(Service):
             asset_type: The asset type
             user_id: The user ID who owns this job
             dedupe_key: Optional idempotency key to prevent duplicate jobs for the same batch
+            initial_metadata: Metadata that must be committed atomically with the QUEUED
+                row. The background workflow facade uses this for its replay request and
+                encrypted override envelope so a worker can never claim a partially
+                initialized job.
 
         Returns:
             Created Job object
@@ -172,6 +177,7 @@ class JobService(Service):
                     msg = f"A non-retryable job with dedupe_key={dedupe_key!r} already exists"
                     raise DuplicateJobError(msg)
 
+            metadata = dict(initial_metadata or {})
             job = Job(
                 job_id=job_id,
                 flow_id=flow_id,
@@ -181,6 +187,10 @@ class JobService(Service):
                 asset_type=asset_type,
                 user_id=user_id,
                 dedupe_key=dedupe_key,
+                # Replay data and its encrypted override envelope must be committed
+                # atomically with the QUEUED row so no worker can claim a partially
+                # initialized background request.
+                job_metadata=metadata or None,
             )
             session.add(job)
             await session.flush()
@@ -545,7 +555,14 @@ class JobService(Service):
             await session.flush()
             return result.rowcount == 1
 
-    async def claim_queued_lease(self, job_id: UUID, *, owner: str, lease_ttl_s: float) -> bool:
+    async def claim_queued_lease(
+        self,
+        job_id: UUID,
+        *,
+        owner: str,
+        lease_ttl_s: float,
+        heartbeat_at: str | None = None,
+    ) -> bool:
         """Lease-claim a QUEUED row WITHOUT flipping its status. Returns True if won.
 
         Single-flight ownership for the default re-enqueue path that, unlike
@@ -560,12 +577,14 @@ class JobService(Service):
         The claim succeeds only when the row is QUEUED and its current lease is
         absent or stale, and the conditional UPDATE matches the EXACT prior
         ``heartbeat_at`` we read, so two workers racing the same stale row see
-        only one ``rowcount == 1``. Portable across SQLite and Postgres.
+        only one ``rowcount == 1``. A caller-supplied ``heartbeat_at`` becomes
+        the claim token for a later guarded release or terminalization. Portable
+        across SQLite and Postgres.
         """
         from sqlmodel import update
 
         hb_expr = col(Job.job_metadata)["heartbeat_at"].as_string()
-        now = datetime.now(timezone.utc).isoformat()
+        claim_heartbeat = heartbeat_at or datetime.now(timezone.utc).isoformat()
         async with session_scope() as session:
             job = await session.get(Job, job_id)
             if job is None or job.status != JobStatus.QUEUED:
@@ -575,7 +594,7 @@ class JobService(Service):
             # A fresh lease means another worker already owns this claim window.
             if not self.is_lease_stale(job, lease_ttl_s=lease_ttl_s):
                 return False
-            merged = {**meta, "owner": owner, "heartbeat_at": now}
+            merged = {**meta, "owner": owner, "heartbeat_at": claim_heartbeat}
             # Guard on the exact prior heartbeat so a concurrent claimer that
             # already stamped its own loses the conditional UPDATE.
             guard = hb_expr.is_(None) if prior_hb is None else hb_expr == prior_hb
@@ -587,6 +606,111 @@ class JobService(Service):
             result = await session.exec(stmt)  # type: ignore[call-overload]
             await session.flush()
             return result.rowcount == 1
+
+    async def release_queued_lease(self, job_id: UUID, *, owner: str, heartbeat_at: str) -> bool:
+        """Release this owner's QUEUED lease without clearing a newer claim.
+
+        The status, owner, and exact heartbeat guards make the whole-metadata
+        replacement safe across SQLite and Postgres: a worker that has replaced
+        or refreshed this lease cannot have its claim erased by a stale recovery.
+        """
+        from sqlmodel import update
+
+        owner_expr = col(Job.job_metadata)["owner"].as_string()
+        hb_expr = col(Job.job_metadata)["heartbeat_at"].as_string()
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None or job.status != JobStatus.QUEUED:
+                return False
+            metadata = dict(job.job_metadata or {})
+            if metadata.get("owner") != owner or metadata.get("heartbeat_at") != heartbeat_at:
+                return False
+            metadata.pop("owner", None)
+            metadata.pop("heartbeat_at", None)
+            stmt = (
+                update(Job)
+                .where(
+                    Job.job_id == job_id,
+                    Job.status == JobStatus.QUEUED,
+                    owner_expr == owner,
+                    hb_expr == heartbeat_at,
+                )
+                .values(job_metadata=metadata or None)
+            )
+            result = await session.exec(stmt)  # type: ignore[call-overload]
+            await session.flush()
+            return result.rowcount == 1
+
+    async def fail_queued_job(
+        self,
+        job_id: UUID,
+        *,
+        owner: str,
+        heartbeat_at: str,
+        error: dict,
+        event_type: str,
+    ) -> bool:
+        """Atomically terminalize this owner's QUEUED claim with its durable event.
+
+        The entire status-CAS + event transaction is retried after a per-job
+        sequence collision or transient SQLite writer lock. Rolling back before
+        each retry leaves the job QUEUED under the exact original lease, so a
+        retry either commits both records or safely loses to a newer claim.
+        """
+        from sqlmodel import update
+
+        owner_expr = col(Job.job_metadata)["owner"].as_string()
+        hb_expr = col(Job.job_metadata)["heartbeat_at"].as_string()
+        last_exc: Exception | None = None
+        for attempt in range(_APPEND_EVENT_MAX_RETRIES):
+            try:
+                async with session_scope() as session:
+                    job = await session.get(Job, job_id)
+                    if job is None or job.status != JobStatus.QUEUED:
+                        return False
+                    metadata = job.job_metadata or {}
+                    if metadata.get("owner") != owner or metadata.get("heartbeat_at") != heartbeat_at:
+                        return False
+                    stmt = (
+                        update(Job)
+                        .where(
+                            Job.job_id == job_id,
+                            Job.status == JobStatus.QUEUED,
+                            owner_expr == owner,
+                            hb_expr == heartbeat_at,
+                        )
+                        .values(
+                            status=JobStatus.FAILED,
+                            error=dict(error),
+                            finished_timestamp=datetime.now(timezone.utc),
+                        )
+                    )
+                    result = await session.exec(stmt)  # type: ignore[call-overload]
+                    if result.rowcount != 1:
+                        return False
+                    current_max = (
+                        await session.exec(select(func.max(JobEvent.seq)).where(JobEvent.job_id == job_id))
+                    ).one()
+                    session.add(
+                        JobEvent(
+                            job_id=job_id,
+                            seq=(current_max or 0) + 1,
+                            event_type=event_type,
+                            payload=dict(error),
+                        )
+                    )
+                    await session.flush()
+                    return True
+            except IntegrityError as exc:
+                last_exc = exc
+            except OperationalError as exc:
+                if "lock" not in str(exc).lower() and "busy" not in str(exc).lower():
+                    raise
+                last_exc = exc
+            await asyncio.sleep(min(0.05, 0.002 * (attempt + 1)))
+
+        msg = f"fail_queued_job exhausted {_APPEND_EVENT_MAX_RETRIES} retries for job {job_id} (event seq contention)"
+        raise RuntimeError(msg) from last_exc
 
     async def claim_suspended_for_resume(self, job_id: UUID, *, owner: str | None = None) -> bool:
         """Atomically flip SUSPENDED->IN_PROGRESS for resume; True iff this caller won.
