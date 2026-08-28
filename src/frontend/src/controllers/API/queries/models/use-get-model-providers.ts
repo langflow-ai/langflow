@@ -1,7 +1,14 @@
 import { useQueryFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
+import {
+  appendProviderScope,
+  type ProviderScopeParams,
+  providerScopeQueryKey,
+} from "../../helpers/provider-scope";
 import { UseRequestProcessor } from "../../services/request-processor";
+
+const PROVIDER_POLICY_STALE_TIME_MS = 30_000;
 
 export interface ModelProviderInfo {
   provider: string;
@@ -23,9 +30,10 @@ export interface ModelProviderWithStatus extends ModelProviderInfo {
   icon?: string;
 }
 
-export interface GetModelProvidersParams {
+export interface GetModelProvidersParams extends ProviderScopeParams {
   includeDeprecated?: boolean;
   includeUnsupported?: boolean;
+  purpose?: "use" | "configure";
 }
 
 export const getModelProvidersQueryOptions = (
@@ -38,6 +46,10 @@ export const getModelProvidersQueryOptions = (
   if (params?.includeUnsupported) {
     queryParams.append("include_unsupported", "true");
   }
+  appendProviderScope(queryParams, params);
+  if (params?.purpose) {
+    queryParams.append("purpose", params.purpose);
+  }
 
   const url = `${getURL("MODELS")}${
     queryParams.toString() ? `?${queryParams.toString()}` : ""
@@ -48,6 +60,8 @@ export const getModelProvidersQueryOptions = (
       "useGetModelProviders",
       params?.includeDeprecated,
       params?.includeUnsupported,
+      ...providerScopeQueryKey(params),
+      params?.purpose,
     ] as const,
     queryFn: async (): Promise<ModelProviderWithStatus[]> => {
       const response = await api.get<ModelProviderInfo[]>(url);
@@ -58,8 +72,8 @@ export const getModelProvidersQueryOptions = (
         icon: providerInfo.icon || getProviderIcon(providerInfo.provider),
       }));
     },
-    refetchOnWindowFocus: false,
-    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: true,
+    staleTime: PROVIDER_POLICY_STALE_TIME_MS,
   };
 };
 

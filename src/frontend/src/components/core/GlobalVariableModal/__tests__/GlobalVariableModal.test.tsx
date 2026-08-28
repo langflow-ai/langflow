@@ -7,6 +7,17 @@ import { assignTab } from "../utils/assign-tab";
 const mockUpsert = jest.fn();
 const mockSetSuccessData = jest.fn();
 const mockSetErrorData = jest.fn();
+const mockUseGetTypes = jest.fn((_options?: unknown) => ({}));
+const mockGlobalVariablesData: unknown[] = [];
+const mockUseGetGlobalVariables = jest.fn((_options?: unknown) => ({
+  data: mockGlobalVariablesData,
+}));
+const mockUseGlobalVariableUpsert = jest.fn(
+  (_scope?: unknown, _variables?: unknown) => ({
+    upsertGlobalVariable: mockUpsert,
+    updateGlobalVariable: jest.fn(),
+  }),
+);
 
 // BaseModal is mocked to a passthrough that renders the modal body plus a
 // stand-in submit button wired to onSubmit, so the test drives handleSaveVariable
@@ -55,7 +66,7 @@ jest.mock("../../parameterRenderComponent/components/inputComponent", () => ({
 }));
 
 jest.mock("@/controllers/API/queries/flows/use-get-types", () => ({
-  useGetTypes: () => ({}),
+  useGetTypes: (options?: unknown) => mockUseGetTypes(options),
 }));
 
 jest.mock("@/stores/typesStore", () => {
@@ -84,14 +95,11 @@ jest.mock("@/stores/alertStore", () => ({
 }));
 
 jest.mock("@/controllers/API/queries/variables", () => {
-  // Stable reference: globalVariables is a useEffect dep in the modal.
-  const data: unknown[] = [];
   return {
-    useGetGlobalVariables: () => ({ data }),
-    useGlobalVariableUpsert: () => ({
-      upsertGlobalVariable: mockUpsert,
-      updateGlobalVariable: jest.fn(),
-    }),
+    useGetGlobalVariables: (options?: unknown) =>
+      mockUseGetGlobalVariables(options),
+    useGlobalVariableUpsert: (scope?: unknown, variables?: unknown) =>
+      mockUseGlobalVariableUpsert(scope, variables),
   };
 });
 
@@ -223,6 +231,30 @@ describe("GlobalVariableModal - Type Safety & onValueChange", () => {
 
       expect(credentialType).toBe("Credential");
       expect(genericType).toBe("Generic");
+    });
+  });
+});
+
+describe("GlobalVariableModal - provider scope", () => {
+  it("uses the same flow scope for palette, lookup, and upsert", () => {
+    const providerScope = { flowId: "flow-project-a" };
+
+    render(
+      <GlobalVariableModal
+        open
+        setOpen={jest.fn()}
+        providerScope={providerScope}
+      />,
+    );
+
+    expect(mockUseGlobalVariableUpsert).toHaveBeenCalledWith(
+      providerScope,
+      mockGlobalVariablesData,
+    );
+    expect(mockUseGetGlobalVariables).toHaveBeenCalledWith(providerScope);
+    expect(mockUseGetTypes).toHaveBeenCalledWith({
+      ...providerScope,
+      enabled: true,
     });
   });
 });

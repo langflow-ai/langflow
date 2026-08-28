@@ -4,9 +4,10 @@ This module contains tests for verifying the functionality of the ParameterHandl
 which is responsible for processing and managing parameters in vertices.
 """
 
+import asyncio
 import copy
 import pickle
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
 import pytest
@@ -16,12 +17,302 @@ from lfx.graph import Graph
 from lfx.graph.edge.base import Edge
 from lfx.graph.vertex import base as vertex_base_module
 from lfx.graph.vertex import vertex_types as vertex_types_module
-from lfx.graph.vertex.base import ParameterHandler, Vertex
+from lfx.graph.vertex.base import ParameterHandler, Vertex, VertexStates
 from lfx.interface.components import component_cache
+from lfx.services.model_provider_policy import (
+    BaseModelProviderPolicyService,
+    ModelProviderPolicyContext,
+    ModelProviderPolicyError,
+    current_model_provider_policy_context,
+    reset_current_model_provider_policy_context,
+    set_current_model_provider_policy_context,
+)
 from lfx.services.storage.local import LocalStorageService
 from lfx.services.storage.service import StorageService
 from lfx.utils.file_path_security import LocalFileAccessError
 from lfx.utils.util import unescape_string
+
+
+class _HierarchyRefreshingPolicy(BaseModelProviderPolicyService):
+    """Policy double that makes stale synchronous runtime checks observable."""
+
+    SNAPSHOT_CACHE_MAX_SIZE = 0
+
+    def __init__(self, *, allowed_provider_ids: set[str]) -> None:
+        super().__init__()
+        self.allowed_provider_ids = allowed_provider_ids
+        self.async_contexts: list[ModelProviderPolicyContext] = []
+        self.async_candidates: list[frozenset[str]] = []
+
+    def get_allowed_provider_ids(self, *, context, candidate_provider_ids, purpose):
+        _ = context, candidate_provider_ids, purpose
+        msg = "synchronous provider checks do not refresh project hierarchy"
+        raise AssertionError(msg)
+
+    async def aget_allowed_provider_ids(self, *, context, candidate_provider_ids, purpose):
+        _ = purpose
+        self.async_contexts.append(context)
+        self.async_candidates.append(candidate_provider_ids)
+        return candidate_provider_ids & self.allowed_provider_ids
+
+
+@pytest.mark.asyncio
+async def test_build_async_provider_denial_precedes_input_and_credential_hydration(monkeypatch):
+    """Normal model builds must refresh hierarchy before any load_from_db resolution."""
+    from lfx.base.models.model import LCModelComponent
+
+    class StandaloneOpenAIComponent(LCModelComponent):
+        display_name = "OpenAI"
+
+    policy = _HierarchyRefreshingPolicy(allowed_provider_ids=set())
+    monkeypatch.setattr("lfx.services.deps.get_model_provider_policy_service", lambda: policy)
+    component = StandaloneOpenAIComponent(_user_id="owner-1")
+    vertex = object.__new__(Vertex)
+    vertex.display_name = "Denied Model"
+    vertex.base_type = "component"
+    vertex.params = {}
+    vertex.custom_component = component
+    vertex._validate_built_object = Mock()
+
+    async def hydrate_upstream_credentials():
+        await component.get_variable(name="UPSTREAM_API_KEY", field="upstream_api_key")
+
+    async def hydrate_credentials(**_kwargs):
+        await component.get_variable(name="OPENAI_API_KEY", field="api_key")
+
+    vertex._build_each_vertex_in_params_dict = AsyncMock(side_effect=hydrate_upstream_credentials)
+    vertex._build_results = AsyncMock(side_effect=hydrate_credentials)
+
+    token = set_current_model_provider_policy_context(
+        user_id="owner-1",
+        attributes={"project_id": "project-new", "workspace_id": "workspace-new"},
+    )
+    try:
+        with pytest.raises(ModelProviderPolicyError):
+            await vertex._build(fallback_to_env_vars=False, user_id="owner-1")
+
+        assert current_model_provider_policy_context() == ModelProviderPolicyContext(
+            user_id="owner-1",
+            attributes={"project_id": "project-new", "workspace_id": "workspace-new"},
+        )
+    finally:
+        reset_current_model_provider_policy_context(token)
+
+    assert current_model_provider_policy_context() is None
+    assert policy.async_contexts == [
+        ModelProviderPolicyContext(
+            user_id="owner-1",
+            attributes={"project_id": "project-new", "workspace_id": "workspace-new"},
+        )
+    ]
+    vertex._build_each_vertex_in_params_dict.assert_not_awaited()
+    vertex._build_results.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_worker_restored_component_refreshes_current_hierarchy_with_explicit_actor(monkeypatch):
+    """Checkpoint workers must bind the actor before refreshing the current project hierarchy."""
+    from lfx.base.models.model import LCModelComponent
+
+    class StandaloneOpenAIComponent(LCModelComponent):
+        display_name = "OpenAI"
+
+    policy = _HierarchyRefreshingPolicy(allowed_provider_ids={"openai"})
+    monkeypatch.setattr("lfx.services.deps.get_model_provider_policy_service", lambda: policy)
+    component = StandaloneOpenAIComponent(_user_id=None)
+    vertex = object.__new__(Vertex)
+    vertex.custom_component = component
+    vertex.params = {}
+
+    token = set_current_model_provider_policy_context(
+        user_id="actor-1",
+        attributes={"project_id": "project-moved", "workspace_id": "workspace-current"},
+    )
+    try:
+        await vertex.arequire_model_provider_policy(user_id="actor-1")
+    finally:
+        reset_current_model_provider_policy_context(token)
+
+    assert component.user_id == "actor-1"
+    assert policy.async_contexts == [
+        ModelProviderPolicyContext(
+            user_id="actor-1",
+            attributes={"project_id": "project-moved", "workspace_id": "workspace-current"},
+        )
+    ]
+
+
+@pytest.mark.asyncio
+async def test_provider_preflight_forwards_event_manager_to_component_construction():
+    vertex = object.__new__(Vertex)
+    vertex.custom_component = None
+    vertex.instantiate_component = Mock()
+    vertex._bind_restored_component_user = Mock()
+    event_manager = Mock()
+
+    await vertex.arequire_model_provider_policy(user_id="actor-1", event_manager=event_manager)
+
+    vertex.instantiate_component.assert_called_once_with(user_id="actor-1", event_manager=event_manager)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("frozen", "requester"), [(True, None), (False, Mock())])
+async def test_cached_build_reauthorization_forwards_event_manager(monkeypatch, frozen, requester):
+    """Cached public build paths must preserve the manager used to construct missing components."""
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: None)
+    vertex = object.__new__(Vertex)
+    vertex._lock = asyncio.Lock()
+    vertex.state = VertexStates.ACTIVE
+    vertex.display_name = "Cached Model"
+    vertex._is_loop = False
+    vertex.frozen = frozen
+    vertex.built = True
+    vertex.arequire_model_provider_policy = AsyncMock()
+    vertex.get_requester_result = AsyncMock(return_value="cached result")
+    event_manager = Mock()
+
+    result = await vertex.build(user_id="actor-1", requester=requester, event_manager=event_manager)
+
+    assert result == "cached result"
+    vertex.arequire_model_provider_policy.assert_awaited_once_with("actor-1", event_manager=event_manager)
+    vertex.get_requester_result.assert_awaited_once_with(requester)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("component_kind", ["language", "embedding"])
+async def test_delegate_provider_override_denied_before_local_credential_hydration(monkeypatch, component_kind):
+    """Unified selectors must refresh only the selected provider before loading their API key."""
+    from lfx.components.models_and_agents.embedding_model import EmbeddingModelComponent
+    from lfx.components.models_and_agents.language_model import LanguageModelComponent
+
+    component_class = LanguageModelComponent if component_kind == "language" else EmbeddingModelComponent
+    params = {
+        "model": [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}],
+        "provider": "Anthropic",
+        "api_key": "stored-variable-reference",  # pragma: allowlist secret
+    }
+    component = component_class(
+        _user_id="owner-1",
+        _parameters={"model": params["model"], "api_key": params["api_key"]},
+    )
+    policy = _HierarchyRefreshingPolicy(allowed_provider_ids=set())
+    monkeypatch.setattr("lfx.services.deps.get_model_provider_policy_service", lambda: policy)
+    vertex = object.__new__(Vertex)
+    vertex.display_name = component.display_name
+    vertex.base_type = "component"
+    vertex.params = params
+    vertex.custom_component = component
+    vertex._upstream_secret_values = set()
+    vertex._validate_built_object = Mock()
+    vertex._build_each_vertex_in_params_dict = AsyncMock()
+    vertex._build_results = AsyncMock(side_effect=AssertionError("local credential hydrated before provider denial"))
+
+    token = set_current_model_provider_policy_context(
+        user_id="owner-1",
+        attributes={"project_id": "project-new", "workspace_id": "workspace-new"},
+    )
+    try:
+        with pytest.raises(ModelProviderPolicyError):
+            await vertex._build(fallback_to_env_vars=False, user_id="owner-1")
+    finally:
+        reset_current_model_provider_policy_context(token)
+
+    assert policy.async_candidates == [frozenset({"anthropic"})]
+    vertex._build_each_vertex_in_params_dict.assert_not_awaited()
+    vertex._build_results.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "model_selection",
+    [
+        [{"name": "claude-sonnet", "provider": "Anthropic", "metadata": {}}],
+        {"name": "claude-sonnet", "provider": "Anthropic", "metadata": {}},
+    ],
+    ids=["list", "mapping"],
+)
+async def test_plain_component_model_selection_denied_before_local_credential_hydration(monkeypatch, model_selection):
+    """Ordinary components with a ModelInput must preflight its provider before API-key hydration."""
+    from lfx.components.agentics.amap_component import AMapComponent
+
+    params = {
+        "model": model_selection,
+        "api_key": "stored-variable-reference",  # pragma: allowlist secret
+    }
+    component = AMapComponent(_user_id="owner-1", _parameters=params)
+    policy = _HierarchyRefreshingPolicy(allowed_provider_ids=set())
+    monkeypatch.setattr("lfx.services.deps.get_model_provider_policy_service", lambda: policy)
+    vertex = object.__new__(Vertex)
+    vertex.display_name = component.display_name
+    vertex.base_type = "component"
+    vertex.params = params
+    vertex.custom_component = component
+    vertex._upstream_secret_values = set()
+    vertex._validate_built_object = Mock()
+    vertex._build_each_vertex_in_params_dict = AsyncMock()
+    vertex._build_results = AsyncMock(side_effect=AssertionError("local credential hydrated before provider denial"))
+
+    token = set_current_model_provider_policy_context(
+        user_id="owner-1",
+        attributes={"project_id": "project-new", "workspace_id": "workspace-new"},
+    )
+    try:
+        with pytest.raises(ModelProviderPolicyError):
+            await vertex._build(fallback_to_env_vars=False, user_id="owner-1")
+    finally:
+        reset_current_model_provider_policy_context(token)
+
+    assert policy.async_candidates == [frozenset({"anthropic"})]
+    vertex._build_each_vertex_in_params_dict.assert_not_awaited()
+    vertex._build_results.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_renamed_model_input_denied_before_local_credential_hydration(monkeypatch):
+    """Every actual ModelInput name is preflighted; generic provider overrides apply only to ``model``."""
+    from lfx.custom.custom_component.component import Component
+    from lfx.io import ModelInput, SecretStrInput
+
+    class AstraLikeVectorStoreComponent(Component):
+        display_name = "Astra-like Vector Store"
+        inputs = [
+            ModelInput(name="embedding_model", model_type="embedding"),
+            SecretStrInput(name="api_key"),
+        ]
+
+    params = {
+        "embedding_model": [{"name": "text-embedding-3-small", "provider": "OpenAI", "metadata": {}}],
+        # Only the canonical ``model`` selector consumes this override. An unrelated
+        # component field must not redirect the embedding_model policy identity.
+        "provider": "Anthropic",
+        "api_key": "stored-variable-reference",  # pragma: allowlist secret
+    }
+    component = AstraLikeVectorStoreComponent(_user_id="owner-1", _parameters=params)
+    policy = _HierarchyRefreshingPolicy(allowed_provider_ids=set())
+    monkeypatch.setattr("lfx.services.deps.get_model_provider_policy_service", lambda: policy)
+    vertex = object.__new__(Vertex)
+    vertex.display_name = component.display_name
+    vertex.base_type = "component"
+    vertex.params = params
+    vertex.custom_component = component
+    vertex._upstream_secret_values = set()
+    vertex._validate_built_object = Mock()
+    vertex._build_each_vertex_in_params_dict = AsyncMock()
+    vertex._build_results = AsyncMock(side_effect=AssertionError("local credential hydrated before provider denial"))
+
+    token = set_current_model_provider_policy_context(
+        user_id="owner-1",
+        attributes={"project_id": "project-new", "workspace_id": "workspace-new"},
+    )
+    try:
+        with pytest.raises(ModelProviderPolicyError):
+            await vertex._build(fallback_to_env_vars=False, user_id="owner-1")
+    finally:
+        reset_current_model_provider_policy_context(token)
+
+    assert policy.async_candidates == [frozenset({"openai"})]
+    vertex._build_each_vertex_in_params_dict.assert_not_awaited()
+    vertex._build_results.assert_not_awaited()
 
 
 def test_vertex_getstate_drops_custom_component_runtime_state():

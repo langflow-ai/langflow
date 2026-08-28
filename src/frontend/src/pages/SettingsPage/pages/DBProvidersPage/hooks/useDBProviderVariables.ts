@@ -14,6 +14,7 @@ import {
  * query plus the create-or-update primitives the page persists through.
  */
 export function useDBProviderVariables() {
+  // Provider Settings intentionally manages only global/unscoped variables.
   const { data: globalVariables = [] } = useGetGlobalVariables();
 
   const { mutateAsync: createGlobalVariable, isPending: isCreating } =

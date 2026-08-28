@@ -42,6 +42,19 @@ class DatabaseVariableService(VariableService, Service):
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
 
+    async def get_default_field_bindings(
+        self,
+        user_id: UUID | str,
+        session: AsyncSession,
+    ) -> list[tuple[str, list[str] | None]]:
+        """Read only names and default fields; never materialize variable values."""
+        stmt = (
+            select(Variable.name, Variable.default_fields)
+            .where(Variable.user_id == user_id)
+            .order_by(col(Variable.name), col(Variable.id))
+        )
+        return [(name, default_fields) for name, default_fields in (await session.exec(stmt)).all() if name]
+
     async def initialize_user_variables(self, user_id: UUID | str, session: AsyncSession) -> None:
         if not self.settings_service.settings.store_environment_variables:
             await logger.adebug("Skipping environment variable storage.")
@@ -259,7 +272,7 @@ class DatabaseVariableService(VariableService, Service):
         *,
         visibility: ResourceVisibilityScope | None = None,
     ) -> list[VariableRead]:
-        stmt = select(Variable)
+        stmt = select(Variable).order_by(col(Variable.name), col(Variable.id))
         if visibility is None:
             stmt = stmt.where(Variable.user_id == user_id)
         else:
