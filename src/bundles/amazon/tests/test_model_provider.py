@@ -42,6 +42,28 @@ def test_legacy_meta_profiles_do_not_advertise_tool_calling():
     assert all(not model["tool_calling"] for model in meta_models)
 
 
+def test_reasoning_flag_is_set_per_model_not_by_substring():
+    models = {model["name"]: model for model in load_bedrock_models()}
+
+    # Current Claude 4.6+/5 profiles expose extended reasoning.
+    assert models["eu.anthropic.claude-opus-4-8"]["reasoning"] is True
+    assert models["eu.anthropic.claude-sonnet-4-6"]["reasoning"] is True
+
+    # Legacy Claude 3.x profiles must not be advertised as reasoning models,
+    # even though their IDs contain "anthropic.claude".
+    assert models["eu.anthropic.claude-3-7-sonnet-20250219-v1:0"]["reasoning"] is False
+    assert models["eu.anthropic.claude-3-haiku-20240307-v1:0"]["reasoning"] is False
+
+
+def test_expired_claude_3_5_haiku_profile_is_not_advertised():
+    # eu.anthropic.claude-3-5-haiku-20241022-v1:0 reached AWS end-of-life on
+    # 2026-06-19 and must not be offered as an active/default model.
+    expired_profile = "eu.anthropic.claude-3-5-haiku-20241022-v1:0"
+
+    assert expired_profile not in EU_BEDROCK_INFERENCE_PROFILE_IDS
+    assert expired_profile not in {model["name"] for model in load_bedrock_models()}
+
+
 @pytest.mark.usefixtures("loaded_amazon_extension")
 def test_amazon_extension_manifest_registers_bedrock_provider():
     assert "Amazon Bedrock" in get_model_providers()
