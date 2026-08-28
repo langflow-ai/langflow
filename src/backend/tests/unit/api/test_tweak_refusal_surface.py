@@ -99,12 +99,18 @@ async def test_off_refuses_component_targeted_inputs_on_the_v1_build(
     client, simple_api_test, logged_in_headers, monkeypatch
 ):
     """The authenticated build path must refuse before it queues a job."""
-    from langflow.services.deps import get_settings_service
+    from uuid import UUID
+
+    from langflow.services.database.models.jobs.model import Job
+    from langflow.services.deps import get_queue_service, get_settings_service, session_scope
+    from sqlmodel import select
 
     monkeypatch.setattr(get_settings_service().settings, "tweaks_policy", "off")
-    flow_id = simple_api_test["id"]
+    flow_id = UUID(simple_api_test["id"])
     node_id = next(node["id"] for node in simple_api_test["data"]["nodes"] if node["id"].startswith("ChatInput"))
     payload = {"inputs": {"components": [node_id], "input_value": "targeted", "type": "chat"}}
+    queue_service = get_queue_service()
+    active_jobs_before = queue_service.metrics_snapshot()["active_jobs"]
 
     response = await client.post(f"/api/v1/build/{flow_id}/flow", headers=logged_in_headers, json=payload)
 
@@ -112,6 +118,10 @@ async def test_off_refuses_component_targeted_inputs_on_the_v1_build(
     detail = response.json()["detail"]
     assert detail["code"] == "TWEAKS_REFUSED"
     assert detail["fields"] == [node_id]
+    assert queue_service.metrics_snapshot()["active_jobs"] == active_jobs_before
+    async with session_scope() as session:
+        jobs = (await session.exec(select(Job).where(Job.flow_id == flow_id))).all()
+    assert jobs == []
 
 
 async def test_off_refuses_component_targeted_inputs_on_the_v1_public_build(
