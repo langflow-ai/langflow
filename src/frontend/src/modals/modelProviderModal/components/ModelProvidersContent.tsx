@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
+import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
 import CustomModelProvidersEmptyState from "@/customization/components/custom-model-providers-empty-state";
 import ProviderList from "@/modals/modelProviderModal/components/ProviderList";
 import { Provider } from "@/modals/modelProviderModal/components/types";
@@ -10,7 +11,7 @@ import { useProviderConfiguration } from "../hooks/useProviderConfiguration";
 import ModelSelection, { hasProviderOwnedEmptyState } from "./ModelSelection";
 import ProviderConfigurationForm from "./ProviderConfigurationForm";
 
-interface ModelProvidersContentProps {
+interface ModelProvidersContentProps extends ProviderScopeParams {
   modelType: ModelTypeFilter;
   onFlushRef?: React.MutableRefObject<(() => Promise<void>) | null>;
   onHasChangesRef?: React.MutableRefObject<(() => boolean) | null>;
@@ -20,6 +21,8 @@ const ModelProvidersContent = ({
   modelType,
   onFlushRef,
   onHasChangesRef,
+  flowId,
+  projectId,
 }: ModelProvidersContentProps) => {
   const { t } = useTranslation();
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
@@ -53,6 +56,8 @@ const ModelProvidersContent = ({
     requiresConfiguration,
   } = useProviderConfiguration({
     selectedProvider,
+    flowId,
+    projectId,
   });
 
   // Expose flushPendingChanges and hasUserMadeChanges to the parent
@@ -122,6 +127,8 @@ const ModelProvidersContent = ({
           onProviderSelect={handleProviderSelect}
           selectedProviderName={syncedSelectedProvider?.provider ?? null}
           query={providerQuery}
+          flowId={flowId}
+          projectId={projectId}
         />
       </div>
 
@@ -183,6 +190,8 @@ const ModelProvidersContent = ({
                 }
                 liveDiscovery={!!syncedSelectedProvider?.live_discovery}
                 isConfigured={!!syncedSelectedProvider?.is_configured}
+                flowId={flowId}
+                projectId={projectId}
               />
             </CustomModelProvidersEmptyState>
           </div>

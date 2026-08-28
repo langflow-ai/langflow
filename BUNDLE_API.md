@@ -190,6 +190,11 @@ the deserialize half is covered by
 ### v0 (this release)
 
 - Initial surface enumerated above.  Frozen as `BUNDLE_API_VERSION = 1`.
+- `ExtensionManifest.version` now accepts the canonical PEP 440 stable, dev,
+  alpha, beta, and release-candidate forms emitted by the repository's bundle
+  release pipeline, in addition to the existing SemVer 2.0.0 forms.  Runtime
+  and published JSON Schema validation remain equivalent; this is additive and
+  does not change `BUNDLE_API_VERSION`.
 - Typed loader diagnostics now distinguish unavailable optional providers from
   broken bundle imports.  `optional-dependency-missing` is added to
   `ERROR_CODES`; a manifest-less `lfx-bundles` module emits this warning only

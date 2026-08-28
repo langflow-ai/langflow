@@ -5,6 +5,7 @@ const mockApiPost = jest.fn();
 const mockQueryClient = {
   refetchQueries: jest.fn(),
   invalidateQueries: jest.fn(),
+  getQueryCache: jest.fn(() => ({ findAll: jest.fn(() => []) })),
 };
 
 jest.mock("@/stores/foldersStore", () => ({
@@ -30,7 +31,7 @@ jest.mock("@/controllers/API/services/request-processor", () => ({
     mutate: jest.fn((_key: any, fn: any, options: any) => ({
       mutate: async (payload: any) => {
         const result = await fn(payload);
-        options?.onSettled?.(result);
+        await options?.onSettled?.(result);
         return result;
       },
     })),
@@ -90,5 +91,36 @@ describe("usePostAddFlow", () => {
       expect.stringContaining("/api/v1/flows/"),
       expect.objectContaining({ locked: null }),
     );
+  });
+
+  it("refetches the created flow's project list", async () => {
+    mockApiPost.mockResolvedValue({
+      data: { id: "new-flow", folder_id: "folder" },
+    });
+
+    const mutation = usePostAddFlow();
+
+    await mutation.mutate({
+      name: "Flow",
+      description: "Desc",
+      data: { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+      is_component: false,
+      folder_id: "folder",
+      endpoint_name: undefined,
+      icon: undefined,
+      gradient: undefined,
+      tags: [],
+      mcp_enabled: true,
+    });
+
+    expect(mockQueryClient.refetchQueries).toHaveBeenCalledWith({
+      queryKey: ["useGetFolder", "folder"],
+    });
+    expect(mockQueryClient.refetchQueries).toHaveBeenCalledWith({
+      queryKey: [
+        "useGetRefreshFlowsQuery",
+        { get_all: true, header_flows: true },
+      ],
+    });
   });
 });

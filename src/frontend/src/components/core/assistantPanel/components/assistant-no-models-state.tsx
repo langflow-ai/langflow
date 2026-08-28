@@ -4,10 +4,12 @@ import langflowAssistantIcon from "@/assets/langflow_assistant.svg";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import ModelProviderModal from "@/modals/modelProviderModal";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 
 export function AssistantNoModelsState() {
   const { t } = useTranslation();
   const [isProviderModalOpen, setIsProviderModalOpen] = useState(false);
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-8 pb-6">
@@ -39,6 +41,7 @@ export function AssistantNoModelsState() {
           open={isProviderModalOpen}
           onClose={() => setIsProviderModalOpen(false)}
           modelType="llm"
+          flowId={currentFlowId}
         />
       )}
     </div>
