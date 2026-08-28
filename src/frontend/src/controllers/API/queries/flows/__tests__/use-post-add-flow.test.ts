@@ -8,8 +8,14 @@ const mockQueryClient = {
   getQueryCache: jest.fn(() => ({ findAll: jest.fn(() => []) })),
 };
 
+type FolderStoreState = { myCollectionId: string };
+type MockMutationFn = (payload: unknown) => Promise<unknown>;
+type MockMutationOptions = {
+  onSettled?: (result: unknown) => void | Promise<void>;
+};
+
 jest.mock("@/stores/foldersStore", () => ({
-  useFolderStore: jest.fn((selector: any) =>
+  useFolderStore: jest.fn((selector: (state: FolderStoreState) => unknown) =>
     selector({ myCollectionId: "mc" }),
   ),
 }));
@@ -28,13 +34,15 @@ jest.mock("@/controllers/API/helpers/constants", () => ({
 
 jest.mock("@/controllers/API/services/request-processor", () => ({
   UseRequestProcessor: jest.fn(() => ({
-    mutate: jest.fn((_key: any, fn: any, options: any) => ({
-      mutate: async (payload: any) => {
-        const result = await fn(payload);
-        await options?.onSettled?.(result);
-        return result;
-      },
-    })),
+    mutate: jest.fn(
+      (_key: unknown, fn: MockMutationFn, options: MockMutationOptions) => ({
+        mutate: async (payload: unknown) => {
+          const result = await fn(payload);
+          await options?.onSettled?.(result);
+          return result;
+        },
+      }),
+    ),
     queryClient: mockQueryClient,
   })),
 }));
