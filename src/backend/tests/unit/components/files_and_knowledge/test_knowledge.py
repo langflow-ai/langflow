@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import json
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from lfx.components.files_and_knowledge.ingestion import KnowledgeIngestionComponent
@@ -97,6 +97,17 @@ class TestKnowledgeComponentShape:
         assert set(component.default_keys) <= all_input_names
         assert "mode" in component.default_keys
         assert "knowledge_base" in component.default_keys
+
+    @pytest.mark.parametrize("name", ["docs.v2", "a" * 100, "a" * 512, "topology+collection"])
+    def test_collection_name_validation_accepts_shared_contract(self, name: str) -> None:
+        assert KnowledgeComponent().is_valid_collection_name(name)
+
+    @pytest.mark.parametrize(
+        "name",
+        ["Q&A docs", "trailing_", "catálogo", "a" * 513, "docs..v2", "127.0.0.1"],
+    )
+    def test_collection_name_validation_rejects_chroma_incompatible_names(self, name: str) -> None:
+        assert not KnowledgeComponent().is_valid_collection_name(name)
 
 
 # ---------------------------------------------------------------------------
@@ -463,6 +474,113 @@ class TestBackendResolution:
             pytest.raises(RuntimeError, match="connection lost"),
         ):
             await component._resolve_backend_config()
+
+
+class TestKnowledgeProviderPolicyPreflight:
+    """Embedding policy is resolved from raw dialog values or stored KB metadata."""
+
+    USER_ID = "3f1c9c1e-6d2a-4a53-8a4e-9c0b1d2e3f40"
+
+    async def test_create_dialog_selection_is_denied_before_dynamic_hook_work(self, monkeypatch) -> None:
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        component = KnowledgeComponent(_user_id=self.USER_ID)
+        denial = ModelProviderPolicyError("openai", ModelProviderPolicyPurpose.CONFIGURE)
+        snapshot = SimpleNamespace(require=Mock(side_effect=denial))
+        resolve_policy = AsyncMock(return_value=snapshot)
+        metadata_lookup = AsyncMock(side_effect=AssertionError("stored KB metadata read for create dialog"))
+        monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+        monkeypatch.setattr(component, "_get_kb_metadata", metadata_lookup)
+
+        parameters = {
+            "knowledge_base": {
+                "01_new_kb_name": "support_docs",
+                "02_embedding_model": [{"name": "text-embedding-3-small", "provider": "OpenAI"}],
+            }
+        }
+        with pytest.raises(ModelProviderPolicyError):
+            await component.arequire_model_provider_policy(
+                ModelProviderPolicyPurpose.CONFIGURE,
+                user_id="policy-actor",
+                parameters=parameters,
+            )
+
+        resolve_policy.assert_awaited_once_with(
+            user_id="policy-actor",
+            providers=["openai"],
+            purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        )
+        metadata_lookup.assert_not_awaited()
+
+    @pytest.mark.parametrize("mode", [MODE_INGEST, MODE_RETRIEVE])
+    async def test_saved_kb_provider_uses_owner_metadata_and_explicit_policy_actor(self, monkeypatch, mode) -> None:
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+        component = KnowledgeComponent(knowledge_base="support_docs", mode=mode, _user_id=self.USER_ID)
+        snapshot = SimpleNamespace(require=Mock())
+        resolve_policy = AsyncMock(return_value=snapshot)
+        metadata_lookup = AsyncMock(
+            return_value={
+                "model_selection": {"name": "text-embedding-3-small", "provider": "OpenAI"},
+                "embedding_provider": "OpenAI",
+            }
+        )
+        monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+        monkeypatch.setattr(component, "_get_kb_metadata", metadata_lookup)
+
+        await component.arequire_model_provider_policy(
+            ModelProviderPolicyPurpose.USE,
+            user_id="policy-actor",
+            parameters={"knowledge_base": "support_docs", "mode": mode},
+        )
+
+        metadata_lookup.assert_awaited_once_with("support_docs")
+        resolve_policy.assert_awaited_once_with(
+            user_id="policy-actor",
+            providers=["openai"],
+            purpose=ModelProviderPolicyPurpose.USE,
+        )
+        snapshot.require.assert_called_once_with("openai")
+
+    async def test_saved_kb_with_unresolvable_provider_fails_closed(self, monkeypatch) -> None:
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        component = KnowledgeComponent(knowledge_base="legacy_docs", _user_id=self.USER_ID)
+        resolve_policy = AsyncMock()
+        monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+        monkeypatch.setattr(
+            component,
+            "_get_kb_metadata",
+            AsyncMock(return_value={"model_selection": {"name": "old-model"}, "embedding_provider": "Unknown"}),
+        )
+
+        with pytest.raises(ModelProviderPolicyError):
+            await component.arequire_model_provider_policy(
+                ModelProviderPolicyPurpose.USE,
+                user_id="policy-actor",
+                parameters={"knowledge_base": "legacy_docs"},
+            )
+
+        resolve_policy.assert_not_awaited()
+
+    async def test_missing_saved_kb_metadata_fails_closed_before_policy_resolution(self, monkeypatch) -> None:
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        component = KnowledgeComponent(knowledge_base="missing_docs", _user_id=self.USER_ID)
+        resolve_policy = AsyncMock()
+        metadata_lookup = AsyncMock(return_value={})
+        monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+        monkeypatch.setattr(component, "_get_kb_metadata", metadata_lookup)
+
+        with pytest.raises(ModelProviderPolicyError):
+            await component.arequire_model_provider_policy(
+                ModelProviderPolicyPurpose.USE,
+                user_id="policy-actor",
+                parameters={"knowledge_base": "missing_docs"},
+            )
+
+        metadata_lookup.assert_awaited_once_with("missing_docs")
+        resolve_policy.assert_not_awaited()
 
 
 # ---------------------------------------------------------------------------
