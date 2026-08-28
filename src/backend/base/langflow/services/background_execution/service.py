@@ -379,7 +379,7 @@ class BackgroundExecutionService(Service):
         # The API models default both fields to {}, so treat empty mappings as no
         # override rather than encrypting an envelope for every ordinary run.
         overrides = {key: value for key, value in supplied_overrides.items() if value}
-        ciphertext: str | None = None
+        metadata: dict[str, Any] = {"request": self._redact_request(request)}
         if overrides:
             from langflow.services.auth.utils import get_fernet
 
@@ -402,26 +402,21 @@ class BackgroundExecutionService(Service):
                 raise
             except Exception:  # noqa: BLE001 -- every crypto/config failure must become the same safe error
                 raise RequestOverridesUnavailableError from None
-        return {
-            "request": self._redact_request(request),
-            _REQUEST_OVERRIDES_FORMAT_KEY: _REQUEST_OVERRIDES_FORMAT,
-            _REQUEST_OVERRIDES_KEY: ciphertext,
-        }
+            metadata[_REQUEST_OVERRIDES_FORMAT_KEY] = _REQUEST_OVERRIDES_FORMAT
+            metadata[_REQUEST_OVERRIDES_KEY] = ciphertext
+        return metadata
 
     def _decrypt_request_overrides(self, job: Job, metadata: dict[str, Any]) -> dict[str, dict[str, Any]]:
         """Authenticate, decrypt, bind, and validate a job's override envelope."""
-        marker = metadata.get(_REQUEST_OVERRIDES_FORMAT_KEY)
-        if marker is None:
-            # Safe legacy rows never carried overrides. A legacy plaintext override
-            # must not bypass the encrypted format merely because it predates the marker.
-            if _REQUEST_OVERRIDES_KEY in metadata:
-                raise RequestOverridesUnavailableError
+        has_marker = _REQUEST_OVERRIDES_FORMAT_KEY in metadata
+        has_ciphertext = _REQUEST_OVERRIDES_KEY in metadata
+        if not has_marker and not has_ciphertext:
+            # New no-override rows and safe legacy rows intentionally carry neither
+            # key. Plaintext values are rejected separately by reconstruction.
             return {}
-        if marker != _REQUEST_OVERRIDES_FORMAT or _REQUEST_OVERRIDES_KEY not in metadata:
+        if not has_marker or not has_ciphertext or metadata[_REQUEST_OVERRIDES_FORMAT_KEY] != _REQUEST_OVERRIDES_FORMAT:
             raise RequestOverridesUnavailableError
         ciphertext = metadata[_REQUEST_OVERRIDES_KEY]
-        if ciphertext is None:
-            return {}
         if not isinstance(ciphertext, str) or not ciphertext:
             raise RequestOverridesUnavailableError
 
@@ -783,10 +778,13 @@ class BackgroundExecutionService(Service):
                 "session_id": meta.get("session_id"),
                 "input_value": meta.get("input_value", ""),
             }
-        # No plaintext override is accepted, including on old rows: otherwise a
-        # missing marker would silently downgrade the authenticated format.
-        if _REQUEST_OVERRIDE_FIELDS.intersection(request):
-            raise RequestOverridesUnavailableError
+        # Pre-fix v2 requests always included empty override defaults. They carry
+        # no value and are safe to normalize away; every other plaintext shape
+        # remains a fail-closed downgrade attempt.
+        for key in _REQUEST_OVERRIDE_FIELDS.intersection(request):
+            value = request.pop(key)
+            if not isinstance(value, dict) or value:
+                raise RequestOverridesUnavailableError
         return {**request, **self._decrypt_request_overrides(job, meta)}
 
     @staticmethod
