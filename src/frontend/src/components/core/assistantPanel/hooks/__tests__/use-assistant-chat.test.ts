@@ -464,6 +464,41 @@ describe("useAssistantChat", () => {
     });
   });
 
+  describe("handleRetry", () => {
+    it("keeps a failed message inert when its exact model was revoked", async () => {
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onError({
+            event: "error",
+            message: "temporary failure",
+          });
+        },
+      );
+      const { result } = renderHook(() => useAssistantChat());
+
+      await act(async () => {
+        await result.current.handleSend("try once", TEST_MODEL);
+      });
+      const failedMessageId = result.current.messages[1].id;
+      mockPostAssistStream.mockClear();
+      const isModelEnabled = jest.fn(
+        (model: typeof TEST_MODEL) => model.provider === "anthropic",
+      );
+
+      act(() => {
+        result.current.handleRetry(failedMessageId, isModelEnabled);
+      });
+
+      expect(isModelEnabled).toHaveBeenCalledWith(TEST_MODEL);
+      expect(mockPostAssistStream).not.toHaveBeenCalled();
+      expect(
+        result.current.messages.some(
+          (message) => message.id === failedMessageId,
+        ),
+      ).toBe(true);
+    });
+  });
+
   describe("handleApprove", () => {
     it("should validate and add component for a validated message", async () => {
       mockPostAssistStream.mockImplementation(
@@ -742,6 +777,46 @@ describe("useAssistantChat", () => {
       expect(request.input_value.toLowerCase()).toContain("approve");
     });
 
+    it("does not approve or send a plan continuation after the model is revoked", async () => {
+      let modelAllowed = true;
+      mockPostAssistStream.mockImplementationOnce(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "propose_plan",
+            markdown: "Plan",
+          });
+          callbacks.onComplete({
+            event: "complete",
+            data: { result: "", validated: true },
+          });
+        },
+      );
+      const { result } = renderHook(() =>
+        useAssistantChat({ canUseModel: () => modelAllowed }),
+      );
+      await act(async () => {
+        await result.current.handleSend("build a flow", TEST_MODEL);
+      });
+      const assistantMsg = result.current.messages.find(
+        (message) => message.pendingPlanProposal,
+      );
+      expect(assistantMsg).toBeDefined();
+
+      modelAllowed = false;
+      mockPostAssistStream.mockClear();
+      await act(async () => {
+        await result.current.handleApprovePlan(assistantMsg!.id);
+      });
+
+      expect(mockPostAssistStream).not.toHaveBeenCalled();
+      expect(
+        result.current.messages.find(
+          (message) => message.id === assistantMsg!.id,
+        )?.planProposalStatus,
+      ).toBe("pending");
+    });
+
     it("should_mark_plan_as_refining_when_handleDismissPlan_called", async () => {
       mockPostAssistStream.mockImplementation(
         async (_request: unknown, callbacks: Record<string, Function>) => {
@@ -832,8 +907,6 @@ describe("useAssistantChat", () => {
 
   describe("bugs and edge cases", () => {
     it("completedSteps should track step transitions", async () => {
-      const progressSteps: string[] = [];
-
       mockPostAssistStream.mockImplementation(
         async (_request: unknown, callbacks: Record<string, Function>) => {
           callbacks.onProgress({
