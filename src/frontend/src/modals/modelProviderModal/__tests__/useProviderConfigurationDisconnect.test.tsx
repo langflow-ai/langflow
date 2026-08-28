@@ -31,7 +31,7 @@ let mockModelProvidersIsFetching = false;
 let mockModelProvidersIsError = false;
 let mockModelProvidersIsSuccess = true;
 let mockModelProvidersFetchStatus: "idle" | "fetching" | "paused" = "idle";
-let mockQueryStateTrusted = true;
+let mockInvalidatedQueryKey: readonly unknown[] | null = null;
 
 const deleteCalls: Array<{ id: string | undefined }> = [];
 const mockDeleteMutateAsync = jest.fn((params: { id: string | undefined }) => {
@@ -45,6 +45,12 @@ const mockSetSuccessData = jest.fn();
 const mockSetErrorData = jest.fn();
 const mockInvalidateQueries = jest.fn();
 const mockRefetchQueries = jest.fn();
+const mockGetQueryState = jest.fn((queryKey: readonly unknown[]) => ({
+  status: "success",
+  fetchStatus: "idle",
+  isInvalidated:
+    JSON.stringify(queryKey) === JSON.stringify(mockInvalidatedQueryKey),
+}));
 const mockUseGetModelProviders = jest.fn(
   (_params?: unknown, _options?: unknown) => ({
     data: mockModelProviders,
@@ -60,10 +66,7 @@ jest.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({
     invalidateQueries: mockInvalidateQueries,
     refetchQueries: mockRefetchQueries,
-    getQueryState: () =>
-      mockQueryStateTrusted
-        ? { status: "success", fetchStatus: "idle", isInvalidated: false }
-        : { status: "success", fetchStatus: "idle", isInvalidated: true },
+    getQueryState: mockGetQueryState,
   }),
 }));
 
@@ -189,7 +192,7 @@ describe("useProviderConfiguration.handleDisconnect", () => {
     mockModelProvidersIsError = false;
     mockModelProvidersIsSuccess = true;
     mockModelProvidersFetchStatus = "idle";
-    mockQueryStateTrusted = true;
+    mockInvalidatedQueryKey = null;
     mockValidateMutateAsync.mockReset();
     mockValidateMutateAsync.mockResolvedValue({ valid: true });
     deleteCalls.length = 0;
@@ -416,7 +419,7 @@ describe("useProviderConfiguration policy refresh", () => {
     mockModelProvidersIsError = false;
     mockModelProvidersIsSuccess = true;
     mockModelProvidersFetchStatus = "idle";
-    mockQueryStateTrusted = true;
+    mockInvalidatedQueryKey = null;
     mockCreateMutateAsync.mockClear();
     mockValidateMutateAsync.mockReset();
     mockValidateMutateAsync.mockResolvedValue({ valid: true });
@@ -544,7 +547,14 @@ describe("useProviderConfiguration policy refresh", () => {
     await waitFor(() =>
       expect(result.current.syncedSelectedProvider?.provider).toBe("OpenAI"),
     );
-    mockQueryStateTrusted = false;
+    mockInvalidatedQueryKey = [
+      "useGetModelProviders",
+      true,
+      undefined,
+      undefined,
+      undefined,
+      "configure",
+    ];
 
     await act(async () => result.current.handleDisconnect());
 
@@ -590,7 +600,14 @@ describe("useProviderConfiguration policy refresh", () => {
       savePromise = result.current.handleSaveAllVariables();
     });
     await waitFor(() => expect(mockValidateMutateAsync).toHaveBeenCalled());
-    mockQueryStateTrusted = false;
+    mockInvalidatedQueryKey = [
+      "useGetModelProviders",
+      true,
+      undefined,
+      undefined,
+      undefined,
+      "configure",
+    ];
     resolveValidation({ valid: true });
     await act(async () => savePromise);
 
@@ -951,6 +968,103 @@ describe("useProviderConfiguration.handleSaveAllVariables", () => {
         mockCreateMutateAsync.mock.calls.map(([{ name }]) => name),
       ).toEqual(["OPENAI_BASE_URL", "OPENAI_API_KEY"]);
       expect(mockSetErrorData).not.toHaveBeenCalled();
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
+  it("completes a multi-variable save after each own variable-cache refresh", async () => {
+    mockProviderVariablesMapping.Anthropic = [
+      {
+        variable_name: "Base URL",
+        variable_key: "ANTHROPIC_BASE_URL",
+        required: false,
+        is_secret: false,
+        is_list: false,
+        options: [],
+      },
+      {
+        variable_name: "API Key",
+        variable_key: "ANTHROPIC_API_KEY",
+        required: true,
+        is_secret: true,
+        is_list: false,
+        options: [],
+      },
+    ];
+    mockModelProviders = [
+      {
+        provider: "Anthropic",
+        is_enabled: false,
+        is_configured: false,
+        models: [],
+      },
+    ];
+    const globalVariablesKey = ["useGetGlobalVariables", undefined, undefined];
+    mockCreateMutateAsync.mockImplementation(async () => {
+      mockInvalidatedQueryKey = globalVariablesKey;
+    });
+    mockRefetchQueries.mockImplementation(async ({ queryKey }) => {
+      if (JSON.stringify(queryKey) === JSON.stringify(globalVariablesKey)) {
+        mockInvalidatedQueryKey = null;
+      }
+    });
+    const provider: Provider = {
+      provider: "Anthropic",
+      icon: "Anthropic",
+      is_enabled: false,
+      is_configured: false,
+      models: [],
+    };
+
+    const { result, rerender } = renderProviderConfiguration(provider);
+
+    act(() => {
+      result.current.handleVariableChange(
+        "ANTHROPIC_BASE_URL",
+        "https://api.anthropic.com",
+      );
+      result.current.handleVariableChange("ANTHROPIC_API_KEY", "test-api-key");
+    });
+
+    const dateNowSpy = jest
+      .spyOn(Date, "now")
+      .mockImplementationOnce(() => 0)
+      .mockImplementation(() => 500);
+
+    try {
+      await act(async () => result.current.handleSaveAllVariables());
+
+      expect(
+        mockCreateMutateAsync.mock.calls.map(([{ name }]) => name),
+      ).toEqual(["ANTHROPIC_BASE_URL", "ANTHROPIC_API_KEY"]);
+      expect(
+        mockRefetchQueries.mock.calls.filter(
+          ([{ queryKey }]) =>
+            JSON.stringify(queryKey) === JSON.stringify(globalVariablesKey),
+        ),
+      ).toEqual([
+        [
+          { queryKey: globalVariablesKey, exact: true },
+          { cancelRefetch: false },
+        ],
+        [
+          { queryKey: globalVariablesKey, exact: true },
+          { cancelRefetch: false },
+        ],
+      ]);
+      expect(result.current.isFetchingAfterSave).toBe(true);
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["useGetModelProviders"],
+      });
+
+      mockModelProvidersIsFetching = true;
+      rerender({ provider });
+      mockModelProvidersIsFetching = false;
+      rerender({ provider });
+
+      await waitFor(() => expect(mockSetSuccessData).toHaveBeenCalled());
+      expect(result.current.isFetchingAfterSave).toBe(false);
     } finally {
       dateNowSpy.mockRestore();
     }

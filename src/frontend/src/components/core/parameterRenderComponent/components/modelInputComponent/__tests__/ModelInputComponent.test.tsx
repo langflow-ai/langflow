@@ -321,6 +321,92 @@ describe("ModelInputComponent", () => {
       expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     });
 
+    it("supports an explicit install-wide policy context outside a flow", () => {
+      mockCurrentFlowId = "";
+
+      renderWithQueryClient(
+        <ModelInputComponent {...defaultProps} providerScope={{}} />,
+      );
+
+      expect(useGetModelProviders).toHaveBeenCalledWith(
+        { purpose: "use" },
+        { enabled: true },
+      );
+      expect(useGetEnabledModels).toHaveBeenCalledWith({
+        purpose: "use",
+        enabled: true,
+      });
+      expect(screen.getByRole("combobox")).toBeInTheDocument();
+    });
+
+    it("fails closed for an explicitly empty flow scope", () => {
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          providerScope={{ flowId: "" }}
+        />,
+      );
+
+      expect(useGetModelProviders).toHaveBeenCalledWith(
+        { flowId: "", purpose: "use" },
+        { enabled: false },
+      );
+      expect(useGetEnabledModels).toHaveBeenCalledWith({
+        flowId: "",
+        purpose: "use",
+        enabled: false,
+      });
+      expect(screen.getByText("Loading models")).toBeInTheDocument();
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    });
+
+    it("fails closed for an explicit undefined scope", () => {
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          providerScope={{ flowId: undefined }}
+        />,
+      );
+
+      expect(useGetModelProviders).toHaveBeenCalledWith(
+        { flowId: undefined, purpose: "use" },
+        { enabled: false },
+      );
+      expect(useGetEnabledModels).toHaveBeenCalledWith({
+        flowId: undefined,
+        purpose: "use",
+        enabled: false,
+      });
+      expect(screen.getByText("Loading models")).toBeInTheDocument();
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    });
+
+    it("fails closed when both explicit scope keys are present", () => {
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          providerScope={{ flowId: "flow-one", projectId: "project-one" }}
+        />,
+      );
+
+      expect(useGetModelProviders).toHaveBeenCalledWith(
+        {
+          flowId: "flow-one",
+          projectId: "project-one",
+          purpose: "use",
+        },
+        { enabled: false },
+      );
+      expect(useGetEnabledModels).toHaveBeenCalledWith({
+        flowId: "flow-one",
+        projectId: "project-one",
+        purpose: "use",
+        enabled: false,
+      });
+      expect(screen.getByText("Loading models")).toBeInTheDocument();
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    });
+
     it("fails closed while a policy query is paused with cached data", () => {
       (useGetModelProviders as jest.Mock).mockReturnValue({
         data: mockProvidersData,
@@ -635,6 +721,39 @@ describe("ModelInputComponent", () => {
       await waitFor(() => {
         expect(screen.getByText("Loading models")).toBeInTheDocument();
       });
+    });
+
+    it("keeps the provider dialog mounted during a picker policy refetch", async () => {
+      let providersFetching = false;
+      const mockedProviders = useGetModelProviders as jest.MockedFunction<
+        typeof useGetModelProviders
+      >;
+      mockedProviders.mockImplementation(
+        () =>
+          ({
+            data: mockProvidersData,
+            isLoading: false,
+            isFetching: providersFetching,
+            fetchStatus: providersFetching ? "fetching" : "idle",
+            error: null,
+            refetch: jest.fn(),
+          }) as unknown as ReturnType<typeof useGetModelProviders>,
+      );
+
+      const user = userEvent.setup();
+      const { rerenderWithProvider } = renderWithQueryClient(
+        <ModelInputComponent {...defaultProps} />,
+      );
+
+      await user.click(screen.getByRole("combobox"));
+      await user.click(await screen.findByTestId("manage-model-providers"));
+      expect(screen.getByTestId("model-provider-modal")).toBeInTheDocument();
+
+      providersFetching = true;
+      rerenderWithProvider(<ModelInputComponent {...defaultProps} />);
+
+      expect(screen.getByText("Loading models")).toBeInTheDocument();
+      expect(screen.getByTestId("model-provider-modal")).toBeInTheDocument();
     });
 
     it("keeps loading state until providers and enabled-models refetches settle", async () => {

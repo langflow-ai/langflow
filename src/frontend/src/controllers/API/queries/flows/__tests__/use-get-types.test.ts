@@ -14,6 +14,8 @@ const mockQuery = jest.fn((key, fn, _options) => {
   }, [keyString]);
   return {
     data,
+    dataUpdatedAt: data === undefined ? 0 : 1,
+    fetchStatus: data === undefined ? "fetching" : "idle",
     isFetching: data === undefined,
     isLoading: data === undefined,
     isSuccess: data !== undefined,

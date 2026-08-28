@@ -1,17 +1,46 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { axe } from "@/utils/a11y-test";
 import DBProviderInputComponent, { DBProviderInput } from "..";
 
-const mockUseGetGlobalVariables = jest.fn((_options?: unknown) => ({
+type MockGlobalVariablesQuery = {
+  data: never[];
+  isSuccess: boolean;
+  isFetching: boolean;
+  isError: boolean;
+  fetchStatus: "idle" | "fetching" | "paused";
+};
+
+let mockGlobalVariablesQuery: MockGlobalVariablesQuery = {
   data: [],
-  isFetched: true,
-  isFetching: false,
   isSuccess: true,
+  isFetching: false,
+  isError: false,
+  fetchStatus: "idle",
+};
+let mockGlobalVariablesQueryState = {
+  status: "success",
+  fetchStatus: "idle",
+  isInvalidated: false,
+};
+const mockGetQueryState = jest.fn(() => mockGlobalVariablesQueryState);
+const mockQueryClient = { getQueryState: mockGetQueryState };
+const mockUseGetGlobalVariables = jest.fn(
+  (_options?: unknown) => mockGlobalVariablesQuery,
+);
+
+jest.mock("@tanstack/react-query", () => ({
+  ...jest.requireActual("@tanstack/react-query"),
+  useQueryClient: () => mockQueryClient,
 }));
 let mockCurrentFlowId = "flow-project-a";
 
 jest.mock("@/controllers/API/queries/variables", () => ({
+  getGlobalVariablesQueryKey: ({ flowId }: { flowId?: string } = {}) => [
+    "useGetGlobalVariables",
+    flowId,
+    undefined,
+  ],
   useGetGlobalVariables: (options?: unknown) =>
     mockUseGetGlobalVariables(options),
 }));
@@ -106,13 +135,20 @@ describe("DBProviderInput", () => {
 describe("DBProviderInputComponent", () => {
   beforeEach(() => {
     mockCurrentFlowId = "flow-project-a";
-    mockUseGetGlobalVariables.mockReset();
-    mockUseGetGlobalVariables.mockReturnValue({
+    mockGlobalVariablesQuery = {
       data: [],
-      isFetched: true,
-      isFetching: false,
       isSuccess: true,
-    });
+      isFetching: false,
+      isError: false,
+      fetchStatus: "idle",
+    };
+    mockGlobalVariablesQueryState = {
+      status: "success",
+      fetchStatus: "idle",
+      isInvalidated: false,
+    };
+    mockGetQueryState.mockClear();
+    mockUseGetGlobalVariables.mockClear();
   });
 
   // The canvas field label reaches the trigger only if the wrapper forwards
@@ -135,14 +171,8 @@ describe("DBProviderInputComponent", () => {
     });
   });
 
-  it("waits for a successful scoped variable query before initializing a default", () => {
+  it("waits for a flow before initializing a default", async () => {
     mockCurrentFlowId = "";
-    mockUseGetGlobalVariables.mockReturnValue({
-      data: [],
-      isFetched: false,
-      isFetching: false,
-      isSuccess: false,
-    });
     const handleOnNewValue = jest.fn();
     const { rerender } = render(
       <MemoryRouter>
@@ -157,12 +187,6 @@ describe("DBProviderInputComponent", () => {
     expect(handleOnNewValue).not.toHaveBeenCalled();
 
     mockCurrentFlowId = "flow-project-a";
-    mockUseGetGlobalVariables.mockReturnValue({
-      data: [],
-      isFetched: true,
-      isFetching: false,
-      isSuccess: true,
-    });
     rerender(
       <MemoryRouter>
         <DBProviderInputComponent
@@ -173,6 +197,119 @@ describe("DBProviderInputComponent", () => {
       </MemoryRouter>,
     );
 
-    expect(handleOnNewValue).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(handleOnNewValue).toHaveBeenCalledTimes(1));
+  });
+
+  it("waits for a successful scoped variable query before initializing a default", async () => {
+    const handleOnNewValue = jest.fn();
+    mockGlobalVariablesQuery = {
+      data: [],
+      isSuccess: false,
+      isFetching: true,
+      isError: false,
+      fetchStatus: "fetching",
+    };
+    const { rerender } = render(
+      <MemoryRouter>
+        <DBProviderInputComponent
+          {...fieldProps}
+          value={undefined}
+          handleOnNewValue={handleOnNewValue}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(handleOnNewValue).not.toHaveBeenCalled();
+
+    mockGlobalVariablesQuery = {
+      data: [],
+      isSuccess: true,
+      isFetching: false,
+      isError: false,
+      fetchStatus: "idle",
+    };
+    rerender(
+      <MemoryRouter>
+        <DBProviderInputComponent
+          {...fieldProps}
+          value={undefined}
+          handleOnNewValue={handleOnNewValue}
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(handleOnNewValue).toHaveBeenCalledTimes(1));
+  });
+
+  it("waits for paused and invalidated scoped queries before initializing", async () => {
+    const handleOnNewValue = jest.fn();
+    mockGlobalVariablesQuery = {
+      data: [],
+      isSuccess: true,
+      isFetching: false,
+      isError: false,
+      fetchStatus: "paused",
+    };
+    const { rerender } = render(
+      <MemoryRouter>
+        <DBProviderInputComponent
+          {...fieldProps}
+          value={undefined}
+          handleOnNewValue={handleOnNewValue}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(handleOnNewValue).not.toHaveBeenCalled();
+
+    mockGlobalVariablesQuery = {
+      data: [],
+      isSuccess: true,
+      isFetching: false,
+      isError: false,
+      fetchStatus: "idle",
+    };
+    mockGlobalVariablesQueryState = {
+      status: "success",
+      fetchStatus: "idle",
+      isInvalidated: true,
+    };
+    rerender(
+      <MemoryRouter>
+        <DBProviderInputComponent
+          {...fieldProps}
+          value={undefined}
+          handleOnNewValue={handleOnNewValue}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(handleOnNewValue).not.toHaveBeenCalled();
+    expect(mockGetQueryState).toHaveBeenCalledWith([
+      "useGetGlobalVariables",
+      "flow-project-a",
+      undefined,
+    ]);
+
+    mockGlobalVariablesQueryState = {
+      status: "success",
+      fetchStatus: "idle",
+      isInvalidated: false,
+    };
+    mockGlobalVariablesQuery = {
+      ...mockGlobalVariablesQuery,
+      data: [],
+    };
+    rerender(
+      <MemoryRouter>
+        <DBProviderInputComponent
+          {...fieldProps}
+          value={undefined}
+          handleOnNewValue={handleOnNewValue}
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(handleOnNewValue).toHaveBeenCalledTimes(1));
   });
 });

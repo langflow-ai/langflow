@@ -108,6 +108,7 @@ export default function CreateMemoryModal({
                   setSelectedEmbeddingModel(value);
                 }}
                 options={embeddingModelOptions}
+                providerScope={{ flowId }}
                 placeholder={t("memory.selectEmbeddingModel")}
                 modelType="embeddings"
               />
@@ -220,6 +221,7 @@ export default function CreateMemoryModal({
                       setSelectedPreprocessingModel(value);
                     }}
                     options={llmModelOptions}
+                    providerScope={{ flowId }}
                     placeholder={t("memory.selectPreprocessingModel")}
                     modelType="llm"
                   />

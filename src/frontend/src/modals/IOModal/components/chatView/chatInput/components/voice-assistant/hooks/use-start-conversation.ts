@@ -98,10 +98,17 @@ export const useStartConversation = (
 
     socket.onerror = (error) => {
       if (wsRef.current !== socket) return;
-      wsRef.current = null;
       console.error("WebSocket Error:", error);
       setStatus(i18n.t("voiceAssistant.connectionError"));
       stopRecording();
+      if (wsRef.current === socket) {
+        wsRef.current = null;
+        socket.onopen = null;
+        socket.onmessage = null;
+        socket.onerror = null;
+        socket.onclose = null;
+        socket.close();
+      }
     };
   } catch (error) {
     console.error("Failed to create WebSocket:", error);

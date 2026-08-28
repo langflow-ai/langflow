@@ -18,6 +18,7 @@ const mockPostAddFolder = jest.fn();
 const mockUpdateGroupRecursion = jest.fn();
 const mockGetQueryData = jest.fn();
 const mockGetQueryState = jest.fn();
+const mockFetchQuery = jest.fn();
 const PROJECT_VARIABLES: GlobalVariable[] = [
   {
     id: "project-variable",
@@ -36,6 +37,7 @@ jest.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({
     getQueryData: (queryKey: unknown) => mockGetQueryData(queryKey),
     getQueryState: (queryKey: unknown) => mockGetQueryState(queryKey),
+    fetchQuery: (options: unknown) => mockFetchQuery(options),
   }),
 }));
 
@@ -195,6 +197,7 @@ beforeEach(() => {
   mockFolderId = "folder-1";
   mockMyCollectionId = "folder-1";
   mockFolders = [{ id: "folder-1" }];
+  mockFetchQuery.mockRejectedValue(new Error("project snapshot unavailable"));
   mockGetQueryData.mockImplementation((queryKey) =>
     JSON.stringify(queryKey) ===
     JSON.stringify(getGlobalVariablesQueryKey({ projectId: "folder-1" }))
@@ -374,6 +377,28 @@ describe("useAddFlow — success path", () => {
       [],
       undefined,
       undefined,
+    );
+  });
+
+  it("fetches the exact project snapshot before cleaning imported references", async () => {
+    mockScopedGlobalVariables = undefined;
+    mockFetchQuery.mockResolvedValue(PROJECT_VARIABLES);
+    resolveAddFlow(FLOW_WITH_PROJECT_CREDENTIAL);
+
+    const { result } = renderHook(() => useAddFlow());
+    await result.current({ flow: FLOW_WITH_PROJECT_CREDENTIAL });
+
+    expect(mockFetchQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: getGlobalVariablesQueryKey({ projectId: "folder-1" }),
+        queryFn: expect.any(Function),
+      }),
+    );
+    expect(mockUpdateGroupRecursion).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "credential-node" }),
+      [],
+      { "API Key": "PROJECT_KEY" },
+      ["PROJECT_KEY"],
     );
   });
 

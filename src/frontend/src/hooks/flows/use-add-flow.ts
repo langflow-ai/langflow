@@ -6,6 +6,7 @@ import { getGlobalVariablesQueryKey } from "@/controllers/API/helpers/global-var
 import { getSettledSuccessfulQueryData } from "@/controllers/API/helpers/query-cache";
 import { usePostAddFlow } from "@/controllers/API/queries/flows/use-post-add-flow";
 import { usePostFolders } from "@/controllers/API/queries/folders";
+import { fetchGlobalVariables } from "@/controllers/API/queries/variables/use-get-global-variables";
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -92,12 +93,24 @@ const useAddFlow = () => {
     // exact target project. If that snapshot is not ready (or a project was
     // just created), preserving the reference is safer than treating a global
     // or sibling-project list as authoritative and silently clearing it.
-    const cleanupVariables = folder_id
+    let cleanupVariables = folder_id
       ? getSettledSuccessfulQueryData<GlobalVariable[]>(
           queryClient,
           getGlobalVariablesQueryKey({ projectId: folder_id }),
         )
       : undefined;
+    if (folder_id && cleanupVariables === undefined) {
+      try {
+        cleanupVariables = await queryClient.fetchQuery({
+          queryKey: getGlobalVariablesQueryKey({ projectId: folder_id }),
+          queryFn: () => fetchGlobalVariables({ projectId: folder_id }),
+        });
+      } catch {
+        // Preserve stored references when the exact project policy snapshot
+        // cannot be loaded; a missing snapshot must never act like an empty one.
+        cleanupVariables = undefined;
+      }
+    }
     const unavailableFields = cleanupVariables
       ? getUnavailableFields(cleanupVariables)
       : undefined;

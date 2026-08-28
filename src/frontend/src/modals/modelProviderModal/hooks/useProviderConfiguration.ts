@@ -557,6 +557,18 @@ export const useProviderConfiguration = ({
             projectId,
           });
         }
+
+        // Variable mutations start an exact scoped-cache refetch in onSettled.
+        // Wait for that self-induced refresh instead of treating it as a policy
+        // revocation, then re-run every fail-closed policy check before the next
+        // write or the completion path.
+        if (!isSettledSuccessfulQuery(queryClient, globalVariablesQueryKey)) {
+          await queryClient.refetchQueries(
+            { queryKey: globalVariablesQueryKey, exact: true },
+            { cancelRefetch: false },
+          );
+        }
+        if (!canUseCurrentProviderPolicy(providerName)) return;
       }
 
       if (!canUseCurrentProviderPolicy(providerName)) return;
@@ -590,7 +602,10 @@ export const useProviderConfiguration = ({
     updateGlobalVariable,
     flowId,
     projectId,
-    setSuccessData,
+    queryClient,
+    globalVariablesQueryKey,
+    validateCredentials,
+    t,
     setErrorData,
     invalidateProviderQueries,
   ]);

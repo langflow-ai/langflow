@@ -206,7 +206,19 @@ export async function mockModels(page: LangflowPage) {
     route.fulfill({ json: MODEL_PROVIDERS }),
   );
   await page.route(ENABLED_MODELS_GLOB, (route) =>
-    route.fulfill({ json: { enabled_models: {} } }),
+    route.fulfill({
+      json: {
+        enabled_models: {
+          OpenAI: { "text-embedding-3-small": true },
+        },
+        enabled_models_by_type: {
+          OpenAI: {
+            llm: {},
+            embeddings: { "text-embedding-3-small": true },
+          },
+        },
+      },
+    }),
   );
 }
 

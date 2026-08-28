@@ -4,6 +4,7 @@ This module contains tests for verifying the functionality of the ParameterHandl
 which is responsible for processing and managing parameters in vertices.
 """
 
+import asyncio
 import copy
 import pickle
 from unittest.mock import AsyncMock, Mock, patch
@@ -16,7 +17,7 @@ from lfx.graph import Graph
 from lfx.graph.edge.base import Edge
 from lfx.graph.vertex import base as vertex_base_module
 from lfx.graph.vertex import vertex_types as vertex_types_module
-from lfx.graph.vertex.base import ParameterHandler, Vertex
+from lfx.graph.vertex.base import ParameterHandler, Vertex, VertexStates
 from lfx.interface.components import component_cache
 from lfx.services.model_provider_policy import (
     BaseModelProviderPolicyService,
@@ -139,6 +140,42 @@ async def test_worker_restored_component_refreshes_current_hierarchy_with_explic
             attributes={"project_id": "project-moved", "workspace_id": "workspace-current"},
         )
     ]
+
+
+@pytest.mark.asyncio
+async def test_provider_preflight_forwards_event_manager_to_component_construction():
+    vertex = object.__new__(Vertex)
+    vertex.custom_component = None
+    vertex.instantiate_component = Mock()
+    vertex._bind_restored_component_user = Mock()
+    event_manager = Mock()
+
+    await vertex.arequire_model_provider_policy(user_id="actor-1", event_manager=event_manager)
+
+    vertex.instantiate_component.assert_called_once_with(user_id="actor-1", event_manager=event_manager)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("frozen", "requester"), [(True, None), (False, Mock())])
+async def test_cached_build_reauthorization_forwards_event_manager(monkeypatch, frozen, requester):
+    """Cached public build paths must preserve the manager used to construct missing components."""
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: None)
+    vertex = object.__new__(Vertex)
+    vertex._lock = asyncio.Lock()
+    vertex.state = VertexStates.ACTIVE
+    vertex.display_name = "Cached Model"
+    vertex._is_loop = False
+    vertex.frozen = frozen
+    vertex.built = True
+    vertex.arequire_model_provider_policy = AsyncMock()
+    vertex.get_requester_result = AsyncMock(return_value="cached result")
+    event_manager = Mock()
+
+    result = await vertex.build(user_id="actor-1", requester=requester, event_manager=event_manager)
+
+    assert result == "cached result"
+    vertex.arequire_model_provider_policy.assert_awaited_once_with("actor-1", event_manager=event_manager)
+    vertex.get_requester_result.assert_awaited_once_with(requester)
 
 
 @pytest.mark.asyncio

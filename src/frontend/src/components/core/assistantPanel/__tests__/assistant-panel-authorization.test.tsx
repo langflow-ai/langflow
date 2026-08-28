@@ -118,7 +118,7 @@ jest.mock("../hooks", () => ({
     isCatalogReady: mockCatalogReady,
     isLoading: !mockCatalogReady,
     isError: false,
-    isModelEnabled: mockIsModelEnabled,
+    isModelEnabled: (model: AssistantModel | null) => mockIsModelEnabled(model),
   }),
   useAssistantChat: () => ({
     messages: [],
@@ -169,20 +169,28 @@ describe("AssistantPanel scoped model authorization", () => {
     mockCatalogReady = false;
     mockPendingMessage = "build a flow";
 
-    render(<AssistantPanel isOpen onClose={jest.fn()} />);
+    const { rerender } = render(<AssistantPanel isOpen onClose={jest.fn()} />);
 
-    await waitFor(() => expect(mockHandleSend).not.toHaveBeenCalled());
+    expect(mockHandleSend).not.toHaveBeenCalled();
     expect(mockClearPendingMessage).not.toHaveBeenCalled();
+
+    mockCatalogReady = true;
+    rerender(<AssistantPanel isOpen onClose={jest.fn()} />);
+    await waitFor(() => expect(mockHandleSend).toHaveBeenCalled());
   });
 
   it("rejects a stale localStorage model when auto-sending after a scope switch", async () => {
     mockModelAllowed = false;
     mockPendingMessage = "build a flow";
 
-    render(<AssistantPanel isOpen onClose={jest.fn()} />);
+    const { rerender } = render(<AssistantPanel isOpen onClose={jest.fn()} />);
 
-    await waitFor(() => expect(mockHandleSend).not.toHaveBeenCalled());
+    expect(mockHandleSend).not.toHaveBeenCalled();
     expect(mockClearPendingMessage).not.toHaveBeenCalled();
+
+    mockModelAllowed = true;
+    rerender(<AssistantPanel isOpen onClose={jest.fn()} />);
+    await waitFor(() => expect(mockHandleSend).toHaveBeenCalled());
   });
 
   it("guards direct panel sends with current catalog membership", async () => {

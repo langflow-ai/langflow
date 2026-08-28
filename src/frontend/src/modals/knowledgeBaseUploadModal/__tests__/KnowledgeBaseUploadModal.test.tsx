@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { BrowserRouter } from "react-router-dom";
+import type { EnabledModelsResponse } from "@/controllers/API/queries/models/use-get-enabled-models";
 
 // ── Mocks (must precede component imports) ──────────────────────────────────
 
@@ -86,7 +87,15 @@ const MODEL_PROVIDERS = [
 ];
 
 let mockModelProvidersResult: Record<string, unknown>;
-let mockEnabledModelsResult: Record<string, unknown>;
+type MockEnabledModelsResult = {
+  data: EnabledModelsResponse;
+  isLoading: boolean;
+  isFetching: boolean;
+  isError: boolean;
+  isSuccess: boolean;
+  fetchStatus: "idle" | "fetching" | "paused";
+};
+let mockEnabledModelsResult: MockEnabledModelsResult;
 let mockGlobalVariablesResult: Record<string, unknown>;
 const mockUseGetModelProviders = jest.fn();
 const mockUseGetEnabledModels = jest.fn();
@@ -1149,14 +1158,38 @@ describe("KnowledgeBaseUploadModal", () => {
       );
     });
 
-    it("keeps an existing model without provider identity inert", async () => {
+    it.each([undefined, "Unknown"])(
+      "recovers an existing model when the legacy provider is %s",
+      async (embeddingProvider) => {
+        render(
+          <KnowledgeBaseUploadModal
+            open={true}
+            setOpen={jest.fn()}
+            existingKnowledgeBase={{
+              name: existingKB.name,
+              embeddingModel: existingKB.embeddingModel,
+              embeddingProvider,
+            }}
+            hideAdvanced={true}
+          />,
+          { wrapper: createWrapper() },
+        );
+
+        await waitFor(() =>
+          expect(screen.getByTestId("kb-create-button")).toBeEnabled(),
+        );
+        expect(screen.getByText(existingKB.embeddingModel)).toBeInTheDocument();
+      },
+    );
+
+    it("does not replace a known but unavailable provider with another provider", async () => {
       render(
         <KnowledgeBaseUploadModal
           open={true}
           setOpen={jest.fn()}
           existingKnowledgeBase={{
-            name: existingKB.name,
-            embeddingModel: existingKB.embeddingModel,
+            ...existingKB,
+            embeddingProvider: "Unavailable Provider",
           }}
           hideAdvanced={true}
         />,
@@ -1166,7 +1199,117 @@ describe("KnowledgeBaseUploadModal", () => {
       await waitFor(() =>
         expect(screen.getByTestId("kb-create-button")).toBeDisabled(),
       );
-      expect(screen.getByText(existingKB.embeddingModel)).toBeInTheDocument();
+    });
+
+    it("fails closed when an unknown legacy provider has ambiguous model matches", async () => {
+      mockModelProvidersResult = {
+        ...mockModelProvidersResult,
+        data: [
+          ...MODEL_PROVIDERS,
+          {
+            provider: "Azure AI Foundry",
+            is_enabled: true,
+            icon: "Azure",
+            models: [
+              {
+                model_name: existingKB.embeddingModel,
+                metadata: { model_type: "embeddings" },
+              },
+            ],
+          },
+        ],
+      };
+      mockEnabledModelsResult = {
+        ...mockEnabledModelsResult,
+        data: {
+          ...mockEnabledModelsResult.data,
+          enabled_models: {
+            ...mockEnabledModelsResult.data.enabled_models,
+            "Azure AI Foundry": {
+              [existingKB.embeddingModel]: true,
+            },
+          },
+        },
+      };
+
+      render(
+        <KnowledgeBaseUploadModal
+          open={true}
+          setOpen={jest.fn()}
+          existingKnowledgeBase={{
+            ...existingKB,
+            embeddingProvider: "Unknown",
+          }}
+          hideAdvanced={true}
+        />,
+        { wrapper: createWrapper() },
+      );
+
+      await waitFor(() =>
+        expect(screen.getByTestId("kb-create-button")).toBeDisabled(),
+      );
+    });
+
+    it("clears a recovered legacy model when a policy refresh makes it ambiguous", async () => {
+      const legacyKnowledgeBase = {
+        ...existingKB,
+        embeddingProvider: "Unknown",
+      };
+      const { rerender } = render(
+        <KnowledgeBaseUploadModal
+          open={true}
+          setOpen={jest.fn()}
+          existingKnowledgeBase={legacyKnowledgeBase}
+          hideAdvanced={true}
+        />,
+        { wrapper: createWrapper() },
+      );
+
+      await waitFor(() =>
+        expect(screen.getByTestId("kb-create-button")).toBeEnabled(),
+      );
+
+      mockModelProvidersResult = {
+        ...mockModelProvidersResult,
+        data: [
+          ...MODEL_PROVIDERS,
+          {
+            provider: "Azure AI Foundry",
+            is_enabled: true,
+            icon: "Azure",
+            models: [
+              {
+                model_name: existingKB.embeddingModel,
+                metadata: { model_type: "embeddings" },
+              },
+            ],
+          },
+        ],
+      };
+      mockEnabledModelsResult = {
+        ...mockEnabledModelsResult,
+        data: {
+          ...mockEnabledModelsResult.data,
+          enabled_models: {
+            ...mockEnabledModelsResult.data.enabled_models,
+            "Azure AI Foundry": {
+              [existingKB.embeddingModel]: true,
+            },
+          },
+        },
+      };
+      rerender(
+        <KnowledgeBaseUploadModal
+          open={true}
+          setOpen={jest.fn()}
+          existingKnowledgeBase={legacyKnowledgeBase}
+          hideAdvanced={true}
+        />,
+      );
+
+      await waitFor(() =>
+        expect(screen.getByTestId("kb-create-button")).toBeDisabled(),
+      );
     });
   });
 

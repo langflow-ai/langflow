@@ -45,7 +45,7 @@ export function VoiceAssistant({
   const [isRecording, setIsRecording] = useState(false);
   const [_status, setStatus] = useState("");
   const [_message, setMessage] = useState("");
-  const [showSettingsModal, _setShowSettingsModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [addKey, setAddKey] = useState(false);
   const [barHeights, setBarHeights] = useState<number[]>(Array(30).fill(20));
   const [preferredLanguage, setPreferredLanguage] = useState(
@@ -331,6 +331,7 @@ export function VoiceAssistant({
       elevenLabsApiKey && elevenLabsApiKey !== "ELEVENLABS_API_KEY";
 
     if (open) {
+      setShowSettingsModal(true);
       stopRecording();
       if (audioContextRef.current) {
         audioContextRef.current.close();
@@ -340,28 +341,20 @@ export function VoiceAssistant({
     } else {
       setRecordingTime(0);
       setBarHeights(Array(30).fill(20));
+    }
 
-      if (hasOpenAIAPIKey) {
-        if (audioContextRef.current) {
-          audioContextRef.current.close();
-          audioContextRef.current = null;
-        }
-        analyserRef.current = null;
-
-        setTimeout(() => {
-          initializeAudio();
-          startRecording();
-          setIsRecording(true);
-        }, 100);
+    try {
+      if (saveApiKey) {
+        await handleSaveApiKey(openaiApiKey, "OPENAI_API_KEY", false);
       }
-    }
 
-    if (saveApiKey) {
-      await handleSaveApiKey(openaiApiKey, "OPENAI_API_KEY", false);
-    }
-
-    if (saveElevenLabsApiKey && !open) {
-      await handleSaveApiKey(elevenLabsApiKey, "ELEVENLABS_API_KEY", true);
+      if (saveElevenLabsApiKey && !open) {
+        await handleSaveApiKey(elevenLabsApiKey, "ELEVENLABS_API_KEY", true);
+      }
+    } finally {
+      if (!open) {
+        setShowSettingsModal(false);
+      }
     }
   };
 

@@ -104,11 +104,10 @@ async def test_build_driver_rebinds_scope_for_reused_graph_execution(monkeypatch
     from langflow.api import build
     from lfx.services.model_provider_policy import current_model_provider_policy_context
 
-    reused_graph = object()
     observed = []
 
     async def _reuse_graph(**_kwargs):
-        observed.append((reused_graph, current_model_provider_policy_context()))
+        observed.append(current_model_provider_policy_context())
 
     monkeypatch.setattr(build, "_generate_flow_events", _reuse_graph)
     user = SimpleNamespace(id=uuid4(), is_superuser=False)
@@ -118,9 +117,8 @@ async def test_build_driver_rebinds_scope_for_reused_graph_execution(monkeypatch
     await build.generate_flow_events(provider_policy_flow=first_flow, current_user=user)
     await build.generate_flow_events(provider_policy_flow=second_flow, current_user=user)
 
-    assert [graph for graph, _context in observed] == [reused_graph, reused_graph]
-    assert [context.user_id for _graph, context in observed] == [user.id, user.id]
-    assert [context.attributes for _graph, context in observed] == [
+    assert [context.user_id for context in observed] == [user.id, user.id]
+    assert [context.attributes for context in observed] == [
         {
             "is_superuser": False,
             "project_id": first_flow.folder_id,

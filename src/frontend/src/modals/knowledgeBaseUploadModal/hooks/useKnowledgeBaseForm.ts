@@ -275,18 +275,19 @@ export function useKnowledgeBaseForm({
   useEffect(() => {
     if (existingKnowledgeBase && open) {
       setSourceName(existingKnowledgeBase.name);
-      if (
-        existingKnowledgeBase.embeddingModel &&
-        existingKnowledgeBase.embeddingProvider
-      ) {
-        const matchingModel = embeddingModelOptions.find(
-          (opt) =>
-            opt.id === existingKnowledgeBase.embeddingModel &&
-            opt.provider === existingKnowledgeBase.embeddingProvider,
+      if (existingKnowledgeBase.embeddingModel) {
+        const matchingModels = embeddingModelOptions.filter(
+          (option) => option.id === existingKnowledgeBase.embeddingModel,
         );
-        if (matchingModel) {
-          setSelectedEmbeddingModel([matchingModel]);
-        }
+        const savedProvider = existingKnowledgeBase.embeddingProvider?.trim();
+        const providerIsUnknown =
+          !savedProvider || savedProvider.toLowerCase() === "unknown";
+        const matchingModel = providerIsUnknown
+          ? matchingModels.length === 1
+            ? matchingModels[0]
+            : undefined
+          : matchingModels.find((option) => option.provider === savedProvider);
+        setSelectedEmbeddingModel(matchingModel ? [matchingModel] : []);
       }
       if (existingKnowledgeBase.chunkSize != null) {
         setChunkSize(existingKnowledgeBase.chunkSize);

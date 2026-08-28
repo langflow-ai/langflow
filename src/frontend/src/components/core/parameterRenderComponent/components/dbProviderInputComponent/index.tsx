@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -23,7 +24,11 @@ import {
   isDBProviderConfigured,
   resolveUIBackendType,
 } from "@/constants/dbProviderConstants";
-import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
+import { isSettledSuccessfulQuery } from "@/controllers/API/helpers/query-cache";
+import {
+  getGlobalVariablesQueryKey,
+  useGetGlobalVariables,
+} from "@/controllers/API/queries/variables";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { GlobalVariable } from "@/types/global_variables";
@@ -71,11 +76,18 @@ export default function DBProviderInputComponent({
 }: BaseInputProps<
   DBProviderSelection | AvailableDBProviderId | null | undefined
 >) {
+  const queryClient = useQueryClient();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const globalVariablesQueryKey = useMemo(
+    () => getGlobalVariablesQueryKey({ flowId: currentFlowId || undefined }),
+    [currentFlowId],
+  );
   const {
     data: globalVariables = [],
-    isFetching,
     isSuccess,
+    isFetching,
+    isError,
+    fetchStatus,
   } = useGetGlobalVariables({
     flowId: currentFlowId || undefined,
     enabled: Boolean(currentFlowId),
@@ -100,16 +112,28 @@ export default function DBProviderInputComponent({
 
   useEffect(() => {
     if (hasProviderValue || hasInitializedDefaultRef.current) return;
-    if (!currentFlowId || !isSuccess || isFetching) return;
+    if (
+      !currentFlowId ||
+      !isSuccess ||
+      isFetching ||
+      isError ||
+      fetchStatus !== "idle" ||
+      !isSettledSuccessfulQuery(queryClient, globalVariablesQueryKey)
+    )
+      return;
     hasInitializedDefaultRef.current = true;
     handleOnNewValue({ value: currentValue });
   }, [
     currentFlowId,
     currentValue,
+    fetchStatus,
+    globalVariablesQueryKey,
     handleOnNewValue,
     hasProviderValue,
+    isError,
     isFetching,
     isSuccess,
+    queryClient,
   ]);
 
   return (

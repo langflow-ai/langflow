@@ -385,11 +385,12 @@ class Vertex:
         self.params = self.raw_params.copy()
         self.updated_raw_params = True
 
-    def instantiate_component(self, user_id=None) -> None:
+    def instantiate_component(self, user_id=None, event_manager: EventManager | None = None) -> None:
         if not self.custom_component:
             self.custom_component, _ = initialize.loading.instantiate_class(
                 user_id=user_id,
                 vertex=self,
+                event_manager=event_manager,
             )
 
     def _bind_restored_component_user(self, user_id=None) -> None:
@@ -411,10 +412,10 @@ class Vertex:
 
             self.custom_component.require_model_provider_policy(ModelProviderPolicyPurpose.USE)
 
-    async def arequire_model_provider_policy(self, user_id=None) -> None:
+    async def arequire_model_provider_policy(self, user_id=None, event_manager: EventManager | None = None) -> None:
         """Authorize runtime use through the hierarchy-refreshing async policy hook."""
         if not self.custom_component:
-            self.instantiate_component(user_id=user_id)
+            self.instantiate_component(user_id=user_id, event_manager=event_manager)
         self._bind_restored_component_user(user_id)
         if self.custom_component:
             from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
@@ -436,7 +437,7 @@ class Vertex:
         # Upstream parameters may themselves hydrate load_from_db credentials.
         # Preflight the target model before building any input vertex so a
         # scoped denial cannot observe either upstream or local secrets.
-        await self.arequire_model_provider_policy(user_id=user_id)
+        await self.arequire_model_provider_policy(user_id=user_id, event_manager=event_manager)
         await self._build_each_vertex_in_params_dict()
         if self.base_type is None:
             msg = f"Base type for vertex {self.display_name} not found"
@@ -875,12 +876,12 @@ class Vertex:
             # because they need to iterate through their data
             is_loop_component = self.display_name == "Loop" or self.is_loop
             if self.frozen and self.built and not is_loop_component:
-                await self.arequire_model_provider_policy(user_id)
+                await self.arequire_model_provider_policy(user_id, event_manager=event_manager)
                 return await self.get_requester_result(requester)
             if self.built and requester is not None:
                 # This means that the vertex has already been built
                 # and we are just getting the result for the requester
-                await self.arequire_model_provider_policy(user_id)
+                await self.arequire_model_provider_policy(user_id, event_manager=event_manager)
                 return await self.get_requester_result(requester)
             self._reset()
 

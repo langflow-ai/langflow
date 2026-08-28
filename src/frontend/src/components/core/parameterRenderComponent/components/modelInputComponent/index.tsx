@@ -76,6 +76,7 @@ export default function ModelInputComponent({
   inspectionPanel,
   showEmptyState = false,
   modelType: modelTypeProp,
+  providerScope,
   "aria-label": ariaLabel,
   ariaLabelledBy,
   ariaDescribedBy,
@@ -156,7 +157,26 @@ export default function ModelInputComponent({
     return Object.fromEntries(entries) as Record<string, unknown>;
   }, [nodeClass]);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const hasFlowScope = Boolean(currentFlowId);
+  const hasExplicitProviderScope = providerScope !== undefined;
+  const resolvedProviderScope = hasExplicitProviderScope
+    ? providerScope
+    : { flowId: currentFlowId };
+  const hasExplicitFlowScopeKey =
+    hasExplicitProviderScope && Object.hasOwn(resolvedProviderScope, "flowId");
+  const hasExplicitProjectScopeKey =
+    hasExplicitProviderScope &&
+    Object.hasOwn(resolvedProviderScope, "projectId");
+  const explicitScopeKeyCount =
+    Number(hasExplicitFlowScopeKey) + Number(hasExplicitProjectScopeKey);
+  const hasValidExplicitProviderScope =
+    explicitScopeKeyCount === 0 ||
+    (explicitScopeKeyCount === 1 &&
+      (hasExplicitFlowScopeKey
+        ? Boolean(resolvedProviderScope.flowId?.trim())
+        : Boolean(resolvedProviderScope.projectId?.trim())));
+  const hasProviderPolicyContext = hasExplicitProviderScope
+    ? hasValidExplicitProviderScope
+    : Boolean(currentFlowId);
 
   const {
     data: providersData = [],
@@ -166,8 +186,8 @@ export default function ModelInputComponent({
     error: providersError,
     refetch: refetchProviders,
   } = useGetModelProviders(
-    { flowId: currentFlowId, purpose: "use" },
-    { enabled: hasFlowScope },
+    { ...resolvedProviderScope, purpose: "use" },
+    { enabled: hasProviderPolicyContext },
   );
   const {
     data: enabledModelsData,
@@ -177,20 +197,20 @@ export default function ModelInputComponent({
     error: enabledModelsError,
     refetch: refetchEnabledModels,
   } = useGetEnabledModels({
-    flowId: currentFlowId,
+    ...resolvedProviderScope,
     purpose: "use",
-    enabled: hasFlowScope,
+    enabled: hasProviderPolicyContext,
   });
 
   const isLoading =
-    !hasFlowScope || isLoadingProviders || isLoadingEnabledModels;
+    !hasProviderPolicyContext || isLoadingProviders || isLoadingEnabledModels;
   const isPolicyPaused =
     providersFetchStatus === "paused" || enabledModelsFetchStatus === "paused";
   const isFetching =
     isFetchingProviders || isFetchingEnabledModels || isPolicyPaused;
   const hasPolicyError = !!providersError || !!enabledModelsError;
   const providerStatusIsReliable =
-    hasFlowScope &&
+    hasProviderPolicyContext &&
     !isFetchingProviders &&
     providersFetchStatus !== "paused" &&
     !providersError;
@@ -360,6 +380,19 @@ export default function ModelInputComponent({
     void refetchEnabledModels();
   }, [refetchProviders, refetchEnabledModels]);
 
+  // Keep the configuration dialog mounted while its own mutations invalidate
+  // the picker's policy queries. The picker still fails closed below, but the
+  // dialog must retain its selection and in-flight save state until it closes.
+  const manageProvidersDialog = openManageProvidersDialog ? (
+    <ModelProviderModal
+      open={openManageProvidersDialog}
+      onClose={handleManageProvidersDialogClose}
+      modelType={modelType || "llm"}
+      flowId={resolvedProviderScope.flowId}
+      projectId={resolvedProviderScope.projectId}
+    />
+  ) : null;
+
   const renderPopoverContent = () => {
     const PopoverContentInput =
       editNode || inspectionPanel || inspectionPanelVisible
@@ -418,17 +451,23 @@ export default function ModelInputComponent({
 
   if (hasPolicyError && !isFetching) {
     return (
-      <div className="w-full">
-        <ModelInputErrorButton onRetry={handleRetryLoad} />
-      </div>
+      <>
+        <div className="w-full">
+          <ModelInputErrorButton onRetry={handleRetryLoad} />
+        </div>
+        {manageProvidersDialog}
+      </>
     );
   }
 
   if (isLoading || isFetching || isRefreshingAfterClose || refreshOptions) {
     return (
-      <div className="w-full">
-        <ModelInputLoadingButton />
-      </div>
+      <>
+        <div className="w-full">
+          <ModelInputLoadingButton />
+        </div>
+        {manageProvidersDialog}
+      </>
     );
   }
 
@@ -482,14 +521,7 @@ export default function ModelInputComponent({
         {renderPopoverContent()}
       </Popover>
 
-      {openManageProvidersDialog && (
-        <ModelProviderModal
-          open={openManageProvidersDialog}
-          onClose={handleManageProvidersDialogClose}
-          modelType={modelType || "llm"}
-          flowId={currentFlowId}
-        />
-      )}
+      {manageProvidersDialog}
     </>
   );
 }

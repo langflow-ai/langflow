@@ -563,6 +563,25 @@ class TestKnowledgeProviderPolicyPreflight:
 
         resolve_policy.assert_not_awaited()
 
+    async def test_missing_saved_kb_metadata_fails_closed_before_policy_resolution(self, monkeypatch) -> None:
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        component = KnowledgeComponent(knowledge_base="missing_docs", _user_id=self.USER_ID)
+        resolve_policy = AsyncMock()
+        metadata_lookup = AsyncMock(return_value={})
+        monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+        monkeypatch.setattr(component, "_get_kb_metadata", metadata_lookup)
+
+        with pytest.raises(ModelProviderPolicyError):
+            await component.arequire_model_provider_policy(
+                ModelProviderPolicyPurpose.USE,
+                user_id="policy-actor",
+                parameters={"knowledge_base": "missing_docs"},
+            )
+
+        metadata_lookup.assert_awaited_once_with("missing_docs")
+        resolve_policy.assert_not_awaited()
+
 
 # ---------------------------------------------------------------------------
 # Display name / dropdown UX (matches starter projects + frontend create dialog)

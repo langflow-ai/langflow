@@ -10,17 +10,20 @@ import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 const ANTHROPIC_MODEL = "claude-sonnet-4-5-20250929";
 
 async function mockAnthropicModelCatalog(page: Page) {
-  await page.route("**/api/v1/models/enabled_models", async (route) => {
-    await route.fulfill({
-      json: {
-        enabled_models: {
-          Anthropic: { [ANTHROPIC_MODEL]: true },
-          OpenAI: { "gpt-4o-mini": true },
+  await page.route(
+    /\/api\/v1\/models\/enabled_models(?:\?.*)?$/,
+    async (route) => {
+      await route.fulfill({
+        json: {
+          enabled_models: {
+            Anthropic: { [ANTHROPIC_MODEL]: true },
+            OpenAI: { "gpt-4o-mini": true },
+          },
         },
-      },
-    });
-  });
-  await page.route("**/api/v1/models", async (route) => {
+      });
+    },
+  );
+  await page.route(/\/api\/v1\/models(?:\?.*)?$/, async (route) => {
     await route.fulfill({
       json: [
         {

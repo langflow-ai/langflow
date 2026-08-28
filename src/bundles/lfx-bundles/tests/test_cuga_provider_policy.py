@@ -91,4 +91,4 @@ async def test_custom_provider_options_are_filtered_by_active_scope(monkeypatch)
 
     resolve_policy.assert_awaited_once()
     assert updated["agent_llm"]["options"] == ["OpenAI", "Custom"]
-    assert len(updated["agent_llm"]["options_metadata"]) == 2
+    assert updated["agent_llm"]["options_metadata"] == [{"icon": "OpenAI"}, {"icon": "brain"}]

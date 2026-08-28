@@ -49,4 +49,29 @@ describe("useStartConversation", () => {
     expect(wsRef.current).toBe(secondSocket);
     expect(stopRecording).not.toHaveBeenCalled();
   });
+
+  it("closes and detaches the active socket after an error", () => {
+    const wsRef = { current: null as WebSocket | null };
+    const setStatus = jest.fn();
+    const stopRecording = jest.fn();
+
+    useStartConversation(
+      "flow-a",
+      wsRef,
+      setStatus,
+      jest.fn(),
+      jest.fn(),
+      stopRecording,
+      "session-1",
+    );
+    const socket = FakeWebSocket.instances[0];
+
+    socket.onerror?.(new Event("error"));
+
+    expect(stopRecording).toHaveBeenCalledTimes(1);
+    expect(wsRef.current).toBeNull();
+    expect(socket.close).toHaveBeenCalledTimes(1);
+    expect(socket.onerror).toBeNull();
+    expect(socket.onclose).toBeNull();
+  });
 });

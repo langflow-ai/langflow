@@ -95,6 +95,44 @@ describe("useScopedVoiceInitialization", () => {
     expect(initializeAudio).toHaveBeenCalledTimes(2);
   });
 
+  it("does not initialize refreshed credentials behind an open settings dialog", () => {
+    const initializeAudio = jest.fn();
+    const stopRecording = jest.fn();
+    const setIsRecording = jest.fn();
+    const callbacks = { initializeAudio, stopRecording, setIsRecording };
+
+    const { rerender } = renderHook(
+      (props: {
+        scopedCredentialsReady: boolean;
+        showSettingsModal: boolean;
+      }) =>
+        useScopedVoiceInitialization({
+          flowId: "flow-a",
+          hasOpenAIAPIKey: true,
+          ...props,
+          ...callbacks,
+        }),
+      {
+        initialProps: {
+          scopedCredentialsReady: false,
+          showSettingsModal: true,
+        },
+      },
+    );
+
+    rerender({
+      scopedCredentialsReady: true,
+      showSettingsModal: true,
+    });
+    expect(initializeAudio).not.toHaveBeenCalled();
+
+    rerender({
+      scopedCredentialsReady: true,
+      showSettingsModal: false,
+    });
+    expect(initializeAudio).toHaveBeenCalledTimes(1);
+  });
+
   it("stops the previous flow before initializing a newly scoped flow", () => {
     const events: string[] = [];
     const initializeAudio = jest.fn(() => {

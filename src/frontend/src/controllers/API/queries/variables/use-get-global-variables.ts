@@ -19,6 +19,20 @@ interface GetGlobalVariablesOptions extends ProviderScopeParams {
 
 export { getGlobalVariablesQueryKey };
 
+export const fetchGlobalVariables = async ({
+  flowId,
+  projectId,
+}: ProviderScopeParams = {}): Promise<GlobalVariable[]> => {
+  const queryParams = new URLSearchParams();
+  appendProviderScope(queryParams, { flowId, projectId });
+  const res = await api.get(
+    `${getURL("VARIABLES")}/${
+      queryParams.toString() ? `?${queryParams.toString()}` : ""
+    }`,
+  );
+  return res.data;
+};
+
 export const useGetGlobalVariables: useQueryFunctionType<
   undefined,
   GlobalVariable[],
@@ -41,14 +55,7 @@ export const useGetGlobalVariables: useQueryFunctionType<
 
   const getGlobalVariablesFn = async (): Promise<GlobalVariable[]> => {
     if (!isAuthenticated) return [];
-    const queryParams = new URLSearchParams();
-    appendProviderScope(queryParams, { flowId, projectId });
-    const res = await api.get(
-      `${getURL("VARIABLES")}/${
-        queryParams.toString() ? `?${queryParams.toString()}` : ""
-      }`,
-    );
-    return res.data;
+    return fetchGlobalVariables({ flowId, projectId });
   };
 
   const queryResult: UseQueryResult<GlobalVariable[], Error> = query(

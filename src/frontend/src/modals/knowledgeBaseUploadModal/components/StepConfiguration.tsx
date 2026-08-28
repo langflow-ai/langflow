@@ -193,6 +193,7 @@ export function StepConfiguration({
                   onFieldChange?.();
                 }}
                 options={embeddingModelOptions}
+                providerScope={{}}
                 placeholder={t("knowledge.embeddingModelPlaceholder")}
                 showEmptyState
                 aria-label={t("knowledge.embeddingModelLabel")}

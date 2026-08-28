@@ -146,6 +146,7 @@ interface ToggleBatch {
   updates: ModelStatusUpdate[];
   previousData: EnabledModelsResponse | undefined;
   togglesToSend: ToggleMap;
+  queryKey: ReturnType<typeof getEnabledModelsQueryKey>;
   flowId?: string;
   projectId?: string;
 }
@@ -315,6 +316,7 @@ export const useModelToggleQueue = ({
       updates,
       previousData,
       togglesToSend,
+      queryKey: activeContext.queryKey,
       flowId: activeContext.flowId,
       projectId: activeContext.projectId,
     };
@@ -332,18 +334,19 @@ export const useModelToggleQueue = ({
     (
       togglesToSend: ToggleMap,
       previousData: EnabledModelsResponse | undefined,
+      queryKey: ReturnType<typeof getEnabledModelsQueryKey>,
       error: unknown,
     ) => {
       clearSentOverlay(togglesToSend);
       if (previousData) {
-        queryClient.setQueryData(enabledModelsQueryKey, previousData);
+        queryClient.setQueryData(queryKey, previousData);
       }
       setErrorData({
         title: t("errors.updateModelStatus"),
         list: [getErrorMessage(error) || "Failed to update model status"],
       });
     },
-    [clearSentOverlay, enabledModelsQueryKey, queryClient, setErrorData],
+    [clearSentOverlay, queryClient, setErrorData, t],
   );
 
   const flushModelToggles = useDebounce(() => {
@@ -353,6 +356,7 @@ export const useModelToggleQueue = ({
       updates,
       previousData,
       togglesToSend,
+      queryKey,
       flowId: batchFlowId,
       projectId: batchProjectId,
     } = batch;
@@ -361,7 +365,7 @@ export const useModelToggleQueue = ({
       { updates, flowId: batchFlowId, projectId: batchProjectId },
       {
         onError: (error: unknown) => {
-          rollbackToggleBatch(togglesToSend, previousData, error);
+          rollbackToggleBatch(togglesToSend, previousData, queryKey, error);
         },
         onSettled: () => {
           clearSentOverlay(togglesToSend);
@@ -411,6 +415,7 @@ export const useModelToggleQueue = ({
       updates,
       previousData,
       togglesToSend,
+      queryKey,
       flowId: batchFlowId,
       projectId: batchProjectId,
     } = batch;
@@ -430,7 +435,7 @@ export const useModelToggleQueue = ({
       queryClient.invalidateQueries({ queryKey: ["useGetEnabledModels"] });
       queryClient.invalidateQueries({ queryKey: ["useGetModelProviders"] });
     } catch (error: unknown) {
-      rollbackToggleBatch(togglesToSend, previousData, error);
+      rollbackToggleBatch(togglesToSend, previousData, queryKey, error);
     }
   }, [
     flushModelToggles,

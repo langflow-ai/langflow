@@ -57,7 +57,9 @@ test(
     await page.locator("textarea").last().press(`ControlOrMeta+a`);
     await page.keyboard.press("Backspace");
     await page.locator("textarea").last().fill(updatedCode);
-    const customComponentPromise = page.waitForResponse("**/custom_component");
+    const customComponentPromise = page.waitForResponse(
+      /\/api\/v1\/custom_component(?:\?.*)?$/,
+    );
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
     const customComponentResponse = await customComponentPromise;
     // check if the response is 200

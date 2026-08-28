@@ -195,7 +195,7 @@ const SettingsVoiceModal = ({
 
   useEffect(() => {
     if (!hasOpenAIAPIKey) {
-      setOpen(true);
+      onOpenChangeDropdownMenu(true);
     }
   }, [hasOpenAIAPIKey]);
 

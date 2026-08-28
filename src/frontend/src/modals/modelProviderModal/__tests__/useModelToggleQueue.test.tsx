@@ -64,7 +64,17 @@ jest.mock("@tanstack/react-query", () => ({
 // react when a refetch lands. The shared mock starts with the same baseline
 // the trackingQueryClient holds.
 jest.mock("@/controllers/API/queries/models/use-get-enabled-models", () => ({
-  getEnabledModelsQueryKey: jest.fn(() => ["useGetEnabledModels"]),
+  getEnabledModelsQueryKey: jest.fn(
+    (params?: { flowId?: string; projectId?: string; purpose?: string }) =>
+      params?.flowId || params?.projectId || params?.purpose
+        ? [
+            "useGetEnabledModels",
+            params?.flowId,
+            params?.projectId,
+            params?.purpose,
+          ]
+        : ["useGetEnabledModels"],
+  ),
   useGetEnabledModels: jest.fn(() => ({
     data: {
       enabled_models: {
@@ -276,11 +286,11 @@ describe("useModelToggleQueue", () => {
           callsBeforeRevocation,
         );
       expect(callsAfterRevocation).not.toContainEqual([
-        ["useGetEnabledModels"],
+        ["useGetEnabledModels", undefined, undefined, "configure"],
         expect.any(Function),
       ]);
       expect(trackingQueryClient.invalidateQueries).toHaveBeenCalledWith({
-        queryKey: ["useGetEnabledModels"],
+        queryKey: ["useGetEnabledModels", undefined, undefined, "configure"],
         exact: true,
       });
       act(() => runDebounced());
@@ -306,7 +316,7 @@ describe("useModelToggleQueue", () => {
 
       expect(mutationCalls).toHaveLength(0);
       expect(trackingQueryClient.invalidateQueries).toHaveBeenCalledWith({
-        queryKey: ["useGetEnabledModels"],
+        queryKey: ["useGetEnabledModels", undefined, undefined, "configure"],
         exact: true,
       });
       expect(mockSetErrorData).toHaveBeenCalledWith(
@@ -333,7 +343,7 @@ describe("useModelToggleQueue", () => {
 
       expect(mutationCalls).toHaveLength(0);
       expect(trackingQueryClient.invalidateQueries).toHaveBeenCalledWith({
-        queryKey: ["useGetEnabledModels"],
+        queryKey: ["useGetEnabledModels", "flow-one", undefined, "configure"],
         exact: true,
       });
     });
@@ -360,7 +370,12 @@ describe("useModelToggleQueue", () => {
 
       expect(mutationCalls).toHaveLength(0);
       expect(trackingQueryClient.invalidateQueries).toHaveBeenCalledWith({
-        queryKey: ["useGetEnabledModels"],
+        queryKey: [
+          "useGetEnabledModels",
+          "flow-one",
+          "project-one",
+          "configure",
+        ],
         exact: true,
       });
     });
@@ -380,10 +395,10 @@ describe("useModelToggleQueue", () => {
       });
 
       expect(trackingQueryClient.cancelQueries).toHaveBeenCalledWith({
-        queryKey: ["useGetEnabledModels"],
+        queryKey: ["useGetEnabledModels", undefined, undefined, "configure"],
       });
       expect(trackingQueryClient.setQueryData).toHaveBeenCalledWith(
-        ["useGetEnabledModels"],
+        ["useGetEnabledModels", undefined, undefined, "configure"],
         expect.any(Function),
       );
 
@@ -610,7 +625,7 @@ describe("useModelToggleQueue", () => {
 
       // The effect detects drift and re-applies the overlay.
       expect(trackingQueryClient.setQueryData).toHaveBeenCalledWith(
-        ["useGetEnabledModels"],
+        ["useGetEnabledModels", undefined, undefined, "configure"],
         expect.any(Function),
       );
 
@@ -839,7 +854,12 @@ describe("useModelToggleQueue", () => {
         ([_, arg]) => typeof arg !== "function",
       );
       expect(rollbackCall).toBeDefined();
-      expect(rollbackCall?.[0]).toEqual(["useGetEnabledModels"]);
+      expect(rollbackCall?.[0]).toEqual([
+        "useGetEnabledModels",
+        undefined,
+        undefined,
+        "configure",
+      ]);
       expect(rollbackCall?.[1]).toEqual({
         enabled_models: { OpenAI: { "gpt-4": true } },
       });
@@ -995,14 +1015,14 @@ describe("useModelToggleQueue", () => {
       expect(
         trackingQueryClient.setQueryData.mock.calls.slice(callsBeforeClose),
       ).toContainEqual([
-        ["useGetEnabledModels"],
+        ["useGetEnabledModels", undefined, undefined, "configure"],
         { enabled_models: { OpenAI: { "gpt-4": true } } },
       ]);
       expect(mockSetErrorData).toHaveBeenCalledWith(
         expect.objectContaining({ title: "Error updating model status" }),
       );
       expect(trackingQueryClient.invalidateQueries).toHaveBeenCalledWith({
-        queryKey: ["useGetEnabledModels"],
+        queryKey: ["useGetEnabledModels", undefined, undefined, "configure"],
         exact: true,
       });
 
