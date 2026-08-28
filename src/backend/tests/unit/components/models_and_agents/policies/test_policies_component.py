@@ -1,8 +1,10 @@
+import tempfile
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
+from lfx.components.models_and_agents import policies_component as policies_component_module
 from lfx.components.models_and_agents.policies.guard_sync_utils import GENERATED_GUARD_INFO_PREFIX
 from lfx.components.models_and_agents.policies.module_utils import ensure_toolguard_module_path_compat
 from lfx.components.models_and_agents.policies_component import (
@@ -406,14 +408,73 @@ async def test_generate_mode_validation_errors(mock_component):
     #     await mock_component.guard_tools()
 
 
-def test_work_dir_property():
+def test_work_dir_property(monkeypatch, tmp_path):
     """Test work_dir property generates correct path."""
+    monkeypatch.setattr(policies_component_module, "TOOLGUARD_WORK_DIR", tmp_path)
     component = PoliciesComponent()
     component.project = "test project"
     work_dir = component.work_dir
 
+    assert work_dir.is_relative_to(tmp_path)
+    assert work_dir.is_absolute()
     assert "test_project" in str(work_dir)
     assert work_dir.name == "test_project"
+
+
+def test_resolve_work_dir_uses_temp_directory_by_default(monkeypatch):
+    """The default work directory is writable and independent of the current directory."""
+    monkeypatch.delenv("TOOLGUARD_WORK_DIR", raising=False)
+
+    assert policies_component_module._resolve_toolguard_work_dir() == Path(tempfile.gettempdir()) / "tmp_toolguard"
+
+
+def test_resolve_work_dir_honors_environment_override(monkeypatch, tmp_path):
+    """Deployments can configure a dedicated ToolGuard work directory."""
+    configured_work_dir = tmp_path / "toolguard"
+    monkeypatch.setenv("TOOLGUARD_WORK_DIR", str(configured_work_dir))
+
+    assert policies_component_module._resolve_toolguard_work_dir() == configured_work_dir
+
+
+def test_work_dir_reuses_standalone_component_identity():
+    """Recreated standalone components with the same ID reuse generated guards."""
+
+    def _component() -> PoliciesComponent:
+        component = PoliciesComponent()
+        component.project = "shared project"
+        component._id = "policies-node"
+        return component
+
+    first = _component()
+    recreated = _component()
+
+    assert first.work_dir == recreated.work_dir
+    assert first.work_dir.parts[-4:] == ("anonymous", "standalone", "policies_node", "shared_project")
+
+
+def test_work_dir_isolates_flows_and_components_with_the_same_project():
+    """Identical project names cannot share generated guards across runtime identities."""
+
+    def _component(flow_id: str, component_id: str) -> PoliciesComponent:
+        component = PoliciesComponent()
+        component.project = "shared project"
+        component._vertex = SimpleNamespace(
+            id=component_id,
+            graph=SimpleNamespace(flow_id=flow_id, user_id="shared-user"),
+        )
+        return component
+
+    flow_a_node_a = _component("flow-a", "policies-a")
+    flow_b_node_a = _component("flow-b", "policies-a")
+    flow_a_node_b = _component("flow-a", "policies-b")
+
+    work_dirs = {
+        flow_a_node_a.work_dir,
+        flow_b_node_a.work_dir,
+        flow_a_node_b.work_dir,
+    }
+    assert len(work_dirs) == 3
+    assert all(work_dir.name == "shared_project" for work_dir in work_dirs)
 
 
 def test_to_snake_case():

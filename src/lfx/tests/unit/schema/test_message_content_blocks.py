@@ -496,6 +496,17 @@ class TestBackwardsCompatibility:
         error_contents = [c for c in error_blocks[0].contents if isinstance(c, ErrorContent)]
         assert len(error_contents) == 1
 
+    def test_error_message_renders_complete_os_error(self):
+        """OS errors must show their message and path instead of only the numeric errno."""
+        exc = PermissionError(13, "Permission denied", "tmp_toolguard")
+
+        err_msg = ErrorMessage(exception=exc)
+
+        assert err_msg.text == "[Errno 13] Permission denied: 'tmp_toolguard'\n"
+        [error_block] = [block for block in err_msg.content_blocks if isinstance(block, ContentBlock)]
+        [error_content] = [content for content in error_block.contents if isinstance(content, ErrorContent)]
+        assert "[Errno 13] Permission denied: 'tmp_toolguard'" in error_content.reason
+
     def test_error_message_renders_reason_coded_exception_message(self):
         """A reason-coded error shows its human message, not just the class name and code."""
 

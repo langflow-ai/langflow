@@ -3,8 +3,10 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
+from uuid import uuid4
 
 from lfx.base.models import LCModelComponent
 from lfx.base.models.unified_models import (
@@ -32,7 +34,14 @@ if TYPE_CHECKING:
     from lfx.inputs.inputs import InputTypes
 
 
-TOOLGUARD_WORK_DIR = Path(os.getenv("TOOLGUARD_WORK_DIR") or "tmp_toolguard")
+def _resolve_toolguard_work_dir() -> Path:
+    configured_work_dir = os.getenv("TOOLGUARD_WORK_DIR")
+    if configured_work_dir:
+        return Path(configured_work_dir)
+    return Path(tempfile.gettempdir()) / "tmp_toolguard"
+
+
+TOOLGUARD_WORK_DIR = _resolve_toolguard_work_dir()
 BUILDTIME_MODELS = ["gpt-5", "claude-sonnet"]  # currently inactive, we recommend but do not enforce
 STEP1 = "Step_1"
 STEP2 = "Step_2"
@@ -182,7 +191,31 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
 
     @property
     def work_dir(self) -> Path:
-        return TOOLGUARD_WORK_DIR / self._to_snake_case(self.project)
+        """Return a path isolated by user, flow, component, and project."""
+        try:
+            user_id = self.user_id
+        except (AttributeError, ValueError):
+            user_id = None
+        try:
+            flow_id = self.flow_id
+        except (AttributeError, ValueError):
+            flow_id = None
+
+        vertex = getattr(self, "_vertex", None)
+        component_id = getattr(self, "_id", None) or getattr(vertex, "id", None)
+
+        user_namespace = self._to_snake_case(str(user_id)) if user_id and str(user_id) != "None" else "anonymous"
+        flow_namespace = self._to_snake_case(str(flow_id)) if flow_id else "standalone"
+        if component_id:
+            component_namespace = self._to_snake_case(str(component_id))
+        else:
+            instance_id = getattr(self, "_toolguard_instance_id", None)
+            if instance_id is None:
+                instance_id = uuid4().hex
+                self._toolguard_instance_id = instance_id
+            component_namespace = f"component_{instance_id}"
+        project_namespace = self._to_snake_case(self.project)
+        return TOOLGUARD_WORK_DIR / user_namespace / flow_namespace / component_namespace / project_namespace
 
     def build_model(self) -> LanguageModel:
         llm_model = get_llm(

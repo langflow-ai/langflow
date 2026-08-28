@@ -3,12 +3,11 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 const NEW_SLUG = "web_fetch";
-const NEW_DESCRIPTION = "LE2272 distinctive description";
+const NEW_DESCRIPTION = "distinctive updated description";
 
-// LE-2272: the tool actions editor applies its edits to the node only on close.
-// A custom_component/update response issued before those edits but landing after
-// them used to be applied wholesale, reverting the slug, the description and
-// approval_actions — and the autosave then persisted the loss.
+// The tool actions editor applies its edits to the node only on close. A
+// custom_component/update response issued before those edits but landing after
+// them used to revert the slug, description, and approval actions.
 test("tool action edits survive a custom_component/update response that lands late", {
   tag: ["@release", "@components"],
 }, async ({ page }) => {
@@ -24,8 +23,6 @@ test("tool action edits survive a custom_component/update response that lands la
   await page.getByTestId("add-component-button-url").click();
   await adjustScreenView(page);
 
-  // Hold the pre-edit tools_metadata refresh and release it only once the
-  // editor has closed, so its response is stale by the time it is applied.
   let alreadyHeld = false;
   let release: () => void = () => {};
   const gate = new Promise<void>((resolve) => {
@@ -62,12 +59,18 @@ test("tool action edits survive a custom_component/update response that lands la
   await page.getByTestId("input_update_name").fill(NEW_SLUG);
   await page.getByTestId("input_update_description").fill(NEW_DESCRIPTION);
 
+  // Row refreshes can recreate the switch cell; retry until the toggle takes.
   const toggle = page.getByTestId("requires-approval-toggle").first();
-  await toggle.click();
-  await expect(toggle).toHaveAttribute("aria-checked", "true");
-  // The switch renders instantly but persists onto the row after its slide
-  // transition, so give that timer room before closing the editor.
+  await expect(async () => {
+    if ((await toggle.getAttribute("aria-checked")) !== "true") {
+      await toggle.click();
+    }
+    await expect(toggle).toHaveAttribute("aria-checked", "true", {
+      timeout: 1000,
+    });
+  }).toPass({ timeout: 30000 });
   await page.waitForTimeout(600);
+  await expect(toggle).toHaveAttribute("aria-checked", "true");
 
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("input_update_name")).toBeHidden({
@@ -89,7 +92,6 @@ test("tool action edits survive a custom_component/update response that lands la
   ).toHaveAttribute("aria-checked", "true");
   await page.keyboard.press("Escape");
 
-  // The reverted node used to reach the database through the debounced autosave.
   const flowId = page.url().split("/flow/")[1]?.split("/")[0];
   await expect
     .poll(
