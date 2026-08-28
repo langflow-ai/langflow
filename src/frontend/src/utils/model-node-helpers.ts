@@ -90,6 +90,22 @@ export function validateModelValue(
       opt?.metadata?.not_enabled_locally !== true &&
       (!opt.provider || providerConfiguration?.get(opt.provider) !== false),
   );
+
+  // Blocked / user-disabled sticky selection: keep the saved model when the
+  // provider is still configured (or unknown). Silent replacement would rewrite
+  // flows onto a model nobody chose.
+  const stickyCurrent =
+    currentModelName &&
+    availableOptions.find(
+      (opt: ModelOptionType) =>
+        opt.name === currentModelName &&
+        (!currentProvider || opt.provider === currentProvider) &&
+        opt?.metadata?.not_enabled_locally === true,
+    );
+  if (stickyCurrent && currentProviderConfiguration !== false) {
+    return template;
+  }
+
   const optionsForValidation =
     currentProviderConfiguration === false && selectableOptions.length > 0
       ? selectableOptions
