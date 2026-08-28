@@ -576,6 +576,78 @@ def test_a_refusal_applies_nothing_on_the_graph_path():
     assert ok.params == {}
 
 
+def test_runtime_file_validation_failure_is_atomic_across_the_graph(monkeypatch):
+    """A later invalid FileInput tweak must not leave any cached vertex half-mutated."""
+    from unittest.mock import MagicMock
+
+    from lfx.graph.vertex.base import ParameterHandler, Vertex
+    from lfx.processing.process import process_tweaks_on_graph
+    from lfx.utils.file_path_security import LocalFileAccessError
+
+    settings_service = MagicMock()
+    settings_service.settings.restrict_local_file_access = False
+    monkeypatch.setattr("lfx.utils.file_path_security.get_settings_service", lambda: settings_service)
+
+    class _G:
+        user_id = "attacker"
+        flow_id = "attacker-flow"
+        source_flow_id = "trusted-source-flow"
+        vertices = []
+
+    graph = _G()
+
+    def real_shaped(vertex_id, *, load_from_db):
+        vertex = MagicMock(spec=Vertex)
+        vertex.id = vertex_id
+        vertex.graph = graph
+        vertex.data = {
+            "node": {
+                "template": {
+                    "path": {
+                        "type": "file",
+                        "_input_type": "FileInput",
+                        "value": "attacker/original.txt",
+                        "load_from_db": load_from_db,
+                    }
+                }
+            }
+        }
+        vertex.params = {"path": "attacker/original.txt"}
+        vertex.raw_params = {"path": "attacker/original.txt"}
+        vertex.load_from_db_fields = ["path"] if load_from_db else []
+
+        def update_raw_params(new_params, *, overwrite=False):
+            assert overwrite is True
+            validated = ParameterHandler(vertex, storage_service=None).process_runtime_params(dict(new_params))
+            vertex.raw_params.update(validated)
+            vertex.params = vertex.raw_params.copy()
+
+        vertex.update_raw_params.side_effect = update_raw_params
+        return vertex
+
+    safe = real_shaped("safe", load_from_db=False)
+    invalid = real_shaped("invalid", load_from_db=True)
+    graph.vertices = [safe, invalid]
+
+    with pytest.raises(LocalFileAccessError):
+        process_tweaks_on_graph(
+            graph,
+            {
+                "safe": {"path": "trusted-source-flow/source.txt"},
+                "invalid": {"path": {"file_path": r"attacker\..\outside.txt", "load_from_db": False}},
+            },
+        )
+
+    assert safe.raw_params == {"path": "attacker/original.txt"}
+    assert safe.params == {"path": "attacker/original.txt"}
+    assert safe.load_from_db_fields == []
+    assert invalid.raw_params == {"path": "attacker/original.txt"}
+    assert invalid.params == {"path": "attacker/original.txt"}
+    assert invalid.load_from_db_fields == ["path"]
+    safe.update_raw_params.assert_not_called()
+    invalid.update_raw_params.assert_not_called()
+
+
 def test_a_refusal_applies_nothing_on_the_dict_path():
     graph = _graph(
         [

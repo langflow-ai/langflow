@@ -1606,6 +1606,9 @@ async def experimental_run_flow(
                 outputs=outputs,
                 stream=stream,
             )
+    except TweakRefusedError:
+        # Let the app-level handler return the documented structured 422.
+        raise
     except Exception as exc:
         await logger.aexception("Advanced-run execution failed for flow %s", flow.id)
         if isinstance(exc, HTTPException):
