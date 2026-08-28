@@ -12,8 +12,6 @@ export const KB_CHUNKS_GLOB = "**/api/v1/knowledge_bases/*/chunks*";
 export const KB_METADATA_KEYS_GLOB =
   "**/api/v1/knowledge_bases/*/metadata/keys*";
 export const KB_PREVIEW_GLOB = "**/api/v1/knowledge_bases/preview-chunks";
-export const MODELS_GLOB = "**/api/v1/models**";
-export const ENABLED_MODELS_GLOB = "**/api/v1/models/enabled_models**";
 export const VARIABLES_GLOB = "**/api/v1/variables**";
 
 export const RELEASE = { tag: ["@release", "@workspace"] };
@@ -202,11 +200,26 @@ export async function mockIngestionRunDetail(
 
 export async function mockModels(page: LangflowPage) {
   await page.route(VARIABLES_GLOB, (route) => route.fulfill({ json: [] }));
-  await page.route(MODELS_GLOB, (route) =>
-    route.fulfill({ json: MODEL_PROVIDERS }),
+  await page.route(
+    (url) => url.pathname === "/api/v1/models",
+    (route) => route.fulfill({ json: MODEL_PROVIDERS }),
   );
-  await page.route(ENABLED_MODELS_GLOB, (route) =>
-    route.fulfill({ json: { enabled_models: {} } }),
+  await page.route(
+    (url) => url.pathname === "/api/v1/models/enabled_models",
+    (route) =>
+      route.fulfill({
+        json: {
+          enabled_models: {
+            OpenAI: { "text-embedding-3-small": true },
+          },
+          enabled_models_by_type: {
+            OpenAI: {
+              llm: {},
+              embeddings: { "text-embedding-3-small": true },
+            },
+          },
+        },
+      }),
   );
 }
 

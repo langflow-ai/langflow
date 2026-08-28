@@ -48,7 +48,11 @@ export function AppInitPage() {
   const { isFetched: isConfigFetched } = useGetConfig({
     enabled: isFetched && isAuthReady,
   });
-  useGetGlobalVariables({ enabled: isFetched && isAuthReady });
+  // App initialization owns the global/unscoped snapshot used outside a flow.
+  useGetGlobalVariables({
+    enabled: isFetched && isAuthReady,
+    mirrorToStore: true,
+  });
   useGetTagsQuery({
     enabled: ENABLE_LANGFLOW_STORE && isFetched && isAuthReady,
   });

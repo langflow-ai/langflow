@@ -1,4 +1,6 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
 import type { APIClassType } from "@/types/api";
 import { axe } from "@/utils/a11y-test";
 import { mockUsePostTemplateValue } from "../../__tests__/a11y-mock-helpers";
@@ -13,6 +15,13 @@ jest.mock("@/controllers/API/queries/nodes/use-post-template-value", () =>
 );
 
 import DropdownComponent from "..";
+
+const renderWithQueryClient = (ui: ReactElement) => {
+  const queryClient = new QueryClient();
+  return render(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+  );
+};
 
 const baseProps = {
   value: "",
@@ -29,7 +38,7 @@ const baseProps = {
 
 describe("DropdownComponent", () => {
   it("should_have_no_axe_violations", async () => {
-    const { container } = render(
+    const { container } = renderWithQueryClient(
       <>
         <span id="field-label">Model provider</span>
         <DropdownComponent {...baseProps} ariaLabelledBy="field-label" />
@@ -44,7 +53,7 @@ describe("DropdownComponent", () => {
   // test proves ariaLabelledBy actually survives that pass-through end to
   // end, not just that the wrapper "has" the prop.
   it("uses the field's real label as the combobox trigger's accessible name", () => {
-    render(
+    renderWithQueryClient(
       <>
         <span id="field-label">Model provider</span>
         <DropdownComponent {...baseProps} ariaLabelledBy="field-label" />
@@ -57,7 +66,7 @@ describe("DropdownComponent", () => {
   });
 
   it("does not set aria-labelledby on the combobox trigger when absent", () => {
-    render(<DropdownComponent {...baseProps} />);
+    renderWithQueryClient(<DropdownComponent {...baseProps} />);
 
     expect(screen.getByRole("combobox")).not.toHaveAttribute("aria-labelledby");
   });

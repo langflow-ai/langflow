@@ -574,6 +574,7 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 background_tasks=fresh_background_tasks,
                 parsed=parsed,
                 current_user=user,
+                provider_policy_flow=flow,
                 source_flow_owner_id=flow.user_id,
                 expose_error_details=caller_owns_flow(flow, user),
                 job_id=job_id,
@@ -846,6 +847,7 @@ async def get_workflow_status(
                     flow=flow,
                     job_id=job_id_str,
                     user_id=str(current_user.id),
+                    is_superuser=bool(getattr(current_user, "is_superuser", False)),
                 )
             except ValueError:
                 if partial_stored_response is not None:

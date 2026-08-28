@@ -1,3 +1,5 @@
+import { replaceEqualDeep } from "@tanstack/react-query";
+import { useLayoutEffect } from "react";
 import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
 import {
   recomputeComponentsToUpdateIfNeeded,
@@ -12,31 +14,62 @@ import type {
 } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
+import {
+  appendProviderScope,
+  providerScopeStoreKey,
+} from "../../helpers/provider-scope";
 import { UseRequestProcessor } from "../../services/request-processor";
+
+const displayNamesByPalette = new WeakMap<
+  APIObjectType,
+  ComponentDisplayNamesType
+>();
+const PALETTE_STALE_TIME_MS = 30_000;
+
+const isPaletteObject = (value: unknown): value is APIObjectType =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const sharePaletteAndMetadata = (oldData: unknown, newData: unknown) => {
+  const sharedData = replaceEqualDeep(oldData, newData);
+  if (isPaletteObject(newData) && isPaletteObject(sharedData)) {
+    // A fresh root guarantees observers see an equal successful fetch even
+    // when dataUpdatedAt falls in the same millisecond. Nested palette data
+    // remains structurally shared.
+    const paletteData = sharedData === oldData ? { ...sharedData } : sharedData;
+    const displayNames = displayNamesByPalette.get(newData);
+    if (displayNames !== undefined) {
+      displayNamesByPalette.set(paletteData, displayNames);
+    }
+    return paletteData;
+  }
+  return sharedData;
+};
 
 export const useGetTypes: useQueryFunctionType<
   undefined,
   APIObjectType,
-  { checkCache?: boolean }
+  { checkCache?: boolean; flowId?: string; projectId?: string }
 > = (options) => {
   const { query } = UseRequestProcessor();
   const setLoading = useFlowsManagerStore((state) => state.setIsLoading);
-  const setTypes = useTypesStore((state) => state.setTypes);
-  const setComponentDisplayNames = useTypesStore(
-    (state) => state.setComponentDisplayNames,
-  );
+  const activateScope = useTypesStore((state) => state.activateScope);
+  const clearScopedTypes = useTypesStore((state) => state.clearScopedTypes);
+  const setScopedTypes = useTypesStore((state) => state.setScopedTypes);
+  const {
+    flowId,
+    projectId,
+    checkCache: _checkCache,
+    ...queryOptions
+  } = options ?? {};
+  const scopeKey = providerScopeStoreKey({ flowId, projectId });
+  const isScoped = Boolean(flowId || projectId);
 
-  const getTypesFn = async (checkCache = false) => {
+  const getTypesFn = async () => {
     try {
-      if (checkCache) {
-        const data = useTypesStore.getState().types;
-        if (data && Object.keys(data).length > 0) {
-          return data;
-        }
-      }
-
+      const queryParams = new URLSearchParams({ force_refresh: "true" });
+      appendProviderScope(queryParams, { flowId, projectId });
       const response = await api.get<APIObjectType>(
-        `${getURL("ALL")}?force_refresh=true`,
+        `${getURL("ALL")}?${queryParams.toString()}`,
       );
       const raw = response?.data as Record<string, unknown>;
 
@@ -50,12 +83,7 @@ export const useGetTypes: useQueryFunctionType<
         delete data.knowledge_bases;
       }
 
-      if (componentDisplayNames) {
-        setComponentDisplayNames(componentDisplayNames);
-      }
-      setTypes(data);
-      syncNodeTranslations();
-      recomputeComponentsToUpdateIfNeeded();
+      displayNamesByPalette.set(data, componentDisplayNames ?? {});
       return data;
     } catch (error) {
       console.error("[Types] Error fetching types:", error);
@@ -64,14 +92,44 @@ export const useGetTypes: useQueryFunctionType<
     }
   };
 
-  const queryResult = query(
-    ["useGetTypes"],
-    () => getTypesFn(options?.checkCache),
-    {
-      refetchOnWindowFocus: false,
-      ...options,
-    },
-  );
+  const queryResult = query(["useGetTypes", flowId, projectId], getTypesFn, {
+    refetchOnWindowFocus: true,
+    staleTime: PALETTE_STALE_TIME_MS,
+    // Preserve React Query's structural sharing while transferring display-name
+    // metadata from the fresh response to the shared palette root.
+    structuralSharing: sharePaletteAndMetadata,
+    ...queryOptions,
+  });
+
+  useLayoutEffect(() => {
+    activateScope(scopeKey);
+    if (isScoped && queryResult.data === undefined) {
+      if (clearScopedTypes(scopeKey)) {
+        syncNodeTranslations();
+        recomputeComponentsToUpdateIfNeeded();
+      }
+      return;
+    }
+    if (
+      queryResult.data &&
+      setScopedTypes(
+        scopeKey,
+        queryResult.data,
+        displayNamesByPalette.get(queryResult.data) ?? {},
+      )
+    ) {
+      syncNodeTranslations();
+      recomputeComponentsToUpdateIfNeeded();
+    }
+  }, [
+    activateScope,
+    clearScopedTypes,
+    isScoped,
+    queryResult.data,
+    queryResult.dataUpdatedAt,
+    scopeKey,
+    setScopedTypes,
+  ]);
 
   return queryResult;
 };
