@@ -681,7 +681,60 @@ def _get_flow_input_nodes(flow: Flow) -> list[Vertex]:
 
 
 def _is_mcp_input_field(field_data: Any) -> bool:
-    return isinstance(field_data, dict) and field_data.get("show", False) and not field_data.get("advanced", False)
+    return (
+        isinstance(field_data, dict)
+        and field_data.get("show", False)
+        and not field_data.get("advanced", False)
+        and field_data.get("api_editable") is True
+    )
+
+
+_JSON_SCHEMA_TYPE_BY_FIELD_TYPE = {
+    "str": "string",
+    "string": "string",
+    "int": "integer",
+    "integer": "integer",
+    "float": "number",
+    "number": "number",
+    "slider": "number",
+    "bool": "boolean",
+    "boolean": "boolean",
+    "dict": "object",
+    "NestedDict": "object",
+    "table": "object",
+    "duration": "object",
+    "auth": "object",
+    "mcp": "object",
+    "data_display": "object",
+    "object": "object",
+    "sortableList": "array",
+    "actionPicker": "array",
+    "tools": "array",
+    "model": "array",
+    "array": "array",
+    "connect": "string",
+    "file": "string",
+    "prompt": "string",
+    "mustache": "string",
+    "code": "string",
+    "other": "string",
+    "link": "string",
+    "tab": "string",
+    "query": "string",
+    "knowledge_backend": "string",
+}
+
+
+def _json_schema_type_for_field(field_data: dict[str, Any]) -> dict[str, Any]:
+    field_type = field_data.get("type", "string")
+    json_schema_type = _JSON_SCHEMA_TYPE_BY_FIELD_TYPE.get(field_type)
+    if json_schema_type is None:
+        logger.warning(f"Unknown field type: {field_type} defaulting to string")
+        json_schema_type = "string"
+
+    if field_data.get("list") is True:
+        return {"type": "array", "items": {"type": json_schema_type}}
+    return {"type": json_schema_type}
 
 
 def get_flow_input_tweaks(flow: Flow, inputs: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -710,24 +763,10 @@ def json_schema_from_flow(flow: Flow) -> dict:
 
         for field_name, field_data in template.items():
             if _is_mcp_input_field(field_data):
-                field_type = field_data.get("type", "string")
                 properties[field_name] = {
-                    "type": field_type,
+                    **_json_schema_type_for_field(field_data),
                     "description": field_data.get("info", f"Input for {field_name}"),
                 }
-                # Update field_type in properties after determining the JSON Schema type
-                if field_type == "str":
-                    field_type = "string"
-                elif field_type == "int":
-                    field_type = "integer"
-                elif field_type == "float":
-                    field_type = "number"
-                elif field_type == "bool":
-                    field_type = "boolean"
-                else:
-                    logger.warning(f"Unknown field type: {field_type} defaulting to string")
-                    field_type = "string"
-                properties[field_name]["type"] = field_type
 
                 if field_data.get("required", False):
                     required.append(field_name)

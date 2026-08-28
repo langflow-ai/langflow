@@ -705,24 +705,24 @@ async def test_handle_call_tool_forwards_only_advertised_input_fields(monkeypatc
                     is_input=True,
                     template={
                         "input_value": {"show": True, "advanced": False},
-                        "backend_token": {"show": True, "advanced": False},
-                        "enabled": {"show": True, "advanced": False},
-                        "hidden": {"show": False, "advanced": False},
-                        "advanced": {"show": True, "advanced": True},
+                        "backend_token": {"show": True, "advanced": False, "api_editable": True},
+                        "enabled": {"show": True, "advanced": False, "api_editable": True},
+                        "hidden": {"show": False, "advanced": False, "api_editable": True},
+                        "advanced": {"show": True, "advanced": True, "api_editable": True},
                     },
                 ),
                 _FakeNode(
                     "input-b",
                     is_input=True,
                     template={
-                        "backend_token": {"show": True, "advanced": False},
-                        "backend_url": {"show": True, "advanced": False},
+                        "backend_token": {"show": True, "advanced": False, "api_editable": True},
+                        "backend_url": {"show": True, "advanced": False, "api_editable": True},
                     },
                 ),
                 _FakeNode(
                     "downstream",
                     is_input=False,
-                    template={"backend_url": {"show": True, "advanced": False}},
+                    template={"backend_url": {"show": True, "advanced": False, "api_editable": True}},
                 ),
             ]
 
@@ -802,6 +802,7 @@ def test_json_schema_from_flow_preserves_flow_defined_session_id(monkeypatch):
                     "session_id": {
                         "show": True,
                         "advanced": False,
+                        "api_editable": True,
                         "type": "str",
                         "info": custom_session_id_property["description"],
                         "required": True,
