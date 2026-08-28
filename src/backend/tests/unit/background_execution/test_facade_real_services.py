@@ -571,6 +571,61 @@ async def test_fail_queued_job_never_terminalizes_a_replaced_claim(real_services
     await job_service.update_job_status(job_id, JobStatus.CANCELLED, finished_timestamp=True)
 
 
+async def test_fail_queued_job_retries_event_sequence_collision_atomically(real_services_job_service, monkeypatch):
+    """A colliding event insert rolls back the status CAS before retrying the whole transaction."""
+    from datetime import datetime, timezone
+
+    from langflow.services.database.models.jobs.model import JobEvent
+    from langflow.services.jobs import service as jobs_service_module
+    from sqlalchemy.exc import IntegrityError
+
+    job_service = real_services_job_service
+    job_id = uuid4()
+    await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+    heartbeat = datetime.now(timezone.utc).isoformat()
+    assert await job_service.claim_queued_lease(
+        job_id,
+        owner="recovery-owner",
+        lease_ttl_s=0,
+        heartbeat_at=heartbeat,
+    )
+    await job_service.append_event(job_id, "queued", {})
+
+    calls = 0
+
+    class _CollidingJobEvent:
+        job_id = JobEvent.job_id
+        seq = JobEvent.seq
+
+        def __new__(cls, *args, **kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                collision = "forced event sequence collision"
+                raise IntegrityError(collision, None, RuntimeError())
+            return JobEvent(*args, **kwargs)
+
+    monkeypatch.setattr(jobs_service_module, "JobEvent", _CollidingJobEvent)
+
+    failed = await job_service.fail_queued_job(
+        job_id,
+        owner="recovery-owner",
+        heartbeat_at=heartbeat,
+        error={"type": "request_overrides_unavailable"},
+        event_type="run_failed",
+    )
+
+    assert failed is True
+    assert calls == 2
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.FAILED
+    assert job.error == {"type": "request_overrides_unavailable"}
+    assert [(event.seq, event.event_type) for event in await job_service.read_events(job_id, after_seq=0)] == [
+        (1, "queued"),
+        (2, "run_failed"),
+    ]
+
+
 async def test_restart_and_scaled_hydration_restore_encrypted_overrides(real_services_job_service):
     """A job-id-only handoff and a fresh startup both replay the original overrides."""
     import asyncio
@@ -815,6 +870,51 @@ async def test_startup_terminalizes_authenticated_malformed_override_payload(rea
     assert ran == []
     assert failed.status == JobStatus.FAILED
     assert failed.error == {"type": "request_overrides_unavailable"}
+
+
+async def test_startup_terminalizes_non_ascii_override_ciphertext(real_services_job_service):
+    """A non-ASCII Fernet token is structural corruption, not an ambiguous authentication failure."""
+    from langflow.services.background_execution.service import BackgroundExecutionService
+    from langflow.services.deps import get_settings_service
+
+    job_service = real_services_job_service
+    settings_service = get_settings_service()
+    flow_id, user_id = uuid4(), uuid4()
+    submitter = BackgroundExecutionService(
+        settings_service=settings_service,
+        frame_source_factory=_echo_input_factory,
+        backend=_RecordingBackend(),
+    )
+    job_id = await submitter.submit(
+        flow_id=flow_id,
+        request={
+            "flow_id": str(flow_id),
+            "mode": "background",
+            "stream_protocol": "langflow",
+            "tweaks": {"Node-x": {"value": "never-run"}},
+        },
+        user=_StubUser(user_id),
+    )
+    job = await job_service.get_job_by_job_id(job_id)
+    metadata = dict(job.job_metadata)
+    metadata["request_overrides"] = "not-a-fernet-token-\N{SNOWMAN}"
+    await job_service.update_job_metadata(job_id, metadata, replace=True)
+
+    ran: list[dict] = []
+    restart = BackgroundExecutionService(
+        settings_service=settings_service,
+        frame_source_factory=_capture_request_factory(ran),
+    )
+    await restart.sweep_orphans_on_startup()
+    await restart.stop()
+
+    failed = await job_service.get_job_by_job_id(job_id)
+    assert ran == []
+    assert failed.status == JobStatus.FAILED
+    assert failed.error == {"type": "request_overrides_unavailable"}
+    assert [(event.event_type, event.payload) for event in await job_service.read_events(job_id, after_seq=0)] == [
+        ("run_failed", {"type": "request_overrides_unavailable"})
+    ]
 
 
 async def test_startup_terminalizes_authenticated_unparseable_override_payload(real_services_job_service):
