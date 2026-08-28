@@ -205,11 +205,12 @@ def _echo_input_factory(*, request, **_kwargs):
 
 
 async def test_submit_persists_request_for_faithful_requeue(real_services_job_service):
-    """``submit`` persists the request body on the job row (job_metadata.request).
+    """``submit`` persists only replay-safe request fields on job_metadata.request.
 
-    This is the durable record the startup sweep reads to replay original inputs.
-    Proven on both real SQLite and real Postgres. The executor is stopped right
-    after submit so no run interferes with reading the persisted row.
+    The startup sweep needs the original non-secret inputs, but caller tweaks may
+    contain credentials and must remain live-only. Proven on both real SQLite and
+    real Postgres. The executor is stopped right after submit so no run interferes
+    with reading the persisted row.
     """
     from langflow.services.background_execution.service import BackgroundExecutionService
     from langflow.services.deps import get_settings_service
@@ -236,21 +237,24 @@ async def test_submit_persists_request_for_faithful_requeue(real_services_job_se
     job = await job_service.get_job_by_job_id(job_id)
     assert job.job_metadata is not None
     persisted = job.job_metadata.get("request")
-    # The whole request round-trips, not just input_value.
-    assert persisted == request
+    assert persisted == {
+        "flow_id": str(flow_id),
+        "mode": "background",
+        "stream_protocol": "langflow",
+        "input_value": original_input,
+        "session_id": "thread-restart",
+    }
+    # Redaction must not mutate the live request passed to the in-memory run.
+    assert request["tweaks"] == {"ChatInput-x": {"foo": "bar"}}
 
 
-async def test_submit_redacts_inline_globals_from_persisted_request(real_services_job_service):
-    """Inline ``globals`` (request-level secrets) must NOT land plaintext on the row.
+async def test_submit_redacts_inline_overrides_from_persisted_request(real_services_job_service):
+    """Inline ``globals`` and ``tweaks`` must NOT land plaintext on the row.
 
-    ``submit`` persists the request body for faithful replay, but request-level
-    ``globals`` can carry inline secrets (API keys). Storing them plaintext in the
-    durable ``job`` table widens the blast radius of any DB read (backup, ops
-    access, SQL-injection elsewhere). The persisted replay request must omit
-    ``globals``; the live in-memory run still has them. Tradeoff: a background
-    re-enqueue after a restart drops inline globals — reference stored global
-    variables by name for background runs instead of passing secrets inline.
-    Real SQLite and Postgres.
+    Both request shapes can carry API keys. Storing either plaintext in the durable
+    ``job`` table widens the blast radius of any DB read (backup, ops access, a
+    SQL-injection elsewhere). The persisted replay request must omit both; the live
+    in-memory run still has them. Real SQLite and Postgres.
     """
     from langflow.services.background_execution.service import BackgroundExecutionService
     from langflow.services.deps import get_settings_service
@@ -269,17 +273,20 @@ async def test_submit_redacts_inline_globals_from_persisted_request(real_service
         "stream_protocol": "langflow",
         "input_value": "hi",
         "globals": {"OPENAI_API_KEY": secret},
+        "tweaks": {"LanguageModelComponent-x": {"api_key": secret}},
     }
     job_id = await svc.submit(flow_id=flow_id, request=request, user=_StubUser(uuid4()))
     await svc.stop()
 
     job = await job_service.get_job_by_job_id(job_id)
     persisted = job.job_metadata.get("request") or {}
-    # The secret must not appear anywhere in the persisted request blob.
+    # Neither secret-bearing override shape may appear in the persisted blob.
     assert "globals" not in persisted, "inline globals persisted plaintext on the job row"
+    assert "tweaks" not in persisted, "inline tweaks persisted plaintext on the job row"
     assert secret not in json.dumps(job.job_metadata), "inline secret leaked into job_metadata"
     # The caller's original request dict is not mutated as a side effect.
     assert request["globals"] == {"OPENAI_API_KEY": secret}
+    assert request["tweaks"] == {"LanguageModelComponent-x": {"api_key": secret}}
 
 
 async def test_requeued_queued_job_replays_original_input(real_services_job_service):
