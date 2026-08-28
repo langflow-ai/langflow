@@ -33,6 +33,7 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from fastapi.responses import EventSourceResponse, StreamingResponse
+from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.log.logger import logger
 from lfx.memory.flow_context import derive_message_owner_uuid
 from lfx.schema.workflow import (
@@ -319,6 +320,8 @@ async def run_sync_with_mapping(
                 "timeout_seconds": timeout_seconds,
             },
         ) from None
+    except TweakRefusedError:
+        raise
     except (PydanticValidationError, WorkflowValidationError) as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
