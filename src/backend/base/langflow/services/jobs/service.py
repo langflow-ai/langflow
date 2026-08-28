@@ -125,6 +125,7 @@ class JobService(Service):
         user_id: UUID | None = None,
         dedupe_key: str | None = None,
         end_user_id: str | None = None,
+        initial_metadata: dict | None = None,
     ) -> Job:
         """Create a new job record with QUEUED status.
 
@@ -142,6 +143,10 @@ class JobService(Service):
                 ``job_metadata['end_user_id']`` (no schema change) — ``user_id`` stays the
                 executing service account so re-enqueue/resume can still fetch the SID-owned
                 flow, while status/stop/resume isolate on this end-user key. See F8.
+            initial_metadata: Metadata that must be committed atomically with the QUEUED
+                row. The background workflow facade uses this for its replay request and
+                encrypted override envelope so a worker can never claim a partially
+                initialized job.
 
         Returns:
             Created Job object
@@ -179,6 +184,9 @@ class JobService(Service):
                     msg = f"A non-retryable job with dedupe_key={dedupe_key!r} already exists"
                     raise DuplicateJobError(msg)
 
+            metadata = dict(initial_metadata or {})
+            if end_user_id:
+                metadata["end_user_id"] = end_user_id
             job = Job(
                 job_id=job_id,
                 flow_id=flow_id,
@@ -188,9 +196,8 @@ class JobService(Service):
                 asset_type=asset_type,
                 user_id=user_id,
                 dedupe_key=dedupe_key,
-                # Two things stamped atomically with the insert, for the same reason: a later
-                # shallow update_job_metadata (e.g. submit's persisted request) preserves what
-                # is already on the row.
+                # Job-owned context is stamped atomically with the insert. A later shallow
+                # update_job_metadata preserves what is already on the row.
                 #
                 # The end user, so serving rows carry who the run was for.
                 #
@@ -201,7 +208,7 @@ class JobService(Service):
                 #
                 # Still None when neither applies, so non-serving untraced rows stay
                 # byte-identical to what they were.
-                job_metadata=inject_trace_carrier({"end_user_id": end_user_id} if end_user_id else None) or None,
+                job_metadata=inject_trace_carrier(metadata) or None,
             )
             session.add(job)
             await session.flush()

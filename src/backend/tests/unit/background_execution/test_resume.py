@@ -178,6 +178,7 @@ async def test_resume_checks_encrypted_overrides_before_claiming_or_writing_deci
     real_services_job_service,
 ) -> None:
     """A wrong decryption key leaves the paused run and its decision seam untouched."""
+    from cryptography.fernet import Fernet
     from langflow.services.background_execution.service import (
         BackgroundExecutionService,
         RequestOverridesUnavailableError,
@@ -209,9 +210,7 @@ async def test_resume_checks_encrypted_overrides_before_claiming_or_writing_deci
     await job_service.update_job_status(job_id, JobStatus.SUSPENDED)
 
     wrong_auth = settings_service.auth_settings.model_copy(
-        update={  # pragma: allowlist secret
-            "SECRET_KEY": SecretStr("different-key-material-that-is-at-least-32-bytes")
-        }
+        update={"SECRET_KEY": SecretStr(Fernet.generate_key().decode())}
     )
     resume_service = BackgroundExecutionService(
         settings_service=SimpleNamespace(settings=settings_service.settings, auth_settings=wrong_auth),
@@ -233,6 +232,58 @@ async def test_resume_checks_encrypted_overrides_before_claiming_or_writing_deci
     assert (job.job_metadata or {}).get("pending_request_id") == "req-encrypted"
     assert await job_service.unconsumed_signals(job_id) == []
     assert "decision-must-not-be-written" not in json.dumps(job.job_metadata)
+
+
+@pytest.mark.real_services
+@pytest.mark.no_blockbuster
+async def test_resume_rehydrates_original_encrypted_overrides(real_services_job_service) -> None:
+    """A successful HITL resume receives the same overrides as the initial run."""
+    from langflow.services.background_execution.service import BackgroundExecutionService
+    from langflow.services.deps import get_settings_service
+
+    job_service = real_services_job_service
+    settings_service = get_settings_service()
+    backend = _RecordingBackend()
+    user_id, flow_id = uuid4(), uuid4()
+    request = {
+        "flow_id": str(flow_id),
+        "mode": "background",
+        "stream_protocol": "langflow",
+        "input_value": "resume-with-overrides",
+        "tweaks": {"Node-x": {"api_key": "resume-replay-secret"}},  # pragma: allowlist secret
+    }
+    submitter = BackgroundExecutionService(
+        settings_service=settings_service,
+        frame_source_factory=_noop_factory,
+        backend=backend,
+    )
+    job_id = await submitter.submit(flow_id=flow_id, request=request, user=_StubUser(user_id))
+    await job_service.update_job_metadata(job_id, {"pending_request_id": "req-replay"})
+    await job_service.update_job_status(job_id, JobStatus.SUSPENDED)
+
+    captured: list[dict] = []
+
+    def _capture_factory(*, request, **_kwargs):
+        captured.append(request)
+        return _noop_factory()
+
+    resume_service = BackgroundExecutionService(
+        settings_service=settings_service,
+        frame_source_factory=_capture_factory,
+    )
+    try:
+        accepted = await resume_service.resume_job(
+            job_id,
+            _StubUser(user_id),
+            request_id="req-replay",
+            decision={"choice": "approve"},
+        )
+        assert accepted is True
+        # The factory is called synchronously while building the re-enqueued
+        # runner, before the executor starts consuming the resume checkpoint.
+        assert captured == [request]
+    finally:
+        await resume_service.stop()
 
 
 # --------------------------------------------------------------------------- #

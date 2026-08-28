@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import math
 import os
 import tempfile
 from pathlib import Path
@@ -60,6 +61,20 @@ if TYPE_CHECKING:
 # process-local live bus) so a reattach to a finished job replays and returns
 # instead of tailing a bus that will never produce another frame.
 _TERMINAL_STATUSES = frozenset({JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.TIMED_OUT})
+_REQUEST_OVERRIDES_FORMAT_KEY = "request_overrides_format"
+_REQUEST_OVERRIDES_KEY = "request_overrides"
+_REQUEST_OVERRIDES_FORMAT = "fernet-json-v1"
+_REQUEST_OVERRIDES_VERSION = 1
+_REQUEST_OVERRIDE_FIELDS = frozenset({"globals", "tweaks"})
+_REQUEST_OVERRIDES_ERROR = {"type": "request_overrides_unavailable"}
+_MAX_OVERRIDE_JSON_DEPTH = 64
+
+
+class RequestOverridesUnavailableError(RuntimeError):
+    """Fail-closed signal for a background request whose overrides cannot be restored."""
+
+    def __init__(self) -> None:
+        super().__init__("Background request overrides are unavailable.")
 
 
 class BackgroundExecutionService(Service):
@@ -260,6 +275,11 @@ class BackgroundExecutionService(Service):
         job_service = get_job_service()
         job_id = uuid4()
         dedupe_key = request.get("idempotency_key")
+        # Construct and encrypt the durable payload BEFORE creating the row. The
+        # QUEUED insert then commits the marker, plaintext-safe request, and
+        # authenticated override envelope together; no worker can claim a row in
+        # the old create-then-patch gap.
+        initial_metadata = self._persisted_request_metadata(job_id=job_id, flow_id=flow_id, request=request)
         try:
             await job_service.create_job(
                 job_id=job_id,
@@ -270,6 +290,7 @@ class BackgroundExecutionService(Service):
                 # status/stop/resume isolate on it. user_id stays the SID so the worker's
                 # _user_stub(job.user_id) still fetches the SID-owned flow on re-enqueue.
                 end_user_id=request.get("end_user_id"),
+                initial_metadata=initial_metadata,
             )
         except DuplicateJobError:
             # Idempotent retry: a non-terminal job already exists for this key,
@@ -280,20 +301,6 @@ class BackgroundExecutionService(Service):
             if existing is not None:
                 return existing
             raise
-        # Persist replay-safe request fields on the job row so a QUEUED job that
-        # survives a restart keeps its original input, files, partial-run ids,
-        # and protocol instead of falling back to reconstructed defaults. The
-        # worker / startup sweep reads them via ``_reconstruct_request``.
-        #
-        # Request-level ``globals`` and ``tweaks`` are REDACTED from the persisted
-        # copy: both can carry inline secrets (API keys), and storing them plaintext in the
-        # durable ``job`` table (JSONB on Postgres) widens the blast radius of any
-        # DB read (backup, ops access, a SQL-injection elsewhere) beyond the
-        # live-only handling these overrides get on the sync path. Tradeoff: a
-        # background re-enqueue after a restart drops inline globals and tweaks —
-        # store durable values on the flow or in named variables instead. The live
-        # in-memory run below still uses the full ``request``.
-        await job_service.update_job_metadata(job_id, {"request": self._redact_request(request)})
         # After create_job so an idempotent retry returns the existing job instead of
         # cancelling it; the new job is QUEUED, so the suspended-only query skips it.
         await self.supersede_suspended_runs(flow_id=flow_id, user_id=user.id, session_id=request.get("session_id"))
@@ -310,8 +317,8 @@ class BackgroundExecutionService(Service):
         """Return a copy of ``request`` with secret-bearing overrides removed.
 
         Returns a shallow copy so the caller's dict (used for the live run) is not
-        mutated. ``globals`` and ``tweaks`` are dropped; everything else round-trips
-        for replay. See ``submit`` for the durable-plaintext rationale and tradeoff.
+        mutated. ``globals`` and ``tweaks`` are dropped from this plaintext blob;
+        an authenticated encrypted envelope carries them for durable replay.
         """
         if "globals" not in request and "tweaks" not in request:
             return request
@@ -319,6 +326,125 @@ class BackgroundExecutionService(Service):
         redacted.pop("globals", None)
         redacted.pop("tweaks", None)
         return redacted
+
+    @classmethod
+    def _validate_json_value(cls, value: Any, *, seen: set[int] | None = None, depth: int = 0) -> None:
+        """Validate the deliberately narrow JSON value grammar used by overrides."""
+        if depth > _MAX_OVERRIDE_JSON_DEPTH:
+            raise RequestOverridesUnavailableError
+        if value is None or isinstance(value, (str, bool, int)):
+            return
+        if isinstance(value, float):
+            if not math.isfinite(value):
+                raise RequestOverridesUnavailableError
+            return
+        if not isinstance(value, (dict, list)):
+            raise RequestOverridesUnavailableError
+        if seen is None:
+            seen = set()
+        value_id = id(value)
+        if value_id in seen:
+            raise RequestOverridesUnavailableError
+        seen.add(value_id)
+        try:
+            if isinstance(value, dict):
+                if not all(isinstance(key, str) for key in value):
+                    raise RequestOverridesUnavailableError
+                for nested in value.values():
+                    cls._validate_json_value(nested, seen=seen, depth=depth + 1)
+            else:
+                for nested in value:
+                    cls._validate_json_value(nested, seen=seen, depth=depth + 1)
+        finally:
+            seen.remove(value_id)
+
+    @classmethod
+    def _validated_overrides(cls, value: Any) -> dict[str, dict[str, Any]]:
+        """Return validated globals/tweaks only, rejecting all other envelope shapes."""
+        if not isinstance(value, dict) or not set(value).issubset(_REQUEST_OVERRIDE_FIELDS):
+            raise RequestOverridesUnavailableError
+        overrides: dict[str, dict[str, Any]] = {}
+        for key, nested in value.items():
+            if not isinstance(nested, dict):
+                raise RequestOverridesUnavailableError
+            cls._validate_json_value(nested)
+            overrides[key] = nested
+        return overrides
+
+    def _persisted_request_metadata(self, *, job_id: UUID, flow_id: UUID, request: dict[str, Any]) -> dict[str, Any]:
+        """Build the atomic metadata payload for a background workflow row."""
+        supplied_overrides = self._validated_overrides(
+            {key: request[key] for key in _REQUEST_OVERRIDE_FIELDS if key in request}
+        )
+        # The API models default both fields to {}, so treat empty mappings as no
+        # override rather than encrypting an envelope for every ordinary run.
+        overrides = {key: value for key, value in supplied_overrides.items() if value}
+        ciphertext: str | None = None
+        if overrides:
+            from langflow.services.auth.utils import get_fernet
+
+            envelope = {
+                "version": _REQUEST_OVERRIDES_VERSION,
+                "job_id": str(job_id),
+                "flow_id": str(flow_id),
+                "overrides": overrides,
+            }
+            try:
+                plaintext = json.dumps(
+                    envelope,
+                    allow_nan=False,
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                    sort_keys=True,
+                ).encode()
+                ciphertext = get_fernet(self.settings_service).encrypt(plaintext).decode("ascii")
+            except RequestOverridesUnavailableError:
+                raise
+            except Exception:  # noqa: BLE001 -- every crypto/config failure must become the same safe error
+                raise RequestOverridesUnavailableError from None
+        return {
+            "request": self._redact_request(request),
+            _REQUEST_OVERRIDES_FORMAT_KEY: _REQUEST_OVERRIDES_FORMAT,
+            _REQUEST_OVERRIDES_KEY: ciphertext,
+        }
+
+    def _decrypt_request_overrides(self, job: Job, metadata: dict[str, Any]) -> dict[str, dict[str, Any]]:
+        """Authenticate, decrypt, bind, and validate a job's override envelope."""
+        marker = metadata.get(_REQUEST_OVERRIDES_FORMAT_KEY)
+        if marker is None:
+            # Safe legacy rows never carried overrides. A legacy plaintext override
+            # must not bypass the encrypted format merely because it predates the marker.
+            if _REQUEST_OVERRIDES_KEY in metadata:
+                raise RequestOverridesUnavailableError
+            return {}
+        if marker != _REQUEST_OVERRIDES_FORMAT or _REQUEST_OVERRIDES_KEY not in metadata:
+            raise RequestOverridesUnavailableError
+        ciphertext = metadata[_REQUEST_OVERRIDES_KEY]
+        if ciphertext is None:
+            return {}
+        if not isinstance(ciphertext, str) or not ciphertext:
+            raise RequestOverridesUnavailableError
+
+        from langflow.services.auth.utils import get_fernet_for_decryption
+
+        try:
+            plaintext = get_fernet_for_decryption(self.settings_service).decrypt(ciphertext.encode("ascii"))
+            envelope = json.loads(plaintext)
+            if not isinstance(envelope, dict) or set(envelope) != {"version", "job_id", "flow_id", "overrides"}:
+                raise RequestOverridesUnavailableError
+            if type(envelope["version"]) is not int or envelope["version"] != _REQUEST_OVERRIDES_VERSION:
+                raise RequestOverridesUnavailableError
+            if envelope["job_id"] != str(job.job_id) or envelope["flow_id"] != str(job.flow_id):
+                raise RequestOverridesUnavailableError
+            overrides = self._validated_overrides(envelope["overrides"])
+            if not overrides:
+                raise RequestOverridesUnavailableError
+        except RequestOverridesUnavailableError:
+            raise
+        except Exception:  # noqa: BLE001 -- never expose crypto/parser distinctions to the caller
+            raise RequestOverridesUnavailableError from None
+        else:
+            return overrides
 
     @staticmethod
     async def _existing_job_for_dedupe(dedupe_key: str | None, user_id: UUID | None) -> UUID | None:
@@ -486,6 +612,10 @@ class BackgroundExecutionService(Service):
         pending = (job.job_metadata or {}).get("pending_request_id")
         if pending is not None and request_id != pending:
             return False
+        # Decrypt and validate before the single-flight claim or signal write. A
+        # key-rotation/configuration error must leave the pause and decision seam
+        # untouched so the caller can retry after restoring the key.
+        request = self._reconstruct_request(job)
         # Win the single-flight flip BEFORE writing the RESUME signal, so exactly one
         # RESUME row exists per suspend and a loser never strands a stray decision.
         if not await job_service.claim_suspended_for_resume(job_id, owner=self._owner):
@@ -495,7 +625,7 @@ class BackgroundExecutionService(Service):
             await self._enqueue(
                 job_id=job_id,
                 flow_id=job.flow_id,
-                request=self._reconstruct_request(job),
+                request=request,
                 user=self._user_stub(job.user_id),
             )
         except Exception:
@@ -579,7 +709,11 @@ class BackgroundExecutionService(Service):
         for job in await self._queued_workflow_jobs():
             if not await job_service.claim_queued_lease(job.job_id, owner=self._owner, lease_ttl_s=lease_ttl):
                 continue
-            request_dict = self._reconstruct_request(job)
+            try:
+                request_dict = self._reconstruct_request(job)
+            except RequestOverridesUnavailableError:
+                await self._fail_request_overrides_unavailable(job.job_id, job_service)
+                continue
             user = self._user_stub(job.user_id)
             with contextlib.suppress(Exception):
                 await self._enqueue(
@@ -623,27 +757,37 @@ class BackgroundExecutionService(Service):
             return list(result.all())
 
     @staticmethod
-    def _reconstruct_request(job: Job) -> dict[str, Any]:
+    async def _fail_request_overrides_unavailable(job_id: UUID, job_service) -> None:
+        """Terminalize a queued job whose authenticated overrides cannot be restored."""
+        await job_service.update_job_status(job_id, JobStatus.FAILED, finished_timestamp=True)
+        await job_service.set_error(job_id, dict(_REQUEST_OVERRIDES_ERROR))
+        await job_service.append_event(job_id, "run_failed", dict(_REQUEST_OVERRIDES_ERROR))
+
+    def _reconstruct_request(self, job: Job) -> dict[str, Any]:
         """Rebuild the request dict for a re-enqueued QUEUED job.
 
-        ``submit`` persists replay-safe request fields under
-        ``job_metadata["request"]`` so re-enqueue keeps the original input, files,
-        partial-run ids, and protocol. Secret-bearing globals and tweaks stay
-        live-only. Falls back to a minimal default only for legacy rows written
-        before the request was persisted, so a pre-existing QUEUED job still
-        re-runs rather than blocks.
+        ``submit`` persists replay-safe fields under ``job_metadata["request"]``
+        and globals/tweaks in an authenticated Fernet envelope beside it. Legacy
+        rows with no overrides keep their old fallback; legacy plaintext overrides
+        and malformed encrypted rows fail closed.
         """
         meta = job.job_metadata or {}
         persisted = meta.get("request")
         if isinstance(persisted, dict) and persisted:
-            return persisted
-        return {
-            "flow_id": str(job.flow_id),
-            "mode": "background",
-            "stream_protocol": meta.get("stream_protocol", "langflow"),
-            "session_id": meta.get("session_id"),
-            "input_value": meta.get("input_value", ""),
-        }
+            request = dict(persisted)
+        else:
+            request = {
+                "flow_id": str(job.flow_id),
+                "mode": "background",
+                "stream_protocol": meta.get("stream_protocol", "langflow"),
+                "session_id": meta.get("session_id"),
+                "input_value": meta.get("input_value", ""),
+            }
+        # No plaintext override is accepted, including on old rows: otherwise a
+        # missing marker would silently downgrade the authenticated format.
+        if _REQUEST_OVERRIDE_FIELDS.intersection(request):
+            raise RequestOverridesUnavailableError
+        return {**request, **self._decrypt_request_overrides(job, meta)}
 
     @staticmethod
     def _user_stub(user_id: UUID | None) -> UserRead | None:

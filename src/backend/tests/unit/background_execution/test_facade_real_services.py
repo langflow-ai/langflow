@@ -408,21 +408,26 @@ async def test_restart_and_scaled_hydration_restore_encrypted_overrides(real_ser
     finally:
         await restart.stop()
 
-    assert captured == [request]
+    # The shared real-services DB may contain other QUEUED fixtures; this target
+    # must still hydrate exactly once with its full authenticated request.
+    assert captured.count(request) == 1
     assert recovered.status == JobStatus.COMPLETED
 
 
-@pytest.mark.parametrize("damage", ["missing", "tampered"])
+@pytest.mark.parametrize("damage", ["missing", "tampered", "wrong-key"])
 async def test_startup_terminalizes_unavailable_encrypted_overrides(real_services_job_service, damage):
     """A damaged envelope cannot downgrade into a run without its original overrides."""
+    from cryptography.fernet import Fernet
     from langflow.services.background_execution.service import BackgroundExecutionService
     from langflow.services.deps import get_settings_service
+    from pydantic import SecretStr
 
     job_service = real_services_job_service
     backend = _RecordingBackend()
     flow_id = uuid4()
+    settings_service = get_settings_service()
     submitter = BackgroundExecutionService(
-        settings_service=get_settings_service(),
+        settings_service=settings_service,
         frame_source_factory=_echo_input_factory,
         backend=backend,
     )
@@ -443,14 +448,20 @@ async def test_startup_terminalizes_unavailable_encrypted_overrides(real_service
     metadata = dict(job.job_metadata)
     if damage == "missing":
         metadata.pop("request_overrides")
-    else:
+    elif damage == "tampered":
         token = metadata["request_overrides"]
         metadata["request_overrides"] = f"{token[:-1]}{'A' if token[-1] != 'A' else 'B'}"
     await job_service.update_job_metadata(job_id, metadata, replace=True)
 
     ran: list[dict] = []
+    recovery_settings = settings_service
+    if damage == "wrong-key":
+        wrong_auth = settings_service.auth_settings.model_copy(
+            update={"SECRET_KEY": SecretStr(Fernet.generate_key().decode())}
+        )
+        recovery_settings = SimpleNamespace(settings=settings_service.settings, auth_settings=wrong_auth)
     restart = BackgroundExecutionService(
-        settings_service=get_settings_service(),
+        settings_service=recovery_settings,
         frame_source_factory=_capture_request_factory(ran),
     )
     await restart.sweep_orphans_on_startup()
@@ -469,6 +480,7 @@ async def test_startup_terminalizes_unavailable_encrypted_overrides(real_service
 
 async def test_wrong_key_and_cross_job_envelopes_fail_closed(real_services_job_service):
     """Ciphertext is tied to both the installation key and its job/flow identity."""
+    from cryptography.fernet import Fernet
     from langflow.services.background_execution.service import (
         BackgroundExecutionService,
         RequestOverridesUnavailableError,
@@ -499,9 +511,7 @@ async def test_wrong_key_and_cross_job_envelopes_fail_closed(real_services_job_s
     job = await job_service.get_job_by_job_id(job_id)
 
     wrong_auth = settings_service.auth_settings.model_copy(
-        update={  # pragma: allowlist secret
-            "SECRET_KEY": SecretStr("wrong-key-material-that-is-at-least-32-bytes")
-        }
+        update={"SECRET_KEY": SecretStr(Fernet.generate_key().decode())}
     )
     wrong_key_service = BackgroundExecutionService(
         settings_service=SimpleNamespace(settings=settings_service.settings, auth_settings=wrong_auth),
@@ -535,6 +545,9 @@ async def test_no_overrides_and_safe_legacy_rows_remain_replayable(real_services
         "mode": "background",
         "stream_protocol": "langflow",
         "input_value": "no-overrides",
+        # API model defaults: these must not create an envelope for an ordinary run.
+        "globals": {},
+        "tweaks": {},
     }
     svc = BackgroundExecutionService(
         settings_service=get_settings_service(), frame_source_factory=_echo_input_factory, backend=backend
@@ -543,17 +556,18 @@ async def test_no_overrides_and_safe_legacy_rows_remain_replayable(real_services
     job = await job_service.get_job_by_job_id(job_id)
     assert job.job_metadata.get("request_overrides_format") == "fernet-json-v1"
     assert job.job_metadata.get("request_overrides") is None
-    assert svc._reconstruct_request(job) == request
+    safe_request = {key: value for key, value in request.items() if key not in {"globals", "tweaks"}}
+    assert svc._reconstruct_request(job) == safe_request
 
     legacy_id = uuid4()
     await job_service.create_job(
         job_id=legacy_id,
         flow_id=flow_id,
         user_id=uuid4(),
-        initial_metadata={"request": request},
+        initial_metadata={"request": safe_request},
     )
     legacy = await job_service.get_job_by_job_id(legacy_id)
-    assert svc._reconstruct_request(legacy) == request
+    assert svc._reconstruct_request(legacy) == safe_request
 
 
 async def test_legacy_plaintext_overrides_are_not_replayed(real_services_job_service):
