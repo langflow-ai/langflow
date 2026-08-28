@@ -896,6 +896,8 @@ class ErrorMessage(Message):
                 reason = f"**{message}**\n - **Code: {exception.code}**\n"
             else:
                 reason += f" - **Code: {exception.code}**\n"
+        elif isinstance(exception, OSError):
+            reason += f" - **Details: {exception!s}**\n"
         elif hasattr(exception, "args") and exception.args:
             reason += f" - **Details: {exception.args[0]}**\n"
         elif isinstance(exception, ValidationError):
@@ -914,6 +916,8 @@ class ErrorMessage(Message):
         elif hasattr(exception, "code"):
             message = ErrorMessage._coded_exception_message(exception)
             reason = f"{message}\n" if message else f"Code: {exception.code}\n"
+        elif isinstance(exception, OSError):
+            reason = f"{exception!s}\n"
         elif hasattr(exception, "args") and exception.args:
             reason = f"{exception.args[0]}\n"
         elif isinstance(exception, ValidationError):
