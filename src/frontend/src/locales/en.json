@@ -1742,6 +1742,8 @@
   "knowledge.columnNameDescription": "Name of the column in the source DataFrame",
   "knowledge.columnEmbeddingDescription": "Create embeddings for this column",
   "knowledge.columnIdDescription": "Use this column as unique identifier",
+  "common.close": "Close",
+  "common.dialog": "Dialog",
   "common.langflowLogo": "Langflow Logo",
   "common.langflowLogoLight": "Langflow Logo Light",
   "common.langflowLogoDark": "Langflow Logo Dark",
