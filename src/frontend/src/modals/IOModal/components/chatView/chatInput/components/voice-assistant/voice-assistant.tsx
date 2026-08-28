@@ -28,6 +28,7 @@ import { useHandleWebsocketMessage } from "./hooks/use-handle-websocket-message"
 import { useInitializeAudio } from "./hooks/use-initialize-audio";
 import { useInterruptPlayback } from "./hooks/use-interrupt-playback";
 import { usePlayNextAudioChunk } from "./hooks/use-play-next-audio-chunk";
+import { useScopedVoiceInitialization } from "./hooks/use-scoped-voice-initialization";
 import { useStopRecording } from "./hooks/use-stop-recording";
 
 export interface VoiceAssistantProps {
@@ -87,7 +88,14 @@ export function VoiceAssistant({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const currentSessionId = useUtilityStore((state) => state.currentSessionId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const { data: globalVariables } = useGetGlobalVariables({ flowId });
+  const {
+    data: globalVariables,
+    isFetching: isGlobalVariablesFetching,
+    isSuccess: isGlobalVariablesSuccess,
+  } = useGetGlobalVariables({
+    flowId: flowId || undefined,
+    enabled: Boolean(flowId),
+  });
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const currentFlowId = currentFlow?.id;
 
@@ -119,19 +127,15 @@ export function VoiceAssistant({
     return Boolean(import.meta?.env?.ELEVENLABS_API_KEY);
   }, [globalVariables, addKey]);
 
-  useEffect(() => {
-    if (!isRecording && hasOpenAIAPIKey && !showSettingsModal) {
-      setIsRecording(true);
-      initializeAudio();
-    } else {
-      stopRecording();
-    }
-  }, []);
-
   const getMessagesMutation = useGetMessagesPollingMutation();
 
-  const initializeAudio = async () => {
-    useInitializeAudio(audioContextRef, setStatus, startConversation);
+  const initializeAudio = async (isCurrent: () => boolean = () => true) => {
+    await useInitializeAudio(
+      audioContextRef,
+      setStatus,
+      startConversation,
+      isCurrent,
+    );
   };
 
   const startRecording = async () => {
@@ -161,6 +165,17 @@ export function VoiceAssistant({
       setIsRecording,
     );
   };
+
+  useScopedVoiceInitialization({
+    flowId,
+    hasOpenAIAPIKey,
+    scopedCredentialsReady:
+      Boolean(flowId) && isGlobalVariablesSuccess && !isGlobalVariablesFetching,
+    showSettingsModal,
+    initializeAudio,
+    stopRecording,
+    setIsRecording,
+  });
 
   const playNextAudioChunk = () => {
     usePlayNextAudioChunk(audioQueueRef, isPlayingRef, processorRef);

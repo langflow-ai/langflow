@@ -7,7 +7,9 @@ const mockUseGetGlobalVariables = jest.fn((_options?: unknown) => ({
   data: [],
   isFetched: true,
   isFetching: false,
+  isSuccess: true,
 }));
+let mockCurrentFlowId = "flow-project-a";
 
 jest.mock("@/controllers/API/queries/variables", () => ({
   useGetGlobalVariables: (options?: unknown) =>
@@ -17,7 +19,7 @@ jest.mock("@/controllers/API/queries/variables", () => ({
 jest.mock("@/stores/flowsManagerStore", () => ({
   __esModule: true,
   default: (selector: (state: { currentFlowId: string }) => unknown) =>
-    selector({ currentFlowId: "flow-project-a" }),
+    selector({ currentFlowId: mockCurrentFlowId }),
 }));
 
 const baseProps = {
@@ -102,6 +104,17 @@ describe("DBProviderInput", () => {
 });
 
 describe("DBProviderInputComponent", () => {
+  beforeEach(() => {
+    mockCurrentFlowId = "flow-project-a";
+    mockUseGetGlobalVariables.mockReset();
+    mockUseGetGlobalVariables.mockReturnValue({
+      data: [],
+      isFetched: true,
+      isFetching: false,
+      isSuccess: true,
+    });
+  });
+
   // The canvas field label reaches the trigger only if the wrapper forwards
   // ariaLabelledBy out of baseInputProps — testing DBProviderInput alone
   // cannot catch that link being dropped.
@@ -120,5 +133,46 @@ describe("DBProviderInputComponent", () => {
       flowId: "flow-project-a",
       enabled: true,
     });
+  });
+
+  it("waits for a successful scoped variable query before initializing a default", () => {
+    mockCurrentFlowId = "";
+    mockUseGetGlobalVariables.mockReturnValue({
+      data: [],
+      isFetched: false,
+      isFetching: false,
+      isSuccess: false,
+    });
+    const handleOnNewValue = jest.fn();
+    const { rerender } = render(
+      <MemoryRouter>
+        <DBProviderInputComponent
+          {...fieldProps}
+          value={undefined}
+          handleOnNewValue={handleOnNewValue}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(handleOnNewValue).not.toHaveBeenCalled();
+
+    mockCurrentFlowId = "flow-project-a";
+    mockUseGetGlobalVariables.mockReturnValue({
+      data: [],
+      isFetched: true,
+      isFetching: false,
+      isSuccess: true,
+    });
+    rerender(
+      <MemoryRouter>
+        <DBProviderInputComponent
+          {...fieldProps}
+          value={undefined}
+          handleOnNewValue={handleOnNewValue}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(handleOnNewValue).toHaveBeenCalledTimes(1);
   });
 });

@@ -20,7 +20,6 @@ its own short-lived session and never holds a request-scoped transaction.
 
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, patch
-from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
@@ -154,7 +153,7 @@ async def test_execute_named_flow_releases_transaction_before_run(
 
 @pytest.mark.parametrize(
     ("flow_id", "expected_status"),
-    [("not-a-uuid", 422), (str(uuid4()), 404)],
+    [("not-a-uuid", 422), ("00000000-0000-4000-8000-000000000001", 404)],
 )
 @pytest.mark.usefixtures("_agentic_enabled")
 async def test_execute_named_flow_rejects_invalid_target_before_provider_discovery(

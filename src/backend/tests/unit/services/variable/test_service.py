@@ -131,6 +131,36 @@ async def test_get_default_field_bindings_never_decrypts_values(service, session
     assert result == [("OPENAI_API_KEY", ["OpenAI API Key"])]
 
 
+async def test_default_field_binding_order_matches_variable_list(service, session: AsyncSession):
+    user_id = uuid4()
+    session.add_all(
+        [
+            Variable(
+                user_id=user_id,
+                name="Z_LAST",
+                value="encrypted-secret",  # pragma: allowlist secret
+                type=CREDENTIAL_TYPE,
+                default_fields=["Shared Field"],
+            ),
+            Variable(
+                user_id=user_id,
+                name="A_FIRST",
+                value="encrypted-secret",  # pragma: allowlist secret
+                type=CREDENTIAL_TYPE,
+                default_fields=["Shared Field"],
+            ),
+        ]
+    )
+    await session.flush()
+
+    bindings = await service.get_default_field_bindings(user_id, session)
+    with patch("langflow.services.auth.utils.decrypt_api_key", return_value="secret"):
+        variables = await service.get_all(user_id, session)
+
+    assert [name for name, _default_fields in bindings] == ["A_FIRST", "Z_LAST"]
+    assert [variable.name for variable in variables] == ["A_FIRST", "Z_LAST"]
+
+
 async def test_initialize_user_variables__skipping_environment_variable_storage(service, session: AsyncSession):
     service.settings_service.settings.store_environment_variables = False
     await service.initialize_user_variables(uuid4(), session=session)

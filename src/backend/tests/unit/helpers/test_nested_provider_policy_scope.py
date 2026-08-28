@@ -443,7 +443,7 @@ async def test_concurrent_nested_runs_keep_target_scopes_isolated(nested_flow_ro
             entered += 1
             if entered == 2:
                 ready.set()
-            await ready.wait()
+            await asyncio.wait_for(ready.wait(), timeout=5)
             context = current_model_provider_policy_context()
             seen[label].append(str(context.attributes["project_id"]))
             assert seen[label] == [str(expected), str(expected)]

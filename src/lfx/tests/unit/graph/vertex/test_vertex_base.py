@@ -186,12 +186,20 @@ async def test_delegate_provider_override_denied_before_local_credential_hydrati
 
 
 @pytest.mark.asyncio
-async def test_plain_component_model_selection_denied_before_local_credential_hydration(monkeypatch):
+@pytest.mark.parametrize(
+    "model_selection",
+    [
+        [{"name": "claude-sonnet", "provider": "Anthropic", "metadata": {}}],
+        {"name": "claude-sonnet", "provider": "Anthropic", "metadata": {}},
+    ],
+    ids=["list", "mapping"],
+)
+async def test_plain_component_model_selection_denied_before_local_credential_hydration(monkeypatch, model_selection):
     """Ordinary components with a ModelInput must preflight its provider before API-key hydration."""
     from lfx.components.agentics.amap_component import AMapComponent
 
     params = {
-        "model": [{"name": "claude-sonnet", "provider": "Anthropic", "metadata": {}}],
+        "model": model_selection,
         "api_key": "stored-variable-reference",  # pragma: allowlist secret
     }
     component = AMapComponent(_user_id="owner-1", _parameters=params)

@@ -68,12 +68,14 @@ export default function DBProviderInputComponent({
   disabled,
   handleOnNewValue,
   ariaLabelledBy,
-}: BaseInputProps<DBProviderSelection | AvailableDBProviderId>) {
+}: BaseInputProps<
+  DBProviderSelection | AvailableDBProviderId | null | undefined
+>) {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const {
     data: globalVariables = [],
-    isFetched,
     isFetching,
+    isSuccess,
   } = useGetGlobalVariables({
     flowId: currentFlowId || undefined,
     enabled: Boolean(currentFlowId),
@@ -98,10 +100,17 @@ export default function DBProviderInputComponent({
 
   useEffect(() => {
     if (hasProviderValue || hasInitializedDefaultRef.current) return;
-    if (!isFetched && isFetching) return;
+    if (!currentFlowId || !isSuccess || isFetching) return;
     hasInitializedDefaultRef.current = true;
     handleOnNewValue({ value: currentValue });
-  }, [currentValue, handleOnNewValue, hasProviderValue, isFetched, isFetching]);
+  }, [
+    currentFlowId,
+    currentValue,
+    handleOnNewValue,
+    hasProviderValue,
+    isFetching,
+    isSuccess,
+  ]);
 
   return (
     <DBProviderInput

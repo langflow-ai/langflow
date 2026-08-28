@@ -1332,6 +1332,8 @@ class Component(CustomComponent):
             if not isinstance(input_, ModelInput) or not isinstance(input_.name, str):
                 continue
             model_selection = effective_parameters.get(input_.name)
+            if isinstance(model_selection, Mapping):
+                model_selection = [model_selection]
             if (
                 not isinstance(model_selection, list)
                 or not model_selection
