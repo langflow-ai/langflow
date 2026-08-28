@@ -48,10 +48,7 @@ def test_amazon_extension_manifest_registers_bedrock_provider():
     assert provider_registry.provider_id_for("Amazon Bedrock") == "amazon-bedrock"
 
     bedrock_models = [
-        row
-        for group in get_models_detailed()
-        for row in group
-        if row.get("provider") == "Amazon Bedrock"
+        row for group in get_models_detailed() for row in group if row.get("provider") == "Amazon Bedrock"
     ]
     assert bedrock_models
 
