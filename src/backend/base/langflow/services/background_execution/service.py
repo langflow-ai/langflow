@@ -22,6 +22,7 @@ import json
 import math
 import os
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
@@ -66,15 +67,29 @@ _REQUEST_OVERRIDES_KEY = "request_overrides"
 _REQUEST_OVERRIDES_FORMAT = "fernet-json-v1"
 _REQUEST_OVERRIDES_VERSION = 1
 _REQUEST_OVERRIDE_FIELDS = frozenset({"globals", "tweaks"})
+_REQUEST_OVERRIDES_CONTAINER_FIELD = "overrides"
 _REQUEST_OVERRIDES_ERROR = {"type": "request_overrides_unavailable"}
 _MAX_OVERRIDE_JSON_DEPTH = 64
+_MAX_OVERRIDE_INTEGER_BITS = 14_000
 
 
 class RequestOverridesUnavailableError(RuntimeError):
-    """Fail-closed signal for a background request whose overrides cannot be restored."""
+    """Retryable signal for request overrides blocked by unavailable cryptographic state."""
 
     def __init__(self) -> None:
         super().__init__("Background request overrides are unavailable.")
+
+
+class RequestOverridesCorruptedError(RequestOverridesUnavailableError):
+    """Fail-closed signal for an authenticated or structurally malformed persisted envelope."""
+
+
+class InvalidRequestOverridesError(ValueError):
+    """Caller-supplied request overrides do not match the supported JSON grammar."""
+
+    def __init__(self, field: str) -> None:
+        self.field = field
+        super().__init__(f"Invalid request override field: {field}")
 
 
 class BackgroundExecutionService(Service):
@@ -328,33 +343,52 @@ class BackgroundExecutionService(Service):
         return redacted
 
     @classmethod
-    def _validate_json_value(cls, value: Any, *, seen: set[int] | None = None, depth: int = 0) -> None:
+    def _validate_json_value(
+        cls,
+        value: Any,
+        *,
+        field: str,
+        seen: set[int] | None = None,
+        depth: int = 0,
+    ) -> None:
         """Validate the deliberately narrow JSON value grammar used by overrides."""
         if depth > _MAX_OVERRIDE_JSON_DEPTH:
-            raise RequestOverridesUnavailableError
-        if value is None or isinstance(value, (str, bool, int)):
+            raise InvalidRequestOverridesError(field)
+        if value is None or isinstance(value, bool):
+            return
+        if isinstance(value, str):
+            try:
+                value.encode("utf-8")
+            except UnicodeEncodeError:
+                raise InvalidRequestOverridesError(field) from None
+            return
+        if isinstance(value, int):
+            # Bound decimal conversion below Python's default 4,300-digit
+            # protection so behavior is stable on every supported interpreter.
+            if value.bit_length() > _MAX_OVERRIDE_INTEGER_BITS:
+                raise InvalidRequestOverridesError(field)
             return
         if isinstance(value, float):
             if not math.isfinite(value):
-                raise RequestOverridesUnavailableError
+                raise InvalidRequestOverridesError(field)
             return
         if not isinstance(value, (dict, list)):
-            raise RequestOverridesUnavailableError
+            raise InvalidRequestOverridesError(field)
         if seen is None:
             seen = set()
         value_id = id(value)
         if value_id in seen:
-            raise RequestOverridesUnavailableError
+            raise InvalidRequestOverridesError(field)
         seen.add(value_id)
         try:
             if isinstance(value, dict):
                 if not all(isinstance(key, str) for key in value):
-                    raise RequestOverridesUnavailableError
+                    raise InvalidRequestOverridesError(field)
                 for nested in value.values():
-                    cls._validate_json_value(nested, seen=seen, depth=depth + 1)
+                    cls._validate_json_value(nested, field=field, seen=seen, depth=depth + 1)
             else:
                 for nested in value:
-                    cls._validate_json_value(nested, seen=seen, depth=depth + 1)
+                    cls._validate_json_value(nested, field=field, seen=seen, depth=depth + 1)
         finally:
             seen.remove(value_id)
 
@@ -362,12 +396,12 @@ class BackgroundExecutionService(Service):
     def _validated_overrides(cls, value: Any) -> dict[str, dict[str, Any]]:
         """Return validated globals/tweaks only, rejecting all other envelope shapes."""
         if not isinstance(value, dict) or not set(value).issubset(_REQUEST_OVERRIDE_FIELDS):
-            raise RequestOverridesUnavailableError
+            raise InvalidRequestOverridesError(_REQUEST_OVERRIDES_CONTAINER_FIELD)
         overrides: dict[str, dict[str, Any]] = {}
         for key, nested in value.items():
             if not isinstance(nested, dict):
-                raise RequestOverridesUnavailableError
-            cls._validate_json_value(nested)
+                raise InvalidRequestOverridesError(key)
+            cls._validate_json_value(nested, field=key)
             overrides[key] = nested
         return overrides
 
@@ -397,10 +431,25 @@ class BackgroundExecutionService(Service):
                     separators=(",", ":"),
                     sort_keys=True,
                 ).encode()
+            except (RecursionError, TypeError, UnicodeError, ValueError) as exc:
+                logger.warning(
+                    "Background request override serialization failed",
+                    job_id=str(job_id),
+                    flow_id=str(flow_id),
+                    stage="serialize",
+                    error_type=type(exc).__name__,
+                )
+                raise InvalidRequestOverridesError(_REQUEST_OVERRIDES_CONTAINER_FIELD) from None
+            try:
                 ciphertext = get_fernet(self.settings_service).encrypt(plaintext).decode("ascii")
-            except RequestOverridesUnavailableError:
-                raise
-            except Exception:  # noqa: BLE001 -- every crypto/config failure must become the same safe error
+            except Exception as exc:  # noqa: BLE001 -- every crypto/config failure becomes the same safe error
+                logger.error(
+                    "Background request override encryption failed",
+                    job_id=str(job_id),
+                    flow_id=str(flow_id),
+                    stage="encrypt",
+                    error_type=type(exc).__name__,
+                )
                 raise RequestOverridesUnavailableError from None
             metadata[_REQUEST_OVERRIDES_FORMAT_KEY] = _REQUEST_OVERRIDES_FORMAT
             metadata[_REQUEST_OVERRIDES_KEY] = ciphertext
@@ -415,28 +464,65 @@ class BackgroundExecutionService(Service):
             # key. Plaintext values are rejected separately by reconstruction.
             return {}
         if not has_marker or not has_ciphertext or metadata[_REQUEST_OVERRIDES_FORMAT_KEY] != _REQUEST_OVERRIDES_FORMAT:
-            raise RequestOverridesUnavailableError
+            raise RequestOverridesCorruptedError
         ciphertext = metadata[_REQUEST_OVERRIDES_KEY]
         if not isinstance(ciphertext, str) or not ciphertext:
-            raise RequestOverridesUnavailableError
+            raise RequestOverridesCorruptedError
 
         from langflow.services.auth.utils import get_fernet_for_decryption
 
         try:
             plaintext = get_fernet_for_decryption(self.settings_service).decrypt(ciphertext.encode("ascii"))
+        except Exception as exc:  # noqa: BLE001 -- Fernet auth failure cannot distinguish bad key from tampering
+            logger.error(
+                "Background request override decryption failed",
+                job_id=str(job.job_id),
+                flow_id=str(job.flow_id),
+                stage="decrypt",
+                error_type=type(exc).__name__,
+            )
+            raise RequestOverridesUnavailableError from None
+
+        try:
             envelope = json.loads(plaintext)
             if not isinstance(envelope, dict) or set(envelope) != {"version", "job_id", "flow_id", "overrides"}:
-                raise RequestOverridesUnavailableError
+                raise RequestOverridesCorruptedError
             if type(envelope["version"]) is not int or envelope["version"] != _REQUEST_OVERRIDES_VERSION:
-                raise RequestOverridesUnavailableError
+                raise RequestOverridesCorruptedError
             if envelope["job_id"] != str(job.job_id) or envelope["flow_id"] != str(job.flow_id):
-                raise RequestOverridesUnavailableError
-            overrides = self._validated_overrides(envelope["overrides"])
+                raise RequestOverridesCorruptedError
+            try:
+                overrides = self._validated_overrides(envelope["overrides"])
+            except InvalidRequestOverridesError:
+                raise RequestOverridesCorruptedError from None
             if not overrides:
-                raise RequestOverridesUnavailableError
-        except RequestOverridesUnavailableError:
+                raise RequestOverridesCorruptedError
+        except RequestOverridesCorruptedError as exc:
+            logger.error(
+                "Background request override envelope validation failed",
+                job_id=str(job.job_id),
+                flow_id=str(job.flow_id),
+                stage="validate",
+                error_type=type(exc).__name__,
+            )
             raise
-        except Exception:  # noqa: BLE001 -- never expose crypto/parser distinctions to the caller
+        except (RecursionError, TypeError, UnicodeError, ValueError, OverflowError) as exc:
+            logger.error(
+                "Background request override parsing failed",
+                job_id=str(job.job_id),
+                flow_id=str(job.flow_id),
+                stage="parse",
+                error_type=type(exc).__name__,
+            )
+            raise RequestOverridesCorruptedError from None
+        except Exception as exc:  # noqa: BLE001 -- resource/server failures remain retryable
+            logger.error(
+                "Background request override parsing unavailable",
+                job_id=str(job.job_id),
+                flow_id=str(job.flow_id),
+                stage="parse",
+                error_type=type(exc).__name__,
+            )
             raise RequestOverridesUnavailableError from None
         else:
             return overrides
@@ -702,12 +788,38 @@ class BackgroundExecutionService(Service):
         # sweep would fail worker_lost. The runner's execute_with_status performs
         # the real QUEUED->IN_PROGRESS flip once it actually starts emitting.
         for job in await self._queued_workflow_jobs():
-            if not await job_service.claim_queued_lease(job.job_id, owner=self._owner, lease_ttl_s=lease_ttl):
+            lease_heartbeat = datetime.now(timezone.utc).isoformat()
+            if not await job_service.claim_queued_lease(
+                job.job_id,
+                owner=self._owner,
+                lease_ttl_s=lease_ttl,
+                heartbeat_at=lease_heartbeat,
+            ):
                 continue
             try:
                 request_dict = self._reconstruct_request(job)
-            except RequestOverridesUnavailableError:
-                await self._fail_request_overrides_unavailable(job.job_id, job_service)
+            except RequestOverridesCorruptedError:
+                await job_service.fail_queued_job(
+                    job.job_id,
+                    owner=self._owner,
+                    heartbeat_at=lease_heartbeat,
+                    error=dict(_REQUEST_OVERRIDES_ERROR),
+                    event_type="run_failed",
+                )
+                continue
+            except RequestOverridesUnavailableError as exc:
+                await logger.aerror(
+                    "Background request overrides unavailable during startup recovery",
+                    job_id=str(job.job_id),
+                    flow_id=str(job.flow_id),
+                    stage="startup_restore",
+                    error_type=type(exc).__name__,
+                )
+                await job_service.release_queued_lease(
+                    job.job_id,
+                    owner=self._owner,
+                    heartbeat_at=lease_heartbeat,
+                )
                 continue
             user = self._user_stub(job.user_id)
             with contextlib.suppress(Exception):
@@ -751,13 +863,6 @@ class BackgroundExecutionService(Service):
             result = await session.exec(stmt)
             return list(result.all())
 
-    @staticmethod
-    async def _fail_request_overrides_unavailable(job_id: UUID, job_service) -> None:
-        """Terminalize a queued job whose authenticated overrides cannot be restored."""
-        await job_service.update_job_status(job_id, JobStatus.FAILED, finished_timestamp=True)
-        await job_service.set_error(job_id, dict(_REQUEST_OVERRIDES_ERROR))
-        await job_service.append_event(job_id, "run_failed", dict(_REQUEST_OVERRIDES_ERROR))
-
     def _reconstruct_request(self, job: Job) -> dict[str, Any]:
         """Rebuild the request dict for a re-enqueued QUEUED job.
 
@@ -784,7 +889,7 @@ class BackgroundExecutionService(Service):
         for key in _REQUEST_OVERRIDE_FIELDS.intersection(request):
             value = request.pop(key)
             if not isinstance(value, dict) or value:
-                raise RequestOverridesUnavailableError
+                raise RequestOverridesCorruptedError
         return {**request, **self._decrypt_request_overrides(job, meta)}
 
     @staticmethod

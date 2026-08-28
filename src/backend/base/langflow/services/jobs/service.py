@@ -593,7 +593,14 @@ class JobService(Service):
             await session.flush()
             return result.rowcount == 1
 
-    async def claim_queued_lease(self, job_id: UUID, *, owner: str, lease_ttl_s: float) -> bool:
+    async def claim_queued_lease(
+        self,
+        job_id: UUID,
+        *,
+        owner: str,
+        lease_ttl_s: float,
+        heartbeat_at: str | None = None,
+    ) -> bool:
         """Lease-claim a QUEUED row WITHOUT flipping its status. Returns True if won.
 
         Single-flight ownership for the default re-enqueue path that, unlike
@@ -608,12 +615,14 @@ class JobService(Service):
         The claim succeeds only when the row is QUEUED and its current lease is
         absent or stale, and the conditional UPDATE matches the EXACT prior
         ``heartbeat_at`` we read, so two workers racing the same stale row see
-        only one ``rowcount == 1``. Portable across SQLite and Postgres.
+        only one ``rowcount == 1``. A caller-supplied ``heartbeat_at`` becomes
+        the claim token for a later guarded release or terminalization. Portable
+        across SQLite and Postgres.
         """
         from sqlmodel import update
 
         hb_expr = col(Job.job_metadata)["heartbeat_at"].as_string()
-        now = datetime.now(timezone.utc).isoformat()
+        claim_heartbeat = heartbeat_at or datetime.now(timezone.utc).isoformat()
         async with session_scope() as session:
             job = await session.get(Job, job_id)
             if job is None or job.status != JobStatus.QUEUED:
@@ -623,7 +632,7 @@ class JobService(Service):
             # A fresh lease means another worker already owns this claim window.
             if not self.is_lease_stale(job, lease_ttl_s=lease_ttl_s):
                 return False
-            merged = {**meta, "owner": owner, "heartbeat_at": now}
+            merged = {**meta, "owner": owner, "heartbeat_at": claim_heartbeat}
             # Guard on the exact prior heartbeat so a concurrent claimer that
             # already stamped its own loses the conditional UPDATE.
             guard = hb_expr.is_(None) if prior_hb is None else hb_expr == prior_hb
@@ -635,6 +644,90 @@ class JobService(Service):
             result = await session.exec(stmt)  # type: ignore[call-overload]
             await session.flush()
             return result.rowcount == 1
+
+    async def release_queued_lease(self, job_id: UUID, *, owner: str, heartbeat_at: str) -> bool:
+        """Release this owner's QUEUED lease without clearing a newer claim.
+
+        The status, owner, and exact heartbeat guards make the whole-metadata
+        replacement safe across SQLite and Postgres: a worker that has replaced
+        or refreshed this lease cannot have its claim erased by a stale recovery.
+        """
+        from sqlmodel import update
+
+        owner_expr = col(Job.job_metadata)["owner"].as_string()
+        hb_expr = col(Job.job_metadata)["heartbeat_at"].as_string()
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None or job.status != JobStatus.QUEUED:
+                return False
+            metadata = dict(job.job_metadata or {})
+            if metadata.get("owner") != owner or metadata.get("heartbeat_at") != heartbeat_at:
+                return False
+            metadata.pop("owner", None)
+            metadata.pop("heartbeat_at", None)
+            stmt = (
+                update(Job)
+                .where(
+                    Job.job_id == job_id,
+                    Job.status == JobStatus.QUEUED,
+                    owner_expr == owner,
+                    hb_expr == heartbeat_at,
+                )
+                .values(job_metadata=metadata or None)
+            )
+            result = await session.exec(stmt)  # type: ignore[call-overload]
+            await session.flush()
+            return result.rowcount == 1
+
+    async def fail_queued_job(
+        self,
+        job_id: UUID,
+        *,
+        owner: str,
+        heartbeat_at: str,
+        error: dict,
+        event_type: str,
+    ) -> bool:
+        """Atomically terminalize this owner's QUEUED claim with its durable event."""
+        from sqlmodel import update
+
+        owner_expr = col(Job.job_metadata)["owner"].as_string()
+        hb_expr = col(Job.job_metadata)["heartbeat_at"].as_string()
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None or job.status != JobStatus.QUEUED:
+                return False
+            metadata = job.job_metadata or {}
+            if metadata.get("owner") != owner or metadata.get("heartbeat_at") != heartbeat_at:
+                return False
+            stmt = (
+                update(Job)
+                .where(
+                    Job.job_id == job_id,
+                    Job.status == JobStatus.QUEUED,
+                    owner_expr == owner,
+                    hb_expr == heartbeat_at,
+                )
+                .values(
+                    status=JobStatus.FAILED,
+                    error=dict(error),
+                    finished_timestamp=datetime.now(timezone.utc),
+                )
+            )
+            result = await session.exec(stmt)  # type: ignore[call-overload]
+            if result.rowcount != 1:
+                return False
+            current_max = (await session.exec(select(func.max(JobEvent.seq)).where(JobEvent.job_id == job_id))).one()
+            session.add(
+                JobEvent(
+                    job_id=job_id,
+                    seq=(current_max or 0) + 1,
+                    event_type=event_type,
+                    payload=dict(error),
+                )
+            )
+            await session.flush()
+            return True
 
     async def claim_suspended_for_resume(self, job_id: UUID, *, owner: str | None = None) -> bool:
         """Atomically flip SUSPENDED->IN_PROGRESS for resume; True iff this caller won.
