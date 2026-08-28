@@ -95,6 +95,50 @@ async def test_off_refuses_component_targeted_inputs_on_the_v1_advanced_run(
     assert detail["fields"] == [node_id]
 
 
+async def test_off_refuses_component_targeted_inputs_on_the_v1_build(
+    client, simple_api_test, logged_in_headers, monkeypatch
+):
+    """The authenticated build path must refuse before it queues a job."""
+    from langflow.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "tweaks_policy", "off")
+    flow_id = simple_api_test["id"]
+    node_id = next(node["id"] for node in simple_api_test["data"]["nodes"] if node["id"].startswith("ChatInput"))
+    payload = {"inputs": {"components": [node_id], "input_value": "targeted", "type": "chat"}}
+
+    response = await client.post(f"/api/v1/build/{flow_id}/flow", headers=logged_in_headers, json=payload)
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    detail = response.json()["detail"]
+    assert detail["code"] == "TWEAKS_REFUSED"
+    assert detail["fields"] == [node_id]
+
+
+async def test_off_refuses_component_targeted_inputs_on_the_v1_public_build(
+    client, simple_api_test, logged_in_headers, monkeypatch
+):
+    """The anonymous public build path must return the same structured 422."""
+    from langflow.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "tweaks_policy", "off")
+    flow_id = simple_api_test["id"]
+    node_id = next(node["id"] for node in simple_api_test["data"]["nodes"] if node["id"].startswith("ChatInput"))
+    public_response = await client.patch(
+        f"/api/v1/flows/{flow_id}", json={"access_type": "PUBLIC"}, headers=logged_in_headers
+    )
+    assert public_response.status_code == status.HTTP_200_OK, public_response.text
+    client.cookies.clear()
+    client.cookies.set("client_id", "targeted-input-policy-client")
+    payload = {"inputs": {"components": [node_id], "input_value": "targeted", "type": "chat"}}
+
+    response = await client.post(f"/api/v1/build_public_tmp/{flow_id}/flow", json=payload)
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    detail = response.json()["detail"]
+    assert detail["code"] == "TWEAKS_REFUSED"
+    assert detail["fields"] == [node_id]
+
+
 @pytest.mark.parametrize("policy", ["permissive", "declared"])
 async def test_non_off_policies_allow_component_targeted_inputs_on_the_v1_advanced_run(
     client, simple_api_test, created_api_key, monkeypatch, policy
