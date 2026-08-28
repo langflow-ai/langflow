@@ -79,7 +79,7 @@ interface UseProviderConfigurationReturn {
   isFetchingAfterDisconnect: boolean;
 
   // Cache invalidation
-  invalidateProviderQueries: () => void;
+  invalidateProviderQueries: () => Promise<void>;
 }
 
 export const useProviderConfiguration = ({
@@ -224,57 +224,18 @@ export const useProviderConfiguration = ({
   );
 
   // Invalidate all provider-related caches after successful create/update
-  const invalidateProviderQueries = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["useGetModelProviders"] });
-    queryClient.invalidateQueries({ queryKey: ["useGetEnabledModels"] });
-    queryClient.invalidateQueries({ queryKey: ["useGetProviderVariables"] });
-    queryClient.invalidateQueries({
-      queryKey: getGlobalVariablesQueryKey({ flowId, projectId }),
-      exact: true,
-    });
-    queryClient.refetchQueries({ queryKey: ["flows"] });
+  const invalidateProviderQueries = useCallback(async (): Promise<void> => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["useGetModelProviders"] }),
+      queryClient.invalidateQueries({ queryKey: ["useGetEnabledModels"] }),
+      queryClient.invalidateQueries({ queryKey: ["useGetProviderVariables"] }),
+      queryClient.invalidateQueries({
+        queryKey: getGlobalVariablesQueryKey({ flowId, projectId }),
+        exact: true,
+      }),
+      queryClient.refetchQueries({ queryKey: ["flows"] }),
+    ]);
   }, [flowId, projectId, queryClient]);
-
-  // Clear isFetchingAfterSave/Disconnect once the models refetch settles
-  // We use fetchingSeenRef to avoid clearing prematurely on the first render
-  // before react-query has actually started the refetch (isFetchingModels lags by 1 tick).
-  const clearValuesAfterFetchRef = useRef(false);
-  const pendingSuccessTitleRef = useRef<string | null>(null);
-  const fetchingSeenRef = useRef(false);
-  useEffect(() => {
-    const isWaiting = isFetchingAfterSave || isFetchingAfterDisconnect;
-    if (isFetchingModels && isWaiting) {
-      // Mark that we've seen the refetch actually start
-      fetchingSeenRef.current = true;
-    }
-    if (!isFetchingModels && fetchingSeenRef.current && isWaiting) {
-      // Refetch has completed — now safe to clear
-      fetchingSeenRef.current = false;
-      if (isFetchingAfterSave) {
-        setIsFetchingAfterSave(false);
-        if (clearValuesAfterFetchRef.current) {
-          clearValuesAfterFetchRef.current = false;
-          setVariableValues({});
-        }
-        if (pendingSuccessTitleRef.current) {
-          setSuccessData({ title: pendingSuccessTitleRef.current });
-          pendingSuccessTitleRef.current = null;
-        }
-        // Refresh all model nodes on the canvas so they pick up new models
-        refreshAllModelInputs({ silent: true });
-      }
-      if (isFetchingAfterDisconnect) {
-        setIsFetchingAfterDisconnect(false);
-        // Refresh all model nodes on the canvas so they reflect the disconnect
-        refreshAllModelInputs({ silent: true });
-      }
-    }
-  }, [
-    isFetchingModels,
-    isFetchingAfterSave,
-    isFetchingAfterDisconnect,
-    refreshAllModelInputs,
-  ]);
 
   // Reset every local value/ref when either the provider or its authorization
   // scope changes. A credential typed in flow/project A must never repaint or
@@ -292,9 +253,6 @@ export const useProviderConfiguration = ({
       setIsSaving(false);
       setIsFetchingAfterSave(false);
       setIsFetchingAfterDisconnect(false);
-      clearValuesAfterFetchRef.current = false;
-      pendingSuccessTitleRef.current = null;
-      fetchingSeenRef.current = false;
       hasUserMadeChangesRef.current = false;
       if (_validationTimeoutRef.current) {
         clearTimeout(_validationTimeoutRef.current);
@@ -302,7 +260,7 @@ export const useProviderConfiguration = ({
       }
 
       // Force refetch models when switching provider or authorization scope.
-      invalidateProviderQueries();
+      void invalidateProviderQueries();
     }
   }, [configurationContextKey, invalidateProviderQueries]);
 
@@ -573,14 +531,22 @@ export const useProviderConfiguration = ({
 
       if (!canUseCurrentProviderPolicy(providerName)) return;
 
-      // All succeeded — defer toast and value clear until after models refetch
+      // All succeeded. Await the cache refresh directly instead of relying on
+      // React to render an intermediate `isFetching` state, which a fast
+      // refetch can enter and leave in the same batch.
       hasUserMadeChangesRef.current = true;
-      pendingSuccessTitleRef.current = t("modelProviders.configurationSaved", {
-        provider: providerName,
-      });
       setIsFetchingAfterSave(true);
-      clearValuesAfterFetchRef.current = true;
-      invalidateProviderQueries();
+      await invalidateProviderQueries();
+
+      if (activeConfigurationContextRef.current === configurationContextKey) {
+        setVariableValues({});
+        setSuccessData({
+          title: t("modelProviders.configurationSaved", {
+            provider: providerName,
+          }),
+        });
+        void refreshAllModelInputs({ silent: true });
+      }
     } catch (error: unknown) {
       setValidationFailed(true);
       setErrorData({
@@ -590,7 +556,10 @@ export const useProviderConfiguration = ({
         ],
       });
     } finally {
-      setIsSaving(false);
+      if (activeConfigurationContextRef.current === configurationContextKey) {
+        setIsSaving(false);
+        setIsFetchingAfterSave(false);
+      }
     }
   }, [
     trustedSelectedProvider,
@@ -606,8 +575,11 @@ export const useProviderConfiguration = ({
     globalVariablesQueryKey,
     validateCredentials,
     t,
+    setSuccessData,
     setErrorData,
     invalidateProviderQueries,
+    refreshAllModelInputs,
+    configurationContextKey,
   ]);
 
   // Activate providers that don't need API keys (e.g., Ollama)
@@ -664,7 +636,7 @@ export const useProviderConfiguration = ({
           provider: providerName,
         }),
       });
-      invalidateProviderQueries();
+      void invalidateProviderQueries();
     } catch (error: unknown) {
       setErrorData({
         title: t("modelProviders.errorActivatingProvider"),
@@ -725,13 +697,17 @@ export const useProviderConfiguration = ({
       );
 
       hasUserMadeChangesRef.current = true;
-      setSuccessData({
-        title: t("modelProviders.providerDisconnected", {
-          provider: providerName,
-        }),
-      });
       setIsFetchingAfterDisconnect(true);
-      invalidateProviderQueries();
+      await invalidateProviderQueries();
+
+      if (activeConfigurationContextRef.current === configurationContextKey) {
+        setSuccessData({
+          title: t("modelProviders.providerDisconnected", {
+            provider: providerName,
+          }),
+        });
+        void refreshAllModelInputs({ silent: true });
+      }
     } catch (error: unknown) {
       setErrorData({
         title: t("modelProviders.errorDisconnectingProvider"),
@@ -739,6 +715,10 @@ export const useProviderConfiguration = ({
           getAxiosErrorMessage(error, t("modelProviders.errorUnexpected")),
         ],
       });
+    } finally {
+      if (activeConfigurationContextRef.current === configurationContextKey) {
+        setIsFetchingAfterDisconnect(false);
+      }
     }
   }, [
     trustedSelectedProvider,
@@ -751,6 +731,8 @@ export const useProviderConfiguration = ({
     setSuccessData,
     setErrorData,
     invalidateProviderQueries,
+    refreshAllModelInputs,
+    configurationContextKey,
   ]);
 
   const { handleModelToggle: queueModelToggle, flushPendingChanges } =

@@ -11,7 +11,7 @@ const ANTHROPIC_MODEL = "claude-sonnet-4-5-20250929";
 
 async function mockAnthropicModelCatalog(page: Page) {
   await page.route(
-    /\/api\/v1\/models\/enabled_models(?:\?.*)?$/,
+    (url) => url.pathname === "/api/v1/models/enabled_models",
     async (route) => {
       await route.fulfill({
         json: {
@@ -23,36 +23,39 @@ async function mockAnthropicModelCatalog(page: Page) {
       });
     },
   );
-  await page.route(/\/api\/v1\/models(?:\?.*)?$/, async (route) => {
-    await route.fulfill({
-      json: [
-        {
-          provider: "Anthropic",
-          icon: "Anthropic",
-          is_enabled: true,
-          is_configured: true,
-          models: [
-            {
-              model_name: ANTHROPIC_MODEL,
-              metadata: { model_type: "llm", tool_calling: true },
-            },
-          ],
-        },
-        {
-          provider: "OpenAI",
-          icon: "OpenAI",
-          is_enabled: true,
-          is_configured: true,
-          models: [
-            {
-              model_name: "gpt-4o-mini",
-              metadata: { model_type: "llm", tool_calling: true },
-            },
-          ],
-        },
-      ],
-    });
-  });
+  await page.route(
+    (url) => url.pathname === "/api/v1/models",
+    async (route) => {
+      await route.fulfill({
+        json: [
+          {
+            provider: "Anthropic",
+            icon: "Anthropic",
+            is_enabled: true,
+            is_configured: true,
+            models: [
+              {
+                model_name: ANTHROPIC_MODEL,
+                metadata: { model_type: "llm", tool_calling: true },
+              },
+            ],
+          },
+          {
+            provider: "OpenAI",
+            icon: "OpenAI",
+            is_enabled: true,
+            is_configured: true,
+            models: [
+              {
+                model_name: "gpt-4o-mini",
+                metadata: { model_type: "llm", tool_calling: true },
+              },
+            ],
+          },
+        ],
+      });
+    },
+  );
 }
 
 test(
