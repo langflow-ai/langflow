@@ -870,6 +870,129 @@ class TestKnowledgeBaseAPI:
         assert response.status_code == 400
         assert "at least 3 characters" in response.json()["detail"]
 
+    @pytest.mark.parametrize(
+        "name",
+        ["Q&A docs", "catálogo-produtos", "trailing_", "docs..v2", "127.0.0.1", "a" * 513],
+    )
+    async def test_create_kb_rejects_chroma_incompatible_name_before_persistence(
+        self,
+        name,
+        client: AsyncClient,
+        logged_in_headers,
+        active_user,
+        monkeypatch,
+    ):
+        from langflow.api.v1 import knowledge_bases as kb_api
+
+        root_path = MagicMock()
+        monkeypatch.setattr(kb_api.KBStorageHelper, "get_root_path", root_path)
+
+        response = await client.post(
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={
+                "name": name,
+                "embedding_provider": "OpenAI",
+                "embedding_model": "model",
+            },
+        )
+
+        assert response.status_code == 400, response.text
+        assert "3-512 characters" in response.json()["detail"]
+        root_path.assert_not_called()
+        normalized_name = name.strip().replace(" ", "_")
+        assert await knowledge_base_service.get_by_user_and_name(active_user.id, normalized_name) is None
+
+    @pytest.mark.parametrize("name", ["docs.v2", "a" * 100, "topology+collection"])
+    async def test_create_kb_accepts_full_chroma_name_contract(
+        self,
+        name,
+        client: AsyncClient,
+        logged_in_headers,
+        active_user,
+        tmp_path,
+        monkeypatch,
+    ):
+        from langflow.api.v1 import knowledge_bases as kb_api
+
+        mock_chroma_client = MagicMock()
+        monkeypatch.setattr(kb_api.KBStorageHelper, "get_root_path", MagicMock(return_value=tmp_path))
+        monkeypatch.setattr(
+            kb_api.KBStorageHelper,
+            "get_fresh_chroma_client",
+            MagicMock(return_value=mock_chroma_client),
+        )
+
+        response = await client.post(
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={
+                "name": name,
+                "embedding_provider": "OpenAI",
+                "embedding_model": "model",
+            },
+        )
+
+        assert response.status_code == 201, response.text
+        mock_chroma_client.create_collection.assert_called_once()
+        assert await knowledge_base_service.get_by_user_and_name(active_user.id, name) is not None
+
+    async def test_create_kb_rejects_name_too_long_for_local_chroma(
+        self,
+        client: AsyncClient,
+        logged_in_headers,
+        active_user,
+        monkeypatch,
+    ):
+        from langflow.api.v1 import knowledge_bases as kb_api
+
+        root_path = MagicMock()
+        monkeypatch.setattr(kb_api.KBStorageHelper, "get_root_path", root_path)
+        name = "a" * 256
+
+        response = await client.post(
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={
+                "name": name,
+                "embedding_provider": "OpenAI",
+                "embedding_model": "model",
+            },
+        )
+
+        assert response.status_code == 400, response.text
+        assert "at most 255 characters for local Chroma storage" in response.json()["detail"]
+        root_path.assert_not_called()
+        assert await knowledge_base_service.get_by_user_and_name(active_user.id, name) is None
+
+    async def test_create_kb_does_not_apply_chroma_rules_to_postgres(
+        self,
+        client: AsyncClient,
+        logged_in_headers,
+        active_user,
+    ):
+        from lfx.base.knowledge_bases.backends.base import TestConnectionResult
+        from lfx.base.knowledge_bases.backends.postgres import PostgresBackend
+
+        connection_result = TestConnectionResult(ok=True, message="Connected")
+        with patch.object(PostgresBackend, "test_connection", new=AsyncMock(return_value=connection_result)):
+            response = await client.post(
+                "api/v1/knowledge_bases",
+                headers=logged_in_headers,
+                json={
+                    "name": "Q&A_docs",
+                    "embedding_provider": "OpenAI",
+                    "embedding_model": "model",
+                    "backend_type": "postgres",
+                    "backend_config": {},
+                },
+            )
+
+        assert response.status_code == 201, response.text
+        record = await knowledge_base_service.get_by_user_and_name(active_user.id, "Q&A_docs")
+        assert record is not None
+        assert record.backend_type == "postgres"
+
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_create_duplicate_kb(self, mock_root, client: AsyncClient, logged_in_headers, tmp_path):
         mock_root.return_value = tmp_path

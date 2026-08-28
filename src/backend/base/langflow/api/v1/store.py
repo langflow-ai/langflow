@@ -1,6 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from lfx.log.logger import logger
 
@@ -147,6 +148,13 @@ async def get_tags():
         return await get_store_service().get_tags()
     except CustomError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except httpx.TransportError as exc:
+        # The store is a third-party service and the visual editor asks for tags on
+        # every app boot, so an unreachable upstream must not read as a fault of this
+        # server. Tags only decorate a filter, so degrade to none and keep 500 for
+        # failures that ARE ours.
+        await logger.awarning(f"Langflow Store unreachable; serving no tags: {exc}")
+        return []
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
