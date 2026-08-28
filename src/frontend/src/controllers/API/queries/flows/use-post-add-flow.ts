@@ -1,5 +1,6 @@
 import type { UseMutationResult } from "@tanstack/react-query";
 import type { ReactFlowJsonObject } from "@xyflow/react";
+import { refetchQueriesFresh } from "@/controllers/API/helpers/query-cache";
 import { useFolderStore } from "@/stores/foldersStore";
 import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
@@ -49,16 +50,20 @@ export const usePostAddFlow: useMutationFunctionType<
     postAddFlowFn,
     {
       ...options,
+      // Fire-and-forget on purpose: TanStack dispatches the mutation's
+      // "success" only after this callback settles, so awaiting the refetches
+      // would hold up every caller of `addFlow` — including the navigation to
+      // the flow that was just created.
       onSettled: (response) => {
         if (response) {
-          queryClient.refetchQueries({
+          void refetchQueriesFresh(queryClient, {
             queryKey: [
               "useGetRefreshFlowsQuery",
               { get_all: true, header_flows: true },
             ],
           });
 
-          queryClient.refetchQueries({
+          void refetchQueriesFresh(queryClient, {
             queryKey: ["useGetFolder", response.folder_id ?? myCollectionId],
           });
         }
