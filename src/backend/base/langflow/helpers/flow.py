@@ -680,13 +680,12 @@ def _get_flow_input_nodes(flow: Flow) -> list[Vertex]:
     return [vertex for vertex in graph.vertices if vertex.is_input]
 
 
+def _is_visible_input_field(field_data: Any) -> bool:
+    return isinstance(field_data, dict) and field_data.get("show", False) and not field_data.get("advanced", False)
+
+
 def _is_mcp_input_field(field_data: Any) -> bool:
-    return (
-        isinstance(field_data, dict)
-        and field_data.get("show", False)
-        and not field_data.get("advanced", False)
-        and field_data.get("api_editable") is True
-    )
+    return _is_visible_input_field(field_data) and field_data.get("api_editable") is True
 
 
 _JSON_SCHEMA_TYPE_BY_FIELD_TYPE = {
@@ -760,16 +759,21 @@ def get_flow_input_tweaks(flow: Flow, inputs: dict[str, Any]) -> dict[str, dict[
     return tweaks
 
 
-def json_schema_from_flow(flow: Flow) -> dict:
-    """Generate JSON schema from flow input nodes."""
+def json_schema_from_flow(flow: Flow, *, require_api_editable: bool = True) -> dict:
+    """Generate JSON schema from flow input nodes.
+
+    MCP schemas expose only API-editable fields. Other consumers, such as A2A,
+    can include every visible, non-advanced field in their input contract.
+    """
     properties = {}
     required = []
+    is_input_field = _is_mcp_input_field if require_api_editable else _is_visible_input_field
     for node in _get_flow_input_nodes(flow):
         node_data = node.data["node"]
         template = node_data["template"]
 
         for field_name, field_data in template.items():
-            if _is_mcp_input_field(field_data):
+            if is_input_field(field_data):
                 properties[field_name] = {
                     **_json_schema_type_for_field(field_data),
                     "description": field_data.get("info", f"Input for {field_name}"),
