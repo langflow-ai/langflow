@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import sys
+import typing
 from types import ModuleType
 from typing import TypeVar, get_args
 
@@ -11,6 +12,7 @@ from lfx.custom.annotation_validation import (
     UnsafeReturnAnnotationError,
     is_safe_return_annotation,
     resolve_callable_return_annotation,
+    resolve_compiled_method_return_annotation,
     resolve_type_annotation,
     validate_return_annotations,
 )
@@ -42,6 +44,29 @@ def test_passive_return_annotations_are_accepted(annotation: str) -> None:
     assert node.returns is not None
     assert is_safe_return_annotation(node.returns)
     validate_return_annotations(ast.Module(body=[node], type_ignores=[]))
+
+
+def test_annotated_metadata_calls_are_accepted_without_execution(tmp_path) -> None:
+    marker = tmp_path / "annotated-metadata-evaluated"
+    tree = ast.parse(
+        f'def build() -> Annotated[str, Field(description="label"), open({str(marker)!r}, "w")]:\n    pass\n'
+    )
+    node = tree.body[0]
+    assert isinstance(node, ast.FunctionDef)
+    assert node.returns is not None
+
+    validate_return_annotations(tree)
+    resolved = resolve_type_annotation(node.returns)
+
+    assert resolved is str
+    assert not marker.exists()
+
+
+def test_annotated_type_calls_remain_rejected() -> None:
+    tree = ast.parse('def build() -> Annotated[open("marker", "w"), "label"]:\n    pass\n')
+
+    with pytest.raises(UnsafeReturnAnnotationError, match="active expression"):
+        validate_return_annotations(tree)
 
 
 @pytest.mark.parametrize(
@@ -114,6 +139,25 @@ def test_runtime_resolver_supports_imported_aliases_and_provider_types() -> None
 
     trusted_alias = resolve_type_annotation("TrustedPayload | None", globalns={"TrustedPayload": Data})
     assert get_args(trusted_alias) == (Data, type(None))
+
+
+@pytest.mark.parametrize(
+    "runtime_annotation",
+    [
+        typing.Sequence[int],
+        typing.Iterator[str],
+        typing.AsyncIterator[Data],
+        typing.Iterable[float],
+        typing.Mapping[str, Data],
+        typing.Callable[[str, int], Data],
+    ],
+)
+def test_runtime_resolver_supports_trusted_typing_abc_origins(runtime_annotation: object) -> None:
+    assert resolve_type_annotation("Alias", globalns={"Alias": runtime_annotation}) == runtime_annotation
+
+
+def test_runtime_resolver_unwraps_annotated_metadata() -> None:
+    assert resolve_type_annotation(typing.Annotated[str, "label"]) is str
 
 
 def test_runtime_resolver_reads_module_dict_without_dynamic_attribute_access() -> None:
@@ -314,6 +358,48 @@ def test_code_parser_does_not_import_or_invoke_user_annotation_objects(monkeypat
     assert calls == []
 
 
+def test_code_parser_resolves_safe_imported_aliases_without_importing() -> None:
+    parser = CodeParser("")
+    parser.data["imports"] = [("lfx.schema", "Data as Payload")]
+    node = ast.parse("def build() -> Payload:\n    pass\n").body[0]
+    assert isinstance(node, ast.FunctionDef)
+
+    details = parser.parse_callable_details(node)
+
+    assert details["return_type"] is Data
+
+
+def test_legacy_custom_component_preserves_safe_aliased_return_type() -> None:
+    from lfx.custom import CustomComponent
+
+    code = """\
+from lfx.custom import CustomComponent
+from lfx.schema import Data as Payload
+
+class AliasedAnnotationComponent(CustomComponent):
+    def build(self) -> Payload:
+        return Payload(data={})
+"""
+    component = CustomComponent(_code=code, _function_entrypoint_name="build")
+
+    assert component._get_function_entrypoint_return_type == [Data]
+
+
+def test_legacy_custom_component_skips_unresolved_return_types() -> None:
+    from lfx.custom import CustomComponent
+
+    code = """\
+from lfx.custom import CustomComponent
+
+class UnknownAnnotationComponent(CustomComponent):
+    def build(self) -> MissingProviderType:
+        return None
+"""
+    component = CustomComponent(_code=code, _function_entrypoint_name="build")
+
+    assert component._get_function_entrypoint_return_type == []
+
+
 @pytest.mark.parametrize(
     "code",
     [
@@ -346,6 +432,851 @@ class UnsafeAnnotationComponent(Component):
         eval_custom_component_code(code)
 
     assert not marker.exists()
+
+
+def test_custom_component_uses_annotated_wrapped_type_without_executing_metadata(tmp_path) -> None:
+    marker = tmp_path / "annotated-component-metadata"
+    code = f"""\
+from typing import Annotated
+from pydantic import Field
+from lfx.custom import Component
+
+class CompatibleAnnotatedMetadataComponent(Component):
+    def build(self) -> Annotated[str, Field(description="label"), open({str(marker)!r}, "w")]:
+        return "ok"
+"""
+
+    component_class = eval_custom_component_code(code)
+
+    assert isinstance(component_class.build.__annotations__["return"], str)
+    assert component_class()._get_method_return_type("build") == ["Text"]
+    assert not marker.exists()
+
+
+def test_custom_component_supports_abc_base_class() -> None:
+    code = """\
+from abc import ABC, abstractmethod
+from lfx.custom import Component
+
+class AbstractHelper(ABC):
+    @abstractmethod
+    def helper(self) -> str:
+        raise NotImplementedError
+
+class ABCCompatibleComponent(AbstractHelper, Component):
+    def helper(self) -> str:
+        return "ok"
+
+    def build(self) -> str:
+        return "ok"
+"""
+
+    component_class = eval_custom_component_code(code)
+
+    assert component_class()._get_method_return_type("build") == ["Text"]
+
+
+def test_custom_component_preserves_unrelated_pydantic_annotated_field_metadata() -> None:
+    code = """\
+from typing import Annotated
+from pydantic import BaseModel, Field
+from lfx.custom import Component
+
+class HelperModel(BaseModel):
+    value: Annotated[int, Field(gt=0)]
+
+HelperModelReady = HelperModel.model_rebuild(_types_namespace=globals())
+
+class PydanticHelperAnnotationComponent(Component):
+    Helper = HelperModel
+
+    def build(self) -> str:
+        return "ok"
+"""
+
+    component_class = eval_custom_component_code(code)
+    metadata = component_class.Helper.model_fields["value"].metadata
+
+    assert any(getattr(item, "gt", None) == 0 for item in metadata)
+    assert component_class()._get_method_return_type("build") == ["Text"]
+
+
+def test_custom_component_supports_cached_decorated_output_method() -> None:
+    code = """\
+from functools import lru_cache
+from lfx.custom import Component
+
+class CachedOutputComponent(Component):
+    @lru_cache
+    def build(self) -> str:
+        return "ok"
+"""
+
+    component_class = eval_custom_component_code(code)
+
+    assert component_class()._get_method_return_type("build") == ["Text"]
+
+
+def test_runtime_subclass_inherits_cached_decorated_sidecar_return() -> None:
+    code = """\
+from functools import lru_cache
+from lfx.custom import Component
+
+class CachedSidecarBaseComponent(Component):
+    @lru_cache
+    def build(self) -> str:
+        return "ok"
+"""
+    base_class = eval_custom_component_code(code)
+
+    class RuntimeSubclass(base_class):
+        pass
+
+    assert base_class()._get_method_return_type("build") == ["Text"]
+    assert RuntimeSubclass()._get_method_return_type("build") == ["Text"]
+
+
+def test_compiled_sidecar_is_authoritative_for_unannotated_decorated_method() -> None:
+    code = """\
+from lfx.custom import Component
+
+annotation_calls = []
+
+class PoisonAnnotations(dict):
+    def get(self, key, default=None):
+        annotation_calls.append(key)
+        return str
+
+def poison_annotations(function):
+    function.__annotations__ = PoisonAnnotations()
+    return function
+
+class UnannotatedDecoratedComponent(Component):
+    @poison_annotations
+    def build(self):
+        return "ok"
+"""
+
+    component_class = eval_custom_component_code(code)
+
+    assert component_class()._get_method_return_type("build") == []
+    assert component_class.build.__globals__["annotation_calls"] == []
+
+
+def test_compiled_sidecar_registry_does_not_hash_component_classes() -> None:
+    code = """\
+from lfx.custom import Component
+
+hash_calls = []
+
+class HashProbeMeta(type):
+    def __hash__(cls):
+        hash_calls.append("hash")
+        return type.__hash__(cls)
+
+class HashSafeComponent(Component, metaclass=HashProbeMeta):
+    def build(self) -> str:
+        return "ok"
+"""
+
+    component_class = eval_custom_component_code(code)
+    hash_calls = component_class.build.__globals__["hash_calls"]
+
+    assert hash_calls == []
+    assert component_class()._get_method_return_type("build") == ["Text"]
+    assert hash_calls == []
+
+
+@pytest.mark.parametrize("return_annotation", ["SelfTypedComponent", "list[SelfTypedComponent]"])
+def test_compiled_sidecar_registry_does_not_retain_self_typed_component(return_annotation: str) -> None:
+    import gc
+    import weakref
+
+    code = f"""\
+from lfx.custom import Component
+
+class SelfTypedComponent(Component):
+    def build(self) -> {return_annotation}:
+        return self
+"""
+
+    component_class = eval_custom_component_code(code)
+    class_reference = weakref.ref(component_class)
+
+    assert component_class()._get_method_return_type("build") == []
+
+    del component_class
+    gc.collect()
+
+    assert class_reference() is None
+
+
+@pytest.mark.parametrize("return_annotation", ["LocalPayload", "list[LocalPayload]"])
+def test_compiled_sidecar_registry_does_not_retain_refreshed_local_payload(return_annotation: str) -> None:
+    import gc
+    import weakref
+
+    code = f"""\
+import weakref
+from lfx.custom import Component
+
+payload_references = []
+
+def make_local_payload():
+    class LocalPayload:
+        def marker(self):
+            return "payload"
+
+    globals()["LocalPayload"] = LocalPayload
+    payload_references.append(weakref.ref(LocalPayload))
+    return LocalPayload
+
+class LocalPayloadComponent(Component):
+    Payload = make_local_payload()
+
+    def build(self) -> {return_annotation}:
+        return self.Payload()
+"""
+
+    component_class = eval_custom_component_code(code)
+    component_reference = weakref.ref(component_class)
+    payload_reference = weakref.ref(component_class.Payload)
+
+    assert component_class()._get_method_return_type("build") == []
+
+    del component_class
+    gc.collect()
+
+    assert component_reference() is None
+    assert payload_reference() is None
+
+
+def test_compiled_sidecar_collects_control_flow_methods_without_runtime_annotation_reads() -> None:
+    code = """\
+from lfx.custom import Component
+
+annotation_calls = []
+
+class PoisonAnnotations(dict):
+    def get(self, key, default=None):
+        annotation_calls.append(key)
+        return str
+
+def poison_annotations(function):
+    function.__annotations__ = PoisonAnnotations()
+    return function
+
+class ControlFlowMethodComponent(Component):
+    if True:
+        @poison_annotations
+        def build(self) -> str:
+            return "ok"
+"""
+
+    component_class = eval_custom_component_code(code)
+
+    assert component_class()._get_method_return_type("build") == []
+    assert component_class.build.__globals__["annotation_calls"] == []
+
+
+def test_compiled_sidecar_does_not_infer_mutually_exclusive_control_flow_return() -> None:
+    code = """\
+from lfx.custom import Component
+from lfx.schema import Data
+
+class ConditionalMethodComponent(Component):
+    if True:
+        def build(self) -> str:
+            return "ok"
+    else:
+        def build(self) -> Data:
+            return Data(data={})
+"""
+
+    component_class = eval_custom_component_code(code)
+
+    assert component_class()._get_method_return_type("build") == []
+
+
+def test_compiled_target_fails_closed_for_inherited_unregistered_decorated_method() -> None:
+    code = """\
+from lfx.custom import Component
+
+annotation_calls = []
+
+class PoisonAnnotations(dict):
+    def get(self, key, default=None):
+        annotation_calls.append(key)
+        return str
+
+def poison_annotations(function):
+    function.__annotations__ = PoisonAnnotations()
+    return function
+
+class UserBase:
+    @poison_annotations
+    def build(self) -> str:
+        return "ok"
+
+class InheritedUserBaseComponent(UserBase, Component):
+    pass
+"""
+
+    component_class = eval_custom_component_code(code)
+
+    assert component_class()._get_method_return_type("build") == []
+    assert component_class.build.__globals__["annotation_calls"] == []
+
+
+def test_runtime_subclass_fails_closed_after_compiled_sidecar_boundary() -> None:
+    code = """\
+from lfx.custom import Component
+
+annotation_calls = []
+
+class PoisonAnnotations(dict):
+    def get(self, key, default=None):
+        annotation_calls.append(key)
+        return str
+
+def poison_annotations(function):
+    function.__annotations__ = PoisonAnnotations()
+    return function
+
+class UserBase:
+    @poison_annotations
+    def build(self) -> str:
+        return "ok"
+
+class InheritedUserBaseComponent(UserBase, Component):
+    pass
+"""
+
+    component_class = eval_custom_component_code(code)
+
+    class RuntimeSubclass(component_class):
+        pass
+
+    assert RuntimeSubclass()._get_method_return_type("build") == []
+    assert component_class.build.__globals__["annotation_calls"] == []
+
+
+def test_custom_component_preserves_class_valued_helper_attribute() -> None:
+    code = """\
+from lfx.custom import Component
+
+class Helper:
+    pass
+
+class ClassValuedHelperComponent(Component):
+    HelperType = Helper
+
+    def build(self) -> str:
+        return "ok"
+"""
+
+    component_class = eval_custom_component_code(code)
+
+    assert component_class.HelperType.__name__ == "Helper"
+    assert component_class()._get_method_return_type("build") == ["Text"]
+
+
+def test_runtime_subclass_override_without_sidecar_uses_callable_resolver() -> None:
+    code = """\
+from lfx.custom import Component
+
+class SidecarBaseComponent(Component):
+    def build(self) -> str:
+        return "ok"
+"""
+    base_class = eval_custom_component_code(code)
+
+    class RuntimeSubclass(base_class):
+        def build(self) -> Data:
+            return Data(data={})
+
+    assert base_class()._get_method_return_type("build") == ["Text"]
+    assert RuntimeSubclass()._get_method_return_type("build") == ["JSON"]
+
+
+def test_custom_component_rejects_class_decorator_substitution_without_registering_framework_class() -> None:
+    from lfx.custom import Component, annotation_validation
+
+    before = resolve_compiled_method_return_annotation(Component, "build")
+    code = """\
+from lfx.custom import Component
+
+def replace_with_framework(_component_class):
+    return Component
+
+@replace_with_framework
+class ReplacedComponent(Component):
+    def build(self) -> str:
+        return "ok"
+"""
+
+    error = None
+    try:
+        eval_custom_component_code(code)
+    except ValueError as exc:
+        error = exc
+    after = resolve_compiled_method_return_annotation(Component, "build")
+    if after != before:
+        annotation_validation._COMPILED_CLASS_METHOD_RETURNS.pop(id(Component), None)
+
+    assert error is not None
+    assert "class" in str(error).lower()
+    assert after == before
+
+
+def test_custom_component_preserves_identity_returning_class_decorator() -> None:
+    code = """\
+from lfx.custom import Component
+
+def preserve_identity(component_class):
+    return component_class
+
+@preserve_identity
+class IdentityDecoratedComponent(Component):
+    def build(self) -> str:
+        return "ok"
+"""
+
+    component_class = eval_custom_component_code(code)
+
+    assert component_class()._get_method_return_type("build") == []
+
+
+def test_custom_component_fails_closed_for_fresh_class_decorator_replacement() -> None:
+    code = """\
+from lfx.custom import Component
+from lfx.schema import Data
+
+def replace_with_fresh_class(_component_class):
+    class ReplacementComponent(Component):
+        def build(self) -> Data:
+            return Data(data={})
+
+    ReplacementComponent.__module__ = __name__
+    ReplacementComponent.__name__ = "FreshReplacementComponent"
+    ReplacementComponent.__qualname__ = "FreshReplacementComponent"
+    return ReplacementComponent
+
+@replace_with_fresh_class
+class FreshReplacementComponent(Component):
+    def build(self) -> str:
+        return "target"
+"""
+
+    component_class = eval_custom_component_code(code)
+
+    assert component_class()._get_method_return_type("build") == []
+
+
+def test_trusted_vector_store_connection_preserves_compiled_output_types() -> None:
+    code = """\
+from langchain_core.vectorstores import VectorStore
+from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection as trusted_connection
+from lfx.custom import Component
+
+@trusted_connection
+class DecoratedVectorStoreComponent(Component):
+    outputs = []
+
+    def build(self) -> str:
+        return "ok"
+
+    def build_vector_store(self) -> VectorStore:
+        raise NotImplementedError
+"""
+
+    component = eval_custom_component_code(code)()
+
+    assert component._get_method_return_type("build") == ["Text"]
+    assert component._get_method_return_type("as_vector_store") == ["VectorStore"]
+
+
+def test_trusted_vector_store_connection_cannot_be_replaced_and_restored_during_class_execution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from lfx.base.vectorstores import vector_store_connection_decorator as decorator_module
+
+    monkeypatch.setattr(
+        decorator_module.vector_store_connection, "__code__", decorator_module.vector_store_connection.__code__
+    )
+    monkeypatch.setattr(decorator_module, "_saved_trusted_code", None, raising=False)
+    monkeypatch.setattr(decorator_module, "_decorator_calls", None, raising=False)
+    code = """\
+import lfx.base.vectorstores.vector_store_connection_decorator as decorator_module
+from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection as trusted_connection
+from lfx.custom import Component
+
+def replacement(component_class):
+    global _decorator_calls
+    _decorator_calls += 1
+    component_class.untrusted_decorator_ran = True
+
+    def as_vector_store(self):
+        return "attacker-controlled"
+
+    component_class.as_vector_store = as_vector_store
+    if _decorator_calls == 2:
+        vector_store_connection.__code__ = _saved_trusted_code
+    return component_class
+
+decorator_module._saved_trusted_code = trusted_connection.__code__
+decorator_module._decorator_calls = 0
+trusted_connection.__code__ = replacement.__code__
+
+@trusted_connection
+class SnapshotBypassComponent(Component):
+    outputs = []
+
+    def build(self) -> str:
+        return "ok"
+
+    def build_vector_store(self):
+        return "safe"
+"""
+
+    component_class = eval_custom_component_code(code)
+    component = component_class()
+
+    assert not hasattr(component_class, "untrusted_decorator_ran")
+    assert component._get_method_return_type("build") == ["Text"]
+    assert component._get_method_return_type("as_vector_store") == ["VectorStore"]
+    assert component.as_vector_store() == "safe"
+
+
+def test_trusted_vector_store_connection_ignores_current_load_helper_rebinding(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import importlib
+
+    validator_module = importlib.import_module("lfx.custom.validate")
+    monkeypatch.setattr(
+        validator_module,
+        "_apply_vector_store_connection",
+        getattr(validator_module, "_apply_vector_store_connection", None),
+        raising=False,
+    )
+    code = """\
+import importlib
+from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection as trusted_connection
+from lfx.custom import Component
+
+def attacker_helper(component_class):
+    component_class.untrusted_helper_ran = True
+
+    def as_vector_store(self):
+        return "attacker-controlled"
+
+    component_class.as_vector_store = as_vector_store
+    return component_class
+
+validator = importlib.import_module("lfx.custom.validate")
+validator._apply_vector_store_connection = attacker_helper
+
+@trusted_connection
+class HelperRebindingComponent(Component):
+    outputs = []
+
+    def build(self) -> str:
+        return "ok"
+
+    def build_vector_store(self):
+        return "safe"
+"""
+
+    component_class = eval_custom_component_code(code)
+    component = component_class()
+
+    assert not hasattr(component_class, "untrusted_helper_ran")
+    assert component._get_method_return_type("build") == ["Text"]
+    assert component._get_method_return_type("as_vector_store") == ["VectorStore"]
+    assert component.as_vector_store() == "safe"
+
+
+def test_trusted_vector_store_connection_ignores_prior_validate_type_poisoning(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import importlib
+
+    validator_module = importlib.import_module("lfx.custom.validate")
+
+    def poisoned_output(**_kwargs):
+        return None
+
+    monkeypatch.setattr(validator_module, "VectorStore", str, raising=False)
+    monkeypatch.setattr(validator_module, "Output", poisoned_output, raising=False)
+    code = """\
+from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection
+from lfx.custom import Component
+
+@vector_store_connection
+class ValidateTypePoisoningComponent(Component):
+    outputs = []
+
+    def build(self) -> str:
+        return "ok"
+
+    def build_vector_store(self):
+        return "safe"
+"""
+
+    component = eval_custom_component_code(code)()
+
+    assert component._get_method_return_type("build") == ["Text"]
+    assert component._get_method_return_type("as_vector_store") == ["VectorStore"]
+    assert component.outputs[0].name == "vectorstoreconnection"
+    assert component.as_vector_store() == "safe"
+
+
+def test_trusted_vector_store_connection_ignores_cross_load_trust_poisoning(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import importlib
+
+    from lfx.base.vectorstores import vector_store_connection_decorator as decorator_module
+
+    validator_module = importlib.import_module("lfx.custom.validate")
+    for name in (
+        "_TRUSTED_VECTOR_STORE_CONNECTION",
+        "_TRUSTED_VECTOR_STORE_CONNECTION_CODE",
+        "_TRUSTED_VECTOR_STORE_OUTPUT",
+        "_TRUSTED_VECTOR_STORE_OUTPUT_FACTORY",
+    ):
+        monkeypatch.setattr(validator_module, name, getattr(validator_module, name, None), raising=False)
+    for name in ("vector_store_connection", "VectorStore", "Output"):
+        monkeypatch.setattr(decorator_module, name, getattr(decorator_module, name))
+
+    poisoning_code = """\
+import importlib
+import lfx.base.vectorstores.vector_store_connection_decorator as decorator_module
+from lfx.custom import Component
+
+def arbitrary_decorator(component_class):
+    component_class.untrusted_decorator_ran = True
+
+    def as_vector_store(self):
+        return "poisoned"
+
+    component_class.as_vector_store = as_vector_store
+    return component_class
+
+def arbitrary_output(*args, **kwargs):
+    return None
+
+validator = importlib.import_module("lfx.custom.validate")
+validator._TRUSTED_VECTOR_STORE_CONNECTION = arbitrary_decorator
+validator._TRUSTED_VECTOR_STORE_CONNECTION_CODE = arbitrary_decorator.__code__
+validator._TRUSTED_VECTOR_STORE_OUTPUT = str
+validator._TRUSTED_VECTOR_STORE_OUTPUT_FACTORY = arbitrary_output
+decorator_module.vector_store_connection = arbitrary_decorator
+decorator_module.VectorStore = str
+decorator_module.Output = arbitrary_output
+
+class PoisoningComponent(Component):
+    def build(self) -> str:
+        return "poison"
+"""
+    victim_code = """\
+from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection as attacker_alias
+from lfx.custom import Component
+
+@attacker_alias
+class StaleSnapshotComponent(Component):
+    outputs = []
+
+    def build(self) -> str:
+        return "ok"
+
+    def build_vector_store(self):
+        return "safe"
+"""
+
+    eval_custom_component_code(poisoning_code)
+    component_class = eval_custom_component_code(victim_code)
+    component = component_class()
+
+    assert not hasattr(component_class, "untrusted_decorator_ran")
+    assert component._get_method_return_type("build") == ["Text"]
+    assert component._get_method_return_type("as_vector_store") == ["VectorStore"]
+    assert component.as_vector_store() == "safe"
+
+
+def test_trusted_vector_store_connection_rejects_rebound_import_alias() -> None:
+    code = """\
+from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection as trusted_connection
+from lfx.custom import Component
+
+def arbitrary_decorator(component_class):
+    return component_class
+
+trusted_connection = arbitrary_decorator
+
+@trusted_connection
+class ReboundTrustedDecoratorComponent(Component):
+    def build(self) -> str:
+        return "ok"
+"""
+
+    with pytest.raises(ValueError, match="vector-store decorator alias"):
+        eval_custom_component_code(code)
+
+
+def test_mutated_vector_store_decorator_module_binding_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    from lfx.base.vectorstores import vector_store_connection_decorator as decorator_module
+
+    monkeypatch.setattr(
+        decorator_module,
+        "vector_store_connection",
+        decorator_module.vector_store_connection,
+    )
+    code = """\
+import lfx.base.vectorstores.vector_store_connection_decorator as decorator_module
+from lfx.custom import Component
+
+def vector_store_connection(component_class):
+    return component_class
+
+decorator_module.vector_store_connection = vector_store_connection
+
+@vector_store_connection
+class MutatedDecoratorBindingComponent(Component):
+    def build(self) -> str:
+        return "ok"
+"""
+
+    component = eval_custom_component_code(code)()
+
+    assert component._get_method_return_type("build") == []
+    assert component._get_method_return_type("as_vector_store") == []
+
+
+def test_canonical_vector_store_decorator_ignores_mutated_module_function_code(monkeypatch: pytest.MonkeyPatch) -> None:
+    from lfx.base.vectorstores import vector_store_connection_decorator as decorator_module
+
+    def replacement_decorator(component_class):
+        return component_class
+
+    monkeypatch.setattr(
+        decorator_module.vector_store_connection,
+        "__code__",
+        replacement_decorator.__code__,
+    )
+    code = """\
+from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection
+from lfx.custom import Component
+
+@vector_store_connection
+class MutatedDecoratorCodeComponent(Component):
+    def build(self) -> str:
+        return "ok"
+"""
+
+    component = eval_custom_component_code(code)()
+
+    assert component._get_method_return_type("build") == ["Text"]
+    assert component._get_method_return_type("as_vector_store") == ["VectorStore"]
+
+
+def test_canonical_vector_store_decorator_ignores_mutated_module_output_binding(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from lfx.base.vectorstores import vector_store_connection_decorator as decorator_module
+
+    monkeypatch.setattr(decorator_module, "VectorStore", str)
+    code = """\
+from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection
+from lfx.custom import Component
+
+@vector_store_connection
+class MutatedVectorStoreBindingComponent(Component):
+    def build(self) -> str:
+        return "ok"
+
+    def build_vector_store(self):
+        raise NotImplementedError
+"""
+
+    component = eval_custom_component_code(code)()
+
+    assert component._get_method_return_type("build") == ["Text"]
+    assert component._get_method_return_type("as_vector_store") == ["VectorStore"]
+
+
+def test_custom_component_class_snapshot_does_not_read_instance_class_property() -> None:
+    code = """\
+from lfx.custom import Component
+
+class_property_calls = []
+decorator_calls = 0
+
+class Probe:
+    @property
+    def __class__(self):
+        class_property_calls.append("class")
+        return type
+
+def isolate_snapshot(component_class):
+    global decorator_calls
+    decorator_calls += 1
+    if decorator_calls == 1:
+        globals()["probe"] = Probe()
+    else:
+        globals().pop("probe", None)
+    return component_class
+
+@isolate_snapshot
+class CallbackSafeComponent(Component):
+    def build(self) -> str:
+        return "ok"
+"""
+
+    component_class = eval_custom_component_code(code)
+
+    assert component_class()._get_method_return_type("build") == []
+    assert component_class.build.__globals__["class_property_calls"] == []
+
+
+def test_custom_component_rejects_spoofed_preexisting_class_decorator_substitution() -> None:
+    from lfx.custom import annotation_validation
+
+    code = """\
+from lfx.custom import Component
+
+class ForeignMeta(type):
+    pass
+
+class ForeignComponent(metaclass=ForeignMeta):
+    def build(self) -> str:
+        return "foreign"
+
+ForeignComponent.__module__ = __name__
+ForeignComponent.__name__ = "SpoofedComponent"
+ForeignComponent.__qualname__ = "SpoofedComponent"
+
+def replace_with_spoofed_foreign(_component_class):
+    return ForeignComponent
+
+@replace_with_spoofed_foreign
+class SpoofedComponent(Component):
+    def build(self) -> str:
+        return "target"
+"""
+
+    error = None
+    returned_class = None
+    try:
+        returned_class = eval_custom_component_code(code)
+    except ValueError as exc:
+        error = exc
+    if returned_class is not None:
+        annotation_validation._COMPILED_CLASS_METHOD_RETURNS.pop(id(returned_class), None)
+
+    assert error is not None
+    assert "class" in str(error).lower()
 
 
 def test_custom_component_runtime_resolves_alias_module_and_provider_annotations() -> None:

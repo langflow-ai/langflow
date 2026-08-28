@@ -23,7 +23,9 @@ from lfx.base.tools.constants import (
     TOOLS_METADATA_INFO,
     TOOLS_METADATA_INPUT_NAME,
 )
-from lfx.custom.annotation_validation import resolve_callable_return_annotation
+from lfx.custom.annotation_validation import (
+    resolve_method_return_annotation,
+)
 from lfx.custom.tree_visitor import RequiredInputsVisitor
 from lfx.exceptions.component import StreamingError
 from lfx.field_typing import Tool  # noqa: TC001
@@ -1142,8 +1144,11 @@ class Component(CustomComponent):
                 raise ValueError(msg) from e
 
     def _get_method_return_type(self, method_name: str) -> list[str]:
-        method = getattr(self, method_name)
-        return_type = resolve_callable_return_annotation(method)
+        return_type = resolve_method_return_annotation(
+            component_class=type(self),
+            method_name=method_name,
+            method_getter=lambda: getattr(self, method_name),
+        )
         if return_type is None:
             return []
         extracted_return_types = self._extract_return_type(return_type)

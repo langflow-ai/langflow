@@ -8,7 +8,7 @@ from typing import Any
 from cachetools import TTLCache, keys
 from fastapi import HTTPException
 
-from lfx.custom.annotation_validation import is_safe_return_annotation, resolve_type_annotation
+from lfx.custom.annotation_validation import is_safe_return_annotation, resolve_type_annotation, safe_annotation_aliases
 from lfx.custom.eval import eval_custom_component_code
 from lfx.custom.schema import CallableCodeDetails, ClassCodeDetails, MissingDefault
 from lfx.log.logger import logger
@@ -133,7 +133,7 @@ class CodeParser:
         """Extracts details from a single function or method node."""
         return_type = None
         if node.returns and is_safe_return_annotation(node.returns):
-            return_type = resolve_type_annotation(node.returns)
+            return_type = resolve_type_annotation(node.returns, aliases=safe_annotation_aliases(self.data["imports"]))
 
         func = CallableCodeDetails(
             name=node.name,
