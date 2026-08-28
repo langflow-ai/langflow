@@ -8,6 +8,7 @@ from uuid import UUID
 from lfx.log.logger import logger
 from lfx.services.authorization.base import ResourceVisibilityScope
 from lfx.services.settings.constants import AGENTIC_VARIABLES
+from lfx.services.variable import VariableNotFoundError
 from sqlmodel import col, select
 
 from langflow.services.auth import utils as auth_utils
@@ -40,6 +41,19 @@ def has_variable_value(variable: Variable) -> bool:
 class DatabaseVariableService(VariableService, Service):
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
+
+    async def get_default_field_bindings(
+        self,
+        user_id: UUID | str,
+        session: AsyncSession,
+    ) -> list[tuple[str, list[str] | None]]:
+        """Read only names and default fields; never materialize variable values."""
+        stmt = (
+            select(Variable.name, Variable.default_fields)
+            .where(Variable.user_id == user_id)
+            .order_by(col(Variable.name), col(Variable.id))
+        )
+        return [(name, default_fields) for name, default_fields in (await session.exec(stmt)).all() if name]
 
     async def initialize_user_variables(self, user_id: UUID | str, session: AsyncSession) -> None:
         if not self.settings_service.settings.store_environment_variables:
@@ -164,7 +178,7 @@ class DatabaseVariableService(VariableService, Service):
 
         if not variable or not variable.value:
             msg = f"{name} variable not found."
-            raise ValueError(msg)
+            raise VariableNotFoundError(msg)
 
         return variable
 
@@ -179,7 +193,7 @@ class DatabaseVariableService(VariableService, Service):
         # credential = session.query(Variable).filter(Variable.user_id == user_id, Variable.name == name).first()
         try:
             variable = await self.get_variable_object(user_id, name, session)
-        except ValueError as owned_lookup_error:
+        except VariableNotFoundError as owned_lookup_error:
             # Runtime resolution may use an explicitly shared variable, but it
             # must never broaden administrative get/update/delete lookups. An
             # owned variable wins on name collisions; otherwise require one
@@ -258,7 +272,7 @@ class DatabaseVariableService(VariableService, Service):
         *,
         visibility: ResourceVisibilityScope | None = None,
     ) -> list[VariableRead]:
-        stmt = select(Variable)
+        stmt = select(Variable).order_by(col(Variable.name), col(Variable.id))
         if visibility is None:
             stmt = stmt.where(Variable.user_id == user_id)
         else:

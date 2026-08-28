@@ -897,12 +897,37 @@ test(
 
     await adjustScreenView(page, { numberOfZoomOut: 2 });
 
+    const singleFileOutputRefresh = page.waitForResponse(
+      (response) => {
+        if (
+          response.request().method() !== "POST" ||
+          new URL(response.url()).pathname !== "/api/v1/custom_component/update"
+        ) {
+          return false;
+        }
+        const requestBody = response.request().postDataJSON();
+        return (
+          requestBody.field === "path" &&
+          Array.isArray(requestBody.field_value) &&
+          requestBody.field_value.length === 1
+        );
+      },
+      { timeout: 30000 },
+    );
     await page.getByTestId(`remove-file-button-${file2}`).click();
+    const refreshResponse = await singleFileOutputRefresh;
+    expect(
+      refreshResponse.ok(),
+      `Refreshing Read File outputs returned ${refreshResponse.status()} ${refreshResponse.statusText()}`,
+    ).toBeTruthy();
+    await refreshResponse.finished();
 
     await page.getByTestId("dropdown-output-file").click();
-    await page
-      .getByTestId("dropdown-item-output-file-file path")
-      .click({ force: true });
+    const filePathOutput = page.getByTestId(
+      "dropdown-item-output-file-file path",
+    );
+    await expect(filePathOutput).toBeVisible({ timeout: 10000 });
+    await filePathOutput.click();
     await page.getByTestId("button_run_read file").click();
     await expect(page.getByText("Built successfully")).toBeVisible({
       timeout: 30000,

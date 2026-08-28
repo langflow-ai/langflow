@@ -8,7 +8,7 @@ from cryptography.fernet import Fernet
 from langflow.services.auth.service import AuthService
 from langflow.services.auth.utils import ensure_fernet_key
 from langflow.services.database.models.user.model import User
-from langflow.services.database.models.variable.model import VariableUpdate
+from langflow.services.database.models.variable.model import Variable, VariableUpdate
 from langflow.services.deps import get_settings_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService, has_variable_value
@@ -19,6 +19,7 @@ from lfx.services.model_provider_policy import (
     ModelProviderPolicySnapshot,
 )
 from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
+from lfx.services.variable import VariableNotFoundError
 from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
@@ -106,6 +107,58 @@ async def test_initialize_user_variables__not_found_variable(service, session: A
         m.side_effect = Exception()
         await service.initialize_user_variables(uuid4(), session=session)
     assert True
+
+
+async def test_get_default_field_bindings_never_decrypts_values(service, session: AsyncSession):
+    user_id = uuid4()
+    session.add(
+        Variable(
+            user_id=user_id,
+            name="OPENAI_API_KEY",
+            value="encrypted-secret",  # pragma: allowlist secret
+            type=CREDENTIAL_TYPE,
+            default_fields=["OpenAI API Key"],
+        )
+    )
+    await session.flush()
+
+    with patch(
+        "langflow.services.auth.utils.decrypt_api_key",
+        side_effect=AssertionError("default-field lookup must not decrypt values"),
+    ):
+        result = await service.get_default_field_bindings(user_id, session)
+
+    assert result == [("OPENAI_API_KEY", ["OpenAI API Key"])]
+
+
+async def test_default_field_binding_order_matches_variable_list(service, session: AsyncSession):
+    user_id = uuid4()
+    session.add_all(
+        [
+            Variable(
+                user_id=user_id,
+                name="Z_LAST",
+                value="encrypted-secret",  # pragma: allowlist secret
+                type=CREDENTIAL_TYPE,
+                default_fields=["Shared Field"],
+            ),
+            Variable(
+                user_id=user_id,
+                name="A_FIRST",
+                value="encrypted-secret",  # pragma: allowlist secret
+                type=CREDENTIAL_TYPE,
+                default_fields=["Shared Field"],
+            ),
+        ]
+    )
+    await session.flush()
+
+    bindings = await service.get_default_field_bindings(user_id, session)
+    with patch("langflow.services.auth.utils.decrypt_api_key", return_value="secret"):
+        variables = await service.get_all(user_id, session)
+
+    assert [name for name, _default_fields in bindings] == ["A_FIRST", "Z_LAST"]
+    assert [variable.name for variable in variables] == ["A_FIRST", "Z_LAST"]
 
 
 async def test_initialize_user_variables__skipping_environment_variable_storage(service, session: AsyncSession):
@@ -242,7 +295,7 @@ async def test_get_variable__valueerror(service, session: AsyncSession):
     name = "name"
     field = ""
 
-    with pytest.raises(ValueError, match=f"{name} variable not found."):
+    with pytest.raises(VariableNotFoundError, match=f"{name} variable not found."):
         await service.get_variable(user_id, name, field, session=session)
 
 
@@ -317,7 +370,7 @@ async def test_get_variable_fails_closed_for_domain_only_runtime_scope(service, 
 
     with (
         patch("langflow.services.deps.get_authorization_service", return_value=authz),
-        pytest.raises(ValueError, match="DOMAIN_ONLY_TOKEN variable not found"),
+        pytest.raises(VariableNotFoundError, match="DOMAIN_ONLY_TOKEN variable not found"),
     ):
         await service.get_variable(actor_id, "DOMAIN_ONLY_TOKEN", "", session=session)
 
