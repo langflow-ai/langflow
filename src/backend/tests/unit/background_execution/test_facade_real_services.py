@@ -11,6 +11,7 @@ and the orphan sweep on BOTH engines.
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -204,13 +205,37 @@ def _echo_input_factory(*, request, **_kwargs):
     return _source
 
 
+class _RecordingBackend:
+    """Scaled-backend stand-in that records durable job ids without running them."""
+
+    def __init__(self) -> None:
+        self.enqueued: list[str] = []
+
+    async def enqueue(self, job_id: str) -> None:
+        self.enqueued.append(job_id)
+
+
+def _capture_request_factory(captured: list[dict]):
+    """Record the request a fresh worker hydrates without persisting its secrets."""
+
+    def _factory(*, request, **_kwargs):
+        captured.append(request)
+
+        async def _source(**_kw):
+            yield _frame("end", {})
+
+        return _source
+
+    return _factory
+
+
 async def test_submit_persists_request_for_faithful_requeue(real_services_job_service):
     """``submit`` persists only replay-safe request fields on job_metadata.request.
 
     The startup sweep needs the original non-secret inputs, but caller tweaks may
-    contain credentials and must remain live-only. Proven on both real SQLite and
-    real Postgres. The executor is stopped right after submit so no run interferes
-    with reading the persisted row.
+    contain credentials and must live outside the plaintext request in an encrypted
+    envelope. Proven on both real SQLite and real Postgres. The executor is stopped
+    right after submit so no run interferes with reading the persisted row.
     """
     from langflow.services.background_execution.service import BackgroundExecutionService
     from langflow.services.deps import get_settings_service
@@ -244,6 +269,10 @@ async def test_submit_persists_request_for_faithful_requeue(real_services_job_se
         "input_value": original_input,
         "session_id": "thread-restart",
     }
+    assert job.job_metadata.get("request_overrides_format") == "fernet-json-v1"
+    assert isinstance(job.job_metadata.get("request_overrides"), str)
+    hydrated = svc._reconstruct_request(job)
+    assert hydrated == request
     # Redaction must not mutate the live request passed to the in-memory run.
     assert request["tweaks"] == {"ChatInput-x": {"foo": "bar"}}
 
@@ -253,8 +282,8 @@ async def test_submit_redacts_inline_overrides_from_persisted_request(real_servi
 
     Both request shapes can carry API keys. Storing either plaintext in the durable
     ``job`` table widens the blast radius of any DB read (backup, ops access, a
-    SQL-injection elsewhere). The persisted replay request must omit both; the live
-    in-memory run still has them. Real SQLite and Postgres.
+    SQL-injection elsewhere). The persisted plaintext request must omit both while
+    authenticated decryption restores them for replay. Real SQLite and Postgres.
     """
     from langflow.services.background_execution.service import BackgroundExecutionService
     from langflow.services.deps import get_settings_service
@@ -284,9 +313,276 @@ async def test_submit_redacts_inline_overrides_from_persisted_request(real_servi
     assert "globals" not in persisted, "inline globals persisted plaintext on the job row"
     assert "tweaks" not in persisted, "inline tweaks persisted plaintext on the job row"
     assert secret not in json.dumps(job.job_metadata), "inline secret leaked into job_metadata"
+    assert svc._reconstruct_request(job) == request
     # The caller's original request dict is not mutated as a side effect.
     assert request["globals"] == {"OPENAI_API_KEY": secret}
     assert request["tweaks"] == {"LanguageModelComponent-x": {"api_key": secret}}
+
+
+async def test_submit_writes_request_and_encrypted_overrides_atomically(real_services_job_service, monkeypatch):
+    """Submit must not expose a QUEUED row before its durable replay payload exists."""
+    from langflow.services.background_execution.service import BackgroundExecutionService
+    from langflow.services.deps import get_settings_service
+
+    job_service = real_services_job_service
+    backend = _RecordingBackend()
+    flow_id = uuid4()
+
+    async def _unexpected_metadata_update(*_args, **_kwargs):
+        pytest.fail("submit persisted replay metadata in a second transaction")
+
+    monkeypatch.setattr(job_service, "update_job_metadata", _unexpected_metadata_update)
+    svc = BackgroundExecutionService(
+        settings_service=get_settings_service(),
+        frame_source_factory=_echo_input_factory,
+        backend=backend,
+    )
+    request = {
+        "flow_id": str(flow_id),
+        "mode": "background",
+        "stream_protocol": "langflow",
+        "input_value": "atomic",
+        "tweaks": {"LanguageModelComponent-x": {"api_key": "secret-atomic"}},  # pragma: allowlist secret
+    }
+    job_id = await svc.submit(flow_id=flow_id, request=request, user=_StubUser(uuid4()))
+
+    assert backend.enqueued == [str(job_id)]
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.job_metadata.get("request") == {
+        "flow_id": str(flow_id),
+        "mode": "background",
+        "stream_protocol": "langflow",
+        "input_value": "atomic",
+    }
+    assert "secret-atomic" not in json.dumps(job.job_metadata)
+
+
+async def test_restart_and_scaled_hydration_restore_encrypted_overrides(real_services_job_service):
+    """A job-id-only handoff and a fresh startup both replay the original overrides."""
+    import asyncio
+
+    from langflow.services.background_execution.service import BackgroundExecutionService
+    from langflow.services.deps import get_settings_service
+
+    job_service = real_services_job_service
+    backend = _RecordingBackend()
+    flow_id = uuid4()
+    request = {
+        "flow_id": str(flow_id),
+        "mode": "background",
+        "stream_protocol": "langflow",
+        "input_value": "restart-with-overrides",
+        "globals": {"MODEL_API_KEY": "restart-secret"},  # pragma: allowlist secret
+        "tweaks": {  # pragma: allowlist secret
+            "LanguageModelComponent-x": {  # pragma: allowlist secret
+                "api_key": "restart-secret",  # pragma: allowlist secret
+                "temperature": 0.2,
+            }
+        },
+    }
+    submitter = BackgroundExecutionService(
+        settings_service=get_settings_service(),
+        frame_source_factory=_echo_input_factory,
+        backend=backend,
+    )
+    job_id = await submitter.submit(flow_id=flow_id, request=request, user=_StubUser(uuid4()))
+    assert backend.enqueued == [str(job_id)]
+
+    job = await job_service.get_job_by_job_id(job_id)
+    # This is the worker/scaled hydration seam: only the queued job id crosses the bus.
+    assert submitter._reconstruct_request(job) == request
+
+    captured: list[dict] = []
+    restart = BackgroundExecutionService(
+        settings_service=get_settings_service(),
+        frame_source_factory=_capture_request_factory(captured),
+    )
+    await restart.start()
+    try:
+        await restart.sweep_orphans_on_startup()
+        for _ in range(100):
+            recovered = await job_service.get_job_by_job_id(job_id)
+            if recovered.status == JobStatus.COMPLETED:
+                break
+            await asyncio.sleep(0.05)
+    finally:
+        await restart.stop()
+
+    assert captured == [request]
+    assert recovered.status == JobStatus.COMPLETED
+
+
+@pytest.mark.parametrize("damage", ["missing", "tampered"])
+async def test_startup_terminalizes_unavailable_encrypted_overrides(real_services_job_service, damage):
+    """A damaged envelope cannot downgrade into a run without its original overrides."""
+    from langflow.services.background_execution.service import BackgroundExecutionService
+    from langflow.services.deps import get_settings_service
+
+    job_service = real_services_job_service
+    backend = _RecordingBackend()
+    flow_id = uuid4()
+    submitter = BackgroundExecutionService(
+        settings_service=get_settings_service(),
+        frame_source_factory=_echo_input_factory,
+        backend=backend,
+    )
+    job_id = await submitter.submit(
+        flow_id=flow_id,
+        request={
+            "flow_id": str(flow_id),
+            "mode": "background",
+            "stream_protocol": "langflow",
+            "input_value": "must-not-run",
+            "tweaks": {  # pragma: allowlist secret
+                "LanguageModelComponent-x": {"api_key": "tamper-secret"}  # pragma: allowlist secret
+            },
+        },
+        user=_StubUser(uuid4()),
+    )
+    job = await job_service.get_job_by_job_id(job_id)
+    metadata = dict(job.job_metadata)
+    if damage == "missing":
+        metadata.pop("request_overrides")
+    else:
+        token = metadata["request_overrides"]
+        metadata["request_overrides"] = f"{token[:-1]}{'A' if token[-1] != 'A' else 'B'}"
+    await job_service.update_job_metadata(job_id, metadata, replace=True)
+
+    ran: list[dict] = []
+    restart = BackgroundExecutionService(
+        settings_service=get_settings_service(),
+        frame_source_factory=_capture_request_factory(ran),
+    )
+    await restart.sweep_orphans_on_startup()
+    await restart.stop()
+
+    failed = await job_service.get_job_by_job_id(job_id)
+    assert ran == []
+    assert failed.status == JobStatus.FAILED
+    assert failed.error == {"type": "request_overrides_unavailable"}
+    assert "tamper-secret" not in json.dumps(failed.error)
+    events = await job_service.read_events(job_id, after_seq=0)
+    assert [(event.event_type, event.payload) for event in events] == [
+        ("run_failed", {"type": "request_overrides_unavailable"})
+    ]
+
+
+async def test_wrong_key_and_cross_job_envelopes_fail_closed(real_services_job_service):
+    """Ciphertext is tied to both the installation key and its job/flow identity."""
+    from langflow.services.background_execution.service import (
+        BackgroundExecutionService,
+        RequestOverridesUnavailableError,
+    )
+    from langflow.services.deps import get_settings_service
+    from pydantic import SecretStr
+
+    job_service = real_services_job_service
+    backend = _RecordingBackend()
+    settings_service = get_settings_service()
+    flow_id = uuid4()
+    submitter = BackgroundExecutionService(
+        settings_service=settings_service,
+        frame_source_factory=_echo_input_factory,
+        backend=backend,
+    )
+    job_id = await submitter.submit(
+        flow_id=flow_id,
+        request={
+            "flow_id": str(flow_id),
+            "mode": "background",
+            "stream_protocol": "langflow",
+            "input_value": "bound",
+            "tweaks": {"Node-x": {"api_key": "bound-secret"}},  # pragma: allowlist secret
+        },
+        user=_StubUser(uuid4()),
+    )
+    job = await job_service.get_job_by_job_id(job_id)
+
+    wrong_auth = settings_service.auth_settings.model_copy(
+        update={  # pragma: allowlist secret
+            "SECRET_KEY": SecretStr("wrong-key-material-that-is-at-least-32-bytes")
+        }
+    )
+    wrong_key_service = BackgroundExecutionService(
+        settings_service=SimpleNamespace(settings=settings_service.settings, auth_settings=wrong_auth),
+        frame_source_factory=_echo_input_factory,
+    )
+    with pytest.raises(RequestOverridesUnavailableError, match="Background request overrides are unavailable"):
+        wrong_key_service._reconstruct_request(job)
+
+    other_job_id = uuid4()
+    await job_service.create_job(
+        job_id=other_job_id,
+        flow_id=uuid4(),
+        user_id=uuid4(),
+        initial_metadata=job.job_metadata,
+    )
+    other_job = await job_service.get_job_by_job_id(other_job_id)
+    with pytest.raises(RequestOverridesUnavailableError, match="Background request overrides are unavailable"):
+        submitter._reconstruct_request(other_job)
+
+
+async def test_no_overrides_and_safe_legacy_rows_remain_replayable(real_services_job_service):
+    """New empty envelopes and old rows without overrides preserve compatibility."""
+    from langflow.services.background_execution.service import BackgroundExecutionService
+    from langflow.services.deps import get_settings_service
+
+    job_service = real_services_job_service
+    backend = _RecordingBackend()
+    flow_id = uuid4()
+    request = {
+        "flow_id": str(flow_id),
+        "mode": "background",
+        "stream_protocol": "langflow",
+        "input_value": "no-overrides",
+    }
+    svc = BackgroundExecutionService(
+        settings_service=get_settings_service(), frame_source_factory=_echo_input_factory, backend=backend
+    )
+    job_id = await svc.submit(flow_id=flow_id, request=request, user=_StubUser(uuid4()))
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.job_metadata.get("request_overrides_format") == "fernet-json-v1"
+    assert job.job_metadata.get("request_overrides") is None
+    assert svc._reconstruct_request(job) == request
+
+    legacy_id = uuid4()
+    await job_service.create_job(
+        job_id=legacy_id,
+        flow_id=flow_id,
+        user_id=uuid4(),
+        initial_metadata={"request": request},
+    )
+    legacy = await job_service.get_job_by_job_id(legacy_id)
+    assert svc._reconstruct_request(legacy) == request
+
+
+async def test_legacy_plaintext_overrides_are_not_replayed(real_services_job_service):
+    """A pre-fix plaintext override row cannot bypass the encrypted envelope contract."""
+    from langflow.services.background_execution.service import (
+        BackgroundExecutionService,
+        RequestOverridesUnavailableError,
+    )
+    from langflow.services.deps import get_settings_service
+
+    flow_id = uuid4()
+    job_id = uuid4()
+    request = {
+        "flow_id": str(flow_id),
+        "mode": "background",
+        "stream_protocol": "langflow",
+        "input_value": "legacy",
+        "tweaks": {"Node-x": {"api_key": "legacy-plaintext-secret"}},  # pragma: allowlist secret
+    }
+    await real_services_job_service.create_job(
+        job_id=job_id,
+        flow_id=flow_id,
+        user_id=uuid4(),
+        initial_metadata={"request": request},
+    )
+    svc = BackgroundExecutionService(settings_service=get_settings_service(), frame_source_factory=_echo_input_factory)
+    job = await real_services_job_service.get_job_by_job_id(job_id)
+    with pytest.raises(RequestOverridesUnavailableError, match="Background request overrides are unavailable"):
+        svc._reconstruct_request(job)
 
 
 async def test_requeued_queued_job_replays_original_input(real_services_job_service):

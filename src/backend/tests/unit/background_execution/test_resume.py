@@ -8,6 +8,7 @@ non-SUSPENDED resumes are rejected before any signal/re-enqueue.
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -39,6 +40,14 @@ def _noop_factory(**_kwargs):
 class _StubUser:
     def __init__(self, user_id):
         self.id = user_id
+
+
+class _RecordingBackend:
+    def __init__(self) -> None:
+        self.enqueued: list[str] = []
+
+    async def enqueue(self, job_id: str) -> None:
+        self.enqueued.append(job_id)
 
 
 def _runner(job_service, job_id, source):
@@ -161,6 +170,69 @@ async def test_stale_request_id_is_rejected(real_services_job_service) -> None:
     assert not [s for s in signals if s.signal_type == SignalType.RESUME]  # no signal written for a stale id
     job = await job_service.get_job_by_job_id(job_id)
     assert job.status == JobStatus.SUSPENDED  # untouched
+
+
+@pytest.mark.real_services
+@pytest.mark.no_blockbuster
+async def test_resume_checks_encrypted_overrides_before_claiming_or_writing_decision(
+    real_services_job_service,
+) -> None:
+    """A wrong decryption key leaves the paused run and its decision seam untouched."""
+    from langflow.services.background_execution.service import (
+        BackgroundExecutionService,
+        RequestOverridesUnavailableError,
+    )
+    from langflow.services.deps import get_settings_service
+    from pydantic import SecretStr
+
+    job_service = real_services_job_service
+    settings_service = get_settings_service()
+    backend = _RecordingBackend()
+    user_id, flow_id = uuid4(), uuid4()
+    submitter = BackgroundExecutionService(
+        settings_service=settings_service,
+        frame_source_factory=_noop_factory,
+        backend=backend,
+    )
+    job_id = await submitter.submit(
+        flow_id=flow_id,
+        request={
+            "flow_id": str(flow_id),
+            "mode": "background",
+            "stream_protocol": "langflow",
+            "input_value": "pause",
+            "tweaks": {"Node-x": {"api_key": "resume-secret"}},  # pragma: allowlist secret
+        },
+        user=_StubUser(user_id),
+    )
+    await job_service.update_job_metadata(job_id, {"pending_request_id": "req-encrypted"})
+    await job_service.update_job_status(job_id, JobStatus.SUSPENDED)
+
+    wrong_auth = settings_service.auth_settings.model_copy(
+        update={  # pragma: allowlist secret
+            "SECRET_KEY": SecretStr("different-key-material-that-is-at-least-32-bytes")
+        }
+    )
+    resume_service = BackgroundExecutionService(
+        settings_service=SimpleNamespace(settings=settings_service.settings, auth_settings=wrong_auth),
+        frame_source_factory=_noop_factory,
+    )
+    with pytest.raises(RequestOverridesUnavailableError, match="Background request overrides are unavailable"):
+        await resume_service.resume_job(
+            job_id,
+            _StubUser(user_id),
+            request_id="req-encrypted",
+            decision={  # pragma: allowlist secret
+                "choice": "approve",
+                "secret": "decision-must-not-be-written",  # pragma: allowlist secret
+            },
+        )
+
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.SUSPENDED
+    assert (job.job_metadata or {}).get("pending_request_id") == "req-encrypted"
+    assert await job_service.unconsumed_signals(job_id) == []
+    assert "decision-must-not-be-written" not in json.dumps(job.job_metadata)
 
 
 # --------------------------------------------------------------------------- #
