@@ -1142,9 +1142,7 @@
       "crewai",
       {
         "CrewAIAgentComponent": {
-          "base_classes": [
-            "NoneType"
-          ],
+          "base_classes": [],
           "beta": false,
           "conditional_paths": [],
           "custom_fields": {},
@@ -1194,11 +1192,8 @@
               "group_outputs": false,
               "method": "build_output",
               "name": "output",
-              "selected": "NoneType",
               "tool_mode": true,
-              "types": [
-                "NoneType"
-              ],
+              "types": [],
               "value": "__UNDEFINED__"
             }
           ],
@@ -12377,9 +12372,7 @@
           "tool_mode": false
         },
         "CharacterTextSplitter": {
-          "base_classes": [
-            "JSON"
-          ],
+          "base_classes": [],
           "beta": false,
           "conditional_paths": [],
           "custom_fields": {},
@@ -12423,11 +12416,8 @@
               "group_outputs": false,
               "method": "transform_data",
               "name": "data",
-              "selected": "JSON",
               "tool_mode": true,
-              "types": [
-                "JSON"
-              ],
+              "types": [],
               "value": "__UNDEFINED__"
             }
           ],
@@ -13590,9 +13580,7 @@
           "tool_mode": false
         },
         "LanguageRecursiveTextSplitter": {
-          "base_classes": [
-            "JSON"
-          ],
+          "base_classes": [],
           "beta": false,
           "conditional_paths": [],
           "custom_fields": {},
@@ -13636,11 +13624,8 @@
               "group_outputs": false,
               "method": "transform_data",
               "name": "data",
-              "selected": "JSON",
               "tool_mode": true,
-              "types": [
-                "JSON"
-              ],
+              "types": [],
               "value": "__UNDEFINED__"
             }
           ],
@@ -13793,9 +13778,7 @@
           "tool_mode": false
         },
         "NaturalLanguageTextSplitter": {
-          "base_classes": [
-            "JSON"
-          ],
+          "base_classes": [],
           "beta": false,
           "conditional_paths": [],
           "custom_fields": {},
@@ -13840,11 +13823,8 @@
               "group_outputs": false,
               "method": "transform_data",
               "name": "data",
-              "selected": "JSON",
               "tool_mode": true,
-              "types": [
-                "JSON"
-              ],
+              "types": [],
               "value": "__UNDEFINED__"
             }
           ],
@@ -13995,10 +13975,7 @@
           "tool_mode": false
         },
         "OpenAIToolsAgent": {
-          "base_classes": [
-            "AgentExecutor",
-            "Message"
-          ],
+          "base_classes": [],
           "beta": false,
           "conditional_paths": [],
           "custom_fields": {},
@@ -14054,11 +14031,8 @@
               "group_outputs": false,
               "method": "message_response",
               "name": "response",
-              "selected": "Message",
               "tool_mode": true,
-              "types": [
-                "Message"
-              ],
+              "types": [],
               "value": "__UNDEFINED__"
             },
             {
@@ -14068,11 +14042,8 @@
               "group_outputs": false,
               "method": "build_agent",
               "name": "agent",
-              "selected": "AgentExecutor",
               "tool_mode": false,
-              "types": [
-                "AgentExecutor"
-              ],
+              "types": [],
               "value": "__UNDEFINED__"
             }
           ],
@@ -14775,9 +14746,7 @@
           "tool_mode": false
         },
         "RecursiveCharacterTextSplitter": {
-          "base_classes": [
-            "JSON"
-          ],
+          "base_classes": [],
           "beta": false,
           "conditional_paths": [],
           "custom_fields": {},
@@ -14821,11 +14790,8 @@
               "group_outputs": false,
               "method": "transform_data",
               "name": "data",
-              "selected": "JSON",
               "tool_mode": true,
-              "types": [
-                "JSON"
-              ],
+              "types": [],
               "value": "__UNDEFINED__"
             }
           ],
@@ -16512,10 +16478,7 @@
           "tool_mode": false
         },
         "ToolCallingAgent": {
-          "base_classes": [
-            "AgentExecutor",
-            "Message"
-          ],
+          "base_classes": [],
           "beta": false,
           "conditional_paths": [],
           "custom_fields": {},
@@ -16570,11 +16533,8 @@
               "group_outputs": false,
               "method": "message_response",
               "name": "response",
-              "selected": "Message",
               "tool_mode": true,
-              "types": [
-                "Message"
-              ],
+              "types": [],
               "value": "__UNDEFINED__"
             },
             {
@@ -16584,11 +16544,8 @@
               "group_outputs": false,
               "method": "build_agent",
               "name": "agent",
-              "selected": "AgentExecutor",
               "tool_mode": false,
-              "types": [
-                "AgentExecutor"
-              ],
+              "types": [],
               "value": "__UNDEFINED__"
             }
           ],
@@ -17285,10 +17242,7 @@
           "tool_mode": false
         },
         "XMLAgent": {
-          "base_classes": [
-            "AgentExecutor",
-            "Message"
-          ],
+          "base_classes": [],
           "beta": true,
           "conditional_paths": [],
           "custom_fields": {},
@@ -17344,11 +17298,8 @@
               "group_outputs": false,
               "method": "message_response",
               "name": "response",
-              "selected": "Message",
               "tool_mode": true,
-              "types": [
-                "Message"
-              ],
+              "types": [],
               "value": "__UNDEFINED__"
             },
             {
@@ -17358,11 +17309,8 @@
               "group_outputs": false,
               "method": "build_agent",
               "name": "agent",
-              "selected": "AgentExecutor",
               "tool_mode": false,
-              "types": [
-                "AgentExecutor"
-              ],
+              "types": [],
               "value": "__UNDEFINED__"
             }
           ],
@@ -31039,6 +30987,6 @@
     "num_components": 127,
     "num_modules": 16
   },
-  "sha256": "f9bbb59447f5b6bdbb13aa19e568d6fc5b7561e78fe7444ccdbb79315bb05b0b",
+  "sha256": "dff0ed82b54acf8a178bfecbbce04fd7cf3199e1ca9d20ff882d1269c35e1a4f",
   "version": "1.12.0"
 }
