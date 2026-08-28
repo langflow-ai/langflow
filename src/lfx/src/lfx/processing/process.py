@@ -7,6 +7,7 @@ from json_repair import repair_json
 from pydantic import BaseModel
 
 from lfx.graph.vertex.base import Vertex
+from lfx.graph.vertex.param_handler import ParameterHandler
 from lfx.log.logger import logger
 from lfx.schema.graph import InputValue, Tweaks
 from lfx.schema.schema import INPUT_FIELD_NAME, InputValueRequest
@@ -44,6 +45,20 @@ class Result(BaseModel):
     session_id: str
 
 
+def validate_targeted_inputs(inputs: list[InputValueRequest] | None) -> None:
+    """Refuse caller-selected input components when the tweak policy is off."""
+    from lfx.utils.flow_validation import TWEAK_POLICY_OFF
+
+    if _resolve_tweak_policy() != TWEAK_POLICY_OFF:
+        return
+
+    targeted = sorted({component for request in inputs or [] for component in (request.components or [])})
+    if targeted:
+        from lfx.exceptions.tweaks import TweakRefusedError
+
+        raise TweakRefusedError(targeted, reason="This deployment does not accept component-targeted inputs.")
+
+
 async def run_graph_internal(
     graph: Graph,
     flow_id: str,
@@ -61,21 +76,14 @@ async def run_graph_internal(
     # ``off`` refuses component-targeted inputs as well as tweaks. Both aim a
     # value at a named node, so refusing only tweaks would make the setting
     # tell a half-truth. ``input_value`` and ``session_id`` keep working.
-    from lfx.utils.flow_validation import TWEAK_POLICY_OFF
-
-    if _resolve_tweak_policy() == TWEAK_POLICY_OFF:
-        targeted = sorted({c for r in inputs for c in (r.components or [])})
-        if targeted:
-            from lfx.exceptions.tweaks import TweakRefusedError
-
-            raise TweakRefusedError(targeted, reason="This deployment does not accept component-targeted inputs.")
+    validate_targeted_inputs(inputs)
 
     components = []
     inputs_list = []
     types = []
     for input_value_request in inputs:
         if input_value_request.input_value is None:
-            logger.warning("InputValueRequest input_value cannot be None, defaulting to an empty string.")
+            await logger.awarning("InputValueRequest input_value cannot be None, defaulting to an empty string.")
             input_value_request.input_value = ""
         components.append(input_value_request.components or [])
         inputs_list.append({INPUT_FIELD_NAME: input_value_request.input_value})
@@ -550,6 +558,22 @@ def process_tweaks_on_graph(graph: Graph, tweaks: dict[str, dict[str, Any]], *, 
     if refused:
         reason = _refusal_reason(policy, flow_declares_allowlist=flow_declares_allowlist)
         raise TweakRefusedError(sorted(set(refused)), reason=reason)
+
+    # FileInput validation can still reject an otherwise policy-allowed tweak. Validate every
+    # target before applying any of them so a later invalid vertex cannot leave an earlier cached
+    # vertex mutated. Keep the original values for application: unrestricted local paths are a
+    # compatibility contract, and this pass exists only to validate them atomically.
+    for vertex, node_tweaks in pending:
+        template_data = vertex.data.get("node", {}).get("template", {})
+        if not isinstance(template_data, dict):
+            continue
+        declared_tweaks = {
+            tweak_name: tweak_value
+            for tweak_name, tweak_value in node_tweaks.items()
+            if isinstance(template_data.get(tweak_name), dict)
+        }
+        if declared_tweaks:
+            ParameterHandler(vertex, storage_service=None).process_runtime_params(declared_tweaks)
 
     for vertex, node_tweaks in pending:
         apply_tweaks_on_vertex(
