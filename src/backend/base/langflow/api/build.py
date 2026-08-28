@@ -599,11 +599,11 @@ async def _generate_flow_events(
             # A refused tweak is a caller error, not a build failure, so it must
             # not be flattened into the generic 500 below.
             #
-            # Where it surfaces depends on how this ran. Called inline, it
-            # reaches the app-level handler and answers 422. Streaming and
-            # background callers run this in their own task, so the refusal is
-            # reported as an error event on an already-committed HTTP 200
-            # instead. Enforcement holds either way: the tweak is never applied.
+            # ``start_flow_build`` eagerly refuses targeted inputs and does not
+            # accept tweaks. This branch remains for worker-initiated callers
+            # that pass tweaks directly to ``generate_flow_events``; their HTTP
+            # response is already committed, so refusal is reported as an error
+            # event instead. Enforcement still holds: the tweak is never applied.
             raise
         except Exception as exc:
             await log_telemetry(
