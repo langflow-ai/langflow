@@ -414,7 +414,7 @@ async def test_restart_and_scaled_hydration_restore_encrypted_overrides(real_ser
     assert recovered.status == JobStatus.COMPLETED
 
 
-@pytest.mark.parametrize("damage", ["missing", "tampered", "wrong-key"])
+@pytest.mark.parametrize("damage", ["missing", "null", "tampered", "wrong-key"])
 async def test_startup_terminalizes_unavailable_encrypted_overrides(real_services_job_service, damage):
     """A damaged envelope cannot downgrade into a run without its original overrides."""
     from cryptography.fernet import Fernet
@@ -448,6 +448,8 @@ async def test_startup_terminalizes_unavailable_encrypted_overrides(real_service
     metadata = dict(job.job_metadata)
     if damage == "missing":
         metadata.pop("request_overrides")
+    elif damage == "null":
+        metadata["request_overrides"] = None
     elif damage == "tampered":
         token = metadata["request_overrides"]
         metadata["request_overrides"] = f"{token[:-1]}{'A' if token[-1] != 'A' else 'B'}"
@@ -478,8 +480,8 @@ async def test_startup_terminalizes_unavailable_encrypted_overrides(real_service
     ]
 
 
-async def test_wrong_key_and_cross_job_envelopes_fail_closed(real_services_job_service):
-    """Ciphertext is tied to both the installation key and its job/flow identity."""
+async def test_wrong_key_cross_job_and_null_envelopes_fail_closed(real_services_job_service):
+    """Worker hydration rejects wrong-key, cross-job, and nulled ciphertext."""
     from cryptography.fernet import Fernet
     from langflow.services.background_execution.service import (
         BackgroundExecutionService,
@@ -531,6 +533,13 @@ async def test_wrong_key_and_cross_job_envelopes_fail_closed(real_services_job_s
     with pytest.raises(RequestOverridesUnavailableError, match="Background request overrides are unavailable"):
         submitter._reconstruct_request(other_job)
 
+    null_metadata = dict(job.job_metadata)
+    null_metadata["request_overrides"] = None
+    await job_service.update_job_metadata(job_id, null_metadata, replace=True)
+    null_job = await job_service.get_job_by_job_id(job_id)
+    with pytest.raises(RequestOverridesUnavailableError, match="Background request overrides are unavailable"):
+        submitter._reconstruct_request(null_job)
+
 
 async def test_no_overrides_and_safe_legacy_rows_remain_replayable(real_services_job_service):
     """New empty envelopes and old rows without overrides preserve compatibility."""
@@ -554,20 +563,63 @@ async def test_no_overrides_and_safe_legacy_rows_remain_replayable(real_services
     )
     job_id = await svc.submit(flow_id=flow_id, request=request, user=_StubUser(uuid4()))
     job = await job_service.get_job_by_job_id(job_id)
-    assert job.job_metadata.get("request_overrides_format") == "fernet-json-v1"
-    assert job.job_metadata.get("request_overrides") is None
+    assert "request_overrides_format" not in job.job_metadata
+    assert "request_overrides" not in job.job_metadata
     safe_request = {key: value for key, value in request.items() if key not in {"globals", "tweaks"}}
     assert svc._reconstruct_request(job) == safe_request
 
     legacy_id = uuid4()
+    legacy_request = {**safe_request, "globals": {}, "tweaks": {}}
     await job_service.create_job(
         job_id=legacy_id,
         flow_id=flow_id,
         user_id=uuid4(),
-        initial_metadata={"request": safe_request},
+        initial_metadata={"request": legacy_request},
     )
     legacy = await job_service.get_job_by_job_id(legacy_id)
     assert svc._reconstruct_request(legacy) == safe_request
+
+
+async def test_legacy_empty_overrides_restart_safely(real_services_job_service):
+    """A queued pre-fix v2 row with empty override defaults remains recoverable."""
+    import asyncio
+
+    from langflow.services.background_execution.service import BackgroundExecutionService
+    from langflow.services.deps import get_settings_service
+
+    job_service = real_services_job_service
+    flow_id, job_id = uuid4(), uuid4()
+    safe_request = {
+        "flow_id": str(flow_id),
+        "mode": "background",
+        "stream_protocol": "langflow",
+        "input_value": "legacy-empty-restart",
+    }
+    await job_service.create_job(
+        job_id=job_id,
+        flow_id=flow_id,
+        user_id=uuid4(),
+        initial_metadata={"request": {**safe_request, "globals": {}, "tweaks": {}}},
+    )
+
+    captured: list[dict] = []
+    restart = BackgroundExecutionService(
+        settings_service=get_settings_service(),
+        frame_source_factory=_capture_request_factory(captured),
+    )
+    await restart.start()
+    try:
+        await restart.sweep_orphans_on_startup()
+        for _ in range(100):
+            recovered = await job_service.get_job_by_job_id(job_id)
+            if recovered.status in {JobStatus.COMPLETED, JobStatus.FAILED}:
+                break
+            await asyncio.sleep(0.05)
+    finally:
+        await restart.stop()
+
+    assert captured.count(safe_request) == 1
+    assert recovered.status == JobStatus.COMPLETED
 
 
 async def test_legacy_plaintext_overrides_are_not_replayed(real_services_job_service):
