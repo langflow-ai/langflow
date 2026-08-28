@@ -822,6 +822,54 @@ async def test_startup_terminalizes_authenticated_unparseable_override_payload(r
     ]
 
 
+async def test_startup_releases_lease_for_transient_authenticated_parser_failure(
+    real_services_job_service, monkeypatch
+):
+    """Transient parser resource failures keep an authenticated job queued for retry."""
+    from langflow.services.background_execution.service import BackgroundExecutionService
+    from langflow.services.deps import get_settings_service
+
+    job_service = real_services_job_service
+    settings_service = get_settings_service()
+    flow_id, user_id = uuid4(), uuid4()
+    submitter = BackgroundExecutionService(
+        settings_service=settings_service,
+        frame_source_factory=_echo_input_factory,
+        backend=_RecordingBackend(),
+    )
+    job_id = await submitter.submit(
+        flow_id=flow_id,
+        request={
+            "flow_id": str(flow_id),
+            "mode": "background",
+            "stream_protocol": "langflow",
+            "tweaks": {"Node-x": {"value": "retry-after-resource-recovery"}},
+        },
+        user=_StubUser(user_id),
+    )
+    monkeypatch.setattr(
+        "langflow.services.background_execution.service.json.loads",
+        lambda _plaintext: (_ for _ in ()).throw(MemoryError),
+    )
+
+    ran: list[dict] = []
+    restart = BackgroundExecutionService(
+        settings_service=settings_service,
+        frame_source_factory=_capture_request_factory(ran),
+    )
+    await restart.sweep_orphans_on_startup()
+    await restart.stop()
+
+    queued = await job_service.get_job_by_job_id(job_id)
+    assert ran == []
+    assert queued.status == JobStatus.QUEUED
+    assert queued.error is None
+    assert queued.finished_timestamp is None
+    assert (queued.job_metadata or {}).get("owner") is None
+    assert (queued.job_metadata or {}).get("heartbeat_at") is None
+    assert await job_service.read_events(job_id, after_seq=0) == []
+
+
 async def test_wrong_key_cross_job_and_null_envelopes_fail_closed(real_services_job_service):
     """Worker hydration rejects wrong-key, cross-job, and nulled ciphertext."""
     from cryptography.fernet import Fernet
