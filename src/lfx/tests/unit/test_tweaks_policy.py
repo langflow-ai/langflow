@@ -12,7 +12,7 @@ refuse every request, including one that sends no tweaks at all.
 
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from lfx.exceptions.tweaks import TweakRefusedError
@@ -394,6 +394,20 @@ class _FakeVertex:
             self.raw_params.update(params)
 
 
+def _built_vertex(vertex_id: str, template: dict, node_type: str | None = None):
+    """Return a minimal object accepted by the built-graph tweak path."""
+    from lfx.graph.vertex.base import Vertex
+
+    vertex = MagicMock(spec=Vertex)
+    vertex.id = vertex_id
+    vertex.data = {"node": {"template": template}}
+    if node_type is not None:
+        vertex.data["type"] = node_type
+    vertex.params = {}
+    vertex.load_from_db_fields = []
+    return vertex
+
+
 def test_graph_path_refuses_a_sandbox_field_the_old_filter_allowed():
     """`global_imports` is sandbox-widening and was previously applied here.
 
@@ -435,6 +449,63 @@ def test_graph_path_applies_and_persists_an_allowed_tweak():
     assert refused == []
     assert vertex.raw_params == {"a": "new"}
     assert vertex.params["a"] == "new"
+
+
+@pytest.mark.parametrize(
+    ("policy", "template", "node_type", "tweaks", "expected_fields", "expected_reason"),
+    [
+        (
+            "permissive",
+            {"database_url": {"value": "stored", "type": "str"}},
+            "SQLComponent",
+            {"database_url": "postgresql://attacker/db"},
+            ["database_url"],
+            PROTECTED_TWEAK_REASON,
+        ),
+        (
+            "off",
+            {
+                "a": {"value": "old", "type": "str"},
+                "b": {"value": "old", "type": "str"},
+            },
+            None,
+            {"b": "new-b", "a": "new-a"},
+            ["a", "b"],
+            OFF_TWEAK_REASON,
+        ),
+        (
+            "declared",
+            {
+                "allowed": {"value": "old", "type": "str", "api_editable": True},
+                "ordinary": {"value": "old", "type": "str"},
+                "database_url": {"value": "stored", "type": "str", "api_editable": True},
+            },
+            "SQLComponent",
+            {"ordinary": "new", "database_url": "postgresql://attacker/db"},
+            ["database_url", "ordinary"],
+            f"{PROTECTED_TWEAK_REASON} {DECLARED_TWEAK_REASON}",
+        ),
+    ],
+)
+def test_graph_path_reports_stable_refusal_reasons(
+    policy, template, node_type, tweaks, expected_fields, expected_reason
+):
+    """The built-graph path must preserve reasons, deduplicate them, and order them stably."""
+    from lfx.processing.process import process_tweaks_on_graph
+
+    vertex = _built_vertex("v1", template, node_type)
+
+    class _G:
+        vertices = [vertex]
+
+    with (
+        patch("lfx.processing.process._resolve_tweak_policy", return_value=policy),
+        pytest.raises(TweakRefusedError) as exc,
+    ):
+        process_tweaks_on_graph(_G(), {"v1": tweaks})
+
+    assert exc.value.refused == expected_fields
+    assert exc.value.reason == expected_reason
 
 
 # --- atomicity ------------------------------------------------------------
