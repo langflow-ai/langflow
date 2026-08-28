@@ -62,6 +62,7 @@ export function FlowBuilderWelcome({
   // AppInitPage holds every route back until the examples fetch settles, so an
   // empty list here means a policy blocked them, never "still loading".
   const examples = useFlowsManagerStore((state) => state.examples);
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const hasSimpleAgent = findStarterTemplate(examples, "simple_agent") !== null;
   const hasVectorStoreRag =
     findStarterTemplate(examples, "vector_store_rag") !== null;
@@ -86,24 +87,10 @@ export function FlowBuilderWelcome({
     return () => window.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
-  const trySubmit = () => {
-    const trimmed = message.trim();
-    if (!trimmed || trimmed.length > maxMessageLength) return;
-    onSubmit(trimmed);
-  };
-
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      trySubmit();
-    }
-  };
-
   const messageLength = message.length;
   // The cap is hard, but never silent: the counter is always on screen and hitting the limit
   // names the environment variable that raises it.
   const isAtLimit = messageLength >= maxMessageLength;
-  const canSend = message.trim().length > 0;
   const { t } = useTranslation();
   // Shared model state with the AssistantPanel — picking a model here
   // persists to the same localStorage key, so the assistant opens with the
@@ -113,11 +100,27 @@ export function FlowBuilderWelcome({
   // template buttons below don't. So when no provider is configured we swap
   // ONLY the input area for a configure-provider nudge and leave templates
   // fully usable.
-  const { hasEnabledModels, isLoading: isModelsLoading } = useEnabledModels();
+  const { hasEnabledModels, isCatalogReady, isModelEnabled } =
+    useEnabledModels();
   const [isProviderModalOpen, setIsProviderModalOpen] = useState(false);
-  // Treat "still loading" as "has models" so we don't flash the empty state
-  // for a frame while the providers request is in flight.
-  const showNoProviderState = !isModelsLoading && !hasEnabledModels;
+  const selectedModelAuthorized = isModelEnabled(selectedModel);
+  const canSend =
+    message.trim().length > 0 && isCatalogReady && selectedModelAuthorized;
+  const trySubmit = () => {
+    const trimmed = message.trim();
+    if (!canSend || trimmed.length > maxMessageLength) return;
+    onSubmit(trimmed);
+  };
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      trySubmit();
+    }
+  };
+  // A settled empty catalog means configuration is needed. Pending, paused,
+  // or failed policy resolution keeps the composer visible but inert so stale
+  // cached data never masquerades as current authorization.
+  const showNoProviderState = isCatalogReady && !hasEnabledModels;
 
   return (
     <div
@@ -276,6 +279,7 @@ export function FlowBuilderWelcome({
             open={isProviderModalOpen}
             onClose={() => setIsProviderModalOpen(false)}
             modelType="llm"
+            flowId={currentFlowId}
           />
         )}
 

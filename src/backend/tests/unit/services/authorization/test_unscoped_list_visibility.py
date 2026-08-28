@@ -190,6 +190,7 @@ async def test_variable_list_forwards_global_structured_visibility(monkeypatch):
     result = await variable_api.read_variables(
         session=MagicMock(),
         current_user=actor,
+        provider_policy_attributes={},
     )
 
     assert result == []
@@ -197,6 +198,7 @@ async def test_variable_list_forwards_global_structured_visibility(monkeypatch):
         user_id=actor.id,
         session=ANY,
         visibility=visibility,
+        include_empty_names=ANY,
     )
 
 

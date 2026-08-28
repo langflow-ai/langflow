@@ -53,6 +53,14 @@ jest.mock("@/controllers/API/queries/nodes/use-post-template-value", () => ({
   usePostTemplateValue: () => ({ mutateAsync: jest.fn() }),
 }));
 
+jest.mock("@/controllers/API/queries/models/use-get-model-providers", () => ({
+  useGetModelProviders: () => ({
+    data: undefined,
+    isLoading: false,
+    isFetching: false,
+  }),
+}));
+
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
   default: (selector?: MockStoreSelectorFn<{ setErrorData: jest.Mock }>) =>
@@ -63,6 +71,15 @@ jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
   default: (selector?: MockStoreSelectorFn<{ nodes: unknown[] }>) =>
     selector ? selector({ nodes: [] }) : {},
+}));
+
+jest.mock("@/stores/flowsManagerStore", () => ({
+  __esModule: true,
+  default: (
+    selector?: MockStoreSelectorFn<{
+      currentFlowId: string;
+    }>,
+  ) => (selector ? selector({ currentFlowId: "flow-one" }) : {}),
 }));
 
 jest.mock("@/stores/typesStore", () => ({
