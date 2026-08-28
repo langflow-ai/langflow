@@ -304,6 +304,7 @@ async def _buffer_background_run(
             background_tasks=fresh_background_tasks,
             parsed=parsed,
             current_user=current_user,
+            provider_policy_flow=flow,
             source_flow_owner_id=flow.user_id,
             expose_error_details=caller_owns_flow(flow, current_user),
             # Build under the job id so the run's vertex builds are persisted
