@@ -18,7 +18,7 @@ from lfx.observability import (
     bootstrap_application_telemetry,
 )
 from opentelemetry import metrics
-from opentelemetry.metrics import CallbackOptions, Observation
+from opentelemetry.metrics import CallbackOptions, NoOpMeterProvider, Observation
 from opentelemetry.metrics._internal.instrument import Counter, Histogram, UpDownCounter
 from opentelemetry.sdk._logs import LoggerProvider
 from opentelemetry.sdk.metrics import MeterProvider
@@ -231,10 +231,19 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
         self._tracer_provider = telemetry.tracer_provider
         self._logger_provider = telemetry.logger_provider
 
-        # meter_provider is None when nothing is exported and Prometheus is off (the default):
-        # the bootstrap declines to install a reader-less provider. Fall back to the global API
-        # proxy so the custom metrics still register on a no-op meter rather than crashing here.
-        self.meter = (self._meter_provider or metrics.get_meter_provider()).get_meter(langflow_meter_name)
+        # meter_provider is None when nothing is exported and Prometheus is off, which is the
+        # default. Fall back to an explicit no-op provider, NOT to the global API provider.
+        #
+        # The global one at this moment is a proxy, and a proxy meter is not a no-op: its
+        # instruments resolve lazily onto whichever real MeterProvider is registered later. An
+        # LLM tracing SDK that registers one on the first flow run would therefore adopt every
+        # metric recorded here, labels included, and ship it to the vendor's endpoint. The
+        # allowlist that draws this boundary for our own exporter cannot help, because this
+        # path never reaches that exporter.
+        #
+        # A no-op provider says what the configuration actually means: nothing was asked for,
+        # so nothing is recorded, and nothing can be adopted afterwards.
+        self.meter = (self._meter_provider or NoOpMeterProvider()).get_meter(langflow_meter_name)
 
         for name, metric in self._metrics_registry.items():
             if name != metric.name:
