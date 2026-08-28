@@ -1,5 +1,5 @@
 import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 /**
  * LE-2311: the sidebar row's label wrapper is a flex item with the default
@@ -21,17 +21,13 @@ test(
   { tag: ["@release", "@components", "@workspace"] },
   async ({ page }) => {
     await page.setViewportSize({ width: 1470, height: 704 });
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("blank-flow").click();
-    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-      timeout: 30000,
-    });
+    await openBlankFlow(page);
 
     await page.getByTestId("sidebar-search-input").fill("embed");
-    await page.waitForSelector('[data-testid="icon-GripVertical"]', {
-      timeout: 30000,
-    });
+    const longRow = page.getByTestId(
+      "amazon_amazon bedrock embeddings_draggable",
+    );
+    await expect(longRow).toBeVisible({ timeout: 30000 });
 
     const overflowing = await page.evaluate(() => {
       const rows = Array.from(
@@ -62,9 +58,6 @@ test(
 
     // The `+` is hidden until hover by design; on an affected row it never
     // appears at all because the whole action container is off the row.
-    const longRow = page.getByTestId(
-      "amazon_amazon bedrock embeddings_draggable",
-    );
     await longRow.hover();
 
     const addButton = longRow.getByTestId(

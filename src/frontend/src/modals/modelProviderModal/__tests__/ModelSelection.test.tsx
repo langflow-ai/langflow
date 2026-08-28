@@ -24,11 +24,19 @@ const mockEnabledModels = {
     },
   },
 };
+const mockRefetchEnabledModels = jest.fn();
 
 jest.mock("@/controllers/API/queries/models/use-get-enabled-models", () => ({
   useGetEnabledModels: jest.fn(() => ({
     data: mockEnabledModels,
     isLoading: false,
+    isSuccess: true,
+    isFetching: false,
+    isFetchedAfterMount: true,
+    fetchStatus: "idle",
+    isError: false,
+    error: null,
+    refetch: mockRefetchEnabledModels,
   })),
 }));
 
@@ -86,10 +94,33 @@ describe("ModelSelection", () => {
     useGetEnabledModels.mockReturnValue({
       data: mockEnabledModels,
       isLoading: false,
+      isSuccess: true,
+      isFetching: false,
+      isFetchedAfterMount: true,
+      fetchStatus: "idle",
+      isError: false,
+      error: null,
+      refetch: mockRefetchEnabledModels,
     });
   });
 
   describe("Rendering", () => {
+    it("loads model state with configuration authorization", () => {
+      render(
+        <ModelSelection
+          {...defaultProps}
+          flowId="flow-one"
+          projectId="project-one"
+        />,
+      );
+
+      expect(useGetEnabledModels).toHaveBeenCalledWith({
+        flowId: "flow-one",
+        projectId: "project-one",
+        purpose: "configure",
+      });
+    });
+
     it("should render the component container", () => {
       render(<ModelSelection {...defaultProps} />);
 
@@ -202,6 +233,82 @@ describe("ModelSelection", () => {
         "embeddings",
       );
       expect(onParentClick).not.toHaveBeenCalled();
+    });
+
+    it("hides model rows and toggles while enabled-model status is refetching", () => {
+      useGetEnabledModels.mockReturnValue({
+        data: mockEnabledModels,
+        isLoading: false,
+        isSuccess: true,
+        isFetching: true,
+        isFetchedAfterMount: false,
+        fetchStatus: "fetching",
+      });
+
+      render(<ModelSelection {...defaultProps} />);
+
+      expect(screen.queryByText("gpt-4")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("llm-toggle-gpt-4")).not.toBeInTheDocument();
+    });
+
+    it("hides stale model rows after enabled-model status fails", () => {
+      useGetEnabledModels.mockReturnValue({
+        data: mockEnabledModels,
+        isLoading: false,
+        isSuccess: false,
+        isFetching: false,
+        isFetchedAfterMount: true,
+        fetchStatus: "idle",
+      });
+
+      render(<ModelSelection {...defaultProps} />);
+
+      expect(screen.queryByText("gpt-4")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("llm-toggle-gpt-4")).not.toBeInTheDocument();
+    });
+
+    it("announces a paused policy refresh without exposing cached model controls", () => {
+      useGetEnabledModels.mockReturnValue({
+        data: mockEnabledModels,
+        isLoading: false,
+        isSuccess: true,
+        isFetching: false,
+        isFetchedAfterMount: true,
+        fetchStatus: "paused",
+        isError: false,
+        error: null,
+        refetch: mockRefetchEnabledModels,
+      });
+
+      render(<ModelSelection {...defaultProps} />);
+
+      expect(screen.getByRole("status")).toHaveTextContent("Loading models");
+      expect(screen.queryByText("gpt-4")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("llm-toggle-gpt-4")).not.toBeInTheDocument();
+    });
+
+    it("announces policy errors and retries without exposing cached model controls", async () => {
+      const user = userEvent.setup();
+      useGetEnabledModels.mockReturnValue({
+        data: mockEnabledModels,
+        isLoading: false,
+        isSuccess: false,
+        isFetching: false,
+        isFetchedAfterMount: true,
+        fetchStatus: "idle",
+        isError: true,
+        error: new Error("policy unavailable"),
+        refetch: mockRefetchEnabledModels,
+      });
+
+      render(<ModelSelection {...defaultProps} />);
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "An unexpected error occurred",
+      );
+      expect(screen.queryByText("gpt-4")).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Retry" }));
+      expect(mockRefetchEnabledModels).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -344,6 +451,10 @@ describe("ModelSelection", () => {
           },
         },
         isLoading: false,
+        isSuccess: true,
+        isFetching: false,
+        isFetchedAfterMount: true,
+        fetchStatus: "idle",
       });
     });
 
@@ -388,6 +499,42 @@ describe("ModelSelection", () => {
         true,
         "embeddings",
       );
+    });
+
+    it("does not expose saved or addable deployments before enabled-model status settles", () => {
+      useGetEnabledModels.mockReturnValue({
+        data: {
+          enabled_models: {
+            "Azure AI Foundry": { "saved-deployment": true },
+          },
+        },
+        isLoading: false,
+        isSuccess: true,
+        isFetching: true,
+        isFetchedAfterMount: false,
+        fetchStatus: "fetching",
+      });
+
+      render(
+        <ModelSelection
+          {...defaultProps}
+          providerName="Azure AI Foundry"
+          availableModels={foundryModels}
+        />,
+      );
+
+      expect(screen.queryByText("gpt-4o")).not.toBeInTheDocument();
+      expect(screen.queryByText("saved-deployment")).not.toBeInTheDocument();
+      expect(screen.getByRole("status")).toHaveTextContent("Loading models");
+      expect(
+        screen.queryByTestId("model-search-input"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("add-custom-llm-deployment-button"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("add-custom-embeddings-deployment-button"),
+      ).not.toBeInTheDocument();
     });
 
     it("offers only the missing type when a deployment name exists as an LLM", async () => {
@@ -448,6 +595,10 @@ describe("ModelSelection", () => {
           },
         },
         isLoading: false,
+        isSuccess: true,
+        isFetching: false,
+        isFetchedAfterMount: true,
+        fetchStatus: "idle",
       });
 
       render(
@@ -487,6 +638,10 @@ describe("ModelSelection", () => {
           },
         },
         isLoading: false,
+        isSuccess: true,
+        isFetching: false,
+        isFetchedAfterMount: true,
+        fetchStatus: "idle",
       });
 
       render(
