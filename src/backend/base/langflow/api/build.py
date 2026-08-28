@@ -12,7 +12,7 @@ from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
 from lfx.log.logger import logger
-from lfx.processing.process import process_tweaks_on_graph
+from lfx.processing.process import process_tweaks_on_graph, validate_targeted_inputs
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
 from lfx.utils.file_path_security import LocalFileAccessError
@@ -225,6 +225,11 @@ async def start_flow_build(
     Returns:
         the job_id.
     """
+    # Reject before allocating a queue or starting the background build. Once a
+    # job id has been returned, a policy refusal can only arrive as an event on
+    # an HTTP 200 rather than the documented structured 422.
+    validate_targeted_inputs([inputs] if inputs is not None else None)
+
     job_id = str(uuid.uuid4())
     try:
         _, event_manager = queue_service.create_queue(job_id)

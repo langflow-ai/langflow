@@ -44,6 +44,20 @@ class Result(BaseModel):
     session_id: str
 
 
+def validate_targeted_inputs(inputs: list[InputValueRequest] | None) -> None:
+    """Refuse caller-selected input components when the tweak policy is off."""
+    from lfx.utils.flow_validation import TWEAK_POLICY_OFF
+
+    if _resolve_tweak_policy() != TWEAK_POLICY_OFF:
+        return
+
+    targeted = sorted({component for request in inputs or [] for component in (request.components or [])})
+    if targeted:
+        from lfx.exceptions.tweaks import TweakRefusedError
+
+        raise TweakRefusedError(targeted, reason="This deployment does not accept component-targeted inputs.")
+
+
 async def run_graph_internal(
     graph: Graph,
     flow_id: str,
@@ -61,14 +75,7 @@ async def run_graph_internal(
     # ``off`` refuses component-targeted inputs as well as tweaks. Both aim a
     # value at a named node, so refusing only tweaks would make the setting
     # tell a half-truth. ``input_value`` and ``session_id`` keep working.
-    from lfx.utils.flow_validation import TWEAK_POLICY_OFF
-
-    if _resolve_tweak_policy() == TWEAK_POLICY_OFF:
-        targeted = sorted({c for r in inputs for c in (r.components or [])})
-        if targeted:
-            from lfx.exceptions.tweaks import TweakRefusedError
-
-            raise TweakRefusedError(targeted, reason="This deployment does not accept component-targeted inputs.")
+    validate_targeted_inputs(inputs)
 
     components = []
     inputs_list = []
