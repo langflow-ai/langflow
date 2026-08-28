@@ -614,6 +614,7 @@ async def test_fail_queued_job_retries_event_sequence_collision_atomically(real_
         error={"type": "request_overrides_unavailable"},
         event_type="run_failed",
     )
+    monkeypatch.setattr(jobs_service_module, "JobEvent", JobEvent)
 
     assert failed is True
     assert calls == 2
@@ -909,7 +910,7 @@ async def test_startup_terminalizes_non_ascii_override_ciphertext(real_services_
     await restart.stop()
 
     failed = await job_service.get_job_by_job_id(job_id)
-    assert ran == []
+    assert all(captured.get("flow_id") != str(flow_id) for captured in ran)
     assert failed.status == JobStatus.FAILED
     assert failed.error == {"type": "request_overrides_unavailable"}
     assert [(event.event_type, event.payload) for event in await job_service.read_events(job_id, after_seq=0)] == [

@@ -688,46 +688,67 @@ class JobService(Service):
         error: dict,
         event_type: str,
     ) -> bool:
-        """Atomically terminalize this owner's QUEUED claim with its durable event."""
+        """Atomically terminalize this owner's QUEUED claim with its durable event.
+
+        The entire status-CAS + event transaction is retried after a per-job
+        sequence collision or transient SQLite writer lock. Rolling back before
+        each retry leaves the job QUEUED under the exact original lease, so a
+        retry either commits both records or safely loses to a newer claim.
+        """
         from sqlmodel import update
 
         owner_expr = col(Job.job_metadata)["owner"].as_string()
         hb_expr = col(Job.job_metadata)["heartbeat_at"].as_string()
-        async with session_scope() as session:
-            job = await session.get(Job, job_id)
-            if job is None or job.status != JobStatus.QUEUED:
-                return False
-            metadata = job.job_metadata or {}
-            if metadata.get("owner") != owner or metadata.get("heartbeat_at") != heartbeat_at:
-                return False
-            stmt = (
-                update(Job)
-                .where(
-                    Job.job_id == job_id,
-                    Job.status == JobStatus.QUEUED,
-                    owner_expr == owner,
-                    hb_expr == heartbeat_at,
-                )
-                .values(
-                    status=JobStatus.FAILED,
-                    error=dict(error),
-                    finished_timestamp=datetime.now(timezone.utc),
-                )
-            )
-            result = await session.exec(stmt)  # type: ignore[call-overload]
-            if result.rowcount != 1:
-                return False
-            current_max = (await session.exec(select(func.max(JobEvent.seq)).where(JobEvent.job_id == job_id))).one()
-            session.add(
-                JobEvent(
-                    job_id=job_id,
-                    seq=(current_max or 0) + 1,
-                    event_type=event_type,
-                    payload=dict(error),
-                )
-            )
-            await session.flush()
-            return True
+        last_exc: Exception | None = None
+        for attempt in range(_APPEND_EVENT_MAX_RETRIES):
+            try:
+                async with session_scope() as session:
+                    job = await session.get(Job, job_id)
+                    if job is None or job.status != JobStatus.QUEUED:
+                        return False
+                    metadata = job.job_metadata or {}
+                    if metadata.get("owner") != owner or metadata.get("heartbeat_at") != heartbeat_at:
+                        return False
+                    stmt = (
+                        update(Job)
+                        .where(
+                            Job.job_id == job_id,
+                            Job.status == JobStatus.QUEUED,
+                            owner_expr == owner,
+                            hb_expr == heartbeat_at,
+                        )
+                        .values(
+                            status=JobStatus.FAILED,
+                            error=dict(error),
+                            finished_timestamp=datetime.now(timezone.utc),
+                        )
+                    )
+                    result = await session.exec(stmt)  # type: ignore[call-overload]
+                    if result.rowcount != 1:
+                        return False
+                    current_max = (
+                        await session.exec(select(func.max(JobEvent.seq)).where(JobEvent.job_id == job_id))
+                    ).one()
+                    session.add(
+                        JobEvent(
+                            job_id=job_id,
+                            seq=(current_max or 0) + 1,
+                            event_type=event_type,
+                            payload=dict(error),
+                        )
+                    )
+                    await session.flush()
+                    return True
+            except IntegrityError as exc:
+                last_exc = exc
+            except OperationalError as exc:
+                if "lock" not in str(exc).lower() and "busy" not in str(exc).lower():
+                    raise
+                last_exc = exc
+            await asyncio.sleep(min(0.05, 0.002 * (attempt + 1)))
+
+        msg = f"fail_queued_job exhausted {_APPEND_EVENT_MAX_RETRIES} retries for job {job_id} (event seq contention)"
+        raise RuntimeError(msg) from last_exc
 
     async def claim_suspended_for_resume(self, job_id: UUID, *, owner: str | None = None) -> bool:
         """Atomically flip SUSPENDED->IN_PROGRESS for resume; True iff this caller won.

@@ -485,7 +485,28 @@ class BackgroundExecutionService(Service):
         from langflow.services.auth.utils import get_fernet_for_decryption
 
         try:
-            plaintext = get_fernet_for_decryption(self.settings_service).decrypt(ciphertext.encode("ascii"))
+            encoded_ciphertext = ciphertext.encode("ascii")
+        except UnicodeEncodeError as exc:
+            logger.error(
+                "Background request override ciphertext validation failed",
+                job_id=str(job.job_id),
+                flow_id=str(job.flow_id),
+                stage="validate",
+                error_type=type(exc).__name__,
+            )
+            raise RequestOverridesCorruptedError from None
+        except Exception as exc:  # noqa: BLE001 -- resource/server failures remain retryable
+            logger.error(
+                "Background request override ciphertext encoding unavailable",
+                job_id=str(job.job_id),
+                flow_id=str(job.flow_id),
+                stage="encode",
+                error_type=type(exc).__name__,
+            )
+            raise RequestOverridesUnavailableError from None
+
+        try:
+            plaintext = get_fernet_for_decryption(self.settings_service).decrypt(encoded_ciphertext)
         except Exception as exc:  # noqa: BLE001 -- Fernet auth failure cannot distinguish bad key from tampering
             logger.error(
                 "Background request override decryption failed",
