@@ -657,6 +657,64 @@ async def test_custom_component_update_denies_selected_provider_before_secret_hy
     hydrate.assert_not_awaited()
 
 
+async def test_custom_component_update_keeps_realtime_value_out_of_component_attributes(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    from unittest.mock import MagicMock
+
+    from langflow.api.v1 import endpoints
+    from lfx.custom.custom_component.component import Component
+    from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+    component_instance = Component(_code="")
+    require_policy = AsyncMock()
+    set_attributes = MagicMock()
+    run_update_outputs = AsyncMock()
+    monkeypatch.setattr(component_instance, "arequire_model_provider_policy", require_policy)
+    monkeypatch.setattr(component_instance, "set_attributes", set_attributes)
+    monkeypatch.setattr(component_instance, "run_and_validate_update_outputs", run_update_outputs)
+    monkeypatch.setattr(endpoints, "get_current_external_access_context", lambda: None)
+    monkeypatch.setattr(endpoints, "get_settings_service", lambda: SimpleNamespace(settings=SimpleNamespace()))
+    monkeypatch.setattr(endpoints, "get_catalog_policy_service", lambda: SimpleNamespace(snapshot=object()))
+    monkeypatch.setattr(endpoints, "resolve_component_code_for_action", lambda code, **_kwargs: code)
+    monkeypatch.setattr(
+        endpoints,
+        "build_custom_component_template",
+        lambda *_args, **_kwargs: ({"template": {}, "outputs": []}, component_instance),
+    )
+    monkeypatch.setattr(endpoints, "get_instance_name", lambda _component: "SelectedModel")
+    monkeypatch.setattr(endpoints, "enforce_catalog_policy_for_component_type", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(endpoints, "update_component_build_config", AsyncMock())
+
+    template_value = [{"provider": "OpenAI", "model_name": "gpt-test"}]
+    realtime_value = [{"provider": "Anthropic", "model_name": "claude-test"}]
+    request = UpdateCustomComponentRequest(
+        code="class SelectedModel: pass",
+        frontend_node={"outputs": []},
+        field="model",
+        field_value=realtime_value,
+        template={
+            "model": {
+                "value": template_value,
+                "_input_type": "ModelInput",
+            }
+        },
+    )
+
+    response = await client.post(
+        "api/v1/custom_component/update",
+        json=request.model_dump(),
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert require_policy.await_args.args == (ModelProviderPolicyPurpose.CONFIGURE,)
+    assert require_policy.await_args.kwargs["parameters"]["model"] == realtime_value
+    assert set_attributes.call_args.args[0]["model"] == template_value
+
+
 async def test_custom_component_endpoint_returns_metadata(client: AsyncClient, logged_in_headers: dict):
     """Test that the /custom_component endpoint returns metadata with module and code_hash."""
     component_code = """
