@@ -13,6 +13,7 @@ import {
 } from "@/utils/customComponentGuards";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
+import { appendProviderScope } from "../../helpers/provider-scope";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 interface IPostTemplateValue {
@@ -50,9 +51,21 @@ export const usePostTemplateValue: useMutationFunctionType<
     (state) => state.currentFlow?.folder_id,
   );
 
+  const capturedScopeIsCurrent = (): boolean => {
+    const current = useFlowsManagerStore.getState();
+    return (
+      current.currentFlowId === flowId &&
+      current.currentFlow?.folder_id === folderId
+    );
+  };
+
   const postTemplateValueFn = async (
     payload: IPostTemplateValue,
   ): Promise<APIClassType | undefined> => {
+    // The hook may remain mounted briefly after navigation. Do not issue an
+    // edit under the flow/project scope captured by a previous render.
+    if (!capturedScopeIsCurrent()) return undefined;
+
     const template = payload.template ?? node.template;
 
     if (!template) return;
@@ -80,8 +93,12 @@ export const usePostTemplateValue: useMutationFunctionType<
 
     let response;
     try {
+      const queryParams = new URLSearchParams();
+      appendProviderScope(queryParams, { flowId });
       response = await api.post<APIClassType>(
-        getURL("CUSTOM_COMPONENT", { update: "update" }),
+        `${getURL("CUSTOM_COMPONENT", { update: "update" })}${
+          queryParams.toString() ? `?${queryParams.toString()}` : ""
+        }`,
         {
           code: template.code.value,
           template: preparedTemplate,
@@ -104,6 +121,10 @@ export const usePostTemplateValue: useMutationFunctionType<
       }
       throw e;
     }
+
+    // The response is authorized only for the captured scope. A same-id node
+    // in the newly active flow must never receive this template.
+    if (!capturedScopeIsCurrent()) return undefined;
 
     const newTemplate = response.data;
     newTemplate.last_updated = lastUpdated;

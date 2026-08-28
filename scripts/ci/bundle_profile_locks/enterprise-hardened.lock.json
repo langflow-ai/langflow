@@ -58,9 +58,9 @@
       "providers": [
         "lfx-datastax"
       ],
-      "requested": ">=0.1.5,<1.0.0",
-      "requirement": "lfx-datastax==0.1.5",
-      "resolved_version": "0.1.5"
+      "requested": ">=0.1.6,<1.0.0",
+      "requirement": "lfx-datastax==0.1.6",
+      "resolved_version": "0.1.6"
     },
     {
       "distribution": "lfx-docling",
@@ -78,9 +78,9 @@
       "providers": [
         "lfx-google"
       ],
-      "requested": ">=0.1.0,<1.0.0",
-      "requirement": "lfx-google==0.1.0",
-      "resolved_version": "0.1.0"
+      "requested": ">=0.1.1,<1.0.0",
+      "requirement": "lfx-google==0.1.1",
+      "resolved_version": "0.1.1"
     },
     {
       "distribution": "lfx-ibm",

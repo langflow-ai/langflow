@@ -107,7 +107,18 @@ def _create_repository(tmp_path: Path, versions: dict[str, str]) -> Path:
         (tests_dir / "test_component.py").write_text("VALUE = 1\n", encoding="utf-8")
         (source_dir / "component.py").write_text("VALUE = 1\n", encoding="utf-8")
         (source_dir / "extension.json").write_text(
-            json.dumps({"id": name, "version": version}, indent=2) + "\n", encoding="utf-8"
+            json.dumps(
+                {
+                    "id": name,
+                    "version": version,
+                    "name": name,
+                    "lfx": {"compat": ["1"]},
+                    "bundles": [{"name": directory, "path": directory}],
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
         )
     (repo / "pyproject.toml").write_text(
         '[project]\nname = "langflow"\nversion = "1.11.0"\ndependencies = [\n' + "\n".join(dependencies) + "\n]\n",
@@ -297,6 +308,8 @@ def test_prerelease_restamp_reuses_stable_and_changes_only_unpublished_bundle(tm
     assert '"lfx>=1.11.0.dev0,<2.0.0"' in alpha
     assert 'version = "0.2.0rc3"' in beta
     assert '"lfx>=1.11.0rc3,<2.0.0"' in beta
+    beta_manifest = json.loads((repo / "src" / "bundles" / "beta" / "src" / "lfx_beta" / "extension.json").read_text())
+    assert beta_manifest["version"] == "0.2.0rc3"
 
 
 def test_prerelease_restamp_updates_runtime_lfx_requirement_not_quoted_comment(tmp_path: Path) -> None:
