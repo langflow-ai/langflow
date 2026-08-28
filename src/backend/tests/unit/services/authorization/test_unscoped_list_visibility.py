@@ -198,6 +198,7 @@ async def test_variable_list_forwards_global_structured_visibility(monkeypatch):
         user_id=actor.id,
         session=ANY,
         visibility=visibility,
+        include_empty_names=ANY,
     )
 
 
