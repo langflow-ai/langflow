@@ -280,19 +280,19 @@ class BackgroundExecutionService(Service):
             if existing is not None:
                 return existing
             raise
-        # Persist the submit request on the job row so a QUEUED job that survives
-        # a restart is re-enqueued with its ORIGINAL inputs (input_value, tweaks,
-        # etc.), not a reconstructed default. The worker / startup sweep read it
-        # back via ``_reconstruct_request``.
+        # Persist replay-safe request fields on the job row so a QUEUED job that
+        # survives a restart keeps its original input, files, partial-run ids,
+        # and protocol instead of falling back to reconstructed defaults. The
+        # worker / startup sweep reads them via ``_reconstruct_request``.
         #
-        # Request-level ``globals`` are REDACTED from the persisted copy: they can
-        # carry inline secrets (API keys), and storing them plaintext in the
+        # Request-level ``globals`` and ``tweaks`` are REDACTED from the persisted
+        # copy: both can carry inline secrets (API keys), and storing them plaintext in the
         # durable ``job`` table (JSONB on Postgres) widens the blast radius of any
         # DB read (backup, ops access, a SQL-injection elsewhere) beyond the
-        # live-only handling globals get on the sync path. Tradeoff: a background
-        # re-enqueue after a restart drops inline globals — reference STORED global
-        # variables by name for background runs rather than passing secrets inline.
-        # The live in-memory run below still uses the full ``request``.
+        # live-only handling these overrides get on the sync path. Tradeoff: a
+        # background re-enqueue after a restart drops inline globals and tweaks —
+        # store durable values on the flow or in named variables instead. The live
+        # in-memory run below still uses the full ``request``.
         await job_service.update_job_metadata(job_id, {"request": self._redact_request(request)})
         # After create_job so an idempotent retry returns the existing job instead of
         # cancelling it; the new job is QUEUED, so the suspended-only query skips it.
@@ -307,17 +307,17 @@ class BackgroundExecutionService(Service):
 
     @staticmethod
     def _redact_request(request: dict[str, Any]) -> dict[str, Any]:
-        """Return a copy of ``request`` with secret-bearing ``globals`` removed.
+        """Return a copy of ``request`` with secret-bearing overrides removed.
 
         Returns a shallow copy so the caller's dict (used for the live run) is not
-        mutated. Only ``globals`` is dropped; everything else round-trips for a
-        faithful replay. See ``submit`` for the durable-plaintext rationale and
-        the inline-globals tradeoff.
+        mutated. ``globals`` and ``tweaks`` are dropped; everything else round-trips
+        for replay. See ``submit`` for the durable-plaintext rationale and tradeoff.
         """
-        if "globals" not in request:
+        if "globals" not in request and "tweaks" not in request:
             return request
         redacted = dict(request)
         redacted.pop("globals", None)
+        redacted.pop("tweaks", None)
         return redacted
 
     @staticmethod
@@ -626,11 +626,12 @@ class BackgroundExecutionService(Service):
     def _reconstruct_request(job: Job) -> dict[str, Any]:
         """Rebuild the request dict for a re-enqueued QUEUED job.
 
-        ``submit`` persists the original request body under
-        ``job_metadata["request"]`` so re-enqueue replays the ORIGINAL inputs
-        (input_value, tweaks, globals, files, partial-run ids, ...). Falls back
-        to a minimal default only for legacy rows written before the request was
-        persisted, so a pre-existing QUEUED job still re-runs rather than blocks.
+        ``submit`` persists replay-safe request fields under
+        ``job_metadata["request"]`` so re-enqueue keeps the original input, files,
+        partial-run ids, and protocol. Secret-bearing globals and tweaks stay
+        live-only. Falls back to a minimal default only for legacy rows written
+        before the request was persisted, so a pre-existing QUEUED job still
+        re-runs rather than blocks.
         """
         meta = job.job_metadata or {}
         persisted = meta.get("request")
