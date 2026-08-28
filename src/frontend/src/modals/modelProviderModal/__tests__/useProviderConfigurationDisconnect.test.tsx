@@ -7,8 +7,12 @@ import { useProviderConfiguration } from "../hooks/useProviderConfiguration";
 // Shared mock plumbing
 // ---------------------------------------------------------------------------
 
-const mockGlobalVariables: Array<{ id: string; name: string; value?: string }> =
-  [];
+const mockGlobalVariables: Array<{
+  id: string;
+  name: string;
+  value?: string;
+  has_value?: boolean;
+}> = [];
 const mockProviderVariablesMapping: Record<
   string,
   Array<{
@@ -36,9 +40,10 @@ let mockInvalidatedQueryKey: readonly unknown[] | null = null;
 const deleteCalls: Array<{ id: string | undefined }> = [];
 const mockDeleteMutateAsync = jest.fn((params: { id: string | undefined }) => {
   deleteCalls.push(params);
-  return Promise.resolve(undefined);
+  return Promise.resolve();
 });
 const mockCreateMutateAsync = jest.fn();
+const mockUpdateMutateAsync = jest.fn();
 const mockValidateMutateAsync = jest.fn(() => Promise.resolve({ valid: true }));
 
 const mockSetSuccessData = jest.fn();
@@ -82,7 +87,7 @@ jest.mock("@/controllers/API/queries/variables", () => ({
   }),
   useGetGlobalVariables: () => ({ data: mockGlobalVariables }),
   usePatchGlobalVariables: () => ({
-    mutateAsync: jest.fn(),
+    mutateAsync: mockUpdateMutateAsync,
     isPending: false,
   }),
   usePostGlobalVariables: () => ({
@@ -159,6 +164,59 @@ const renderProviderConfiguration = (selectedProvider: Provider) =>
       useProviderConfiguration({ selectedProvider: provider }),
     { initialProps: { provider: selectedProvider } },
   );
+
+const openAIProviderVariables = [
+  {
+    variable_name: "OpenAI API Key",
+    variable_key: "OPENAI_API_KEY",
+    required: true,
+    is_secret: true,
+    is_list: false,
+    options: [],
+  },
+  {
+    variable_name: "OpenAI Base URL",
+    variable_key: "OPENAI_BASE_URL",
+    required: false,
+    is_secret: false,
+    is_list: false,
+    options: [],
+  },
+];
+
+const renderConfiguredOpenAI = ({
+  baseUrl = "https://example.com/v1",
+  baseUrlHasValue = true,
+}: {
+  baseUrl?: string;
+  baseUrlHasValue?: boolean;
+} = {}) => {
+  mockProviderVariablesMapping.OpenAI = openAIProviderVariables;
+  mockGlobalVariables.push(
+    { id: "var-key", name: "OPENAI_API_KEY", has_value: true },
+    {
+      id: "var-url",
+      name: "OPENAI_BASE_URL",
+      value: baseUrl,
+      has_value: baseUrlHasValue,
+    },
+  );
+  mockModelProviders = [
+    {
+      provider: "OpenAI",
+      is_configured: true,
+      is_enabled: true,
+      models: [],
+    },
+  ];
+  return renderProviderConfiguration({
+    provider: "OpenAI",
+    icon: "OpenAI",
+    is_enabled: true,
+    is_configured: true,
+    models: [],
+  });
+};
 
 const renderScopedProviderConfiguration = (
   selectedProvider: Provider,
@@ -1007,8 +1065,12 @@ describe("useProviderConfiguration.handleSaveAllVariables", () => {
     mockModelProvidersFetchStatus = "idle";
     mockInvalidatedQueryKey = null;
     mockCreateMutateAsync.mockReset();
+    mockUpdateMutateAsync.mockReset();
+    mockUpdateMutateAsync.mockResolvedValue(undefined);
     mockValidateMutateAsync.mockReset();
     mockValidateMutateAsync.mockResolvedValue({ valid: true });
+    deleteCalls.length = 0;
+    mockDeleteMutateAsync.mockClear();
     mockSetSuccessData.mockClear();
     mockSetErrorData.mockClear();
     mockInvalidateQueries.mockReset();
@@ -1016,6 +1078,135 @@ describe("useProviderConfiguration.handleSaveAllVariables", () => {
     mockRefetchQueries.mockReset();
     mockRefetchQueries.mockResolvedValue(undefined);
     mockRefreshAllModelInputs.mockClear();
+  });
+
+  it("resets a configured optional variable without deleting its identity", async () => {
+    const { result } = renderConfiguredOpenAI();
+
+    act(() => {
+      result.current.handleVariableChange("OPENAI_BASE_URL", "");
+    });
+
+    expect(result.current.canSave).toBe(true);
+
+    await act(async () => {
+      await result.current.handleSaveAllVariables();
+    });
+
+    expect(mockUpdateMutateAsync).toHaveBeenCalledWith({
+      id: "var-url",
+      value: "",
+    });
+    expect(deleteCalls).toHaveLength(0);
+    expect(mockCreateMutateAsync).not.toHaveBeenCalled();
+    expect(mockValidateMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("does not validate a replacement credential against an explicitly cleared URL", async () => {
+    const { result } = renderConfiguredOpenAI();
+    const replacementApiKey = "replacement-api-key"; // pragma: allowlist secret
+
+    act(() => {
+      result.current.handleVariableChange("OPENAI_BASE_URL", "");
+      result.current.handleVariableChange("OPENAI_API_KEY", replacementApiKey);
+    });
+
+    const dateNowSpy = jest
+      .spyOn(Date, "now")
+      .mockImplementationOnce(() => 0)
+      .mockImplementation(() => 500);
+
+    try {
+      await act(async () => {
+        await result.current.handleSaveAllVariables();
+      });
+
+      expect(mockValidateMutateAsync).toHaveBeenCalledWith({
+        provider: "OpenAI",
+        variables: { OPENAI_API_KEY: replacementApiKey },
+      });
+      expect(mockUpdateMutateAsync).toHaveBeenNthCalledWith(1, {
+        id: "var-url",
+        value: "",
+      });
+      expect(mockUpdateMutateAsync).toHaveBeenNthCalledWith(2, {
+        id: "var-key",
+        value: replacementApiKey,
+      });
+      expect(mockUpdateMutateAsync).toHaveBeenCalledTimes(2);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
+  it("reuses the preserved variable after a cleared value is reopened", async () => {
+    const { result } = renderConfiguredOpenAI({
+      baseUrl: "",
+      baseUrlHasValue: false,
+    });
+
+    expect(result.current.getConfiguredValue("OPENAI_BASE_URL")).toBe("");
+    expect(result.current.isVariableConfigured("OPENAI_BASE_URL")).toBe(false);
+
+    act(() => {
+      result.current.handleVariableChange(
+        "OPENAI_BASE_URL",
+        "https://replacement.example/v1",
+      );
+    });
+
+    const dateNowSpy = jest
+      .spyOn(Date, "now")
+      .mockImplementationOnce(() => 0)
+      .mockImplementation(() => 500);
+
+    try {
+      await act(async () => {
+        await result.current.handleSaveAllVariables();
+      });
+
+      expect(mockUpdateMutateAsync).toHaveBeenCalledWith({
+        id: "var-url",
+        value: "https://replacement.example/v1",
+      });
+      expect(mockCreateMutateAsync).not.toHaveBeenCalled();
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
+  it("refreshes provider state when a later write fails after a reset", async () => {
+    mockUpdateMutateAsync
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error("credential write failed"));
+
+    const { result } = renderConfiguredOpenAI();
+
+    act(() => {
+      result.current.handleVariableChange("OPENAI_BASE_URL", "");
+      result.current.handleVariableChange("OPENAI_API_KEY", "replacement-key");
+    });
+
+    const dateNowSpy = jest
+      .spyOn(Date, "now")
+      .mockImplementationOnce(() => 0)
+      .mockImplementation(() => 500);
+
+    try {
+      await act(async () => {
+        await result.current.handleSaveAllVariables();
+      });
+
+      expect(mockUpdateMutateAsync).toHaveBeenNthCalledWith(1, {
+        id: "var-url",
+        value: "",
+      });
+      expect(result.current.hasUserMadeChanges()).toBe(true);
+      expect(mockInvalidateQueries).toHaveBeenCalled();
+      expect(mockSetErrorData).toHaveBeenCalled();
+    } finally {
+      dateNowSpy.mockRestore();
+    }
   });
 
   it("waits for the base URL write before creating the API key", async () => {

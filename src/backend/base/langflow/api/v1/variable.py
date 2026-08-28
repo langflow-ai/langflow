@@ -7,6 +7,8 @@ from fastapi import APIRouter, HTTPException
 from lfx.base.models.unified_models import (
     get_all_variables_for_provider,
     get_model_provider_variable_mapping,
+    get_model_providers,
+    get_provider_all_variables,
     validate_model_provider_key,
 )
 from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
@@ -236,10 +238,19 @@ async def read_variables(
             resource_type="variable",
             act=VariableAction.READ,
         )
+        resettable_provider_variables = {
+            variable["variable_key"]
+            for provider in get_model_providers()
+            for variable in get_provider_all_variables(provider)
+            if not variable.get("required")
+            and not variable.get("is_secret")
+            and isinstance(variable.get("variable_key"), str)
+        }
         all_variables = await variable_service.get_all(
             user_id=current_user.id,
             session=session,
             visibility=visibility,
+            include_empty_names=resettable_provider_variables,
         )
 
         # Filter out internal variables (those starting and ending with __)
