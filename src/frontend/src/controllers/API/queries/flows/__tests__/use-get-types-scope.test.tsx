@@ -218,7 +218,7 @@ describe("useGetTypes scoped store ownership", () => {
     }
   });
 
-  it("refreshes a stale scoped palette on focus after provider revocation", async () => {
+  it("preserves a stale scoped palette while refreshing provider revocation", async () => {
     const now = 1_000_000;
     const dateNow = jest.spyOn(Date, "now").mockReturnValue(now);
     const allowed = palette("openai", "OpenAIComponent");
@@ -247,7 +247,7 @@ describe("useGetTypes scoped store ownership", () => {
             ?.fetchStatus,
         ).toBe("fetching"),
       );
-      expectPaletteStoreToBeEmpty();
+      expect(useTypesStore.getState().data).toEqual(allowed);
 
       await act(async () => refresh.resolve({ data: revoked }));
       await waitFor(() =>
@@ -260,7 +260,7 @@ describe("useGetTypes scoped store ownership", () => {
     }
   });
 
-  it("clears a cached scoped palette while an offline refresh is paused", async () => {
+  it("preserves a cached scoped palette while an offline refresh is paused", async () => {
     const allowed = palette("openai", "OpenAIComponent");
     mockApiGet.mockResolvedValue({ data: allowed });
 
@@ -283,7 +283,7 @@ describe("useGetTypes scoped store ownership", () => {
           ?.fetchStatus,
       ).toBe("paused"),
     );
-    expectPaletteStoreToBeEmpty();
+    expect(useTypesStore.getState().data).toEqual(allowed);
 
     onlineManager.setOnline(true);
   });
