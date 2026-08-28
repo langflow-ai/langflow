@@ -63,12 +63,13 @@ export default function InputGlobalComponent({
     Boolean(currentFlowId) &&
     isGlobalVariablesFetchSuccessful &&
     !isGlobalVariablesFetching &&
-    globalVariablesFetchStatus !== "paused" &&
-    isGlobalVariablesFetchedAfterMount;
+    globalVariablesFetchStatus === "idle" &&
+    globalVariables !== undefined;
 
   // Cached credentials are authorization-sensitive. Keep saved references in
-  // the flow data, but do not surface them or any cached options until the
-  // exact flow-scoped query has succeeded and settled for this mount.
+  // the flow data, but do not surface them while the exact flow-scoped query is
+  // fetching, paused, or failed. A successful result may come from another
+  // observer of the same scoped cache entry after this component remounts.
   const typedGlobalVariables: GlobalVariable[] = canUseScopedGlobalVariables
     ? (globalVariables ?? [])
     : [];
@@ -83,7 +84,10 @@ export default function InputGlobalComponent({
     currentValue,
     typedGlobalVariables,
   );
-  const canValidateMissingVariable = canUseScopedGlobalVariables;
+  // Clearing a saved reference is destructive, so require this observer's own
+  // post-mount validation even when settled scoped data is safe to display.
+  const canValidateMissingVariable =
+    canUseScopedGlobalVariables && isGlobalVariablesFetchedAfterMount;
 
   useInitialLoad(
     isDisabled,

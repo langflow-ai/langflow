@@ -98,6 +98,7 @@ describe("InputGlobalComponent", () => {
       data: [{ id: "project-var", name: "PROJECT_ONLY" }],
       isFetchedAfterMount: true,
       isFetching: false,
+      fetchStatus: "idle",
       isSuccess: true,
     });
 
@@ -139,6 +140,7 @@ describe("InputGlobalComponent", () => {
       data: [],
       isFetchedAfterMount: true,
       isFetching: false,
+      fetchStatus: "idle",
       isSuccess: true,
     });
 
@@ -240,15 +242,51 @@ describe("InputGlobalComponent", () => {
     );
   });
 
-  it("hides a cached saved reference until this mount has fetched its scope", async () => {
+  it("shows settled scoped data supplied by another observer after this component remounts", async () => {
     mockUseGetGlobalVariables.mockReturnValue({
-      data: [{ name: "MISSING_VAR" }],
+      data: [{ name: "NEW_SCOPED_VAR" }],
       isFetchedAfterMount: false,
       isFetching: false,
+      fetchStatus: "idle",
       isSuccess: true,
     });
 
-    renderComponent();
+    render(
+      <InputGlobalComponent
+        id="new-scoped-variable"
+        value=""
+        display_name="API Key"
+        handleOnNewValue={handleOnNewValue}
+        load_from_db={false}
+        password
+        editNode={false}
+        disabled={false}
+      />,
+    );
+
+    expect(mockInputComponent).toHaveBeenLastCalledWith(
+      expect.objectContaining({ options: ["NEW_SCOPED_VAR"] }),
+    );
+
+    const selectOption = mockInputComponent.mock.calls[0][0]
+      .setSelectedOption as (value: string) => void;
+    selectOption("NEW_SCOPED_VAR");
+    expect(handleOnNewValue).toHaveBeenCalledWith({
+      value: "NEW_SCOPED_VAR",
+      load_from_db: true,
+    });
+  });
+
+  it("does not clear a cached saved reference until this mount has fetched its scope", async () => {
+    mockUseGetGlobalVariables.mockReturnValue({
+      data: [{ name: "OTHER_VAR" }],
+      isFetchedAfterMount: false,
+      isFetching: false,
+      fetchStatus: "idle",
+      isSuccess: true,
+    });
+
+    const { rerender } = renderComponent();
 
     await waitFor(() => {
       expect(handleOnNewValue).not.toHaveBeenCalled();
@@ -256,9 +294,35 @@ describe("InputGlobalComponent", () => {
     expect(mockInputComponent).toHaveBeenLastCalledWith(
       expect.objectContaining({
         value: "",
-        options: [],
+        options: ["OTHER_VAR"],
         selectedOption: "",
       }),
+    );
+
+    mockUseGetGlobalVariables.mockReturnValue({
+      data: [{ name: "OTHER_VAR" }],
+      isFetchedAfterMount: true,
+      isFetching: false,
+      fetchStatus: "idle",
+      isSuccess: true,
+    });
+    rerender(
+      <InputGlobalComponent
+        id="global-var-input"
+        value="MISSING_VAR"
+        display_name="API Key"
+        handleOnNewValue={handleOnNewValue}
+        load_from_db
+        password={false}
+        editNode={false}
+        disabled={false}
+      />,
+    );
+
+    await waitFor(() => expect(handleOnNewValue).toHaveBeenCalledTimes(1));
+    expect(handleOnNewValue).toHaveBeenCalledWith(
+      { value: "", load_from_db: false },
+      { skipSnapshot: true },
     );
   });
 
@@ -267,6 +331,7 @@ describe("InputGlobalComponent", () => {
       data: [],
       isFetchedAfterMount: true,
       isFetching: false,
+      fetchStatus: "idle",
       isSuccess: true,
     });
 
@@ -300,6 +365,7 @@ describe("InputGlobalComponent", () => {
         data: configuredVariables,
         isFetchedAfterMount: true,
         isFetching: false,
+        fetchStatus: "idle",
         isSuccess: true,
       });
     });
@@ -412,6 +478,7 @@ describe("InputGlobalComponent", () => {
         data: variables,
         isFetchedAfterMount: true,
         isFetching: false,
+        fetchStatus: "idle",
         isSuccess: true,
       });
     });
