@@ -45,7 +45,7 @@ export function useApplyTemplateToCurrentFlow() {
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
   const currentFlow = useFlowStore((state) => state.currentFlow);
-  const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
+  const requestFitView = useFlowStore((state) => state.requestFitView);
   const examples = useFlowsManagerStore((state) => state.examples);
   const flows = useFlowsManagerStore((state) => state.flows);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -124,15 +124,17 @@ export function useApplyTemplateToCurrentFlow() {
         setEdges(templateData.edges ?? []);
       }
 
-      // fitView reads node sizes from the DOM: wait two rAFs for ReactFlow to
-      // commit/measure, then snap (no duration) while the overlay still covers it.
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          reactFlowInstance?.fitView({
-            padding: { left: "20px", right: "20px", top: "80px" },
-          });
-          requestAnimationFrame(() => onFitted?.());
-        });
+      // A template's nodes measure across several ResizeObserver batches, and a
+      // fit that runs before they all have dimensions silently drops the ones
+      // still pending — the flow would open framed around a subset. The canvas
+      // performs the fit once the graph is fully measured and then uncovers
+      // itself through `onFitted`.
+      requestFitView(() => {
+        // Uncovering returns the sidebar to the layout, which narrows the
+        // canvas the fit was just computed for — so frame it again against the
+        // size it actually ends up with.
+        onFitted?.();
+        requestFitView();
       });
       return true;
     },
@@ -145,7 +147,7 @@ export function useApplyTemplateToCurrentFlow() {
       setCurrentFlowInManager,
       setErrorData,
       saveFlow,
-      reactFlowInstance,
+      requestFitView,
       t,
     ],
   );

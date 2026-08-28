@@ -30,9 +30,11 @@ const useApplyFlowToCanvas = () => {
         );
       }
       setCurrentFlow(clonedFlow);
-      requestAnimationFrame(() => {
-        useFlowStore.getState().reactFlowInstance?.fitView();
-      });
+      // Ask for a fit instead of running one now: the nodes have not been
+      // measured yet, and a fit over unmeasured nodes silently drops them from
+      // the bounding box. `useFitViewWhenMeasured` runs it once they all have
+      // dimensions.
+      useFlowStore.getState().requestFitView();
       refreshAllModelInputs({ silent: true }).catch((err) => {
         console.error(
           "useApplyFlowToCanvas: failed to refresh model inputs",
