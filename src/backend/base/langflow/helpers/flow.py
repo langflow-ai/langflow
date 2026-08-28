@@ -701,16 +701,11 @@ _JSON_SCHEMA_TYPE_BY_FIELD_TYPE = {
     "boolean": "boolean",
     "dict": "object",
     "NestedDict": "object",
-    "table": "object",
     "duration": "object",
     "auth": "object",
     "mcp": "object",
     "data_display": "object",
     "object": "object",
-    "sortableList": "array",
-    "actionPicker": "array",
-    "tools": "array",
-    "model": "array",
     "array": "array",
     "connect": "string",
     "file": "string",
@@ -724,15 +719,27 @@ _JSON_SCHEMA_TYPE_BY_FIELD_TYPE = {
     "knowledge_backend": "string",
 }
 
+_JSON_SCHEMA_ARRAY_ITEM_TYPE_BY_FIELD_TYPE = {
+    "sortableList": "object",
+    "actionPicker": "string",
+    "table": "object",
+    "tools": "object",
+    "model": "object",
+}
+
 
 def _json_schema_type_for_field(field_data: dict[str, Any]) -> dict[str, Any]:
     field_type = field_data.get("type", "string")
+    array_item_type = _JSON_SCHEMA_ARRAY_ITEM_TYPE_BY_FIELD_TYPE.get(field_type)
+    if array_item_type is not None:
+        return {"type": "array", "items": {"type": array_item_type}}
+
     json_schema_type = _JSON_SCHEMA_TYPE_BY_FIELD_TYPE.get(field_type)
     if json_schema_type is None:
         logger.warning(f"Unknown field type: {field_type} defaulting to string")
         json_schema_type = "string"
 
-    if field_data.get("list") is True:
+    if field_data.get("list") is True or field_data.get("is_list") is True:
         return {"type": "array", "items": {"type": json_schema_type}}
     return {"type": json_schema_type}
 

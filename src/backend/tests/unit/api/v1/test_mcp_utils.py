@@ -911,6 +911,34 @@ def test_json_schema_from_flow_maps_structured_and_list_field_types(monkeypatch)
                         "api_editable": True,
                         "type": "sortableList",
                     },
+                    "rows": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "table",
+                        "list": True,
+                    },
+                    "actions": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "actionPicker",
+                        "list": True,
+                    },
+                    "tools": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "tools",
+                        "is_list": True,
+                    },
+                    "models": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "model",
+                        "list": False,
+                    },
                     "tags": {
                         "show": True,
                         "advanced": False,
@@ -939,6 +967,15 @@ def test_json_schema_from_flow_maps_structured_and_list_field_types(monkeypatch)
     assert properties["metadata"]["type"] == "object"
     assert properties["nested"]["type"] == "object"
     assert properties["steps"]["type"] == "array"
+    assert properties["steps"]["items"] == {"type": "object"}
+    assert properties["rows"]["type"] == "array"
+    assert properties["rows"]["items"] == {"type": "object"}
+    assert properties["actions"]["type"] == "array"
+    assert properties["actions"]["items"] == {"type": "string"}
+    assert properties["tools"]["type"] == "array"
+    assert properties["tools"]["items"] == {"type": "object"}
+    assert properties["models"]["type"] == "array"
+    assert properties["models"]["items"] == {"type": "object"}
     assert properties["tags"]["type"] == "array"
     assert properties["tags"]["items"] == {"type": "string"}
 
