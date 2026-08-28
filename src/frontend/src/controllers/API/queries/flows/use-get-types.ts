@@ -103,12 +103,7 @@ export const useGetTypes: useQueryFunctionType<
 
   useLayoutEffect(() => {
     activateScope(scopeKey);
-    if (
-      isScoped &&
-      (queryResult.fetchStatus !== "idle" ||
-        queryResult.isFetching ||
-        !queryResult.isSuccess)
-    ) {
+    if (isScoped && queryResult.data === undefined) {
       if (clearScopedTypes(scopeKey)) {
         syncNodeTranslations();
         recomputeComponentsToUpdateIfNeeded();
@@ -132,9 +127,6 @@ export const useGetTypes: useQueryFunctionType<
     isScoped,
     queryResult.data,
     queryResult.dataUpdatedAt,
-    queryResult.fetchStatus,
-    queryResult.isFetching,
-    queryResult.isSuccess,
     scopeKey,
     setScopedTypes,
   ]);
