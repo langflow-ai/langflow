@@ -195,35 +195,31 @@ def apply_tweaks(
     exempt keys.
     """
     exempt_keys = exempt_keys or frozenset()
-    refused: list[str] = []
     template_data = node.get("data", {}).get("node", {}).get("template")
 
     if not isinstance(template_data, dict):
         logger.warning(f"Template data for node {node.get('id')} should be a dictionary")
-        return refused
+        return []
 
     # One function decides refusals, this one only applies them. Re-deriving the
     # floor and the policy here is exactly the shape that produced the original
     # bypass: two copies of a security predicate that drifted apart. In the
     # two-pass callers this list is already empty by the time we get here, so the
     # skip below only matters to direct callers of this function.
-    refused = list(
-        _refused_tweak_reasons(
-            template_data,
-            node.get("data", {}).get("type"),
-            node_tweaks,
-            policy=policy,
-            flow_declares_allowlist=flow_declares_allowlist,
-            exempt_keys=exempt_keys,
-        )
+    refused = _refused_tweak_reasons(
+        template_data,
+        node.get("data", {}).get("type"),
+        node_tweaks,
+        policy=policy,
+        flow_declares_allowlist=flow_declares_allowlist,
+        exempt_keys=exempt_keys,
     )
-    refused_names = frozenset(refused)
 
     for tweak_name, tweak_value in node_tweaks.items():
         field = template_data.get(tweak_name)
         if not isinstance(field, dict):
             continue
-        if tweak_name in refused_names:
+        if tweak_name in refused:
             continue
         field_type = field.get("type", "")
         if field_type == "NestedDict":
@@ -255,7 +251,7 @@ def apply_tweaks(
             if "load_from_db" in template_data[tweak_name]:
                 template_data[tweak_name]["load_from_db"] = False
 
-    return refused
+    return list(refused)
 
 
 def _refused_tweak_reasons(
@@ -274,24 +270,26 @@ def _refused_tweak_reasons(
     and the graph the run paths hand us is cached and reused, so that half
     survives into later runs that send no tweaks at all.
     """
-    from lfx.utils.flow_validation import is_protected_tweak_field, is_tweak_refused_by_policy
-
     refused: dict[str, str] = {}
     for tweak_name in node_tweaks:
         field = template_data.get(tweak_name)
         if not isinstance(field, dict):
             continue
-        if is_protected_tweak_field(component_type, tweak_name, field.get("type", "")):
-            logger.warning(f"Security: refusing to override protected field {tweak_name!r} via tweaks.")
-            refused[tweak_name] = _PROTECTED_TWEAK_REASON
-            continue
-        if tweak_name not in exempt_keys and is_tweak_refused_by_policy(
+        reason = _tweak_refusal_reason(
+            component_type,
+            tweak_name,
+            field.get("type", ""),
             policy,
             flow_declares_allowlist=flow_declares_allowlist,
             field_is_api_editable=field.get("api_editable") is True,
-        ):
-            logger.warning(f"Policy {policy!r}: refusing to override field {tweak_name!r} via tweaks.")
-            refused[tweak_name] = _policy_refusal_reason(policy)
+            policy_exempt=tweak_name in exempt_keys,
+        )
+        if reason is not None:
+            if reason == _PROTECTED_TWEAK_REASON:
+                logger.warning(f"Security: refusing to override protected field {tweak_name!r} via tweaks.")
+            else:
+                logger.warning(f"Policy {policy!r}: refusing to override field {tweak_name!r} via tweaks.")
+            refused[tweak_name] = reason
     return refused
 
 
@@ -337,13 +335,42 @@ _OFF_TWEAK_REASON = "This deployment does not accept tweaks."
 _REFUSAL_REASON_ORDER = (_PROTECTED_TWEAK_REASON, _DECLARED_TWEAK_REASON, _OFF_TWEAK_REASON)
 
 
-def _policy_refusal_reason(policy: str) -> str:
-    """Return the caller-facing explanation for a policy-layer refusal."""
-    from lfx.utils.flow_validation import TWEAK_POLICY_OFF
+def _tweak_refusal_reason(
+    component_type: str | None,
+    field_name: str,
+    field_type: str,
+    policy: str,
+    *,
+    flow_declares_allowlist: bool,
+    field_is_api_editable: bool,
+    policy_exempt: bool,
+) -> str | None:
+    """Return the single caller-facing reason for refusing a field, if any.
 
-    if policy == TWEAK_POLICY_OFF:
+    Under ``off``, the policy alone refuses every caller-supplied field. Keep
+    that response uniform so probing one field at a time cannot reveal which
+    fields are also protected by the deployment floor. In the other modes the
+    floor takes precedence, which is the distinction LE-2387 needs under
+    ``declared``.
+    """
+    from lfx.utils.flow_validation import (
+        TWEAK_POLICY_OFF,
+        is_protected_tweak_field,
+        is_tweak_refused_by_policy,
+    )
+
+    refused_by_policy = not policy_exempt and is_tweak_refused_by_policy(
+        policy,
+        flow_declares_allowlist=flow_declares_allowlist,
+        field_is_api_editable=field_is_api_editable,
+    )
+    if refused_by_policy and policy == TWEAK_POLICY_OFF:
         return _OFF_TWEAK_REASON
-    return _DECLARED_TWEAK_REASON
+    if is_protected_tweak_field(component_type, field_name, field_type):
+        return _PROTECTED_TWEAK_REASON
+    if refused_by_policy:
+        return _DECLARED_TWEAK_REASON
+    return None
 
 
 def _combined_refusal_reason(refused: list[tuple[str, str]]) -> str:
@@ -372,27 +399,23 @@ def apply_tweaks_on_vertex(
     component at runtime, which is the bug the two former private copies of this
     function existed to work around.
     """
-    refused: list[str] = []
     template_data = vertex.data.get("node", {}).get("template", {})
     if not isinstance(template_data, dict):
         # No usable template means nothing can be validated, so nothing is
         # applied. Refusing here instead would turn a malformed node into a
         # caller-facing error the caller cannot act on.
-        return refused
+        return []
 
     # Same single-predicate rule as ``apply_tweaks``: this function applies, it
     # does not re-decide. Two copies of the floor are what let the graph path
     # accept tweaks the sync path refused in the first place.
-    refused = list(
-        _refused_tweak_reasons(
-            template_data,
-            vertex.data.get("type"),
-            node_tweaks,
-            policy=policy,
-            flow_declares_allowlist=flow_declares_allowlist,
-        )
+    refused = _refused_tweak_reasons(
+        template_data,
+        vertex.data.get("type"),
+        node_tweaks,
+        policy=policy,
+        flow_declares_allowlist=flow_declares_allowlist,
     )
-    refused_names = frozenset(refused)
 
     accepted: dict[str, Any] = {}
     for tweak_name, tweak_value in node_tweaks.items():
@@ -403,7 +426,7 @@ def apply_tweaks_on_vertex(
         # caller who sends a tweak for a component the flow no longer has.
         if not isinstance(field, dict):
             continue
-        if tweak_name in refused_names:
+        if tweak_name in refused:
             continue
 
         accepted[tweak_name] = tweak_value
@@ -425,7 +448,7 @@ def apply_tweaks_on_vertex(
     if accepted:
         vertex.update_raw_params(accepted, overwrite=True)
 
-    return refused
+    return list(refused)
 
 
 def process_tweaks(

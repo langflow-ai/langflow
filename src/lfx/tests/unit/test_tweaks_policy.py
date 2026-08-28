@@ -12,10 +12,12 @@ refuse every request, including one that sends no tweaks at all.
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from typing import Any
+from unittest.mock import patch
 
 import pytest
 from lfx.exceptions.tweaks import TweakRefusedError
+from lfx.graph.vertex.base import Vertex
 from lfx.processing.process import apply_tweaks, process_tweaks
 from lfx.utils.flow_validation import flow_declares_api_editable
 
@@ -161,8 +163,16 @@ def test_process_tweaks_raises_naming_every_refused_key():
     assert exc.value.refused == ["a", "b"]
 
 
-@pytest.mark.parametrize("policy", ["permissive", "declared", "off"])
-def test_process_tweaks_reports_protected_reason_under_every_policy(policy):
+@pytest.mark.parametrize(
+    ("policy", "expected_reason"),
+    [
+        ("permissive", PROTECTED_TWEAK_REASON),
+        ("declared", PROTECTED_TWEAK_REASON),
+        ("off", OFF_TWEAK_REASON),
+    ],
+)
+def test_process_tweaks_reports_the_causal_refusal_reason(policy, expected_reason):
+    """Off is uniform; otherwise the protected-field floor is the cause."""
     graph = _graph(
         [
             _node(
@@ -179,7 +189,7 @@ def test_process_tweaks_reports_protected_reason_under_every_policy(policy):
         process_tweaks(graph, {"n": {"database_url": "postgresql://attacker/db"}})
 
     assert exc.value.refused == ["database_url"]
-    assert exc.value.reason == PROTECTED_TWEAK_REASON
+    assert exc.value.reason == expected_reason
 
 
 @pytest.mark.parametrize(
@@ -228,6 +238,35 @@ def test_process_tweaks_reports_protected_and_policy_reasons_together():
         process_tweaks(graph, {"n": {"ordinary": "new", "database_url": "postgresql://attacker/db"}})
 
     assert exc.value.refused == ["database_url", "ordinary"]
+    assert exc.value.reason == f"{PROTECTED_TWEAK_REASON} {DECLARED_TWEAK_REASON}"
+
+
+def test_process_tweaks_deduplicates_a_flat_key_refused_by_two_rules():
+    """A flat tweak can target multiple nodes but names each refused key once."""
+    graph = _graph(
+        [
+            _node(
+                {"query": {"value": "SELECT 1", "type": "str"}},
+                node_type="SQLComponent",
+                node_id="sql",
+            ),
+            _node(
+                {
+                    "allowed": {"value": "old", "type": "str", "api_editable": True},
+                    "query": {"value": "old", "type": "str"},
+                },
+                node_id="ordinary",
+            ),
+        ]
+    )
+
+    with (
+        patch("lfx.processing.process._resolve_tweak_policy", return_value="declared"),
+        pytest.raises(TweakRefusedError) as exc,
+    ):
+        process_tweaks(graph, {"query": "attacker"})
+
+    assert exc.value.refused == ["query"]
     assert exc.value.reason == f"{PROTECTED_TWEAK_REASON} {DECLARED_TWEAK_REASON}"
 
 
@@ -373,7 +412,7 @@ def test_graph_path_exempts_runtime_generated_tweaks():
 # the literal key "code", so it accepted tweaks the sync mode refused.
 
 
-class _FakeVertex:
+class _FakeVertex(Vertex):
     """Minimal stand-in for a built Vertex.
 
     A real Graph is not needed to prove which tweaks the graph-level path
@@ -382,7 +421,7 @@ class _FakeVertex:
 
     def __init__(self, vertex_id: str, template: dict, node_type: str | None = None) -> None:
         self.id = vertex_id
-        self.data = {"node": {"template": template}}
+        self.data: dict[str, Any] = {"node": {"template": template}}
         if node_type is not None:
             self.data["type"] = node_type
         self.params: dict = {}
@@ -396,16 +435,7 @@ class _FakeVertex:
 
 def _built_vertex(vertex_id: str, template: dict, node_type: str | None = None):
     """Return a minimal object accepted by the built-graph tweak path."""
-    from lfx.graph.vertex.base import Vertex
-
-    vertex = MagicMock(spec=Vertex)
-    vertex.id = vertex_id
-    vertex.data = {"node": {"template": template}}
-    if node_type is not None:
-        vertex.data["type"] = node_type
-    vertex.params = {}
-    vertex.load_from_db_fields = []
-    return vertex
+    return _FakeVertex(vertex_id, template, node_type)
 
 
 def test_graph_path_refuses_a_sandbox_field_the_old_filter_allowed():
