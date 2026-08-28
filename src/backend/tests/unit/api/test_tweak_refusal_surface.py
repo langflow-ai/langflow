@@ -71,6 +71,72 @@ async def test_refused_tweak_returns_422_on_the_v1_advanced_run(client, simple_a
     assert detail["fields"] == ["code"]
 
 
+async def test_off_refuses_component_targeted_inputs_on_the_v1_advanced_run(
+    client, simple_api_test, created_api_key, monkeypatch
+):
+    """The Langflow HTTP path must enforce the LFX targeted-input guard."""
+    from langflow.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "tweaks_policy", "off")
+    flow_id = simple_api_test["id"]
+    node_id = next(node["id"] for node in simple_api_test["data"]["nodes"] if node["id"].startswith("ChatInput"))
+    payload = {
+        "inputs": [{"components": [node_id], "input_value": "targeted", "type": "chat"}],
+        "outputs": [],
+    }
+
+    response = await client.post(
+        f"/api/v1/run/advanced/{flow_id}", headers={"x-api-key": created_api_key.api_key}, json=payload
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    detail = response.json()["detail"]
+    assert detail["code"] == "TWEAKS_REFUSED"
+    assert detail["fields"] == [node_id]
+
+
+@pytest.mark.parametrize("policy", ["permissive", "declared"])
+async def test_non_off_policies_allow_component_targeted_inputs_on_the_v1_advanced_run(
+    client, simple_api_test, created_api_key, monkeypatch, policy
+):
+    """Only ``off`` closes targeted inputs; the other policies remain compatible."""
+    from langflow.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "tweaks_policy", policy)
+    flow_id = simple_api_test["id"]
+    node_id = next(node["id"] for node in simple_api_test["data"]["nodes"] if node["id"].startswith("ChatInput"))
+    payload = {
+        "inputs": [{"components": [node_id], "input_value": "targeted", "type": "chat"}],
+        "outputs": [],
+    }
+
+    response = await client.post(
+        f"/api/v1/run/advanced/{flow_id}", headers={"x-api-key": created_api_key.api_key}, json=payload
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json()["session_id"] == flow_id
+
+
+async def test_off_allows_plain_input_and_session_on_the_v1_run(client, simple_api_test, created_api_key, monkeypatch):
+    """``off`` closes node selection without disabling ordinary chat runs."""
+    from langflow.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "tweaks_policy", "off")
+    flow_id = simple_api_test["id"]
+    payload = {
+        "input_value": "ordinary",
+        "input_type": "chat",
+        "output_type": "text",
+        "session_id": "ordinary-session",
+    }
+
+    response = await client.post(f"/api/v1/run/{flow_id}", headers={"x-api-key": created_api_key.api_key}, json=payload)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json()["session_id"] == "ordinary-session"
+
+
 async def test_off_does_not_break_a_flow_called_as_a_tool(simple_api_test, active_user):
     """``off`` closes the API surface, it must not stop agents calling flows as tools.
 
