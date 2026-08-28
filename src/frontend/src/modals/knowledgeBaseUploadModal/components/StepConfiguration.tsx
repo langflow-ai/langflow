@@ -40,6 +40,8 @@ interface StepConfigurationProps {
   selectedEmbeddingModel: ModelOption[];
   onEmbeddingModelChange: (value: ModelOption[]) => void;
   embeddingModelOptions: ModelOption[];
+  modelCatalogReady: boolean;
+  globalVariablesReady: boolean;
   existingEmbeddingModel?: string;
   existingEmbeddingIcon?: string;
   chunkSize: number;
@@ -74,6 +76,8 @@ export function StepConfiguration({
   selectedEmbeddingModel,
   onEmbeddingModelChange,
   embeddingModelOptions,
+  modelCatalogReady,
+  globalVariablesReady,
   existingEmbeddingModel,
   existingEmbeddingIcon,
   chunkSize,
@@ -183,12 +187,13 @@ export function StepConfiguration({
                 }
                 value={selectedEmbeddingModel}
                 editNode={false}
-                disabled={false}
+                disabled={!modelCatalogReady}
                 handleOnNewValue={({ value }) => {
                   onEmbeddingModelChange(value);
                   onFieldChange?.();
                 }}
                 options={embeddingModelOptions}
+                providerScope={{}}
                 placeholder={t("knowledge.embeddingModelPlaceholder")}
                 showEmptyState
                 aria-label={t("knowledge.embeddingModelLabel")}
@@ -226,7 +231,7 @@ export function StepConfiguration({
               }
               value={backendType}
               globalVariables={globalVariables}
-              disabled={isAddSourcesMode}
+              disabled={isAddSourcesMode || !globalVariablesReady}
               aria-label={t("knowledge.dbProviderLabel")}
               onValueChange={(nextBackendType, nextBackendConfig) => {
                 onBackendChange(nextBackendType, nextBackendConfig);

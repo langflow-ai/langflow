@@ -1,5 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
+import {
+  focusManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import React from "react";
 
 // Mock API before imports
@@ -16,6 +20,7 @@ jest.mock("@/controllers/API/helpers/constants", () => ({
 }));
 
 import {
+  getModelProvidersQueryOptions,
   ModelProviderInfo,
   useGetModelProviders,
 } from "../use-get-model-providers";
@@ -100,6 +105,113 @@ describe("useGetModelProviders", () => {
           "/api/v1/models?include_deprecated=true&include_unsupported=true",
         );
       });
+    });
+
+    it("scopes both the request and cache key by flow", async () => {
+      mockApiGet.mockResolvedValue({ data: [] });
+
+      const options = getModelProvidersQueryOptions({
+        includeDeprecated: true,
+        flowId: "flow-one",
+      });
+      await options.queryFn();
+
+      expect(mockApiGet).toHaveBeenCalledWith(
+        "/api/v1/models?include_deprecated=true&flow_id=flow-one",
+      );
+      expect(options.queryKey).toEqual([
+        "useGetModelProviders",
+        true,
+        undefined,
+        "flow-one",
+        undefined,
+        undefined,
+      ]);
+    });
+
+    it("keys and executes both accepted provider-read purposes", async () => {
+      mockApiGet.mockResolvedValue({ data: [] });
+
+      const configureOptions = getModelProvidersQueryOptions({
+        flowId: "flow-one",
+        purpose: "configure",
+      });
+      const useOptions = getModelProvidersQueryOptions({
+        flowId: "flow-one",
+        purpose: "use",
+      });
+      await configureOptions.queryFn();
+      await useOptions.queryFn();
+
+      expect(mockApiGet.mock.calls).toEqual([
+        ["/api/v1/models?flow_id=flow-one&purpose=configure"],
+        ["/api/v1/models?flow_id=flow-one&purpose=use"],
+      ]);
+      expect(configureOptions.queryKey).toEqual([
+        "useGetModelProviders",
+        undefined,
+        undefined,
+        "flow-one",
+        undefined,
+        "configure",
+      ]);
+      expect(useOptions.queryKey).toEqual([
+        "useGetModelProviders",
+        undefined,
+        undefined,
+        "flow-one",
+        undefined,
+        "use",
+      ]);
+    });
+
+    it("keeps global settings in a distinct unscoped cache entry", () => {
+      expect(getModelProvidersQueryOptions({}).queryKey).toEqual([
+        "useGetModelProviders",
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+      ]);
+    });
+
+    it("removes a revoked provider from a mounted flow picker on stale focus", async () => {
+      const dateNow = jest.spyOn(Date, "now").mockReturnValue(1_000_000);
+      mockApiGet
+        .mockResolvedValueOnce({
+          data: [
+            {
+              provider: "OpenAI",
+              models: [],
+              is_enabled: true,
+            },
+          ],
+        })
+        .mockResolvedValueOnce({ data: [] });
+
+      try {
+        const { result } = renderHook(
+          () => useGetModelProviders({ flowId: "flow-one" }),
+          { wrapper: createWrapper() },
+        );
+
+        await waitFor(() =>
+          expect(result.current.data?.map(({ provider }) => provider)).toEqual([
+            "OpenAI",
+          ]),
+        );
+
+        dateNow.mockReturnValue(1_030_001);
+        act(() => focusManager.setFocused(false));
+        act(() => focusManager.setFocused(true));
+
+        await waitFor(() => expect(result.current.data).toEqual([]));
+        expect(mockApiGet).toHaveBeenCalledTimes(2);
+      } finally {
+        focusManager.setFocused(undefined);
+        dateNow.mockRestore();
+      }
     });
   });
 
