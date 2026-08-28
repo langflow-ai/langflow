@@ -627,24 +627,24 @@ async def test_handle_call_tool_forwards_only_advertised_input_fields(monkeypatc
                     is_input=True,
                     template={
                         "input_value": {"show": True, "advanced": False},
-                        "backend_token": {"show": True, "advanced": False},
-                        "enabled": {"show": True, "advanced": False},
-                        "hidden": {"show": False, "advanced": False},
-                        "advanced": {"show": True, "advanced": True},
+                        "backend_token": {"show": True, "advanced": False, "api_editable": True},
+                        "enabled": {"show": True, "advanced": False, "api_editable": True},
+                        "hidden": {"show": False, "advanced": False, "api_editable": True},
+                        "advanced": {"show": True, "advanced": True, "api_editable": True},
                     },
                 ),
                 _FakeNode(
                     "input-b",
                     is_input=True,
                     template={
-                        "backend_token": {"show": True, "advanced": False},
-                        "backend_url": {"show": True, "advanced": False},
+                        "backend_token": {"show": True, "advanced": False, "api_editable": True},
+                        "backend_url": {"show": True, "advanced": False, "api_editable": True},
                     },
                 ),
                 _FakeNode(
                     "downstream",
                     is_input=False,
-                    template={"backend_url": {"show": True, "advanced": False}},
+                    template={"backend_url": {"show": True, "advanced": False, "api_editable": True}},
                 ),
             ]
 
@@ -724,6 +724,7 @@ def test_json_schema_from_flow_preserves_flow_defined_session_id(monkeypatch):
                     "session_id": {
                         "show": True,
                         "advanced": False,
+                        "api_editable": True,
                         "type": "str",
                         "info": custom_session_id_property["description"],
                         "required": True,
@@ -750,6 +751,155 @@ def test_json_schema_from_flow_preserves_flow_defined_session_id(monkeypatch):
     # The flow's own definition wins — the reserved injection must not clobber it.
     assert schema["properties"]["session_id"]["description"] == custom_session_id_property["description"]
     assert "session_id" in schema["required"]
+
+
+def test_json_schema_from_flow_only_advertises_api_exposed_fields(monkeypatch):
+    """MCP tools/list must honor each input field's API exposure toggle."""
+
+    class _FakeNode:
+        is_input = True
+        data = {
+            "node": {
+                "template": {
+                    "exposed": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "str",
+                        "required": True,
+                    },
+                    "not_exposed": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": False,
+                        "type": "str",
+                        "required": True,
+                    },
+                    "legacy_without_exposure_flag": {
+                        "show": True,
+                        "advanced": False,
+                        "type": "str",
+                    },
+                    "off_node": {
+                        "show": True,
+                        "advanced": True,
+                        "api_editable": True,
+                        "type": "str",
+                    },
+                }
+            }
+        }
+
+    class _FakeGraph:
+        vertices = [_FakeNode()]
+
+        @classmethod
+        def from_payload(cls, _flow_data):
+            return cls()
+
+    import lfx.graph.graph.base as graph_base_module
+
+    monkeypatch.setattr(graph_base_module, "Graph", _FakeGraph)
+
+    schema = flow_helpers.json_schema_from_flow(SimpleNamespace(data={"nodes": [], "edges": []}))
+
+    assert set(schema["properties"]) == {"exposed", "session_id"}
+    assert schema["required"] == ["exposed"]
+
+
+def test_json_schema_from_flow_maps_structured_and_list_field_types(monkeypatch):
+    """MCP input schemas must describe the JSON values accepted by exposed fields."""
+
+    class _FakeNode:
+        is_input = True
+        data = {
+            "node": {
+                "template": {
+                    "metadata": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "dict",
+                    },
+                    "nested": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "NestedDict",
+                    },
+                    "steps": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "sortableList",
+                    },
+                    "rows": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "table",
+                        "list": True,
+                    },
+                    "actions": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "actionPicker",
+                        "list": True,
+                    },
+                    "tools": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "tools",
+                        "is_list": True,
+                    },
+                    "models": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "model",
+                        "list": False,
+                    },
+                    "tags": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "str",
+                        "list": True,
+                    },
+                }
+            }
+        }
+
+    class _FakeGraph:
+        vertices = [_FakeNode()]
+
+        @classmethod
+        def from_payload(cls, _flow_data):
+            return cls()
+
+    import lfx.graph.graph.base as graph_base_module
+
+    monkeypatch.setattr(graph_base_module, "Graph", _FakeGraph)
+
+    schema = flow_helpers.json_schema_from_flow(SimpleNamespace(data={"nodes": [], "edges": []}))
+    properties = schema["properties"]
+
+    assert properties["metadata"]["type"] == "object"
+    assert properties["nested"]["type"] == "object"
+    assert properties["steps"]["type"] == "array"
+    assert properties["steps"]["items"] == {"type": "object"}
+    assert properties["rows"]["type"] == "array"
+    assert properties["rows"]["items"] == {"type": "object"}
+    assert properties["actions"]["type"] == "array"
+    assert properties["actions"]["items"] == {"type": "string"}
+    assert properties["tools"]["type"] == "array"
+    assert properties["tools"]["items"] == {"type": "object"}
+    assert properties["models"]["type"] == "array"
+    assert properties["models"]["items"] == {"type": "object"}
+    assert properties["tags"]["type"] == "array"
+    assert properties["tags"]["items"] == {"type": "string"}
 
 
 @pytest.mark.asyncio
