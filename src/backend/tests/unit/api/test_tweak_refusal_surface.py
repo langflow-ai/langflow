@@ -31,6 +31,26 @@ async def test_refused_tweak_returns_422_on_the_v1_sync_run(client, simple_api_t
     assert detail["fields"] == ["code"]
 
 
+async def test_refused_tweak_returns_422_on_the_v2_sync_run(client, simple_api_test, created_api_key):
+    """The v2 sync error mapper must preserve the app-level refusal response."""
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = simple_api_test["id"]
+    node_id = simple_api_test["data"]["nodes"][0]["id"]
+    payload = {
+        "flow_id": flow_id,
+        "mode": "sync",
+        "input_value": "hello",
+        "tweaks": {node_id: {"code": "import os; os.system('id')"}},
+    }
+
+    response = await client.post("/api/v2/workflows", headers=headers, json=payload)
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    detail = response.json()["detail"]
+    assert detail["code"] == "TWEAKS_REFUSED"
+    assert detail["fields"] == ["code"]
+
+
 async def test_an_allowed_tweak_still_runs_on_the_v1_sync_run(client, simple_api_test, created_api_key):
     """The refusal path must not make ordinary tweaks fail."""
     headers = {"x-api-key": created_api_key.api_key}
