@@ -367,6 +367,7 @@ async def test_submit_writes_request_and_encrypted_overrides_atomically(real_ser
         ("tweaks", "cycle"),
         ("tweaks", "too-deep"),
         ("tweaks", "lone-surrogate"),
+        ("tweaks", "lone-surrogate-key"),
         ("tweaks", "oversized-integer"),
         ("tweaks", "top-level-shape"),
         ("globals", "top-level-shape"),
@@ -403,6 +404,8 @@ async def test_submit_rejects_invalid_override_grammar_before_creating_job(
         invalid_value = {"Node-x": {"value": nested}}
     elif invalid_case == "lone-surrogate":
         invalid_value = {"Node-x": {"value": "\ud800"}}
+    elif invalid_case == "lone-surrogate-key":
+        invalid_value = {"Node-x": {"\ud800": "value"}}
     elif invalid_case == "oversized-integer":
         invalid_value = {"Node-x": {"value": 10**5000}}
     else:
@@ -455,6 +458,45 @@ async def test_submit_crypto_unavailable_creates_no_job(real_services_job_servic
         "stream_protocol": "langflow",
         "input_value": "crypto-unavailable",
         "tweaks": {"Node-x": {"api_key": "never-persisted"}},  # pragma: allowlist secret
+    }
+
+    with pytest.raises(RequestOverridesUnavailableError):
+        await service.submit(flow_id=flow_id, request=request, user=_StubUser(user_id))
+
+    assert await job_service.get_jobs_by_flow_id(flow_id, user_id) == []
+
+
+async def test_submit_serialization_resource_unavailable_creates_no_job(real_services_job_service, monkeypatch):
+    """Transient JSON serialization resource failures use the retryable server error."""
+    from types import SimpleNamespace
+
+    from langflow.services.background_execution import service as background_service
+    from langflow.services.background_execution.service import (
+        BackgroundExecutionService,
+        RequestOverridesUnavailableError,
+    )
+    from langflow.services.deps import get_settings_service
+
+    def _unavailable_dumps(*_args, **_kwargs):
+        raise MemoryError
+
+    monkeypatch.setattr(
+        background_service,
+        "json",
+        SimpleNamespace(dumps=_unavailable_dumps, loads=json.loads),
+    )
+    job_service = real_services_job_service
+    flow_id, user_id = uuid4(), uuid4()
+    service = BackgroundExecutionService(
+        settings_service=get_settings_service(),
+        frame_source_factory=_echo_input_factory,
+        backend=_RecordingBackend(),
+    )
+    request = {
+        "flow_id": str(flow_id),
+        "mode": "background",
+        "stream_protocol": "langflow",
+        "tweaks": {"Node-x": {"value": "retry-after-resource-recovery"}},
     }
 
     with pytest.raises(RequestOverridesUnavailableError):

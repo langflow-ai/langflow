@@ -153,6 +153,41 @@ class TestBackgroundSubmitContract:
         assert response.json()["detail"]["code"] == "REQUEST_OVERRIDES_UNAVAILABLE"
         assert await get_job_service().get_jobs_by_flow_id(chatbot_flow, created_api_key.user_id) == []
 
+    async def test_serialization_resource_unavailable_returns_503_without_creating_job(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        chatbot_flow,
+        monkeypatch,
+    ):
+        """A transient serializer resource failure is a structured retryable server error."""
+        from types import SimpleNamespace
+
+        from langflow.services.background_execution import service as background_service
+        from langflow.services.deps import get_job_service
+
+        body = _body(chatbot_flow, mode="background")
+        body["tweaks"] = {"ChatInput-x": {"input_value": "retry-later"}}
+        encoded_body = json.dumps(body)
+
+        def _unavailable_dumps(*_args, **_kwargs):
+            raise MemoryError
+
+        monkeypatch.setattr(
+            background_service,
+            "json",
+            SimpleNamespace(dumps=_unavailable_dumps, loads=json.loads),
+        )
+        response = await client.post(
+            "api/v2/workflows",
+            content=encoded_body,
+            headers={"x-api-key": created_api_key.api_key, "content-type": "application/json"},
+        )
+
+        assert response.status_code == 503, response.text
+        assert response.json()["detail"]["code"] == "REQUEST_OVERRIDES_UNAVAILABLE"
+        assert await get_job_service().get_jobs_by_flow_id(chatbot_flow, created_api_key.user_id) == []
+
 
 class TestStatusDurableResultError:
     """GET status reads durable result/error written by the runner, additively."""
