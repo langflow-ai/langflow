@@ -457,6 +457,25 @@ async def test_submit_crypto_unavailable_creates_no_job(real_services_job_servic
     assert await job_service.get_jobs_by_flow_id(flow_id, user_id) == []
 
 
+async def test_release_queued_lease_never_clears_a_new_owner(real_services_job_service):
+    """A stale startup recovery cannot release a lease another worker has replaced."""
+    from datetime import datetime, timezone
+
+    job_service = real_services_job_service
+    job_id = uuid4()
+    await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+    assert await job_service.claim_queued_lease(job_id, owner="old-owner", lease_ttl_s=0)
+    new_heartbeat = datetime.now(timezone.utc).isoformat()
+    await job_service.update_job_metadata(job_id, {"owner": "new-owner", "heartbeat_at": new_heartbeat})
+
+    released = await job_service.release_queued_lease(job_id, owner="old-owner")
+
+    assert released is False
+    job = await job_service.get_job_by_job_id(job_id)
+    assert (job.job_metadata or {}).get("owner") == "new-owner"
+    assert (job.job_metadata or {}).get("heartbeat_at") == new_heartbeat
+
+
 async def test_restart_and_scaled_hydration_restore_encrypted_overrides(real_services_job_service):
     """A job-id-only handoff and a fresh startup both replay the original overrides."""
     import asyncio
