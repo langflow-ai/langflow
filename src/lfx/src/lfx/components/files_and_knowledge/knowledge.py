@@ -19,6 +19,7 @@ import asyncio
 import hashlib
 import json
 import uuid
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
@@ -171,6 +172,54 @@ class KnowledgeComponent(Component):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._cached_kb_path: Path | None = None
+
+    @staticmethod
+    def _embedding_provider_from_selection(selection: Any) -> str | None:
+        """Read a provider name from a raw or persisted model selection."""
+        if isinstance(selection, list):
+            selection = selection[0] if selection else None
+        if not isinstance(selection, Mapping):
+            return None
+        provider = selection.get("provider")
+        if not isinstance(provider, str) or not provider.strip():
+            return None
+        return provider.strip()
+
+    async def _additional_model_provider_policy_ids(self, purpose, parameters=None) -> tuple[str, ...]:
+        """Resolve the embedding provider before dialog hooks or runtime secrets.
+
+        New-KB configuration carries its ModelInput inside a dropdown dialog,
+        while existing KBs persist the provider in the KB row. Neither is a
+        top-level ModelInput, so both must be resolved explicitly before the
+        generic component pipeline hydrates ``api_key``.
+        """
+        from lfx.base.models.provider_registry import resolve_provider_id
+        from lfx.services.model_provider_policy import ModelProviderPolicyError
+
+        effective_parameters = parameters if isinstance(parameters, Mapping) else getattr(self, "_parameters", None)
+        if not isinstance(effective_parameters, Mapping):
+            effective_parameters = {}
+        knowledge_value = effective_parameters.get("knowledge_base", getattr(self, "knowledge_base", None))
+
+        if isinstance(knowledge_value, Mapping):
+            if "02_embedding_model" not in knowledge_value:
+                return ()
+            provider = self._embedding_provider_from_selection(knowledge_value.get("02_embedding_model"))
+        elif isinstance(knowledge_value, str) and knowledge_value.strip():
+            metadata = await self._get_kb_metadata(knowledge_value.strip())
+            provider = self._embedding_provider_from_selection(metadata.get("model_selection"))
+            if provider is None:
+                legacy_provider = metadata.get("embedding_provider")
+                provider = legacy_provider.strip() if isinstance(legacy_provider, str) else None
+                if provider == "Unknown":
+                    provider = None
+        else:
+            return ()
+
+        if provider is None:
+            unknown_provider = "unknown"
+            raise ModelProviderPolicyError(unknown_provider, purpose)
+        return (resolve_provider_id(provider),)
 
     @dataclass
     class NewKnowledgeBaseInput:
@@ -1386,7 +1435,7 @@ class KnowledgeComponent(Component):
             return None
         return self.user_id if isinstance(self.user_id, uuid.UUID) else uuid.UUID(self.user_id)
 
-    async def _get_kb_metadata(self) -> dict:
+    async def _get_kb_metadata(self, knowledge_base: str | None = None) -> dict:
         """Load this knowledge base's embedding config from its database row.
 
         The row is the sole authority. There is no on-disk sidecar to fall back
@@ -1402,7 +1451,10 @@ class KnowledgeComponent(Component):
         user_uuid = self._user_uuid
         if user_uuid is None:
             return {}
-        record = await knowledge_base_service.get_by_user_and_name(user_uuid, self.knowledge_base)
+        record = await knowledge_base_service.get_by_user_and_name(
+            user_uuid,
+            knowledge_base or self.knowledge_base,
+        )
         if record is None:
             return {}
         return knowledge_base_service.record_to_metadata_dict(record)

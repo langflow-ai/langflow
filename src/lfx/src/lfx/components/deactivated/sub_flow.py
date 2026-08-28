@@ -2,7 +2,6 @@ from typing import TYPE_CHECKING, Any
 
 from lfx.base.flow_processing.utils import build_data_from_result_data
 from lfx.custom.custom_component.custom_component import CustomComponent
-from lfx.graph.graph.base import Graph
 from lfx.graph.vertex.base import Vertex
 from lfx.helpers import get_flow_inputs
 from lfx.log.logger import logger
@@ -53,7 +52,7 @@ class SubFlowComponent(CustomComponent):
                     await logger.aerror(msg)
                 else:
                     try:
-                        graph = Graph.from_payload(flow_data.data["data"])
+                        graph = await self.load_flow(str(flow_data.id))
                         # Get all inputs from the graph
                         inputs = get_flow_inputs(graph)
                         # Add inputs to the build config

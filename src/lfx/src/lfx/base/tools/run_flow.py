@@ -3,7 +3,7 @@ from datetime import datetime
 from types import MethodType  # near the imports
 from typing import TYPE_CHECKING, Any
 
-from langflow.helpers.flow import get_flow_by_id_or_name
+from langflow.helpers.flow import get_flow_by_id_or_name, scoped_model_provider_policy_for_target_flow
 
 from lfx.base.tools.constants import TOOL_OUTPUT_NAME
 from lfx.custom.custom_component.component import Component, get_component_toolkit
@@ -146,28 +146,37 @@ class RunFlowBaseComponent(Component):
         if not (flow_name_selected or flow_id_selected):
             msg = "Flow name or id is required"
             raise ValueError(msg)
-        if flow_id_selected and (flow := self._flow_cache_call("get", flow_id=flow_id_selected)):
-            if self._is_cached_flow_up_to_date(flow, updated_at):
-                return flow
-            self._flow_cache_call("delete", flow_id=flow_id_selected)  # stale, delete it
-
-        # TODO: use flow id only
-        flow = await self.get_flow(flow_name_selected=flow_name_selected, flow_id_selected=flow_id_selected)
-        if not flow:
-            msg = "Flow not found"
-            raise ValueError(msg)
-
-        graph = Graph.from_payload(
-            payload=flow.data.get("data", {}),
+        async with scoped_model_provider_policy_for_target_flow(
+            user_id=self.user_id,
             flow_id=flow_id_selected,
             flow_name=flow_name_selected,
-        )
-        graph.description = flow.data.get("description", None)
-        graph.updated_at = flow.data.get("updated_at", None)
+        ):
+            if flow_id_selected and (flow := self._flow_cache_call("get", flow_id=flow_id_selected)):
+                if str(getattr(flow, "flow_id", "")) != str(flow_id_selected):
+                    self._flow_cache_call("delete", flow_id=flow_id_selected)
+                elif self._is_cached_flow_up_to_date(flow, updated_at):
+                    return flow
+                else:
+                    self._flow_cache_call("delete", flow_id=flow_id_selected)  # stale, delete it
 
-        self._flow_cache_call("set", flow=graph)
+            # TODO: use flow id only
+            flow = await self.get_flow(flow_name_selected=flow_name_selected, flow_id_selected=flow_id_selected)
+            if not flow:
+                msg = "Flow not found"
+                raise ValueError(msg)
 
-        return graph
+            graph = Graph.from_payload(
+                payload=flow.data.get("data", {}),
+                flow_id=flow_id_selected or flow.data.get("id"),
+                flow_name=flow_name_selected,
+                user_id=self.user_id,
+            )
+            graph.description = flow.data.get("description", None)
+            graph.updated_at = flow.data.get("updated_at", None)
+
+            self._flow_cache_call("set", flow=graph)
+
+            return graph
 
     ################################################################
     # Flow inputs/config
