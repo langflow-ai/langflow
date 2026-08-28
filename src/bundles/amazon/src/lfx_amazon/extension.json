@@ -12,5 +12,61 @@
       "name": "amazon",
       "path": "components/amazon"
     }
+  ],
+  "providers": [
+    {
+      "name": "Amazon Bedrock",
+      "provider_id": "amazon-bedrock",
+      "metadata": {
+        "icon": "Amazon",
+        "all_models_default": true,
+        "max_tokens_field_name": "max_tokens",
+        "variables": [
+          {
+            "variable_name": "Amazon Bedrock API Key",
+            "variable_key": "AWS_BEARER_TOKEN_BEDROCK",
+            "description": "API key created in the Amazon Bedrock console. Use per-user keys only in single-tenant deployments because langchain-aws stores this token process-wide.",
+            "required": true,
+            "is_secret": true,
+            "is_list": false,
+            "options": [],
+            "langchain_param": "api_key",
+            "component_metadata": {
+              "mapping_field": "api_key",
+              "required": false,
+              "advanced": true,
+              "info": "Falls back to the AWS_BEARER_TOKEN_BEDROCK environment variable"
+            }
+          },
+          {
+            "variable_name": "AWS Region",
+            "variable_key": "AWS_REGION",
+            "description": "AWS region used for Amazon Bedrock inference.",
+            "required": true,
+            "is_secret": false,
+            "is_list": false,
+            "options": [],
+            "langchain_param": "region_name",
+            "component_metadata": {
+              "mapping_field": "region_name",
+              "required": false,
+              "advanced": true,
+              "info": "Falls back to the AWS_REGION environment variable"
+            }
+          }
+        ],
+        "api_docs_url": "https://docs.aws.amazon.com/bedrock/latest/userguide/api-keys-use.html",
+        "mapping": {
+          "model_class": "ChatBedrockConverse",
+          "model_param": "model"
+        }
+      },
+      "model_class": {
+        "module": "langchain_aws",
+        "attr": "ChatBedrockConverse",
+        "install_hint": "langchain-aws"
+      },
+      "catalog_loader": "lfx_amazon.model_provider:load_bedrock_models"
+    }
   ]
 }

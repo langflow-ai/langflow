@@ -12,15 +12,115 @@ AWS_MODELS_DETAILED = [
     create_model_metadata(
         provider="Amazon Bedrock", name="amazon.titan-text-premier-v1:0", icon="Amazon", tool_calling=True
     ),
-    # Anthropic Models - Claude 4.x
+    # Anthropic Models - current recommended inference profiles.
+    # The newest Claude models do not offer in-region routing on bedrock-runtime;
+    # prefer the EU profile for the default Opus model and retain global profiles
+    # as broadly routable alternatives. Direct IDs remain below for explicit use.
     create_model_metadata(
-        provider="Amazon Bedrock", name="anthropic.claude-opus-4-7", icon="Amazon", tool_calling=True
+        provider="Amazon Bedrock",
+        name="eu.anthropic.claude-opus-4-8",
+        icon="Amazon",
+        tool_calling=True,
+        reasoning=True,
     ),
     create_model_metadata(
-        provider="Amazon Bedrock", name="anthropic.claude-opus-4-6-v1", icon="Amazon", tool_calling=True
+        provider="Amazon Bedrock",
+        name="eu.anthropic.claude-sonnet-5",
+        icon="Amazon",
+        tool_calling=True,
+        reasoning=True,
     ),
     create_model_metadata(
-        provider="Amazon Bedrock", name="anthropic.claude-sonnet-4-6", icon="Amazon", tool_calling=True
+        provider="Amazon Bedrock",
+        name="eu.anthropic.claude-opus-4-7",
+        icon="Amazon",
+        tool_calling=True,
+        reasoning=True,
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock",
+        name="eu.anthropic.claude-sonnet-4-6",
+        icon="Amazon",
+        tool_calling=True,
+        reasoning=True,
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock",
+        name="eu.anthropic.claude-opus-4-6-v1",
+        icon="Amazon",
+        tool_calling=True,
+        reasoning=True,
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock",
+        name="global.anthropic.claude-sonnet-5",
+        icon="Amazon",
+        tool_calling=True,
+        reasoning=True,
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock",
+        name="global.anthropic.claude-opus-4-8",
+        icon="Amazon",
+        tool_calling=True,
+        reasoning=True,
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock",
+        name="global.anthropic.claude-opus-4-7",
+        icon="Amazon",
+        tool_calling=True,
+        reasoning=True,
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock",
+        name="global.anthropic.claude-sonnet-4-6",
+        icon="Amazon",
+        tool_calling=True,
+        reasoning=True,
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock",
+        name="global.anthropic.claude-opus-4-6-v1",
+        icon="Amazon",
+        tool_calling=True,
+        reasoning=True,
+    ),
+    # Anthropic Models - direct model IDs
+    create_model_metadata(
+        provider="Amazon Bedrock",
+        name="anthropic.claude-sonnet-5",
+        icon="Amazon",
+        tool_calling=True,
+        reasoning=True,
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock",
+        name="anthropic.claude-opus-4-8",
+        icon="Amazon",
+        tool_calling=True,
+        reasoning=True,
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock",
+        name="anthropic.claude-opus-4-7",
+        icon="Amazon",
+        tool_calling=True,
+        reasoning=True,
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock",
+        name="anthropic.claude-opus-4-6-v1",
+        icon="Amazon",
+        tool_calling=True,
+        reasoning=True,
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock",
+        name="anthropic.claude-sonnet-4-6",
+        icon="Amazon",
+        tool_calling=True,
+        reasoning=True,
     ),
     create_model_metadata(
         provider="Amazon Bedrock", name="anthropic.claude-sonnet-4-5-20250929-v1:0", icon="Amazon", tool_calling=True
