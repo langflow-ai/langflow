@@ -1,5 +1,4 @@
 import pytest
-
 from lfx_bundles.iflytek.iflytek_spark import (
     IFLYTEK_SPARK_MAX_OUTPUT_TOKENS,
     IFlytekSparkComponent,
