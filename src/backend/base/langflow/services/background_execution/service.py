@@ -382,9 +382,13 @@ class BackgroundExecutionService(Service):
         seen.add(value_id)
         try:
             if isinstance(value, dict):
-                if not all(isinstance(key, str) for key in value):
-                    raise InvalidRequestOverridesError(field)
-                for nested in value.values():
+                for key, nested in value.items():
+                    if not isinstance(key, str):
+                        raise InvalidRequestOverridesError(field)
+                    try:
+                        key.encode("utf-8")
+                    except UnicodeEncodeError:
+                        raise InvalidRequestOverridesError(field) from None
                     cls._validate_json_value(nested, field=field, seen=seen, depth=depth + 1)
             else:
                 for nested in value:
@@ -431,7 +435,7 @@ class BackgroundExecutionService(Service):
                     separators=(",", ":"),
                     sort_keys=True,
                 ).encode()
-            except (RecursionError, TypeError, UnicodeError, ValueError) as exc:
+            except (RecursionError, TypeError, UnicodeError, ValueError, OverflowError) as exc:
                 logger.warning(
                     "Background request override serialization failed",
                     job_id=str(job_id),
@@ -440,6 +444,15 @@ class BackgroundExecutionService(Service):
                     error_type=type(exc).__name__,
                 )
                 raise InvalidRequestOverridesError(_REQUEST_OVERRIDES_CONTAINER_FIELD) from None
+            except Exception as exc:  # noqa: BLE001 -- resource/server failures remain retryable
+                logger.error(
+                    "Background request override serialization unavailable",
+                    job_id=str(job_id),
+                    flow_id=str(flow_id),
+                    stage="serialize",
+                    error_type=type(exc).__name__,
+                )
+                raise RequestOverridesUnavailableError from None
             try:
                 ciphertext = get_fernet(self.settings_service).encrypt(plaintext).decode("ascii")
             except Exception as exc:  # noqa: BLE001 -- every crypto/config failure becomes the same safe error
