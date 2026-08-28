@@ -366,6 +366,8 @@ async def test_submit_writes_request_and_encrypted_overrides_atomically(real_ser
         ("tweaks", "unsupported-value"),
         ("tweaks", "cycle"),
         ("tweaks", "too-deep"),
+        ("tweaks", "lone-surrogate"),
+        ("tweaks", "oversized-integer"),
         ("tweaks", "top-level-shape"),
         ("globals", "top-level-shape"),
     ],
@@ -399,6 +401,10 @@ async def test_submit_rejects_invalid_override_grammar_before_creating_job(
         for _ in range(66):
             nested = [nested]
         invalid_value = {"Node-x": {"value": nested}}
+    elif invalid_case == "lone-surrogate":
+        invalid_value = {"Node-x": {"value": "\ud800"}}
+    elif invalid_case == "oversized-integer":
+        invalid_value = {"Node-x": {"value": 10**5000}}
     else:
         invalid_value = ["not-a-mapping"]
 
@@ -457,23 +463,70 @@ async def test_submit_crypto_unavailable_creates_no_job(real_services_job_servic
     assert await job_service.get_jobs_by_flow_id(flow_id, user_id) == []
 
 
-async def test_release_queued_lease_never_clears_a_new_owner(real_services_job_service):
-    """A stale startup recovery cannot release a lease another worker has replaced."""
+@pytest.mark.parametrize("new_owner", ["old-owner", "new-owner"])
+async def test_release_queued_lease_never_clears_an_updated_claim(real_services_job_service, new_owner):
+    """A stale recovery cannot release a claim whose owner or heartbeat advanced."""
     from datetime import datetime, timezone
 
     job_service = real_services_job_service
     job_id = uuid4()
     await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
-    assert await job_service.claim_queued_lease(job_id, owner="old-owner", lease_ttl_s=0)
+    old_heartbeat = datetime.now(timezone.utc).isoformat()
+    assert await job_service.claim_queued_lease(
+        job_id,
+        owner="old-owner",
+        lease_ttl_s=0,
+        heartbeat_at=old_heartbeat,
+    )
     new_heartbeat = datetime.now(timezone.utc).isoformat()
-    await job_service.update_job_metadata(job_id, {"owner": "new-owner", "heartbeat_at": new_heartbeat})
+    await job_service.update_job_metadata(job_id, {"owner": new_owner, "heartbeat_at": new_heartbeat})
 
-    released = await job_service.release_queued_lease(job_id, owner="old-owner")
+    released = await job_service.release_queued_lease(
+        job_id,
+        owner="old-owner",
+        heartbeat_at=old_heartbeat,
+    )
 
     assert released is False
     job = await job_service.get_job_by_job_id(job_id)
+    assert (job.job_metadata or {}).get("owner") == new_owner
+    assert (job.job_metadata or {}).get("heartbeat_at") == new_heartbeat
+    await job_service.update_job_status(job_id, JobStatus.CANCELLED, finished_timestamp=True)
+
+
+async def test_fail_queued_job_never_terminalizes_a_replaced_claim(real_services_job_service):
+    """A stale recovery cannot fail a QUEUED row after another owner replaces its claim."""
+    from datetime import datetime, timezone
+
+    job_service = real_services_job_service
+    job_id = uuid4()
+    await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+    old_heartbeat = datetime.now(timezone.utc).isoformat()
+    assert await job_service.claim_queued_lease(
+        job_id,
+        owner="old-owner",
+        lease_ttl_s=0,
+        heartbeat_at=old_heartbeat,
+    )
+    new_heartbeat = datetime.now(timezone.utc).isoformat()
+    await job_service.update_job_metadata(job_id, {"owner": "new-owner", "heartbeat_at": new_heartbeat})
+
+    failed = await job_service.fail_queued_job(
+        job_id,
+        owner="old-owner",
+        heartbeat_at=old_heartbeat,
+        error={"type": "request_overrides_unavailable"},
+        event_type="run_failed",
+    )
+
+    assert failed is False
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.QUEUED
+    assert job.error is None
     assert (job.job_metadata or {}).get("owner") == "new-owner"
     assert (job.job_metadata or {}).get("heartbeat_at") == new_heartbeat
+    assert await job_service.read_events(job_id, after_seq=0) == []
+    await job_service.update_job_status(job_id, JobStatus.CANCELLED, finished_timestamp=True)
 
 
 async def test_restart_and_scaled_hydration_restore_encrypted_overrides(real_services_job_service):
@@ -720,6 +773,53 @@ async def test_startup_terminalizes_authenticated_malformed_override_payload(rea
     assert ran == []
     assert failed.status == JobStatus.FAILED
     assert failed.error == {"type": "request_overrides_unavailable"}
+
+
+async def test_startup_terminalizes_authenticated_unparseable_override_payload(real_services_job_service):
+    """Authenticated JSON parser-limit failures cannot abort the startup sweep or retain its lease."""
+    from langflow.services.auth.utils import get_fernet
+    from langflow.services.background_execution.service import BackgroundExecutionService
+    from langflow.services.deps import get_settings_service
+
+    job_service = real_services_job_service
+    settings_service = get_settings_service()
+    flow_id, job_id = uuid4(), uuid4()
+    plaintext = (
+        '{"version":1,"job_id":"'
+        + str(job_id)
+        + '","flow_id":"'
+        + str(flow_id)
+        + '","overrides":{"tweaks":{"Node-x":{"value":'
+        + "9" * 5000
+        + "}}}}"
+    )
+    ciphertext = get_fernet(settings_service).encrypt(plaintext.encode()).decode()
+    await job_service.create_job(
+        job_id=job_id,
+        flow_id=flow_id,
+        user_id=uuid4(),
+        initial_metadata={
+            "request": {
+                "flow_id": str(flow_id),
+                "mode": "background",
+                "stream_protocol": "langflow",
+            },
+            "request_overrides_format": "fernet-json-v1",
+            "request_overrides": ciphertext,
+        },
+    )
+
+    restart = BackgroundExecutionService(settings_service=settings_service, frame_source_factory=_echo_input_factory)
+    await restart.sweep_orphans_on_startup()
+    await restart.stop()
+
+    failed = await job_service.get_job_by_job_id(job_id)
+    assert failed.status == JobStatus.FAILED
+    assert failed.error == {"type": "request_overrides_unavailable"}
+    assert failed.finished_timestamp is not None
+    assert [(event.event_type, event.payload) for event in await job_service.read_events(job_id, after_seq=0)] == [
+        ("run_failed", {"type": "request_overrides_unavailable"})
+    ]
 
 
 async def test_wrong_key_cross_job_and_null_envelopes_fail_closed(real_services_job_service):
