@@ -357,6 +357,106 @@ async def test_submit_writes_request_and_encrypted_overrides_atomically(real_ser
     assert "secret-atomic" not in json.dumps(job.job_metadata)
 
 
+@pytest.mark.parametrize(
+    ("field", "invalid_case"),
+    [
+        ("tweaks", "nan"),
+        ("tweaks", "infinity"),
+        ("tweaks", "non-string-key"),
+        ("tweaks", "unsupported-value"),
+        ("tweaks", "cycle"),
+        ("tweaks", "too-deep"),
+        ("tweaks", "top-level-shape"),
+        ("globals", "top-level-shape"),
+    ],
+)
+async def test_submit_rejects_invalid_override_grammar_before_creating_job(
+    real_services_job_service,
+    field,
+    invalid_case,
+):
+    """Caller validation failures identify the field and never persist a job."""
+    from langflow.services.background_execution.service import (
+        BackgroundExecutionService,
+        InvalidRequestOverridesError,
+    )
+    from langflow.services.deps import get_settings_service
+
+    if invalid_case == "nan":
+        invalid_value = {"Node-x": {"value": float("nan")}}
+    elif invalid_case == "infinity":
+        invalid_value = {"Node-x": {"value": float("inf")}}
+    elif invalid_case == "non-string-key":
+        invalid_value = {"Node-x": {1: "value"}}
+    elif invalid_case == "unsupported-value":
+        invalid_value = {"Node-x": {"value": object()}}
+    elif invalid_case == "cycle":
+        cyclic: dict = {}
+        cyclic["self"] = cyclic
+        invalid_value = {"Node-x": cyclic}
+    elif invalid_case == "too-deep":
+        nested: object = "leaf"
+        for _ in range(66):
+            nested = [nested]
+        invalid_value = {"Node-x": {"value": nested}}
+    else:
+        invalid_value = ["not-a-mapping"]
+
+    job_service = real_services_job_service
+    flow_id, user_id = uuid4(), uuid4()
+    service = BackgroundExecutionService(
+        settings_service=get_settings_service(),
+        frame_source_factory=_echo_input_factory,
+        backend=_RecordingBackend(),
+    )
+    request = {
+        "flow_id": str(flow_id),
+        "mode": "background",
+        "stream_protocol": "langflow",
+        "input_value": "invalid-overrides",
+        field: invalid_value,
+    }
+
+    with pytest.raises(InvalidRequestOverridesError) as exc_info:
+        await service.submit(flow_id=flow_id, request=request, user=_StubUser(user_id))
+
+    assert exc_info.value.field == field
+    assert await job_service.get_jobs_by_flow_id(flow_id, user_id) == []
+
+
+async def test_submit_crypto_unavailable_creates_no_job(real_services_job_service, monkeypatch):
+    """Server-side encryption failure is retryable and precedes durable creation."""
+    from langflow.services.background_execution.service import (
+        BackgroundExecutionService,
+        RequestOverridesUnavailableError,
+    )
+    from langflow.services.deps import get_settings_service
+
+    def _unavailable_fernet(_settings_service):
+        raise RuntimeError
+
+    monkeypatch.setattr("langflow.services.auth.utils.get_fernet", _unavailable_fernet)
+    job_service = real_services_job_service
+    flow_id, user_id = uuid4(), uuid4()
+    service = BackgroundExecutionService(
+        settings_service=get_settings_service(),
+        frame_source_factory=_echo_input_factory,
+        backend=_RecordingBackend(),
+    )
+    request = {
+        "flow_id": str(flow_id),
+        "mode": "background",
+        "stream_protocol": "langflow",
+        "input_value": "crypto-unavailable",
+        "tweaks": {"Node-x": {"api_key": "never-persisted"}},  # pragma: allowlist secret
+    }
+
+    with pytest.raises(RequestOverridesUnavailableError):
+        await service.submit(flow_id=flow_id, request=request, user=_StubUser(user_id))
+
+    assert await job_service.get_jobs_by_flow_id(flow_id, user_id) == []
+
+
 async def test_restart_and_scaled_hydration_restore_encrypted_overrides(real_services_job_service):
     """A job-id-only handoff and a fresh startup both replay the original overrides."""
     import asyncio
@@ -414,13 +514,11 @@ async def test_restart_and_scaled_hydration_restore_encrypted_overrides(real_ser
     assert recovered.status == JobStatus.COMPLETED
 
 
-@pytest.mark.parametrize("damage", ["missing", "null", "tampered", "wrong-key"])
+@pytest.mark.parametrize("damage", ["missing", "null"])
 async def test_startup_terminalizes_unavailable_encrypted_overrides(real_services_job_service, damage):
-    """A damaged envelope cannot downgrade into a run without its original overrides."""
-    from cryptography.fernet import Fernet
+    """Malformed marker/ciphertext pairs terminalize without running downgraded."""
     from langflow.services.background_execution.service import BackgroundExecutionService
     from langflow.services.deps import get_settings_service
-    from pydantic import SecretStr
 
     job_service = real_services_job_service
     backend = _RecordingBackend()
@@ -450,20 +548,11 @@ async def test_startup_terminalizes_unavailable_encrypted_overrides(real_service
         metadata.pop("request_overrides")
     elif damage == "null":
         metadata["request_overrides"] = None
-    elif damage == "tampered":
-        token = metadata["request_overrides"]
-        metadata["request_overrides"] = f"{token[:-1]}{'A' if token[-1] != 'A' else 'B'}"
     await job_service.update_job_metadata(job_id, metadata, replace=True)
 
     ran: list[dict] = []
-    recovery_settings = settings_service
-    if damage == "wrong-key":
-        wrong_auth = settings_service.auth_settings.model_copy(
-            update={"SECRET_KEY": SecretStr(Fernet.generate_key().decode())}
-        )
-        recovery_settings = SimpleNamespace(settings=settings_service.settings, auth_settings=wrong_auth)
     restart = BackgroundExecutionService(
-        settings_service=recovery_settings,
+        settings_service=settings_service,
         frame_source_factory=_capture_request_factory(ran),
     )
     await restart.sweep_orphans_on_startup()
@@ -478,6 +567,140 @@ async def test_startup_terminalizes_unavailable_encrypted_overrides(real_service
     assert [(event.event_type, event.payload) for event in events] == [
         ("run_failed", {"type": "request_overrides_unavailable"})
     ]
+
+
+@pytest.mark.parametrize("failure", ["wrong-key", "auth-failure"])
+async def test_startup_keeps_ambiguous_crypto_failures_queued_and_replays_after_recovery(
+    real_services_job_service,
+    failure,
+):
+    """Unreadable Fernet tokens remain retryable because key loss and tampering are indistinguishable."""
+    import asyncio
+
+    from cryptography.fernet import Fernet
+    from langflow.services.background_execution.service import BackgroundExecutionService
+    from langflow.services.deps import get_settings_service
+    from pydantic import SecretStr
+
+    job_service = real_services_job_service
+    settings_service = get_settings_service()
+    backend = _RecordingBackend()
+    flow_id, user_id = uuid4(), uuid4()
+    request = {
+        "flow_id": str(flow_id),
+        "mode": "background",
+        "stream_protocol": "langflow",
+        "input_value": f"recover-{failure}",
+        "tweaks": {"Node-x": {"api_key": "recoverable-secret"}},  # pragma: allowlist secret
+    }
+    submitter = BackgroundExecutionService(
+        settings_service=settings_service,
+        frame_source_factory=_echo_input_factory,
+        backend=backend,
+    )
+    job_id = await submitter.submit(flow_id=flow_id, request=request, user=_StubUser(user_id))
+    original = await job_service.get_job_by_job_id(job_id)
+    original_metadata = dict(original.job_metadata)
+
+    recovery_settings = settings_service
+    if failure == "wrong-key":
+        wrong_auth = settings_service.auth_settings.model_copy(
+            update={"SECRET_KEY": SecretStr(Fernet.generate_key().decode())}
+        )
+        recovery_settings = SimpleNamespace(settings=settings_service.settings, auth_settings=wrong_auth)
+    else:
+        damaged = dict(original_metadata)
+        token = damaged["request_overrides"]
+        damaged["request_overrides"] = f"{token[:-1]}{'A' if token[-1] != 'A' else 'B'}"
+        await job_service.update_job_metadata(job_id, damaged, replace=True)
+
+    ran: list[dict] = []
+    unavailable = BackgroundExecutionService(
+        settings_service=recovery_settings,
+        frame_source_factory=_capture_request_factory(ran),
+    )
+    await unavailable.sweep_orphans_on_startup()
+    await unavailable.stop()
+
+    queued = await job_service.get_job_by_job_id(job_id)
+    assert ran == []
+    assert queued.status == JobStatus.QUEUED
+    assert queued.error is None
+    assert (queued.job_metadata or {}).get("owner") is None
+    assert (queued.job_metadata or {}).get("heartbeat_at") is None
+    assert await job_service.read_events(job_id, after_seq=0) == []
+
+    if failure == "auth-failure":
+        await job_service.update_job_metadata(job_id, original_metadata, replace=True)
+
+    captured: list[dict] = []
+    restored = BackgroundExecutionService(
+        settings_service=settings_service,
+        frame_source_factory=_capture_request_factory(captured),
+    )
+    await restored.start()
+    try:
+        await restored.sweep_orphans_on_startup()
+        for _ in range(100):
+            replayed = await job_service.get_job_by_job_id(job_id)
+            if replayed.status == JobStatus.COMPLETED:
+                break
+            await asyncio.sleep(0.05)
+    finally:
+        await restored.stop()
+
+    assert replayed.status == JobStatus.COMPLETED
+    assert captured.count(request) == 1
+
+
+async def test_startup_terminalizes_authenticated_malformed_override_payload(real_services_job_service):
+    """Authenticated payload corruption is distinct from ambiguous Fernet authentication failure."""
+    from langflow.services.auth.utils import get_fernet
+    from langflow.services.background_execution.service import BackgroundExecutionService
+    from langflow.services.deps import get_settings_service
+
+    job_service = real_services_job_service
+    settings_service = get_settings_service()
+    flow_id, user_id = uuid4(), uuid4()
+    submitter = BackgroundExecutionService(
+        settings_service=settings_service,
+        frame_source_factory=_echo_input_factory,
+        backend=_RecordingBackend(),
+    )
+    job_id = await submitter.submit(
+        flow_id=flow_id,
+        request={
+            "flow_id": str(flow_id),
+            "mode": "background",
+            "stream_protocol": "langflow",
+            "input_value": "authenticated-corruption",
+            "tweaks": {"Node-x": {"api_key": "corrupt-secret"}},  # pragma: allowlist secret
+        },
+        user=_StubUser(user_id),
+    )
+    job = await job_service.get_job_by_job_id(job_id)
+    metadata = dict(job.job_metadata)
+    malformed = {
+        "version": 1,
+        "job_id": str(job_id),
+        "flow_id": str(flow_id),
+        "overrides": {"tweaks": ["not-a-mapping"]},
+    }
+    metadata["request_overrides"] = get_fernet(settings_service).encrypt(json.dumps(malformed).encode()).decode()
+    await job_service.update_job_metadata(job_id, metadata, replace=True)
+
+    ran: list[dict] = []
+    restart = BackgroundExecutionService(
+        settings_service=settings_service,
+        frame_source_factory=_capture_request_factory(ran),
+    )
+    await restart.sweep_orphans_on_startup()
+    await restart.stop()
+
+    failed = await job_service.get_job_by_job_id(job_id)
+    assert ran == []
+    assert failed.status == JobStatus.FAILED
+    assert failed.error == {"type": "request_overrides_unavailable"}
 
 
 async def test_wrong_key_cross_job_and_null_envelopes_fail_closed(real_services_job_service):

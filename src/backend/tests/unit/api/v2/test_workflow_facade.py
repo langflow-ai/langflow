@@ -104,6 +104,55 @@ class TestBackgroundSubmitContract:
         # New additive link: re-attach events URL must point at the job.
         assert result["links"]["events"] == f"/api/v2/workflows/{result['job_id']}/events"
 
+    async def test_invalid_override_grammar_returns_422_without_creating_job(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        chatbot_flow,
+    ):
+        """Non-finite caller data is a structured validation error, not a server fault."""
+        from langflow.services.deps import get_job_service
+
+        body = _body(chatbot_flow, mode="background")
+        body["tweaks"] = {"ChatInput-x": {"temperature": float("nan")}}
+        response = await client.post(
+            "api/v2/workflows",
+            content=json.dumps(body),
+            headers={"x-api-key": created_api_key.api_key, "content-type": "application/json"},
+        )
+
+        assert response.status_code == 422, response.text
+        detail = response.json()["detail"]
+        assert detail["code"] == "INVALID_REQUEST_OVERRIDES"
+        assert detail["field"] == "tweaks"
+        assert await get_job_service().get_jobs_by_flow_id(chatbot_flow, created_api_key.user_id) == []
+
+    async def test_crypto_unavailable_returns_503_without_creating_job(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        chatbot_flow,
+        monkeypatch,
+    ):
+        """A temporarily unavailable encryption key is retryable and never creates a job."""
+        from langflow.services.deps import get_job_service
+
+        def _unavailable_fernet(_settings_service):
+            raise RuntimeError
+
+        monkeypatch.setattr("langflow.services.auth.utils.get_fernet", _unavailable_fernet)
+        body = _body(chatbot_flow, mode="background")
+        body["tweaks"] = {"ChatInput-x": {"input_value": "retry-later"}}
+        response = await client.post(
+            "api/v2/workflows",
+            json=body,
+            headers={"x-api-key": created_api_key.api_key},
+        )
+
+        assert response.status_code == 503, response.text
+        assert response.json()["detail"]["code"] == "REQUEST_OVERRIDES_UNAVAILABLE"
+        assert await get_job_service().get_jobs_by_flow_id(chatbot_flow, created_api_key.user_id) == []
+
 
 class TestStatusDurableResultError:
     """GET status reads durable result/error written by the runner, additively."""
