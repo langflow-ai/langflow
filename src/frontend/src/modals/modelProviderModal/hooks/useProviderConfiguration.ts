@@ -205,10 +205,16 @@ export const useProviderConfiguration = ({
     };
   }, [hasSettledProviderCatalog, modelProviders, selectedProvider]);
 
+  const isCurrentConfigurationContext = useCallback(
+    (): boolean =>
+      activeConfigurationContextRef.current === configurationContextKey &&
+      previousConfigurationContextRef.current === configurationContextKey,
+    [configurationContextKey],
+  );
+
   const canUseCurrentProviderPolicy = useCallback(
     (providerName: string): boolean =>
-      activeConfigurationContextRef.current === configurationContextKey &&
-      previousConfigurationContextRef.current === configurationContextKey &&
+      isCurrentConfigurationContext() &&
       trustedSelectedProvider?.provider === providerName &&
       isSettledSuccessfulQuery(queryClient, providerCatalogQueryKey) &&
       isSettledSuccessfulQuery(queryClient, globalVariablesQueryKey) &&
@@ -218,7 +224,7 @@ export const useProviderConfiguration = ({
       providerCatalogQueryKey,
       providerVariablesQueryKey,
       queryClient,
-      configurationContextKey,
+      isCurrentConfigurationContext,
       trustedSelectedProvider,
     ],
   );
@@ -394,7 +400,7 @@ export const useProviderConfiguration = ({
         await new Promise((resolve) => setTimeout(resolve, 500 - elapsedTime));
       }
 
-      if (activeConfigurationContextRef.current !== configurationContextKey) {
+      if (!isCurrentConfigurationContext()) {
         return false;
       }
       if (!canUseCurrentProviderPolicy(providerName)) {
@@ -419,7 +425,7 @@ export const useProviderConfiguration = ({
         await new Promise((resolve) => setTimeout(resolve, 500 - elapsedTime));
       }
 
-      if (activeConfigurationContextRef.current !== configurationContextKey) {
+      if (!isCurrentConfigurationContext()) {
         return false;
       }
       setValidationState("invalid");
@@ -433,7 +439,7 @@ export const useProviderConfiguration = ({
     validateProvider,
     flowId,
     projectId,
-    configurationContextKey,
+    isCurrentConfigurationContext,
     t,
   ]);
 
@@ -483,12 +489,21 @@ export const useProviderConfiguration = ({
     if (!isValid || !canUseCurrentProviderPolicy(providerName)) return;
     setIsSaving(true);
     setValidationFailed(false);
+    let hasPersistedVariable = false;
+    let hasAttemptedProviderInvalidation = false;
+    const refreshProviderCaches = async (): Promise<void> => {
+      hasAttemptedProviderInvalidation = true;
+      await invalidateProviderQueries();
+    };
 
     try {
       // Persist each companion field before starting the primary-variable
       // request so backend validation can read the complete configuration.
       for (const variable of variablesToSave) {
-        if (!canUseCurrentProviderPolicy(providerName)) return;
+        if (!canUseCurrentProviderPolicy(providerName)) {
+          if (hasPersistedVariable) await refreshProviderCaches();
+          return;
+        }
         const value = variableValues[variable.variable_key].trim();
         const existingVariable = globalVariables.find(
           (v) => v.name === variable.variable_key,
@@ -515,6 +530,7 @@ export const useProviderConfiguration = ({
             projectId,
           });
         }
+        hasPersistedVariable = true;
 
         // Variable mutations start an exact scoped-cache refetch in onSettled.
         // Wait for that self-induced refresh instead of treating it as a policy
@@ -526,19 +542,25 @@ export const useProviderConfiguration = ({
             { cancelRefetch: false },
           );
         }
-        if (!canUseCurrentProviderPolicy(providerName)) return;
+        if (!canUseCurrentProviderPolicy(providerName)) {
+          await refreshProviderCaches();
+          return;
+        }
       }
 
-      if (!canUseCurrentProviderPolicy(providerName)) return;
+      if (!canUseCurrentProviderPolicy(providerName)) {
+        await refreshProviderCaches();
+        return;
+      }
 
       // All succeeded. Await the cache refresh directly instead of relying on
       // React to render an intermediate `isFetching` state, which a fast
       // refetch can enter and leave in the same batch.
       hasUserMadeChangesRef.current = true;
       setIsFetchingAfterSave(true);
-      await invalidateProviderQueries();
+      await refreshProviderCaches();
 
-      if (activeConfigurationContextRef.current === configurationContextKey) {
+      if (isCurrentConfigurationContext()) {
         setVariableValues({});
         setSuccessData({
           title: t("modelProviders.configurationSaved", {
@@ -548,15 +570,24 @@ export const useProviderConfiguration = ({
         void refreshAllModelInputs({ silent: true });
       }
     } catch (error: unknown) {
-      setValidationFailed(true);
-      setErrorData({
-        title: t("modelProviders.errorSavingConfiguration"),
-        list: [
-          getAxiosErrorMessage(error, t("modelProviders.errorUnexpected")),
-        ],
-      });
+      if (hasPersistedVariable && !hasAttemptedProviderInvalidation) {
+        try {
+          await refreshProviderCaches();
+        } catch {
+          // Preserve the original mutation/refetch error for the current UI.
+        }
+      }
+      if (isCurrentConfigurationContext()) {
+        setValidationFailed(true);
+        setErrorData({
+          title: t("modelProviders.errorSavingConfiguration"),
+          list: [
+            getAxiosErrorMessage(error, t("modelProviders.errorUnexpected")),
+          ],
+        });
+      }
     } finally {
-      if (activeConfigurationContextRef.current === configurationContextKey) {
+      if (isCurrentConfigurationContext()) {
         setIsSaving(false);
         setIsFetchingAfterSave(false);
       }
@@ -579,7 +610,7 @@ export const useProviderConfiguration = ({
     setErrorData,
     invalidateProviderQueries,
     refreshAllModelInputs,
-    configurationContextKey,
+    isCurrentConfigurationContext,
   ]);
 
   // Activate providers that don't need API keys (e.g., Ollama)
@@ -630,20 +661,27 @@ export const useProviderConfiguration = ({
         });
       }
 
-      hasUserMadeChangesRef.current = true;
-      setSuccessData({
-        title: t("modelProviders.providerActivated", {
-          provider: providerName,
-        }),
-      });
-      void invalidateProviderQueries();
+      if (isCurrentConfigurationContext()) {
+        hasUserMadeChangesRef.current = true;
+      }
+      await invalidateProviderQueries();
+
+      if (isCurrentConfigurationContext()) {
+        setSuccessData({
+          title: t("modelProviders.providerActivated", {
+            provider: providerName,
+          }),
+        });
+      }
     } catch (error: unknown) {
-      setErrorData({
-        title: t("modelProviders.errorActivatingProvider"),
-        list: [
-          getAxiosErrorMessage(error, t("modelProviders.errorUnexpected")),
-        ],
-      });
+      if (isCurrentConfigurationContext()) {
+        setErrorData({
+          title: t("modelProviders.errorActivatingProvider"),
+          list: [
+            getAxiosErrorMessage(error, t("modelProviders.errorUnexpected")),
+          ],
+        });
+      }
     }
   }, [
     trustedSelectedProvider,
@@ -657,6 +695,7 @@ export const useProviderConfiguration = ({
     setSuccessData,
     setErrorData,
     invalidateProviderQueries,
+    isCurrentConfigurationContext,
   ]);
 
   // Disconnect / Deactivate provider
@@ -690,17 +729,31 @@ export const useProviderConfiguration = ({
       // Delete in parallel — backend already cleans up per-provider enabled
       // and disabled model lists on the primary credential delete, so order
       // does not matter.
-      await Promise.all(
+      const deletionResults = await Promise.allSettled(
         variablesToDelete.map((v) =>
           deleteGlobalVariable({ id: v.id, flowId, projectId }),
         ),
       );
+      const hasSuccessfulDeletion = deletionResults.some(
+        (result) => result.status === "fulfilled",
+      );
+      const failedDeletion = deletionResults.find(
+        (result) => result.status === "rejected",
+      );
 
-      hasUserMadeChangesRef.current = true;
-      setIsFetchingAfterDisconnect(true);
-      await invalidateProviderQueries();
+      if (hasSuccessfulDeletion && isCurrentConfigurationContext()) {
+        hasUserMadeChangesRef.current = true;
+        setIsFetchingAfterDisconnect(true);
+      }
+      if (hasSuccessfulDeletion) {
+        await invalidateProviderQueries();
+      }
 
-      if (activeConfigurationContextRef.current === configurationContextKey) {
+      if (failedDeletion) {
+        throw failedDeletion.reason;
+      }
+
+      if (isCurrentConfigurationContext()) {
         setSuccessData({
           title: t("modelProviders.providerDisconnected", {
             provider: providerName,
@@ -709,14 +762,16 @@ export const useProviderConfiguration = ({
         void refreshAllModelInputs({ silent: true });
       }
     } catch (error: unknown) {
-      setErrorData({
-        title: t("modelProviders.errorDisconnectingProvider"),
-        list: [
-          getAxiosErrorMessage(error, t("modelProviders.errorUnexpected")),
-        ],
-      });
+      if (isCurrentConfigurationContext()) {
+        setErrorData({
+          title: t("modelProviders.errorDisconnectingProvider"),
+          list: [
+            getAxiosErrorMessage(error, t("modelProviders.errorUnexpected")),
+          ],
+        });
+      }
     } finally {
-      if (activeConfigurationContextRef.current === configurationContextKey) {
+      if (isCurrentConfigurationContext()) {
         setIsFetchingAfterDisconnect(false);
       }
     }
@@ -732,7 +787,7 @@ export const useProviderConfiguration = ({
     setErrorData,
     invalidateProviderQueries,
     refreshAllModelInputs,
-    configurationContextKey,
+    isCurrentConfigurationContext,
   ]);
 
   const { handleModelToggle: queueModelToggle, flushPendingChanges } =

@@ -332,6 +332,148 @@ describe("useProviderConfiguration.handleDisconnect", () => {
     expect(mockSetSuccessData).toHaveBeenCalled();
   });
 
+  it.each([
+    { outcome: "resolves", rejects: false },
+    { outcome: "rejects", rejects: true },
+  ])(
+    "ignores a disconnect that $outcome after the authorization scope changes",
+    async ({ rejects }) => {
+      const selectedProvider: Provider = {
+        provider: "Anthropic",
+        icon: "Anthropic",
+        is_enabled: true,
+        is_configured: true,
+        models: [],
+      };
+      mockProviderVariablesMapping.Anthropic = [
+        {
+          variable_name: "API Key",
+          variable_key: "ANTHROPIC_API_KEY",
+          required: true,
+          is_secret: true,
+          is_list: false,
+          options: [],
+        },
+      ];
+      mockGlobalVariables.push({ id: "var-1", name: "ANTHROPIC_API_KEY" });
+      mockModelProviders = [selectedProvider];
+
+      let settleDeletion!: () => void;
+      mockDeleteMutateAsync.mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve, reject) => {
+            settleDeletion = () => {
+              if (rejects) {
+                reject(new Error("late disconnect failure"));
+              } else {
+                resolve();
+              }
+            };
+          }),
+      );
+
+      const { result, rerender } = renderScopedProviderConfiguration(
+        selectedProvider,
+        "flow-a",
+        "project-a",
+      );
+      await waitFor(() =>
+        expect(result.current.syncedSelectedProvider?.provider).toBe(
+          "Anthropic",
+        ),
+      );
+
+      let disconnectPromise!: Promise<void>;
+      act(() => {
+        disconnectPromise = result.current.handleDisconnect();
+      });
+      await waitFor(() => expect(mockDeleteMutateAsync).toHaveBeenCalled());
+
+      rerender({
+        provider: selectedProvider,
+        flow: "flow-b",
+        project: "project-b",
+      });
+      const modelProviderInvalidationsAfterScopeChange =
+        mockInvalidateQueries.mock.calls.filter(
+          ([{ queryKey }]) => queryKey[0] === "useGetModelProviders",
+        ).length;
+
+      await act(async () => {
+        settleDeletion();
+        await disconnectPromise;
+      });
+
+      expect(result.current.isFetchingAfterDisconnect).toBe(false);
+      expect(result.current.hasUserMadeChanges()).toBe(false);
+      expect(mockSetSuccessData).not.toHaveBeenCalled();
+      expect(mockSetErrorData).not.toHaveBeenCalled();
+      expect(mockRefreshAllModelInputs).not.toHaveBeenCalled();
+      expect(
+        mockInvalidateQueries.mock.calls.filter(
+          ([{ queryKey }]) => queryKey[0] === "useGetModelProviders",
+        ),
+      ).toHaveLength(
+        modelProviderInvalidationsAfterScopeChange + (rejects ? 0 : 1),
+      );
+    },
+  );
+
+  it("invalidates provider caches when disconnect finishes after unmount", async () => {
+    const selectedProvider: Provider = {
+      provider: "Anthropic",
+      icon: "Anthropic",
+      is_enabled: true,
+      is_configured: true,
+      models: [],
+    };
+    mockProviderVariablesMapping.Anthropic = [
+      {
+        variable_name: "API Key",
+        variable_key: "ANTHROPIC_API_KEY",
+        required: true,
+        is_secret: true,
+        is_list: false,
+        options: [],
+      },
+    ];
+    mockGlobalVariables.push({ id: "var-1", name: "ANTHROPIC_API_KEY" });
+    mockModelProviders = [selectedProvider];
+
+    let resolveDeletion!: () => void;
+    mockDeleteMutateAsync.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveDeletion = resolve;
+        }),
+    );
+
+    const { result, unmount } = renderProviderConfiguration(selectedProvider);
+    await waitFor(() =>
+      expect(result.current.syncedSelectedProvider?.provider).toBe("Anthropic"),
+    );
+
+    let disconnectPromise!: Promise<void>;
+    act(() => {
+      disconnectPromise = result.current.handleDisconnect();
+    });
+    await waitFor(() => expect(mockDeleteMutateAsync).toHaveBeenCalled());
+
+    unmount();
+    resolveDeletion();
+    await disconnectPromise;
+
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["useGetModelProviders"],
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["useGetEnabledModels"],
+    });
+    expect(mockSetSuccessData).not.toHaveBeenCalled();
+    expect(mockSetErrorData).not.toHaveBeenCalled();
+    expect(mockRefreshAllModelInputs).not.toHaveBeenCalled();
+  });
+
   it("is a no-op when the provider has no configured variables", async () => {
     mockProviderVariablesMapping["OpenRouter"] = [
       {
@@ -406,6 +548,72 @@ describe("useProviderConfiguration.handleDisconnect", () => {
     });
 
     await waitFor(() => expect(mockSetErrorData).toHaveBeenCalled());
+    expect(mockSetSuccessData).not.toHaveBeenCalled();
+  });
+
+  it("invalidates provider caches after a partial multi-variable disconnect", async () => {
+    mockProviderVariablesMapping.OpenRouter = [
+      {
+        variable_name: "OpenRouter API Key",
+        variable_key: "OPENROUTER_API_KEY",
+        required: true,
+        is_secret: true,
+        is_list: false,
+        options: [],
+      },
+      {
+        variable_name: "Site URL",
+        variable_key: "OPENROUTER_SITE_URL",
+        required: false,
+        is_secret: false,
+        is_list: false,
+        options: [],
+      },
+    ];
+    mockGlobalVariables.push(
+      { id: "var-key", name: "OPENROUTER_API_KEY" },
+      { id: "var-url", name: "OPENROUTER_SITE_URL" },
+    );
+    mockModelProviders = [
+      {
+        provider: "OpenRouter",
+        is_configured: true,
+        is_enabled: true,
+        models: [],
+      },
+    ];
+    mockDeleteMutateAsync.mockImplementation(({ id }) => {
+      deleteCalls.push({ id });
+      return id === "var-key"
+        ? Promise.resolve(undefined)
+        : Promise.reject(new Error("site URL deletion failed"));
+    });
+
+    const { result } = renderProviderConfiguration({
+      provider: "OpenRouter",
+      icon: "OpenRouter",
+      is_enabled: true,
+      is_configured: true,
+      models: [],
+    });
+
+    await act(async () => {
+      await result.current.handleDisconnect();
+    });
+
+    expect(deleteCalls.map(({ id }) => id).sort()).toEqual([
+      "var-key",
+      "var-url",
+    ]);
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["useGetModelProviders"],
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["useGetEnabledModels"],
+    });
+    expect(result.current.hasUserMadeChanges()).toBe(true);
+    expect(result.current.isFetchingAfterDisconnect).toBe(false);
+    expect(mockSetErrorData).toHaveBeenCalled();
     expect(mockSetSuccessData).not.toHaveBeenCalled();
   });
 });
