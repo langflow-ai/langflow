@@ -830,6 +830,118 @@ def test_json_schema_from_flow_preserves_flow_defined_session_id(monkeypatch):
     assert "session_id" in schema["required"]
 
 
+def test_json_schema_from_flow_only_advertises_api_exposed_fields(monkeypatch):
+    """MCP tools/list must honor each input field's API exposure toggle."""
+
+    class _FakeNode:
+        is_input = True
+        data = {
+            "node": {
+                "template": {
+                    "exposed": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "str",
+                        "required": True,
+                    },
+                    "not_exposed": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": False,
+                        "type": "str",
+                        "required": True,
+                    },
+                    "legacy_without_exposure_flag": {
+                        "show": True,
+                        "advanced": False,
+                        "type": "str",
+                    },
+                    "off_node": {
+                        "show": True,
+                        "advanced": True,
+                        "api_editable": True,
+                        "type": "str",
+                    },
+                }
+            }
+        }
+
+    class _FakeGraph:
+        vertices = [_FakeNode()]
+
+        @classmethod
+        def from_payload(cls, _flow_data):
+            return cls()
+
+    import lfx.graph.graph.base as graph_base_module
+
+    monkeypatch.setattr(graph_base_module, "Graph", _FakeGraph)
+
+    schema = flow_helpers.json_schema_from_flow(SimpleNamespace(data={"nodes": [], "edges": []}))
+
+    assert set(schema["properties"]) == {"exposed", "session_id"}
+    assert schema["required"] == ["exposed"]
+
+
+def test_json_schema_from_flow_maps_structured_and_list_field_types(monkeypatch):
+    """MCP input schemas must describe the JSON values accepted by exposed fields."""
+
+    class _FakeNode:
+        is_input = True
+        data = {
+            "node": {
+                "template": {
+                    "metadata": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "dict",
+                    },
+                    "nested": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "NestedDict",
+                    },
+                    "steps": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "sortableList",
+                    },
+                    "tags": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "str",
+                        "list": True,
+                    },
+                }
+            }
+        }
+
+    class _FakeGraph:
+        vertices = [_FakeNode()]
+
+        @classmethod
+        def from_payload(cls, _flow_data):
+            return cls()
+
+    import lfx.graph.graph.base as graph_base_module
+
+    monkeypatch.setattr(graph_base_module, "Graph", _FakeGraph)
+
+    schema = flow_helpers.json_schema_from_flow(SimpleNamespace(data={"nodes": [], "edges": []}))
+    properties = schema["properties"]
+
+    assert properties["metadata"]["type"] == "object"
+    assert properties["nested"]["type"] == "object"
+    assert properties["steps"]["type"] == "array"
+    assert properties["tags"]["type"] == "array"
+    assert properties["tags"]["items"] == {"type": "string"}
+
+
 @pytest.mark.asyncio
 async def test_handle_call_tool_blocks_hitl_flow(monkeypatch):
     """A HITL flow invoked as an MCP tool must raise so the MCP result is isError, pointing to the v2 API."""
