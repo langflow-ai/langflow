@@ -65,6 +65,18 @@ class TestFileComponentDynamicOutputs:
             ("message", "Raw Content", "load_files_message", ["Message"]),
         ]
 
+    def test_update_outputs_multiple_files_are_immediately_connectable(self):
+        """Dynamic outputs must include their types before frontend validation runs."""
+        component = FileComponent()
+        frontend_node = {"outputs": [], "template": {"path": {"file_path": ["file1.txt", "file2.txt"]}}}
+
+        result = component.update_outputs(frontend_node, "path", ["file1.txt", "file2.txt"])
+
+        assert [(output.name, output.types, output.selected) for output in result["outputs"]] == [
+            ("dataframe", ["Table"], "Table"),
+            ("message", ["Message"], "Message"),
+        ]
+
     def test_update_outputs_empty_path(self):
         """Test empty path results in no outputs."""
         component = FileComponent()
