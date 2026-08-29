@@ -47,7 +47,7 @@ def _patch_resolution(get_variable_return):
     mock_session.__aenter__ = AsyncMock(return_value=mock_session)
     mock_session.__aexit__ = AsyncMock(return_value=None)
 
-    session_patcher = patch("lfx.interface.initialize.loading.session_scope")
+    session_patcher = patch("lfx.interface.initialize.loading.session_scope_readonly")
     settings_patcher = patch("lfx.services.deps.get_settings_service")
     get_variable_mock = AsyncMock(return_value=get_variable_return)
     return session_patcher, settings_patcher, mock_session, get_variable_mock
