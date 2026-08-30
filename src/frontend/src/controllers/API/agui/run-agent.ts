@@ -79,6 +79,13 @@ export interface WorkflowRunRequestBody {
   input_value: string;
   mode: WorkflowMode;
   stream_protocol: StreamProtocol;
+  /**
+   * Omit (server default `true`) to receive the `STEP_*` / `STATE_*` events
+   * the canvas renders node status from. External callers that expose the
+   * stream to their own end users send `false` so component ids and per-node
+   * outputs stay off the wire.
+   */
+  expose_graph_state?: boolean;
   tweaks?: Record<string, Record<string, unknown>>;
   session_id?: string;
   data?: { nodes: unknown[]; edges: unknown[] };
