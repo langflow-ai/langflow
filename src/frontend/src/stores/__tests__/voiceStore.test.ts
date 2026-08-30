@@ -485,12 +485,14 @@ describe("useVoiceStore", () => {
       const { result } = renderHook(() => useVoiceStore());
       const complexVoices = [
         {
-          name: "Complex Voice",
-          voice_id: "complex-1",
+          ...mockDataFactory.createVoice({
+            name: "Complex Voice",
+            voice_id: "complex-1",
+          }),
           // Additional properties that shouldn't break the store
           extra: { data: "value" },
           metadata: ["tag1", "tag2"],
-        } as any,
+        },
       ];
 
       act(() => {
