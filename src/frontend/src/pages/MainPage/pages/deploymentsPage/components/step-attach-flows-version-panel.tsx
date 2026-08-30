@@ -108,20 +108,6 @@ export const VersionPanel = memo(function VersionPanel({
                 <div
                   key={version.id}
                   data-testid={`version-item-${version.id}`}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => {
-                    if (!isRemoved) onAttach(version.id);
-                  }}
-                  onKeyDown={(event) => {
-                    if (
-                      (event.key === "Enter" || event.key === " ") &&
-                      !isRemoved
-                    ) {
-                      event.preventDefault();
-                      onAttach(version.id);
-                    }
-                  }}
                   className={cn(
                     "flex w-full items-center gap-4 rounded-xl border p-3 text-left transition-colors",
                     isAttachedVersion && !isRemoved
@@ -131,7 +117,24 @@ export const VersionPanel = memo(function VersionPanel({
                         : "border-transparent bg-muted hover:border-border",
                   )}
                 >
-                  <span className="flex min-w-0 flex-1 flex-col gap-1">
+                  <span
+                    data-testid={`version-item-${version.id}-select`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      if (!isRemoved) onAttach(version.id);
+                    }}
+                    onKeyDown={(event) => {
+                      if (
+                        (event.key === "Enter" || event.key === " ") &&
+                        !isRemoved
+                      ) {
+                        event.preventDefault();
+                        onAttach(version.id);
+                      }
+                    }}
+                    className="flex min-w-0 flex-1 flex-col gap-1"
+                  >
                     <span className="flex items-center gap-2 text-sm font-medium leading-tight">
                       <VersionLabel
                         versionTag={version.version_tag}
@@ -173,6 +176,7 @@ export const VersionPanel = memo(function VersionPanel({
                       type="button"
                       className="rounded p-1 text-muted-foreground hover:bg-accent-blue-muted hover:text-accent-blue-muted-foreground"
                       data-testid={`undo-version-${version.id}`}
+                      aria-label={t("deployments.undoDetach")}
                       onClick={(event) => {
                         event.stopPropagation();
                         onUndoRemove(attachmentKey);
@@ -200,6 +204,7 @@ export const VersionPanel = memo(function VersionPanel({
                         type="button"
                         className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                         data-testid={`detach-version-${version.id}`}
+                        aria-label={t("deployments.detachFlow")}
                         onClick={(event) => {
                           event.stopPropagation();
                           onDetach(attachmentKey);

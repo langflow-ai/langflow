@@ -1,5 +1,6 @@
 import { readFileSync } from "fs";
 import { expect, test } from "../../fixtures";
+import { TIMEOUTS } from "../../utils/constants/timeouts";
 import { openFlowsList } from "../../utils/flow/open-flows-list";
 
 test.describe.configure({ mode: "serial" });
@@ -192,6 +193,10 @@ test(
 
     await openFlowsList(page);
 
-    expect(await page.getByText("Backup").count()).toBeGreaterThan(0);
+    // The backup flow row renders after the list refetch settles; a bare
+    // count() snapshot races it on slow runners.
+    await expect(page.getByText("Backup").first()).toBeVisible({
+      timeout: TIMEOUTS.medium,
+    });
   },
 );

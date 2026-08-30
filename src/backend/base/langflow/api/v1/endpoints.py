@@ -21,6 +21,7 @@ from lfx.custom.utils import (
     get_instance_name,
     update_component_build_config,
 )
+from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
 from lfx.log.logger import logger
@@ -35,7 +36,16 @@ from lfx.services.model_provider_policy import (
 )
 from lfx.services.settings.service import SettingsService
 from lfx.utils.component_aliases import ComponentIdentityIndex, build_component_identity_index
-from lfx.utils.flow_validation import CustomComponentValidationError
+from lfx.utils.flow_validation import (
+    CustomComponentValidationError,
+    admin_only_build_required,
+    prepare_flow_build_for_user,
+)
+from lfx.workflow.end_user_identity import (
+    EndUserIdentityRequiredError,
+    end_user_required_detail,
+    resolve_serving_scope,
+)
 
 from langflow.api.utils import (
     CurrentActiveUser,
@@ -367,6 +377,7 @@ async def simple_run_flow(
     context: dict | None = None,
     run_id: str | None = None,
     expose_error_details: bool = False,
+    http_request: Request | None = None,
 ):
     validate_input_and_tweaks(input_request)
     policy_context_token = set_current_model_provider_policy_context(
@@ -380,13 +391,28 @@ async def simple_run_flow(
         if flow.data is None:
             msg = f"Flow {flow_id_str} has no data"
             raise ValueError(msg)
+        # The stored graph is caller-controlled: a regular user can persist component source
+        # through the flow-write API and then execute it here. Apply the caller-aware
+        # component policy to a detached copy so ``custom_component_admin_only`` is enforced
+        # on stored bytes, not only on inline build payloads. Returns ``None`` when no
+        # caller-specific restriction applies, leaving the existing fast paths untouched.
+        sanitized_flow_data = await prepare_flow_build_for_user(
+            flow.data,
+            is_superuser=bool(getattr(api_key_user, "is_superuser", False)),
+        )
         # Opt-in warm fast-path: serve a deepcopy of the pre-built
         # template + apply this run's identity, skipping from_payload and the flow-row
         # rebuild. Returns None (-> cold rebuild below) for tweaks / context / auto-bind
         # flows / HITL / disabled registry / cache-miss. See ``try_warm_run_graph``.
-        graph = await try_warm_run_graph(flow, input_request, user_id=user_id, context=context, stream=stream)
+        # Skipped entirely once the policy sanitized the graph: the warm template is built
+        # from the unsanitized stored row and would reintroduce the untrusted source.
+        graph = (
+            None
+            if sanitized_flow_data is not None
+            else await try_warm_run_graph(flow, input_request, user_id=user_id, context=context, stream=stream)
+        )
         if graph is None:
-            graph_data = flow.data.copy()
+            graph_data = (sanitized_flow_data if sanitized_flow_data is not None else flow.data).copy()
             graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
             raise_if_hitl_unsupported(graph_data)
             # Mirror the Playground's one-time fix in-memory: bind empty fields whose
@@ -407,6 +433,37 @@ async def simple_run_flow(
         run_id_uuid = uuid4() if run_id is None else UUID(run_id)
         run_id = str(run_id_uuid)
         graph.set_run_id(run_id)
+
+        # Serving-plane end-user session scoping (shared with the v2 workflow router):
+        # merge an identified end-user into the effective session_id so per-user memory
+        # is isolated, and mark an anonymous run non-persisting. resolve_serving_scope
+        # returns None under the default settings (feature off), so v1 /run, webhook and
+        # every editor-plane caller are byte-for-byte unchanged. Callers that cannot
+        # supply the request (no header available) pass http_request=None and skip it.
+        effective_session_id = input_request.session_id
+        if http_request is not None:
+            try:
+                scoped = resolve_serving_scope(
+                    http_request=http_request,
+                    requested_session_id=input_request.session_id,
+                    # run_graph_internal falls back to the flow id when no session id is
+                    # supplied; mirror that here so an identified run with no session id
+                    # scopes to ``<end-user>::<flow_id>`` rather than a bare flow id.
+                    default_session_id=flow_id_str,
+                )
+            except EndUserIdentityRequiredError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=end_user_required_detail(exc),
+                ) from exc
+            if scoped is not None:
+                effective_session_id = scoped.session_id
+                graph.persist_messages = scoped.persist
+                # Carry the end-user identity onto the graph so services (chat memory,
+                # and later telemetry / agent file writes) scope per-user state to the
+                # end user. None for an anonymous run.
+                graph.end_user_id = scoped.end_user_id
+
         inputs = None
         if input_request.input_value is not None:
             inputs = [
@@ -443,6 +500,11 @@ async def simple_run_flow(
                 flow_id=flow.id,
                 user_id=user_id,
                 job_type=JobType.WORKFLOW,
+                # Record the serving end user (set on the graph by resolve_serving_scope) so
+                # status/stop isolate to it; user_id stays the executing SID. See F8. Defensive
+                # getattr: the warm-run path may hand back a lightweight graph stand-in without
+                # this attribute, matching every other end_user_id read in the codebase.
+                end_user_id=getattr(graph, "end_user_id", None),
             )
             # The funnel default. Binding is outermost-wins, so a caller that already named its
             # surface (webhook, mcp, openai_responses) keeps it and only the bare v1 route lands
@@ -453,7 +515,7 @@ async def simple_run_flow(
                     run_graph_internal,
                     graph=graph,
                     flow_id=flow_id_str,
-                    session_id=input_request.session_id,
+                    session_id=effective_session_id,
                     inputs=inputs,
                     outputs=outputs,
                     stream=stream,
@@ -518,6 +580,7 @@ async def simple_run_flow_task(
     run_id: str | None = None,
     emit_events: bool = False,
     flow_id: str | None = None,
+    http_request: Request | None = None,
 ):
     """Run a flow task as a BackgroundTask, therefore it should not throw exceptions.
 
@@ -532,6 +595,8 @@ async def simple_run_flow_task(
         run_id: Unique ID for this run
         emit_events: Whether to emit events to webhook_event_manager (for UI feedback)
         flow_id: Flow ID for event emission (required if emit_events=True)
+        http_request: The incoming HTTP request, forwarded so serving-plane end-user
+            session scoping can read the trusted identity header (None to skip).
     """
     should_emit = emit_events and flow_id
 
@@ -561,6 +626,7 @@ async def simple_run_flow_task(
                 event_manager=effective_event_manager,
                 run_id=run_id,
                 expose_error_details=api_key_user is not None and _caller_owns_flow(flow, api_key_user),
+                http_request=http_request,
             )
 
         if should_emit and flow_id is not None:
@@ -671,6 +737,7 @@ async def run_flow_generator(
     context: dict | None = None,
     *,
     expose_error_details: bool = False,
+    http_request: Request | None = None,
 ) -> None:
     """Executes a flow asynchronously and manages event streaming to the client.
 
@@ -685,6 +752,8 @@ async def run_flow_generator(
         client_consumed_queue (asyncio.Queue): Tracks client consumption of events
         context (dict | None): Optional context to pass to the flow
         expose_error_details: Whether client events may contain owner debugging details.
+        http_request: The incoming HTTP request, forwarded so serving-plane end-user
+            session scoping can read the trusted identity header (None to skip).
 
     Events Generated:
         - "add_message": Sent when new messages are added during flow execution
@@ -707,6 +776,7 @@ async def run_flow_generator(
             event_manager=event_manager,
             context=context,
             expose_error_details=expose_error_details,
+            http_request=http_request,
         )
         event_manager.on_end(data={"result": result.model_dump()})
         await client_consumed_queue.get()
@@ -854,6 +924,24 @@ async def _run_flow_internal(
 
     start_time = time.perf_counter()
 
+    # Required-identity gate must fire BEFORE the streaming branch: that branch returns a
+    # StreamingResponse with 200 headers before simple_run_flow runs, so its 401 would only ever
+    # arrive as an in-stream error event. Enforce it synchronously here (idempotent with the scope
+    # simple_run_flow applies again on the same http_request). The non-stream path also flows
+    # through this — harmless, it already surfaced the 401 by propagation. Mirrors the webhook
+    # pre-check (I3); kept outside any try so the 401 is not rewritten. See BUG-01.
+    try:
+        resolve_serving_scope(
+            http_request=http_request,
+            requested_session_id=input_request.session_id,
+            default_session_id=str(flow.id),
+        )
+    except EndUserIdentityRequiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=end_user_required_detail(exc),
+        ) from exc
+
     if stream:
         asyncio_queue: asyncio.Queue = asyncio.Queue()
         asyncio_queue_client_consumed: asyncio.Queue = asyncio.Queue()
@@ -867,6 +955,7 @@ async def _run_flow_internal(
                 client_consumed_queue=asyncio_queue_client_consumed,
                 context=context,
                 expose_error_details=expose_error_details,
+                http_request=http_request,
             )
         )
 
@@ -890,6 +979,7 @@ async def _run_flow_internal(
             context=context,
             run_id=run_id,
             expose_error_details=expose_error_details,
+            http_request=http_request,
         )
         end_time = time.perf_counter()
         background_tasks.add_task(
@@ -937,6 +1027,21 @@ async def _run_flow_internal(
         if expose_error_details:
             raise
         raise error_for_client(exc, expose_details=expose_error_details) from exc
+    except TweakRefusedError:
+        # A refused tweak is a caller error, not a server fault. The generic
+        # handler below turns it into a 500 and discards the structured body
+        # naming the refused keys, so let the app-level handler answer with 422.
+        #
+        # Deliberately not routed through error_for_client. That helper only
+        # preserves the status of an HTTPException, and this is not one, so
+        # redacting would degrade it to RuntimeError -> 500 and reinstate the
+        # exact bug this re-raise exists to fix, for delegated callers only.
+        # The cost is that the refusal reason tells a non-owner whether the
+        # flow declares an allowlist or the deployment refuses tweaks. Accepted:
+        # no data, no stack trace, and the refused names are the caller's own
+        # request keys. A caller who cannot tell a refused tweak from an applied
+        # one is the failure this whole path is here to prevent.
+        raise
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_run,
@@ -1237,6 +1342,19 @@ async def webhook_run_flow(
 
     raise_if_hitl_unsupported(flow.data or {})
 
+    # The run executes in a fire-and-forget background task that never raises, so the identity gate
+    # inside simple_run_flow can't surface its 401 from the webhook. Enforce it synchronously here so
+    # a required-but-absent end-user identity is rejected BEFORE the task is scheduled (idempotent
+    # with the scoping simple_run_flow does again on the same http_request). See I3. Kept outside the
+    # try below so the 401 is not rewritten to a 500 by its generic handler.
+    try:
+        resolve_serving_scope(http_request=request, requested_session_id=None, default_session_id=str(flow.id))
+    except EndUserIdentityRequiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=end_user_required_detail(exc),
+        ) from exc
+
     try:
         # get all webhook components in the flow
         webhook_components = get_all_webhook_components_in_flow(flow.data)
@@ -1270,6 +1388,7 @@ async def webhook_run_flow(
                 run_id=run_id,
                 emit_events=has_ui_listeners,
                 flow_id=flow_id_str,
+                http_request=request,
             )
         )
         # Fire-and-forget: log exceptions but don't block
@@ -1384,6 +1503,16 @@ async def experimental_run_flow(
                 flow.id,
             )
             graph = None
+        elif admin_only_build_required(is_superuser=bool(getattr(api_key_user, "is_superuser", False))):
+            # The cached graph was compiled under whatever component policy was in force when
+            # it was cached. Session cache keys carry no policy generation, so a graph cached
+            # while admin-only mode was off still embeds the caller's own component source and
+            # would execute it unchecked. Rebuild from stored data through the policy instead.
+            await logger.awarning(
+                "Ignoring advanced-run cached graph that predates the admin-only component policy for flow %s",
+                flow.id,
+            )
+            graph = None
 
     if graph is None:
         if flow.data is None:
@@ -1396,7 +1525,14 @@ async def experimental_run_flow(
                 detail=str(client_error),
             )
         try:
-            graph_data = deepcopy(flow.data)
+            # Same caller-aware component policy the other stored-graph run paths apply:
+            # the persisted graph is caller-controlled, so admin-only mode must resolve its
+            # component source against the server registry before anything is compiled.
+            sanitized_flow_data = await prepare_flow_build_for_user(
+                flow.data,
+                is_superuser=bool(getattr(api_key_user, "is_superuser", False)),
+            )
+            graph_data = deepcopy(sanitized_flow_data if sanitized_flow_data is not None else flow.data)
             graph_data = process_tweaks(graph_data, tweaks or {})
             raise_if_hitl_unsupported(graph_data)
             graph = Graph.from_payload(
@@ -1416,6 +1552,12 @@ async def experimental_run_flow(
                 # than chaining the exception to itself.
                 raise
             raise error_for_client(exc, expose_details=expose_error_details) from exc
+        except TweakRefusedError:
+            # Third run route that applies tweaks, and the generic handler below
+            # would turn a refused tweak into a redacted 500 with a stack trace
+            # in the logs. Let it through so the app-level handler answers 422
+            # naming the refused keys, as the setting documents for every mode.
+            raise
         except Exception as exc:
             await logger.aexception("Failed to build advanced-run graph for flow %s", flow.id)
             client_error = error_for_client(exc, expose_details=expose_error_details)
@@ -1755,6 +1897,47 @@ async def custom_component_update(
         raise SerializationError.from_exception(exc, data=component_node) from exc
 
 
+def _blocked_component_types(snapshot) -> list[str]:
+    """Return every component type the editor should treat as policy-blocked.
+
+    The editor compares a node's ``type`` against this set, and a saved node
+    carries whichever identity it was saved under -- ``Prompt`` rather than the
+    registry key ``Prompt Template``. Alias resolution only runs one way, so
+    reporting the administrator's key and its canonical candidates is not
+    enough: blocking the canonical key would leave every node saved under an
+    alias unmatched, and the palette exposes only the canonical key, so that is
+    the one an administrator can find.
+
+    ``_resolve_catalog_policy_matches`` decides the write by resolving the node
+    side too and intersecting, so the same rule is applied here in reverse:
+    every alias whose canonical candidates meet the blocked identities is
+    reported. That keeps this answer identical to the one that decides whether
+    the save succeeds, which is the whole point of sending it.
+    """
+    blocked_keys = getattr(snapshot, "blocked_component_keys", None)
+    if not blocked_keys:
+        return []
+
+    types = set(blocked_keys)
+    try:
+        from lfx.utils.flow_validation import get_component_identity_index_for_validation
+
+        identity_index = get_component_identity_index_for_validation()
+    except Exception:  # noqa: BLE001
+        identity_index = None
+    if identity_index is not None:
+        blocked_identities = frozenset(identity_index.resolve_many(blocked_keys))
+        types |= blocked_identities
+        types |= {
+            alias
+            for alias, candidates in identity_index.aliases.items()
+            # Any overlap blocks the node server side, including an alias that
+            # is ambiguous across components.
+            if not blocked_identities.isdisjoint(candidates)
+        }
+    return sorted(types)
+
+
 @router.get("/config")
 async def get_config(
     user: Annotated[User | None, Depends(get_optional_user)] = None,
@@ -1776,14 +1959,21 @@ async def get_config(
     """
     try:
         settings_service: SettingsService = get_settings_service()
+        blocked_component_types: list[str] = []
         try:
-            catalog_governance_enabled = get_catalog_policy_service().enabled
+            catalog_policy_service = get_catalog_policy_service()
+            catalog_governance_enabled = catalog_policy_service.enabled
+            # A custom policy service need not expose a snapshot. Reporting no
+            # identities then simply leaves the editor unable to name a cause,
+            # which is the safe direction.
+            blocked_component_types = _blocked_component_types(getattr(catalog_policy_service, "snapshot", None))
         except Exception as exc:  # noqa: BLE001
             # Catalog governance is explicitly fail-open. A broken custom
             # policy implementation must not break the public config endpoint
             # or expose its internal exception text.
             await logger.aexception("Catalog policy status unavailable; reporting governance disabled", exception=exc)
             catalog_governance_enabled = False
+            blocked_component_types = []
 
         if user is None:
             return PublicConfigResponse.from_settings(
@@ -1796,6 +1986,7 @@ async def get_config(
             settings_service.settings,
             settings_service.auth_settings,
             catalog_governance_enabled=catalog_governance_enabled,
+            blocked_component_types=blocked_component_types,
         )
 
     except Exception as exc:

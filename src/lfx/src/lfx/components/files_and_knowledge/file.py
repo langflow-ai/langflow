@@ -662,9 +662,12 @@ class FileComponent(BaseFileComponent):
                     Output(display_name="File Path", name="path", method="load_files_path", tool_mode=True),
                 )
         else:
-            # Multiple files => DataFrame output; advanced parser disabled
+            # Multiple files => DataFrame and Message outputs; advanced parser disabled
             frontend_node["outputs"].append(
                 Output(display_name="Files", name="dataframe", method="load_files", tool_mode=True)
+            )
+            frontend_node["outputs"].append(
+                Output(display_name="Raw Content", name="message", method="load_files_message", tool_mode=True)
             )
 
         return frontend_node
@@ -706,12 +709,21 @@ class FileComponent(BaseFileComponent):
             from pathlib import Path
 
             from lfx.schema.data import Data
+            from lfx.utils.file_path_security import (
+                StorageNamespaceError,
+                component_file_access_scopes,
+                enforce_local_file_access,
+            )
 
             # Use same resolution logic as BaseFileComponent (support storage paths)
             path_str = str(file_path_str)
             if parse_storage_path(path_str):
                 try:
                     resolved_path = Path(self.get_full_path(path_str))
+                except StorageNamespaceError:
+                    # A storage namespace outside this graph's scope is an access denial,
+                    # not a resolution failure: never retry it as a plain local path.
+                    raise
                 except (ValueError, AttributeError):
                     resolved_path = Path(self.resolve_path(path_str))
             else:
@@ -719,8 +731,6 @@ class FileComponent(BaseFileComponent):
 
             # Security: confine tool-mode reads to the storage dir in restricted (multi-tenant)
             # mode so a tenant cannot read arbitrary server files via file_path_str.
-            from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
-
             resolved_path = enforce_local_file_access(resolved_path, scope_ids=component_file_access_scopes(self))
 
             if not resolved_path.exists():
