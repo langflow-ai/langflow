@@ -11,7 +11,7 @@ from lfx.custom.eval import eval_custom_component_code
 from lfx.log.logger import logger
 from lfx.schema.artifact import get_artifact_type, post_process_raw
 from lfx.schema.data import Data
-from lfx.services.deps import get_settings_service, session_scope, session_scope_readonly
+from lfx.services.deps import get_settings_service, session_scope
 from lfx.services.session import NoopSession
 from lfx.utils.env_var_security import safe_getenv
 
@@ -314,27 +314,7 @@ async def update_params_with_load_from_db_fields(
     *,
     fallback_to_env_vars=False,
 ):
-    # Nothing to resolve means nothing to query. Opening the session first cost a
-    # pool checkout per vertex on every run, including the common case of a
-    # component with no load-from-db fields at all: with an empty field list both
-    # the loop below and load_from_env_vars are no-ops, so the session was
-    # acquired, held, and returned without ever executing a statement. Measured
-    # on a two-component flow this was the single zero-query checkout appearing
-    # in every request's connection census.
-    if not load_from_db_fields:
-        return params
-
-    # Every path below resolves values through ``get_variable``, which only ever
-    # issues a SELECT, so this scope is read-only and is now declared as such.
-    #
-    # This is NOT a speedup today and must not be reported as one: a session
-    # closing without commit still issues an implicit ROLLBACK, the same round
-    # trip COMMIT costs, so the two helpers are currently equivalent on the wire.
-    # It is here because this is one of the call sites the pending read-only
-    # engine migration targets (variable lookup, per credential input per
-    # component per run); declaring intent now is what lets that land as a
-    # net win rather than as +1 pool for nothing.
-    async with session_scope_readonly() as session:
+    async with session_scope() as session:
         settings_service = get_settings_service()
         is_noop_session = isinstance(session, NoopSession) or (
             settings_service and settings_service.settings.use_noop_database

@@ -54,6 +54,24 @@ class LeakProbe(Component):
 SECRET_RE = re.compile(r"(ALICE|BOB)-[0-9a-f]{12}")
 
 
+def _has_compile_cache() -> bool:
+    """Whether the artefact-caching compile path is present.
+
+    Two of these tests exercise the cache specifically. On a tree without it
+    (the pre-cache revision, or a bisect that reverts validate.py) they would
+    fail for the wrong reason -- absence of the feature, not a leak -- so they
+    skip instead. The leak tests proper do not depend on it.
+    """
+    from lfx.custom import validate
+
+    return hasattr(validate, "_compile_component_artifacts")
+
+
+requires_compile_cache = pytest.mark.skipif(
+    not _has_compile_cache(), reason="build does not include the artefact compile cache"
+)
+
+
 def _build_class(source: str):
     """Build a component class the way the runtime does."""
     from lfx.custom.eval import eval_custom_component_code
@@ -99,6 +117,7 @@ async def test_identical_source_yields_isolated_class_state():
     assert "ALICE-aaaaaaaaaaaa" not in cls_b._seen, "tenant A's data reached tenant B"
 
 
+@requires_compile_cache
 async def test_compile_artifacts_are_still_cached():
     """The isolation above must not come from disabling the cache entirely."""
     from lfx.custom import validate
@@ -108,6 +127,7 @@ async def test_compile_artifacts_are_still_cached():
     assert first is second, "compile artefacts are no longer cached -- perf regression"
 
 
+@requires_compile_cache
 async def test_probe_detects_a_real_leak():
     """NEGATIVE CONTROL. Reintroduce the reverted design; the probe must FAIL.
 

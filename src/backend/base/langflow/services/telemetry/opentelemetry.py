@@ -369,12 +369,7 @@ DB_POOL_GAUGES = (
 # instrumenting a replacement engine returns the *existing* instrument and silently discards the
 # new callbacks. A captured engine would leave the gauges reporting on an engine that is gone,
 # which reads as a permanently healthy pool. Re-instrumentation updates this instead.
-# Keyed by a caller-supplied name so re-instrumenting the SAME logical engine
-# replaces its entry rather than double-counting, while DIFFERENT engines
-# accumulate. A single cell (the previous design) meant the gauges described one
-# engine out of the six or seven a Langflow process actually runs, while reading
-# like a whole-process number.
-_instrumented_engines: dict[str, object] = {}
+_instrumented_engine = None
 
 
 def _pool_observer(method_name: str):
@@ -386,23 +381,17 @@ def _pool_observer(method_name: str):
     """
 
     def observe(_options):
-        total = 0
-        counted = False
-        for eng in list(_instrumented_engines.values()):
-            try:
-                # Clamp: SQLAlchemy's overflow() starts at -pool_size, so a healthy pool reports
-                # a negative 'overflow'. None of these counters are meaningful below zero.
-                total += max(getattr(eng.pool, method_name)(), 0)
-                counted = True
-            except Exception:  # noqa: BLE001, S112 - one broken pool must not hide the rest
-                continue
-        # Report nothing rather than a misleading 0 when no pool could be read at all.
-        return [Observation(total)] if counted else []
+        try:
+            # Clamp: SQLAlchemy's overflow() starts at -pool_size, so a healthy pool reports a
+            # negative 'overflow'. None of these counters are meaningful below zero.
+            return [Observation(max(getattr(_instrumented_engine.pool, method_name)(), 0))]
+        except Exception:  # noqa: BLE001 - a broken gauge must not stop the other metrics
+            return []
 
     return observe
 
 
-def instrument_db_pool(meter_provider, engine, *, engine_name: str = "main") -> None:
+def instrument_db_pool(meter_provider, engine) -> None:
     """Expose SQLAlchemy connection-pool saturation as observable gauges.
 
     No-op when nothing is exported, or when the engine's pool does not count connections
@@ -412,14 +401,16 @@ def instrument_db_pool(meter_provider, engine, *, engine_name: str = "main") -> 
     Carries no attributes: the numbers describe this process's pool, and identity on a metric
     label is what makes cardinality explode.
     """
+    global _instrumented_engine  # noqa: PLW0603
+
     pool = getattr(engine, "pool", None)
     if meter_provider is None or pool is None:
         return
 
-    # Register before (re-)creating the instruments. On a second call the gauges already exist
-    # and the new callbacks are dropped, so this registration is what actually takes effect —
-    # the observer reads the registry at collection time, not a captured engine.
-    _instrumented_engines[engine_name] = engine
+    # Point the gauges at this engine before (re-)registering. On a second call the instruments
+    # already exist and the new callbacks are dropped, so this assignment is what actually
+    # re-targets them.
+    _instrumented_engine = engine
 
     meter = meter_provider.get_meter(langflow_meter_name)
     for name, method_name, description in DB_POOL_GAUGES:

@@ -154,21 +154,14 @@ class GuardrailsComponent(Component):
         self._extracted_text = input_text
 
         enabled_names = getattr(self, "enabled_guardrails", [])
-        enabled_names = list(enabled_names) if isinstance(enabled_names, list) else []
-
-        # Per-run copy. The custom guardrail text below is this run's user input;
-        # writing it into the module-level ``guardrail_descriptions`` publishes it
-        # to every other run sharing this module namespace, and two concurrent runs
-        # can interleave between the write and the read below and pick up each
-        # other's text. Copying ``enabled_names`` above is the same fix one level
-        # up -- ``append`` was mutating the input's own list in place.
-        descriptions = dict(guardrail_descriptions)
+        if not isinstance(enabled_names, list):
+            enabled_names = []
 
         if getattr(self, "enable_custom_guardrail", False):
             custom_explanation = getattr(self, "custom_guardrail_explanation", "")
             if custom_explanation and str(custom_explanation).strip():
                 enabled_names.append("Custom Guardrail")
-                descriptions["Custom Guardrail"] = str(custom_explanation).strip()
+                guardrail_descriptions["Custom Guardrail"] = str(custom_explanation).strip()
 
         if not enabled_names:
             error_msg = "No guardrails enabled. Please select at least one guardrail to validate."
@@ -178,7 +171,9 @@ class GuardrailsComponent(Component):
 
         enabled_guardrails = [str(item) for item in enabled_names if item]
 
-        self._checks_to_run = [(name, descriptions[name]) for name in enabled_guardrails if name in descriptions]
+        self._checks_to_run = [
+            (name, guardrail_descriptions[name]) for name in enabled_guardrails if name in guardrail_descriptions
+        ]
 
     def _extract_text(self, value: Any) -> str:
         """Extract text from Message object, string, or other types."""

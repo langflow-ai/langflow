@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 
 import anyio
 import sqlalchemy as sa
+from alembic import command, util
 from alembic.config import Config
 from lfx.log.logger import logger
 from lfx.observability import instrument_database
@@ -20,13 +21,12 @@ from lfx.services.deps import session_scope
 from sqlalchemy import event, inspect
 from sqlalchemy.dialects import sqlite as dialect_sqlite
 from sqlalchemy.engine import Engine, make_url
-from sqlalchemy.exc import DisconnectionError, OperationalError
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 from tenacity import retry, stop_after_attempt, wait_fixed
 
-from alembic import command, util
 from langflow.helpers.windows_postgres_helper import configure_windows_postgres_event_loop
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.base import Service
@@ -401,84 +401,11 @@ class DatabaseService(Service):
                 logger.error(f"Invalid poolclass '{poolclass_key}' specified. Using default pool class.")
                 kwargs.pop("poolclass", None)
 
-        engine = create_async_engine(
+        return create_async_engine(
             self.database_url,
             connect_args=self._get_connect_args(),
             **kwargs,
         )
-        self._install_adaptive_pre_ping(engine, kwargs)
-        return engine
-
-    def _install_adaptive_pre_ping(self, engine: AsyncEngine, kwargs: dict) -> None:
-        """Ping only connections that have been idle long enough to plausibly be dead.
-
-        ``pool_pre_ping`` validates the connection on EVERY checkout, which costs a
-        full network round trip each time. That is cheap against a local socket and
-        expensive against a remote database: a single flow run takes ~12 checkouts,
-        so at 15ms RTT the pings alone cost roughly 200ms of the request. Measured
-        on a 4-worker rig at 15ms RTT, turning pre-ping off moved p50 from 682ms to
-        554ms and throughput from 34.9 to 45.3 req/s.
-
-        Turning it off outright is not acceptable -- it exists so a connection killed
-        server-side (restart, failover, proxy idle-timeout) is replaced transparently
-        instead of surfacing as an error. But a connection returned to the pool
-        milliseconds ago is not plausibly dead, and pinging it buys nothing.
-
-        So: skip the ping while a connection is fresh, and ping it once it has sat
-        idle beyond ``pool_pre_ping_idle_threshold_s``. Raising ``DisconnectionError``
-        from a checkout handler is SQLAlchemy's documented hook for this -- the pool
-        discards the connection and transparently retries with a new one.
-
-        The honest limit: this narrows, but does not close, the window. A connection
-        killed within the threshold is handed out unvalidated, and the failure then
-        surfaces from the query rather than being caught at checkout.
-
-        That window is smaller than it first appears, though. Raising
-        ``DisconnectionError`` from a checkout handler does NOT invalidate the pool:
-        ``DisconnectionError.invalidate_pool`` defaults to False, so only the offending
-        connection is discarded, and SQLAlchemy retries the checkout up to three times
-        before giving up. So even a mass kill is absorbed connection-by-connection
-        rather than failing every in-flight request at once.
-        """
-        threshold = getattr(self.settings_service.settings, "pool_pre_ping_idle_threshold_s", None)
-        # Only meaningful when the caller asked for pre-ping in the first place, and
-        # only when a threshold is configured. A threshold of 0 restores stock
-        # behaviour (ping every checkout).
-        if not kwargs.get("pool_pre_ping") or not threshold or threshold <= 0:
-            return
-
-        # Take over validation entirely: SQLAlchemy's own pre-ping would otherwise
-        # still run on every checkout and the saving would not materialise.
-        #
-        # This writes a private attribute on the live pool, which holds only because
-        # the main async engine is never disposed and recreated while in use -- every
-        # engine.dispose() in this module targets a throwaway sync engine or is final
-        # teardown. A future change that recycles self.engine must re-apply this, or
-        # pre-ping silently returns on every checkout and the saving disappears with
-        # no visible failure.
-        engine.pool._pre_ping = False  # noqa: SLF001
-
-        @event.listens_for(engine.sync_engine, "checkin")
-        def _record_checkin(dbapi_connection, connection_record):  # noqa: ARG001
-            connection_record.info["lf_last_checkin"] = time.monotonic()
-
-        @event.listens_for(engine.sync_engine, "checkout")
-        def _ping_if_stale(dbapi_connection, connection_record, connection_proxy):  # noqa: ARG001
-            last = connection_record.info.get("lf_last_checkin")
-            if last is not None and (time.monotonic() - last) < threshold:
-                return
-            try:
-                cursor = dbapi_connection.cursor()
-                try:
-                    cursor.execute("SELECT 1")
-                finally:
-                    cursor.close()
-            except Exception as exc:
-                # Tells the pool to discard this connection and retry with a fresh
-                # one; the caller never sees the failure.
-                raise DisconnectionError from exc
-
-        logger.debug(f"Adaptive pre-ping enabled: connections idle >{threshold}s are validated on checkout.")
 
     @retry(wait=wait_fixed(2), stop=stop_after_attempt(10))
     def _create_engine_with_retry(self) -> AsyncEngine:
@@ -918,78 +845,6 @@ class DatabaseService(Service):
         # acquired synchronously; run in a worker thread so a contended-lock
         # poll does not block the event loop.
         await asyncio.to_thread(self._create_db_and_tables_with_lock)
-
-    async def warn_if_connection_budget_exceeds_server_limit(self) -> None:
-        """Warn when this deployment can demand more connections than Postgres allows.
-
-        The pool ceiling is per WORKER PROCESS: every uvicorn worker builds its
-        own engine and therefore its own pool, so the deployment-wide ceiling is
-        ``workers * (pool_size + max_overflow)``. With the shipped defaults
-        (20 + 30) and 4 workers that is 200, while a stock Postgres allows 100 --
-        so a deployment can exhaust the server without any single setting looking
-        wrong. The resulting failure ("FATAL: sorry, too many clients already")
-        surfaces inside an unrelated request, far from its cause, which is why it
-        is worth stating plainly at startup rather than leaving operators to infer it.
-
-        Note this is the CEILING, not steady-state demand. It is still the number
-        that matters, because ``pool_size`` connections per worker are retained
-        once opened -- SQLAlchemy's QueuePool has no idle reaper.
-
-        Diagnostic only: failing to probe the server must not prevent startup, so
-        the probe error is logged and swallowed rather than raised.
-        """
-        settings = self.settings_service.settings
-        kwargs = self._build_connection_kwargs()
-        # Mirror SQLAlchemy's own defaults when the keys are absent.
-        pool_size = kwargs.get("pool_size", 5)
-        max_overflow = kwargs.get("max_overflow", 10)
-        workers = max(getattr(settings, "workers", 1) or 1, 1)
-        ceiling = workers * (pool_size + max_overflow)
-
-        # The telemetry writer builds its OWN engine with its own pool, so its
-        # connections are additional to the main pool's and must be counted here.
-        # Omitting them made this check under-report the real ceiling by
-        # workers * 2 whenever the writer was enabled -- which is the default --
-        # and a budget check that says "you fit" when you do not is worse than
-        # no check at all.
-        writer_per_worker = 0
-        if getattr(settings, "telemetry_writer_enabled", False):
-            # Mirrors _create_dedicated_engine: 1 connection on sqlite, 2 otherwise,
-            # with no overflow.
-            writer_per_worker = 1 if self.database_url.startswith("sqlite") else 2
-            ceiling += workers * writer_per_worker
-
-        try:
-            async with self.engine.connect() as conn:
-                max_conn = int((await conn.exec_driver_sql("SHOW max_connections")).scalar_one())
-                reserved = int((await conn.exec_driver_sql("SHOW superuser_reserved_connections")).scalar_one())
-        except Exception as exc:  # noqa: BLE001 - a diagnostic must never block startup
-            logger.debug(f"Could not read server connection limits for the pool budget check: {exc}")
-            return
-
-        available = max_conn - reserved
-        if ceiling > available:
-            logger.warning(
-                f"Database connection budget exceeds the server limit: this deployment can open up to "
-                f"{ceiling} connections ({workers} worker(s) x (pool_size={pool_size} + "
-                f"max_overflow={max_overflow}"
-                + (f" + {writer_per_worker} telemetry-writer" if writer_per_worker else "")
-                + f")), but the server allows {available} "
-                f"(max_connections={max_conn} minus superuser_reserved_connections={reserved}). "
-                f"Under load this fails with 'too many clients already'. Lower pool_size/max_overflow via "
-                f"LANGFLOW_DB_CONNECTION_SETTINGS, reduce LANGFLOW_WORKERS, or raise the server's "
-                f"max_connections. Note pool_size connections per worker are retained once opened. "
-                f"If a pooling proxy (PgBouncer, RDS Proxy) sits in front of this database, "
-                f"this comparison does not apply: the proxy multiplexes client connections onto "
-                f"fewer backend ones, so the limit that matters is the proxy's, not the server's."
-            )
-        else:
-            logger.debug(
-                f"Database connection budget OK: ceiling {ceiling} <= {available} available "
-                f"({workers} worker(s) x (pool_size={pool_size} + max_overflow={max_overflow}"
-                + (f" + {writer_per_worker} telemetry-writer" if writer_per_worker else "")
-                + "))."
-            )
 
     def _create_db_and_tables_with_lock(self) -> None:
         """Postgres path: hold the migration advisory lock for the DDL.

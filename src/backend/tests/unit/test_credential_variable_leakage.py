@@ -19,6 +19,7 @@ These tests exercise the full chain that the bug touches:
 from __future__ import annotations
 
 import uuid
+from contextlib import ExitStack
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -47,17 +48,28 @@ def _patch_resolution(get_variable_return):
     mock_session.__aenter__ = AsyncMock(return_value=mock_session)
     mock_session.__aexit__ = AsyncMock(return_value=None)
 
-    session_patcher = patch("lfx.interface.initialize.loading.session_scope_readonly")
+    # Patch BOTH session helpers. update_params_with_load_from_db_fields has
+    # used session_scope and, later, session_scope_readonly; patching only the
+    # name that happens to be current makes this suite silently stop
+    # intercepting the moment that call site changes -- which happened, and left
+    # three credential tests red while asserting nothing. Patching both keeps
+    # the mock effective either way.
+    session_patchers = [
+        patch(f"lfx.interface.initialize.loading.{name}", create=True)
+        for name in ("session_scope", "session_scope_readonly")
+    ]
     settings_patcher = patch("lfx.services.deps.get_settings_service")
     get_variable_mock = AsyncMock(return_value=get_variable_return)
-    return session_patcher, settings_patcher, mock_session, get_variable_mock
+    return session_patchers, settings_patcher, mock_session, get_variable_mock
 
 
 async def _resolve(component, params, load_from_db_fields, get_variable_return):
-    session_patcher, settings_patcher, mock_session, get_variable_mock = _patch_resolution(get_variable_return)
+    session_patchers, settings_patcher, mock_session, get_variable_mock = _patch_resolution(get_variable_return)
     component.get_variable = get_variable_mock
-    with session_patcher as mock_session_scope, settings_patcher as mock_get_settings:
-        mock_session_scope.return_value = mock_session
+    with ExitStack() as stack:
+        for sp in session_patchers:
+            stack.enter_context(sp).return_value = mock_session
+        mock_get_settings = stack.enter_context(settings_patcher)
         mock_settings_service = MagicMock()
         mock_settings_service.settings.use_noop_database = False
         mock_get_settings.return_value = mock_settings_service

@@ -39,12 +39,6 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
             msg = "Error creating DB and tables"
             await logger.aexception(msg)
             raise RuntimeError(msg) from exc
-    # Diagnostic, after the schema exists: report when this deployment's pool
-    # ceiling exceeds what the server will allow. Deliberately NOT inside
-    # create_db_and_tables -- that function's job is DDL, and coupling a
-    # diagnostic to it would make schema creation depend on state the check needs.
-    await database_service.warn_if_connection_budget_exceeds_server_limit()
-
     try:
         await database_service.check_schema_health()
     except Exception as exc:
