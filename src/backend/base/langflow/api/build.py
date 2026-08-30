@@ -12,7 +12,7 @@ from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
 from lfx.log.logger import logger
-from lfx.processing.process import process_tweaks_on_graph
+from lfx.processing.process import process_tweaks_on_graph, validate_targeted_inputs
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
 from lfx.utils.file_path_security import LocalFileAccessError
@@ -225,6 +225,11 @@ async def start_flow_build(
     Returns:
         the job_id.
     """
+    # Reject before allocating a queue or starting the background build. Once a
+    # job id has been returned, a policy refusal can only arrive as an event on
+    # an HTTP 200 rather than the documented structured 422.
+    validate_targeted_inputs([inputs] if inputs is not None else None)
+
     job_id = str(uuid.uuid4())
     try:
         _, event_manager = queue_service.create_queue(job_id)
@@ -594,11 +599,11 @@ async def _generate_flow_events(
             # A refused tweak is a caller error, not a build failure, so it must
             # not be flattened into the generic 500 below.
             #
-            # Where it surfaces depends on how this ran. Called inline, it
-            # reaches the app-level handler and answers 422. Streaming and
-            # background callers run this in their own task, so the refusal is
-            # reported as an error event on an already-committed HTTP 200
-            # instead. Enforcement holds either way: the tweak is never applied.
+            # ``start_flow_build`` eagerly refuses targeted inputs and does not
+            # accept tweaks. V2 streaming and background callers instead pass
+            # tweaks directly to ``generate_flow_events`` after their response or
+            # job is committed, so refusal is reported as an error event there.
+            # Enforcement still holds: the tweak is never applied.
             raise
         except Exception as exc:
             await log_telemetry(

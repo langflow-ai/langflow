@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
+from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
 from lfx.log.logger import logger
@@ -1163,6 +1164,9 @@ async def build_public_tmp(
         # started through this public build path, preventing unauthenticated
         # callers from reading or cancelling private-flow builds by job_id.
         await queue_service.register_public_job(job_id)
+    except TweakRefusedError:
+        # Let the app-level handler return the documented structured 422.
+        raise
     except CatalogPolicyIdentityUnavailableError as exc:
         await logger.awarning("Public flow component identities are temporarily unavailable")
         raise HTTPException(status_code=503, detail=PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE) from exc

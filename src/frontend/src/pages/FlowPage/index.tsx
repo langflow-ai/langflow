@@ -26,6 +26,7 @@ import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import { useTypesStore } from "@/stores/typesStore";
+import { uiLocale } from "@/utils/format-date";
 import { customStringify } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
 import useFlowStore from "../../stores/flowStore";
@@ -368,7 +369,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
               flowName={currentSavedFlow.name}
               lastSaved={
                 updatedAt
-                  ? new Date(updatedAt).toLocaleString("en-US", {
+                  ? new Date(updatedAt).toLocaleString(uiLocale(), {
                       hour: "numeric",
                       minute: "numeric",
                       second: "numeric",

@@ -1,8 +1,10 @@
 from collections.abc import Callable
-from typing import Any, get_type_hints
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, computed_field, create_model
 from pydantic.fields import FieldInfo
+
+from lfx.custom.annotation_validation import resolve_method_return_annotation
 
 
 def __validate_method(method: Callable) -> None:
@@ -79,7 +81,7 @@ def build_output_getter(method: Callable, *, validate: bool = True) -> Callable:
         output = methods_class.get_output_by_method(method)
         return output.value
 
-    return_type = get_type_hints(method).get("return", None)
+    return_type = resolve_method_return_annotation(method)
 
     if return_type is None:
         msg = f"Method {method.__name__} has no return type annotation."
