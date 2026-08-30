@@ -196,12 +196,19 @@ jobs:
           # the in-repo bundle so the guards pass here too.
           uv sync --dev --extra otel
           uv pip install "../bundles/lfx-bundles[all-no-torch]"
-          uv run python -c "import lfx_bundles; print('lfx_bundles', lfx_bundles.__file__)"
+          # --no-sync from here on: the install above is deliberately outside the lock, and
+          # a plain `uv run` re-syncs the environment to uv.lock. That reverts the lock-managed
+          # packages the bundle install upgraded while leaving the injected ones alone, which
+          # leaves an environment neither resolution ever produced. It bit us the day
+          # langchain-openai 1.5.2 shipped: the bundle install brought openai 1.5.2 with
+          # langchain-core 1.5.6, `uv run` put core back to the locked 1.5.1, and the pair
+          # failed to import. Both resolutions were fine; only the mix was not.
+          uv run --no-sync python -c "import lfx_bundles; print('lfx_bundles', lfx_bundles.__file__)"
           printf 'Running %d bundle-guarded lfx test file(s):\n' "${#guarded[@]}"
           printf '  %s\n' "${guarded[@]}"
           # No --timeout: pytest-timeout is not in lfx's dev group (pytest, pytest-asyncio,
           # pytest-cov only), and `make lfx_tests` does not pass one either.
-          uv run pytest "${guarded[@]}" -v -m "not api_key_required"
+          uv run --no-sync pytest "${guarded[@]}" -v -m "not api_key_required"
 
   integration-tests:
     name: Integration Tests - Python ${{ matrix.python-version }}

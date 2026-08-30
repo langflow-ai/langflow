@@ -38,6 +38,35 @@ Redis authentication and TLS are only supported through `LANGFLOW_REDIS_QUEUE_UR
 The individual host/port settings `LANGFLOW_REDIS_QUEUE_HOST` and `LANGFLOW_REDIS_QUEUE_PORT` create a plain, unauthenticated connection.
 If you use a managed Redis service with auth or TLS, you must use `LANGFLOW_REDIS_QUEUE_URL`.
 
+## Run multiple workers without Redis
+
+By default, Langflow refuses to start when `LANGFLOW_WORKERS` is greater than 1 and `LANGFLOW_JOB_QUEUE_TYPE` is still `asyncio`, because the in-memory job queue is per-process.
+
+If your deployment is headless — it only calls the Langflow API and never opens the visual editor — you can opt out of that check:
+
+```text
+LANGFLOW_WORKERS=3
+LANGFLOW_DANGEROUSLY_ALLOW_MULTI_WORKER_WITHOUT_SHARED_QUEUE=true
+```
+
+Langflow then starts and logs a warning listing everything that changes. The flag does not make multi-worker safe; it only stops Langflow from refusing to boot.
+
+:::warning
+This configuration is **not supported with the Langflow UI** and **not supported with MCP over SSE**.
+
+- The visual editor and the playground do not work. They use the v1 `/build` endpoints, whose queues live in one worker's memory, so the follow-up `GET /api/v1/build/<job_id>/events` request fails whenever the load balancer routes it to a different worker.
+- MCP over SSE does not work, because the SSE stream and the POST message endpoint that feeds it must run in the same process. Use the Streamable HTTP transport instead.
+
+The following behaviors silently degrade rather than fail:
+
+- Reattaching to a background run polls the durable event log every 0.5 seconds instead of receiving in-process events, so the first event after a reattach arrives more slowly.
+- Rate limits are counted per worker while `LANGFLOW_RATE_LIMIT_STORAGE_URI` is in-memory (`memory://`), so the effective limit is multiplied by the worker count. Point it at Redis for a shared counter.
+- The startup orphan sweep is guarded by a file lock, which is node-local. One worker per host or pod runs the reconcile, rather than one per deployment.
+- Webhook feedback in the UI is per worker, because the webhook event manager keeps its listener registry in memory. A webhook only surfaces live events when it happens to land on the worker holding the browser's connection.
+
+For a supported multi-worker deployment, set `LANGFLOW_JOB_QUEUE_TYPE=redis` instead.
+:::
+
 ## Example: multi-worker Docker Compose
 
 This example runs three Langflow workers sharing a Redis job queue and a PostgreSQL database.
@@ -261,6 +290,7 @@ See [Troubleshoot multi-worker deployments](./troubleshoot#multi-worker-deployme
 | Variable | Default | Description |
 |---|---|---|
 | `LANGFLOW_JOB_QUEUE_TYPE` | `asyncio` | Job queue backend. Set to `redis` to enable the cross-worker queue. |
+| `LANGFLOW_DANGEROUSLY_ALLOW_MULTI_WORKER_WITHOUT_SHARED_QUEUE` | `False` | Start with more than one worker while the job queue is still `asyncio`. **Unsupported with the Langflow UI and with MCP over SSE.** See [Run multiple workers without Redis](#run-multiple-workers-without-redis). |
 | `LANGFLOW_REDIS_QUEUE_URL` | Not set | Full Redis connection URL. Takes priority over `HOST`/`PORT`/`DB` when set. Use this for any Redis instance that requires authentication or TLS. |
 | `LANGFLOW_REDIS_QUEUE_HOST` | `LANGFLOW_REDIS_HOST` | Redis host for the job queue. Falls back to the general Redis host setting. Does not support auth or TLS (use `LANGFLOW_REDIS_QUEUE_URL` instead for secured instances). |
 | `LANGFLOW_REDIS_QUEUE_PORT` | `LANGFLOW_REDIS_PORT` | Redis port for the job queue. Falls back to the general Redis port setting. |

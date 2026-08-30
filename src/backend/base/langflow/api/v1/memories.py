@@ -133,7 +133,8 @@ async def create_memory_base(
     """Create a new Memory Base.
 
     - kb_name is auto-generated as `{sanitized_name}_{8hex}`.
-    - KB directory and embedding_metadata.json are created on disk immediately.
+    - The backing ``knowledge_base`` row is created immediately; a local directory
+      is provisioned only when the resolved backend is local Chroma.
     - Returns 409 if a Memory Base with the same name already exists for this user.
     - Returns 422 if preprocessing=true but preproc_model is missing.
     """

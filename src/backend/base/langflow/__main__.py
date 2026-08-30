@@ -235,6 +235,49 @@ def build_direct_uvicorn_kwargs(
     }
 
 
+MULTI_WORKER_BYPASS_ENV_VAR = "LANGFLOW_DANGEROUSLY_ALLOW_MULTI_WORKER_WITHOUT_SHARED_QUEUE"
+
+
+def multi_worker_bypass_warning(num_workers: int) -> str:
+    """Build the loud warning logged when the multi-worker guard is bypassed.
+
+    Kept next to :func:`ensure_multi_worker_safe` (rather than inlined) so the
+    same text can be reused by any other entrypoint that needs to re-state the
+    caveats, and so tests can assert the caveat list without provoking a boot.
+
+    The reattach poll interval is read from the live bus rather than restated so
+    the number in the warning cannot drift from the one actually used. The import
+    is local: this module is the CLI entrypoint and should not pull in background
+    execution machinery just to build a string.
+    """
+    from langflow.services.background_execution.live_bus import _DURABLE_POLL_INTERVAL_S
+
+    return (
+        f"{MULTI_WORKER_BYPASS_ENV_VAR}=true: starting with {num_workers} workers and the "
+        "default in-memory job queue. THIS CONFIGURATION IS UNSUPPORTED WITH THE LANGFLOW UI "
+        "AND WITH MCP OVER SSE. Every behavior that needs state shared across workers is "
+        "degraded:\n"
+        "  * The v1 /build editor and playground flows do not work. Build queues live in one "
+        "worker's memory and the follow-up GET /api/v1/build/<job_id>/events request is "
+        "round-robined to a different worker, which fails with 'Job queue not found for "
+        "job_id'.\n"
+        "  * MCP over SSE does not work: the SSE stream and the POST message endpoint that "
+        "feeds it must share a process. Use the Streamable HTTP transport instead.\n"
+        f"  * Reattaching to a background run falls back to polling the durable log every "
+        f"{_DURABLE_POLL_INTERVAL_S}s instead of receiving in-process events, so first-event "
+        "latency after a reattach is higher.\n"
+        "  * Rate limits are counted per worker while LANGFLOW_RATE_LIMIT_STORAGE_URI is "
+        "in-memory (memory://); the effective limit is multiplied by the worker count. Point "
+        "it at Redis for a shared counter.\n"
+        "  * The orphan-sweep file lock is node-local, so one worker per pod/replica runs the "
+        "startup reconcile rather than one per deployment.\n"
+        "  * Webhook UI feedback is per worker: the webhook event manager keeps its listener "
+        "registry in memory, so a webhook only surfaces live events when it happens to land on "
+        "the worker holding the browser's connection.\n"
+        "Set LANGFLOW_JOB_QUEUE_TYPE=redis to run multiple workers with full support."
+    )
+
+
 def ensure_multi_worker_safe(num_workers: int) -> None:
     """Refuse to start with multiple workers when the job queue is worker-local.
 
@@ -254,14 +297,27 @@ def ensure_multi_worker_safe(num_workers: int) -> None:
 
     Skipped entirely when ``LANGFLOW_JOB_QUEUE_TYPE=redis`` is configured —
     Redis-backed queues share state across workers and support every delivery
-    mode, so the race the check guards against cannot occur.
+    mode, so the race the check guards against cannot occur. Redis short-circuits
+    before the bypass is consulted: a properly configured deployment must never
+    see the bypass warning, even if the flag is left set in the environment.
+
+    ``LANGFLOW_DANGEROUSLY_ALLOW_MULTI_WORKER_WITHOUT_SHARED_QUEUE=true`` turns
+    the refusal into a loud warning for headless deployments that drive Langflow
+    through the API only and accept the degradations listed in
+    :func:`multi_worker_bypass_warning`. It is off by default and deliberately
+    named: it does not make multi-worker safe, it only stops the process from
+    refusing to boot.
 
     Only called on the Gunicorn (Linux) path — the direct-uvicorn path on
     Windows/macOS clamps workers to 1, so the race cannot occur there.
     """
     if num_workers <= 1:
         return
-    if get_settings_service().settings.job_queue_type == "redis":
+    settings = get_settings_service().settings
+    if settings.job_queue_type == "redis":
+        return
+    if settings.dangerously_allow_multi_worker_without_shared_queue:
+        logger.warning(multi_worker_bypass_warning(num_workers))
         return
     msg = (
         f"Refusing to start with {num_workers} workers and the default in-memory "
@@ -272,6 +328,9 @@ def ensure_multi_worker_safe(num_workers: int) -> None:
         "  * Configure a shared job queue: LANGFLOW_JOB_QUEUE_TYPE=redis. Works "
         "for every event_delivery mode.\n"
         "  * Run with --workers 1. Single worker, no cross-worker routing.\n"
+        f"  * If this deployment never uses the Langflow UI or MCP over SSE, set "
+        f"{MULTI_WORKER_BYPASS_ENV_VAR}=true to boot anyway and accept per-worker "
+        "behavior. Unsupported; read the startup warning it prints first.\n"
         "Note: event_delivery=direct works in multi-worker because the POST "
         "endpoint streams events back inline, but every client must opt into "
         "direct delivery; the server cannot enforce that at startup."
@@ -1033,6 +1092,39 @@ async def _migrate_mcp(*, dry_run: bool) -> None:
         f"MCP migration complete: {verb} {summary['imported']} server(s) across "
         f"{summary['users']} user(s) (skipped {summary['skipped']}, errors {summary['errors']})."
     )
+
+
+@app.command(name="reconcile-kb-from-disk")
+def reconcile_kb_from_disk(
+    log_level: str = typer.Option("info", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    username: str = typer.Option("", help="Only reconcile this user's knowledge bases."),
+    dry_run: bool = typer.Option(default=False, help="Report what would be adopted without writing."),  # noqa: FBT001
+) -> None:
+    """Adopt knowledge base directories on disk that have no database row.
+
+    The ``knowledge_base`` table is the sole authority for KB metadata, so this scan
+    no longer runs on every boot. Use it to recover KBs created by a Langflow version
+    that still wrote the on-disk ``embedding_metadata.json`` sidecar and that are not
+    showing up after an upgrade.
+
+    Idempotent, and it never deletes anything: directories that already have a row,
+    that carry the ``.kb_deleted`` marker, or whose metadata is unreadable are skipped.
+    """
+    configure(log_level=log_level)
+    asyncio.run(_reconcile_kb_from_disk(username=username or None, dry_run=dry_run))
+
+
+async def _reconcile_kb_from_disk(*, username: str | None, dry_run: bool) -> None:
+    from langflow.api.utils import knowledge_base_service
+
+    await initialize_services()
+    inserted = await knowledge_base_service.backfill_all_users_from_disk(
+        username=username,
+        dry_run=dry_run,
+    )
+    scope = f"user '{username}'" if username else "all users"
+    verb = "would adopt" if dry_run else "adopted"
+    typer.echo(f"Knowledge base reconciliation complete: {verb} {inserted} knowledge base(s) for {scope}.")
 
 
 # command to copy the langflow database from the cache to the current directory

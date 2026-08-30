@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import keyword
+import re
 from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
@@ -33,6 +35,25 @@ SORT_DISPATCHER = {
     "asc": asc,
     "desc": desc,
 }
+
+
+def _safe_function_argument_names(inputs: list[Vertex]) -> list[str]:
+    """Return unique Python identifiers for flow-tool input arguments."""
+    names: list[str] = []
+    used: set[str] = set()
+    for index, input_ in enumerate(inputs, start=1):
+        base = re.sub(r"\W", "_", input_.display_name.lower())
+        if not base or not base.isidentifier() or keyword.iskeyword(base) or base == "__debug__":
+            base = f"input_{index}"
+
+        name = base
+        suffix = 2
+        while name in used:
+            name = f"{base}_{suffix}"
+            suffix += 1
+        names.append(name)
+        used.add(name)
+    return names
 
 
 async def list_flows(*, user_id: str | None = None) -> list[Data]:
@@ -212,7 +233,12 @@ async def _build_graph_from_authorized_flow(
         msg = f"Flow {flow_id} not found"
         raise ValueError(msg)
     if tweaks:
-        graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
+        # Component-side, not caller-side. The only routes here are the generated
+        # flow-as-tool function below and ``CustomComponent.run_flow``, both of
+        # which build these tweaks from their own declared inputs. Judging them
+        # against the deployment policy would make ``off`` stop an agent from
+        # calling a flow as a tool. The protected-field floor still applies.
+        graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks, caller_supplied=False)
     return Graph.from_payload(graph_data, flow_id=flow_id, user_id=user_id)
 
 
@@ -363,25 +389,20 @@ def generate_function_for_flow(
         result = function(input1, input2)
     """
     # Prepare function arguments with type hints and default values
+    safe_arg_names = _safe_function_argument_names(inputs)
     args = [
-        (
-            f"{input_.display_name.lower().replace(' ', '_')}: {INPUT_TYPE_MAP[input_.base_name]['type_hint']} = "
-            f"{INPUT_TYPE_MAP[input_.base_name]['default']}"
-        )
-        for input_ in inputs
+        (f"{arg_name}: {INPUT_TYPE_MAP[input_.base_name]['type_hint']} = {INPUT_TYPE_MAP[input_.base_name]['default']}")
+        for input_, arg_name in zip(inputs, safe_arg_names, strict=True)
     ]
 
-    # Maintain original argument names for constructing the tweaks dictionary
-    original_arg_names = [input_.display_name for input_ in inputs]
+    # Use vertex IDs for tweaks so duplicate display names remain independently addressable.
+    input_ids = [str(input_.id) for input_ in inputs]
 
     # Prepare a Pythonic, valid function argument string
     func_args = ", ".join(args)
 
-    # Map original argument names to their corresponding Pythonic variable names in the function
-    arg_mappings = ", ".join(
-        f'"{original_name}": {name}'
-        for original_name, name in zip(original_arg_names, [arg.split(":")[0] for arg in args], strict=True)
-    )
+    # Map input vertex IDs to their corresponding Pythonic variable names in the function.
+    arg_mappings = ", ".join(f"{input_id!r}: {name}" for input_id, name in zip(input_ids, safe_arg_names, strict=True))
 
     func_body = f"""
 from typing import Optional
@@ -393,8 +414,8 @@ async def flow_function({func_args}):
     try:
         run_outputs = await run_flow(
             tweaks={{key: {{'input_value': value}} for key, value in tweaks.items()}},
-            flow_id="{flow_id}",
-            user_id="{user_id}"
+            flow_id={flow_id!r},
+            user_id={str(user_id)!r}
         )
         if not run_outputs:
                 return []
@@ -461,8 +482,8 @@ def build_schema_from_inputs(name: str, inputs: list[Vertex]) -> type[BaseModel]
 
     """
     fields = {}
-    for input_ in inputs:
-        field_name = input_.display_name.lower().replace(" ", "_")
+    safe_arg_names = _safe_function_argument_names(inputs)
+    for input_, field_name in zip(inputs, safe_arg_names, strict=True):
         description = input_.description
         fields[field_name] = (str, Field(default="", description=description))
     return create_model(name, **fields)
@@ -478,9 +499,10 @@ def get_arg_names(inputs: list[Vertex]) -> list[dict[str, str]]:
         List[dict[str, str]]: A list of dictionaries, where each dictionary contains the component name and its
             argument name.
     """
+    safe_arg_names = _safe_function_argument_names(inputs)
     return [
-        {"component_name": input_.display_name, "arg_name": input_.display_name.lower().replace(" ", "_")}
-        for input_ in inputs
+        {"component_name": str(input_.id), "arg_name": arg_name}
+        for input_, arg_name in zip(inputs, safe_arg_names, strict=True)
     ]
 
 

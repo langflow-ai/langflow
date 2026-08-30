@@ -6,9 +6,11 @@ This test suite validates the MCP component functionality using real MCP servers
 """
 
 import shutil
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from langflow.services.deps import get_settings_service
 from lfx.base.mcp.util import MCPSessionManager, MCPStdioClient, MCPStreamableHttpClient
 from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
 from lfx.inputs.inputs import BoolInput, MessageTextInput, NestedDictInput
@@ -706,6 +708,75 @@ class TestMCPComponentConfigPriority:
             mock_connect.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_value_config_respects_code_execution_lockdown(self, component, monkeypatch):
+        """An imported stdio config cannot bypass the non-admin process policy."""
+        component.mcp_server = {
+            "name": "embedded_stdio",
+            "config": {"command": "uvx", "args": ["mcp-server-fetch"]},
+        }
+        component._user_id = "test_user_123"
+        settings = get_settings_service().settings
+        monkeypatch.setattr(settings, "allow_custom_components", True)
+        monkeypatch.setattr(settings, "custom_component_admin_only", True)
+        monkeypatch.setattr(settings, "block_code_interpreter_components", False)
+
+        with (
+            patch("langflow.api.v2.mcp.get_server") as mock_get_server,
+            patch("langflow.services.database.models.user.crud.get_user_by_id") as mock_get_user,
+            patch("lfx.components.models_and_agents.mcp_component.session_scope"),
+            patch.object(component.stdio_client, "connect_to_server") as mock_connect,
+        ):
+            mock_get_user.return_value = SimpleNamespace(id="test_user_123", is_superuser=False)
+            mock_get_server.return_value = None
+
+            with pytest.raises(ValueError, match="restricted to administrators"):
+                await component.update_tool_list()
+
+            mock_connect.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_cached_stdio_config_rechecks_code_execution_lockdown(self, component, monkeypatch):
+        """A cached stdio tool list must not outlive a newly enabled lockdown."""
+        server_name = "embedded_stdio"
+        server_config = {"command": "uvx", "args": ["mcp-server-fetch"]}
+        cached_tool = SimpleNamespace(name="cached-tool")
+        component.mcp_server = {"name": server_name, "config": server_config}
+        component._user_id = "test_user_123"
+        component.use_cache = True
+
+        cache_key = component._mcp_servers_cache_key(server_name)
+        servers_cache = {
+            cache_key: {
+                "tools": [cached_tool],
+                "tool_cache": {"cached-tool": cached_tool},
+                "config": server_config,
+            }
+        }
+        monkeypatch.setattr(
+            "lfx.components.models_and_agents.mcp_component.safe_cache_get",
+            lambda _cache, key, default=None: servers_cache if key == "servers" else default,
+        )
+
+        settings = get_settings_service().settings
+        monkeypatch.setattr(settings, "allow_custom_components", True)
+        monkeypatch.setattr(settings, "custom_component_admin_only", True)
+        monkeypatch.setattr(settings, "block_code_interpreter_components", False)
+
+        with (
+            patch("langflow.api.v2.mcp.get_server") as mock_get_server,
+            patch("langflow.services.database.models.user.crud.get_user_by_id") as mock_get_user,
+            patch("lfx.components.models_and_agents.mcp_component.session_scope"),
+            patch.object(component.stdio_client, "connect_to_server") as mock_connect,
+        ):
+            mock_get_user.return_value = SimpleNamespace(id="test_user_123", is_superuser=False)
+
+            with pytest.raises(ValueError, match="restricted to administrators"):
+                await component.update_tool_list()
+
+            mock_get_server.assert_not_called()
+            mock_connect.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_unsafe_value_config_is_rejected_when_not_in_database(self, component):
         """An embedded fallback must be rejected before the stdio client is used."""
         component.mcp_server = {
@@ -946,6 +1017,86 @@ class TestMCPComponentConfigPriority:
             assert exc_info.value.__cause__.name == "lfx.services.deps"
 
             mock_update_tools.assert_not_called()
+
+
+class TestMCPComponentGlobalVariableResolution:
+    """Header global variables must resolve even when a request overrides some of them.
+
+    Regression coverage for #14602: loading global variables from the database was
+    skipped whenever the request carried any override, so a header bound to a
+    non-overridden variable was sent upstream with the literal variable name as its
+    value instead of the stored secret.
+    """
+
+    USER_ID = "11111111-1111-1111-1111-111111111111"
+    SERVER_CONFIG = {
+        "url": "https://echo.invalid/mcp",
+        "headers": {"X-Auth1": "AUTH-VAR1", "X-Auth2": "AUTH-VAR2"},
+    }
+    DB_VARIABLES = {"AUTH-VAR1": "var1-placeholder", "AUTH-VAR2": "my-api-key"}
+
+    async def _run(self, context_variables, server_config=None):
+        """Drive update_tool_list and return (request_variables passed on, variable_service)."""
+        component = MCPToolsComponent()
+        component.mcp_server = "test_server"
+        component._user_id = self.USER_ID
+        if context_variables is not None:
+            # ``graph`` is a read-only property backed by ``_vertex.graph``.
+            component._vertex = SimpleNamespace(graph=SimpleNamespace(context={"request_variables": context_variables}))
+
+        variable_service = MagicMock()
+        variable_service.get_all_decrypted_variables = AsyncMock(return_value=dict(self.DB_VARIABLES))
+
+        with (
+            patch(
+                "langflow.api.v2.mcp.get_server",
+                new=AsyncMock(return_value=dict(server_config if server_config is not None else self.SERVER_CONFIG)),
+            ),
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_id",
+                new=AsyncMock(return_value=MagicMock(id=self.USER_ID)),
+            ),
+            patch("lfx.components.models_and_agents.mcp_component.session_scope"),
+            patch("lfx.services.deps.get_variable_service", return_value=variable_service),
+            patch(
+                "lfx.components.models_and_agents.mcp_component.update_tools",
+                new=AsyncMock(return_value=("Streamable_HTTP", [], {})),
+            ) as mock_update_tools,
+        ):
+            await component.update_tool_list()
+
+        return mock_update_tools.call_args.kwargs["request_variables"], variable_service
+
+    @pytest.mark.asyncio
+    async def test_database_variables_loaded_without_request_override(self):
+        """Baseline: with no per-request override every global variable is loaded."""
+        resolved, _ = await self._run(None)
+
+        assert resolved == self.DB_VARIABLES
+
+    @pytest.mark.asyncio
+    async def test_request_override_merges_with_database_variables(self):
+        """A partial override must not suppress the database load for other variables."""
+        resolved, _ = await self._run({"AUTH-VAR1": "my-session-api-key"})
+
+        assert resolved == {"AUTH-VAR1": "my-session-api-key", "AUTH-VAR2": "my-api-key"}
+
+    @pytest.mark.asyncio
+    async def test_non_overridden_header_resolves_to_stored_value(self):
+        """The variable name must never reach the upstream server as a header value."""
+        from lfx.base.mcp.util import _process_headers
+
+        resolved, _ = await self._run({"AUTH-VAR1": "my-session-api-key"})
+        headers = _process_headers(dict(self.SERVER_CONFIG["headers"]), resolved)
+
+        assert headers == {"x-auth1": "my-session-api-key", "x-auth2": "my-api-key"}
+
+    @pytest.mark.asyncio
+    async def test_no_database_query_when_config_has_no_headers(self):
+        """The load stays skipped for header-less servers, preserving the fast path."""
+        _, variable_service = await self._run(None, server_config={"url": "https://echo.invalid/mcp"})
+
+        variable_service.get_all_decrypted_variables.assert_not_called()
 
 
 # ============================================================================

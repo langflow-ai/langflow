@@ -4,6 +4,10 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
+import {
+  blockedStopsExecution,
+  isBlockedByCatalogPolicy,
+} from "@/CustomNodes/helpers/check-code-validity";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
@@ -111,6 +115,9 @@ function GenericNode({
   const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
   const isReadOnly = useIsFlowReadOnly(currentFlowId);
 
+  const blockedComponentTypes = useUtilityStore(
+    (state) => state.blockedComponentTypes,
+  );
   const allowCustomComponents = useUtilityStore(
     (state) => state.allowCustomComponents,
   );
@@ -431,13 +438,31 @@ function GenericNode({
 
   const rightClickedNodeId = useFlowStore((state) => state.rightClickedNodeId);
 
+  // A node whose template has gone missing is always surfaced. Previously this
+  // only happened while custom components were disabled, so a component an
+  // administrator removed from the catalog left the node looking healthy until
+  // the flow was run.
+  // A user's own custom component has no template either, so the banner only
+  // treats a missing one as a problem where it actually stops the node.
+  const blockedByPolicy = isBlockedByCatalogPolicy(
+    blockedComponentTypes,
+    data.type,
+  );
+  const blockedIsFatal = blockedStopsExecution(
+    allowCustomComponents,
+    blockedComponentTypes,
+    data.type,
+  );
+
   const shouldShowUpdateComponent = useMemo(
     () =>
-      !allowCustomComponents
-        ? isBlocked || isOutdated || hasBreakingChange
-        : (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll,
+      (isBlocked && blockedIsFatal) ||
+      (!allowCustomComponents
+        ? isOutdated || hasBreakingChange
+        : (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll),
     [
       isBlocked,
+      blockedIsFatal,
       isOutdated,
       hasBreakingChange,
       isUserEdited,
@@ -594,7 +619,13 @@ function GenericNode({
         {shouldShowUpdateComponent ? (
           <NodeUpdateComponent
             hasBreakingChange={hasBreakingChange}
-            blocked={isBlocked}
+            blocked={isBlocked && blockedIsFatal}
+            blockedByCatalogPolicy={
+              // Restricted mode blocks every unknown code-bearing node on its
+              // own, so it stays the stated cause; the policy is only named
+              // when it is both in force and names this component.
+              isBlocked && allowCustomComponents && blockedByPolicy
+            }
             showNode={showNode}
             handleUpdateCode={() =>
               void handleUpdateCode().catch(() => undefined)
@@ -685,7 +716,7 @@ function GenericNode({
               data={data}
               frozen={data.node?.frozen}
               showNode={showNode}
-              display_name={data.node?.display_name!}
+              display_name={data.node?.display_name}
               nodeId={data.id}
               selected={selected}
               setBorderColor={setBorderColor}

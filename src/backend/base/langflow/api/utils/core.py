@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 API_WORDS = _flow_secrets.API_WORDS
 has_api_terms = _flow_secrets.has_api_terms
 remove_api_keys = _flow_secrets.remove_api_keys
+strip_flow_secrets = _flow_secrets.strip_flow_secrets
 strip_secret_field_values = _flow_secrets.strip_secret_field_values
 strip_secret_field_values_in_place = _flow_secrets.strip_secret_field_values_in_place
 

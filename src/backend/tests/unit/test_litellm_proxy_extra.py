@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 
 from packaging.requirements import Requirement
+from packaging.version import Version
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -20,6 +21,7 @@ else:
     import tomli as tomllib
 
 REQUIRED_PACKAGES = ("apscheduler", "cryptography")
+REPO_ROOT = Path(__file__).resolve().parents[4]
 
 
 def _load_base_pyproject() -> dict:
@@ -27,6 +29,26 @@ def _load_base_pyproject() -> dict:
     assert pyproject_path.is_file(), f"pyproject.toml not found at {pyproject_path}"
     with pyproject_path.open("rb") as f:
         return tomllib.load(f)
+
+
+def _load_workspace_pyproject() -> dict:
+    with (REPO_ROOT / "pyproject.toml").open("rb") as f:
+        return tomllib.load(f)
+
+
+def _active_litellm_override(python_version: str) -> Requirement:
+    overrides = _load_workspace_pyproject()["tool"]["uv"]["override-dependencies"]
+    requirements = [Requirement(spec) for spec in overrides if Requirement(spec).name == "litellm"]
+    active = [
+        requirement
+        for requirement in requirements
+        if requirement.marker is None
+        or requirement.marker.evaluate(
+            environment={"python_version": python_version, "python_full_version": f"{python_version}.0"}
+        )
+    ]
+    assert len(active) == 1
+    return active[0]
 
 
 def _package_name(spec: str) -> str:
@@ -67,3 +89,13 @@ def test_litellm_dependent_extras_are_available_on_python_314() -> None:
     toolguard = next(Requirement(spec) for spec in optional["toolguard"] if Requirement(spec).name == "lfx")
     assert "toolguard" in toolguard.extras
     assert toolguard.marker is None
+
+
+def test_litellm_override_preserves_opik_python310_compatibility() -> None:
+    python_310 = _active_litellm_override("3.10").specifier
+    assert Version("1.96.0") in python_310
+    assert Version("1.97.0") not in python_310
+
+    python_314 = _active_litellm_override("3.14").specifier
+    assert Version("1.98.0") in python_314
+    assert Version("2.0.0") not in python_314

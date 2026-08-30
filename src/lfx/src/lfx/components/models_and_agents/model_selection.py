@@ -78,7 +78,7 @@ def apply_model_overrides(
         except Exception as exc:  # noqa: BLE001
             # The runtime instantiation helpers still have provider-level
             # fallbacks. Keep model execution available if option refresh fails.
-            logger.debug("Could not refresh model options for model override: %s", exc)
+            logger.debug("Could not refresh model options for model override", exc_info=exc)
 
     provider_changed = bool(target_provider and target_provider != selected_provider)
     if provider_changed:

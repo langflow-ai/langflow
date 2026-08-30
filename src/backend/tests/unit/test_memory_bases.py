@@ -120,6 +120,13 @@ class TestInferEmbeddingProvider:
             # Other providers
             ("nomic-embed-text", "Ollama"),
             ("embed-english-v3.0", "Cohere"),
+            # Ollama models with :tag suffix (e.g. from /api/tags).
+            # The tag must be stripped before catalog + pattern matching
+            # so bge-m3:latest resolves to "Ollama", not "OpenAI".
+            ("bge-m3:latest", "Ollama"),
+            ("nomic-embed-text:latest", "Ollama"),
+            ("all-minilm:v2", "Ollama"),
+            ("snowflake-arctic-embed:latest", "Ollama"),
             # Unknown / empty fall back to the safe default.
             ("unknown-model", "OpenAI"),
             ("", "OpenAI"),
@@ -156,8 +163,8 @@ class TestKBIngestionHelperBuildEmbeddings:
     returned by ``get_embedding_model_options``: that catalog is empty
     whenever the per-user credential lookup fails (which can happen
     transparently when the helper runs in a thread bridged from an async
-    event loop). The KB's ``embedding_metadata.json`` is the source of
-    truth — we resolve the embedding class from the static registry.
+    event loop). The KB's ``knowledge_base`` row is the source of truth —
+    we resolve the embedding class from the static registry.
     """
 
     @pytest.mark.asyncio
@@ -998,7 +1005,7 @@ class TestMemoryBaseServiceMismatch:
                 AsyncMock(return_value="testuser"),
             ),
             patch("langflow.services.memory_base.ingestion.session_scope") as mock_scope,
-            patch("langflow.services.memory_base.ingestion.KBStorageHelper.get_root_path", return_value=tmp_path),
+            patch("langflow.services.memory_base.ingestion.resolve_local_store_path", return_value=tmp_path),
             patch(
                 "langflow.services.memory_base.ingestion.resolve_backend_selection",
                 AsyncMock(return_value=("chroma", {})),
@@ -1129,7 +1136,7 @@ class TestMemoryBaseServicePurgeSessionData:
                 side_effect=lambda: FakeCtx(),
             ),
             patch(
-                "langflow.services.memory_base.ingestion.KBStorageHelper.get_root_path",
+                "langflow.services.memory_base.ingestion.resolve_local_store_path",
                 return_value=kb_root,
             ),
             patch(
@@ -1197,7 +1204,7 @@ class TestMemoryBaseServicePurgeSessionData:
                 side_effect=lambda: FakeCtx(),
             ),
             patch(
-                "langflow.services.memory_base.ingestion.KBStorageHelper.get_root_path",
+                "langflow.services.memory_base.ingestion.resolve_local_store_path",
                 return_value=kb_root,
             ),
             patch(
@@ -1285,7 +1292,7 @@ class TestIngestMemoryTask:
                 AsyncMock(return_value=[]),
             ),
             patch(
-                "langflow.services.memory_base.task.KBStorageHelper.get_root_path",
+                "langflow.services.memory_base.task.resolve_local_store_path",
                 return_value=tmp_path / "kb",
             ),
         ):
@@ -1366,7 +1373,7 @@ class TestIngestMemoryTask:
                 side_effect=fake_advance_cursor,
             ),
             patch(
-                "langflow.services.memory_base.task.KBStorageHelper.get_root_path",
+                "langflow.services.memory_base.task.resolve_local_store_path",
                 return_value=tmp_path / "kb",
             ),
             pytest.raises(RuntimeError, match="Chroma exploded"),
@@ -1402,7 +1409,7 @@ class TestIngestMemoryTask:
 
         sync_called_with: dict = {}
 
-        async def fake_sync_kb_metadata(*, user_id, kb_name, backend):
+        async def fake_sync_kb_stats(*, user_id, kb_name, backend):
             sync_called_with["user_id"] = user_id
             sync_called_with["kb_name"] = kb_name
             sync_called_with["backend"] = backend
@@ -1442,11 +1449,11 @@ class TestIngestMemoryTask:
                 "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
                 AsyncMock(return_value=1),
             ),
-            patch("langflow.services.memory_base.task.sync_kb_stats_to_record", side_effect=fake_sync_kb_metadata),
+            patch("langflow.services.memory_base.task.sync_kb_stats_to_record", side_effect=fake_sync_kb_stats),
             patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
             patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
             patch(
-                "langflow.services.memory_base.task.KBStorageHelper.get_root_path",
+                "langflow.services.memory_base.task.resolve_local_store_path",
                 return_value=tmp_path / "kb",
             ),
         ):
@@ -1470,7 +1477,7 @@ class TestIngestMemoryTask:
 
     @pytest.mark.asyncio
     async def test_metadata_not_synced_when_cancelled(self, tmp_path):
-        """embedding_metadata.json must NOT be updated when ingestion is cancelled."""
+        """The ``knowledge_base`` row's stats must NOT be updated when ingestion is cancelled."""
         from langflow.services.memory_base.task import IngestionRequest, ingest_memory_task
 
         flow_id = uuid.uuid4()
@@ -1522,7 +1529,7 @@ class TestIngestMemoryTask:
             patch("langflow.services.memory_base.task.sync_kb_stats_to_record", side_effect=fake_sync),
             patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
             patch(
-                "langflow.services.memory_base.task.KBStorageHelper.get_root_path",
+                "langflow.services.memory_base.task.resolve_local_store_path",
                 return_value=tmp_path / "kb",
             ),
         ):
@@ -1542,7 +1549,7 @@ class TestIngestMemoryTask:
                 ),
             )
 
-        assert not sync_called, "sync_kb_metadata must not be called when ingestion is cancelled"
+        assert not sync_called, "KB stats must not be synced when ingestion is cancelled"
         assert "cancelled" in result["message"].lower()
 
     @pytest.mark.asyncio
@@ -1600,7 +1607,7 @@ class TestIngestMemoryTask:
             patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
             patch("langflow.services.memory_base.task._advance_cursor", AsyncMock(side_effect=fake_advance_cursor)),
             patch(
-                "langflow.services.memory_base.task.KBStorageHelper.get_root_path",
+                "langflow.services.memory_base.task.resolve_local_store_path",
                 return_value=tmp_path / "kb",
             ),
         ):
@@ -1623,46 +1630,6 @@ class TestIngestMemoryTask:
         assert result["ingested"] == 1
         assert advance_kwargs["new_cursor_id"] == msg.id
         assert advance_kwargs["ingested_count"] == 1
-
-    def test_sync_kb_metadata_stamps_is_memory_base(self, tmp_path):
-        """sync_kb_metadata must write is_memory_base: true to the metadata file."""
-        import json
-
-        from langflow.services.memory_base.document_builders import sync_kb_metadata as _sync_kb_metadata
-
-        kb_path = tmp_path / "test_kb"
-        kb_path.mkdir()
-
-        mock_chroma = MagicMock()
-
-        with (
-            patch(
-                "langflow.services.memory_base.document_builders.KBAnalysisHelper.get_metadata",
-                return_value={"chunks": 0, "embedding_provider": "OpenAI"},
-            ),
-            patch("langflow.services.memory_base.document_builders.KBAnalysisHelper.update_text_metrics"),
-            patch(
-                "langflow.services.memory_base.document_builders.KBStorageHelper.get_directory_size", return_value=1024
-            ),
-        ):
-            _sync_kb_metadata(kb_path=kb_path, chroma=mock_chroma)
-
-        written = json.loads((kb_path / "embedding_metadata.json").read_text())
-        assert written["is_memory_base"] is True
-        assert "memory" in written.get("source_types", [])
-
-    def test_sync_kb_metadata_failure_does_not_raise(self, tmp_path):
-        """Metadata sync errors must be swallowed so the cursor can still advance."""
-        from langflow.services.memory_base.document_builders import sync_kb_metadata as _sync_kb_metadata
-
-        kb_path = tmp_path / "no_such_dir"  # does not exist
-
-        with patch(
-            "langflow.services.memory_base.document_builders.KBAnalysisHelper.get_metadata",
-            side_effect=OSError("disk full"),
-        ):
-            # Must not raise
-            _sync_kb_metadata(kb_path=kb_path, chroma=MagicMock())
 
     def test_build_documents_skips_empty_messages(self):
         from langflow.services.memory_base.document_builders import (
@@ -3070,19 +3037,19 @@ class TestMemoryBaseDBDriven:
             "langflow.api.utils.knowledge_base_service.get_by_user_and_name",
             AsyncMock(return_value=record),
         ):
-            provider, model = await resolve_embedding_selection(user_id=uuid.uuid4(), kb_name="mb_kb", kb_path=None)
+            provider, model = await resolve_embedding_selection(user_id=uuid.uuid4(), kb_name="mb_kb")
         assert (provider, model) == ("OpenAI", "text-embedding-3-large")
 
     @pytest.mark.asyncio
     async def test_resolve_embedding_selection_defaults_without_row_or_sidecar(self):
-        """No row and no sidecar (kb_path=None) falls back to the safe default."""
+        """No knowledge_base row falls back to the safe default embedding."""
         from langflow.api.utils.kb_helpers import resolve_embedding_selection
 
         with patch(
             "langflow.api.utils.knowledge_base_service.get_by_user_and_name",
             AsyncMock(return_value=None),
         ):
-            provider, model = await resolve_embedding_selection(user_id=uuid.uuid4(), kb_name="mb_kb", kb_path=None)
+            provider, model = await resolve_embedding_selection(user_id=uuid.uuid4(), kb_name="mb_kb")
         assert provider == "OpenAI"
         assert model == "text-embedding-3-small"
 
@@ -3114,7 +3081,7 @@ class TestMemoryBaseDBDriven:
         delete_row.assert_awaited_once_with(user_id, mb.kb_name)
 
     @pytest.mark.asyncio
-    async def test_delete_drops_remote_collection_before_row(self, tmp_path):
+    async def test_delete_drops_remote_collection_before_row(self):
         """A remote-backed Memory Base drops its vector collection before the row.
 
         The knowledge_base row holds the backend config needed to reach the
@@ -3141,18 +3108,22 @@ class TestMemoryBaseDBDriven:
 
         delete_row = AsyncMock(side_effect=lambda *_a, **_k: order.append("delete_row"))
 
-        root = MagicMock(return_value=tmp_path)
         with (
             patch("langflow.services.memory_base.service.session_scope", self._fake_scope(mock_db)),
             patch("langflow.services.memory_base.service.resolve_kb_username", AsyncMock(return_value="testuser")),
             patch("langflow.services.memory_base.service.cancel_active_jobs", AsyncMock()),
             patch("langflow.services.memory_base.service.delete_kb", AsyncMock()),
-            patch("langflow.services.memory_base.kb_path_helpers.KBStorageHelper.get_root_path", root),
             patch(
                 "langflow.api.utils.kb_helpers.resolve_backend_selection",
                 AsyncMock(return_value=("opensearch", {"url_variable": "OPENSEARCH_URL"})),
             ),
-            patch("lfx.base.knowledge_bases.backends.create_backend", MagicMock(return_value=fake_backend)),
+            # Patch where it is used, not where it is defined: the remote-cleanup
+            # path no longer takes a local import, so the module-level binding in
+            # kb_path_helpers is the one that resolves.
+            patch(
+                "langflow.services.memory_base.kb_path_helpers.create_backend",
+                MagicMock(return_value=fake_backend),
+            ),
             patch("langflow.api.utils.knowledge_base_service.delete_by_user_and_name", delete_row),
         ):
             result = await service.delete(mb.id, user_id=user_id)

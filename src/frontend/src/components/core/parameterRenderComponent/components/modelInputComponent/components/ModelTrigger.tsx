@@ -33,6 +33,8 @@ interface ModelTriggerProps {
   showEmptyState?: boolean;
   "aria-label"?: string;
   ariaLabelledBy?: string;
+  ariaDescribedBy?: string;
+  ariaInvalid?: boolean;
 }
 
 const ModelTrigger = ({
@@ -48,6 +50,8 @@ const ModelTrigger = ({
   showEmptyState = false,
   "aria-label": ariaLabel,
   ariaLabelledBy,
+  ariaDescribedBy,
+  ariaInvalid,
 }: ModelTriggerProps) => {
   const { t } = useTranslation();
   const renderSelectedIcon = () => {
@@ -65,31 +69,60 @@ const ModelTrigger = ({
 
   // Check if we're in empty state mode (showEmptyState=true and no options)
   const isEmptyStateMode = showEmptyState && options.length === 0;
+  // The saved model is no longer offered to this user (restricted by an
+  // administrator or removed from the catalog). Keep naming it, but say so.
+  const isUnavailable = selectedModel?.metadata?.unavailable === true;
 
+  // A selected-but-unavailable model outranks the setup-provider call to
+  // action: replacing it with "Setup Provider" would hide both the saved
+  // selection and the reason it cannot be used (the footer still offers
+  // provider management).
   if (
+    !isUnavailable &&
     isSetupProviderState({
       hasEnabledProviders,
       showEmptyState,
       optionCount: options.length,
     })
   ) {
+    // Unlike the combobox below — whose visible text is its *value*, so the
+    // field label alone is the right accessible name — this branch is a plain
+    // button whose visible text is its label. WCAG 2.5.3 (Label in Name)
+    // requires that text to be part of the accessible name, so the field label
+    // is composed after it rather than replacing it: speech input matches what
+    // the user reads ("click Setup Provider"), and the field label still tells
+    // a screen reader user which field the CTA belongs to.
+    const setupProviderTextId = `${id}-setup-provider-label`;
+    const setupProviderText =
+      placeholder === "Setup Provider" ? t("model.setupProvider") : placeholder;
+
     return (
       <Button
         variant="outline"
         size="xs"
         className="dropdown-component-false-outline w-full justify-start gap-2 py-2 font-normal"
         onClick={onOpenManageProviders}
-        aria-label={!ariaLabelledBy ? ariaLabel : undefined}
-        aria-labelledby={ariaLabelledBy}
+        aria-label={
+          !ariaLabelledBy && ariaLabel
+            ? `${setupProviderText}, ${ariaLabel}`
+            : undefined
+        }
+        aria-labelledby={
+          ariaLabelledBy
+            ? `${setupProviderTextId} ${ariaLabelledBy}`
+            : undefined
+        }
+        aria-describedby={ariaDescribedBy}
       >
         <ForwardedIconComponent
           name="BrainCircuit"
           className="h-4 w-4 flex-shrink-0 text-muted-foreground"
         />
-        <div className="text-[13px] text-muted-foreground">
-          {placeholder === "Setup Provider"
-            ? t("model.setupProvider")
-            : placeholder}
+        <div
+          id={setupProviderTextId}
+          className="text-[13px] text-muted-foreground"
+        >
+          {setupProviderText}
         </div>
       </Button>
     );
@@ -108,6 +141,8 @@ const ModelTrigger = ({
           aria-expanded={open}
           aria-label={!ariaLabelledBy ? ariaLabel : undefined}
           aria-labelledby={ariaLabelledBy}
+          aria-describedby={ariaDescribedBy}
+          aria-invalid={ariaInvalid || undefined}
           data-testid={id}
           className={cn(
             "dropdown-component-false-outline py-2",
@@ -137,6 +172,20 @@ const ModelTrigger = ({
                 </div>
               )}
             </span>
+            {!disabled && isUnavailable ? (
+              <span
+                data-testid={`${id}-unavailable`}
+                title={t("model.unavailableTitle")}
+                aria-label={t("model.unavailableTitle")}
+                className="inline-flex shrink-0 items-center gap-1 text-[11px] text-accent-amber-foreground"
+              >
+                <ForwardedIconComponent
+                  name="TriangleAlert"
+                  className="h-3.5 w-3.5"
+                />
+                {t("model.unavailable")}
+              </span>
+            ) : null}
           </span>
           <ForwardedIconComponent
             name={disabled ? "Lock" : "ChevronsUpDown"}

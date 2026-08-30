@@ -135,7 +135,11 @@ export default function McpClientPage() {
         <div
           role="tablist"
           aria-label={t("settings.mcpClient.agentTablistLabel")}
-          className="flex flex-row justify-start border-b border-border"
+          // overflow-x-auto: tab labels are text-nowrap, so at a 320px
+          // viewport the last tab would clip off-screen with no way to reach
+          // it (WCAG 1.4.10); a scrollable strip keeps every tab reachable
+          // without wrapping the underline row.
+          className="flex flex-row justify-start overflow-x-auto border-b border-border"
         >
           {agents.map((agent, index) => {
             const isSelected = selectedAgent === agent.id;
@@ -154,7 +158,11 @@ export default function McpClientPage() {
                 // move within the tablist.
                 tabIndex={isSelected ? 0 : -1}
                 className={cn(
-                  "flex h-6 flex-row items-end gap-2 text-nowrap border-b-2 border-b-transparent px-3 py-2 text-[13px] font-medium",
+                  // No fixed height: the icon/text used to overflow the h-6
+                  // box invisibly, and the scrollable tablist would clip it.
+                  // Inset focus outline: the tab fills the scroll container's
+                  // padding box, so the global +2px outline would be clipped.
+                  "flex flex-row items-end gap-2 text-nowrap border-b-2 border-b-transparent px-3 py-2 text-[13px] font-medium focus-visible:-outline-offset-2",
                   isSelected
                     ? "border-b-2 border-black dark:border-b-white"
                     : "text-muted-foreground hover:text-foreground",

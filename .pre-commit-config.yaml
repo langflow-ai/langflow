@@ -72,6 +72,16 @@ repos:
         language: system
         files: ^(src/lfx/src/lfx/components/.*\.py|src/backend/base/langflow/components/.*\.py|src/bundles/.*\.py)$
         pass_filenames: false
+      - id: logged-exception-text
+        name: Log calls must not render the caught exception (leaks payloads, drops error.type)
+        entry: uv run python scripts/lint/check_logged_exception_text.py
+        language: system
+        # Scoped to the flow execution path, which is where a leaked exception message
+        # carries flow content. pass_filenames is false so the whole scope is re-checked on
+        # any touch rather than only the staged slice, which is what keeps it at zero
+        # without a baseline file.
+        files: ^(src/lfx/src/lfx/base/agents/.*\.py|src/lfx/src/lfx/graph/.*\.py|src/lfx/src/lfx/components/models_and_agents/.*\.py)$
+        pass_filenames: false
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
     hooks:

@@ -163,6 +163,7 @@ describe("useApplyTemplateToCurrentFlow", () => {
     // ...and the rename is persisted via saveFlow.
     expect(saveFlow).toHaveBeenCalledWith(
       expect.objectContaining({ id: "flow-1", name: "Simple Agent" }),
+      expect.anything(),
     );
   });
 
@@ -184,9 +185,10 @@ describe("useApplyTemplateToCurrentFlow", () => {
     );
   });
 
-  it("should_not_dedupe_against_a_same_named_flow_in_a_different_folder", () => {
-    // Dedupe must be folder-scoped, mirroring ``useAddFlow``. A "Simple Agent"
-    // sitting in another folder must not bump this folder's flow to "(1)".
+  it("should_dedupe_against_a_same_named_flow_in_a_different_folder", () => {
+    // Flow names are unique per USER in the database (``unique_flow_name`` on
+    // (user_id, name)), not per folder. A folder-scoped rename lets the clash
+    // through and the PATCH comes back 400 "Name must be unique" (LE-2232).
     setStores(fullExamples, [
       { id: "other", name: "Simple Agent", folder_id: "folder-B" },
     ]);
@@ -197,8 +199,96 @@ describe("useApplyTemplateToCurrentFlow", () => {
     });
 
     expect(setCurrentFlowInManager).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Simple Agent (1)" }),
+    );
+    expect(saveFlow).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Simple Agent (1)" }),
+      expect.anything(),
+    );
+  });
+
+  it("should_issue_the_save_before_the_optimistic_store_swap", () => {
+    // useSaveFlow skips the request when the payload already equals the
+    // manager store's flow, so swapping first turns the save into a no-op and
+    // leaves persistence to the debounced autosave — where nothing can react
+    // to a rejected rename.
+    let swapsWhenSaveWasCalled = -1;
+    saveFlow.mockImplementationOnce(() => {
+      swapsWhenSaveWasCalled = setCurrentFlowInManager.mock.calls.length;
+      return Promise.resolve(undefined);
+    });
+    const { result } = renderHook(() => useApplyTemplateToCurrentFlow());
+
+    act(() => {
+      result.current("simple_agent");
+    });
+
+    expect(swapsWhenSaveWasCalled).toBe(0);
+    expect(setCurrentFlowInManager).toHaveBeenCalledTimes(1);
+  });
+
+  it("should_not_dedupe_against_ownerless_example_flows", () => {
+    // Under AUTO_LOGIN the flows list also carries the ownerless starter
+    // examples. They hold no user_id, so they never collide — suffixing
+    // because of them would rename a flow whose name is actually free.
+    setStores(fullExamples, [
+      { id: "ex-1", name: "Simple Agent", folder_id: "starter-folder" },
+    ]);
+    const { result } = renderHook(() => useApplyTemplateToCurrentFlow());
+
+    act(() => {
+      result.current("simple_agent");
+    });
+
+    expect(setCurrentFlowInManager).toHaveBeenCalledWith(
       expect.objectContaining({ name: "Simple Agent" }),
     );
+  });
+
+  it("should_retry_with_the_next_version_when_the_save_hits_a_name_conflict", async () => {
+    // Safety net for what no client-side list can see: another tab/session
+    // taking the name between the read and the PATCH. Retry with the next
+    // free version instead of dropping the template on the floor.
+    saveFlow.mockRejectedValueOnce({
+      response: { status: 400, data: { detail: "Name must be unique" } },
+    });
+    const { result } = renderHook(() => useApplyTemplateToCurrentFlow());
+
+    await act(async () => {
+      result.current("simple_agent");
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(saveFlow).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ name: "Simple Agent" }),
+      expect.anything(),
+    );
+    expect(saveFlow).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ name: "Simple Agent (1)" }),
+      expect.anything(),
+    );
+    expect(setCurrentFlowInManager).toHaveBeenLastCalledWith(
+      expect.objectContaining({ name: "Simple Agent (1)" }),
+    );
+  });
+
+  it("should_stop_retrying_and_roll_back_when_every_version_conflicts", async () => {
+    saveFlow.mockRejectedValue({
+      response: { status: 400, data: { detail: "Name must be unique" } },
+    });
+    const original = currentFlow;
+    const { result } = renderHook(() => useApplyTemplateToCurrentFlow());
+
+    await act(async () => {
+      result.current("simple_agent");
+      for (let i = 0; i < 20; i++) await Promise.resolve();
+    });
+
+    expect(saveFlow.mock.calls.length).toBeLessThanOrEqual(5);
+    expect(setCurrentFlowInManager).toHaveBeenLastCalledWith(original);
   });
 
   it("should_revert_the_optimistic_rename_when_the_persist_fails", async () => {
