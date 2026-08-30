@@ -376,6 +376,7 @@ def build_stream_response(
         StreamAdapterContext(
             run_id=str(uuid4()),
             thread_id=parsed.session_id or str(flow.id),
+            expose_graph_state=parsed.expose_graph_state,
         ),
     )
     return _execute_streaming_workflow(

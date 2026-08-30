@@ -1132,6 +1132,62 @@ class TestAGUIStreaming:
                 if flow:
                     await session.delete(flow)
 
+    async def test_stream_with_expose_graph_state_false_hides_the_flow_topology(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        json_memory_chatbot_no_llm,
+    ):
+        """``expose_graph_state: false`` strips every component id and output from the stream.
+
+        End-to-end counterpart to ``test_stream_real_flow_runs_without_error``:
+        the same real flow, streamed with the opt-out, must still deliver the
+        conversation while none of the graph's component ids reach the wire.
+        """
+        raw = json.loads(json_memory_chatbot_no_llm)
+        flow_data = raw.get("data", raw)
+        flow_id = uuid4()
+        node_ids = [node["id"] for node in flow_data["nodes"]]
+        assert node_ids, "fixture flow must have nodes for this assertion to mean anything"
+        async with session_scope() as session:
+            flow = Flow(
+                id=flow_id,
+                name="AG-UI Private Graph Flow",
+                data=flow_data,
+                user_id=created_api_key.user_id,
+            )
+            session.add(flow)
+            await session.flush()
+
+        try:
+            body_json = _agui_body(flow_id, message="hello from agui", mode="stream")
+            body_json["expose_graph_state"] = False
+            response = await client.post(
+                "api/v2/workflows",
+                json=body_json,
+                headers={"x-api-key": created_api_key.api_key},
+            )
+
+            assert response.status_code == 200
+            body = response.text
+            # The conversation is unaffected.
+            assert "RUN_STARTED" in body
+            assert "RUN_FINISHED" in body
+            assert "RUN_ERROR" not in body
+            assert "TEXT_MESSAGE_START" in body
+            assert "TEXT_MESSAGE_CONTENT" in body
+            # Every graph-describing event type is gone.
+            for event_type in ("STEP_STARTED", "STEP_FINISHED", "STATE_SNAPSHOT", "STATE_DELTA"):
+                assert event_type not in body
+            # And no component id survives anywhere in the payloads.
+            for node_id in node_ids:
+                assert node_id not in body
+        finally:
+            async with session_scope() as session:
+                flow = await session.get(Flow, flow_id)
+                if flow:
+                    await session.delete(flow)
+
     async def test_stream_applies_request_tweaks(
         self,
         client: AsyncClient,

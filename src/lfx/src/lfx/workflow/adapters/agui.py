@@ -63,6 +63,7 @@ class AGUIAdapter:
         self._translator = AGUITranslator(
             run_id=context.run_id,
             thread_id=context.thread_id,
+            expose_graph_state=context.expose_graph_state,
         )
 
     def initial_events(self) -> Iterable[StreamEvent]:

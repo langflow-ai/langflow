@@ -203,3 +203,39 @@ def test_unknown_event_types_yield_no_events(unknown_event_type):
     adapter = get_stream_adapter("agui", _ctx())
     events = list(adapter.translate(unknown_event_type, {}))
     assert events == []
+
+
+class TestExposeGraphState:
+    """``expose_graph_state=False`` keeps the flow's topology off the wire."""
+
+    @staticmethod
+    def _closed_ctx() -> StreamAdapterContext:
+        return StreamAdapterContext(run_id="run-8", thread_id="thread-8", expose_graph_state=False)
+
+    def test_context_defaults_to_exposing_graph_state(self):
+        # The Langflow canvas relies on the default; a silent flip would blank
+        # out node highlighting for every existing caller.
+        assert StreamAdapterContext(run_id="r", thread_id="t").expose_graph_state is True
+
+    def test_initial_events_omit_the_state_snapshot(self):
+        adapter = get_stream_adapter("agui", self._closed_ctx())
+        assert [e.type for e in adapter.initial_events()] == ["RUN_STARTED"]
+
+    @pytest.mark.parametrize(
+        ("event_type", "data"),
+        [
+            ("vertices_sorted", {"to_run": ["ChatInput-a", "Agent-b"]}),
+            ("build_start", {"id": "Agent-b"}),
+            ("end_vertex", {"build_data": {"id": "Agent-b", "valid": True, "data": {"outputs": {}}}}),
+        ],
+    )
+    def test_graph_events_translate_to_nothing(self, event_type, data):
+        adapter = get_stream_adapter("agui", self._closed_ctx())
+        list(adapter.initial_events())
+        assert list(adapter.translate(event_type, data)) == []
+
+    def test_messages_and_tool_calls_still_stream(self):
+        adapter = get_stream_adapter("agui", self._closed_ctx())
+        list(adapter.initial_events())
+        events = list(adapter.translate("token", {"id": "m1", "chunk": "hello"}))
+        assert [e.type for e in events] == ["TEXT_MESSAGE_START", "TEXT_MESSAGE_CONTENT"]

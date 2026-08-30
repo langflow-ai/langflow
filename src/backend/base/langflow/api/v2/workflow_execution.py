@@ -339,7 +339,12 @@ async def _stream_event_frames(
     # The AG-UI playground's chat-view consumes the v1 message payload via a
     # side-channel ``CustomEvent``; emitted only when the wire protocol is
     # AG-UI. A follow-up retires this once chat-view consumes AG-UI primitives.
-    emit_side_channel = adapter.name == "agui"
+    # It carries raw ``EventManager`` payloads, whose ``properties.source``
+    # names the component that produced each message, so a caller who opted out
+    # of graph state must not receive it either — the opt-out would otherwise
+    # strip the STEP_*/STATE_* events while this channel leaked the same
+    # component identities. Only the canvas (which keeps the default) needs it.
+    emit_side_channel = adapter.name == "agui" and parsed.expose_graph_state
     side_channel_events = frozenset({"add_message", "token", "remove_message", "error", "end"})
     terminal_error_type = getattr(adapter, "terminal_error_type", None)
     terminal_error_seen = False

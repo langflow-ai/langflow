@@ -45,6 +45,15 @@ class StreamAdapterContext(BaseModel):
 
     run_id: str
     thread_id: str
+    expose_graph_state: bool = True
+    """Whether the protocol may describe the flow's internal graph on the wire.
+
+    ``False`` suppresses every event that names a component or carries a
+    vertex's output (AG-UI: ``STEP_STARTED`` / ``STEP_FINISHED`` /
+    ``STATE_SNAPSHOT`` / ``STATE_DELTA``). Callers embedding a flow in their own
+    product hand this stream to end users, so the topology must be opt-out.
+    Adapters whose protocol never exposes graph internals ignore the field.
+    """
 
 
 @runtime_checkable
