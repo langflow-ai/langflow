@@ -206,6 +206,30 @@ async def test_public_endpoint_rejects_tweaks_field(client: AsyncClient, public_
 
 @pytest.mark.benchmark
 @pytest.mark.security
+async def test_public_endpoint_accepts_expose_graph_state_false(client: AsyncClient, public_flow_id):
+    """``expose_graph_state`` is accepted by the public wire schema.
+
+    A public flow's AG-UI stream otherwise names every component and carries
+    each one's output, so an anonymous visitor can read the flow's topology.
+    The field must survive the ``extra="forbid"`` schema (a 422 would mean the
+    opt-out never reaches the translator).
+    """
+    _send_unauthenticated(client, "expose-graph-state-client")
+    response = await client.post(
+        "api/v2/workflows/public",
+        json={
+            "flow_id": str(public_flow_id),
+            "input_value": "Hi",
+            "stream_protocol": "agui",
+            "expose_graph_state": False,
+        },
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code != codes.UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
 async def test_public_endpoint_rejects_oversized_input_value(client: AsyncClient, public_flow_id):
     """An anonymous caller cannot post an arbitrarily large ``input_value``; the wire schema bounds it at 64 KB."""
     _send_unauthenticated(client, "oversized-input-client")
