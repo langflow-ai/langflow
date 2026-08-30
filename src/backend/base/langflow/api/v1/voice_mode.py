@@ -1204,8 +1204,7 @@ async def flow_as_tool_websocket(
 
                         do_forward = True
                         do_forward = do_forward and not (
-                            event_type == "response.done"
-                            and (voice_config.use_elevenlabs or voice_config.use_gandr)
+                            event_type == "response.done" and (voice_config.use_elevenlabs or voice_config.use_gandr)
                         )
                         do_forward = do_forward and event_type.find("flow.") != 0
 
@@ -1544,9 +1543,7 @@ async def flow_tts_websocket(
                                                 input=gandr_chunk,
                                                 response_format="pcm",
                                             )
-                                            base64_audio = base64.b64encode(
-                                                speech_response.content
-                                            ).decode("utf-8")
+                                            base64_audio = base64.b64encode(speech_response.content).decode("utf-8")
                                             audio_event = {"type": "response.audio.delta", "delta": base64_audio}
                                             client_send(audio_event)
                                     else:
