@@ -139,6 +139,19 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       get().reactFlowInstance?.fitView({ nodes: [{ id: nodeId }] });
     }
   },
+  fitViewRequest: { id: 0 },
+  // Fitting immediately would measure an incomplete graph, so this only records
+  // the intent — the canvas performs the fit once every node has dimensions and
+  // then runs `onFitted`. See `useFitViewWhenMeasured`.
+  requestFitView: (onFitted) => {
+    const superseded = get().fitViewRequest.onFitted;
+    set((state) => ({
+      fitViewRequest: { id: state.fitViewRequest.id + 1, onFitted },
+    }));
+    // A request replaced before it ran must not strand its caller: the welcome
+    // overlay waits on this callback before it uncovers the canvas.
+    superseded?.();
+  },
   autoSaveFlow: undefined,
   componentsToUpdate: [],
   setComponentsToUpdate: (change) => {

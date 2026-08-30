@@ -283,6 +283,10 @@ test(
       .first()
       .click();
 
+    await expect(page.locator(".react-flow__edge")).toHaveCount(1, {
+      timeout: 10000,
+    });
+
     await page
       .getByRole("button", { name: TEXTS.playground, exact: true })
       .click();
