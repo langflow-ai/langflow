@@ -1,0 +1,31 @@
+# Self-contained database + latency-injection stack for the reproducible A/B.
+#
+# Ports are deliberately non-default so this cannot collide with, or be confused
+# for, a developer's own Postgres: the whole point is that a run is reproducible,
+# and silently talking to the wrong database is the failure mode that costs a day.
+name: langflow-repro-bench
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: langflow
+      POSTGRES_PASSWORD: langflow
+      POSTGRES_DB: langflow
+    command: ["postgres", "-c", "max_connections=200"]
+    ports:
+      - "55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langflow -d langflow"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.9.0
+    ports:
+      - "58474:8474"   # control API
+      - "55433:5433"   # proxied postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
