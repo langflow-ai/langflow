@@ -69,9 +69,18 @@ class AGUITranslator:
     :meth:`translate` for each ``EventManager`` event.
     """
 
-    def __init__(self, run_id: str, thread_id: str) -> None:
+    def __init__(self, run_id: str, thread_id: str, *, expose_graph_state: bool = True) -> None:
         self.run_id = run_id
         self.thread_id = thread_id
+        # When False, every event that would describe the flow's internal graph is
+        # withheld: the node-graph STATE_SNAPSHOT, the per-node STEP_STARTED /
+        # STEP_FINISHED (whose ``step_name`` is the component id), and the
+        # STATE_DELTA carrying each vertex's status and full output payload. A
+        # caller embedding a flow in their own product exposes that stream to end
+        # users, so the flow's topology and intermediate outputs must be opt-out.
+        # The Langflow canvas keeps the default (True) because it renders node
+        # status from these deltas.
+        self.expose_graph_state = expose_graph_state
         # Id of the text message currently open on the wire, or ``None``.
         self._open_message_id: str | None = None
         # Message ids whose TEXT_MESSAGE_END has been emitted; the protocol
@@ -105,12 +114,14 @@ class AGUITranslator:
 
         Emits ``RUN_STARTED`` and an empty node-graph ``STATE_SNAPSHOT``. The
         snapshot establishes ``/nodes`` so every later node ``STATE_DELTA`` has a
-        parent to patch, regardless of which execution path drives the run.
+        parent to patch, regardless of which execution path drives the run. With
+        ``expose_graph_state`` off no node deltas are ever emitted, so the
+        snapshot has nothing to parent and is skipped too.
         """
-        return [
-            RunStartedEvent(run_id=self.run_id, thread_id=self.thread_id),
-            StateSnapshotEvent(snapshot={"nodes": {}}),
-        ]
+        events: list[BaseEvent] = [RunStartedEvent(run_id=self.run_id, thread_id=self.thread_id)]
+        if self.expose_graph_state:
+            events.append(StateSnapshotEvent(snapshot={"nodes": {}}))
+        return events
 
     def translate(self, event_type: str, data: dict) -> list[BaseEvent]:
         """Map one ``EventManager`` event to zero or more AG-UI events."""
@@ -211,7 +222,12 @@ class AGUITranslator:
         Seeds every node that will run with ``pending`` status so the canvas can
         render the graph before execution begins. ``to_run`` is the full run set;
         ``ids`` (the first layer only) is the fallback.
+
+        This snapshot names every component in the flow, so it is withheld
+        entirely when ``expose_graph_state`` is off.
         """
+        if not self.expose_graph_state:
+            return []
         node_ids = data.get("to_run") or data.get("ids") or []
         snapshot = {"nodes": {node_id: {"status": "pending", "output": None} for node_id in node_ids}}
         return [StateSnapshotEvent(snapshot=snapshot)]
@@ -221,19 +237,30 @@ class AGUITranslator:
 
         The graph-level ``build_start`` (the ``/build`` path) carries no ``id`` and
         is a no-op here: ``RUN_STARTED`` already signals the run beginning.
+
+        ``step_name`` is the component id, so nothing is emitted when
+        ``expose_graph_state`` is off; the dedupe bookkeeping still runs, but it
+        is inert because no node event ever reaches the wire in that mode.
         """
         node_id = data.get("id")
         if not node_id:
             return []
         # The node is running again, so a later exclusion may re-emit ``inactive``.
         self._inactivated_nodes.discard(node_id)
+        if not self.expose_graph_state:
+            return []
         return [
             StepStartedEvent(step_name=node_id),
             StateDeltaEvent(delta=[self._set_node(node_id, "running", None)]),
         ]
 
     def _translate_end_vertex(self, data: dict) -> list[BaseEvent]:
-        """Map ``end_vertex`` to a ``STEP_FINISHED`` + a ``STATE_DELTA`` for status and output."""
+        """Map ``end_vertex`` to a ``STEP_FINISHED`` + a ``STATE_DELTA`` for status and output.
+
+        The delta carries the vertex's own output payload, so this is the most
+        revealing of the graph-state events; it is withheld along with the rest
+        when ``expose_graph_state`` is off.
+        """
         build_data = data.get("build_data") or {}
         node_id = build_data.get("id")
         if not node_id:
@@ -241,6 +268,8 @@ class AGUITranslator:
         status = "success" if build_data.get("valid") else "error"
         # This node just ran, so a later exclusion may re-emit ``inactive``.
         self._inactivated_nodes.discard(node_id)
+        if not self.expose_graph_state:
+            return []
         delta = [self._set_node(node_id, status, build_data.get("data"))]
         # A branch component (If-Else, Conditional Router) reports the vertices on
         # the not-taken branch in ``inactivated_vertices`` (already unioned with the

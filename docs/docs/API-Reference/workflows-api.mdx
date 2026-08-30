@@ -62,6 +62,7 @@ POST /api/v2/workflows
 | `input_value` | `string` | No | `""` | Chat-style input for the run. |
 | `mode` | `string` | No | `sync` | Execution mode: `sync`, `stream`, or `background`. |
 | `stream_protocol` | `string` | No | `langflow` | Stream adapter name used for `stream` responses and background event re-attachment. Unknown values return a `422` code for any request mode because the API validates the field against the registered adapters before execution starts. |
+| `expose_graph_state` | `boolean` | No | `true` | Whether the stream may describe the flow's internal graph. Set to `false` to omit the `STEP_STARTED`, `STEP_FINISHED`, `STATE_SNAPSHOT`, and `STATE_DELTA` events, which name each component and carry its output. Only the `agui` protocol honors this field. See [Hide the flow graph from the stream](#hide-the-flow-graph-from-the-stream). |
 | `session_id` | `string` | No | - | Scopes message memory and chat history to this session. |
 | `tweaks` | `object` | No | `{}` | Per-component parameter overrides keyed by component id. See [Component tweaks](#component-tweaks). |
 | `globals` | `object` | No | `{}` | Request-level global variables. Available in sync mode only. Keys are limited to 256 characters and values to 64 KB. See [Pass request-level global variables](#request-level-global-variables).
@@ -182,6 +183,24 @@ Send `POST /api/v2/workflows` with `"mode": "stream"` and `"stream_protocol": "a
 | `CUSTOM` | Langflow-specific extensions (see below). |
 
 Langflow also emits `CUSTOM` events that generic AG-UI clients can ignore, such as `langflow.log`, `langflow.content.*`, `langflow.message.removed`, and `langflow.run.cancelled`.
+
+#### Hide the flow graph from the stream
+
+The `STEP_STARTED` and `STEP_FINISHED` events carry the component id as their step name, and `STATE_SNAPSHOT` and `STATE_DELTA` carry each component's id, status, and full output payload. That is what the Langflow canvas uses to color nodes as a flow runs, but it means an AG-UI stream you expose to your own end users describes your flow's topology and intermediate outputs.
+
+Set `"expose_graph_state": false` to withhold all four event types. The run is unchanged; only the wire is narrower, leaving the run lifecycle, text messages, tool calls, and `CUSTOM` events:
+
+```json
+{
+  "flow_id": "$FLOW_ID",
+  "input_value": "hello",
+  "mode": "stream",
+  "stream_protocol": "agui",
+  "expose_graph_state": false
+}
+```
+
+The field is also accepted by `POST /api/v2/workflows/public`. Background runs record it with the job, so re-attaching to a run submitted with `expose_graph_state: false` replays the same narrowed stream.
 
 For the full AG-UI event catalog, see the [AG-UI specification](https://docs.ag-ui.com/concepts/architecture).
 
