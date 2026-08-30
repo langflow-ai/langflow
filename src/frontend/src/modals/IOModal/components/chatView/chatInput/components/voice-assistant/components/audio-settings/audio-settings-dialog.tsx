@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { GANDR_VOICES } from "@/constants/constants";
 import {
   useGetGlobalVariables,
   usePatchGlobalVariables,
@@ -31,11 +32,13 @@ interface SettingsVoiceModalProps {
   children?: React.ReactNode;
   userOpenaiApiKey?: string;
   userElevenLabsApiKey?: string;
+  userGandrApiKey?: string;
   hasElevenLabsApiKeyEnv?: boolean;
   setShowSettingsModal: (
     open: boolean,
     openaiApiKey: string,
     elevenLabsApiKey: string,
+    gandrApiKey: string,
   ) => void;
   hasOpenAIAPIKey: boolean;
   language?: string;
@@ -51,6 +54,7 @@ const SettingsVoiceModal = ({
   children,
   userOpenaiApiKey,
   userElevenLabsApiKey,
+  userGandrApiKey,
   setShowSettingsModal,
   hasOpenAIAPIKey,
   language,
@@ -71,6 +75,9 @@ const SettingsVoiceModal = ({
   );
   const [elevenLabsApiKey, setElevenLabsApiKey] = useState<string>(
     userElevenLabsApiKey ?? "",
+  );
+  const [gandrApiKey, setGandrApiKey] = useState<string>(
+    userGandrApiKey ?? "",
   );
 
   const { data: globalVariablesEntities = [] } = useGetGlobalVariables({
@@ -111,17 +118,12 @@ const SettingsVoiceModal = ({
 
   useEffect(() => {
     if (isFetched) {
-      if (voiceList) {
-        const allVoicesMerged = [...openaiVoices, ...voiceList];
-
-        voiceList.length > 0
-          ? setAllVoices(allVoicesMerged)
-          : setAllVoices(openaiVoices);
-      } else {
-        setAllVoices(openaiVoices);
-      }
+      const elevenLabsVoices =
+        voiceList && voiceList.length > 0 ? voiceList : [];
+      const gandrVoices = gandrApiKey ? GANDR_VOICES : [];
+      setAllVoices([...openaiVoices, ...elevenLabsVoices, ...gandrVoices]);
     }
-  }, [voiceList, isFetched, userElevenLabsApiKey]);
+  }, [voiceList, isFetched, userElevenLabsApiKey, gandrApiKey]);
 
   useEffect(() => {
     const audioSettings = JSON.parse(
@@ -141,11 +143,20 @@ const SettingsVoiceModal = ({
   const handleSetVoice = (value: string) => {
     setVoice(value);
     const isOpenAiVoice = openaiVoices.some((voice) => voice.value === value);
+    const isGandrVoice = GANDR_VOICES.some((voice) => voice.value === value);
     if (isOpenAiVoice) {
       setLocalStorage(
         "lf_audio_settings_playground",
         JSON.stringify({
           provider: "openai",
+          voice: value,
+        }),
+      );
+    } else if (isGandrVoice) {
+      setLocalStorage(
+        "lf_audio_settings_playground",
+        JSON.stringify({
+          provider: "gandr",
           voice: value,
         }),
       );
@@ -163,7 +174,7 @@ const SettingsVoiceModal = ({
   const onOpenChangeDropdownMenu = (open: boolean) => {
     isPlayingRef.current = false;
     setOpen(open);
-    setShowSettingsModal(open, openaiApiKey, elevenLabsApiKey);
+    setShowSettingsModal(open, openaiApiKey, elevenLabsApiKey, gandrApiKey);
   };
 
   const checkIfGlobalVariableExists = (variable: string) => {
@@ -185,13 +196,19 @@ const SettingsVoiceModal = ({
     setElevenLabsApiKey(userElevenLabsApiKey ?? "");
 
     if (!userElevenLabsApiKey) {
-      handleSetVoice(openaiVoices[0].value);
-      setAllVoices(openaiVoices);
+      if (!gandrApiKey) {
+        handleSetVoice(openaiVoices[0].value);
+        setAllVoices(openaiVoices);
+      }
       return;
     }
 
     refetch();
   }, [userElevenLabsApiKey]);
+
+  useEffect(() => {
+    setGandrApiKey(userGandrApiKey ?? "");
+  }, [userGandrApiKey]);
 
   useEffect(() => {
     if (!hasOpenAIAPIKey) {
@@ -258,6 +275,25 @@ const SettingsVoiceModal = ({
   const handleSetElevenLabsApiKey = (value: string) => {
     setElevenLabsApiKey(value);
     debouncedSetElevenLabsApiKey(value);
+  };
+
+  const debouncedSetGandrApiKey = useDebounce((value: string) => {
+    const globalVariable = globalVariablesEntities?.find(
+      (variable) => variable.name === "GANDR_API_KEY",
+    );
+
+    if (globalVariable) {
+      updateVariable({
+        name: "GANDR_API_KEY",
+        value: value,
+        id: globalVariable.id,
+      });
+    }
+  }, 2000);
+
+  const handleSetGandrApiKey = (value: string) => {
+    setGandrApiKey(value);
+    debouncedSetGandrApiKey(value);
   };
 
   return (
@@ -434,6 +470,55 @@ const SettingsVoiceModal = ({
                             : ""
                         }
                         setSelectedOption={setElevenLabsApiKey}
+                        commandWidth="11rem"
+                        blockAddNewGlobalVariable
+                      />
+                    </div>
+
+                    <div className="grid w-full items-center gap-2">
+                      <span className="flex items-center text-sm">
+                        {t("voice.gandrApiKeyLabel")}
+                        <ShadTooltip content={t("voice.gandrKeyTooltip")}>
+                          <div>
+                            <IconComponent
+                              name="Info"
+                              strokeWidth={2}
+                              className="relative -top-[3px] left-1 h-[14px] w-[14px] text-placeholder"
+                            />
+                          </div>
+                        </ShadTooltip>
+                      </span>
+
+                      <InputComponent
+                        isObjectOption={false}
+                        password
+                        nodeStyle
+                        popoverWidth="16rem"
+                        placeholder={getPlaceholder(
+                          false,
+                          t("voice.gandrApiKeyPlaceholder"),
+                        )}
+                        id="gandr-api-key"
+                        options={
+                          globalVariables?.map((variable) => variable) ?? []
+                        }
+                        optionsPlaceholder={t("voice.globalVariables")}
+                        optionsIcon="Globe"
+                        optionsButton={<GeneralGlobalVariableModal />}
+                        optionButton={(option) => (
+                          <GlobalVariableDeleteConfirmation
+                            option={option}
+                            onConfirmDelete={() => {}}
+                          />
+                        )}
+                        value={gandrApiKey}
+                        onChange={handleSetGandrApiKey}
+                        selectedOption={
+                          checkIfGlobalVariableExists(gandrApiKey)
+                            ? gandrApiKey
+                            : ""
+                        }
+                        setSelectedOption={setGandrApiKey}
                         commandWidth="11rem"
                         blockAddNewGlobalVariable
                       />

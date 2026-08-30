@@ -34,6 +34,7 @@ describe("useVoiceStore", () => {
       providersList: [
         { name: "OpenAI", value: "openai" },
         { name: "ElevenLabs", value: "elevenlabs" },
+        { name: "Gandr", value: "gandr" },
       ],
       openaiVoices: [
         { name: "Alloy", value: "alloy" },
@@ -54,6 +55,7 @@ describe("useVoiceStore", () => {
       expect(result.current.providersList).toEqual([
         { name: "OpenAI", value: "openai" },
         { name: "ElevenLabs", value: "elevenlabs" },
+        { name: "Gandr", value: "gandr" },
       ]);
       expect(result.current.openaiVoices).toEqual([
         { name: "Alloy", value: "alloy" },
