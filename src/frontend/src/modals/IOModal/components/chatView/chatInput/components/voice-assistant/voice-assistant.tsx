@@ -248,8 +248,7 @@ export function VoiceAssistant({
         : elevenLabsApiKeyGlobalVariable;
     const updateOpenAiKey =
       isEditingOpenAIKey && openaiApiKeyGlobalVariable?.id;
-    const updateProviderApiKey =
-      providerKeyGlobalVariable?.id && providerKey;
+    const updateProviderApiKey = providerKeyGlobalVariable?.id && providerKey;
 
     if (updateOpenAiKey || updateProviderApiKey) {
       await updateVariable.mutateAsync(

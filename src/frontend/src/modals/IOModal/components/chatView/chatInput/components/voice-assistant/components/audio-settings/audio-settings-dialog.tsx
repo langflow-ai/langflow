@@ -72,9 +72,7 @@ const SettingsVoiceModal = ({
   const [elevenLabsApiKey, setElevenLabsApiKey] = useState<string>(
     userElevenLabsApiKey ?? "",
   );
-  const [gandrApiKey, setGandrApiKey] = useState<string>(
-    userGandrApiKey ?? "",
-  );
+  const [gandrApiKey, setGandrApiKey] = useState<string>(userGandrApiKey ?? "");
 
   const globalVariables = useGlobalVariablesStore(
     (state) => state.globalVariablesEntries,
