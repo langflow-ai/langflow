@@ -273,9 +273,13 @@ class GovernanceComponent(Component):
                 ):
                     # redact keeps sanitized text even in ENFORCE
                     filtered_text = _redact_pii(raw_text, pii_findings)
-                elif pii_findings and pii_action == "block":
-                    filtered_text = ""
-                elif injection_findings or tool_blocked or budget_blocked or iteration_blocked:
+                elif (
+                    (pii_findings and pii_action == "block")
+                    or injection_findings
+                    or tool_blocked
+                    or budget_blocked
+                    or iteration_blocked
+                ):
                     filtered_text = ""
                 elif pii_action == "redact":
                     pass  # already redacted
