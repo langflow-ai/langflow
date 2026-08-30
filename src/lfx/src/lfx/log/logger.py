@@ -934,6 +934,16 @@ def setup_loguru_logger(log_level: str, *, enqueue: bool = False) -> None:
     )
 
 
+def _remove_log_file_handler() -> None:
+    """Remove and close Langflow's managed root file handler, if present."""
+    global _file_handler  # noqa: PLW0603
+
+    if _file_handler is not None:
+        logging.root.removeHandler(_file_handler)
+        _file_handler.close()
+        _file_handler = None
+
+
 def setup_log_file(log_file: Path, *, max_bytes: int, formatter: logging.Formatter | None = None) -> None:
     """Set up Langflow's rotating file handler.
 
@@ -944,9 +954,7 @@ def setup_log_file(log_file: Path, *, max_bytes: int, formatter: logging.Formatt
     """
     global _file_handler  # noqa: PLW0603
 
-    if _file_handler is not None:
-        logging.root.removeHandler(_file_handler)
-        _file_handler.close()
+    _remove_log_file_handler()
 
     _file_handler = logging.handlers.RotatingFileHandler(
         log_file,
@@ -1019,6 +1027,8 @@ def configure(
     # remain installed and send those records back through structlog.
     if not (json_mode and not log_file):
         _remove_stdlib_intercept()
+    if log_file is None:
+        _remove_log_file_handler()
 
     # Fingerprint of every caller-supplied input that changes the resulting
     # setup. Stored on the wrapper_class (below) so structlog.reset_defaults()

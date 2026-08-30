@@ -31,6 +31,7 @@ from lfx.log.logger import (
     add_serialized,
     buffer_writer,
     configure,
+    is_file_logging_configured,
     log_buffer,
     setup_gunicorn_logger,
     setup_uvicorn_logger,
@@ -558,9 +559,10 @@ class TestSetupFunctions:
 
 
 class TestGunicornLoggerFileMode:
-    """Gunicorn must not send file-mode records back through structlog."""
+    """Gunicorn must follow logging-mode transitions without stale handlers."""
 
-    def test_file_mode_propagates_gunicorn_logs_to_root_handler(self):
+    def test_file_mode_propagates_gunicorn_logs_to_root_handler(self, capsys):
+        """Write once in file mode, then switch cleanly back to stdout JSON."""
         root = logging.getLogger()
         original_root_handlers = root.handlers[:]
         original_root_level = root.level
@@ -597,6 +599,21 @@ class TestGunicornLoggerFileMode:
                 records = [json.loads(line) for line in log_file_path.read_text().splitlines() if line.strip()]
                 gunicorn_records = [record for record in records if record.get("logger") == "gunicorn.error"]
                 assert [record["event"] for record in gunicorn_records] == ["file mode gunicorn error"]
+
+                configure(log_env="container", log_level="INFO", cache=False)
+                assert not is_file_logging_configured()
+
+                stdout_logger = GunicornLogger(cfg)
+                assert all(
+                    len(logger.handlers) == 1 and isinstance(logger.handlers[0], InterceptHandler)
+                    for logger in (stdout_logger.error_log, stdout_logger.access_log)
+                )
+                stdout_logger.error("stdout gunicorn error")
+                stdout_records = [
+                    json.loads(line) for line in capsys.readouterr().out.splitlines() if line.strip().startswith("{")
+                ]
+                assert [record["event"] for record in stdout_records] == ["stdout gunicorn error"]
+                assert "stdout gunicorn error" not in log_file_path.read_text()
         finally:
             for handler in root.handlers[:]:
                 if handler not in original_root_handlers:

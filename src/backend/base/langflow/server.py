@@ -60,6 +60,7 @@ class Logger(glogging.Logger):
     """Configure Gunicorn logging to use Langflow's logging pipeline."""
 
     def __init__(self, cfg) -> None:
+        """Route Gunicorn records through the active Langflow output mode."""
         super().__init__(cfg)
         gunicorn_loggers = (self.error_log, self.access_log)
         for gunicorn_logger in gunicorn_loggers:
