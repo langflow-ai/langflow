@@ -87,7 +87,7 @@ If it detects a supported environment variable, then it automatically adopts the
     DO_NOT_TRACK=True
     LANGFLOW_AUTO_LOGIN=False
     LANGFLOW_AUTO_SAVING=True
-    LANGFLOW_AUTO_SAVING_INTERVAL=1000
+    LANGFLOW_AUTO_SAVING_INTERVAL=2000
     LANGFLOW_BACKEND_ONLY=False
     LANGFLOW_BUNDLE_URLS=["https://github.com/user/repo/commit/hash"]
     LANGFLOW_CACHE_TYPE=async
@@ -166,7 +166,7 @@ Create or edit a `.env` file in the root directory of your application or Langfl
 DO_NOT_TRACK=True
 LANGFLOW_AUTO_LOGIN=False
 LANGFLOW_AUTO_SAVING=True
-LANGFLOW_AUTO_SAVING_INTERVAL=1000
+LANGFLOW_AUTO_SAVING_INTERVAL=2000
 LANGFLOW_BACKEND_ONLY=False
 LANGFLOW_BUNDLE_URLS=["https://github.com/user/repo/commit/hash"]
 LANGFLOW_CACHE_TYPE=async
@@ -212,7 +212,7 @@ To add environment variables, create or edit a service configuration file and ad
 Environment="DO_NOT_TRACK=true"
 Environment="LANGFLOW_AUTO_LOGIN=false"
 Environment="LANGFLOW_AUTO_SAVING=true"
-Environment="LANGFLOW_AUTO_SAVING_INTERVAL=1000"
+Environment="LANGFLOW_AUTO_SAVING_INTERVAL=2000"
 Environment="LANGFLOW_BACKEND_ONLY=false"
 Environment="LANGFLOW_BUNDLE_URLS=[\"https://github.com/user/repo/commit/hash\"]"
 Environment="LANGFLOW_CACHE_TYPE=async"
@@ -265,7 +265,7 @@ Create or edit the `.vscode/tasks.json` file in your project root.
             "DO_NOT_TRACK": "true",
             "LANGFLOW_AUTO_LOGIN": "false",
             "LANGFLOW_AUTO_SAVING": "true",
-            "LANGFLOW_AUTO_SAVING_INTERVAL": "1000",
+            "LANGFLOW_AUTO_SAVING_INTERVAL": "2000",
             "LANGFLOW_BACKEND_ONLY": "false",
             "LANGFLOW_BUNDLE_URLS": "[\"https://github.com/user/repo/commit/hash\"]",
             "LANGFLOW_CACHE_TYPE": "async",
@@ -482,7 +482,7 @@ They are not included in a default `uv pip install langflow` installation. Insta
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
 | `LANGFLOW_AUTO_SAVING` | Boolean | `True` | Whether to automatically save the current flow draft. Auto-save only updates the live draft, and doesn't create [saved flow versions](/concepts-flows#save-and-restore-flow-versions). |
-| `LANGFLOW_AUTO_SAVING_INTERVAL` | Integer | `1000` | Set the auto-save interval in milliseconds if `LANGFLOW_AUTO_SAVING=True`. |
+| `LANGFLOW_AUTO_SAVING_INTERVAL` | Integer | `2000` | Set the auto-save interval in milliseconds if `LANGFLOW_AUTO_SAVING=True`. |
 | `LANGFLOW_BUNDLE_URLS` | List[String] | `[]` | A list of URLs from which to load custom bundles. Supports GitHub URLs. If `LANGFLOW_AUTO_LOGIN=True`, flows from these bundles are loaded into the database. |
 | `LANGFLOW_COMPONENTS_PATH` | String | Not set | Path to a directory containing custom components. Typically used if you have local custom components or you are building a Docker image with custom components. |
 | `LANGFLOW_COMPONENTS_INDEX_PATH` | String | Not set | File path or URL (`http://` or `https://`) to a prebuilt component index JSON file used to populate built-in components in the visual editor. When not set, Langflow uses the included index. Useful for supplying a curated component index, for example in airgapped deployments. For more information, see [Block custom components](/deployment-block-custom-components). |
