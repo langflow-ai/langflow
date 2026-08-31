@@ -18,6 +18,7 @@ from lfx.mcp.flow_builder_tools import set_tool_start_listener
 from lfx.observability import execution_protocol
 from lfx.schema.schema import InputValueRequest
 from lfx.utils.flow_validation import CustomComponentValidationError
+from lfx.utils.trusted_flow import packaged_flow_scope
 
 from langflow.agentic.services.flow_run import extract_graph_token_usage
 from langflow.agentic.services.flow_types import (
@@ -122,39 +123,42 @@ async def execute_flow_file(
     flow_path, flow_type = resolve_flow_path(flow_filename)
 
     try:
-        graph = await load_graph_for_execution(
-            flow_path,
-            flow_type,
-            provider,
-            model_name,
-            api_key_var,
-            provider_vars=global_variables,
-        )
+        # resolve_flow_path confines flow_path to the packaged flows directory: this is
+        # first-party product code, not tenant content (LE-2321/LE-2322).
+        with packaged_flow_scope():
+            graph = await load_graph_for_execution(
+                flow_path,
+                flow_type,
+                provider,
+                model_name,
+                api_key_var,
+                provider_vars=global_variables,
+            )
 
-        if user_id:
-            graph.user_id = user_id
-        if session_id:
-            graph.session_id = session_id
+            if user_id:
+                graph.user_id = user_id
+            if session_id:
+                graph.session_id = session_id
 
-        if global_variables:
-            if "request_variables" not in graph.context:
-                graph.context["request_variables"] = {}
-            graph.context["request_variables"].update(global_variables)
+            if global_variables:
+                if "request_variables" not in graph.context:
+                    graph.context["request_variables"] = {}
+                graph.context["request_variables"].update(global_variables)
 
-        flow_id = (global_variables or {}).get("FLOW_ID")
-        if flow_id:
-            graph.flow_id = flow_id
-        graph.flow_name = graph.flow_name or flow_filename
+            flow_id = (global_variables or {}).get("FLOW_ID")
+            if flow_id:
+                graph.flow_id = flow_id
+            graph.flow_name = graph.flow_name or flow_filename
 
-        graph.prepare()
-        inputs = InputValueRequest(input_value=input_value) if input_value else None
+            graph.prepare()
+            inputs = InputValueRequest(input_value=input_value) if input_value else None
 
-        coordinator = await aget_default_coordinator()
-        with execution_protocol("agentic"), graph.flow_execution_span():
-            results = [
-                payload async for payload in coordinator.stream(graph, initial_inputs=inputs, open_flow_span=False)
-            ]
-        flow_result = extract_structured_result(results)
+            coordinator = await aget_default_coordinator()
+            with execution_protocol("agentic"), graph.flow_execution_span():
+                results = [
+                    payload async for payload in coordinator.stream(graph, initial_inputs=inputs, open_flow_span=False)
+                ]
+            flow_result = extract_structured_result(results)
     except HTTPException:
         raise
     except CustomComponentValidationError as e:
@@ -214,38 +218,43 @@ async def execute_flow_file_streaming(
     """
     flow_path, flow_type = resolve_flow_path(flow_filename)
 
-    try:
-        graph = await load_graph_for_execution(
-            flow_path,
-            flow_type,
-            provider,
-            model_name,
-            api_key_var,
-            provider_vars=global_variables,
-        )
-    except CustomComponentValidationError as e:
-        logger.error(f"Flow preparation error: {e}")
-        raise HTTPException(status_code=400, detail=str(e)) from e
-    except (json.JSONDecodeError, OSError, ValueError) as e:
-        logger.error(f"Flow preparation error: {e}")
-        raise HTTPException(status_code=500, detail="An error occurred while preparing the flow.") from e
+    # resolve_flow_path confines flow_path to the packaged flows directory, so everything
+    # loaded here is first-party product code (LE-2321/LE-2322). Bound inside the generator
+    # body and closed before the first yield: asyncio.create_task copies the context at
+    # creation, so the run inherits the marker without it straddling a suspension point.
+    with packaged_flow_scope():
+        try:
+            graph = await load_graph_for_execution(
+                flow_path,
+                flow_type,
+                provider,
+                model_name,
+                api_key_var,
+                provider_vars=global_variables,
+            )
+        except CustomComponentValidationError as e:
+            logger.error(f"Flow preparation error: {e}")
+            raise HTTPException(status_code=400, detail=str(e)) from e
+        except (json.JSONDecodeError, OSError, ValueError) as e:
+            logger.error(f"Flow preparation error: {e}")
+            raise HTTPException(status_code=500, detail="An error occurred while preparing the flow.") from e
 
-    event_queue: asyncio.Queue[tuple[str, bytes, float] | None] = asyncio.Queue(maxsize=STREAMING_QUEUE_MAX_SIZE)
-    event_manager = create_default_event_manager(event_queue)
-    execution_result = FlowExecutionResult()
+        event_queue: asyncio.Queue[tuple[str, bytes, float] | None] = asyncio.Queue(maxsize=STREAMING_QUEUE_MAX_SIZE)
+        event_manager = create_default_event_manager(event_queue)
+        execution_result = FlowExecutionResult()
 
-    flow_task = asyncio.create_task(
-        _run_graph_with_events(
-            graph=graph,
-            input_value=input_value,
-            global_variables=global_variables,
-            user_id=user_id,
-            session_id=session_id,
-            event_manager=event_manager,
-            event_queue=event_queue,
-            execution_result=execution_result,
+        flow_task = asyncio.create_task(
+            _run_graph_with_events(
+                graph=graph,
+                input_value=input_value,
+                global_variables=global_variables,
+                user_id=user_id,
+                session_id=session_id,
+                event_manager=event_manager,
+                event_queue=event_queue,
+                execution_result=execution_result,
+            )
         )
-    )
 
     cancelled = False
     try:

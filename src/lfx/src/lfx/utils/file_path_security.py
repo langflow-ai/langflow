@@ -214,12 +214,34 @@ def _scope_roots(
         roots.append(data_dir)
 
     if not roots:
-        msg = (
-            "Local-file access requires an authenticated user or flow scope "
-            "when LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true."
-        )
+        logger.warning("Local-file access denied: no user or flow scope (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true).")
+        msg = "Local-file access requires an authenticated user or flow scope."
         raise LocalFileAccessError(msg)
     return tuple(roots)
+
+
+def package_resource_root() -> Path | None:
+    """Root of the installed lfx package, or None when it cannot be resolved.
+
+    LE-2322: the packaged assistant flow reads its own component library off disk to
+    answer questions about components. That path is outside every user's storage scope,
+    so restricted mode denied it and the assistant blocked itself.
+
+    Read access is granted for this root ONLY while a packaged first-party flow is
+    active. It is the product's own source: no tenant data, no uploads, and none of the
+    reserved secret/key/DB files, which live under config_dir. Constraining the
+    exemption to this root is what keeps the marker safe even though it stays set while
+    the flow runs -- a FileSystemTool inside that flow still cannot reach anything else.
+    """
+    try:
+        import lfx
+
+        package_file = getattr(lfx, "__file__", None)
+        if not package_file:
+            return None
+        return Path(package_file).parent.resolve()
+    except (ImportError, OSError, ValueError):
+        return None
 
 
 def enforce_local_file_access(
@@ -265,11 +287,20 @@ def enforce_local_file_access(
         raise LocalFileAccessError(msg) from e
 
     if not any(candidate == root or candidate.is_relative_to(root) for root in allowed_roots):
-        msg = (
-            "Access to local file paths outside the authenticated user's storage scope is disabled "
-            "(LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true). Use an uploaded file instead."
-        )
-        raise LocalFileAccessError(msg)
+        from lfx.utils.trusted_flow import packaged_flow_is_active
+
+        package_root = package_resource_root() if packaged_flow_is_active() else None
+        if package_root is None or not (candidate == package_root or candidate.is_relative_to(package_root)):
+            logger.warning(
+                "Local-file access denied for %s: outside the caller's storage scope "
+                "(LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true).",
+                candidate,
+            )
+            msg = (
+                "Access to local file paths outside the authenticated user's storage scope is disabled. "
+                "Use an uploaded file, or ask your administrator."
+            )
+            raise LocalFileAccessError(msg)
 
     # The storage dir is config_dir, which also holds server-managed secret/key/DB files as
     # siblings of the upload subdirs. Scope containment rejects them only when a scope narrows
@@ -278,6 +309,10 @@ def enforce_local_file_access(
     # DB out of reach, not a redundant second line. Covered by
     # test_read_file_bytes_denies_reserved_secret_key.
     if candidate in _reserved_secret_paths(data_dir):
-        msg = "Access to this server-managed file is not permitted (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true)."
+        logger.warning(
+            "Local-file access denied for reserved server file %s (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true).",
+            candidate,
+        )
+        msg = "Access to this server-managed file is not permitted. Ask your administrator if you need access."
         raise LocalFileAccessError(msg)
     return candidate

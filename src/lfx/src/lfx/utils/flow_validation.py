@@ -970,6 +970,14 @@ def validate_flow_for_current_settings(
 ) -> None:
     """Enforce catalog and custom-component policy for a payload or graph-like object."""
     from lfx.services.deps import get_catalog_policy_service, get_settings_service
+    from lfx.utils.trusted_flow import packaged_flow_is_active
+
+    # LE-2321: a packaged first-party flow is product code, not tenant content. It is
+    # marked only by flow_executor, and only for artifacts resolved inside the packaged
+    # flows directory -- see lfx.utils.trusted_flow for why this is bound to the artifact
+    # rather than to "an assistant request is in flight".
+    if packaged_flow_is_active():
+        return
 
     settings_service = get_settings_service()
     if settings_service is None:
