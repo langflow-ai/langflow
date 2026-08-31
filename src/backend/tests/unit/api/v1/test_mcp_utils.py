@@ -596,10 +596,15 @@ async def test_handle_call_tool_keeps_unmatched_public_secret_references_scrubbe
                                 "table_schema": [{"name": "value", "type": "str", "load_from_db": True}],
                                 "value": [
                                     {
+                                        "key": "X-Langflow-Global-Var-OWNER_ONLY_TABLE_TOKEN",
+                                        "value": "OWNER_ONLY_TABLE_TOKEN",
+                                        "__load_from_db_fields": {"value": True},
+                                    },
+                                    {
                                         "key": "X-Langflow-Global-Var-LITERAL_TOKEN",
                                         "value": "LITERAL_TOKEN",
                                         "__load_from_db_fields": {"value": False},
-                                    }
+                                    },
                                 ],
                             },
                         }
@@ -628,6 +633,7 @@ async def test_handle_call_tool_keeps_unmatched_public_secret_references_scrubbe
     forwarded_template = forwarded_flow.data["nodes"][0]["data"]["node"]["template"]
     assert forwarded_template["api_key"]["value"] is None
     assert forwarded_template["headers"]["value"][0]["value"] is None
+    assert forwarded_template["headers"]["value"][1]["value"] is None
 
 
 async def test_handle_call_tool_rejects_public_flow_validation_failure(monkeypatch):
