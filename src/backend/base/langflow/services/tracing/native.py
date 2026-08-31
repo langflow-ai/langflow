@@ -45,7 +45,6 @@ TYPE_MAP = {
 }
 
 
-
 def _orm_row(obj) -> dict:
     """Every mapped column value from a constructed ORM object.
 
@@ -108,6 +107,7 @@ def _conflict_free_insert(session, model_cls, rows: list[dict], *, update_on_con
     # end and could legitimately differ across two flushes of the same trace.
     updatable = {k: stmt.excluded[k] for k in rows[0] if k != "id"}
     return stmt.on_conflict_do_update(index_elements=["id"], set_=updatable)
+
 
 class NativeTracer(BaseTracer):
     """Tracer that stores execution traces in Langflow's database.
