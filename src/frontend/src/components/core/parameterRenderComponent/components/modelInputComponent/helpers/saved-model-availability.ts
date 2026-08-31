@@ -1,5 +1,6 @@
 import type { ModelProviderWithStatus } from "@/controllers/API/queries/models/use-get-model-providers";
 import type { ModelOption } from "../types";
+import { canonicalProviderName, providerNamesMatch } from "./provider-identity";
 import { recoverModelOption } from "./recover-model-option";
 
 type EnabledModels = Record<string, Record<string, boolean>>;
@@ -52,8 +53,8 @@ export function isSavedModelUnavailable({
     return false;
   }
 
-  const providerInfo = providers.find(
-    (provider) => provider.provider === saved.provider,
+  const providerInfo = providers.find((provider) =>
+    providerNamesMatch(provider.provider, saved.provider),
   );
   if (!providerInfo) {
     return true;
@@ -70,7 +71,12 @@ export function isSavedModelUnavailable({
     return false;
   }
   const knownToUserSettings =
-    enabledModels?.[saved.provider] !== undefined &&
-    Object.hasOwn(enabledModels[saved.provider], saved.name);
+    (enabledModels?.[saved.provider] !== undefined &&
+      Object.hasOwn(enabledModels[saved.provider], saved.name)) ||
+    (enabledModels?.[canonicalProviderName(saved.provider)] !== undefined &&
+      Object.hasOwn(
+        enabledModels[canonicalProviderName(saved.provider)],
+        saved.name,
+      ));
   return !knownToUserSettings;
 }

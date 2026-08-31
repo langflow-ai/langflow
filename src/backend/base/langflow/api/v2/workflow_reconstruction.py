@@ -14,6 +14,7 @@ from lfx.workflow.converters import run_response_to_workflow_response
 
 from langflow.api.v1.schemas import RunResponse
 from langflow.services.database.models.vertex_builds.crud import get_vertex_builds_by_job_id
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -71,6 +72,8 @@ async def reconstruct_workflow_response_from_job_id(
     flow: FlowRead,
     job_id: str,
     user_id: str,
+    *,
+    is_superuser: bool = False,
 ):
     """Reconstruct WorkflowExecutionResponse from vertex_builds by job_id.
 
@@ -83,6 +86,7 @@ async def reconstruct_workflow_response_from_job_id(
         flow: Flow model from database
         job_id: Job ID to query vertex builds
         user_id: User ID for graph construction
+        is_superuser: Whether the execution principal has the superadmin bypass
 
     Returns:
         WorkflowExecutionResponse reconstructed from vertex_build data
@@ -100,7 +104,12 @@ async def reconstruct_workflow_response_from_job_id(
         raise ValueError(msg)
 
     flow_id_str = str(flow.id)
-    graph = Graph.from_payload(flow.data, flow_id=flow_id_str, user_id=user_id, flow_name=flow.name)
+    with scoped_model_provider_policy_for_flow(
+        flow,
+        user_id=user_id,
+        is_superuser=is_superuser,
+    ):
+        graph = Graph.from_payload(flow.data, flow_id=flow_id_str, user_id=user_id, flow_name=flow.name)
     terminal_node_ids = graph.get_terminal_nodes()
 
     terminal_vertex_builds = [vb for vb in vertex_builds if vb.id in terminal_node_ids and vb.data]

@@ -116,7 +116,9 @@ export default function CodeAreaModal({
     validateComponentCode(
       { code, frontend_node: nodeClass! },
       {
-        onSuccess: ({ data, type }) => {
+        onSuccess: (response) => {
+          if (!response) return;
+          const { data, type } = response;
           if (data && type) {
             setValue(code);
             try {
@@ -134,7 +136,7 @@ export default function CodeAreaModal({
 
               clearHandlesFromAdvancedFields(componentId!, merged);
               setNodeClass(merged, type);
-            } catch (e) {
+            } catch {
               clearHandlesFromAdvancedFields(componentId!, data);
               setNodeClass(data, type);
             }

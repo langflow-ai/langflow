@@ -260,6 +260,7 @@ async def execute_public_workflow(
             background_tasks=background_tasks,
             parsed=parsed,
             current_user=public_user,
+            provider_policy_flow=flow,
             source_flow_id=real_flow_id,
             source_flow_owner_id=source_flow_owner_id,
             # Anonymous shared-link traffic, kept apart from signed-in v2 runs the same way

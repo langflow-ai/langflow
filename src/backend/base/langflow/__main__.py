@@ -232,6 +232,16 @@ def build_direct_uvicorn_kwargs(
         "ssl_certfile": ssl_cert_file_path,
         "ssl_keyfile": ssl_key_file_path,
         "forwarded_allow_ips": "*" if trust_proxy else "",
+        # A request that arrives while another is still in flight on the same connection is
+        # queued as a pipelined request, and uvicorn then starts it from inside the finishing
+        # request's task (httptools_impl ``on_response_complete`` -> ``_start_asgi_task``).
+        # ``create_task`` copies the context, so the new request begins with the previous
+        # request's already-ended server span still current. OpenTelemetry's ASGI middleware
+        # reads that as nesting and emits the request as an INTERNAL child of an unrelated,
+        # finished request instead of as a SERVER root, which merges unrelated traces and
+        # hides roughly half of HTTP traffic from RED metrics and service maps. A browser page
+        # load triggers it; sequential curl never does. See CPython #140947.
+        "reset_contextvars": True,
     }
 
 
