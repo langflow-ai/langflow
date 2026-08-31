@@ -327,6 +327,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/sandbox-backends",
+          label: "Sandbox backends",
+        },
+        {
+          type: "doc",
           id: "Deployment/deployment-tweaks-policy",
           label: "Restrict API tweaks",
         },
