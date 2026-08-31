@@ -1,4 +1,4 @@
-"""Governance components for Langflow."""
+"""Governance bundle for Langflow."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from lfx.components.governance.governance import GovernanceComponent
+    from lfx_bundles.governance.governance import GovernanceComponent
 
 _dynamic_imports = {
     "GovernanceComponent": "governance",

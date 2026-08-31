@@ -43,15 +43,9 @@ def _detect_pii(text: str, categories: list[str]) -> list[dict[str, Any]]:
         pattern = PII_PATTERNS.get(cat)
         if pattern is None:
             continue
-        for m in pattern.finditer(text):
-            findings.append(
-                {
-                    "category": cat,
-                    "match": m.group(),
-                    "start": m.start(),
-                    "end": m.end(),
-                }
-            )
+        findings.extend(
+            {"category": cat, "match": m.group(), "start": m.start(), "end": m.end()} for m in pattern.finditer(text)
+        )
     return findings
 
 
@@ -66,15 +60,10 @@ def _redact_pii(text: str, findings: list[dict[str, Any]]) -> str:
 def _detect_injection(text: str) -> list[dict[str, Any]]:
     findings: list[dict[str, Any]] = []
     for pat in INJECTION_PATTERNS:
-        for m in pat.finditer(text):
-            findings.append(
-                {
-                    "category": "prompt_injection",
-                    "match": m.group(),
-                    "start": m.start(),
-                    "end": m.end(),
-                }
-            )
+        findings.extend(
+            {"category": "prompt_injection", "match": m.group(), "start": m.start(), "end": m.end()}
+            for m in pat.finditer(text)
+        )
     return findings
 
 
@@ -273,12 +262,8 @@ class GovernanceComponent(Component):
                 ):
                     # redact keeps sanitized text even in ENFORCE
                     filtered_text = _redact_pii(raw_text, pii_findings)
-                elif (
-                    (pii_findings and pii_action == "block")
-                    or injection_findings
-                    or tool_blocked
-                    or budget_blocked
-                    or iteration_blocked
+                elif (pii_findings and pii_action == "block") or (
+                    injection_findings or tool_blocked or budget_blocked or iteration_blocked
                 ):
                     filtered_text = ""
                 elif pii_action == "redact":

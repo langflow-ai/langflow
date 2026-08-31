@@ -1,4 +1,8 @@
-from lfx.components.governance.governance import GovernanceComponent
+import pytest
+
+pytest.importorskip("lfx_bundles.governance")
+
+from lfx_bundles.governance.governance import GovernanceComponent
 
 
 class TestGovernancePII:
