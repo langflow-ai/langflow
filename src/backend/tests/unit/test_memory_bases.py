@@ -3519,6 +3519,24 @@ class TestInitializeKbConnectivity:
 
         assert collection_names == [generated_name]
 
+    async def test_local_chroma_rejects_invalid_collection_name(self, tmp_path):
+        from langflow.services.memory_base.kb_path_helpers import BackendProvisioningError, initialize_kb
+
+        with (
+            patch(
+                "langflow.services.memory_base.kb_path_helpers.KBStorageHelper.get_root_path",
+                return_value=tmp_path,
+            ),
+            pytest.raises(BackendProvisioningError) as exc_info,
+        ):
+            await initialize_kb(
+                kb_name="catálogo_memória_deadbeef",
+                kb_username="testuser",
+                backend_type="chroma",
+            )
+
+        assert isinstance(exc_info.value.__cause__, chromadb.errors.InvalidArgumentError)
+
     @pytest.mark.asyncio
     async def test_unreachable_remote_backend_raises(self, tmp_path):
         from langflow.services.memory_base.kb_path_helpers import BackendProvisioningError, initialize_kb
