@@ -9,6 +9,7 @@ jest.mock("lodash", () => ({
 // Mock constants
 jest.mock("@/constants/constants", () => ({
   SAVE_DEBOUNCE_TIME: 1000,
+  AUTOSAVE_DEBOUNCE_TIME: 2000,
 }));
 
 // Mock flowStore
