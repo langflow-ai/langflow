@@ -687,17 +687,19 @@ class JobService(Service):
                 return job_id
         return None
 
-    async def fail_in_progress_job(self, job_id: UUID) -> bool:
-        """Atomically flip an IN_PROGRESS job to FAILED. Returns True if we won.
+    async def fail_in_progress_job(self, job_id: UUID, *, error: dict) -> bool:
+        """Atomically flip an IN_PROGRESS job to FAILED with its error blob. Returns True if we won.
 
         Single-flight guard for the worker_lost reconcile: a conditional
         ``UPDATE job SET status=FAILED WHERE job_id=? AND status='IN_PROGRESS'``
         means only ONE racer's update affects the row (``rowcount == 1``); every
-        other concurrent watchdog sees ``rowcount == 0`` and must not write the
-        error blob or append its own terminal event. Works identically on SQLite
-        and Postgres (a single-row conditional UPDATE is atomic on both), so N
-        workers' periodic watchdogs scanning the same orphan cannot each append
-        a duplicate ``run_failed`` milestone.
+        other concurrent watchdog sees ``rowcount == 0`` and must not append its
+        own terminal event. The error blob rides the SAME UPDATE, so no reader
+        can ever observe a FAILED row without its error, and a watchdog crash
+        right after the flip cannot leave the blob missing forever. Works
+        identically on SQLite and Postgres (a single-row conditional UPDATE is
+        atomic on both), so N workers' periodic watchdogs scanning the same
+        orphan cannot each append a duplicate ``run_failed`` milestone.
         """
         from sqlmodel import update
 
@@ -705,7 +707,7 @@ class JobService(Service):
             stmt = (
                 update(Job)
                 .where(Job.job_id == job_id, Job.status == JobStatus.IN_PROGRESS)
-                .values(status=JobStatus.FAILED, finished_timestamp=datetime.now(timezone.utc))
+                .values(status=JobStatus.FAILED, error=dict(error), finished_timestamp=datetime.now(timezone.utc))
             )
             result = await session.exec(stmt)  # type: ignore[call-overload]
             await session.flush()

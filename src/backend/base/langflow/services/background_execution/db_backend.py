@@ -161,12 +161,11 @@ class DBBackgroundQueue:
                     continue
             # Default at-most-once, or retries exhausted: fail worker_lost with
             # a terminal event so any reattached tail terminates cleanly. The
-            # conditional IN_PROGRESS->FAILED flip is the single-flight token:
-            # only the watchdog whose UPDATE matched writes the error blob and
-            # appends run_failed, so N concurrent watchdogs cannot append
-            # duplicate terminal milestones.
-            if await self._job_service.fail_in_progress_job(job.job_id):
-                await self._job_service.set_error(job.job_id, {"type": "worker_lost"})
+            # conditional IN_PROGRESS->FAILED flip (which carries the error blob
+            # in the same UPDATE) is the single-flight token: only the watchdog
+            # whose UPDATE matched appends run_failed, so N concurrent watchdogs
+            # cannot append duplicate terminal milestones.
+            if await self._job_service.fail_in_progress_job(job.job_id, error={"type": "worker_lost"}):
                 await self._job_service.append_event(job.job_id, "run_failed", {"type": "worker_lost"})
         return requeued
 
