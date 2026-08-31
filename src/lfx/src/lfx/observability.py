@@ -83,6 +83,11 @@ APPLICATION_TRACER_NAME = "langflow.observability"
 # event-loop lag sampler below; langflow's own counters and gauges are additional.
 APPLICATION_METER_NAME = "langflow"
 
+# The meter provider the bootstrap installed, remembered so the code that records metrics can
+# bind to it directly. Set by :func:`bootstrap_application_telemetry`; stays None when nothing
+# is configured, which is the default. See :func:`application_meter`.
+_application_meter_provider: MeterProvider | None = None
+
 DEFAULT_SERVICE_NAME = "langflow"
 
 # The surface a flow run arrived through, recorded as the flow span's ``protocol`` attribute so
@@ -1077,6 +1082,8 @@ def bootstrap_application_telemetry(*, prometheus_enabled: bool = False) -> Appl
         return ApplicationTelemetry()
 
     meter_provider, owns_meter_provider = _install_meter_provider(prometheus_enabled=prometheus_enabled)
+    global _application_meter_provider  # noqa: PLW0603 - process-wide, like the OTel provider globals
+    _application_meter_provider = meter_provider
     if meter_provider is not None:
         _instrument_process_metrics(meter_provider)
     tracer_provider = _configure_tracer_provider_from_environment()
@@ -1087,6 +1094,26 @@ def bootstrap_application_telemetry(*, prometheus_enabled: bool = False) -> Appl
         tracer_provider=tracer_provider,
         logger_provider=logger_provider,
     )
+
+
+def application_meter():
+    """Return the meter Langflow's own metrics record on, or None without OpenTelemetry.
+
+    Never ``metrics.get_meter``. With nothing configured the bootstrap installs no provider,
+    and the global API hands back a proxy meter, which is not a no-op: its instruments resolve
+    lazily onto whichever MeterProvider is registered next. An LLM tracing SDK that installs
+    one on the first flow run would therefore adopt every metric recorded here, labels
+    included, and ship it to the vendor's endpoint. The export allowlist that draws this
+    boundary for our own exporter cannot help, because that path never reaches our exporter.
+
+    A no-op meter says what the configuration actually means: nothing was asked for, so
+    nothing is recorded, and nothing can be adopted afterwards.
+    """
+    if not _OTEL_AVAILABLE:
+        return None
+    from opentelemetry.metrics import NoOpMeterProvider
+
+    return (_application_meter_provider or NoOpMeterProvider()).get_meter(APPLICATION_METER_NAME)
 
 
 def instrument_database(engine: object) -> None:

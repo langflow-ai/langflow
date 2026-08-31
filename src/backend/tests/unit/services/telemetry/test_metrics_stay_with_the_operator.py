@@ -23,6 +23,7 @@ import tempfile
 from pathlib import Path
 
 from langflow.services.telemetry.opentelemetry import OpenTelemetry
+from lfx.observability_llm_metrics import LLMProviderMetricsCallbackHandler
 from opentelemetry import metrics
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import InMemoryMetricReader
@@ -43,12 +44,27 @@ def _recorded_by_a_late_provider(record) -> list[str]:
 
 
 def test_metrics_do_not_follow_a_provider_registered_after_startup():
-    """The regression. Nothing Langflow records may reach a provider it did not choose."""
-    service = OpenTelemetry(prometheus_enabled=False)
+    """The regression. Nothing Langflow records may reach a provider it did not choose.
 
-    landed = _recorded_by_a_late_provider(
-        lambda: service.increment_counter("num_files_uploaded", labels={"flow_id": "probe-flow"}, value=3)
-    )
+    Every path that builds an instrument is exercised in this one test on purpose:
+    ``set_meter_provider`` is one-shot, so a second test calling it would keep the provider
+    this one registered and assert against a reader nothing was ever wired to. One
+    registration, every recorder.
+
+    The three paths reached the global API separately, so fixing one left the others leaking:
+    the counters and histograms take the service's own meter, the observable gauges built
+    their own, and the LLM provider metrics live in lfx and build a third.
+    """
+    service = OpenTelemetry(prometheus_enabled=False)
+    llm_metrics = LLMProviderMetricsCallbackHandler()
+
+    def record_from_every_path() -> None:
+        service.increment_counter("num_files_uploaded", labels={"flow_id": "probe-flow"}, value=3)
+        service.update_gauge("file_uploads", value=4242.0, labels={"flow_id": "probe-flow"})
+        llm_metrics._duration.record(1.5, {"gen_ai.system": "openai", "gen_ai.request.model": "probe"})
+        llm_metrics._errors.add(1, {"error.type": "ProbeError"})
+
+    landed = _recorded_by_a_late_provider(record_from_every_path)
 
     assert landed == [], f"Langflow metrics reached a provider registered by someone else: {landed}"
 
@@ -66,11 +82,15 @@ def test_recording_a_metric_still_works_when_nothing_is_configured():
 
 CONFIGURED_PROBE = """
 from langflow.services.telemetry.opentelemetry import OpenTelemetry
+from lfx.observability_llm_metrics import get_llm_provider_metrics_handler
 
 service = OpenTelemetry(prometheus_enabled=True)
+handler = get_llm_provider_metrics_handler()
 print("PROBE_RESULT " + repr({
     "owns_provider": service._meter_provider is not None,
     "meter_type": type(service.meter).__name__,
+    "gauge_meter_type": type(service._metrics["file_uploads"]._meter).__name__,
+    "llm_instrument_type": type(handler._duration).__name__,
 }))
 """
 
@@ -99,3 +119,5 @@ def test_a_configured_provider_still_receives_the_metrics():
 
     assert result["owns_provider"], "the bootstrap should own a provider when Prometheus is on"
     assert result["meter_type"] != "NoOpMeter", "a configured deployment must still record"
+    assert result["gauge_meter_type"] != "NoOpMeter", "the gauges must record too, not just the counters"
+    assert result["llm_instrument_type"] != "NoOpHistogram", "the LLM provider metrics must record too"

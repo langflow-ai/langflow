@@ -17,8 +17,7 @@ from lfx.observability import (
     ApplicationTelemetry,
     bootstrap_application_telemetry,
 )
-from opentelemetry import metrics
-from opentelemetry.metrics import CallbackOptions, NoOpMeterProvider, Observation
+from opentelemetry.metrics import CallbackOptions, Meter, NoOpMeterProvider, Observation
 from opentelemetry.metrics._internal.instrument import Counter, Histogram, UpDownCounter
 from opentelemetry.sdk._logs import LoggerProvider
 from opentelemetry.sdk.metrics import MeterProvider
@@ -77,9 +76,13 @@ class ObservableGaugeWrapper:
     instead it uses a callback function to get the value, we need to create a wrapper class.
     """
 
-    def __init__(self, name: str, description: str, unit: str):
+    def __init__(self, name: str, description: str, unit: str, meter: Meter):
         self._values: dict[tuple[tuple[str, str], ...], float] = {}
-        self._meter = metrics.get_meter(langflow_meter_name)
+        # The meter is passed in rather than fetched from the global API for the same reason
+        # the counters use self.meter: a global proxy meter is not a no-op, so a gauge built
+        # on one would report its flow_id-labelled values to whichever MeterProvider an LLM
+        # tracing SDK registers later.
+        self._meter = meter
         self._gauge = self._meter.create_observable_gauge(
             name=name, description=description, unit=unit, callbacks=[self._callback]
         )
@@ -270,6 +273,7 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
                 name=metric.name,
                 description=metric.description,
                 unit=metric.unit,
+                meter=self.meter,
             )
         if metric.type == MetricType.UP_DOWN_COUNTER:
             return self.meter.create_up_down_counter(
