@@ -37,8 +37,9 @@ This is useful for testing when you don't want to persist any data.
 
 ## Langflow database tables
 
-The following tables are stored in `langflow.db`.
+The following tables are stored in Langflow's application database.
 This list covers the main product tables.
+On OSS, the default is the SQLite file `langflow.db`. Desktop uses `database.db`. You can also use an [external PostgreSQL database](#configure-external-memory).
 
 • **ApiKey**: Manages Langflow API authentication keys. Component API keys are stored in the **Variables** table. For more information, see [API keys and authentication](/api-keys-and-authentication).
 
@@ -130,7 +131,7 @@ To fine-tune your database connection pool and timeout settings, you can set the
     Don't use the deprecated environment variables `LANGFLOW_DB_POOL_SIZE` or `LANGFLOW_DB_MAX_OVERFLOW`.
     Instead, use `pool_size` and `max_overflow` in `LANGFLOW_DB_CONNECTION_SETTINGS`.
 
-* `LANGFLOW_MIGRATION_LOCK_NAMESPACE`: Optional namespace for PostgreSQL advisory locks used during database migrations. If not provided, a hash of the database URL is used. Useful when multiple Langflow instances share the same PostgreSQL database and need coordinated migration locking. This setting only applies when using PostgreSQL as your database backend.
+* `LANGFLOW_MIGRATION_LOCK_NAMESPACE`: Optional namespace for PostgreSQL advisory locks used during database migrations. If unset, Alembic uses the static lock key `11223344`, which coordinates every Langflow instance on the same PostgreSQL server. If set, Alembic hashes the namespace to derive the lock key. Set this variable to isolate different Langflow deployments that share one PostgreSQL server, and use the same value on every instance in that deployment. This setting only applies when using PostgreSQL as your database backend.
 
 ## Configure cache memory
 
@@ -175,6 +176,7 @@ Retrieval as memory is an important distinction for LLMs and agents because this
 Unlike vector stores, which are designed for semantic search and retrieval of text chunks, chat memory is designed to store and retrieve chat messages in a way that is optimized for conversation history.
 
 For semantic retrieval of past conversations across sessions, use a [memory base](/memory-bases) instead of chronological chat memory.
+The **Memory Base** component enables **Filter by Session** by default, so retrieval stays in the current session. Disable **Filter by Session** to search across all sessions ingested into the memory base.
 
 </details>
 

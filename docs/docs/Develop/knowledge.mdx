@@ -245,7 +245,7 @@ To create a knowledge base using this provider, see [Create a knowledge base](#c
 
 #### Postgres pgvector
 
-To use [Postgres with pgvector](https://github.com/pgvector/pgvector) as a database provider, you need a PostgreSQL database with the `vector` extension available, and the Langflow `pgvector` optional dependency installed.
+To use [Postgres with pgvector](https://github.com/pgvector/pgvector) as a database provider, you need a PostgreSQL database with the `vector` extension enabled, a connection role that has `CREATE` on the target schema, and the Langflow `pgvector` optional dependency installed.
 This example uses a Postgres container running locally, but you can also use a remote PostgreSQL instance that has pgvector installed.
 
 :::tip
@@ -274,7 +274,29 @@ You can point both at the same PostgreSQL server, or use different databases.
       pgvector/pgvector:pg16
     ```
 
-3. Set the `PGVECTOR_CONNECTION_STRING` environment variable to your Postgres connection string, and then start or restart Langflow:
+3. Enable the `vector` extension, and grant Langflow's connection role `CREATE` on the target schema.
+
+    Langflow does not create the `vector` extension. If the extension is absent, knowledge-base and memory-base operations fail.
+
+    To create the `vector` extension, connect to your Langflow server as a superuser and run:
+
+    ```sql
+    CREATE EXTENSION vector;
+    ```
+
+    For the local container in this example:
+
+    ```bash
+    podman exec -it pgvector psql -U pgvector -d langflow_vectors -c "CREATE EXTENSION vector;"
+    ```
+
+    Langflow creates one table per knowledge base on first ingest, so the role in `PGVECTOR_CONNECTION_STRING` needs `CREATE` on the target schema. For example:
+
+    ```sql
+    GRANT CREATE ON SCHEMA public TO <role>;
+    ```
+
+4. Set the `PGVECTOR_CONNECTION_STRING` environment variable to your Postgres connection string, and then start or restart Langflow:
 
     ```bash
     export PGVECTOR_CONNECTION_STRING="postgresql+psycopg://pgvector:pgvector@localhost:5432/langflow_vectors"
@@ -283,14 +305,13 @@ You can point both at the same PostgreSQL server, or use different databases.
     You can also use a `postgresql://` URL. Langflow normalizes it to the `psycopg` driver at runtime.
 
     When `PGVECTOR_CONNECTION_STRING` is set, new knowledge bases and memory bases default to Postgres pgvector unless you select a different provider.
-    Langflow creates the `vector` extension and required tables on first use.
 
-4. To connect Postgres pgvector to Langflow, click **Settings**, and then click **DB Providers**.
-5. Select **Postgres pgvector**.
+5. To connect Postgres pgvector to Langflow, click **Settings**, and then click **DB Providers**.
+6. Select **Postgres pgvector**.
 
     There are no credentials to enter in the UI. Postgres pgvector is configured from your server environment.
 
-6. Click **Use Postgres pgVector**.
+7. Click **Use Postgres pgVector**.
 
     Optionally, click **Test Connection** to verify that Langflow can reach your Postgres instance before selecting it.
 
