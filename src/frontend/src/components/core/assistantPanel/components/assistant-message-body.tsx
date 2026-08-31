@@ -137,12 +137,32 @@ export function AssistantMessageBody({
   }
 
   if (message.status === "error" && message.error) {
+    // A turn can fail AFTER building part of the flow (step budget). Error text alone
+    // would strand that proposal, which the backend told the user is offered here.
+    const strandedProposal =
+      message.flowProposalStatus && message.pendingFlowProposal ? (
+        <AssistantFlowPreview
+          flowPreview={{
+            flow: message.pendingFlowProposal.flow,
+            name: message.pendingFlowProposal.name ?? "",
+            nodeCount: message.pendingFlowProposal.nodeCount,
+            edgeCount: message.pendingFlowProposal.edgeCount,
+            graph: "",
+          }}
+          status={message.flowProposalStatus}
+          onApply={(mode) => onApplyFlowProposal?.(message.id, mode)}
+          onRevert={() => onRevertFlowProposal?.(message.id)}
+          canRevert={Boolean(message.flowProposalSnapshot)}
+          onDismiss={() => onDismissFlowProposal?.(message.id)}
+        />
+      ) : null;
     return (
       <div className="flex flex-col gap-1">
         <p className="text-sm font-normal text-destructive">{message.error}</p>
         {message.errorDetail && (
           <AssistantErrorDetails detail={message.errorDetail} />
         )}
+        {strandedProposal}
       </div>
     );
   }
