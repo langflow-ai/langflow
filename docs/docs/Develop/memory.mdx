@@ -4,7 +4,7 @@ slug: /memory
 ---
 
 Langflow provides flexible memory management options for storage and retrieval of data relevant to your flows and your Langflow server.
-This includes essential Langflow database tables, file management, and caching, as well as chat memory.
+This includes essential Langflow database tables, file management, caching, and chat memory.
 
 ## Storage options and paths
 
@@ -37,9 +37,13 @@ This is useful for testing when you don't want to persist any data.
 
 ## Langflow database tables
 
-The following tables are stored in `langflow.db`:
+The following tables are stored in Langflow's application database.
+This list covers the main product tables.
+On OSS, the default is the SQLite file `langflow.db`. Desktop uses `database.db`. You can also use an [external PostgreSQL database](#configure-external-memory).
 
 • **ApiKey**: Manages Langflow API authentication keys. Component API keys are stored in the **Variables** table. For more information, see [API keys and authentication](/api-keys-and-authentication).
+
+• **A2ATask** and **A2ACheckpoint**: Persist Agent-to-Agent (A2A) protocol tasks and human-in-the-loop graph checkpoints so A2A runs survive restarts and can resume across workers.
 
 • **Deployment**: Tracks deployments of Langflow flows to external providers, including the deployment name, provider resource key, and associated project and provider account.
 
@@ -67,9 +71,9 @@ The following tables are stored in `langflow.db`:
 
 • **KnowledgeBase**: Stores knowledge base configurations, including the embedding model, chunking settings, backend type, status, and cached statistics (chunk count, word count, total size). For more information, see [Knowledge bases](/knowledge-base).
 
-• **MemoryBase**: Stores memory base configurations for flows, including the associated knowledge base name, embedding model, auto-capture threshold, and optional preprocessing settings.
+• **MemoryBase**: Stores memory base configurations for a flow, including display name, linked `kb_name`, embedding model, ingestion threshold, auto-capture, and optional preprocessing settings. Vector-store `backend_type` / `backend_config` are not columns on this table; they live on the linked **KnowledgeBase** row. For more information, see [Manage memory bases](/memory-bases).
 
-• **MemoryBasePreprocessingOutput**: Captures LLM-distilled preprocessing output before knowledge base writes. Each row represents one preprocessing batch and tracks the status (`processed`, `ingested`, or `skipped`) to support resumable two-phase commit (LLM call → knowledge base write).
+• **MemoryBasePreprocessingOutput**: Captures LLM-distilled preprocessing output before vector-store writes. Each row represents one preprocessing batch and tracks the status (`processed`, `ingested`, or `skipped`) to support resumable two-phase commit (LLM call → knowledge base write).
 
 • **MemoryBaseSession**: Tracks per-session state for each memory base, including the sync cursor position and total count of processed messages.
 
@@ -89,6 +93,9 @@ The following tables are stored in `langflow.db`:
 
 • **VertexBuild**: Tracks the build status of individual nodes within flows. For more information, see [Test flows in the Playground](/concepts-playground).
 
+Additional tables support authorization, SSO, and governance, including **AuthzRole**, **AuthzRoleAssignment**, **AuthzShare**, **AuthzTeam**, **AuthzAuditLog**, **CasbinRule**, **SSOConfig**, **SSOSettings**, **SSOUserProfile**, **CatalogPolicyRule**, **ModelProviderPolicy**, and policy bundle tables.
+For more information, see [Authorization](/authorization) and [External authentication](/external-authentication).
+
 For more information, see the database models in the [source code](https://github.com/langflow-ai/langflow/tree/main/src/backend/base/langflow/services/database/models).
 
 ## Configure external memory {#configure-external-memory}
@@ -105,8 +112,6 @@ To fine-tune your database connection pool and timeout settings, you can set the
 * `LANGFLOW_DATABASE_CONNECTION_RETRY`: Whether to retry lost connections to your Langflow database. If `true`, Langflow tries to connect to the database again if the connection fails. Default: `false`.
 
 * `LANGFLOW_DB_CONNECT_TIMEOUT`: The number of seconds to wait before giving up on a lock to be released or establishing a connection to the database. This may be separate from the `pool_timeout` in `LANGFLOW_DB_CONNECTION_SETTINGS`. Default: 30.
-
-* `LANGFLOW_MIGRATION_LOCK_NAMESPACE`: Optional namespace identifier for PostgreSQL advisory lock during migrations. If not provided, a hash of the database URL will be used. Useful when multiple Langflow instances share the same database and need coordinated migration locking
 
 * `LANGFLOW_DB_CONNECTION_SETTINGS`: A JSON dictionary containing the following database connection pool settings:
 
@@ -126,7 +131,7 @@ To fine-tune your database connection pool and timeout settings, you can set the
     Don't use the deprecated environment variables `LANGFLOW_DB_POOL_SIZE` or `LANGFLOW_DB_MAX_OVERFLOW`.
     Instead, use `pool_size` and `max_overflow` in `LANGFLOW_DB_CONNECTION_SETTINGS`.
 
-* `LANGFLOW_MIGRATION_LOCK_NAMESPACE`: Optional namespace for PostgreSQL advisory locks used during database migrations. This is useful when running multiple Langflow instances that share the same PostgreSQL database. Each instance should use a unique namespace to avoid conflicts. If not set, Langflow uses a default namespace. This setting only applies when using PostgreSQL as your database backend.
+* `LANGFLOW_MIGRATION_LOCK_NAMESPACE`: Optional namespace for PostgreSQL advisory locks used during database migrations. If unset, Alembic uses the static lock key `11223344`, which coordinates every Langflow instance on the same PostgreSQL server. If set, Alembic hashes the namespace to derive the lock key. Set this variable to isolate different Langflow deployments that share one PostgreSQL server, and use the same value on every instance in that deployment. This setting only applies when using PostgreSQL as your database backend.
 
 ## Configure cache memory
 
@@ -170,6 +175,9 @@ Components that support chat memory (such as the **Agent** and **Message History
 Retrieval as memory is an important distinction for LLMs and agents because this storage and retrieval mechanism is specifically designed to recall context from past conversations.
 Unlike vector stores, which are designed for semantic search and retrieval of text chunks, chat memory is designed to store and retrieve chat messages in a way that is optimized for conversation history.
 
+For semantic retrieval of past conversations across sessions, use a [memory base](/memory-bases) instead of chronological chat memory.
+The **Memory Base** component enables **Filter by Session** by default, so retrieval stays in the current session. Disable **Filter by Session** to search across all sessions ingested into the memory base.
+
 </details>
 
 ### Session ID and chat memory
@@ -206,6 +214,8 @@ For more information and examples, see [**Message History** component](/message-
 
 ## See also
 
+* [Manage memory bases](/memory-bases)
+* [Configure vector database providers](/knowledge#configure-vector-database-providers)
 * [Database migrations](./database-migrations)
 * [Configure an external PostgreSQL database](/configuration-custom-database)
 * [Langflow file management](/concepts-file-management)
