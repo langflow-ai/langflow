@@ -1,7 +1,6 @@
 """The shipped Langflow Assistant flow must run under the hardened enterprise settings.
 
-Reproduced from LE-2321 / LE-2322 (Verizon alpha feedback). ``LangflowAssistant.json``
-is first-party content, but it was loaded through the same gates as tenant-supplied
+``LangflowAssistant.json`` is first-party content, but it was loaded through the same gates as tenant-supplied
 flows and did not satisfy them:
 
 * ``LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`` blocked the flow's own inline
@@ -26,18 +25,30 @@ from langflow.agentic.services.flow_preparation import load_and_prepare_flow
 from lfx.interface.components import get_and_cache_all_types_dict
 from lfx.services.deps import get_settings_service
 from lfx.utils.file_path_security import LocalFileAccessError, enforce_local_file_access
-from lfx.utils.flow_validation import CustomComponentValidationError, validate_flow_for_current_settings
+from lfx.utils.flow_validation import (
+    CustomComponentValidationError,
+    validate_flow_for_current_settings,
+)
 from lfx.utils.trusted_flow import packaged_flow_scope
 
 import lfx
 
-FLOW_PATH = Path(__file__).parents[4] / "base" / "langflow" / "agentic" / "flows" / "LangflowAssistant.json"
+FLOW_PATH = (
+    Path(__file__).parents[4]
+    / "base"
+    / "langflow"
+    / "agentic"
+    / "flows"
+    / "LangflowAssistant.json"
+)
 LFX_COMPONENTS_DIR = str(Path(lfx.__file__).parent / "components")
 
 
 def _prepared_flow() -> dict:
     """The flow exactly as production prepares it (both path injections applied)."""
-    return json.loads(load_and_prepare_flow(FLOW_PATH, None, None, None)).get("data", {})
+    return json.loads(load_and_prepare_flow(FLOW_PATH, None, None, None)).get(
+        "data", {}
+    )
 
 
 @pytest.fixture
@@ -76,7 +87,9 @@ class TestShippedAssistantFlowRunsHardened:
     def test_should_read_its_own_component_library(self):
         """LE-2322: the Directory node's package path must be readable."""
         with packaged_flow_scope():
-            enforce_local_file_access(LFX_COMPONENTS_DIR, scope_ids=(str(uuid.uuid4()),))
+            enforce_local_file_access(
+                LFX_COMPONENTS_DIR, scope_ids=(str(uuid.uuid4()),)
+            )
 
 
 @pytest.mark.usefixtures("hardened_settings")
@@ -86,15 +99,21 @@ class TestPackagedFlowMarkerIsContained:
     async def test_should_still_block_the_same_flow_outside_the_marker(self):
         """A tenant flow with identical content stays blocked."""
         await get_and_cache_all_types_dict(get_settings_service())
-        with pytest.raises(CustomComponentValidationError, match="custom components are not allowed"):
+        with pytest.raises(
+            CustomComponentValidationError, match="custom components are not allowed"
+        ):
             validate_flow_for_current_settings(_prepared_flow())
 
     def test_should_still_block_package_reads_outside_the_marker(self):
         with pytest.raises(LocalFileAccessError):
-            enforce_local_file_access(LFX_COMPONENTS_DIR, scope_ids=(str(uuid.uuid4()),))
+            enforce_local_file_access(
+                LFX_COMPONENTS_DIR, scope_ids=(str(uuid.uuid4()),)
+            )
 
     @pytest.mark.parametrize("forbidden", ["/etc/passwd", "/usr/bin", str(Path.home())])
-    def test_should_still_block_arbitrary_server_paths_inside_the_marker(self, forbidden):
+    def test_should_still_block_arbitrary_server_paths_inside_the_marker(
+        self, forbidden
+    ):
         """The file exemption is the package directory only, never a blanket unlock."""
         with packaged_flow_scope(), pytest.raises(LocalFileAccessError):
             enforce_local_file_access(forbidden, scope_ids=(str(uuid.uuid4()),))
@@ -109,4 +128,6 @@ class TestPackagedFlowMarkerIsContained:
         with packaged_flow_scope():
             pass
         with pytest.raises(LocalFileAccessError):
-            enforce_local_file_access(LFX_COMPONENTS_DIR, scope_ids=(str(uuid.uuid4()),))
+            enforce_local_file_access(
+                LFX_COMPONENTS_DIR, scope_ids=(str(uuid.uuid4()),)
+            )

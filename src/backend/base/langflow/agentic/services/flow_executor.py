@@ -27,7 +27,10 @@ from langflow.agentic.services.flow_types import (
     FlowExecutionResult,
 )
 from langflow.agentic.services.helpers.event_consumer import consume_streaming_events
-from langflow.agentic.services.helpers.flow_loader import load_graph_for_execution, resolve_flow_path
+from langflow.agentic.services.helpers.flow_loader import (
+    load_graph_for_execution,
+    resolve_flow_path,
+)
 
 if TYPE_CHECKING:
     from lfx.graph.graph.base import Graph
@@ -47,7 +50,11 @@ async def _run_graph_with_events(
     try:
         # Live tool-start bridge: canvas-mutating flow-builder tools announce the
         # moment they START through the same queue tokens use (deque drains can't).
-        set_tool_start_listener(lambda payload: event_manager.send_event(event_type="tool_start", data=payload))
+        set_tool_start_listener(
+            lambda payload: event_manager.send_event(
+                event_type="tool_start", data=payload
+            )
+        )
         if user_id:
             graph.user_id = user_id
         if session_id:
@@ -73,7 +80,10 @@ async def _run_graph_with_events(
             results = [
                 payload
                 async for payload in coordinator.stream(
-                    graph, initial_inputs=inputs, event_manager=event_manager, open_flow_span=False
+                    graph,
+                    initial_inputs=inputs,
+                    event_manager=event_manager,
+                    open_flow_span=False,
                 )
             ]
         execution_result.result = extract_structured_result(results)
@@ -124,7 +134,7 @@ async def execute_flow_file(
 
     try:
         # resolve_flow_path confines flow_path to the packaged flows directory: this is
-        # first-party product code, not tenant content (LE-2321/LE-2322).
+        # first-party product code, not tenant content.
         with packaged_flow_scope():
             graph = await load_graph_for_execution(
                 flow_path,
@@ -156,7 +166,10 @@ async def execute_flow_file(
             coordinator = await aget_default_coordinator()
             with execution_protocol("agentic"), graph.flow_execution_span():
                 results = [
-                    payload async for payload in coordinator.stream(graph, initial_inputs=inputs, open_flow_span=False)
+                    payload
+                    async for payload in coordinator.stream(
+                        graph, initial_inputs=inputs, open_flow_span=False
+                    )
                 ]
             flow_result = extract_structured_result(results)
     except HTTPException:
@@ -165,10 +178,15 @@ async def execute_flow_file(
         raise HTTPException(status_code=400, detail=str(e)) from e
     except ValueError as e:
         logger.error(f"Flow execution error: {e}")
-        raise HTTPException(status_code=500, detail="An error occurred while executing the flow.") from e
+        raise HTTPException(
+            status_code=500, detail="An error occurred while executing the flow."
+        ) from e
     except Exception as e:
         logger.error(f"Flow execution error: {e}")
-        raise HTTPException(status_code=500, detail="An internal error occurred while executing the flow.") from e
+        raise HTTPException(
+            status_code=500,
+            detail="An internal error occurred while executing the flow.",
+        ) from e
     else:
         if isinstance(flow_result, dict):
             flow_result["_metrics"] = extract_graph_token_usage(graph)
@@ -219,7 +237,7 @@ async def execute_flow_file_streaming(
     flow_path, flow_type = resolve_flow_path(flow_filename)
 
     # resolve_flow_path confines flow_path to the packaged flows directory, so everything
-    # loaded here is first-party product code (LE-2321/LE-2322). Bound inside the generator
+    # loaded here is first-party product code. Bound inside the generator
     # body and closed before the first yield: asyncio.create_task copies the context at
     # creation, so the run inherits the marker without it straddling a suspension point.
     with packaged_flow_scope():
@@ -237,9 +255,13 @@ async def execute_flow_file_streaming(
             raise HTTPException(status_code=400, detail=str(e)) from e
         except (json.JSONDecodeError, OSError, ValueError) as e:
             logger.error(f"Flow preparation error: {e}")
-            raise HTTPException(status_code=500, detail="An error occurred while preparing the flow.") from e
+            raise HTTPException(
+                status_code=500, detail="An error occurred while preparing the flow."
+            ) from e
 
-        event_queue: asyncio.Queue[tuple[str, bytes, float] | None] = asyncio.Queue(maxsize=STREAMING_QUEUE_MAX_SIZE)
+        event_queue: asyncio.Queue[tuple[str, bytes, float] | None] = asyncio.Queue(
+            maxsize=STREAMING_QUEUE_MAX_SIZE
+        )
         event_manager = create_default_event_manager(event_queue)
         execution_result = FlowExecutionResult()
 
@@ -258,7 +280,9 @@ async def execute_flow_file_streaming(
 
     cancelled = False
     try:
-        async for event_type, chunk in consume_streaming_events(event_queue, is_disconnected, cancel_event):
+        async for event_type, chunk in consume_streaming_events(
+            event_queue, is_disconnected, cancel_event
+        ):
             if event_type == "token":
                 yield ("token", chunk)
             elif event_type == "tool_start":

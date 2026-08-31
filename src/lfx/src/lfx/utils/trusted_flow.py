@@ -3,7 +3,7 @@
 The custom-component and local-file policies exist to constrain *tenant-supplied*
 flows. The Langflow Assistant is itself implemented as a flow, shipped inside the
 package, and it is loaded through the same seams — so those policies applied to it
-too, and it blocked itself (LE-2321 / LE-2322).
+too, and it blocked itself.
 
 Scope is deliberately narrow. The marker is bound to the *artifact*, not to "an
 assistant request is in flight": the assistant also builds and runs tenant flows
@@ -28,7 +28,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-_packaged_flow_active: ContextVar[bool] = ContextVar("lfx_packaged_flow_active", default=False)
+_packaged_flow_active: ContextVar[bool] = ContextVar(
+    "lfx_packaged_flow_active", default=False
+)
 
 
 def packaged_flow_is_active() -> bool:

@@ -8,19 +8,22 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
-from lfx.utils.component_aliases import ComponentIdentityIndex, get_component_type_aliases
+from lfx.utils.component_aliases import (
+    ComponentIdentityIndex,
+    get_component_type_aliases,
+)
 
 if TYPE_CHECKING:
     from lfx.services.catalog_policy import CatalogPolicySnapshot
 
-INITIALIZING_COMPONENT_TEMPLATES_MESSAGE = (
-    "Flow build blocked: component templates are still initializing. Please try again in a few seconds."
+INITIALIZING_COMPONENT_TEMPLATES_MESSAGE = "Flow build blocked: component templates are still initializing. Please try again in a few seconds."
+SETTINGS_SERVICE_REQUIRED_MESSAGE = (
+    "Settings service must be initialized before validating flows."
 )
-SETTINGS_SERVICE_REQUIRED_MESSAGE = "Settings service must be initialized before validating flows."
-CATALOG_POLICY_IDENTITIES_UNAVAILABLE_MESSAGE = (
-    "Catalog policy component identities are still initializing. Please try again in a few seconds."
+CATALOG_POLICY_IDENTITIES_UNAVAILABLE_MESSAGE = "Catalog policy component identities are still initializing. Please try again in a few seconds."
+PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE = (
+    "This flow is temporarily unavailable. Please try again."
 )
-PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE = "This flow is temporarily unavailable. Please try again."
 
 # Built-in components that execute user- or model-supplied Python from input fields or during
 # runtime, rather than from the validated class ``code`` field. Their class-code hash is valid,
@@ -62,7 +65,8 @@ CODE_EXECUTION_COMPONENT_TYPES: frozenset[str] = frozenset(
 def is_code_execution_component(*identifiers: object) -> bool:
     """Return whether any component identifier is registered as code-executing."""
     return any(
-        isinstance(identifier, str) and identifier in CODE_EXECUTION_COMPONENT_TYPES for identifier in identifiers
+        isinstance(identifier, str) and identifier in CODE_EXECUTION_COMPONENT_TYPES
+        for identifier in identifiers
     )
 
 
@@ -134,13 +138,19 @@ PROTECTED_TWEAK_FIELDS_BY_COMPONENT: Mapping[str, frozenset[str]] = {
 }
 
 
-def is_protected_tweak_field(component_type: str | None, field_name: str, field_type: str = "") -> bool:
+def is_protected_tweak_field(
+    component_type: str | None, field_name: str, field_type: str = ""
+) -> bool:
     """Return whether a runtime tweak must preserve the flow author's value."""
     return (
         field_type == "code"
         or field_name == "code"
-        or (component_type in CODE_EXECUTION_COMPONENT_TYPES and field_name in CODE_EXECUTION_FIELD_NAMES)
-        or field_name in PROTECTED_TWEAK_FIELDS_BY_COMPONENT.get(component_type or "", ())
+        or (
+            component_type in CODE_EXECUTION_COMPONENT_TYPES
+            and field_name in CODE_EXECUTION_FIELD_NAMES
+        )
+        or field_name
+        in PROTECTED_TWEAK_FIELDS_BY_COMPONENT.get(component_type or "", ())
     )
 
 
@@ -156,7 +166,9 @@ def is_protected_tweak_field(component_type: str | None, field_name: str, field_
 TWEAK_POLICY_PERMISSIVE = "permissive"
 TWEAK_POLICY_DECLARED = "declared"
 TWEAK_POLICY_OFF = "off"
-TWEAK_POLICIES = frozenset({TWEAK_POLICY_PERMISSIVE, TWEAK_POLICY_DECLARED, TWEAK_POLICY_OFF})
+TWEAK_POLICIES = frozenset(
+    {TWEAK_POLICY_PERMISSIVE, TWEAK_POLICY_DECLARED, TWEAK_POLICY_OFF}
+)
 
 
 def flow_declares_api_editable(nodes: list[dict[str, Any]]) -> bool:
@@ -308,7 +320,9 @@ def _collect_catalog_component_keys(nodes: Any) -> set[str]:
     return component_keys
 
 
-def collect_catalog_component_keys(target: Mapping[str, Any] | Any | None) -> frozenset[str]:
+def collect_catalog_component_keys(
+    target: Mapping[str, Any] | Any | None
+) -> frozenset[str]:
     """Return the exact component keys stored in a flow payload or Graph-like object.
 
     Accepts the same targets as :func:`validate_catalog_policy_for_flow` —
@@ -387,7 +401,9 @@ def validate_catalog_policy_for_flow(
     if not blocked:
         identity_index = get_component_identity_index_for_validation()
         if identity_index is None:
-            raise CatalogPolicyIdentityUnavailableError(CATALOG_POLICY_IDENTITIES_UNAVAILABLE_MESSAGE)
+            raise CatalogPolicyIdentityUnavailableError(
+                CATALOG_POLICY_IDENTITIES_UNAVAILABLE_MESSAGE
+            )
         blocked = _resolve_catalog_policy_matches(
             component_keys,
             snapshot.blocked_component_keys,
@@ -531,7 +547,9 @@ def _get_invalid_components(
             blocked.append(f"malformed component ({node_id})")
             continue
         node_code_field = node_template.get("code", {})
-        node_code = node_code_field.get("value") if isinstance(node_code_field, dict) else None
+        node_code = (
+            node_code_field.get("value") if isinstance(node_code_field, dict) else None
+        )
 
         if node_code:
             display_name = node_info.get("display_name") or component_type or "unknown"
@@ -553,12 +571,19 @@ def _get_invalid_components(
             # allow_custom_components gate while its stored code still executed at
             # build time (instantiate_class runs the node's stored code, which
             # does not consult the type).
-            expected_hashes = type_to_current_hash.get(component_type) if isinstance(component_type, str) else None
+            expected_hashes = (
+                type_to_current_hash.get(component_type)
+                if isinstance(component_type, str)
+                else None
+            )
             if expected_hashes is None:
                 blocked.append(label)
             else:
                 node_hash = _compute_code_hash(node_code)
-                is_substitutable = substitutable_types is not None and component_type in substitutable_types
+                is_substitutable = (
+                    substitutable_types is not None
+                    and component_type in substitutable_types
+                )
                 if node_hash not in expected_hashes and not is_substitutable:
                     outdated.append(label)
 
@@ -656,8 +681,12 @@ def check_code_execution_components_and_raise(flow_data: dict | None) -> None:
     found = _find_code_execution_components(nodes)
     if found:
         names = ", ".join(found)
-        logger.warning(f"Flow build blocked: code-execution components are disabled: {names}")
-        message = f"Flow build blocked: code-execution components are not allowed: {names}"
+        logger.warning(
+            f"Flow build blocked: code-execution components are disabled: {names}"
+        )
+        message = (
+            f"Flow build blocked: code-execution components are not allowed: {names}"
+        )
         raise CustomComponentValidationError(message)
 
 
@@ -691,7 +720,9 @@ def get_trusted_code_for_validation(code: str) -> str | None:
             and component_cache.all_types_ready
             and component_cache.all_types_dict is not None
         ):
-            component_cache.code_by_hash = collect_code_by_hash(component_cache.all_types_dict)
+            component_cache.code_by_hash = collect_code_by_hash(
+                component_cache.all_types_dict
+            )
 
         code_by_hash = component_cache.code_by_hash
         if not code_by_hash:
@@ -700,19 +731,29 @@ def get_trusted_code_for_validation(code: str) -> str | None:
         return code_by_hash.get(code_hash)
 
 
-def get_trusted_code_and_hashes_for_validation(code: str) -> tuple[str | None, dict[str, set[str]] | None]:
+def get_trusted_code_and_hashes_for_validation(
+    code: str,
+) -> tuple[str | None, dict[str, set[str]] | None]:
     """Return trusted source and type hashes from one component-registry generation."""
     from lfx.interface.components import _build_code_hash_lookups, component_cache
 
     code_hash = _compute_code_hash(code)
     with component_cache.state_lock:
-        if component_cache.all_types_ready and component_cache.all_types_dict is not None:
+        if (
+            component_cache.all_types_ready
+            and component_cache.all_types_dict is not None
+        ):
             if component_cache.code_by_hash is None:
-                component_cache.code_by_hash = collect_code_by_hash(component_cache.all_types_dict)
+                component_cache.code_by_hash = collect_code_by_hash(
+                    component_cache.all_types_dict
+                )
             if component_cache.type_to_current_hash is None:
                 _build_code_hash_lookups(component_cache)
         code_by_hash = component_cache.code_by_hash
-        return (code_by_hash.get(code_hash) if code_by_hash else None, component_cache.type_to_current_hash)
+        return (
+            code_by_hash.get(code_hash) if code_by_hash else None,
+            component_cache.type_to_current_hash,
+        )
 
 
 def _substitute_trusted_code_by_hash(nodes: list[dict]) -> list[str]:
@@ -744,7 +785,9 @@ def _substitute_trusted_code_by_hash(nodes: list[dict]) -> list[str]:
         if isinstance(code, str) and code:
             trusted = get_trusted_code_for_validation(code)
             if trusted is None:
-                display_name = node_info.get("display_name") or node_data.get("type") or "unknown"
+                display_name = (
+                    node_info.get("display_name") or node_data.get("type") or "unknown"
+                )
                 node_id = node_data.get("id") or node.get("id", "unknown")
                 blocked.append(f"{display_name} ({node_id})")
             else:
@@ -753,7 +796,9 @@ def _substitute_trusted_code_by_hash(nodes: list[dict]) -> list[str]:
         nested_flow = node_info.get("flow")
         if isinstance(nested_flow, dict):
             nested_data = nested_flow.get("data")
-            nested_nodes = nested_data.get("nodes") if isinstance(nested_data, dict) else None
+            nested_nodes = (
+                nested_data.get("nodes") if isinstance(nested_data, dict) else None
+            )
             if isinstance(nested_nodes, list) and nested_nodes:
                 blocked.extend(_substitute_trusted_code_by_hash(nested_nodes))
 
@@ -780,7 +825,9 @@ def resolve_trusted_code_for_build(code: str, *, public_execution: bool = False)
     # in this module treats a missing attribute as the True default, so mirror that here.
     allow_custom_components = True
     if settings_service is not None:
-        allow_custom_components = getattr(settings_service.settings, "allow_custom_components", True)
+        allow_custom_components = getattr(
+            settings_service.settings, "allow_custom_components", True
+        )
 
     if allow_custom_components:
         return code
@@ -848,17 +895,25 @@ def check_flow_and_raise(
         )
         raise CustomComponentValidationError(INITIALIZING_COMPONENT_TEMPLATES_MESSAGE)
 
-    blocked, outdated = _get_invalid_components(nodes, type_to_current_hash, substitutable_types)
+    blocked, outdated = _get_invalid_components(
+        nodes, type_to_current_hash, substitutable_types
+    )
 
     if blocked:
         blocked_names = ", ".join(blocked)
-        logger.warning(f"Flow build blocked: unrecognized component code: {blocked_names}")
-        message = f"Flow build blocked: custom components are not allowed: {blocked_names}"
+        logger.warning(
+            f"Flow build blocked: unrecognized component code: {blocked_names}"
+        )
+        message = (
+            f"Flow build blocked: custom components are not allowed: {blocked_names}"
+        )
         raise CustomComponentValidationError(message)
 
     if outdated:
         outdated_names = ", ".join(outdated)
-        logger.warning(f"Flow build blocked: outdated components must be updated: {outdated_names}")
+        logger.warning(
+            f"Flow build blocked: outdated components must be updated: {outdated_names}"
+        )
         message = f"Flow build blocked: outdated components must be updated before running: {outdated_names}"
         raise CustomComponentValidationError(message)
 
@@ -900,7 +955,9 @@ def validate_catalog_policy_for_component_code(
 
     type_to_current_hash = get_component_hash_lookups_for_validation()
     if type_to_current_hash is None:
-        raise CatalogPolicyIdentityUnavailableError(CATALOG_POLICY_IDENTITIES_UNAVAILABLE_MESSAGE)
+        raise CatalogPolicyIdentityUnavailableError(
+            CATALOG_POLICY_IDENTITIES_UNAVAILABLE_MESSAGE
+        )
 
     code_hash = _compute_code_hash(code)
     # Preserve exact lookup behavior for synthetic/custom identities and
@@ -913,10 +970,14 @@ def validate_catalog_policy_for_component_code(
     if not blocked:
         identity_index = get_component_identity_index_for_validation()
         if identity_index is None:
-            raise CatalogPolicyIdentityUnavailableError(CATALOG_POLICY_IDENTITIES_UNAVAILABLE_MESSAGE)
+            raise CatalogPolicyIdentityUnavailableError(
+                CATALOG_POLICY_IDENTITIES_UNAVAILABLE_MESSAGE
+            )
         blocked = frozenset(
             component_type
-            for component_type in identity_index.resolve_many(snapshot.blocked_component_keys)
+            for component_type in identity_index.resolve_many(
+                snapshot.blocked_component_keys
+            )
             if code_hash in type_to_current_hash.get(component_type, set())
         )
     if not blocked:
@@ -949,7 +1010,9 @@ def validate_catalog_policy_for_component_type(
     else:
         identity_index = get_component_identity_index_for_validation()
         if identity_index is None:
-            raise CatalogPolicyIdentityUnavailableError(CATALOG_POLICY_IDENTITIES_UNAVAILABLE_MESSAGE)
+            raise CatalogPolicyIdentityUnavailableError(
+                CATALOG_POLICY_IDENTITIES_UNAVAILABLE_MESSAGE
+            )
         blocked = identity_index.resolve(component_type).intersection(
             identity_index.resolve_many(snapshot.blocked_component_keys)
         )
@@ -972,7 +1035,7 @@ def validate_flow_for_current_settings(
     from lfx.services.deps import get_catalog_policy_service, get_settings_service
     from lfx.utils.trusted_flow import packaged_flow_is_active
 
-    # LE-2321: a packaged first-party flow is product code, not tenant content. It is
+    # A packaged first-party flow is product code, not tenant content. It is
     # marked only by flow_executor, and only for artifacts resolved inside the packaged
     # flows directory -- see lfx.utils.trusted_flow for why this is bound to the artifact
     # rather than to "an assistant request is in flight".
@@ -987,7 +1050,9 @@ def validate_flow_for_current_settings(
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
     settings = settings_service.settings
     allow_custom_components = getattr(settings, "allow_custom_components", True)
-    block_code_interpreter_components = getattr(settings, "block_code_interpreter_components", False)
+    block_code_interpreter_components = getattr(
+        settings, "block_code_interpreter_components", False
+    )
     normalized_flow_data = _extract_flow_data(target)
 
     # If a blocking policy is active and we received a target but couldn't extract any flow
@@ -1004,7 +1069,9 @@ def validate_flow_for_current_settings(
         )
         raise CustomComponentValidationError(msg)
 
-    validate_catalog_policy_for_flow(normalized_flow_data, snapshot=catalog_policy_snapshot)
+    validate_catalog_policy_for_flow(
+        normalized_flow_data, snapshot=catalog_policy_snapshot
+    )
 
     if block_code_interpreter_components:
         check_code_execution_components_and_raise(normalized_flow_data)
@@ -1065,7 +1132,9 @@ def collect_component_code_lookups(all_types_dict: Mapping[str, Any]) -> dict[st
     return type_to_code
 
 
-def _substitute_trusted_node_code(nodes: list, type_to_code: dict[str, str]) -> list[str]:
+def _substitute_trusted_node_code(
+    nodes: list, type_to_code: dict[str, str]
+) -> list[str]:
     """Replace each code-bearing node's code with the server's trusted copy for its type.
 
     Mutates the given node dicts in place (callers pass a copy). A node carries an execution
@@ -1099,7 +1168,9 @@ def _substitute_trusted_node_code(nodes: list, type_to_code: dict[str, str]) -> 
             if isinstance(component_type, str) and component_type in type_to_code:
                 code_field["value"] = type_to_code[component_type]
             else:
-                display_name = (node_info.get("display_name") if node_info else None) or component_type
+                display_name = (
+                    node_info.get("display_name") if node_info else None
+                ) or component_type
                 node_id = node_data.get("id") or node.get("id", "unknown")
                 blocked.append(f"{display_name} ({node_id})")
 
@@ -1108,9 +1179,13 @@ def _substitute_trusted_node_code(nodes: list, type_to_code: dict[str, str]) -> 
             nested_flow = node_info.get("flow")
             if isinstance(nested_flow, dict):
                 nested_data = nested_flow.get("data")
-                nested_nodes = nested_data.get("nodes") if isinstance(nested_data, dict) else None
+                nested_nodes = (
+                    nested_data.get("nodes") if isinstance(nested_data, dict) else None
+                )
                 if isinstance(nested_nodes, list) and nested_nodes:
-                    blocked.extend(_substitute_trusted_node_code(nested_nodes, type_to_code))
+                    blocked.extend(
+                        _substitute_trusted_node_code(nested_nodes, type_to_code)
+                    )
 
     return blocked
 
@@ -1132,7 +1207,9 @@ def get_component_code_lookups_for_validation() -> dict[str, str] | None:
             and component_cache.all_types_ready
             and component_cache.all_types_dict is not None
         ):
-            component_cache.type_to_code = collect_component_code_lookups(component_cache.all_types_dict)
+            component_cache.type_to_code = collect_component_code_lookups(
+                component_cache.all_types_dict
+            )
 
         return component_cache.type_to_code
 
@@ -1165,14 +1242,18 @@ class SubstitutableComponentTypes(Container[str]):
         if current_hashes is None or len(current_hashes) != 1:
             return False
         trusted_code = self.type_to_code.get(component_type)
-        return isinstance(trusted_code, str) and _compute_code_hash(trusted_code) == next(iter(current_hashes))
+        return isinstance(trusted_code, str) and _compute_code_hash(
+            trusted_code
+        ) == next(iter(current_hashes))
 
     def current_hash(self, component_type: str) -> str:
         """Return the single current code hash for a substitutable ``component_type``."""
         return next(iter(self.type_to_current_hash[component_type]))
 
 
-def get_outdated_code_substitution_lookups() -> tuple[dict[str, str], SubstitutableComponentTypes] | None:
+def get_outdated_code_substitution_lookups() -> (
+    tuple[dict[str, str], SubstitutableComponentTypes] | None
+):
     """Return ``(type_to_code, substitutable_types)`` when drifted built-ins are substitutable.
 
     ``None`` — meaning "keep the strict hash check" — is returned when custom components are
@@ -1240,7 +1321,8 @@ def _substitute_outdated_node_code(
             isinstance(code, str)
             and code
             and component_type in substitutable_types
-            and _compute_code_hash(code) != substitutable_types.current_hash(component_type)
+            and _compute_code_hash(code)
+            != substitutable_types.current_hash(component_type)
         ):
             trusted = type_to_code[component_type]
             if trusted != code:
@@ -1252,9 +1334,15 @@ def _substitute_outdated_node_code(
         nested_flow = node_info.get("flow")
         if isinstance(nested_flow, dict):
             nested_data = nested_flow.get("data")
-            nested_nodes = nested_data.get("nodes") if isinstance(nested_data, dict) else None
+            nested_nodes = (
+                nested_data.get("nodes") if isinstance(nested_data, dict) else None
+            )
             if isinstance(nested_nodes, list) and nested_nodes:
-                swapped.extend(_substitute_outdated_node_code(nested_nodes, type_to_code, substitutable_types))
+                swapped.extend(
+                    _substitute_outdated_node_code(
+                        nested_nodes, type_to_code, substitutable_types
+                    )
+                )
 
     return swapped
 
@@ -1337,12 +1425,18 @@ async def _ensure_public_component_lookup_snapshot(
     from lfx.interface.components import component_cache, get_and_cache_all_types_dict
 
     with component_cache.state_lock:
-        registry_unavailable = component_cache.all_types_dict is None or not component_cache.all_types_ready
+        registry_unavailable = (
+            component_cache.all_types_dict is None
+            or not component_cache.all_types_ready
+        )
     if registry_unavailable:
         try:
             await get_and_cache_all_types_dict(settings_service)
         except Exception as exc:
-            logger.warning("Failed to load component templates for public flow sanitization", exc_info=exc)
+            logger.warning(
+                "Failed to load component templates for public flow sanitization",
+                exc_info=exc,
+            )
             raise
 
     # Publication and invalidation replace all derived indexes under this RLock. Keep it across
@@ -1354,7 +1448,9 @@ async def _ensure_public_component_lookup_snapshot(
     return type_to_code or {}, type_to_current_hash or {}
 
 
-async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> dict | None:
+async def prepare_public_flow_build(
+    target: Mapping[str, Any] | Any | None
+) -> dict | None:
     """Return server-trusted, build-ready flow data for the unauthenticated public build path.
 
     ``POST /api/v1/build_public_tmp/{flow_id}/flow`` builds a public flow **as its owner**
@@ -1423,7 +1519,9 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
     if not isinstance(nodes, list) or not nodes:
         return None
 
-    type_to_code, type_to_current_hash = await _ensure_public_component_lookup_snapshot(settings_service)
+    type_to_code, type_to_current_hash = await _ensure_public_component_lookup_snapshot(
+        settings_service
+    )
     if not type_to_code or not type_to_current_hash:
         # Templates unavailable — do not let unverified code through.
         raise CustomComponentValidationError(INITIALIZING_COMPONENT_TEMPLATES_MESSAGE)
@@ -1435,8 +1533,12 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
         # effective graph so the public code-execution check covers the bytes that will run.
         validate_flow_for_current_settings(target)
         if getattr(settings, "substitute_outdated_component_code", True):
-            substitutable_types = SubstitutableComponentTypes(type_to_current_hash, type_to_code)
-            swapped = _substitute_outdated_node_code(sanitized.get("nodes", []), type_to_code, substitutable_types)
+            substitutable_types = SubstitutableComponentTypes(
+                type_to_current_hash, type_to_code
+            )
+            swapped = _substitute_outdated_node_code(
+                sanitized.get("nodes", []), type_to_code, substitutable_types
+            )
             _log_outdated_component_code_substitution(swapped)
         check_flow_and_raise(
             sanitized,
@@ -1444,7 +1546,9 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
             type_to_current_hash=type_to_current_hash,
         )
     else:
-        blocked = _substitute_trusted_node_code(sanitized.get("nodes", []), type_to_code)
+        blocked = _substitute_trusted_node_code(
+            sanitized.get("nodes", []), type_to_code
+        )
         if blocked:
             blocked_names = ", ".join(blocked)
             logger.warning(
@@ -1459,7 +1563,9 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
     # Validate what the executor will actually receive, not only the stale stored bytes checked
     # by route-level defense in depth. This central guarantee covers v1, v2, A2A start, and A2A
     # resume callers alike.
-    validate_public_flow_no_code_execution(sanitized, type_to_current_hash=type_to_current_hash)
+    validate_public_flow_no_code_execution(
+        sanitized, type_to_current_hash=type_to_current_hash
+    )
     return sanitized
 
 
@@ -1534,9 +1640,15 @@ def _collect_blocked_components(
             continue
 
         node_info = node_data.get("node", {})
-        display_name = node_info.get("display_name") if isinstance(node_info, dict) else None
-        matched_by_type = node_data.get("type") in blocked_types or display_name in blocked_types
-        matched_by_hash = bool(blocked_hashes) and _node_code_hash(node_info) in blocked_hashes
+        display_name = (
+            node_info.get("display_name") if isinstance(node_info, dict) else None
+        )
+        matched_by_type = (
+            node_data.get("type") in blocked_types or display_name in blocked_types
+        )
+        matched_by_hash = (
+            bool(blocked_hashes) and _node_code_hash(node_info) in blocked_hashes
+        )
         if matched_by_type or matched_by_hash:
             display_name = display_name or node_data.get("type", "unknown")
             node_id = node_data.get("id") or node.get("id", "unknown")
@@ -1545,11 +1657,17 @@ def _collect_blocked_components(
         # Recurse into nested flows (group / sub-flow nodes).
         if isinstance(node_info, dict):
             nested_flow = node_info.get("flow", {})
-            nested_nodes = nested_flow.get("data", {}).get("nodes", []) if isinstance(nested_flow, dict) else []
+            nested_nodes = (
+                nested_flow.get("data", {}).get("nodes", [])
+                if isinstance(nested_flow, dict)
+                else []
+            )
             if isinstance(nested_nodes, list) and nested_nodes:
                 found.extend(
                     _collect_blocked_components(
-                        nested_nodes, blocked_types=blocked_types, blocked_hashes=blocked_hashes
+                        nested_nodes,
+                        blocked_types=blocked_types,
+                        blocked_hashes=blocked_hashes,
                     )
                 )
     return found
@@ -1591,7 +1709,10 @@ def _is_mcp_server_field(field_name: Any, field: Mapping[str, Any]) -> bool:
     """
     if field.get("type") == MCP_SERVER_FIELD_TYPE:
         return True
-    if field_name in MCP_SERVER_FIELD_NAMES or field.get("name") in MCP_SERVER_FIELD_NAMES:
+    if (
+        field_name in MCP_SERVER_FIELD_NAMES
+        or field.get("name") in MCP_SERVER_FIELD_NAMES
+    ):
         return True
     value = field.get("value")
     return isinstance(value, Mapping) and ("config" in value or "mcpServers" in value)
@@ -1617,18 +1738,27 @@ def _collect_mcp_stdio_components(nodes: list[dict]) -> list[str]:
         template = node_info.get("template", {})
         if isinstance(template, Mapping):
             for field_name, field in template.items():
-                if not isinstance(field, Mapping) or not _is_mcp_server_field(field_name, field):
+                if not isinstance(field, Mapping) or not _is_mcp_server_field(
+                    field_name, field
+                ):
                     continue
                 if any(
-                    _selects_mcp_stdio_transport(config) for config in _mcp_configs_in_field_value(field.get("value"))
+                    _selects_mcp_stdio_transport(config)
+                    for config in _mcp_configs_in_field_value(field.get("value"))
                 ):
-                    display_name = node_info.get("display_name") or node_data.get("type", "unknown")
+                    display_name = node_info.get("display_name") or node_data.get(
+                        "type", "unknown"
+                    )
                     node_id = node_data.get("id") or node.get("id", "unknown")
                     found.append(f"{display_name} ({node_id})")
                     break
 
         nested_flow = node_info.get("flow", {})
-        nested_nodes = nested_flow.get("data", {}).get("nodes", []) if isinstance(nested_flow, dict) else []
+        nested_nodes = (
+            nested_flow.get("data", {}).get("nodes", [])
+            if isinstance(nested_flow, dict)
+            else []
+        )
         if isinstance(nested_nodes, list) and nested_nodes:
             found.extend(_collect_mcp_stdio_components(nested_nodes))
     return found
@@ -1695,7 +1825,9 @@ def validate_public_flow_no_code_execution(
     )
     if code_execution:
         blocked_names = ", ".join(code_execution)
-        logger.warning(f"Public flow build blocked: code-execution components are not allowed: {blocked_names}")
+        logger.warning(
+            f"Public flow build blocked: code-execution components are not allowed: {blocked_names}"
+        )
         message = (
             "Public flows cannot be built without authentication when they contain "
             f"code-execution components: {blocked_names}"
@@ -1712,7 +1844,9 @@ def validate_public_flow_no_code_execution(
     )
     if flow_references:
         blocked_names = ", ".join(flow_references)
-        logger.warning(f"Public flow build blocked: flow-invoking components are not allowed: {blocked_names}")
+        logger.warning(
+            f"Public flow build blocked: flow-invoking components are not allowed: {blocked_names}"
+        )
         message = (
             "Public flows cannot be built without authentication when they contain "
             f"components that can execute other flows: {blocked_names}"
@@ -1730,7 +1864,9 @@ def validate_public_flow_no_code_execution(
     )
     if mcp_stdio:
         blocked_names = ", ".join(dict.fromkeys(mcp_stdio))
-        logger.warning(f"Public flow build blocked: MCP stdio servers are not allowed: {blocked_names}")
+        logger.warning(
+            f"Public flow build blocked: MCP stdio servers are not allowed: {blocked_names}"
+        )
         message = (
             "Public flows cannot be built without authentication when they launch a local "
             f"MCP server process (stdio transport): {blocked_names}"
@@ -1738,7 +1874,9 @@ def validate_public_flow_no_code_execution(
         raise PublicFlowValidationError(message)
 
 
-async def ensure_component_hash_lookups_loaded(*, force: bool = False) -> dict[str, set[str]] | None:
+async def ensure_component_hash_lookups_loaded(
+    *, force: bool = False
+) -> dict[str, set[str]] | None:
     """Ensure component lookups required by active runtime policies are available.
 
     ``force=True`` also loads them for caller-specific policy, such as the
@@ -1755,21 +1893,34 @@ async def ensure_component_hash_lookups_loaded(*, force: bool = False) -> dict[s
     if settings_service is None:
         raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
 
-    catalog_policy_active = bool(get_catalog_policy_service().snapshot.blocked_component_keys)
-    policy_lookups_required = force or not settings_service.settings.allow_custom_components or catalog_policy_active
+    catalog_policy_active = bool(
+        get_catalog_policy_service().snapshot.blocked_component_keys
+    )
+    policy_lookups_required = (
+        force
+        or not settings_service.settings.allow_custom_components
+        or catalog_policy_active
+    )
     with component_cache.state_lock:
-        registry_unavailable = component_cache.all_types_dict is None or not component_cache.all_types_ready
+        registry_unavailable = (
+            component_cache.all_types_dict is None
+            or not component_cache.all_types_ready
+        )
 
     if policy_lookups_required and registry_unavailable:
         try:
             await get_and_cache_all_types_dict(settings_service)
         except Exception as exc:
-            logger.warning("Failed to populate component template hash lookups", exc_info=exc)
+            logger.warning(
+                "Failed to populate component template hash lookups", exc_info=exc
+            )
             raise
 
     type_to_current_hash = get_component_hash_lookups_for_validation()
     if catalog_policy_active and get_component_identity_index() is None:
-        raise CatalogPolicyIdentityUnavailableError(CATALOG_POLICY_IDENTITIES_UNAVAILABLE_MESSAGE)
+        raise CatalogPolicyIdentityUnavailableError(
+            CATALOG_POLICY_IDENTITIES_UNAVAILABLE_MESSAGE
+        )
 
     return type_to_current_hash
 
@@ -1811,7 +1962,11 @@ def _sanitize_admin_only_flow_build(
     validation_hashes = type_to_current_hash
     if substitution_lookups:
         nodes = sanitized.get("nodes", [])
-        swapped = _substitute_outdated_node_code(nodes, *substitution_lookups) if isinstance(nodes, list) else []
+        swapped = (
+            _substitute_outdated_node_code(nodes, *substitution_lookups)
+            if isinstance(nodes, list)
+            else []
+        )
         _log_outdated_component_code_substitution(swapped)
         validation_hashes = substitution_lookups[1].type_to_current_hash
     check_flow_and_raise(
@@ -1824,15 +1979,22 @@ def _sanitize_admin_only_flow_build(
     blocked = _substitute_trusted_code_by_hash(nodes) if isinstance(nodes, list) else []
     if blocked:
         blocked_names = ", ".join(blocked)
-        logger.warning(f"Flow build blocked: trusted component source unavailable: {blocked_names}")
-        message = f"Flow build blocked: no trusted server component matches: {blocked_names}"
+        logger.warning(
+            f"Flow build blocked: trusted component source unavailable: {blocked_names}"
+        )
+        message = (
+            f"Flow build blocked: no trusted server component matches: {blocked_names}"
+        )
         raise CustomComponentValidationError(message)
 
     return sanitized
 
 
 def _admin_only_build_required(settings: Any, *, is_superuser: bool) -> bool:
-    return getattr(settings, "custom_component_admin_only", False) is True and not is_superuser
+    return (
+        getattr(settings, "custom_component_admin_only", False) is True
+        and not is_superuser
+    )
 
 
 def admin_only_build_required(*, is_superuser: bool) -> bool:
@@ -1849,10 +2011,14 @@ def admin_only_build_required(*, is_superuser: bool) -> bool:
     if settings_service is None:
         # Fail closed: without settings we cannot prove the policy is off.
         return True
-    return _admin_only_build_required(settings_service.settings, is_superuser=is_superuser)
+    return _admin_only_build_required(
+        settings_service.settings, is_superuser=is_superuser
+    )
 
 
-async def prepare_admin_only_flow_build(target: Mapping[str, Any] | Any | None) -> dict[str, Any] | None:
+async def prepare_admin_only_flow_build(
+    target: Mapping[str, Any] | Any | None
+) -> dict[str, Any] | None:
     """Backward-compatible admin-only sanitizer for callers that already selected this policy."""
     return _sanitize_admin_only_flow_build(
         target,
@@ -1877,8 +2043,12 @@ async def prepare_flow_build_for_user(
     if settings_service is None:
         raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
 
-    admin_only = _admin_only_build_required(settings_service.settings, is_superuser=is_superuser)
-    type_to_current_hash = await ensure_component_hash_lookups_loaded(force=True) if admin_only else None
+    admin_only = _admin_only_build_required(
+        settings_service.settings, is_superuser=is_superuser
+    )
+    type_to_current_hash = (
+        await ensure_component_hash_lookups_loaded(force=True) if admin_only else None
+    )
 
     # Policies are cumulative: the admin-only hash gate must not disable the
     # code-interpreter or global custom-component restrictions.
@@ -1886,7 +2056,9 @@ async def prepare_flow_build_for_user(
     if not admin_only:
         return None
 
-    return _sanitize_admin_only_flow_build(target, type_to_current_hash=type_to_current_hash)
+    return _sanitize_admin_only_flow_build(
+        target, type_to_current_hash=type_to_current_hash
+    )
 
 
 def prepare_flow_build_for_user_from_cache(
@@ -1907,7 +2079,9 @@ def prepare_flow_build_for_user_from_cache(
         raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
 
     validate_flow_for_current_settings(target)
-    if not _admin_only_build_required(settings_service.settings, is_superuser=is_superuser):
+    if not _admin_only_build_required(
+        settings_service.settings, is_superuser=is_superuser
+    ):
         return None
 
     return _sanitize_admin_only_flow_build(
