@@ -339,9 +339,10 @@ def _build_archive(
         )
 
     manifest = {
-        # Dependencies travel as typed response metadata for the Enterprise
-        # deployment request. They are not part of the stable lfpkg v1 schema.
-        "schema_version": 1,
+        # v2 is already assigned to flows[].version_id. Dependencies therefore
+        # use v3 so an older reader refuses them instead of deploying without
+        # provisioning resources the packaged flows require.
+        "schema_version": 3 if dependencies else 1,
         "project": {"id": str(project_id), "name": project_name},
         # Names of every load_from_db-bound global variable the packaged flows
         # reference; the deploy target must provision each name before serving.
@@ -358,6 +359,8 @@ def _build_archive(
             for flow in flow_entries
         ],
     }
+    if dependencies:
+        manifest["dependencies"] = dependencies
     manifest_bytes = _canonical_json_bytes(manifest)
     if len(manifest_bytes) > limits.max_flow_bytes:
         msg = f"manifest file is {len(manifest_bytes)} bytes, exceeding the {limits.max_flow_bytes}-byte limit"

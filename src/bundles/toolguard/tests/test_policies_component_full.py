@@ -1,8 +1,10 @@
+import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
+from lfx_toolguard.components.models_and_agents import policies_component as policies_component_module
 from lfx_toolguard.components.models_and_agents.policies_component import (
     MODE_GENERATE,
     MODE_GUARD,
@@ -260,14 +262,32 @@ async def test_generate_mode_validation_errors(mock_component):
     #     await mock_component.guard_tools()
 
 
-def test_work_dir_property():
+def test_work_dir_property(monkeypatch, tmp_path):
     """Test work_dir property generates correct path."""
+    monkeypatch.setattr(policies_component_module, "TOOLGUARD_WORK_DIR", tmp_path)
     component = PoliciesComponent()
     component.project = "test project"
     work_dir = component.work_dir
 
+    assert work_dir.is_relative_to(tmp_path)
+    assert work_dir.is_absolute()
     assert "test_project" in str(work_dir)
     assert work_dir.name == "test_project"
+
+
+def test_resolve_work_dir_uses_temp_directory_by_default(monkeypatch):
+    """The default work directory is writable and independent of the current directory."""
+    monkeypatch.delenv("TOOLGUARD_WORK_DIR", raising=False)
+
+    assert policies_component_module._resolve_toolguard_work_dir() == Path(tempfile.gettempdir()) / "tmp_toolguard"
+
+
+def test_resolve_work_dir_honors_environment_override(monkeypatch, tmp_path):
+    """Deployments can configure a dedicated ToolGuard work directory."""
+    configured_work_dir = tmp_path / "toolguard"
+    monkeypatch.setenv("TOOLGUARD_WORK_DIR", str(configured_work_dir))
+
+    assert policies_component_module._resolve_toolguard_work_dir() == configured_work_dir
 
 
 def test_work_dir_reuses_standalone_component_identity():

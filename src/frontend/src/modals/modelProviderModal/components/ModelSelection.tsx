@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 
 import { Model } from "@/modals/modelProviderModal/components/types";
@@ -20,7 +21,7 @@ export const hasProviderOwnedEmptyState = (providerName?: string): boolean =>
   (CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName) ||
     providerName.toLowerCase() === "ollama");
 
-export interface ModelProviderSelectionProps {
+export interface ModelProviderSelectionProps extends ProviderScopeParams {
   availableModels: Model[];
   onModelToggle: (
     modelName: string,
@@ -200,11 +201,27 @@ const ModelSelection = ({
   isEnabledModel,
   liveDiscovery,
   isConfigured,
+  flowId,
+  projectId,
 }: ModelProviderSelectionProps) => {
   const { t } = useTranslation();
-  const { data: enabledModelsData } = useGetEnabledModels();
+  const {
+    data: enabledModelsData,
+    isSuccess: isEnabledModelsSuccess,
+    isFetching: isEnabledModelsFetching,
+    isFetchedAfterMount: isEnabledModelsFetchedAfterMount,
+    fetchStatus: enabledModelsFetchStatus,
+    isError: isEnabledModelsError,
+    refetch: refetchEnabledModels,
+  } = useGetEnabledModels({ flowId, projectId, purpose: "configure" });
   const [modelQuery, setModelQuery] = useState<string>("");
   const [showDeprecated, setShowDeprecated] = useState<boolean>(false);
+  const canUseEnabledModels =
+    !!enabledModelsData &&
+    isEnabledModelsSuccess &&
+    !isEnabledModelsFetching &&
+    isEnabledModelsFetchedAfterMount &&
+    enabledModelsFetchStatus === "idle";
 
   // Reset both the search and the deprecated disclosure when the selected
   // provider changes so neither state leaks across providers
@@ -218,7 +235,13 @@ const ModelSelection = ({
     modelName: string,
     selectedModelType: ModelType,
   ): boolean => {
-    if (!providerName || !enabledModelsData?.enabled_models) return false;
+    if (
+      !canUseEnabledModels ||
+      !providerName ||
+      !enabledModelsData.enabled_models
+    ) {
+      return false;
+    }
 
     const typedProvider =
       enabledModelsData.enabled_models_by_type?.[providerName];
@@ -239,6 +262,9 @@ const ModelSelection = ({
 
   // Merge enabled free-text deployments; typed API wins, legacy customs default to llm.
   const modelsWithCustomDeployments = useMemo(() => {
+    if (!canUseEnabledModels) {
+      return [];
+    }
     if (!supportsCustomDeployments || !providerName) {
       return availableModels;
     }
@@ -292,6 +318,7 @@ const ModelSelection = ({
       : availableModels;
   }, [
     availableModels,
+    canUseEnabledModels,
     enabledModelsData?.enabled_models,
     enabledModelsData?.enabled_models_by_type,
     providerName,
@@ -325,7 +352,10 @@ const ModelSelection = ({
   );
 
   const addableDeploymentTypes =
-    supportsCustomDeployments && isEnabledModel && trimmedModelQuery.length > 0
+    canUseEnabledModels &&
+    supportsCustomDeployments &&
+    isEnabledModel &&
+    trimmedModelQuery.length > 0
       ? visibleDeploymentTypes.filter(
           (deploymentType) =>
             !modelsWithCustomDeployments.some(
@@ -454,6 +484,33 @@ const ModelSelection = ({
     : t("modelProviders.searchModels", {
         defaultValue: "Search models…",
       });
+
+  if (!canUseEnabledModels) {
+    return (
+      <div
+        data-testid="model-provider-selection"
+        className="flex flex-col gap-3"
+      >
+        {isEnabledModelsError ? (
+          <div role="alert" className="flex flex-col items-start gap-3">
+            <span>{t("modelProviders.errorUnexpected")}</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void refetchEnabledModels()}
+            >
+              {t("common.retry")}
+            </Button>
+          </div>
+        ) : (
+          <div role="status" aria-live="polite">
+            {t("modelInput.loadingModels")}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div data-testid="model-provider-selection" className="flex flex-col gap-6">

@@ -314,6 +314,9 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Python Scan Report
+        # The scanner writes its report even when a route or state fails;
+        # keep it when the step above fails so the findings are not lost.
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: python-route-scan-${{ github.run_attempt }}

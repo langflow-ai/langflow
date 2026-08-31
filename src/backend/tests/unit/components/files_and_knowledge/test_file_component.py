@@ -51,16 +51,73 @@ class TestFileComponentDynamicOutputs:
         assert "message" in output_names  # Raw content
         assert "path" in output_names  # File path
 
-    def test_update_outputs_multiple_files(self):
-        """Test multiple files show only Files output."""
+    async def test_update_outputs_multiple_files_preserves_raw_content(self):
+        """Test multiple files keep the Message output alongside Files."""
         component = FileComponent()
         frontend_node = {"outputs": [], "template": {"path": {"file_path": ["file1.txt", "file2.txt"]}}}
 
-        result = component.update_outputs(frontend_node, "path", ["file1.txt", "file2.txt"])
+        result = await component.run_and_validate_update_outputs(frontend_node, "path", ["file1.txt", "file2.txt"])
 
-        assert len(result["outputs"]) == 1
-        assert result["outputs"][0].name == "dataframe"
-        assert result["outputs"][0].display_name == "Files"
+        assert [
+            (output["name"], output["display_name"], output["method"], output["types"]) for output in result["outputs"]
+        ] == [
+            ("dataframe", "Files", "load_files", ["Table"]),
+            ("message", "Raw Content", "load_files_message", ["Message"]),
+        ]
+
+    @pytest.mark.parametrize(
+        ("paths", "advanced_mode", "expected_outputs"),
+        [
+            (
+                ["test.csv"],
+                False,
+                [
+                    ("dataframe", ["Table"], "Table"),
+                    ("message", ["Message"], "Message"),
+                    ("path", ["Message"], "Message"),
+                ],
+            ),
+            (
+                ["data.json"],
+                False,
+                [
+                    ("json", ["JSON"], "JSON"),
+                    ("message", ["Message"], "Message"),
+                    ("path", ["Message"], "Message"),
+                ],
+            ),
+            (
+                ["document.txt"],
+                False,
+                [("message", ["Message"], "Message"), ("path", ["Message"], "Message")],
+            ),
+            (
+                ["document.pdf"],
+                True,
+                [
+                    ("advanced_dataframe", ["Table"], "Table"),
+                    ("advanced_markdown", ["Message"], "Message"),
+                    ("path", ["Message"], "Message"),
+                ],
+            ),
+            (
+                ["file1.txt", "file2.txt"],
+                False,
+                [("dataframe", ["Table"], "Table"), ("message", ["Message"], "Message")],
+            ),
+        ],
+    )
+    def test_update_outputs_are_immediately_connectable(self, paths, advanced_mode, expected_outputs):
+        """Dynamic outputs must include their types before frontend validation runs."""
+        component = FileComponent()
+        frontend_node = {
+            "outputs": [],
+            "template": {"path": {"file_path": paths}, "advanced_mode": {"value": advanced_mode}},
+        }
+
+        result = component.update_outputs(frontend_node, "path", paths)
+
+        assert [(output.name, output.types, output.selected) for output in result["outputs"]] == expected_outputs
 
     def test_update_outputs_empty_path(self):
         """Test empty path results in no outputs."""

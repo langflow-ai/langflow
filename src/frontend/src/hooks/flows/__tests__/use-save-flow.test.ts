@@ -125,6 +125,9 @@ describe("useSaveFlow", () => {
         onError: expect.any(Function),
       }),
     );
+    expect(mockMutate.mock.calls[0][0]).not.toHaveProperty(
+      "providerScopeChanged",
+    );
     expect(mockSetSaveLoading).toHaveBeenCalledWith(true);
     expect(mockSetSaveLoading).toHaveBeenCalledWith(false);
     expect(mockSetCurrentFlow).toHaveBeenCalled();
@@ -388,6 +391,7 @@ describe("useSaveFlow", () => {
       expect.objectContaining({
         id: "flow-1",
         folder_id: "folder-B",
+        providerScopeChanged: true,
       }),
       expect.objectContaining({
         onSuccess: expect.any(Function),
@@ -400,5 +404,45 @@ describe("useSaveFlow", () => {
     expect(nextFlows[0]).toEqual(
       expect.objectContaining({ id: "flow-1", folder_id: "folder-B" }),
     );
+  });
+  it("keeps canvas edits made while the save was in flight", async () => {
+    // The editor's `currentFlow` is the baseline the next autosave diffs
+    // against. Overwriting it with the response of a save that started before
+    // the edit makes that edit look already-persisted, so the follow-up save
+    // is skipped and the work is lost. Reproduced on Windows CI as a published
+    // flow whose edge never reached the backend.
+    let resolveSave: (() => void) | undefined;
+    mockMutate.mockImplementation((payload, options) => {
+      resolveSave = () =>
+        options.onSuccess({
+          ...flowsManagerState.currentFlow,
+          data: payload.data,
+        });
+    });
+
+    const { result } = renderHook(() => useSaveFlow());
+    const inFlight = result.current();
+
+    // The user connects an edge while the request is still open.
+    const newEdges = [{ id: "new-edge" }];
+    flowStoreState.edges = newEdges;
+    flowStoreState.currentFlow = {
+      ...flowStoreState.currentFlow,
+      data: { ...flowStoreState.currentFlow.data, edges: newEdges },
+    };
+
+    resolveSave!();
+    await inFlight;
+
+    expect(mockSetCurrentFlow).not.toHaveBeenCalled();
+    expect(flowStoreState.currentFlow.data.edges).toEqual(newEdges);
+  });
+
+  it("still adopts the saved flow when the canvas did not change", async () => {
+    const { result } = renderHook(() => useSaveFlow());
+
+    await expect(result.current()).resolves.toBeUndefined();
+
+    expect(mockSetCurrentFlow).toHaveBeenCalledTimes(1);
   });
 });

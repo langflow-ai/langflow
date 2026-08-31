@@ -5,6 +5,14 @@ import type {
 } from "../../api";
 
 export type TypesStoreType = {
+  activeScopeKey: string | null;
+  activateScope: (scopeKey: string) => void;
+  clearScopedTypes: (scopeKey: string) => boolean;
+  setScopedTypes: (
+    scopeKey: string,
+    data: APIDataType,
+    componentDisplayNames: ComponentDisplayNamesType,
+  ) => boolean;
   types: { [char: string]: string };
   setTypes: (newState: {}) => void;
   templates: { [char: string]: APIClassType };

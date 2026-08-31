@@ -30,18 +30,18 @@ dependencies = [
     # the supported lfx axis.
     "lfx-ibm>=0.2.1,<1.0.0",
     "lfx-docling>=0.1.0,<1.0.0",
-    "lfx-datastax>=0.1.5,<1.0.0",
-    "lfx-toolguard>=0.1.1,<1.0.0",
+    "lfx-datastax>=0.1.6,<1.0.0",
+    "lfx-toolguard>=0.1.2,<1.0.0",
     "lfx-openai>=0.1.2,<1.0.0",
     "lfx-anthropic>=0.1.5,<1.0.0",
     "lfx-azure>=0.1.0,<1.0.0",
-    "lfx-ollama>=0.1.0,<1.0.0",
-    "lfx-amazon>=0.1.0,<1.0.0",
+    "lfx-ollama>=0.1.1,<1.0.0",
+    "lfx-amazon>=0.1.4,<1.0.0",
     "lfx-cohere>=0.1.0,<1.0.0",
     "lfx-oracle>=0.1.0,<1.0.0",
     "lfx-vllm>=0.1.0,<1.0.0",
-    "lfx-openai-compatible>=0.1.0,<1.0.0",
-    "lfx-google>=0.1.0,<1.0.0",
+    "lfx-openai-compatible>=0.1.3,<1.0.0",
+    "lfx-google>=0.1.1,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -171,7 +171,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 bundles = [
-    "lfx-bundles[all-no-torch]>=1.1.15,<2.0",
+    "lfx-bundles[all-no-torch]>=1.1.18,<2.0",
     "lfx-arxiv>=0.1.0,<1.0.0",
     "lfx-confluent>=0.1.0,<1.0.0",
     "lfx-duckduckgo>=0.1.0,<1.0.0",
@@ -250,13 +250,14 @@ override-dependencies = [
     "gunicorn>=25.3.0",
     "pypdf>=6.15.0,<7.0.0",  # Force a patched pypdf 6.x release
     "cryptography>=50.0.0",  # GHSA-g6cj-pr64-35w5 is fixed in 50.0.0
-    "nltk>=3.9.4",
+    "nltk>=3.10.3",
     "Markdown>=3.8.0",
     "dynaconf>=3.2.13",
     "pillow>=12.3.0",  # Force Pillow 12.3.0+ to prevent CVE-vulnerable versions
     "playwright>=1.59.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
-    # Keep uv workspace resolution on the Python 3.14-compatible LiteLLM floor.
-    "litellm>=1.93.0,<2.0.0",
+    # Keep the Python 3.14-compatible floor without overriding Opik's Python 3.10 cap.
+    "litellm>=1.93.0,<1.97; python_version < '3.11'",
+    "litellm>=1.93.0,<2.0.0; python_version >= '3.11'",
     # Temporary compatibility valve: langchain-litellm 0.6.1-0.7.0 cap
     # cryptography below 49; 0.5.1 is the newest release without that cap.
     "langchain-litellm==0.5.1",

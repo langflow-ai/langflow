@@ -9,6 +9,7 @@ import {
 } from "@/controllers/API/queries/auth";
 import { useGetProfilePicturesQuery } from "@/controllers/API/queries/files";
 import { CustomRegistrationData } from "@/customization/components/custom-registration-data";
+import CustomSettingsPasswordFormGate from "@/customization/components/custom-settings-password-form-gate";
 import { CustomTelemetryToggle } from "@/customization/components/custom-telemetry-toggle";
 import { CustomTermsLinks } from "@/customization/components/custom-terms-links";
 import { ENABLE_PROFILE_ICONS } from "@/customization/feature-flags";
@@ -173,14 +174,16 @@ export const GeneralPage = () => {
         )}
 
         {!autoLogin && (
-          <PasswordFormComponent
-            currentPassword={currentPassword}
-            password={password}
-            cnfPassword={cnfPassword}
-            handleInput={handleInput}
-            handlePatchPassword={handlePatchPassword}
-            serverError={passwordFormError}
-          />
+          <CustomSettingsPasswordFormGate>
+            <PasswordFormComponent
+              currentPassword={currentPassword}
+              password={password}
+              cnfPassword={cnfPassword}
+              handleInput={handleInput}
+              handlePatchPassword={handlePatchPassword}
+              serverError={passwordFormError}
+            />
+          </CustomSettingsPasswordFormGate>
         )}
       </div>
 

@@ -11,7 +11,9 @@ import {
   isDBProviderConfigured,
   toAPIBackendType,
 } from "@/constants/dbProviderConstants";
+import { isModelEnabledForType } from "@/controllers/API/helpers/enabled-model-policy";
 import { useCreateMemory } from "@/controllers/API/queries/memories/use-create-memory";
+import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import useAlertStore from "@/stores/alertStore";
@@ -59,9 +61,38 @@ export function useCreateMemoryModal({
   const hasAppliedBackendDefaults = useRef(false);
 
   const { t } = useTranslation();
-  const { data: modelProviders = [] } = useGetModelProviders({});
-  const { data: globalVariables = [], isFetched: areGlobalVariablesFetched } =
-    useGetGlobalVariables();
+  const modelProvidersQuery = useGetModelProviders(
+    { flowId, purpose: "use" },
+    { enabled: Boolean(flowId) },
+  );
+  const enabledModelsQuery = useGetEnabledModels({
+    flowId,
+    enabled: Boolean(flowId),
+    purpose: "use",
+  });
+  const globalVariablesQuery = useGetGlobalVariables({
+    flowId,
+    enabled: Boolean(flowId),
+  });
+  const globalVariables = globalVariablesQuery.data ?? [];
+  const modelCatalogReady = Boolean(
+    flowId &&
+      modelProvidersQuery.isSuccess &&
+      enabledModelsQuery.isSuccess &&
+      modelProvidersQuery.fetchStatus === "idle" &&
+      enabledModelsQuery.fetchStatus === "idle" &&
+      !modelProvidersQuery.isFetching &&
+      !enabledModelsQuery.isFetching &&
+      !modelProvidersQuery.isError &&
+      !enabledModelsQuery.isError,
+  );
+  const globalVariablesReady = Boolean(
+    flowId &&
+      globalVariablesQuery.isSuccess &&
+      globalVariablesQuery.fetchStatus === "idle" &&
+      !globalVariablesQuery.isFetching &&
+      !globalVariablesQuery.isError,
+  );
   const localVectorStoreAvailable = useUtilityStore(
     (state) => state.localVectorStoreAvailable,
   );
@@ -78,13 +109,13 @@ export function useCreateMemoryModal({
 
   // Seed the selector from the active provider once global variables load.
   useEffect(() => {
-    if (hasAppliedBackendDefaults.current || !areGlobalVariablesFetched) {
+    if (hasAppliedBackendDefaults.current || !globalVariablesReady) {
       return;
     }
     hasAppliedBackendDefaults.current = true;
     setBackendType(defaultBackendSelection.backendType);
     setBackendConfig(defaultBackendSelection.backendConfig);
-  }, [areGlobalVariablesFetched, defaultBackendSelection]);
+  }, [defaultBackendSelection, globalVariablesReady]);
 
   const handleBackendProviderChange = useCallback(
     (
@@ -99,54 +130,94 @@ export function useCreateMemoryModal({
     [backendType, backendConfig],
   );
 
-  const backendConfigured = isDBProviderConfigured(
-    backendType,
-    globalVariables,
-    localVectorStoreAvailable,
-  );
+  const backendConfigured =
+    globalVariablesReady &&
+    isDBProviderConfigured(
+      backendType,
+      globalVariables,
+      localVectorStoreAvailable,
+    );
   const { setErrorData, setSuccessData } = useAlertStore((state) => ({
     setErrorData: state.setErrorData,
     setSuccessData: state.setSuccessData,
   }));
 
-  const embeddingModelOptions = useMemo(
-    () =>
-      modelProviders
-        .filter((provider) => provider.is_enabled)
-        .flatMap((provider) =>
-          provider.models
-            .filter(
-              (model) =>
-                model.metadata?.model_type === "embeddings" ||
-                model.metadata?.model_type === "embedding",
-            )
-            .map((model) => ({
-              id: model.model_name,
-              name: model.model_name,
-              icon: provider.icon || "Bot",
-              provider: provider.provider,
-              metadata: model.metadata,
-            })),
-        ),
-    [modelProviders],
-  );
+  const embeddingModelOptions = useMemo(() => {
+    if (!modelCatalogReady) return [];
+    const enabledModelsData = enabledModelsQuery.data;
+    if (!enabledModelsData) return [];
+    return (modelProvidersQuery.data ?? [])
+      .filter((provider) => provider.is_enabled)
+      .flatMap((provider) =>
+        provider.models
+          .filter(
+            (model) =>
+              (model.metadata?.model_type === "embeddings" ||
+                model.metadata?.model_type === "embedding") &&
+              isModelEnabledForType(
+                enabledModelsData,
+                provider.provider,
+                model.model_name,
+                "embeddings",
+              ),
+          )
+          .map((model) => ({
+            id: model.model_name,
+            name: model.model_name,
+            icon: provider.icon || "Bot",
+            provider: provider.provider,
+            metadata: model.metadata,
+          })),
+      );
+  }, [enabledModelsQuery.data, modelCatalogReady, modelProvidersQuery.data]);
 
-  const llmModelOptions = useMemo(
-    () =>
-      modelProviders
-        .filter((provider) => provider.is_enabled)
-        .flatMap((provider) =>
-          provider.models
-            .filter((model) => model.metadata?.model_type === "llm")
-            .map((model) => ({
-              id: model.model_name,
-              name: model.model_name,
-              icon: provider.icon || "Bot",
-              provider: provider.provider,
-              metadata: model.metadata,
-            })),
-        ),
-    [modelProviders],
+  const llmModelOptions = useMemo(() => {
+    if (!modelCatalogReady) return [];
+    const enabledModelsData = enabledModelsQuery.data;
+    if (!enabledModelsData) return [];
+    return (modelProvidersQuery.data ?? [])
+      .filter((provider) => provider.is_enabled)
+      .flatMap((provider) =>
+        provider.models
+          .filter(
+            (model) =>
+              model.metadata?.model_type === "llm" &&
+              isModelEnabledForType(
+                enabledModelsData,
+                provider.provider,
+                model.model_name,
+                "llm",
+              ),
+          )
+          .map((model) => ({
+            id: model.model_name,
+            name: model.model_name,
+            icon: provider.icon || "Bot",
+            provider: provider.provider,
+            metadata: model.metadata,
+          })),
+      );
+  }, [enabledModelsQuery.data, modelCatalogReady, modelProvidersQuery.data]);
+
+  const selectionIsIn = (selection: ModelOption[], options: ModelOption[]) => {
+    const selected = selection[0];
+    return (
+      modelCatalogReady &&
+      selected !== undefined &&
+      options.some(
+        (option) =>
+          option.provider === selected.provider &&
+          option.name === selected.name,
+      )
+    );
+  };
+  const embeddingSelectionAuthorized = selectionIsIn(
+    selectedEmbeddingModel,
+    embeddingModelOptions,
+  );
+  const preprocessingSelectionAuthorized = selectionIsIn(
+    selectedPreprocessingModel,
+    llmModelOptions,
   );
 
   const resetForm = () => {
@@ -194,7 +265,15 @@ export function useCreateMemoryModal({
       return;
     }
 
-    if (selectedEmbeddingModel.length === 0) {
+    if (!modelCatalogReady) {
+      setErrorData({
+        title: t("memory.validationError"),
+        list: [t("errors.failedToLoadModels")],
+      });
+      return;
+    }
+
+    if (!embeddingSelectionAuthorized) {
       setErrorData({
         title: t("memory.validationError"),
         list: [t("memory.embeddingRequired")],
@@ -202,7 +281,7 @@ export function useCreateMemoryModal({
       return;
     }
 
-    if (preprocessingEnabled && selectedPreprocessingModel.length === 0) {
+    if (preprocessingEnabled && !preprocessingSelectionAuthorized) {
       setErrorData({
         title: t("memory.validationError"),
         list: [t("memory.preprocessingRequired")],
@@ -221,7 +300,7 @@ export function useCreateMemoryModal({
     // Block creation only when a *remote* backend isn't configured in DB
     // Providers settings. `isDBProviderConfigured` returns true unconditionally
     // for local Chroma, so the default/local path is never blocked here.
-    if (!backendConfigured) {
+    if (!globalVariablesReady || !backendConfigured) {
       setErrorData({
         title: t("memory.validationError"),
         list: [
@@ -282,6 +361,10 @@ export function useCreateMemoryModal({
     setPreprocessingPrompt,
     embeddingModelOptions,
     llmModelOptions,
+    modelCatalogReady,
+    globalVariablesReady,
+    embeddingSelectionAuthorized,
+    preprocessingSelectionAuthorized,
     backendType,
     handleBackendProviderChange,
     globalVariables,

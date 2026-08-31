@@ -52,6 +52,7 @@ from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_job_service, get_memory_base_service, get_settings_service, get_task_service
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.services.warm_registry.service import flow_version
 
 # Configuration constants
@@ -206,6 +207,7 @@ async def _stream_event_frames(
     background_tasks: BackgroundTasks,
     parsed: ParsedWorkflowRun,
     current_user: UserRead,
+    provider_policy_flow: FlowRead | None = None,
     source_flow_id: UUID | None = None,
     source_flow_owner_id: UUID | None = None,
     run_id: str | None = None,
@@ -273,10 +275,19 @@ async def _stream_event_frames(
             # The queued-run link rides alongside for the same reason and in the same place. It
             # is None for a run with a live request above it, and the context manager is a no-op
             # then, so this costs a synchronous path nothing.
-            with execution_protocol(protocol), queued_trace_link(await _queued_trace_link_for(job_id)):
+            with (
+                scoped_model_provider_policy_for_flow(
+                    provider_policy_flow,
+                    user_id=current_user.id,
+                    is_superuser=bool(getattr(current_user, "is_superuser", False)),
+                ),
+                execution_protocol(protocol),
+                queued_trace_link(await _queued_trace_link_for(job_id)),
+            ):
                 await asyncio.wait_for(
                     generate_flow_events(
                         flow_id=flow_id,
+                        provider_policy_flow=provider_policy_flow,
                         background_tasks=background_tasks,
                         event_manager=event_manager,
                         inputs=input_request,
@@ -484,6 +495,7 @@ def _execute_streaming_workflow(
             background_tasks=background_tasks,
             parsed=parsed,
             current_user=current_user,
+            provider_policy_flow=flow,
             source_flow_owner_id=flow.user_id,
             # The live v2 stream. Which client sent it is a separate attribute, read from the
             # X-Langflow-Client header, because the playground calls this same public endpoint.
@@ -668,24 +680,33 @@ async def execute_sync_workflow(
         # instead of rebuilding. Cold-fall-back (None) for tweaks, request context/globals,
         # or a HITL/checkpointed run — none of which fit a shared user-agnostic template.
         graph = None
-        if sanitized_flow_data is None and not tweaks and context is None and checkpoint_store is None:
-            graph = await warm_deepcopy(
-                flow_id_str,
-                expected_version=flow_version(flow.updated_at),
-                user_id=user_id,
-                session_id=session_id,
-                stream=False,
-            )
-        if graph is None:
-            # Use deepcopy to prevent mutation of the original flow.data
-            # process_tweaks modifies nested dictionaries in-place
-            graph_data = deepcopy(sanitized_flow_data if sanitized_flow_data is not None else flow.data)
-            graph_data = process_tweaks(graph_data, tweaks, stream=False)
-            # Pass context to graph (similar to V1's simple_run_flow)
-            # This allows components to access request metadata via graph.context
-            graph = Graph.from_payload(
-                graph_data, flow_id=flow_id_str, user_id=user_id, flow_name=flow.name, context=context
-            )
+        with scoped_model_provider_policy_for_flow(
+            flow,
+            user_id=current_user.id,
+            is_superuser=bool(getattr(current_user, "is_superuser", False)),
+        ):
+            if sanitized_flow_data is None and not tweaks and context is None and checkpoint_store is None:
+                graph = await warm_deepcopy(
+                    flow_id_str,
+                    expected_version=flow_version(flow.updated_at),
+                    user_id=user_id,
+                    session_id=session_id,
+                    stream=False,
+                )
+            if graph is None:
+                # Use deepcopy to prevent mutation of the original flow.data
+                # process_tweaks modifies nested dictionaries in-place
+                graph_data = deepcopy(sanitized_flow_data if sanitized_flow_data is not None else flow.data)
+                graph_data = process_tweaks(graph_data, tweaks, stream=False)
+                # Pass context to graph (similar to V1's simple_run_flow)
+                # This allows components to access request metadata via graph.context
+                graph = Graph.from_payload(
+                    graph_data,
+                    flow_id=flow_id_str,
+                    user_id=user_id,
+                    flow_name=flow.name,
+                    context=context,
+                )
         # Serving-plane end-user scoping: an anonymous run is ephemeral, so mark the
         # graph non-persisting (astore_message honors this per component). Defaults
         # True for every other run.
@@ -731,7 +752,14 @@ async def execute_sync_workflow(
     _sync_run_error: str = ""
     _run_start = time.perf_counter()
     try:
-        with execution_protocol("v2"):
+        with (
+            scoped_model_provider_policy_for_flow(
+                flow,
+                user_id=current_user.id,
+                is_superuser=bool(getattr(current_user, "is_superuser", False)),
+            ),
+            execution_protocol("v2"),
+        ):
             task_result, execution_session_id = await job_service.execute_with_status(
                 job_id=job_id,
                 run_coro_func=run_graph_internal,

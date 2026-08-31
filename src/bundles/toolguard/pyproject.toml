@@ -1,6 +1,6 @@
 [project]
 name = "lfx-toolguard"
-version = "0.1.1"
+version = "0.1.2"
 description = "Langflow Policies component powered by ToolGuard."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"

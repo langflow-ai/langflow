@@ -10,6 +10,11 @@ token spend per attempt on hosted models -- was accepted deliberately, and a per
 
 This test is a tripwire: any future change to the pinned budget must be a conscious
 decision that also updates ``ASSISTANT_ITERATION_BUDGET`` here.
+
+LE-2324 (2026-08-27): the pin is now the FALLBACK, not the ceiling. An operator sets
+``LANGFLOW_ASSISTANT_ITERATIONS`` to move the default for a whole deployment, because
+``/iterations N`` only tunes one browser session. The tripwire still guards the shipped
+default, which is what a user gets out of the box.
 """
 
 import json
@@ -51,8 +56,9 @@ def test_builder_budget_comes_from_the_shared_constant():
         "update ASSISTANT_ITERATION_BUDGET and see the docstring"
     )
     source = PY_FLOW_PATH.read_text(encoding="utf-8")
-    assert "DEFAULT_ASSISTANT_ITERATIONS" in source, (
-        "flow_builder_assistant.py must default its Agent budget to the shared constant"
+    assert "assistant_iterations_default" in source, (
+        "flow_builder_assistant.py must default its Agent budget to the shared resolver "
+        "(LANGFLOW_ASSISTANT_ITERATIONS, falling back to DEFAULT_ASSISTANT_ITERATIONS)"
     )
     assert not re.search(r"max_iterations\D{0,20}\d", source), (
         "flow_builder_assistant.py must not hardcode a numeric max_iterations -- "
