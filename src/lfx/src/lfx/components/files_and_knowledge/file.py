@@ -816,16 +816,19 @@ class FileComponent(BaseFileComponent):
         # Get file extension from S3 key
         file_extension = Path(self.s3_file_key).suffix or ""
 
-        with tempfile.NamedTemporaryFile(mode="wb", suffix=file_extension, delete=False) as temp_file:
-            temp_file_path = temp_file.name
-            try:
+        temp_file = tempfile.NamedTemporaryFile(  # noqa: SIM115 - close before failed-download cleanup on Windows
+            mode="wb", suffix=file_extension, delete=False
+        )
+        temp_file_path = temp_file.name
+        try:
+            with temp_file:
                 s3_client.download_fileobj(self.bucket_name, self.s3_file_key, temp_file)
-            except Exception as e:
-                # Clean up temp file on failure
-                with contextlib.suppress(OSError):
-                    Path(temp_file_path).unlink()
-                msg = f"Failed to download file from S3: {e}"
-                raise RuntimeError(msg) from e
+        except Exception as e:
+            # The handle must be closed before Windows permits deleting the partial download.
+            with contextlib.suppress(OSError):
+                Path(temp_file_path).unlink()
+            msg = f"Failed to download file from S3: {e}"
+            raise RuntimeError(msg) from e
 
         # Create BaseFile object
         from lfx.schema.data import Data
@@ -877,20 +880,23 @@ class FileComponent(BaseFileComponent):
 
         # Download file to temp location
         file_extension = Path(file_name).suffix or ""
-        with tempfile.NamedTemporaryFile(mode="wb", suffix=file_extension, delete=False) as temp_file:
-            temp_file_path = temp_file.name
-            try:
+        temp_file = tempfile.NamedTemporaryFile(  # noqa: SIM115 - close before failed-download cleanup on Windows
+            mode="wb", suffix=file_extension, delete=False
+        )
+        temp_file_path = temp_file.name
+        try:
+            with temp_file:
                 request = drive_service.files().get_media(fileId=self.file_id)
                 downloader = MediaIoBaseDownload(temp_file, request)
                 done = False
                 while not done:
                     _status, done = downloader.next_chunk()
-            except Exception as e:
-                # Clean up temp file on failure
-                with contextlib.suppress(OSError):
-                    Path(temp_file_path).unlink()
-                msg = f"Failed to download file from Google Drive: {e}"
-                raise RuntimeError(msg) from e
+        except Exception as e:
+            # The handle must be closed before Windows permits deleting the partial download.
+            with contextlib.suppress(OSError):
+                Path(temp_file_path).unlink()
+            msg = f"Failed to download file from Google Drive: {e}"
+            raise RuntimeError(msg) from e
 
         # Create BaseFile object
         from lfx.schema.data import Data
