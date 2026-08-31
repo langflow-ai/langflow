@@ -345,4 +345,38 @@ describe("useSaveFlow", () => {
       expect.objectContaining({ id: "flow-1", folder_id: "folder-B" }),
     );
   });
+  it("keeps canvas edits made while the save was in flight", async () => {
+    let resolveSave: (() => void) | undefined;
+    mockMutate.mockImplementation((payload, options) => {
+      resolveSave = () =>
+        options.onSuccess({
+          ...flowsManagerState.currentFlow,
+          data: payload.data,
+        });
+    });
+
+    const { result } = renderHook(() => useSaveFlow());
+    const inFlight = result.current();
+
+    const newEdges = [{ id: "new-edge" }];
+    flowStoreState.edges = newEdges;
+    flowStoreState.currentFlow = {
+      ...flowStoreState.currentFlow,
+      data: { ...flowStoreState.currentFlow.data, edges: newEdges },
+    };
+
+    resolveSave!();
+    await inFlight;
+
+    expect(mockSetCurrentFlow).not.toHaveBeenCalled();
+    expect(flowStoreState.currentFlow.data.edges).toEqual(newEdges);
+  });
+
+  it("still adopts the saved flow when the canvas did not change", async () => {
+    const { result } = renderHook(() => useSaveFlow());
+
+    await expect(result.current()).resolves.toBeUndefined();
+
+    expect(mockSetCurrentFlow).toHaveBeenCalledTimes(1);
+  });
 });
