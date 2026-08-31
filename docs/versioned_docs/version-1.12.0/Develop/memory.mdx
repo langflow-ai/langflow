@@ -4,7 +4,7 @@ slug: /memory
 ---
 
 Langflow provides flexible memory management options for storage and retrieval of data relevant to your flows and your Langflow server.
-This includes essential Langflow database tables, file management, and caching, as well as chat memory.
+This includes essential Langflow database tables, file management, caching, and chat memory.
 
 ## Storage options and paths
 
@@ -42,6 +42,8 @@ This list covers the main product tables.
 On OSS, the default is the SQLite file `langflow.db`. Desktop uses `database.db`. You can also use an [external PostgreSQL database](#configure-external-memory).
 
 • **ApiKey**: Manages Langflow API authentication keys. Component API keys are stored in the **Variables** table. For more information, see [API keys and authentication](/api-keys-and-authentication).
+
+• **A2ATask** and **A2ACheckpoint**: Persist Agent-to-Agent (A2A) protocol tasks and human-in-the-loop graph checkpoints so A2A runs survive restarts and can resume across workers.
 
 • **Deployment**: Tracks deployments of Langflow flows to external providers, including the deployment name, provider resource key, and associated project and provider account.
 
@@ -90,6 +92,9 @@ On OSS, the default is the SQLite file `langflow.db`. Desktop uses `database.db`
 • **Variables**: Stores global encrypted values and credentials. For more information, see [Global variables](/configuration-global-variables) and [Component API keys](/api-keys-and-authentication#component-api-keys).
 
 • **VertexBuild**: Tracks the build status of individual nodes within flows. For more information, see [Test flows in the Playground](/concepts-playground).
+
+Additional tables support authorization, SSO, and governance, including **AuthzRole**, **AuthzRoleAssignment**, **AuthzShare**, **AuthzTeam**, **AuthzAuditLog**, **CasbinRule**, **SSOConfig**, **SSOSettings**, **SSOUserProfile**, **CatalogPolicyRule**, **ModelProviderPolicy**, and policy bundle tables.
+For more information, see [Authorization](/authorization) and [External authentication](/external-authentication).
 
 For more information, see the database models in the [source code](https://github.com/langflow-ai/langflow/tree/main/src/backend/base/langflow/services/database/models).
 
