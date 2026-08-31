@@ -180,10 +180,9 @@ module.exports = {
             "Develop/traces",
             {
               type: "category",
-              label: "Monitoring",
+              label: "LLM tracing",
               items: [
                 "Develop/integrations-arize",
-                "Develop/observability-grafana-loki",
                 "Develop/integrations-langfuse",
                 "Develop/integrations-langsmith",
                 "Develop/integrations-langwatch",
@@ -335,6 +334,11 @@ module.exports = {
           type: "doc",
           id: "Deployment/sandbox-createos",
           label: "Run code in CreateOS microVMs",
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-tweaks-policy",
+          label: "Restrict API tweaks",
         },
         {
           type: "doc",
@@ -633,6 +637,7 @@ module.exports = {
         "API-Reference/api-monitor",
         "API-Reference/api-build",
         "API-Reference/api-users",
+        "API-Reference/api-governance-policy",
         {
           type: "link",
           label: "Langflow API specification",
