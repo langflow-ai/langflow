@@ -13708,7 +13708,9 @@
           "tool_mode": false
         },
         "CharacterTextSplitter": {
-          "base_classes": [],
+          "base_classes": [
+            "JSON"
+          ],
           "beta": false,
           "conditional_paths": [],
           "custom_fields": {},
@@ -13752,8 +13754,11 @@
               "group_outputs": false,
               "method": "transform_data",
               "name": "data",
+              "selected": "JSON",
               "tool_mode": true,
-              "types": [],
+              "types": [
+                "JSON"
+              ],
               "value": "__UNDEFINED__"
             }
           ],
@@ -14915,7 +14920,9 @@
           "tool_mode": false
         },
         "LanguageRecursiveTextSplitter": {
-          "base_classes": [],
+          "base_classes": [
+            "JSON"
+          ],
           "beta": false,
           "conditional_paths": [],
           "custom_fields": {},
@@ -14959,8 +14966,11 @@
               "group_outputs": false,
               "method": "transform_data",
               "name": "data",
+              "selected": "JSON",
               "tool_mode": true,
-              "types": [],
+              "types": [
+                "JSON"
+              ],
               "value": "__UNDEFINED__"
             }
           ],
@@ -15113,7 +15123,9 @@
           "tool_mode": false
         },
         "NaturalLanguageTextSplitter": {
-          "base_classes": [],
+          "base_classes": [
+            "JSON"
+          ],
           "beta": false,
           "conditional_paths": [],
           "custom_fields": {},
@@ -15158,8 +15170,11 @@
               "group_outputs": false,
               "method": "transform_data",
               "name": "data",
+              "selected": "JSON",
               "tool_mode": true,
-              "types": [],
+              "types": [
+                "JSON"
+              ],
               "value": "__UNDEFINED__"
             }
           ],
@@ -15310,7 +15325,10 @@
           "tool_mode": false
         },
         "OpenAIToolsAgent": {
-          "base_classes": [],
+          "base_classes": [
+            "AgentExecutor",
+            "Message"
+          ],
           "beta": false,
           "conditional_paths": [],
           "custom_fields": {},
@@ -15366,8 +15384,11 @@
               "group_outputs": false,
               "method": "message_response",
               "name": "response",
+              "selected": "Message",
               "tool_mode": true,
-              "types": [],
+              "types": [
+                "Message"
+              ],
               "value": "__UNDEFINED__"
             },
             {
@@ -15377,8 +15398,11 @@
               "group_outputs": false,
               "method": "build_agent",
               "name": "agent",
+              "selected": "AgentExecutor",
               "tool_mode": false,
-              "types": [],
+              "types": [
+                "AgentExecutor"
+              ],
               "value": "__UNDEFINED__"
             }
           ],
@@ -16081,7 +16105,9 @@
           "tool_mode": false
         },
         "RecursiveCharacterTextSplitter": {
-          "base_classes": [],
+          "base_classes": [
+            "JSON"
+          ],
           "beta": false,
           "conditional_paths": [],
           "custom_fields": {},
@@ -16125,8 +16151,11 @@
               "group_outputs": false,
               "method": "transform_data",
               "name": "data",
+              "selected": "JSON",
               "tool_mode": true,
-              "types": [],
+              "types": [
+                "JSON"
+              ],
               "value": "__UNDEFINED__"
             }
           ],
@@ -17813,7 +17842,10 @@
           "tool_mode": false
         },
         "ToolCallingAgent": {
-          "base_classes": [],
+          "base_classes": [
+            "AgentExecutor",
+            "Message"
+          ],
           "beta": false,
           "conditional_paths": [],
           "custom_fields": {},
@@ -17868,8 +17900,11 @@
               "group_outputs": false,
               "method": "message_response",
               "name": "response",
+              "selected": "Message",
               "tool_mode": true,
-              "types": [],
+              "types": [
+                "Message"
+              ],
               "value": "__UNDEFINED__"
             },
             {
@@ -17879,8 +17914,11 @@
               "group_outputs": false,
               "method": "build_agent",
               "name": "agent",
+              "selected": "AgentExecutor",
               "tool_mode": false,
-              "types": [],
+              "types": [
+                "AgentExecutor"
+              ],
               "value": "__UNDEFINED__"
             }
           ],
@@ -18577,7 +18615,10 @@
           "tool_mode": false
         },
         "XMLAgent": {
-          "base_classes": [],
+          "base_classes": [
+            "AgentExecutor",
+            "Message"
+          ],
           "beta": true,
           "conditional_paths": [],
           "custom_fields": {},
@@ -18633,8 +18674,11 @@
               "group_outputs": false,
               "method": "message_response",
               "name": "response",
+              "selected": "Message",
               "tool_mode": true,
-              "types": [],
+              "types": [
+                "Message"
+              ],
               "value": "__UNDEFINED__"
             },
             {
@@ -18644,8 +18688,11 @@
               "group_outputs": false,
               "method": "build_agent",
               "name": "agent",
+              "selected": "AgentExecutor",
               "tool_mode": false,
-              "types": [],
+              "types": [
+                "AgentExecutor"
+              ],
               "value": "__UNDEFINED__"
             }
           ],
@@ -32565,6 +32612,6 @@
     "num_components": 131,
     "num_modules": 17
   },
-  "sha256": "addc7e05702d586c28c2d0732dcb44a0781f942e132344bd884acd78638a7d42",
+  "sha256": "8ba59d38e65e98cac3c9044dbf935ddb40690eac9502d1795456f6d98c6d9af0",
   "version": "1.11.5"
 }

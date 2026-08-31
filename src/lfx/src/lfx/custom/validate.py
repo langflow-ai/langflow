@@ -4,7 +4,7 @@ import copy
 import importlib
 import sys
 import warnings
-from types import FunctionType
+from types import FunctionType, ModuleType
 from typing import Optional, Union
 
 from langchain_core._api.deprecation import LangChainDeprecationWarning
@@ -13,6 +13,7 @@ from pydantic import ValidationError
 from lfx.custom.annotation_validation import (
     UnsafeReturnAnnotationError,
     register_compiled_class_method_returns,
+    snapshot_trusted_class_method_returns,
     validate_return_annotations,
 )
 from lfx.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
@@ -319,7 +320,13 @@ def create_class(code, class_name):
         if trusted_vector_store_alias is not None:
             runtime_class_code = extract_class_code(runtime_module, class_name)
             runtime_class_code.decorator_list = []
-        exec_globals = prepare_global_scope(runtime_module)
+        trusted_method_returns = {}
+        source_class_bindings = {}
+        exec_globals = prepare_global_scope(
+            runtime_module,
+            trusted_method_returns=trusted_method_returns,
+            source_class_bindings=source_class_bindings,
+        )
 
         future_imports = [n for n in runtime_module.body if isinstance(n, ast.ImportFrom) and n.module == "__future__"]
         class_code = extract_class_code(module, class_name)
@@ -330,11 +337,31 @@ def create_class(code, class_name):
         if trusted_vector_store_alias is not None:
             component_class = apply_vector_store_connection(component_class)
             exec_globals[class_name] = component_class
+        try:
+            component_mro = type.__getattribute__(component_class, "__mro__")
+        except (AttributeError, TypeError):
+            component_mro = ()
+        for source_node in (node for node in runtime_module.body if isinstance(node, ast.ClassDef)):
+            source_base = source_class_bindings.get(id(source_node))
+            if source_base is None or not any(source_base is base for base in component_mro[1:]):
+                continue
+            if source_node.decorator_list or type(source_base) is not type:
+                continue
+            compiled_return_registrar(
+                source_base,
+                source_node,
+                globalns=exec_globals,
+                preexisting_class_ids=preexisting_class_ids,
+                trusted_method_returns=trusted_method_returns,
+                allow_preexisting_class=True,
+                infer_decorated_methods=False,
+            )
         compiled_return_registrar(
             component_class,
             class_code,
             globalns=exec_globals,
             preexisting_class_ids=preexisting_class_ids,
+            trusted_method_returns=trusted_method_returns,
             trusted_vector_store_applied=trusted_vector_store_alias is not None,
             trusted_vector_store_output=vector_store_type,
         )
@@ -445,11 +472,58 @@ def _get_module_fallbacks(module_name: str) -> list[str]:
     return names
 
 
-def prepare_global_scope(module):
+def _static_imported_base(node: ast.AST, exec_globals: dict) -> type | None:
+    if isinstance(node, ast.Name):
+        value = dict.get(exec_globals, node.id)
+    elif isinstance(node, ast.Attribute):
+        attributes: list[str] = []
+        while isinstance(node, ast.Attribute):
+            attributes.append(node.attr)
+            node = node.value
+        if not isinstance(node, ast.Name):
+            return None
+        value = dict.get(exec_globals, node.id)
+        for attribute in reversed(attributes):
+            if not isinstance(value, ModuleType):
+                return None
+            namespace = ModuleType.__getattribute__(value, "__dict__")
+            if type(namespace) is not dict:
+                return None
+            value = dict.get(namespace, attribute)
+    else:
+        return None
+    return value if issubclass(type(value), type) else None
+
+
+def _trusted_imported_bases(module: ast.Module, exec_globals: dict) -> list[type]:
+    bases: dict[int, type] = {}
+    for node in module.body:
+        if not isinstance(node, ast.ClassDef):
+            continue
+        for base_node in node.bases:
+            base = _static_imported_base(base_node, exec_globals)
+            if base is not None:
+                bases[id(base)] = base
+    return list(bases.values())
+
+
+def _has_static_type_metaclass_bases(class_node: ast.ClassDef, exec_globals: dict) -> bool:
+    """Return whether a source class must be freshly created by the built-in type metaclass."""
+    if class_node.decorator_list or class_node.keywords:
+        return False
+    return all(
+        (base := _static_imported_base(base_node, exec_globals)) is not None and type(base) is type
+        for base_node in class_node.bases
+    )
+
+
+def prepare_global_scope(module, *, trusted_method_returns=None, source_class_bindings=None):
     """Prepares the global scope with necessary imports from the provided code module.
 
     Args:
         module: AST parsed module
+        trusted_method_returns: Optional destination for server-owned method snapshots
+        source_class_bindings: Optional destination for exact classes produced by source ClassDefs
 
     Returns:
         Dictionary representing the global scope with imported modules
@@ -537,11 +611,28 @@ def prepare_global_scope(module):
             msg = f"Module {node.module} not found. Please install it and try again"
             raise ModuleNotFoundError(msg)
 
+    if trusted_method_returns is not None:
+        trusted_bases = _trusted_imported_bases(module, exec_globals)
+        trusted_method_returns.update(snapshot_trusted_class_method_returns(trusted_bases))
+
     if definitions:
         # Prepend __future__ imports so compiler directives (e.g. PEP 563 annotations) take effect
-        combined_module = ast.Module(body=future_imports + definitions, type_ignores=[])
-        compiled_code = compile(combined_module, "<string>", "exec")
-        exec(compiled_code, exec_globals)
+        if source_class_bindings is None:
+            combined_module = ast.Module(body=future_imports + definitions, type_ignores=[])
+            compiled_code = compile(combined_module, "<string>", "exec")
+            exec(compiled_code, exec_globals)
+        else:
+            for definition in definitions:
+                safe_source_class = isinstance(definition, ast.ClassDef) and _has_static_type_metaclass_bases(
+                    definition, exec_globals
+                )
+                preexisting_class_ids = {id(value) for value in exec_globals.values() if issubclass(type(value), type)}
+                definition_module = ast.Module(body=[*future_imports, definition], type_ignores=[])
+                exec(compile(definition_module, "<string>", "exec"), exec_globals)
+                if safe_source_class:
+                    runtime_class = dict.get(exec_globals, definition.name)
+                    if type(runtime_class) is type and id(runtime_class) not in preexisting_class_ids:
+                        source_class_bindings[id(definition)] = runtime_class
 
     return exec_globals
 

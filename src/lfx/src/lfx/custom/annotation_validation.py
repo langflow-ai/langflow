@@ -6,6 +6,7 @@ import ast
 import builtins
 import typing
 from functools import lru_cache
+from pathlib import Path
 from types import FunctionType, MappingProxyType, MethodType, ModuleType, UnionType
 from typing import Any
 from weakref import ReferenceType, ref
@@ -522,7 +523,12 @@ def resolve_type_annotation(
     return annotation
 
 
-_COMPILED_CLASS_METHOD_RETURNS: dict[int, tuple[ReferenceType, MappingProxyType]] = {}
+_TrustedMethodKey = tuple[int, str]
+_TrustedMethodSnapshot = tuple[ReferenceType, ReferenceType, Any, tuple[Any, ...], Any]
+_COMPILED_CLASS_METHOD_RETURNS: dict[
+    int,
+    tuple[ReferenceType, MappingProxyType, MappingProxyType],
+] = {}
 
 
 def _remove_compiled_class_sidecar(class_id: int, dead_reference: ReferenceType) -> None:
@@ -531,11 +537,108 @@ def _remove_compiled_class_sidecar(class_id: int, dead_reference: ReferenceType)
         dict.pop(_COMPILED_CLASS_METHOD_RETURNS, class_id, None)
 
 
-def _compiled_class_method_returns(component_class: type) -> MappingProxyType | None:
+def _compiled_class_metadata(component_class: type) -> tuple[MappingProxyType, MappingProxyType] | None:
     entry = dict.get(_COMPILED_CLASS_METHOD_RETURNS, id(component_class))
     if entry is None or entry[0]() is not component_class:
         return None
-    return entry[1]
+    return entry[1], entry[2]
+
+
+@lru_cache(maxsize=128)
+def _source_module(filename: str) -> ast.Module | None:
+    try:
+        return ast.parse(Path(filename).read_text(encoding="utf-8"), filename=filename)
+    except (OSError, SyntaxError, UnicodeError):
+        return None
+
+
+def _static_function_return(function: FunctionType, method_name: str) -> ast.AST | None:
+    code = FunctionType.__getattribute__(function, "__code__")
+    filename = code.co_filename
+    first_line = code.co_firstlineno
+    tree = _source_module(filename) if isinstance(filename, str) else None
+    if tree is None:
+        return None
+
+    matches: list[ast.FunctionDef | ast.AsyncFunctionDef] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef) or node.name != method_name:
+            continue
+        start_line = min((decorator.lineno for decorator in node.decorator_list), default=node.lineno)
+        if first_line in (start_line, node.lineno):
+            matches.append(node)
+    return matches[0].returns if len(matches) == 1 else None
+
+
+def _runtime_annotation_guard(function: FunctionType) -> tuple[Any, ...] | None:
+    """Capture annotation storage identity without invoking deferred evaluation."""
+    try:
+        annotator = FunctionType.__getattribute__(function, "__annotate__")
+    except AttributeError:
+        annotator = None
+    if annotator is not None:
+        annotator_code = (
+            FunctionType.__getattribute__(annotator, "__code__") if type(annotator) is FunctionType else None
+        )
+        return ("deferred", annotator, annotator_code)
+
+    annotations = FunctionType.__getattribute__(function, "__annotations__")
+    if type(annotations) is not dict or not dict.__contains__(annotations, "return"):
+        return None
+    return ("eager", id(annotations), dict.__getitem__(annotations, "return"))
+
+
+def snapshot_trusted_class_method_returns(
+    classes: list[type],
+) -> dict[_TrustedMethodKey, _TrustedMethodSnapshot]:
+    """Snapshot inherited method returns from server source without evaluating annotations."""
+    trusted_classes: dict[int, type] = {}
+    for value in classes:
+        try:
+            mro = type.__getattribute__(value, "__mro__")
+        except (AttributeError, TypeError):
+            continue
+        if type(mro) is tuple:
+            for base in mro:
+                trusted_classes[id(base)] = base
+
+    method_returns: dict[_TrustedMethodKey, _TrustedMethodSnapshot] = {}
+    for class_id, component_class in trusted_classes.items():
+        try:
+            namespace = type.__getattribute__(component_class, "__dict__")
+        except (AttributeError, TypeError):
+            continue
+        if type(namespace) is not MappingProxyType:
+            continue
+        for method_name, descriptor in MappingProxyType.items(namespace):
+            if type(method_name) is not str:
+                continue
+            function = (
+                object.__getattribute__(descriptor, "__func__")
+                if type(descriptor) in {classmethod, staticmethod}
+                else descriptor
+            )
+            if type(function) is not FunctionType:
+                continue
+            function_code = FunctionType.__getattribute__(function, "__code__")
+            return_node = _static_function_return(function, method_name)
+            annotation_guard = _runtime_annotation_guard(function)
+            if return_node is None or annotation_guard is None:
+                continue
+            resolved_return = resolve_type_annotation(
+                return_node,
+                globalns=FunctionType.__getattribute__(function, "__globals__"),
+            )
+            if resolved_return is None:
+                continue
+            method_returns[(class_id, method_name)] = (
+                ref(component_class),
+                ref(function),
+                function_code,
+                annotation_guard,
+                resolved_return,
+            )
+    return method_returns
 
 
 def _annotation_contains_untracked_class(
@@ -596,6 +699,8 @@ def _validate_compiled_class_identity(
     class_node: ast.ClassDef,
     globalns: dict[str, Any],
     preexisting_class_ids: frozenset[int],
+    *,
+    allow_preexisting_class: bool,
 ) -> None:
     """Reject a class decorator that substitutes a foreign runtime class."""
     from lfx.custom.custom_component.component import Component
@@ -613,7 +718,7 @@ def _validate_compiled_class_identity(
     if (
         component_class is Component
         or component_class is CustomComponent
-        or id(component_class) in preexisting_class_ids
+        or (id(component_class) in preexisting_class_ids and not allow_preexisting_class)
         or runtime_module != expected_module
         or runtime_name != class_node.name
         or runtime_qualname != class_node.name
@@ -628,18 +733,34 @@ def register_compiled_class_method_returns(
     *,
     globalns: dict[str, Any],
     preexisting_class_ids: frozenset[int],
+    trusted_method_returns: dict[_TrustedMethodKey, _TrustedMethodSnapshot] | None = None,
+    allow_preexisting_class: bool = False,
+    infer_decorated_methods: bool = True,
     trusted_vector_store_applied: bool = False,
     trusted_vector_store_output: type | None = None,
 ) -> None:
     """Store immutable direct-method return types derived from validated AST."""
-    _validate_compiled_class_identity(component_class, class_node, globalns, preexisting_class_ids)
+    if allow_preexisting_class and (class_node.decorator_list or type(component_class) is not type):
+        msg = f"Preexisting class '{class_node.name}' cannot be registered safely."
+        raise UnsafeReturnAnnotationError(msg)
+    _validate_compiled_class_identity(
+        component_class,
+        class_node,
+        globalns,
+        preexisting_class_ids,
+        allow_preexisting_class=allow_preexisting_class,
+    )
     method_returns: dict[str, Any | None] = {}
     infer_direct_returns = not class_node.decorator_list or trusted_vector_store_applied
     for node in class_node.body:
         if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
             resolved_return = (
                 resolve_type_annotation(node.returns, globalns=globalns)
-                if infer_direct_returns and node.returns is not None
+                if (
+                    infer_direct_returns
+                    and (infer_decorated_methods or not node.decorator_list)
+                    and node.returns is not None
+                )
                 else None
             )
             method_returns[node.name] = (
@@ -663,8 +784,70 @@ def register_compiled_class_method_returns(
     dict.__setitem__(
         _COMPILED_CLASS_METHOD_RETURNS,
         class_id,
-        (class_reference, MappingProxyType(method_returns)),
+        (
+            class_reference,
+            MappingProxyType(method_returns),
+            MappingProxyType(dict(trusted_method_returns or {})),
+        ),
     )
+
+
+def _resolve_trusted_method_snapshot(
+    defining_class: type,
+    method_name: str,
+    namespace: MappingProxyType,
+    trusted_snapshots: list[MappingProxyType],
+) -> tuple[bool, Any | None]:
+    key = (id(defining_class), method_name)
+    for snapshots in trusted_snapshots:
+        if key not in snapshots:
+            continue
+        (
+            class_reference,
+            function_reference,
+            function_code,
+            annotation_guard,
+            resolved_return,
+        ) = MappingProxyType.__getitem__(snapshots, key)
+        if class_reference() is not defining_class:
+            return True, None
+        descriptor = MappingProxyType.__getitem__(namespace, method_name)
+        function = (
+            object.__getattribute__(descriptor, "__func__")
+            if type(descriptor) in {classmethod, staticmethod}
+            else descriptor
+        )
+        if (
+            type(function) is not FunctionType
+            or function_reference() is not function
+            or FunctionType.__getattribute__(function, "__code__") is not function_code
+        ):
+            return True, None
+        if annotation_guard[0] == "deferred":
+            try:
+                current_annotator = FunctionType.__getattribute__(function, "__annotate__")
+            except AttributeError:
+                return True, None
+            annotator, annotator_code = annotation_guard[1:]
+            if current_annotator is not annotator or (
+                type(annotator) is FunctionType
+                and FunctionType.__getattribute__(annotator, "__code__") is not annotator_code
+            ):
+                return True, None
+        else:
+            annotations = FunctionType.__getattribute__(function, "__annotations__")
+            annotations_id, raw_return = annotation_guard[1:]
+            if (
+                type(annotations) is not dict
+                or id(annotations) != annotations_id
+                or not dict.__contains__(annotations, "return")
+                or dict.__getitem__(annotations, "return") is not raw_return
+            ):
+                return True, None
+        if not _is_runtime_annotation_binding(resolved_return):
+            return True, None
+        return True, resolved_return
+    return False, None
 
 
 def resolve_compiled_method_return_annotation(component_class: type, method_name: str) -> tuple[bool, Any | None]:
@@ -677,18 +860,32 @@ def resolve_compiled_method_return_annotation(component_class: type, method_name
         return False, None
 
     crossed_sidecar = False
+    trusted_snapshots: list[MappingProxyType] = []
     for defining_class in mro:
-        method_returns = _compiled_class_method_returns(defining_class)
+        metadata = _compiled_class_metadata(defining_class)
+        method_returns = metadata[0] if metadata is not None else None
+        if metadata is not None:
+            trusted_snapshots.append(metadata[1])
         try:
             namespace = type.__getattribute__(defining_class, "__dict__")
         except (AttributeError, TypeError):
+            return False, None
+        if type(namespace) is not MappingProxyType:
             return False, None
         if method_name not in namespace:
             crossed_sidecar = crossed_sidecar or method_returns is not None
             continue
 
         if method_returns is None:
-            return (True, None) if crossed_sidecar else (False, None)
+            if not crossed_sidecar:
+                return False, None
+            found, return_annotation = _resolve_trusted_method_snapshot(
+                defining_class,
+                method_name,
+                namespace,
+                trusted_snapshots,
+            )
+            return (found, return_annotation) if found else (True, None)
         if method_name not in method_returns:
             return True, None
         break
