@@ -7,11 +7,15 @@ import Icon from "@site/src/components/icon";
 
 A memory base stores the long-term chat history for a Langflow agent in a vectorized format, enabling semantic retrieval of past conversations across sessions.
 
-Unlike the [Message History component](/message-history), which retrieves messages in chronological order from the `messages` table, a memory base embeds messages into a vector store and retrieves by semantic similarity to returning the _most relevant context_ instead of the _most recent messages_.
+Unlike the [Message History component](/message-history), which retrieves messages in chronological order from the `messages` table, a memory base embeds messages into a vector store and retrieves by semantic similarity to return the _most relevant context_ instead of the _most recent messages_.
 
 Unlike a [knowledge base](/knowledge), which you populate manually with files, a memory base fills itself from a flow's chat sessions, which are stored in Langflow's [messages](/memory#store-chat-memory) table.
 
-By default, each memory base is backed by a local [ChromaDB](https://docs.trychroma.com/docs/overview/introduction) vector store, but ChromaDB cloud, OpenSearch, and other providers are available.
+Memory bases and knowledge bases share the same vector-store backends.
+Configure those backends in **Settings → DB Providers**.
+By default, new memory bases use local [Chroma](https://docs.trychroma.com/docs/overview/introduction).
+You can also use [Chroma Cloud](/knowledge#chroma-cloud), [OpenSearch](/knowledge#opensearch), or [Postgres pgvector](/knowledge#postgres-pgvector), depending on which providers you have configured.
+For setup steps, see [Configure vector database providers](/knowledge#configure-vector-database-providers).
 
 After a memory base is created, you can include its knowledge in a flow by adding the [**Memory Base** component](../Components/memory-base.mdx).
 
@@ -101,6 +105,10 @@ Create one from within the visual editor.
 
     * **Name**: Display name for this memory base. Must be unique within your account.
     * **Embedding Model**: The embedding model used to vectorize messages. The available models are those you have configured in **Settings → Model Providers**.
+    * **Vector Database**: The [DB Provider](/knowledge#configure-vector-database-providers) where this memory base stores vectors.
+    The field defaults to the active provider from **Settings → DB Providers**.
+    You must select a configured provider before you can create the memory base.
+    Once created, you cannot change the vector database for that memory base.
 
     Optionally, enable **LLM Preprocessing**.
     This option allows you to include a natural language prompt for preprocessing instructions, such as `Summarize the key facts from this conversation: the issue the user reported, any troubleshooting steps taken, and the outcome or resolution.`
@@ -109,7 +117,8 @@ Create one from within the visual editor.
     If no prompt is included, the connected LLM processes the conversation however it deems reasonable.
 
 4. Click **Create Memory**.
-The memory base and its backing ChromaDB directory is created.
+Langflow creates the memory base and provisions storage on the selected vector database.
+For local Chroma, that includes an on-disk directory; for remote providers such as Chroma Cloud, OpenSearch, or Postgres pgvector, vectors are stored in the configured cluster or database.
 A new memory base's status is **Empty** until the first ingestion job completes.
 
 ## Use a memory base in a flow
@@ -137,9 +146,12 @@ The following information is available for each memory base:
 
 * Name
 * Embedding model
+* Vector store (the DB Provider selected at memory base creation)
 * Ingestion threshold
 * Auto-capture
 * Session history
+
+To view the embedding model, provider, and vector store for a memory base, open its detail view and expand the configuration summary.
 
 The detail view header contains the following controls:
 
@@ -153,7 +165,10 @@ To delete the memory, click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
 
 ### Memory base storage location
 
-Memory bases use the same on-disk layout as [knowledge bases](/knowledge).
+The memory base vectors storage location depends on the [DB Provider](/knowledge#configure-vector-database-providers) you selected when you created it.
+Backend and embedding settings for each memory base are stored on its backing knowledge base record in the Langflow database.
+
+For **local Chroma**, memory bases use the same on-disk layout as [knowledge bases](/knowledge).
 The default storage location depends on your operating system and installation method:
 
 - **Langflow Desktop**:
@@ -171,8 +186,13 @@ To change the default directory, set `LANGFLOW_KNOWLEDGE_BASES_DIR`:
 export LANGFLOW_KNOWLEDGE_BASES_DIR="/path/to/parent/directory"
 ```
 
+For **remote providers** such as Chroma Cloud, OpenSearch, or Postgres pgvector, vectors are stored in the configured cluster or database, not under the local `knowledge_bases` directory.
+Configure those providers in **Settings → DB Providers**.
+For setup steps, see [Configure vector database providers](/knowledge#configure-vector-database-providers).
+
 ## See also
 
 - [Memory Base component](../Components/memory-base.mdx)
+- [Configure vector database providers](/knowledge#configure-vector-database-providers)
 - [Manage vector data](/knowledge)
 - [Memory management options](/memory)
