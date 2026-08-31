@@ -51,7 +51,11 @@ describe("mutateTemplate", () => {
     );
 
     expect(mutateAsync).toHaveBeenCalledWith(
-      expect.objectContaining({ value: true, tool_mode: true }),
+      expect.objectContaining({
+        value: true,
+        template: node.template,
+        tool_mode: true,
+      }),
     );
     expect(setNodeClass).toHaveBeenCalledWith(
       expect.objectContaining({ tool_mode: true }),
