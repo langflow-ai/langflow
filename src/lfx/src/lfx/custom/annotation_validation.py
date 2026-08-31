@@ -545,29 +545,43 @@ def _compiled_class_metadata(component_class: type) -> tuple[MappingProxyType, M
 
 
 @lru_cache(maxsize=128)
-def _source_module(filename: str) -> ast.Module | None:
+def _source_function_returns(filename: str) -> MappingProxyType | None:
     try:
-        return ast.parse(Path(filename).read_text(encoding="utf-8"), filename=filename)
+        tree = ast.parse(Path(filename).read_text(encoding="utf-8"), filename=filename)
     except (OSError, SyntaxError, UnicodeError):
         return None
+
+    method_returns: dict[tuple[str, int], str | None] = {}
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            continue
+        try:
+            return_source = ast.unparse(node.returns) if node.returns is not None else None
+        except (RecursionError, ValueError):
+            return_source = None
+        start_line = min((decorator.lineno for decorator in node.decorator_list), default=node.lineno)
+        for key in {(node.name, start_line), (node.name, node.lineno)}:
+            if key in method_returns:
+                method_returns[key] = None
+            else:
+                method_returns[key] = return_source
+    return MappingProxyType(method_returns)
 
 
 def _static_function_return(function: FunctionType, method_name: str) -> ast.AST | None:
     code = FunctionType.__getattribute__(function, "__code__")
     filename = code.co_filename
     first_line = code.co_firstlineno
-    tree = _source_module(filename) if isinstance(filename, str) else None
-    if tree is None:
+    method_returns = _source_function_returns(filename) if isinstance(filename, str) else None
+    if method_returns is None:
         return None
-
-    matches: list[ast.FunctionDef | ast.AsyncFunctionDef] = []
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef) or node.name != method_name:
-            continue
-        start_line = min((decorator.lineno for decorator in node.decorator_list), default=node.lineno)
-        if first_line in (start_line, node.lineno):
-            matches.append(node)
-    return matches[0].returns if len(matches) == 1 else None
+    return_source = MappingProxyType.get(method_returns, (method_name, first_line))
+    if return_source is None:
+        return None
+    try:
+        return ast.parse(return_source, mode="eval").body
+    except SyntaxError:
+        return None
 
 
 def _runtime_annotation_guard(function: FunctionType) -> tuple[Any, ...] | None:

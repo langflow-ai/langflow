@@ -9,6 +9,7 @@ from typing import TypeVar, get_args
 
 import pytest
 from lfx.components.processing.output_parser import OutputParserComponent
+from lfx.custom import annotation_validation
 from lfx.custom.annotation_validation import (
     UnsafeReturnAnnotationError,
     is_safe_return_annotation,
@@ -858,6 +859,48 @@ class DeferredBase:
         assert snapshots == {}
         assert module.calls == []
     finally:
+        sys.modules.pop(module_name, None)
+
+
+def test_server_snapshot_indexes_each_source_file_once(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    module_path = tmp_path / "multiple_methods.py"
+    module_path.write_text(
+        """\
+class MultipleMethodsBase:
+    def build_text(self) -> str:
+        return "value"
+
+    def build_number(self) -> int:
+        return 1
+""",
+        encoding="utf-8",
+    )
+    module_name = "_lfx_multiple_method_annotation_test"
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    original_walk = ast.walk
+    walk_calls = 0
+
+    def counted_walk(node):
+        nonlocal walk_calls
+        walk_calls += 1
+        return original_walk(node)
+
+    try:
+        spec.loader.exec_module(module)
+        annotation_validation._source_function_returns.cache_clear()
+        monkeypatch.setattr(annotation_validation.ast, "walk", counted_walk)
+
+        snapshots = snapshot_trusted_class_method_returns([module.MultipleMethodsBase])
+
+        assert (id(module.MultipleMethodsBase), "build_text") in snapshots
+        assert (id(module.MultipleMethodsBase), "build_number") in snapshots
+        assert walk_calls == 1
+    finally:
+        annotation_validation._source_function_returns.cache_clear()
         sys.modules.pop(module_name, None)
 
 
