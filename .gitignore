@@ -315,6 +315,3 @@ _context
 requirements-mend.txt
 requirements-workspace-mend.txt
 requirements-gp-mend.txt
-
-# Internal CreateOS working notes (not part of the docs site)
-docs/createos/

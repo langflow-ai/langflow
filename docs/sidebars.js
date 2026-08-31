@@ -332,11 +332,6 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "Deployment/sandbox-createos",
-          label: "Run code in CreateOS microVMs",
-        },
-        {
-          type: "doc",
           id: "Deployment/deployment-tweaks-policy",
           label: "Restrict API tweaks",
         },

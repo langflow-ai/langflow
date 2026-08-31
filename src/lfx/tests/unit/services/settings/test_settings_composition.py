@@ -265,14 +265,7 @@ EXPECTED_FIELDS = {
     "sandbox_memory_mb",
     "sandbox_allow_network",
     "sandbox_allowed_domains",
-    "sandbox_accept_egress_exceptions",
     "sandbox_allow_software_emulation",
-    # SecuritySettings: guest reuse and artifact collection, for backends that
-    # report support for them
-    "sandbox_session_mode",
-    "sandbox_session_idle_seconds",
-    "sandbox_collect_artifacts",
-    "sandbox_max_artifact_bytes",
     # SecuritySettings: rebuild drifted built-ins with this server's code (issue #14455)
     "substitute_outdated_component_code",
     # VariablesSettings: operator-tunable Langflow Assistant prompt length

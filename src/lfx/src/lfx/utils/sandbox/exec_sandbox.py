@@ -27,7 +27,6 @@ from lfx.utils.sandbox.base import (
     SandboxExecutionError,
     SandboxResult,
     SandboxUnavailableError,
-    SessionKey,
     _sandbox_settings,
 )
 from lfx.utils.sandbox.registry import register_sandbox_backend
@@ -406,7 +405,7 @@ class _ExecSandboxExecutor:
             execution_time_ms=getattr(result, "execution_time_ms", None),
         )
 
-    def run(self, code: str, *, env: dict[str, str] | None = None, session: SessionKey | None = None) -> SandboxResult:
+    def run(self, code: str, *, env: dict[str, str] | None = None) -> SandboxResult:
         """Run ``code`` to completion in a fresh exec-sandbox VM.
 
         Raises:
@@ -414,10 +413,6 @@ class _ExecSandboxExecutor:
                 or the operator's policy cannot be honored.
             SandboxExecutionError: The infrastructure failed mid-run.
         """
-        # ``session`` is accepted and ignored: exec-sandbox builds one VM per
-        # run and exposes no handle to reuse, so capabilities() reports
-        # supports_sessions=False and the dispatcher never passes a real key.
-        del session
         settings = _sandbox_settings()
         try:
             import exec_sandbox  # noqa: F401

@@ -51,29 +51,39 @@ _builtin_names: frozenset[str] = frozenset()
 def register_sandbox_backend(name: str, factory: Callable[[], SandboxBackend]) -> None:
     """Register ``factory`` under ``name``.
 
-    The factory is called at most once per process, the first time the backend
-    is actually used, so registering a backend costs nothing until an operator
-    selects it. Re-registering a name replaces the factory and drops any
-    instance already built from the previous one.
+    The factory is called lazily when the backend is first used, so registering
+    a backend costs nothing until an operator selects it. Concurrent first
+    resolutions may construct more than one candidate; the registry keeps one
+    singleton and shuts the others down. A name may be registered only once:
+    replacing a live backend would orphan its process-wide resources and could
+    race an in-flight resolution against two different factories.
 
-    The name is lowercased. The settings validator lowercases
+    The name is stripped and lowercased. The settings validator normalizes
     ``sandbox_backend`` before comparing it against
     :func:`known_sandbox_backends`, so a name registered with an uppercase
     letter would be listed as available and yet never be selectable.
     """
-    name = name.lower()
+    name = name.strip().lower()
+    if not name:
+        msg = "a sandbox backend name cannot be empty"
+        raise ValueError(msg)
     if name == SANDBOX_BACKEND_NONE:
         msg = f"{SANDBOX_BACKEND_NONE!r} is reserved and cannot name a backend"
         raise ValueError(msg)
+    if not callable(factory):
+        msg = f"sandbox backend {name!r} must register a callable factory"
+        raise TypeError(msg)
     if name in _builtin_names:
         # Replacing a built-in would let anything that can run an import
-        # substitute its own executor for exec-sandbox or createos while the
+        # substitute its own executor for exec-sandbox while the
         # operator's settings still name the backend they trusted.
         msg = f"{name!r} is a built-in sandbox backend and cannot be replaced"
         raise ValueError(msg)
     with _lock:
+        if name in _factories:
+            msg = f"sandbox backend {name!r} is already registered"
+            raise ValueError(msg)
         _factories[name] = factory
-        _instances.pop(name, None)
 
 
 def known_sandbox_backends() -> tuple[str, ...]:
@@ -208,17 +218,16 @@ def _load_entry_points() -> None:
     """
     global _entry_points_loaded  # noqa: PLW0603 - module-level one-shot latch
     # The latch is read AND set under a lock that stays held for the whole
-    # load. Setting it early and releasing would let a second thread return
-    # from here immediately and then read a registry that is still filling,
-    # so a plugin backend mid-registration would be reported as unknown and
-    # startup would fail with "sandbox_backend must be one of".
+    # load. Set it before importing a plugin so a same-thread callback into
+    # known_sandbox_backends() sees the registry state collected so far rather
+    # than recursively starting the entry-point load again. Other threads
+    # cannot observe the early value: they remain blocked on _load_lock until
+    # the load has finished.
     with _load_lock:
         if _entry_points_loaded:
             return
-        try:
-            _load_entry_points_locked()
-        finally:
-            _entry_points_loaded = True
+        _entry_points_loaded = True
+        _load_entry_points_locked()
 
 
 def _load_entry_points_locked() -> None:
@@ -272,11 +281,11 @@ def _load_entry_points_locked() -> None:
             logger.warning("Could not load sandbox backend %r", entry_point.name, exc_info=True)
             continue
         try:
-            register_sandbox_backend(entry_point.name, factory)
-        except ValueError:
-            # Reserved name (`none`) or a built-in collision. The docstring
-            # promises a broken plugin is absent rather than fatal, so this
-            # cannot be allowed to propagate out of the settings validator.
+            register_sandbox_backend(plugin_name, factory)
+        except (TypeError, ValueError):
+            # Malformed factory, reserved name, or duplicate name. The docstring promises a broken
+            # plugin is absent rather than fatal, so this cannot propagate out
+            # of the settings validator.
             logger.warning("Refusing sandbox backend plugin %r", entry_point.name, exc_info=True)
             continue
         logger.info("Registered out-of-tree sandbox backend %r", entry_point.name)

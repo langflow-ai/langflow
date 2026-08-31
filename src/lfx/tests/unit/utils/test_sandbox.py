@@ -8,7 +8,6 @@ is exercised everywhere CI runs.
 import importlib
 import importlib.util
 import os
-import re
 import sys
 import threading
 import time
@@ -38,7 +37,6 @@ def _settings(backend, **extra):
         "sandbox_memory_mb": 192,
         "sandbox_allow_network": False,
         "sandbox_allowed_domains": [],
-        "sandbox_accept_egress_exceptions": False,
         "sandbox_allow_software_emulation": False,
     }
     defaults.update(extra)
@@ -1020,27 +1018,6 @@ class TestSettingsValidation:
         with pytest.raises(ValidationError):
             SecuritySettings(sandbox_memory_mb=64)
 
-    def test_the_new_sandbox_knobs_are_bounded_too(self):
-        """Both are guards, and an unbounded guard is not a guard.
-
-        sandbox_max_artifact_bytes caps what a runaway or hostile program can
-        pull into the Langflow process, base64-inflated and held in host
-        memory. A zero or negative value disables it or inverts the
-        comparison. sandbox_session_idle_seconds has no meaning at or below
-        zero for an idle reaper.
-        """
-        from lfx.services.settings.groups.security import SecuritySettings
-        from pydantic import ValidationError
-
-        for value in (0, -1):
-            with pytest.raises(ValidationError):
-                SecuritySettings(sandbox_session_idle_seconds=value)
-            with pytest.raises(ValidationError):
-                SecuritySettings(sandbox_max_artifact_bytes=value)
-
-        assert SecuritySettings(sandbox_session_idle_seconds=600).sandbox_session_idle_seconds == 600
-        assert SecuritySettings(sandbox_max_artifact_bytes=1024).sandbox_max_artifact_bytes == 1024
-
     def test_allowed_domains_normalized(self):
         """Verify that allowed domains are trimmed and blanks are dropped."""
         from lfx.services.settings.groups.security import SecuritySettings
@@ -1115,15 +1092,15 @@ class _StubBackend:
         self._capabilities = capabilities or base_module.Capabilities(
             isolation="hardware-virtualized", supports_deny_all_egress=True, supports_domain_allowlist=True
         )
-        self.runs: list[tuple[str, object]] = []
+        self.runs: list[str] = []
 
     def capabilities(self):
         """Return the stored capabilities."""
         return self._capabilities
 
-    def run(self, code, *, env=None, session=None):  # noqa: ARG002
-        """Record the code and session, and return a canned success result."""
-        self.runs.append((code, session))
+    def run(self, code, *, env=None):  # noqa: ARG002
+        """Record the code and return a canned success result."""
+        self.runs.append(code)
         return base_module.SandboxResult(stdout="stub", stderr="", exit_code=0)
 
     def shutdown(self):
@@ -1151,16 +1128,35 @@ class TestRegistry:
     """Verify how the sandbox backend registry registers and resolves backends."""
 
     def test_in_tree_backends_are_registered(self):
-        """Verify that "none", "exec-sandbox", and "createos" are known backends."""
+        """Verify that "none" and "exec-sandbox" are known backends."""
         names = registry_module.known_sandbox_backends()
         assert "none" in names
         assert "exec-sandbox" in names
-        assert "createos" in names
 
     def test_none_cannot_be_claimed_by_a_backend(self):
         """Verify that registering a backend under the reserved name "none" is refused."""
         with pytest.raises(ValueError, match="reserved"):
             registry_module.register_sandbox_backend("none", _StubBackend)
+
+    @pytest.mark.parametrize("name", ["", "   "])
+    def test_a_backend_name_cannot_be_empty(self, name):
+        """Verify that an empty normalized name is not added to the registry."""
+        with pytest.raises(ValueError, match="cannot be empty"):
+            registry_module.register_sandbox_backend(name, _StubBackend)
+
+    def test_a_backend_factory_must_be_callable(self):
+        """Verify that malformed plugin objects fail during registration, not first execution."""
+        with pytest.raises(TypeError, match="callable factory"):
+            registry_module.register_sandbox_backend("broken", object())  # type: ignore[arg-type]
+
+    def test_a_registered_name_cannot_be_replaced(self, monkeypatch):
+        """Verify that re-registration cannot orphan a live backend or race its factory."""
+        monkeypatch.setitem(registry_module._factories, "taken", _StubBackend)
+
+        with pytest.raises(ValueError, match="already registered"):
+            registry_module.register_sandbox_backend("taken", lambda: _StubBackend())
+
+        assert registry_module._factories["taken"] is _StubBackend
 
     def test_a_registered_backend_is_dispatched_to(self, monkeypatch, stub_backend):
         """Verify that a registered backend receives the run call and its result is returned."""
@@ -1239,24 +1235,6 @@ class TestPolicyGate:
         with pytest.raises(SandboxUnavailableError, match="cannot restrict egress by domain"):
             run_code_in_sandbox("print(1)")
 
-    def test_a_backend_without_artifacts_is_refused_when_they_are_requested(self, monkeypatch, stub_backend):
-        """Verify that a backend without artifact support is refused when artifacts are requested."""
-        stub_backend(
-            base_module.Capabilities(
-                isolation="hardware-virtualized",
-                supports_deny_all_egress=True,
-                supports_domain_allowlist=True,
-                supports_artifacts=False,
-            )
-        )
-        monkeypatch.setattr(
-            "lfx.services.deps.get_settings_service",
-            lambda: _settings("stub", sandbox_collect_artifacts=True),
-        )
-
-        with pytest.raises(SandboxUnavailableError, match="cannot read files back out"):
-            run_code_in_sandbox("print(1)")
-
     def test_a_timeout_above_the_backend_cap_is_refused(self, monkeypatch, stub_backend):
         """Verify that a configured timeout above the backend's max_timeout_seconds is refused."""
         stub_backend(
@@ -1274,384 +1252,6 @@ class TestPolicyGate:
 
         with pytest.raises(SandboxUnavailableError, match="caps one execution at 10s"):
             run_code_in_sandbox("print(1)")
-
-
-class TestSessionGate:
-    """Reuse needs consent from the operator AND a claim from the backend."""
-
-    def test_a_session_is_dropped_when_the_operator_left_sessions_off(self, monkeypatch, stub_backend):
-        """Verify that a session is dropped when the operator has not enabled session mode."""
-        backend = stub_backend(
-            base_module.Capabilities(
-                isolation="hardware-virtualized",
-                supports_deny_all_egress=True,
-                supports_domain_allowlist=True,
-                supports_sessions=True,
-            )
-        )
-        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("stub"))
-
-        run_code_in_sandbox("print(1)", session=base_module.SessionKey(flow_id="f", user_id="u"))
-
-        assert backend.runs[0][1] is None
-
-    def test_a_session_is_dropped_when_the_backend_cannot_hold_one(self, monkeypatch, stub_backend):
-        """Verify that a session is dropped when the backend does not support sessions."""
-        backend = stub_backend(
-            base_module.Capabilities(
-                isolation="hardware-virtualized",
-                supports_deny_all_egress=True,
-                supports_domain_allowlist=True,
-                supports_sessions=False,
-            )
-        )
-        monkeypatch.setattr(
-            "lfx.services.deps.get_settings_service", lambda: _settings("stub", sandbox_session_mode="flow")
-        )
-
-        run_code_in_sandbox("print(1)", session=base_module.SessionKey(flow_id="f", user_id="u"))
-
-        assert backend.runs[0][1] is None
-
-    def test_a_session_survives_when_both_gates_are_open(self, monkeypatch, stub_backend):
-        """Verify that a session is forwarded when both operator and backend allow reuse."""
-        backend = stub_backend(
-            base_module.Capabilities(
-                isolation="hardware-virtualized",
-                supports_deny_all_egress=True,
-                supports_domain_allowlist=True,
-                supports_sessions=True,
-            )
-        )
-        monkeypatch.setattr(
-            "lfx.services.deps.get_settings_service", lambda: _settings("stub", sandbox_session_mode="flow")
-        )
-        session = base_module.SessionKey(flow_id="f", user_id="u")
-
-        run_code_in_sandbox("print(1)", session=session)
-
-        assert backend.runs[0][1] == session
-
-
-class TestSessionKey:
-    """Verify SessionKey's token derivation and identity separation."""
-
-    def test_the_token_hides_the_identity_it_was_built_from(self):
-        """Verify that the token does not contain the flow_id or user_id it was built from."""
-        key = base_module.SessionKey(flow_id="flow-123", user_id="user-456")
-        token = key.token()
-        assert "flow-123" not in token
-        assert "user-456" not in token
-
-    def test_the_token_is_stable(self):
-        """Verify that the same flow_id and user_id always produce the same token."""
-        first = base_module.SessionKey(flow_id="f", user_id="u").token()
-        second = base_module.SessionKey(flow_id="f", user_id="u").token()
-        assert first == second
-
-    def test_different_users_of_one_flow_never_share_a_guest(self):
-        """Verify that different users of the same flow get different tokens."""
-        one = base_module.SessionKey(flow_id="f", user_id="alice").token()
-        two = base_module.SessionKey(flow_id="f", user_id="bob").token()
-        assert one != two
-
-    def test_different_flows_never_share_a_guest(self):
-        """Verify that the same user on different flows gets different tokens."""
-        one = base_module.SessionKey(flow_id="flow-a", user_id="u").token()
-        two = base_module.SessionKey(flow_id="flow-b", user_id="u").token()
-        assert one != two
-
-    def test_the_separator_cannot_be_forged(self):
-        """A concatenated key would collide here; the hash input is delimited."""
-        one = base_module.SessionKey(flow_id="a", user_id="bc").token()
-        two = base_module.SessionKey(flow_id="ab", user_id="c").token()
-        assert one != two
-
-
-class TestServedSessionsAreScopedToTheEndUser:
-    """On the serving plane the executing user is one shared service account."""
-
-    @staticmethod
-    def _serving(monkeypatch, *, enabled=True):
-        """Turn the deployment-level serving end-user switch on or off."""
-        monkeypatch.setattr(
-            "lfx.workflow.end_user_identity.serving_end_user_enabled",
-            lambda: enabled,
-        )
-
-    def test_off_the_serving_plane_the_key_is_unchanged(self, monkeypatch):
-        """The editor plane already keys on the person, so nothing moves."""
-        self._serving(monkeypatch, enabled=False)
-        key = sandbox_module.session_for("flow-1", "user-1")
-        assert key == base_module.SessionKey(flow_id="flow-1", user_id="user-1")
-
-    def test_two_end_users_of_one_deployment_never_share_a_guest(self, monkeypatch):
-        """The service account is identical for both, so only the end user separates them."""
-        self._serving(monkeypatch)
-        alice = sandbox_module.session_for("flow-1", "svc-account", "alice")
-        bob = sandbox_module.session_for("flow-1", "svc-account", "bob")
-        assert alice.token() != bob.token()
-
-    def test_an_anonymous_served_call_runs_cold(self, monkeypatch):
-        """No end-user id means no safe key, so there is no session at all.
-
-        Falling back to the service account here is the whole bug: every
-        anonymous caller of a deployment would land on one guest and read
-        whatever the previous one left in /workspace and in the state pickle.
-        """
-        self._serving(monkeypatch)
-        assert sandbox_module.session_for("flow-1", "svc-account") is None
-        assert sandbox_module.session_for("flow-1", "svc-account", "") is None
-
-    def test_an_unreadable_setting_runs_cold_rather_than_shared(self, monkeypatch):
-        """Fail closed: an unknown plane must not resolve to the shared account."""
-
-        def boom():
-            """Fail the way a half-built settings stack does."""
-            msg = "settings unavailable"
-            raise RuntimeError(msg)
-
-        monkeypatch.setattr("lfx.workflow.end_user_identity.serving_end_user_enabled", boom)
-        assert sandbox_module.session_for("flow-1", "svc-account") is None
-
-    def test_a_missing_flow_or_user_is_still_cold(self, monkeypatch):
-        """Verify that an incomplete identity yields no session on either plane."""
-        self._serving(monkeypatch)
-        assert sandbox_module.session_for(None, "svc-account", "alice") is None
-        assert sandbox_module.session_for("flow-1", None, "alice") is None
-
-    def test_the_end_user_id_does_not_leak_into_the_token(self):
-        """Verify that the end-user id cannot be read back out of the token."""
-        key = base_module.SessionKey(flow_id="f", user_id="svc", end_user_id="secret-person")
-        assert "secret-person" not in key.token()
-
-    def test_an_absent_end_user_id_keeps_the_old_token(self):
-        """Verify that a key with no end user is unchanged from the two-field form."""
-        assert (
-            base_module.SessionKey(flow_id="f", user_id="u").token()
-            == base_module.SessionKey(flow_id="f", user_id="u", end_user_id=None).token()
-        )
-
-
-class TestSessionStateCarryOver:
-    """Reusing a guest keeps its filesystem, not its Python process."""
-
-    def test_the_preamble_loads_and_saves(self):
-        """Verify that the composed code includes state-loading and atexit-save machinery."""
-        composed = base_module.compose_session_code("print(1)")
-        assert "_lf_state" in composed
-        assert "atexit" in composed
-        assert composed.endswith("print(1)")
-
-    def test_future_imports_still_come_first(self):
-        """Verify that a leading `from __future__ import` stays first in the composed code."""
-        composed = base_module.compose_session_code("from __future__ import annotations\nprint(1)")
-        assert composed.startswith("from __future__ import annotations")
-
-    def test_a_module_docstring_still_comes_first(self):
-        """Verify that a leading module docstring stays first in the composed code."""
-        composed = base_module.compose_session_code('"""Doc."""\nprint(1)')
-        assert composed.startswith('"""Doc."""')
-
-    def test_its_own_names_are_never_carried(self):
-        """The machinery must not leak into the next execution's namespace."""
-        composed = base_module.compose_session_code("print(1)")
-        assert '_lf_name.startswith("_lf_")' in composed
-
-    def test_a_session_run_gets_the_preamble(self, monkeypatch, stub_backend):
-        """Verify that a run with a live session gets the state-saving preamble."""
-        backend = stub_backend(
-            base_module.Capabilities(
-                isolation="hardware-virtualized",
-                supports_deny_all_egress=True,
-                supports_domain_allowlist=True,
-                supports_sessions=True,
-            )
-        )
-        monkeypatch.setattr(
-            "lfx.services.deps.get_settings_service", lambda: _settings("stub", sandbox_session_mode="flow")
-        )
-
-        run_code_in_sandbox("print(1)", session=base_module.SessionKey(flow_id="f", user_id="u"))
-
-        assert "_lf_save_state" in backend.runs[0][0]
-
-    def test_a_cold_run_does_not(self, monkeypatch, stub_backend):
-        """Verify that a run without a session does not get the state-saving preamble."""
-        backend = stub_backend()
-        monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("stub"))
-
-        run_code_in_sandbox("print(1)")
-
-        assert "_lf_save_state" not in backend.runs[0][0]
-
-
-class TestSessionStateSurvivesOneBadValue:
-    """The preamble runs for real here: composed code, a real interpreter, twice.
-
-    Mocking cannot reach this. The defect it guards against only appears when a
-    SECOND fresh interpreter tries to load what the first one wrote.
-    """
-
-    @staticmethod
-    def _run(code, state_file):
-        """Run the composed code in a fresh interpreter subprocess and return the completed process."""
-        import subprocess
-        import sys
-
-        composed = base_module.compose_session_code(code, state_path=str(state_file))
-        return subprocess.run(  # noqa: S603
-            [sys.executable, "-c", composed],
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=60,
-        )
-
-    def test_a_corrupt_state_file_says_so_on_stderr(self, tmp_path):
-        """Losing every variable in silence is the case an operator most needs to see.
-
-        The module comment promises that a name which cannot be carried is
-        reported rather than dropped quietly. A truncated or corrupt state
-        file took that whole promise down with it.
-        """
-        state = tmp_path / "session.pkl"
-        state.write_bytes(b"this is not a pickle")
-
-        run = self._run("print('ran anyway')\n", state)
-
-        assert run.returncode == 0, run.stderr
-        assert "ran anyway" in run.stdout
-        assert "could not read the saved session state" in run.stderr
-
-    def test_a_state_file_that_is_not_a_mapping_says_so_too(self, tmp_path):
-        """Verify that a state file holding a non-mapping value reports the problem on stderr."""
-        import pickle
-
-        state = tmp_path / "session.pkl"
-        state.write_bytes(pickle.dumps([1, 2, 3]))
-
-        run = self._run("print('ran anyway')\n", state)
-
-        assert run.returncode == 0, run.stderr
-        assert "was not a mapping" in run.stderr
-
-    def test_a_user_defined_function_does_not_erase_the_other_variables(self, tmp_path):
-        """Pickling the namespace as one object loses everything to one bad entry."""
-        state = tmp_path / "session.pkl"
-        first = self._run("keep = 5\nalso = 'hello'\ndef helper():\n    return 1\n", state)
-        assert first.returncode == 0, first.stderr
-
-        second = self._run("print(keep)\nprint(also)\n", state)
-
-        assert second.returncode == 0, second.stderr
-        assert second.stdout.split() == ["5", "hello"]
-
-    def test_the_uncarryable_name_is_reported_not_swallowed(self, tmp_path):
-        """Verify that a function defined in the session is reported as not carried."""
-        state = tmp_path / "session.pkl"
-        result = self._run("keep = 5\ndef helper():\n    return 1\n", state)
-
-        assert "did not carry" in result.stderr
-        assert "helper" in result.stderr
-
-    def test_an_unpicklable_value_costs_only_itself(self, tmp_path):
-        """Verify that an unpicklable value is dropped without losing other variables."""
-        state = tmp_path / "session.pkl"
-        first = self._run("keep = 7\nhandle = open(__file__ if False else '/dev/null')\n", state)
-        assert first.returncode == 0, first.stderr
-
-        second = self._run("print(keep)\nprint('handle' in dir())\n", state)
-
-        assert second.returncode == 0, second.stderr
-        assert second.stdout.split() == ["7", "False"]
-
-    def test_ordinary_values_round_trip(self, tmp_path):
-        """Verify that ordinary picklable values survive a save and reload."""
-        state = tmp_path / "session.pkl"
-        self._run("import json\nnumbers = [1, 2, 3]\nmapping = {'a': 1}\ntext = 'x'\n", state)
-
-        result = self._run("print(numbers, mapping, text)\n", state)
-
-        assert result.returncode == 0, result.stderr
-        assert result.stdout.strip() == "[1, 2, 3] {'a': 1} x"
-
-    def test_a_corrupt_state_file_does_not_break_the_run(self, tmp_path):
-        """Verify that a corrupt state file does not stop the code from running."""
-        state = tmp_path / "session.pkl"
-        state.write_bytes(b"not a pickle at all")
-
-        result = self._run("print('ran anyway')\n", state)
-
-        assert result.returncode == 0, result.stderr
-        assert "ran anyway" in result.stdout
-
-    def test_an_oversized_value_is_dropped_and_reported(self, tmp_path):
-        """Verify that a value over the size limit is dropped and reported on stderr."""
-        state = tmp_path / "session.pkl"
-        first = self._run(f"small = 1\nbig = 'x' * {base_module._SESSION_MAX_VALUE_BYTES + 1024}\n", state)
-        assert "did not carry" in first.stderr
-        assert "big" in first.stderr
-
-        second = self._run("print(small)\nprint('big' in dir())\n", state)
-
-        assert second.stdout.split() == ["1", "False"]
-
-
-class TestSessionStateWriteIsAtomic:
-    """A session guest can be shared by workers, so a reader must never see a torn file."""
-
-    @staticmethod
-    def _run(code, state_file):
-        """Start the composed code in a fresh interpreter subprocess and return the running process."""
-        import subprocess
-        import sys
-
-        composed = base_module.compose_session_code(code, state_path=str(state_file))
-        return subprocess.Popen(  # noqa: S603
-            [sys.executable, "-c", composed],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-
-    def test_concurrent_writers_never_leave_an_unreadable_state(self, tmp_path):
-        """Verify that many concurrent writers never leave the state file torn or unreadable."""
-        import pickle
-
-        state = tmp_path / "session.pkl"
-        # Each writer stores a payload big enough that a non-atomic write would
-        # span more than one block, which is what makes a torn read possible.
-        writers = [self._run(f"value_{index} = 'x' * 200000\n", state) for index in range(12)]
-        for writer in writers:
-            writer.communicate(timeout=120)
-
-        assert state.exists()
-        # The file is written by the preamble under test, not by anything
-        # untrusted; reading it back is the whole assertion.
-        entries = pickle.loads(state.read_bytes())  # noqa: S301
-        assert isinstance(entries, dict)
-        for blob in entries.values():
-            pickle.loads(blob)  # noqa: S301
-
-    def test_no_temporary_file_is_left_behind(self, tmp_path):
-        """Verify that the atomic write leaves no temporary file next to the state file."""
-        state = tmp_path / "session.pkl"
-        self._run("kept = 1\n", state).communicate(timeout=60)
-
-        leftovers = [path.name for path in tmp_path.iterdir() if path.name != state.name]
-        assert leftovers == []
-
-    def test_a_later_run_reads_a_whole_state(self, tmp_path):
-        """Verify that a later run reads back a large value written by an earlier run in full."""
-        state = tmp_path / "session.pkl"
-        self._run("payload = 'y' * 300000\n", state).communicate(timeout=60)
-
-        reader = self._run("print(len(payload))\n", state)
-        stdout, stderr = reader.communicate(timeout=60)
-
-        assert reader.returncode == 0, stderr
-        assert stdout.strip() == "300000"
 
 
 class _FakeEntryPoint:
@@ -1721,6 +1321,25 @@ class TestSandboxBackendPlugins:
 
         assert point.loaded
         assert "vendor" in names
+
+    def test_a_plugin_import_may_read_the_registry_without_recursive_loading(self, monkeypatch, entry_points):
+        """A plugin import can call the public registry API without re-entering its own load."""
+        monkeypatch.setenv("LANGFLOW_SANDBOX_BACKEND_PLUGINS", "vendor")
+        point = _FakeEntryPoint("vendor")
+        loads = 0
+
+        def load_and_read_registry():
+            """Model plugin import-time code that asks which backends are known."""
+            nonlocal loads
+            loads += 1
+            registry_module.known_sandbox_backends()
+            return lambda: _StubBackend()
+
+        point.load = load_and_read_registry
+        entry_points(point)
+
+        assert "vendor" in registry_module.known_sandbox_backends()
+        assert loads == 1
 
     def test_an_unlisted_plugin_is_skipped_while_a_listed_one_loads(self, monkeypatch, entry_points):
         """Verify that only the allowlisted plugin loads when several entry points are present."""
@@ -1987,6 +1606,15 @@ class TestPluginRegistrationFailuresAreNotFatal:
         assert names.count("none") == 1
         assert registry_module._factories.get("none") is None
 
+    def test_a_plugin_that_is_not_a_factory_is_refused_instead_of_crashing(self, monkeypatch, entry_points):
+        """A malformed entry-point value must not break settings validation at startup."""
+        entry_points(_FakeEntryPoint("broken", object()))
+        monkeypatch.setenv("LANGFLOW_SANDBOX_BACKEND_PLUGINS", "broken")
+
+        names = registry_module.known_sandbox_backends()
+
+        assert "broken" not in names
+
     def test_a_plugin_name_is_lowercased_so_it_can_be_selected(self, monkeypatch, entry_points):
         """The settings validator lowercases sandbox_backend before the membership check.
 
@@ -2048,43 +1676,13 @@ class TestCapabilitiesDefaultsGrantNothing:
         assert caps.isolation != "hardware-virtualized"
         assert not caps.supports_deny_all_egress
         assert not caps.supports_domain_allowlist
-        assert not caps.supports_sessions
-        assert not caps.supports_artifacts
         assert caps.max_timeout_seconds is None
-
-
-class TestSessionModeIsAllowlisted:
-    """An unrecognized session mode must run cold, not reuse a guest."""
-
-    def test_an_unknown_session_mode_does_not_reuse_a_guest(self, monkeypatch, stub_backend):
-        """_sandbox_settings reads the mode with getattr and validates nothing.
-
-        "Anything but off" therefore grants reuse to a value that never passed
-        the settings validator, and reuse is the direction that weakens
-        isolation between executions.
-        """
-        backend = stub_backend(
-            base_module.Capabilities(
-                isolation="hardware-virtualized",
-                supports_deny_all_egress=True,
-                supports_domain_allowlist=True,
-                supports_sessions=True,
-            )
-        )
-        monkeypatch.setattr(
-            "lfx.services.deps.get_settings_service",
-            lambda: _settings("stub", sandbox_session_mode="FLOW-typo"),
-        )
-
-        run_code_in_sandbox("print(1)", session=base_module.SessionKey(flow_id="f", user_id="u"))
-
-        assert backend.runs[0][1] is None
 
 
 class TestBackendRegistrationIsIdempotent:
     """Re-executing a backend module must not raise."""
 
-    @pytest.mark.parametrize("module_name", ["exec_sandbox", "createos"])
+    @pytest.mark.parametrize("module_name", ["exec_sandbox"])
     def test_reimporting_a_builtin_backend_module_does_not_raise(self, module_name):
         """seal_builtins() has already run, so a second registration is refused by design.
 
@@ -2186,97 +1784,3 @@ class TestPluginAllowlistMatchingIsCaseInsensitive:
         monkeypatch.setenv("LANGFLOW_SANDBOX_BACKEND_PLUGINS", "vendorbox")
 
         assert "vendorbox" in registry_module.known_sandbox_backends()
-
-
-class TestEgressExceptionsFailClosed:
-    """A destination the backend cannot block is a decision, not a warning."""
-
-    @staticmethod
-    def _leaky():
-        """Return capabilities that declare a link-local egress exception."""
-        return base_module.Capabilities(
-            isolation="hardware-virtualized",
-            supports_deny_all_egress=True,
-            supports_domain_allowlist=True,
-            egress_exceptions=("169.254.0.0/16",),
-        )
-
-    def test_a_denied_network_refuses_a_backend_with_a_hole(self, monkeypatch, stub_backend):
-        """The whole point of ALLOW_NETWORK=false is that nothing is reachable.
-
-        createos declares 169.254.0.0/16 here, which carries the VM metadata
-        service and answered a guest request under a live deny-all policy.
-        Declaring supports_deny_all_egress and logging the hole let that run.
-        """
-        stub_backend(self._leaky())
-        monkeypatch.setattr(
-            "lfx.services.deps.get_settings_service",
-            lambda: _settings("stub", sandbox_allow_network=False),
-        )
-
-        with pytest.raises(SandboxUnavailableError, match=re.escape("cannot block egress to 169.254.0.0/16")):
-            run_code_in_sandbox("print(1)")
-
-    def test_a_domain_allowlist_refuses_one_too(self, monkeypatch, stub_backend):
-        """An allowlist is also a restriction, and the hole is outside it."""
-        stub_backend(self._leaky())
-        monkeypatch.setattr(
-            "lfx.services.deps.get_settings_service",
-            lambda: _settings("stub", sandbox_allow_network=True, sandbox_allowed_domains=["api.example.com"]),
-        )
-
-        with pytest.raises(SandboxUnavailableError, match=re.escape("cannot block egress to 169.254.0.0/16")):
-            run_code_in_sandbox("print(1)")
-
-    def test_the_operator_can_accept_the_hole_deliberately(self, monkeypatch, stub_backend):
-        """The opt-in exists so a backend with a documented hole stays usable."""
-        backend = stub_backend(self._leaky())
-        monkeypatch.setattr(
-            "lfx.services.deps.get_settings_service",
-            lambda: _settings("stub", sandbox_allow_network=False, sandbox_accept_egress_exceptions=True),
-        )
-
-        run_code_in_sandbox("print(1)")
-
-        assert backend.runs, "the opt-in did not let the run through"
-
-    def test_an_unrestricted_policy_is_not_refused(self, monkeypatch, stub_backend):
-        """Nothing was asked for, so nothing is broken by the hole."""
-        backend = stub_backend(self._leaky())
-        monkeypatch.setattr(
-            "lfx.services.deps.get_settings_service",
-            lambda: _settings("stub", sandbox_allow_network=True),
-        )
-
-        run_code_in_sandbox("print(1)")
-
-        assert backend.runs
-
-    def test_a_backend_without_exceptions_needs_no_opt_in(self, monkeypatch, stub_backend):
-        """The refusal must be scoped to backends that actually declare a hole."""
-        backend = stub_backend(
-            base_module.Capabilities(
-                isolation="hardware-virtualized",
-                supports_deny_all_egress=True,
-                supports_domain_allowlist=True,
-            )
-        )
-        monkeypatch.setattr(
-            "lfx.services.deps.get_settings_service",
-            lambda: _settings("stub", sandbox_allow_network=False),
-        )
-
-        run_code_in_sandbox("print(1)")
-
-        assert backend.runs
-
-    def test_createos_declares_the_link_local_hole(self):
-        """The refusal above is only meaningful if createos still declares it.
-
-        Dropping the declaration would silence the gate rather than fix the
-        hole, which is the exact failure this whole guard exists to prevent.
-        """
-        from lfx.utils.sandbox import createos as createos_module
-
-        caps = createos_module._CreateosExecutor().capabilities()
-        assert "169.254.0.0/16" in caps.egress_exceptions

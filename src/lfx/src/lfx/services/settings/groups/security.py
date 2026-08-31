@@ -1,5 +1,3 @@
-"""Security settings group: CORS, SSRF protection, sandbox, and custom-component policy."""
-
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -170,29 +168,6 @@ class SecuritySettings(BaseModel):
       boundary replaces them — so sandboxed code may import any module available
       in the guest image. If the backend is configured but unusable, execution
       fails closed with an error instead of silently running in-process.
-    - "createos": each execution runs in a throwaway CreateOS Firecracker
-      microVM on the CreateOS control plane, so the Langflow host needs no
-      hardware hypervisor of its own and ``sandbox_allow_software_emulation``
-      does not apply. Requires ``CREATEOS_SANDBOX_API_KEY``; optional
-      ``CREATEOS_SANDBOX_BASE_URL``, ``CREATEOS_SANDBOX_ROOTFS`` and
-      ``CREATEOS_SANDBOX_SHAPE``. Like "exec-sandbox" the VM boundary replaces
-      the Python-level restrictions and a backend that cannot be used fails
-      closed, but the network and sizing semantics DIFFER — read these before
-      enabling it:
-
-      * ``sandbox_allow_network=True`` with an EMPTY ``sandbox_allowed_domains``
-        grants UNRESTRICTED egress. exec-sandbox instead keeps a
-        package-registry-only default; CreateOS has no equivalent built-in list.
-        Set ``sandbox_allowed_domains`` explicitly to restrict it.
-      * With a non-empty ``sandbox_allowed_domains``, a public DNS resolver is
-        added to the allowlist so names can be resolved at all. That resolver
-        answers for ANY name, so DNS remains a low-bandwidth exfiltration
-        channel even though connections to non-allowlisted hosts are blocked.
-        exec-sandbox filters DNS inside the guest and does not have this.
-      * ``sandbox_memory_mb`` is a FLOOR, not the VM size. A CreateOS shape
-        fixes vCPU as well as memory, so the default is the named shape
-        ``s-2vcpu-4gb`` and ``sandbox_memory_mb`` only raises it (never lowers
-        it). Pin an exact shape with ``CREATEOS_SANDBOX_SHAPE``.
 
     See https://github.com/langflow-ai/langflow/issues/12029."""
 
@@ -217,33 +192,11 @@ class SecuritySettings(BaseModel):
 
     sandbox_allowed_domains: list[str] = []
     """Comma-separated list of domains sandboxed code may reach when
-    ``sandbox_allow_network`` is enabled. Under ``exec-sandbox`` these are
-    forwarded to its in-guest DNS filter; under ``createos`` they become
-    host-enforced egress rules and a DNS resolver is appended so names resolve
-    at all (see ``sandbox_backend`` for what that implies). Empty (default)
-    keeps exec-sandbox's package-registry-only
+    ``sandbox_allow_network`` is enabled (forwarded to exec-sandbox's DNS
+    filter). Empty (default) keeps exec-sandbox's package-registry-only
     default. Listing a domain here permits guest egress to it, so treat this
     like an SSRF allow-list: prefer narrow, fully-qualified domains.
     Only used when sandbox_backend is not "none"."""
-
-    sandbox_accept_egress_exceptions: bool = False
-    """Whether to run anyway when the backend cannot block every destination.
-
-    A backend declares the destinations it cannot block in
-    ``Capabilities.egress_exceptions``. When the operator restricts egress --
-    ``LANGFLOW_SANDBOX_ALLOW_NETWORK`` false, or
-    ``LANGFLOW_SANDBOX_ALLOWED_DOMAINS`` set -- a backend with any such
-    exception is REFUSED unless this is true.
-
-    Default False, because the refusal is the honest answer: an operator who
-    turned the network off did not ask for "off except one range". The
-    exception is not cosmetic. Under ``createos`` it is 169.254.0.0/16, which
-    carries the VM metadata service and answered a guest request under a live
-    deny-all policy.
-
-    Set this to true only after reading what the chosen backend cannot block
-    and deciding those destinations are acceptable in your deployment. Only
-    used when ``sandbox_backend`` is not "none"."""
 
     sandbox_allow_software_emulation: bool = False
     """Permit the sandbox to run without a hardware hypervisor (KVM on Linux,
@@ -255,56 +208,6 @@ class SecuritySettings(BaseModel):
     assumption of a hardware boundary. Enable only for trusted/development
     workloads, e.g. CI smoke tests or containers without /dev/kvm passthrough.
     Only used when sandbox_backend is not "none"."""
-
-    sandbox_session_mode: str = "off"
-    """Whether one guest VM is reused across executions of the same flow.
-
-    - "off" (default): every execution gets a fresh guest. Nothing survives
-      between two runs, matching the in-process path where each invocation
-      builds a new globals namespace.
-    - "flow": executions of the same flow, by the same user, share one guest
-      until it goes idle for ``sandbox_session_idle_seconds``. Variables,
-      imports and files written by one execution are visible to the next.
-      On a backend that builds a VM per execution, this also removes that
-      creation cost from every execution after the first, which matters most
-      for agent loops that run many small snippets.
-
-    Read this before enabling "flow": reuse is a deliberate weakening of
-    isolation BETWEEN EXECUTIONS. The guest boundary against the Langflow host
-    is unchanged, but code from one execution can read what earlier code in the
-    same flow left behind. The session is keyed on flow AND user, so two users
-    of the same flow never share a guest. Only honored when the backend reports
-    session support; ``exec-sandbox`` does not, and runs cold either way.
-    Only used when sandbox_backend is not "none"."""
-
-    sandbox_session_idle_seconds: int = Field(default=600, ge=1, le=86_400)
-    """How long a reused guest may sit idle before it is destroyed.
-
-    Bounds both the cost of a forgotten session and how long its state stays
-    readable. Only used when ``sandbox_session_mode`` is not "off"."""
-
-    sandbox_collect_artifacts: bool = False
-    """Whether files written to /workspace/artifacts are read back after a run.
-
-    Default False. When True, the backend collects that directory after the
-    code exits and the component returns the files alongside stdout, so code
-    that saves a chart or a CSV can hand it to the rest of the flow. Costs one
-    extra round trip per execution. Refused at run time when the configured
-    backend cannot read files back out of the guest, rather than silently
-    returning nothing. Only used when sandbox_backend is not "none"."""
-
-    sandbox_max_artifact_bytes: int = Field(default=5 * 1024 * 1024, ge=1, le=64 * 1024 * 1024)
-    """Total size of collected artifacts allowed per execution, in bytes.
-
-    Guest code chooses what it writes, so this is the cap that keeps a runaway
-    or hostile program from pulling an unbounded payload into the Langflow
-    process. Collection stops at the limit and the run reports what it kept.
-
-    The default is deliberately small. Artifacts travel base64-encoded inside
-    the component's output, so they are carried through the flow and rendered
-    in the UI rather than written to storage. Raise this only when the
-    deployment can carry payloads of that size. Only used when
-    ``sandbox_collect_artifacts`` is True."""
 
     restrict_local_file_access: bool = False
     """If set to True, the built-in file-reading components (File, Directory, JSON/CSV-to-Data)
@@ -467,18 +370,6 @@ class SecuritySettings(BaseModel):
         allowed = set(known_sandbox_backends())
         if normalized not in allowed:
             msg = f"sandbox_backend must be one of {sorted(allowed)}, got {value!r}"
-            raise ValueError(msg)
-        return normalized
-
-    @field_validator("sandbox_session_mode", mode="before")
-    @classmethod
-    def validate_sandbox_session_mode(cls, value):
-        """Reject unknown session modes at startup, the way backends are checked."""
-        from lfx.utils.sandbox.base import KNOWN_SESSION_MODES
-
-        normalized = str(value).strip().lower() if value is not None else "off"
-        if normalized not in KNOWN_SESSION_MODES:
-            msg = f"sandbox_session_mode must be one of {sorted(KNOWN_SESSION_MODES)}, got {value!r}"
             raise ValueError(msg)
         return normalized
 

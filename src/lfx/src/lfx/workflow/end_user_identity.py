@@ -231,26 +231,6 @@ def end_user_id_from_scoped_session(session_id: str | None) -> str | None:
     return prefix
 
 
-def end_user_id_from_graph(graph: Any) -> str | None:
-    """The serving end-user id stamped on a graph, or ``None``.
-
-    ``graph.end_user_id`` is set at the build site by the serving entry points
-    (see :func:`resolve_serving_scope`) and is ``None`` on the editor plane, on an
-    anonymous served request, and whenever the feature is off. Duck-typed and
-    ``getattr``-based so a component can ask without owning a graph, and so a
-    component built without a vertex answers ``None`` instead of raising.
-
-    Callers that need the id for a *security* decision must pair it with
-    :func:`serving_end_user_enabled`: ``None`` here does not distinguish "editor
-    run, the executing user is the person" from "served run, the caller is
-    anonymous", and those two want opposite answers.
-    """
-    end_user = getattr(graph, "end_user_id", None)
-    if not end_user:
-        return None
-    return str(end_user).strip() or None
-
-
 def resolve_serving_end_user_id(*, http_request: Any) -> str | None:
     """The raw trusted end-user id for a serving request, or ``None`` when off / anonymous.
 

@@ -26,7 +26,6 @@ Layout:
   truth for which names are accepted.
 * :mod:`lfx.utils.sandbox.exec_sandbox` — local QEMU microVMs via the
   `exec-sandbox <https://github.com/dualeai/exec-sandbox>`_ package.
-* :mod:`lfx.utils.sandbox.createos` — remote Firecracker microVMs.
 """
 
 from __future__ import annotations
@@ -34,20 +33,15 @@ from __future__ import annotations
 import contextlib
 import os
 
-from lfx.log.logger import logger
 from lfx.utils.sandbox.base import (
-    SESSION_MODE_FLOW,
     Capabilities,
     SandboxBackend,
     SandboxExecutionError,
-    SandboxFile,
     SandboxResult,
     SandboxUnavailableError,
-    SessionKey,
     _compose_sandbox_code,
     _sandbox_settings,
     build_import_preamble,
-    compose_session_code,
     sanitize_code,
 )
 from lfx.utils.sandbox.registry import (
@@ -65,7 +59,6 @@ from lfx.utils.sandbox.registry import seal_builtins as _seal_builtins
 # Imported for their registration side effect. An in-tree backend is a plain
 # import here; an out-of-tree one arrives through the lfx.sandbox_backends
 # entry point instead and needs no edit to this file.
-from lfx.utils.sandbox import createos as _createos  # noqa: F401  isort:skip
 from lfx.utils.sandbox import exec_sandbox as _exec_sandbox  # noqa: F401  isort:skip
 
 # Everything registered above is in-tree. Freezing the set here is what lets
@@ -77,10 +70,8 @@ __all__ = [
     "Capabilities",
     "SandboxBackend",
     "SandboxExecutionError",
-    "SandboxFile",
     "SandboxResult",
     "SandboxUnavailableError",
-    "SessionKey",
     "build_import_preamble",
     "get_sandbox_backend",
     "is_sandbox_enabled",
@@ -88,7 +79,6 @@ __all__ = [
     "register_sandbox_backend",
     "run_code_in_sandbox",
     "sanitize_code",
-    "session_for",
     "shutdown_sandbox",
 ]
 
@@ -123,18 +113,12 @@ def run_code_in_sandbox(
     *,
     global_imports: str | list[str] = "",
     env: dict[str, str] | None = None,
-    session: SessionKey | None = None,
 ) -> SandboxResult:
     """Execute ``code`` in the configured sandbox backend and return the outcome.
 
     Synchronous by design: the code-execution components are synchronous and
     may be invoked from arbitrary threads/event loops, so any loop-affine work
     is the backend's problem, not the caller's.
-
-    ``session`` asks for the guest to be reused across executions of the same
-    flow and user. It is honored only when the operator turned sessions on AND
-    the backend supports them; otherwise the run is cold, which is always the
-    safe outcome.
 
     Raises:
         SandboxUnavailableError: A sandbox backend is configured but unusable
@@ -164,100 +148,7 @@ def run_code_in_sandbox(
     _assert_backend_honours_policy(backend)
     preamble = build_import_preamble(global_imports)
     full_code = _compose_sandbox_code(preamble, code)
-    effective_session = _effective_session(backend, session)
-    if effective_session is not None:
-        # Reusing a guest keeps its filesystem, not its Python process, so the
-        # variables have to be carried across explicitly.
-        full_code = compose_session_code(full_code)
-    return backend.run(full_code, env=env, session=effective_session)
-
-
-def session_for(flow_id: str | None, user_id: str | None, end_user_id: str | None = None) -> SessionKey | None:
-    """Build the session key for a component run, or None when it has no identity.
-
-    ``flow_id`` and ``user_id`` are both required. A guest keyed on a flow alone
-    would be shared by every user of that flow, and one keyed on a user alone
-    would be shared by every flow they run. When either is missing the answer is
-    no session at all, so an unidentified caller can never join someone else's
-    guest.
-
-    On the serving plane those two are not enough. Every request to a deployed
-    flow executes as one shared service account, so ``user_id`` is a constant
-    there and the pair ``(flow, user)`` names ONE guest for every caller of that
-    deployment. Session reuse keeps the guest filesystem -- ``/workspace``, the
-    artifact directory, and the pickled variables carried between executions --
-    so that guest would hand each caller whatever the previous one left behind.
-    ``end_user_id`` is the gateway-authenticated caller, and it is what keeps
-    them apart.
-
-    An anonymous served request has no such id, and there is no safe key to give
-    it: falling back to the service account is exactly the shared guest above,
-    and anything derived from the request would collide with the next anonymous
-    caller. So it runs cold -- no session, no reuse, nothing inherited. That is
-    the same answer :func:`lfx.workflow.end_user_identity.scope_session_for_identity`
-    gives an anonymous request for chat memory, and the same one this function
-    already gives a run with no flow or user at all.
-
-    Off the serving plane (the default, and the flow editor) ``user_id`` is the
-    person, ``serving_end_user_enabled()`` is False, and the key is unchanged.
-    """
-    if not flow_id or not user_id:
-        return None
-    # Imported here rather than at module scope: this module is imported by the
-    # sandbox dispatch path, and lfx.workflow pulls in the serving plane.
-    from lfx.workflow.end_user_identity import serving_end_user_enabled
-
-    # The DEPLOYMENT-level switch, not "did this request carry a header". A
-    # served request without the header is anonymous, which is the case that
-    # must run cold -- reading per-request state here would let exactly that
-    # request fall back to the shared service-account guest.
-    try:
-        serving = serving_end_user_enabled()
-    except Exception:  # noqa: BLE001 - an unreadable settings stack must not decide for reuse
-        # Cannot tell which plane this is. Assume the serving one: that branch
-        # only reuses a guest when an end-user id is present, so the unknown
-        # case degrades to a cold run instead of to the shared service account.
-        logger.debug("Could not read the serving end-user setting; treating the run as served", exc_info=True)
-        serving = True
-    if serving:
-        if not end_user_id:
-            logger.debug("Serving request has no end-user identity; running the sandbox cold")
-            return None
-        return SessionKey(flow_id=str(flow_id), user_id=str(user_id), end_user_id=str(end_user_id))
-    return SessionKey(flow_id=str(flow_id), user_id=str(user_id))
-
-
-def _effective_session(backend: SandboxBackend, session: SessionKey | None) -> SessionKey | None:
-    """Drop the session unless both the operator and the backend allow reuse.
-
-    Two independent gates, and either one closing means a cold run. Reuse is
-    the risky direction — one execution can read what the last one left in the
-    guest — so it needs consent from the operator (the setting) and a claim
-    from the backend (the capability). A missing gate never silently reuses.
-    """
-    if session is None:
-        return None
-    settings = _sandbox_settings()
-    # Allowlisted, not "anything but off". _sandbox_settings reads the mode
-    # with getattr and validates nothing, so a value that reached here without
-    # passing the settings validator must produce a cold run rather than
-    # granting reuse.
-    if settings.session_mode not in _SESSION_MODES_THAT_REUSE:
-        return None
-    if not backend.capabilities().supports_sessions:
-        logger.debug("Sandbox backend %r has no session support; running cold", backend.name)
-        return None
-    return session
-
-
-# The session modes that actually reuse a guest. Anything else -- "off", or a
-# value that never went through the settings validator -- runs cold.
-_SESSION_MODES_THAT_REUSE = frozenset({SESSION_MODE_FLOW})
-
-
-# One warning per backend per process: a declared egress hole is worth saying
-# out loud, but not once per execution.
-_EGRESS_EXCEPTIONS_LOGGED: dict[str, bool] = {}
+    return backend.run(full_code, env=env)
 
 
 def _assert_backend_honours_policy(backend: SandboxBackend) -> None:
@@ -292,46 +183,6 @@ def _assert_backend_honours_policy(backend: SandboxBackend) -> None:
             "cannot restrict egress by domain. Refusing to run the code."
         )
         raise SandboxUnavailableError(msg)
-
-    if settings.collect_artifacts and not capabilities.supports_artifacts:
-        msg = (
-            f"LANGFLOW_SANDBOX_COLLECT_ARTIFACTS is true but sandbox backend {backend.name!r} "
-            "cannot read files back out of the guest. Refusing to run the code, because a run "
-            "that silently produced no artifacts would look like the code wrote nothing."
-        )
-        raise SandboxUnavailableError(msg)
-
-    if capabilities.egress_exceptions:
-        # A declared hole is a DECISION, not a log line. The operator restricts
-        # egress by turning the network off or by naming an allowlist; either
-        # way a destination the backend cannot block is outside what they
-        # asked for, and warning about it does not make the policy hold.
-        #
-        # Under createos the exception is 169.254.0.0/16, which carries the VM
-        # metadata service and answered a guest request under a live deny-all
-        # policy. Refusing is the honest answer; the opt-in exists so an
-        # operator who has read that can still choose to run.
-        operator_restricts_egress = not settings.allow_network or bool(settings.allowed_domains)
-        if operator_restricts_egress and not settings.accept_egress_exceptions:
-            asked_for = (
-                "LANGFLOW_SANDBOX_ALLOW_NETWORK is false"
-                if not settings.allow_network
-                else "LANGFLOW_SANDBOX_ALLOWED_DOMAINS restricts egress"
-            )
-            msg = (
-                f"{asked_for}, but sandbox backend {backend.name!r} cannot block egress to "
-                f"{', '.join(capabilities.egress_exceptions)}. Those destinations stay reachable "
-                "from the guest whatever the policy says. Refusing to run the code. Set "
-                "LANGFLOW_SANDBOX_ACCEPT_EGRESS_EXCEPTIONS=true to accept them deliberately."
-            )
-            raise SandboxUnavailableError(msg)
-        if not _EGRESS_EXCEPTIONS_LOGGED.get(backend.name):
-            _EGRESS_EXCEPTIONS_LOGGED[backend.name] = True
-            logger.warning(
-                "Sandbox backend %r cannot block egress to %s; the operator accepted this",
-                backend.name,
-                ", ".join(capabilities.egress_exceptions),
-            )
 
     if capabilities.max_timeout_seconds is not None and settings.timeout_seconds > capabilities.max_timeout_seconds:
         msg = (

@@ -11,7 +11,6 @@ can be added without editing shared code. See :mod:`lfx.utils.sandbox.registry`.
 from __future__ import annotations
 
 import ast
-import hashlib
 import re
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
@@ -70,9 +69,6 @@ class SandboxResult:
     stderr: str
     exit_code: int
     execution_time_ms: int | None = None
-    # Files the code left in the guest's artifact directory. Empty unless the
-    # operator enabled collection and the backend supports it.
-    files: tuple[SandboxFile, ...] = ()
 
     @property
     def success(self) -> bool:
@@ -91,15 +87,6 @@ class SandboxResult:
         return self.stderr.strip() or f"Sandboxed execution failed with exit code {self.exit_code}"
 
 
-# Session isolation is off unless the operator turns it on. Reusing one guest
-# across executions is faster and lets state survive, but it also lets one
-# execution read what the previous one left behind, so it must be a decision
-# rather than a default.
-SESSION_MODE_OFF = "off"
-SESSION_MODE_FLOW = "flow"
-KNOWN_SESSION_MODES = (SESSION_MODE_OFF, SESSION_MODE_FLOW)
-
-
 @dataclass(frozen=True)
 class _SandboxSettings:
     """Operator-tunable sandbox settings, with safe defaults for every field."""
@@ -108,12 +95,7 @@ class _SandboxSettings:
     memory_mb: int = 192
     allow_network: bool = False
     allowed_domains: tuple[str, ...] = ()
-    accept_egress_exceptions: bool = False
     allow_software_emulation: bool = False
-    session_mode: str = SESSION_MODE_OFF
-    session_idle_seconds: int = 600
-    collect_artifacts: bool = False
-    max_artifact_bytes: int = 5 * 1024 * 1024
 
 
 def _sandbox_settings() -> _SandboxSettings:
@@ -133,199 +115,10 @@ def _sandbox_settings() -> _SandboxSettings:
         memory_mb=getattr(settings, "sandbox_memory_mb", defaults.memory_mb),
         allow_network=getattr(settings, "sandbox_allow_network", defaults.allow_network),
         allowed_domains=tuple(getattr(settings, "sandbox_allowed_domains", ()) or ()),
-        accept_egress_exceptions=getattr(
-            settings, "sandbox_accept_egress_exceptions", defaults.accept_egress_exceptions
-        ),
         allow_software_emulation=getattr(
             settings, "sandbox_allow_software_emulation", defaults.allow_software_emulation
         ),
-        session_mode=getattr(settings, "sandbox_session_mode", defaults.session_mode),
-        session_idle_seconds=getattr(settings, "sandbox_session_idle_seconds", defaults.session_idle_seconds),
-        collect_artifacts=getattr(settings, "sandbox_collect_artifacts", defaults.collect_artifacts),
-        max_artifact_bytes=getattr(settings, "sandbox_max_artifact_bytes", defaults.max_artifact_bytes),
     )
-
-
-@dataclass(frozen=True)
-class SessionKey:
-    """Identifies the guest that a run may reuse.
-
-    Deliberately not a plain string. A caller-supplied string would let two
-    unrelated flows, or two users of the same flow, name the same guest and
-    read each other's leftover state. The identity fields are the input and
-    :meth:`token` is the only thing a backend ever sees, so the guest name can
-    never be chosen by a caller.
-    """
-
-    flow_id: str
-    user_id: str
-    # The serving-plane end user, when there is one. On the serving plane
-    # ``user_id`` is the shared service account every request executes as, so it
-    # is the same value for every caller of a deployed flow -- a guest keyed on
-    # it alone would hand one caller's leftover files and pickled state to the
-    # next. This field is what separates them. ``None`` off the serving plane,
-    # where ``user_id`` already IS the person, so the token is unchanged there.
-    end_user_id: str | None = None
-
-    def token(self) -> str:
-        """A stable, opaque id for this (flow, user, end user) triple.
-
-        Hashed rather than concatenated so a backend cannot reconstruct the
-        flow, user, or end-user id from a VM name it stores or logs.
-        """
-        digest = hashlib.sha256(f"{self.flow_id}\x00{self.user_id}\x00{self.end_user_id or ''}".encode())
-        return digest.hexdigest()[:32]
-
-
-@dataclass(frozen=True)
-class SandboxFile:
-    """One file the sandboxed code produced, read back into the host process."""
-
-    path: str
-    content: bytes
-
-    @property
-    def size(self) -> int:
-        """Return the file content size in bytes."""
-        return len(self.content)
-
-
-# Where a session's carried-over variables live inside the guest.
-_SESSION_STATE_PATH = "/workspace/.lf_session_state.pkl"
-
-# Largest single value carried from one execution to the next. Bounds both the
-# time spent serializing and the disk a forgotten session holds. A value over
-# the limit is simply not carried; the execution that created it is unaffected.
-_SESSION_MAX_VALUE_BYTES = 4 * 1024 * 1024
-
-
-# Prepended to the user's code when a session is active.
-#
-# Reusing a guest preserves its FILESYSTEM, not the Python process: each
-# execution is a new interpreter, so module-level variables would be gone even
-# though the VM is the same. Verified against a live sandbox -- ``state = 41``
-# followed by ``print(state)`` raised NameError until this existed.
-#
-# This carries the variables across instead. It is a small preamble rather than
-# a runner script or a long-lived kernel process:
-#
-# * ``atexit`` runs the save on a normal exit AND on ``sys.exit``, and on an
-#   uncaught exception, so no ``try``/``finally`` has to wrap (and re-indent)
-#   the user's code.
-# * Only picklable values are carried. Anything else -- an open socket, a file
-#   handle, a lambda -- is skipped rather than failing the run.
-# * Everything it defines is ``_lf_``-prefixed and excluded from the save, so
-#   the machinery never leaks into the next execution's namespace.
-#
-# Each value is serialized SEPARATELY, into a mapping of name to bytes, and the
-# file holds one pickle of that mapping. The obvious alternative -- pickle the
-# whole namespace as a single object -- loses everything to one bad entry, and
-# ordinary code produces such entries: a function defined by the user pickles
-# cleanly by reference to ``__main__.fn``, but the next execution is a fresh
-# interpreter where that name does not exist yet, so the load fails and takes
-# every other variable with it. With per-entry bytes the outer mapping is only
-# str to bytes, which always loads, and a failing entry costs just itself.
-#
-# A name that cannot be carried is reported on stderr rather than dropped in
-# silence, so a session that quietly stopped carrying something is visible.
-#
-# The pickle is written and read entirely inside the guest. It never crosses
-# into the Langflow process, so it grants code that is already running
-# arbitrarily in that guest no capability it did not have.
-def _build_session_preamble(state_path: str) -> str:
-    """The preamble text, parameterized only so a test can point it at a writable path."""
-    return f"""\
-import atexit as _lf_atexit, os as _lf_os, pathlib as _lf_pathlib, pickle as _lf_pickle, sys as _lf_sys
-_lf_state = _lf_pathlib.Path({state_path!r})
-_lf_lost = []
-if _lf_state.exists():
-    try:
-        _lf_entries = _lf_pickle.loads(_lf_state.read_bytes())
-    except Exception as _lf_exc:
-        _lf_entries = {{}}
-        print(
-            "langflow session: could not read the saved session state, "
-            "starting empty (" + type(_lf_exc).__name__ + ")",
-            file=_lf_sys.stderr,
-        )
-    if not isinstance(_lf_entries, dict):
-        print(
-            "langflow session: saved session state was not a mapping, starting empty",
-            file=_lf_sys.stderr,
-        )
-    if isinstance(_lf_entries, dict):
-        for _lf_name, _lf_blob in _lf_entries.items():
-            try:
-                globals()[_lf_name] = _lf_pickle.loads(_lf_blob)
-            except Exception:
-                _lf_lost.append(_lf_name)
-    if _lf_lost:
-        print(
-            "langflow session: could not restore " + ", ".join(sorted(_lf_lost)),
-            file=_lf_sys.stderr,
-        )
-
-
-def _lf_save_state():
-    _lf_keep = {{}}
-    _lf_dropped = []
-    for _lf_name, _lf_value in list(globals().items()):
-        if _lf_name.startswith("_lf_") or _lf_name.startswith("__"):
-            continue
-        # Defined by this run, so it pickles by reference to a __main__
-        # attribute the next interpreter will not have. Skipped here rather
-        # than left to fail on every future restore.
-        if getattr(_lf_value, "__module__", None) == "__main__":
-            _lf_dropped.append(_lf_name)
-            continue
-        try:
-            _lf_blob = _lf_pickle.dumps(_lf_value)
-        except Exception:
-            _lf_dropped.append(_lf_name)
-            continue
-        if len(_lf_blob) > {_SESSION_MAX_VALUE_BYTES}:
-            _lf_dropped.append(_lf_name)
-            continue
-        _lf_keep[_lf_name] = _lf_blob
-    # Written to a private temporary name and renamed into place. A session
-    # guest can be shared by more than one worker, so a plain write could be
-    # read half-finished by an execution starting on another worker; a rename
-    # is atomic, making the loser of that race a whole older state rather than
-    # a torn file.
-    _lf_tmp = _lf_state.with_name(_lf_state.name + "." + str(_lf_os.getpid()) + ".tmp")
-    try:
-        _lf_tmp.write_bytes(_lf_pickle.dumps(_lf_keep))
-        _lf_os.replace(_lf_tmp, _lf_state)
-    except Exception:
-        try:
-            _lf_tmp.unlink()
-        except Exception:
-            pass
-        print("langflow session: could not save state", file=_lf_sys.stderr)
-        return
-    if _lf_dropped:
-        print(
-            "langflow session: did not carry " + ", ".join(sorted(_lf_dropped)),
-            file=_lf_sys.stderr,
-        )
-
-
-_lf_atexit.register(_lf_save_state)
-"""
-
-
-def compose_session_code(code: str, *, state_path: str = _SESSION_STATE_PATH) -> str:
-    """Wrap ``code`` so its variables survive into the next execution.
-
-    Applied only when a session is active. The preamble goes through the same
-    placement rules as the import preamble, so a leading docstring or
-    ``from __future__`` block still comes first.
-
-    ``state_path`` is the guest path holding the carried values. It is a
-    constant in production; the parameter exists so a test can run the same
-    preamble against a writable path instead of /workspace.
-    """
-    return _compose_sandbox_code(_build_session_preamble(state_path), code)
 
 
 def build_import_preamble(global_imports: str | list[str]) -> str:
@@ -442,17 +235,6 @@ class Capabilities:
     supports_domain_allowlist: bool = False
     # Longest single execution the backend accepts, or None for no cap.
     max_timeout_seconds: int | None = None
-    # Whether the backend can keep one guest alive across executions of the
-    # same SessionKey. A backend without this runs every execution cold.
-    supports_sessions: bool = False
-    # Whether the backend can read files back out of the guest after a run.
-    supports_artifacts: bool = False
-    # Destinations the backend cannot block even when egress is denied. A hole
-    # has to be declared rather than discovered, AND declaring it is refused by
-    # default: when the operator restricts egress at all, a backend with any
-    # entry here is rejected unless sandbox_accept_egress_exceptions is true.
-    # Empty means the backend blocks everything it is told to.
-    egress_exceptions: tuple[str, ...] = ()
 
 
 @runtime_checkable
@@ -470,13 +252,8 @@ class SandboxBackend(Protocol):
         """Declare what this backend enforces. Must not perform I/O."""
         ...
 
-    def run(self, code: str, *, env: dict[str, str] | None = None, session: SessionKey | None = None) -> SandboxResult:
+    def run(self, code: str, *, env: dict[str, str] | None = None) -> SandboxResult:
         """Run ``code`` to completion and return its outcome.
-
-        ``session`` asks the backend to reuse the guest it used for the same
-        key last time. A backend that reports ``supports_sessions=False``
-        ignores it and runs cold, which is always safe: reuse is an
-        optimization, never a correctness requirement.
 
         Raises:
             SandboxUnavailableError: The backend is configured but unusable, or
