@@ -807,6 +807,114 @@ def test_json_schema_from_flow_only_advertises_api_exposed_fields(monkeypatch):
     assert schema["required"] == ["exposed"]
 
 
+def _patch_graph_with_input_nodes(monkeypatch, templates):
+    """Stand a fake graph whose input vertices carry ``templates`` (a list of node templates)."""
+
+    class _FakeNode:
+        def __init__(self, node_id, template):
+            self.id = node_id
+            self.is_input = True
+            self.data = {"node": {"template": template}}
+
+    class _FakeGraph:
+        vertices = [_FakeNode(f"input-{index}", template) for index, template in enumerate(templates)]
+
+        @classmethod
+        def from_payload(cls, _flow_data):
+            return cls()
+
+    import lfx.graph.graph.base as graph_base_module
+
+    monkeypatch.setattr(graph_base_module, "Graph", _FakeGraph)
+
+
+def test_json_schema_from_flow_keeps_visible_fields_when_flow_declares_no_allowlist(monkeypatch):
+    """A flow that toggled nothing has declared no allowlist and keeps its previous contract.
+
+    ``api_editable`` defaults to False and has no backfill, so gating on it without this fallback
+    empties the advertised schema of every flow nobody hand-prepared -- templates included.
+    """
+    _patch_graph_with_input_nodes(
+        monkeypatch,
+        [
+            {
+                "input_value": {"show": True, "advanced": False, "type": "str", "required": True},
+                "sender_name": {"show": True, "advanced": False, "type": "str"},
+                "opt_out": {"show": True, "advanced": False, "api_editable": False, "type": "str"},
+                "hidden": {"show": False, "advanced": False, "type": "str"},
+                "off_node": {"show": True, "advanced": True, "type": "str"},
+            }
+        ],
+    )
+
+    schema = flow_helpers.json_schema_from_flow(SimpleNamespace(data={"nodes": [], "edges": []}))
+
+    assert set(schema["properties"]) == {"input_value", "sender_name", "opt_out", "session_id"}
+    assert schema["required"] == ["input_value"]
+
+
+def test_json_schema_from_flow_always_advertises_input_value(monkeypatch):
+    """``input_value`` stays advertised even under an allowlist, because the runtime still takes it.
+
+    ``handle_call_tool`` pops ``input_value`` before the tweak filter and forwards it directly, so
+    dropping it from the schema would publish a contract narrower than the one served -- a caller
+    obeying the schema would run the flow with no message.
+    """
+    _patch_graph_with_input_nodes(
+        monkeypatch,
+        [
+            {
+                "input_value": {"show": True, "advanced": False, "type": "str"},
+                "sender_name": {"show": True, "advanced": False, "api_editable": True, "type": "str"},
+                "session_ttl": {"show": True, "advanced": False, "type": "int"},
+            }
+        ],
+    )
+
+    schema = flow_helpers.json_schema_from_flow(SimpleNamespace(data={"nodes": [], "edges": []}))
+
+    assert set(schema["properties"]) == {"input_value", "sender_name", "session_id"}
+
+
+def test_json_schema_from_flow_allowlist_is_scoped_to_a_single_flow(monkeypatch):
+    """One input node's toggle closes the whole flow, not just that node."""
+    _patch_graph_with_input_nodes(
+        monkeypatch,
+        [
+            {"greeting": {"show": True, "advanced": False, "api_editable": True, "type": "str"}},
+            {"untoggled": {"show": True, "advanced": False, "type": "str"}},
+        ],
+    )
+
+    schema = flow_helpers.json_schema_from_flow(SimpleNamespace(data={"nodes": [], "edges": []}))
+
+    assert set(schema["properties"]) == {"greeting", "session_id"}
+
+
+def test_get_flow_input_tweaks_matches_the_advertised_schema(monkeypatch):
+    """The call-time filter must accept exactly what ``tools/list`` advertised."""
+    template = {
+        "sender_name": {"show": True, "advanced": False, "type": "str"},
+        "hidden": {"show": False, "advanced": False, "type": "str"},
+    }
+    _patch_graph_with_input_nodes(monkeypatch, [template])
+    flow = SimpleNamespace(data={"nodes": [], "edges": []})
+
+    # No toggle anywhere: permissive, so the visible field is forwarded.
+    assert flow_helpers.get_flow_input_tweaks(flow, {"sender_name": "ada", "hidden": "no"}) == {
+        "input-0": {"sender_name": "ada"}
+    }
+
+    # Once the flow declares an allowlist, an untoggled field is refused at both ends.
+    _patch_graph_with_input_nodes(
+        monkeypatch,
+        [{**template, "greeting": {"show": True, "advanced": False, "api_editable": True, "type": "str"}}],
+    )
+    assert flow_helpers.get_flow_input_tweaks(flow, {"sender_name": "ada", "greeting": "hi"}) == {
+        "input-0": {"greeting": "hi"}
+    }
+
+
 def test_json_schema_from_flow_maps_structured_and_list_field_types(monkeypatch):
     """MCP input schemas must describe the JSON values accepted by exposed fields."""
 
