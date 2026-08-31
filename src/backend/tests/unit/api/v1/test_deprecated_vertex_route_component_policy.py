@@ -309,6 +309,6 @@ async def test_real_policy_leaves_a_superuser_alone_on_the_deprecated_seams(
     path = f"api/v1/build/{flow_id}/vertices" if route == "order" else f"api/v1/build/{flow_id}/vertices/{node_id}"
     response = await client.post(path, headers=logged_in_headers_super_user)
 
-    assert response.status_code != 400, f"the admin-only policy refused an admin on {path}: {response.text[:300]}"
+    assert response.status_code == 200, f"the admin-only policy refused an admin on {path}: {response.text[:300]}"
 
     await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers_super_user)

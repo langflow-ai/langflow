@@ -31,11 +31,16 @@ test(
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
+    let markRequestHeld: () => void = () => {};
+    const requestHeld = new Promise<void>((resolve) => {
+      markRequestHeld = resolve;
+    });
     await page.route("**/api/v1/custom_component/update", async (route) => {
       const body = route.request().postData() ?? "";
       if (!alreadyHeld && body.includes('"field":"decisions"')) {
         alreadyHeld = true;
         const response = await route.fetch();
+        markRequestHeld();
         await gate;
         await route.fulfill({ response });
         return;
@@ -46,6 +51,7 @@ test(
     await page.getByTestId("flow_controlsHuman Input").hover();
     await page.getByTestId("add-component-button-human-input").click();
     await adjustScreenView(page);
+    await requestHeld;
 
     await page.getByTestId("actionpicker-add-decisions").click();
     await page.getByTestId("action-add-input").fill(NEW_ACTION);

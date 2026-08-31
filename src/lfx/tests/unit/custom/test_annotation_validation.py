@@ -297,6 +297,10 @@ def test_format_type_preserves_generic_alias_origin_name() -> None:
     assert format_type(dict[str, str]) == "dict"
 
 
+def test_format_type_preserves_typing_generic_alias_origin_name() -> None:
+    assert format_type(typing.AsyncIterator[str]) == "AsyncIterator"
+
+
 def test_runtime_resolver_does_not_invoke_user_generic_or_union_hooks() -> None:
     calls: list[str] = []
 

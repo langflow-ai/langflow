@@ -1195,11 +1195,12 @@ def test_chat_output_text_consolidation_does_not_duplicate_tool_calls():
 
     second = _fire_add_message(t, message, "m1")
 
-    starts = [e for e in first + second if isinstance(e, ToolCallStartEvent)]
-    results = [e for e in first + second if isinstance(e, ToolCallResultEvent)]
+    starts = [e for e in first if isinstance(e, ToolCallStartEvent)]
+    results = [e for e in first if isinstance(e, ToolCallResultEvent)]
     assert len(starts) == 2
     assert len({e.tool_call_id for e in starts}) == 2
     assert len(results) == 2
+    assert not any(isinstance(e, (ToolCallStartEvent, ToolCallResultEvent)) for e in second)
 
 
 def test_chat_output_text_consolidation_does_not_duplicate_custom_content():
@@ -1220,9 +1221,10 @@ def test_chat_output_text_consolidation_does_not_duplicate_custom_content():
 
     second = _fire_add_message(t, message, "m2")
 
-    customs = [e for e in first + second if isinstance(e, CustomEvent)]
+    customs = [e for e in first if isinstance(e, CustomEvent)]
     assert len(customs) == 1
     assert customs[0].name == "langflow.content.json"
+    assert not any(isinstance(e, CustomEvent) for e in second)
 
 
 def test_custom_content_still_re_emits_when_the_block_changes():
@@ -1321,5 +1323,6 @@ def test_grouped_leaves_survive_text_consolidation():
 
     second = _fire_add_message(t, message, "m3")
 
-    assert len([e for e in first + second if isinstance(e, ToolCallStartEvent)]) == 1
-    assert len([e for e in first + second if isinstance(e, CustomEvent)]) == 1
+    assert len([e for e in first if isinstance(e, ToolCallStartEvent)]) == 1
+    assert len([e for e in first if isinstance(e, CustomEvent)]) == 1
+    assert not any(isinstance(e, (ToolCallStartEvent, CustomEvent)) for e in second)
