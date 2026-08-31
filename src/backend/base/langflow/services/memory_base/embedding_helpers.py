@@ -107,7 +107,6 @@ def infer_llm_provider(model_name: str) -> str:
     return provider
 
 
-
 def _lookup_provider_in_live_catalog(embedding_model: str, user_id) -> str | None:
     """Return provider for ``embedding_model`` from the user-scoped live catalog."""
     with contextlib.suppress(Exception):

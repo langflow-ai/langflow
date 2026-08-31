@@ -177,7 +177,11 @@ class MemoryBaseService(Service):
         # supplied by the UI (payload.embedding_provider) when present — it is
         # authoritative and avoids heuristic misclassification for overlapping
         # names like text-embedding-3-small across OpenAI / OpenAI Compatible.
-        embedding_provider = payload.embedding_provider.strip() if isinstance(payload.embedding_provider, str) and payload.embedding_provider.strip() else infer_embedding_provider(payload.embedding_model, user_id)
+        embedding_provider = (
+            payload.embedding_provider.strip()
+            if isinstance(payload.embedding_provider, str) and payload.embedding_provider.strip()
+            else infer_embedding_provider(payload.embedding_model, user_id)
+        )
         require_model_provider(
             user_id=user_id,
             provider=embedding_provider,
@@ -202,7 +206,11 @@ class MemoryBaseService(Service):
                 raise ValueError(msg)
 
         # 3. Auto-generate kb_name: sanitized_name_<8hex>
-        embedding_provider = payload.embedding_provider.strip() if isinstance(payload.embedding_provider, str) and payload.embedding_provider.strip() else infer_embedding_provider(payload.embedding_model, user_id)
+        embedding_provider = (
+            payload.embedding_provider.strip()
+            if isinstance(payload.embedding_provider, str) and payload.embedding_provider.strip()
+            else infer_embedding_provider(payload.embedding_model, user_id)
+        )
         kb_name = f"{sanitize_kb_name(payload.name)}_{uuid.uuid4().hex[:8]}"
 
         # 4-5. Provision the backing KB (vector-store collection + ``knowledge_base``
