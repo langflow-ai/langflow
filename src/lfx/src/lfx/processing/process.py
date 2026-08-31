@@ -7,6 +7,7 @@ from json_repair import repair_json
 from pydantic import BaseModel
 
 from lfx.graph.vertex.base import Vertex
+from lfx.graph.vertex.param_handler import ParameterHandler
 from lfx.log.logger import logger
 from lfx.schema.graph import InputValue, Tweaks
 from lfx.schema.schema import INPUT_FIELD_NAME, InputValueRequest
@@ -270,12 +271,30 @@ def process_tweaks(
 
 
 def process_tweaks_on_graph(graph: Graph, tweaks: dict[str, dict[str, Any]]):
+    pending: list[tuple[Vertex, dict[str, Any]]] = []
     for vertex in graph.vertices:
         if isinstance(vertex, Vertex) and isinstance(vertex.id, str):
             node_id = vertex.id
             if node_tweaks := tweaks.get(node_id):
-                apply_tweaks_on_vertex(vertex, node_tweaks)
+                pending.append((vertex, node_tweaks))
         else:
             logger.warning("Each node should be a Vertex with an 'id' attribute of type str")
+
+    # Validate all runtime FileInput values before mutating any cached vertex.
+    # This keeps the operation atomic when a later vertex carries an invalid path.
+    for vertex, node_tweaks in pending:
+        template_data = vertex.data.get("node", {}).get("template", {})
+        if not isinstance(template_data, dict):
+            continue
+        declared_tweaks = {
+            tweak_name: tweak_value
+            for tweak_name, tweak_value in node_tweaks.items()
+            if isinstance(template_data.get(tweak_name), dict)
+        }
+        if declared_tweaks:
+            ParameterHandler(vertex, storage_service=None).process_runtime_params(declared_tweaks)
+
+    for vertex, node_tweaks in pending:
+        apply_tweaks_on_vertex(vertex, node_tweaks)
 
     return graph
