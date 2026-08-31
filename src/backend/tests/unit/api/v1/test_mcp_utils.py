@@ -413,6 +413,7 @@ async def _invoke_handle_call_tool(
     authenticated_caller="user-1",
     project_id=None,
     flow_data=None,
+    request_variables: dict[str, str] | None = None,
     expected_error: str | None = None,
 ) -> AsyncMock:
     """Run handle_call_tool with all external deps stubbed; return the simple_run_flow mock.
@@ -456,6 +457,7 @@ async def _invoke_handle_call_tool(
 
     token = mcp_utils.current_user_ctx.set(SimpleNamespace(id="user-1"))
     caller_token = mcp_utils.authenticated_caller_ctx.set(authenticated_caller)
+    request_variables_token = mcp_utils.current_request_variables_ctx.set(request_variables)
     try:
         if expected_error is None:
             await mcp_utils.handle_call_tool(
@@ -473,6 +475,7 @@ async def _invoke_handle_call_tool(
                     project_id=project_id,
                 )
     finally:
+        mcp_utils.current_request_variables_ctx.reset(request_variables_token)
         mcp_utils.authenticated_caller_ctx.reset(caller_token)
         mcp_utils.current_user_ctx.reset(token)
 
@@ -508,6 +511,129 @@ async def test_handle_call_tool_applies_public_policy_and_scopes_session(monkeyp
     assert forwarded_request.session_id.endswith(":owner-private")
     assert forwarded_user.id == uuid5(NAMESPACE_URL, "urn:langflow:principal:anonymous-public")
     assert forwarded_user.is_superuser is False
+
+
+async def test_handle_call_tool_preserves_request_backed_secret_references_for_public_flow(monkeypatch):
+    variable_name = "OPENRAG_INGEST_TOKEN"
+    flow_data = {
+        "nodes": [
+            {
+                "id": "openrag",
+                "data": {
+                    "id": "openrag",
+                    "type": "OpenRAG",
+                    "node": {
+                        "template": {
+                            "api_key": {
+                                "name": "api_key",
+                                "password": True,
+                                "load_from_db": True,
+                                "value": variable_name,
+                            },
+                            "headers": {
+                                "name": "headers",
+                                "type": "table",
+                                "table_schema": [
+                                    {"name": "key", "type": "str"},
+                                    {"name": "value", "type": "str", "load_from_db": True},
+                                ],
+                                "value": [
+                                    {
+                                        "key": f"X-Langflow-Global-Var-{variable_name}",
+                                        "value": variable_name,
+                                        "__load_from_db_fields": {"value": True},
+                                    }
+                                ],
+                            },
+                        }
+                    },
+                },
+            }
+        ],
+        "edges": [],
+    }
+    monkeypatch.setattr(mcp_utils, "validate_public_flow_no_code_execution", MagicMock())
+    monkeypatch.setattr(mcp_utils, "prepare_public_flow_build", AsyncMock(return_value=flow_data))
+
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello"},
+        authenticated_caller=None,
+        project_id=uuid4(),
+        flow_data=flow_data,
+        request_variables={variable_name: "request-scoped-secret"},  # pragma: allowlist secret
+    )
+
+    forwarded_flow = simple_run_flow_mock.await_args.kwargs["flow"]
+    forwarded_template = forwarded_flow.data["nodes"][0]["data"]["node"]["template"]
+    assert forwarded_template["api_key"]["value"] == variable_name
+    assert forwarded_template["headers"]["value"][0]["value"] == variable_name
+    assert simple_run_flow_mock.await_args.kwargs["context"] == {
+        "request_variables": {variable_name: "request-scoped-secret"}  # pragma: allowlist secret
+    }
+
+
+async def test_handle_call_tool_keeps_unmatched_public_secret_references_scrubbed(monkeypatch):
+    variable_name = "OWNER_ONLY_TOKEN"
+    flow_data = {
+        "nodes": [
+            {
+                "id": "private-token",
+                "data": {
+                    "id": "private-token",
+                    "type": "SecretConsumer",
+                    "node": {
+                        "template": {
+                            "api_key": {
+                                "name": "api_key",
+                                "password": True,
+                                "load_from_db": True,
+                                "value": variable_name,
+                            },
+                            "headers": {
+                                "name": "headers",
+                                "type": "table",
+                                "table_schema": [{"name": "value", "type": "str", "load_from_db": True}],
+                                "value": [
+                                    {
+                                        "key": "X-Langflow-Global-Var-OWNER_ONLY_TABLE_TOKEN",
+                                        "value": "OWNER_ONLY_TABLE_TOKEN",
+                                        "__load_from_db_fields": {"value": True},
+                                    },
+                                    {
+                                        "key": "X-Langflow-Global-Var-LITERAL_TOKEN",
+                                        "value": "LITERAL_TOKEN",
+                                        "__load_from_db_fields": {"value": False},
+                                    },
+                                ],
+                            },
+                        }
+                    },
+                },
+            }
+        ],
+        "edges": [],
+    }
+    monkeypatch.setattr(mcp_utils, "validate_public_flow_no_code_execution", MagicMock())
+    monkeypatch.setattr(mcp_utils, "prepare_public_flow_build", AsyncMock(return_value=flow_data))
+
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello"},
+        authenticated_caller=None,
+        project_id=uuid4(),
+        flow_data=flow_data,
+        request_variables={
+            "DIFFERENT_TOKEN": "request-scoped-secret",  # pragma: allowlist secret
+            "LITERAL_TOKEN": "must-not-be-used",  # pragma: allowlist secret
+        },
+    )
+
+    forwarded_flow = simple_run_flow_mock.await_args.kwargs["flow"]
+    forwarded_template = forwarded_flow.data["nodes"][0]["data"]["node"]["template"]
+    assert forwarded_template["api_key"]["value"] is None
+    assert forwarded_template["headers"]["value"][0]["value"] is None
+    assert forwarded_template["headers"]["value"][1]["value"] is None
 
 
 async def test_handle_call_tool_rejects_public_flow_validation_failure(monkeypatch):
