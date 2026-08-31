@@ -261,8 +261,10 @@ class WebSearchComponent(Component):
         """Perform DuckDuckGo web search."""
         query = self._sanitize_query(self.query)
         if not query:
-            msg = "Empty search query"
-            raise ValueError(msg)
+            self.status = "Empty search query"
+            return DataFrame(
+                pd.DataFrame([{"title": "Error", "link": "", "snippet": "Empty search query", "content": ""}])
+            )
 
         headers = {"User-Agent": get_user_agent()}
         params = {"q": query, "kl": "us-en"}
