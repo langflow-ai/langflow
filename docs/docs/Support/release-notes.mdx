@@ -62,6 +62,12 @@ Highlights of this release include the following changes. For all changes, see t
     Bundle separation concludes in 1.12.
     `uv pip install langflow` no longer installs all provider bundles, and includes only a curated list of providers.
 
+    Saved flows continue to operate as expected, and existing component class names remain compatible.
+    If a required provider package is not installed, the component is visible in the visual editor, but the flow won't build or run until you install the package.
+
+    Langflow displays an error that names the missing package, so you can install it.
+    To install a package, such as Exa, run `uv pip install lfx-exa` in your virtual environment.
+
     For more information, see [Additional bundles](extensions-bundle-list#additional-bundles).
 
 - Admin Page removed
