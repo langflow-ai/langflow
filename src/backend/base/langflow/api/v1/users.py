@@ -18,14 +18,18 @@ from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import PasswordResetRequest, UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.auth.utils import get_current_active_superuser, get_current_user_optional
-from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS, AUDIT_EVENT_MUTATION
+from langflow.services.authorization.audit import (
+    AUDIT_EVENT_ACCESS,
+    AUDIT_EVENT_MUTATION,
+    audit_decision,
+    stage_audit_decision,
+)
 from langflow.services.authorization.lifecycle import (
     acquire_identity_mutation_lock,
     safe_identity_mutation_committed,
     stage_identity_mutation,
     validate_identity_mutation,
 )
-from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
 from langflow.services.database.models.user.model import User, UserCreate, UserRead, UserUpdate
 from langflow.services.deps import get_auth_service, get_authorization_service, get_settings_service
@@ -104,8 +108,9 @@ async def add_user(
         await session.refresh(new_user)
         folder = await get_or_create_default_folder(session, new_user.id)
         if not folder:
+            await session.rollback()
             await _audit_deny(
-                user_id=current_user.id if current_user is not None else new_user.id,
+                user_id=current_user.id if current_user is not None else None,
                 action="user:create",
                 obj=f"user:{new_user.id}",
                 status_code=500,
@@ -135,24 +140,34 @@ async def add_user(
             is_superuser=new_user.is_superuser,
         ),
     )
+    audit_details = {
+        "event": AUDIT_EVENT_MUTATION,
+        "created_by": "admin" if is_superuser_caller else "signup",
+    }
     try:
         await stage_identity_mutation(authorization_service, session, lifecycle_mutation)
+        audit_staged = stage_audit_decision(
+            session=session,
+            user_id=current_user.id if current_user is not None else new_user.id,
+            action="user:create",
+            obj=f"user:{new_user.id}",
+            result="allow",
+            details=audit_details,
+        )
         await session.commit()
     except Exception:
         await session.rollback()
         raise
 
     await safe_identity_mutation_committed(authorization_service, lifecycle_mutation)
-    await audit_decision(
-        user_id=current_user.id if current_user is not None else new_user.id,
-        action="user:create",
-        obj=f"user:{new_user.id}",
-        result="allow",
-        details={
-            "event": AUDIT_EVENT_MUTATION,
-            "created_by": "admin" if is_superuser_caller else "signup",
-        },
-    )
+    if not audit_staged:
+        await audit_decision(
+            user_id=current_user.id if current_user is not None else new_user.id,
+            action="user:create",
+            obj=f"user:{new_user.id}",
+            result="allow",
+            details=audit_details,
+        )
     return new_user
 
 
@@ -321,24 +336,34 @@ async def patch_user(
             raise
         if lifecycle_mutation is not None:
             await stage_identity_mutation(authorization_service, session, lifecycle_mutation)
+        audit_details = {
+            "event": AUDIT_EVENT_MUTATION,
+            "fields_changed": fields_changed,
+            "lifecycle_kind": lifecycle_mutation.kind.value if lifecycle_mutation is not None else None,
+        }
         try:
+            audit_staged = stage_audit_decision(
+                session=session,
+                user_id=user.id,
+                action="user:update",
+                obj=f"user:{user_db.id}",
+                result="allow",
+                details=audit_details,
+            )
             await session.commit()
         except Exception:
             await session.rollback()
             raise
         if lifecycle_mutation is not None:
             await safe_identity_mutation_committed(authorization_service, lifecycle_mutation)
-        await audit_decision(
-            user_id=user.id,
-            action="user:update",
-            obj=f"user:{user_db.id}",
-            result="allow",
-            details={
-                "event": AUDIT_EVENT_MUTATION,
-                "fields_changed": fields_changed,
-                "lifecycle_kind": lifecycle_mutation.kind.value if lifecycle_mutation is not None else None,
-            },
-        )
+        if not audit_staged:
+            await audit_decision(
+                user_id=user.id,
+                action="user:update",
+                obj=f"user:{user_db.id}",
+                result="allow",
+                details=audit_details,
+            )
         return updated_user
     await _audit_deny(
         user_id=user.id,
@@ -383,7 +408,7 @@ async def reset_password(
 @router.delete("/{user_id}")
 async def delete_user(
     user_id: UUID,
-    current_user: Annotated[User, Depends(get_current_active_superuser)],
+    current_user: CurrentActiveUser,
     session: DbSession,
 ) -> dict:
     """Delete a user from the database."""
@@ -451,17 +476,27 @@ async def delete_user(
     await session.delete(user_db)
     await session.flush()
     await stage_identity_mutation(authorization_service, session, lifecycle_mutation)
-    await session.commit()
-    await safe_identity_mutation_committed(authorization_service, lifecycle_mutation)
-    await audit_decision(
+    audit_details = {
+        "event": AUDIT_EVENT_MUTATION,
+        "target_was_active": lifecycle_mutation.user_before.is_active,
+        "target_was_superuser": lifecycle_mutation.user_before.is_superuser,
+    }
+    audit_staged = stage_audit_decision(
+        session=session,
         user_id=current_user.id,
         action="user:delete",
         obj=f"user:{user_id}",
         result="allow",
-        details={
-            "event": AUDIT_EVENT_MUTATION,
-            "target_was_active": lifecycle_mutation.user_before.is_active,
-            "target_was_superuser": lifecycle_mutation.user_before.is_superuser,
-        },
+        details=audit_details,
     )
+    await session.commit()
+    await safe_identity_mutation_committed(authorization_service, lifecycle_mutation)
+    if not audit_staged:
+        await audit_decision(
+            user_id=current_user.id,
+            action="user:delete",
+            obj=f"user:{user_id}",
+            result="allow",
+            details=audit_details,
+        )
     return {"detail": "User deleted"}

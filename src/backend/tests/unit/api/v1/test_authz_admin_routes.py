@@ -406,7 +406,13 @@ async def test_create_role_409_on_name_conflict(stub_authz, audit_calls):
     from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS
 
     stub_authz()
-    session = _FakeAsyncSession(commit_raises=IntegrityError("dup", {}, Exception()))
+    session = _FakeAsyncSession(
+        commit_raises=IntegrityError(
+            "insert",
+            {},
+            Exception("UNIQUE constraint failed: authz_role.name"),
+        )
+    )
     user = _make_user(is_superuser=True)
     payload = RoleCreate(name="viewer", permissions=[])
 
@@ -425,6 +431,46 @@ async def test_create_role_409_on_name_conflict(stub_authz, audit_calls):
                 "event": AUDIT_EVENT_ACCESS,
                 "status_code": 409,
                 "reason": "role_name_conflict",
+            },
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_create_role_does_not_mislabel_unrelated_integrity_error(stub_authz, audit_calls):
+    from langflow.api.v1 import authz_roles
+    from langflow.api.v1.schemas.authz_roles import RoleCreate
+    from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS
+
+    stub_authz()
+    session = _FakeAsyncSession(
+        commit_raises=IntegrityError(
+            "insert",
+            {},
+            Exception("FOREIGN KEY constraint failed"),
+        )
+    )
+    user = _make_user(is_superuser=True)
+
+    with pytest.raises(HTTPException) as excinfo:
+        await authz_roles.create_role(
+            payload=RoleCreate(name="custom", permissions=[]),
+            current_user=user,
+            session=session,
+        )
+
+    assert excinfo.value.status_code == 409
+    assert excinfo.value.detail == "Role data conflicts with the current database state"
+    assert audit_calls == [
+        {
+            "user_id": user.id,
+            "action": "role:create",
+            "obj": "role:*",
+            "result": "deny",
+            "details": {
+                "event": AUDIT_EVENT_ACCESS,
+                "status_code": 409,
+                "reason": "role_integrity_conflict",
             },
         }
     ]

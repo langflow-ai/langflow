@@ -32,6 +32,9 @@ router = APIRouter(prefix="/authz/roles", tags=["Authorization"])
 # request. 100 default / 200 max is enough for typical UI dropdowns.
 _LIST_MAX_LIMIT = 200
 _LIST_DEFAULT_LIMIT = 100
+_POSTGRES_UNIQUE_VIOLATION_SQLSTATE = "23505"
+_ROLE_NAME_UNIQUE_INDEX = "ix_authz_role_name"
+_SQLITE_ROLE_NAME_UNIQUE_MARKER = "UNIQUE constraint failed: authz_role.name"
 
 
 async def _audit_deny(*, user_id: UUID, action: str, obj: str, status_code: int, reason: str) -> None:
@@ -42,6 +45,26 @@ async def _audit_deny(*, user_id: UUID, action: str, obj: str, status_code: int,
         result="deny",
         details={"event": AUDIT_EVENT_ACCESS, "status_code": status_code, "reason": reason},
     )
+
+
+def _is_role_name_conflict(exc: IntegrityError) -> bool:
+    """Return whether an integrity failure is specifically role-name uniqueness."""
+    current: BaseException | None = exc
+    constraint_name: str | None = None
+    is_unique_violation = False
+    seen: set[int] = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if _SQLITE_ROLE_NAME_UNIQUE_MARKER in str(current):
+            return True
+        sqlstate = getattr(current, "sqlstate", None) or getattr(current, "pgcode", None)
+        is_unique_violation = is_unique_violation or sqlstate == _POSTGRES_UNIQUE_VIOLATION_SQLSTATE
+        diagnostic = getattr(current, "diag", None)
+        candidate = getattr(diagnostic, "constraint_name", None) or getattr(current, "constraint_name", None)
+        if candidate:
+            constraint_name = str(candidate)
+        current = getattr(current, "orig", None) or current.__cause__
+    return is_unique_violation and constraint_name == _ROLE_NAME_UNIQUE_INDEX
 
 
 async def _require_superuser(user, *, action: str, obj: str) -> None:
@@ -198,16 +221,21 @@ async def create_role(
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()
+        is_name_conflict = _is_role_name_conflict(exc)
         await _audit_deny(
             user_id=current_user.id,
             action="role:create",
             obj="role:*",
             status_code=status.HTTP_409_CONFLICT,
-            reason="role_name_conflict",
+            reason="role_name_conflict" if is_name_conflict else "role_integrity_conflict",
         )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Role with name {payload.name!r} already exists",
+            detail=(
+                f"Role with name {payload.name!r} already exists"
+                if is_name_conflict
+                else "Role data conflicts with the current database state"
+            ),
         ) from exc
     await safe_identity_mutation_committed(authorization_service, mutation)
     await session.refresh(role)
@@ -371,16 +399,21 @@ async def update_role(
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()
+        is_name_conflict = _is_role_name_conflict(exc)
         await _audit_deny(
             user_id=current_user.id,
             action="role:update",
             obj=f"role:{role_id}",
             status_code=status.HTTP_409_CONFLICT,
-            reason="role_name_conflict",
+            reason="role_name_conflict" if is_name_conflict else "role_integrity_conflict",
         )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Name conflict — another role already uses this name",
+            detail=(
+                "Name conflict — another role already uses this name"
+                if is_name_conflict
+                else "Role data conflicts with the current database state"
+            ),
         ) from exc
     await safe_identity_mutation_committed(authorization_service, mutation)
     await session.refresh(role)
