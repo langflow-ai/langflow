@@ -133,6 +133,28 @@ async def test_fallback_path_keeps_every_record():
 
 
 @pytest.mark.asyncio
+async def test_fallback_preserves_a_record_field_named_objects():
+    """A user field named ``objects`` must not be mistaken for the list envelope."""
+
+    async def _fallback(_prompt: str) -> str:
+        return '{"objects": ["alpha", "beta"]}'
+
+    data = await orchestrate_structured_output(
+        llm=object(),
+        output_schema=[
+            {"name": "objects", "description": "record values", "type": "str", "multiple": True},
+        ],
+        system_prompt="",
+        format_instructions="",
+        input_value="return the values",
+        run_prompt_fallback=_fallback,
+        prefer_native=False,
+    )
+
+    assert data.data == {"objects": ["alpha", "beta"]}
+
+
+@pytest.mark.asyncio
 async def test_a_single_record_keeps_its_flat_shape():
     """Back-compat: one record must still surface flat, not nested under a list key.
 

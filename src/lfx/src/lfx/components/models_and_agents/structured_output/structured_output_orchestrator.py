@@ -28,7 +28,15 @@ from lfx.schema.data import Data
 LIST_FIELD_NAME = "objects"
 
 
-def _wrap_in_list_container(record_model: type[BaseModel]) -> type[BaseModel]:
+def _get_list_field_name(record_model: type[BaseModel]) -> str:
+    """Return an envelope field name that cannot collide with the record schema."""
+    field_name = LIST_FIELD_NAME
+    while field_name in record_model.model_fields:
+        field_name += "_"
+    return field_name
+
+
+def _wrap_in_list_container(record_model: type[BaseModel], list_field_name: str) -> type[BaseModel]:
     """Wrap the record model in a list container, as the Structured Output component does.
 
     The schema table describes ONE record. Handing that model straight to the provider
@@ -40,7 +48,7 @@ def _wrap_in_list_container(record_model: type[BaseModel]) -> type[BaseModel]:
         "OutputModel",
         __doc__="A list of extracted records.",
         **{
-            LIST_FIELD_NAME: (
+            list_field_name: (
                 list[record_model],  # type: ignore[valid-type]
                 Field(description="Every record that matches the schema.", min_length=1),
             )
@@ -71,7 +79,8 @@ async def orchestrate_structured_output(
         return Data(data={"content": input_value})
 
     record_model = build_model_from_schema(preprocess_schema(output_schema))
-    output_model = _wrap_in_list_container(record_model)
+    list_field_name = _get_list_field_name(record_model)
+    output_model = _wrap_in_list_container(record_model, list_field_name)
 
     fallback_reason = "llm_lacks_with_structured_output"
     if prefer_native and _supports_native_structured_output(llm):
@@ -96,7 +105,7 @@ async def orchestrate_structured_output(
             )
             fallback_reason = "native_raised_not_implemented"
         else:
-            return _wrap_payload(payload)
+            return _wrap_payload(payload, envelope_key=list_field_name)
 
     await logger.adebug(
         "structured_output.fallback_invoked",
@@ -104,8 +113,8 @@ async def orchestrate_structured_output(
     )
     augmented_prompt = _build_augmented_system_prompt(system_prompt, format_instructions, output_model)
     raw_content = await run_prompt_fallback(augmented_prompt)
-    parsed = parse_and_validate_fallback_content(raw_content, record_model, envelope_key=LIST_FIELD_NAME)
-    return _wrap_payload(parsed)
+    parsed = parse_and_validate_fallback_content(raw_content, record_model, envelope_key=list_field_name)
+    return _wrap_payload(parsed, envelope_key=list_field_name)
 
 
 def _supports_native_structured_output(llm: Any) -> bool:
@@ -132,12 +141,12 @@ def _build_augmented_system_prompt(
     return "\n\n".join(parts)
 
 
-def _wrap_payload(payload: dict[str, Any] | list[Any]) -> Data:
+def _wrap_payload(payload: dict[str, Any] | list[Any], *, envelope_key: str = LIST_FIELD_NAME) -> Data:
     if isinstance(payload, dict):
         # Unwrap the list container so the records, not the envelope, drive the shape.
-        records = payload.get(LIST_FIELD_NAME)
+        records = payload.get(envelope_key)
         if isinstance(records, list):
-            return _wrap_payload(records)
+            return _wrap_payload(records, envelope_key=envelope_key)
         return Data(data=payload)
     if len(payload) == 1 and isinstance(payload[0], dict):
         return Data(data=payload[0])
