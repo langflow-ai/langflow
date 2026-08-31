@@ -28,9 +28,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-_packaged_flow_active: ContextVar[bool] = ContextVar(
-    "lfx_packaged_flow_active", default=False
-)
+_packaged_flow_active: ContextVar[bool] = ContextVar("lfx_packaged_flow_active", default=False)
 
 
 def packaged_flow_is_active() -> bool:

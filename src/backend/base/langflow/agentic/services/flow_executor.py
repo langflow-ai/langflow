@@ -50,11 +50,7 @@ async def _run_graph_with_events(
     try:
         # Live tool-start bridge: canvas-mutating flow-builder tools announce the
         # moment they START through the same queue tokens use (deque drains can't).
-        set_tool_start_listener(
-            lambda payload: event_manager.send_event(
-                event_type="tool_start", data=payload
-            )
-        )
+        set_tool_start_listener(lambda payload: event_manager.send_event(event_type="tool_start", data=payload))
         if user_id:
             graph.user_id = user_id
         if session_id:
@@ -166,10 +162,7 @@ async def execute_flow_file(
             coordinator = await aget_default_coordinator()
             with execution_protocol("agentic"), graph.flow_execution_span():
                 results = [
-                    payload
-                    async for payload in coordinator.stream(
-                        graph, initial_inputs=inputs, open_flow_span=False
-                    )
+                    payload async for payload in coordinator.stream(graph, initial_inputs=inputs, open_flow_span=False)
                 ]
             flow_result = extract_structured_result(results)
     except HTTPException:
@@ -178,9 +171,7 @@ async def execute_flow_file(
         raise HTTPException(status_code=400, detail=str(e)) from e
     except ValueError as e:
         logger.error(f"Flow execution error: {e}")
-        raise HTTPException(
-            status_code=500, detail="An error occurred while executing the flow."
-        ) from e
+        raise HTTPException(status_code=500, detail="An error occurred while executing the flow.") from e
     except Exception as e:
         logger.error(f"Flow execution error: {e}")
         raise HTTPException(
@@ -255,13 +246,9 @@ async def execute_flow_file_streaming(
             raise HTTPException(status_code=400, detail=str(e)) from e
         except (json.JSONDecodeError, OSError, ValueError) as e:
             logger.error(f"Flow preparation error: {e}")
-            raise HTTPException(
-                status_code=500, detail="An error occurred while preparing the flow."
-            ) from e
+            raise HTTPException(status_code=500, detail="An error occurred while preparing the flow.") from e
 
-        event_queue: asyncio.Queue[tuple[str, bytes, float] | None] = asyncio.Queue(
-            maxsize=STREAMING_QUEUE_MAX_SIZE
-        )
+        event_queue: asyncio.Queue[tuple[str, bytes, float] | None] = asyncio.Queue(maxsize=STREAMING_QUEUE_MAX_SIZE)
         event_manager = create_default_event_manager(event_queue)
         execution_result = FlowExecutionResult()
 
@@ -280,9 +267,7 @@ async def execute_flow_file_streaming(
 
     cancelled = False
     try:
-        async for event_type, chunk in consume_streaming_events(
-            event_queue, is_disconnected, cancel_event
-        ):
+        async for event_type, chunk in consume_streaming_events(event_queue, is_disconnected, cancel_event):
             if event_type == "token":
                 yield ("token", chunk)
             elif event_type == "tool_start":
