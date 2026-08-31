@@ -4,6 +4,7 @@ import time
 import traceback
 import uuid
 from collections.abc import AsyncIterator
+from functools import wraps
 
 from fastapi import BackgroundTasks, HTTPException, Response
 from lfx.exceptions.tweaks import TweakRefusedError
@@ -11,7 +12,7 @@ from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
 from lfx.log.logger import logger
-from lfx.processing.process import process_tweaks_on_graph
+from lfx.processing.process import process_tweaks_on_graph, validate_targeted_inputs
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
 from lfx.utils.file_path_security import LocalFileAccessError
@@ -49,6 +50,7 @@ from langflow.services.deps import (
     session_scope,
 )
 from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.services.telemetry.schema import (
     ComponentInputsPayload,
     ComponentPayload,
@@ -191,6 +193,7 @@ async def start_flow_build(
     start_component_id: str | None,
     log_builds: bool,
     current_user: User | UserRead,
+    provider_policy_flow: Flow,
     queue_service: JobQueueService,
     flow_name: str | None = None,
     source_flow_id: uuid.UUID | None = None,
@@ -209,6 +212,8 @@ async def start_flow_build(
         start_component_id: Optional component ID to start from.
         log_builds: Whether to log build events.
         current_user: The currently authenticated user.
+        provider_policy_flow: Server-loaded flow whose project/workspace scope
+            governs provider use for the queued graph.
         queue_service: The job queue service instance.
         flow_name: Optional flow name override.
         source_flow_id: If provided, the actual flow ID to load from DB.
@@ -220,6 +225,11 @@ async def start_flow_build(
     Returns:
         the job_id.
     """
+    # Reject before allocating a queue or starting the background build. Once a
+    # job id has been returned, a policy refusal can only arrive as an event on
+    # an HTTP 200 rather than the documented structured 422.
+    validate_targeted_inputs([inputs] if inputs is not None else None)
+
     job_id = str(uuid.uuid4())
     try:
         _, event_manager = queue_service.create_queue(job_id)
@@ -234,6 +244,7 @@ async def start_flow_build(
             start_component_id=start_component_id,
             log_builds=log_builds,
             current_user=current_user,
+            provider_policy_flow=provider_policy_flow,
             flow_name=flow_name,
             source_flow_id=source_flow_id,
             source_flow_owner_id=source_flow_owner_id,
@@ -437,7 +448,7 @@ async def create_flow_response(
     )
 
 
-async def generate_flow_events(
+async def _generate_flow_events(
     *,
     flow_id: uuid.UUID,
     background_tasks: BackgroundTasks,
@@ -588,11 +599,11 @@ async def generate_flow_events(
             # A refused tweak is a caller error, not a build failure, so it must
             # not be flattened into the generic 500 below.
             #
-            # Where it surfaces depends on how this ran. Called inline, it
-            # reaches the app-level handler and answers 422. Streaming and
-            # background callers run this in their own task, so the refusal is
-            # reported as an error event on an already-committed HTTP 200
-            # instead. Enforcement holds either way: the tweak is never applied.
+            # ``start_flow_build`` eagerly refuses targeted inputs and does not
+            # accept tweaks. V2 streaming and background callers instead pass
+            # tweaks directly to ``generate_flow_events`` after their response or
+            # job is committed, so refusal is reported as an error event there.
+            # Enforcement still holds: the tweak is never applied.
             raise
         except Exception as exc:
             await log_telemetry(
@@ -1049,6 +1060,23 @@ async def generate_flow_events(
             await logger.awarning("Memory base hook scheduling failed for flow %s", flow_id, exc_info=True)
 
     await event_manager.queue.put((None, None, time.time()))
+
+
+@wraps(_generate_flow_events)
+async def generate_flow_events(*args, provider_policy_flow: Flow | None = None, **kwargs) -> None:
+    """Run the build driver under a trusted, required provider-policy scope.
+
+    Production callers pass the exact server-loaded flow they authorized. A
+    missing flow remains a required unresolved scope so provider-bearing test
+    or internal callers fail closed in the Enterprise policy implementation.
+    """
+    current_user = kwargs.get("current_user")
+    with scoped_model_provider_policy_for_flow(
+        provider_policy_flow,
+        user_id=getattr(current_user, "id", None),
+        is_superuser=bool(getattr(current_user, "is_superuser", False)),
+    ):
+        await _generate_flow_events(*args, **kwargs)
 
 
 async def cancel_flow_build(

@@ -1,3 +1,4 @@
+import { ENABLE_LANGFLOW_STORE } from "@/customization/feature-flags";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { useQueryFunctionType } from "@/types/api";
 import { api } from "../../api";
@@ -31,6 +32,8 @@ export const useGetTagsQuery: useQueryFunctionType<
   const queryResult = query(["useGetTagsQuery"], responseFn, {
     refetchOnWindowFocus: false,
     ...options,
+    // Gated here, not at the call site: AppInitPage fires this on every app boot.
+    enabled: (options?.enabled ?? true) && ENABLE_LANGFLOW_STORE,
   });
 
   return queryResult;

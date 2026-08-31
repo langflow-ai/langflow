@@ -51,6 +51,7 @@ interface SelectFlowVersionParams {
   flowName: string;
   versionId: string;
   versionTag: string;
+  wxoEligibilityIssue?: SelectedFlowVersion["wxoEligibilityIssue"];
 }
 
 interface DeploymentStepperContextType {
@@ -304,7 +305,13 @@ export function DeploymentStepperProvider({
   }, []);
 
   const handleSelectVersion = useCallback(
-    ({ flowId, flowName, versionId, versionTag }: SelectFlowVersionParams) => {
+    ({
+      flowId,
+      flowName,
+      versionId,
+      versionTag,
+      wxoEligibilityIssue,
+    }: SelectFlowVersionParams) => {
       setSelectedVersionByFlow((prev) => {
         const next = new Map(prev);
         const key = getSelectedFlowVersionKey(flowId, versionId);
@@ -314,6 +321,7 @@ export function DeploymentStepperProvider({
           flowName,
           versionId,
           versionTag,
+          wxoEligibilityIssue,
         });
         return next;
       });

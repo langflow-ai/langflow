@@ -7,8 +7,9 @@ const options = {
     "x-api-key": `${process.env.LANGFLOW_API_KEY ?? ""}`,
   },
   body: JSON.stringify({
-  "password": "newsecurepassword123"
-}),
+    current_password: "securepassword123",
+    password: "newsecurepassword123",
+  }),
 };
 
 fetch(url, options)

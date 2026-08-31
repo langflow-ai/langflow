@@ -39,7 +39,11 @@ export type { A11yScanOptions, LangflowPage } from "./utils/types";
 const RUN_A11Y = process.env.RUN_A11Y === "true";
 const RUN_A11Y_ASSERT = process.env.RUN_A11Y_ASSERT === "true";
 const MAX_FLOW_ERROR_DIAGNOSTICS = 20;
-const API_REQUEST_DRAIN_TIMEOUT_MS = 2000;
+// How long teardown waits for in-flight API requests to settle. Windows CI
+// runners routinely need more than 2s to finish the last few requests a test
+// kicked off (an MCP server list, a component template refresh), and the wait
+// only costs that long when something really is still pending.
+const API_REQUEST_DRAIN_TIMEOUT_MS = process.platform === "win32" ? 6000 : 2000;
 const RESPONSE_BODY_READ_TIMEOUT_MS = API_REQUEST_DRAIN_TIMEOUT_MS;
 const RESPONSE_INSPECTION_DRAIN_TIMEOUT_MS = API_REQUEST_DRAIN_TIMEOUT_MS;
 const MAX_PENDING_REQUEST_DIAGNOSTICS = 20;
