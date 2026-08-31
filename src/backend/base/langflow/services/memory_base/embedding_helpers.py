@@ -35,12 +35,20 @@ _MODEL_TO_PROVIDER: list[tuple[list[str], str]] = [
 ]
 
 
-def infer_embedding_provider(embedding_model: str) -> str:
+def infer_embedding_provider(embedding_model: str, user_id=None) -> str:
     """Derive embedding provider name from a model string.
 
     Looks up the model in the unified models catalog first so the answer
     matches what the UI dropdown shows; falls back to pattern-based
     inference for legacy/edge cases.
+
+    When ``user_id`` is provided, live models discovered for that user's
+    configured providers (e.g. OpenAI Compatible via /v1/models) are also
+    considered, so a model like ``text-embedding-3-small`` served by an
+    OpenAI Compatible endpoint is correctly attributed to ``OpenAI Compatible``
+    instead of ``OpenAI``. Without a user context the static catalog is the
+    only source, preserving the previous behaviour for callers that lack an
+    identity.
 
     Ollama's ``/api/tags`` endpoint returns model names with a tag suffix
     (e.g. ``bge-m3:latest``), but the unified catalog stores them without
@@ -50,6 +58,11 @@ def infer_embedding_provider(embedding_model: str) -> str:
     """
     if not embedding_model:
         return "OpenAI"  # Safe default — matches _resolve_embedding fallback
+
+    if user_id is not None:
+        live_provider = _lookup_provider_in_live_catalog(embedding_model, user_id)
+        if live_provider:
+            return live_provider
 
     catalog_provider = _lookup_provider_in_catalog(embedding_model)
     if catalog_provider:
@@ -92,6 +105,22 @@ def infer_llm_provider(model_name: str) -> str:
         )
         raise ValueError(msg)
     return provider
+
+
+
+def _lookup_provider_in_live_catalog(embedding_model: str, user_id) -> str | None:
+    """Return provider for ``embedding_model`` from the user-scoped live catalog."""
+    with contextlib.suppress(Exception):
+        from lfx.base.models.unified_models.model_catalog import get_embedding_model_options
+
+        options = get_embedding_model_options(user_id)
+        bare_name = embedding_model.split(":")[0]
+        for opt in options:
+            if opt.get("name") in (embedding_model, bare_name):
+                provider = opt.get("provider")
+                if isinstance(provider, str) and provider.strip():
+                    return provider
+    return None
 
 
 def _lookup_provider_in_catalog(embedding_model: str) -> str | None:
