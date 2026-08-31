@@ -27,11 +27,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 from langchain_community.vectorstores import Cassandra
 from langchain_core.embeddings import Embeddings, FakeEmbeddings
-from lfx.schema.data import Data
 from lfx.components.cassandra.cassandra import (
     DEFAULT_BATCH_SIZE,
     CassandraVectorStoreComponent,
 )
+from lfx.schema.data import Data
 
 MODULE = "lfx.components.cassandra.cassandra"
 CASSIO_TABLE = "cassio.table.MetadataVectorCassandraTable"
@@ -139,7 +139,9 @@ def test_should_resolve_setup_mode_for_a_synchronous_ingest(setup_mode: str, exp
 
 @pytest.mark.parametrize("raw_batch_size", [0, None, ""])
 def test_should_fall_back_to_the_default_batch_size_when_the_field_is_cleared(raw_batch_size):
-    """``IntInput`` coerces a cleared advanced field to 0, and add_texts slices with
+    """``IntInput`` coerces a cleared advanced field to 0.
+
+    ``add_texts`` slices with
     ``range(0, len(texts), batch_size)`` -- which raises ``range() arg 3 must not be
     zero`` only AFTER the table DDL and the embedding-dimension probe have run.
     """
@@ -154,7 +156,9 @@ def test_should_fall_back_to_the_default_batch_size_when_the_field_is_cleared(ra
 
 
 def test_should_clamp_a_negative_batch_size():
-    """A negative batch size makes add_texts iterate an empty range: it reports success
+    """A negative batch size makes add_texts iterate an empty range.
+
+    It reports success
     and writes NOTHING, which is worse than the crash a zero produces.
     """
     component = _component(with_documents=True)
