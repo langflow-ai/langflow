@@ -16,10 +16,12 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import sqlite3
 import uuid
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import chromadb.errors
 import pytest
 from langflow.services.database.models.memory_base.model import (
     MemoryBase,
@@ -3469,6 +3471,54 @@ class TestMemoryBaseCreateAtomicity:
 class TestInitializeKbConnectivity:
     """initialize_kb surfaces remote-backend misconfig; local Chroma stays lazy."""
 
+    @pytest.mark.parametrize(
+        ("name", "expected_prefix"),
+        [
+            ("catálogo memória", "catlogo_memria"),
+            ("ação", "ao"),
+            ("José", "jos"),
+            ("日本語 base", "base"),
+            ("日本語", "memory"),
+            ("R&D docs", "rd_docs"),
+            ("___private", "private"),
+        ],
+    )
+    def test_memory_base_name_is_sanitized_to_chroma_safe_ascii(self, name, expected_prefix):
+        from langflow.services.memory_base.kb_path_helpers import sanitize_kb_name
+        from lfx.base.knowledge_bases.validation import validate_collection_name
+
+        prefix = sanitize_kb_name(name)
+
+        assert prefix == expected_prefix
+        validate_collection_name(f"{prefix}_deadbeef", local=True)
+
+    def test_memory_base_name_is_capped_for_local_chroma(self):
+        from langflow.services.memory_base.kb_path_helpers import sanitize_kb_name
+        from lfx.base.knowledge_bases.validation import MAX_LOCAL_COLLECTION_NAME_LENGTH, validate_collection_name
+
+        generated_name = f"{sanitize_kb_name('a' * 1000)}_deadbeef"
+
+        assert len(generated_name) == MAX_LOCAL_COLLECTION_NAME_LENGTH
+        validate_collection_name(generated_name, local=True)
+
+    @pytest.mark.asyncio
+    async def test_non_ascii_memory_base_name_provisions_local_chroma(self, tmp_path):
+        from langflow.services.memory_base.kb_path_helpers import initialize_kb, sanitize_kb_name
+
+        generated_name = f"{sanitize_kb_name('catálogo memória')}_deadbeef"
+
+        with patch(
+            "langflow.services.memory_base.kb_path_helpers.KBStorageHelper.get_root_path",
+            return_value=tmp_path,
+        ):
+            await initialize_kb(kb_name=generated_name, kb_username="testuser", backend_type="chroma")
+
+        database_path = tmp_path / "testuser" / generated_name / "chroma.sqlite3"
+        with sqlite3.connect(database_path) as database:
+            collection_names = [row[0] for row in database.execute("SELECT name FROM collections")]
+
+        assert collection_names == [generated_name]
+
     @pytest.mark.asyncio
     async def test_unreachable_remote_backend_raises(self, tmp_path):
         from langflow.services.memory_base.kb_path_helpers import BackendProvisioningError, initialize_kb
@@ -3508,6 +3558,22 @@ class TestInitializeKbConnectivity:
         ):
             # Must NOT raise.
             await initialize_kb(kb_name="mb_kb", kb_username="testuser", backend_type="chroma", backend_config=None)
+        backend.teardown.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_local_chroma_validation_failure_is_raised(self, tmp_path):
+        from langflow.services.memory_base.kb_path_helpers import BackendProvisioningError, initialize_kb
+
+        backend = AsyncMock()
+        backend.ensure_ready = AsyncMock(side_effect=chromadb.errors.InvalidArgumentError("invalid collection name"))
+        backend.teardown = AsyncMock()
+
+        with (
+            patch("langflow.services.memory_base.kb_path_helpers.KBStorageHelper.get_root_path", return_value=tmp_path),
+            patch("langflow.services.memory_base.kb_path_helpers.create_backend", MagicMock(return_value=backend)),
+            pytest.raises(BackendProvisioningError, match="invalid collection name"),
+        ):
+            await initialize_kb(kb_name="invalid", kb_username="testuser", backend_type="chroma")
         backend.teardown.assert_awaited_once()
 
     @pytest.mark.asyncio
