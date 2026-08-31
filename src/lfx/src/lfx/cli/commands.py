@@ -145,6 +145,8 @@ async def _build_serve_registry(
                 store=flow_store,
             )
         except ValueError as e:
+            with contextlib.suppress(OSError):
+                Path(temp_file_to_cleanup).unlink()
             typer.echo(f"Error: {e}", err=True)
             raise typer.Exit(1) from e
 
@@ -187,6 +189,8 @@ async def _build_serve_registry(
                     store=flow_store,
                 )
             except ValueError as e:
+                with contextlib.suppress(OSError):
+                    Path(temp_file_to_cleanup).unlink()
                 typer.echo(f"Error: {e}", err=True)
                 raise typer.Exit(1) from e
 

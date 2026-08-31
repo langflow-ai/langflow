@@ -369,6 +369,66 @@ class TestBuildRegistryFromPaths:
         assert len(registry) == 2, "both flows must be registered with distinct IDs"
 
 
+class TestBuildServeRegistryTempCleanup:
+    def test_inline_flow_removes_temp_file_when_registry_build_fails(self, tmp_path, monkeypatch):
+        import asyncio
+
+        import typer
+        from lfx.cli.commands import _build_serve_registry
+
+        monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
+
+        with (
+            patch("lfx.cli.commands.build_registry_from_paths", new=AsyncMock(side_effect=ValueError("invalid flow"))),
+            pytest.raises(typer.Exit),
+        ):
+            asyncio.run(
+                _build_serve_registry(
+                    script_paths=None,
+                    flow_json="{}",
+                    stdin=False,
+                    check_variables=False,
+                    no_env_fallback=False,
+                    flow_store=MagicMock(),
+                    verbose_print=lambda _: None,
+                )
+            )
+
+        assert list(tmp_path.iterdir()) == []
+
+    def test_upgraded_file_removes_temp_file_when_registry_build_fails(self, tmp_path, monkeypatch):
+        import asyncio
+
+        import typer
+        from lfx.cli.commands import _build_serve_registry
+
+        source_path = tmp_path / "flow.json"
+        source_path.write_text("{}")
+        temp_dir = tmp_path / "temp"
+        temp_dir.mkdir()
+        monkeypatch.setattr(tempfile, "tempdir", str(temp_dir))
+
+        with (
+            patch("lfx.cli.commands._gate_flow_for_serve", return_value={}),
+            patch("lfx.cli.commands.build_registry_from_paths", new=AsyncMock(side_effect=ValueError("invalid flow"))),
+            pytest.raises(typer.Exit),
+        ):
+            asyncio.run(
+                _build_serve_registry(
+                    script_paths=[str(source_path)],
+                    flow_json=None,
+                    stdin=False,
+                    check_variables=False,
+                    no_env_fallback=False,
+                    flow_store=MagicMock(),
+                    verbose_print=lambda _: None,
+                    upgrade_flow="safe",
+                )
+            )
+
+        assert list(temp_dir.iterdir()) == []
+
+
 class TestServeCommandMultiFlow:
     def test_serve_command_with_directory(self, tmp_path):
         from lfx.cli.commands import serve_command
