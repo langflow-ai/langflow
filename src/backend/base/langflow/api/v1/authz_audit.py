@@ -78,6 +78,10 @@ async def list_audit_log(
         str | None,
         Query(description="Filter by action string, e.g. ``flow:read`` or ``share:create``."),
     ] = None,
+    exclude_action: Annotated[
+        list[str] | None,
+        Query(description="Exclude rows whose action exactly matches any supplied value."),
+    ] = None,
     result: Annotated[
         str | None,
         Query(description="Filter by audit result (``allow`` / ``deny`` / ``owner_override`` / ``skip``)."),
@@ -138,6 +142,8 @@ async def list_audit_log(
         base = base.where(AuthzAuditLog.resource_id == resource_id)
     if action is not None:
         base = base.where(AuthzAuditLog.action == action)
+    if exclude_action:
+        base = base.where(col(AuthzAuditLog.action).not_in(exclude_action))
     if result is not None:
         base = base.where(AuthzAuditLog.result == result)
     # ``details`` is a JSON column; SQLAlchemy renders the index access as
