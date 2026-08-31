@@ -1,5 +1,6 @@
 import ast
 import contextlib
+import copy
 import importlib
 import sys
 import warnings
@@ -9,10 +10,16 @@ from typing import Optional, Union
 from langchain_core._api.deprecation import LangChainDeprecationWarning
 from pydantic import ValidationError
 
+from lfx.custom.annotation_validation import (
+    UnsafeReturnAnnotationError,
+    register_compiled_class_method_returns,
+    validate_return_annotations,
+)
 from lfx.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
 from lfx.log.logger import logger
 
 _LANGFLOW_IS_INSTALLED = False
+_VECTOR_STORE_CONNECTION_MODULE = "lfx.base.vectorstores.vector_store_connection_decorator"
 
 with contextlib.suppress(ImportError):
     import langflow  # noqa: F401
@@ -191,6 +198,52 @@ def create_function(code, function_name):
     return wrapped_function
 
 
+def _trusted_vector_store_decorator_alias(module: ast.Module, class_name: str) -> str | None:
+    """Recognize an unshadowed canonical vector-store decorator import."""
+    class_node = next(node for node in module.body if isinstance(node, ast.ClassDef) and node.name == class_name)
+    if len(class_node.decorator_list) != 1 or not isinstance(class_node.decorator_list[0], ast.Name):
+        return None
+
+    decorator_name = class_node.decorator_list[0].id
+    approved_import = None
+    for node in module.body:
+        if not isinstance(node, ast.ImportFrom) or node.level != 0 or node.module != _VECTOR_STORE_CONNECTION_MODULE:
+            continue
+        for imported in node.names:
+            if imported.name == "vector_store_connection" and (imported.asname or imported.name) == decorator_name:
+                if approved_import is not None:
+                    msg = f"Trusted vector-store decorator alias '{decorator_name}' is bound more than once."
+                    raise UnsafeReturnAnnotationError(msg)
+                approved_import = imported
+    if approved_import is None:
+        return None
+
+    for node in ast.walk(module):
+        if node is approved_import:
+            continue
+        if isinstance(node, ast.Name) and node.id == decorator_name and isinstance(node.ctx, ast.Store | ast.Del):
+            break
+        if isinstance(node, ast.arg) and node.arg == decorator_name:
+            break
+        if isinstance(node, ast.alias):
+            bound_name = node.asname or node.name.split(".", 1)[0]
+            if node.name == "*" or bound_name == decorator_name:
+                break
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef) and node.name == decorator_name:
+            break
+        if isinstance(node, ast.ExceptHandler) and node.name == decorator_name:
+            break
+        if isinstance(node, ast.MatchAs | ast.MatchStar) and node.name == decorator_name:
+            break
+        if isinstance(node, ast.MatchMapping) and node.rest == decorator_name:
+            break
+    else:
+        return decorator_name
+
+    msg = f"Trusted vector-store decorator alias '{decorator_name}' is shadowed or rebound."
+    raise UnsafeReturnAnnotationError(msg)
+
+
 def create_class(code, class_name):
     """Dynamically create a class from a string of code and a specified class name.
 
@@ -204,6 +257,36 @@ def create_class(code, class_name):
     Raises:
         ValueError: If the code contains syntax errors or the class definition is invalid
     """
+    from langchain_core.vectorstores import VectorStore
+
+    from lfx.io import Output
+
+    vector_store_type = VectorStore
+    output_type = Output
+    compiled_return_registrar = register_compiled_class_method_returns
+
+    def apply_vector_store_connection(component_class: type) -> type:
+        """Apply trusted behavior without component-controlled global lookups."""
+        component_class.decorated = True
+        if hasattr(component_class, "outputs"):
+            component_class.outputs = component_class.outputs.copy()
+            if "vectorstoreconnection" not in [output.name for output in component_class.outputs]:
+                component_class.outputs.append(
+                    output_type(
+                        display_name="Vector Store Connection",
+                        hidden=False,
+                        name="vectorstoreconnection",
+                        method="as_vector_store",
+                        group_outputs=False,
+                    )
+                )
+
+        def as_vector_store(self) -> vector_store_type:
+            return self.build_vector_store()
+
+        component_class.as_vector_store = as_vector_store
+        return component_class
+
     if not hasattr(ast, "TypeIgnore"):
         ast.TypeIgnore = create_type_ignore_class()
 
@@ -216,13 +299,45 @@ def create_class(code, class_name):
     code = DEFAULT_IMPORT_STRING + "\n" + code
     try:
         module = ast.parse(code)
-        exec_globals = prepare_global_scope(module)
+        # Return annotations are evaluated by Python during class creation and
+        # later by typing.get_type_hints. Reject active syntax before imports,
+        # compilation, or component construction can execute it.
+        validate_return_annotations(module)
+        if not any(
+            isinstance(node, ast.ImportFrom)
+            and node.module == "__future__"
+            and any(alias.name == "annotations" for alias in node.names)
+            for node in module.body
+        ):
+            module.body.insert(
+                0,
+                ast.ImportFrom(module="__future__", names=[ast.alias(name="annotations")], level=0),
+            )
+            ast.fix_missing_locations(module)
+        trusted_vector_store_alias = _trusted_vector_store_decorator_alias(module, class_name)
+        runtime_module = copy.deepcopy(module) if trusted_vector_store_alias is not None else module
+        if trusted_vector_store_alias is not None:
+            runtime_class_code = extract_class_code(runtime_module, class_name)
+            runtime_class_code.decorator_list = []
+        exec_globals = prepare_global_scope(runtime_module)
 
-        future_imports = [n for n in module.body if isinstance(n, ast.ImportFrom) and n.module == "__future__"]
+        future_imports = [n for n in runtime_module.body if isinstance(n, ast.ImportFrom) and n.module == "__future__"]
         class_code = extract_class_code(module, class_name)
-        compiled_class = compile_class_code(class_code, future_imports)
-
-        return build_class_constructor(compiled_class, exec_globals, class_name)
+        runtime_class_code = extract_class_code(runtime_module, class_name)
+        compiled_class = compile_class_code(runtime_class_code, future_imports)
+        preexisting_class_ids = frozenset(id(value) for value in exec_globals.values() if issubclass(type(value), type))
+        component_class = build_class_constructor(compiled_class, exec_globals, class_name)
+        if trusted_vector_store_alias is not None:
+            component_class = apply_vector_store_connection(component_class)
+            exec_globals[class_name] = component_class
+        compiled_return_registrar(
+            component_class,
+            class_code,
+            globalns=exec_globals,
+            preexisting_class_ids=preexisting_class_ids,
+            trusted_vector_store_applied=trusted_vector_store_alias is not None,
+            trusted_vector_store_output=vector_store_type,
+        )
 
     except SyntaxError as e:
         msg = f"Syntax error in code: {e!s}"
@@ -234,9 +349,13 @@ def create_class(code, class_name):
         messages = [error["msg"].split(",", 1) for error in e.errors()]
         error_message = "\n".join([message[1] if len(message) > 1 else message[0] for message in messages])
         raise ValueError(error_message) from e
+    except UnsafeReturnAnnotationError as e:
+        raise ValueError(str(e)) from e
     except Exception as e:
         msg = f"Error creating class. {type(e).__name__}({e!s})."
         raise ValueError(msg) from e
+    else:
+        return component_class
 
 
 def create_type_ignore_class():

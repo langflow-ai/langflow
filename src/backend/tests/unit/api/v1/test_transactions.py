@@ -500,13 +500,13 @@ class TestTransactionsEndpoint:
     async def test_get_transactions_requires_flow_id(self, client: AsyncClient, logged_in_headers):
         """Test that GET /monitor/transactions requires flow_id parameter."""
         response = await client.get("api/v1/monitor/transactions", headers=logged_in_headers)
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     @pytest.mark.usefixtures("active_user")
     async def test_get_transactions_invalid_flow_id_format(self, client: AsyncClient, logged_in_headers):
         """Test GET /monitor/transactions with invalid flow_id format."""
         response = await client.get("api/v1/monitor/transactions?flow_id=invalid-uuid", headers=logged_in_headers)
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     @pytest.mark.usefixtures("active_user")
     async def test_get_transactions_response_structure(self, client: AsyncClient, logged_in_headers):

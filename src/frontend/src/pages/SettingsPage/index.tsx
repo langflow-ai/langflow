@@ -1,19 +1,20 @@
 import { useTranslation } from "react-i18next";
-import { Outlet, type To } from "react-router-dom";
+import { Outlet, type To, useLocation } from "react-router-dom";
 import SideBarButtonsComponent from "@/components/core/sidebarComponent";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { CustomStoreSidebar } from "@/customization/components/custom-store-sidebar";
 import {
   ENABLE_DATASTAX_LANGFLOW,
-  ENABLE_LANGFLOW_STORE,
   ENABLE_PROFILE_ICONS,
 } from "@/customization/feature-flags";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import useAuthStore from "@/stores/authStore";
 import { useStoreStore } from "@/stores/storeStore";
 import ForwardedIconComponent from "../../components/common/genericIconComponent";
 import PageLayout from "../../components/common/pageLayout";
 export default function SettingsPage(): JSX.Element {
   const { t } = useTranslation();
+  const { pathname } = useLocation();
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const hasStore = useStoreStore((state) => state.hasStore);
 
@@ -115,9 +116,16 @@ export default function SettingsPage(): JSX.Element {
 
   // TODO: Remove this on cleanup
   if (!ENABLE_DATASTAX_LANGFLOW) {
-    const langflowItems = CustomStoreSidebar(true, ENABLE_LANGFLOW_STORE);
+    const langflowItems = CustomStoreSidebar(true);
     sidebarNavItems.splice(2, 0, ...langflowItems);
   }
+
+  // Every settings section shares this shell, so the tab title has to name the
+  // open section rather than just "Settings" (WCAG 2.4.2).
+  const activeNavItem = sidebarNavItems.find(
+    (item) => item.href && pathname.startsWith(item.href),
+  );
+  useDocumentTitle(activeNavItem?.title ?? t("settings.title"));
 
   return (
     <PageLayout

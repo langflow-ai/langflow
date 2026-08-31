@@ -9,6 +9,7 @@ from lfx.base.mcp.util import (
     _resolve_mcp_tool_execution_timeout,
     get_session_validation_timeout,
 )
+from lfx.observability import _root_error_type
 
 
 def test_resolve_mcp_tool_execution_timeout_uses_explicit_value():
@@ -108,6 +109,32 @@ def test_mcp_streamable_http_client_uses_resolved_timeout():
         client = MCPStreamableHttpClient(tool_execution_timeout=None)
 
     assert client._tool_execution_timeout == 240.0
+
+
+@pytest.mark.parametrize(
+    ("client_class", "connection_params"),
+    [
+        (MCPStdioClient, SimpleNamespace(command="python", args=["server.py"])),
+        (MCPStreamableHttpClient, {"url": "http://127.0.0.1:9931/mcp"}),
+    ],
+)
+@pytest.mark.asyncio
+async def test_repeated_tool_timeout_preserves_the_root_error(client_class, connection_params):
+    client = client_class(tool_execution_timeout=0.01)
+    client._connected = True
+    client._connection_params = connection_params
+    session = AsyncMock()
+    session.call_tool.side_effect = TimeoutError
+
+    with (
+        patch.object(client, "_get_or_create_session", new=AsyncMock(return_value=session)),
+        patch("lfx.base.mcp.util.asyncio.sleep", new=AsyncMock()),
+        pytest.raises(ValueError, match="Maximum retries exceeded") as exc_info,
+    ):
+        await client._run_tool("slow", {})
+
+    assert isinstance(exc_info.value.__cause__, TimeoutError)
+    assert _root_error_type(exc_info.value) == "TimeoutError"
 
 
 # Made with Bob

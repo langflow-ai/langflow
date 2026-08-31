@@ -3,10 +3,11 @@ import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { SearchConfigTrigger } from "./searchConfigTrigger";
 
 interface NoResultsMessageProps {
-  onClearSearch: () => void;
+  onClearSearch?: () => void;
   message?: string;
   clearSearchText?: string;
   additionalText?: string;
+  showClearSearch?: boolean;
   showConfig?: boolean;
   setShowConfig?: (show: boolean) => void;
 }
@@ -16,6 +17,7 @@ const NoResultsMessage = ({
   message,
   clearSearchText,
   additionalText,
+  showClearSearch = true,
   showConfig = false,
   setShowConfig,
 }: NoResultsMessageProps) => {
@@ -36,14 +38,20 @@ const NoResultsMessage = ({
       )}
       <div className="flex h-full flex-col items-center justify-center p-3 text-center">
         <p className="text-sm text-secondary-foreground">
-          {resolvedMessage}{" "}
-          <a
-            className="cursor-pointer underline underline-offset-4"
-            onClick={onClearSearch}
-          >
-            {resolvedClearSearchText}
-          </a>{" "}
-          {resolvedAdditionalText}
+          {resolvedMessage}
+          {showClearSearch && (
+            <>
+              {" "}
+              <button
+                type="button"
+                className="cursor-pointer border-0 bg-transparent p-0 underline underline-offset-4"
+                onClick={onClearSearch}
+              >
+                {resolvedClearSearchText}
+              </button>{" "}
+              {resolvedAdditionalText}
+            </>
+          )}
         </p>
       </div>
     </div>

@@ -3,11 +3,16 @@ import { VALID_CATEGORIES } from "@/constants/constants";
 import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
+import {
+  appendProviderScope,
+  type ProviderScopeParams,
+} from "../../helpers/provider-scope";
 import { UseRequestProcessor } from "../../services/request-processor";
+import { getGlobalVariablesQueryKey } from "./use-get-global-variables";
 
 type VariableCategory = (typeof VALID_CATEGORIES)[number];
 
-interface PostGlobalVariablesParams {
+interface PostGlobalVariablesParams extends ProviderScopeParams {
   name: string;
   value: string;
   type?: string;
@@ -33,14 +38,23 @@ export const usePostGlobalVariables: useMutationFunctionType<
     type,
     default_fields = [],
     category,
+    flowId,
+    projectId,
   }: PostGlobalVariablesParams): Promise<PostGlobalVariablesResponse> => {
-    const res = await api.post(`${getURL("VARIABLES")}/`, {
-      name,
-      value,
-      type,
-      default_fields: default_fields,
-      category,
-    });
+    const queryParams = new URLSearchParams();
+    appendProviderScope(queryParams, { flowId, projectId });
+    const res = await api.post(
+      `${getURL("VARIABLES")}/${
+        queryParams.toString() ? `?${queryParams.toString()}` : ""
+      }`,
+      {
+        name,
+        value,
+        type,
+        default_fields: default_fields,
+        category,
+      },
+    );
     return res.data;
   };
 
@@ -50,7 +64,10 @@ export const usePostGlobalVariables: useMutationFunctionType<
     PostGlobalVariablesParams
   > = mutate(["usePostGlobalVariables"], postGlobalVariablesFunction, {
     onSettled: (data, error, variables) => {
-      queryClient.refetchQueries({ queryKey: ["useGetGlobalVariables"] });
+      queryClient.refetchQueries({
+        queryKey: getGlobalVariablesQueryKey(variables),
+        exact: true,
+      });
       if (variables.category) {
         queryClient.refetchQueries({
           queryKey: ["category-variable", variables.category],

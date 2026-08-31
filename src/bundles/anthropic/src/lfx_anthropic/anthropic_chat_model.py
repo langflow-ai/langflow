@@ -8,6 +8,8 @@ model construction.
 
 from typing import Any
 
+import anthropic
+import httpx
 from langchain_anthropic import ChatAnthropic
 
 
@@ -43,3 +45,15 @@ def _install_thinking_compat() -> type[ChatAnthropic]:
 # those fields without their defaults. Patch the request hook once and keep the
 # already-supported ChatAnthropic model and validator intact.
 ChatAnthropicThinkingCompat = _install_thinking_compat()
+
+
+def install_anthropic_ssrf_clients(
+    model: ChatAnthropic,
+    *,
+    http_client: httpx.Client,
+    http_async_client: httpx.AsyncClient,
+) -> None:
+    """Install validated, DNS-pinned transports into ChatAnthropic's lazy SDK clients."""
+    client_params = model._client_params  # noqa: SLF001
+    model.__dict__["_client"] = anthropic.Anthropic(**client_params, http_client=http_client)
+    model.__dict__["_async_client"] = anthropic.AsyncAnthropic(**client_params, http_client=http_async_client)

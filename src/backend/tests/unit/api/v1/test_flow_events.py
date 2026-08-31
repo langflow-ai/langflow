@@ -155,7 +155,7 @@ async def test_invalid_event_type_returns_422(client: AsyncClient, logged_in_hea
         json={"type": "invalid_type", "summary": "bad event"},
         headers=logged_in_headers,
     )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 async def test_missing_event_type_returns_422(client: AsyncClient, logged_in_headers):
@@ -166,7 +166,7 @@ async def test_missing_event_type_returns_422(client: AsyncClient, logged_in_hea
         json={"summary": "no type field"},
         headers=logged_in_headers,
     )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 async def test_summary_max_length_returns_422(client: AsyncClient, logged_in_headers):
@@ -177,4 +177,4 @@ async def test_summary_max_length_returns_422(client: AsyncClient, logged_in_hea
         json={"type": "component_added", "summary": "x" * 501},
         headers=logged_in_headers,
     )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT

@@ -4,10 +4,14 @@ import json
 import tempfile
 import threading
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
+import pytest
 from lfx.base.data.base_file import BaseFileComponent
 from lfx.schema.data import Data
 from lfx.schema.message import Message
+from lfx.utils.file_path_security import LocalFileAccessError, StorageNamespaceError
 
 
 class TestFileComponent(BaseFileComponent):
@@ -386,3 +390,266 @@ class TestDeleteAfterProcessingRaceCondition:
             "Race-recovery must be keyed to the current paths and gated on the "
             "validation-skip flag; an empty input must not return a stale cached result."
         )
+
+
+class TestS3DeleteAfterProcessingSecurity:
+    """Regression tests for storage-aware cleanup of S3-backed server files."""
+
+    @pytest.fixture(autouse=True)
+    def _s3_settings(self, monkeypatch, tmp_path):
+        settings = SimpleNamespace(
+            config_dir=str(tmp_path / "config"),
+            database_url="",
+            restrict_local_file_access=False,
+            storage_type="s3",
+        )
+        settings_service = SimpleNamespace(settings=settings)
+        monkeypatch.setattr("lfx.base.data.base_file.get_settings_service", lambda: settings_service)
+        monkeypatch.setattr("lfx.utils.file_path_security.get_settings_service", lambda: settings_service)
+        self.settings = settings
+
+    def test_restricted_s3_rejects_out_of_scope_absolute_local_file(self, tmp_path):
+        canary = tmp_path / "outside.txt"
+        canary.write_text("SAFE_CANARY", encoding="utf-8")
+
+        component = TestFileComponent()
+        component._user_id = "user-id"
+        component.file_path = Data(data={"file_path": str(canary)})
+        component.delete_server_file_after_processing = True
+        self.settings.restrict_local_file_access = True
+
+        with pytest.raises(LocalFileAccessError):
+            component.load_files_base()
+
+        assert canary.read_text(encoding="utf-8") == "SAFE_CANARY"
+
+    def test_unrestricted_s3_local_file_is_read_but_never_deleted(self, tmp_path):
+        canary = tmp_path / "local-input.txt"
+        canary.write_text("SAFE_CANARY", encoding="utf-8")
+
+        component = TestFileComponent()
+        component.file_path = Data(data={"file_path": str(canary)})
+        component.delete_server_file_after_processing = True
+
+        result = component.load_files_base()
+
+        assert result[0].data["text"] == "SAFE_CANARY"
+        assert canary.read_text(encoding="utf-8") == "SAFE_CANARY"
+
+    def test_s3_component_temp_file_uses_explicit_local_cleanup(self, monkeypatch, tmp_path):
+        temp_file = tmp_path / "component-download.txt"
+        temp_file.write_text("SAFE_CANARY", encoding="utf-8")
+        storage_service = SimpleNamespace(delete_file=AsyncMock())
+        monkeypatch.setattr("lfx.base.data.base_file.get_storage_service", lambda: storage_service, raising=False)
+
+        component = TestFileComponent()
+        base_file = BaseFileComponent.BaseFile(
+            Data(data={"file_path": str(temp_file)}),
+            temp_file,
+            delete_after_processing=True,
+            cleanup_local_file=True,
+        )
+
+        component._delete_after_processing(base_file)
+
+        assert not temp_file.exists()
+        storage_service.delete_file.assert_not_awaited()
+
+    def test_s3_user_key_cleanup_uses_storage_service_without_local_unlink(self, monkeypatch, tmp_path):
+        monkeypatch.chdir(tmp_path)
+        local_collision = tmp_path / "user-id" / "file.txt"
+        local_collision.parent.mkdir()
+        local_collision.write_text("SAFE_CANARY", encoding="utf-8")
+
+        storage_service = SimpleNamespace(delete_file=AsyncMock())
+        monkeypatch.setattr("lfx.base.data.base_file.get_storage_service", lambda: storage_service, raising=False)
+
+        component = TestFileComponent()
+        component._user_id = "user-id"
+        component.file_path = Data(data={"file_path": "user-id/file.txt"})
+        component.delete_server_file_after_processing = True
+
+        component.load_files_base()
+
+        storage_service.delete_file.assert_awaited_once_with("user-id", "file.txt")
+        assert local_collision.read_text(encoding="utf-8") == "SAFE_CANARY"
+
+    def test_s3_key_cleanup_skips_unscoped_caller(self, monkeypatch):
+        """A graph with no user/flow scope keeps the legacy read path but never deletes."""
+        storage_service = SimpleNamespace(delete_file=AsyncMock())
+        monkeypatch.setattr("lfx.base.data.base_file.get_storage_service", lambda: storage_service, raising=False)
+
+        component = TestFileComponent()
+        component.file_path = Data(data={"file_path": "victim-id/file.txt"})
+        component.delete_server_file_after_processing = True
+
+        component.load_files_base()
+
+        storage_service.delete_file.assert_not_awaited()
+
+    def test_s3_key_outside_caller_scope_is_rejected_before_any_storage_call(self, monkeypatch):
+        """A scoped caller may not address another principal's object prefix at all.
+
+        Cleanup was already scope-gated; the read itself is now rejected too, so the key never
+        reaches the storage service.
+        """
+        storage_service = SimpleNamespace(delete_file=AsyncMock(), get_file=AsyncMock())
+        monkeypatch.setattr("lfx.base.data.base_file.get_storage_service", lambda: storage_service, raising=False)
+
+        component = TestFileComponent()
+        component._user_id = "attacker-id"
+        component.file_path = Data(data={"file_path": "victim-id/file.txt"})
+        component.delete_server_file_after_processing = True
+
+        with pytest.raises(StorageNamespaceError, match="outside the authenticated user's"):
+            component.load_files_base()
+
+        storage_service.get_file.assert_not_awaited()
+        storage_service.delete_file.assert_not_awaited()
+
+    def test_s3_key_cleanup_rejects_flow_id_collision_with_other_user(self, monkeypatch):
+        storage_service = SimpleNamespace(delete_file=AsyncMock())
+        monkeypatch.setattr("lfx.base.data.base_file.get_storage_service", lambda: storage_service, raising=False)
+
+        component = TestFileComponent()
+        component._user_id = "attacker-id"
+        component._vertex = SimpleNamespace(
+            graph=SimpleNamespace(user_id="attacker-id", flow_id="victim-id"),
+        )
+        component.file_path = Data(data={"file_path": "victim-id/file.txt"})
+        component.delete_server_file_after_processing = True
+
+        component.load_files_base()
+
+        storage_service.delete_file.assert_not_awaited()
+
+
+class TestStorageKeyNamespaceOwnership:
+    """Regression tests for cross-user reads through the ``<namespace>/<file>`` storage key.
+
+    A component input of that shape is resolved against the storage backend rather than the
+    local filesystem, so the namespace segment must be checked against the executing graph's
+    own scopes. Without that check a caller can read any other user's upload by storage key.
+    """
+
+    VICTIM_ID = "11111111-1111-1111-1111-111111111111"
+    ATTACKER_ID = "22222222-2222-2222-2222-222222222222"
+
+    @pytest.fixture
+    def storage(self, monkeypatch, tmp_path):
+        """Local storage rooted at tmp_path with a victim upload already in place."""
+        config_dir = tmp_path / "config"
+        (config_dir / self.VICTIM_ID).mkdir(parents=True)
+        (config_dir / self.VICTIM_ID / "secret.txt").write_text("VICTIM_SECRET", encoding="utf-8")
+        (config_dir / self.ATTACKER_ID).mkdir(parents=True)
+        (config_dir / self.ATTACKER_ID / "own.txt").write_text("ATTACKER_OWN", encoding="utf-8")
+        # A server-managed secret sits alongside the per-principal upload dirs.
+        (config_dir / "secret_key").write_text("MASTER_KEY", encoding="utf-8")
+
+        settings = SimpleNamespace(
+            config_dir=str(config_dir),
+            database_url="",
+            # OSS default: local-file containment is OFF. Namespace ownership must hold anyway.
+            restrict_local_file_access=False,
+            storage_type="local",
+        )
+        settings_service = SimpleNamespace(settings=settings)
+        monkeypatch.setattr("lfx.base.data.base_file.get_settings_service", lambda: settings_service)
+        monkeypatch.setattr("lfx.utils.file_path_security.get_settings_service", lambda: settings_service)
+
+        class LocalStorage:
+            data_dir = config_dir
+
+            def build_full_path(self, flow_id, file_name):
+                return str(Path(config_dir) / flow_id / file_name)
+
+        monkeypatch.setattr("lfx.custom.custom_component.custom_component.get_storage_service", lambda: LocalStorage())
+        return settings
+
+    def _attacker_component(self):
+        component = TestFileComponent()
+        component._user_id = self.ATTACKER_ID
+        component.delete_server_file_after_processing = False
+        return component
+
+    @pytest.mark.usefixtures("storage")
+    def test_other_users_storage_key_is_denied(self):
+        component = self._attacker_component()
+        component.path = [f"{self.VICTIM_ID}/secret.txt"]
+
+        with pytest.raises(StorageNamespaceError, match="outside the authenticated user's"):
+            component.load_files_base()
+
+    @pytest.mark.usefixtures("storage")
+    def test_denial_is_not_downgraded_to_a_local_path_read(self):
+        """The denial must not fall back to ``resolve_path``, nor be muted by silent_errors."""
+        component = self._attacker_component()
+        component.silent_errors = True
+        component.path = [f"{self.VICTIM_ID}/secret.txt"]
+
+        with pytest.raises(StorageNamespaceError):
+            component.load_files_base()
+
+    @pytest.mark.usefixtures("storage")
+    def test_traversal_out_of_own_namespace_is_denied(self):
+        """An in-scope namespace with a traversal file name would still escape."""
+        component = self._attacker_component()
+        component.path = [f"{self.ATTACKER_ID}/../{self.VICTIM_ID}/secret.txt"]
+
+        with pytest.raises(StorageNamespaceError, match="path separators or traversal"):
+            component.load_files_base()
+
+    @pytest.mark.usefixtures("storage")
+    def test_traversal_to_server_secret_is_denied(self):
+        component = self._attacker_component()
+        component.path = [f"{self.ATTACKER_ID}/../secret_key"]
+
+        with pytest.raises(StorageNamespaceError, match="path separators or traversal"):
+            component.load_files_base()
+
+    @pytest.mark.usefixtures("storage")
+    def test_own_storage_key_still_resolves(self):
+        """The legitimate case must keep working: a user reading their own upload."""
+        component = self._attacker_component()
+        component.path = [f"{self.ATTACKER_ID}/own.txt"]
+
+        result = component.load_files_base()
+
+        assert [data.data["text"] for data in result] == ["ATTACKER_OWN"]
+
+    @pytest.mark.usefixtures("storage")
+    def test_executing_flow_namespace_still_resolves(self, tmp_path):
+        """Legacy per-flow uploads are addressed by flow id, which is also an owned scope."""
+        flow_id = "33333333-3333-3333-3333-333333333333"
+        flow_dir = tmp_path / "config" / flow_id
+        flow_dir.mkdir(parents=True)
+        (flow_dir / "flow.txt").write_text("FLOW_UPLOAD", encoding="utf-8")
+
+        component = self._attacker_component()
+        component._vertex = SimpleNamespace(
+            graph=SimpleNamespace(user_id=self.ATTACKER_ID, flow_id=flow_id, source_flow_id=None)
+        )
+        component.path = [f"{flow_id}/flow.txt"]
+
+        result = component.load_files_base()
+
+        assert [data.data["text"] for data in result] == ["FLOW_UPLOAD"]
+
+    def test_s3_object_key_outside_namespace_is_denied(self, monkeypatch, tmp_path):
+        """S3 keys never touch the filesystem, so they need the same namespace check."""
+        settings = SimpleNamespace(
+            config_dir=str(tmp_path / "config"),
+            database_url="",
+            restrict_local_file_access=False,
+            storage_type="s3",
+        )
+        monkeypatch.setattr("lfx.base.data.base_file.get_settings_service", lambda: SimpleNamespace(settings=settings))
+        monkeypatch.setattr(
+            "lfx.utils.file_path_security.get_settings_service", lambda: SimpleNamespace(settings=settings)
+        )
+
+        component = self._attacker_component()
+        component.path = [f"{self.VICTIM_ID}/secret.txt"]
+
+        with pytest.raises(StorageNamespaceError, match="outside the authenticated user's"):
+            component.load_files_base()

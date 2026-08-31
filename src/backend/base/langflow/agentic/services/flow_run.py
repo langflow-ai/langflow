@@ -30,6 +30,8 @@ import logging
 from time import perf_counter
 from typing import Any
 
+from lfx.observability import execution_protocol
+
 from langflow.agentic.helpers.code_security import scan_code_security
 from langflow.agentic.helpers.error_handling import extract_friendly_error
 from langflow.api.utils.flow_utils import build_graph_from_data
@@ -239,10 +241,11 @@ async def run_working_flow(*, flow_data: dict, flow_id: str, user_id: str | None
     graph: Any = None
     try:
         graph = await build_graph_from_data(flow_id, payload, flow_name=flow_name, user_id=user_id)
-        run_outputs, _session_id = await asyncio.wait_for(
-            run_graph_internal(graph, flow_id, inputs=[], outputs=[]),
-            timeout=RUN_TIMEOUT_SECONDS,
-        )
+        with execution_protocol("agentic"):
+            run_outputs, _session_id = await asyncio.wait_for(
+                run_graph_internal(graph, flow_id, inputs=[], outputs=[]),
+                timeout=RUN_TIMEOUT_SECONDS,
+            )
     except (TimeoutError, asyncio.TimeoutError):
         # On Python 3.10 ``asyncio.wait_for`` raises ``asyncio.TimeoutError``,
         # a class DISTINCT from the builtin ``TimeoutError`` (they were unified

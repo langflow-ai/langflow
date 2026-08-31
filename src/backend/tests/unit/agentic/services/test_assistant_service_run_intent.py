@@ -18,6 +18,23 @@ from langflow.agentic.services.assistant_service import (
 from langflow.agentic.services.flow_types import IntentResult
 
 MODULE = "langflow.agentic.services.assistant_service"
+_DENIED_ASSISTANT_CATALOG_CALLS: list[None] = []
+
+
+def _denied_assistant_catalog_loader():
+    _DENIED_ASSISTANT_CATALOG_CALLS.append(None)
+    return [{"name": "blocked-model", "model_type": "llm"}]
+
+
+class _AssistantPolicy:
+    def __init__(self, allowed: set[str] | None) -> None:
+        self.allowed = allowed
+
+    def allows(self, provider: str) -> bool:
+        return self.allowed is None or provider in self.allowed
+
+    def filter(self, providers: list[str]) -> list[str]:
+        return [provider for provider in providers if self.allows(provider)]
 
 
 def _intent(intent: str) -> IntentResult:
@@ -389,6 +406,200 @@ async def test_available_model_hint_injected_when_provider_and_model_given():
             )
         )
     assert "Available language models" not in seen[0]
+
+
+@pytest.mark.asyncio
+async def test_assistant_filters_and_does_not_bind_policy_blocked_requested_provider():
+    from langflow.agentic.services.agent_run_context import current_agent_run_model, current_requested_agent_model
+    from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+    seen: dict = {}
+    captured_policy: dict = {}
+    intent = IntentResult(
+        intent="build_flow",
+        translation="build an agent with Anthropic",
+        requested_model="claude-sonnet-4-5",
+        requested_provider="Anthropic",
+    )
+
+    async def _resolve_policy(**kwargs):
+        captured_policy.update(kwargs)
+        return _AssistantPolicy({"OpenAI"})
+
+    def factory(**kwargs):
+        seen["input"] = kwargs["input_value"]
+        seen["requested"] = current_requested_agent_model()
+        seen["runtime"] = current_agent_run_model()
+        return _gen([("end", {"result": "ok"})])
+
+    with (
+        patch(f"{MODULE}.classify_intent", new_callable=AsyncMock, return_value=intent),
+        patch(f"{MODULE}.aresolve_model_provider_policy", side_effect=_resolve_policy),
+        patch(f"{MODULE}.execute_flow_file_streaming", side_effect=factory),
+        patch(f"{MODULE}.drain_flow_events", side_effect=[[{"action": "set_flow", "flow": {}}], [], []]),
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
+        await _collect(
+            execute_flow_with_validation_streaming(
+                flow_filename="TestFlow",
+                input_value="build an agent with Anthropic",
+                global_variables={
+                    "OPENAI_API_KEY": "openai-test",  # pragma: allowlist secret
+                    "ANTHROPIC_API_KEY": "anthropic-test",  # pragma: allowlist secret
+                },
+                user_id="user-1",
+                provider="Anthropic",
+                model_name="claude-sonnet-4-5",
+                max_retries=1,
+            )
+        )
+
+    assert captured_policy["purpose"] is ModelProviderPolicyPurpose.CONFIGURE
+    assert "providers with credentials configured: OpenAI" in seen["input"]
+    assert "providers with credentials configured: OpenAI, Anthropic" not in seen["input"]
+    assert "explicitly requested provider is unavailable" in seen["input"]
+    assert seen["requested"] is None
+    assert seen["runtime"] == {
+        "provider": "Anthropic",
+        "model_name": "claude-sonnet-4-5",
+        "api_key_var": None,
+        "allow_configuration": False,
+    }
+
+
+@pytest.mark.asyncio
+async def test_assistant_allow_all_policy_preserves_requested_provider_binding():
+    from langflow.agentic.services.agent_run_context import current_requested_agent_model
+
+    seen: dict = {}
+    intent = IntentResult(
+        intent="build_flow",
+        translation="build an agent with Anthropic",
+        requested_model="claude-sonnet-4-5",
+        requested_provider="Anthropic",
+    )
+
+    async def _resolve_policy(**_kwargs):
+        return _AssistantPolicy(None)
+
+    def factory(**kwargs):
+        seen["input"] = kwargs["input_value"]
+        seen["requested"] = current_requested_agent_model()
+        return _gen([("end", {"result": "ok"})])
+
+    with (
+        patch(f"{MODULE}.classify_intent", new_callable=AsyncMock, return_value=intent),
+        patch(f"{MODULE}.aresolve_model_provider_policy", side_effect=_resolve_policy),
+        patch(f"{MODULE}.execute_flow_file_streaming", side_effect=factory),
+        patch(f"{MODULE}.drain_flow_events", side_effect=[[{"action": "set_flow", "flow": {}}], [], []]),
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
+        await _collect(
+            execute_flow_with_validation_streaming(
+                flow_filename="TestFlow",
+                input_value="build an agent with Anthropic",
+                global_variables={
+                    "OPENAI_API_KEY": "openai-test",  # pragma: allowlist secret
+                    "ANTHROPIC_API_KEY": "anthropic-test",  # pragma: allowlist secret
+                },
+                user_id="user-1",
+                provider="OpenAI",
+                model_name="gpt-4o-mini",
+                max_retries=1,
+            )
+        )
+
+    assert "providers with credentials configured: OpenAI, Anthropic" in seen["input"]
+    assert "explicitly requested provider is unavailable" not in seen["input"]
+    assert "[Model provider policy:" not in seen["input"]
+    assert seen["requested"] == {
+        "provider": "Anthropic",
+        "model_name": "claude-sonnet-4-5",
+        "api_key_var": None,
+    }
+
+
+@pytest.mark.asyncio
+async def test_assistant_policy_resolution_does_not_execute_extension_catalog():
+    from lfx.base.models.provider_registry import ProviderSpec, register_provider, unregister_provider
+
+    provider = "Denied Assistant Extension"
+    register_provider(
+        ProviderSpec(
+            name=provider,
+            provider_id="denied-assistant-extension",
+            metadata={
+                "icon": "Bot",
+                "variables": [],
+                "mapping": {"model_class": "ChatOpenAI", "model_param": "model"},
+            },
+            catalog_loader=f"{__name__}:_denied_assistant_catalog_loader",
+        )
+    )
+    _DENIED_ASSISTANT_CATALOG_CALLS.clear()
+
+    async def _resolve_policy(**_kwargs):
+        return _AssistantPolicy({"OpenAI"})
+
+    try:
+        with (
+            patch(f"{MODULE}.classify_intent", new_callable=AsyncMock, return_value=_intent("build_flow")),
+            patch(f"{MODULE}.aresolve_model_provider_policy", side_effect=_resolve_policy),
+            patch(
+                f"{MODULE}.execute_flow_file_streaming",
+                return_value=_gen([("end", {"result": "ok"})]),
+            ),
+            patch(f"{MODULE}.drain_flow_events", side_effect=[[{"action": "set_flow", "flow": {}}], [], []]),
+            patch("asyncio.sleep", new_callable=AsyncMock),
+        ):
+            await _collect(
+                execute_flow_with_validation_streaming(
+                    flow_filename="TestFlow",
+                    input_value="build an agent",
+                    global_variables={"OPENAI_API_KEY": "openai-test"},  # pragma: allowlist secret
+                    user_id="user-1",
+                    provider="OpenAI",
+                    model_name="gpt-4o-mini",
+                    max_retries=1,
+                )
+            )
+    finally:
+        unregister_provider(provider)
+
+    assert _DENIED_ASSISTANT_CATALOG_CALLS == []
+
+
+@pytest.mark.asyncio
+async def test_assistant_resets_working_flow_when_policy_resolution_fails():
+    from lfx.mcp.flow_builder_tools import get_working_flow, init_working_flow, reset_working_flow
+
+    async def _seed_working_flow(*_args, **_kwargs):
+        init_working_flow({"name": "Seeded", "data": {"nodes": [], "edges": []}}, "flow-1")
+        return "seeded canvas"
+
+    try:
+        with (
+            patch(f"{MODULE}._get_current_flow_summary", side_effect=_seed_working_flow),
+            patch(f"{MODULE}.classify_intent", new_callable=AsyncMock, return_value=_intent("build_flow")),
+            patch(
+                f"{MODULE}.aresolve_model_provider_policy",
+                new_callable=AsyncMock,
+                side_effect=RuntimeError("denied"),
+            ),
+            pytest.raises(RuntimeError, match="denied"),
+        ):
+            await _collect(
+                execute_flow_with_validation_streaming(
+                    flow_filename="TestFlow",
+                    input_value="build an agent",
+                    global_variables={},
+                    user_id="user-1",
+                )
+            )
+
+        assert get_working_flow() is None
+    finally:
+        reset_working_flow()
 
 
 @pytest.mark.asyncio

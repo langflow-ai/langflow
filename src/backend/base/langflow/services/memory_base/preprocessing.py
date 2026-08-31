@@ -25,6 +25,8 @@ from langflow.services.memory_base.embedding_helpers import infer_llm_provider
 if TYPE_CHECKING:
     import uuid
 
+    from lfx.services.model_provider_policy import ModelProviderPolicySnapshot
+
     from langflow.services.database.models.message.model import MessageTable
 
 
@@ -143,7 +145,10 @@ async def run_preprocessing(
     preproc_model: str,
     preproc_instructions: str | None,
     kill_phrase: str,
-    user_id: uuid.UUID | str | None,
+    owner_user_id: uuid.UUID | str | None = None,
+    actor_user_id: uuid.UUID | str | None = None,
+    provider_policy: ModelProviderPolicySnapshot | None = None,
+    user_id: uuid.UUID | str | None = None,
 ) -> PreprocessingResult:
     """Run a single LLM call over ``messages`` and classify the result.
 
@@ -154,14 +159,23 @@ async def run_preprocessing(
     if not messages:
         return PreprocessingResult(status="skipped", output_text="", raw_response="")
 
+    owner_user_id = owner_user_id if owner_user_id is not None else user_id
+    actor_user_id = actor_user_id if actor_user_id is not None else owner_user_id
+
     provider = infer_llm_provider(preproc_model)
+    if provider_policy is None:
+        from lfx.services.model_provider_policy import require_model_provider
+
+        provider_policy = require_model_provider(user_id=actor_user_id, provider=provider)
+    else:
+        provider_policy.require(provider)
 
     # Resolve the provider's API key from the user's globally-configured
     # variables (or env). Required because we instantiate the component outside
     # a Graph, so ``self.user_id`` is unset and ``get_llm`` cannot look it up.
-    api_key = get_api_key_for_provider(user_id, provider)
+    api_key = get_api_key_for_provider(owner_user_id, provider)
 
-    llm = LanguageModelComponent()
+    llm = LanguageModelComponent(_user_id=actor_user_id)
     llm.set_input_value("model", _build_model_config(provider, preproc_model))
 
     system_message = PREPROCESSING_TEMPLATE.format(
@@ -175,6 +189,28 @@ async def run_preprocessing(
         temperature=0.1,
         api_key=api_key,
     )
+
+    # The policy subject and credential owner can differ for delegated Memory
+    # Base ingestion. Reuse the already-authorized actor snapshot while asking
+    # unified-model setup to resolve every credential variable for the owner.
+    if actor_user_id != owner_user_id:
+        from lfx.base.models.unified_models import get_llm
+
+        def _build_authorized_model():
+            return get_llm(
+                model=llm.model,
+                user_id=owner_user_id,
+                api_key=llm.api_key,
+                temperature=llm.temperature,
+                stream=getattr(llm, "stream", False),
+                max_tokens=getattr(llm, "max_tokens", None),
+                watsonx_url=getattr(llm, "base_url_ibm_watsonx", None),
+                watsonx_project_id=getattr(llm, "project_id", None),
+                ollama_base_url=getattr(llm, "ollama_base_url", None),
+                provider_policy=provider_policy,
+            )
+
+        llm.build_model = _build_authorized_model  # type: ignore[method-assign]
 
     message = await llm.text_response()
     response_text = getattr(message, "text", None) or str(message)

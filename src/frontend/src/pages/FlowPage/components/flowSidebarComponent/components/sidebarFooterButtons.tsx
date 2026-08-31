@@ -4,10 +4,13 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
+import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
+import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
+import { cn } from "@/utils/utils";
 
 const SidebarMenuButtons = ({
   customComponent,
@@ -21,6 +24,17 @@ const SidebarMenuButtons = ({
   const allowCustomComponents = useUtilityStore(
     (state) => state.allowCustomComponents,
   );
+  // Same flow id `useAddComponent` gates on, so the affordance and the gate
+  // can never disagree about which flow is being evaluated.
+  const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
+  const isFlowReadOnly = useIsFlowReadOnly(currentFlowId);
+
+  // One flag for every reason the add is refused: the component types are
+  // still loading, there is nothing to add yet, the permission answer is in
+  // flight, or it denies write. Dimming only some of them would leave the
+  // same control looking disabled for one cause and enabled for another,
+  // which reads as a bug not a policy.
+  const isUnavailable = isLoading || isFlowReadOnly || !customComponent;
 
   const handleAddMcpServerClick = () => {
     setAddMcpOpen(true);
@@ -82,14 +96,21 @@ const SidebarMenuButtons = ({
     <SidebarMenuButton asChild className="group">
       <Button
         unstyled
-        disabled={isLoading}
+        disabled={isUnavailable}
         onClick={() => {
           if (customComponent) {
             addComponent(customComponent, "CustomComponent");
           }
         }}
         data-testid="sidebar-custom-component-button"
-        className="flex items-center w-full h-full gap-3 hover:bg-muted"
+        // `unstyled` opts out of the base class that carries
+        // `disabled:opacity-70`, so the disabled look has to be spelled out
+        // here — otherwise the control blocks the click while still looking
+        // exactly like a working one, which is the defect being fixed.
+        className={cn(
+          "flex items-center w-full h-full gap-3 hover:bg-muted",
+          isUnavailable && "cursor-not-allowed opacity-70",
+        )}
       >
         <ForwardedIconComponent
           name="Plus"

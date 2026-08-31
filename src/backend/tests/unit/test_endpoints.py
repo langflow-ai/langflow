@@ -165,6 +165,292 @@ async def test_get_all(client: AsyncClient, logged_in_headers):
     assert "ChatOutput" in json_response["input_output"]
 
 
+async def test_component_palette_policy_filters_models_without_mutating_shared_cache(monkeypatch):
+    from langflow.api.v1 import endpoints
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicyPurpose,
+        ModelProviderPolicySnapshot,
+    )
+
+    cached = {
+        "mixed": {
+            "AllowedModel": {"metadata": {"model_provider_id": "openai"}},
+            "DeniedModel": {"metadata": {"model_provider_id": "anthropic"}},
+            "Utility": {"metadata": {}},
+        }
+    }
+
+    project_id = uuid4()
+
+    async def _openai_only(*, user_id, providers, purpose, attributes=None):
+        assert purpose is ModelProviderPolicyPurpose.DISCOVER
+        assert attributes == {"project_id": project_id}
+        candidates = frozenset(providers)
+        return ModelProviderPolicySnapshot(
+            context=ModelProviderPolicyContext(user_id=user_id, attributes=attributes or {}),
+            purpose=purpose,
+            candidate_provider_ids=candidates,
+            allowed_provider_ids=frozenset({"openai"}),
+        )
+
+    def _sync_resolver_must_not_run(**_kwargs):
+        msg = "scoped palette discovery must refresh hierarchy asynchronously"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr(endpoints, "resolve_model_provider_policy", _sync_resolver_must_not_run, raising=False)
+    monkeypatch.setattr(endpoints, "aresolve_model_provider_policy", _openai_only, raising=False)
+
+    filtered = await endpoints._filter_component_palette_by_provider_policy(
+        cached,
+        user_id="user-1",
+        attributes={"project_id": project_id},
+    )
+
+    assert set(filtered["mixed"]) == {"AllowedModel", "Utility"}
+    assert "DeniedModel" in cached["mixed"]
+    assert filtered is not cached
+    assert filtered["mixed"] is not cached["mixed"]
+
+
+def test_catalog_policy_filter_is_case_sensitive_and_does_not_mutate_shared_cache():
+    from langflow.api.v1 import endpoints
+
+    blocked_component = {"display_name": "Blocked", "metadata": {"nested": True}}
+    allowed_component = {"display_name": "Allowed", "metadata": {"nested": True}}
+    cached = {
+        "models": {
+            "BlockedAgent": blocked_component,
+            "blockedagent": allowed_component,
+        },
+        "empty": {},
+    }
+
+    filtered = endpoints._filter_component_palette_by_catalog_policy(
+        cached,
+        blocked_component_keys=frozenset({"BlockedAgent"}),
+    )
+
+    assert list(filtered) == ["models", "empty"]
+    assert list(filtered["models"]) == ["blockedagent"]
+    assert filtered["empty"] == {}
+    assert filtered is not cached
+    assert filtered["models"] is not cached["models"]
+    assert filtered["empty"] is not cached["empty"]
+    assert filtered["models"]["blockedagent"] is allowed_component
+    assert list(cached["models"]) == ["BlockedAgent", "blockedagent"]
+    assert cached["models"]["BlockedAgent"] is blocked_component
+
+
+def test_catalog_policy_filter_resolves_legacy_extension_alias_without_mutating_cache():
+    from langflow.api.v1 import endpoints
+
+    canonical_key = "ext:datastax:AstraDBVectorStoreComponent@official"
+    astra_component = {
+        "name": "AstraDB",
+        "display_name": "Astra DB",
+        "metadata": {"module": "lfx_datastax.components.datastax.astradb_vectorstore.AstraDBVectorStoreComponent"},
+        "template": {"_type": "Component"},
+    }
+    cached = {
+        "datastax": {canonical_key: astra_component},
+        "input_output": {"ChatInput": {"display_name": "Chat Input"}},
+    }
+
+    filtered = endpoints._filter_component_palette_by_catalog_policy(
+        cached,
+        blocked_component_keys=frozenset({"AstraDB"}),
+    )
+
+    assert filtered["datastax"] == {}
+    assert "ChatInput" in filtered["input_output"]
+    assert cached["datastax"][canonical_key] is astra_component
+    assert filtered is not cached
+    assert filtered["datastax"] is not cached["datastax"]
+
+
+async def test_get_all_filters_catalog_policy_and_uses_current_snapshot(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    from langflow.api.v1 import endpoints
+    from langflow.interface import components as components_module
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+
+    cached = {
+        "models": {
+            "AllowedAgent": {
+                "display_name": "Allowed Agent",
+                "description": "Visible",
+                "template": {},
+                "metadata": {},
+            },
+            "BlockedAgent": {
+                "display_name": "Blocked Agent",
+                "description": "Hidden",
+                "template": {},
+                "metadata": {},
+            },
+        },
+        "empty": {},
+    }
+
+    class MutableCatalogPolicyService:
+        def __init__(self):
+            self.current_snapshot = CatalogPolicySnapshot(blocked_component_keys={"BlockedAgent"})
+            self.snapshot_reads = 0
+
+        @property
+        def snapshot(self):
+            self.snapshot_reads += 1
+            return self.current_snapshot
+
+    service = MutableCatalogPolicyService()
+
+    async def get_cached_types(*, settings_service):
+        _ = settings_service
+        return cached
+
+    monkeypatch.setattr(components_module, "get_and_cache_all_types_dict", get_cached_types)
+    monkeypatch.setattr(endpoints, "get_catalog_policy_service", lambda: service)
+
+    async def allow_all_providers(all_types, **_kwargs):
+        return {category: dict(components) for category, components in all_types.items()}
+
+    monkeypatch.setattr(
+        endpoints,
+        "_filter_component_palette_by_provider_policy",
+        allow_all_providers,
+    )
+
+    blocked_response = await client.get("api/v1/all", headers=logged_in_headers)
+
+    assert blocked_response.status_code == status.HTTP_200_OK
+    blocked_payload = blocked_response.json()
+    assert list(blocked_payload["models"]) == ["AllowedAgent"]
+    assert "blockedagent" not in blocked_payload["component_display_names"]
+    assert blocked_payload["empty"] == {}
+    assert service.snapshot_reads == 1
+    assert "BlockedAgent" in cached["models"]
+
+    service.current_snapshot = CatalogPolicySnapshot()
+    unblocked_response = await client.get("api/v1/all", headers=logged_in_headers)
+
+    assert unblocked_response.status_code == status.HTTP_200_OK
+    unblocked_payload = unblocked_response.json()
+    assert list(unblocked_payload["models"]) == ["AllowedAgent", "BlockedAgent"]
+    assert "blockedagent" in unblocked_payload["component_display_names"]
+    assert service.snapshot_reads == 2
+    assert list(cached["models"]) == ["AllowedAgent", "BlockedAgent"]
+
+
+async def test_get_all_rejects_include_blocked_for_non_superuser_before_broad_exception_handler(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    from langflow.api.v1 import endpoints
+
+    def unexpected_catalog_service_lookup():
+        msg = "catalog policy must not be read for an unauthorized override"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr(endpoints, "get_catalog_policy_service", unexpected_catalog_service_lookup)
+
+    response = await client.get("api/v1/all?include_blocked=true", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_get_all_superuser_override_skips_only_catalog_filter_without_cache_poisoning(
+    client: AsyncClient,
+    logged_in_headers_super_user,
+    monkeypatch,
+):
+    from langflow.api.v1 import endpoints
+    from langflow.interface import components as components_module
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+
+    cached = {
+        "models": {
+            "AllowedAgent": {
+                "display_name": "Allowed Agent",
+                "description": "Visible",
+                "template": {},
+                "metadata": {},
+            },
+            "BlockedAgent": {
+                "display_name": "Blocked Agent",
+                "description": "Catalog blocked",
+                "template": {},
+                "metadata": {},
+            },
+            "ProviderBlockedAgent": {
+                "display_name": "Provider Blocked Agent",
+                "description": "Provider blocked",
+                "template": {},
+                "metadata": {"model_provider_id": "denied-provider"},
+            },
+        }
+    }
+
+    class CountingCatalogPolicyService:
+        def __init__(self):
+            self.snapshot_reads = 0
+
+        @property
+        def snapshot(self):
+            self.snapshot_reads += 1
+            return CatalogPolicySnapshot(blocked_component_keys={"BlockedAgent"})
+
+    service = CountingCatalogPolicyService()
+    provider_filter_calls = 0
+
+    async def get_cached_types(*, settings_service):
+        _ = settings_service
+        return cached
+
+    async def filter_provider_policy(all_types, *, user_id, attributes=None):
+        nonlocal provider_filter_calls
+        _ = user_id
+        provider_filter_calls += 1
+        assert attributes == {"is_superuser": True}
+        return {
+            category: {
+                key: component
+                for key, component in components.items()
+                if component.get("metadata", {}).get("model_provider_id") != "denied-provider"
+            }
+            for category, components in all_types.items()
+        }
+
+    monkeypatch.setattr(components_module, "get_and_cache_all_types_dict", get_cached_types)
+    monkeypatch.setattr(endpoints, "get_catalog_policy_service", lambda: service)
+    monkeypatch.setattr(endpoints, "_filter_component_palette_by_provider_policy", filter_provider_policy)
+
+    override_response = await client.get(
+        "api/v1/all?include_blocked=true",
+        headers=logged_in_headers_super_user,
+    )
+
+    assert override_response.status_code == status.HTTP_200_OK
+    override_payload = override_response.json()
+    assert list(override_payload["models"]) == ["AllowedAgent", "BlockedAgent"]
+    assert "ProviderBlockedAgent" not in override_payload["models"]
+    assert service.snapshot_reads == 1
+    assert provider_filter_calls == 1
+    assert list(cached["models"]) == ["AllowedAgent", "BlockedAgent", "ProviderBlockedAgent"]
+
+    default_response = await client.get("api/v1/all", headers=logged_in_headers_super_user)
+
+    assert default_response.status_code == status.HTTP_200_OK
+    assert list(default_response.json()["models"]) == ["AllowedAgent"]
+    assert service.snapshot_reads == 2
+    assert provider_filter_calls == 2
+    assert list(cached["models"]) == ["AllowedAgent", "BlockedAgent", "ProviderBlockedAgent"]
+
+
 @pytest.mark.usefixtures("active_user")
 async def test_post_validate_code(client: AsyncClient, logged_in_headers):
     # Test case with a valid import and function
@@ -309,10 +595,49 @@ async def test_get_vertices(client, added_flow_webhook_test, logged_in_headers):
     assert set(ids) == {"ChatInput"}
 
 
-async def test_get_vertices_blocks_custom_components_when_disabled(
+async def test_get_vertices_rebuilds_outdated_components_when_custom_components_disabled(
     client, added_flow_webhook_test, logged_in_headers, monkeypatch
 ):
+    """A saved flow whose built-in code drifted across versions still builds (issue #14455).
+
+    With allow_custom_components=False the code stored in the node is never what executes —
+    ``resolve_trusted_code_for_build`` substitutes this server's copy — so refusing the flow over
+    a stale code hash only broke every saved flow on upgrade. This node's type is a known server
+    component, so the build runs the server's copy of it instead of being refused.
+
+    The spy asserts the substitution actually fired against the real component registry, which is
+    what keeps this test honest: were the fixture's stored code ever to catch up with the server's
+    copy, the build would still return 200 without exercising the substitution at all.
+    """
+    from lfx.utils import flow_validation
+
     monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", False)
+
+    # from_payload imports this by module attribute on every call, so the spy sees the real run.
+    substitute = flow_validation.substitute_outdated_component_code_in_place
+    swapped: list[str] = []
+
+    def _spy(payload, **kwargs):
+        result = substitute(payload, **kwargs)
+        swapped.extend(result)
+        return result
+
+    monkeypatch.setattr(flow_validation, "substitute_outdated_component_code_in_place", _spy)
+
+    flow_id = added_flow_webhook_test["id"]
+    response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+
+    assert response.status_code == 200
+    assert any("ChatInput" in label for label in swapped), f"expected a ChatInput swap, got {swapped}"
+
+
+async def test_get_vertices_blocks_outdated_components_when_substitution_disabled(
+    client, added_flow_webhook_test, logged_in_headers, monkeypatch
+):
+    """LANGFLOW_SUBSTITUTE_OUTDATED_COMPONENT_CODE=false keeps the strict hash gate."""
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "allow_custom_components", False)
+    monkeypatch.setattr(settings, "substitute_outdated_component_code", False)
 
     flow_id = added_flow_webhook_test["id"]
     response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
@@ -426,10 +751,82 @@ async def test_build_vertex_returns_404_for_other_users_private_flow(
     assert response.status_code == 404, response.text
 
 
+async def test_build_vertex_stream_returns_404_for_other_users_private_flow(
+    client, added_flow_webhook_test, second_user_headers
+):
+    """The deprecated stream route must authorize before reading the shared graph cache."""
+    flow_id = added_flow_webhook_test["id"]
+    response = await client.get(
+        f"/api/v1/build/{flow_id}/ChatInput-some-id/stream",
+        headers=second_user_headers,
+    )
+    assert response.status_code == 404, response.text
+
+
 async def test_build_vertex_invalid_vertex_id(client, added_flow_webhook_test, logged_in_headers):
     flow_id = added_flow_webhook_test["id"]
     response = await client.post(f"/api/v1/build/{flow_id}/vertices/invalid_vertex_id", headers=logged_in_headers)
     assert response.status_code == 500
+
+
+async def test_build_vertex_revalidates_cached_graph_after_catalog_policy_change(
+    client,
+    added_flow_webhook_test,
+    logged_in_headers,
+    monkeypatch,
+):
+    """The deprecated per-vertex route must not execute a stale, newly blocked cached graph."""
+    from langflow.api.v1 import chat as chat_module
+    from lfx.utils.flow_validation import CatalogPolicyValidationError
+
+    flow_id = added_flow_webhook_test["id"]
+    order_response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+    assert order_response.status_code == 200
+    vertex_id = order_response.json()["ids"][0]
+    blocked_message = "Flow build blocked: catalog policy blocks components: ChatInput"
+
+    def reject_cached_graph(_graph):
+        raise CatalogPolicyValidationError(blocked_message)
+
+    monkeypatch.setattr(chat_module, "validate_flow_for_current_settings", reject_cached_graph)
+
+    response = await client.post(
+        f"/api/v1/build/{flow_id}/vertices/{vertex_id}",
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 400
+    assert "ChatInput" in response.json()["detail"]
+
+
+async def test_build_vertex_stream_revalidates_cached_graph_after_catalog_policy_change(
+    client,
+    added_flow_webhook_test,
+    logged_in_headers,
+    monkeypatch,
+):
+    """The deprecated stream route rejects a stale graph before response streaming begins."""
+    from langflow.api.v1 import chat as chat_module
+    from lfx.utils.flow_validation import CatalogPolicyValidationError
+
+    flow_id = added_flow_webhook_test["id"]
+    order_response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+    assert order_response.status_code == 200
+    vertex_id = order_response.json()["ids"][0]
+    blocked_message = "Flow build blocked: catalog policy blocks components: ChatInput"
+
+    def reject_cached_graph(_graph):
+        raise CatalogPolicyValidationError(blocked_message)
+
+    monkeypatch.setattr(chat_module, "validate_flow_for_current_settings", reject_cached_graph)
+
+    response = await client.get(
+        f"/api/v1/build/{flow_id}/{vertex_id}/stream",
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 400
+    assert "ChatInput" in response.json()["detail"]
 
 
 async def test_successful_run_no_payload(client, simple_api_test, created_api_key):
@@ -457,6 +854,39 @@ async def test_successful_run_no_payload(client, simple_api_test, created_api_ke
     inner_results = [output.get("results") for output in outputs_dict.get("outputs")]
 
     assert all(result is not None for result in inner_results), (outputs_dict, output_results_has_results)
+
+
+async def test_run_by_id_enforces_current_catalog_policy_and_recovers_when_cleared(
+    client, json_simple_api_test, logged_in_headers, created_api_key
+):
+    from lfx.services.deps import get_catalog_policy_service
+
+    catalog_policy_service = get_catalog_policy_service()
+    await catalog_policy_service.replace_blocked_component_keys([], actor_user_id=None)
+    flow_payload = orjson.loads(json_simple_api_test)
+    flow = FlowCreate(
+        name="Catalog Policy Run Test",
+        data=flow_payload["data"],
+        description="Catalog policy route test",
+    )
+    create_response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_id = create_response.json()["id"]
+    await catalog_policy_service.replace_blocked_component_keys(["ChatInput"], actor_user_id=None)
+
+    blocked_response = await client.post(
+        f"/api/v1/run/{flow_id}",
+        headers={"x-api-key": created_api_key.api_key},
+    )
+    await catalog_policy_service.replace_blocked_component_keys([], actor_user_id=None)
+    allowed_response = await client.post(
+        f"/api/v1/run/{flow_id}",
+        headers={"x-api-key": created_api_key.api_key},
+    )
+
+    assert blocked_response.status_code == status.HTTP_400_BAD_REQUEST
+    assert blocked_response.json()["detail"].endswith("ChatInput")
+    assert allowed_response.status_code == status.HTTP_200_OK, allowed_response.text
 
 
 async def test_successful_run_with_output_type_text(client, simple_api_test, created_api_key):

@@ -14,6 +14,7 @@ from langflow.api.v1 import (
     authz_roles_router,
     authz_shares_router,
     authz_teams_router,
+    catalog_policy_router,
     chat_router,
     endpoints_router,
     extensions_router,
@@ -28,9 +29,11 @@ from langflow.api.v1 import (
     mcp_router,
     memories_router,
     model_options_router,
+    model_provider_policy_router,
     models_router,
     monitor_router,
     openai_responses_router,
+    policy_bundle_router,
     projects_router,
     starter_projects_router,
     store_router,
@@ -93,26 +96,19 @@ router_v1.include_router(a2a_router)
 router_v1.include_router(openai_responses_router)
 router_v1.include_router(models_router)
 router_v1.include_router(model_options_router)
+router_v1.include_router(model_provider_policy_router)
+router_v1.include_router(policy_bundle_router)
 router_v1.include_router(authz_shares_router)
 router_v1.include_router(authz_audit_router)
 router_v1.include_router(authz_roles_router)
 router_v1.include_router(authz_role_assignments_router)
 router_v1.include_router(authz_teams_router)
 router_v1.include_router(authz_me_router)
+router_v1.include_router(catalog_policy_router)
 
 
-# Extension reload is Mode A (local-dev / pip-installed) only.  The route is
-# always mounted; a per-request guard in ``langflow.api.v1.extensions`` reads
-# the live ``settings.enable_extension_reload`` and returns 404 when the flag
-# is off, which means the route is indistinguishable from "not mounted" on
-# production deployments that leave it unset.
-#
-# Mounting unconditionally avoids the import-time / env-file ordering
-# coupling: ``langflow.__main__`` imports ``setup_app`` (and hence this
-# router module) before ``load_dotenv(env_file)`` runs, so any module-level
-# read of ``LANGFLOW_ENABLE_EXTENSION_RELOAD`` would miss the value supplied
-# via ``--env-file``.  The runtime guard sees the post-env-file value
-# because it executes per-request, after settings have been built.
+# Mounted unconditionally: this module imports before load_dotenv(env_file), so the
+# per-request guard in api.v1.extensions reads the live flag and 404s when it is off.
 router_v1.include_router(extensions_router)
 include_deployment_router(router_v1)
 
@@ -123,6 +119,7 @@ def _include_agentic_router():
     from langflow.agentic.api.files_router import router as agentic_files_router
     from langflow.agentic.api.router import router as agentic_router
     from langflow.agentic.api.sessions_router import router as agentic_sessions_router
+    from langflow.api.v1.agentic_mcp import router as agentic_mcp_router
 
     # SECURITY (Issue 15): gate the sandbox-management routers on agentic_experience. The
     # code-exec endpoints inside agentic_router (/assist, /assist/stream, /execute) carry the same
@@ -132,6 +129,7 @@ def _include_agentic_router():
     router_v1.include_router(agentic_router)
     router_v1.include_router(agentic_files_router, dependencies=agentic_gate)
     router_v1.include_router(agentic_sessions_router, dependencies=agentic_gate)
+    router_v1.include_router(agentic_mcp_router)
 
 
 _include_agentic_router()
@@ -147,7 +145,11 @@ router_v2.include_router(registration_router_v2)
 # them (one handler per method+path). ``developer_api_guard=False`` because the
 # authenticated langflow v2 router has never carried a developer-api gate; the
 # default-off setting would otherwise 403 every authenticated request.
-_workflow_host = LangflowWorkflowHost()
+# One host serves every profile. Warming is selected at request/build time from
+# ``settings.warm_registry_enabled`` while authentication and per-flow authorization
+# remain identical whether the cache is enabled or not. This module is imported before
+# ``load_dotenv`` runs, so keeping the decision out of this path preserves ``--env-file``.
+_workflow_host: WorkflowHost = LangflowWorkflowHost()
 assert isinstance(_workflow_host, WorkflowHost)  # noqa: S101
 router_v2.include_router(
     create_workflow_router(

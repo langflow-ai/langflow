@@ -1,24 +1,23 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
 import { TEXTS } from "../../utils/constants/texts";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
+import { waitForFlowEditorReady } from "../../utils/flow/wait-for-flow-editor-ready";
+
+const waitForFlowSave = (page: Page) =>
+  page.waitForResponse(
+    (response) =>
+      response.request().method() === "PATCH" &&
+      /\/api\/v1\/flows\/[^/]+$/.test(new URL(response.url()).pathname),
+  );
 
 test.describe("Flow Lock Feature", () => {
   test(
     "should lock and unlock a flow and verify UI changes",
     { tag: ["@release", "@api"] },
     async ({ page }) => {
-      await awaitBootstrapTest(page);
-
-      // Navigate to templates and select a flow to work with
-      await page.getByTestId("side_nav_options_all-templates").click();
-      await page
-        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
-        .click();
-
-      await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-        timeout: 5000,
-      });
+      await openStarterProject(page, TEXTS.templateBasicPrompting);
+      await waitForFlowEditorReady(page);
 
       // Open flow settings by clicking on the flow name
       await page.getByTestId("flow_name").click();
@@ -41,13 +40,6 @@ test.describe("Flow Lock Feature", () => {
       await expect(descriptionInput).toBeEnabled();
 
       await lockSwitch.click();
-      await page.waitForTimeout(1000);
-
-      const stateAfterClick = await lockSwitch.getAttribute("data-state");
-      if (stateAfterClick !== "checked") {
-        await lockSwitch.click();
-        await page.waitForTimeout(500);
-      }
       await expect(lockSwitch).toHaveAttribute("data-state", "checked");
 
       // Verify that inputs become disabled when locked
@@ -57,9 +49,12 @@ test.describe("Flow Lock Feature", () => {
       // Save the settings by clicking the save button
       const saveButton = page.getByTestId("save-flow-settings");
 
-      if (await saveButton.isEnabled({ timeout: 3000 })) {
-        await saveButton.click();
-      }
+      await expect(saveButton).toBeEnabled();
+      const [lockResponse] = await Promise.all([
+        waitForFlowSave(page),
+        saveButton.click(),
+      ]);
+      expect(lockResponse.ok()).toBe(true);
       await expect(saveButton).toBeHidden({
         timeout: 5000 * 3,
       });
@@ -97,8 +92,12 @@ test.describe("Flow Lock Feature", () => {
       await expect(descriptionInput).toBeEnabled();
 
       // Save the unlocked state by clicking the save button
-      await page.getByTestId("save-flow-settings").isEnabled({ timeout: 3000 });
-      await page.getByTestId("save-flow-settings").click();
+      await expect(saveButton).toBeEnabled();
+      const [unlockResponse] = await Promise.all([
+        waitForFlowSave(page),
+        saveButton.click(),
+      ]);
+      expect(unlockResponse.ok()).toBe(true);
 
       await expect(saveButton).toBeHidden({
         timeout: 5000,
@@ -120,17 +119,8 @@ test.describe("Flow Lock Feature", () => {
     "should show correct lock/unlock icon in settings based on state",
     { tag: ["@release", "@api"] },
     async ({ page }) => {
-      await awaitBootstrapTest(page);
-
-      // Navigate to templates and select a flow
-      await page.getByTestId("side_nav_options_all-templates").click();
-      await page
-        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
-        .click();
-
-      await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-        timeout: 5000,
-      });
+      await openStarterProject(page, TEXTS.templateBasicPrompting);
+      await waitForFlowEditorReady(page);
 
       // Open flow settings
       await page.getByTestId("flow_name").click();

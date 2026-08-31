@@ -1,9 +1,12 @@
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { GRADIENT_CLASS } from "@/constants/constants";
 import QueryModal from "@/modals/queryModal";
 import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
+import { Button } from "../../../../ui/button";
 import { Input } from "../../../../ui/input";
+import { getNodeScopedDomId } from "../../helpers/get-node-scoped-dom-id";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import type { InputProps, QueryComponentType } from "../../types";
 import { getIconName } from "../inputComponent/components/helpers/get-icon-name";
@@ -55,13 +58,15 @@ export default function QueryComponent({
   handleOnNewValue,
   editNode = false,
   id = "",
+  nodeId,
   placeholder,
   isToolMode = false,
   display_name,
   info,
-  separator,
   showParameter = true,
+  ariaLabelledBy,
 }: InputProps<string, QueryComponentType>): JSX.Element | null {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
 
@@ -78,46 +83,42 @@ export default function QueryComponent({
     handleOnNewValue({ value: e.target.value });
   };
 
-  const renderIcon = () => (
-    <div>
-      {!disabled && !isFocused && (
-        <div
-          className={cn(
-            externalLinkIconClasses.gradient({
-              disabled,
-              editNode,
-            }),
-            editNode
-              ? externalLinkIconClasses.editNodeTop
-              : externalLinkIconClasses.normalTop,
-          )}
-          style={{
-            pointerEvents: "none",
-            background: isFocused
-              ? undefined
-              : disabled
-                ? "bg-background"
-                : GRADIENT_CLASS,
-          }}
-          aria-hidden="true"
-        />
-      )}
-
-      <IconComponent
-        dataTestId={`button_open_text_area_modal_${id}${editNode ? "_advanced" : ""}`}
-        name={getIconName(disabled, "", "", false, isToolMode) || "Scan"}
+  const renderGradient = () =>
+    !disabled &&
+    !isFocused && (
+      <div
         className={cn(
-          "cursor-pointer bg-background",
-          externalLinkIconClasses.icon,
+          externalLinkIconClasses.gradient({
+            disabled,
+            editNode,
+          }),
           editNode
             ? externalLinkIconClasses.editNodeTop
-            : externalLinkIconClasses.iconTop,
-          disabled
-            ? "bg-muted text-placeholder-foreground"
-            : "bg-background text-foreground",
+            : externalLinkIconClasses.normalTop,
         )}
+        style={{
+          pointerEvents: "none",
+          background: isFocused
+            ? undefined
+            : disabled
+              ? "bg-background"
+              : GRADIENT_CLASS,
+        }}
+        aria-hidden="true"
       />
-    </div>
+    );
+
+  const renderIcon = () => (
+    <IconComponent
+      dataTestId={`button_open_text_area_modal_${id}${editNode ? "_advanced" : ""}`}
+      name={getIconName(disabled, "", "", false, isToolMode) || "Scan"}
+      className={cn(
+        "h-4 w-4 cursor-pointer bg-background",
+        disabled
+          ? "bg-muted text-placeholder-foreground"
+          : "bg-background text-foreground",
+      )}
+    />
   );
 
   if (!showParameter) {
@@ -129,28 +130,52 @@ export default function QueryComponent({
       <Input
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
-        id={id}
+        id={getNodeScopedDomId(id, nodeId)}
         data-testid={id}
         value={disabled ? "" : value}
         onChange={handleInputChange}
         disabled={disabled}
         className={getInputClassName()}
         placeholder={getPlaceholder(disabled, placeholder)}
-        aria-label={disabled ? value : undefined}
+        // aria-labelledby wins whenever it resolves, which on the canvas
+        // is always — state the precedence explicitly instead of leaving
+        // the aria-label branch as unreachable dead code.
+        aria-label={disabled && !ariaLabelledBy ? value : undefined}
+        aria-labelledby={ariaLabelledBy}
         ref={inputRef}
         type={"text"}
       />
 
-      <QueryModal
-        title={display_name}
-        description={info}
-        placeholder={placeholder}
-        value={value}
-        setValue={(newValue) => handleOnNewValue({ value: newValue })}
-        disabled={disabled}
-      >
-        <div className="relative w-full">{renderIcon()}</div>
-      </QueryModal>
+      <div className="relative w-full">
+        {renderGradient()}
+        <QueryModal
+          title={display_name}
+          description={info}
+          placeholder={placeholder}
+          value={value}
+          setValue={(newValue) => handleOnNewValue({ value: newValue })}
+          disabled={disabled}
+        >
+          <Button
+            unstyled
+            aria-label={t("input.expandTextEditor")}
+            className={cn(
+              // `before:` pseudo-element pads the touch target out to the
+              // WCAG 2.5.8 minimum (24x24) without resizing the visible
+              // icon or shifting its position. The button is already
+              // `position: absolute` (via externalLinkIconClasses.icon),
+              // which is enough to anchor the pseudo-element.
+              "flex items-center justify-center before:absolute before:-inset-1 before:content-['']",
+              externalLinkIconClasses.icon,
+              editNode
+                ? externalLinkIconClasses.editNodeTop
+                : externalLinkIconClasses.iconTop,
+            )}
+          >
+            {renderIcon()}
+          </Button>
+        </QueryModal>
+      </div>
     </div>
   );
 }

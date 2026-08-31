@@ -616,6 +616,7 @@ class TestUpdateBuildConfig:
 # ----------------------------------------------------------------------
 
 
+@pytest.mark.usefixtures("allow_placeholder_endpoints")
 class TestCreateCollectionAstrapyOnly:
     """The override must not touch ``langchain-astradb``."""
 

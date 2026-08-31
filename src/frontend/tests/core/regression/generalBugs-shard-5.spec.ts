@@ -1,9 +1,55 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
+import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { zoomOut } from "../../utils/zoom-out";
+
+async function addComponentAtPosition(
+  page: Page,
+  options: {
+    search: string;
+    testId: string;
+    position: { x: number; y: number };
+  },
+): Promise<void> {
+  const nodes = page.locator(".react-flow__node");
+  const previousNodeCount = await nodes.count();
+  await addComponentFromSidebar(page, {
+    search: options.search,
+    testId: options.testId,
+    hoverAdd: true,
+  });
+
+  const node = nodes.nth(previousNodeCount);
+  const dragHandle = node.getByTestId("generic-node-title-arrangement");
+  const before = await node.boundingBox();
+  const handleBox = await dragHandle.boundingBox();
+  const canvasBox = await page.locator("#react-flow-id").boundingBox();
+  if (!before || !handleBox || !canvasBox) {
+    throw new Error("Expected an attached graph node with a draggable title");
+  }
+
+  const startX = handleBox.x + handleBox.width / 2;
+  const startY = handleBox.y + handleBox.height / 2;
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(
+    canvasBox.x + options.position.x,
+    canvasBox.y + options.position.y,
+    { steps: 12 },
+  );
+  await page.mouse.up();
+
+  await expect
+    .poll(async () => {
+      const after = await node.boundingBox();
+      return after ? Math.hypot(after.x - before.x, after.y - before.y) : 0;
+    })
+    .toBeGreaterThan(20);
+}
 
 test(
   "should be able to see output preview from grouped components and connect components with a single click",
@@ -13,79 +59,50 @@ test(
     const secondRandomName = Math.random().toString(36).substring(2);
     const thirdRandomName = Math.random().toString(36).substring(2);
 
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("blank-flow").click();
-
+    await openBlankFlow(page);
     await addLegacyComponents(page);
 
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchTextInput);
-    await page.waitForSelector('[data-testid="input_outputText Input"]', {
-      timeout: 3000,
+    await addComponentAtPosition(page, {
+      search: TEXTS.searchTextInput,
+      testId: "input_outputText Input",
+      position: { x: 200, y: 200 },
     });
-
-    await page
-      .getByTestId("input_outputText Input")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {});
 
     await zoomOut(page, 4);
 
-    await page.waitForTimeout(500);
-
-    await page
-      .getByTestId("input_outputText Input")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 500, y: 150 },
-      });
-
-    await page.waitForTimeout(500);
-
-    await page
-      .getByTestId("input_outputText Input")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 670, y: 200 },
-      });
-
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("combine text");
-
-    await page.waitForSelector('[data-testid="processingCombine Text"]', {
-      timeout: 3000,
+    await addComponentAtPosition(page, {
+      search: TEXTS.searchTextInput,
+      testId: "input_outputText Input",
+      position: { x: 500, y: 150 },
     });
 
-    await page
-      .getByTestId("processingCombine Text")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 10, y: 10 },
-      });
+    await addComponentAtPosition(page, {
+      search: TEXTS.searchTextInput,
+      testId: "input_outputText Input",
+      position: { x: 670, y: 200 },
+    });
 
-    await page.waitForTimeout(500);
+    await addComponentAtPosition(page, {
+      search: "combine text",
+      testId: "processingCombine Text",
+      position: { x: 10, y: 10 },
+    });
 
     await page.getByTestId("popover-anchor-input-delimiter").fill("-");
 
-    await page
-      .getByTestId("processingCombine Text")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 200, y: 10 },
-      });
-
-    await page.waitForTimeout(500);
+    await addComponentAtPosition(page, {
+      search: "combine text",
+      testId: "processingCombine Text",
+      position: { x: 200, y: 10 },
+    });
 
     await page.getByTestId("popover-anchor-input-delimiter").last().fill("-");
 
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("text");
-
-    await page.waitForSelector('[data-testid="input_outputText Output"]', {
-      timeout: 3000,
+    await addComponentAtPosition(page, {
+      search: "text",
+      testId: "input_outputText Output",
+      position: { x: 10, y: 400 },
     });
-
-    await page
-      .getByTestId("input_outputText Output")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 10, y: 400 },
-      });
     //connection 1
     const elementCombineTextOutput0 = page
       .getByTestId("handle-combinetext-shownode-combined text-right")

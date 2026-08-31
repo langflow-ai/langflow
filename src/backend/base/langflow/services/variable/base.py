@@ -13,6 +13,19 @@ class VariableService(Service):
 
     name = "variable_service"
 
+    async def get_default_field_bindings(
+        self,
+        user_id: UUID | str,
+        session: AsyncSession,
+    ) -> list[tuple[str, list[str] | None]]:
+        """Return non-secret variable metadata used for default-field binding.
+
+        External variable-service implementations remain source compatible and
+        opt out by default. Implementations must not fetch or decrypt values.
+        """
+        _ = user_id, session
+        return []
+
     @abc.abstractmethod
     async def initialize_user_variables(self, user_id: UUID | str, session: AsyncSession) -> None:
         """Initialize user variables.

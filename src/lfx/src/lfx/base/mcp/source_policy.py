@@ -150,6 +150,16 @@ DOCKER_HARDENED_NETWORK_FLAGS = frozenset({"--net", "--network"})
 DOCKER_SAFE_NETWORK_VALUES = frozenset({"none", "bridge", "default"})
 SHELL_CONTROL_CHARS = frozenset({";", "|", "&", "$", "`", "<", ">", "\n", "\r"})
 
+# cmd.exe switches that do NOT run the rest of the command line. ``/c`` is not the only
+# executing switch: ``/k`` runs the command and keeps the session alive, and ``/r`` is an
+# undocumented synonym of ``/c``. Boolean switches may also be clustered ahead of the
+# executing one (``/q/k``), and a switch may carry a value (``/t:0a``).
+#
+# The set is inverted deliberately: anything outside it is treated as executing, so a switch
+# this module does not know about fails safe (the wrapped payload still gets bound to the
+# command allowlist) instead of silently skipping the wrapper check.
+CMD_NON_EXEC_SWITCH_LETTERS = frozenset({"a", "d", "e", "f", "q", "s", "t", "u", "v"})
+
 HARDENED_ALLOWED_PYTHON_MODULES = frozenset({"langflow.agentic.mcp", "langflow.agentic.mcp.server"})
 PYTHON_MODULE_MIN_ARGS = 2
 
@@ -369,6 +379,13 @@ def _uvx_package_selection(args: list[str]) -> tuple[list[str], list[str], str |
     return from_packages, with_packages, command
 
 
+def _is_uvx_with_option(arg: str) -> bool:
+    """Match every spelling uvx accepts for ``--with``: split, inline, and clustered short."""
+    if arg in {"--with", "-w"}:
+        return True
+    return arg.startswith("--with=") or (arg.startswith("-w") and not arg.startswith("--"))
+
+
 def _package_runner_target(base_command: str, args: list[str]) -> tuple[str | None, str | None]:
     """Extract the installed package and an explicit uvx entrypoint."""
     index = 0
@@ -394,6 +411,12 @@ def _package_runner_target(base_command: str, args: list[str]) -> tuple[str | No
         if base_command == "npx" and (arg == "--package" or arg.startswith("--package=")):
             package, _ = _option_value(args, index, base_command)
             return package, None
+        if base_command == "uvx" and _is_uvx_with_option(arg):
+            # ``--with`` adds a requirement to the ephemeral environment; it never selects the
+            # executable. Skipping its value keeps the operand after it as the runner target
+            # instead of misreading the extra requirement as the package being launched.
+            index += 2 if arg in {"--with", "-w"} else 1
+            continue
         if arg.startswith("-"):
             index += 2 if arg in UVX_VALUE_OPTIONS | NPX_VALUE_OPTIONS and "=" not in arg else 1
             continue
@@ -469,12 +492,30 @@ def _validate_npx_package_selection(args: list[str], allowed_packages: frozenset
     return True
 
 
+def _sdk_constraint_exemption() -> str | None:
+    """Return the requirement Langflow itself injects as ``uvx --with``, if enabled.
+
+    Langflow prepends ``--with <mcp_sdk_constraint>`` to every MCP server it launches
+    through uvx. Exempting that exact specifier keeps operator package allowlists
+    working without every deployment adding ``mcp``; any other ``--with`` requirement
+    is still validated against the allowlist.
+    """
+    from lfx.base.mcp.uvx import DEFAULT_MCP_SDK_CONSTRAINT
+
+    value = _setting("mcp_sdk_constraint", default=DEFAULT_MCP_SDK_CONSTRAINT)
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
+
+
 def _validate_allowed_package(base_command: str, args: list[str], allowed_packages: frozenset[str] | None) -> None:
     if allowed_packages is None or base_command not in {"npx", "uvx"}:
         return
 
     if base_command == "uvx":
         from_packages, with_packages, command = _uvx_package_selection(args)
+        exemption = _sdk_constraint_exemption()
+        with_packages = [package for package in with_packages if package != exemption]
         selected_packages = [*from_packages, *with_packages]
         if not from_packages:
             selected_packages.append(command or "<missing>")
@@ -529,7 +570,7 @@ def _validate_interpreter_invocation(base_command: str, args: list[str], *, hard
     if base_command in {"sh", "bash", "cmd"}:
         first_arg = args[0].lower() if args else ""
         has_leading_exec_flag = (
-            first_arg == "/c"
+            has_leading_cmd_exec_flag(args)
             if base_command == "cmd"
             else first_arg.startswith("-") and not first_arg.startswith("--") and "c" in first_arg[1:]
         )
@@ -647,13 +688,41 @@ def _parse_shell_payload(command: str, payload: str) -> tuple[str, list[str]]:
     return parts[0], parts[1:]
 
 
+def is_cmd_exec_flag(arg: str) -> bool:
+    """Return whether a cmd.exe switch token makes cmd execute the rest of its argv."""
+    arg_lower = arg.lower()
+    if not arg_lower.startswith("/"):
+        return False
+    # ``/q/k`` packs several switches into one token and a switch may carry a value
+    # (``/t:0a``), so only the leading letter of each part identifies the switch.
+    return any(part[:1] not in CMD_NON_EXEC_SWITCH_LETTERS for part in arg_lower.split("/") if part)
+
+
+def has_leading_cmd_exec_flag(args: list[str]) -> bool:
+    """Whether a cmd.exe execution switch precedes every operand.
+
+    cmd.exe accepts benign switches ahead of the execution switch (``/d /c uvx ...``),
+    and a switch may carry a value (``/t:0a``). Those are skipped. Scanning stops at the
+    first token that is not a switch, so a script operand can never precede the execution
+    switch and be mistaken for a validated wrapper -- ``parse_mcp_shell_wrapper`` alone is
+    not sufficient here because it skips non-switch tokens while searching.
+    """
+    for arg in args:
+        arg_lower = arg.lower()
+        if not arg_lower.startswith("/"):
+            return False
+        if is_cmd_exec_flag(arg_lower):
+            return True
+    return False
+
+
 def parse_mcp_shell_wrapper(command: str, args: list[str]) -> tuple[str, list[str]] | None:
     """Return a shell wrapper's canonical executable and argv payload."""
     command = _base_command(command)
     for index, arg in enumerate(args):
         arg_lower = arg.lower()
         if command == "cmd":
-            if arg_lower != "/c" or index + 1 >= len(args):
+            if not is_cmd_exec_flag(arg_lower) or index + 1 >= len(args):
                 continue
             payload = args[index + 1 :]
             if any(char in " ".join(payload) for char in SHELL_CONTROL_CHARS):

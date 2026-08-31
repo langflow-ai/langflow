@@ -35,7 +35,6 @@ def reset_preload_state():
         "types_cached": _STATE.types_cached,
         "starter_projects_created": _STATE.starter_projects_created,
         "agentic_globals_initialized": _STATE.agentic_globals_initialized,
-        "agentic_mcp_configured": _STATE.agentic_mcp_configured,
         "flows_loaded": _STATE.flows_loaded,
     }
 
@@ -70,7 +69,6 @@ class _PreloadFixture:
     create_or_update_starter_projects: AsyncMock
     load_flows_from_directory: AsyncMock
     initialize_agentic_global_variables: AsyncMock
-    auto_configure_agentic_mcp_server: AsyncMock
     logger: AsyncMock
 
 
@@ -104,7 +102,6 @@ def _preload_env(
     dispose_side_effect=None,
     copy_profile_pictures=None,
     initialize_agentic_global_variables=None,
-    auto_configure_agentic_mcp_server=None,
     cache_service=None,
     all_types_dict=None,
 ):
@@ -124,7 +121,6 @@ def _preload_env(
     create_starter = AsyncMock()
     load_flows = AsyncMock()
     init_agentic = initialize_agentic_global_variables or AsyncMock()
-    auto_config = auto_configure_agentic_mcp_server or AsyncMock()
     logger_mock = AsyncMock()
 
     with ExitStack() as stack:
@@ -160,12 +156,6 @@ def _preload_env(
                 init_agentic,
             ),
         )
-        stack.enter_context(
-            patch(
-                "langflow.api.utils.mcp.agentic_mcp.auto_configure_agentic_mcp_server",
-                auto_config,
-            ),
-        )
         # Default ``component_cache.all_types_dict`` is None (skips starter-project branch).
         # Tests that exercise that branch must pass a truthy ``all_types_dict``.
         types_mock = MagicMock()
@@ -183,7 +173,6 @@ def _preload_env(
             create_or_update_starter_projects=create_starter,
             load_flows_from_directory=load_flows,
             initialize_agentic_global_variables=init_agentic,
-            auto_configure_agentic_mcp_server=auto_config,
             logger=logger_mock,
         )
 
@@ -288,7 +277,6 @@ def test_reset_clears_all_fields():
     _STATE.types_cached = True
     _STATE.starter_projects_created = True
     _STATE.agentic_globals_initialized = True
-    _STATE.agentic_mcp_configured = True
     _STATE.flows_loaded = True
 
     _STATE.reset()
@@ -302,7 +290,6 @@ def test_reset_clears_all_fields():
     assert _STATE.types_cached is False
     assert _STATE.starter_projects_created is False
     assert _STATE.agentic_globals_initialized is False
-    assert _STATE.agentic_mcp_configured is False
     assert _STATE.flows_loaded is False
 
 
@@ -509,42 +496,31 @@ async def test_run_master_preload_closes_external_cache_service():
 
 @pytest.mark.asyncio
 async def test_run_master_preload_agentic_experience_enabled():
-    """Both agentic steps run and set their flags when ``agentic_experience`` is True."""
+    """The agentic-globals step runs and sets its flag when ``agentic_experience`` is True."""
     init_agentic = AsyncMock()
-    auto_config = AsyncMock()
 
     with _preload_env(
         agentic_experience=True,
         all_types_dict={"fake": "types_dict"},
         initialize_agentic_global_variables=init_agentic,
-        auto_configure_agentic_mcp_server=auto_config,
     ):
         await _run_master_preload()
 
     init_agentic.assert_awaited_once()
-    auto_config.assert_awaited_once()
     assert _STATE.agentic_globals_initialized is True
-    assert _STATE.agentic_mcp_configured is True
 
 
 @pytest.mark.asyncio
-async def test_run_master_preload_agentic_partial_failure_tracked_separately():
-    """Independent try/except per agentic step: one failing must not block the other.
-
-    Guards the "split the one-try-wraps-two-ops block into two tries" claim.
-    """
+async def test_run_master_preload_agentic_failure_is_best_effort():
+    """A failing agentic-globals step must not break the preload; its flag stays False."""
     init_agentic = AsyncMock(side_effect=RuntimeError("agentic globals broke"))
-    auto_config = AsyncMock()
 
     with _preload_env(
         agentic_experience=True,
         all_types_dict={"fake": "types_dict"},
         initialize_agentic_global_variables=init_agentic,
-        auto_configure_agentic_mcp_server=auto_config,
     ):
         await _run_master_preload()
 
     init_agentic.assert_awaited_once()
-    auto_config.assert_awaited_once()
     assert _STATE.agentic_globals_initialized is False
-    assert _STATE.agentic_mcp_configured is True

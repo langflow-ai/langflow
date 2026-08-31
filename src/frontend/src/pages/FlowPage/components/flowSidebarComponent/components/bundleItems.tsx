@@ -79,8 +79,8 @@ export const BundleItem = memo(
     );
 
     return (
-      <Disclosure key={item.name} open={isOpen} onOpenChange={handleOpenChange}>
-        <SidebarMenuItem>
+      <SidebarMenuItem key={item.name}>
+        <Disclosure open={isOpen} onOpenChange={handleOpenChange}>
           <DisclosureTrigger className="group/collapsible">
             <SidebarMenuButton asChild>
               <div
@@ -121,8 +121,8 @@ export const BundleItem = memo(
               sensitiveSort={sensitiveSort}
             />
           </DisclosureContent>
-        </SidebarMenuItem>
-      </Disclosure>
+        </Disclosure>
+      </SidebarMenuItem>
     );
   },
 );

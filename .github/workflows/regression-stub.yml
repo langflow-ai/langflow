@@ -12,7 +12,7 @@ jobs:
       issues: write
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Get current minor version
         id: version
@@ -22,7 +22,7 @@ jobs:
           echo "file=regressions/${MINOR}.x.yaml" >> $GITHUB_OUTPUT
 
       - name: Post regression stub comment
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@v5
         with:
           issue-number: ${{ github.event.issue.number }}
           body: |

@@ -14,6 +14,7 @@ from lfx.utils.secrets import secret_value_to_str
 class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
     """LFX component for IBM watsonx.ai embeddings."""
 
+    model_provider_id = "ibm-watsonx"
     display_name = "IBM watsonx.ai Embeddings"
     description = "Generate embeddings using IBM watsonx.ai models."
     icon = "WatsonxAI"

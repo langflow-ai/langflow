@@ -41,6 +41,12 @@ def infer_embedding_provider(embedding_model: str) -> str:
     Looks up the model in the unified models catalog first so the answer
     matches what the UI dropdown shows; falls back to pattern-based
     inference for legacy/edge cases.
+
+    Ollama's ``/api/tags`` endpoint returns model names with a tag suffix
+    (e.g. ``bge-m3:latest``), but the unified catalog stores them without
+    tags (``bge-m3``).  Both the catalog lookup and the pattern fallback
+    strip the tag before matching so that ``bge-m3:latest`` resolves to
+    ``"Ollama"`` instead of falling through to the ``"OpenAI"`` default.
     """
     if not embedding_model:
         return "OpenAI"  # Safe default — matches _resolve_embedding fallback
@@ -49,7 +55,9 @@ def infer_embedding_provider(embedding_model: str) -> str:
     if catalog_provider:
         return catalog_provider
 
-    lower = embedding_model.lower()
+    # Strip Ollama-style ``:tag`` suffix (e.g. ``bge-m3:latest`` -> ``bge-m3``)
+    # before pattern matching -- the tag carries no provider signal.
+    lower = embedding_model.split(":")[0].lower()
     for patterns, provider in _MODEL_TO_PROVIDER:
         if any(p in lower for p in patterns):
             return provider
@@ -93,6 +101,10 @@ def _lookup_provider_in_catalog(embedding_model: str) -> str | None:
         # unified_models package at import time (keeps test imports cheap).
         from lfx.base.models.unified_models.model_catalog import get_unified_models_detailed
 
+        # Ollama's /api/tags returns names with a tag (``bge-m3:latest``);
+        # the catalog stores them bare (``bge-m3``).  Strip the suffix so
+        # the lookup matches regardless of whether the caller included a tag.
+        bare_name = embedding_model.split(":")[0]
         all_providers = get_unified_models_detailed(
             model_type="embeddings",
             include_deprecated=True,
@@ -100,6 +112,6 @@ def _lookup_provider_in_catalog(embedding_model: str) -> str | None:
         )
         for provider_data in all_providers:
             for model_data in provider_data.get("models", []):
-                if model_data.get("model_name") == embedding_model:
+                if model_data.get("model_name") in (embedding_model, bare_name):
                     return provider_data.get("provider")
     return None

@@ -3,6 +3,7 @@ import {
   AnimatePresence,
   motion,
   type TargetAndTransition,
+  useReducedMotion,
   type Variants,
 } from "framer-motion";
 import React from "react";
@@ -155,6 +156,16 @@ export function TextEffect({
   onAnimationComplete,
   segmentWrapperClassName,
 }: TextEffectProps) {
+  const shouldReduceMotion = useReducedMotion();
+
+  // With reduced motion, the text "animation" finishes immediately, so let
+  // callers waiting on the animation lifecycle proceed.
+  React.useEffect(() => {
+    if (shouldReduceMotion && trigger) {
+      onAnimationComplete?.();
+    }
+  }, [shouldReduceMotion, trigger, onAnimationComplete]);
+
   let segments: string[];
 
   if (per === "line") {
@@ -172,6 +183,22 @@ export function TextEffect({
   const containerVariants = variants?.container || selectedVariants.container;
   const itemVariants = variants?.item || selectedVariants.item;
   const ariaLabel = per === "line" ? undefined : children;
+
+  // prefers-reduced-motion: render the text statically at full opacity —
+  // per-segment fades leave low-contrast intermediate frames and are exactly
+  // the motion the user asked to avoid.
+  if (shouldReduceMotion) {
+    if (!trigger) return null;
+    const StaticTag = as;
+    return (
+      <StaticTag
+        {...(ariaLabel ? { role: "img", "aria-label": ariaLabel } : {})}
+        className={cn("whitespace-pre-wrap", className)}
+      >
+        {children}
+      </StaticTag>
+    );
+  }
 
   const stagger = defaultStaggerTimes[per];
 
@@ -197,7 +224,7 @@ export function TextEffect({
           initial="hidden"
           animate="visible"
           exit="exit"
-          aria-label={ariaLabel}
+          {...(ariaLabel ? { role: "img", "aria-label": ariaLabel } : {})}
           variants={delayedContainerVariants}
           className={cn("whitespace-pre-wrap", className)}
           onAnimationComplete={onAnimationComplete}

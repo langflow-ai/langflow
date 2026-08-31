@@ -1,4 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   Dialog,
@@ -6,6 +8,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "../dialog";
 
 // Mock genericIconComponent (already globally mocked, but be explicit)
@@ -131,5 +134,125 @@ describe("DialogContent", () => {
     );
 
     expect(screen.queryByText("Dialog")).not.toBeInTheDocument();
+  });
+
+  it("should_restore_focus_to_opener_on_escape_without_dialog_trigger", async () => {
+    const user = userEvent.setup();
+
+    function Harness() {
+      const [open, setOpen] = useState(false);
+      return (
+        <TooltipProvider>
+          <button
+            type="button"
+            data-testid="dialog-opener"
+            onClick={() => setOpen(true)}
+          >
+            Open
+          </button>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogContent hideCloseButton>
+              <DialogTitle>Controlled dialog</DialogTitle>
+              <DialogDescription>Focus restore check</DialogDescription>
+              <button type="button">Inside</button>
+            </DialogContent>
+          </Dialog>
+        </TooltipProvider>
+      );
+    }
+
+    render(<Harness />);
+    const opener = screen.getByTestId("dialog-opener");
+
+    await user.click(opener);
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    expect(opener).toHaveFocus();
+  });
+
+  it("should_restore_focus_to_dialog_trigger_on_escape", async () => {
+    const user = userEvent.setup();
+
+    renderWithProviders(
+      <Dialog>
+        <DialogTrigger asChild>
+          <button type="button">Open dialog</button>
+        </DialogTrigger>
+        <DialogContent hideCloseButton>
+          <DialogTitle>Triggered dialog</DialogTitle>
+          <DialogDescription>Focus restore check</DialogDescription>
+          <button type="button">Inside</button>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    const trigger = screen.getByRole("button", { name: "Open dialog" });
+    await user.click(trigger);
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    expect(trigger).toHaveFocus();
+  });
+
+  it("should_respect_custom_onCloseAutoFocus_preventDefault", async () => {
+    const user = userEvent.setup();
+    const customClose = jest.fn((e: Event) => {
+      e.preventDefault();
+    });
+
+    function Harness() {
+      const [open, setOpen] = useState(false);
+      return (
+        <TooltipProvider>
+          <button
+            type="button"
+            data-testid="dialog-opener"
+            onClick={() => setOpen(true)}
+          >
+            Open
+          </button>
+          <button type="button" data-testid="other-target">
+            Other
+          </button>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogContent hideCloseButton onCloseAutoFocus={customClose}>
+              <DialogTitle>Custom close focus</DialogTitle>
+              <DialogDescription>Focus restore check</DialogDescription>
+              <button type="button">Inside</button>
+            </DialogContent>
+          </Dialog>
+        </TooltipProvider>
+      );
+    }
+
+    render(<Harness />);
+    const opener = screen.getByTestId("dialog-opener");
+
+    await user.click(opener);
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    expect(customClose).toHaveBeenCalled();
+    // Custom handler prevented default restore — opener should not be forced.
+    expect(opener).not.toHaveFocus();
   });
 });

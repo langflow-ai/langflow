@@ -60,8 +60,11 @@ def _build_response(spec):
 
 
 def _run(main=None, base=None, *, base_version="1.10.0", build_type="both"):
-    """Compute a tag with mocked PyPI responses for the main and base nightly packages."""
-    responses = {MAIN_URL: _build_response(main), BASE_URL: _build_response(base)}
+    """Compute a tag with mocked PyPI responses for the full/base packages."""
+    responses = {
+        MAIN_URL: _build_response(main),
+        BASE_URL: _build_response(base),
+    }
 
     def fake_get(url, timeout=10):  # noqa: ARG001
         return responses[url]

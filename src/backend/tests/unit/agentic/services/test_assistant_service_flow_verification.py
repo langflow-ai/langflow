@@ -54,6 +54,74 @@ _BUILT_FLOW = {
 }
 
 
+_BUILT_LOOP_FLOW = {
+    "name": "loop",
+    "data": {
+        "nodes": [
+            {"id": "LoopComponent-1", "data": {"type": "LoopComponent", "node": {"template": {}}}},
+            {"id": "TypeConverterComponent-1", "data": {"type": "TypeConverterComponent", "node": {"template": {}}}},
+        ],
+        "edges": [
+            {
+                "source": "TypeConverterComponent-1",
+                "target": "LoopComponent-1",
+                "data": {"targetHandle": {"name": "item", "id": "LoopComponent-1", "output_types": ["Data"]}},
+            }
+        ],
+    },
+}
+
+
+_LOOP_OUTPUTS = [
+    {"name": "item", "types": ["Data"], "allows_loop": True, "group_outputs": True},
+    {"name": "done", "types": ["DataFrame"], "allows_loop": False, "group_outputs": True},
+]
+
+_COMPLETE_LOOP_FLOW = {
+    "name": "loop",
+    "data": {
+        "nodes": [
+            {"id": "ChatInput-1", "data": {"id": "ChatInput-1", "type": "ChatInput", "node": {"template": {}}}},
+            {
+                "id": "LoopComponent-1",
+                "data": {
+                    "id": "LoopComponent-1",
+                    "type": "LoopComponent",
+                    "node": {"template": {"data": {"input_types": ["Data"]}}, "outputs": _LOOP_OUTPUTS},
+                },
+            },
+            {"id": "ChatOutput-1", "data": {"id": "ChatOutput-1", "type": "ChatOutput", "node": {"template": {}}}},
+        ],
+        "edges": [
+            {
+                "source": "ChatInput-1",
+                "target": "LoopComponent-1",
+                "data": {
+                    "sourceHandle": {"name": "message", "id": "ChatInput-1"},
+                    "targetHandle": {"fieldName": "data", "id": "LoopComponent-1"},
+                },
+            },
+            {
+                "source": "LoopComponent-1",
+                "target": "ChatOutput-1",
+                "data": {
+                    "sourceHandle": {"name": "item", "id": "LoopComponent-1"},
+                    "targetHandle": {"fieldName": "input_value", "id": "ChatOutput-1"},
+                },
+            },
+            {
+                "source": "ChatOutput-1",
+                "target": "LoopComponent-1",
+                "data": {
+                    "sourceHandle": {"name": "message", "id": "ChatOutput-1"},
+                    "targetHandle": {"name": "item", "id": "LoopComponent-1", "output_types": ["Data"]},
+                },
+            },
+        ],
+    },
+}
+
+
 def _complete_payload(events):
     for e in events:
         if '"event": "complete"' in e:
@@ -124,6 +192,69 @@ class TestFlowVerificationDeliversHonestCaveat:
         assert data["data"].get("verified") is False
         assert data["data"].get("verification_caveat")
         assert "couldn't" in data["data"]["verification_caveat"].lower()
+
+    @pytest.mark.asyncio
+    async def test_cyclic_loop_flow_is_structurally_validated_not_run_and_flags_incomplete(self):
+        run = AsyncMock()
+        # get_working_flow returns the same broken loop each time, so the
+        # structural fix loop can never repair it -> honest incomplete caveat.
+        with (
+            patch(f"{MODULE}.classify_intent", AsyncMock(return_value=_intent("build_flow"))),
+            patch(f"{MODULE}.execute_flow_file_streaming", MagicMock(side_effect=lambda **_k: _stream_end())),
+            patch(f"{MODULE}.execute_flow_file", new_callable=AsyncMock),
+            patch(f"{MODULE}.drain_flow_events", side_effect=_drain_set_flow_once()),
+            patch(f"{MODULE}.extract_response_text", return_value="Flow built."),
+            patch(f"{MODULE}.get_working_flow", return_value=_BUILT_LOOP_FLOW),
+            patch(f"{MODULE}.run_working_flow", run),
+            patch("asyncio.sleep", new_callable=AsyncMock),
+        ):
+            events = await _collect(
+                execute_flow_with_validation_streaming(
+                    flow_filename="flow_builder_assistant",
+                    input_value="build me a loop flow",
+                    global_variables={"FLOW_ID": "11111111-1111-1111-1111-111111111111"},
+                    max_retries=1,
+                )
+            )
+
+        run.assert_not_called()  # cyclic flow is never run to completion for verification
+        data = _complete_payload(events)
+        assert data is not None
+        assert data["data"].get("verified") is False
+        caveat = data["data"]["verification_caveat"].lower()
+        assert "loop" in caveat
+        assert "incomplete" in caveat
+        assert '"event": "error"' not in "\n".join(events)
+
+    @pytest.mark.asyncio
+    async def test_structurally_complete_loop_is_delivered_as_verified(self):
+        run = AsyncMock()
+        fix = AsyncMock()
+        with (
+            patch(f"{MODULE}.classify_intent", AsyncMock(return_value=_intent("build_flow"))),
+            patch(f"{MODULE}.execute_flow_file_streaming", MagicMock(side_effect=lambda **_k: _stream_end())),
+            patch(f"{MODULE}.execute_flow_file", fix),
+            patch(f"{MODULE}.drain_flow_events", side_effect=_drain_set_flow_once()),
+            patch(f"{MODULE}.extract_response_text", return_value="Flow built."),
+            patch(f"{MODULE}.get_working_flow", return_value=_COMPLETE_LOOP_FLOW),
+            patch(f"{MODULE}.run_working_flow", run),
+            patch("asyncio.sleep", new_callable=AsyncMock),
+        ):
+            events = await _collect(
+                execute_flow_with_validation_streaming(
+                    flow_filename="flow_builder_assistant",
+                    input_value="build me a loop flow",
+                    global_variables={"FLOW_ID": "11111111-1111-1111-1111-111111111111"},
+                    max_retries=1,
+                )
+            )
+
+        run.assert_not_called()  # loops are validated structurally, never run
+        fix.assert_not_awaited()  # a sound loop needs no fix turn
+        data = _complete_payload(events)
+        assert data is not None
+        assert data["data"].get("verified") is True
+        assert "verification_caveat" not in data["data"]
 
     @pytest.mark.asyncio
     async def test_kill_switch_disables_verification(self, monkeypatch):

@@ -1,5 +1,6 @@
 import { type Connection, Handle, Position } from "@xyflow/react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { useDarkStore } from "@/stores/darkStore";
@@ -191,6 +192,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
   colorName?: string[];
   minimizedHandleTop?: string;
 }) {
+  const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const [openTooltip, setOpenTooltip] = useState(false);
 
@@ -204,6 +206,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
   const isLocked = isFlowLocked || isPermissionReadOnly;
 
   const edges = useFlowStore((state) => state.edges);
+  const getNode = useFlowStore((state) => state.getNode);
 
   // Check if this node is in "connect other models" mode
   const isInConnectionMode = useFlowStore(
@@ -447,6 +450,28 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     [],
   );
 
+  // The handle carries role="button" (see below) but ReactFlow's own
+  // keyboard a11y is disabled canvas-wide (disableKeyboardA11y, PageComponent),
+  // so without this it would be an announced-but-inert button: focusable by
+  // no means, activatable only by mouse. Route Enter/Space to the same
+  // handler mouse clicks use so the announced role is actually operable.
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      handleClick();
+    },
+    [handleClick],
+  );
+
+  // DefaultEdge already prefers display_name over the raw id for its
+  // accessible name; do the same here instead of reading the node's id
+  // character-by-character to assistive tech.
+  const nodeDisplayName = getNode(nodeId)?.data?.node?.display_name ?? nodeId;
+  const handleAriaLabel = left
+    ? t("handle.ariaLabelInput", { field: title, node: nodeDisplayName })
+    : t("handle.ariaLabelOutput", { field: title, node: nodeDisplayName });
+
   return (
     <div>
       <ShadTooltip
@@ -492,6 +517,10 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
           onMouseDown={handleMouseDown}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
+          onKeyDown={isLocked ? undefined : handleKeyDown}
+          role="button"
+          tabIndex={isLocked ? undefined : 0}
+          aria-label={handleAriaLabel}
           data-testid={`handle-${testIdComplement}-${title.toLowerCase()}-${
             !showNode ? (left ? "target" : "source") : left ? "left" : "right"
           }`}

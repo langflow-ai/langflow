@@ -224,8 +224,156 @@ class TestLoadPluginRoutes:
         ]
         assert len(routes_at_path) == 1
 
+    def test_config_valueerror_is_not_reported_as_a_route_conflict(self):
+        """A plugin config error must not read as a duplicate path.
+
+        Reporting every ValueError as a conflict sent operators looking for a
+        clashing route when the real cause was elsewhere — and either way the
+        plugin's whole route set is missing, which is the part that matters.
+        """
+        app = FastAPI()
+
+        def misconfigured_register(_app_like):
+            err_msg = "LANGFLOW_AUTHZ_AUDIT_DURABLE=true is required"
+            raise ValueError(err_msg)
+
+        ep = MagicMock()
+        ep.name = "enterprise"
+        ep.load.return_value = misconfigured_register
+
+        with (
+            patch("langflow.plugin_routes.entry_points", return_value=[ep]),
+            patch("langflow.plugin_routes.logger") as mock_logger,
+        ):
+            load_plugin_routes(app)
+
+        mock_logger.warning.assert_not_called()
+        mock_logger.error.assert_called_once()
+        assert "none are available" in mock_logger.error.call_args.args[0]
+
+    def test_genuine_route_conflict_is_still_reported_as_one(self):
+        app = FastAPI()
+
+        @app.get("/api/v1/flow")
+        def core_flow():
+            return "core"
+
+        def conflicting_register(app_like):
+            app_like.get("/api/v1/flow")(lambda: "plugin")
+
+        ep = MagicMock()
+        ep.name = "conflicting"
+        ep.load.return_value = conflicting_register
+
+        with (
+            patch("langflow.plugin_routes.entry_points", return_value=[ep]),
+            patch("langflow.plugin_routes.logger") as mock_logger,
+        ):
+            load_plugin_routes(app)
+
+        mock_logger.error.assert_not_called()
+        mock_logger.warning.assert_called_once()
+        assert "route conflict" in mock_logger.warning.call_args.args[0]
+
+    def test_partial_registration_is_rolled_back_on_conflict(self):
+        """A plugin that conflicts halfway must not leave its earlier routes live.
+
+        Registering some routes and then failing left the plugin half-mounted:
+        reported as rejected while part of its surface answered requests. For an
+        authorization plugin that is worse than registering nothing, because the
+        app looks functional.
+        """
+        app = FastAPI()
+
+        @app.get("/api/v1/existing")
+        def existing():
+            return "core"
+
+        def half_registering(app_like):
+            app_like.get("/api/v1/plugin-first")(lambda: "first")
+            app_like.get("/api/v1/existing")(lambda: "conflict")
+            app_like.get("/api/v1/plugin-third")(lambda: "third")
+
+        ep = MagicMock()
+        ep.name = "half_plugin"
+        ep.load.return_value = half_registering
+
+        with (
+            patch("langflow.plugin_routes.entry_points", return_value=[ep]),
+            patch("langflow.plugin_routes.logger"),
+        ):
+            load_plugin_routes(app)
+
+        keys = _get_route_keys(app)
+        assert ("/api/v1/plugin-first", "GET") not in keys
+        assert ("/api/v1/plugin-third", "GET") not in keys
+        # The core route the plugin collided with is untouched.
+        assert ("/api/v1/existing", "GET") in keys
+
+    def test_rollback_frees_the_failed_plugins_reservations(self):
+        """A later plugin may claim a path a failed plugin mounted and lost.
+
+        The wrapper is shared across entry points, so without restoring
+        ``_reserved`` the abandoned path would stay claimed and reject the next
+        plugin for a route that is no longer mounted.
+        """
+        app = FastAPI()
+
+        @app.get("/api/v1/existing")
+        def existing():
+            return "core"
+
+        def failing(app_like):
+            app_like.get("/api/v1/contested")(lambda: "first-claimant")
+            app_like.get("/api/v1/existing")(lambda: "conflict")
+
+        def later(app_like):
+            app_like.get("/api/v1/contested")(lambda: "second-claimant")
+
+        failing_ep = MagicMock()
+        failing_ep.name = "a_failing"
+        failing_ep.load.return_value = failing
+        later_ep = MagicMock()
+        later_ep.name = "b_later"
+        later_ep.load.return_value = later
+
+        with (
+            patch("langflow.plugin_routes.entry_points", return_value=[failing_ep, later_ep]),
+            patch("langflow.plugin_routes.logger") as mock_logger,
+        ):
+            load_plugin_routes(app)
+
+        assert ("/api/v1/contested", "GET") in _get_route_keys(app)
+        # Exactly one rejection: the first plugin's. The second is not a conflict.
+        mock_logger.warning.assert_called_once()
+
+    def test_successful_plugins_are_untouched_by_a_neighbours_failure(self):
+        app = FastAPI()
+
+        def good(app_like):
+            app_like.get("/api/v1/good")(lambda: "good")
+
+        def broken(_app_like):
+            err_msg = "plugin broken"
+            raise RuntimeError(err_msg)
+
+        good_ep = MagicMock()
+        good_ep.name = "a_good"
+        good_ep.load.return_value = good
+        broken_ep = MagicMock()
+        broken_ep.name = "b_broken"
+        broken_ep.load.return_value = broken
+
+        with (
+            patch("langflow.plugin_routes.entry_points", return_value=[good_ep, broken_ep]),
+            patch("langflow.plugin_routes.logger"),
+        ):
+            load_plugin_routes(app)
+
+        assert ("/api/v1/good", "GET") in _get_route_keys(app)
+
     def test_plugin_that_raises_is_skipped_app_continues(self):
-        """When a plugin raises a non-ValueError exception, it is skipped."""
+        """When a plugin raises a non-conflict exception, it is skipped."""
         app = FastAPI()
 
         @app.get("/health")

@@ -46,214 +46,91 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
     If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
 
-## 1.11.x
+## 1.12.x
 
-Highlights of this release include the following changes.
-For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
+Highlights of this release include the following changes. For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).
 
 ### Breaking changes
 
-- Short `LANGFLOW_SECRET_KEY` upgrade compatibility
+- `langflow-base` is now the minimal install
 
-    Langflow 1.10.1 changed how secrets shorter than 32 characters derive the Fernet key used for encrypted credentials.
-    Langflow 1.11.x retains read compatibility with credentials encrypted by the earlier derivation while continuing to use the current SHA-256 derivation for all new writes.
+    Langflow 1.12 makes `langflow-base` a complete, version-aligned installation of the Langflow application.
 
-    If your deployment uses a `LANGFLOW_SECRET_KEY` shorter than 32 characters, keep it unchanged during the initial upgrade so Langflow can continue to decrypt existing credentials.
-    Langflow logs a startup warning for this configuration because short secrets aren't recommended for production.
-    To replace the key, first record or export the stored credentials, set a randomly generated key of at least 32 characters, and then re-enter the credentials; changing the key directly invalidates ciphertext created with the old key.
+- Ongoing breaking change: bundle separation
 
-- Default superuser password removed
+    Bundle separation concludes in 1.12.
+    `uv pip install langflow` no longer installs all provider bundles, and includes only a curated list of providers.
 
-    Langflow no longer creates or accepts the legacy `langflow`/`langflow` default superuser credentials.
-    If `LANGFLOW_AUTO_LOGIN=False`, set `LANGFLOW_SUPERUSER_PASSWORD` to a strong password before startup.
-    The legacy value `langflow` is not allowed, even if `LANGFLOW_AUTO_LOGIN=True`.
+    For more information, see [Additional bundles](extensions-bundle-list#additional-bundles).
 
-    ```bash
-    export LANGFLOW_SUPERUSER_PASSWORD=SUPERUSER_PASSWORD
-    ```
+- Admin Page removed
 
-    Replace `SUPERUSER_PASSWORD` with a strong password for the Langflow superuser.
+    Langflow OSS no longer includes an **Admin Page**.
+    The `/admin` route, the account-menu **Admin Page** link, and the user-management page are gone.
+    Superusers can no longer manage users or passwords in the visual editor.
 
-    If `LANGFLOW_AUTO_LOGIN=true`, setting `LANGFLOW_SUPERUSER_PASSWORD` is optional. If you omit it, Langflow generates a random bootstrap password for the auto-login account.
+    To manage users, use the [Users API](/api-users).
+    `/login/admin` is still the admin sign-in endpoint and page.
 
-    If you're running Langflow with Docker and `LANGFLOW_AUTO_LOGIN=false`, pass the password at startup:
+    For more information, see [Manage users as an administrator](/api-keys-and-authentication#manage-users-as-an-administrator).
 
-    ```bash
-    docker run -d \
-      --name ${CONTAINER_NAME} \
-      --restart unless-stopped \
-      -p 7860:7860 \
-      -e LANGFLOW_HOST=0.0.0.0 \
-      -e LANGFLOW_PORT=7860 \
-      -e LANGFLOW_AUTO_LOGIN=false \
-      -e LANGFLOW_SUPERUSER_PASSWORD=SUPERUSER_PASSWORD \
-      -v langflow-data:/app/langflow \
-      ${IMAGE}
-    ```
+### New features
 
-    Replace `SUPERUSER_PASSWORD` with a strong password for the Langflow superuser.
+- OpenTelemetry export
 
-- Docker images disable auto-login by default
+    Langflow can export health traces, metrics, and logs over OTLP to your own backend.
 
-    Official Langflow Docker images set `LANGFLOW_AUTO_LOGIN=false`.
-    You must set `LANGFLOW_SUPERUSER_PASSWORD` (and optionally `LANGFLOW_SUPERUSER`) before the container can start, unless you explicitly set `LANGFLOW_AUTO_LOGIN=true`.
+    For more information, see [OpenTelemetry](./observability-opentelemetry), [New Relic](./observability-new-relic), and [Instana](./observability-instana).
 
-    For more information, see [Docker image defaults](/deployment-docker#docker-image-security-defaults).
+- Python Interpreter microVM sandbox
 
-- Ongoing breaking changes: bundle separation
+    Set `LANGFLOW_SANDBOX_BACKEND=exec-sandbox` to run the [**Python Interpreter** component](/python-interpreter) in a dedicated [QEMU microVM](https://www.qemu.org/docs/master/system/i386/microvm.html) instead of in the Langflow server process.
+    The microVM is not included in a default `uv pip install langflow` installation.
+    To install it, run `uv pip install 'langflow[sandbox]'`.
 
-    Langflow 1.10.x introduced the Extension bundles model.
-    In Langflow 1.11.x, many third-party provider integrations are now shipped as *long-tail bundles* inside the `lfx-bundles` package, instead of in the core `langflow` installation.
+    For more information, see [Isolate executions in a microVM](/python-interpreter#sandbox).
 
-    `uv pip install langflow` still includes these bundles automatically, but if you install standalone `lfx`, you will need to install the providers your flows require:
+- Production preflight checks
 
-    ```bash
-    # Install one third party provider
-    uv pip install "lfx-bundles[<bundle-name>]"
+    Set `LANGFLOW_DEPLOYMENT_PROFILE=prod` to probe your Langflow deployment before any workers start.
+    The default remains `dev`, which skips prod checks.
 
-    # Install all third party providers
-    uv pip install "lfx[bundles]"
-    ```
+    For more information, see [Production preflight checks](/deployment-prod-best-practices#production-preflight).
 
-    For more information, see [Langflow Extensions overview](./extensions-overview).
+- Disable the legacy MCP SSE transport
 
-- PyTorch components are opt-in by default
+    Set `LANGFLOW_MCP_SSE_ENABLED=false` to return a `404` from the legacy SSE transport endpoint.
+    Streamable HTTP is not affected.
 
-    **CUGA**, **Code Agents**, and **Docling** local conversion are excluded from the default `uv pip install langflow` installation because they require PyTorch.
+    For more information, see [Disable the legacy MCP SSE transport](/mcp-server#disable-legacy-sse).
 
-    To install these components, see [Torch opt-in installs](./components-bundle-components#torch-opt-in).
+- OrcaRouter bundle
 
-- Workflow API request schema (Beta)
+    The **OrcaRouter** bundle adds an OrcaRouter language model component.
 
-    The v2 [Workflow API (Beta)](/workflow-api) request body and interaction pattern changes in 1.11.
-    Any client that calls `POST /api/v2/workflows` against 1.10.x must update as follows:
+    For more information, see [OrcaRouter](./bundles-orcarouter).
 
-    Example 1.10.x request:
+- IBM Confluent bundle
 
-    ```json
-    {
-      "flow_id": "67ccd2be-17f0-8190-81ff-3bb2cf6508e6",
-      "background": false,
-      "inputs": {
-        "ChatInput-abc.input_value": "what is 2+2",
-        "LLMComponent-123.temperature": 0.7
-      }
-    }
-    ```
+    The **IBM Confluent** bundle adds Kafka, Tableflow, and Real-Time Context Engine components.
 
-    Example 1.11.x request:
+    For more information, see [IBM Confluent](./bundles-confluent).
 
-    ```json
-    {
-      "flow_id": "67ccd2be-17f0-8190-81ff-3bb2cf6508e6",
-      "input_value": "what is 2+2",
-      "mode": "stream",
-      "stream_protocol": "agui",
-      "tweaks": {
-        "LLMComponent-123": {
-          "temperature": 0.7
-        }
-      }
-    }
-    ```
+- Deployment tweak policy
 
-    For more information, see [Workflow API (Beta)](/workflow-api).
+    Set `LANGFLOW_TWEAKS_POLICY` to control which component fields an API caller can override at run time.
 
-- Input Schema pane replaced by in-component Parameters
+    For more information, see [Restrict API tweaks](./deployment-tweaks-policy).
 
-    The **Input Schema** pane under **Share** > **API access** is removed, but the fields can still be exposed to requests.
-    The `tweaks` object in API requests is unchanged.
-    **Endpoint Name** remains available from the **API access** pane.
+- Catalog and model policy APIs
 
-    For details, see [Tweaks (API inputs)](/concepts-publish#input-schema).
+    Superusers can block or allow components, starter templates, model providers, and specific models.
 
-### New features and enhancements
+    For more information, see [Catalog and model policy](./api-governance-policy).
 
-- Human-in-the-Loop (HITL)
+## 1.11.x
 
-    Human-in-the-Loop (HITL) pauses an agent when the agent calls a tool and creates a stateful checkpoint.
-    After a human responds by approving, rejecting, or editing the request, the agent resumes from the checkpoint.
-
-    For more information, see [Human-in-the-Loop](./human-in-the-loop).
-
-- Agent2Agent (A2A) protocol support
-
-    Publish a flow as an A2A agent so other agents can discover and call it, and call remote A2A agents from inside a flow with the **A2A Agent** component.
-
-    For more information, see [Use Langflow as an A2A server](./a2a-server) and the [**A2A Agent** component](./a2a-agent-component).
-
-- AG-UI compatible streaming for the Workflow API
-
-    The v2 [Workflow API](/workflow-api) now supports streaming with the [AG-UI (Agent–User Interaction) protocol](https://docs.ag-ui.com/introduction) streaming format.
-
-    For more information, see [Workflow API (Beta)](/workflow-api#stream-with-ag-ui).
-
-- OpenAI Compatible model provider
-
-    Point Langflow's model provider at any OpenAI-compatible endpoint, and Langflow discovers models live from the `/v1/models` endpoint.
-    These models can power flows, Langflow Assistant, and any component that uses Langflow’s global model providers.
-
-    For more information, see [OpenAI Compatible](./bundles-openai-compatible).
-
-- Unified **Data Operations** component
-
-    **Text Operations**, **JSON Operations**, and **Table Operations** are consolidated into a single [**Data Operations** component](./operations).
-    Saved flows that use the separate components continue to work.
-    For more information, see the [**Data Operations** component](./operations).
-
-- IBM watsonx Orchestrate: Python 3.14 compatibility
-
-    The `ibm-watsonx-orchestrate-core` and `ibm-watsonx-orchestrate-clients` packages are upgraded to version 2.12, which supports Python 3.14.
-    IBM watsonx Orchestrate is no longer excluded from Python 3.14 installs.
-
-    For more information, see [Deploy flows on watsonx Orchestrate](/deployment-wxo).
-
-    The following optional integrations remain excluded from installations on Python 3.14:
-
-    - [ALTK](/bundles-altk)
-    - [CUGA](/bundles-cuga)
-    - [LangWatch](/integrations-langwatch)
-    - [Pinecone](/bundles-pinecone)
-    - [OpenDsStar](/bundles-files-ingestion)
-    - [litellm](/bundles-lite-llm)
-    - [opik](/integrations-opik)
-    - [toolguard](/policies)
-
-- NextPlaid multi-vector bundle
-
-    The **NextPlaid** bundle adds two new components for ColBERT-style multi-vector retrieval.
-
-    The **NextPlaid** vector store, backed by a running [NextPlaid](https://github.com/meetdoshi90/next-plaid) server, stores each document as a matrix of token embeddings, and the **vLLM Multivector Embeddings** component generates the token-level multi-vector embeddings required by NextPlaid.
-
-    For more information, see [NextPlaid bundle](./bundles-nextplaid).
-
-- PaddleOCR bundle
-
-    The **Paddle** bundle (`lfx-paddle`) adds a **PaddleOCR** component that calls the PaddleOCR AI Studio Job API for layout-aware document parsing into Markdown.
-
-    For more information, see [Paddle bundle](./bundles-paddle).
-
-- Oracle Extension bundle
-
-    The **Oracle** bundle adds Oracle Database integration for vector search, document loading, and embeddings.
-
-    For more information, see [Oracle bundle](./bundles-oracle).
-
-- Valkey bundle
-
-    The **Valkey** bundle adds a vector store and chat memory components for [Valkey](https://valkey.io/), an open-source Redis fork.
-
-    For more information, see [Valkey bundle](./bundles-valkey).
-
-- LFX is now engine-only
-
-    `uv pip install lfx` now installs the LFX executor only, with no bundle components included.
-    `uv pip install langflow` is unchanged.
-    This only affects users who install `lfx` directly.
-
-    If you install `lfx` directly and your flows use bundle components, install the required packages in the same environment.
-
-    For more information, see [Extensions overview](./extensions-overview).
+For 1.11.x release notes, see the [1.11.x documentation](https://docs.langflow.org/1.11.0/release-notes).
 
 ## 1.10.x
 

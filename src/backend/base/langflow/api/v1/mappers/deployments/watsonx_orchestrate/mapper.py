@@ -10,6 +10,7 @@ from fastapi import HTTPException, status
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
     BaseDeploymentDataUpdate,
+    BaseFlowArtifact,
     ConfigListResult,
     DeploymentCreateResult,
     DeploymentGetResult,
@@ -102,6 +103,7 @@ from langflow.api.v1.schemas.deployments import (
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
     WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
 )
+from langflow.services.adapters.deployment.watsonx_orchestrate.eligibility import get_wxo_flow_eligibility_error
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     PAYLOAD_SCHEMAS as WXO_ADAPTER_PAYLOAD_SCHEMAS,
 )
@@ -136,6 +138,18 @@ class _FlowToolPayload(TypedDict):
     display_name: str
     provider_data: AdapterPayload
     raw_name: str
+
+
+def _validate_wxo_flow_artifacts(flow_artifacts: list[tuple[UUID, BaseFlowArtifact]]) -> None:
+    """Reject incompatible flow versions before the deployment adapter can call wxO."""
+    for flow_version_id, artifact in flow_artifacts:
+        eligibility_error = get_wxo_flow_eligibility_error(artifact.data)
+        if eligibility_error:
+            detail = (
+                f"Flow '{artifact.name}' (version {flow_version_id}) cannot be deployed as a Watsonx Orchestrate tool. "
+                f"{eligibility_error}"
+            )
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=detail)
 
 
 @register_mapper(AdapterType.DEPLOYMENT, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
@@ -620,6 +634,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             project_id=project_id,
             reference_ids=flow_version_ids,
         )
+        _validate_wxo_flow_artifacts(flow_artifacts)
         # Start with flow names as display labels, then let user-provided
         # tool_display_name overrides replace them. The adapter provider-data
         # schema generates the wxO technical tool name once; raw payload names
@@ -662,7 +677,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         api_provider_payload = self._parse_deployment_create_request(payload)
         if api_provider_payload.llm is None:
             msg = "provider_data.llm is required for wxO deployment create."
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=msg)
         provider_payload = await self._resolve_provider_payload_from_create_api(
             user_id=user_id,
             project_id=project_id,
@@ -671,7 +686,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         )
         if api_provider_payload.display_name is None:
             msg = "provider_data.display_name is required for wxO deployment create."
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=msg)
         return AdapterDeploymentCreate(
             spec=BaseDeploymentData(
                 description=payload.description,
@@ -717,6 +732,9 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             user_id=user_id,
             deployment_db_id=deployment_db_id,
             flow_version_ids=ordered_flow_version_ids,
+        )
+        _validate_wxo_flow_artifacts(
+            [(flow_version_id, artifact) for flow_version_id, _version_number, _project_id, artifact in flow_artifacts]
         )
         # Start with flow names as display labels, then let user-provided
         # tool_display_name overrides replace them. The adapter provider-data
@@ -766,7 +784,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         missing_strict = [str(fv) for fv in strict_fv_ids if fv not in flow_version_snapshot_id_map]
         if missing_strict:
             msg = f"Cannot resolve provider snapshot ids for flow_version_ids in watsonx operations: {missing_strict}"
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=msg)
 
         reused_fv_ids = {
             item.flow_version_id
@@ -1688,7 +1706,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                     "Cannot resolve provider snapshot ids for flow_version_ids "
                     f"in watsonx operations: [{flow_version_id}]"
                 )
-                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=msg)
             flow_tool = self._get_flow_tool_payload(
                 flow_tool_by_flow_version_id=flow_tool_by_flow_version_id,
                 flow_version_id=flow_version_id,
@@ -1709,7 +1727,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                     "Cannot resolve provider snapshot ids for flow_version_ids "
                     f"in watsonx operations: [{flow_version_id}]"
                 )
-                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=msg)
             provider_operations.append(
                 self._to_remove_tool_provider_operation(
                     tool_id=flow_version_snapshot_id_map[flow_version_id],
@@ -1882,5 +1900,5 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 "Cannot resolve provider snapshot ids for flow_version_ids in watsonx operations: "
                 f"{missing_flow_versions}"
             )
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=msg)
         return snapshot_map

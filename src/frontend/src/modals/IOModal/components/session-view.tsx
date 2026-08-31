@@ -1,5 +1,10 @@
 import { useIsFetching } from "@tanstack/react-query";
-import type { NewValueParams, SelectionChangedEvent } from "ag-grid-community";
+import type {
+  CellKeyDownEvent,
+  NewValueParams,
+  SelectionChangedEvent,
+  SuppressKeyboardEventParams,
+} from "ag-grid-community";
 import cloneDeep from "lodash/cloneDeep";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,6 +20,14 @@ import TableComponent from "../../../components/core/parameterRenderComponent/co
 import useAlertStore from "../../../stores/alertStore";
 import { useMessagesStore } from "../../../stores/messagesStore";
 import { extractColumnsFromRows, messagesSorter } from "../../../utils/utils";
+
+function suppressMessageRowActionKeys(params: SuppressKeyboardEventParams) {
+  return (
+    params.event.key === "Enter" ||
+    params.event.key === " " ||
+    params.event.key === "Spacebar"
+  );
+}
 
 export default function SessionView({
   session,
@@ -73,10 +86,17 @@ export default function SessionView({
     files: t("messages.column.files"),
   };
 
-  const columns = extractColumnsFromRows(messages, "intersection").map((col) =>
-    col.field && columnHeaderMap[col.field]
-      ? { ...col, headerName: columnHeaderMap[col.field] }
-      : col,
+  const columns = extractColumnsFromRows(messages, "intersection").map(
+    (col) => ({
+      ...col,
+      ...(col.field && columnHeaderMap[col.field]
+        ? { headerName: columnHeaderMap[col.field] }
+        : {}),
+      ...(col.field === "text"
+        ? { flex: 3, minWidth: 320, tooltipField: "text" }
+        : {}),
+      suppressKeyboardEvent: suppressMessageRowActionKeys,
+    }),
   );
   const isFetchingCount = useIsFetching({
     queryKey: ["useGetMessagesQuery"],
@@ -149,6 +169,18 @@ export default function SessionView({
     deleteMessages({ ids: selectedRows });
   }
 
+  function handleCellKeyDown(event: CellKeyDownEvent) {
+    const keyboardEvent = event.event as KeyboardEvent | undefined;
+    if (keyboardEvent?.key !== " " && keyboardEvent?.key !== "Spacebar") {
+      return;
+    }
+
+    keyboardEvent.preventDefault();
+    keyboardEvent.stopPropagation();
+    event.node.setSelected(!event.node.isSelected(), false);
+    setSelectedRows(event.api.getSelectedRows().map((row) => row.id));
+  }
+
   const editable = useMemo(() => {
     return playgroundPage
       ? false
@@ -156,12 +188,17 @@ export default function SessionView({
   }, [handleUpdateMessage]);
 
   return isFetching ? (
-    <div className="flex h-full w-full items-center justify-center align-middle">
+    <div
+      aria-label={t("common.loading")}
+      className="flex h-full w-full items-center justify-center align-middle"
+      role="status"
+    >
       <Loading></Loading>
     </div>
   ) : (
     <TableComponent
       key={"sessionView"}
+      tableLabel={t("messages.title")}
       onDelete={playgroundPage ? undefined : handleRemoveMessages}
       readOnlyEdit
       editable={editable}
@@ -169,6 +206,7 @@ export default function SessionView({
       onSelectionChanged={(event: SelectionChangedEvent) => {
         setSelectedRows(event.api.getSelectedRows().map((row) => row.id));
       }}
+      onCellKeyDown={handleCellKeyDown}
       rowSelection={playgroundPage ? undefined : "multiple"}
       suppressRowClickSelection={true}
       pagination={true}

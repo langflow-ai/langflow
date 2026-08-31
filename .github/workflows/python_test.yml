@@ -12,7 +12,7 @@ on:
     inputs:
       python-versions:
         description: "(Optional) Python versions to test"
-        required: true
+        required: false
         type: string
         default: "['3.10', '3.11', '3.12', '3.13', '3.14']"
       ref:
@@ -45,12 +45,14 @@ on:
           - self-hosted
           - '["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]'
         default: ubuntu-latest
+
+permissions:
+  contents: read
+
 env:
   POETRY_VERSION: "1.8.2"
   NODE_VERSION: "22"
   PYTEST_RUN_PATH: "src/backend/tests"
-  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
 jobs:
   build:
@@ -62,19 +64,20 @@ jobs:
         splitCount: [5]
         group: [1, 2, 3, 4, 5]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.ref }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         id: setup-node
         with:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
@@ -83,22 +86,18 @@ jobs:
       - name: Install the project
         run: uv sync
 
-      - name: Generate dynamic coverage configuration
-        run: |
-          echo "Generating dynamic coverage configuration..."
-          python3 scripts/generate_coverage_config.py
-          echo "Generated .coveragerc with the following exclusions:"
-          echo "Bundled components and legacy files excluded from coverage"
-
       - name: Run unit tests
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         with:
           timeout_minutes: 50
           max_attempts: 2
-          command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5 --cov --cov-config=src/backend/.coveragerc --cov-report=xml --cov-report=html"
+          command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5 --cov --cov-config=pyproject.toml --cov-report=xml --cov-report=html"
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         if: matrix.python-version == '3.10'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -109,7 +108,7 @@ jobs:
           directory: ./
 
       - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: matrix.python-version == '3.10'
         with:
           name: backend-coverage-report-group-${{ matrix.group }}
@@ -118,6 +117,99 @@ jobs:
             htmlcov/
           retention-days: 30
 
+  bundle-guarded-tests:
+    permissions:
+      contents: read
+    # The backend unit suite installs with a plain `uv sync`, which since #13869 no longer
+    # brings in the opt-in lfx-bundles metapackage -- so every test carrying
+    # `pytest.importorskip("lfx_bundles")` silently skipped in all of CI (issue #14554).
+    # Most of those moved into src/bundles/lfx-bundles/tests/ and now run under
+    # cross-bundle-test.yml. The stragglers cannot: they inherit tests/base.py's
+    # version-compatibility harness (tests.constants + tests.integration.utils), which is
+    # langflow-specific and cannot follow them into the bundle's lfx-only venv. This job is
+    # their home -- same suite, bundles installed.
+    name: Unit Tests (bundles installed) - Python ${{ matrix.python-version }}
+    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Cost control: oldest + newest supported Python, matching cross-bundle-test.yml.
+        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.14"]') }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ matrix.python-version }}
+          prune-cache: false
+
+      - name: Install the project with the bundles extra
+        run: uv sync --extra bundles
+
+      - name: Fail if the bundles extra did not actually install lfx_bundles
+        # Before the tests, not after: if lfx_bundles is missing, every guarded test
+        # importorskips and the run below reports green having executed nothing -- the exact
+        # failure mode this job exists to catch.
+        run: uv run python -c "import lfx_bundles; print('lfx_bundles', lfx_bundles.__file__)"
+
+      - name: Run the bundle-guarded backend unit tests
+        run: |
+          # Discovered, not hard-coded: a newly guarded test is picked up automatically
+          # instead of quietly joining the set of tests nothing runs.
+          # -E with ['\"] so a single-quoted importorskip is not silently missed -- a guarded
+          # test this scan overlooks is exactly the bug being fixed.
+          # `while read` rather than `mapfile`: mapfile needs bash 4+, and runs-on is an input
+          # to this workflow, so the shell is not guaranteed to be a GitHub ubuntu runner.
+          guarded=()
+          while IFS= read -r f; do guarded+=("$f"); done < <(grep -rlE --include='*.py' "pytest\.importorskip\([[:space:]]*['\"]lfx_bundles" src/backend/tests || true)
+          if [ ${#guarded[@]} -eq 0 ]; then
+            echo "No lfx_bundles-guarded backend tests found -- nothing to run."
+            exit 0
+          fi
+          printf 'Running %d bundle-guarded backend test file(s):\n' "${#guarded[@]}"
+          printf '  %s\n' "${guarded[@]}"
+          # -m "not api_key_required" matches `make unit_tests`, which the main backend job
+          # uses: those tests make live provider calls and are deselected repo-wide by
+          # policy. Deselecting is a deliberate exclusion, unlike the silent import-skip
+          # this job exists to prevent.
+          uv run pytest "${guarded[@]}" -v --timeout=300 -m "not api_key_required"
+
+      - name: Run the bundle-guarded lfx unit tests
+        # A separate invocation, and from src/lfx: src/backend/tests and src/lfx/tests both
+        # provide a top-level `tests` package, so collecting both in one pytest run dies with
+        # ImportPathMismatchError on tests.conftest. This mirrors the existing split between
+        # the Unit Tests and LFX Tests jobs (`make lfx_tests` also runs from src/lfx).
+        working-directory: src/lfx
+        run: |
+          guarded=()
+          while IFS= read -r f; do guarded+=("$f"); done < <(grep -rlE --include='*.py' "pytest\.importorskip\([[:space:]]*['\"]lfx_bundles" tests || true)
+          if [ ${#guarded[@]} -eq 0 ]; then
+            echo "No lfx_bundles-guarded lfx tests found -- nothing to run."
+            exit 0
+          fi
+          # The lfx package resolves its own venv, which does not carry lfx-bundles; install
+          # the in-repo bundle so the guards pass here too.
+          uv sync --dev --extra otel
+          uv pip install "../bundles/lfx-bundles[all-no-torch]"
+          # --no-sync from here on: the install above is deliberately outside the lock, and
+          # a plain `uv run` re-syncs the environment to uv.lock. That reverts the lock-managed
+          # packages the bundle install upgraded while leaving the injected ones alone, which
+          # leaves an environment neither resolution ever produced. It bit us the day
+          # langchain-openai 1.5.2 shipped: the bundle install brought openai 1.5.2 with
+          # langchain-core 1.5.6, `uv run` put core back to the locked 1.5.1, and the pair
+          # failed to import. Both resolutions were fine; only the mix was not.
+          uv run --no-sync python -c "import lfx_bundles; print('lfx_bundles', lfx_bundles.__file__)"
+          printf 'Running %d bundle-guarded lfx test file(s):\n' "${#guarded[@]}"
+          printf '  %s\n' "${guarded[@]}"
+          # No --timeout: pytest-timeout is not in lfx's dev group (pytest, pytest-asyncio,
+          # pytest-cov only), and `make lfx_tests` does not pass one either.
+          uv run --no-sync pytest "${guarded[@]}" -v -m "not api_key_required"
+
   integration-tests:
     name: Integration Tests - Python ${{ matrix.python-version }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
@@ -125,12 +217,13 @@ jobs:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13", "3.14"]') }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.ref }}
       - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
@@ -150,12 +243,13 @@ jobs:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13", "3.14"]') }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.ref }}
       - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
@@ -166,7 +260,7 @@ jobs:
           DO_NOT_TRACK: true # disable telemetry reporting
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         if: matrix.python-version == '3.10'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -177,7 +271,7 @@ jobs:
           directory: ./src/lfx/
 
       - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: matrix.python-version == '3.10'
         with:
           name: lfx-coverage-report
@@ -194,36 +288,47 @@ jobs:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13", "3.14"]') }}
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.ref }}
       - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
           prune-cache: false
+          # This job intentionally exits before invoking uv when langflow-base
+          # has not been published yet (including its first release).
+          ignore-nothing-to-cache: true
 
       - name: Check Version
         id: check-version
-        # We need to print $3 because langflow-base is a dependency of langflow
-        # For langlow we'd use print $2
+        # The main wheel resolves its direct langflow-base dependency from PyPI.
+        # Skip until the source base version (stable or canonical nightly) exists.
         run: |
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
+          version=$(python -c "import pathlib, tomllib; print(tomllib.loads(pathlib.Path('src/backend/base/pyproject.toml').read_text())['project']['version'])")
           url="https://pypi.org/pypi/langflow-base/json"
-          if [ ${{ inputs.nightly }} == true ]; then
-            url="https://pypi.org/pypi/langflow-base-nightly/json"
+
+          status=$(curl -sS -o "$RUNNER_TEMP/langflow-base-pypi.json" -w "%{http_code}" "$url")
+          if [ "$status" = "404" ]; then
+            last_released_version=""
+          elif [ "$status" != "200" ]; then
+            echo "Failed to fetch langflow-base releases: HTTP $status"
+            cat "$RUNNER_TEMP/langflow-base-pypi.json"
+            exit 1
+          else
+            last_released_version=$(jq -r '.releases | keys[]' "$RUNNER_TEMP/langflow-base-pypi.json" | sort -V | tail -n 1)
           fi
 
-          last_released_version=$(curl -s $url | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
           if [ "$version" != "$last_released_version" ]; then
             echo "Version $version has not been released yet. Skipping the rest of the job."
-            echo skipped=true >> $GITHUB_OUTPUT
+            echo skipped=true >> "$GITHUB_OUTPUT"
             exit 0
           else
-            echo version=$version >> $GITHUB_OUTPUT
-            echo skipped=false >> $GITHUB_OUTPUT
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+            echo skipped=false >> "$GITHUB_OUTPUT"
           fi
       - name: Build wheel
         if: steps.check-version.outputs.skipped == 'false'

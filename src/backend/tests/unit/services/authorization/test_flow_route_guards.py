@@ -176,9 +176,9 @@ def test_create_flows_guards_each_flow_with_its_destination(routes):
 def test_upload_file_guards_each_flow_with_effective_destination(routes):
     """POST /upload/ adds a per-flow check after parsing.
 
-    `_upsert_flow_list` lets the query ``folder_id`` override each flow's folder_id but
-    preserves each flow's workspace_id, so the per-flow check must use
-    ``workspace_id=flow.workspace_id`` and live inside a loop over ``flow_list.flows``.
+    The query ``folder_id`` overrides each flow's folder_id while preserving
+    each flow's workspace_id, so the per-flow check must use
+    ``workspace_id=flow.workspace_id`` inside a loop over ``flow_list.flows``.
     """
     func = routes["upload_file"]
     calls = _ensure_flow_permission_calls(func)
@@ -232,6 +232,22 @@ def test_upsert_flow_update_branch_authorizes_destination_on_move(routes):
         target_workspace_kw="target_workspace_id",
         target_folder_kw="target_folder_id",
     ), "upsert_flow must authorize WRITE at target_workspace_id/target_folder_id when moving"
+
+
+def test_upsert_flow_reauthorizes_fresh_source_and_destination(routes):
+    """Every PUT retry must re-check the freshly loaded source and destination."""
+    func = routes["upsert_flow"]
+    write_calls = [call for call in _ensure_flow_permission_calls(func) if _action_arg(call) == "FlowAction.WRITE"]
+    assert any(
+        _kwarg_source(call, "workspace_id") == "existing_flow_for_attempt.workspace_id"
+        and _kwarg_source(call, "folder_id") == "existing_flow_for_attempt.folder_id"
+        for call in write_calls
+    ), "upsert_flow retry must re-authorize the freshly loaded source scope"
+    assert _has_destination_check(
+        func,
+        target_workspace_kw="attempt_target_workspace_id",
+        target_folder_kw="attempt_target_folder_id",
+    ), "upsert_flow retry must re-authorize its freshly resolved destination scope"
 
 
 def test_no_bare_string_actions_remain(routes):

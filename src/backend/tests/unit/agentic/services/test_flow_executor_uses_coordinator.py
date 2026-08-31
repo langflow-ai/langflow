@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from typing import Any
 
 import pytest
@@ -57,6 +58,17 @@ async def test_run_graph_uses_default_coordinator():
 
         def prepare(self):
             pass
+
+        @contextlib.contextmanager
+        def flow_execution_span(self, *, make_current: bool = True):
+            """The caller opens the flow span now, so a stand-in graph has to offer one.
+
+            Without it the AttributeError is swallowed by the broad except in
+            _run_graph_with_events and the coordinator is never reached, which reads as "the
+            coordinator was not used" rather than "the fake is missing a method".
+            """
+            _ = make_current
+            yield
 
     queue: asyncio.Queue = asyncio.Queue()
     execution_result = FlowExecutionResult()

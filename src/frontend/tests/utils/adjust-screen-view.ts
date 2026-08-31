@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 
 export async function adjustScreenView(
   page: Page,
@@ -12,15 +13,14 @@ export async function adjustScreenView(
     timeout: 30000,
   });
 
-  let fitViewButton = await page.getByTestId("fit_view").count();
-
-  if (fitViewButton === 0) {
-    await page.getByTestId("canvas_controls_dropdown").click();
-    fitViewButton = await page.getByTestId("fit_view").count();
+  const controlsTrigger = page.getByTestId("canvas_controls_dropdown");
+  if ((await controlsTrigger.getAttribute("data-state")) !== "open") {
+    await controlsTrigger.click();
   }
-
-  await page.getByTestId("fit_view").click();
-  await page.waitForTimeout(500);
+  await expect(controlsTrigger).toHaveAttribute("data-state", "open");
+  const fitViewButton = page.getByTestId("fit_view");
+  await fitViewButton.waitFor({ state: "visible" });
+  await fitViewButton.click();
 
   for (let i = 0; i < numberOfZoomOut; i++) {
     const zoomOutButton = page.getByTestId("zoom_out");
@@ -34,9 +34,9 @@ export async function adjustScreenView(
     // until the 1s timeout fires — turning a successful zoom into a flake.
     await zoomOutButton.click({ timeout: 5000, noWaitAfter: true });
   }
-  if (fitViewButton > 0) {
-    await page
-      .getByTestId("canvas_controls_dropdown")
-      .click({ force: true, timeout: 5000, noWaitAfter: true });
-  }
+  await controlsTrigger.click({
+    force: true,
+    timeout: 5000,
+    noWaitAfter: true,
+  });
 }

@@ -4,6 +4,7 @@ import { convertTestName } from "@/components/common/storeCardComponent/utils/co
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
+import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { updateIds } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
@@ -25,6 +26,9 @@ export default function TemplateGetStartedCardComponent({
 }: TemplateGetStartedCardComponentProps) {
   const addFlow = useAddFlow();
   const navigate = useCustomNavigate();
+  const dismissWelcomeForNavigation = useFlowBuilderWelcomeStore(
+    (state) => state.dismissForNavigation,
+  );
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
 
@@ -38,6 +42,8 @@ export default function TemplateGetStartedCardComponent({
       updateIds(flow.data!);
       addFlow({ flow })
         .then((id) => {
+          // Same tick as the navigate — see ``dismissForNavigation``.
+          dismissWelcomeForNavigation();
           navigate(`/flow/${id}/folder/${folderIdUrl}`);
         })
         .finally(() => {
@@ -63,7 +69,9 @@ export default function TemplateGetStartedCardComponent({
         "group relative flex h-full min-h-[200px] w-full cursor-pointer flex-col overflow-hidden rounded-3xl border focus-visible:border-ring md:min-h-[250px]",
         loading ? "cursor-default opacity-80" : "cursor-pointer",
       )}
-      tabIndex={1}
+      role="button"
+      aria-label={flow.name}
+      tabIndex={0}
       onKeyDown={handleKeyDown}
       onClick={handleClick}
     >

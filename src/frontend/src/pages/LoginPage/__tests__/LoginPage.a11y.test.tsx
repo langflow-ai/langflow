@@ -6,6 +6,7 @@ import { axe } from "@/utils/a11y-test";
 import LoginPage from "../index";
 
 const mockLoginMutate = jest.fn();
+const mockCustomLoginSsoOptions = jest.fn((): React.ReactNode => null);
 
 jest.mock("@/assets/LangflowLogo.svg?react", () => ({
   __esModule: true,
@@ -38,8 +39,18 @@ jest.mock("@/customization/components/custom-link", () => ({
   ),
 }));
 
+jest.mock("@/customization/components/custom-login-sso-options", () => ({
+  __esModule: true,
+  default: () => mockCustomLoginSsoOptions(),
+}));
+
 jest.mock("@/hooks/use-sanitize-redirect-url", () => ({
   useSanitizeRedirectUrl: jest.fn(),
+}));
+
+jest.mock("@/pages/LoginPage/components/dot-grid-background", () => ({
+  __esModule: true,
+  default: () => null,
 }));
 
 function renderLoginPage() {
@@ -54,6 +65,7 @@ function renderLoginPage() {
 describe("LoginPage accessibility", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCustomLoginSsoOptions.mockReturnValue(null);
     useAlertStore.setState({
       notificationList: [],
       tempNotificationList: [],
@@ -84,6 +96,30 @@ describe("LoginPage accessibility", () => {
     expect(mockLoginMutate).not.toHaveBeenCalled();
   });
 
+  it("renders downstream login options between password sign-in and sign-up", () => {
+    mockCustomLoginSsoOptions.mockReturnValue(
+      <div data-testid="custom-login-sso-options" />,
+    );
+
+    renderLoginPage();
+
+    const signInButton = screen.getByRole("button", { name: /sign in/i });
+    const loginOptions = screen.getByTestId("custom-login-sso-options");
+    const signUpLink = screen.getByRole("link", { name: /sign up/i });
+
+    expect(screen.getByText("Langflow")).toBeInTheDocument();
+    expect(screen.getByText(/don't have an account\?/i)).toBeInTheDocument();
+    expect(
+      signInButton.compareDocumentPosition(loginOptions) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      loginOptions.compareDocumentPosition(signUpLink) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(signUpLink).toHaveAttribute("href", "/signup");
+  });
+
   it("should_have_no_axe_violations", async () => {
     const { container } = renderLoginPage();
 
@@ -93,12 +129,57 @@ describe("LoginPage accessibility", () => {
   it("uses_valid_external_labels_for_username_and_password", () => {
     renderLoginPage();
 
-    expect(
-      screen.getByRole("textbox", { name: /username/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /username/i })).toHaveAttribute(
+      "autocomplete",
+      "username",
+    );
     expect(
       screen.getByLabelText(/^Password/i, { selector: "input" }),
+    ).toHaveAttribute("autocomplete", "current-password");
+  });
+
+  it("names_the_login_form_region", () => {
+    renderLoginPage();
+
+    expect(
+      screen.getByRole("region", { name: /sign in to langflow/i }),
     ).toBeInTheDocument();
+  });
+
+  it("associates_server_rejection_with_both_credential_fields", async () => {
+    mockLoginMutate.mockImplementation((_user, options) => {
+      options.onError({
+        response: { data: { detail: "Incorrect username or password." } },
+      });
+    });
+    const { container } = renderLoginPage();
+
+    fireEvent.change(screen.getByPlaceholderText("Username"), {
+      target: { value: "alice" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Password"), {
+      target: { value: "wrong-password" },
+    });
+    fireEvent.submit(container.querySelector("form")!);
+
+    const message =
+      "Incorrect username or password. Check your username and password, then try again.";
+    const inline = await screen.findByText(message);
+    expect(inline).toHaveAttribute("role", "alert");
+    expect(inline).toHaveAttribute("id", "login-form-error");
+
+    const username = screen.getByPlaceholderText("Username");
+    const password = screen.getByPlaceholderText("Password");
+    expect(username).toHaveAttribute("aria-invalid", "true");
+    expect(username).toHaveAttribute("aria-describedby", "login-form-error");
+    expect(password).toHaveAttribute("aria-invalid", "true");
+    expect(password).toHaveAttribute("aria-describedby", "login-form-error");
+
+    // Editing either field clears the stale error and the invalid state.
+    fireEvent.change(username, { target: { value: "alice2" } });
+    expect(screen.queryByText(message)).not.toBeInTheDocument();
+    expect(username).toHaveAttribute("aria-invalid", "false");
+    expect(password).not.toHaveAttribute("aria-invalid");
   });
 
   it("adds_actionable_suggestion_to_server_login_errors", () => {

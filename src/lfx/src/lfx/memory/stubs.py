@@ -38,6 +38,14 @@ async def astore_message(
         logger.warning("No message provided.")
         return []
 
+    # Serving-plane ephemeral runs (anonymous end-user) must not persist chat
+    # memory. Mirrors the identical gate in langflow.memory.astore_message so the
+    # contract holds regardless of which memory implementation dispatch selects.
+    from lfx.memory.flow_context import should_persist_messages
+
+    if not should_persist_messages():
+        return [message]
+
     if not message.session_id or not message.sender or not message.sender_name:
         msg = (
             f"All of session_id, sender, and sender_name must be provided. Session ID: {message.session_id},"

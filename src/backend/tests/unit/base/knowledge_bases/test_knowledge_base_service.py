@@ -257,7 +257,14 @@ class TestBackfillFromDisk:
         assert a.size_bytes > 0
         assert a.source_types == ["pdf", "txt"]
 
-    async def test_backfill_uses_recounted_disk_stats(self, active_user, tmp_path: Path, monkeypatch):
+    async def test_backfill_adopts_recorded_stats_without_opening_the_vector_store(self, active_user, tmp_path: Path):
+        """Adoption reads the sidecar as-written; it never boots a Chroma client to recount.
+
+        This is a legacy-recovery path, so it stays cheap and non-mutating: opening a
+        persistent Chroma client per directory would be slow and would take a SQLite
+        lock on data the operator is trying to rescue. The counters are refreshed by
+        the next ingestion anyway.
+        """
         kb_root = tmp_path / active_user.username
         kb_root.mkdir()
         kb_dir = kb_root / "legacy_with_chunks"
@@ -270,31 +277,14 @@ class TestBackfillFromDisk:
                     "embedding_model": "m",
                     "chunk_size": 512,
                     "chunk_overlap": 50,
-                    "chunks": 0,
-                    "words": 0,
-                    "characters": 0,
-                    "size": 0,
-                    "source_types": [],
+                    "chunks": 161,
+                    "words": 3200,
+                    "characters": 18000,
+                    "size": 4096,
+                    "source_types": ["file_upload"],
                 }
             )
         )
-
-        def fake_get_metadata(kb_path: Path, *, fast: bool = False) -> dict:
-            assert kb_path == kb_dir
-            assert fast is False
-            return {
-                "embedding_provider": "OpenAI",
-                "embedding_model": "m",
-                "chunk_size": 512,
-                "chunk_overlap": 50,
-                "chunks": 161,
-                "words": 3200,
-                "characters": 18000,
-                "size": 4096,
-                "source_types": ["file_upload"],
-            }
-
-        monkeypatch.setattr("langflow.api.utils.kb_helpers.KBAnalysisHelper.get_metadata", fake_get_metadata)
 
         inserted = await knowledge_base_service.backfill_from_disk(user_id=active_user.id, kb_user_root=kb_root)
         assert inserted == 1
@@ -307,6 +297,26 @@ class TestBackfillFromDisk:
         assert record.size_bytes == 4096
         assert record.source_types == ["file_upload"]
         assert knowledge_base_service.record_to_metadata_dict(record)["status"] == KnowledgeBaseStatus.READY.value
+
+    async def test_backfill_dry_run_reports_without_writing(self, active_user, tmp_path: Path):
+        """``--dry-run`` must count adoptable KBs and leave the database untouched."""
+        kb_root = tmp_path / active_user.username
+        kb_root.mkdir()
+        kb_dir = kb_root / "diskonly_dryrun"
+        kb_dir.mkdir()
+        (kb_dir / "embedding_metadata.json").write_text(
+            json.dumps({"embedding_provider": "OpenAI", "embedding_model": "m"})
+        )
+
+        would_insert = await knowledge_base_service.backfill_from_disk(
+            user_id=active_user.id, kb_user_root=kb_root, dry_run=True
+        )
+        assert would_insert == 1
+        assert await knowledge_base_service.get_by_user_and_name(active_user.id, "diskonly_dryrun") is None
+
+        # And the same call without dry_run actually adopts it.
+        assert await knowledge_base_service.backfill_from_disk(user_id=active_user.id, kb_user_root=kb_root) == 1
+        assert await knowledge_base_service.get_by_user_and_name(active_user.id, "diskonly_dryrun") is not None
 
     async def test_backfill_is_idempotent(self, active_user, tmp_path: Path):
         kb_root = tmp_path / active_user.username

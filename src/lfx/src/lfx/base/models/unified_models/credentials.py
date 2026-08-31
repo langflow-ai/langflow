@@ -6,11 +6,12 @@ import contextlib
 import json
 import os
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
+from lfx.services.variable import VariableNotFoundError
 from lfx.services.variable.request_scope import is_env_fallback_disabled
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.env_var_security import safe_getenv
@@ -19,8 +20,13 @@ from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 from .provider_queries import (
     get_model_provider_variable_mapping,
+    get_model_providers,
     get_provider_all_variables,
+    get_provider_secret_variable_key,
 )
+
+if TYPE_CHECKING:
+    from lfx.services.model_provider_policy import ModelProviderPolicySnapshot
 
 MODEL_STATUS_KEY_SEPARATOR = "::"
 MODEL_STATUS_TYPES = ("llm", "embeddings")
@@ -106,7 +112,7 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
                             field="",
                             session=session,
                         )
-                    except ValueError:
+                    except VariableNotFoundError:
                         return None
 
             value = run_until_complete(_get_by_var_name())
@@ -126,6 +132,14 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
 
     if api_key and api_key.strip():
         var_name = api_key.strip()
+        # A malformed or legacy component can point its api_key field at any
+        # global variable name. Never reinterpret declared non-secret provider
+        # configuration (for example, a base URL) as bearer credentials.
+        if any(
+            variable.get("variable_key") == var_name and not variable.get("is_secret")
+            for variable in get_provider_all_variables(provider)
+        ):
+            return None
         # Names that look like env/global variables (e.g. MY_OPENAI_API_KEY): resolve from env/DB
         if var_name.replace("_", "").isalnum() and var_name[0].isalpha():
             resolved = _resolve_var_name(var_name)
@@ -138,8 +152,7 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
         return var_name
 
     # Get primary variable (first required secret) from provider metadata
-    provider_variable_map = get_model_provider_variable_mapping()
-    variable_name = provider_variable_map.get(provider)
+    variable_name = get_provider_secret_variable_key(provider)
     if not variable_name:
         return None
 
@@ -162,13 +175,10 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
                         field="",
                         session=session,
                     )
-                except ValueError:
+                except VariableNotFoundError:
                     return None
 
-        try:
-            api_key = run_until_complete(_get_variable())
-        except (ValueError, Exception):  # noqa: BLE001
-            api_key = None
+        api_key = run_until_complete(_get_variable())
 
     api_key = secret_value_to_str(api_key, strip=True)
     if api_key:
@@ -249,7 +259,7 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
                     value = secret_value_to_str(value, strip=True)
                     if value:
                         values[var_key] = value
-                except (ValueError, Exception):  # noqa: BLE001
+                except ValueError:
                     # Variable not found - check environment, unless the request disables
                     # env fallback (keeps served flows isolated from process-wide credentials).
                     if is_env_fallback_disabled():
@@ -295,6 +305,7 @@ def _validate_and_get_enabled_providers(
 
     settings_service = get_settings_service()
     enabled = set()
+    from lfx.base.models.provider_registry import is_api_key_optional
 
     for provider in provider_variable_map:
         provider_vars = get_provider_all_variables(provider)
@@ -345,9 +356,10 @@ def _validate_and_get_enabled_providers(
                 all_required_present = False
 
         if not provider_vars:
-            enabled.add(provider)
-        elif all_required_present and collected_values:
-            if skip_validation:
+            if is_api_key_optional(provider):
+                enabled.add(provider)
+        elif all_required_present and (collected_values or is_api_key_optional(provider)):
+            if skip_validation or not collected_values:
                 # Just check existence - validation was done on save
                 enabled.add(provider)
             else:
@@ -399,18 +411,50 @@ async def _get_model_status(user_id: UUID | str) -> tuple[set[str], set[str]]:
         return disabled, enabled
 
 
-async def _fetch_enabled_providers_for_user(user_id: UUID | str) -> set[str]:
-    """Shared helper for get_language_model_options and get_embedding_model_options."""
+async def _fetch_enabled_providers_for_user(
+    user_id: UUID | str,
+    *,
+    provider_policy: ModelProviderPolicySnapshot | None = None,
+) -> set[str]:
+    """Return credential-enabled providers allowed for configuration and by the caller."""
+    variable_service = get_variable_service()
+    if variable_service is None:
+        return set()
+
+    from langflow.services.variable.service import DatabaseVariableService
+
+    if not isinstance(variable_service, DatabaseVariableService):
+        return set()
+
+    provider_variable_map = get_model_provider_variable_mapping()
+    providers = get_model_providers()
+    from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, aresolve_model_provider_policy
+
+    configuration_policy = await aresolve_model_provider_policy(
+        user_id=user_id,
+        providers=providers,
+        purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        attributes=provider_policy.context.attributes if provider_policy is not None else None,
+    )
+    from lfx.base.models.provider_registry import is_api_key_optional
+
+    provider_candidates = {
+        **provider_variable_map,
+        **{
+            provider: ""
+            for provider in providers
+            if provider not in provider_variable_map and is_api_key_optional(provider)
+        },
+    }
+    provider_candidates = {
+        provider: variable
+        for provider, variable in provider_candidates.items()
+        if configuration_policy.allows(provider) and (provider_policy is None or provider_policy.allows(provider))
+    }
+    if not provider_candidates:
+        return set()
+
     async with session_scope() as session:
-        variable_service = get_variable_service()
-        if variable_service is None:
-            return set()
-
-        from langflow.services.variable.service import DatabaseVariableService
-
-        if not isinstance(variable_service, DatabaseVariableService):
-            return set()
-
         # Get all variable names (VariableRead has value=None for credentials)
         all_vars = await variable_service.get_all(
             user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
@@ -418,14 +462,12 @@ async def _fetch_enabled_providers_for_user(user_id: UUID | str) -> set[str]:
         )
         all_var_names = {var.name for var in all_vars}
 
-        provider_variable_map = get_model_provider_variable_mapping()
-
         # Build dict with raw Variable values (encrypted for secrets, plaintext for others)
         # We need to fetch raw Variable objects because VariableRead has value=None for credentials
         all_provider_variables = {}
         user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
 
-        for provider in provider_variable_map:
+        for provider in provider_candidates:
             # Get ALL variables for this provider (not just the primary one)
             provider_vars = get_provider_all_variables(provider)
 
@@ -452,7 +494,7 @@ async def _fetch_enabled_providers_for_user(user_id: UUID | str) -> set[str]:
                     continue
 
         # Use shared helper to validate and get enabled providers
-        return _validate_and_get_enabled_providers(all_provider_variables, provider_variable_map)
+        return _validate_and_get_enabled_providers(all_provider_variables, provider_candidates)
 
 
 def validate_model_provider_key(provider: str, variables: dict[str, str], model_name: str | None = None) -> None:
@@ -629,15 +671,16 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
 
             api_key = variables.get("AZURE_AI_FOUNDRY_API_KEY")
             endpoint = variables.get("AZURE_AI_FOUNDRY_ENDPOINT")
+            api_version = variables.get("AZURE_AI_FOUNDRY_API_VERSION")
             if not api_key or not endpoint:
                 return
             try:
                 # Validate connection without requiring a seed catalog model name.
-                request_azure_ai_foundry_model_entries(endpoint, api_key)
-            except Exception as e:
-                msg = f"Could not validate Azure AI Foundry credentials: {e!s}"
-                logger.warning(msg)
-                raise ValueError(msg) from e
+                request_azure_ai_foundry_model_entries(endpoint, api_key, api_version)
+            except Exception as e:  # noqa: BLE001 - normalize provider/network failures for the UI
+                msg = "Could not validate Azure AI Foundry credentials. Check the endpoint, API key, and network."
+                logger.warning(f"{msg} Error type: {type(e).__name__}")
+                raise ValueError(msg) from None
 
         elif provider == "Ollama":
             import requests

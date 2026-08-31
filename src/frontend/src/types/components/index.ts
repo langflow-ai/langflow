@@ -39,6 +39,11 @@ export type InputComponentType = {
   placeholder?: string;
   className?: string;
   id?: string;
+  /**
+   * Scopes the rendered DOM id to a flow node so two nodes exposing the same
+   * field name do not collide (LE-2037). `data-testid` keeps using `id`.
+   */
+  nodeId?: string;
   inputProps?: InputHTMLAttributes<HTMLInputElement>;
   blurOnEnter?: boolean;
   optionsIcon?: string;
@@ -169,11 +174,8 @@ export type IOJSONInputComponentType = {
   output?: boolean;
 };
 export type outputComponentType = {
-  types: string[];
-  selected: string;
   nodeId: string;
   frozen?: boolean;
-  idx: number;
   name: string;
   proxy?: OutputFieldProxyType;
   isToolMode?: boolean;
@@ -309,6 +311,14 @@ export type ShadToolTipType = {
   delayDuration?: number;
   styleClasses?: string;
   avoidCollisions?: boolean;
+  /**
+   * Overrides Radix's automatic aria-describedby on the trigger. Pass a
+   * string to point at a specific description element, or `undefined` to
+   * suppress the description entirely (e.g. when the tooltip text just
+   * repeats the trigger's own aria-label and would otherwise be announced
+   * twice). Omit this prop to keep Radix's default behavior.
+   */
+  ariaDescribedBy?: string;
 };
 
 export type TextHighlightType = {
@@ -322,6 +332,10 @@ export type TextHighlightType = {
 export interface IVarHighlightType {
   name: string;
   addCurlyBraces?: boolean;
+  /** Bare identifier used to decide whether the name is reserved, when it differs from `name`. */
+  variableName?: string;
+  /** Tooltip shown when the name is reserved. Must come from i18n, never from user input. */
+  invalidTitle?: string;
 }
 
 export type IconComponentProps = {
@@ -378,6 +392,11 @@ export type TriggerProps = {
   children: ReactNode;
   tooltipContent?: ReactNode;
   side?: "top" | "right" | "bottom" | "left";
+  // Forwarded onto the underlying trigger button. Used when the trigger acts
+  // as a toggle (e.g. the admin active/superuser controls) so it is announced
+  // as a named toggle button instead of nesting an interactive role inside it.
+  ariaLabel?: string;
+  ariaPressed?: boolean;
 };
 
 export interface languageMap {
@@ -656,6 +675,9 @@ export type modalHeaderType = {
   children: ReactNode;
   description?: string | JSX.Element | null;
   clampDescription?: number;
+  className?: string;
+  titleClassName?: string;
+  descriptionClassName?: string;
 };
 
 export type codeAreaModalPropsType = {

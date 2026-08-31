@@ -70,4 +70,46 @@ describe("useFlowBuilderWelcomeStore", () => {
       expect(state.isOpen).toBe(true);
     });
   });
+
+  describe("dismissForNavigation", () => {
+    it("should_hide_the_overlay_immediately", () => {
+      useFlowBuilderWelcomeStore.setState({
+        isOpen: true,
+        openedForFlowId: "flow-placeholder",
+      });
+
+      useFlowBuilderWelcomeStore.getState().dismissForNavigation();
+
+      // The sidebar keys off isOpen, so this MUST be false before the new flow
+      // paints — otherwise it stays at display:none and ReactFlow fits against
+      // a canvas width it is about to lose.
+      expect(useFlowBuilderWelcomeStore.getState().isOpen).toBe(false);
+    });
+
+    it("should_retain_openedForFlowId_so_the_placeholder_can_still_be_reaped", () => {
+      useFlowBuilderWelcomeStore.setState({
+        isOpen: true,
+        openedForFlowId: "flow-placeholder",
+      });
+
+      useFlowBuilderWelcomeStore.getState().dismissForNavigation();
+
+      // Unlike close(), this keeps the id — the mount's cleanup effect is the
+      // only thing that knows how to delete the orphaned blank placeholder.
+      expect(useFlowBuilderWelcomeStore.getState().openedForFlowId).toBe(
+        "flow-placeholder",
+      );
+    });
+
+    it("should_drop_a_stale_pendingMessage", () => {
+      useFlowBuilderWelcomeStore.setState({
+        isOpen: true,
+        pendingMessage: "stale",
+      });
+
+      useFlowBuilderWelcomeStore.getState().dismissForNavigation();
+
+      expect(useFlowBuilderWelcomeStore.getState().pendingMessage).toBeNull();
+    });
+  });
 });

@@ -17,9 +17,9 @@ class A2ATask(SQLModel, table=True):  # type: ignore[call-arg]
     ``task`` holds the whole protobuf ``Task`` as ``MessageToDict`` JSON; the A2A surface
     only does point lookups by id this slice, so a single blob is enough (a tasks/list or
     contextId filter would add decomposed columns later). The composite PK ``(id, owner)``
-    mirrors the SDK TaskStore's owner-scoped keying — ``owner`` is '' on the anonymous public
-    endpoint. ``id`` is declared first so ``session.get(A2ATask, (id, owner))`` passes the
-    tuple in primary-key order.
+    mirrors the SDK TaskStore's owner-scoped keying. Legacy anonymous rows used an empty SDK
+    owner inside the flow scope; current public rows use the stable anonymous principal. ``id``
+    is declared first so ``session.get(A2ATask, (id, owner))`` passes the tuple in primary-key order.
     """
 
     __tablename__ = "a2a_tasks"

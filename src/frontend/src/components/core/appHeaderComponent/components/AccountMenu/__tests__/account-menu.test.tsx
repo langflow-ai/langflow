@@ -32,9 +32,8 @@ jest.mock("@/customization/feature-flags", () => ({
 
 jest.mock("@/stores/authStore", () => ({
   __esModule: true,
-  default: (
-    selector: (state: { isAdmin: boolean; autoLogin: boolean }) => unknown,
-  ) => selector({ isAdmin: false, autoLogin: false }),
+  default: (selector: (state: { autoLogin: boolean }) => unknown) =>
+    selector({ autoLogin: false }),
 }));
 
 jest.mock("@/stores/darkStore", () => ({

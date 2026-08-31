@@ -30,6 +30,7 @@ cd src/frontend
 RUN_A11Y=true npx playwright test tests/a11y/static-routes.a11y.spec.ts --project=chromium --workers=5
 RUN_A11Y=true npx playwright test tests/a11y --project=chromium --workers=5
 npm run a11y:html-report --silent
+npm run a11y:job-summary --silent
 ```
 
 The HTML report is written to:

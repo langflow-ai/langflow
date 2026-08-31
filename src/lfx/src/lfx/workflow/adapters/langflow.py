@@ -21,6 +21,45 @@ from lfx.workflow.converters import build_component_output, resolve_output_type
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+# Reserved event type for the OFF-WIRE terminal-output capture the background
+# runner records into ``Job.result``. It is protocol-neutral: the frame source
+# synthesizes it from the raw ``end_vertex`` (the authoritative ``output_meta``)
+# so BOTH wire protocols populate ``Job.result`` — the ``agui`` adapter emits no
+# wire ``output`` event, and without this its background GET-status would carry
+# no outputs. The runner captures it in-memory only (never appended to
+# ``job_events``, never published to the live bus), so it stays invisible to
+# clients and independent of durable-event storage.
+WORKFLOW_OUTPUT_CAPTURE_EVENT = "__workflow_output_capture__"
+
+
+def build_terminal_output_event(event_data: dict[str, Any]) -> OutputEvent | None:
+    """Build the normalized terminal ``OutputEvent`` from a raw ``end_vertex``, or None.
+
+    Returns None for a non-terminal vertex so callers emit an output for exactly
+    the set sync reports in ``outputs``. The vertex metadata is the authoritative
+    ``output_meta`` shipped by the v1 build path, so this is protocol-neutral —
+    both the ``langflow`` wire ``output`` event and the off-wire capture frame are
+    built from it.
+    """
+    output_meta = event_data.get("output_meta") or {}
+    if not output_meta.get("is_terminal"):
+        return None
+    build_data = event_data.get("build_data") or {}
+    component_id = output_meta.get("component_id") or build_data.get("id")
+    if not component_id:
+        return None
+    component_output = build_component_output(
+        component_id=component_id,
+        is_output=bool(output_meta.get("is_output")),
+        vertex_type=output_meta.get("vertex_type"),
+        output_type=resolve_output_type(output_meta.get("output_types"), output_meta.get("vertex_type")),
+        display_name=output_meta.get("display_name"),
+        result_data=build_data.get("data"),
+        valid=bool(build_data.get("valid", True)),
+    )
+    return OutputEvent(component_id=component_id, **component_output.model_dump())
+
+
 # Durable milestones for the langflow wire protocol. ``token`` is the only
 # high-volume ephemeral type; everything else the build loop emits is a
 # milestone worth persisting for reattach.
@@ -74,29 +113,10 @@ class LangflowAdapter:
 
     @staticmethod
     def _output_event(event_data: dict[str, Any]) -> StreamEvent | None:
-        """Build the normalized ``output`` event for a terminal output, or None.
-
-        Returns None for non-terminal vertices so the stream emits an ``output`` for
-        exactly the set sync reports in ``outputs``. The vertex metadata is the
-        authoritative ``output_meta`` shipped by the v1 build path.
-        """
-        output_meta = event_data.get("output_meta") or {}
-        if not output_meta.get("is_terminal"):
+        """Wrap the terminal ``OutputEvent`` as a ``langflow`` wire ``output`` event, or None."""
+        output = build_terminal_output_event(event_data)
+        if output is None:
             return None
-        build_data = event_data.get("build_data") or {}
-        component_id = output_meta.get("component_id") or build_data.get("id")
-        if not component_id:
-            return None
-        component_output = build_component_output(
-            component_id=component_id,
-            is_output=bool(output_meta.get("is_output")),
-            vertex_type=output_meta.get("vertex_type"),
-            output_type=resolve_output_type(output_meta.get("output_types"), output_meta.get("vertex_type")),
-            display_name=output_meta.get("display_name"),
-            result_data=build_data.get("data"),
-            valid=bool(build_data.get("valid", True)),
-        )
-        output = OutputEvent(component_id=component_id, **component_output.model_dump())
         payload = {"event": "output", "data": output.model_dump(mode="json")}
         return StreamEvent(type="output", data_json=json.dumps(payload, default=str))
 

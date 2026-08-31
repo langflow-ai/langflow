@@ -16,6 +16,7 @@ from lfx.utils.secrets import secret_value_to_str
 class WatsonxAIComponent(LCModelComponent):
     """LFX component for IBM watsonx.ai text/chat generation."""
 
+    model_provider_id = "ibm-watsonx"
     display_name = "IBM watsonx.ai"
     description = "Generate text using IBM watsonx.ai foundation models."
     icon = "WatsonxAI"

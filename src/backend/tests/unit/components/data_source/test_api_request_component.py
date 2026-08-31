@@ -89,6 +89,25 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
         assert result.data["result"]["key"] == "value"
 
     @respx.mock
+    async def test_make_request_falls_back_when_json_is_not_utf8(self, component):
+        url = "https://example.com/api/test"
+        respx.get(url).mock(
+            return_value=Response(
+                200,
+                content=b'{"label":"caf\xe9"}',
+                headers={"Content-Type": "application/json"},
+            )
+        )
+
+        result = await component.make_request(
+            client=httpx.AsyncClient(),
+            method="GET",
+            url=url,
+        )
+
+        assert result.data["result"].decode("utf-8") == '{"label":"caf\ufffd"}'
+
+    @respx.mock
     async def test_make_request_with_metadata(self, component):
         # Test request with metadata included
         url = "https://example.com/api/test"

@@ -1,10 +1,10 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { TID } from "../../utils/constants/testIds";
-import { TEXTS } from "../../utils/constants/texts";
 import { ANIMATIONS, TIMEOUTS } from "../../utils/constants/timeouts";
 import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { sendPlaygroundMessage } from "../../utils/playground/send-playground-message";
 
 test(
   "user should be able to publish a flow",
@@ -40,18 +40,16 @@ test(
     const newPage = await pagePromise;
     await newPage.waitForLoadState("domcontentloaded");
 
-    // Wait for the chat input to actually be present before filling. The
-    // default actionTimeout (20s) was not enough on Windows CI for the
-    // shareable-playground page to mount the message input.
-    await newPage
-      .getByPlaceholder(TEXTS.placeholderSendMessage)
-      .waitFor({ state: "visible", timeout: TIMEOUTS.long });
+    // Run the published flow to completion before leaving the page. The
+    // helper waits for the chat input (slow to mount on Windows CI), sends,
+    // and only returns once the Stop button has cleared. Closing the tab while
+    // the build was still in flight aborted the backend request mid-write; on
+    // SQLite that cancellation can leave a write transaction open until GC and
+    // stall every other writer, which is how the un-publish PATCH below hung
+    // for 10s+ (nightly 31907290063, shard 41). Waiting also proves the
+    // shareable playground actually completes a run.
+    await sendPlaygroundMessage(newPage, "Hello", { surface: "shareable" });
     const newUrl = newPage.url();
-    await newPage.getByPlaceholder(TEXTS.placeholderSendMessage).fill("Hello");
-    await newPage.getByTestId(TID.buttonSend).last().click();
-
-    const stopButton = newPage.getByRole("button", { name: TEXTS.stop });
-    await stopButton.waitFor({ state: "visible", timeout: TIMEOUTS.standard });
 
     await newPage.close();
     await page.bringToFront();

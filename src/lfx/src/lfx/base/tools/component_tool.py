@@ -102,33 +102,6 @@ def patch_components_send_message(component: Component):
     return old_send_message
 
 
-def _patch_send_message_decorator(component, func):
-    """Decorator to patch the send_message method of a component.
-
-    This is useful when we want to use a component as a tool, but we don't want to
-    send any messages to the UI. With this only the Component calling the tool
-    will send messages to the UI.
-    """
-
-    async def async_wrapper(*args, **kwargs):
-        original_send_message = component.send_message
-        component.send_message = send_message_noop
-        try:
-            return await func(*args, **kwargs)
-        finally:
-            component.send_message = original_send_message
-
-    def sync_wrapper(*args, **kwargs):
-        original_send_message = component.send_message
-        component.send_message = send_message_noop
-        try:
-            return func(*args, **kwargs)
-        finally:
-            component.send_message = original_send_message
-
-    return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
-
-
 def _build_output_function(
     component: Component,
     output_method: Callable,
@@ -148,10 +121,15 @@ def _build_output_function(
         # Create an isolated copy to prevent race conditions when this
         # tool is invoked concurrently by an agent (GitHub issue #8791)
         comp = deepcopy(component)
+        # Nothing patches send_message here. Silencing the shared component leaked across
+        # overlapping calls: the second call recorded the first call's no-op as the method
+        # to restore, and restored it once the first call had put the real one back.
+        # Suppressing the tool run's own messages is a separate change, tracked on its own.
         local_method = getattr(comp, method_name, output_method)
         build_started = False
         result = None
         try:
+            comp._ensure_code_execution_policy()  # noqa: SLF001
             if event_manager:
                 event_manager.on_build_start(data={"id": comp.get_id()})
                 build_started = True
@@ -182,7 +160,7 @@ def _build_output_function(
         # removing the model_dump() call here because it is not serializable
         return serialize(result)
 
-    return _patch_send_message_decorator(component, output_function)
+    return output_function
 
 
 def _build_output_async_function(
@@ -204,10 +182,12 @@ def _build_output_async_function(
         # Create an isolated copy to prevent race conditions when this
         # tool is invoked concurrently by an agent (GitHub issue #8791)
         comp = deepcopy(component)
+        # See _build_output_function: a tool call must not patch send_message anywhere.
         local_method = getattr(comp, method_name, output_method)
         build_started = False
         result = None
         try:
+            comp._ensure_code_execution_policy()  # noqa: SLF001
             if event_manager:
                 event_manager.on_build_start(data={"id": comp.get_id()})
                 build_started = True
@@ -237,7 +217,7 @@ def _build_output_async_function(
         # removing the model_dump() call here because it is not serializable
         return serialize(result)
 
-    return _patch_send_message_decorator(component, output_function)
+    return output_function
 
 
 def _format_tool_name(name: str):

@@ -17,4 +17,7 @@ export interface ReviewFlowItem {
   defaultToolName: string;
   versionLabel: string;
   connectionDetails: ReviewConnectionDetail[];
+  wxoEligibilityIssue: WatsonxFlowEligibilityIssue | undefined;
 }
+
+import type { WatsonxFlowEligibilityIssue } from "../../helpers/watsonx-flow-eligibility";

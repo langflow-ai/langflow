@@ -49,10 +49,14 @@ export const selectAnthropicModel = async (page: Page) => {
       const checkExistingKey = await page.getByTestId("input-end-icon").count();
       if (checkExistingKey === 0) {
         await page
-          .getByPlaceholder("Add API key")
+          .getByTestId("provider-variable-input-ANTHROPIC_API_KEY") // pragma: allowlist secret
           .fill(process.env.ANTHROPIC_API_KEY!);
-        await page.waitForSelector("text=Anthropic Api Key Saved", {
-          timeout: 30000,
+        // The provider modal saves only on the explicit Save click (live key
+        // validation + persist); the success toast fires after the post-save
+        // model refetch settles, so the toggle below is ready once it shows.
+        await page.getByTestId("provider-save-button").click();
+        await page.waitForSelector("text=Anthropic Configuration Saved", {
+          timeout: 60000,
         });
         await page.getByTestId(`llm-toggle-${ANTHROPIC_MODEL_NAME}`).click();
         await page.getByText(TEXTS.close).last().click();

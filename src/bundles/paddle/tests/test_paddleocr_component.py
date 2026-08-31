@@ -276,6 +276,66 @@ def test_fetch_result_blocks_internal_url_when_ssrf_enabled(monkeypatch):
         component._fetch_result("http://169.254.169.254/latest/meta-data/")
 
 
+def test_paddleocr_loopback_base_url_allowed_by_default(monkeypatch, tmp_path):
+    # SSRF protection on, no allowlist: a self-hosted PaddleOCR service on
+    # localhost passes the connector policy (literal-loopback exemption), so
+    # processing proceeds to the (stubbed) submit/poll calls. Regression guard
+    # for the #14264 family (local services blocked at loopback by the raw
+    # validator).
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+    monkeypatch.delenv("LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK", raising=False)
+
+    file_path = tmp_path / "sample.png"
+    file_path.write_bytes(b"fake image")
+
+    monkeypatch.setattr(PaddleOCRComponent, "_submit_job", lambda _self, **_kwargs: "job-id")
+    monkeypatch.setattr(
+        PaddleOCRComponent,
+        "_poll_job",
+        lambda _self, **_kwargs: [{"result": {"ocrResults": [{"prunedResult": {"rec_texts": ["ok"]}}]}}],
+    )
+
+    component = PaddleOCRComponent()
+    component.set_attributes(
+        {
+            "access_token": "token",
+            "base_url": "http://127.0.0.1:8868",
+            "task_type": "ocr",
+            "model": "PP-OCRv6",
+            "poll_timeout": 60,
+        }
+    )
+    result = component.process_files([make_base_file(file_path)])
+    assert result[0].data[0].data["text"] == "ok"
+
+
+def test_paddleocr_loopback_base_url_blocked_when_connector_loopback_disabled(monkeypatch, tmp_path):
+    # Multi-tenant posture: connector_ssrf_allow_loopback=false blocks the
+    # loopback base_url before any request is made.
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK", "false")
+    monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+
+    file_path = tmp_path / "sample.png"
+    file_path.write_bytes(b"fake image")
+
+    component = PaddleOCRComponent()
+    component.set_attributes(
+        {
+            "access_token": "token",
+            "base_url": "http://127.0.0.1:8868",
+            "task_type": "ocr",
+            "model": "PP-OCRv6",
+            "poll_timeout": 60,
+        }
+    )
+    with pytest.raises(SSRFProtectionError, match="blocked"):
+        component.process_files([make_base_file(file_path)])
+
+
 def test_fetch_result_parses_json_list(monkeypatch):
     component = PaddleOCRComponent()
 

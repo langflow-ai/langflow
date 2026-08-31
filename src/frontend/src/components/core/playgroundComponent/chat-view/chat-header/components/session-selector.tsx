@@ -15,7 +15,10 @@ export interface SessionSelectorProps {
   deleteSession: (session: string) => void;
   toggleVisibility: () => void;
   isVisible: boolean;
-  inspectSession?: (session: string) => void;
+  inspectSession?: (
+    session: string,
+    triggerElement: HTMLElement | null,
+  ) => void;
   updateVisibleSession: (session: string) => void;
   selectedView?: { type: string; id: string };
   setSelectedView?: (view: { type: string; id: string } | undefined) => void;
@@ -120,7 +123,19 @@ export function SessionSelector({
       )}
     >
       <div className="flex h-8 items-center justify-between overflow-hidden w-full">
-        <div className="flex w-full min-w-0 items-center gap-2 px-2">
+        <div
+          className="flex w-full min-w-0 items-center gap-2 px-2"
+          role={isEditing ? undefined : "button"}
+          tabIndex={isEditing ? undefined : 0}
+          onKeyDown={(e) => {
+            if (isEditing || e.target !== e.currentTarget) return;
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setNewSessionCloseVoiceAssistant(true);
+              toggleVisibility();
+            }
+          }}
+        >
           {showCheckbox && onToggleSelect && (
             <div
               onClick={(e) => {
@@ -177,7 +192,9 @@ export function SessionSelector({
 
         <SessionMoreMenu
           onRename={handleEditClick}
-          onMessageLogs={() => inspectSession?.(session)}
+          onMessageLogs={(triggerElement) =>
+            inspectSession?.(session, triggerElement)
+          }
           onDelete={() => deleteSession(session)}
           showRename={canRenameSession}
           showDelete={canDeleteSession}

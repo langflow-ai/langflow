@@ -89,7 +89,7 @@ async def test_runner_failed_suspend_finalizes_failed_not_hung(active_user, monk
 
     job = await job_service.get_job_by_job_id(job_id)
     assert job.status == JobStatus.FAILED
-    assert job.error is not None
+    assert job.error == {"type": "suspend_failed", "detail": "Workflow suspension failed."}
 
 
 async def test_runner_finalizes_completed(active_user):
@@ -107,6 +107,36 @@ async def test_runner_finalizes_completed(active_user):
 
     job = await job_service.get_job_by_job_id(job_id)
     assert job.status == JobStatus.COMPLETED
+
+
+async def test_runner_captures_standard_output_frame_without_private_capture(active_user):
+    """A custom frame source that emits only the public ``output`` still fills Job.result."""
+    job_service = get_job_service()
+    job_id = await _make_job(uuid4(), active_user.id)
+    output = {
+        "component_id": "ChatOutput-1",
+        "type": "message",
+        "status": "completed",
+        "display_name": "Chat Output",
+        "content": "hello",
+        "metadata": {},
+    }
+
+    async def source(**_kwargs) -> AsyncIterator[tuple[bytes, str]]:
+        # Exported/injected FrameSource implementations are allowed to emit the
+        # normal adapter event without the private off-wire capture frame.
+        yield _frame("output", output)
+        yield _frame("end", {})
+
+    bus = InMemoryLiveBus()
+    adapter = get_stream_adapter("langflow", StreamAdapterContext(run_id=str(job_id), thread_id="t"))
+    runner = JobRunner(job_service=job_service, live_bus=bus, adapter=adapter, frame_source=source)
+
+    await runner.run(job_id=job_id, source_kwargs={})
+
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.COMPLETED
+    assert job.result == {"status": "completed", "outputs": [output]}
 
 
 async def test_runner_finalizes_failed_and_writes_error(active_user):

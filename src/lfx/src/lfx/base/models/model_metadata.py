@@ -92,6 +92,7 @@ EXPLICIT_ENABLE_ONLY_PROVIDERS: frozenset[str] = frozenset({"Azure AI Foundry"})
 #
 MODEL_PROVIDER_METADATA: dict[str, Any] = {
     "OpenAI": {
+        "provider_id": "openai",
         "icon": "OpenAI",
         "max_tokens_field_name": "max_tokens",
         "variables": [
@@ -131,6 +132,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         },
     },
     "Anthropic": {
+        "provider_id": "anthropic",
         "icon": "Anthropic",
         "max_tokens_field_name": "max_tokens",
         "variables": [
@@ -157,6 +159,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         },
     },
     "Google Generative AI": {
+        "provider_id": "google-generative-ai",
         "icon": "GoogleGenerativeAI",
         "max_tokens_field_name": "max_output_tokens",
         "variables": [
@@ -183,6 +186,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         },
     },
     "Ollama": {
+        "provider_id": "ollama",
         "icon": "Ollama",
         "max_tokens_field_name": "max_tokens",
         "variables": [
@@ -209,6 +213,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         },
     },
     "Groq": {
+        "provider_id": "groq",
         "icon": "Groq",
         "max_tokens_field_name": "max_tokens",
         "variables": [
@@ -235,6 +240,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         },
     },
     "Azure OpenAI": {
+        "provider_id": "azure-openai",
         "icon": "Azure",
         "max_tokens_field_name": "max_tokens",
         "variables": [
@@ -261,6 +267,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         },
     },
     "Azure AI Foundry": {
+        "provider_id": "azure-ai-foundry",
         "icon": "Azure",
         "max_tokens_field_name": "max_tokens",
         "variables": [
@@ -293,6 +300,22 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
                 "options": [],
                 "langchain_param": "endpoint",
             },
+            {
+                "variable_name": "Azure AI Foundry API Version",
+                "variable_key": "AZURE_AI_FOUNDRY_API_VERSION",
+                "description": (
+                    "Optional. api-version used for the deployments listing that powers "
+                    "live model discovery. Leave empty for the default "
+                    "(2023-03-15-preview)."
+                ),
+                "required": False,
+                "is_secret": False,
+                "is_list": False,
+                "options": [],
+                # No langchain_param / component_metadata: consumed by live discovery
+                # only — the OpenAI-compatible inference endpoint takes no api-version,
+                # so this must never reach the chat/embedding constructors.
+            },
         ],
         "api_docs_url": "https://learn.microsoft.com/en-us/azure/foundry/how-to/develop/langchain-models",
         "mapping": {
@@ -301,6 +324,8 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         },
     },
     "IBM WatsonX": {
+        "provider_id": "ibm-watsonx",
+        "aliases": ["IBM watsonx.ai"],
         "icon": "WatsonxAI",
         "max_tokens_field_name": "max_tokens",
         "variables": [
@@ -365,6 +390,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         },
     },
     "OpenRouter": {
+        "provider_id": "openrouter",
         "icon": "OpenRouter",
         "max_tokens_field_name": "max_tokens",
         "base_url": "https://openrouter.ai/api/v1",

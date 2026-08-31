@@ -49,6 +49,13 @@ def _normalize_message_content(content: Any) -> Any:
 
 
 class LCModelComponent(Component):
+    # ``standalone`` gates this component at the outer build/config boundary.
+    # Unified provider selectors override this with ``delegate`` and enforce
+    # the concrete provider inside get_llm/get_embeddings.
+    model_provider_policy_mode: str = "standalone"
+    # Optional explicit override for policy identity. Most subclasses are
+    # classified systemically from their provider package/module.
+    model_provider_id: str | None = None
     display_name: str = "Model Name"
     description: str = "Model Description"
     trace_type = "llm"
@@ -247,6 +254,9 @@ class LCModelComponent(Component):
             ValueError: If the input message is empty or if there's an error during model invocation
         """
         messages: list[BaseMessage] = []
+        # A Prompt input replaces ``runnable`` with a chain below; remediation has to
+        # target the chat model itself, which that chain keeps a reference to.
+        chat_model = runnable
         if not input_value and not system_message:
             msg = "The message you want to send to the model is empty."
             raise ValueError(msg)
@@ -273,42 +283,48 @@ class LCModelComponent(Component):
         if system_message and not system_message_added:
             messages.insert(0, SystemMessage(content=system_message))
         inputs: list | dict = messages or {}
-        lf_message = None
-        usage_data = None
-        try:
-            # TODO: Depreciated Feature to be removed in upcoming release
-            if hasattr(self, "output_parser") and self.output_parser is not None:
-                runnable |= self.output_parser
+        applied_remediations: set[str] = set()
+        while True:
+            lf_message = None
+            usage_data = None
+            try:
+                active: Any = runnable
+                # TODO: Depreciated Feature to be removed in upcoming release
+                if hasattr(self, "output_parser") and self.output_parser is not None:
+                    active |= self.output_parser
 
-            runnable = runnable.with_config(
-                {
-                    "run_name": self.display_name,
-                    "project_name": self.get_project_name(),
-                    "callbacks": self.get_langchain_callbacks(),
-                }
-            )
-            if stream:
-                lf_message, result, message = await self._handle_stream(runnable, inputs)
-            else:
-                message = await runnable.ainvoke(inputs)
-                result = message.content if hasattr(message, "content") else message
-                result = _normalize_message_content(result)
-            if isinstance(message, AIMessage):
-                status_message = self.build_status_message(message)
-                self.status = status_message
-                # Extract usage for the response
-                usage_data = self.extract_usage(message)
-                if usage_data:
-                    self._token_usage = usage_data
-            elif isinstance(result, dict):
-                result = json.dumps(message, indent=4)
-                self.status = result
-            else:
-                self.status = result
-        except Exception as e:
-            if message := self._get_exception_message(e):
-                raise ValueError(message) from e
-            raise
+                active = active.with_config(
+                    {
+                        "run_name": self.display_name,
+                        "project_name": self.get_project_name(),
+                        "callbacks": self.get_langchain_callbacks(),
+                    }
+                )
+                if stream:
+                    lf_message, result, message = await self._handle_stream(active, inputs)
+                else:
+                    message = await active.ainvoke(inputs)
+                    result = message.content if hasattr(message, "content") else message
+                    result = _normalize_message_content(result)
+                if isinstance(message, AIMessage):
+                    status_message = self.build_status_message(message)
+                    self.status = status_message
+                    # Extract usage for the response
+                    usage_data = self.extract_usage(message)
+                    if usage_data:
+                        self._token_usage = usage_data
+                elif isinstance(result, dict):
+                    result = json.dumps(message, indent=4)
+                    self.status = result
+                else:
+                    self.status = result
+            except Exception as e:
+                if self._remediate_model_error(e, chat_model, applied_remediations):
+                    continue
+                if message := self._get_exception_message(e):
+                    raise ValueError(message) from e
+                raise
+            break
 
         if lf_message:
             if lf_message.properties and lf_message.properties.usage:
@@ -320,6 +336,31 @@ class LCModelComponent(Component):
         if usage_data:
             msg.properties.usage = usage_data
         return msg
+
+    def _remediate_model_error(self, error: Exception, runnable: Any, applied: set[str]) -> bool:
+        """Try to work around a model constraint the provider only reports at call time.
+
+        Some models reject a parameter their siblings accept — Anthropic's Claude 5
+        family answers any request carrying ``temperature`` with a 400 (GH-14291).
+        No provider exposes that in its model listing, so the constraint is matched
+        on the error text (see ``model_remediation``), cleared on the live model, and
+        the request retried. Returns True when the caller should retry.
+
+        Each remediation is applied at most once per call, so a constraint that was
+        not the real cause degrades to the original error instead of looping.
+        """
+        from lfx.base.models.model_remediation import apply_overrides_to_model, find_remediation
+
+        error_text = f"{error} {getattr(error, '__cause__', '') or ''}"
+        remediation = find_remediation(error_text, provider=None, already_applied=applied)
+        if remediation is None or not apply_overrides_to_model(runnable, remediation.overrides):
+            return False
+        applied.add(remediation.name)
+        logger.warning(
+            f"model.remediation.applied name={remediation.name} "
+            f"component={getattr(self, 'display_name', '<unknown>')} id={getattr(self, '_id', '<unknown>')}"
+        )
+        return True
 
     async def _handle_stream(self, runnable, inputs):
         """Handle streaming responses from the language model.

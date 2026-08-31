@@ -38,6 +38,12 @@ export type BaseInputProps<valueType = any> = {
   connectionLink?: string;
   showParameter?: boolean;
   inspectionPanel?: boolean;
+  // Id of NodeInputField's label element for this field. Optional here so
+  // every widget's prop type gets it for free through BaseInputProps —
+  // most widgets currently ignore it; only those that explicitly apply it
+  // to their real DOM control (see inputComponent's CustomInputPopover
+  // branch) actually give the control an accessible name from it.
+  ariaLabelledBy?: string;
 };
 
 // Generic type for composing input props
@@ -81,6 +87,10 @@ export type IntComponentType = {
 export type ToggleComponentType = {
   size?: "small" | "medium" | "large";
   showToogle?: boolean;
+  /** Pass -1 to pull the switch out of tab order — for callers where an
+   *  ancestor element is the real keyboard-operable control and this switch
+   *  is purely a visual state indicator. */
+  tabIndex?: number;
 };
 
 export type FileComponentType = {

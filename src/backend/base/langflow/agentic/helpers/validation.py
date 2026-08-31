@@ -241,6 +241,9 @@ async def _execute_output_methods_for_validation(cc_instance) -> str | None:
         return None
 
     try:
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+        cc_instance.require_model_provider_policy(ModelProviderPolicyPurpose.USE)
         await cc_instance._build_results()  # noqa: SLF001 — sandbox bypass of send_error/tracing
     except ValidationError as exc:
         return _format_validation_error(exc)
@@ -287,6 +290,16 @@ async def validate_component_runtime(code: str, user_id: str | None = None) -> s
             "Custom component execution is disabled on this server "
             "(allow_custom_components=false); generated components cannot be validated or run."
         )
+
+    # This helper is itself an in-process execution boundary. Keep the security
+    # scan here as defense in depth so a future or direct caller cannot bypass
+    # the assistant service's earlier scan by calling the runtime validator.
+    from langflow.agentic.helpers.code_security import scan_code_security
+
+    security_result = scan_code_security(code)
+    if not security_result.is_safe:
+        return "Generated component failed security validation: " + "; ".join(security_result.violations)
+
     try:
         from lfx.custom.custom_component.component import Component as ComponentClass
         from lfx.custom.utils import build_custom_component_template

@@ -41,6 +41,15 @@ class MemoryBase(MemoryBaseBase, table=True):  # type: ignore[call-arg]
 class MemoryBaseCreate(MemoryBaseBase):
     user_id: UUID | None = None  # Derived from auth token in the endpoint; not required in request body
 
+    # Vector-store selection for the Memory Base's backing KB. Declared on the
+    # create payload rather than on ``MemoryBaseBase`` so no column is added to
+    # the ``memory_base`` table: the values are persisted on the
+    # ``knowledge_base`` row this Memory Base creates, which is what every read
+    # path resolves against. ``None`` lets the server choose the deployment
+    # default (pgvector when its fixed server environment variable is present).
+    backend_type: str | None = None
+    backend_config: dict = Field(default_factory=dict)
+
     @model_validator(mode="after")
     def preprocessing_defaults(self) -> "MemoryBaseCreate":
         if self.preprocessing and not self.preproc_model:
@@ -66,6 +75,15 @@ class MemoryBaseRead(MemoryBaseBase):
     id: UUID
     kb_name: str
     created_at: datetime
+    # Vector-store backend of the backing ``knowledge_base`` row (not columns on
+    # the ``memory_base`` table). Populated by the API layer so the Memory Base
+    # Control Center can surface it in the config dropdown. ``backend_config`` is
+    # included so the UI can distinguish Chroma Local from Chroma Cloud (both use
+    # ``backend_type="chroma"``, discriminated by ``backend_config["mode"]``); it
+    # carries only variable names / routing flags, never secrets. Defaults suit a
+    # Memory Base with no resolvable KB row.
+    backend_type: str = "chroma"
+    backend_config: dict = Field(default_factory=dict)
 
 
 class MemoryBaseSessionBase(SQLModel):

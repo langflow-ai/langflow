@@ -33,10 +33,11 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: "3.13"
@@ -92,7 +93,7 @@ jobs:
       # "Validate PR" checks never run on them. With a PAT both fire normally.
       HAS_PR_TOKEN: ${{ secrets.DURATIONS_PR_TOKEN != '' }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Download group durations
         uses: actions/download-artifact@v8
         with:
@@ -143,7 +144,7 @@ jobs:
           cat /tmp/durations_summary.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Close existing PRs
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |

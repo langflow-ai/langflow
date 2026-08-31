@@ -394,8 +394,9 @@ class TestChunksFilters:
         mock_root.return_value = tmp_path
         kb_dir = tmp_path / active_user.username / "filter_kb"
         kb_dir.mkdir(parents=True)
-        # A dummy chroma.sqlite3 so the "has_data" guard passes.
+        # A dummy chroma.sqlite3 so the local-Chroma "has_data" guard passes.
         (kb_dir / "chroma.sqlite3").write_bytes(b"")
+        await _ensure_kb_record(user_id=active_user.id, kb_name="filter_kb")
 
         mock_create_backend.return_value = self._fake_backend(
             [
@@ -428,6 +429,9 @@ class TestChunksFilters:
         mock_root.return_value = tmp_path
         kb_dir = tmp_path / active_user.username / "filter_multi"
         kb_dir.mkdir(parents=True)
+        # A dummy chroma.sqlite3 so the local-Chroma "has_data" guard passes.
+        (kb_dir / "chroma.sqlite3").write_bytes(b"")
+        await _ensure_kb_record(user_id=active_user.id, kb_name="filter_multi")
         (kb_dir / "chroma.sqlite3").write_bytes(b"")
 
         mock_create_backend.return_value = self._fake_backend(

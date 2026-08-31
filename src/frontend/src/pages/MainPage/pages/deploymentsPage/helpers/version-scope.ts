@@ -17,6 +17,9 @@ export function normalizeSelectedFlowVersions(
       flowName: value.flowName,
       versionId,
       versionTag: value.versionTag,
+      ...(value.wxoEligibilityIssue !== undefined
+        ? { wxoEligibilityIssue: value.wxoEligibilityIssue }
+        : {}),
     });
   }
   return next;

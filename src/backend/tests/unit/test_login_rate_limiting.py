@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import Mock
 
 import pytest
+from starlette.datastructures import Headers
 
 
 @pytest.fixture
@@ -103,7 +104,7 @@ class TestIPExtraction:
         from langflow.services.rate_limit.service import get_client_ip
 
         request = Mock()
-        request.headers = {"X-Forwarded-For": "203.0.113.1"}
+        request.headers = Headers({"X-Forwarded-For": "203.0.113.1"})
         request.client = Mock(host="127.0.0.1")
 
         ip = get_client_ip(request)
@@ -115,7 +116,7 @@ class TestIPExtraction:
         from langflow.services.rate_limit.service import get_client_ip
 
         request = Mock()
-        request.headers = {"X-Forwarded-For": "203.0.113.1, 198.51.100.1, 192.0.2.1"}
+        request.headers = Headers({"X-Forwarded-For": "203.0.113.1, 198.51.100.1, 192.0.2.1"})
         request.client = Mock(host="127.0.0.1")
 
         ip = get_client_ip(request)
@@ -128,7 +129,7 @@ class TestIPExtraction:
         from langflow.services.rate_limit.service import get_client_ip
 
         request = Mock()
-        request.headers = {"X-Forwarded-For": "  203.0.113.1  ,  198.51.100.1  "}
+        request.headers = Headers({"X-Forwarded-For": "  203.0.113.1  ,  198.51.100.1  "})
         request.client = Mock(host="127.0.0.1")
 
         ip = get_client_ip(request)
@@ -136,12 +137,46 @@ class TestIPExtraction:
         # Should use rightmost IP, stripped of whitespace
         assert ip == "198.51.100.1"
 
+    def test_get_client_ip_joins_repeated_x_forwarded_for_lines(self):
+        """Repeated X-Forwarded-For lines must be joined before taking the rightmost entry.
+
+        Some proxies append their own header line instead of extending the client's. Reading only
+        the first line would key the rate limiter on an attacker-chosen value, letting a caller pin
+        or rotate their own bucket.
+        """
+        from langflow.services.rate_limit.service import get_client_ip
+
+        request = Mock()
+        request.headers = Headers(
+            raw=[
+                (b"x-forwarded-for", b"203.0.113.1"),  # client-supplied line
+                (b"x-forwarded-for", b"192.0.2.1"),  # line appended by the trusted proxy
+            ]
+        )
+        request.client = Mock(host="10.0.0.5")
+
+        ip = get_client_ip(request)
+
+        assert ip == "192.0.2.1"
+
+    def test_get_client_ip_ignores_blank_x_forwarded_for(self):
+        """A blank header must fall back to the peer rather than returning an empty key."""
+        from langflow.services.rate_limit.service import get_client_ip
+
+        request = Mock()
+        request.headers = Headers({"X-Forwarded-For": " , "})
+        request.client = Mock(host="192.168.1.100")
+
+        ip = get_client_ip(request)
+
+        assert ip == "192.168.1.100"
+
     def test_get_client_ip_from_direct_connection(self):
         """Test IP extraction from direct client connection (no proxy)."""
         from langflow.services.rate_limit.service import get_client_ip
 
         request = Mock()
-        request.headers = {}
+        request.headers = Headers({})
         request.client = Mock(host="192.168.1.100")
 
         ip = get_client_ip(request)
@@ -153,7 +188,7 @@ class TestIPExtraction:
         from langflow.services.rate_limit.service import get_client_ip
 
         request = Mock()
-        request.headers = {}
+        request.headers = Headers({})
         request.client = None
 
         ip = get_client_ip(request)
@@ -165,7 +200,7 @@ class TestIPExtraction:
         from langflow.services.rate_limit.service import get_client_ip
 
         request = Mock()
-        request.headers = {"X-Forwarded-For": "203.0.113.1"}
+        request.headers = Headers({"X-Forwarded-For": "203.0.113.1"})
         request.client = Mock(host="127.0.0.1")
 
         ip = get_client_ip(request)

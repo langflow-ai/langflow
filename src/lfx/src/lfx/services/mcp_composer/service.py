@@ -16,6 +16,7 @@ from functools import wraps
 from pathlib import Path
 from typing import Any
 
+from lfx.base.mcp.uvx import mcp_sdk_constraint_args
 from lfx.log.logger import logger
 from lfx.services.base import Service
 from lfx.services.deps import get_settings_service
@@ -1365,6 +1366,7 @@ class MCPComposerService(Service):
 
         cmd = [
             "uvx",
+            *mcp_sdk_constraint_args(),
             f"mcp-composer{settings.mcp_composer_version}",
             "--port",
             str(port),

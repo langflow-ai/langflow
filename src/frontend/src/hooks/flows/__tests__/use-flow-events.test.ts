@@ -201,6 +201,82 @@ describe("useFlowEvents", () => {
     );
   });
 
+  it("should seed the cursor in the past so events posted just before mount survive", async () => {
+    await mountHook();
+
+    const [, config] = apiGetMock.mock.calls[0];
+    // Anything posted between the route committing and this hook mounting must
+    // still be newer than `since`, or the API drops it for good.
+    expect(config.params.since).toBeLessThan(Date.now() / 1000);
+  });
+
+  it("should surface an event posted just before mount on the first poll", async () => {
+    apiGetMock.mockResolvedValueOnce({
+      data: {
+        events: [
+          {
+            type: "component_added",
+            timestamp: Date.now() / 1000 - 1,
+            summary: "Added OpenAI Model",
+          },
+        ],
+        settled: false,
+      },
+    });
+
+    const { result } = await mountHook();
+
+    expect(result.current.isAgentWorking).toBe(true);
+    expect(result.current.events).toHaveLength(1);
+  });
+
+  it("should stay quiet when the catch-up poll only finds finished work", async () => {
+    apiGetMock.mockResolvedValueOnce({
+      data: {
+        events: [
+          {
+            type: "component_added",
+            timestamp: Date.now() / 1000 - 8,
+            summary: "Added OpenAI Model",
+          },
+        ],
+        settled: true,
+      },
+    });
+
+    const { result } = await mountHook();
+
+    expect(result.current.isAgentWorking).toBe(false);
+    expect(result.current.events).toEqual([]);
+    expect(result.current.lastSettledAt).toBeNull();
+  });
+
+  it("should re-arm the catch-up poll when flowId changes", async () => {
+    const { result, rerender } = await mountHook();
+
+    apiGetMock.mockResolvedValueOnce({
+      data: {
+        events: [
+          {
+            type: "component_added",
+            timestamp: Date.now() / 1000 - 8,
+            summary: "Added on flow-2",
+          },
+        ],
+        settled: true,
+      },
+    });
+
+    await act(async () => {
+      rerender({ id: "flow-2" });
+    });
+
+    // The first poll after the switch is a catch-up poll again, so already
+    // settled work on the new flow stays quiet too.
+    expect(result.current.isAgentWorking).toBe(false);
+    expect(result.current.events).toEqual([]);
+  });
+
   it("should reset state when flowId changes", async () => {
     const { result, rerender } = await mountHook();
 

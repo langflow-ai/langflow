@@ -12,7 +12,10 @@ who.raise_for_status()
 user_id = who.json()["id"]
 
 # Must differ from the current password.
-payload = {"password": "DocsExampleResetPass2025!"}
+payload = {
+    "current_password": os.environ.get("LANGFLOW_CURRENT_PASSWORD", "securepassword123"),
+    "password": "DocsExampleResetPass2025!",
+}
 
 response = requests.patch(
     f"{base}/api/v1/users/{user_id}/reset-password",

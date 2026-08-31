@@ -33,8 +33,16 @@ The following steps apply when you have a registered enforcement plugin.
 | `LANGFLOW_AUTHZ_ENABLED` | Enable authorization enforcement. Requires a registered enforcement plugin. When `false`, all requests pass regardless of roles or shares. | `false` |
 | `LANGFLOW_AUTHZ_SUPERUSER_BYPASS` | When `true`, active superusers bypass authorization checks. The plugin may still audit the decision. | `true` |
 | `LANGFLOW_AUTHZ_AUDIT_ENABLED` | Write an audit log row for every authorization decision and share-administration action. Works independently of `LANGFLOW_AUTHZ_ENABLED` — set this to `true` while enforcement is off to observe traffic before enabling enforcement. | `false` |
+| `LANGFLOW_AUTHZ_AUDIT_DURABLE` | Wait for each accepted audit row to commit. A full bounded queue applies backpressure and persistence failures fail the triggering request with a sanitized error. Enable this before treating the audit table as a compliance or external-delivery source. | `false` |
 | `LANGFLOW_AUTHZ_AUDIT_RETENTION_DAYS` | Number of days to retain audit log rows. Set to `0` to disable automatic pruning. | `90` |
 | `LANGFLOW_AUTHZ_AUDIT_CLEANUP_INTERVAL` | Seconds between retention sweep runs. A sweep also runs on startup. Minimum `300`. | `86400` |
+
+The default audit producer is intentionally best effort to preserve the OSS
+request-path behavior: a saturated queue or exhausted database flush can lose a
+row. Durable mode is explicit and fail-closed. It assigns the event ID and event
+time before enqueue, applies bounded backpressure, and acknowledges the caller
+only after the batch commits. Producer health reports only counters and bounded
+failure class names; database exception text is never exposed.
 
 ## System roles
 
@@ -53,6 +61,28 @@ You can create additional roles with the [roles API](#roles-api). Role assignmen
 All authorization endpoints are under `/api/v1/authz/`. Write operations require superuser privileges.
 
 These endpoints manage the RBAC data model. An enforcement plugin consumes roles, assignments, and shares when evaluating requests. Without a plugin, API responses succeed but access is not restricted.
+
+## Shared-flow execution identity
+
+A share delegates an action on a resource; it does not delegate the owner's identity or credentials.
+
+For an authenticated shared-flow run, the authenticated caller is the execution principal. Variables, files, nested flows, messages, jobs, and other dependencies resolve in that caller's namespace. A dependency must therefore be owned by the caller or shared with the caller separately. Langflow never falls back to the flow owner's credentials when a caller-owned or explicitly shared dependency is unavailable.
+
+Only the flow owner can submit graph data or component-parameter tweaks. A non-owner receives the same not-found response as a caller without access so the rejection does not confirm that the flow exists.
+
+Revoking a share prevents new runs and rechecked continuations, including HITL resume. It does not change the principal of work that is already running or terminate that work. Deployments and legacy public entry points are explicit exceptions:
+
+- Public V1/V2 and unauthenticated A2A (`auth_type=none`) entry points execute with a stable, non-persisted anonymous principal under visitor-isolated session and storage namespaces. They never inherit the published flow owner's credentials, variables, files, or Memory Bases, and public requests cannot submit graph data or tweaks. Protected A2A (`apikey` or `oauth`) continues to require and execute as the flow owner.
+- Deployment authorization and audit use the requesting actor, while the external deployment data plane continues to use the deployment owner's provider namespace. Provider controls govern already-running work.
+- Webhooks, legacy MCP, and project MCP remain owner-scoped admission surfaces in this release; they do not widen execution to shared flows. Webhook request data is the one trusted server-generated tweak and is mapped only to the published Webhook Component.
+
+Owner-only execution retains detailed component errors for debugging. Delegated and public execution returns a stable generic workflow error without a component traceback or provider detail. Server logs and telemetry keep the original exception.
+
+:::important Upgrade note: paused public A2A tasks
+An A2A HITL resume requires the stored checkpoint's principal to match the principal the current request was admitted under. Checkpoints written before anonymous public execution existed recorded the flow owner, while an `auth_type=none` folder now admits the anonymous principal, so a public A2A task that is paused across this upgrade cannot be resumed and returns `404`. There is no compatibility read for these rows on purpose: accepting an owner-principal checkpoint under an anonymous principal is exactly the protected-to-public transition this check exists to block. Drain or cancel paused public A2A tasks before upgrading, then start them again. Protected (`apikey`, `oauth`) A2A tasks are unaffected.
+:::
+
+The machine-validated endpoint-family contract is maintained in `scripts/ci/execution_principal_matrix.json`. Changes to a listed runtime surface must update that matrix and its referenced tests.
 
 ### Effective permissions
 

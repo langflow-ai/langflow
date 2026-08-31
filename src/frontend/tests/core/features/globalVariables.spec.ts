@@ -2,7 +2,6 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 
 test(
@@ -34,12 +33,6 @@ test(
       });
 
     await adjustScreenView(page, { numberOfZoomOut: 2 });
-
-    await initialGPTsetup(page, {
-      skipAdjustScreenView: true,
-      skipUpdateOldComponents: true,
-      skipSelectGptModel: true,
-    });
 
     const genericName = Math.random().toString();
     const credentialName = Math.random().toString();

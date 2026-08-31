@@ -352,3 +352,72 @@ def test_reload_id_not_in_local_discovery_errors_clean(runner: CliRunner, monkey
     msg = result.stderr or result.stdout
     assert "lfx-not-installed" in msg
     assert "--bundle" in msg
+
+
+def test_reload_multi_bundle_extension_requires_explicit_bundle(
+    runner: CliRunner,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seed = tmp_path / "seed"
+    extension = seed / "lfx_datastax"
+    extension.mkdir(parents=True)
+    manifest = {
+        **_BASE_MANIFEST,
+        "id": "lfx-datastax",
+        "bundles": [
+            {"name": "datastax", "path": "datastax"},
+            {"name": "cassandra", "path": "cassandra"},
+        ],
+    }
+    for bundle in manifest["bundles"]:
+        (extension / bundle["path"]).mkdir()
+    (extension / "extension.json").write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setenv("LANGFLOW_SEED_DIR", str(seed))
+    monkeypatch.setattr(
+        "lfx.cli._extension_commands._post_reload",
+        lambda **_kwargs: pytest.fail("should not POST an ambiguous bundle"),
+    )
+
+    result = runner.invoke(app, ["extension", "reload", "lfx-datastax"])
+
+    assert result.exit_code == 1
+    message = result.stderr or result.stdout
+    assert "cassandra, datastax" in message
+    assert "--bundle" in message
+
+
+def test_reload_all_posts_every_bundle_in_multi_bundle_extension(
+    runner: CliRunner,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from lfx.cli._extension_reload_client import ReloadHttpResponse
+
+    seed = tmp_path / "seed"
+    extension = seed / "lfx_datastax"
+    extension.mkdir(parents=True)
+    manifest = {
+        **_BASE_MANIFEST,
+        "id": "lfx-datastax",
+        "bundles": [
+            {"name": "datastax", "path": "datastax"},
+            {"name": "cassandra", "path": "cassandra"},
+        ],
+    }
+    for bundle in manifest["bundles"]:
+        (extension / bundle["path"]).mkdir()
+    (extension / "extension.json").write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setenv("LANGFLOW_SEED_DIR", str(seed))
+    posted: list[tuple[str, str]] = []
+
+    def _record_post(**kwargs: str | None) -> ReloadHttpResponse:
+        posted.append((str(kwargs["extension_id"]), str(kwargs["bundle_name"])))
+        return ReloadHttpResponse(status=200, ok=True, payload={"ok": True})
+
+    monkeypatch.setattr("lfx.cli._extension_commands._post_reload", _record_post)
+
+    result = runner.invoke(app, ["extension", "reload", "--all", "--format", "json"])
+
+    assert result.exit_code == 0, result.stderr or result.stdout
+    assert posted == [("lfx-datastax", "datastax"), ("lfx-datastax", "cassandra")]

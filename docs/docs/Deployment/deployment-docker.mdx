@@ -9,6 +9,11 @@ import PartialPodmanAlt from '@site/docs/_partial-podman-alt.mdx';
 
 Running applications in Docker containers ensures consistent behavior across different systems and eliminates dependency conflicts.
 
+Langflow publishes base, default, and extended application images with different
+provider inventories. Before deploying, see
+[Choose a Langflow Docker image](./docker-image-profiles.mdx) for the
+canonical tags, composition, version-pinning, migration, and rollback guidance.
+
 This guide demonstrates several ways to run Langflow with [Docker](https://docs.docker.com/) and [Docker Compose](https://docs.docker.com/compose/):
 
 * [Quickstart](#quickstart): Start a Langflow container with default values.
@@ -283,7 +288,10 @@ The full source is copied later with `COPY ./src`, which brings those omitted me
 
     The first `uv sync` installs only dependencies before the source is copied, so that Docker can cache that layer. The second `uv sync` installs the project packages (`langflow`, `lfx`) from the copied source. Both calls are required. Omitting the second will produce a container with all dependencies present but the project packages missing, which fails at runtime.
 
-For an example, see [`docker/build_and_push_with_extras.Dockerfile`](https://github.com/langflow-ai/langflow/blob/main/docker/build_and_push_with_extras.Dockerfile).
+The supported source build uses
+[`docker/build_and_push.Dockerfile`](https://github.com/langflow-ai/langflow/blob/main/docker/build_and_push.Dockerfile).
+Build its `base` target for the bundle-free application, `full` for the normal
+curated distribution, or `full-bundles` for the extended provider inventory.
 
 ### Start a development environment with `make dcdev_up`
 

@@ -317,14 +317,15 @@ class PublicWorkflowRunRequest(BaseModel):
     The endpoint enforces the additional CVE mitigations that the regular
     endpoint does not need:
 
-    - ``access_type == PUBLIC`` gate (others 403).
+    - Canonical PUBLIC-share or legacy ``access_type == PUBLIC`` direct-link
+      grant (others are hidden as 404).
     - ``virtual_flow_id = uuid5(identifier, flow_id)`` so messages stay
       isolated per visitor.
     - Session string namespaced under the virtual flow id
       (CVE-2026-33017).
     - File-path validation (GHSA-rcjh-r59h-gq37).
-    - Owner impersonation: the run executes under the flow owner's
-      permissions, never the visitor's.
+    - Anonymous principal isolation: execution cannot inherit the flow owner's
+      credentials, variables, files, or knowledge bases.
     """
 
     flow_id: str = Field(..., description="UUID of the public flow to run.")
@@ -337,7 +338,7 @@ class PublicWorkflowRunRequest(BaseModel):
         WorkflowMode.STREAM,
         description=(
             "Always ``stream``. Sync/background modes would widen the public "
-            "attack surface (job polling, owner impersonation persists across "
+            "attack surface (job polling and anonymous work persists across "
             "queue boundaries) so the schema rejects them at the wire."
         ),
     )

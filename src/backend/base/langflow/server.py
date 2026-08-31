@@ -11,7 +11,11 @@ from uvicorn.workers import UvicornWorker
 
 
 class LangflowUvicornWorker(UvicornWorker):
-    CONFIG_KWARGS = {"loop": "asyncio"}
+    # ``reset_contextvars``: start every request task from a clean context. Without it a
+    # pipelined request inherits the previous request's ended server span and OpenTelemetry
+    # emits it as an INTERNAL child of an unrelated request. Kept in step with the
+    # direct-uvicorn kwargs in ``langflow.__main__.build_direct_uvicorn_kwargs``.
+    CONFIG_KWARGS = {"loop": "asyncio", "reset_contextvars": True}
     _has_exited = False
 
     def init_process(self) -> None:

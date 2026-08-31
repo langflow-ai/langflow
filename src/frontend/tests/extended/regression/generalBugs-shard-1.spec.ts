@@ -1,23 +1,19 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { selectStarterTemplate } from "../../utils/flow/select-starter-template";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 
 test(
   "should delete rows from table message",
   { tag: ["@release"] },
   async ({ page }) => {
-    skipIfMissing.openAiKey();
-    loadDotenvIfLocal(__dirname);
+    await seedLoopbackProvider(page);
     await awaitBootstrapTest(page);
 
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page
-      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
-      .click();
-    await initialGPTsetup(page);
+    await selectStarterTemplate(page, TEXTS.templateBasicPrompting);
+    await configureLoopbackOpenAI(page);
 
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {

@@ -20,6 +20,14 @@ class TelemetrySettings(BaseModel):
     """If set to True, Langflow will track transactions between flows."""
     vertex_builds_storage_enabled: bool = True
     """If set to True, Langflow will keep track of each vertex builds (outputs) in the UI for any flow."""
+    sync_result_storage_enabled: bool = False
+    """If set to True, a completed ``mode=sync`` workflow run caches its outputs to ``Job.result``
+    (and its session to ``job_metadata``) so a later GET status on that job_id returns them.
+
+    Off by default: sync callers already receive the full outputs and session_id in the inline
+    response, so persisting them again is an extra per-request job-row write with no documented
+    consumer. Enable only for a client that submits sync runs and later polls GET status. Background
+    runs are unaffected — they always persist their result (the caller is detached and must poll)."""
 
     telemetry_writer_enabled: bool = True
     """Route transaction and vertex_build writes through an async batched writer backed by a

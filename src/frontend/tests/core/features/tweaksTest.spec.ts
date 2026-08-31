@@ -6,6 +6,7 @@ import {
   addParameterToNode,
   setParameterApiEditable,
 } from "../../utils/open-advanced-options";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 
 // LE-1810: API exposure is managed per-parameter on the node (panel API
 // toggle backed by the persisted api_editable flag). The apiModal no longer
@@ -77,6 +78,10 @@ test("check if exposed parameters are updating when something on the flow change
   await page.getByTestId("blank-flow").click();
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("Chroma");
+  await skipIfComponentUnavailable(
+    page.getByTestId("chromaChroma DB"),
+    "Chroma",
+  );
 
   await page.waitForSelector('[data-testid="chromaChroma DB"]', {
     timeout: 1000,

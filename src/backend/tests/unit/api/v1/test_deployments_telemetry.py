@@ -106,9 +106,7 @@ def mock_db_crud(mock_mapper, active_user):
         )
         mock_upd_dep = stack.enter_context(patch("langflow.api.v1.deployments.update_deployment_db"))
         mock_res_ad = stack.enter_context(patch("langflow.api.v1.deployments.resolve_adapter_from_deployment"))
-        _mock_del_dep = stack.enter_context(
-            patch("langflow.api.v1.deployments._delete_local_deployment_row_with_commit_retry")
-        )
+        _mock_del_dep = stack.enter_context(patch("langflow.api.v1.deployments._delete_local_deployment_row"))
         mock_list_att_by_snapshot = stack.enter_context(
             patch("langflow.api.v1.deployments.list_attachments_by_provider_snapshot_id")
         )

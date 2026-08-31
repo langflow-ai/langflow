@@ -39,6 +39,17 @@ async def test_resume_restores_identity_and_state():
     assert resumed.get_vertex("chat_input").built is True
 
 
+async def test_resume_restores_source_flow_provenance():
+    original, _ = await _paused_checkpoint()
+    original.source_flow_id = "source-flow"
+
+    checkpoint = original.build_checkpoint()
+    resumed = Graph.resume_from_checkpoint(checkpoint)
+
+    assert checkpoint.source_flow_id == "source-flow"
+    assert resumed.source_flow_id == "source-flow"
+
+
 async def test_resume_recomputes_next_runnable_layer_from_built_predecessors():
     _, checkpoint = await _paused_checkpoint()
     resumed = Graph.resume_from_checkpoint(checkpoint)

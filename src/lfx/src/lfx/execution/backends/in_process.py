@@ -22,7 +22,9 @@ class InProcessExecutor(Executor):
         opts = unit.runtime_options
 
         if opts.get("_use_arun_legacy") and hasattr(graph, "_arun_legacy"):
-            legacy_kwargs = {k: v for k, v in opts.items() if not k.startswith("_")}
+            # open_flow_span is for async_start, which the legacy path does not go through, and
+            # _arun_legacy would reject the unexpected keyword.
+            legacy_kwargs = {k: v for k, v in opts.items() if not k.startswith("_") and k != "open_flow_span"}
             outputs = await graph._arun_legacy(inputs=unit.inputs, **legacy_kwargs)  # noqa: SLF001
             yield RunComplete(outputs=list(outputs))
             return
@@ -41,6 +43,8 @@ class InProcessExecutor(Executor):
             event_manager=opts.get("event_manager"),
             reset_output_values=opts.get("reset_output_values", True),
             fallback_to_env_vars=opts.get("fallback_to_env_vars", False),
+            # Defaults True, so a consumer that has not been converted still gets a span.
+            open_flow_span=opts.get("open_flow_span", True),
         )
         try:
             async for result in inner:

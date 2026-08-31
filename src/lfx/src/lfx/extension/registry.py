@@ -101,6 +101,11 @@ class Extension:
     load_error: ExtensionError | None = None
 
     @property
+    def bundle_names(self) -> tuple[str, ...]:
+        """Return every component bundle declared by the Extension manifest."""
+        return tuple(bundle.name for bundle in self.manifest.manifest.bundles)
+
+    @property
     def namespaced_slot(self) -> str:
         """Slot rendered with the canonical ``@`` prefix (e.g. ``@official``).
 

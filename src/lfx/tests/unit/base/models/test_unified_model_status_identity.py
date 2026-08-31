@@ -253,6 +253,7 @@ def test_legacy_name_normalization_preserves_first_provider():
 
 def test_reasoning_model_instantiation_omits_temperature_and_preserves_max_tokens():
     from lfx.base.models import unified_models as unified_models_module
+    from lfx.base.models.unified_models import instantiation
     from lfx.base.models.unified_models.instantiation import get_llm
 
     captured: dict = {}
@@ -276,6 +277,7 @@ def test_reasoning_model_instantiation_omits_temperature_and_preserves_max_token
             "get_all_variables_for_provider",
             return_value={"AZURE_AI_FOUNDRY_ENDPOINT": "https://example.services.ai.azure.com/openai/v1"},
         ),
+        patch.object(instantiation, "validate_url_for_ssrf_or_raise"),
     ):
         get_llm(selection, user_id="user-1", temperature=0.7, max_tokens=25)
 

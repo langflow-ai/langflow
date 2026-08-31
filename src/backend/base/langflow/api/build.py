@@ -4,20 +4,22 @@ import time
 import traceback
 import uuid
 from collections.abc import AsyncIterator
+from functools import wraps
 
 from fastapi import BackgroundTasks, HTTPException, Response
+from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
-from lfx.graph.vertex.base import Vertex
 from lfx.log.logger import logger
+from lfx.processing.process import process_tweaks_on_graph, validate_targeted_inputs
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
+from lfx.utils.file_path_security import LocalFileAccessError
 from sqlmodel import select
 
 from langflow.api.disconnect import DisconnectHandlerStreamingResponse
 from langflow.api.utils import (
-    CurrentActiveUser,
     EventDeliveryType,
     build_graph_from_data,
     build_graph_from_db,
@@ -26,6 +28,7 @@ from langflow.api.utils import (
     get_top_level_vertices,
     parse_exception,
 )
+from langflow.api.utils.execution_errors import error_details_for_client, error_for_client
 from langflow.api.v1.schemas import (
     FlowDataRequest,
     ResultDataResponse,
@@ -37,6 +40,7 @@ from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.jobs.model import JobType
+from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import (
     get_chat_service,
     get_job_service,
@@ -46,6 +50,7 @@ from langflow.services.deps import (
     session_scope,
 )
 from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.services.telemetry.schema import (
     ComponentInputsPayload,
     ComponentPayload,
@@ -187,10 +192,13 @@ async def start_flow_build(
     stop_component_id: str | None,
     start_component_id: str | None,
     log_builds: bool,
-    current_user: CurrentActiveUser,
+    current_user: User | UserRead,
+    provider_policy_flow: Flow,
     queue_service: JobQueueService,
     flow_name: str | None = None,
     source_flow_id: uuid.UUID | None = None,
+    source_flow_owner_id: uuid.UUID | None = None,
+    expose_error_details: bool = False,
 ) -> str:
     """Start the flow build process by setting up the queue and starting the build task.
 
@@ -204,15 +212,24 @@ async def start_flow_build(
         start_component_id: Optional component ID to start from.
         log_builds: Whether to log build events.
         current_user: The currently authenticated user.
+        provider_policy_flow: Server-loaded flow whose project/workspace scope
+            governs provider use for the queued graph.
         queue_service: The job queue service instance.
         flow_name: Optional flow name override.
         source_flow_id: If provided, the actual flow ID to load from DB.
             Used by public flows where flow_id is a virtual UUID for session isolation
             but the flow data must be loaded from the original flow in the database.
+        source_flow_owner_id: Stored owner of the source flow, used to gate owner-scoped side effects.
+        expose_error_details: Whether client events may include component errors and tracebacks.
 
     Returns:
         the job_id.
     """
+    # Reject before allocating a queue or starting the background build. Once a
+    # job id has been returned, a policy refusal can only arrive as an event on
+    # an HTTP 200 rather than the documented structured 422.
+    validate_targeted_inputs([inputs] if inputs is not None else None)
+
     job_id = str(uuid.uuid4())
     try:
         _, event_manager = queue_service.create_queue(job_id)
@@ -227,13 +244,21 @@ async def start_flow_build(
             start_component_id=start_component_id,
             log_builds=log_builds,
             current_user=current_user,
+            provider_policy_flow=provider_policy_flow,
             flow_name=flow_name,
             source_flow_id=source_flow_id,
+            source_flow_owner_id=source_flow_owner_id,
+            expose_error_details=expose_error_details,
         )
         queue_service.start_job(job_id, task_coro)
     except Exception as e:
         await logger.aexception("Failed to create queue and start task")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        client_error = error_for_client(e, expose_details=expose_error_details)
+        if isinstance(client_error, HTTPException):
+            if client_error is e:
+                raise
+            raise client_error from e
+        raise HTTPException(status_code=500, detail=str(client_error)) from e
     return job_id
 
 
@@ -423,7 +448,7 @@ async def create_flow_response(
     )
 
 
-async def generate_flow_events(
+async def _generate_flow_events(
     *,
     flow_id: uuid.UUID,
     background_tasks: BackgroundTasks,
@@ -434,14 +459,18 @@ async def generate_flow_events(
     stop_component_id: str | None,
     start_component_id: str | None,
     log_builds: bool,
-    current_user: CurrentActiveUser,
+    current_user: User | UserRead,
     flow_name: str | None = None,
     source_flow_id: uuid.UUID | None = None,
+    source_flow_owner_id: uuid.UUID | None = None,
     job_id: uuid.UUID | str | None = None,
     resume: dict | None = None,
     run_id: str | None = None,
     track_job_status: bool = True,
     tweaks: dict | None = None,
+    expose_error_details: bool = False,
+    persist_messages: bool = True,
+    end_user_id: str | None = None,
 ) -> None:
     """Generate events for flow building process.
 
@@ -481,6 +510,12 @@ async def generate_flow_events(
         graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
         if not graph.user_id:
             graph.user_id = str(current_user.id)
+        # F5: the in-memory end_user_id is lost when the graph is rebuilt from the durable
+        # checkpoint, so re-apply it (threaded here from the persisted request's end_user_id)
+        # — otherwise the resumed run would stamp post-pause messages to the SID, not the end
+        # user, breaking write==read for this conversation.
+        if end_user_id:
+            graph.end_user_id = end_user_id
         # Resume skips the initial run's trace setup (trace_context_var stays unset → post-pause
         # vertices like Chat Output never trace); re-init so the resumed vertices trace.
         graph.flow_name = graph.flow_name or flow_name
@@ -528,18 +563,16 @@ async def generate_flow_events(
             # Apply request tweaks to the built graph. The sync path applies
             # tweaks before Graph construction; the streaming/background path
             # builds from the DB (or request data), so tweaks must be applied
-            # to the built graph here or they are silently dropped. We use
-            # ``update_raw_params`` rather than the lfx ``process_tweaks_on_graph``
-            # helper because that helper only sets ``vertex.params`` and does not
-            # persist the override to runtime (mirrors the workaround in
-            # ``lfx.base.tools.run_flow._process_tweaks_on_graph``).
+            # to the built graph here or they are silently dropped.
+            #
+            # This used to filter only the literal key "code" and write straight
+            # through ``update_raw_params``, which meant the streaming and
+            # background modes accepted tweaks the sync mode refused: the
+            # protected-field floor and the deployment tweak policy were never
+            # consulted. ``process_tweaks_on_graph`` now enforces both and
+            # persists the override correctly, so this path uses it.
             if tweaks:
-                for vertex in graph.vertices:
-                    if not (isinstance(vertex, Vertex) and isinstance(vertex.id, str)):
-                        continue
-                    if node_tweaks := tweaks.get(vertex.id):
-                        node_tweaks = {k: v for k, v in node_tweaks.items() if k != "code"}
-                        vertex.update_raw_params(node_tweaks, overwrite=True)
+                process_tweaks_on_graph(graph, tweaks)
 
             graph.set_run_id(build_run_id)
             if job_id is not None:
@@ -562,6 +595,16 @@ async def generate_flow_events(
             await chat_service.set_cache(flow_id_str, graph)
             await log_telemetry(start_time, components_count, run_id=build_run_id, success=True)
 
+        except TweakRefusedError:
+            # A refused tweak is a caller error, not a build failure, so it must
+            # not be flattened into the generic 500 below.
+            #
+            # ``start_flow_build`` eagerly refuses targeted inputs and does not
+            # accept tweaks. V2 streaming and background callers instead pass
+            # tweaks directly to ``generate_flow_events`` after their response or
+            # job is committed, so refusal is reported as an error event there.
+            # Enforcement still holds: the tweak is never applied.
+            raise
         except Exception as exc:
             await log_telemetry(
                 start_time,
@@ -571,7 +614,7 @@ async def generate_flow_events(
                 error_message=str(exc),
             )
 
-            if "stream or streaming set to True" in str(exc):
+            if isinstance(exc, LocalFileAccessError) or "stream or streaming set to True" in str(exc):
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
             await logger.aexception("Error checking build status: " + str(exc))
             raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -614,22 +657,33 @@ async def generate_flow_events(
                 session_id=effective_session_id,
                 run_id=str(job_id) if job_id is not None else run_id,
             )
-            if source_flow_id is not None:
-                graph.flow_id = str(flow_id)
-            return graph
+        else:
+            if not flow_name:
+                lookup_flow_id = source_flow_id if source_flow_id is not None else flow_id
+                result = await fresh_session.exec(select(Flow.name).where(Flow.id == lookup_flow_id))
+                flow_name = result.first()
 
-        if not flow_name:
-            result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
-            flow_name = result.first()
+            # Sanitized public data still contains FileInput references under
+            # the real source-flow namespace. Build under that trusted scope;
+            # after parameter containment completes, switch the graph to the
+            # visitor-virtual execution ID below.
+            graph_build_flow_id = str(source_flow_id) if source_flow_id is not None else flow_id_str
+            graph = await build_graph_from_data(
+                flow_id=graph_build_flow_id,
+                payload=data.model_dump(),
+                user_id=str(current_user.id),
+                flow_name=flow_name,
+                session_id=effective_session_id,
+                run_id=str(job_id) if job_id is not None else run_id,
+            )
 
-        return await build_graph_from_data(
-            flow_id=flow_id_str,
-            payload=data.model_dump(),
-            user_id=str(current_user.id),
-            flow_name=flow_name,
-            session_id=effective_session_id,
-            run_id=str(job_id) if job_id is not None else run_id,
-        )
+        if source_flow_id is not None:
+            # This value comes from the server-resolved public flow, never from
+            # request data. FileInput containment and ChatInput attachment
+            # validation use it only after flow_id becomes visitor-virtual.
+            graph.source_flow_id = str(source_flow_id)
+            graph.flow_id = str(flow_id)
+        return graph
 
     def sort_vertices(graph: Graph) -> list[str]:
         try:
@@ -638,7 +692,12 @@ async def generate_flow_events(
             logger.exception("Error sorting vertices")
             return graph.sort_vertices()
 
+    # _build_vertex converts a component failure into an error output instead of raising, so the
+    # flow span cannot observe it. Remember the type here and hand it to the span after the walk.
+    build_error_type: str | None = None
+
     async def _build_vertex(vertex_id: str, graph: Graph, event_manager: EventManager) -> VertexBuildResponse:
+        nonlocal build_error_type
         flow_id_str = str(flow_id)
         next_runnable_vertices = []
         top_level_vertices = []
@@ -671,6 +730,10 @@ async def generate_flow_events(
                 # error output would terminalize a suspendable run.
                 raise
             except Exception as exc:  # noqa: BLE001
+                # First failure wins. Sibling vertices in a layer are gathered concurrently, so
+                # last-writer-wins would make the reported type depend on scheduling order.
+                if build_error_type is None:
+                    build_error_type = type(exc).__name__
                 if isinstance(exc, ComponentBuildError):
                     params = exc.message
                     tb = exc.formatted_traceback
@@ -678,9 +741,17 @@ async def generate_flow_events(
                     tb = traceback.format_exc()
                     await logger.aexception("Error building Component")
                     params = format_exception_message(exc)
+                error_message = params
+                client_error = error_details_for_client(
+                    exc,
+                    expose_details=expose_error_details,
+                    message=params,
+                    stack_trace=tb,
+                )
+                params = client_error.message
+                tb = client_error.stack_trace
                 message = {"errorMessage": params, "stackTrace": tb}
                 valid = False
-                error_message = params
                 output_label = vertex.outputs[0]["name"] if vertex.outputs else "output"
                 outputs = {output_label: OutputValue(message=message, type="error")}
                 result_data_response = ResultDataResponse(results={}, outputs=outputs)
@@ -693,8 +764,10 @@ async def generate_flow_events(
             # ``run_id``) persist every vertex, including streaming terminal outputs,
             # so GET-status reconstruction by job_id is complete. The live build
             # path (``run_id is None``) keeps the original "skip streaming vertices"
-            # behavior unchanged.
-            if log_builds and (run_id is not None or not vertex.will_stream):
+            # behavior unchanged. Ephemeral (anonymous serving) runs skip the
+            # persisted record entirely — vertex-build rows retain params/outputs,
+            # so the no-persist contract covers them too.
+            if log_builds and graph.persist_messages and (run_id is not None or not vertex.will_stream):
                 background_tasks.add_task(
                     log_vertex_build,
                     flow_id=flow_id_str,
@@ -838,14 +911,25 @@ async def generate_flow_events(
 
     try:
         ids, vertices_to_run, graph = await build_graph_and_get_order()
+        # Serving-plane end-user scoping: an anonymous run is ephemeral, so mark the
+        # graph non-persisting (astore_message honors this per component). Defaults
+        # True, so the Playground and every other caller are unaffected.
+        graph.persist_messages = persist_messages
+        # Carry the end-user identity onto the graph so per-user state (chat memory)
+        # scopes to the end user. None for anonymous / feature-off / editor runs.
+        graph.end_user_id = end_user_id
     except Exception as e:
+        client_error = error_for_client(e, expose_details=expose_error_details)
         error_message = ErrorMessage(
             flow_id=flow_id,
-            exception=e,
+            exception=client_error,
             session_id=inputs.session,
+            include_traceback=expose_error_details,
         )
         event_manager.on_error(data=error_message.data)
-        raise
+        if expose_error_details:
+            raise
+        raise client_error from e
 
     # Create a WORKFLOW job record so memory-base on_flow_output can track this run.
     # Best-effort: failures here must never break the build path.
@@ -904,21 +988,38 @@ async def generate_flow_events(
             await logger.aerror(f"Error building vertices: {e}")
             custom_component = graph.get_vertex(vertex_id).custom_component
             trace_name = getattr(custom_component, "trace_name", None)
+            client_error = error_for_client(e, expose_details=expose_error_details)
             error_message = ErrorMessage(
                 flow_id=flow_id,
-                exception=e,
+                exception=client_error,
                 session_id=graph.session_id,
                 trace_name=trace_name,
+                include_traceback=expose_error_details,
             )
             event_manager.on_error(data=error_message.data)
-            raise
+            if expose_error_details:
+                raise
+            raise client_error from e
 
     try:
         runner_owns_status = job_id is not None  # background path: JobRunner already wraps execute_with_status
-        if _build_job_svc and _build_run_id and not runner_owns_status:
-            await _build_job_svc.execute_with_status(_build_run_id, _run_vertex_build)
-        else:
-            await _run_vertex_build()
+        # This driver walks the vertices itself and never enters Graph.arun/async_start/process, so
+        # without this the busiest surfaces in the product (playground, v2 streaming and background,
+        # voice) were the ones producing no flow span at all. v2 sync is not in that list: it runs
+        # through run_graph_internal -> Graph.arun, which has carried the span all along.
+        # Safe as make_current: this is a coroutine run as its own task, not an async generator,
+        # so the context token cannot outlive the scope.
+        # Starts here and not earlier because the span hangs off the graph: a run that dies in
+        # build_graph_and_get_order has no graph to hang one on, so it emits no flow span. Those
+        # are request-shaped failures (bad flow data, no sortable order) and the server span
+        # still covers them, so the operator sees the request, just not a unit of work.
+        with graph.flow_execution_span() as flow_span:
+            if _build_job_svc and _build_run_id and not runner_owns_status:
+                await _build_job_svc.execute_with_status(_build_run_id, _run_vertex_build)
+            else:
+                await _run_vertex_build()
+            if build_error_type is not None:
+                flow_span.record_error(build_error_type)
     except GraphPausedException as exc:
         # Non-terminal: persist the card to history, emit the pause event, end without on_end.
         from langflow.api.v2.hitl import persist_human_input_card
@@ -946,7 +1047,7 @@ async def generate_flow_events(
     # when a caller owns the run's lifecycle (the v2 durable background path
     # passes ``track_job_status=False`` and fires this hook itself with the
     # durable job_id), firing here too would double-capture the flow output.
-    if track_job_status:
+    if track_job_status and source_flow_owner_id is not None and str(source_flow_owner_id) == str(current_user.id):
         try:
             _run_id_uuid = uuid.UUID(graph.run_id) if graph.run_id else None  # type-cast only; same run_id set on graph
             await get_task_service().fire_and_forget_task(
@@ -959,6 +1060,23 @@ async def generate_flow_events(
             await logger.awarning("Memory base hook scheduling failed for flow %s", flow_id, exc_info=True)
 
     await event_manager.queue.put((None, None, time.time()))
+
+
+@wraps(_generate_flow_events)
+async def generate_flow_events(*args, provider_policy_flow: Flow | None = None, **kwargs) -> None:
+    """Run the build driver under a trusted, required provider-policy scope.
+
+    Production callers pass the exact server-loaded flow they authorized. A
+    missing flow remains a required unresolved scope so provider-bearing test
+    or internal callers fail closed in the Enterprise policy implementation.
+    """
+    current_user = kwargs.get("current_user")
+    with scoped_model_provider_policy_for_flow(
+        provider_policy_flow,
+        user_id=getattr(current_user, "id", None),
+        is_superuser=bool(getattr(current_user, "is_superuser", False)),
+    ):
+        await _generate_flow_events(*args, **kwargs)
 
 
 async def cancel_flow_build(

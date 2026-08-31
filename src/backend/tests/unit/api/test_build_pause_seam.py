@@ -58,6 +58,7 @@ async def _drive_build(flow_id: uuid.UUID, active_user) -> tuple[asyncio.Queue, 
             start_component_id=None,
             log_builds=False,
             current_user=active_user,
+            expose_error_details=False,
         )
     except BaseException as exc:
         error = exc

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
-import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
+import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
 import type { GlobalVariable } from "./types";
 
 // Custom hook for managing global variable value existence
@@ -18,9 +18,11 @@ export const useGlobalVariableValue = (
 export const useUnavailableField = (
   displayName: string | undefined,
   value: string,
+  globalVariables: GlobalVariable[],
 ) => {
-  const unavailableFields = useGlobalVariablesStore(
-    (state) => state.unavailableFields,
+  const unavailableFields = useMemo(
+    () => getUnavailableFields(globalVariables),
+    [globalVariables],
   );
 
   return useMemo(() => {
@@ -40,7 +42,6 @@ export const useUnavailableField = (
 export const useInitialLoad = (
   disabled: boolean,
   loadFromDb: boolean,
-  globalVariables: GlobalVariable[],
   canValidateMissingVariable: boolean,
   valueExists: boolean,
   unavailableField: string | null,
@@ -60,13 +61,7 @@ export const useInitialLoad = (
   // global variables query is still in flight, during background refetches,
   // or after failed fetches.
   useEffect(() => {
-    if (
-      disabled ||
-      !loadFromDb ||
-      !canValidateMissingVariable ||
-      !globalVariables.length ||
-      valueExists
-    ) {
+    if (disabled || !loadFromDb || !canValidateMissingVariable || valueExists) {
       return;
     }
 
@@ -74,13 +69,7 @@ export const useInitialLoad = (
       { value: "", load_from_db: false },
       { skipSnapshot: true },
     );
-  }, [
-    disabled,
-    loadFromDb,
-    canValidateMissingVariable,
-    globalVariables.length,
-    valueExists,
-  ]);
+  }, [disabled, loadFromDb, canValidateMissingVariable, valueExists]);
 
   // Handle unavailable field initialization
   useEffect(() => {

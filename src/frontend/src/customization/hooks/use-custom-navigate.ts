@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import {
   type NavigateFunction,
   type NavigateOptions,
@@ -12,16 +13,17 @@ export function useCustomNavigate(): NavigateFunction {
 
   const { customParam } = useParams();
 
-  function navigate(to: To | number, options?: NavigateOptions) {
-    if (typeof to === "number") {
-      domNavigate(to);
-    } else {
-      domNavigate(
-        ENABLE_CUSTOM_PARAM && to[0] === "/" ? `/${customParam}${to}` : to,
-        options,
-      );
-    }
-  }
-
-  return navigate;
+  return useCallback(
+    (to: To | number, options?: NavigateOptions) => {
+      if (typeof to === "number") {
+        domNavigate(to);
+      } else {
+        domNavigate(
+          ENABLE_CUSTOM_PARAM && to[0] === "/" ? `/${customParam}${to}` : to,
+          options,
+        );
+      }
+    },
+    [customParam, domNavigate],
+  );
 }

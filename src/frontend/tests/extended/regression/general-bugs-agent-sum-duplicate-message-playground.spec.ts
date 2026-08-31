@@ -1,16 +1,17 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
+import { TID } from "../../utils/constants/testIds";
 import { TEXTS } from "../../utils/constants/texts";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { selectAnthropicModel } from "../../utils/select-anthropic-model";
+import { TIMEOUTS } from "../../utils/constants/timeouts";
+import { sendPlaygroundMessage } from "../../utils/playground/send-playground-message";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 
 test(
   "user must not experience message duplication in mathematical expressions with agent component",
   { tag: ["@release", "@components", "@workspace"] },
   async ({ page }) => {
-    skipIfMissing.anthropicKey();
-    loadDotenvIfLocal(__dirname);
+    await seedLoopbackProvider(page);
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
@@ -19,56 +20,47 @@ test(
       .first()
       .click();
 
-    await selectAnthropicModel(page);
+    await configureLoopbackOpenAI(page);
 
-    await page.getByTestId("playground-btn-flow-io").click();
+    await page.getByTestId(TID.playgroundBtnFlowIo).click();
+    await sendPlaygroundMessage(page, "2+2");
 
-    await page.waitForSelector('[data-testid="input-chat-playground"]', {
-      timeout: 100000,
+    const calculatorTrigger = page.getByRole("button", {
+      name: /calculator|evaluate expression/i,
+    });
+    await expect(calculatorTrigger).toBeVisible({
+      timeout: TIMEOUTS.buildComplete,
+    });
+    await expect(
+      calculatorTrigger.getByTestId("tool-status-done"),
+    ).toBeVisible();
+    if ((await calculatorTrigger.getAttribute("data-state")) !== "open") {
+      await calculatorTrigger.click();
+    }
+    const calculatorCard = page.getByRole("region", {
+      name: /tool done (calculator|evaluate expression)/i,
     });
 
-    // Test simple math expression
-    await page.getByTestId("input-chat-playground").fill("2+2");
-
-    await page.waitForSelector('[data-testid="button-send"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("button-send").click();
-    // Wait for response completion
-    await page.waitForSelector(
-      '[data-testid="header-icon"] svg[data-testid="icon-Check"]',
-      {
-        timeout: 30000,
-      },
+    // The current tool card renders primitive arguments as labelled rows,
+    // rather than the legacy JSON tabs. Assert the calculator saw exactly one
+    // expression and produced the corresponding result.
+    await expect(
+      calculatorCard.getByText("expression", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      calculatorCard.getByText('"2+2"', { exact: true }),
+    ).toBeVisible();
+    await expect(calculatorCard.locator("code")).toContainText(
+      /"result"\s*:\s*"4"/,
     );
-
-    // Click on the execution section to expand and reveal the JSON blocks
-    await page.locator('[data-testid="header-icon"]').first().click();
-
-    // Wait for the JSON code blocks to appear after clicking
-    await page.waitForSelector('[data-testid="chat-code-tab"]', {
-      timeout: 10000,
-    });
-
-    // Get all the JSON code content to check both input and output
-    const codeBlocks = await page
-      .locator('[data-testid="chat-code-tab"] code.language-json')
-      .allTextContents();
-
-    // First code block should contain the input expression
-    const inputJson = codeBlocks[0];
-    expect(inputJson).toContain('"expression": "2+2"');
-
-    // Verify the input is NOT duplicated (should not contain "2+22+2")
-    expect(inputJson).not.toContain('"expression": "2+22+2"');
-    expect(inputJson).not.toContain('"expression": "22+2"');
-
-    // Second code block should contain the output result
-    const outputJson = codeBlocks[1];
-    expect(outputJson).toContain('"result": "4"');
-
-    // Ensure the result is not 26 (which would be 2+22+2)
-    expect(outputJson).not.toContain('"result": "26"');
+    await expect(
+      calculatorCard.getByText('"2+22+2"', { exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      calculatorCard.getByText('"22+2"', { exact: true }),
+    ).toHaveCount(0);
+    await expect(calculatorCard.locator("code")).not.toContainText(
+      /"result"\s*:\s*"26"/,
+    );
   },
 );

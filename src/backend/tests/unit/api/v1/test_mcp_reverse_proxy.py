@@ -9,9 +9,6 @@ import pytest
 from langflow.api.v1.mcp_projects import get_project_sse, project_sse_transports
 from mcp.server.sse import SseServerTransport
 
-pytestmark = pytest.mark.asyncio
-
-
 # ---------------------------------------------------------------------------
 # Unit: SseServerTransport respects root_path in the ASGI scope
 # ---------------------------------------------------------------------------

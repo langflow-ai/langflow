@@ -3,11 +3,14 @@ from typing import Any
 from langchain_openai import ChatOpenAI
 from lfx.base.models.model import LCModelComponent
 from lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES
+from lfx.base.models.provider_ssrf import openai_compatible_client_kwargs
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
 from lfx.log.logger import logger
 from lfx.utils.secrets import secret_value_to_str
+
+DEFAULT_OPENAI_API_BASE = "https://api.openai.com/v1"
 
 
 class OpenAIModelComponent(LCModelComponent):
@@ -111,10 +114,15 @@ class OpenAIModelComponent(LCModelComponent):
             "model_name": self.model_name,
             "max_tokens": self.max_tokens or None,
             "model_kwargs": model_kwargs,
-            "base_url": self.openai_api_base or "https://api.openai.com/v1",
+            "base_url": self.openai_api_base or DEFAULT_OPENAI_API_BASE,
             "max_retries": self.max_retries,
             "timeout": self.timeout,
         }
+
+        # openai_api_base is tenant-editable and the SDK sends the operator's stored API key to
+        # whatever host it names. Apply the connector SSRF policy and route a custom endpoint
+        # through DNS-pinned, redirect-free clients. No-op for the default OpenAI endpoint.
+        parameters.update(openai_compatible_client_kwargs(self.openai_api_base, default_url=DEFAULT_OPENAI_API_BASE))
 
         # TODO: Revisit if/once parameters are supported for reasoning models
         unsupported_params_for_reasoning_models = ["temperature", "seed"]

@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { NodeDataType } from "@/types/flow";
+import { axe } from "@/utils/a11y-test";
 import InspectionPanelParameterRow from "../components/InspectionPanelParameterRow";
 
 jest.mock("@/components/common/genericIconComponent", () => {
@@ -99,6 +100,40 @@ describe("InspectionPanelParameterRow", () => {
     mockFactoryTemplates = {};
   });
 
+  describe("accessibility", () => {
+    it("should_have_no_axe_violations for an on-canvas parameter (Remove)", async () => {
+      const { container } = renderWithProviders(
+        <InspectionPanelParameterRow {...defaultProps} />,
+      );
+
+      expect(await axe(container)).toHaveNoViolations();
+    });
+
+    it("should_have_no_axe_violations for an off-canvas parameter (Add)", async () => {
+      const props = {
+        ...defaultProps,
+        data: createMockData({ advanced: true }),
+      };
+      const { container } = renderWithProviders(
+        <InspectionPanelParameterRow {...props} />,
+      );
+
+      expect(await axe(container)).toHaveNoViolations();
+    });
+
+    it("should_have_no_axe_violations with the info tooltip present", async () => {
+      const props = {
+        ...defaultProps,
+        data: createMockData({ info: "helpful text" }),
+      };
+      const { container } = renderWithProviders(
+        <InspectionPanelParameterRow {...props} />,
+      );
+
+      expect(await axe(container)).toHaveNoViolations();
+    });
+  });
+
   describe("rendering", () => {
     it("renders title and preview line labeled Value when no factory default exists", () => {
       renderWithProviders(<InspectionPanelParameterRow {...defaultProps} />);
@@ -167,6 +202,18 @@ describe("InspectionPanelParameterRow", () => {
       expect(
         screen.queryByTestId("inspector-remove-test_field"),
       ).not.toBeInTheDocument();
+    });
+
+    it("renders the Add button with sufficient-contrast text color, not text-muted-foreground", () => {
+      const props = {
+        ...defaultProps,
+        data: createMockData({ advanced: true }),
+      };
+      renderWithProviders(<InspectionPanelParameterRow {...props} />);
+
+      const addButton = screen.getByTestId("inspector-add-test_field");
+      expect(addButton).toHaveClass("text-foreground");
+      expect(addButton).not.toHaveClass("text-muted-foreground");
     });
 
     it("renders the API toggle on every row, including off-canvas ones", () => {

@@ -1,5 +1,6 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   Command,
@@ -15,10 +16,12 @@ import {
   PopoverContentWithoutPortal,
 } from "@/components/ui/popover";
 import { classNames, cn } from "@/utils/utils";
+import { getNodeScopedDomId } from "../../../../helpers/get-node-scoped-dom-id";
 import { useIMEInputForOnChange } from "../../../../hooks/use-ime-input";
 
 const CustomInputPopoverObject = ({
   id,
+  nodeId = undefined,
   refInput,
   onInputLostFocus,
   selectedOption,
@@ -42,7 +45,9 @@ const CustomInputPopoverObject = ({
   handleKeyDown,
   showOptions,
   inspectionPanel,
+  ariaLabelledBy,
 }) => {
+  const { t } = useTranslation();
   const PopoverContentInput =
     editNode || inspectionPanel ? PopoverContent : PopoverContentWithoutPortal;
 
@@ -86,7 +91,7 @@ const CustomInputPopoverObject = ({
     <Popover modal open={showOptions} onOpenChange={setShowOptions}>
       <PopoverAnchor>
         <Input
-          id={id}
+          id={getNodeScopedDomId(id, nodeId)}
           ref={refInput}
           type="text"
           {...(isSelectionMode ? {} : imeInputProps)}
@@ -112,6 +117,7 @@ const CustomInputPopoverObject = ({
             if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
           }}
           data-testid={id}
+          aria-labelledby={ariaLabelledBy}
         />
       </PopoverAnchor>
       <PopoverContentInput
@@ -122,6 +128,7 @@ const CustomInputPopoverObject = ({
         align="center"
       >
         <Command
+          label={optionsPlaceholder || t("input.searchOptions")}
           filter={(value, search) => {
             if (
               value.toLowerCase().includes(search.toLowerCase()) ||

@@ -1,4 +1,6 @@
-`uv pip install langflow` installs bundle components automatically.
+`uv pip install langflow` installs a curated provider set.
+Other providers are opt-in.
+For more information, see [Additional bundles](/extensions-bundle-list#additional-bundles).
 
 `uv pip install lfx` installs the core LFX executor _only_, with no provider bundles included.
 
@@ -6,24 +8,24 @@ If your flows use bundle components, install the required packages in the same v
 
 Some components require an additional [torch opt-in installation](./components-bundle-components#torch-opt-in).
 
-_Long-tail bundles_ are third-party provider integrations like vector stores or model providers that ship together in the `lfx-bundles` package.
+Providers in `lfx-bundles` are extras of that metapackage, such as additional model providers and vector stores.
 
-_Standalone bundles_ are graduated providers with their own release cadences, such as OpenAI, Anthropic, and Exa.
+Standalone packages are providers with their own `lfx-<provider>` package and release cadence, such as OpenAI, Anthropic, and Exa.
 
-To install one long-tail provider:
+To install one provider from `lfx-bundles`:
 
 ```bash
-uv pip install "lfx-bundles[<bundle>]"
+uv pip install "lfx-bundles[<bundle-name>]"
 ```
 
-To install every long-tail provider:
+To install every provider in `lfx-bundles`:
 
 ```bash
 uv pip install "lfx[bundles]"
 ```
 
 `lfx[bundles]` is equivalent to `lfx` plus `lfx-bundles[all]`.
-It does **not** install graduated standalone packages such as `lfx-openai`.
+It does **not** install standalone packages such as `lfx-openai`.
 
 To install a standalone provider package:
 

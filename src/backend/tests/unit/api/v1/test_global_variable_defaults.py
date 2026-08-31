@@ -318,12 +318,9 @@ class TestApplyGlobalVariableDefaultsAsync:
             ],
             "edges": [],
         }
-        mock_var = MagicMock()
-        mock_var.name = "OPENAI_API_KEY"
-        mock_var.default_fields = ["OpenAI API Key"]
-
         mock_service = MagicMock()
-        mock_service.get_all = AsyncMock(return_value=[mock_var])
+        mock_service.get_default_field_bindings = AsyncMock(return_value=[("OPENAI_API_KEY", ["OpenAI API Key"])])
+        mock_service.get_all = AsyncMock(side_effect=AssertionError("variable values must not be materialized"))
 
         # session_scope is an async context manager -- give it the minimum protocol.
         mock_session_cm = MagicMock()
@@ -345,6 +342,8 @@ class TestApplyGlobalVariableDefaultsAsync:
         field = result["nodes"][0]["data"]["node"]["template"]["api_key"]
         assert field["value"] == "OPENAI_API_KEY"
         assert field["load_from_db"] is True
+        mock_service.get_default_field_bindings.assert_awaited_once()
+        mock_service.get_all.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_variable_service_exception_is_swallowed(self) -> None:

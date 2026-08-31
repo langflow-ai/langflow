@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from types import SimpleNamespace
 from typing import Any
 from uuid import UUID, uuid4
@@ -11,6 +12,8 @@ from fastapi import HTTPException
 from langflow.api.v1 import authz_shares as shares_module
 from langflow.api.v1.schemas.authz_shares import ShareCreate, ShareUpdate
 from langflow.services.database.models.auth import AuthzShare, SharePermissionLevel, ShareScope
+from lfx.services.authorization import ShareRuleSnapshot
+from lfx.services.authorization.service import AuthorizationService as LfxAuthorizationService
 
 pytestmark = pytest.mark.no_blockbuster
 
@@ -96,6 +99,62 @@ class _SyncingAuthz(_StubAuthz):
         self.events.append("sync_shares")
 
 
+class _TargetedAuthz(_SyncingAuthz):
+    def __init__(self, *, targeted_raises: bool = False, coarse_raises: bool = False) -> None:
+        super().__init__()
+        self.targeted_raises = targeted_raises
+        self.coarse_raises = coarse_raises
+        self.synced_share_ids: list[UUID] = []
+        self.removed_snapshots: list[ShareRuleSnapshot] = []
+
+    async def sync_share(self, share_id: UUID) -> None:
+        self.synced_share_ids.append(share_id)
+        self.events.append("sync_share")
+        if self.targeted_raises:
+            msg = "targeted sync failed"
+            raise RuntimeError(msg)
+
+    async def remove_share_rules(self, snapshot: ShareRuleSnapshot) -> None:
+        self.removed_snapshots.append(snapshot)
+        self.events.append("remove_share_rules")
+        if self.targeted_raises:
+            msg = "targeted removal failed"
+            raise RuntimeError(msg)
+
+    async def sync_shares(self) -> None:
+        self.sync_shares_calls += 1
+        self.events.append("sync_shares")
+        if self.coarse_raises:
+            msg = "coarse sync failed"
+            raise RuntimeError(msg)
+
+
+class _HangingTargetedAuthz(_TargetedAuthz):
+    async def sync_share(self, share_id: UUID) -> None:
+        self.synced_share_ids.append(share_id)
+        self.events.append("sync_share")
+        await asyncio.Event().wait()
+
+    async def remove_share_rules(self, snapshot: ShareRuleSnapshot) -> None:
+        self.removed_snapshots.append(snapshot)
+        self.events.append("remove_share_rules")
+        await asyncio.Event().wait()
+
+
+class _HangingCoarseAuthz(_SyncingAuthz):
+    async def sync_shares(self) -> None:
+        self.sync_shares_calls += 1
+        self.events.append("sync_shares")
+        await asyncio.Event().wait()
+
+
+class _HangingInvalidationAuthz(_StubAuthz):
+    async def invalidate_user(self, user_id: UUID, *_args, **_kwargs) -> None:
+        self.invalidated_users.append(user_id)
+        self.events.append("invalidate_user")
+        await asyncio.Event().wait()
+
+
 @pytest.fixture
 def patch_authz(monkeypatch):
     """Install a stub authz service into the shares module and the split helper modules."""
@@ -151,6 +210,23 @@ def _payload_for(resource_id: UUID) -> ShareCreate:
     )
 
 
+async def test_memory_base_resolves_as_knowledge_base_resource_owner():
+    from langflow.services.database.models.memory_base.model import MemoryBase
+
+    owner_id = uuid4()
+    memory_base_id = uuid4()
+    memory_base = SimpleNamespace(id=memory_base_id, user_id=owner_id)
+    session = _FakeAsyncSession({(MemoryBase, memory_base_id): memory_base})
+
+    resolved = await shares_module._resolve_resource_owner(
+        session,
+        resource_type="knowledge_base",
+        resource_id=memory_base_id,
+    )
+
+    assert resolved == owner_id
+
+
 # --------------------------------------------------------------------------- #
 # CREATE — OSS floor must block non-owner / non-superuser
 # --------------------------------------------------------------------------- #
@@ -158,7 +234,7 @@ def _payload_for(resource_id: UUID) -> ShareCreate:
 
 @pytest.mark.asyncio
 async def test_create_share_blocks_non_owner_under_oss_passthrough(patch_authz, silence_audit):  # noqa: ARG001
-    """A non-owner cannot mint a share row for another user's flow under OSS."""
+    """An OSS-floor deny is indistinguishable from a missing resource."""
     from langflow.services.database.models.flow.model import Flow
 
     patch_authz(cross_user=False, enabled=False)
@@ -172,8 +248,8 @@ async def test_create_share_blocks_non_owner_under_oss_passthrough(patch_authz, 
     with pytest.raises(HTTPException) as excinfo:
         await shares_module.create_share(payload=payload, current_user=attacker, session=session)
 
-    assert excinfo.value.status_code == 403
-    assert "Only the resource owner" in excinfo.value.detail
+    assert excinfo.value.status_code == 404
+    assert excinfo.value.detail == "Resource not found"
     # Floor fires before any DB write — no share row was added.
     assert session.added == []
 
@@ -216,6 +292,25 @@ async def test_create_share_commits_before_policy_refresh(patch_authz, silence_a
 
 
 @pytest.mark.asyncio
+async def test_create_share_prefers_targeted_sync_after_commit(monkeypatch, silence_audit):  # noqa: ARG001
+    from langflow.services.database.models.flow.model import Flow
+
+    owner = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    session = _FakeAsyncSession({(Flow, flow.id): flow})
+    stub = _TargetedAuthz()
+    stub.events = session.events
+    monkeypatch.setattr(shares_module, "get_authorization_service", lambda: stub)
+
+    result = await shares_module.create_share(payload=_payload_for(flow.id), current_user=owner, session=session)
+
+    assert stub.synced_share_ids == [result.id]
+    assert session.events == ["flush", "commit", "sync_share"]
+    assert stub.sync_shares_calls == 0
+    assert stub.invalidated_users == []
+
+
+@pytest.mark.asyncio
 async def test_create_share_allows_superuser_under_oss_passthrough(patch_authz, silence_audit):  # noqa: ARG001
     """A superuser can mint a share row for a resource they don't own."""
     from langflow.services.database.models.flow.model import Flow
@@ -248,6 +343,87 @@ async def test_create_share_returns_404_when_resource_missing(patch_authz, silen
         await shares_module.create_share(payload=payload, current_user=attacker, session=session)
 
     assert excinfo.value.status_code == 404
+    assert excinfo.value.detail == "Resource not found"
+
+
+@pytest.mark.parametrize(
+    "permission_level",
+    [
+        SharePermissionLevel.READ.value,
+        SharePermissionLevel.WRITE.value,
+        SharePermissionLevel.ADMIN.value,
+    ],
+)
+@pytest.mark.asyncio
+async def test_create_share_rejects_non_executable_public_flow(permission_level, patch_authz, silence_audit):  # noqa: ARG001
+    """The public flow product is an executable playground, not a generic anonymous grant."""
+    from langflow.services.database.models.flow.model import Flow
+
+    patch_authz(cross_user=False, enabled=False)
+
+    owner = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    session = _FakeAsyncSession({(Flow, flow.id): flow})
+    payload = ShareCreate(
+        resource_type="flow",
+        resource_id=flow.id,
+        scope=ShareScope.PUBLIC.value,
+        permission_level=permission_level,
+    )
+
+    with pytest.raises(HTTPException) as excinfo:
+        await shares_module.create_share(payload=payload, current_user=owner, session=session)
+
+    assert excinfo.value.status_code == 422
+    assert excinfo.value.detail == "PUBLIC flow shares require permission_level 'execute'."
+    assert session.added == []
+    assert session.flushed == 0
+
+
+@pytest.mark.asyncio
+async def test_create_share_allows_executable_public_flow(patch_authz, silence_audit):  # noqa: ARG001
+    from langflow.services.database.models.flow.model import Flow
+
+    patch_authz(cross_user=False, enabled=False)
+
+    owner = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    session = _FakeAsyncSession({(Flow, flow.id): flow})
+    payload = ShareCreate(
+        resource_type="flow",
+        resource_id=flow.id,
+        scope=ShareScope.PUBLIC.value,
+        permission_level=SharePermissionLevel.EXECUTE.value,
+    )
+
+    result = await shares_module.create_share(payload=payload, current_user=owner, session=session)
+
+    assert result.permission_level == SharePermissionLevel.EXECUTE.value
+    assert session.flushed == 1
+    assert session.committed == 1
+
+
+@pytest.mark.asyncio
+async def test_create_share_keeps_public_read_for_non_flow_resources(patch_authz, silence_audit):  # noqa: ARG001
+    from langflow.services.database.models.file.model import File
+
+    patch_authz(cross_user=False, enabled=False)
+
+    owner = _make_user()
+    file = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    session = _FakeAsyncSession({(File, file.id): file})
+    payload = ShareCreate(
+        resource_type="file",
+        resource_id=file.id,
+        scope=ShareScope.PUBLIC.value,
+        permission_level=SharePermissionLevel.READ.value,
+    )
+
+    result = await shares_module.create_share(payload=payload, current_user=owner, session=session)
+
+    assert result.permission_level == SharePermissionLevel.READ.value
+    assert session.flushed == 1
+    assert session.committed == 1
 
 
 # --------------------------------------------------------------------------- #
@@ -323,6 +499,111 @@ async def test_update_share_allows_owner_under_oss_passthrough(patch_authz, sile
     assert session.committed == 1
 
 
+@pytest.mark.asyncio
+async def test_update_share_prefers_targeted_sync_after_commit(monkeypatch, silence_audit):  # noqa: ARG001
+    from langflow.services.database.models.flow.model import Flow
+
+    owner = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    share = AuthzShare(
+        id=uuid4(),
+        resource_type="flow",
+        resource_id=flow.id,
+        scope=ShareScope.USER.value,
+        target_id=uuid4(),
+        permission_level=SharePermissionLevel.READ.value,
+        created_by=owner.id,
+    )
+    session = _FakeAsyncSession({(AuthzShare, share.id): share, (Flow, flow.id): flow})
+    stub = _TargetedAuthz()
+    stub.events = session.events
+    monkeypatch.setattr(shares_module, "get_authorization_service", lambda: stub)
+
+    await shares_module.update_share(
+        share_id=share.id,
+        payload=ShareUpdate(permission_level=SharePermissionLevel.WRITE.value),
+        current_user=owner,
+        session=session,
+    )
+
+    assert stub.synced_share_ids == [share.id]
+    assert session.events == ["flush", "commit", "sync_share"]
+    assert stub.sync_shares_calls == 0
+
+
+@pytest.mark.parametrize(
+    "permission_level",
+    [
+        SharePermissionLevel.READ.value,
+        SharePermissionLevel.WRITE.value,
+        SharePermissionLevel.ADMIN.value,
+    ],
+)
+@pytest.mark.asyncio
+async def test_update_share_rejects_non_executable_public_flow(permission_level, patch_authz, silence_audit):  # noqa: ARG001
+    """PATCH cannot turn a PUBLIC flow share into a grant with no matching product behavior."""
+    from langflow.services.database.models.flow.model import Flow
+
+    patch_authz(cross_user=False, enabled=False)
+
+    owner = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    share = AuthzShare(
+        id=uuid4(),
+        resource_type="flow",
+        resource_id=flow.id,
+        scope=ShareScope.PUBLIC.value,
+        target_id=None,
+        permission_level=SharePermissionLevel.EXECUTE.value,
+        created_by=owner.id,
+    )
+    session = _FakeAsyncSession({(AuthzShare, share.id): share, (Flow, flow.id): flow})
+
+    with pytest.raises(HTTPException) as excinfo:
+        await shares_module.update_share(
+            share_id=share.id,
+            payload=ShareUpdate(permission_level=permission_level),
+            current_user=owner,
+            session=session,
+        )
+
+    assert excinfo.value.status_code == 422
+    assert excinfo.value.detail == "PUBLIC flow shares require permission_level 'execute'."
+    assert share.permission_level == SharePermissionLevel.EXECUTE.value
+    assert session.flushed == 0
+
+
+@pytest.mark.asyncio
+async def test_update_share_allows_executable_public_flow(patch_authz, silence_audit):  # noqa: ARG001
+    from langflow.services.database.models.flow.model import Flow
+
+    patch_authz(cross_user=False, enabled=False)
+
+    owner = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    share = AuthzShare(
+        id=uuid4(),
+        resource_type="flow",
+        resource_id=flow.id,
+        scope=ShareScope.PUBLIC.value,
+        target_id=None,
+        permission_level=SharePermissionLevel.READ.value,
+        created_by=owner.id,
+    )
+    session = _FakeAsyncSession({(AuthzShare, share.id): share, (Flow, flow.id): flow})
+
+    result = await shares_module.update_share(
+        share_id=share.id,
+        payload=ShareUpdate(permission_level=SharePermissionLevel.EXECUTE.value),
+        current_user=owner,
+        session=session,
+    )
+
+    assert result.permission_level == SharePermissionLevel.EXECUTE.value
+    assert session.flushed == 1
+    assert session.committed == 1
+
+
 # --------------------------------------------------------------------------- #
 # DELETE — same floor
 # --------------------------------------------------------------------------- #
@@ -381,6 +662,42 @@ async def test_delete_share_allows_owner_under_oss_passthrough(patch_authz, sile
 
     assert len(session.deleted) == 1
     assert session.committed == 1
+
+
+@pytest.mark.asyncio
+async def test_delete_share_snapshots_then_removes_targeted_rules_after_commit(monkeypatch, silence_audit):  # noqa: ARG001
+    from langflow.services.database.models.flow.model import Flow
+
+    owner = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    share = AuthzShare(
+        id=uuid4(),
+        resource_type="flow",
+        resource_id=flow.id,
+        scope=ShareScope.TEAM.value,
+        target_id=uuid4(),
+        permission_level=SharePermissionLevel.WRITE.value,
+        created_by=owner.id,
+    )
+    session = _FakeAsyncSession({(AuthzShare, share.id): share, (Flow, flow.id): flow})
+    stub = _TargetedAuthz()
+    stub.events = session.events
+    monkeypatch.setattr(shares_module, "get_authorization_service", lambda: stub)
+
+    await shares_module.delete_share(share_id=share.id, current_user=owner, session=session)
+
+    assert session.events == ["flush", "commit", "remove_share_rules"]
+    assert stub.removed_snapshots == [
+        ShareRuleSnapshot(
+            share_id=share.id,
+            resource_type="flow",
+            resource_id=flow.id,
+            scope=ShareScope.TEAM.value,
+            target_id=share.target_id,
+            permission_level=SharePermissionLevel.WRITE.value,
+        )
+    ]
+    assert stub.sync_shares_calls == 0
 
 
 # --------------------------------------------------------------------------- #
@@ -445,7 +762,7 @@ async def test_create_share_invokes_plugin_enforce_for_non_owner(patch_authz, si
 
 @pytest.mark.asyncio
 async def test_create_share_denied_when_plugin_denies_non_owner(patch_authz, silence_audit):  # noqa: ARG001
-    """Regression: plugin deny on share-create must yield 403 and no DB write."""
+    """A plugin deny on share-create must preserve resource UUID privacy."""
     from langflow.services.database.models.flow.model import Flow
 
     patch_authz(cross_user=True, enabled=True, allow=False)
@@ -459,7 +776,37 @@ async def test_create_share_denied_when_plugin_denies_non_owner(patch_authz, sil
     with pytest.raises(HTTPException) as excinfo:
         await shares_module.create_share(payload=payload, current_user=delegate, session=session)
 
-    assert excinfo.value.status_code == 403
+    assert excinfo.value.status_code == 404
+    assert excinfo.value.detail == "Resource not found"
+    assert session.added == []
+
+
+@pytest.mark.asyncio
+async def test_create_share_preserves_non_403_permission_errors(monkeypatch, patch_authz, silence_audit):  # noqa: ARG001
+    """Only permission denies are masked; unexpected guard errors stay intact."""
+    from langflow.services.database.models.flow.model import Flow
+
+    patch_authz(cross_user=True, enabled=True)
+
+    async def _raise_service_error(*_args, **_kwargs):
+        raise HTTPException(status_code=503, detail="Authorization service unavailable")
+
+    monkeypatch.setattr(shares_module, "ensure_share_permission", _raise_service_error)
+
+    owner = _make_user()
+    delegate = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    session = _FakeAsyncSession({(Flow, flow.id): flow})
+
+    with pytest.raises(HTTPException) as excinfo:
+        await shares_module.create_share(
+            payload=_payload_for(flow.id),
+            current_user=delegate,
+            session=session,
+        )
+
+    assert excinfo.value.status_code == 503
+    assert excinfo.value.detail == "Authorization service unavailable"
     assert session.added == []
 
 
@@ -552,9 +899,18 @@ def test_share_visible_owner_and_creator_always_see():
     assert shares_module._share_visible(row=row, user_id=creator, resource_owner_id=owner, is_team_member=False)
 
 
-def test_share_visible_public_is_visible_to_anyone():
-    row = _share(scope=ShareScope.PUBLIC.value, target_id=None, created_by=uuid4())
-    assert shares_module._share_visible(row=row, user_id=uuid4(), resource_owner_id=uuid4(), is_team_member=False)
+def test_share_visible_public_is_direct_link_only():
+    owner = uuid4()
+    creator = uuid4()
+    row = _share(scope=ShareScope.PUBLIC.value, target_id=None, created_by=creator)
+    assert shares_module._share_visible(row=row, user_id=owner, resource_owner_id=owner, is_team_member=False)
+    assert shares_module._share_visible(row=row, user_id=creator, resource_owner_id=owner, is_team_member=False)
+    assert not shares_module._share_visible(
+        row=row,
+        user_id=uuid4(),
+        resource_owner_id=uuid4(),
+        is_team_member=False,
+    )
 
 
 def test_share_visible_user_scope_matches_target_only():
@@ -613,11 +969,155 @@ async def test_refresh_policy_for_share_prefers_sync_shares(monkeypatch):
     stub = _SyncingAuthz()
     monkeypatch.setattr(shares_module, "get_authorization_service", lambda: stub)
 
-    await shares_module._refresh_policy_for_share(ShareScope.USER.value, uuid4(), op="share:test")
+    await shares_module._refresh_policy_for_share(uuid4(), ShareScope.USER.value, uuid4(), op="share:test")
 
     assert stub.sync_shares_calls == 1
     assert stub.invalidated_users == []
     assert stub.invalidate_all_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_refresh_policy_skips_inherited_base_noop_hooks(monkeypatch):
+    """Inherited no-op targeted/coarse methods must not suppress safe invalidation."""
+
+    class _BaseHooksOnly(LfxAuthorizationService):
+        def __init__(self) -> None:
+            super().__init__()
+            self.invalidated_users = []
+
+        async def invalidate_user(self, user_id: UUID) -> None:
+            self.invalidated_users.append(user_id)
+
+    stub = _BaseHooksOnly()
+    monkeypatch.setattr(shares_module, "get_authorization_service", lambda: stub)
+    target_id = uuid4()
+
+    await shares_module._refresh_policy_for_share(uuid4(), ShareScope.USER.value, target_id, op="share:test")
+
+    assert stub.invalidated_users == [target_id]
+
+
+@pytest.mark.asyncio
+async def test_targeted_sync_failure_falls_back_to_coarse_sync(monkeypatch):
+    stub = _TargetedAuthz(targeted_raises=True)
+    monkeypatch.setattr(shares_module, "get_authorization_service", lambda: stub)
+
+    share_id = uuid4()
+    await shares_module._refresh_policy_for_share(share_id, ShareScope.USER.value, uuid4(), op="share:test")
+
+    assert stub.synced_share_ids == [share_id]
+    assert stub.events == ["sync_share", "sync_shares"]
+    assert stub.invalidated_users == []
+
+
+async def test_targeted_sync_timeout_falls_back_to_coarse_sync(monkeypatch):
+    stub = _HangingTargetedAuthz()
+    monkeypatch.setattr(shares_module, "get_authorization_service", lambda: stub)
+    monkeypatch.setattr(shares_module, "_SHARE_POLICY_HOOK_TIMEOUT_SECONDS", 0.01)
+
+    share_id = uuid4()
+    await shares_module._refresh_policy_for_share(share_id, ShareScope.USER.value, uuid4(), op="share:test")
+
+    assert stub.synced_share_ids == [share_id]
+    assert stub.events == ["sync_share", "sync_shares"]
+    assert stub.invalidated_users == []
+
+
+async def test_coarse_sync_timeout_falls_back_to_invalidation(monkeypatch):
+    stub = _HangingCoarseAuthz()
+    monkeypatch.setattr(shares_module, "get_authorization_service", lambda: stub)
+    monkeypatch.setattr(shares_module, "_SHARE_POLICY_HOOK_TIMEOUT_SECONDS", 0.01)
+    target_id = uuid4()
+
+    await shares_module._refresh_policy_for_share(uuid4(), ShareScope.USER.value, target_id, op="share:test")
+
+    assert stub.events == ["sync_shares", "invalidate_user"]
+    assert stub.invalidated_users == [target_id]
+
+
+async def test_invalidation_timeout_does_not_block_share_write(monkeypatch):
+    stub = _HangingInvalidationAuthz()
+    monkeypatch.setattr(shares_module, "get_authorization_service", lambda: stub)
+    monkeypatch.setattr(shares_module, "_SHARE_POLICY_HOOK_TIMEOUT_SECONDS", 0.01)
+    target_id = uuid4()
+
+    await shares_module._refresh_policy_for_share(uuid4(), ShareScope.USER.value, target_id, op="share:test")
+
+    assert stub.events == ["invalidate_user", "invalidate_all"]
+    assert stub.invalidated_users == [target_id]
+    assert stub.invalidate_all_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_targeted_and_coarse_sync_failure_falls_back_to_invalidation(monkeypatch):
+    stub = _TargetedAuthz(targeted_raises=True, coarse_raises=True)
+    monkeypatch.setattr(shares_module, "get_authorization_service", lambda: stub)
+
+    target_id = uuid4()
+    await shares_module._refresh_policy_for_share(uuid4(), ShareScope.USER.value, target_id, op="share:test")
+
+    assert stub.events == ["sync_share", "sync_shares", "invalidate_user"]
+    assert stub.invalidated_users == [target_id]
+
+
+@pytest.mark.asyncio
+async def test_targeted_remove_failure_falls_back_to_coarse_sync(monkeypatch):
+    stub = _TargetedAuthz(targeted_raises=True)
+    monkeypatch.setattr(shares_module, "get_authorization_service", lambda: stub)
+    snapshot = ShareRuleSnapshot(
+        share_id=uuid4(),
+        resource_type="flow",
+        resource_id=uuid4(),
+        scope=ShareScope.PUBLIC.value,
+        target_id=None,
+        permission_level=SharePermissionLevel.READ.value,
+    )
+
+    await shares_module._remove_policy_for_share(snapshot, op="share:delete")
+
+    assert stub.removed_snapshots == [snapshot]
+    assert stub.events == ["remove_share_rules", "sync_shares"]
+    assert stub.invalidate_all_calls == 0
+
+
+async def test_targeted_remove_timeout_falls_back_to_coarse_sync(monkeypatch):
+    stub = _HangingTargetedAuthz()
+    monkeypatch.setattr(shares_module, "get_authorization_service", lambda: stub)
+    monkeypatch.setattr(shares_module, "_SHARE_POLICY_HOOK_TIMEOUT_SECONDS", 0.01)
+    snapshot = ShareRuleSnapshot(
+        share_id=uuid4(),
+        resource_type="flow",
+        resource_id=uuid4(),
+        scope=ShareScope.PUBLIC.value,
+        target_id=None,
+        permission_level=SharePermissionLevel.READ.value,
+    )
+
+    await shares_module._remove_policy_for_share(snapshot, op="share:delete")
+
+    assert stub.removed_snapshots == [snapshot]
+    assert stub.events == ["remove_share_rules", "sync_shares"]
+    assert stub.invalidate_all_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_targeted_and_coarse_remove_failure_falls_back_to_invalidation(monkeypatch):
+    stub = _TargetedAuthz(targeted_raises=True, coarse_raises=True)
+    monkeypatch.setattr(shares_module, "get_authorization_service", lambda: stub)
+    target_id = uuid4()
+    snapshot = ShareRuleSnapshot(
+        share_id=uuid4(),
+        resource_type="flow",
+        resource_id=uuid4(),
+        scope=ShareScope.USER.value,
+        target_id=target_id,
+        permission_level=SharePermissionLevel.READ.value,
+    )
+
+    await shares_module._remove_policy_for_share(snapshot, op="share:delete")
+
+    assert stub.events == ["remove_share_rules", "sync_shares", "invalidate_user"]
+    assert stub.invalidated_users == [target_id]
 
 
 # --------------------------------------------------------------------------- #
@@ -647,10 +1147,20 @@ class _QueueSession(_FakeAsyncSession):
     def __init__(self, get_by_type: dict[tuple[type, UUID], Any] | None = None, *, exec_queue=None) -> None:
         super().__init__(get_by_type)
         self._exec_queue = [list(rows) for rows in (exec_queue or [])]
+        self.statements: list[Any] = []
 
-    async def exec(self, _stmt: Any) -> _ExecResult:
+    async def exec(self, stmt: Any) -> _ExecResult:
+        self.statements.append(stmt)
         rows = self._exec_queue.pop(0) if self._exec_queue else []
         return _ExecResult(rows)
+
+
+def test_team_share_visibility_query_requires_active_team():
+    statement = shares_module._active_team_ids_for_user(uuid4())
+    sql = str(statement).lower()
+
+    assert "join authz_team" in sql
+    assert "authz_team.is_active is true" in sql
 
 
 @pytest.mark.asyncio

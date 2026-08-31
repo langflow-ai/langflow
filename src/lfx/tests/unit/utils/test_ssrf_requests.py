@@ -43,6 +43,33 @@ class TestSSRFSafeGet:
             ssrf_safe_get("http://127.0.0.1:8080/secret", timeout=5)
         mock_get.assert_not_called()
 
+    def test_backslash_authority_parser_confusion_is_blocked(self):
+        """A URL interpreted differently by stdlib and Requests is blocked before transport."""
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch("requests.get") as mock_get,
+            pytest.raises(SSRFProtectionError, match="backslash"),
+        ):
+            ssrf_safe_get("http://127.0.0.1\\@1.1.1.1/", timeout=5)
+        mock_get.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "http://feed.example.com/folder\\item",
+            "http://feed.example.com/rss?filter=folder\\item",
+        ],
+    )
+    def test_backslash_outside_authority_is_allowed(self, url):
+        """Backslashes outside the authority retain Requests' existing quoting behavior."""
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch("requests.get", return_value=_response()) as mock_get,
+        ):
+            ssrf_safe_get(url, timeout=5)
+        mock_get.assert_called_once()
+
     def test_cloud_metadata_endpoint_is_blocked(self):
         """The cloud metadata endpoint is blocked before any request is made."""
         with (

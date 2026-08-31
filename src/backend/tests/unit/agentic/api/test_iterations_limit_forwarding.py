@@ -33,8 +33,8 @@ def _provider_env():
             return_value=(["OpenAI"], {}),
         ),
         patch(
-            f"{_ROUTER}.get_model_provider_variable_mapping",
-            return_value={"OpenAI": "OPENAI_API_KEY"},
+            f"{_ROUTER}.get_provider_secret_variable_key",
+            return_value="OPENAI_API_KEY",
         ),
         patch(f"{_ROUTER}.get_default_model", return_value="gpt-4o"),
         patch(
@@ -64,6 +64,53 @@ async def test_absent_iterations_limit_leaves_global_vars_unbudgeted():
     ctx = await _resolve_assistant_context(_request(), uuid4(), session=session)
 
     assert "ITERATIONS_LIMIT" not in ctx.global_vars
+
+
+async def test_credentialless_extension_provider_resolves_without_api_key_name():
+    with (
+        patch(
+            f"{_ROUTER}.get_enabled_providers_for_user",
+            new_callable=AsyncMock,
+            return_value=(["AmbientAuthCo"], {"AmbientAuthCo": True}),
+        ),
+        patch(f"{_ROUTER}.get_provider_secret_variable_key", return_value=None),
+        patch(f"{_ROUTER}.is_api_key_optional", return_value=True),
+        patch(f"{_ROUTER}.get_default_model", return_value="ambient-chat"),
+        patch(f"{_ROUTER}.get_all_variables_for_provider", return_value={}),
+        patch(f"{_ROUTER}.get_provider_required_variable_keys", return_value=[]),
+    ):
+        ctx = await _resolve_assistant_context(
+            _request(provider="AmbientAuthCo"),
+            uuid4(),
+            session=AsyncMock(),
+        )
+
+    assert ctx.provider == "AmbientAuthCo"
+    assert ctx.api_key_name is None
+    assert ctx.global_vars["MODEL_NAME"] == "ambient-chat"
+
+
+async def test_base_url_only_provider_does_not_inject_connection_config_as_api_key():
+    with (
+        patch(
+            f"{_ROUTER}.get_enabled_providers_for_user",
+            new_callable=AsyncMock,
+            return_value=(["LocalCo"], {"LocalCo": True}),
+        ),
+        patch(f"{_ROUTER}.get_provider_secret_variable_key", return_value=None),
+        patch(f"{_ROUTER}.is_api_key_optional", return_value=True),
+        patch(f"{_ROUTER}.get_default_model", return_value="local-chat"),
+        patch(f"{_ROUTER}.get_all_variables_for_provider", return_value={"LOCALCO_BASE_URL": "http://local"}),
+        patch(f"{_ROUTER}.get_provider_required_variable_keys", return_value=["LOCALCO_BASE_URL"]),
+    ):
+        ctx = await _resolve_assistant_context(
+            _request(provider="LocalCo"),
+            uuid4(),
+            session=AsyncMock(),
+        )
+
+    assert ctx.api_key_name is None
+    assert ctx.global_vars["LOCALCO_BASE_URL"] == "http://local"
 
 
 async def test_non_streaming_execution_binds_the_iterations_context():

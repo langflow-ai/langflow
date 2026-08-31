@@ -43,6 +43,7 @@ def sample_jpeg_image(tmp_path):
 
 
 @pytest.mark.skipif(not has_api_key("OPENAI_API_KEY"), reason="OPENAI_API_KEY not available in CI")
+@pytest.mark.api_key_required
 def test_openai_vision_api_real_call(sample_image):
     """Test that image content dict works with real OpenAI Vision API calls."""
     try:
@@ -74,6 +75,7 @@ def test_openai_vision_api_real_call(sample_image):
 
 
 @pytest.mark.skipif(not has_api_key("OPENAI_API_KEY"), reason="OPENAI_API_KEY not available in CI")
+@pytest.mark.api_key_required
 def test_openai_vision_api_with_jpeg(sample_jpeg_image):
     """Test OpenAI Vision API with JPEG image format."""
     try:
@@ -104,6 +106,7 @@ def test_openai_vision_api_with_jpeg(sample_jpeg_image):
 
 
 @pytest.mark.skipif(not has_api_key("ANTHROPIC_API_KEY"), reason="ANTHROPIC_API_KEY not available in CI")
+@pytest.mark.api_key_required
 def test_anthropic_vision_api_real_call(sample_image):
     """Test that image content dict works with real Anthropic Claude API calls."""
     try:
@@ -142,6 +145,7 @@ def test_anthropic_vision_api_real_call(sample_image):
 
 
 @pytest.mark.skipif(not has_api_key("ANTHROPIC_API_KEY"), reason="ANTHROPIC_API_KEY not available in CI")
+@pytest.mark.api_key_required
 def test_anthropic_vision_api_with_jpeg(sample_jpeg_image):
     """Test Anthropic Claude API with JPEG image format."""
     try:
@@ -178,6 +182,7 @@ def test_anthropic_vision_api_with_jpeg(sample_jpeg_image):
 
 
 @pytest.mark.skipif(not has_api_key("GEMINI_API_KEY"), reason="GEMINI_API_KEY not available in CI")
+@pytest.mark.api_key_required
 def test_google_gemini_vision_api_real_call(sample_image):
     """Test that image content dict works with real Google Gemini API calls."""
     try:
@@ -213,6 +218,7 @@ def test_google_gemini_vision_api_real_call(sample_image):
 
 
 @pytest.mark.skipif(not has_api_key("GEMINI_API_KEY"), reason="GEMINI_API_KEY not available in CI")
+@pytest.mark.api_key_required
 def test_google_gemini_vision_api_with_jpeg(sample_jpeg_image):
     """Test Google Gemini API with JPEG image format."""
     try:
@@ -276,6 +282,7 @@ def test_langchain_integration_format_compatibility(sample_image):
     not (has_api_key("OPENAI_API_KEY") and has_api_key("ANTHROPIC_API_KEY")),
     reason="Both OPENAI_API_KEY and ANTHROPIC_API_KEY needed for cross-provider test",
 )
+@pytest.mark.api_key_required
 def test_cross_provider_consistency(sample_image):
     """Test that the same image content dict works across multiple providers."""
     content_dict = create_image_content_dict(sample_image)

@@ -67,7 +67,7 @@ async def orchestrate_structured_output(
             # not actually support it. Recover transparently via the prompt fallback.
             await logger.adebug(
                 "structured_output.native_unsupported",
-                extra={"strategy": "native", "reason": str(exc)},
+                extra={"strategy": "native", "reason": type(exc).__name__},
             )
             fallback_reason = "native_raised_not_implemented"
         else:

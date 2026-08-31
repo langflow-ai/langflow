@@ -8,7 +8,11 @@ import httpx
 from lfx.base.data.base_file import BaseFileComponent
 from lfx.inputs.inputs import BoolInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
 from lfx.schema.data import Data
-from lfx.utils.ssrf_protection import is_ssrf_protection_enabled, validate_and_resolve_url
+from lfx.utils.ssrf_protection import (
+    is_ssrf_protection_enabled,
+    validate_and_resolve_connector_url,
+    validate_and_resolve_url,
+)
 from lfx.utils.ssrf_transport import create_ssrf_protected_sync_client
 
 if TYPE_CHECKING:
@@ -209,12 +213,16 @@ class PaddleOCRComponent(BaseFileComponent):
         }
         poll_timeout = int(self.poll_timeout or 600)
 
-        # ``base_url`` is operator-configurable, so the submit and poll requests
-        # (which carry the bearer token and the uploaded file) are validated for
-        # SSRF up front and DNS-pinned for the rest of the run.  Like
-        # ``_fetch_result``, this is a no-op when SSRF protection is disabled
-        # (the default), so default behavior is unchanged.
-        _validated_url, base_ips = validate_and_resolve_url(base_url)
+        # ``base_url`` is configured by the flow author (a self-hosted PaddleOCR
+        # service on localhost is a legitimate deployment), so the submit and
+        # poll requests (which carry the bearer token and the uploaded file)
+        # follow the connector SSRF policy: a literal loopback host is allowed
+        # by default (``connector_ssrf_allow_loopback``) while RFC1918 /
+        # link-local / cloud-metadata targets stay blocked; non-exempt hosts
+        # are DNS-pinned for the rest of the run.  ``result_url`` in
+        # ``_fetch_result`` comes from the remote response instead and keeps
+        # the strict validator.
+        _validated_url, base_ips = validate_and_resolve_connector_url(base_url)
 
         try:
             for file in file_list:

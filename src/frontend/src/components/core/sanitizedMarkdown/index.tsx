@@ -75,6 +75,14 @@ export const SanitizedMarkdown = ({
             isEmpty ? "text-muted-foreground" : "text-primary",
           )}
           components={{
+            // Spread first, then pin target/rel, so a raw-HTML anchor that
+            // arrives with its own target/rel cannot opt out of noopener.
+            // Matches the link handling every other Markdown site here uses.
+            a: ({ node, ...props }) => (
+              <a {...props} target="_blank" rel="noopener noreferrer">
+                {props.children}
+              </a>
+            ),
             p({ node, ...props }) {
               return (
                 <p className="w-fit max-w-full my-1.5 last:mb-0 first:mt-0">

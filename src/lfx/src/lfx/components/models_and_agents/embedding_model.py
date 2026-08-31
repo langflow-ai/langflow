@@ -19,10 +19,9 @@ from lfx.io import (
     StrInput,
 )
 
-DEFAULT_OLLAMA_URL = "http://localhost:11434"
-
 
 class EmbeddingModelComponent(LCEmbeddingsModel):
+    model_provider_policy_mode = "delegate"
     display_name = "Embedding Model"
     description = "Generate embeddings using a specified provider."
     documentation: str = "https://docs.langflow.org/components-embedding-models"
@@ -104,8 +103,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         StrInput(
             name="ollama_base_url",
             display_name="Ollama API URL",
-            info=f"Endpoint of the Ollama API (Ollama only). Defaults to {DEFAULT_OLLAMA_URL}",
-            value=DEFAULT_OLLAMA_URL,
+            info="Endpoint of the Ollama API (Ollama only)",
             show=False,
             real_time_refresh=True,
         ),

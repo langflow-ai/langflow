@@ -1,7 +1,14 @@
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/utils/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface DisconnectWarningProps {
   show: boolean;
@@ -21,27 +28,50 @@ const DisconnectWarning = ({
   className,
 }: DisconnectWarningProps) => {
   const { t } = useTranslation();
+
   return (
-    <div
-      className={cn(
-        "border border-border border-destructive rounded-md transition-all h-fit duration-300 ease-in-out",
-        show ? "opacity-100 p-4" : "opacity-0 pointer-events-none",
-        className,
-      )}
+    <Dialog
+      open={show}
+      onOpenChange={(open) => {
+        if (!open) {
+          onCancel();
+        }
+      }}
     >
-      <div className="flex flex-col gap-3 h-full">
-        <div className="text-destructive flex items-center gap-1 text-md">
-          <ForwardedIconComponent
-            name="Circle"
-            className="text-destructive w-3 h-3 fill-destructive mr-2 animate-pulse"
-          />
-          {t("modelProviders.warning")}
-        </div>
+      <DialogContent
+        hideCloseButton
+        className={className}
+        onOpenAutoFocus={(e) => {
+          // Move focus to Cancel (least destructive action) on open.
+          e.preventDefault();
+          const cancelButton = (e.currentTarget as HTMLElement).querySelector(
+            '[data-testid="disconnect-warning-cancel"]',
+          ) as HTMLElement | null;
+          cancelButton?.focus();
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle className="text-destructive flex items-center gap-1 text-md">
+            <ForwardedIconComponent
+              name="Circle"
+              className="text-destructive w-3 h-3 fill-destructive mr-2 animate-pulse"
+              ariaHidden
+            />
+            {t("modelProviders.warning")}
+          </DialogTitle>
+        </DialogHeader>
 
-        <p className="flex flex-col text-sm h-full">{message}</p>
+        <DialogDescription className="text-sm text-foreground">
+          {message}
+        </DialogDescription>
 
-        <div className="flex gap-2 justify-end ">
-          <Button size="sm" variant="ghost" onClick={onCancel}>
+        <DialogFooter>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onCancel}
+            data-testid="disconnect-warning-cancel"
+          >
             {t("modelProviders.cancelButton")}
           </Button>
           <Button
@@ -49,12 +79,13 @@ const DisconnectWarning = ({
             variant="destructive"
             onClick={onConfirm}
             loading={isLoading}
+            data-testid="disconnect-warning-confirm"
           >
             {t("modelProviders.confirmButton")}
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

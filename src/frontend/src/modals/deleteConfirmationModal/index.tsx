@@ -19,6 +19,7 @@ export default function DeleteConfirmationModal({
   open,
   setOpen,
   note = "",
+  onCloseAutoFocus,
 }: {
   children?: JSX.Element;
   onConfirm: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
@@ -27,15 +28,16 @@ export default function DeleteConfirmationModal({
   open?: boolean;
   setOpen?: (open: boolean) => void;
   note?: string;
+  onCloseAutoFocus?: (event: Event) => void;
 }) {
   const { t } = useTranslation();
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild={!children ? true : asChild}>
-        {children}
-      </DialogTrigger>
-      <DialogContent>
+      {children ? (
+        <DialogTrigger asChild={asChild}>{children}</DialogTrigger>
+      ) : null}
+      <DialogContent onCloseAutoFocus={onCloseAutoFocus}>
         <DialogHeader>
           <DialogTitle>
             <div className="flex items-center">

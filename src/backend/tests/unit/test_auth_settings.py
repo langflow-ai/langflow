@@ -36,11 +36,17 @@ def test_auto_login_true_preserves_configured_credentials_and_scrubs_password(tm
     assert settings.SUPERUSER_PASSWORD.get_secret_value() == ""
 
 
-def test_default_superuser_password_is_empty(tmp_path: Path):
+def test_default_superuser_password_is_empty(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    # conftest load_dotenv() can inject a developer .env (e.g. LANGFLOW_SUPERUSER=admin);
+    # this test asserts AuthSettings defaults, so clear any process overrides.
+    monkeypatch.delenv("LANGFLOW_SUPERUSER", raising=False)
+    monkeypatch.delenv("LANGFLOW_SUPERUSER_PASSWORD", raising=False)
+
     cfg_dir = tmp_path.as_posix()
     settings = AuthSettings(CONFIG_DIR=cfg_dir)
     assert settings.SUPERUSER == DEFAULT_SUPERUSER
-    assert settings.SUPERUSER_PASSWORD.get_secret_value() == DEFAULT_SUPERUSER_PASSWORD.get_secret_value() == ""
+    assert settings.SUPERUSER_PASSWORD.get_secret_value() == ""
+    assert DEFAULT_SUPERUSER_PASSWORD.get_secret_value() == ""
 
 
 def test_short_secret_key_logs_upgrade_warning(tmp_path: Path):
@@ -139,3 +145,50 @@ class TestApiKeySourceEnvironmentVariables:
         monkeypatch.setenv("LANGFLOW_API_KEY_SOURCE", "invalid")
         with pytest.raises(ValidationError):
             AuthSettings(CONFIG_DIR=cfg_dir)
+
+
+class TestSsoRedirectUrlSettings:
+    def test_sso_redirect_url_is_declared_with_description(self, tmp_path: Path):
+        settings = AuthSettings(CONFIG_DIR=tmp_path.as_posix())
+
+        assert settings.SSO_REDIRECT_URL is None
+        assert AuthSettings.model_fields["SSO_REDIRECT_URL"].description
+
+    def test_sso_redirect_url_loads_relative_path_from_environment(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_SSO_REDIRECT_URL", "/api/v1/sso/callback")
+
+        settings = AuthSettings(CONFIG_DIR=tmp_path.as_posix())
+
+        assert settings.SSO_REDIRECT_URL == "/api/v1/sso/callback"
+
+    @pytest.mark.parametrize("blank_url", ["", "   ", "\t\r\n"])
+    def test_sso_redirect_url_normalizes_blank_values_to_none(self, blank_url: str, tmp_path: Path):
+        settings = AuthSettings(CONFIG_DIR=tmp_path.as_posix(), SSO_REDIRECT_URL=blank_url)
+
+        assert settings.SSO_REDIRECT_URL is None
+
+    @pytest.mark.parametrize(
+        "control_character_url",
+        [
+            "/api/v1/sso/\x00callback",
+            "/api/v1/sso/callback\nnext",
+            "/api/v1/sso/\x7fcallback",
+            "\t/api/v1/sso/callback",
+        ],
+    )
+    def test_sso_redirect_url_rejects_control_characters(self, control_character_url: str, tmp_path: Path):
+        with pytest.raises(ValidationError, match="control characters"):
+            AuthSettings(CONFIG_DIR=tmp_path.as_posix(), SSO_REDIRECT_URL=control_character_url)
+
+    @pytest.mark.parametrize(
+        "off_origin_url",
+        [
+            "https://attacker.example/sso",
+            "//attacker.example/sso",
+            "///attacker.example/sso",
+            "\\\\attacker.example\\sso",
+        ],
+    )
+    def test_sso_redirect_url_rejects_absolute_off_origin_url(self, off_origin_url: str, tmp_path: Path):
+        with pytest.raises(ValidationError, match="SSO_REDIRECT_URL"):
+            AuthSettings(CONFIG_DIR=tmp_path.as_posix(), SSO_REDIRECT_URL=off_origin_url)

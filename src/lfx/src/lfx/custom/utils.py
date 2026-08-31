@@ -514,6 +514,42 @@ def build_component_metadata(
         module_name = get_module_name_from_display_name(frontend_node.display_name)
         frontend_node.metadata["module"] = f"custom_components.{module_name}"
 
+    # Standalone model/embedding components predate the unified provider
+    # selector and otherwise carry no policy identity in the shared palette.
+    # Stamp only those base classes; mixed bundles keep every unrelated tool.
+    from lfx.base.embeddings.model import LCEmbeddingsModel
+    from lfx.base.models.model import LCModelComponent
+    from lfx.base.models.provider_registry import (
+        get_provider_descriptor,
+        model_component_policy_mode,
+        model_component_provider_id,
+    )
+
+    if isinstance(custom_component, LCModelComponent | LCEmbeddingsModel):
+        policy_mode = model_component_policy_mode(custom_component)
+        # This metadata is produced from the loaded class, not inferred from
+        # the serialized source field. Static registry consumers can therefore
+        # honor inherited and annotated policy declarations without parsing
+        # user-controlled code.
+        frontend_node.metadata["model_provider_policy_mode"] = policy_mode
+        if policy_mode == "standalone":
+            provider_id = model_component_provider_id(
+                custom_component,
+                module_name=module_name,
+            )
+            descriptor = get_provider_descriptor(provider_id)
+            frontend_node.metadata["model_provider_id"] = provider_id
+            frontend_node.metadata["model_provider_display_name"] = (
+                descriptor.display_name
+                if descriptor is not None and descriptor.display_name
+                else provider_id.replace("_", " ").replace("-", " ").title()
+            )
+        else:
+            # Delegating/identity-free components must not retain a stale
+            # standalone identity from a reused or pre-populated template.
+            frontend_node.metadata.pop("model_provider_id", None)
+            frontend_node.metadata.pop("model_provider_display_name", None)
+
     # Generate code hash for cache invalidation and debugging
     try:
         code_hash = _generate_code_hash(custom_component._code, module_name)

@@ -14,6 +14,7 @@ from lfx.services.deps import injectable_session_scope, session_scope
 from lfx.services.settings.constants import MINIMUM_SECRET_KEY_LENGTH
 
 from langflow.services.auth.exceptions import (
+    AuthBackendUnavailableError,
     AuthenticationError,
     InsufficientPermissionsError,
     InvalidCredentialsError,
@@ -160,10 +161,18 @@ async def ws_api_key_security(api_key: str | None) -> UserRead:
 
 
 def _auth_error_to_http(e: AuthenticationError) -> HTTPException:
-    """Map auth exceptions to 401 Unauthorized or 403 Forbidden.
+    """Map auth exceptions to 503 Service Unavailable, 403 Forbidden or 401 Unauthorized.
 
     Langflow returns 403 for missing/invalid credentials; 401 for invalid/expired tokens.
+    A backend failure never judged the credential, so it is reported as a
+    retryable 503 rather than as a verdict on the caller's token.
     """
+    if isinstance(e, AuthBackendUnavailableError):
+        return HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=e.message,
+            headers={"Retry-After": "1"},
+        )
     if isinstance(
         e,
         (MissingCredentialsError, InvalidCredentialsError, InsufficientPermissionsError),
@@ -237,6 +246,10 @@ async def get_current_user_for_websocket(
 
     try:
         return await _auth_service().get_current_user_for_websocket(token, api_key, db, external_token=external_token)
+    except AuthBackendUnavailableError as e:
+        # The credential was never judged, so closing as a policy violation
+        # would tell the client to fix a credential that is not the problem.
+        raise WebSocketException(code=status.WS_1013_TRY_AGAIN_LATER, reason=e.message) from e
     except AuthenticationError as e:
         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason=WS_AUTH_REASON) from e
 
@@ -258,6 +271,8 @@ async def get_current_user_for_sse(
 
     try:
         return await _auth_service().get_current_user_for_sse(token, api_key, db, external_token=external_token)
+    except AuthBackendUnavailableError as e:
+        raise _auth_error_to_http(e) from e
     except AuthenticationError as e:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

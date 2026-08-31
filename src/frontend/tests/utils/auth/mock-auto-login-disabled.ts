@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { LangflowPage } from "../types";
 
 /**
  * Stub the /api/v1/auto_login endpoint so the app falls back to manual
@@ -9,12 +9,17 @@ import type { Page } from "@playwright/test";
  * The caller is responsible for the subsequent assertions (e.g. waiting
  * for the mainpage_title).
  */
-export async function mockAutoLoginDisabled(page: Page): Promise<void> {
+export async function mockAutoLoginDisabled(page: LangflowPage): Promise<void> {
   await page.route("**/api/v1/auto_login", (route) => {
     route.fulfill({
-      status: 500,
+      status: 403,
       contentType: "application/json",
-      body: JSON.stringify({ detail: { auto_login: false } }),
+      body: JSON.stringify({
+        detail: {
+          message: "Auto login is disabled.",
+          auto_login: false,
+        },
+      }),
     });
   });
 

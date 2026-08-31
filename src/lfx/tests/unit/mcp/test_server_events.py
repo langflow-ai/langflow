@@ -59,9 +59,9 @@ def _patch_server(mock_client, mock_registry, mock_flow):
     return ctx()
 
 
-def _node(component_id: str, *, frozen: bool = False) -> dict:
+def _node(component_id: str, *, frozen: bool = False, node_type: str | None = None) -> dict:
     """Build a minimal flow node for tests that need one."""
-    return {
+    node = {
         "id": "node-1",
         "data": {
             "id": component_id,
@@ -71,6 +71,10 @@ def _node(component_id: str, *, frozen: bool = False) -> dict:
             },
         },
     }
+    if node_type is not None:
+        # data.type is what the tool-mode capability check keys the registry on.
+        node["data"]["type"] = node_type
+    return node
 
 
 # ---------------------------------------------------------------------------
@@ -178,6 +182,104 @@ async def test_tool_emits_event(tool_name, call_fn, expected_event_type, mock_cl
     assert call_args[0][0] == flow_id, f"{tool_name} should emit event for the correct flow_id"
     assert call_args[0][1] == expected_event_type, f"{tool_name} should emit '{expected_event_type}'"
     assert isinstance(call_args[0][2], str), f"{tool_name} summary should be a string"
+
+
+async def test_rejected_tool_mode_connection_leaves_the_remote_flow_untouched(mock_client, mock_registry, mock_flow):
+    """A refused component_as_tool wiring must not have flipped tool mode server-side.
+
+    connect_components used to PATCH tool_mode=True onto the source before
+    validating the edge, so a component that cannot produce a toolset output was
+    left in a dead tool mode after the connection failed. The capability check
+    now runs against the local flow first, so nothing is persisted.
+    """
+    from lfx.mcp.server import connect_components
+
+    mock_flow["data"]["nodes"] = [_node("ChatInput-1", node_type="ChatInput")]
+
+    with (
+        patch("lfx.mcp.server._get_client", return_value=mock_client),
+        patch("lfx.mcp.server._get_registry", new_callable=AsyncMock, return_value=mock_registry),
+        patch("lfx.mcp.server._get_flow", new_callable=AsyncMock, return_value=mock_flow),
+        patch("lfx.mcp.server.configure_component", new_callable=AsyncMock) as configure,
+        patch("lfx.mcp.server._patch_flow", new_callable=AsyncMock) as patch_flow,
+        pytest.raises(ValueError, match="does not support tool mode"),
+    ):
+        await connect_components("flow-123", "ChatInput-1", "component_as_tool", "Agent-1", "tools")
+
+    configure.assert_not_awaited()
+    patch_flow.assert_not_awaited()
+    mock_client.post_event.assert_not_awaited()
+
+
+async def test_accepted_tool_mode_connection_keeps_the_server_rebuilt_node(mock_client, mock_registry, mock_flow):
+    """The accepted path flips tool mode SERVER-side and preserves that rebuild.
+
+    /custom_component/update rebuilds the node through
+    Component.run_and_validate_update_outputs, which is the only thing that
+    inserts the toolset metadata field (``tools_metadata``) into the template.
+    A purely local flip cannot synthesize it, so connect_components must keep
+    delegating the flip -- and add_connection must then leave the rebuilt node
+    alone via its idempotence shortcut rather than overwrite the outputs.
+    """
+    from lfx.mcp.server import connect_components
+
+    source = _node("RunFlow-1", node_type="RunFlow")
+    source["data"]["node"]["add_tool_output"] = True
+    target = _node("Agent-1", node_type="Agent")
+    target["id"] = "node-2"
+    target["data"]["node"]["template"]["tools"] = {"type": "other", "input_types": ["Tool"]}
+    mock_flow["data"]["nodes"] = [source, target]
+
+    async def _server_rebuild(_flow_id, _component_id, params):
+        assert params == {"tool_mode": True}
+        inner = source["data"]["node"]
+        inner["tool_mode"] = True
+        inner["outputs"] = [{"name": "component_as_tool", "types": ["Tool"], "display_name": "Toolset"}]
+        inner["template"]["tools_metadata"] = {"type": "table", "value": [], "display_name": "Toolset"}
+
+    with (
+        patch("lfx.mcp.server._get_client", return_value=mock_client),
+        patch("lfx.mcp.server._get_registry", new_callable=AsyncMock, return_value=mock_registry),
+        patch("lfx.mcp.server._get_flow", new_callable=AsyncMock, return_value=mock_flow),
+        patch("lfx.mcp.server._patch_flow", new_callable=AsyncMock),
+        patch("lfx.mcp.server.configure_component", new=AsyncMock(side_effect=_server_rebuild)) as configure,
+        patch("lfx.mcp.server.layout_flow"),
+    ):
+        await connect_components("flow-123", "RunFlow-1", "component_as_tool", "Agent-1", "tools")
+
+    configure.assert_awaited_once_with("flow-123", "RunFlow-1", {"tool_mode": True})
+    # The rebuild survives the local add_connection pass.
+    assert "tools_metadata" in source["data"]["node"]["template"]
+    assert [o["name"] for o in source["data"]["node"]["outputs"]] == ["component_as_tool"]
+    assert len(mock_flow["data"]["edges"]) == 1
+
+
+async def test_configure_component_marks_dynamic_explicit_value_as_literal(mock_client, mock_registry, mock_flow):
+    """Dynamic field refreshes must not reinterpret an explicit value as a global-variable name."""
+    from lfx.mcp.server import configure_component
+
+    node = _node("X-1")
+    node["data"]["node"]["template"]["api_key"] = {
+        "value": "",
+        "type": "str",
+        "load_from_db": True,
+    }
+    mock_flow["data"]["nodes"] = [node]
+    mock_client.post.return_value = {"template": node["data"]["node"]["template"]}
+
+    with (
+        _patch_server(mock_client, mock_registry, mock_flow),
+        patch("lfx.mcp.server.needs_server_update", return_value=True),
+    ):
+        await configure_component(
+            "flow-123",
+            "X-1",
+            {"api_key": "literal-value"},  # pragma: allowlist secret
+        )
+
+    request = mock_client.post.call_args.kwargs["json_data"]
+    assert request["template"]["api_key"]["value"] == "literal-value"
+    assert request["template"]["api_key"]["load_from_db"] is False
 
 
 # ---------------------------------------------------------------------------

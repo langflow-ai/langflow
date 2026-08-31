@@ -6,8 +6,9 @@ import pytest
 from langflow.services.auth.exceptions import InvalidTokenError
 from langflow.services.database.models.auth import SSOUserProfile
 from langflow.services.database.models.user import User
-from langflow.services.deps import get_auth_service, get_settings_service, session_scope
+from langflow.services.deps import get_auth_service, get_db_service, get_settings_service, session_scope
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, LEGACY_DEFAULT_SUPERUSER_PASSWORD
+from sqlalchemy import event
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
@@ -241,6 +242,59 @@ async def test_session_endpoint_jit_creates_user_for_external_header(client, ext
     second_response = await client.get("api/v1/session", headers={_EXTERNAL_AUTH_HEADER: f"Bearer {token}"})
     assert second_response.status_code == 200
     assert second_response.json()["user"]["id"] == data["user"]["id"]
+
+
+async def test_jit_provisioning_orders_user_insert_before_profile_insert(client, external_auth_settings):  # noqa: ARG001
+    """Regression test for a ForeignKeyViolation seen on Postgres-backed instances.
+
+    SSOUserProfile.user_id (services/database/models/auth/sso.py) is a bare
+    SQLAlchemy FK column - no SQLModel Relationship() ties User and
+    SSOUserProfile together. Without a declared relationship, SQLAlchemy's
+    unit-of-work can't infer that the `user` row must be inserted before
+    `sso_user_profile` in the same flush, so the two INSERTs aren't
+    guaranteed to be ordered. On a backend that enforces FK constraints
+    immediately (Postgres), an unlucky order raises `ForeignKeyViolation` on
+    `sso_user_profile_user_id_fkey`. SQLite doesn't enforce FKs by default,
+    so the same misordering never surfaces there - this test asserts the
+    actual INSERT order at the engine level instead of relying on a
+    constraint violation, so it catches the regression on SQLite too.
+    """
+    token = _external_token(
+        sub="subject-order-check",
+        preferred_username="order-check-user",
+        email="order-check@example.com",
+        name="Order Check User",
+    )
+
+    insert_order = []
+
+    def _table_from_insert(statement: str) -> str | None:
+        normalized = " ".join(statement.split()).upper()
+        if not normalized.startswith("INSERT INTO"):
+            return None
+        target = normalized.removeprefix("INSERT INTO").strip().split(" ", 1)[0].strip('"')
+        return target.lower() if target.lower() in {"user", "sso_user_profile"} else None
+
+    def _before_cursor_execute(conn, cursor, statement, parameters, context, executemany):  # noqa: ARG001
+        table = _table_from_insert(statement)
+        if table is not None:
+            insert_order.append(table)
+
+    sync_engine = get_db_service().engine.sync_engine
+    event.listen(sync_engine, "before_cursor_execute", _before_cursor_execute)
+    try:
+        response = await client.get("api/v1/session", headers={_EXTERNAL_AUTH_HEADER: f"Bearer {token}"})
+    finally:
+        event.remove(sync_engine, "before_cursor_execute", _before_cursor_execute)
+
+    assert response.status_code == 200
+    assert response.json()["authenticated"] is True
+
+    assert "user" in insert_order
+    assert "sso_user_profile" in insert_order
+    assert insert_order.index("user") < insert_order.index("sso_user_profile"), (
+        f"Expected the 'user' INSERT to precede 'sso_user_profile', got order: {insert_order}"
+    )
 
 
 async def test_session_endpoint_accepts_external_cookie_with_custom_claim_mapping(client, external_auth_settings):

@@ -3,10 +3,36 @@
 Tests the core import_mod function used throughout the dynamic import system.
 """
 
+import importlib.util
+import sys
 from unittest.mock import patch
 
 import pytest
 from lfx.components._importing import import_mod
+
+
+def _knowledge_deps_available() -> bool:
+    """Whether the knowledge module's ``langchain_chroma`` import can resolve.
+
+    Mirrors the probe in ``test_dynamic_imports.py``. ``KnowledgeComponent``'s
+    module imports ``langchain_chroma`` at import time (every ``langflow`` import
+    in it is lazy), so its importability tracks that one optional dependency.
+    Must tolerate the KB-backends conftest, which registers a bare
+    ``types.ModuleType("langchain_chroma")`` shim into ``sys.modules`` when the
+    real package is missing: the shim satisfies ``from langchain_chroma import
+    Chroma`` (so the module imports) but has ``__spec__ is None``, which makes
+    ``find_spec`` raise ``ValueError``. Check ``sys.modules`` first, then guard
+    ``find_spec`` the way the conftest's own ``_is_missing`` helper does.
+    """
+    if "langchain_chroma" in sys.modules:
+        return True
+    try:
+        return importlib.util.find_spec("langchain_chroma") is not None
+    except (ImportError, ValueError):
+        return False
+
+
+_KNOWLEDGE_DEPS_AVAILABLE = _knowledge_deps_available()
 
 
 class TestImportAttr:
@@ -124,10 +150,15 @@ class TestImportAttr:
         module_result = import_mod("processing", "__module__", "lfx.components")
         assert hasattr(module_result, "__name__")
 
-        # Test class import - KnowledgeComponent's module imports langchain_chroma /
-        # langflow, which are absent in the engine-only lfx env, so this fails.
-        with pytest.raises((ImportError, ModuleNotFoundError)):
-            import_mod("KnowledgeComponent", "knowledge", "lfx.components.files_and_knowledge")
+        # Test class import - KnowledgeComponent's module imports langchain_chroma
+        # at import time. When that dep (or its conftest shim) is present the class
+        # resolves; otherwise the import error propagates.
+        if _KNOWLEDGE_DEPS_AVAILABLE:
+            class_result = import_mod("KnowledgeComponent", "knowledge", "lfx.components.files_and_knowledge")
+            assert class_result.__name__ == "KnowledgeComponent"
+        else:
+            with pytest.raises((ImportError, ModuleNotFoundError)):
+                import_mod("KnowledgeComponent", "knowledge", "lfx.components.files_and_knowledge")
 
     def test_caching_independence(self):
         """Test that import_mod doesn't interfere with Python's module caching."""

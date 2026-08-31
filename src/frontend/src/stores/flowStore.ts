@@ -9,14 +9,21 @@ import {
 import { cloneDeep } from "lodash";
 import { v5 as uuidv5 } from "uuid";
 import { create } from "zustand";
-import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
+import {
+  blockedStopsExecution,
+  checkCodeValidity,
+} from "@/CustomNodes/helpers/check-code-validity";
 import { queryClient } from "@/contexts";
 import {
   runFlowAGUI,
   runFlowHITL,
 } from "@/controllers/API/agui/run-flow-bridge";
+import { getGlobalVariablesQueryKey } from "@/controllers/API/helpers/global-variable-scope";
+import { getSettledSuccessfulQueryData } from "@/controllers/API/helpers/query-cache";
 import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import { track, trackFlowBuild } from "@/customization/utils/analytics";
+import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
+import type { GlobalVariable } from "@/types/global_variables";
 import { brokenEdgeMessage } from "@/utils/utils";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import i18n from "../i18n";
@@ -53,7 +60,6 @@ import useAlertStore from "./alertStore";
 import useAuthStore from "./authStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
-import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
 import { useTweaksStore } from "./tweaksStore";
 import { useTypesStore } from "./typesStore";
 import { useUtilityStore } from "./utilityStore";
@@ -133,6 +139,19 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       get().reactFlowInstance?.fitView({ nodes: [{ id: nodeId }] });
     }
   },
+  fitViewRequest: { id: 0 },
+  // Fitting immediately would measure an incomplete graph, so this only records
+  // the intent — the canvas performs the fit once every node has dimensions and
+  // then runs `onFitted`. See `useFitViewWhenMeasured`.
+  requestFitView: (onFitted) => {
+    const superseded = get().fitViewRequest.onFitted;
+    set((state) => ({
+      fitViewRequest: { id: state.fitViewRequest.id + 1, onFitted },
+    }));
+    // A request replaced before it ran must not strand its caller: the welcome
+    // overlay waits on this callback before it uncovers the canvas.
+    superseded?.();
+  },
   autoSaveFlow: undefined,
   componentsToUpdate: [],
   setComponentsToUpdate: (change) => {
@@ -155,6 +174,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         if (codeValidity && (codeValidity.outdated || codeValidity.blocked))
           outdatedNodes.push({
             id: node.id,
+            type: node.data.type,
             icon: node.data.node?.icon,
             display_name: node.data.node?.display_name,
             outdated: codeValidity.outdated,
@@ -440,6 +460,25 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       get().autoSaveFlow!();
     }
   },
+  setNodesAndEdges: (nodes, edges) => {
+    // Atomic single-render replace mirroring resetFlow (the F5 load path); a
+    // split setNodes+setEdges draws loop/dynamic-handle edges only after refresh.
+    const { edges: newEdges } = cleanEdges(nodes, edges);
+    const { inputs, outputs } = getInputsAndOutputs(nodes);
+    get().updateComponentsToUpdate(nodes);
+    set({
+      nodes,
+      edges: newEdges,
+      flowState: undefined,
+      inputs,
+      outputs,
+      hasIO: inputs.length > 0 || outputs.length > 0,
+    });
+    get().updateCurrentFlow({ nodes, edges: newEdges });
+    if (get().autoSaveFlow) {
+      get().autoSaveFlow!();
+    }
+  },
   setNode: (
     id: string,
     change: AllNodeType | ((oldState: AllNodeType) => AllNodeType),
@@ -613,6 +652,20 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     internalPostionDictionary[insidePosition.x] = insidePosition.y;
     get().setPositionDictionary(internalPostionDictionary);
 
+    const currentFlowId = useFlowsManagerStore.getState().currentFlowId;
+    const scopedGlobalVariables = currentFlowId
+      ? getSettledSuccessfulQueryData<GlobalVariable[]>(
+          queryClient,
+          getGlobalVariablesQueryKey({ flowId: currentFlowId }),
+        )
+      : undefined;
+    const scopedUnavailableFields = scopedGlobalVariables
+      ? getUnavailableFields(scopedGlobalVariables)
+      : undefined;
+    const scopedGlobalVariableEntries = scopedGlobalVariables?.map(
+      (variable) => variable.name,
+    );
+
     selection.nodes.forEach((node: AllNodeType) => {
       // Generate a unique node ID
       const newId = getNodeId(node.data.type);
@@ -638,8 +691,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       updateGroupRecursion(
         newNode,
         selection.edges,
-        useGlobalVariablesStore.getState().unavailableFields,
-        useGlobalVariablesStore.getState().globalVariablesEntries,
+        scopedUnavailableFields,
+        scopedGlobalVariableEntries,
       );
 
       // Add the new node to the list of nodes in state
@@ -869,49 +922,86 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     // then immediately clicked "Run") before checking outdated state.
     await waitForNodeUpdates();
 
-    // Block build when custom components are disabled and outdated components exist;
-    // recalculate from current nodes (setNode does not run updateComponentsToUpdate).
+    // Recalculate from current nodes (setNode does not run updateComponentsToUpdate).
+    // Unknown code-bearing types always block in restricted mode; known drift only blocks when
+    // the server-side trusted-code substitution policy is disabled.
     get().updateComponentsToUpdate(get().nodes);
-    const allowCustomComponents =
-      useUtilityStore.getState().allowCustomComponents;
-    if (!allowCustomComponents && get().componentsToUpdate.length > 0) {
-      const blockedComponents = get().componentsToUpdate.filter(
-        (component) => component.blocked,
+    const {
+      allowCustomComponents,
+      substituteOutdatedComponentCode,
+      blockedComponentTypes,
+    } = useUtilityStore.getState();
+    // A missing template is the normal state of a user-authored custom
+    // component when those are allowed, so it only stops a run under
+    // restricted mode or when the policy names this component.
+    const stopsExecution = (component: { type?: string }) =>
+      blockedStopsExecution(
+        allowCustomComponents,
+        blockedComponentTypes,
+        component.type,
       );
-      const outdatedComponents = get().componentsToUpdate.filter(
-        (component) => component.outdated,
+    // A partial build only executes its own subgraph, so only that subgraph can
+    // block it. componentsToUpdate stays whole-flow for the update banner.
+    const validatedNodeIds = new Set(nodesToValidate.map((node) => node.id));
+    const componentsToPreflight = get().componentsToUpdate.filter((component) =>
+      validatedNodeIds.has(component.id),
+    );
+    // A cold shareable Playground intentionally has no component-template registry, so it cannot
+    // distinguish a known server component from an unknown custom type. Its public endpoint owns
+    // that decision and sanitizes the stored graph before execution. Keep this client preflight
+    // for editor runs, where the template registry is loaded and its classification is reliable.
+    if (!get().playgroundPage && componentsToPreflight.length > 0) {
+      // A missing template blocks the run either way. Outdated components are
+      // only enforced in restricted mode, as before.
+      const blockedComponents = componentsToPreflight.filter(
+        (component) => component.blocked && stopsExecution(component),
       );
-      const errorList: string[] = [];
+      const outdatedComponents =
+        substituteOutdatedComponentCode || allowCustomComponents
+          ? []
+          : componentsToPreflight.filter((component) => component.outdated);
+      const mustBlockBuild =
+        blockedComponents.length > 0 || outdatedComponents.length > 0;
+      if (mustBlockBuild) {
+        const errorList: string[] = [];
 
-      if (blockedComponents.length > 0) {
-        errorList.push(
-          `The following custom components cannot run while custom components are disabled: ${blockedComponents
+        if (blockedComponents.length > 0) {
+          const names = blockedComponents
             .map((component) => component.display_name ?? component.id)
-            .join(", ")}`,
-        );
-      }
+            .join(", ");
+          errorList.push(
+            allowCustomComponents
+              ? `The following components are no longer available in the approved catalog: ${names}`
+              : `The following custom components cannot run while custom components are disabled: ${names}`,
+          );
+        }
 
-      if (outdatedComponents.length > 0) {
-        errorList.push(
-          `The following components are outdated and must be updated: ${outdatedComponents
-            .map((component) => component.display_name ?? component.id)
-            .join(", ")}`,
-        );
-      }
+        if (outdatedComponents.length > 0) {
+          errorList.push(
+            `The following components are outdated and must be updated: ${outdatedComponents
+              .map((component) => component.display_name ?? component.id)
+              .join(", ")}`,
+          );
+        }
 
-      setErrorData({
-        title:
+        const blockedTitle = allowCustomComponents
+          ? "Components disabled by an administrator must be removed before building"
+          : "Custom components are blocked while custom components are disabled";
+
+        setErrorData({
+          title:
+            blockedComponents.length > 0
+              ? blockedTitle
+              : "Outdated components must be updated before building",
+          list: errorList,
+        });
+        get().setIsBuilding(false);
+        throw new Error(
           blockedComponents.length > 0
-            ? "Custom components are blocked while custom components are disabled"
-            : "Outdated components must be updated before building",
-        list: errorList,
-      });
-      get().setIsBuilding(false);
-      throw new Error(
-        blockedComponents.length > 0
-          ? "Custom components are blocked while custom components are disabled"
-          : "Outdated components must be updated",
-      );
+            ? blockedTitle
+            : "Outdated components must be updated",
+        );
+      }
     }
 
     // One AbortController per build so stopBuilding cancels only the in-flight run;
@@ -923,13 +1013,17 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     let buildingFlowId = currentFlow!.id;
     if (get().playgroundPage) {
       const authState = useAuthStore.getState();
+      const authenticatedVisitorId =
+        authState.isAuthenticated && authState.autoLogin === false
+          ? authState.userData?.id
+          : undefined;
       const visitorId =
-        authState.isAuthenticated &&
-        authState.autoLogin === false &&
-        authState.userData?.id
-          ? authState.userData.id
-          : useUtilityStore.getState().clientId;
-      buildingFlowId = uuidv5(`${visitorId}_${currentFlow!.id}`, uuidv5.DNS);
+        authenticatedVisitorId ?? useUtilityStore.getState().clientId;
+      const principalType = authenticatedVisitorId ? "user" : "client";
+      buildingFlowId = uuidv5(
+        `${principalType}:${visitorId}_${currentFlow!.id}`,
+        uuidv5.DNS,
+      );
     }
     get().setBuildingSession(buildingFlowId, session ?? null);
 

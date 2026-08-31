@@ -185,6 +185,43 @@ def test_original_flow_not_mutated(flow_name, flow_data_map, registry):
 
 
 # ---------------------------------------------------------------------------
+# Tool-mode nodes
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("flow_name", [f.stem for f in FIXTURE_FLOWS])
+def test_tool_mode_nodes_are_not_breaking_while_the_component_supports_tool_mode(flow_name, flow_data_map, registry):
+    """A node in tool mode must not be breaking merely because its outputs are the toolset.
+
+    Tool mode replaces a node's authored outputs with the single ``component_as_tool`` entry,
+    which no registry entry declares, so comparing the two output sets always fails. Unlike the
+    other checks in this file this one asserts a verdict, but it survives registry evolution
+    because it skips any node whose component has since dropped tool-mode support.
+    """
+    from lfx.upgrade.checker import TOOL_OUTPUT_NAME, _registry_supports_tool_mode, build_registry_lookup
+
+    lookup = build_registry_lookup(registry)
+    flow = flow_data_map[flow_name]
+    report = check_flow_compatibility(flow, registry, registry=lookup)
+    statuses = {n.node_id: n for n in report.nodes}
+
+    for node in flow.get("nodes", []):
+        node_info = node.get("data", {}).get("node", {})
+        output_names = {o.get("name") for o in (node_info.get("outputs") or [])}
+        if output_names != {TOOL_OUTPUT_NAME}:
+            continue
+        entry = lookup.get(node.get("data", {}).get("type", ""))
+        if entry is None or not _registry_supports_tool_mode(entry):
+            continue
+        status = statuses.get(node.get("data", {}).get("id") or node.get("id"))
+        assert status is not None, f"Tool-mode node in {flow_name} was not classified"
+        assert status.status != "outdated_breaking", (
+            f"{status.display_name} ({status.component_type}) in {flow_name} is in tool mode and its "
+            f"component still supports tool mode, so it must not be classified outdated_breaking"
+        )
+
+
+# ---------------------------------------------------------------------------
 # Summary test — print a human-readable report for CI logs
 # ---------------------------------------------------------------------------
 

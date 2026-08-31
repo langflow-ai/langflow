@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Mapping
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, cast
@@ -30,6 +31,8 @@ from lfx.components.models_and_agents.agent_helpers.tool_call_id_middleware impo
 from lfx.components.models_and_agents.memory import MemoryComponent, _safe_graph_user_id, aget_agent_chat_history
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
     from langchain_core.tools import Tool
 
     from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
@@ -325,6 +328,49 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         ),
     ]
 
+    async def _additional_model_provider_policy_ids(self, purpose, parameters=None) -> tuple[str, ...]:
+        """Gate the provider selector retained by legacy Agent/ALTK flows."""
+        _ = purpose
+        from lfx.base.models.provider_registry import resolve_provider_id
+
+        effective_parameters = parameters if isinstance(parameters, Mapping) else getattr(self, "_parameters", None)
+        if not isinstance(effective_parameters, Mapping):
+            effective_parameters = {}
+        selected_model = effective_parameters.get("model", getattr(self, "model", None))
+        if selected_model:
+            # The shared Component hook already handles a selected ModelInput;
+            # connected model objects are gated by their upstream vertex.
+            return ()
+        legacy_provider = effective_parameters.get("agent_llm", getattr(self, "agent_llm", None))
+        if not isinstance(legacy_provider, str) or not legacy_provider.strip() or legacy_provider == "Custom":
+            return ()
+        return (resolve_provider_id(legacy_provider),)
+
+    async def _filter_legacy_provider_options(self, build_config: Mapping[str, Any]) -> None:
+        """Filter ALTK/legacy Agent provider choices through the active scope."""
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, aresolve_model_provider_policy
+
+        provider_field = build_config.get("agent_llm")
+        if not isinstance(provider_field, dict):
+            return
+        options = provider_field.get("options")
+        if not isinstance(options, list):
+            return
+        candidates = [option for option in options if isinstance(option, str) and option != "Custom"]
+        if not candidates:
+            return
+        snapshot = await aresolve_model_provider_policy(
+            user_id=self.user_id,
+            providers=candidates,
+            purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        )
+        allowed = set(snapshot.filter(candidates))
+        keep_indexes = [index for index, option in enumerate(options) if option == "Custom" or option in allowed]
+        provider_field["options"] = [options[index] for index in keep_indexes]
+        metadata = provider_field.get("options_metadata")
+        if isinstance(metadata, list) and len(metadata) == len(options):
+            provider_field["options_metadata"] = [metadata[index] for index in keep_indexes]
+
     def _resolve_selected_model(self):
         """Resolve the selected model, including legacy agent_llm/model_name inputs."""
         try:
@@ -389,6 +435,10 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
     async def get_agent_requirements(self):
         """Get the agent requirements for the agent."""
         from langchain_core.tools import StructuredTool
+
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+        await self.arequire_model_provider_policy(ModelProviderPolicyPurpose.USE)
 
         selected_model = self._resolve_selected_model()
         try:
@@ -700,7 +750,10 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                 if msg_id:
                     await delete_message(id_=msg_id)
                 await self._send_message_event(e.agent_message, category="remove_message")
-            logger.error(f"ExceptionWithMessageError: {e}")
+            # exception(), not error(f"...{e}"): this class's str() interpolates the model's
+            # partial completion, and passing the exception rather than formatting it is what
+            # gives the exported record an error.type to triage on.
+            logger.exception("Agent run failed after a partial message was emitted")
             raise
 
         usage_data = token_usage_handler.get_usage()
@@ -741,57 +794,139 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             session_id=session_id or uuid.uuid4(),
         )
 
-    def _selected_provider_and_model(self) -> tuple[str | None, str | None]:
-        """Provider/name of the selected model, for error-driven remediation."""
+    def _selected_model_remediation_context(self) -> tuple[str | None, str | None, Any | None]:
+        """Return provider/name plus a connected model target, when present."""
         try:
             selected = self._resolve_selected_model()
             if isinstance(selected, list) and selected and isinstance(selected[0], dict):
-                return selected[0].get("provider"), selected[0].get("name")
-        except (AttributeError, TypeError, KeyError, ImportError):
+                return selected[0].get("provider"), selected[0].get("name"), None
+
+            from langchain_core.language_models import BaseLanguageModel
+
+            if isinstance(selected, BaseLanguageModel):
+                model_name = None
+                for attr in ("model_name", "model", "model_id"):
+                    value = getattr(selected, attr, None)
+                    if isinstance(value, str) and value:
+                        model_name = value
+                        break
+                return self._connected_model_provider(selected), model_name, selected
+        except (AttributeError, TypeError, ValueError, KeyError, ImportError):
             pass
-        return None, None
+        return None, None, None
 
-    async def message_response(self) -> Message:
-        from lfx.base.models.model_remediation import find_remediation, remember
+    def _connected_model_provider(self, model: Any) -> str | None:
+        """Resolve a connected model's provider from the source component.
 
-        provider, model_name = self._selected_provider_and_model()
+        Runtime model classes are not provider identities: OpenAI, OpenRouter,
+        and compatible endpoints can all produce ``ChatOpenAI``. The incoming
+        model edge preserves the source component, so prefer its explicit
+        provider override or selected-model metadata, then its provider display
+        name. If the Agent is used without graph provenance, leave the provider
+        unknown so provider-scoped remediations remain disabled.
+        """
+        vertex = getattr(self, "_vertex", None)
+        if vertex is None:
+            return None
+        source_id = vertex.get_incoming_edge_by_target_param("model")
+        if not source_id:
+            return None
+        source = vertex.graph.get_vertex(source_id)
+        component = getattr(source, "custom_component", None)
+        if component is None:
+            return None
+
+        candidate = getattr(component, "provider", None)
+
+        if not isinstance(candidate, str) or not candidate:
+            selected_model = getattr(component, "model", None)
+            if isinstance(selected_model, list) and selected_model and isinstance(selected_model[0], dict):
+                candidate = selected_model[0].get("provider")
+
+        if not isinstance(candidate, str) or not candidate:
+            candidate = getattr(component, "display_name", None)
+        if not isinstance(candidate, str) or not candidate:
+            return None
+
+        from lfx.base.models.unified_models.provider_queries import get_model_provider_metadata
+
+        provider_metadata = get_model_provider_metadata().get(candidate, {})
+        expected_class = provider_metadata.get("mapping", {}).get("model_class")
+        model_classes = {base.__name__ for base in type(model).__mro__}
+        return candidate if expected_class in model_classes else None
+
+    async def _run_agent_with_model_remediation(
+        self,
+        run_once: Callable[[], Awaitable[Message]],
+    ) -> Message:
+        """Run one Agent operation, retrying safe provider-validation failures.
+
+        Registered remediations must identify request-validation failures that
+        occur before tool execution. A failure that can happen after a tool runs
+        must instead retry at the model-call boundary to avoid repeating tool
+        side effects.
+        """
+        from lfx.base.models.model_remediation import apply_overrides_to_model, find_remediation, remember
+
+        provider, model_name, connected_model = self._selected_model_remediation_context()
         applied: set[str] = set()
         while True:
             try:
-                llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
-                # Set up and run agent
-                self.set(
-                    llm=llm_model,
-                    tools=self.tools or [],
-                    chat_history=self.chat_history,
-                    input_value=self.input_value,
-                    system_prompt=self._inject_dynamic_prompt_values(self.system_prompt),
-                )
-                agent = self.create_agent_runnable()
-                result = await self.run_agent(agent)
-                self._agent_result = result
-            except (ValueError, TypeError, KeyError) as e:
-                await logger.aerror(f"{type(e).__name__}: {e!s}")
+                result = await run_once()
+            except (ValueError, TypeError, KeyError):
+                await logger.aexception("Agent run failed")
                 raise
-            except Exception as e:
-                # Error-driven remediation (see model_remediation): run_agent wraps
-                # the provider error in ExceptionWithMessageError, so match the chain.
-                error_text = f"{e} {getattr(e, '__cause__', '') or ''}"
+            except Exception as exc:
+                # run_agent may wrap the provider error in ExceptionWithMessageError, whose
+                # str() carries the model's partial completion. Matching on it locally is fine;
+                # logging it is not, so the record below passes the exception instead.
+                error_text = f"{exc} {getattr(exc, '__cause__', '') or ''}"
                 remediation = find_remediation(error_text, provider, already_applied=applied)
                 if remediation is None:
-                    label = type(e).__name__
-                    await logger.aerror(f"{label}: {e!s}")
+                    await logger.aexception("Agent run failed with no remediation available")
+                    raise
+                if connected_model is not None and not apply_overrides_to_model(connected_model, remediation.overrides):
+                    await logger.aerror(
+                        f"model.remediation.unapplied name={remediation.name} provider={provider} model={model_name}"
+                    )
                     raise
                 applied.add(remediation.name)
-                self._model_overrides = {**(getattr(self, "_model_overrides", None) or {}), **remediation.overrides}
+                if connected_model is None:
+                    self._model_overrides = {
+                        **(getattr(self, "_model_overrides", None) or {}),
+                        **remediation.overrides,
+                    }
+                else:
+                    # Connected outputs are shared objects across downstream flow
+                    # branches. The mutation is intentionally flow-scoped: sibling
+                    # branches holding this model will see the matched override too.
+                    await logger.adebug(
+                        f"model.remediation.shared_model name={remediation.name} provider={provider} model={model_name}"
+                    )
                 await logger.awarning(
                     f"model.remediation.applied name={remediation.name} provider={provider} model={model_name}"
                 )
-                continue
             else:
-                if getattr(self, "_model_overrides", None):
+                if connected_model is None and getattr(self, "_model_overrides", None):
                     remember(provider, model_name, self._model_overrides)
                 return result
+
+    async def message_response(self) -> Message:
+        async def _run_once() -> Message:
+            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
+            self.set(
+                llm=llm_model,
+                tools=self.tools or [],
+                chat_history=self.chat_history,
+                input_value=self.input_value,
+                system_prompt=self._inject_dynamic_prompt_values(self.system_prompt),
+            )
+            agent = self.create_agent_runnable()
+            return await self.run_agent(agent)
+
+        result = await self._run_agent_with_model_remediation(_run_once)
+        self._agent_result = result
+        return result
 
     async def json_response(self) -> Data:
         """Produce structured Data via native LLM structured output, with prompt-based fallback.
@@ -807,7 +942,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         try:
             llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
         except (ValueError, TypeError) as exc:
-            await logger.aerror(f"json_response.requirements_failed: {exc}")
+            await logger.aexception("json_response.requirements_failed")
             return Data(data={"content": "", "error": str(exc)})
 
         injected_system_prompt = self._inject_dynamic_prompt_values(getattr(self, "system_prompt", "") or "") or ""
@@ -816,17 +951,27 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         has_tools = bool(self.tools)
 
         async def _run_agent_for_fallback(augmented_prompt: str) -> str:
-            self.set(
-                llm=llm_model,
-                tools=self.tools or [],
-                chat_history=self.chat_history,
-                input_value=self.input_value,
-                system_prompt=augmented_prompt,
-            )
-            # Structured output cannot suspend mid-parse: disable tool-approval interrupts.
-            agent_runnable = self.create_agent_runnable(allow_interrupts=False)
+            first_attempt = True
+
+            async def _run_once() -> Message:
+                nonlocal first_attempt, llm_model
+                if first_attempt:
+                    first_attempt = False
+                else:
+                    llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
+                self.set(
+                    llm=llm_model,
+                    tools=self.tools or [],
+                    chat_history=self.chat_history,
+                    input_value=self.input_value,
+                    system_prompt=augmented_prompt,
+                )
+                # Structured output cannot suspend mid-parse: disable tool-approval interrupts.
+                agent_runnable = self.create_agent_runnable(allow_interrupts=False)
+                return await self.run_agent(agent_runnable)
+
             with _suppress_send_message(self):
-                result = await self.run_agent(agent_runnable)
+                result = await self._run_agent_with_model_remediation(_run_once)
             return _extract_text_content(result)
 
         try:
@@ -846,7 +991,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             NotImplementedError,
             AttributeError,
         ) as exc:
-            await logger.aerror(f"json_response.orchestration_failed: {exc}")
+            await logger.aexception("json_response.orchestration_failed")
             return Data(data={"content": "", "error": str(exc)})
 
     async def get_memory_data(self):
@@ -881,6 +1026,15 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         field_value: list[dict],
         field_name: str | None = None,
     ) -> dotdict:
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+        policy_parameters = dict(getattr(self, "_parameters", {}) or {})
+        if field_name:
+            policy_parameters[field_name] = field_value
+        await self.arequire_model_provider_policy(
+            ModelProviderPolicyPurpose.CONFIGURE,
+            parameters=policy_parameters,
+        )
         # Update model options with caching (for all field changes).
         # The tool-calling constraint lives on the ModelInput's ``filters``
         # field (declared above); ``handle_model_input_update`` reads it
@@ -918,6 +1072,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             if missing_keys:
                 msg = f"Missing required keys in build_config: {missing_keys}"
                 raise ValueError(msg)
+        await self._filter_legacy_provider_options(build_config)
         return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
 
     async def _get_tools(self) -> list[Tool]:

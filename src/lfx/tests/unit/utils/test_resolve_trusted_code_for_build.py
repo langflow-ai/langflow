@@ -10,8 +10,14 @@ failing closed when no trusted copy is known — while leaving permissive mode (
 from types import SimpleNamespace
 
 import pytest
+from lfx.interface.initialize import loading
+from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
 from lfx.utils import flow_validation
-from lfx.utils.flow_validation import CustomComponentValidationError, resolve_trusted_code_for_build
+from lfx.utils.flow_validation import (
+    CustomComponentValidationError,
+    PublicFlowValidationError,
+    resolve_trusted_code_for_build,
+)
 
 
 def _set_allow_custom_components(monkeypatch, *, allow: bool) -> None:
@@ -36,6 +42,56 @@ def test_restricted_mode_substitutes_trusted_copy(monkeypatch):
     monkeypatch.setattr(flow_validation, "get_trusted_code_for_validation", lambda _code: "SERVER_TRUSTED_SRC")
     # Even a forged blob that collides with a known hash resolves to the server copy.
     assert resolve_trusted_code_for_build("forged colliding blob") == "SERVER_TRUSTED_SRC"
+
+
+def test_public_restricted_mode_checks_the_final_trusted_copy(monkeypatch):
+    """The exact source selected immediately before eval is subject to public policy."""
+    _set_allow_custom_components(monkeypatch, allow=False)
+    trusted_repl = "class PythonREPLComponent(Component):\n    pass\n"
+    trusted_hash = flow_validation._compute_code_hash(trusted_repl)
+    monkeypatch.setattr(
+        flow_validation,
+        "get_trusted_code_and_hashes_for_validation",
+        lambda _code: (trusted_repl, {"PythonREPLComponent": {trusted_hash}}),
+    )
+
+    with pytest.raises(PublicFlowValidationError, match="code-execution"):
+        resolve_trusted_code_for_build("previously checked source", public_execution=True)
+
+
+@pytest.mark.parametrize(
+    ("user_id", "expected_public_execution"),
+    [
+        (str(PUBLIC_ANONYMOUS_ACTOR_ID), True),
+        ("authenticated-owner", False),
+    ],
+)
+def test_instantiate_class_marks_only_the_public_principal(monkeypatch, user_id, expected_public_execution):
+    """The final pre-eval resolver receives the execution principal's public status."""
+    seen: dict[str, object] = {}
+
+    def resolve(code: str, *, public_execution: bool = False) -> str:
+        seen.update(code=code, public_execution=public_execution)
+        return "trusted source"
+
+    class TestComponent:
+        def __init__(self, **_kwargs):
+            pass
+
+    monkeypatch.setattr(flow_validation, "resolve_trusted_code_for_build", resolve)
+    monkeypatch.setattr(loading, "eval_custom_component_code", lambda _code: TestComponent)
+    vertex = SimpleNamespace(
+        vertex_type="TestComponent",
+        base_type="component",
+        params={"code": "stored source"},
+        id="test-component",
+    )
+
+    component, params = loading.instantiate_class(vertex, user_id=user_id)
+
+    assert isinstance(component, TestComponent)
+    assert params == {}
+    assert seen == {"code": "stored source", "public_execution": expected_public_execution}
 
 
 def test_restricted_mode_no_match_fails_closed(monkeypatch):

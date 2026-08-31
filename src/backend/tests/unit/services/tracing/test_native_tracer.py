@@ -691,13 +691,14 @@ class TestTopologicalSortSpans:
         assert uuids.index(root) < uuids.index(mid) < uuids.index(leaf)
 
     def test_parent_outside_batch(self):
-        """Spans referencing a parent not in the batch are treated as roots."""
+        """Spans referencing a missing parent are detached before insertion."""
         external_parent = uuid4()
         child_id = uuid4()
         items = [self._make_span(child_id, external_parent)]
         result = topological_sort_spans(items)
         assert len(result) == 1
         assert result[0][1] == child_id
+        assert result[0][2] is None
 
     def test_mixed_roots_and_children(self):
         root_a = uuid4()
@@ -891,3 +892,43 @@ class TestFlushParentChildOrder:
         assert span_objects[0].id == parent_uuid
         assert span_objects[1].id == child_uuid
         assert span_objects[1].parent_span_id == parent_uuid
+
+    async def test_flush_detaches_span_from_missing_parent(self):
+        """A missing parent must not leave an invalid self-referential FK."""
+        tracer = _make_tracer(flow_id=str(uuid4()))
+        tracer.completed_spans = [
+            {
+                "id": str(uuid4()),
+                "name": "Orphan Span",
+                "span_type": SpanType.CHAIN,
+                "inputs": {},
+                "outputs": None,
+                "start_time": datetime.now(tz=timezone.utc),
+                "end_time": datetime.now(tz=timezone.utc),
+                "latency_ms": 5,
+                "status": SpanStatus.OK,
+                "error": None,
+                "attributes": {},
+                "span_source": "langchain",
+                "parent_span_id": uuid4(),
+            }
+        ]
+
+        merged_objects = []
+        mock_session = AsyncMock()
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=False)
+
+        async def capture_merge(obj):
+            merged_objects.append(obj)
+
+        mock_session.merge = capture_merge
+
+        with patch("lfx.services.deps.session_scope", return_value=mock_session):
+            await tracer._flush_to_database()
+
+        from langflow.services.database.models.traces.model import SpanTable
+
+        span_objects = [obj for obj in merged_objects if isinstance(obj, SpanTable)]
+        assert len(span_objects) == 1
+        assert span_objects[0].parent_span_id is None

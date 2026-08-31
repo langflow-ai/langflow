@@ -1,7 +1,9 @@
 import asyncio
+import faulthandler
 import json
 import os
 import shutil
+import sys
 
 # we need to import tmpdir
 import tempfile
@@ -165,7 +167,54 @@ def blockbuster(request):
             yield bb
 
 
+# Hard, GIL-proof per-test watchdog. pytest-timeout's thread method (pyproject
+# `timeout = 90`) arms a *Python* timer thread, which needs the GIL to run its
+# callback -- a hang inside a C call that never releases the GIL (observed on
+# the release-1.11.3 py3.13 Group 5 job: a worker froze for 25+ minutes in
+# test_login.py::test_session_endpoint_rejects_expired_external_token with no
+# dump) silently defeats it and the job burns to the CI step wall.
+# faulthandler.dump_traceback_later() instead uses a C-level watchdog thread
+# that needs no GIL: it dumps every thread's stack to the real stderr fd
+# (inherited by xdist workers, so it lands in the CI log) and, with exit=True,
+# hard-exits the wedged worker -- xdist then reports "node down", replaces the
+# worker, and --reruns retries the test on the fresh one. The 120s default sits
+# above pytest-timeout's 90s so the soft watchdog (clean per-test failure)
+# always gets first shot; this only fires when that one *couldn't* run.
+# Disable locally for debugger sessions with LANGFLOW_TEST_HARD_TIMEOUT=0.
+_HARD_TIMEOUT_S = float(os.getenv("LANGFLOW_TEST_HARD_TIMEOUT", "120"))
+
+# Real-stderr fd, dup'd at pytest_configure time. pytest's fd-level capture
+# redirects fd 2 into a per-test temp file that is discarded when the process
+# hard-exits, so a dump armed against sys.__stderr__ at *test* time vanishes
+# (which is also why pytest-timeout's thread dumps never showed in CI logs).
+# At configure time fd 2 still points at the process's original stderr -- in an
+# xdist worker that fd is inherited from the controller, so dumps written to
+# the dup land in the CI step log. Same strategy as pytest's builtin
+# faulthandler plugin.
+_watchdog_stderr_fd: int | None = None
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_protocol(item, nextitem):  # noqa: ARG001
+    if _HARD_TIMEOUT_S <= 0 or _watchdog_stderr_fd is None:
+        return (yield)
+    faulthandler.dump_traceback_later(_HARD_TIMEOUT_S, file=_watchdog_stderr_fd, exit=True)
+    try:
+        return (yield)
+    finally:
+        faulthandler.cancel_dump_traceback_later()
+
+
 def pytest_configure(config):
+    global _watchdog_stderr_fd  # noqa: PLW0603
+    if _HARD_TIMEOUT_S > 0 and _watchdog_stderr_fd is None:
+        with suppress(AttributeError, ValueError, OSError):
+            try:
+                fd = sys.stderr.fileno()
+            except (AttributeError, ValueError, OSError):
+                fd = sys.__stderr__.fileno()
+            _watchdog_stderr_fd = os.dup(fd)
+
     config.addinivalue_line("markers", "noclient: don't create a client for this test")
     config.addinivalue_line("markers", "load_flows: load the flows for this test")
     config.addinivalue_line("markers", "api_key_required: run only if the api key is set in the environment variables")

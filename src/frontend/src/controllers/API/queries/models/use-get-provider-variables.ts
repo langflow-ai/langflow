@@ -2,9 +2,19 @@ import { ProviderVariable } from "@/constants/providerConstants";
 import { useQueryFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
+import {
+  appendProviderScope,
+  type ProviderScopeParams,
+  providerScopeQueryKey,
+} from "../../helpers/provider-scope";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 export type ProviderVariablesMapping = Record<string, ProviderVariable[]>;
+
+const PROVIDER_POLICY_STALE_TIME_MS = 30_000;
+
+export const getProviderVariablesQueryKey = (params?: ProviderScopeParams) =>
+  ["useGetProviderVariables", ...providerScopeQueryKey(params)] as const;
 
 /**
  * Hook to fetch provider variables mapping from the API.
@@ -21,29 +31,33 @@ export type ProviderVariablesMapping = Record<string, ProviderVariable[]>;
  * }
  */
 export const useGetProviderVariables: useQueryFunctionType<
-  undefined,
+  ProviderScopeParams | undefined,
   ProviderVariablesMapping
-> = (_, options) => {
+> = (params, options) => {
   const { query } = UseRequestProcessor();
 
   const getProviderVariablesFn =
     async (): Promise<ProviderVariablesMapping> => {
       try {
-        const url = `${getURL("MODELS")}/provider-variable-mapping`;
+        const queryParams = new URLSearchParams();
+        appendProviderScope(queryParams, params);
+        const url = `${getURL("MODELS")}/provider-variable-mapping${
+          queryParams.toString() ? `?${queryParams.toString()}` : ""
+        }`;
         const response = await api.get<ProviderVariablesMapping>(url);
         return response.data;
       } catch (error) {
         console.error("Error fetching provider variables mapping:", error);
-        return {};
+        throw error;
       }
     };
 
   const queryResult = query(
-    ["useGetProviderVariables"],
+    getProviderVariablesQueryKey(params),
     getProviderVariablesFn,
     {
-      refetchOnWindowFocus: false,
-      staleTime: 1000 * 60 * 60, // 1 hour - this data rarely changes
+      refetchOnWindowFocus: true,
+      staleTime: PROVIDER_POLICY_STALE_TIME_MS,
       ...options,
     },
   );

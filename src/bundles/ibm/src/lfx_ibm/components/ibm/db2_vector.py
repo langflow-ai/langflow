@@ -9,6 +9,7 @@ from lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, S
 from lfx.io import Output, QueryInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
+from lfx.utils.file_path_security import component_file_access_scopes
 from lfx_ibm.components.ibm.db2_security import (
     create_safe_error_message,
     validate_and_prepare_ssl_certificate,
@@ -300,7 +301,9 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
 
             # Validate and prepare SSL certificate
             self.log(f"Validating SSL certificate: {cert_path_input}")
-            ssl_cert_path, is_temp_cert, cert_error = validate_and_prepare_ssl_certificate(cert_path_input)
+            ssl_cert_path, is_temp_cert, cert_error = validate_and_prepare_ssl_certificate(
+                cert_path_input, scope_ids=component_file_access_scopes(self)
+            )
 
             if cert_error:
                 msg = f"SSL certificate validation failed: {cert_error}"

@@ -77,14 +77,17 @@ export const usePatchMCPServer: useMutationFunctionType<
     ...options,
     retry: 0,
 
-    onSuccess: (data, variables, context) => {
+    onSuccess: (data, variables, onMutateResult, context) => {
       queryClient.invalidateQueries({
         queryKey: ["useGetMCPServers"],
       });
       queryClient.invalidateQueries({
+        queryKey: ["useGetMCPServerCounts"],
+      });
+      queryClient.invalidateQueries({
         queryKey: ["useGetMCPServer", variables.name],
       });
-      options?.onSuccess?.(data, variables, context);
+      options?.onSuccess?.(data, variables, onMutateResult, context);
     },
   });
 

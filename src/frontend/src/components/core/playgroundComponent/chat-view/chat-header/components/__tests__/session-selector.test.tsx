@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { SessionSelector } from "../session-selector";
 
 jest.mock("@/controllers/API/queries/messages/use-rename-session", () => ({
@@ -41,6 +42,33 @@ const getRoot = () => screen.getByTestId("session-selector");
 // suffix such as `hover:bg-accent`. The negative lookbehind excludes the
 // pseudo-prefix colon so we test the row-level (non-hover) state.
 const ROW_BG_ACCENT = /(?<!:)\bbg-accent\b/;
+
+describe("SessionSelector — keyboard reachability (WCAG 2.1.1)", () => {
+  // Regression guard: the row used to be a plain <div onClick> with no
+  // tabIndex/role/keyboard handler, so Tab skipped it entirely and there
+  // was no way to select a session without a mouse.
+  it("is reachable via Tab and selects the session on Enter", async () => {
+    const user = userEvent.setup();
+    const toggleVisibility = jest.fn();
+    render(
+      <SessionSelector
+        {...baseProps}
+        toggleVisibility={toggleVisibility}
+        isVisible={false}
+        isSelected={false}
+        showCheckbox={false}
+      />,
+    );
+
+    const row = getRoot();
+    await user.tab();
+
+    expect(row.querySelector('[role="button"][tabindex="0"]')).toHaveFocus();
+
+    await user.keyboard("{Enter}");
+    expect(toggleVisibility).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe("SessionSelector — visual focus cue", () => {
   it("renders neutral styling when the session is neither active nor selected", () => {

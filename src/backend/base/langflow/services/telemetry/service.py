@@ -13,6 +13,7 @@ from lfx.log.logger import logger
 
 from langflow.services.base import Service
 from langflow.services.telemetry.opentelemetry import OpenTelemetry
+from langflow.services.telemetry.run_event_store import append_run_event
 from langflow.services.telemetry.schema import (
     MAX_TELEMETRY_URL_SIZE,
     ComponentIndexPayload,
@@ -109,6 +110,10 @@ class TelemetryService(Service):
             await logger.aerror(f"Unexpected error occurred: {err}.")
 
     async def log_package_run(self, payload: RunPayload) -> None:
+        # Recorded before the do-not-track gate in _queue_event: enterprise
+        # metering must see every run even when outbound telemetry is off.
+        # The store is process-local and bounded; see run_event_store.
+        append_run_event(payload)
         await self._queue_event((self.send_telemetry_data, payload, "run"))
 
     async def log_package_deployment(self, payload: DeploymentPayload) -> None:
@@ -276,3 +281,8 @@ class TelemetryService(Service):
 
     async def teardown(self) -> None:
         await self.stop()
+        # Unconditional, and separate from stop(): the OTLP application telemetry is gated on
+        # OTEL_* env, not on do_not_track, so it can be live even when product analytics is off
+        # (stop() early-returns in that case). Off the event loop: the final export can block on
+        # the network. A no-op when no provider was installed.
+        await asyncio.to_thread(self.ot.shutdown)

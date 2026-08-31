@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { cn } from "@/utils/utils";
 import { handleKeyDown } from "../../../../../utils/reactflowUtils";
+import { getNodeScopedDomId } from "../../helpers/get-node-scoped-dom-id";
 import type { InputProps, IntComponentType } from "../../types";
 
 export default function IntComponent({
@@ -21,8 +22,10 @@ export default function IntComponent({
   disabled,
   editNode = false,
   id = "",
+  nodeId,
   readonly,
   showParameter = true,
+  ariaLabelledBy,
 }: InputProps<number, IntComponentType>): JSX.Element | null {
   const { t } = useTranslation();
   const min = -Infinity;
@@ -141,7 +144,7 @@ export default function IntComponent({
     " border-b-[1px] hover:rounded-tr-[5px] hover:bg-muted group-increment";
   const decrementStepperClassName =
     " hover:rounded-br-[5px] hover:bg-muted group-decrement";
-  const inputRef = useRef(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   if (!showParameter) {
     return null;
@@ -150,7 +153,7 @@ export default function IntComponent({
   return (
     <div className="w-full">
       <NumberInput
-        id={id}
+        id={getNodeScopedDomId(id, nodeId)}
         step={getStepValue()}
         min={getMinValue()}
         max={getMaxValue()}
@@ -177,6 +180,7 @@ export default function IntComponent({
           }
           data-testid={id}
           ref={inputRef}
+          aria-labelledby={ariaLabelledBy}
         />
         <NumberInputStepper className={stepperClassName}>
           <NumberIncrementStepper

@@ -83,8 +83,9 @@ class AGUITranslator:
         # immediately promotes the next buffered one.
         self._buffered_messages: dict[str, _BufferedMessage] = {}
         # Tool-call ids already emitted as TOOL_CALL_START / already resolved
-        # with a TOOL_CALL_RESULT. ``add_message`` can re-fire with the same
-        # (append-only) content_blocks, so emissions must be deduplicated.
+        # with a TOOL_CALL_RESULT. ``add_message`` can re-fire for the same
+        # message as its content grows (or is reindexed — see
+        # ``_translate_tool_use``), so emissions must be deduplicated.
         self._started_tool_calls: set[str] = set()
         self._resulted_tool_calls: set[str] = set()
         # Custom content blocks already emitted as CUSTOM events, mapped to a
@@ -281,24 +282,32 @@ class AGUITranslator:
         # nested contents. ``text`` leaves are skipped here (text rides ``data["text"]``
         # below); a block is either a leaf or a group, so a leaf's empty ``contents``
         # makes the nested loop a no-op and the two paths cannot double-emit.
-        for block_index, block in enumerate(data.get("content_blocks") or []):
+        #
+        # ``tool_ordinal`` and ``custom_ordinal`` count only the leaves they key,
+        # in traversal order, instead of reusing a leaf's raw list index — see
+        # ``_translate_tool_use`` for why the raw index is unsound.
+        tool_ordinal = 0
+        custom_ordinal = 0
+        for block in data.get("content_blocks") or []:
             if not isinstance(block, dict):
                 continue
             block_type = block.get("type")
             if block_type == "tool_use":
-                events.extend(self._translate_tool_use(message_id, block_index, 0, block))
+                events.extend(self._translate_tool_use(message_id, tool_ordinal, block))
+                tool_ordinal += 1
             elif block_type in _CUSTOM_CONTENT_TYPES:
-                events.extend(self._translate_custom_content(message_id, block, block_index, 0, block))
-            for content_index, content in enumerate(block.get("contents") or []):
+                events.extend(self._translate_custom_content(message_id, block, custom_ordinal, block))
+                custom_ordinal += 1
+            for content in block.get("contents") or []:
                 if not isinstance(content, dict):
                     continue
                 content_type = content.get("type")
                 if content_type == "tool_use":
-                    events.extend(self._translate_tool_use(message_id, block_index, content_index, content))
+                    events.extend(self._translate_tool_use(message_id, tool_ordinal, content))
+                    tool_ordinal += 1
                 elif content_type in _CUSTOM_CONTENT_TYPES:
-                    events.extend(
-                        self._translate_custom_content(message_id, block, block_index, content_index, content)
-                    )
+                    events.extend(self._translate_custom_content(message_id, block, custom_ordinal, content))
+                    custom_ordinal += 1
 
         # Message text. The agent path re-fires ``add_message`` with
         # ``properties.state == "partial"`` mid-run (tool start/end updates)
@@ -337,15 +346,31 @@ class AGUITranslator:
                     self._buffered_messages[message_id] = _BufferedMessage(final_text=text)
         return events
 
-    def _translate_tool_use(
-        self, message_id: str, block_index: int, content_index: int, content: dict
-    ) -> list[BaseEvent]:
+    def _translate_tool_use(self, message_id: str, tool_ordinal: int, content: dict) -> list[BaseEvent]:
         """Map one ``tool_use`` content block to tool-call lifecycle events.
 
-        ``ToolContent`` has no id, so a stable tool-call id is derived from the
-        tool's position in the (append-only) content_blocks structure.
+        The tool-call id prefers ``content["id"]`` — a producer-stamped stable id
+        (e.g. a LangChain ``tool_call_id``) — when present. Otherwise it falls back
+        to ``tool_ordinal``: this call's rank among tool_use leaves encountered so
+        far in the current ``content_blocks`` traversal, not its raw list index.
+
+        The two live in separate ``:id:`` / ``:ord:`` namespaces because a message
+        can mix stamped and unstamped leaves: with a shared namespace,
+        ``[tool(id="1"), tool(id=None)]`` collapses onto one key and the second
+        call's whole lifecycle is dropped.
+
+        Raw list index was tried first and is unsound: ``Message.text``'s setter
+        drops every ``TextContent`` block and appends one consolidated block at the
+        end, which shifts every later block's absolute index whenever ``add_message``
+        re-fires for a message with text ahead of its tool calls (e.g. Chat Output
+        re-emitting an Agent message that already finished streaming). A shifted
+        index looks like a brand-new tool call to the dedup sets below, so the whole
+        START/ARGS/END/RESULT quartet re-emits with a fresh id and ~zero duration.
+        The ordinal is immune to that reindexing: only ``TextContent`` blocks move,
+        so tool_use leaves keep the same relative rank across re-fires.
         """
-        tool_call_id = f"{message_id}:tool:{block_index}:{content_index}"
+        content_id = content.get("id")
+        tool_call_id = f"{message_id}:tool:id:{content_id}" if content_id else f"{message_id}:tool:ord:{tool_ordinal}"
         events: list[BaseEvent] = []
 
         if tool_call_id not in self._started_tool_calls:
@@ -378,14 +403,24 @@ class AGUITranslator:
         return events
 
     def _translate_custom_content(
-        self, message_id: str, block: dict, block_index: int, content_index: int, content: dict
+        self, message_id: str, block: dict, custom_ordinal: int, content: dict
     ) -> list[BaseEvent]:
         """Map a Langflow-specific content block to a namespaced CUSTOM event.
 
         Deduplicated by content state: a re-fired ``add_message`` whose block is
         unchanged emits nothing, but an in-place update to the block re-emits.
+
+        The key prefers ``content["id"]`` and otherwise falls back to
+        ``custom_ordinal`` — this block's rank among custom-content leaves in the
+        current traversal — for the same reason ``_translate_tool_use`` avoids raw
+        list indices: ``Message.text``'s setter reindexes ``content_blocks``, and a
+        shifted index reads as an unseen block, re-emitting a CUSTOM event that
+        consumers already have. The ``:id:`` / ``:ord:`` namespaces are kept apart
+        for the same reason as there: a stamped and an unstamped block sharing one
+        key would overwrite each other's fingerprint and re-emit on every re-fire.
         """
-        key = f"{message_id}:content:{block_index}:{content_index}"
+        content_id = content.get("id")
+        key = f"{message_id}:content:id:{content_id}" if content_id else f"{message_id}:content:ord:{custom_ordinal}"
         fingerprint = json.dumps(content, sort_keys=True, default=str)
         if self._emitted_content_state.get(key) == fingerprint:
             return []
