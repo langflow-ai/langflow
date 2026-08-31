@@ -94,6 +94,7 @@ async def test_user_create_stages_default_folder_and_identity_in_one_transaction
 @pytest.mark.asyncio
 async def test_user_disable_validates_and_stages_in_transaction_order(monkeypatch):
     from langflow.api.v1 import users
+    from langflow.services.authorization.audit import AUDIT_EVENT_MUTATION
     from langflow.services.database.models.user.model import UserUpdate
 
     events: list[str] = []
@@ -119,11 +120,17 @@ async def test_user_disable_validates_and_stages_in_transaction_order(monkeypatc
         events.append("read")
         return target
 
+    audit_calls = []
+
+    async def audit(**kwargs):
+        events.append("audit")
+        audit_calls.append(kwargs)
+
     session.commit.side_effect = commit
     monkeypatch.setattr(users, "get_user_by_id", get_user_by_id)
     monkeypatch.setattr(users, "update_user", update_user)
     monkeypatch.setattr(users, "get_authorization_service", lambda: service)
-    monkeypatch.setattr(users, "audit_decision", AsyncMock())
+    monkeypatch.setattr(users, "audit_decision", audit)
 
     result = await users.patch_user(
         user_id=target.id,
@@ -133,12 +140,136 @@ async def test_user_disable_validates_and_stages_in_transaction_order(monkeypatc
     )
 
     assert result is target
-    assert events == ["lock", "read", "validate", "mutate", "stage", "commit", "committed"]
+    assert events == ["lock", "read", "validate", "mutate", "stage", "commit", "committed", "audit"]
     assert service.validated == service.staged == service.committed
     mutation = service.staged[0]
     assert mutation.kind is AuthorizationMutationKind.USER_DISABLED
     assert mutation.user_before.is_active is True
     assert mutation.user_after.is_active is False
+    assert audit_calls == [
+        {
+            "user_id": actor.id,
+            "action": "user:update",
+            "obj": f"user:{target.id}",
+            "result": "allow",
+            "details": {
+                "event": AUDIT_EVENT_MUTATION,
+                "fields_changed": ["is_active"],
+                "lifecycle_kind": AuthorizationMutationKind.USER_DISABLED.value,
+            },
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_ordinary_user_patch_audits_after_commit_without_password_or_values(monkeypatch):
+    from langflow.api.v1 import users
+    from langflow.services.authorization.audit import AUDIT_EVENT_MUTATION
+    from langflow.services.database.models.user.model import UserUpdate
+
+    events: list[str] = []
+    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    target = SimpleNamespace(
+        id=uuid4(),
+        username="before",
+        is_active=True,
+        is_superuser=False,
+        password="old-hash",  # noqa: S106  # pragma: allowlist secret
+    )
+    session = AsyncMock()
+    audit_calls = []
+
+    async def get_user_by_id(_session, _user_id):
+        events.append("read")
+        return target
+
+    async def update_user(_target, update, _session):
+        events.append("mutate")
+        target.username = update.username
+        target.password = update.password
+        return target
+
+    async def commit():
+        events.append("commit")
+
+    async def audit(**kwargs):
+        events.append("audit")
+        audit_calls.append(kwargs)
+
+    session.commit.side_effect = commit
+    monkeypatch.setattr(users, "get_user_by_id", get_user_by_id)
+    monkeypatch.setattr(users, "update_user", update_user)
+    monkeypatch.setattr(
+        users,
+        "get_auth_service",
+        lambda: SimpleNamespace(get_password_hash=lambda _password: "new-hash"),
+    )
+    monkeypatch.setattr(users, "get_authorization_service", lambda: _LifecycleService(events))
+    monkeypatch.setattr(users, "audit_decision", audit)
+
+    await users.patch_user(
+        user_id=target.id,
+        user_update=UserUpdate(username="after", password="plaintext"),  # noqa: S106
+        user=actor,
+        session=session,
+    )
+
+    assert events == ["read", "mutate", "commit", "audit"]
+    assert audit_calls == [
+        {
+            "user_id": actor.id,
+            "action": "user:update",
+            "obj": f"user:{target.id}",
+            "result": "allow",
+            "details": {
+                "event": AUDIT_EVENT_MUTATION,
+                "fields_changed": ["username"],
+                "lifecycle_kind": None,
+            },
+        }
+    ]
+    assert "password" not in repr(audit_calls).lower()
+    assert "plaintext" not in repr(audit_calls)
+    assert "after" not in repr(audit_calls)
+
+
+@pytest.mark.asyncio
+async def test_user_patch_business_denial_emits_access_audit(monkeypatch):
+    from langflow.api.v1 import users
+    from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS
+    from langflow.services.database.models.user.model import UserUpdate
+
+    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    session = AsyncMock()
+    audit_calls = []
+
+    async def audit(**kwargs):
+        audit_calls.append(kwargs)
+
+    monkeypatch.setattr(users, "audit_decision", audit)
+
+    with pytest.raises(HTTPException, match="deactivate"):
+        await users.patch_user(
+            user_id=actor.id,
+            user_update=UserUpdate(is_active=False),
+            user=actor,
+            session=session,
+        )
+
+    assert audit_calls == [
+        {
+            "user_id": actor.id,
+            "action": "user:update",
+            "obj": f"user:{actor.id}",
+            "result": "deny",
+            "details": {
+                "event": AUDIT_EVENT_ACCESS,
+                "status_code": 403,
+                "reason": "self_deactivation_forbidden",
+            },
+        }
+    ]
+    session.commit.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -241,6 +372,7 @@ async def test_user_lifecycle_policy_rejection_is_409_without_mutation(monkeypat
     )
     session = AsyncMock()
     update = AsyncMock()
+    audit = AsyncMock()
 
     async def reject(*, session, mutation):  # noqa: ARG001
         events.append("validate")
@@ -250,6 +382,7 @@ async def test_user_lifecycle_policy_rejection_is_409_without_mutation(monkeypat
     monkeypatch.setattr(users, "get_user_by_id", AsyncMock(return_value=target))
     monkeypatch.setattr(users, "update_user", update)
     monkeypatch.setattr(users, "get_authorization_service", lambda: service)
+    monkeypatch.setattr(users, "audit_decision", audit)
 
     with pytest.raises(HTTPException) as exc_info:
         await users.patch_user(
@@ -264,6 +397,7 @@ async def test_user_lifecycle_policy_rejection_is_409_without_mutation(monkeypat
     assert events == ["lock", "validate"]
     update.assert_not_awaited()
     session.commit.assert_not_awaited()
+    audit.assert_not_awaited()
 
 
 @pytest.mark.asyncio
