@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import type { AxiosError } from "axios";
 import { customShouldSkipAuthRefresh } from "../../utils/custom-should-skip-auth-refresh";
 import { CustomAdminPageMenuItem } from "../custom-admin-page-menu-item";
+import { CustomHeaderMenuItemsTitle } from "../custom-header-menu-items-title";
 import CustomLoginBrandTitle from "../custom-login-brand-title";
 import CustomLoginSignupPrompt from "../custom-login-signup-prompt";
 import CustomLoginSsoOptions from "../custom-login-sso-options";
@@ -13,6 +14,12 @@ describe("OSS auth customization seams", () => {
     const { container } = render(
       <CustomAdminPageMenuItem onNavigate={jest.fn()} />,
     );
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("does not render an account-menu identity header", () => {
+    const { container } = render(<CustomHeaderMenuItemsTitle />);
 
     expect(container).toBeEmptyDOMElement();
   });
