@@ -800,11 +800,42 @@ def _inject_mcp_stdio_headers(args: list[str], headers: dict[str, str]) -> list[
     return [*final_args, *extra_args]
 
 
+def _lookup_request_variable(val: str, request_variables: dict[str, str]) -> str | None:
+    """Look up a variable name in request_variables with case-insensitive and prefix normalization."""
+    if val in request_variables:
+        return request_variables[val]
+
+    clean_val = val
+    if clean_val.lower().startswith("x-langflow-global-var-"):
+        clean_val = clean_val[len("x-langflow-global-var-") :]
+
+    candidates = [
+        clean_val,
+        clean_val.upper(),
+        clean_val.lower(),
+        clean_val.upper().replace("-", "_"),
+        clean_val.lower().replace("-", "_"),
+        clean_val.upper().replace("_", "-"),
+        clean_val.lower().replace("_", "-"),
+    ]
+    for cand in candidates:
+        if cand in request_variables:
+            return request_variables[cand]
+
+    val_lower = clean_val.lower()
+    val_norm = val_lower.replace("_", "-")
+    for k, v in request_variables.items():
+        k_lower = k.lower()
+        if k_lower == val_lower or k_lower.replace("_", "-") == val_norm:
+            return v
+    return None
+
+
 def _resolve_global_variables_in_headers(headers: dict, request_variables: dict[str, str] | None) -> dict:
     """Resolve global variable names in header values to their actual values.
 
     Args:
-        headers: Dictionary of headers where values might be global variable names
+        headers: Dictionary of headers where values or keys might be global variable names
         request_variables: Dictionary of global variables from request context
 
     Returns:
@@ -815,12 +846,15 @@ def _resolve_global_variables_in_headers(headers: dict, request_variables: dict[
 
     resolved = {}
     for key, value in headers.items():
-        # If the value matches a global variable name, replace it with the actual value
-        if isinstance(value, str) and value in request_variables:
-            resolved[key] = request_variables[value]
-        else:
-            resolved[key] = value
+        # Check if value or key resolves to a global variable
+        resolved_val = _lookup_request_variable(str(value), request_variables) if isinstance(value, str) else None
+        if resolved_val is None and isinstance(key, str) and key.lower().startswith("x-langflow-global-var-"):
+            resolved_val = _lookup_request_variable(key, request_variables)
+
+        resolved[key] = resolved_val if resolved_val is not None else value
+
     return resolved
+
 
 
 def _validate_node_installation(command: str) -> str:
