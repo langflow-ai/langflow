@@ -31,6 +31,8 @@ from langflow.agentic.helpers.code_security import scan_code_security
 from langflow.agentic.helpers.content_safety import REFUSAL_MESSAGE as CONTENT_REFUSAL_MESSAGE
 from langflow.agentic.helpers.content_safety import check_content
 from langflow.agentic.helpers.error_handling import (
+    PARTIAL_WORK_KEPT_SUFFIX,
+    PARTIAL_WORK_PROPOSED_SUFFIX,
     build_error_detail,
     build_recovered_notice,
     extract_friendly_error,
@@ -351,15 +353,21 @@ async def execute_flow_with_validation(
     provider: str | None = None,
     model_name: str | None = None,
     api_key_var: str | None = None,
+    trusted_source: bool = False,
 ) -> dict:
     """Execute flow and validate the generated component code.
 
     If the response contains Python code, it validates the code.
     If validation fails, re-executes the flow with error context.
     Continues until valid code is generated or max retries reached.
+
+    ``trusted_source`` marks ``input_value`` as assistant-authored (the
+    ``generate_component`` tool's spec) rather than a user turn, so the
+    injection guardrail — already applied to the user turn that led here —
+    is not re-run on the assistant's own words.
     """
     # Layer 1: Input sanitization
-    sanitization = sanitize_input(input_value)
+    sanitization = sanitize_input(input_value, trusted_source=trusted_source)
     if not sanitization.is_safe:
         logger.warning(f"Input sanitization blocked request: {sanitization.violation}")
         return {"result": sanitization.refusal}
@@ -1264,6 +1272,29 @@ async def execute_flow_with_validation_streaming(
                         )
                         continue
                     _rollback_provisional_remediations()
+                    # Only this drain still sees work no token followed. It goes through the
+                    # reconciler like every other: raw events leak `flow_ran`, lose `auto_apply`.
+                    (
+                        partial_updates,
+                        auto_apply_flow,
+                        saw_set_flow,
+                        saw_run,
+                        last_set_flow,
+                        set_flow_applied,
+                    ) = _reconcile_flow_updates(
+                        drain_flow_events(),
+                        auto_apply_flow=auto_apply_flow,
+                        saw_set_flow=saw_set_flow,
+                        saw_run=saw_run,
+                        last_set_flow=last_set_flow,
+                        set_flow_applied=set_flow_applied,
+                    )
+                    for update in partial_updates:
+                        yield format_flow_update_event(update)
+                    if partial_updates:
+                        applied = any(u.get("auto_apply") for u in partial_updates)
+                        suffix = PARTIAL_WORK_KEPT_SUFFIX if applied else PARTIAL_WORK_PROPOSED_SUFFIX
+                        execution_error = f"{execution_error} {suffix}"
                     yield format_error_event(
                         execution_error,
                         detail=build_error_detail(execution_error_raw, step=step_name, include_raw_cause=is_superuser),

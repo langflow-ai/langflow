@@ -5,6 +5,7 @@ This test suite validates the MCP component functionality using real MCP servers
 - HTTP/SSE servers (streamable HTTP mode) - provides various tools
 """
 
+import re
 import shutil
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -706,6 +707,32 @@ class TestMCPComponentConfigPriority:
 
             # Connect should be called with value config as fallback
             mock_connect.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_missing_named_server_fails_with_actionable_error(self, component):
+        """A portable flow must identify the server registration required on the target."""
+        component.mcp_server = {"name": "production_server"}
+        component._user_id = "test_user_123"
+
+        with (
+            patch("langflow.api.v2.mcp.get_server") as mock_get_server,
+            patch("langflow.services.database.models.user.crud.get_user_by_id") as mock_get_user,
+            patch("lfx.components.models_and_agents.mcp_component.session_scope"),
+            patch("lfx.components.models_and_agents.mcp_component.update_tools") as mock_update_tools,
+        ):
+            mock_get_user.return_value = MagicMock(id="test_user_123")
+            mock_get_server.return_value = None
+
+            with pytest.raises(
+                ValueError,
+                match=re.escape(
+                    "MCP server 'production_server' is not configured. "
+                    "Add a server with this name in Settings > MCP Servers before running this flow."
+                ),
+            ):
+                await component.update_tool_list()
+
+            mock_update_tools.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_value_config_respects_code_execution_lockdown(self, component, monkeypatch):
