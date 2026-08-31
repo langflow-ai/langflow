@@ -128,6 +128,7 @@ export default function AddMcpServerModal({
     setStdioCommand("");
     setStdioArgs([""]);
     setStdioEnv([{ key: "", value: "", id: nanoid(), error: false }]);
+    setStdioHeaders([{ key: "", value: "", id: nanoid(), error: false }]);
     setHttpName("");
     setHttpUrl("");
     setHttpEnv([{ key: "", value: "", id: nanoid(), error: false }]);
@@ -142,6 +143,9 @@ export default function AddMcpServerModal({
   );
   const [stdioEnv, setStdioEnv] = useState<KeyPairRow[]>(
     objectToKeyPairRow(initialData?.env) || [],
+  );
+  const [stdioHeaders, setStdioHeaders] = useState<KeyPairRow[]>(
+    objectToKeyPairRow(initialData?.headers) || [],
   );
 
   // HTTP state
@@ -163,6 +167,7 @@ export default function AddMcpServerModal({
       setStdioCommand(initialData?.command || "");
       setStdioArgs(initialData?.args || [""]);
       setStdioEnv(objectToKeyPairRow(initialData?.env) || []);
+      setStdioHeaders(objectToKeyPairRow(initialData?.headers) || []);
       setHttpName(initialData?.name || "");
       setHttpUrl(initialData?.url || "");
       setHttpEnv(objectToKeyPairRow(initialData?.env) || []);
@@ -181,6 +186,10 @@ export default function AddMcpServerModal({
         setError(t("mcp.modal.errorDuplicateEnvKeys"));
         return;
       }
+      if (stdioHeaders.some((item) => item.error)) {
+        setError(t("mcp.modal.errorDuplicateHeaders"));
+        return;
+      }
       // The server name is the immutable identifier: it is the storage key and
       // the URL path PATCH targets. When editing, always reuse the original
       // name so the update hits the existing record. Re-deriving it from the
@@ -195,12 +204,17 @@ export default function AddMcpServerModal({
           ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
       const argsPayload = buildArgsPayload(stdioArgs, initialData?.args);
       const envPayload = buildKeyPairPayload(stdioEnv, initialData?.env);
+      const headersPayload = buildKeyPairPayload(
+        stdioHeaders,
+        initialData?.headers,
+      );
       try {
         await modifyMCPServer({
           name,
           command: stdioCommand,
           ...(argsPayload !== undefined ? { args: argsPayload } : {}),
           ...(envPayload !== undefined ? { env: envPayload } : {}),
+          ...(headersPayload !== undefined ? { headers: headersPayload } : {}),
         });
         if (!initialData) {
           await queryClient.setQueryData(
@@ -219,6 +233,7 @@ export default function AddMcpServerModal({
         setStdioCommand("");
         setStdioArgs([""]);
         setStdioEnv([{ key: "", value: "", id: nanoid(), error: false }]);
+        setStdioHeaders([{ key: "", value: "", id: nanoid(), error: false }]);
         setError(null);
       } catch (err: unknown) {
         setError(
@@ -475,6 +490,20 @@ export default function AddMcpServerModal({
                       editNode={false}
                       id="stdio-args"
                       data-testid="stdio-args-input"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label className="!text-mmd">
+                      {t("mcp.modal.fieldHeaders")}
+                    </Label>
+                    <IOKeyPairInputWithVariables
+                      value={stdioHeaders}
+                      onChange={setStdioHeaders}
+                      duplicateKey={false}
+                      isList={true}
+                      isInputField={true}
+                      testId="stdio-headers"
+                      enableGlobalVariables={true}
                     />
                   </div>
                   <div className="flex flex-col gap-2">
