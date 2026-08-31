@@ -6,6 +6,7 @@ import logging
 import logging.handlers
 import os
 import sys
+import threading
 import warnings
 from collections import deque
 from collections.abc import Iterator
@@ -1307,6 +1308,14 @@ def add_stdlib_log_level_from_record(_logger: Any, method_name: str, event_dict:
 _RESERVED_LOGRECORD_ATTRS = frozenset(logging.makeLogRecord({}).__dict__) | {"message", "asctime"}
 
 
+# Thread-local re-entrancy guard for InterceptHandler. When LANGFLOW_LOG_FILE is
+# set, configure() uses structlog.stdlib.LoggerFactory, so structlog.get_logger
+# writes back to the stdlib logger that owns this handler. Without a guard,
+# emit -> structlog -> stdlib -> emit recurses infinitely, doubling the message
+# each lap until OOM.
+_intercept_reentrancy = threading.local()
+
+
 class InterceptHandler(logging.Handler):
     """Route stdlib logging records into structlog.
 
@@ -1317,27 +1326,33 @@ class InterceptHandler(logging.Handler):
     """
 
     def emit(self, record: logging.LogRecord) -> None:
-        # Mirrors the stdlib Handler.emit safety net: a malformed third-party
-        # log call (e.g. mismatched %-format args) must not propagate up and
-        # crash the request path. Anything that raises here is routed to
-        # handleError, which is the documented contract callers expect.
+        if getattr(_intercept_reentrancy, "in_emit", False):
+            return
+        _intercept_reentrancy.in_emit = True
         try:
-            structlog_logger = structlog.get_logger(record.name)
-            kwargs: dict[str, Any] = {}
-            if record.exc_info:
-                kwargs["exc_info"] = record.exc_info
-            if record.stack_info:
-                # stdlib already formats stack_info as a string. Pass it as
-                # the rendered ``stack`` field directly so it survives without
-                # needing StackInfoRenderer to recompute from a different frame.
-                kwargs["stack"] = record.stack_info
-            for key, value in record.__dict__.items():
-                if key not in _RESERVED_LOGRECORD_ATTRS and not key.startswith("_") and key not in kwargs:
-                    kwargs[key] = value
-            method_name = _levelno_to_structlog_name(record.levelno)
-            getattr(structlog_logger, method_name)(record.getMessage(), **kwargs)
-        except Exception:  # noqa: BLE001 - logging must never break the caller
-            self.handleError(record)
+            # Mirrors the stdlib Handler.emit safety net: a malformed third-party
+            # log call (e.g. mismatched %-format args) must not propagate up and
+            # crash the request path. Anything that raises here is routed to
+            # handleError, which is the documented contract callers expect.
+            try:
+                structlog_logger = structlog.get_logger(record.name)
+                kwargs: dict[str, Any] = {}
+                if record.exc_info:
+                    kwargs["exc_info"] = record.exc_info
+                if record.stack_info:
+                    # stdlib already formats stack_info as a string. Pass it as
+                    # the rendered ``stack`` field directly so it survives without
+                    # needing StackInfoRenderer to recompute from a different frame.
+                    kwargs["stack"] = record.stack_info
+                for key, value in record.__dict__.items():
+                    if key not in _RESERVED_LOGRECORD_ATTRS and not key.startswith("_") and key not in kwargs:
+                        kwargs[key] = value
+                method_name = _levelno_to_structlog_name(record.levelno)
+                getattr(structlog_logger, method_name)(record.getMessage(), **kwargs)
+            except Exception:  # noqa: BLE001 - logging must never break the caller
+                self.handleError(record)
+        finally:
+            _intercept_reentrancy.in_emit = False
 
 
 def _install_stdlib_intercept(numeric_level: int) -> None:
