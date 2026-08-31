@@ -67,6 +67,8 @@ class CustomComponent(BaseComponent):
     """The name of the component used to styles. Defaults to None."""
     display_name: str | None = None
     """The display name of the component. Defaults to None."""
+    trace_display_name: str | None = None
+    """Optional override for the component name shown in traces. Defaults to None."""
     description: str | None = None
     """The description of the component. Defaults to None."""
     icon: str | None = None
@@ -136,9 +138,28 @@ class CustomComponent(BaseComponent):
         if hasattr(self, "_id") and self._id is None:
             msg = "Component id is not set"
             raise ValueError(msg)
+        name = self._resolve_trace_base_name()
         if hasattr(self, "_id"):
-            return f"{self.display_name} ({self._id})"
-        return f"{self.display_name}"
+            return f"{name} ({self._id})"
+        return f"{name}"
+
+    def _resolve_trace_base_name(self) -> str | None:
+        override = getattr(self, "trace_display_name", None)
+        if override is None:
+            # Component routes constructor kwargs into _attributes, and the class
+            # default above shadows __getattr__, so the kwargs are only visible here.
+            attributes = getattr(self, "_attributes", None)
+            if isinstance(attributes, dict):
+                override = attributes.get("trace_display_name")
+        if isinstance(override, str) and override.strip():
+            return override.strip()
+        vertex = getattr(self, "_vertex", None)
+        if vertex is not None:
+            node_name = getattr(vertex, "display_name", None)
+            vertex_id = getattr(vertex, "id", "") or ""
+            if isinstance(node_name, str) and node_name.strip() and node_name != vertex_id.split("-")[0]:
+                return node_name
+        return self.display_name
 
     def stop(self, output_name: str | None = None) -> None:
         if not output_name and self._vertex and len(self._vertex.outputs) == 1:
