@@ -39,6 +39,20 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import urlsplit, urlunsplit
 
 from lfx.log.logger import logger, operator_logger, otel_log_bodies_exported
+
+# Opt into the stable HTTP semantic conventions here, at import, rather than beside the call
+# that needs them.
+#
+# OpenTelemetry reads this once, when its instrumentation package first initialises, and
+# caches it for the life of the process. Setting it inside instrument_fastapi_app looked
+# early enough and is not: bootstrap_application_telemetry runs first on both runtimes, and
+# its SystemMetricsInstrumentor loads that package, freezing the decision while the variable
+# is still unset. The FastAPI metrics then arrive under the pre-stable names, which is a
+# silent defect -- ingest is healthy, and an APM keying its HTTP dashboards off the stable
+# names shows nothing.
+#
+# setdefault, so "http/dup" stays available to an operator mid-migration.
+os.environ.setdefault("OTEL_SEMCONV_STABILITY_OPT_IN", "http")
 from lfx.observability_fastapi import patch_otel_fastapi_route_details
 
 _BASE_EXCEPTION_GROUP_TYPE = getattr(builtins, "BaseExceptionGroup", None)
@@ -55,7 +69,7 @@ if TYPE_CHECKING:
     from opentelemetry.sdk._logs import LoggerProvider
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.trace import Link, Span
+    from opentelemetry.trace import Link, Span, SpanContext
 
 # The tracer name Langflow's own application spans are emitted under. Deliberately not
 # "langflow": the LLM tracer integrations already take a tracer under that name, and their
@@ -401,6 +415,9 @@ except ImportError:
 
 
 if _OTEL_AVAILABLE:
+    # Distinct from None, which means "no exported ancestor, promote to root". This one means
+    # the chain left what this process saw, so the honest answer is to change nothing.
+    _UNKNOWN_ANCESTOR = object()
 
     class ApplicationOnlySpanProcessor(BatchSpanProcessor):
         """Exports only spans that describe the application, dropping everything else.
@@ -413,13 +430,28 @@ if _OTEL_AVAILABLE:
         Drops are logged once per scope at debug level; they are the expected case for LLM
         instrumentation, and logging every one would be noise.
 
-        Known consequence: an exported span whose parent was dropped arrives at the APM with a
-        parent that never shows up, so the trace renders with a gap. That follows from the
-        requirement of zero component spans in the APM, and it cannot be repaired here because
-        a child ends before its parent, so there is no way to know at the child's on_end that
-        the parent will be dropped. Scrubbing attributes instead of dropping would keep the
-        tree intact, but the requirement is no component spans, not merely no content.
+        A span whose parent is dropped is re-parented to its nearest exported ancestor, or
+        promoted to a root when it has none, so the trace still renders as a tree.
+
+        This is knowable at the child's on_end even though the child ends before its parent,
+        because the drop depends only on the instrumentation scope, which is fixed when the
+        span starts. ``on_start`` fires for every span, dropped ones included, so recording
+        scope and parentage there answers at the child's on_end what will happen to a parent
+        that has not ended yet.
+
+        Only rewrites when the parent is known to be dropped. A parent that is absent from the
+        map is left alone: that is a remote parent from another process, or one evicted by the
+        cap below, and neither is an orphan this can fix. Rewriting on a guess would invent a
+        relationship, which is worse than the gap.
+
+        Scrubbing attributes instead of dropping would also keep the tree intact, but the
+        requirement is no component spans, not merely no content.
         """
+
+        # Bounds the lineage map against spans that start and never end. Entries are removed
+        # as spans end, so a healthy process sits far below this; hitting it means something
+        # is leaking, and the cost of that is losing re-parenting, not memory.
+        _MAX_TRACKED_SPANS = 10_000
 
         def __init__(self, *args, **kwargs) -> None:
             super().__init__(*args, **kwargs)
@@ -427,17 +459,107 @@ if _OTEL_AVAILABLE:
             # Resolved once, at construction, so the set cannot change under a running
             # process and leave two spans of the same scope treated differently.
             self._scopes = exported_span_scopes()
+            # span_id -> (will be exported, parent span context, own span context). Written in
+            # on_start, read when a child ends, removed when the span itself ends. Children
+            # end before their parents, so a parent is still present when its child looks it
+            # up. No lock: dict get and set are atomic here, and a lost race costs one
+            # re-parenting, leaving the span exactly as it was exported before this existed.
+            self._lineage: dict[int, tuple[bool, SpanContext | None, SpanContext]] = {}
+            self._lineage_capped = False
+            self._reparent_failed = False
+
+        def _reparent_safely(self, span) -> None:
+            """Re-parent, but never at the cost of the run.
+
+            ``span._parent`` reaches into the SDK's internals, and the SDK does not catch
+            exceptions raised by a span processor: it lets them out of ``Span.end()`` and into
+            whatever application code ended the span. So a future OpenTelemetry release that
+            renames that attribute would not merely stop the trace rendering nicely, it would
+            raise inside a flow run. Telemetry is not allowed to do that.
+
+            Logged once rather than per span, since the cause is process-wide when it happens
+            at all, and the span is exported either way with the parent it already had.
+            """
+            try:
+                self._reparent_over_dropped_ancestors(span)
+            except Exception:  # noqa: BLE001
+                if not self._reparent_failed:
+                    self._reparent_failed = True
+                    logger.debug(
+                        "Could not re-parent a span over its dropped ancestors; "
+                        "exporting it unchanged. This is a no-op for the run itself.",
+                        exc_info=True,
+                    )
+
+        def on_start(self, span, parent_context=None) -> None:
+            super().on_start(span, parent_context)
+            if len(self._lineage) >= self._MAX_TRACKED_SPANS:
+                if not self._lineage_capped:
+                    self._lineage_capped = True
+                    logger.debug(
+                        f"Tracking more than {self._MAX_TRACKED_SPANS} in-flight spans; "
+                        "not re-parenting children of dropped spans beyond this point."
+                    )
+                return
+            scope = span.instrumentation_scope.name if span.instrumentation_scope else ""
+            context = span.get_span_context()
+            self._lineage[context.span_id] = (scope in self._scopes, span.parent, context)
+
+        def _exported_ancestor(self, parent_id):
+            """The nearest ancestor that will be exported.
+
+            Returns its span context, or None when the chain reaches a root through dropped
+            spans only, or ``_UNKNOWN_ANCESTOR`` when the chain leaves what this process
+            recorded and the answer is genuinely not known.
+            """
+            seen: set[int] = set()
+            current = parent_id
+            while current is not None:
+                if current in seen:  # pragma: no cover - defensive, ids are unique
+                    return _UNKNOWN_ANCESTOR
+                seen.add(current)
+                entry = self._lineage.get(current)
+                if entry is None:
+                    return _UNKNOWN_ANCESTOR
+                exported, next_parent, context = entry
+                if exported:
+                    return context
+                if next_parent is not None and next_parent.is_remote:
+                    return next_parent
+                current = next_parent.span_id if next_parent is not None else None
+            return None
+
+        def _reparent_over_dropped_ancestors(self, span) -> None:
+            parent = span.parent
+            if parent is None:
+                return
+            entry = self._lineage.get(parent.span_id)
+            if entry is None or entry[0]:
+                # Unknown parent, or one that is being exported. Either way, leave it.
+                return
+            ancestor = self._exported_ancestor(parent.span_id)
+            if ancestor is _UNKNOWN_ANCESTOR:
+                return
+            # Same trace either way, so this moves the span within its tree rather than
+            # relocating it. None promotes it to a root, which is what it effectively is once
+            # everything above it is dropped.
+            span._parent = ancestor  # noqa: SLF001
 
         def on_end(self, span) -> None:
             scope = span.instrumentation_scope.name if span.instrumentation_scope else ""
-            if scope in self._scopes:
-                _redact_url_attributes(span)
-                _redact_db_path_attributes(span)
-                super().on_end(span)
-                return
-            if scope not in self._dropped_scopes:
-                self._dropped_scopes.add(scope)
-                logger.debug(f"Not exporting spans from {scope!r}; only application telemetry is sent to the APM.")
+            try:
+                if scope in self._scopes:
+                    self._reparent_safely(span)
+                    _redact_url_attributes(span)
+                    _redact_db_path_attributes(span)
+                    super().on_end(span)
+                    return
+                if scope not in self._dropped_scopes:
+                    self._dropped_scopes.add(scope)
+                    logger.debug(f"Not exporting spans from {scope!r}; only application telemetry is sent to the APM.")
+            finally:
+                # After the export, and after any child has had the chance to read it.
+                self._lineage.pop(span.get_span_context().span_id, None)
 
     class ApplicationOnlyMetricExporter(MetricExporter):
         """Pushes only the service's own metrics, dropping every other instrumentation scope.
@@ -1238,18 +1360,16 @@ def instrument_fastapi_app(app: FastAPI) -> None:
     app, ``lfx serve`` on the multi-flow app. No-op when the FastAPI instrumentation is not
     installed.
 
-    Sets the stable HTTP semantic conventions (http.route, http.request.method,
-    http.response.status_code) rather than the pre-1.0 names, because APMs key their HTTP
-    dashboards and service maps off the stable ones. It has to run before instrument_app: the
-    opt-in is read once, on first instrumentation, and cached for the life of the process.
-    setdefault leaves "http/dup" available to an operator migrating.
+    The stable HTTP semantic conventions (http.route, http.request.method,
+    http.response.status_code) are opted into at module import, not here. The opt-in is read
+    once, when OpenTelemetry's instrumentation package first initialises, and by the time this
+    runs that has already happened.
     """
     try:
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
     except ImportError:
         return
 
-    os.environ.setdefault("OTEL_SEMCONV_STABILITY_OPT_IN", "http")
     # FastAPI >=0.137 lazy include_router puts _IncludedRouter wrappers (no .path) in
     # app.routes, which crashes OTel's span route extraction on partial matches (e.g. CORS
     # preflight). Patch the helper before instrumenting.

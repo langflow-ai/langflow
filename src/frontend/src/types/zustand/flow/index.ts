@@ -87,6 +87,9 @@ export type FlowStoreType = {
     [key: number]: number;
   }) => void;
   fitViewNode: (nodeId: string) => void;
+  /** Set by `requestFitView`; the canvas fits once every node is measured. */
+  fitViewRequest: { id: number; onFitted?: () => void };
+  requestFitView: (onFitted?: () => void) => void;
   autoSaveFlow: AutoSaveFlowType | undefined;
   componentsToUpdate: ComponentsToUpdateType[];
   setComponentsToUpdate: (

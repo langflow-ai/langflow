@@ -9,10 +9,11 @@ import TabItem from '@theme/TabItem';
 
 This component allows you to execute Python code with imported packages.
 
-The **Python Interpreter** component can only import packages that are already installed in your Langflow environment.
-If you encounter an `ImportError` when trying to use a package, you need to install it first.
+By default, code runs in the Langflow server process.
+The **Python Interpreter** can only import packages that are already installed in your Langflow environment.
+If you encounter an `ImportError`, install the package first. For more information, see [Install custom dependencies](/install-custom-dependencies).
 
-To install custom packages, see [Install custom dependencies](/install-custom-dependencies).
+On a shared server, isolate executions in a microVM or [block the custom component](/api-keys-and-authentication#multi-tenant-component-hardening).
 
 ## Use the Python Interpreter in a flow
 
@@ -229,6 +230,35 @@ For example, to connect a [**Chat Input** component](/chat-input-and-output) and
 6. Connect the **Text** component's output to the new **URL** input field on your customized **Python Interpreter** component.
 
 The **Python Interpreter** component can now use the `url` variable in the Python code that it executes.
+
+## Isolate executions in a microVM {#sandbox}
+
+Set `LANGFLOW_SANDBOX_BACKEND=exec-sandbox` to run each **Python Interpreter** execution in a dedicated [QEMU microVM](https://www.qemu.org/docs/master/system/i386/microvm.html) instead of in the server process.
+The VM has a read-only root filesystem, no host filesystem access, and no network unless you enable it.
+
+1. Use Python 3.12 or later, QEMU 8 or later, and hardware virtualization. Use KVM on Linux, or HVF on macOS.
+2. The microVM is not included with a default `uv pip install langflow` installation.
+To install it, run `uv pip install 'langflow[sandbox]'`.
+If you enable the environment variable but don't install the sandbox package, the component errors.
+
+3. In your `.env` file, set:
+
+    ```text
+    LANGFLOW_SANDBOX_BACKEND=exec-sandbox
+    ```
+
+4. Restart Langflow.
+
+If the sandbox is configured but unavailable, execution fails with an error, and Langflow does not fall back to in-process `exec`.
+
+Sandboxed code may import any module already in the microVM's filesystem.
+Langflow inserts `import` statements at the top of the script in the VM. Those packages must already be in the microVM's filesystem, not only in your Langflow environment.
+Network access is off by default.
+Code that fetches URLs needs `LANGFLOW_SANDBOX_ALLOW_NETWORK=true` and, for non-PyPI hosts, `LANGFLOW_SANDBOX_ALLOWED_DOMAINS`.
+
+Set `LANGFLOW_SANDBOX_ALLOW_SOFTWARE_EMULATION=true` for trusted development or CI hosts without a hypervisor.
+
+For more information, see [Python Interpreter sandbox environment variables](/environment-variables#langflow-sandbox).
 
 ## Python Interpreter parameters
 

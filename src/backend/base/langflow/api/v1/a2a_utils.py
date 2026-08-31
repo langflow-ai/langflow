@@ -196,7 +196,7 @@ async def build_agent_card(flow: Flow, *, rpc_url: str, session: AsyncSession) -
     try:
         # json_schema_from_flow does a full, synchronous graph build; offload it
         # so this public endpoint never blocks the event loop.
-        input_schema = await asyncio.to_thread(json_schema_from_flow, flow)
+        input_schema = await asyncio.to_thread(json_schema_from_flow, flow, require_api_editable=False)
     except Exception:  # noqa: BLE001 - any graph build failure degrades, not crashes
         logger.warning("Could not build A2A input schema for flow %s; serving empty input contract", flow.id)
         input_schema = dict(_EMPTY_INPUT_SCHEMA)

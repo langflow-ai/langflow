@@ -743,7 +743,16 @@ def validate_mcp_stdio_config(
                 # Only cmd needs the parsed payload: sh/bash carry their whole command in one
                 # argument ("sh -c 'id > /tmp/x'"), and splitting that here would let the gate
                 # inspect only the first token instead of the full command string.
-                parsed_wrapper = parse_mcp_shell_wrapper(base_command, args) if base_command == "cmd" else None
+                # ``parse_mcp_shell_wrapper`` rejects shell control characters in the cmd
+                # payload (and unparseable quoting) with a bare ValueError. This function's
+                # contract is MCPStdioSecurityError for every policy denial, so convert it
+                # here the same way the source-policy call above does -- otherwise a
+                # ``cmd /c "uvx x && calc"`` denial escapes as a different exception type
+                # than the equivalent ``sh -c`` denial raised by the metacharacter scan.
+                try:
+                    parsed_wrapper = parse_mcp_shell_wrapper(base_command, args) if base_command == "cmd" else None
+                except ValueError as exc:
+                    raise MCPStdioSecurityError(str(exc)) from exc
                 if parsed_wrapper is not None:
                     wrapped_command, wrapped_args = parsed_wrapper
                 else:

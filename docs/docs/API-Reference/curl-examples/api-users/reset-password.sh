@@ -3,5 +3,6 @@ curl -X PATCH \
   -H "Content-Type: application/json" \
   -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{
+    "current_password": "securepassword123",
     "password": "newsecurepassword123"
   }'

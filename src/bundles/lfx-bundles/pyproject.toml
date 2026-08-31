@@ -1,6 +1,6 @@
 [project]
 name = "lfx-bundles"
-version = "1.1.15"
+version = "1.1.18"
 description = "Langflow's long-tail provider bundles as a single manifest-less metapackage (the langchain-community model)."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -36,6 +36,7 @@ assemblyai = ["assemblyai>=0.33.0,<1.0.0"]
 azure = ["lfx-azure>=0.1.0,<1.0.0"]
 baidu = ["qianfan==0.3.5", "langchain-community>=0.4.1,<1.0.0"]
 bing = ["langchain-community>=0.4.1,<1.0.0"]
+# chromadb 1.5.9 is the newest release; CVE-2026-45829 is unpatched upstream. See .github/mend-scan-notes.md.
 chroma = ["chromadb>=1.0.0,<2.0.0", "langchain-chroma~=0.2.6", "langchain-community>=0.4.1,<1.0.0"]
 cleanlab = ["cleanlab-tlm>=1.1.2,<2.0.0"]
 clickhouse = ["clickhouse-connect==0.7.19", "langchain-community>=0.4.1,<1.0.0"]

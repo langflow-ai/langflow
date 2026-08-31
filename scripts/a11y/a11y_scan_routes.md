@@ -42,6 +42,12 @@ files there instead of ad-hoc `/tmp` paths so post-interaction states (open moda
 scrolled grids) stay rerunnable. `settings-messages.json` covers the AG-Grid
 scroll states on `/settings/messages` that a default-load scan cannot see.
 
+A state can name the DOM it depends on with `"requires": "<selector>"`; when that
+element is absent (the grid never renders against a backend with no messages) the
+state is reported as skipped instead of failing the scan. Any other action failure is
+recorded per state as `failed` and the run continues, so one broken state cannot
+cost the other routes' findings.
+
 ### Policies
 
 `--policies` selects the IBM guideline set the engine evaluates against and defaults
