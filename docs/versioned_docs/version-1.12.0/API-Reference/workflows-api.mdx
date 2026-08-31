@@ -526,7 +526,7 @@ The API uses standard HTTP status codes to indicate success or failure:
 | `400 Bad Request` | Invalid request parameters. |
 | `403 Forbidden` | Invalid or missing API key. |
 | `404 Not Found` | Flow not found or developer API disabled. |
-| `422 Unprocessable Entity` | Unknown `stream_protocol` or unsupported field for the selected mode. |
+| `422 Unprocessable Entity` | Unknown `stream_protocol`, unsupported field for the selected mode, or refused `tweaks` with `TWEAKS_REFUSED`. |
 | `500 Internal Server Error` | Server error during execution. |
 | `501 Not Implemented` | Endpoint not yet implemented. |
 
@@ -539,6 +539,8 @@ The API uses standard HTTP status codes to indicate success or failure:
 ```
 
 For an unknown `stream_protocol`, the `422` response includes an `available` list of registered protocol names (`langflow`, `agui`).
+
+For a refused tweak, `detail` is an object with `code` `TWEAKS_REFUSED`. See [Refused tweaks with `TWEAKS_REFUSED`](/deployment-tweaks-policy#tweaks-refused).
 
 ## See also
 
