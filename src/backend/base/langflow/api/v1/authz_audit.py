@@ -23,7 +23,7 @@ from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.database.models.auth import AuthzAuditLog
 from langflow.services.database.models.user.model import User
 
-router = APIRouter(prefix="/authz/audit", tags=["Authorization"])
+router = APIRouter(prefix="/authz/audit", tags=["Authorization"], include_in_schema=False)
 
 _MAX_PAGE_SIZE = 200
 

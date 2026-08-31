@@ -70,7 +70,7 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
 
-router = APIRouter(prefix="/workflows/public", tags=["Workflow (public)"])
+router = APIRouter(prefix="/workflows/public", tags=["Workflow (public)"], include_in_schema=False)
 
 
 def _enforce_public_rate_limit(http_request: Request) -> None:

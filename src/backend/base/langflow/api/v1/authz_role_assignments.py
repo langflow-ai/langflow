@@ -39,7 +39,7 @@ from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignmen
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_authorization_service
 
-router = APIRouter(prefix="/authz/role-assignments", tags=["Authorization"])
+router = APIRouter(prefix="/authz/role-assignments", tags=["Authorization"], include_in_schema=False)
 
 # See ``authz_roles._LIST_MAX_LIMIT`` — same bound, applied to assignments.
 _LIST_MAX_LIMIT = 200
