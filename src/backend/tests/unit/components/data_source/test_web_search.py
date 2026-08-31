@@ -2,9 +2,15 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pandas as pd
 import pytest
-from lfx.components.data_source.web_search import WebSearchComponent
-from lfx.schema import DataFrame
+from lfx.components.data_source.web_search import (
+    DEFAULT_MAX_CONTENT_LENGTH,
+    DEFAULT_MAX_RESULTS,
+    TRUNCATION_SUFFIX,
+    WebSearchComponent,
+)
+from lfx.schema import Data, DataFrame, Message
 from lfx.utils.ssrf_protection import SSRFProtectionError
+from pydantic import SecretStr, ValidationError
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -424,6 +430,286 @@ class TestWebSearchComponent(ComponentTestBaseWithoutClient):
         assert mock_get.call_count == 1
         assert isinstance(result, DataFrame)
         assert "Blocked by SSRF protection" in result.iloc[0]["content"]
+
+    @staticmethod
+    def _serp_html(result_count: int) -> str:
+        blocks = "".join(
+            f'<div class="result">'
+            f'<a class="result__a" href="?uddg=https%3A%2F%2Fexample.com%2F{i}">Title {i}</a>'
+            f'<a class="result__snippet">Snippet {i}</a>'
+            f"</div>"
+            for i in range(result_count)
+        )
+        return f"<html>{blocks}</html>"
+
+    @staticmethod
+    def _serp_response(result_count: int) -> Mock:
+        response = Mock()
+        response.text = TestWebSearchComponent._serp_html(result_count)
+        response.headers = {"content-type": "text/html"}
+        response.raise_for_status.return_value = None
+        return response
+
+    @staticmethod
+    def _page_response(body_length: int) -> Mock:
+        response = Mock()
+        response.text = f"<html><body>{'a' * body_length}</body></html>"
+        response.raise_for_status.return_value = None
+        return response
+
+    @patch.object(WebSearchComponent, "_safe_get_url")
+    @patch("lfx.components.data_source.web_search.requests.get")
+    def test_should_cap_web_results_when_max_results_is_set(self, mock_get, mock_safe_get):
+        """Regression (LE-2164): the scrape loop must stop at max_results."""
+        component = WebSearchComponent()
+        component.query = "test query"
+        component.timeout = 5
+        component.max_results = 3
+
+        mock_get.return_value = self._serp_response(result_count=12)
+        mock_safe_get.return_value = self._page_response(body_length=50)
+
+        result = component.perform_web_search()
+
+        assert len(result) == 3
+        assert mock_safe_get.call_count == 3
+
+    @patch.object(WebSearchComponent, "_safe_get_url")
+    @patch("lfx.components.data_source.web_search.requests.get")
+    def test_should_truncate_content_when_max_content_length_is_set(self, mock_get, mock_safe_get):
+        """Regression (LE-2164): scraped page text must never exceed max_content_length."""
+        component = WebSearchComponent()
+        component.query = "test query"
+        component.timeout = 5
+        component.max_content_length = 500
+
+        mock_get.return_value = self._serp_response(result_count=1)
+        mock_safe_get.return_value = self._page_response(body_length=40_000)
+
+        result = component.perform_web_search()
+
+        content = result.iloc[0]["content"]
+        assert len(content) <= 500
+        assert content.endswith("... [truncated]")
+
+    @pytest.mark.parametrize("limit", range(1, len(TRUNCATION_SUFFIX)))
+    def test_should_mark_truncated_content_when_limit_is_shorter_than_suffix(self, limit):
+        """Every positive content limit must retain a recognizable truncation marker."""
+        component = WebSearchComponent()
+
+        content = component._truncate_content("a" * 100, limit)
+
+        assert len(content) == limit
+        assert content.endswith("…")
+
+    def test_should_use_full_truncation_marker_at_suffix_length(self):
+        """The full marker fits exactly at its existing length boundary."""
+        component = WebSearchComponent()
+
+        content = component._truncate_content("a" * 100, len(TRUNCATION_SUFFIX))
+
+        assert content == TRUNCATION_SUFFIX
+        assert component._truncate_content("a" * 100, len(TRUNCATION_SUFFIX) + 1) == f"a{TRUNCATION_SUFFIX}"
+        assert component._truncate_content("a" * len(TRUNCATION_SUFFIX), len(TRUNCATION_SUFFIX)) == "a" * len(
+            TRUNCATION_SUFFIX
+        )
+
+    @patch.object(WebSearchComponent, "_safe_get_url")
+    @patch("lfx.components.data_source.web_search.requests.get")
+    def test_should_bound_payload_when_limits_are_absent(self, mock_get, mock_safe_get):
+        """Saved flows frozen before LE-2164 carry no limit fields; defaults must still bound them."""
+        component = WebSearchComponent()
+        component.query = "Sample Slide Show"
+        component.timeout = 5
+
+        mock_get.return_value = self._serp_response(result_count=10)
+        mock_safe_get.return_value = self._page_response(body_length=40_755)
+
+        result = component.perform_web_search()
+
+        total_chars = sum(len(str(value)) for row in result.to_dict(orient="records") for value in row.values())
+        assert len(result) == 5
+        assert all(len(row["content"]) <= 2000 for row in result.to_dict(orient="records"))
+        assert total_chars < 20_000
+
+    @patch.object(WebSearchComponent, "_safe_get_url")
+    @patch("lfx.components.data_source.web_search.requests.get")
+    def test_should_keep_full_payload_when_limits_are_disabled(self, mock_get, mock_safe_get):
+        """Zero is the documented opt-out for both limits."""
+        component = WebSearchComponent()
+        component.query = "test query"
+        component.timeout = 5
+        component.set_attributes({"max_results": 0, "max_content_length": 0})
+
+        mock_get.return_value = self._serp_response(result_count=12)
+        mock_safe_get.return_value = self._page_response(body_length=10_000)
+
+        result = component.perform_web_search()
+
+        assert len(result) == 12
+        assert len(result.iloc[0]["content"]) == 10_000
+
+    @patch("lfx.components.data_source.web_search.requests.get")
+    def test_should_cap_news_results_when_max_results_is_set(self, mock_get):
+        """Regression (LE-2164): News mode also feeds the agent context and must be bounded."""
+        component = WebSearchComponent()
+        component.query = "test news"
+        component.timeout = 5
+        component.max_results = 4
+
+        items = "".join(
+            f"<item><title>News {i}</title><link>https://news.example.com/{i}</link>"
+            f"<pubDate>Mon, 01 Jan 2024 00:00:00 GMT</pubDate><description>Body {i}</description></item>"
+            for i in range(30)
+        )
+        mock_response = Mock()
+        mock_response.content = f'<?xml version="1.0" encoding="UTF-8"?><rss><channel>{items}</channel></rss>'.encode()
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+
+        result = component.perform_news_search()
+
+        assert len(result) == 4
+
+    @patch("lfx.components.data_source.web_search.requests.get")
+    def test_should_bound_news_text_fields(self, mock_get):
+        """Every text field in a News item must honor max_content_length."""
+        component = WebSearchComponent()
+        component.query = "test news"
+        component.timeout = 5
+        component.max_results = 1
+        component.max_content_length = 100
+
+        oversized = "a" * 100_000
+        mock_response = Mock()
+        mock_response.content = (
+            '<?xml version="1.0" encoding="UTF-8"?><rss><channel><item>'
+            f"<title>{oversized}</title><link>https://example.com/{oversized}</link>"
+            f"<pubDate>{oversized}</pubDate><description>{oversized}</description>"
+            "</item></channel></rss>"
+        ).encode()
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+
+        result = component.perform_news_search()
+
+        row = result.iloc[0]
+        for field in ("title", "link", "published", "summary"):
+            assert len(row[field]) == 100
+            assert row[field].endswith(TRUNCATION_SUFFIX)
+
+    @patch.object(WebSearchComponent, "_safe_get_url")
+    def test_should_cap_rss_items_when_max_results_is_set(self, mock_get):
+        """Regression (LE-2164): RSS mode must honour the same cap."""
+        component = WebSearchComponent()
+        component.query = "https://example.com/feed.rss"
+        component.timeout = 5
+        component.max_results = 2
+
+        items = "".join(
+            f"<item><title>Item {i}</title><link>https://example.com/{i}</link>"
+            f"<pubDate>Mon, 01 Jan 2024 00:00:00 GMT</pubDate><description>Body {i}</description></item>"
+            for i in range(10)
+        )
+        mock_response = Mock()
+        mock_response.content = f'<?xml version="1.0" encoding="UTF-8"?><rss><channel>{items}</channel></rss>'.encode()
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+
+        result = component.perform_rss_read()
+
+        assert len(result) == 2
+
+    @patch.object(WebSearchComponent, "_safe_get_url")
+    def test_should_bound_rss_text_fields(self, mock_get):
+        """A single oversized RSS item must not flood the caller's context window."""
+        component = WebSearchComponent()
+        component.query = "https://example.com/feed.rss"
+        component.timeout = 5
+        component.max_results = 1
+        component.max_content_length = 100
+
+        oversized = "a" * 100_000
+        mock_response = Mock()
+        mock_response.content = (
+            '<?xml version="1.0" encoding="UTF-8"?><rss><channel><item>'
+            f"<title>{oversized}</title><link>https://example.com/{oversized}</link>"
+            f"<pubDate>{oversized}</pubDate><description>{oversized}</description>"
+            "</item></channel></rss>"
+        ).encode()
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+
+        result = component.perform_rss_read()
+
+        assert len(result) == 1
+        row = result.iloc[0]
+        fields = ("title", "link", "published", "summary")
+        for field in fields:
+            assert len(row[field]) == 100
+            assert row[field].endswith(TRUNCATION_SUFFIX)
+        assert sum(len(row[field]) for field in fields) <= 4 * 100
+
+    @pytest.mark.parametrize(
+        ("name", "default"), [("max_results", DEFAULT_MAX_RESULTS), ("max_content_length", DEFAULT_MAX_CONTENT_LENGTH)]
+    )
+    @pytest.mark.parametrize("invalid", [None, "", "not-a-number", -1, -0.5, 0.5, False, True, float("inf"), "1e309"])
+    def test_should_normalize_invalid_limits_before_input_validation(self, name, default, invalid):
+        """Graph input binding must fall back safely instead of disabling or rejecting limits."""
+        component = WebSearchComponent()
+
+        component.set_attributes({name: invalid})
+
+        assert component._get_limit(name, default) == default
+
+    @pytest.mark.parametrize("zero", [0, 0.0, "0"])
+    def test_should_only_disable_limits_for_explicit_zero(self, zero):
+        """Numeric zero remains the sole supported opt-out after normal input binding."""
+        component = WebSearchComponent()
+
+        component.set_attributes({"max_results": zero})
+
+        assert component._get_limit("max_results", DEFAULT_MAX_RESULTS) is None
+
+    @pytest.mark.parametrize("wrapped", [Message(text="2"), Data(text="2")])
+    def test_should_preserve_wrapped_integer_limits(self, wrapped):
+        """Component-specific normalization must preserve IntInput's Message/Data support."""
+        component = WebSearchComponent()
+
+        component.set_attributes({"max_results": wrapped})
+
+        assert component._get_limit("max_results", DEFAULT_MAX_RESULTS) == 2
+
+    @pytest.mark.parametrize("name", ["max_results", "max_content_length"])
+    def test_should_reject_credential_variables_for_limits(self, name):
+        """Pre-normalization must preserve the global non-password credential guard."""
+        component = WebSearchComponent()
+        raw_secret = "credential-sentinel"  # noqa: S105  # pragma: allowlist secret
+
+        with pytest.raises(ValidationError) as excinfo:
+            component.set_attributes({name: SecretStr(raw_secret)})
+
+        error_text = str(excinfo.value)
+        assert "Credential-typed global variable" in error_text
+        assert name in error_text
+        assert raw_secret not in error_text
+
+    @patch.object(WebSearchComponent, "_safe_get_url")
+    @patch("lfx.components.data_source.web_search.requests.get")
+    def test_should_fall_back_to_defaults_when_limits_are_invalid(self, mock_get, mock_safe_get):
+        """Tool-mode callers can pass strings/None; invalid limits must not crash the search."""
+        component = WebSearchComponent()
+        component.query = "test query"
+        component.timeout = 5
+        component.set_attributes({"max_results": "not-a-number", "max_content_length": None})
+
+        mock_get.return_value = self._serp_response(result_count=12)
+        mock_safe_get.return_value = self._page_response(body_length=40_000)
+
+        result = component.perform_web_search()
+
+        assert len(result) == 5
+        assert len(result.iloc[0]["content"]) <= 2000
 
     @patch.object(WebSearchComponent, "perform_web_search")
     def test_perform_search_web_mode(self, mock_web_search):

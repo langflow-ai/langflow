@@ -1,0 +1,14 @@
+schema_version: 1
+release: 1.11.x
+
+entries:
+
+- id: GH-14334
+  title: Docker/Kubernetes startup fails with read-only file system under /opt/app-root/src
+  status: resolved
+  area: database
+  first_bad_version: 1.11.0
+  last_known_good_version: 1.10.x
+  resolved_in_version: 1.11.2
+  fix_pr: https://github.com/langflow-ai/langflow/pull/14354
+  workaround: Set LANGFLOW_CONFIG_DIR to a writable path such as /app/langflow, or upgrade to 1.11.2.

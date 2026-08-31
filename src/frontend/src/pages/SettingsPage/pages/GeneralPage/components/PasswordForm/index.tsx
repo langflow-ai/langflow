@@ -18,6 +18,8 @@ type PasswordFormComponentProps = {
   cnfPassword: string;
   handleInput: (event: inputHandlerEventType) => void;
   handlePatchPassword: () => void;
+  /** Mismatch or server rejection, rendered inline and associated with the fields (WCAG 3.3.1). */
+  serverError?: string | null;
 };
 const PasswordFormComponent = ({
   currentPassword,
@@ -25,11 +27,22 @@ const PasswordFormComponent = ({
   cnfPassword,
   handleInput,
   handlePatchPassword,
+  serverError,
 }: PasswordFormComponentProps) => {
   const { t } = useTranslation();
+  // Built conditionally: spreading present-but-undefined aria keys would
+  // clobber the aria-describedby Radix Form.Control wires to its
+  // valueMissing messages (Slot merge lets child keys win even at undefined).
+  const errorAriaProps = serverError
+    ? {
+        "aria-invalid": true,
+        "aria-describedby": "password-form-error",
+      }
+    : {};
   return (
     <>
       <Form.Root
+        aria-label={t("settings.passwordTitle")}
         onSubmit={(event) => {
           handlePatchPassword();
           event.preventDefault();
@@ -56,6 +69,10 @@ const PasswordFormComponent = ({
                   isForm
                   password={true}
                   required
+                  inputProps={{
+                    "aria-label": t("settings.currentPasswordPlaceholder"),
+                    ...errorAriaProps,
+                  }}
                   placeholder={t("settings.currentPasswordPlaceholder")}
                   className="w-full"
                 />
@@ -73,6 +90,10 @@ const PasswordFormComponent = ({
                   isForm
                   password={true}
                   required
+                  inputProps={{
+                    "aria-label": t("settings.passwordPlaceholder"),
+                    ...errorAriaProps,
+                  }}
                   placeholder={t("settings.passwordPlaceholder")}
                   className="w-full"
                 />
@@ -92,6 +113,10 @@ const PasswordFormComponent = ({
                   isForm
                   password={true}
                   required
+                  inputProps={{
+                    "aria-label": t("settings.confirmPasswordPlaceholder"),
+                    ...errorAriaProps,
+                  }}
                   placeholder={t("settings.confirmPasswordPlaceholder")}
                   className="w-full"
                 />
@@ -101,6 +126,15 @@ const PasswordFormComponent = ({
                 </Form.Message>
               </Form.Field>
             </div>
+            {serverError && (
+              <p
+                id="password-form-error"
+                role="alert"
+                className="field-invalid static mt-3"
+              >
+                {serverError}
+              </p>
+            )}
           </CardContent>
           <CardFooter className="border-t px-6 py-4">
             <Form.Submit asChild>

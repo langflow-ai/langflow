@@ -1,6 +1,7 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 import DialogContentWithouFixed from "@/customization/components/custom-dialog-content-without-fixed";
 import { dialogClass } from "@/customization/utils/dialog-class";
 import { cn } from "../../utils/utils";
@@ -98,14 +99,22 @@ const DialogContent = React.forwardRef<
       closeButtonClassName,
       overlayClassName,
       onOpenAutoFocus,
+      onCloseAutoFocus,
       ...props
     },
     ref,
   ) => {
+    const { t } = useTranslation();
     // Check if DialogTitle is included in children
     const hasDialogTitle = hideTitle || hasChildOfType(children, DialogTitle);
     const hasDialogDescription =
       hideDescription || hasChildOfType(children, DialogDescription);
+
+    // Radix Dialog only restores focus to DialogTrigger. Controlled dialogs
+    // without a trigger leave focus on <body> on close (WCAG 2.4.3). Capture
+    // the opener in onOpenAutoFocus (still focused at that point) so we can
+    // restore it in onCloseAutoFocus.
+    const previousFocusRef = React.useRef<HTMLElement | null>(null);
 
     useInertForAriaHiddenElements();
 
@@ -118,7 +127,19 @@ const DialogContent = React.forwardRef<
             "fixed z-50 flex w-full max-w-lg flex-col gap-4 rounded-xl border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]",
             className,
           )}
+          {...props}
           onOpenAutoFocus={(e) => {
+            const active = document.activeElement;
+            const content = e.currentTarget as HTMLElement;
+            // Prefer the real opener; ignore body and anything already inside
+            // the dialog (FocusScope may have moved focus before this runs).
+            if (
+              active instanceof HTMLElement &&
+              active !== document.body &&
+              !content.contains(active)
+            ) {
+              previousFocusRef.current = active;
+            }
             if (onOpenAutoFocus) {
               onOpenAutoFocus(e);
               return;
@@ -129,11 +150,21 @@ const DialogContent = React.forwardRef<
             e.preventDefault();
             (e.target as HTMLElement | null)?.focus();
           }}
-          {...props}
+          onCloseAutoFocus={(e) => {
+            onCloseAutoFocus?.(e);
+            if (e.defaultPrevented) return;
+            // Prevent FocusScope from parking focus on <body>, and restore
+            // to the element that opened the dialog (trigger or prior focus).
+            e.preventDefault();
+            const node = previousFocusRef.current;
+            if (node && document.contains(node)) {
+              node.focus();
+            }
+          }}
         >
           {!hasDialogTitle && (
             <VisuallyHidden>
-              <DialogTitle>Dialog</DialogTitle>
+              <DialogTitle>{t("common.dialog")}</DialogTitle>
             </VisuallyHidden>
           )}
           {!hasDialogDescription && (
@@ -145,7 +176,7 @@ const DialogContent = React.forwardRef<
           {!hideCloseButton && (
             <ShadTooltip
               styleClasses="z-50"
-              content="Close"
+              content={t("common.close")}
               side="bottom"
               avoidCollisions
             >
@@ -156,7 +187,7 @@ const DialogContent = React.forwardRef<
                 )}
               >
                 <Cross2Icon className="h-[18px] w-[18px]" aria-hidden="true" />
-                <span className="sr-only">Close</span>
+                <span className="sr-only">{t("common.close")}</span>
               </DialogPrimitive.Close>
             </ShadTooltip>
           )}
@@ -165,6 +196,41 @@ const DialogContent = React.forwardRef<
     );
   },
 );
+
+const DialogOverlayPlain = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Overlay>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Overlay
+    ref={ref}
+    className={cn(
+      "fixed inset-0 z-50 bg-black/50 data-[state=closed]:animate-overlayHide data-[state=open]:animate-overlayShow",
+      className,
+    )}
+    {...props}
+  />
+));
+DialogOverlayPlain.displayName = "DialogOverlayPlain";
+
+const DialogContentPlain = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
+>(({ className, children, ...props }, ref) => (
+  <DialogPrimitive.Portal>
+    <DialogOverlayPlain />
+    <DialogPrimitive.Content
+      ref={ref}
+      className={cn(
+        "fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-3 rounded-xl border bg-background p-3 shadow-lg duration-200 data-[state=closed]:animate-contentHide data-[state=open]:animate-contentShow",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </DialogPrimitive.Content>
+  </DialogPrimitive.Portal>
+));
+DialogContentPlain.displayName = "DialogContentPlain";
 
 const DialogHeader = ({
   className,
@@ -221,6 +287,7 @@ DialogDescription.displayName = DialogPrimitive.Description.displayName;
 export {
   Dialog,
   DialogContent,
+  DialogContentPlain,
   DialogContentWithouFixed,
   DialogDescription,
   DialogFooter,

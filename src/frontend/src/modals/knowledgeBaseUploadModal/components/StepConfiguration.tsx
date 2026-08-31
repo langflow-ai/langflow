@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { DBProviderInput } from "@/components/core/parameterRenderComponent/components/dbProviderInputComponent";
@@ -39,6 +40,8 @@ interface StepConfigurationProps {
   selectedEmbeddingModel: ModelOption[];
   onEmbeddingModelChange: (value: ModelOption[]) => void;
   embeddingModelOptions: ModelOption[];
+  modelCatalogReady: boolean;
+  globalVariablesReady: boolean;
   existingEmbeddingModel?: string;
   existingEmbeddingIcon?: string;
   chunkSize: number;
@@ -73,6 +76,8 @@ export function StepConfiguration({
   selectedEmbeddingModel,
   onEmbeddingModelChange,
   embeddingModelOptions,
+  modelCatalogReady,
+  globalVariablesReady,
   existingEmbeddingModel,
   existingEmbeddingIcon,
   chunkSize,
@@ -96,8 +101,16 @@ export function StepConfiguration({
   onMetadataPairsChange,
 }: StepConfigurationProps) {
   const { t } = useTranslation();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [menuContainer, setMenuContainer] = useState<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    setMenuContainer(
+      rootRef.current?.closest<HTMLElement>('[role="dialog"]') ?? null,
+    );
+  }, []);
+
   return (
-    <div className="relative">
+    <div className="relative" ref={rootRef}>
       <div className="flex flex-col">
         {isAddSourcesMode && kbName && (
           <div className="pb-4">
@@ -121,9 +134,17 @@ export function StepConfiguration({
             data-testid="kb-source-name-input"
             disabled={isAddSourcesMode}
             className={validationErrors.sourceName ? "border-destructive" : ""}
+            aria-invalid={Boolean(validationErrors.sourceName)}
+            aria-describedby={
+              validationErrors.sourceName ? "kb-source-name-error" : undefined
+            }
           />
           {validationErrors.sourceName && (
-            <span className="text-xs text-destructive">
+            <span
+              id="kb-source-name-error"
+              className="text-xs text-destructive"
+              role="alert"
+            >
               {validationErrors.sourceName}
             </span>
           )}
@@ -131,7 +152,10 @@ export function StepConfiguration({
 
         {/* Model Selection */}
         <div className="flex flex-col gap-2 pt-4">
-          <Label className="text-sm font-medium">
+          <Label
+            htmlFor={isAddSourcesMode ? undefined : "kb-embedding-model"}
+            className="text-sm font-medium"
+          >
             {t("knowledge.embeddingModelLabel")}{" "}
             <span className="text-destructive">*</span>
           </Label>
@@ -155,21 +179,33 @@ export function StepConfiguration({
             >
               <ModelInputComponent
                 id="kb-embedding-model"
+                ariaInvalid={Boolean(validationErrors.embeddingModel)}
+                ariaDescribedBy={
+                  validationErrors.embeddingModel
+                    ? "kb-embedding-model-error"
+                    : undefined
+                }
                 value={selectedEmbeddingModel}
                 editNode={false}
-                disabled={false}
+                disabled={!modelCatalogReady}
                 handleOnNewValue={({ value }) => {
                   onEmbeddingModelChange(value);
                   onFieldChange?.();
                 }}
                 options={embeddingModelOptions}
+                providerScope={{}}
                 placeholder={t("knowledge.embeddingModelPlaceholder")}
                 showEmptyState
+                aria-label={t("knowledge.embeddingModelLabel")}
               />
             </div>
           )}
           {validationErrors.embeddingModel && (
-            <span className="text-xs text-destructive">
+            <span
+              id="kb-embedding-model-error"
+              className="text-xs text-destructive"
+              role="alert"
+            >
               {validationErrors.embeddingModel}
             </span>
           )}
@@ -177,7 +213,7 @@ export function StepConfiguration({
 
         {/* Backend Selection */}
         <div className="flex flex-col gap-2 pt-4">
-          <Label className="text-sm font-medium">
+          <Label htmlFor="kb-db-provider" className="text-sm font-medium">
             {t("knowledge.dbProviderLabel")}{" "}
             <span className="text-destructive">*</span>
           </Label>
@@ -189,9 +225,14 @@ export function StepConfiguration({
           >
             <DBProviderInput
               id="kb-db-provider"
+              ariaInvalid={Boolean(validationErrors.backend)}
+              ariaDescribedBy={
+                validationErrors.backend ? "kb-backend-error" : undefined
+              }
               value={backendType}
               globalVariables={globalVariables}
-              disabled={isAddSourcesMode}
+              disabled={isAddSourcesMode || !globalVariablesReady}
+              aria-label={t("knowledge.dbProviderLabel")}
               onValueChange={(nextBackendType, nextBackendConfig) => {
                 onBackendChange(nextBackendType, nextBackendConfig);
                 onFieldChange?.();
@@ -202,7 +243,11 @@ export function StepConfiguration({
             {t("knowledge.dbProviderDescription")}
           </span>
           {validationErrors.backend && (
-            <span className="text-xs text-destructive">
+            <span
+              id="kb-backend-error"
+              className="text-xs text-destructive"
+              role="alert"
+            >
               {validationErrors.backend}
             </span>
           )}
@@ -265,8 +310,11 @@ export function StepConfiguration({
                       <Button
                         variant="outline"
                         data-testid="kb-browse-btn"
+                        aria-describedby={
+                          validationErrors.files ? "kb-files-error" : undefined
+                        }
                         className={cn(
-                          "w-full justify-between focus-visible:ring-1 focus-visible:ring-input focus-visible:ring-offset-0 focus-visible:ring-offset-background",
+                          "w-full justify-between focus-visible:outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                           validationErrors.files && "border-destructive",
                         )}
                       >
@@ -283,7 +331,11 @@ export function StepConfiguration({
                         />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-[220px]">
+                    <DropdownMenuContent
+                      align="start"
+                      className="w-[220px]"
+                      container={menuContainer}
+                    >
                       <DropdownMenuItem
                         onClick={() => {
                           document.getElementById("file-input")?.click();
@@ -310,7 +362,11 @@ export function StepConfiguration({
                   </DropdownMenu>
 
                   {validationErrors.files && (
-                    <span className="text-xs text-destructive">
+                    <span
+                      id="kb-files-error"
+                      className="text-xs text-destructive"
+                      role="alert"
+                    >
                       {validationErrors.files}
                     </span>
                   )}
@@ -501,6 +557,7 @@ export function StepConfiguration({
                 <span
                   className="text-xs text-destructive"
                   data-testid="kb-run-metadata-form-error"
+                  role="alert"
                 >
                   {validationErrors.metadata}
                 </span>

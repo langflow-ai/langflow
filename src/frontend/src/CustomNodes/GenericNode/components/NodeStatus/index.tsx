@@ -53,7 +53,7 @@ export default function NodeStatus({
   getValidationStatus,
 }: {
   nodeId: string;
-  display_name: string;
+  display_name?: string;
   selected?: boolean;
   setBorderColor: (color: string) => void;
   frozen?: boolean;
@@ -405,14 +405,18 @@ export default function NodeStatus({
     );
   };
 
+  // A node dropped while the backend was unreachable is persisted with no
+  // display_name; dereferencing it took the whole node tree down with it.
+  const displayNameSlug = (display_name ?? "").toLowerCase();
+
   const getDataTestId = () => {
     if (isAuthenticated && !isPolling) {
-      return `button_connected_${display_name.toLowerCase()}`;
+      return `button_connected_${displayNameSlug}`;
     }
     if (connectionLink === "error") {
-      return `button_error_${display_name.toLowerCase()}`;
+      return `button_error_${displayNameSlug}`;
     }
-    return `button_disconnected_${display_name.toLowerCase()}`;
+    return `button_disconnected_${displayNameSlug}`;
   };
 
   return (
@@ -441,12 +445,12 @@ export default function NodeStatus({
                 {conditionSuccess && validationStatus?.data?.duration ? (
                   <div
                     className="flex items-center gap-1 rounded-sm px-1 font-mono text-xs text-accent-emerald-foreground transition-colors hover:bg-accent-emerald"
-                    data-testid={`node_duration_` + display_name.toLowerCase()}
+                    data-testid={`node_duration_` + displayNameSlug}
                   >
                     {validationStatus?.data?.token_usage && (
                       <span
                         className="flex items-center gap-1"
-                        data-testid={`node-token-count-${display_name.toLowerCase()}`}
+                        data-testid={`node-token-count-${displayNameSlug}`}
                       >
                         <IconComponent
                           name="Coins"
@@ -469,7 +473,7 @@ export default function NodeStatus({
                   <div
                     data-testid={
                       `node_status_icon_` +
-                      display_name.toLowerCase() +
+                      displayNameSlug +
                       `_` +
                       buildStatus?.toLowerCase()
                     }
@@ -500,6 +504,7 @@ export default function NodeStatus({
                   )}
                   onClick={handleClickConnect}
                   data-testid={getDataTestId()}
+                  aria-label={nodeAuth.auth_tooltip || "Connect"}
                 >
                   <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                     <IconComponent
@@ -551,8 +556,9 @@ export default function NodeStatus({
                 unstyled
                 className="nodrag button-run-bg group disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={executeDenied && buildStatus !== BuildStatus.BUILDING}
+                aria-label={getTooltipContent()}
               >
-                <div data-testid={`button_run_` + display_name.toLowerCase()}>
+                <div data-testid={`button_run_` + displayNameSlug}>
                   <IconComponent
                     name={iconName}
                     className={iconClasses}

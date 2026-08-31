@@ -8,11 +8,12 @@ from __future__ import annotations
 
 import contextlib
 import os
+from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
 from langflow.logging.logger import logger
 
-from .service import StorageService
+from .service import StorageReadiness, StorageService
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -107,7 +108,16 @@ class S3StorageService(StorageService):
 
         Returns:
             str: The full S3 key (e.g., 'files/flow_123/myfile.txt')
+
+        Raises:
+            ValueError: If either identifier carries separators or traversal sequences.
         """
+        # Defense in depth: every file operation validates its own identifiers, but this is a
+        # public key builder whose result is also handed to callers directly (component path
+        # resolution). Path shape must never be treated as authorization, so reject anything
+        # that could compose a key outside the ``flow_id`` namespace. ``file_name`` is empty
+        # when building a listing prefix (see ``list_files``), which stays allowed.
+        self._validate_identifiers(flow_id, file_name or None)
         # note: prefix already contains the / at the end
         return f"{self.prefix}{flow_id}/{file_name}"
 
@@ -158,6 +168,67 @@ class S3StorageService(StorageService):
     def _get_client(self):
         """Get or create an S3 client using the async context manager."""
         return self.session.create_client("s3")
+
+    async def check_readiness(self) -> StorageReadiness:
+        """Verify S3 credentials resolve and the configured bucket is reachable.
+
+        Used by the production preflight. Resolves AWS credentials from the
+        environment/instance role, then issues a ``head_bucket`` to confirm the
+        bucket exists and is accessible. Distinguishes missing credentials,
+        missing bucket, access denied, and general unreachability.
+        """
+        # Resolve credentials before any network call so "no creds" is reported
+        # distinctly from "bucket unreachable". A misconfigured AWS profile/config
+        # surfaces here too and is treated as a credentials failure.
+        try:
+            credentials = await self.session.get_credentials()
+        except Exception as exc:  # noqa: BLE001 — botocore config errors (e.g. ProfileNotFound)
+            return StorageReadiness(
+                ok=False,
+                backend="s3",
+                detail=f"could not resolve AWS credentials: {exc}",
+                reason="no-credentials",
+            )
+        if credentials is None:
+            return StorageReadiness(
+                ok=False,
+                backend="s3",
+                detail="no AWS credentials resolved (set AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY or an instance role)",
+                reason="no-credentials",
+            )
+
+        try:
+            async with self._get_client() as s3_client:
+                await s3_client.head_bucket(Bucket=self.bucket_name)
+        except Exception as exc:  # noqa: BLE001 — normalize any botocore/network error into a typed reason
+            status_code = None
+            error_code = None
+            if hasattr(exc, "response") and isinstance(exc.response, dict):
+                status_code = exc.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+                error_code = exc.response.get("Error", {}).get("Code")
+
+            if status_code == HTTPStatus.NOT_FOUND or error_code in {"404", "NoSuchBucket"}:
+                return StorageReadiness(
+                    ok=False,
+                    backend="s3",
+                    detail=f"bucket '{self.bucket_name}' does not exist",
+                    reason="bucket-missing",
+                )
+            if status_code == HTTPStatus.FORBIDDEN or error_code in {"403", "AccessDenied", "InvalidAccessKeyId"}:
+                return StorageReadiness(
+                    ok=False,
+                    backend="s3",
+                    detail=f"access denied to bucket '{self.bucket_name}' (check credentials and bucket policy)",
+                    reason="access-denied",
+                )
+            return StorageReadiness(
+                ok=False,
+                backend="s3",
+                detail=f"could not reach bucket '{self.bucket_name}': {exc}",
+                reason="unreachable",
+            )
+
+        return StorageReadiness(ok=True, backend="s3", detail=f"bucket reachable ({self.bucket_name})")
 
     async def save_file(self, flow_id: str, file_name: str, data: bytes, *, append: bool = False) -> None:
         """Save a file to S3.

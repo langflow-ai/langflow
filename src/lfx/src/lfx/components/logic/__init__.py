@@ -148,7 +148,11 @@ def __getattr__(attr_name: str) -> Any:
         raise AttributeError(msg)
 
     # Most logic components were moved to flow_controls
-    # Forward them to flow_controls for backwards compatibility
+    # Forward them to flow_controls for backwards compatibility.
+    # Import the submodule directly rather than `from lfx.components import flow_controls`: neither
+    # flow_controls nor llm_operations is registered in lfx.components._dynamic_imports, so the
+    # `from ... import` form falls into lfx.components.__getattr__ and brute-force imports every
+    # bundle module before giving up.
     if attr_name in (
         "ConditionalRouterComponent",
         "DataConditionalRouterComponent",
@@ -159,7 +163,9 @@ def __getattr__(attr_name: str) -> Any:
         "RunFlowComponent",
         "SubFlowComponent",
     ):
-        from lfx.components import flow_controls
+        from importlib import import_module
+
+        flow_controls = import_module("lfx.components.flow_controls")
 
         result = getattr(flow_controls, attr_name)
         globals()[attr_name] = result
@@ -167,7 +173,9 @@ def __getattr__(attr_name: str) -> Any:
 
     # SmartRouterComponent was moved to llm_operations
     if attr_name == "SmartRouterComponent":
-        from lfx.components import llm_operations
+        from importlib import import_module
+
+        llm_operations = import_module("lfx.components.llm_operations")
 
         result = getattr(llm_operations, attr_name)
         globals()[attr_name] = result

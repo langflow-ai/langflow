@@ -6,12 +6,14 @@ from uuid import UUID
 
 from lfx.base.models.model_metadata import CONDITIONAL_LIVE_MODEL_PROVIDERS, LIVE_MODEL_PROVIDERS
 from lfx.base.models.model_utils import get_live_models_for_provider
+from lfx.base.models.provider_registry import get_registry_snapshot, is_api_key_optional
 from lfx.base.models.unified_models import (
     get_model_provider_variable_mapping,
     get_provider_required_variable_keys,
     get_unified_models_detailed,
 )
 from lfx.log.logger import logger
+from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, aresolve_model_provider_policy
 from lfx.utils.secrets import secret_value_to_str
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,7 +26,7 @@ PREFERRED_PROVIDERS = ["Anthropic", "OpenAI", "Google Generative AI", "Groq"]
 ASSISTANT_PREFERRED_MODELS: dict[str, tuple[str, ...]] = {
     "OpenAI": ("gpt-5.4", "gpt-5.2", "gpt-5.1", "gpt-5", "gpt-4o"),
     "Anthropic": ("claude-opus-4-6", "claude-sonnet-4-6", "claude-opus-4-5-20251101"),
-    "Google Generative AI": ("gemini-2.5-pro", "gemini-1.5-pro"),
+    "Google Generative AI": ("gemini-2.5-pro", "gemini-3.1-pro-preview"),
     "Azure AI Foundry": ("gpt-4o",),
     "OpenRouter": ("anthropic/claude-opus-4.7", "openai/gpt-5.4"),
 }
@@ -38,13 +40,22 @@ tasks". The assistant drives a multi-step tool-calling loop, so its default must
 provider's strongest general agent model, not its fastest or its newest.
 
 The first name the provider actually offers wins. Providers absent here — and names that
-no longer exist — fall back to the catalog default.
+no longer exist — fall back to the catalog default. Every entry must be a model the catalog
+still offers: a deprecated name is filtered out before the lookup, so it silently reduces the
+list rather than acting as a fallback.
 """
+
+
+def _get_registered_provider_names() -> list[str]:
+    """Return provider names without executing extension catalog loaders."""
+    return sorted(descriptor.name for descriptor in get_registry_snapshot().descriptors_by_id.values())
 
 
 async def get_enabled_providers_for_user(
     user_id: UUID | str,
     session: AsyncSession,
+    *,
+    purpose: ModelProviderPolicyPurpose = ModelProviderPolicyPurpose.CONFIGURE,
 ) -> tuple[list[str], dict[str, bool]]:
     """Get enabled providers for a user.
 
@@ -55,21 +66,47 @@ async def get_enabled_providers_for_user(
     if not isinstance(variable_service, DatabaseVariableService):
         return [], {}
 
+    provider_variable_map = get_model_provider_variable_mapping()
+    registered_providers = _get_registered_provider_names()
+    provider_candidates = [
+        *provider_variable_map,
+        *(
+            provider
+            for provider in registered_providers
+            if provider not in provider_variable_map and is_api_key_optional(provider)
+        ),
+    ]
+    # Resolve authorization before reading any credential-bearing variables or
+    # probing environment-backed providers. Assistant requests bind their
+    # trusted stored-flow scope in the router, and the async policy path keeps
+    # inherited team/workspace role materialization current.
+    provider_policy = await aresolve_model_provider_policy(
+        user_id=user_id,
+        providers=[*registered_providers, *provider_candidates],
+        purpose=purpose,
+    )
+    provider_candidates = provider_policy.filter(provider_candidates)
+    if not provider_candidates:
+        return [], {}
+
     all_variables = await variable_service.get_all(user_id=user_id, session=session)
     # Include all variable types (credentials and regular variables)
     # so providers like Ollama (which use non-secret variables) are detected
     all_variable_names = {var.name for var in all_variables}
 
-    provider_variable_map = get_model_provider_variable_mapping()
-
     enabled_providers = []
     provider_status = {}
 
-    for provider in provider_variable_map:
+    for provider in provider_candidates:
         # Check if ALL required variables for this provider are present
         # in either database variables or environment variables
         required_keys = get_provider_required_variable_keys(provider)
-        is_enabled = all(key in all_variable_names or os.getenv(key) for key in required_keys)
+        provider_has_variables = provider in provider_variable_map
+        is_enabled = (
+            is_api_key_optional(provider)
+            if not provider_has_variables
+            else all(key in all_variable_names or os.getenv(key) for key in required_keys)
+        )
 
         provider_status[provider] = is_enabled
         if is_enabled:
@@ -226,6 +263,61 @@ def get_default_model(provider: str, user_id: UUID | str | None = None) -> str |
     return _preferred_model(provider, _catalog_model_names(provider)) or catalog_default
 
 
+def build_live_only_provider_entries(
+    enabled_providers: list[str],
+    existing_provider_names: set[str],
+    user_id: UUID | str | None,
+) -> list[dict]:
+    """Config entries for enabled live providers the static-catalog filter dropped.
+
+    ``get_unified_models_detailed(include_deprecated=False)`` omits a provider whose
+    static catalog is empty or all-deprecated (e.g. IBM WatsonX, whose bundled
+    models are all deprecated), so the check-config loop never reaches that
+    provider's live fetch. Those providers still expose live, currently-available
+    tool-calling models — fetch them directly here so the assistant offers them
+    instead of hiding the provider.
+    """
+    entries: list[dict] = []
+    for provider in LIVE_MODEL_PROVIDERS:
+        if provider not in enabled_providers or provider in existing_provider_names:
+            continue
+        installed = list_installed_tool_calling_models(provider, user_id)
+        if not installed:
+            continue
+        model_list = [{"name": name, "display_name": name} for name in installed]
+        default_model = get_default_model(provider, user_id)
+        if default_model not in {m["name"] for m in model_list}:
+            default_model = model_list[0]["name"]
+        entries.append(
+            {
+                "name": provider,
+                "configured": True,
+                "default_model": default_model,
+                "models": model_list,
+            }
+        )
+    return entries
+
+
+def _preferred_first(provider: str, names: list[str]) -> list[str]:
+    """Order ``names`` so this provider's curated preferences come first.
+
+    The assistant walks this order when the chosen model turns out to be unusable. Catalog
+    order puts a provider's small flash SKUs ahead of its other pro-class models, so without
+    this a blocked default drops to a weaker model than ``ASSISTANT_PREFERRED_MODELS`` already
+    says to prefer. Names absent from the preference list keep their relative order.
+    """
+    preferences = ASSISTANT_PREFERRED_MODELS.get(provider, ())
+    if not preferences:
+        return names
+    offered = set(names)
+    front = [name for name in preferences if name in offered]
+    if not front:
+        return names
+    promoted = set(front)
+    return [*front, *(name for name in names if name not in promoted)]
+
+
 def get_provider_model_candidates(provider: str, user_id: UUID | str | None = None) -> list[str]:
     """Return the ordered model candidates the assistant may try on this provider.
 
@@ -243,7 +335,7 @@ def get_provider_model_candidates(provider: str, user_id: UUID | str | None = No
 
     installed = list_installed_tool_calling_models(provider, user_id)
     if installed:
-        return installed
+        return _preferred_first(provider, installed)
 
     models_by_provider = get_unified_models_detailed(
         providers=[provider],
@@ -267,4 +359,4 @@ def get_provider_model_candidates(provider: str, user_id: UUID | str | None = No
             ordered.append(name)
             seen.add(name)
 
-    return ordered
+    return _preferred_first(provider, ordered)

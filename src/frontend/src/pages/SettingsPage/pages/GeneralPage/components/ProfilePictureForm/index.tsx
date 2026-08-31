@@ -5,6 +5,8 @@ import {
   type ProfilePicturesQueryResponse,
   useGetProfilePicturesQuery,
 } from "@/controllers/API/queries/files";
+import type { Users } from "@/types/api";
+import type { inputHandlerEventType } from "@/types/components";
 import { Button } from "../../../../../../components/ui/button";
 import {
   Card,
@@ -19,16 +21,15 @@ import ProfilePictureChooserComponent from "./components/profilePictureChooserCo
 
 type ProfilePictureFormComponentProps = {
   profilePicture: string;
-  handleInput: (event: any) => void;
+  handleInput: (event: inputHandlerEventType) => void;
   handlePatchProfilePicture: (gradient: string) => void;
   handleGetProfilePictures: UseQueryResult<ProfilePicturesQueryResponse>;
-  userData: any;
+  userData: Users | null;
 };
 const ProfilePictureFormComponent = ({
   profilePicture,
   handleInput,
   handlePatchProfilePicture,
-  handleGetProfilePictures,
   userData,
 }: ProfilePictureFormComponentProps) => {
   const { t } = useTranslation();
@@ -36,6 +37,7 @@ const ProfilePictureFormComponent = ({
 
   return (
     <Form.Root
+      aria-label={t("settings.profilePictureTitle")}
       onSubmit={(event) => {
         handlePatchProfilePicture(profilePicture);
         event.preventDefault();

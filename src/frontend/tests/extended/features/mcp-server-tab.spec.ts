@@ -1,35 +1,21 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
+import { fillLocalMcpServerCommand } from "../../utils/fill-local-mcp-server-command";
+import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { openAddMcpServerModal } from "../../utils/open-add-mcp-server-modal";
 
 test(
   "user should be able to manage MCP server tools and configuration",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    // Create a new flow
-    await page.getByTestId("blank-flow").click();
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("api request");
-
-    await page.waitForSelector('[data-testid="data_sourceAPI Request"]', {
-      timeout: 30000,
+    await openBlankFlow(page);
+    await addComponentFromSidebar(page, {
+      search: "api request",
+      testId: "data_sourceAPI Request",
+      hoverAdd: true,
     });
-
-    // Use dragTo which is more reliable than click on add-component-button
-    await page
-      .getByTestId("data_sourceAPI Request")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-    await page.waitForSelector(
-      '[data-testid="generic-node-title-arrangement"]',
-      {
-        timeout: 30000,
-      },
-    );
 
     // Exit the flow
     await page.getByTestId("icon-ChevronLeft").last().click();
@@ -79,7 +65,8 @@ test(
     await page.reload();
 
     // Navigate to MCP server tab
-    await page.getByTestId("mcp-btn").click({ timeout: 10000 });
+    await expect(page.getByTestId("mcp-btn")).toBeVisible({ timeout: 30000 });
+    await page.getByTestId("mcp-btn").click();
 
     // Verify MCP server tab is visible
     await expect(page.getByTestId("mcp-server-title")).toBeVisible();
@@ -231,42 +218,112 @@ test(
       "https://docs.langflow.org/mcp-server#connect-clients-to-use-the-servers-actions",
     );
 
-    await awaitBootstrapTest(page);
-
     // Create a new flow with MCP component
-    await page.getByTestId("blank-flow").click();
+    const mcpFlowId = await openBlankFlow(page);
     await page.getByTestId("sidebar-nav-mcp").click();
-    await page.waitForSelector(
-      '[data-testid="add-component-button-lf-starter_project"]',
-      {
-        timeout: 60000,
-      },
+    const mcpNodes = page.getByRole("application", { name: "MCP Tools node" });
+    const previousMcpNodeCount = await mcpNodes.count();
+    await expect(page.getByTestId("canvas-add-note-button")).toBeEnabled({
+      timeout: 30_000,
+    });
+    const mcpRow = page.getByTestId("mcp_lf-starter_project_draggable");
+    await expect(mcpRow).toBeAttached({ timeout: 30_000 });
+    await mcpRow.evaluate((element) =>
+      element.scrollIntoView({ block: "center", behavior: "instant" }),
     );
-    await page.getByTestId("add-component-button-lf-starter_project").click();
+    const addMcpNodeButton = page.getByTestId(
+      "add-component-button-lf-starter_project",
+    );
+    await expect(addMcpNodeButton).toBeVisible({ timeout: 30_000 });
+    await addMcpNodeButton.click();
+    await expect(mcpNodes).toHaveCount(previousMcpNodeCount + 1, {
+      timeout: 30_000,
+    });
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
 
     await openAddMcpServerModal(page);
 
-    await page.waitForSelector('[data-testid="json-input"]', {
+    // The generated uvx/mcp-proxy configuration is validated structurally
+    // above. Exercise component-side discovery with the checked-in fixture so
+    // this blocking test never downloads or executes an external MCP client.
+    await page.getByTestId("stdio-tab").click();
+    await page.waitForSelector('[data-testid="stdio-name-input"]', {
       state: "visible",
       timeout: 30000,
     });
 
     const randomSuffix = Math.floor(Math.random() * 90000) + 10000;
     const testName = `test_server_${randomSuffix}`;
+    await page.getByTestId("stdio-name-input").fill(testName);
+    await fillLocalMcpServerCommand(page);
 
-    await page
-      .getByTestId("json-input")
-      .fill(configJsonLinux.replace(/lf-starter_project/g, testName) || "");
-
+    const serverSaveResponse = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        new URL(response.url()).pathname.endsWith(
+          `/api/v2/mcp/servers/${encodeURIComponent(testName)}`,
+        ),
+      { timeout: 30_000 },
+    );
+    const componentRefreshResponse = page.waitForResponse(
+      (response) => {
+        if (
+          response.request().method() !== "POST" ||
+          new URL(response.url()).pathname !== "/api/v1/custom_component/update"
+        ) {
+          return false;
+        }
+        try {
+          const payload = response.request().postDataJSON();
+          return (
+            payload.field === "mcp_server" &&
+            payload.field_value?.name === testName
+          );
+        } catch {
+          return false;
+        }
+      },
+      { timeout: 30_000 },
+    );
+    const flowSaveResponse = page.waitForResponse(
+      (response) => {
+        if (
+          response.request().method() !== "PATCH" ||
+          new URL(response.url()).pathname !== `/api/v1/flows/${mcpFlowId}`
+        ) {
+          return false;
+        }
+        try {
+          const payload = response.request().postDataJSON();
+          return payload.data?.nodes?.some(
+            (node) =>
+              node.data?.node?.template?.mcp_server?.value?.name === testName,
+          );
+        } catch {
+          return false;
+        }
+      },
+      { timeout: 30_000 },
+    );
     await page.getByTestId("add-mcp-server-button").click();
+    const [savedServer, refreshedComponent, savedFlow] = await Promise.all([
+      serverSaveResponse,
+      componentRefreshResponse,
+      flowSaveResponse,
+    ]);
+    expect(savedServer.ok()).toBeTruthy();
+    expect(refreshedComponent.ok()).toBeTruthy();
+    expect(savedFlow.ok()).toBeTruthy();
+    await Promise.all([
+      savedServer.finished(),
+      refreshedComponent.finished(),
+      savedFlow.finished(),
+    ]);
 
-    // Wait for the modal overlay to fully close before interacting
-    await page
-      .locator(".fixed.inset-0.z-50")
-      .waitFor({ state: "hidden", timeout: 10000 })
-      .catch(() => {});
+    await expect(page.getByTestId("add-mcp-server-button")).toBeHidden({
+      timeout: 30_000,
+    });
 
     await expect(page.getByTestId("dropdown_str_tool")).toBeVisible({
       timeout: 60000,
@@ -282,12 +339,14 @@ test(
 
     await page.getByTestId("dropdown_str_tool").click();
 
-    // Verify that tools are available in the dropdown
-    // The dropdown should show tool options (the action_name rename may not appear here)
-    const toolOptions = page.locator('[data-testid*="-option"]');
-    await expect(toolOptions.first()).toBeVisible({ timeout: 30000 });
-    const toolCount = await toolOptions.count();
+    await expect(page.getByTestId("fetch-0-option")).toBeVisible({
+      timeout: 30_000,
+    });
 
-    expect(toolCount).toBeGreaterThan(0);
+    await page.keyboard.press("Escape");
+    await page.getByTestId("icon-ChevronLeft").last().click();
+    await expect(page.getByTestId("mainpage_title")).toBeVisible({
+      timeout: 30_000,
+    });
   },
 );

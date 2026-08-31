@@ -36,6 +36,7 @@ export default function McpComponent({
   nodeId = "",
   nodeClass,
   handleNodeClass,
+  ariaLabelledBy,
 }: InputProps<McpServerValue>): JSX.Element | null {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -219,6 +220,16 @@ export default function McpComponent({
     );
   }, [selectedOption, config]);
 
+  // Id of the visible span holding the selected server, so it can be
+  // composed into the trigger's accessible name alongside the field label.
+  const mcpValueId = `${id}-mcp-server-value`;
+  // The save/clear and loading states describe an action or a transient
+  // state rather than the field's value, so they keep their own aria-label.
+  const mcpTriggerLabelledBy =
+    showSaveButton || !options || !ariaLabelledBy
+      ? undefined
+      : `${ariaLabelledBy} ${mcpValueId}`;
+
   if (!showParameter) {
     return null;
   }
@@ -230,7 +241,23 @@ export default function McpComponent({
           <Button
             variant={!showSaveButton ? "primary" : "secondary"}
             size="xs"
-            role="combobox"
+            aria-haspopup={!showSaveButton ? "dialog" : undefined}
+            aria-expanded={!showSaveButton ? open : undefined}
+            // This is a plain button, not a combobox: a screen reader
+            // announces its name and nothing else, so the name has to carry
+            // both the field and its current value. When a field label is
+            // available the two are composed via aria-labelledby (label id +
+            // the visible value span); aria-label is dropped in that case,
+            // since aria-labelledby wins and would strand the value here.
+            aria-label={
+              mcpTriggerLabelledBy
+                ? undefined
+                : showSaveButton
+                  ? t("mcp.clearServer")
+                  : !options
+                    ? t("mcp.loadingServers")
+                    : (selectedItem[0]?.name ?? t("mcp.selectServer"))
+            }
             onClick={
               !showSaveButton
                 ? handleOpenListSelectionDialog
@@ -244,13 +271,14 @@ export default function McpComponent({
             )}
             data-testid="mcp-server-dropdown"
             disabled={disabled || !options}
+            aria-labelledby={mcpTriggerLabelledBy}
           >
             <div
               className={cn(
                 "flex w-full items-center justify-start text-sm font-normal",
               )}
             >
-              <span className="truncate">
+              <span className="truncate" id={mcpValueId}>
                 {!options
                   ? t("mcp.loadingServers")
                   : selectedItem[0]?.name
@@ -270,6 +298,7 @@ export default function McpComponent({
               className="px-2.5"
               onClick={handleSaveButtonClick}
               data-testid="save-mcp-server-button"
+              aria-label={t("mcp.saveServer")}
             >
               <ForwardedIconComponent
                 name="Save"
@@ -278,7 +307,10 @@ export default function McpComponent({
             </Button>
           )}
           {name && !showSaveButton && (
-            <ShadTooltip content={t("mcp.refreshServer")}>
+            <ShadTooltip
+              content={t("mcp.refreshServer")}
+              ariaDescribedBy={undefined}
+            >
               <Button
                 variant="ghost"
                 size="iconMd"

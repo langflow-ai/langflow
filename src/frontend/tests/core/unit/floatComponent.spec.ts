@@ -5,6 +5,7 @@ import {
   addParameterToNode,
   closeParametersPanel,
 } from "../../utils/open-advanced-options";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 
 test(
   "FloatComponent",
@@ -13,6 +14,10 @@ test(
     await openBlankFlow(page);
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("nvidia");
+    await skipIfComponentUnavailable(
+      page.getByTestId("nvidiaNVIDIA"),
+      "NVIDIA",
+    );
 
     await page.waitForSelector('[data-testid="nvidiaNVIDIA"]', {
       timeout: 30000,
@@ -44,20 +49,10 @@ test(
 
     await adjustScreenView(page);
 
-    await page.locator('//*[@id="int_int_seed"]').click();
-    await page.locator('//*[@id="int_int_seed"]').fill("");
-    await page.locator('//*[@id="int_int_seed"]').fill("3");
-
-    let value = await page.locator('//*[@id="int_int_seed"]').inputValue();
-
-    expect(value).toBe("3");
-
-    await page.locator('//*[@id="int_int_seed"]').click();
-    await page.locator('//*[@id="int_int_seed"]').fill("");
-    await page.locator('//*[@id="int_int_seed"]').fill("-3");
-
-    value = await page.locator('//*[@id="int_int_seed"]').inputValue();
-
-    expect(value).toBe("-3");
+    const seedInput = page.getByTestId("int_int_seed");
+    await seedInput.fill("3");
+    await expect(seedInput).toHaveValue("3");
+    await seedInput.fill("-3");
+    await expect(seedInput).toHaveValue("-3");
   },
 );

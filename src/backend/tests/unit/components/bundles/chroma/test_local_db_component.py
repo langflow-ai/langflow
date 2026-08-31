@@ -4,6 +4,9 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+pytest.importorskip("lfx_bundles")
+
 from langchain_core.embeddings import Embeddings
 from lfx.schema.data import Data
 from lfx_bundles.chroma.local_db import LocalDBComponent

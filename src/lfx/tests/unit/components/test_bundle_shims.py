@@ -28,6 +28,7 @@ current environment is in.
 
 from __future__ import annotations
 
+import builtins
 import importlib
 import importlib.util
 import sys
@@ -40,7 +41,7 @@ COMPONENTS_DIR = Path(__file__).resolve().parents[3] / "src" / "lfx" / "componen
 SHIM_MARKER = "# lfx-bundles-shim"
 
 # The two install-message shapes the shims are allowed to emit.
-_METAPACKAGE_MSG = "pip install lfx-bundles"
+_METAPACKAGE_MSG = "Install it with: pip install lfx-bundles."
 _PARTNER_MSG_PREFIX = "pip install lfx-"
 
 
@@ -208,6 +209,55 @@ def test_component_walk_skip_includes_compat_shims() -> None:
     assert "knowledge_bases" in detected
 
 
+@pytest.mark.parametrize(
+    ("shim", "extension_package", "import_style"),
+    [
+        pytest.param(COMPONENTS_DIR / "cassandra" / "__init__.py", "lfx_datastax", "importlib", id="cassandra"),
+        pytest.param(
+            COMPONENTS_DIR / "models_and_agents" / "policies" / "__init__.py",
+            "lfx_toolguard",
+            "importlib",
+            id="policies-helpers",
+        ),
+        pytest.param(
+            COMPONENTS_DIR / "models_and_agents" / "policies_component.py",
+            "lfx_toolguard",
+            "builtin",
+            id="policies-component",
+        ),
+    ],
+)
+def test_compat_shims_preserve_transitive_import_errors(
+    shim: Path,
+    extension_package: str,
+    import_style: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A broken extension install must not be misreported as an absent extension."""
+    missing_dependency = "extension_runtime_dependency"
+
+    def _raise_transitive_import_error(_name: str):
+        message = f"No module named '{missing_dependency}'"
+        raise ModuleNotFoundError(message, name=missing_dependency)
+
+    if import_style == "importlib":
+        monkeypatch.setattr(importlib, "import_module", _raise_transitive_import_error)
+    else:
+        original_import = builtins.__import__
+
+        def _import_with_transitive_error(name: str, *args, **kwargs):
+            if name.partition(".")[0] == extension_package:
+                _raise_transitive_import_error(name)
+            return original_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", _import_with_transitive_error)
+
+    with pytest.raises(ModuleNotFoundError, match=missing_dependency) as exc_info:
+        _import_file_as(f"synthetic_compat_{shim.parent.name}", shim)
+
+    assert exc_info.value.name == missing_dependency
+
+
 # ---------------------------------------------------------------------------
 # Mechanism tests against a synthetic shim (hermetic)
 # ---------------------------------------------------------------------------
@@ -224,7 +274,7 @@ except ModuleNotFoundError as exc:
     if exc.name is not None and (exc.name == "fake_lfx_target" or exc.name.startswith("fake_lfx_target.")):
         msg = (
             "The 'alpha' components moved to the 'fake-lfx-target' distribution. "
-            "Install it with:  pip install fake-lfx-target"
+            "Install it with: pip install fake-lfx-target"
         )
         raise ModuleNotFoundError(msg, name="fake_lfx_target") from exc
     raise

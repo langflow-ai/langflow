@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { DBProviderInput } from "@/components/core/parameterRenderComponent/components/dbProviderInputComponent";
 import ModelInputComponent from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,6 +42,14 @@ export default function CreateMemoryModal({
     setPreprocessingPrompt,
     embeddingModelOptions,
     llmModelOptions,
+    modelCatalogReady,
+    globalVariablesReady,
+    embeddingSelectionAuthorized,
+    preprocessingSelectionAuthorized,
+    backendType,
+    handleBackendProviderChange,
+    globalVariables,
+    backendConfigured,
     createMemoryMutation,
     handleSubmit,
     handleClose,
@@ -94,11 +103,12 @@ export default function CreateMemoryModal({
                 id="memory-embedding-model"
                 value={selectedEmbeddingModel}
                 editNode={false}
-                disabled={false}
+                disabled={!modelCatalogReady}
                 handleOnNewValue={({ value }) => {
                   setSelectedEmbeddingModel(value);
                 }}
                 options={embeddingModelOptions}
+                providerScope={{ flowId }}
                 placeholder={t("memory.selectEmbeddingModel")}
                 modelType="embeddings"
               />
@@ -110,6 +120,35 @@ export default function CreateMemoryModal({
                 })}
               </div>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>
+              {t("memory.dbProviderLabel")}{" "}
+              <span className="text-destructive">*</span>
+            </Label>
+            <div
+              className={cn(
+                "rounded-md",
+                "[&_button]:h-10",
+                !backendConfigured && "[&_button]:border-destructive",
+              )}
+            >
+              <DBProviderInput
+                id="memory-db-provider"
+                value={backendType}
+                globalVariables={globalVariables}
+                disabled={!globalVariablesReady}
+                onValueChange={handleBackendProviderChange}
+              />
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {backendConfigured
+                ? t("memory.dbProviderDescription")
+                : t("memory.dbProviderNotConfigured", {
+                    provider: backendType,
+                  })}
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -177,11 +216,12 @@ export default function CreateMemoryModal({
                     id="memory-preprocessing-model"
                     value={selectedPreprocessingModel}
                     editNode={false}
-                    disabled={false}
+                    disabled={!modelCatalogReady}
                     handleOnNewValue={({ value }) => {
                       setSelectedPreprocessingModel(value);
                     }}
                     options={llmModelOptions}
+                    providerScope={{ flowId }}
                     placeholder={t("memory.selectPreprocessingModel")}
                     modelType="llm"
                   />
@@ -249,8 +289,11 @@ export default function CreateMemoryModal({
           loading: createMemoryMutation.isPending,
           disabled:
             !name.trim() ||
-            selectedEmbeddingModel.length === 0 ||
-            (preprocessingEnabled && selectedPreprocessingModel.length === 0) ||
+            !modelCatalogReady ||
+            !globalVariablesReady ||
+            !embeddingSelectionAuthorized ||
+            !backendConfigured ||
+            (preprocessingEnabled && !preprocessingSelectionAuthorized) ||
             (preprocessingEnabled && !preprocessingPrompt.trim()),
         }}
       />

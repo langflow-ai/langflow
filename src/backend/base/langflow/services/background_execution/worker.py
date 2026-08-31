@@ -52,6 +52,10 @@ class WorkerJobRunner:
         # Process-unique token the in-flight JobRunner stamps on the heartbeat so
         # the periodic watchdog can tell this live run from a dead worker's.
         self._owner = owner
+        # Lazily-built facade instance: request reconstruction is an instance
+        # method (it Fernet-decrypts the persisted request overrides), so the
+        # worker reuses the facade's implementation instead of duplicating it.
+        self._facade: Any = None
 
     def _resolve_frame_source_factory(self) -> Callable[..., Any]:
         if self._frame_source_factory is not None:
@@ -75,7 +79,11 @@ class WorkerJobRunner:
             await logger.aerror(f"Worker: job {job_id} not found; skipping")
             return
 
-        request = BackgroundExecutionService._reconstruct_request(job)  # noqa: SLF001
+        if self._facade is None:
+            from langflow.services.deps import get_settings_service
+
+            self._facade = BackgroundExecutionService(settings_service=get_settings_service())
+        request = self._facade._reconstruct_request(job)  # noqa: SLF001
         user = BackgroundExecutionService._user_stub(job.user_id)  # noqa: SLF001
         adapter = self._build_adapter(request, job_uuid, job.flow_id)
         factory = self._resolve_frame_source_factory()

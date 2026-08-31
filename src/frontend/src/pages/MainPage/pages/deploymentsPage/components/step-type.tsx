@@ -93,12 +93,15 @@ export default function StepType() {
       <div className="flex flex-col gap-3">
         <span className="text-sm font-medium">
           {t("deployments.chooseType")}{" "}
-          <span className="text-destructive">*</span>
+          <span className="text-destructive" aria-hidden="true">
+            *
+          </span>
         </span>
         <div
           className="grid grid-cols-2 gap-3"
           role="radiogroup"
           aria-label={t("deployments.ariaDeploymentType")}
+          aria-required="true"
         >
           {TYPE_OPTIONS.map((option) => (
             <label
@@ -144,11 +147,14 @@ export default function StepType() {
       </div>
 
       <div className="flex flex-col">
-        <span className="pb-2 text-sm font-medium">
+        <label htmlFor="deployment-name" className="pb-2 text-sm font-medium">
           {t("deployments.labelName")}{" "}
-          <span className="text-destructive">*</span>
-        </span>
+          <span className="text-destructive" aria-hidden="true">
+            *
+          </span>
+        </label>
         <Input
+          id="deployment-name"
           placeholder={t("deployments.placeholderSalesBot")}
           className={cn(
             "bg-muted",
@@ -158,6 +164,7 @@ export default function StepType() {
           value={deploymentName}
           onChange={(e) => setDeploymentName(e.target.value)}
           aria-invalid={hasDeploymentNameFormatError}
+          aria-required="true"
         />
         {hasDeploymentNameFormatError && (
           <span className="mt-1 text-xs text-destructive">
@@ -167,16 +174,22 @@ export default function StepType() {
       </div>
 
       <div className="flex flex-col">
-        <span className="pb-2 text-sm font-medium">
+        <label htmlFor="deployment-model" className="pb-2 text-sm font-medium">
           {t("deployments.labelModel")}{" "}
-          <span className="text-destructive">*</span>
-        </span>
+          <span className="text-destructive" aria-hidden="true">
+            *
+          </span>
+        </label>
         <Select
           value={selectedLlm}
           onValueChange={setSelectedLlm}
           onOpenChange={(open) => open && setShowScrollHint(true)}
         >
-          <SelectTrigger className="bg-muted focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-foreground">
+          <SelectTrigger
+            id="deployment-model"
+            aria-required="true"
+            className="bg-muted focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-foreground"
+          >
             <SelectValue
               placeholder={
                 llmsLoading
@@ -215,10 +228,14 @@ export default function StepType() {
       </div>
 
       <div className="flex flex-col">
-        <span className="pb-2 text-sm font-medium">
+        <label
+          htmlFor="deployment-description"
+          className="pb-2 text-sm font-medium"
+        >
           {t("deployments.descriptionLabel")}
-        </span>
+        </label>
         <Textarea
+          id="deployment-description"
           placeholder={t("deployments.placeholderAgentPurpose")}
           rows={3}
           className="resize-none bg-muted placeholder:text-placeholder-foreground"

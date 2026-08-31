@@ -25,6 +25,9 @@ interface FlowBuilderWelcomeState {
   openedForFlowId: string | null;
   open: (flowId?: string | null) => void;
   close: () => void;
+  /** Hide the overlay *synchronously*, at the moment we navigate to another
+   *  flow, while keeping ``openedForFlowId`` for the mount's cleanup effect. */
+  dismissForNavigation: () => void;
   setPendingMessage: (message: string) => void;
   clearPendingMessage: () => void;
 }
@@ -38,6 +41,15 @@ const useFlowBuilderWelcomeStore = create<FlowBuilderWelcomeState>((set) => ({
   // otherwise replay into the assistant the next time the overlay opens.
   close: () =>
     set({ isOpen: false, pendingMessage: null, openedForFlowId: null }),
+  // Navigating to a different flow must hide the overlay in the SAME tick as
+  // the ``navigate`` call. Routing reuses the FlowPage instance (no
+  // ``key={id}``), so the mount's id-comparison effect only fires a beat
+  // later — and until it does, the new flow paints while ``isOpen`` is still
+  // true, which keeps the sidebar at ``display: none`` and lets ReactFlow
+  // fitView against a full-width canvas it is about to lose. Hence a
+  // synchronous dismiss here. ``openedForFlowId`` is deliberately retained so
+  // the mount can still find and delete the orphaned blank placeholder.
+  dismissForNavigation: () => set({ isOpen: false, pendingMessage: null }),
   setPendingMessage: (message) => set({ pendingMessage: message }),
   clearPendingMessage: () => set({ pendingMessage: null }),
 }));

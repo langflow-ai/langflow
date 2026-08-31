@@ -347,6 +347,12 @@ class TestFlowBuilderToolsIntegration:
 
 
 class TestResetToolCache:
+    def setup_method(self):
+        # The cache ContextVar survives across tests within an xdist worker, and
+        # other tests in this file write the same ("t", {"x": 1}) key — without
+        # this reset the first cached_tool_call below can be a stale hit.
+        reset_tool_cache()
+
     def test_reset_tool_cache_should_drop_existing_entries(self):
         producer_calls = 0
 

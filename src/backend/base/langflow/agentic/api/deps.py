@@ -14,9 +14,11 @@ def require_agentic_experience() -> None:
 
     SECURITY: the assistant generates and EXECUTES component code in-process
     (langflow.agentic.helpers.validation.validate_component_runtime and the user-components
-    overlay). ``agentic_experience`` was only a frontend/UX + MCP-provisioning flag, so the codegen
-    endpoints were live by default. Gate them here (404 when off), matching the per-endpoint
-    precedent in api/v1/endpoints.py. The read-only ``/agentic/check-config`` probe is intentionally
+    overlay). ``agentic_experience`` is on by default (the Assistant is Langflow's entry-point
+    experience); this gate 404s the codegen endpoints when an operator opts out with
+    LANGFLOW_AGENTIC_EXPERIENCE=false, matching the per-endpoint precedent in
+    api/v1/endpoints.py. Execution entry points are additionally guarded by
+    ``allow_custom_components``. The read-only ``/agentic/check-config`` probe is intentionally
     NOT gated so non-agentic deployments can still query provider configuration.
     """
     if not get_settings_service().settings.agentic_experience:

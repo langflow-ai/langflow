@@ -11,6 +11,10 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
+import pytest
+
+pytest.importorskip("lfx_bundles")
+
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from lfx.components.qdrant import QdrantVectorStoreComponent

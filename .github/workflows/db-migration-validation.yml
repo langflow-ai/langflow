@@ -45,13 +45,14 @@ jobs:
 
     steps:
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: false
 
       - name: Create test directory
@@ -169,7 +170,7 @@ jobs:
           # `python -m langflow` could keep running the stable version and no real nightly migration
           # is exercised (false-positive test).
           echo "Removing stable langflow to force a clean install of the nightly dev version..."
-          uv pip uninstall -y langflow langflow-base || true
+          uv pip uninstall langflow langflow-base || true
 
           # Extract version from Docker tag (format: langflowai/langflow:v1.10.0.dev20260522)
           if [[ "$NIGHTLY_TAG" == *":"* ]]; then
@@ -182,8 +183,8 @@ jobs:
 
             # Scope pre-release resolution to the langflow stack only. uv accepts a
             # pre-release for a package when its own requirement carries a pre-release
-            # marker, but NOT via transitive pins (langflow -> langflow-base -> lfx ->
-            # langflow-sdk are exact ==devN pins on nightlies), so each lockstep package
+            # marker, but NOT via transitive pins (langflow -> langflow-base ->
+            # lfx -> langflow-sdk are exact ==devN pins on nightlies), so each lockstep package
             # must be requested directly. A global --prerelease=allow is NOT safe here:
             # it lets unrelated dependencies resolve to alphas (pydantic 2.14.0a1 broke
             # langchain-core imports on the first canonical-prerelease nightly).
@@ -289,7 +290,7 @@ jobs:
 
       - name: Upload logs on failure
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: migration-pip-venv-logs
           path: |
@@ -304,7 +305,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Create Docker Compose test directory
         run: |
@@ -497,7 +498,7 @@ jobs:
 
       - name: Upload logs on failure
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: migration-docker-compose-logs
           path: |

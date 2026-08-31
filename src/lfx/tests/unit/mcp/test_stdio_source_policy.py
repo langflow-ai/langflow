@@ -2,6 +2,7 @@ import pytest
 from lfx.base.mcp.security import validate_mcp_stdio_config
 from lfx.base.mcp.source_policy import (
     is_package_manager_config_env_var,
+    parse_mcp_shell_wrapper,
     validate_mcp_stdio_source_policy,
 )
 
@@ -301,6 +302,21 @@ def test_interpreter_hardening_rejects_tenant_selected_code(command, args):
         validate_mcp_stdio_source_policy(command, args, interpreter_hardening=True)
 
 
+@pytest.mark.parametrize("switch", ["/c", "/C", "/k", "/K", "/r", "/R", "/q/k", "/s/k", "/d/k"])
+def test_cmd_wrapper_parser_recognises_every_execution_switch(switch):
+    """Every cmd.exe switch that runs a command line must expose the wrapped payload.
+
+    The parser result is what binds a wrapper to the command allowlist; returning ``None``
+    silently skips that check for the switch in question.
+    """
+    assert parse_mcp_shell_wrapper("cmd", [switch, "whoami"]) == ("whoami", [])
+
+
+@pytest.mark.parametrize("switch", ["/a", "/d", "/e:on", "/f:off", "/q", "/s", "/t:0a", "/u", "/v:on"])
+def test_cmd_wrapper_parser_skips_switches_that_do_not_execute(switch):
+    assert parse_mcp_shell_wrapper("cmd", [switch, "/c", "uvx", "mcp-proxy"]) == ("uvx", ["mcp-proxy"])
+
+
 def test_interpreter_hardening_preserves_authenticated_agentic_module():
     validate_mcp_stdio_source_policy(
         "python",
@@ -343,3 +359,53 @@ def test_docker_hardening_preserves_isolated_run():
         ["run", "--rm", "--network", "bridge", "--security-opt", "no-new-privileges", "mcp-image"],
         docker_hardening=True,
     )
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--with", "mcp~=1.28", "mcp-proxy"],
+        ["--with=mcp~=1.28", "mcp-proxy"],
+        ["-w", "mcp~=1.28", "mcp-proxy"],
+        ["-wmcp~=1.28", "mcp-proxy"],
+    ],
+)
+def test_uvx_allowlist_exempts_injected_sdk_constraint(args):
+    validate_mcp_stdio_config("uvx", args, {}, allowed_packages={"mcp-proxy"})
+
+
+def test_uvx_allowlist_rejects_with_specifiers_other_than_the_configured_constraint():
+    with pytest.raises(ValueError, match=r"Package 'mcp~=1.27' is not allowed for MCP uvx"):
+        validate_mcp_stdio_config(
+            "uvx",
+            ["--with", "mcp~=1.27", "mcp-proxy"],
+            {},
+            allowed_packages={"mcp-proxy"},
+        )
+
+
+def test_uvx_sdk_constraint_cannot_mask_unapproved_runner_target():
+    with pytest.raises(ValueError, match=r"Package 'attacker-package' is not allowed for MCP uvx"):
+        validate_mcp_stdio_config(
+            "uvx",
+            ["--with", "mcp~=1.28", "attacker-package"],
+            {},
+            allowed_packages={"mcp-proxy"},
+        )
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--with", "mcp~=1.28", "mcp-proxy", "--transport", "streamablehttp", "http://localhost:7860/x"],
+        ["--with=mcp~=1.28", "mcp-proxy"],
+        ["-w", "mcp~=1.28", "mcp-proxy"],
+        ["-wmcp~=1.28", "mcp-proxy"],
+    ],
+)
+def test_uvx_sdk_constraint_spellings_preserve_runner_target(args):
+    from lfx.base.mcp.source_policy import _package_runner_target
+
+    package, entrypoint = _package_runner_target("uvx", args)
+    assert package == "mcp-proxy"
+    assert entrypoint is None

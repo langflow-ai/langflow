@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           # Full history so merge-base against the PR target works.
           fetch-depth: 0
@@ -153,7 +153,7 @@ jobs:
 
       - name: Find existing advisory comment
         id: find
-        uses: peter-evans/find-comment@v3
+        uses: peter-evans/find-comment@v4
         continue-on-error: true
         with:
           issue-number: ${{ github.event.pull_request.number }}
@@ -161,7 +161,7 @@ jobs:
           body-includes: "<!-- test-coverage-advisor -->"
 
       - name: Upsert advisory comment
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@v5
         # Fork PRs get a read-only token — don't fail the run if so.
         continue-on-error: true
         with:

@@ -1,40 +1,21 @@
+# lfx-compat-shim
+"""Compatibility shim for Cassandra components moved to ``lfx-datastax``."""
+
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+import importlib
+import sys
 
-from lfx.components._importing import import_mod
-
-if TYPE_CHECKING:
-    from .cassandra import CassandraVectorStoreComponent
-    from .cassandra_chat import CassandraChatMemory
-    from .cassandra_graph import CassandraGraphVectorStoreComponent
-
-_dynamic_imports = {
-    "CassandraVectorStoreComponent": "cassandra",
-    "CassandraGraphVectorStoreComponent": "cassandra_graph",
-    "CassandraChatMemory": "cassandra_chat",
-}
-
-__all__ = [
-    "CassandraChatMemory",
-    "CassandraGraphVectorStoreComponent",
-    "CassandraVectorStoreComponent",
-]
-
-
-def __getattr__(attr_name: str) -> Any:
-    """Lazily import Cassandra components on attribute access."""
-    if attr_name not in _dynamic_imports:
-        msg = f"module '{__name__}' has no attribute '{attr_name}'"
-        raise AttributeError(msg)
-    try:
-        result = import_mod(attr_name, _dynamic_imports[attr_name], __spec__.parent)
-    except (ModuleNotFoundError, ImportError, AttributeError) as e:
-        msg = f"Could not import '{attr_name}' from '{__name__}': {e}"
-        raise AttributeError(msg) from e
-    globals()[attr_name] = result
-    return result
-
-
-def __dir__() -> list[str]:
-    return list(__all__)
+try:
+    canonical_package = "lfx_datastax.components.cassandra"
+    for module_name in ("cassandra", "cassandra_chat", "cassandra_graph"):
+        sys.modules[f"{__name__}.{module_name}"] = importlib.import_module(f"{canonical_package}.{module_name}")
+    sys.modules[__name__] = importlib.import_module(canonical_package)
+except ModuleNotFoundError as exc:
+    if exc.name is not None and exc.name.partition(".")[0] != "lfx_datastax":
+        raise
+    msg = (
+        "The Cassandra components moved to the 'lfx-datastax' distribution. "
+        'Install them with `pip install "lfx[cassandra]"`.'
+    )
+    raise ModuleNotFoundError(msg) from exc

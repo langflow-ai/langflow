@@ -46,6 +46,11 @@ jest.mock("@/customization/utils/analytics", () => ({
   track: jest.fn(),
 }));
 
+jest.mock("@/pages/LoginPage/components/dot-grid-background", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
 function renderSignUpPage() {
   return render(<SignUp />);
 }
@@ -88,24 +93,39 @@ describe("SignUpPage accessibility", () => {
   it("uses_valid_external_labels_for_all_fields", () => {
     renderSignUpPage();
 
-    expect(
-      screen.getByRole("textbox", { name: /username/i }),
-    ).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Password/i)).toBeInTheDocument();
-    expect(
-      screen.getByLabelText(/^Confirm your password/i),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /username/i })).toHaveAttribute(
+      "autocomplete",
+      "username",
+    );
+    expect(screen.getByLabelText(/^Password/i)).toHaveAttribute(
+      "autocomplete",
+      "new-password",
+    );
+    expect(screen.getByLabelText(/^Confirm your password/i)).toHaveAttribute(
+      "autocomplete",
+      "new-password",
+    );
   });
 
-  it("announces_actionable_password_mismatch_suggestion_after_confirm_blur", async () => {
-    const user = userEvent.setup();
+  it("renders_sign_in_navigation_as_one_link", () => {
     renderSignUpPage();
 
-    await user.type(screen.getByPlaceholderText("Password"), "first-password");
-    await user.type(
-      screen.getByPlaceholderText("Confirm your password"),
-      "second-password",
-    );
+    const signInLink = screen.getByRole("link", {
+      name: /already have an account.*sign in/i,
+    });
+    expect(signInLink).toHaveAttribute("href", "/login");
+    expect(signInLink.querySelector("button")).toBeNull();
+  });
+
+  it("announces_actionable_password_mismatch_suggestion_after_confirm_blur", () => {
+    const { container } = renderSignUpPage();
+
+    fireEvent.change(screen.getByPlaceholderText("Password"), {
+      target: { value: "first-password" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Confirm your password"), {
+      target: { value: "second-password" },
+    });
 
     expect(
       screen.queryByText(
@@ -115,7 +135,7 @@ describe("SignUpPage accessibility", () => {
 
     fireEvent.blur(screen.getByPlaceholderText("Confirm your password"));
 
-    const mismatch = await screen.findByText(
+    const mismatch = screen.getByText(
       "Passwords do not match. Re-enter both passwords so they match.",
     );
     expect(mismatch).toHaveAttribute("role", "alert");
@@ -125,6 +145,9 @@ describe("SignUpPage accessibility", () => {
     expect(
       screen.getByPlaceholderText("Confirm your password"),
     ).toHaveAttribute("aria-describedby", "signup-confirm-password-error");
+    expect(container.querySelector("#signup-confirm-password-error")).toBe(
+      mismatch,
+    );
   });
 
   it("adds_actionable_suggestion_to_server_signup_errors", () => {
@@ -188,5 +211,40 @@ describe("SignUpPage accessibility", () => {
         "Username must be unique; Password is too short. Use a different username or contact an administrator if you already have an account.",
       ],
     });
+  });
+
+  it("associates_server_rejection_with_the_username_field", async () => {
+    mockAddUserMutate.mockImplementation((_user, options) => {
+      options.onError({
+        response: { data: { detail: "This username is unavailable." } },
+      });
+    });
+    const { container } = renderSignUpPage();
+
+    fireEvent.change(screen.getByPlaceholderText("Username"), {
+      target: { value: "taken" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Password"), {
+      target: { value: "same-password" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Confirm your password"), {
+      target: { value: "same-password" },
+    });
+    fireEvent.submit(container.querySelector("form")!);
+
+    const message =
+      "This username is unavailable. Use a different username or contact an administrator if you already have an account.";
+    const inline = await screen.findByText(message);
+    expect(inline).toHaveAttribute("role", "alert");
+    expect(inline).toHaveAttribute("id", "signup-form-error");
+
+    const username = screen.getByPlaceholderText("Username");
+    expect(username).toHaveAttribute("aria-invalid", "true");
+    expect(username).toHaveAttribute("aria-describedby", "signup-form-error");
+
+    // Editing the username clears the stale error and the invalid state.
+    fireEvent.change(username, { target: { value: "taken2" } });
+    expect(screen.queryByText(message)).not.toBeInTheDocument();
+    expect(username).toHaveAttribute("aria-invalid", "false");
   });
 });

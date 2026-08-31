@@ -1,7 +1,10 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TIMEOUTS } from "../../utils/constants/timeouts";
+import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
@@ -11,6 +14,10 @@ test(
     await openBlankFlow(page);
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("composio");
+    await skipIfComponentUnavailable(
+      page.getByTestId("composioComposio Tools"),
+      "Composio",
+    );
 
     await page.waitForSelector('[data-testid="composioComposio Tools"]', {
       timeout: 3000,
@@ -41,48 +48,38 @@ test(
 
     await page.getByTestId("blank-flow").click();
 
-    //first component
-
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("search api");
-    await page.waitForSelector('[data-testid="searchapiSearchApi"]', {
-      timeout: 1000,
-    });
-
     await zoomOut(page, 3);
 
-    await page
-      .getByTestId("searchapiSearchApi")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 100 },
-      });
+    //first component
 
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("tool calling agent");
-    await page.waitForSelector(
-      '[data-testid="langchain_utilitiesTool Calling Agent"]',
-      {
-        timeout: 1000,
-      },
-    );
+    await addComponentFromSidebar(page, {
+      search: "url",
+      testId: "data_sourceURL",
+      position: { x: 100, y: 100 },
+    });
 
-    await page
-      .getByTestId("langchain_utilitiesTool Calling Agent")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 300, y: 300 },
-      });
+    await addComponentFromSidebar(page, {
+      search: "tool calling agent",
+      testId: "langchain_utilitiesTool Calling Agent",
+      position: { x: 300, y: 300 },
+    });
 
     await adjustScreenView(page);
 
-    await page.getByTestId("title-SearchApi").first().click();
+    await page.getByTestId("title-URL").first().click();
+    await expect(page.getByTestId("tool-mode-button")).toBeVisible({
+      timeout: TIMEOUTS.short,
+    });
     await page.getByTestId("tool-mode-button").click();
 
     //connection
-    const searchApiOutput = await page
-      .getByTestId("handle-searchcomponent-shownode-toolset-right")
+    const urlOutput = await page
+      .getByTestId("handle-urlcomponent-shownode-toolset-right")
       .first();
 
-    await searchApiOutput.hover();
+    await expect(urlOutput).toBeVisible({ timeout: TIMEOUTS.short });
+
+    await urlOutput.hover();
     await page.mouse.down();
     const toolCallingAgentInput = await page
       .getByTestId("handle-toolcallingagent-shownode-tools-left")
@@ -90,6 +87,8 @@ test(
     await toolCallingAgentInput.hover();
     await page.mouse.up();
 
-    expect(await page.locator(".react-flow__edge-interaction").count()).toBe(2);
+    await expect(page.locator(".react-flow__edge-interaction")).toHaveCount(2, {
+      timeout: TIMEOUTS.short,
+    });
   },
 );

@@ -10,6 +10,7 @@ const mockPostToolModeValue = { isPending: false };
 const mockSetNoticeData = jest.fn();
 const mockSetErrorData = jest.fn();
 const mockSetSuccessData = jest.fn();
+let mockShortcutFreeze: (() => void) | undefined;
 
 jest.mock("@xyflow/react", () => ({
   useUpdateNodeInternals: () => jest.fn(),
@@ -107,15 +108,18 @@ const mockFlowStoreState = {
   setNodes: jest.fn(),
   setEdges: jest.fn(),
   edges: [],
+  nodes: [{ id: "current-node" }],
   getNodePosition: jest.fn(() => ({ x: 0, y: 0 })),
   inspectionPanelVisible: false,
 };
 
-jest.mock("@/stores/flowStore", () => ({
-  __esModule: true,
-  default: (selector: (state: typeof mockFlowStoreState) => unknown) =>
-    selector(mockFlowStoreState),
-}));
+jest.mock("@/stores/flowStore", () => {
+  const useFlowStore = (
+    selector: (state: typeof mockFlowStoreState) => unknown,
+  ) => selector(mockFlowStoreState);
+  useFlowStore.getState = () => mockFlowStoreState;
+  return { __esModule: true, default: useFlowStore };
+});
 
 const mockFlowsManagerStoreState = {
   currentFlowId: "flow-1",
@@ -151,7 +155,7 @@ jest.mock("../../../../../components/common/genericIconComponent", () => ({
   ForwardedIconComponent: ({ name }: { name: string }) => <span>{name}</span>,
 }));
 
-jest.mock("../../../../../components/ui/select-custom", () => ({
+jest.mock("../../../../../components/ui/select", () => ({
   Select: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
@@ -204,7 +208,20 @@ jest.mock("../components/toolbar-modals", () => ({
 
 jest.mock("../hooks/use-shortcuts", () => ({
   __esModule: true,
-  default: () => undefined,
+  default: (options: { FreezeAllVertices?: () => void }) => {
+    mockShortcutFreeze = options.FreezeAllVertices;
+  },
+}));
+
+jest.mock("../components/ToolbarMoreMenu", () => ({
+  ToolbarMoreMenu: ({ onSelect }: { onSelect: (value: string) => void }) => (
+    <button
+      data-testid="mock-menu-freeze"
+      onClick={() => onSelect("freezeAll")}
+    >
+      Freeze from menu
+    </button>
+  ),
 }));
 
 jest.mock("../shortcutDisplay", () => ({
@@ -254,6 +271,7 @@ describe("NodeToolbarComponent config transitions", () => {
     jest.clearAllMocks();
     mockCheckHasToolMode.mockReturnValue(false);
     mockPostToolModeValue.isPending = false;
+    mockShortcutFreeze = undefined;
     act(() => {
       useUtilityStore.setState({ allowCustomComponents: false });
     });
@@ -315,5 +333,38 @@ describe("NodeToolbarComponent config transitions", () => {
     );
 
     expect(screen.getByTestId("tool-mode-button")).toHaveClass("text-primary");
+  });
+
+  it.each([
+    ["toolbar button", "freeze-all-button-modal"],
+    ["more menu", "mock-menu-freeze"],
+  ])("freezes the current graph from the %s", (_entryPoint, testId) => {
+    render(<NodeToolbarComponent {...getProps()} />);
+
+    fireEvent.click(screen.getByTestId(testId));
+
+    expect(mockFreezeAllVertices).toHaveBeenCalledWith({
+      flowId: "flow-1",
+      data: {
+        nodes: mockFlowStoreState.nodes,
+        edges: mockFlowStoreState.edges,
+      },
+      stopNodeId: "node-1",
+    });
+  });
+
+  it("freezes the current graph from the keyboard shortcut", () => {
+    render(<NodeToolbarComponent {...getProps()} />);
+
+    mockShortcutFreeze?.();
+
+    expect(mockFreezeAllVertices).toHaveBeenCalledWith({
+      flowId: "flow-1",
+      data: {
+        nodes: mockFlowStoreState.nodes,
+        edges: mockFlowStoreState.edges,
+      },
+      stopNodeId: "node-1",
+    });
   });
 });

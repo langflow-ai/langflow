@@ -1,4 +1,6 @@
+import contextlib
 import json
+import re
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path, PurePath, PureWindowsPath
 from typing import Any
@@ -144,26 +146,26 @@ class SaveToFileComponent(Component):
         SecretStrInput(
             name="aws_access_key_id",
             display_name="AWS Access Key ID",
-            info="AWS Access key ID.",
+            info="Optional. Falls back to the AWS_ACCESS_KEY_ID environment variable.",
             show=_is_default_storage("AWS"),
             advanced=not _is_default_storage("AWS"),
-            required=True,
+            required=False,
         ),
         SecretStrInput(
             name="aws_secret_access_key",
             display_name="AWS Secret Key",
-            info="AWS Secret Key.",
+            info="Optional. Falls back to the AWS_SECRET_ACCESS_KEY environment variable.",
             show=_is_default_storage("AWS"),
             advanced=not _is_default_storage("AWS"),
-            required=True,
+            required=False,
         ),
         StrInput(
             name="bucket_name",
             display_name="S3 Bucket Name",
-            info="Enter the name of the S3 bucket.",
+            info="Optional. Falls back to the configured object storage bucket.",
             show=_is_default_storage("AWS"),
             advanced=not _is_default_storage("AWS"),
-            required=True,
+            required=False,
         ),
         StrInput(
             name="aws_region",
@@ -425,8 +427,13 @@ class SaveToFileComponent(Component):
         plain_text_formats = ["txt", "json", "markdown", "md", "csv", "xml", "html", "yaml", "log", "tsv", "jsonl"]
         return fmt.lower() in plain_text_formats
 
-    async def _upload_file(self, file_path: Path) -> None:
-        """Upload the saved file using the upload_user_file service."""
+    async def _upload_file(self, file_path: Path) -> Any:
+        """Upload the saved file using the upload_user_file service.
+
+        Returns the ``UploadFileResponse`` (with the durable storage ``path`` and
+        ``provider``) so the caller can report the real destination and, for
+        remote backends, discard the local staging copy.
+        """
         from langflow.api.v2.files import upload_user_file
         from langflow.services.database.models.user.crud import get_user_by_id
 
@@ -444,7 +451,7 @@ class SaveToFileComponent(Component):
                     raise ValueError(msg)
                 current_user = await get_user_by_id(db, self.user_id)
 
-                await upload_user_file(
+                return await upload_user_file(
                     file=UploadFile(filename=file_path.name, file=f, size=file_path.stat().st_size),
                     session=db,
                     current_user=current_user,
@@ -637,6 +644,22 @@ class SaveToFileComponent(Component):
             return getattr(self, "gdrive_format", "txt")
         return self._get_default_format()
 
+    def _serving_end_user_segment(self) -> str | None:
+        """Filesystem-safe end-user id to namespace saved files under, or ``None``.
+
+        On the serving plane an identified end user owns the files they write during their
+        session, so their id (``graph.end_user_id``) namespaces the save destination instead
+        of the shared service account. Sanitized to ``[A-Za-z0-9_.-]`` so a gateway-supplied
+        id can never traverse out of the storage root. ``None`` off / editor / anonymous, so
+        the destination falls back to the SID scope exactly as before (strict BC).
+        """
+        graph = getattr(getattr(self, "_vertex", None), "graph", None)
+        end_user = getattr(graph, "end_user_id", None)
+        if not end_user:
+            return None
+        safe = re.sub(r"[^A-Za-z0-9_.-]", "_", str(end_user)).strip("._")
+        return safe or None
+
     async def _save_to_local(self) -> Message:
         """Save file to local storage (original functionality)."""
         file_format = self._get_file_format_for_location("Local")
@@ -652,6 +675,12 @@ class SaveToFileComponent(Component):
         # Prepare file path. file_name is tenant-controlled and this writes to local disk.
         settings = get_settings_service().settings
         scope_ids = component_file_access_scopes(self)
+        # Serving plane: an identified end user owns their files, so their (sanitized) id
+        # becomes the namespace folder AND an allowed access scope for enforce_local_file_access.
+        # None off / editor / anonymous -> scope_ids unchanged -> SID namespace as before (BC).
+        end_user_segment = self._serving_end_user_segment()
+        if end_user_segment:
+            scope_ids = (end_user_segment, *scope_ids)
         file_path = Path(self._get_safe_local_file_name()).expanduser()
         if settings.restrict_local_file_access and not file_path.is_absolute():
             # New files belong to the authenticated user's storage namespace. If no
@@ -674,10 +703,42 @@ class SaveToFileComponent(Component):
             msg = f"Unsupported input type: {self._get_input_type()}"
             raise ValueError(msg)
 
-        # Upload the saved file
-        await self._upload_file(file_path)
+        # Upload the saved file into the configured storage backend.
+        upload_result = await self._upload_file(file_path)
 
-        # Return the final file path and confirmation message
+        # When the backend is remote (e.g. S3) the local file was only a
+        # serialization staging area — the durable copy now lives in the storage
+        # service. Delete the staging file (matching AWS-mode cleanup) and report
+        # the storage destination instead of the misleading local path.
+        # Why: on disposable executor pods the local copy is both redundant and
+        # unreachable by other pods, so leaving it behind leaks a file and makes
+        # the returned path point somewhere that does not durably exist. For local
+        # storage the staged file IS the durable artifact, so it is kept as-is.
+        #
+        # Exception: append_mode accumulates content by reading the persisted local
+        # file across calls (should_append hinges on path.exists()). Deleting it
+        # would make the next append silently fall back to overwrite and lose the
+        # accumulated content — so the staging file is preserved when appending.
+        settings = get_settings_service().settings
+        if settings.storage_type != "local":
+            if not getattr(self, "append_mode", False):
+                with contextlib.suppress(OSError):
+                    file_path.unlink()
+            destination = upload_result.path if upload_result is not None else file_path.name
+            provider = (
+                upload_result.provider
+                if upload_result is not None and upload_result.provider
+                else settings.storage_type
+            ).upper()
+            action = (
+                "appended to"
+                if getattr(self, "append_mode", False) and self._is_plain_text_format(file_format)
+                else "saved successfully as"
+            )
+            return Message(text=f"{self._get_input_type()} {action} '{destination}' in {provider} storage")
+
+        # Local storage: the staged file is the durable artifact — keep it and
+        # report its on-disk path.
         final_path = Path.cwd() / file_path if not file_path.is_absolute() else file_path
         return Message(text=f"{confirmation} at {final_path}")
 
@@ -687,19 +748,19 @@ class SaveToFileComponent(Component):
 
         import boto3
 
-        from lfx.base.data.cloud_storage_utils import create_s3_client, validate_aws_credentials
-
         # Get AWS credentials from component inputs or fall back to environment variables
         aws_access_key_id = getattr(self, "aws_access_key_id", None)
         if aws_access_key_id and hasattr(aws_access_key_id, "get_secret_value"):
             aws_access_key_id = aws_access_key_id.get_secret_value()
-        if not aws_access_key_id:
+        access_key_from_environment = not aws_access_key_id
+        if access_key_from_environment:
             aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
 
         aws_secret_access_key = getattr(self, "aws_secret_access_key", None)
         if aws_secret_access_key and hasattr(aws_secret_access_key, "get_secret_value"):
             aws_secret_access_key = aws_secret_access_key.get_secret_value()
-        if not aws_secret_access_key:
+        secret_key_from_environment = not aws_secret_access_key
+        if secret_key_from_environment:
             aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
 
         bucket_name = getattr(self, "bucket_name", None)
@@ -728,15 +789,15 @@ class SaveToFileComponent(Component):
             )
             raise ValueError(msg)
 
-        # Validate AWS credentials
-        validate_aws_credentials(self)
-
-        # Create S3 client
-        s3_client = create_s3_client(self)
+        # Create S3 client from the resolved component or fallback values
         client_config: dict[str, Any] = {
             "aws_access_key_id": str(aws_access_key_id),
             "aws_secret_access_key": str(aws_secret_access_key),
         }
+        if access_key_from_environment and secret_key_from_environment:
+            aws_session_token = os.getenv("AWS_SESSION_TOKEN")
+            if aws_session_token:
+                client_config["aws_session_token"] = aws_session_token
 
         # Get region from component input, environment variable, or settings
         aws_region = getattr(self, "aws_region", None)
@@ -751,10 +812,20 @@ class SaveToFileComponent(Component):
         content = self._extract_content_for_upload()
         file_format = self._get_file_format_for_location("AWS")
 
-        # Generate file path
-        file_path = f"{self.file_name}.{file_format}"
+        # Generate file path. Namespace by user_id so concurrent multi-user runs
+        # writing the same file_name don't overwrite each other — mirrors how the
+        # platform storage service isolates files under "{user_id}/". Layout:
+        #   {s3_prefix}/{user_id}/{file_name}.{ext}
+        file_name = f"{self.file_name}.{file_format}"
+        path_segments = []
         if hasattr(self, "s3_prefix") and self.s3_prefix:
-            file_path = f"{self.s3_prefix.rstrip('/')}/{file_path}"
+            path_segments.append(self.s3_prefix.rstrip("/"))
+        # Serving plane: an identified end user owns their files (sanitized id); else the SID.
+        user_id = self._serving_end_user_segment() or self.user_id
+        if user_id and str(user_id) != "None":
+            path_segments.append(str(user_id))
+        path_segments.append(file_name)
+        file_path = "/".join(path_segments)
 
         # Create temporary file
         import tempfile

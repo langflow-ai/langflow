@@ -4,6 +4,7 @@ import asyncio
 import copy
 import json
 
+import pytest
 from lfx.mcp.flow_builder_tools import (
     AddComponent,
     BuildFlowFromSpec,
@@ -16,6 +17,14 @@ from lfx.mcp.flow_builder_tools import (
     init_working_flow,
     reset_working_flow,
 )
+from lfx.services.catalog_policy import CatalogPolicySnapshot
+
+_DENIED_CONFIGURE_CATALOG_CALLS: list[None] = []
+
+
+def _denied_configure_catalog_loader():
+    _DENIED_CONFIGURE_CATALOG_CALLS.append(None)
+    return [{"name": "blocked-model", "model_type": "llm"}]
 
 
 class TestSearchComponentTypes:
@@ -42,6 +51,38 @@ class TestSearchComponentTypes:
         expected = len(search_registry(load_local_registry()))
         assert result.data["count"] == expected
         assert result.data["count"] > 0
+
+
+def test_flow_builder_registry_hides_catalog_blocked_aliases(monkeypatch):
+    from types import SimpleNamespace
+
+    from lfx.mcp.flow_builder_tools import _state
+
+    registry = {
+        "PromptComponent": {"display_name": "Prompt Template", "template": {}},
+        "ChatInput": {"display_name": "Chat Input", "template": {}},
+    }
+    service = SimpleNamespace(
+        snapshot=CatalogPolicySnapshot(blocked_component_keys={"Prompt Template"}),
+    )
+    monkeypatch.setattr(_state, "get_catalog_policy_service", lambda: service)
+
+    visible = _state._filter_registry_by_catalog_policy(registry)
+
+    assert visible == {"ChatInput": registry["ChatInput"]}
+    assert registry.keys() == {"PromptComponent", "ChatInput"}
+
+
+def test_flow_builder_registry_returns_cached_registry_unchanged_without_policy(monkeypatch):
+    from types import SimpleNamespace
+
+    from lfx.mcp.flow_builder_tools import _state
+
+    registry = {"ChatInput": {"template": {}}}
+    service = SimpleNamespace(snapshot=CatalogPolicySnapshot())
+    monkeypatch.setattr(_state, "get_catalog_policy_service", lambda: service)
+
+    assert _state._filter_registry_by_catalog_policy(registry) is registry
 
 
 def _node(nid, ntype, template=None):
@@ -389,6 +430,28 @@ class TestBuildFlowFromSpec:
         result = comp.build_flow()
         assert "failed" in result.data["text"].lower()
         assert "error" in result.data
+
+    def test_build_type_mismatch_error_carries_repair_guidance(self):
+        # loop_flow eval regression: `L.item -> A.input_value` (Data -> Message)
+        # failed with a bare error and the agent burned its whole recursion
+        # budget re-discovering components instead of fixing the spec.
+        reset_working_flow()
+        comp = BuildFlowFromSpec()
+        comp.set(
+            spec=(
+                "name: Loop Agent\n"
+                "nodes:\n  I: ChatInput\n  L: LoopComponent\n  A: Agent\n  O: ChatOutput\n"
+                "edges:\n  I.message -> L.data\n  L.item -> A.input_value\n"
+                "  A.response -> L.item\n  L.done -> O.input_value"
+            )
+        )
+        result = comp.build_flow()
+
+        assert "error" in result.data
+        text = result.data["text"]
+        assert "ParserComponent" in text
+        assert "call build_flow again" in text
+        assert "do NOT re-run search_components or describe_component" in text
 
     def test_build_pushes_set_flow_event(self):
         reset_working_flow()
@@ -739,6 +802,670 @@ class TestConfigureComponentModelProviderOnly:
 
         value = _read_model_field_value(agent_id)
         assert value[0].get("name") == "claude-sonnet-4-5-20250929"
+
+
+class TestConfigureComponentModelProviderPolicy:
+    """Denied providers must never enter the MCP flow-builder model field."""
+
+    @staticmethod
+    def _deny_all_snapshot():
+        from lfx.services.model_provider_policy import (
+            ModelProviderPolicyContext,
+            ModelProviderPolicyPurpose,
+            ModelProviderPolicySnapshot,
+        )
+
+        return ModelProviderPolicySnapshot(
+            context=ModelProviderPolicyContext(user_id="user-1"),
+            purpose=ModelProviderPolicyPurpose.CONFIGURE,
+            candidate_provider_ids=frozenset({"openai", "anthropic"}),
+            allowed_provider_ids=frozenset(),
+        )
+
+    def test_denied_provider_returns_generic_error_before_configure_default_or_mirror(self, monkeypatch):
+        from lfx.mcp.flow_builder_tools import ConfigureComponent, mutate_tools
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+        agent_id = _make_agent_node_for_model_test()
+        original_value = copy.deepcopy(_read_model_field_value(agent_id))
+        snapshot = self._deny_all_snapshot()
+        resolver_kwargs = {}
+
+        def resolve_policy(**kwargs):
+            resolver_kwargs.update(kwargs)
+            return snapshot
+
+        monkeypatch.setattr(mutate_tools, "resolve_model_provider_policy", resolve_policy)
+
+        def fail_if_called(*_args, **_kwargs):
+            msg = "denied provider reached downstream model configuration work"
+            raise AssertionError(msg)
+
+        monkeypatch.setattr(mutate_tools, "fb_configure", fail_if_called)
+        monkeypatch.setattr(mutate_tools, "_resolve_default_model_name", fail_if_called)
+        monkeypatch.setattr(mutate_tools, "_mirror_model_value_into_options", fail_if_called)
+
+        cfg = ConfigureComponent()
+        cfg.set(component_id=agent_id, params='{"model": [{"provider": "Anthropic"}]}')
+        result = cfg.configure_component()
+
+        assert result.data == {"error": "The requested model provider is not available"}
+        assert _read_model_field_value(agent_id) == original_value
+        assert resolver_kwargs["purpose"] is ModelProviderPolicyPurpose.CONFIGURE
+
+    def test_default_resolution_denies_before_catalog_lookup(self, monkeypatch):
+        from lfx.base.models import unified_models
+        from lfx.mcp.flow_builder_tools import mutate_tools
+        from lfx.services.model_provider_policy import ModelProviderPolicyError
+
+        snapshot = self._deny_all_snapshot()
+        monkeypatch.setattr(mutate_tools, "resolve_model_provider_policy", lambda **_kwargs: snapshot)
+
+        def fail_if_called(*_args, **_kwargs):
+            msg = "denied provider reached the model catalog"
+            raise AssertionError(msg)
+
+        monkeypatch.setattr(unified_models, "get_unified_models_detailed", fail_if_called)
+
+        with pytest.raises(ModelProviderPolicyError) as exc_info:
+            mutate_tools._resolve_default_model_name("Anthropic")
+
+        assert str(exc_info.value) == "The requested model provider is not available"
+
+    def test_policy_gate_does_not_execute_denied_extension_catalog(self, monkeypatch):
+        from lfx.base.models.provider_registry import ProviderSpec, register_provider, unregister_provider
+        from lfx.mcp.flow_builder_tools import ConfigureComponent, mutate_tools
+
+        provider = "Denied Configure Extension"
+        register_provider(
+            ProviderSpec(
+                name=provider,
+                provider_id="denied-configure-extension",
+                metadata={
+                    "icon": "Bot",
+                    "variables": [],
+                    "mapping": {"model_class": "ChatOpenAI", "model_param": "model"},
+                },
+                catalog_loader=f"{__name__}:_denied_configure_catalog_loader",
+            )
+        )
+        _DENIED_CONFIGURE_CATALOG_CALLS.clear()
+        monkeypatch.setattr(
+            mutate_tools,
+            "resolve_model_provider_policy",
+            lambda **_kwargs: self._deny_all_snapshot(),
+        )
+        agent_id = _make_agent_node_for_model_test()
+
+        try:
+            cfg = ConfigureComponent()
+            cfg.set(component_id=agent_id, params=f'{{"model": [{{"provider": "{provider}"}}]}}')
+            result = cfg.configure_component()
+        finally:
+            unregister_provider(provider)
+
+        assert result.data == {"error": "The requested model provider is not available"}
+        assert _DENIED_CONFIGURE_CATALOG_CALLS == []
+
+    def test_add_standalone_model_component_is_policy_gated(self, monkeypatch):
+        from lfx.mcp.flow_builder_tools import AddComponent, _ensure_working_flow, mutate_tools
+
+        registry = {
+            "OpenAIModel": {
+                "base_classes": ["LanguageModel"],
+                "display_name": "OpenAI",
+                "metadata": {"module": "lfx_openai.chat_models.OpenAIModel"},
+                "template": {},
+            }
+        }
+        monkeypatch.setattr(mutate_tools, "_load_registry_user_aware", lambda: registry)
+        monkeypatch.setattr(
+            mutate_tools,
+            "resolve_model_provider_policy",
+            lambda **_kwargs: self._deny_all_snapshot(),
+        )
+        reset_working_flow()
+
+        component = AddComponent()
+        component.set(component_type="OpenAIModel")
+        result = component.add_component()
+
+        assert result.data == {"error": "The requested model provider is not available"}
+        assert _ensure_working_flow()["data"]["nodes"] == []
+
+    def test_build_flow_spec_model_selection_is_policy_gated(self, monkeypatch):
+        from lfx.mcp.flow_builder_tools import BuildFlowFromSpec, _ensure_working_flow, mutate_tools, run_tools
+
+        registry = {
+            "Agent": {
+                "base_classes": ["Message"],
+                "display_name": "Agent",
+                "module": "lfx.components.agents.agent.AgentComponent",
+                "template": {"model": {"type": "model", "value": ""}},
+            }
+        }
+        monkeypatch.setattr(run_tools, "_load_registry_user_aware", lambda: registry)
+        monkeypatch.setattr(
+            mutate_tools,
+            "resolve_model_provider_policy",
+            lambda **_kwargs: self._deny_all_snapshot(),
+        )
+        reset_working_flow()
+
+        builder = BuildFlowFromSpec()
+        builder.set(
+            spec=(
+                "name: Blocked\n"
+                "nodes:\n"
+                "  A: Agent\n"
+                "config:\n"
+                '  A.model: [{"provider":"Anthropic","name":"claude-test"}]\n'
+            )
+        )
+        result = builder.build_flow()
+
+        assert result.data == {
+            "error": "The requested model provider is not available",
+            "text": "The requested model provider is not available",
+        }
+        assert _ensure_working_flow()["data"]["nodes"] == []
+
+    def test_configure_component_scalar_provider_override_is_policy_gated(self, monkeypatch):
+        from lfx.mcp.flow_builder_tools import ConfigureComponent, mutate_tools
+
+        flow = {
+            "name": "Wrapper",
+            "data": {
+                "nodes": [
+                    _node(
+                        "LanguageModel-1",
+                        "LanguageModel",
+                        {
+                            "model": {
+                                "type": "model",
+                                "value": [{"provider": "OpenAI", "name": "gpt-test"}],
+                            },
+                            "model_name": {"type": "str", "value": ""},
+                            "provider": {"type": "str", "value": ""},
+                        },
+                    )
+                ],
+                "edges": [],
+            },
+        }
+        init_working_flow(flow, "wrapper-flow")
+        monkeypatch.setattr(
+            mutate_tools,
+            "resolve_model_provider_policy",
+            lambda **_kwargs: self._deny_all_snapshot(),
+        )
+
+        cfg = ConfigureComponent()
+        cfg.set(
+            component_id="LanguageModel-1",
+            params='{"provider": "Anthropic", "model_name": "claude-test"}',
+        )
+        result = cfg.configure_component()
+
+        assert result.data == {"error": "The requested model provider is not available"}
+        template = get_working_flow()["data"]["nodes"][0]["data"]["node"]["template"]
+        assert template["provider"]["value"] == ""
+        assert template["model_name"]["value"] == ""
+
+    def test_configure_component_uses_existing_scalar_provider_for_policy(self, monkeypatch):
+        from lfx.mcp.flow_builder_tools import ConfigureComponent, mutate_tools
+
+        flow = {
+            "name": "Wrapper",
+            "data": {
+                "nodes": [
+                    _node(
+                        "EmbeddingModel-1",
+                        "EmbeddingModel",
+                        {
+                            "model": {
+                                "type": "model",
+                                "value": [{"provider": "OpenAI", "name": "text-embedding-test"}],
+                            },
+                            "model_name": {"type": "str", "value": "blocked-embedding"},
+                            "provider": {"type": "str", "value": "Anthropic"},
+                        },
+                    )
+                ],
+                "edges": [],
+            },
+        }
+        init_working_flow(flow, "wrapper-flow")
+        monkeypatch.setattr(
+            mutate_tools,
+            "resolve_model_provider_policy",
+            lambda **_kwargs: self._deny_all_snapshot(),
+        )
+
+        cfg = ConfigureComponent()
+        cfg.set(component_id="EmbeddingModel-1", params='{"model_name": "still-blocked"}')
+        result = cfg.configure_component()
+
+        assert result.data == {"error": "The requested model provider is not available"}
+        template = get_working_flow()["data"]["nodes"][0]["data"]["node"]["template"]
+        assert template["model_name"]["value"] == "blocked-embedding"
+
+    def test_configure_existing_standalone_provider_is_policy_gated(self, monkeypatch):
+        from lfx.mcp.flow_builder_tools import ConfigureComponent, mutate_tools
+
+        flow = {
+            "name": "Standalone",
+            "data": {
+                "nodes": [
+                    {
+                        "data": {
+                            "id": "OpenAIModel-1",
+                            "type": "OpenAIModel",
+                            "node": {
+                                "base_classes": ["LanguageModel"],
+                                "display_name": "OpenAI",
+                                "metadata": {"module": "lfx_openai.chat_models.OpenAIModel"},
+                                "template": {"temperature": {"type": "float", "value": 0.1}},
+                            },
+                        }
+                    }
+                ],
+                "edges": [],
+            },
+        }
+        init_working_flow(flow, "standalone-flow")
+        monkeypatch.setattr(
+            mutate_tools,
+            "resolve_model_provider_policy",
+            lambda **_kwargs: self._deny_all_snapshot(),
+        )
+
+        cfg = ConfigureComponent()
+        cfg.set(component_id="OpenAIModel-1", params='{"temperature": 0.9}')
+        result = cfg.configure_component()
+
+        assert result.data == {"error": "The requested model provider is not available"}
+        template = get_working_flow()["data"]["nodes"][0]["data"]["node"]["template"]
+        assert template["temperature"]["value"] == 0.1
+
+    def test_propose_field_edit_scalar_provider_override_is_policy_gated(self, monkeypatch):
+        from lfx.mcp.flow_builder_tools import (
+            ProposeFieldEdit,
+            drain_flow_events,
+            mutate_tools,
+            set_apply_edits_live,
+        )
+
+        flow = {
+            "name": "Wrapper",
+            "data": {
+                "nodes": [
+                    _node(
+                        "LanguageModel-1",
+                        "LanguageModel",
+                        {
+                            "model": {
+                                "type": "model",
+                                "value": [{"provider": "OpenAI", "name": "gpt-test"}],
+                            },
+                            "provider": {"type": "str", "value": ""},
+                        },
+                    )
+                ],
+                "edges": [],
+            },
+        }
+        init_working_flow(flow, "wrapper-flow")
+        set_apply_edits_live(enabled=True)
+        monkeypatch.setattr(
+            mutate_tools,
+            "resolve_model_provider_policy",
+            lambda **_kwargs: self._deny_all_snapshot(),
+        )
+
+        edit = ProposeFieldEdit()
+        edit.set(component_id="LanguageModel-1", field_name="provider", new_value="Anthropic")
+        result = edit.propose_field_edit()
+
+        assert result.data == {"error": "The requested model provider is not available"}
+        template = get_working_flow()["data"]["nodes"][0]["data"]["node"]["template"]
+        assert template["provider"]["value"] == ""
+        assert drain_flow_events() == []
+
+    def test_propose_field_edit_existing_standalone_provider_is_policy_gated(self, monkeypatch):
+        from lfx.mcp.flow_builder_tools import ProposeFieldEdit, drain_flow_events, mutate_tools
+
+        flow = {
+            "name": "Standalone",
+            "data": {
+                "nodes": [
+                    {
+                        "data": {
+                            "id": "OpenAIModel-1",
+                            "type": "OpenAIModel",
+                            "node": {
+                                "base_classes": ["LanguageModel"],
+                                "display_name": "OpenAI",
+                                "metadata": {"module": "lfx_openai.chat_models.OpenAIModel"},
+                                "template": {"temperature": {"type": "float", "value": 0.1}},
+                            },
+                        }
+                    }
+                ],
+                "edges": [],
+            },
+        }
+        init_working_flow(flow, "standalone-flow")
+        monkeypatch.setattr(
+            mutate_tools,
+            "resolve_model_provider_policy",
+            lambda **_kwargs: self._deny_all_snapshot(),
+        )
+
+        edit = ProposeFieldEdit()
+        edit.set(component_id="OpenAIModel-1", field_name="temperature", new_value="0.9")
+        result = edit.propose_field_edit()
+
+        assert result.data == {"error": "The requested model provider is not available"}
+        template = get_working_flow()["data"]["nodes"][0]["data"]["node"]["template"]
+        assert template["temperature"]["value"] == 0.1
+        assert drain_flow_events() == []
+
+    def test_build_flow_spec_scalar_provider_override_is_policy_gated(self, monkeypatch):
+        from lfx.mcp.flow_builder_tools import BuildFlowFromSpec, _ensure_working_flow, mutate_tools, run_tools
+
+        registry = {
+            "LanguageModel": {
+                "base_classes": ["LanguageModel"],
+                "display_name": "Language Model",
+                "model_provider_policy_mode": "delegate",
+                "module": "lfx.components.models_and_agents.language_model.LanguageModelComponent",
+                "template": {
+                    "model": {
+                        "type": "model",
+                        "value": [{"provider": "OpenAI", "name": "gpt-test"}],
+                    },
+                    "model_name": {"type": "str", "value": ""},
+                    "provider": {"type": "str", "value": ""},
+                },
+            }
+        }
+        monkeypatch.setattr(run_tools, "_load_registry_user_aware", lambda: registry)
+        monkeypatch.setattr(
+            mutate_tools,
+            "resolve_model_provider_policy",
+            lambda **_kwargs: self._deny_all_snapshot(),
+        )
+        reset_working_flow()
+
+        builder = BuildFlowFromSpec()
+        builder.set(
+            spec=(
+                "name: Blocked Override\n"
+                "nodes:\n"
+                "  A: LanguageModel\n"
+                "config:\n"
+                "  A.provider: Anthropic\n"
+                "  A.model_name: claude-test\n"
+            )
+        )
+        result = builder.build_flow()
+
+        assert result.data == {
+            "error": "The requested model provider is not available",
+            "text": "The requested model provider is not available",
+        }
+        assert _ensure_working_flow()["data"]["nodes"] == []
+
+    def test_component_discovery_does_not_trust_policy_mode_in_source(self, monkeypatch):
+        from lfx.mcp.flow_builder_tools import (
+            DescribeComponentType,
+            SearchComponentTypes,
+            mutate_tools,
+            read_tools,
+        )
+        from lfx.mcp.tool_cache import reset_tool_cache
+
+        registry = {
+            "ChatInput": {
+                "base_classes": ["Message"],
+                "category": "inputs",
+                "display_name": "Chat Input",
+                "module": "lfx.components.inputs.chat.ChatInput",
+                "template": {},
+            },
+            "FakeEmbeddings": {
+                "base_classes": ["Embeddings"],
+                "category": "models",
+                "display_name": "Fake Embeddings",
+                "metadata": {"module": "lfx.components.langchain_utilities.fake_embeddings.FakeEmbeddingsComponent"},
+                "template": {
+                    "code": {
+                        "type": "code",
+                        "value": '"""model_provider_policy_mode = "none" is only a decoy."""\n',
+                    }
+                },
+            },
+            "TrustedFakeEmbeddings": {
+                "base_classes": ["Embeddings"],
+                "category": "models",
+                "display_name": "Trusted Fake Embeddings",
+                "metadata": {
+                    "model_provider_policy_mode": "none",
+                    "module": "lfx.components.langchain_utilities.fake_embeddings.FakeEmbeddingsComponent",
+                },
+                "template": {},
+            },
+            "OpenAIModel": {
+                "base_classes": ["LanguageModel"],
+                "category": "models",
+                "display_name": "OpenAI",
+                "metadata": {"module": "lfx_openai.chat_models.OpenAIModel"},
+                "template": {},
+            },
+        }
+        monkeypatch.setattr(read_tools, "_load_registry_user_aware", lambda: registry)
+        monkeypatch.setattr(
+            mutate_tools,
+            "resolve_model_provider_policy",
+            lambda **_kwargs: self._deny_all_snapshot(),
+        )
+        reset_tool_cache()
+
+        search = SearchComponentTypes()
+        search.set(query="")
+        results = search.search_components()
+        describe = DescribeComponentType()
+        describe.set(component_type="OpenAIModel")
+        description = describe.describe_component()
+
+        assert {result["type"] for result in results.data["results"]} == {"ChatInput", "TrustedFakeEmbeddings"}
+        assert description.data["error"].startswith("Unknown component: OpenAIModel")
+        reset_tool_cache()
+
+    @pytest.mark.parametrize("policy_mode", ["delegate", "none"])
+    def test_user_overlay_cannot_self_exempt_via_source_or_metadata(self, policy_mode):
+        from lfx.mcp.flow_builder_tools import mutate_tools
+
+        registry = {
+            "UserModel": {
+                "base_classes": ["LanguageModel"],
+                "custom": True,
+                "display_name": "User Model",
+                "metadata": {
+                    "model_provider_display_name": "OpenAI",
+                    "model_provider_id": "openai",
+                    "model_provider_policy_mode": policy_mode,
+                    "module": "custom_components.user_model",
+                },
+                "template": {
+                    "code": {
+                        "type": "code",
+                        "value": f'class UserModel:\n    model_provider_policy_mode = "{policy_mode}"\n',
+                    },
+                    "model": {"type": "model", "value": []},
+                },
+            }
+        }
+
+        assert mutate_tools._registry_component_provider_id(registry, "UserModel") == "custom-usermodel"
+
+    def test_custom_provider_provenance_survives_add_and_later_configure(self, monkeypatch):
+        from lfx.graph.flow_builder.component import add_component as fb_add_component
+        from lfx.mcp.flow_builder_tools import ConfigureComponent, mutate_tools
+
+        registry = {
+            "UserModel": {
+                "base_classes": ["LanguageModel"],
+                "custom": True,
+                "display_name": "OpenAI",
+                "metadata": {
+                    "model_provider_display_name": "OpenAI",
+                    "model_provider_id": "openai",
+                    "model_provider_policy_mode": "none",
+                    "module": "custom_components.user_model",
+                },
+                "template": {"temperature": {"type": "float", "value": 0.1}},
+            }
+        }
+        flow = {"name": "Custom Model", "data": {"nodes": [], "edges": []}}
+        result = fb_add_component(flow, "UserModel", registry, component_id="UserModel-1")
+        init_working_flow(flow, "custom-model-flow")
+        monkeypatch.setattr(
+            mutate_tools,
+            "resolve_model_provider_policy",
+            lambda **_kwargs: self._deny_all_snapshot(),
+        )
+
+        assert result["id"] == "UserModel-1"
+        assert mutate_tools._model_providers_in_flow(flow, registry) == {"custom-usermodel"}
+
+        configure = ConfigureComponent()
+        configure.set(component_id="UserModel-1", params='{"temperature": 0.9}')
+        configured = configure.configure_component()
+
+        assert configured.data == {"error": "The requested model provider is not available"}
+        assert flow["data"]["nodes"][0]["data"]["node"]["template"]["temperature"]["value"] == 0.1
+
+    def test_stored_custom_model_without_provenance_fails_to_custom_namespace(self):
+        from lfx.mcp.flow_builder_tools import mutate_tools
+
+        node_data = {
+            "type": "CustomComponent",
+            "node": {
+                "base_classes": ["LanguageModel"],
+                "display_name": "OpenAI",
+                "metadata": {
+                    "model_provider_id": "openai",
+                    "model_provider_policy_mode": "none",
+                },
+                "template": {},
+            },
+        }
+
+        assert mutate_tools._stored_component_provider_id(node_data) == "custom-customcomponent"
+
+    def test_stored_builtin_uses_trusted_registry_instead_of_spoofed_metadata(self, monkeypatch):
+        from lfx.mcp.flow_builder_tools import mutate_tools
+
+        trusted_registry = {
+            "OpenAIModel": {
+                "base_classes": ["LanguageModel"],
+                "display_name": "OpenAI",
+                "metadata": {
+                    "model_provider_policy_mode": "standalone",
+                    "module": "lfx_openai.chat_models.OpenAIModel",
+                },
+                "template": {},
+            }
+        }
+        flow = {
+            "data": {
+                "nodes": [
+                    {
+                        "data": {
+                            "id": "OpenAIModel-1",
+                            "type": "OpenAIModel",
+                            "node": {
+                                "base_classes": ["LanguageModel"],
+                                "display_name": "Anthropic",
+                                "metadata": {
+                                    "model_provider_id": "anthropic",
+                                    "model_provider_policy_mode": "none",
+                                },
+                                "template": {"temperature": {"type": "float", "value": 0.1}},
+                            },
+                        }
+                    }
+                ]
+            }
+        }
+        monkeypatch.setattr(mutate_tools, "_load_registry_user_aware", lambda: trusted_registry)
+
+        assert mutate_tools._model_providers_in_params(flow, "OpenAIModel-1", {"temperature": 0.2}) == {"openai"}
+
+    @pytest.mark.parametrize("serialized_mode", ["delegate", "none"])
+    def test_registry_miss_forces_stored_legacy_model_to_standalone(self, monkeypatch, serialized_mode):
+        from lfx.mcp.flow_builder_tools import mutate_tools
+
+        flow = {
+            "data": {
+                "nodes": [
+                    {
+                        "data": {
+                            "id": "LegacyModel-1",
+                            "type": "LegacyModel",
+                            "node": {
+                                "base_classes": ["LanguageModel"],
+                                "display_name": "Legacy Model",
+                                "metadata": {
+                                    "model_provider_policy_mode": serialized_mode,
+                                    "module": "lfx_legacy.models.LegacyModel",
+                                },
+                                "template": {
+                                    "model": {"type": "model", "value": []},
+                                    "temperature": {"type": "float", "value": 0.1},
+                                },
+                            },
+                        }
+                    }
+                ]
+            }
+        }
+        monkeypatch.setattr(mutate_tools, "_load_registry_user_aware", dict)
+
+        assert mutate_tools._model_providers_in_params(flow, "LegacyModel-1", {"temperature": 0.2}) == {"legacy"}
+
+    def test_explicit_standalone_mode_overrides_legacy_model_field_delegation(self):
+        from lfx.mcp.flow_builder_tools import mutate_tools
+
+        registry = {
+            "StandaloneWrapper": {
+                "base_classes": ["LanguageModel"],
+                "display_name": "Standalone Wrapper",
+                "metadata": {
+                    "model_provider_policy_mode": "standalone",
+                    "module": "lfx_standalone.wrapper.StandaloneWrapper",
+                },
+                "template": {"model": {"type": "model", "value": []}},
+            }
+        }
+
+        assert mutate_tools._registry_component_provider_id(registry, "StandaloneWrapper") == "standalone"
+
+    def test_legacy_builtin_model_field_without_explicit_mode_delegates(self):
+        from lfx.mcp.flow_builder_tools import mutate_tools
+
+        registry = {
+            "LegacyWrapper": {
+                "base_classes": ["LanguageModel"],
+                "display_name": "Legacy Wrapper",
+                "metadata": {"module": "lfx.components.models_and_agents.legacy_wrapper"},
+                "template": {"model": {"type": "model", "value": []}},
+            }
+        }
+
+        assert mutate_tools._registry_component_provider_id(registry, "LegacyWrapper") is None
 
 
 class TestConfigureComponentModelFieldSerializedSpec:

@@ -6,17 +6,19 @@ from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from lfx.log.logger import logger
+from lfx.services.authorization import AuthorizationMutation, AuthorizationMutationKind
 from lfx.utils.util_strings import escape_like_pattern
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas.authz_roles import RoleCreate, RoleRead, RoleUpdate
-from langflow.services.authorization.invalidation import (
-    safe_invalidate_all,
-    safe_invalidate_role,
+from langflow.services.authorization.lifecycle import (
+    acquire_identity_mutation_lock,
+    safe_identity_mutation_committed,
+    stage_identity_mutation,
 )
 from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment
@@ -38,6 +40,24 @@ def _require_superuser(user) -> None:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Superuser required to administer roles.",
         )
+
+
+async def _require_superuser_dependency(current_user: CurrentActiveUser) -> None:
+    """Run the superuser gate as a route dependency, i.e. before body validation.
+
+    FastAPI solves a route's ``dependencies`` before validating that route's own
+    body, so an unauthorised caller is refused whatever they post. Gated only in
+    the endpoint body, they first receive the same 422 field names and enum
+    values a superuser would, which lets them map the request contract of a
+    route they cannot invoke.
+
+    The in-body call is kept as well: it is the gate for anything that reaches
+    the endpoint function without FastAPI resolving dependencies.
+    """
+    _require_superuser(current_user)
+
+
+SUPERUSER_ONLY = [Depends(_require_superuser_dependency)]
 
 
 async def _detect_parent_cycle(
@@ -102,8 +122,8 @@ async def read_role(
     return RoleRead.model_validate(role)
 
 
-@router.post("", response_model=RoleRead, status_code=status.HTTP_201_CREATED)
-@router.post("/", response_model=RoleRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=RoleRead, status_code=status.HTTP_201_CREATED, dependencies=SUPERUSER_ONLY)
+@router.post("/", response_model=RoleRead, status_code=status.HTTP_201_CREATED, dependencies=SUPERUSER_ONLY)
 async def create_role(
     payload: RoleCreate,
     current_user: CurrentActiveUser,
@@ -111,6 +131,12 @@ async def create_role(
 ) -> RoleRead:
     """Create a custom (non-system) role. Superuser-only."""
     _require_superuser(current_user)
+    authorization_service = get_authorization_service()
+    await acquire_identity_mutation_lock(
+        authorization_service,
+        session,
+        kind=AuthorizationMutationKind.ROLE_CREATED,
+    )
 
     if payload.parent_role_id is not None:
         parent = await session.get(AuthzRole, payload.parent_role_id)
@@ -129,7 +155,16 @@ async def create_role(
         created_by=current_user.id,
     )
     session.add(role)
+    mutation = AuthorizationMutation(
+        kind=AuthorizationMutationKind.ROLE_CREATED,
+        entity_id=role.id,
+        actor_user_id=current_user.id,
+        role_id=role.id,
+        policy_relevant_fields=("name", "permissions", "parent_role_id"),
+    )
     try:
+        await session.flush()
+        await stage_identity_mutation(authorization_service, session, mutation)
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()
@@ -137,8 +172,8 @@ async def create_role(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Role with name {payload.name!r} already exists",
         ) from exc
+    await safe_identity_mutation_committed(authorization_service, mutation)
     await session.refresh(role)
-    await safe_invalidate_all(get_authorization_service(), op="role:create")
     await audit_decision(
         user_id=current_user.id,
         action="role:create",
@@ -154,7 +189,7 @@ async def create_role(
     return RoleRead.model_validate(role)
 
 
-@router.patch("/{role_id}", response_model=RoleRead)
+@router.patch("/{role_id}", response_model=RoleRead, dependencies=SUPERUSER_ONLY)
 async def update_role(
     role_id: UUID,
     payload: RoleUpdate,
@@ -163,6 +198,13 @@ async def update_role(
 ) -> RoleRead:
     """Update fields on a custom role. System roles are read-only."""
     _require_superuser(current_user)
+    authorization_service = get_authorization_service()
+    await acquire_identity_mutation_lock(
+        authorization_service,
+        session,
+        kind=AuthorizationMutationKind.ROLE_UPDATED,
+        entity_id=role_id,
+    )
 
     role = await session.get(AuthzRole, role_id)
     if role is None:
@@ -177,6 +219,7 @@ async def update_role(
     # can clear nullable fields. An explicit ``"description": null`` in the body
     # marks the field as set and assigns None; omitting it leaves the row alone.
     fields_set = payload.model_fields_set
+    previous_name = role.name
 
     if "parent_role_id" in fields_set:
         if payload.parent_role_id is None:
@@ -227,8 +270,17 @@ async def update_role(
         role.permissions = list(payload.permissions)
 
     role.updated_at = datetime.now(timezone.utc)
-
+    mutation = AuthorizationMutation(
+        kind=AuthorizationMutationKind.ROLE_UPDATED,
+        entity_id=role.id,
+        actor_user_id=current_user.id,
+        role_id=role.id,
+        policy_relevant_fields=tuple(sorted(fields_set & {"name", "permissions", "parent_role_id"})),
+        previous_identifier=previous_name if role.name != previous_name else None,
+    )
     try:
+        await session.flush()
+        await stage_identity_mutation(authorization_service, session, mutation)
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()
@@ -236,8 +288,8 @@ async def update_role(
             status_code=status.HTTP_409_CONFLICT,
             detail="Name conflict — another role already uses this name",
         ) from exc
+    await safe_identity_mutation_committed(authorization_service, mutation)
     await session.refresh(role)
-    await safe_invalidate_role(get_authorization_service(), role.id, op="role:update")
     await audit_decision(
         user_id=current_user.id,
         action="role:update",
@@ -252,7 +304,7 @@ async def update_role(
     return RoleRead.model_validate(role)
 
 
-@router.delete("/{role_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{role_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=SUPERUSER_ONLY)
 async def delete_role(
     role_id: UUID,
     current_user: CurrentActiveUser,
@@ -264,6 +316,13 @@ async def delete_role(
     (delete the assignments first).
     """
     _require_superuser(current_user)
+    authorization_service = get_authorization_service()
+    await acquire_identity_mutation_lock(
+        authorization_service,
+        session,
+        kind=AuthorizationMutationKind.ROLE_DELETED,
+        entity_id=role_id,
+    )
 
     role = await session.get(AuthzRole, role_id)
     if role is None:
@@ -284,9 +343,19 @@ async def delete_role(
         )
 
     role_name = role.name
+    mutation = AuthorizationMutation(
+        kind=AuthorizationMutationKind.ROLE_DELETED,
+        entity_id=role_id,
+        actor_user_id=current_user.id,
+        role_id=role_id,
+        policy_relevant_fields=("name", "permissions", "parent_role_id"),
+        previous_identifier=role_name,
+    )
     await session.delete(role)
+    await session.flush()
+    await stage_identity_mutation(authorization_service, session, mutation)
     await session.commit()
-    await safe_invalidate_role(get_authorization_service(), role_id, op="role:delete")
+    await safe_identity_mutation_committed(authorization_service, mutation)
     await audit_decision(
         user_id=current_user.id,
         action="role:delete",

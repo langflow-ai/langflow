@@ -29,10 +29,22 @@ export const markdownSanitizeSchema: Schema = {
     td: ["align", "colSpan", "rowSpan"],
     th: ["align", "colSpan", "rowSpan"],
   },
-  // Remove dangerous protocols
+  // Remove dangerous protocols.
+  //
+  // NOTE: this object REPLACES `defaultSchema.protocols` rather than merging
+  // with it, so every URL-bearing attribute allowed above must be listed here.
+  // `hast-util-sanitize` only protocol-checks attributes that appear in this
+  // map ("no protocols defined? then everything is fine"), so an omission here
+  // silently turns that attribute into an unguarded URL sink.
   protocols: {
     href: ["http", "https", "mailto"],
     src: ["http", "https"], // Used by img, video, audio
+    // `cite` is inherited from defaultSchema.attributes for blockquote/del/ins,
+    // and `poster` is allowed on video above. Both were missing here, which
+    // dropped the protocol guard upstream provides for `cite` entirely.
+    cite: ["http", "https"],
+    poster: ["http", "https"],
+    longDesc: ["http", "https"],
   },
   // Strip dangerous tags completely
   strip: ["script", "style"],

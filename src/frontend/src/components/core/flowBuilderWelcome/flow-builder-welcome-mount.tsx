@@ -45,13 +45,12 @@ export function FlowBuilderWelcomeMount() {
   // placeholder. Delete that placeholder here so the user is left with a SINGLE
   // flow (the template they chose) instead of two. Guarded to only remove a
   // still-blank placeholder so we never discard a flow the user built on.
+  // Intentionally NOT guarded on ``isOpen``: the templates path dismisses the
+  // overlay synchronously at navigation (see ``dismissForNavigation``), so by
+  // the time this runs ``isOpen`` is already false and only ``openedForFlowId``
+  // is left to tell us there is a placeholder to reap.
   useEffect(() => {
-    if (
-      isOpen &&
-      openedForFlowId &&
-      currentFlowId &&
-      currentFlowId !== openedForFlowId
-    ) {
+    if (openedForFlowId && currentFlowId && currentFlowId !== openedForFlowId) {
       const placeholder = flows?.find((flow) => flow.id === openedForFlowId);
       const isBlankPlaceholder =
         !!placeholder && (placeholder.data?.nodes?.length ?? 0) === 0;
@@ -61,7 +60,7 @@ export function FlowBuilderWelcomeMount() {
       }
       close();
     }
-  }, [isOpen, openedForFlowId, currentFlowId, close, flows, deleteFlow]);
+  }, [openedForFlowId, currentFlowId, close, flows, deleteFlow]);
   const setAssistantSidebarOpen = useAssistantManagerStore(
     (state) => state.setAssistantSidebarOpen,
   );

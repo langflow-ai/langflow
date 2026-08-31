@@ -1,65 +1,26 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
-from lfx.graph.vertex.base import Vertex
 from lfx.log.logger import logger
-from lfx.processing.utils import validate_and_repair_json
+from lfx.processing.process import apply_tweaks as _lfx_apply_tweaks
+from lfx.processing.process import apply_tweaks_on_vertex as _lfx_apply_tweaks_on_vertex
+from lfx.processing.process import process_tweaks as _lfx_process_tweaks
+from lfx.processing.process import process_tweaks_on_graph as _lfx_process_tweaks_on_graph
+from lfx.processing.process import run_graph_internal as _lfx_run_graph_internal
 from pydantic import BaseModel
 
 from langflow.schema.graph import InputValue, Tweaks
 from langflow.schema.schema import INPUT_FIELD_NAME
-from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
-    from lfx.events.event_manager import EventManager
     from lfx.graph.graph.base import Graph
     from lfx.graph.schema import RunOutputs
-    from lfx.schema.schema import InputValueRequest
 
 
 class Result(BaseModel):
     result: Any
     session_id: str
-
-
-async def run_graph_internal(
-    graph: Graph,
-    flow_id: str,
-    *,
-    stream: bool = False,
-    session_id: str | None = None,
-    inputs: list[InputValueRequest] | None = None,
-    outputs: list[str] | None = None,
-    event_manager: EventManager | None = None,
-) -> tuple[list[RunOutputs], str]:
-    """Run the graph and generate the result."""
-    inputs = inputs or []
-    effective_session_id = session_id or flow_id
-    components = []
-    inputs_list = []
-    types = []
-    for input_value_request in inputs:
-        if input_value_request.input_value is None:
-            await logger.awarning("InputValueRequest input_value cannot be None, defaulting to an empty string.")
-            input_value_request.input_value = ""
-        components.append(input_value_request.components or [])
-        inputs_list.append({INPUT_FIELD_NAME: input_value_request.input_value})
-        types.append(input_value_request.type)
-
-    fallback_to_env_vars = get_settings_service().settings.fallback_to_env_var
-    graph.session_id = effective_session_id
-    run_outputs = await graph.arun(
-        inputs=inputs_list,
-        inputs_components=components,
-        types=types,
-        outputs=outputs or [],
-        stream=stream,
-        session_id=effective_session_id or "",
-        fallback_to_env_vars=fallback_to_env_vars,
-        event_manager=event_manager,
-    )
-    return run_outputs, effective_session_id
 
 
 async def run_graph(
@@ -137,133 +98,16 @@ def validate_input(
     return nodes
 
 
-def apply_tweaks(node: dict[str, Any], node_tweaks: dict[str, Any]) -> None:
-    template_data = node.get("data", {}).get("node", {}).get("template")
-
-    if not isinstance(template_data, dict):
-        logger.warning(f"Template data for node {node.get('id')} should be a dictionary")
-        return
-
-    # Security: tweaks must never inject executable code, widen the code sandbox,
-    # or repoint a protected sink configured by the flow author.
-    # The previous name-only block on "code" was bypassable because code-execution
-    # components expose their code under other field names (python_code, tool_code,
-    # filter_instruction) that serialize as plain "str". Refuse a tweak when the
-    # field is code-typed, literally named "code", or is a code/sandbox input on a
-    # code-execution component — while leaving benign fields (name, description,
-    # data, ...) on those components tweakable.
-    from lfx.utils.flow_validation import (
-        CODE_EXECUTION_COMPONENT_TYPES,
-        CODE_EXECUTION_FIELD_NAMES,
-        PROTECTED_TWEAK_FIELDS_BY_COMPONENT,
-    )
-
-    component_type = node.get("data", {}).get("type")
-    is_code_exec_component = component_type in CODE_EXECUTION_COMPONENT_TYPES
-    protected_tweak_fields = PROTECTED_TWEAK_FIELDS_BY_COMPONENT.get(component_type, ())
-    for tweak_name, tweak_value in node_tweaks.items():
-        if tweak_name not in template_data:
-            continue
-        field_type = template_data[tweak_name].get("type", "")
-        if (
-            field_type == "code"
-            or tweak_name == "code"
-            or (is_code_exec_component and tweak_name in CODE_EXECUTION_FIELD_NAMES)
-        ):
-            logger.warning(f"Security: refusing to override code field {tweak_name!r} via tweaks.")
-            continue
-        if tweak_name in protected_tweak_fields:
-            logger.warning(f"Security: refusing to override protected field {tweak_name!r} via tweaks.")
-            continue
-        if field_type == "NestedDict":
-            value = validate_and_repair_json(tweak_value)
-            template_data[tweak_name]["value"] = value
-        elif field_type == "mcp":
-            # MCP fields expect dict values to be set directly
-            template_data[tweak_name]["value"] = tweak_value
-        elif field_type == "dict" and isinstance(tweak_value, dict):
-            # Dict fields: set the dict directly as the value.
-            # If the tweak is wrapped in {"value": <actual>}, unwrap it
-            # to support the template-format style (e.g. from UI exports).
-            # Caveat: a legitimate single-key dict {"value": x} will be unwrapped.
-            if len(tweak_value) == 1 and "value" in tweak_value:
-                template_data[tweak_name]["value"] = tweak_value["value"]
-            else:
-                template_data[tweak_name]["value"] = tweak_value
-        elif isinstance(tweak_value, dict):
-            for k, v in tweak_value.items():
-                k_ = "file_path" if field_type == "file" else k
-                template_data[tweak_name][k_] = v
-            # If the user didn't explicitly set load_from_db in the dict,
-            # we default to False for the override.
-            if "load_from_db" not in tweak_value and "load_from_db" in template_data[tweak_name]:
-                template_data[tweak_name]["load_from_db"] = False
-        else:
-            key = "file_path" if field_type == "file" else "value"
-            template_data[tweak_name][key] = tweak_value
-            if "load_from_db" in template_data[tweak_name]:
-                template_data[tweak_name]["load_from_db"] = False
-
-
-def apply_tweaks_on_vertex(vertex: Vertex, node_tweaks: dict[str, Any]) -> None:
-    for tweak_name, tweak_value in node_tweaks.items():
-        if tweak_name and tweak_value and tweak_name in vertex.params:
-            vertex.params[tweak_name] = tweak_value
-
-            # Determine if we should load from DB
-            tweak_load_from_db = False
-            if isinstance(tweak_value, dict):
-                tweak_load_from_db = tweak_value.get("load_from_db", False)
-
-            if tweak_load_from_db:
-                if tweak_name not in vertex.load_from_db_fields:
-                    vertex.load_from_db_fields.append(tweak_name)
-            elif tweak_name in vertex.load_from_db_fields:
-                vertex.load_from_db_fields.remove(tweak_name)
-
-
-def process_tweaks(
-    graph_data: dict[str, Any], tweaks: Tweaks | dict[str, dict[str, Any]], *, stream: bool = False
-) -> dict[str, Any]:
-    """This function is used to tweak the graph data using the node id and the tweaks dict.
-
-    :param graph_data: The dictionary containing the graph data. It must contain a 'data' key with
-                       'nodes' as its child or directly contain 'nodes' key. Each node should have an 'id' and 'data'.
-    :param tweaks: The dictionary containing the tweaks. The keys can be the node id or the name of the tweak.
-                   The values can be a dictionary containing the tweaks for the node or the value of the tweak.
-    :param stream: A boolean flag indicating whether streaming should be deactivated across all components or not.
-                   Default is False.
-    :return: The modified graph_data dictionary.
-    :raises ValueError: If the input is not in the expected format.
-    """
-    tweaks_dict = cast("dict[str, Any]", tweaks.model_dump()) if not isinstance(tweaks, dict) else tweaks
-    if "stream" not in tweaks_dict:
-        tweaks_dict |= {"stream": stream}
-    nodes = validate_input(graph_data, cast("dict[str, str | dict[str, Any]]", tweaks_dict))
-    nodes_map = {node.get("id"): node for node in nodes}
-    nodes_display_name_map = {node.get("data", {}).get("node", {}).get("display_name"): node for node in nodes}
-
-    all_nodes_tweaks = {}
-    for key, value in tweaks_dict.items():
-        if isinstance(value, dict):
-            if (node := nodes_map.get(key)) or (node := nodes_display_name_map.get(key)):
-                apply_tweaks(node, value)
-        else:
-            all_nodes_tweaks[key] = value
-    if all_nodes_tweaks:
-        for node in nodes:
-            apply_tweaks(node, all_nodes_tweaks)
-
-    return graph_data
-
-
-def process_tweaks_on_graph(graph: Graph, tweaks: dict[str, dict[str, Any]]):
-    for vertex in graph.vertices:
-        if isinstance(vertex, Vertex) and isinstance(vertex.id, str):
-            node_id = vertex.id
-            if node_tweaks := tweaks.get(node_id):
-                apply_tweaks_on_vertex(vertex, node_tweaks)
-        else:
-            logger.warning("Each node should be a Vertex with an 'id' attribute of type str")
-
-    return graph
+# The tweak application lives in lfx. This module re-exports it so the langflow
+# API paths and the lfx paths enforce one implementation of the protected-field
+# floor and the deployment tweak policy.
+#
+# The two copies had already drifted before this change: lfx was refactored onto
+# `is_protected_tweak_field` while this copy kept the older inline checks and a
+# separate "code field" warning. The guards were equivalent, so no request was
+# unguarded, but the drift is why a second copy is not worth keeping.
+run_graph_internal = _lfx_run_graph_internal
+apply_tweaks = _lfx_apply_tweaks
+apply_tweaks_on_vertex = _lfx_apply_tweaks_on_vertex
+process_tweaks = _lfx_process_tweaks
+process_tweaks_on_graph = _lfx_process_tweaks_on_graph

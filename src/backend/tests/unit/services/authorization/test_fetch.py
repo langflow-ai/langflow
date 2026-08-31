@@ -60,10 +60,12 @@ class _FakeSession:
 
     def __init__(self, *, returns: Any = "row") -> None:
         self.calls: list[str] = []
+        self.statements: list[Any] = []
         self.returns = returns
 
     async def exec(self, stmt: Any) -> _FakeResult:
         # str(stmt) gives the compiled SQL — enough to assert which branch ran.
+        self.statements.append(stmt)
         self.calls.append(str(stmt))
         return _FakeResult(self.returns)
 
@@ -109,6 +111,29 @@ async def test_id_only_when_service_supports_cross_user_fetch():
     # No user_id = :user_id predicate in the share-aware path.
     assert "user_id = :user_id" not in session.calls[0]
     assert "WHERE flow.id" in session.calls[0]
+
+
+@pytest.mark.anyio
+async def test_write_fetch_refreshes_identity_map_and_locks_row():
+    """Write attempts must authorize a current row that stays locked through mutation."""
+    session = _FakeSession(returns=object())
+    service = _StubService(supports_cross_user=False)
+    with patch(
+        "langflow.services.authorization.fetch.get_authorization_service",
+        return_value=service,
+    ):
+        await authorized_or_owner_scoped(
+            session,
+            _DummyRow,
+            id_column=_DummyRow.id,
+            resource_id=uuid4(),
+            owner_column=_DummyRow.user_id,
+            owner_id=uuid4(),
+            for_update=True,
+        )
+
+    assert "FOR UPDATE" in session.calls[0]
+    assert session.statements[0].get_execution_options()["populate_existing"] is True
 
 
 def test_deny_to_404_only_rewrites_403():

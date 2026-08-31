@@ -14,8 +14,10 @@ import {
   ENABLE_MCP,
 } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
+import { getProjectDisplayName } from "@/utils/project-display-name";
 import HeaderComponent from "../../components/header";
 import ListComponent from "../../components/list";
 import ListSkeleton from "../../components/listSkeleton";
@@ -25,6 +27,15 @@ import type { FlowTabType } from "../../types";
 import DeploymentsPage from "../deploymentsPage/deployments-page";
 import EmptyFolder from "../emptyFolder";
 import { isFolderEmpty } from "./utils/isFolderEmpty";
+
+// Keyed by the active tab, not the route: Flows and Deployments share /flows
+// and only differ by which header tab is selected.
+const PAGE_TITLE_KEYS: Record<FlowTabType, string> = {
+  flows: "mainPage.tabFlows",
+  deployments: "mainPage.tabDeployments",
+  components: "mainPage.tabComponents",
+  mcp: "mainPage.mcpServer",
+};
 
 const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   const { t } = useTranslation();
@@ -46,12 +57,16 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
       ? "deployments"
       : type,
   );
+  useDocumentTitle(t(PAGE_TITLE_KEYS[flowType]));
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const folders = useFolderStore((state) => state.folders);
-  const folderName =
-    folders.find((folder) => folder.id === folderId)?.name ??
-    folders[0]?.name ??
-    "";
+  const currentFolderId = folderId ?? myCollectionId;
+  const currentFolder =
+    folders.find((folder) => folder.id === currentFolderId) ?? folders[0];
+  const folderName = currentFolder?.name ?? "";
+  const folderDisplayName = currentFolder
+    ? getProjectDisplayName(currentFolder, t)
+    : "";
   const flows = useFlowsManagerStore((state) => state.flows);
   // The primary "New Flow" handler — creates an empty flow, primes the
   // welcome overlay store, and navigates to the canvas. Replaces the old
@@ -76,7 +91,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   const permissionsFolderId = folderId ?? myCollectionId;
 
   const { data: folderData, isLoading } = useGetFolderQuery({
-    id: folderId ?? myCollectionId!,
+    id: folderId ?? myCollectionId,
     page: pageIndex,
     size: pageSize,
     is_component: flowType === "components",
@@ -127,8 +142,8 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     // folder is empty. This avoids a one-frame flash of <EmptyFolder> on
     // initial mount and right after login, when the store is briefly
     // stale. Gating on isLoading instead of folderData lets us still
-    // resolve when the query errors out (e.g. when there is no valid
-    // folder id to query, after deleting all folders).
+    // resolve when the query settles with no folder to read (it returns
+    // null when there is no valid folder id, after deleting all folders).
     if (flows === undefined || isLoading) return;
     setIsEmptyFolder(
       isFolderEmpty({
@@ -308,7 +323,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
             >
               <div className="flex h-full flex-col justify-start">
                 <HeaderComponent
-                  folderName={folderName}
+                  folderName={folderDisplayName}
                   flowType={flowType}
                   setFlowType={setFlowType}
                   view={view}

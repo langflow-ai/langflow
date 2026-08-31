@@ -27,12 +27,15 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from dataclasses import replace
 from typing import Annotated
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from fastapi.responses import EventSourceResponse, StreamingResponse
+from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.log.logger import logger
+from lfx.memory.flow_context import derive_message_owner_uuid
 from lfx.schema.workflow import (
     WORKFLOW_STATUS_RESPONSES,
     JobId,
@@ -57,9 +60,11 @@ from lfx.workflow.converters import (
     parse_workflow_run_request,
     workflow_response_from_output_events,
 )
+from lfx.workflow.end_user_identity import resolve_serving_end_user_id, serving_end_user_enabled
 from pydantic_core import ValidationError as PydanticValidationError
 from sqlalchemy.exc import OperationalError
 
+from langflow.api.utils.execution_errors import caller_owns_flow
 from langflow.api.v2.workflow_execution import (
     _execute_streaming_workflow,
     _resolve_execution_timeout,
@@ -68,7 +73,7 @@ from langflow.api.v2.workflow_execution import (
 )
 from langflow.api.v2.workflow_reconstruction import reconstruct_workflow_response_from_job_id
 from langflow.api.v2.workflow_validation import (
-    _enforce_flow_data_override_owner,
+    _apply_flow_data_override_policy,
     _flow_not_found_privacy_exception,
     _reject_sync_only_fields,
     _reject_unsupported_sync_fields,
@@ -84,8 +89,14 @@ from langflow.exceptions.api import (
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.services.auth.utils import get_current_user_for_workflow
 from langflow.services.authorization import FlowAction, ensure_flow_permission
+from langflow.services.authorization.fetch import deny_to_404_unless_readable
+from langflow.services.authorization.flow_data_override import resolve_flow_data_override
+from langflow.services.background_execution.service import (
+    InvalidRequestOverridesError,
+    RequestOverridesUnavailableError,
+)
 from langflow.services.database.models.flow.model import FlowRead
-from langflow.services.database.models.jobs.model import JobType
+from langflow.services.database.models.jobs.model import Job, JobType
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import (
     get_background_execution_service,
@@ -94,6 +105,7 @@ from langflow.services.deps import (
     get_task_service,
 )
 from langflow.services.jobs.exceptions import DuplicateJobError
+from langflow.services.warm_registry.resolver import resolve_warm_flow_for_execution
 
 # Finished states a late /stop must not rewrite (CANCELLED is handled separately
 # with its own idempotent early return).
@@ -106,6 +118,8 @@ _TERMINAL_JOB_STATUSES = frozenset({JobStatus.COMPLETED, JobStatus.FAILED, JobSt
 # routes stay langflow-owned. Both are mounted on the same ``/workflows``
 # prefix in ``langflow.api.router``.
 router = APIRouter(prefix="/workflows", tags=["Workflow"])
+
+FLOW_EXECUTE_DENIED_DETAIL = "You don't have permission to execute this flow."
 
 
 def _flow_not_found_http_exception(flow_id: str) -> HTTPException:
@@ -131,6 +145,13 @@ async def resolve_flow_for_execution(flow_id: str, current_user: UserRead):
     unexpected a sanitized 500.
     """
     try:
+        warm_flow = await resolve_warm_flow_for_execution(
+            str(flow_id),
+            current_user.id,
+            widen_for_shares=True,
+        )
+        if warm_flow is not None:
+            return warm_flow
         return await get_flow_by_id_or_endpoint_name(
             str(flow_id),
             current_user.id,
@@ -173,6 +194,10 @@ async def authorize_flow_action(
     leaked through a raw 403. ``requested_id`` is the identifier the caller sent
     (an endpoint name or a UUID); the reframed body echoes it instead of the
     resolved internal UUID. Falls back to ``flow.id`` when not provided.
+
+    The 404 reframe is skipped when the caller can read the flow: they already
+    know it exists, and "verify the flow_id and try again" sends them to debug
+    an identifier that is correct. Those callers get an execute denial instead.
     """
     flow_action = FlowAction.READ if action == WorkflowAction.READ else FlowAction.EXECUTE
     # Echo the identifier the caller requested (which may be an endpoint name),
@@ -188,6 +213,29 @@ async def authorize_flow_action(
             folder_id=getattr(flow, "folder_id", None),
         )
     except HTTPException as exc:
+        if flow_action == FlowAction.EXECUTE:
+            resolved = await deny_to_404_unless_readable(
+                exc,
+                lambda: ensure_flow_permission(
+                    current_user,
+                    FlowAction.READ,
+                    flow_id=flow.id,
+                    flow_user_id=flow.user_id,
+                    workspace_id=getattr(flow, "workspace_id", None),
+                    folder_id=getattr(flow, "folder_id", None),
+                ),
+                denied_detail=FLOW_EXECUTE_DENIED_DETAIL,
+            )
+            if resolved.status_code == status.HTTP_403_FORBIDDEN:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail={
+                        "error": "Permission denied",
+                        "code": "FLOW_EXECUTE_FORBIDDEN",
+                        "message": FLOW_EXECUTE_DENIED_DETAIL,
+                        "flow_id": echo_id,
+                    },
+                ) from exc
         privacy = _flow_not_found_privacy_exception(exc, echo_id)
         # Preserve the legacy contract: any 404 on this path surfaces as the
         # structured FLOW_NOT_FOUND body, not the privacy-reframe's string detail.
@@ -220,21 +268,27 @@ async def authorize_flow_action(
             },
         ) from err
 
+    # Resolve the graph-override verdict here, where we can await the policy
+    # plugin. The sync gates below run in all three execution modes and read
+    # the resolved value; without this they fall back to owner-only.
+    if flow_action == FlowAction.EXECUTE:
+        await resolve_flow_data_override(current_user, flow)
 
-def _apply_execution_gates(parsed, flow, current_user: UserRead) -> None:
-    """The langflow request gates that run before a flow executes."""
+
+def _apply_execution_gates(parsed, flow, current_user: UserRead):
+    """Run request gates and return any server-sanitized execution payload."""
+    expose_error_details = caller_owns_flow(flow, current_user)
     _reject_unsupported_sync_fields(parsed)
     _reject_sync_only_fields(parsed)
-    try:
-        _enforce_flow_data_override_owner(parsed, flow, current_user)
-    except HTTPException as exc:
-        # The owner-override deny is a privacy 404 (string detail); re-wrap to the
-        # structured FLOW_NOT_FOUND body using the requested identifier (parsed.flow_id
-        # may be an endpoint name) so the resolved UUID is not leaked.
-        if exc.status_code == status.HTTP_404_NOT_FOUND:
-            raise _flow_not_found_http_exception(str(parsed.flow_id)) from exc
-        raise
-    _validate_flow_data_for_execution(parsed, flow)
+    # An execute-only caller keeps running: their override is dropped and the
+    # stored graph runs, instead of the flow reading as non-existent (LE-1905).
+    parsed = _apply_flow_data_override_policy(parsed, flow, current_user)
+    return _validate_flow_data_for_execution(
+        parsed,
+        flow,
+        current_user,
+        expose_error_details=expose_error_details,
+    )
 
 
 async def run_sync_with_mapping(
@@ -246,7 +300,7 @@ async def run_sync_with_mapping(
     background_tasks: BackgroundTasks,
 ) -> WorkflowExecutionResponse:
     """Inline sync run with the langflow timeout/validation error mapping."""
-    _apply_execution_gates(parsed, flow, current_user)
+    parsed = _apply_execution_gates(parsed, flow, current_user)
     job_id = uuid4()
     try:
         return await execute_sync_workflow_with_timeout(
@@ -270,6 +324,8 @@ async def run_sync_with_mapping(
                 "timeout_seconds": timeout_seconds,
             },
         ) from None
+    except TweakRefusedError:
+        raise
     except (PydanticValidationError, WorkflowValidationError) as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -321,7 +377,7 @@ def build_stream_response(
     side-channel, and vertex-build persistence all survive. Validation gates run
     before the response is constructed so a bad request fails before streaming.
     """
-    _apply_execution_gates(parsed, flow, current_user)
+    parsed = _apply_execution_gates(parsed, flow, current_user)
     adapter = get_stream_adapter(
         stream_protocol,
         StreamAdapterContext(
@@ -346,7 +402,7 @@ async def submit_background_with_mapping(
     stream_protocol: str,
 ) -> WorkflowJobResponse:
     """Queue a durable background run with the langflow service error mapping."""
-    _apply_execution_gates(parsed, flow, current_user)
+    parsed = _apply_execution_gates(parsed, flow, current_user)
     try:
         return await execute_workflow_background(
             parsed=parsed,
@@ -357,6 +413,27 @@ async def submit_background_with_mapping(
             stream_protocol=stream_protocol,
             idempotency_key=getattr(parsed, "idempotency_key", None),
         )
+    except InvalidRequestOverridesError as err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "error": "Invalid request overrides",
+                "code": "INVALID_REQUEST_OVERRIDES",
+                "message": "globals and tweaks must contain JSON-compatible values.",
+                "field": err.field,
+                "flow_id": parsed.flow_id,
+            },
+        ) from err
+    except RequestOverridesUnavailableError as err:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "error": "Service unavailable",
+                "code": "REQUEST_OVERRIDES_UNAVAILABLE",
+                "message": "Background request overrides are temporarily unavailable. Please try again.",
+                "flow_id": parsed.flow_id,
+            },
+        ) from err
     except WorkflowServiceUnavailableError as err:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -411,13 +488,90 @@ def _unknown_protocol_http_exception(exc: UnknownStreamProtocolError) -> HTTPExc
     names so clients can self-correct.
     """
     return HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         detail={
             "error": "Unknown stream_protocol",
             "code": "UNKNOWN_STREAM_PROTOCOL",
             "message": f"Unknown stream_protocol {exc.name!r}.",
             "available": exc.available,
         },
+    )
+
+
+def _end_user_matches(request_end_user_id: str | None, job_metadata: object) -> bool:
+    """The pure serving-plane end-user ownership rule, shared by every jobs endpoint.
+
+    Given a request's resolved end-user id and a job's ``job_metadata``, decide whether they name
+    the same end user (superuser / feature gating is the caller's job). Used by the single-job guard
+    (``_caller_owns_job_end_user`` for status/stop/resume) AND the enumerating pending list, so the
+    isolation rule lives in exactly one place:
+
+    * ``job_metadata`` is coerced to ``{}`` unless it is a real dict — a security guard must never
+      decide from a malformed/legacy value (a JSON string, list, or test mock).
+    * No request end user (feature off / anonymous): matches ONLY a job that also has none.
+    * Both present: the derived owner ids must be equal, so a raw-string vs UUID-form gateway id
+      compares canonically (D6), exactly as message ownership keys it.
+    """
+    metadata = job_metadata if isinstance(job_metadata, dict) else {}
+    job_end_user = metadata.get("end_user_id")
+    if request_end_user_id is None:
+        return job_end_user is None
+    if job_end_user is None:
+        return False
+    return derive_message_owner_uuid(request_end_user_id) == derive_message_owner_uuid(job_end_user)
+
+
+def _caller_owns_job_end_user(job: Job, http_request: Request, current_user: UserRead) -> bool:
+    """Whether the caller may act on ``job`` under serving-plane end-user isolation.
+
+    On the serving plane every end user shares the one service account (SID), so SID-level
+    ownership (already applied by ``get_job_by_job_id(user_id=SID)``) cannot tell two end
+    users apart. This layers the end-user check on top: the request's trusted end-user id
+    (the gateway header) must resolve to the same owner the job was created under
+    (``job_metadata['end_user_id']``). A mismatch means it is another end user's job.
+
+    Because ``job.user_id`` stays the SID (so re-enqueue/resume can still fetch the SID-owned
+    flow — F8), the end-user identity lives only in ``job_metadata``; this is the sole place
+    it gates access. Decisions:
+
+    * Superuser bypass applies ONLY when the serving feature is off. On the serving plane the
+      shared service account (SID) is itself a superuser, so an unconditional bypass would let
+      any end user (all riding that one SID) read/stop/resume any other's run — defeating the
+      whole isolation layer for the exact deployment it exists for. When serving is on the
+      bypass is suppressed and even the SID is scoped to the request's end user.
+    * Feature off / anonymous request (``resolve_serving_end_user_id`` -> None): there is no
+      end-user scope to enforce, so a job created without an end user passes and one created
+      under an end user does not (an anonymous caller must not reach an identified run).
+    * Identified request: the derived request owner must equal the derived job owner. Both
+      sides derive through :func:`derive_message_owner_uuid` so the raw-string vs UUID-form
+      gateway id compares canonically, exactly as message ownership keys it.
+    """
+    if current_user.is_superuser and not serving_end_user_enabled():
+        return True
+    return _end_user_matches(resolve_serving_end_user_id(http_request=http_request), job.job_metadata)
+
+
+def _parse_persisted_workflow_request(request: dict) -> ParsedWorkflowRun:
+    """Re-parse a persisted background/resume request into a ``ParsedWorkflowRun``.
+
+    ``persist_messages`` and ``end_user_id`` are internal serving-plane decisions
+    (anonymous runs are ephemeral; identified runs carry the end user), not client
+    wire fields — ``WorkflowRunRequest`` forbids extras, so they are popped before
+    constructing the request and re-applied to the parsed run. Without this, the
+    worker re-parse would reset ``persist_messages`` to the ``True`` default (an
+    anonymous background/resume run would persist memory it must not) and drop
+    ``end_user_id`` (an identified run would stamp memory to the SID, not the end
+    user). Legacy rows that predate the fields fall back to persist=True /
+    end_user_id=None, matching prior behavior.
+    """
+    internal = {"persist_messages", "end_user_id"}
+    persist_messages = request.get("persist_messages", True)
+    end_user_id = request.get("end_user_id")
+    request_fields = {k: v for k, v in request.items() if k not in internal}
+    return replace(
+        parse_workflow_run_request(WorkflowRunRequest(**request_fields)),
+        persist_messages=persist_messages,
+        end_user_id=end_user_id,
     )
 
 
@@ -433,11 +587,11 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
     the v1 build pipeline have; without it every background run would silently
     miss it.
     """
-    parsed = parse_workflow_run_request(WorkflowRunRequest(**request))
+    parsed = _parse_persisted_workflow_request(request)
     terminal_error_type = adapter.terminal_error_type
 
     async def _source(*, job_id=None, resume=None, **_kwargs):
-        flow = await get_flow_by_id_or_endpoint_name(str(flow_id), user.id, widen_for_shares=True)
+        flow = await resolve_flow_for_execution(str(flow_id), user)
         fresh_background_tasks = BackgroundTasks()
         errored = False
         try:
@@ -448,6 +602,9 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 background_tasks=fresh_background_tasks,
                 parsed=parsed,
                 current_user=user,
+                provider_policy_flow=flow,
+                source_flow_owner_id=flow.user_id,
+                expose_error_details=caller_owns_flow(flow, user),
                 job_id=job_id,
                 resume=resume,
                 # Key the persisted vertex builds by the durable job_id so a completed run's GET
@@ -458,6 +615,13 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 # job_id) and fires the memory-base hook below with that id, so the build pipeline
                 # must not mint its own run_id-keyed WORKFLOW row + hook (it would double both).
                 track_job_status=False,
+                # This factory is the runner the v2 background route actually reaches, so the label
+                # belongs here; without it a background run is indistinguishable from a live stream.
+                protocol="v2.background",
+                # Emit the off-wire terminal-output capture the runner records into
+                # ``Job.result`` — protocol-neutral, so agui-protocol runs get a
+                # populated GET-status result too (not just langflow).
+                emit_output_capture=True,
             ):
                 if terminal_error_type is not None and event_type == terminal_error_type:
                     errored = True
@@ -469,7 +633,7 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
             # callback cannot derail the run.
             with contextlib.suppress(Exception):
                 await fresh_background_tasks()
-            if not errored:
+            if not errored and caller_owns_flow(flow, user):
                 try:
                     await get_task_service().fire_and_forget_task(
                         get_memory_base_service().on_flow_output,
@@ -520,6 +684,14 @@ async def execute_workflow_background(
             "start_component_id": parsed.start_component_id,
             "stop_component_id": parsed.stop_component_id,
             "idempotency_key": idempotency_key,
+            # Serving-plane ephemeral decision must survive the worker re-parse so an
+            # anonymous background/resume run does not persist memory (see the pop in
+            # _default_frame_source_factory).
+            "persist_messages": parsed.persist_messages,
+            # The end-user identity is likewise an internal decision, not a wire field:
+            # it must survive the round-trip so an identified background/resume run
+            # stamps memory to the end user on the worker, not the SID.
+            "end_user_id": parsed.end_user_id,
         }
         job_id_new = await service.submit(flow_id=flow.id, request=request_dict, user=current_user)
         return WorkflowJobResponse(job_id=str(job_id_new), flow_id=parsed.flow_id, status=JobStatus.QUEUED)
@@ -553,6 +725,7 @@ async def execute_workflow_background(
     description="Get status of workflow job by job ID",
 )
 async def get_workflow_status(
+    http_request: Request,
     current_user: Annotated[UserRead, Depends(get_current_user_for_workflow)],
     job_id: Annotated[JobId | None, Query(description="Job ID to query")] = None,
     session: Annotated[object, Depends(injectable_session_scope_readonly)] = None,
@@ -560,6 +733,7 @@ async def get_workflow_status(
     """Get workflow job status and results.
 
     Args:
+        http_request: The FastAPI request, for serving-plane end-user isolation.
         current_user: Authenticated user (session cookie or API key)
         job_id: Optional job ID to query specific job
         session: Database session for querying vertex builds
@@ -622,6 +796,19 @@ async def get_workflow_status(
             },
         )
 
+    # Serving-plane end-user isolation: a different end user (sharing the SID) must not read
+    # this run. 404 (not 403) so the job's existence is not leaked. See F8.
+    if not _caller_owns_job_end_user(job, http_request, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "Workflow job not found",
+                "code": "JOB_NOT_FOUND",
+                "message": f"Workflow job {job_id} not found",
+                "job_id": str(job_id),
+            },
+        )
+
     # Store context for exception handling scope
     flow_id_str = str(job.flow_id)
     job_id_str = str(job_id)
@@ -644,29 +831,65 @@ async def get_workflow_status(
                 folder_id=getattr(flow, "folder_id", None),
             )
 
-            # Reconstruct response from vertex_build table (sync path persists
-            # those keyed by job_id). Background runs do not write vertex_builds
-            # keyed by job_id, so reconstruction finds nothing and raises
-            # ValueError — fall back to the durable Job.result the runner wrote
-            # so a completed background run reports completed instead of 500ing.
+            # The session the run executed under, resolved exactly as the runner's
+            # frame source did (``parsed.session_id or str(flow.id)``): the submit
+            # request is persisted on ``job_metadata["request"]``, so a completed
+            # background GET echoes the same chat/memory thread sync returns. The
+            # terminal output's ``content`` is a rendered string, so it can't be
+            # searched structurally — the persisted request is the source of truth.
+            persisted_request = (job.job_metadata or {}).get("request") or {}
+            effective_session_id = persisted_request.get("session_id") or flow_id_str
+
+            # Default GET-status path: rebuild from the protocol-neutral terminal
+            # captures the runner stored in ``Job.result``. This needs no
+            # ``vertex_build`` rows, so it works with vertex-build storage off
+            # (headless) and skips graph reconstruction.
+            result = job.result if isinstance(job.result, dict) else {}
+            output_events = result.get("outputs") or []
+            partial_stored_response: WorkflowExecutionResponse | None = None
+            if isinstance(output_events, list) and output_events:
+                try:
+                    return workflow_response_from_output_events(
+                        output_events,
+                        flow_id=flow_id_str,
+                        job_id=job_id_str,
+                        session_id=effective_session_id,
+                        fail_on_rejected=True,
+                    )
+                except ValueError:
+                    # Preserve every decodable capture in case the legacy
+                    # vertex-build fallback is also unavailable.
+                    partial_stored_response = workflow_response_from_output_events(
+                        output_events,
+                        flow_id=flow_id_str,
+                        job_id=job_id_str,
+                        session_id=effective_session_id,
+                    )
+
+            # Fallback: ``Job.result`` carried no outputs, has an invalid shape,
+            # contains rejected/version-skewed entries, or predates capture.
+            # Reconstruct from ``vertex_build`` rows keyed by job_id when present.
             try:
-                return await reconstruct_workflow_response_from_job_id(
+                reconstructed = await reconstruct_workflow_response_from_job_id(
                     session=session,
                     flow=flow,
                     job_id=job_id_str,
                     user_id=str(current_user.id),
+                    is_superuser=bool(getattr(current_user, "is_superuser", False)),
                 )
             except ValueError:
-                # Rebuild the result from the ``output`` events the runner
-                # captured into ``Job.result`` (langflow-protocol runs). Falls
-                # back to a bare COMPLETED when none were captured (e.g. an
-                # agui-protocol run, where the result lives only on /events).
-                result = job.result if isinstance(job.result, dict) else {}
+                if partial_stored_response is not None:
+                    return partial_stored_response
                 return workflow_response_from_output_events(
-                    result.get("outputs") or [],
+                    [],
                     flow_id=flow_id_str,
                     job_id=job_id_str,
+                    session_id=effective_session_id,
                 )
+            else:
+                if reconstructed.session_id is None:
+                    reconstructed = reconstructed.model_copy(update={"session_id": effective_session_id})
+                return reconstructed
 
         if job.status == JobStatus.FAILED:
             # Surface the durable error JSON the runner persisted, additively.
@@ -736,6 +959,7 @@ async def get_workflow_status(
 )
 async def stop_workflow(
     request: WorkflowStopRequest,
+    http_request: Request,
     current_user: Annotated[UserRead, Depends(get_current_user_for_workflow)],
 ) -> WorkflowStopResponse:
     """Stop a running workflow execution by job_id.
@@ -744,6 +968,7 @@ async def stop_workflow(
 
     Args:
         request: Stop request containing job_id and optional force flag
+        http_request: The FastAPI request, for serving-plane end-user isolation.
         current_user: Authenticated user (session cookie or API key)
 
     Returns:
@@ -792,6 +1017,19 @@ async def stop_workflow(
                 "error": "Job not found",
                 "code": "JOB_NOT_FOUND",
                 "message": f"Job {job_id} is not a workflow job (type: {job.type})",
+                "job_id": str(job_id),
+            },
+        )
+
+    # Serving-plane end-user isolation: a different end user (sharing the SID) must not stop
+    # this run. 404 (not 403) so the job's existence is not leaked. See F8.
+    if not _caller_owns_job_end_user(job, http_request, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "Job not found",
+                "code": "JOB_NOT_FOUND",
+                "message": f"Job {job_id} not found",
                 "job_id": str(job_id),
             },
         )
@@ -855,12 +1093,24 @@ async def stop_workflow(
     description="Suspended HITL jobs for a flow plus their pending request, for the Traces overlay.",
 )
 async def list_pending_workflows(
+    http_request: Request,
     current_user: Annotated[UserRead, Depends(get_current_user_for_workflow)],
     flow_id: Annotated[UUID, Query(description="Flow ID to list pending HITL requests for")],
 ) -> list[dict]:
     from langflow.api.v2.hitl import list_pending_human_requests
 
-    return await list_pending_human_requests(flow_id, current_user.id)
+    # Serving-plane end-user isolation: this endpoint ENUMERATES suspended runs by flow_id (no job
+    # id needed), and each row exposes the merged session_id + the HITL prompt — so a scope check is
+    # even more load-bearing here than on status/stop/resume. Filter to the caller's own end user.
+    # The superuser "see all" bypass applies only when serving is off; on the serving plane the SID
+    # is a superuser, so an unconditional bypass would leak every end user's suspended run to every
+    # other. Feature off / anonymous -> only end-user-less jobs, unchanged. See F8 / B1.
+    return await list_pending_human_requests(
+        flow_id,
+        current_user.id,
+        request_end_user_id=resolve_serving_end_user_id(http_request=http_request),
+        include_all_end_users=current_user.is_superuser and not serving_end_user_enabled(),
+    )
 
 
 @router.post(
@@ -871,6 +1121,7 @@ async def list_pending_workflows(
 async def resume_workflow(
     job_id: str,
     request: WorkflowResumeRequest,
+    http_request: Request,
     current_user: Annotated[UserRead, Depends(get_current_user_for_workflow)],
 ) -> WorkflowResumeResponse:
     """Resume a SUSPENDED workflow run with a human decision.
@@ -897,6 +1148,10 @@ async def resume_workflow(
     is_owner = job is not None and job.user_id is not None and job.user_id == current_user.id
     if job is None or job.type != JobType.WORKFLOW or not (is_owner or current_user.is_superuser):
         raise _not_found()
+    # Serving-plane end-user isolation: a different end user (sharing the SID) must not resume
+    # another's suspended run. Layered on the SID owner/superuser check above. See F8.
+    if not _caller_owns_job_end_user(job, http_request, current_user):
+        raise _not_found()
 
     from langflow.api.v2.hitl import ensure_resume_execute_permission, is_decision_allowed, mark_card_answered
 
@@ -904,7 +1159,7 @@ async def resume_workflow(
 
     if not await is_decision_allowed(parsed_job_id, request.decision or {}):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "error": "Invalid decision",
                 "code": "INVALID_DECISION",
@@ -919,12 +1174,23 @@ async def resume_workflow(
     # Snapshot the card id before the continuation runs: it may reach another pause and
     # overwrite job metadata, and this decision must never stamp that later card.
     card_message_id = (job.job_metadata or {}).get("card_message_id")
-    accepted = await service.resume_job(
-        parsed_job_id,
-        current_user,
-        request_id=request.request_id,
-        decision=request.decision or {},
-    )
+    try:
+        accepted = await service.resume_job(
+            parsed_job_id,
+            current_user,
+            request_id=request.request_id,
+            decision=request.decision or {},
+        )
+    except RequestOverridesUnavailableError as err:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "error": "Service unavailable",
+                "code": "REQUEST_OVERRIDES_UNAVAILABLE",
+                "message": "Background request overrides are temporarily unavailable. Please try again.",
+                "job_id": job_id,
+            },
+        ) from err
     if not accepted:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -963,12 +1229,8 @@ async def reattach_workflow_events(
     service = get_background_execution_service()
     last_event_id = http_request.headers.get("Last-Event-ID")
 
-    try:
-        # Pre-validate ownership/existence so a deny surfaces as a 404 before
-        # the SSE stream opens. ``events`` re-validates as defense-in-depth.
-        await service.status(UUID(job_id), current_user)
-    except (PermissionError, ValueError) as exc:
-        raise HTTPException(
+    def _not_found() -> HTTPException:
+        return HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={
                 "error": "Background run not found",
@@ -976,7 +1238,20 @@ async def reattach_workflow_events(
                 "message": f"No background run for job {job_id}.",
                 "job_id": job_id,
             },
-        ) from exc
+        )
+
+    try:
+        # Pre-validate ownership/existence so a deny surfaces as a 404 before
+        # the SSE stream opens. ``events`` re-validates as defense-in-depth.
+        await service.status(UUID(job_id), current_user)
+        job = await get_job_service().get_job_by_job_id(UUID(job_id), user_id=current_user.id)
+    except (PermissionError, ValueError) as exc:
+        raise _not_found() from exc
+
+    # Serving-plane end-user isolation: a different end user (sharing the SID) must not reattach
+    # to another's live event stream — the same rule the status/stop/resume paths enforce. See F8.
+    if job is None or not _caller_owns_job_end_user(job, http_request, current_user):
+        raise _not_found()
 
     return EventSourceResponse(
         service.events(UUID(job_id), last_event_id=last_event_id, user=current_user),

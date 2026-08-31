@@ -17,9 +17,14 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
+from playwright.async_api import Error as PlaywrightError
 from playwright.async_api import Page, Request, async_playwright
 
-DEFAULT_ACE_URL = "https://unpkg.com/accessibility-checker-engine@latest/ace.js"
+# Pinned to the same engine the Playwright a11y suite uses (see src/frontend/.achecker.yml,
+# ruleArchive 19May2026) so both scanners evaluate the same ruleset. Override with --ace-url.
+DEFAULT_ACE_URL = "https://unpkg.com/accessibility-checker-engine@4.0.26/ace.js"
+# Matches the `policies` list in src/frontend/.achecker.yml.
+DEFAULT_POLICIES = "IBM_Accessibility"
 STATIC_RESOURCE_TYPES = {"image", "media", "font"}
 STATIC_EXTENSIONS = (
     ".png",
@@ -66,6 +71,16 @@ def parse_args() -> argparse.Namespace:
         "--levels",
         default="violation",
         help="Comma-separated levels: violation,potentialviolation,recommendation,manual.",
+    )
+    parser.add_argument(
+        "--policies",
+        default=DEFAULT_POLICIES,
+        help=(
+            "Comma-separated IBM ACE guideline ids to evaluate against: "
+            "EXTENSIONS,IBM_Accessibility,IBM_Accessibility_next,WCAG_2_2,WCAG_2_1,WCAG_2_0. "
+            f"Default: {DEFAULT_POLICIES}. Pass an empty string to run unfiltered, which also "
+            "reports rules that belong to no policy and are therefore not compliance findings."
+        ),
     )
     parser.add_argument("--timeout-ms", type=int, default=30000)
     parser.add_argument("--quiet-ms", type=int, default=1000)
@@ -189,10 +204,17 @@ async def wait_for_settled_network(page: Page, pending: set[Request], timeout_ms
         await page.wait_for_timeout(100)
 
 
-async def evaluate_ace(page: Page, levels: list[str]) -> list[dict[str, Any]]:
+async def evaluate_ace(page: Page, levels: list[str], policies: list[str]) -> list[dict[str, Any]]:
+    """Run the loaded ACE checker and return the issues matching ``levels``.
+
+    ``policies`` are IBM ACE guideline ids. ``checker.check`` takes the guideline list as its
+    second argument; omitting it returns *every* rule the engine ships, including rules that
+    belong to no guideline (empty ``rulesets``) and therefore are not compliance findings.
+    Pass an empty list to reproduce that unfiltered behaviour.
+    """
     return await page.evaluate(
         """
-        async (levels) => {
+        async ([levels, policies]) => {
           const wanted = new Set(levels.map((level) => level.toLowerCase()));
           const matchesLevel = (values) => {
             if (!Array.isArray(values)) return false;
@@ -209,7 +231,29 @@ async def evaluate_ace(page: Page, levels: list[str]) -> list[dict[str, Any]]:
           }
 
           const checker = new window.ace.Checker();
-          const report = await checker.check(document);
+          const knownPolicies = new Set(checker.rulesetIds);
+          const unknown = policies.filter((policy) => !knownPolicies.has(policy));
+          if (unknown.length) {
+            throw new Error(
+              `Unknown ACE policy: ${unknown.join(", ")}. Known: ${checker.rulesetIds.join(", ")}`
+            );
+          }
+
+          // Rule id -> the guidelines that contain it. A rule missing from this map is in no
+          // guideline at all, which is what makes it invisible to the IBM browser extension.
+          const rulesetsByRule = new Map();
+          for (const guideline of checker.getGuidelines()) {
+            for (const checkpoint of guideline.checkpoints ?? []) {
+              for (const rule of checkpoint.rules ?? []) {
+                if (!rulesetsByRule.has(rule.id)) rulesetsByRule.set(rule.id, new Set());
+                rulesetsByRule.get(rule.id).add(guideline.id);
+              }
+            }
+          }
+
+          const report = policies.length
+            ? await checker.check(document, policies)
+            : await checker.check(document);
           return report.results
             .filter((item) => matchesLevel(item.value))
             .map((item) => ({
@@ -219,10 +263,11 @@ async def evaluate_ace(page: Page, levels: list[str]) -> list[dict[str, Any]]:
               path: item.path?.dom ?? item.path?.aria ?? null,
               snippet: item.snippet ?? null,
               value: item.value,
+              rulesets: [...(rulesetsByRule.get(item.ruleId) ?? [])],
             }));
         }
         """,
-        levels,
+        [levels, policies],
     )
 
 
@@ -304,6 +349,41 @@ async def run_action(page: Page, action: dict[str, Any], timeout_ms: int) -> Non
             await page.locator(press_action["selector"]).first.press(press_action["key"], timeout=timeout_ms)
         else:
             await page.keyboard.press(str(press_action))
+    elif "scroll" in action:
+        # Lets a states-file capture post-scroll DOM, e.g. virtualised grids that only
+        # drop their tabbable rows once the user scrolls:
+        #   {"scroll": {"selector": ".ag-body-viewport", "to": "bottom"}}
+        scroll_action = action["scroll"]
+        if not isinstance(scroll_action, dict):
+            raise ValueError("scroll action must be an object with an optional selector and to/by")
+        to_value = scroll_action.get("to", "bottom")
+        if to_value not in {"top", "bottom"}:
+            raise ValueError("scroll 'to' must be 'top' or 'bottom'")
+        by_value = scroll_action.get("by")
+        if by_value is not None and not isinstance(by_value, (int, float)):
+            raise ValueError("scroll 'by' must be a number of pixels")
+        options = {"to": to_value, "by": by_value}
+        scroll_js = """
+          (el, options) => {
+            const target = el === document ? document.scrollingElement : el;
+            if (options.by !== null && options.by !== undefined) {
+              target.scrollTop += options.by;
+            } else {
+              target.scrollTop = options.to === "top" ? 0 : target.scrollHeight;
+            }
+            // Two frames so virtualised lists finish re-rendering before the scan reads the DOM.
+            return new Promise((resolve) =>
+              requestAnimationFrame(() => requestAnimationFrame(resolve))
+            );
+          }
+        """
+        selector = scroll_action.get("selector")
+        if selector:
+            locator = page.locator(selector).first
+            await locator.wait_for(state="visible", timeout=timeout_ms)
+            await locator.evaluate(scroll_js, options)
+        else:
+            await page.evaluate(f"(options) => ({scroll_js})(document, options)", options)
     elif "waitFor" in action:
         await page.locator(action["waitFor"]).first.wait_for(state="visible", timeout=timeout_ms)
     elif "waitForHidden" in action:
@@ -333,6 +413,7 @@ async def scan_current_dom(
     *,
     ace_script: str,
     levels: list[str],
+    policies: list[str],
     timeout_ms: int,
     route: str,
     requested_url: str,
@@ -344,7 +425,7 @@ async def scan_current_dom(
     diagnostics: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     await ensure_ace_loaded(page, ace_script, timeout_ms)
-    issues = await evaluate_ace(page, levels)
+    issues = await evaluate_ace(page, levels, policies)
     return {
         "route": route,
         "state": state_name,
@@ -367,6 +448,7 @@ async def scan_route(
     route: str,
     states: list[dict[str, Any]],
     levels: list[str],
+    policies: list[str],
     timeout_ms: int,
     quiet_ms: int,
 ) -> list[dict[str, Any]]:
@@ -425,6 +507,7 @@ async def scan_route(
             page,
             ace_script=ace_script,
             levels=levels,
+            policies=policies,
             timeout_ms=timeout_ms,
             route=route,
             requested_url=target_url,
@@ -435,6 +518,33 @@ async def scan_route(
             failures=list(failures),
         )
     ]
+
+    # Result entry for a state phase that carries no scan of its own
+    # (closed / skipped / failed); `extra` holds the reason or error.
+    def state_result(
+        state_name: str,
+        phase: str,
+        *,
+        started_at: float,
+        api_start: int,
+        failure_start: int,
+        diagnostics: dict[str, Any],
+        **extra: Any,
+    ) -> dict[str, Any]:
+        return {
+            "route": route,
+            "state": state_name,
+            "phase": phase,
+            "requestedUrl": target_url,
+            "finalUrl": page.url,
+            "durationMs": round((time.monotonic() - started_at) * 1000),
+            "apiRequests": list(api_requests[api_start:]),
+            "requestFailures": list(failures[failure_start:]),
+            "visibleText": "",
+            "diagnostics": diagnostics,
+            "issues": [],
+            **extra,
+        }
 
     for state in states:
         state_name = state.get("name")
@@ -448,45 +558,56 @@ async def scan_route(
         state_started_at = time.monotonic()
         api_start = len(api_requests)
         failure_start = len(failures)
-        before_open_focus = await describe_active_element(page)
-        await run_actions(page, open_actions, pending, timeout_ms, quiet_ms)
-        open_diagnostics = await modal_diagnostics(page)
-        open_diagnostics["beforeOpenActiveElement"] = before_open_focus
-        route_results.append(
-            await scan_current_dom(
-                page,
-                ace_script=ace_script,
-                levels=levels,
-                timeout_ms=timeout_ms,
-                route=route,
-                requested_url=target_url,
-                state_name=state_name,
-                phase="open",
-                started_at=state_started_at,
-                api_requests=list(api_requests[api_start:]),
-                failures=list(failures[failure_start:]),
-                diagnostics=open_diagnostics,
-            )
-        )
+        window = {"started_at": state_started_at, "api_start": api_start, "failure_start": failure_start}
 
-        if close_actions:
-            await run_actions(page, close_actions, pending, timeout_ms, quiet_ms)
-            close_diagnostics = await modal_diagnostics(page)
+        # A state can declare the DOM it needs (e.g. a data grid that only
+        # renders once the backend has rows). Against a fresh backend that
+        # element may legitimately be absent, so the state is reported as
+        # skipped rather than treated as a scan failure.
+        requires = state.get("requires")
+        if isinstance(requires, str) and requires and await page.locator(requires).count() == 0:
             route_results.append(
-                {
-                    "route": route,
-                    "state": state_name,
-                    "phase": "closed",
-                    "requestedUrl": target_url,
-                    "finalUrl": page.url,
-                    "durationMs": round((time.monotonic() - state_started_at) * 1000),
-                    "apiRequests": list(api_requests[api_start:]),
-                    "requestFailures": list(failures[failure_start:]),
-                    "visibleText": await read_visible_text(page),
-                    "diagnostics": close_diagnostics,
-                    "issues": [],
-                }
+                state_result(
+                    state_name, "skipped", diagnostics={}, reason=f"required element not present: {requires}", **window
+                )
             )
+            continue
+
+        # A broken state must not abort the whole run: record it and keep
+        # scanning, so the other routes' findings still reach the report.
+        try:
+            before_open_focus = await describe_active_element(page)
+            await run_actions(page, open_actions, pending, timeout_ms, quiet_ms)
+            open_diagnostics = await modal_diagnostics(page)
+            open_diagnostics["beforeOpenActiveElement"] = before_open_focus
+            route_results.append(
+                await scan_current_dom(
+                    page,
+                    ace_script=ace_script,
+                    levels=levels,
+                    policies=policies,
+                    timeout_ms=timeout_ms,
+                    route=route,
+                    requested_url=target_url,
+                    state_name=state_name,
+                    phase="open",
+                    started_at=state_started_at,
+                    api_requests=list(api_requests[api_start:]),
+                    failures=list(failures[failure_start:]),
+                    diagnostics=open_diagnostics,
+                )
+            )
+
+            if close_actions:
+                await run_actions(page, close_actions, pending, timeout_ms, quiet_ms)
+                closed = state_result(state_name, "closed", diagnostics=await modal_diagnostics(page), **window)
+                closed["visibleText"] = await read_visible_text(page)
+                route_results.append(closed)
+        except PlaywrightError as exc:
+            route_results.append(
+                state_result(state_name, "failed", diagnostics={}, error=shortened(str(exc), 600), **window)
+            )
+            print(f"  fail: {route}#{state_name}: {shortened(str(exc), 200)}")
 
     await page.close()
     return route_results
@@ -557,6 +678,14 @@ def write_markdown_report(report: dict[str, Any], output_path: Path) -> None:
             f"{len(result['requestFailures'])} | "
             f"{diagnostics.get('dialogCount', '')} | "
             f"{diagnostics.get('focusedWithinDialog', '')} |"
+        )
+
+    problems = [result for result in results if result["phase"] in ("skipped", "failed")]
+    if problems:
+        lines.extend(["", "## Skipped / Failed States", ""])
+        lines.extend(
+            f"- `{markdown_cell(result_name(result))}` - {shortened(result.get('reason') or result.get('error'))}"
+            for result in problems
         )
 
     lines.extend(["", "## Top Rules", "", markdown_rule_table(rule_counts(results)), ""])
@@ -920,6 +1049,7 @@ def write_html_report(report: dict[str, Any], output_path: Path) -> None:
       <span class="danger">{report["totalIssues"]} total issues</span>
       <span>{len(report["routes"])} routes</span>
       <span>levels: {html_escape(", ".join(report["reportLevels"]))}</span>
+      <span>policies: {html_escape(", ".join(report["policies"]) or "unfiltered")}</span>
       <span>base: {html_escape(report["url"])}</span>
     </div>
   </section>
@@ -963,6 +1093,7 @@ async def main() -> None:
     manifest_routes = load_routes_file(args.routes_file, args.route_group)
     routes = route_args or manifest_routes or list(states_by_route.keys()) or [urlparse(args.url).path or "/"]
     levels = split_csv(args.levels)
+    policies = split_csv(args.policies)
     ace_script = fetch_ace_script(args.ace_url)
     executable_path = find_chromium_executable(args.browser_executable)
 
@@ -982,6 +1113,7 @@ async def main() -> None:
                     route,
                     states_by_route.get(route, []),
                     levels,
+                    policies,
                     args.timeout_ms,
                     args.quiet_ms,
                 )
@@ -993,7 +1125,9 @@ async def main() -> None:
                         f"  {label} api={len(result['apiRequests'])} "
                         f"issues={len(result['issues'])} final={result['finalUrl']}"
                     )
-                    if not result["apiRequests"] and result["phase"] != "closed":
+                    if result["phase"] in ("skipped", "failed"):
+                        print(f"  {result['phase']}: {result.get('reason') or result.get('error')}")
+                    elif not result["apiRequests"] and result["phase"] != "closed":
                         print("  warn: no same-origin API/config/health requests observed")
                 results.extend(route_results)
         finally:
@@ -1004,7 +1138,11 @@ async def main() -> None:
         "url": args.url,
         "routes": routes,
         "reportLevels": levels,
+        "policies": policies,
+        "aceUrl": args.ace_url,
         "totalIssues": sum(len(result["issues"]) for result in results),
+        "skippedStates": sum(result["phase"] == "skipped" for result in results),
+        "failedStates": sum(result["phase"] == "failed" for result in results),
         "results": results,
     }
 

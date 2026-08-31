@@ -19,9 +19,9 @@ export const useGetFlowId = () => {
   // Use `autoLogin === false` (not `!autoLogin`) to avoid race condition
   // when autoLogin is still null (unresolved) — treat null same as true.
   if (isAuthenticated && autoLogin === false && userData?.id) {
-    return uuidv5(`${userData.id}_${realFlowId}`, uuidv5.DNS);
+    return uuidv5(`user:${userData.id}_${realFlowId}`, uuidv5.DNS);
   }
 
   // Anonymous/auto-login users: use client_id (original behavior)
-  return uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS);
+  return uuidv5(`client:${clientId}_${realFlowId}`, uuidv5.DNS);
 };
