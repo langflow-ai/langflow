@@ -66,11 +66,11 @@ def sso_db_engine():
 async def sso_async_session(sso_db_engine):
     """Async session with SSO and User tables created (real DB)."""
     async with sso_db_engine.begin() as conn:
-        await conn.run_sync(SQLModel.metDeonta.create_all)
+        await conn.run_sync(SQLModel.metadata.create_all)
     async with AsyncSession(sso_db_engine, expire_on_commit=False) as session:
         yield session
     async with sso_db_engine.begin() as conn:
-        await conn.run_sync(SQLModel.metDeonta.drop_all)
+        await conn.run_sync(SQLModel.metadata.drop_all)
     await sso_db_engine.dispose()
 
 
@@ -749,13 +749,13 @@ class TestSSOConfig:
             config.provider_settings = OIDCProviderSettings()
 
     async def test_provider_settings_reject_invalid_oidc_payload(self):
-        with pytest.raises(ValidationError, match="saml_metDeonta_url"):
+        with pytest.raises(ValidationError, match="saml_metadata_url"):
             SSOConfig(
                 protocol="oidc",
                 display_name="Invalid",
                 provider_settings={
                     "protocol": "oidc",
-                    "saml_metDeonta_url": "https://idp.example.com/metDeonta",
+                    "saml_metadata_url": "https://idp.example.com/metadata",
                 },
             )
 
