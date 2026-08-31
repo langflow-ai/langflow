@@ -18,7 +18,7 @@ from lfx.observability import (
     bootstrap_application_telemetry,
 )
 from opentelemetry import metrics
-from opentelemetry.metrics import CallbackOptions, Observation
+from opentelemetry.metrics import CallbackOptions, Meter, Observation
 from opentelemetry.metrics._internal.instrument import Counter, Histogram, UpDownCounter
 from opentelemetry.sdk._logs import LoggerProvider
 from opentelemetry.sdk.metrics import MeterProvider
@@ -104,9 +104,13 @@ class ObservableCounterWrapper:
     Prometheus rate() semantics.
     """
 
-    def __init__(self, name: str, description: str, unit: str):
+    def __init__(self, name: str, description: str, unit: str, meter: Meter):
         self._values: dict[tuple[tuple[str, str], ...], float] = {}
-        self._meter = metrics.get_meter(langflow_meter_name)
+        # The meter is passed in rather than fetched from the global API. A global proxy meter
+        # is not a no-op: its instruments resolve onto whichever MeterProvider is registered
+        # afterwards, so a counter built on one would report its backend and reason labels to a
+        # provider an LLM tracing SDK installs on the first flow run.
+        self._meter = meter
         self._counter = self._meter.create_observable_counter(
             name=name, description=description, unit=unit, callbacks=[self._callback]
         )
@@ -334,6 +338,7 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
                 name=metric.name,
                 description=metric.description,
                 unit=metric.unit,
+                meter=self.meter,
             )
         if metric.type == MetricType.OBSERVABLE_GAUGE:
             return ObservableGaugeWrapper(
