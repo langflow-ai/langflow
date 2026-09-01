@@ -1,0 +1,31 @@
+---
+title: Human-in-the-Loop
+slug: /human-in-the-loop
+---
+
+Human-in-the-Loop (HITL) pauses a flow, creates a checkpoint, and waits for a human decision.
+
+After you approve or reject the proposed action, the flow run resumes from the checkpoint using the selected branch.
+The previously completed steps are not executed again.
+
+To include a HITL gate in a flow, add a [**Human Input** component](./human-input), or configure your Agent component to [require approval for agent tools](./agents-tools#require-approval-for-agent-tools).
+
+For example, imagine you're building an agent that drafts Python code, and one of its tools can commit code to Git.
+
+The **Human Input** component pauses the flow where you place the component, and creates one output branch per configured **User Action**.
+Place the component after the code generation steps, where a human selects an **Approve** or **Reject** user action.
+If a human selects **Approve**, the flow continues to the commit step, and if a human selects **Reject**, the flow sends the draft back for revision.
+For more information, see the [**Human Input** component](./human-input).
+
+The **Agent** tool approval enables **Requires approval** on the Git commit tool _only_.
+The run pauses when the agent tries to call that tool, but doesn't add a branch.
+For more information, see [Require approval for agent tools](./agents-tools#require-approval-for-agent-tools).
+
+## Use HITL in a flow
+
+For a video example, see the [Langflow 1.11 release blog](https://www.langflow.org/blog/langflow-1-11).
+
+## See also
+
+- [Human Input component](./human-input)
+- [Agents](./components-agents)

@@ -25,7 +25,7 @@ from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment
 from langflow.services.deps import get_authorization_service
 
-router = APIRouter(prefix="/authz/roles", tags=["Authorization"])
+router = APIRouter(prefix="/authz/roles", tags=["Authorization"], include_in_schema=False)
 
 # Match ``authz_shares``: cap any single list call so an authenticated client
 # (or a buggy frontend) can't enumerate the entire role/team catalog in one
