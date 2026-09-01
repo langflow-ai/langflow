@@ -865,11 +865,24 @@ class ErrorMessage(Message):
         reading the error panel. Rendering only ``Code: policy_blocked`` --
         prefixed by the Python class name -- told builders nothing about what
         was blocked or who to ask.
+
+        Driver and SDK errors are coded too, but put nothing in ``args``: a Cassandra
+        ``SyntaxException`` carries the protocol status on ``.code`` and the parser text
+        on ``.message``/``__str__``. Reading only ``args`` made a mistyped table name
+        surface as ``Code: 8192`` while the real cause sat in the logs (LE-2352).
         """
         args = getattr(exception, "args", ())
         if args and isinstance(args[0], str) and args[0].strip():
             return args[0].strip()
-        return None
+
+        # ``.message`` is the SDK convention for the human text; ``__str__`` is the
+        # fallback for drivers that only render it there.
+        message = getattr(exception, "message", None)
+        if isinstance(message, str) and message.strip():
+            return message.strip()
+
+        rendered = str(exception).strip()
+        return rendered or None
 
     @staticmethod
     def _format_markdown_reason(exception: BaseException) -> str:
@@ -883,6 +896,8 @@ class ErrorMessage(Message):
                 reason = f"**{message}**\n - **Code: {exception.code}**\n"
             else:
                 reason += f" - **Code: {exception.code}**\n"
+        elif isinstance(exception, OSError):
+            reason += f" - **Details: {exception!s}**\n"
         elif hasattr(exception, "args") and exception.args:
             reason += f" - **Details: {exception.args[0]}**\n"
         elif isinstance(exception, ValidationError):
@@ -901,6 +916,8 @@ class ErrorMessage(Message):
         elif hasattr(exception, "code"):
             message = ErrorMessage._coded_exception_message(exception)
             reason = f"{message}\n" if message else f"Code: {exception.code}\n"
+        elif isinstance(exception, OSError):
+            reason = f"{exception!s}\n"
         elif hasattr(exception, "args") and exception.args:
             reason = f"{exception.args[0]}\n"
         elif isinstance(exception, ValidationError):

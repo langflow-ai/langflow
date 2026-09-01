@@ -52,6 +52,7 @@ class FakeIndex:
 
     def __init__(self) -> None:
         self.releases: dict[tuple[str, str], list[dict[str, Any] | None]] = defaultdict(list)
+        self.latest_versions: dict[str, str] = {}
         self.downloads: dict[str, bytes] = {}
         self.calls: dict[tuple[str, str], int] = defaultdict(int)
 
@@ -67,6 +68,9 @@ class FakeIndex:
         if len(responses) == 1:
             return responses[0]
         return responses.pop(0)
+
+    def get_latest_version(self, package: str) -> str | None:
+        return self.latest_versions.get(package)
 
     def download(self, url: str) -> bytes:
         return self.downloads[url]
@@ -107,7 +111,18 @@ def _create_repository(tmp_path: Path, versions: dict[str, str]) -> Path:
         (tests_dir / "test_component.py").write_text("VALUE = 1\n", encoding="utf-8")
         (source_dir / "component.py").write_text("VALUE = 1\n", encoding="utf-8")
         (source_dir / "extension.json").write_text(
-            json.dumps({"id": name, "version": version}, indent=2) + "\n", encoding="utf-8"
+            json.dumps(
+                {
+                    "id": name,
+                    "version": version,
+                    "name": name,
+                    "lfx": {"compat": ["1"]},
+                    "bundles": [{"name": directory, "path": directory}],
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
         )
     (repo / "pyproject.toml").write_text(
         '[project]\nname = "langflow"\nversion = "1.11.0"\ndependencies = [\n' + "\n".join(dependencies) + "\n]\n",
@@ -297,6 +312,23 @@ def test_prerelease_restamp_reuses_stable_and_changes_only_unpublished_bundle(tm
     assert '"lfx>=1.11.0.dev0,<2.0.0"' in alpha
     assert 'version = "0.2.0rc3"' in beta
     assert '"lfx>=1.11.0rc3,<2.0.0"' in beta
+    beta_manifest = json.loads((repo / "src" / "bundles" / "beta" / "src" / "lfx_beta" / "extension.json").read_text())
+    assert beta_manifest["version"] == "0.2.0rc3"
+
+
+def test_prerelease_restamp_rejects_source_version_behind_public_latest(tmp_path: Path) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.1.1"})
+    index = FakeIndex()
+    index.latest_versions["lfx-alpha"] = "0.1.2"
+    index.queue("lfx-alpha", "0.1.1", {"urls": [{"packagetype": "bdist_wheel"}]})
+
+    with pytest.raises(
+        PlanError,
+        match=r"lfx-alpha 0\.1\.1: source version trails latest public version 0\.1\.2",
+    ):
+        restamp_unpublished_bundles(3, "1.11.0rc3", index, base_dir=repo)
+
+    assert 'version = "0.1.1"' in (repo / "src" / "bundles" / "alpha" / "pyproject.toml").read_text()
 
 
 def test_prerelease_restamp_updates_runtime_lfx_requirement_not_quoted_comment(tmp_path: Path) -> None:
@@ -392,6 +424,19 @@ def test_partial_publication_reuses_matching_and_plans_only_missing(tmp_path: Pa
         ("lfx-alpha", "reuse"),
         ("lfx-beta", "publish"),
     ]
+
+
+def test_artifact_plan_rejects_version_behind_public_latest(tmp_path: Path) -> None:
+    alpha = _make_wheel(tmp_path, "lfx-alpha", "0.1.1", "ALPHA = 1\n")
+    index = FakeIndex()
+    index.latest_versions["lfx-alpha"] = "0.1.2"
+    index.queue("lfx-alpha", "0.1.1", _matching_release(alpha))
+
+    with pytest.raises(
+        PlanError,
+        match=r"lfx-alpha 0\.1\.1: source version trails latest public version 0\.1\.2",
+    ):
+        build_artifact_plan([alpha], index)
 
 
 def test_partial_publish_only_uploads_missing_artifact(tmp_path: Path) -> None:

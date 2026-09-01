@@ -1,5 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { v5 as uuidv5 } from "uuid";
+import { queryClient } from "@/contexts";
+import { getGlobalVariablesQueryKey } from "@/controllers/API/queries/variables";
 
 // Mock all the complex dependencies
 jest.mock("@xyflow/react", () => ({
@@ -53,8 +55,12 @@ jest.mock("../darkStore", () => ({
 }));
 
 jest.mock("../flowsManagerStore", () => {
-  const state: { currentFlow: { id: string; name: string } | undefined } = {
+  const state: {
+    currentFlow: { id: string; name: string } | undefined;
+    currentFlowId: string | undefined;
+  } = {
     currentFlow: undefined,
+    currentFlowId: undefined,
   };
   return {
     __esModule: true,
@@ -66,15 +72,20 @@ jest.mock("../flowsManagerStore", () => {
       }),
       __setCurrentFlow: (flow: { id: string; name: string } | undefined) => {
         state.currentFlow = flow;
+        state.currentFlowId = flow?.id;
       },
     },
   };
 });
 
+let mockGlobalVariablesEntries: string[] | undefined;
+let mockUnavailableFields: Record<string, string> | undefined;
+
 jest.mock("../globalVariablesStore/globalVariables", () => ({
   useGlobalVariablesStore: {
     getState: () => ({
-      globalVariables: {},
+      globalVariablesEntries: mockGlobalVariablesEntries,
+      unavailableFields: mockUnavailableFields,
     }),
   },
 }));
@@ -160,9 +171,39 @@ describe("useFlowStore", () => {
     target: "node-2",
   } as EdgeType;
 
+  const createCredentialNode = (value: string): AllNodeType => ({
+    id: "credential-node",
+    type: "genericNode",
+    position: { x: 0, y: 0 },
+    data: {
+      id: "credential-node",
+      type: "CredentialComponent",
+      node: {
+        description: "",
+        display_name: "Credential",
+        documentation: "",
+        template: {
+          api_key: {
+            display_name: "API Key",
+            type: "str",
+            required: false,
+            list: false,
+            show: true,
+            readonly: false,
+            load_from_db: true,
+            value,
+          },
+        },
+      },
+    },
+  });
+
   beforeEach(() => {
     // Clear all mocks
     jest.clearAllMocks();
+    queryClient.clear();
+    mockGlobalVariablesEntries = undefined;
+    mockUnavailableFields = undefined;
 
     // Reset store state to basics
     act(() => {
@@ -208,6 +249,213 @@ describe("useFlowStore", () => {
       expect(result.current.inputs).toEqual([]);
       expect(result.current.outputs).toEqual([]);
       expect(result.current.hasIO).toBe(false);
+    });
+  });
+
+  describe("scoped global variables", () => {
+    it("preserves a project-only credential when copying and pasting within its flow", () => {
+      const flowsManager = jest.requireMock("../flowsManagerStore") as {
+        default: {
+          __setCurrentFlow: (
+            flow: { id: string; name: string } | undefined,
+          ) => void;
+        };
+      };
+      flowsManager.default.__setCurrentFlow({
+        id: "project-flow",
+        name: "Project Flow",
+      });
+      mockGlobalVariablesEntries = ["GLOBAL_KEY"];
+      mockUnavailableFields = {};
+      queryClient.setQueryData(
+        getGlobalVariablesQueryKey({ flowId: "project-flow" }),
+        [
+          {
+            id: "project-variable",
+            name: "PROJECT_KEY",
+            type: "Credential",
+            default_fields: ["API Key"],
+          },
+        ],
+      );
+
+      act(() => {
+        useFlowStore.setState({ currentFlow: undefined });
+        useFlowStore
+          .getState()
+          .paste(
+            { nodes: [createCredentialNode("PROJECT_KEY")], edges: [] },
+            { x: 0, y: 0, paneX: 1, paneY: 1 },
+          );
+      });
+
+      const pastedField =
+        useFlowStore.getState().nodes[0].data.node?.template.api_key;
+      expect(pastedField?.value).toBe("PROJECT_KEY");
+      expect(pastedField?.load_from_db).toBe(true);
+      flowsManager.default.__setCurrentFlow(undefined);
+    });
+
+    it("does not treat global or sibling-flow snapshots as authoritative", () => {
+      const flowsManager = jest.requireMock("../flowsManagerStore") as {
+        default: {
+          __setCurrentFlow: (
+            flow: { id: string; name: string } | undefined,
+          ) => void;
+        };
+      };
+      flowsManager.default.__setCurrentFlow({
+        id: "target-flow",
+        name: "Target Flow",
+      });
+      mockGlobalVariablesEntries = ["GLOBAL_KEY"];
+      mockUnavailableFields = { System: "GLOBAL_KEY" };
+      queryClient.setQueryData(getGlobalVariablesQueryKey(), [
+        {
+          id: "global-variable",
+          name: "GLOBAL_KEY",
+          type: "Credential",
+          default_fields: ["System"],
+        },
+      ]);
+      queryClient.setQueryData(
+        getGlobalVariablesQueryKey({ flowId: "sibling-flow" }),
+        [
+          {
+            id: "sibling-variable",
+            name: "SIBLING_KEY",
+            type: "Credential",
+            default_fields: ["API Key"],
+          },
+        ],
+      );
+
+      act(() => {
+        useFlowStore.setState({ currentFlow: undefined });
+        useFlowStore
+          .getState()
+          .paste(
+            { nodes: [createCredentialNode("PROJECT_KEY")], edges: [] },
+            { x: 0, y: 0, paneX: 1, paneY: 1 },
+          );
+      });
+
+      const pastedField =
+        useFlowStore.getState().nodes[0].data.node?.template.api_key;
+      expect(pastedField?.value).toBe("PROJECT_KEY");
+      expect(pastedField?.load_from_db).toBe(true);
+      flowsManager.default.__setCurrentFlow(undefined);
+    });
+
+    it("uses an exact empty flow snapshot to clear invalid references", () => {
+      const flowsManager = jest.requireMock("../flowsManagerStore") as {
+        default: {
+          __setCurrentFlow: (
+            flow: { id: string; name: string } | undefined,
+          ) => void;
+        };
+      };
+      flowsManager.default.__setCurrentFlow({
+        id: "target-flow",
+        name: "Target Flow",
+      });
+      mockGlobalVariablesEntries = ["PROJECT_KEY"];
+      mockUnavailableFields = { "API Key": "PROJECT_KEY" };
+      queryClient.setQueryData(
+        getGlobalVariablesQueryKey({ flowId: "target-flow" }),
+        [],
+      );
+
+      act(() => {
+        useFlowStore.setState({ currentFlow: undefined });
+        useFlowStore
+          .getState()
+          .paste(
+            { nodes: [createCredentialNode("PROJECT_KEY")], edges: [] },
+            { x: 0, y: 0, paneX: 1, paneY: 1 },
+          );
+      });
+
+      const pastedField =
+        useFlowStore.getState().nodes[0].data.node?.template.api_key;
+      expect(pastedField?.value).toBe("");
+      expect(pastedField?.load_from_db).toBe(false);
+      flowsManager.default.__setCurrentFlow(undefined);
+    });
+
+    it("does not trust invalidated flow-scoped credentials during paste", () => {
+      const flowsManager = jest.requireMock("../flowsManagerStore") as {
+        default: {
+          __setCurrentFlow: (
+            flow: { id: string; name: string } | undefined,
+          ) => void;
+        };
+      };
+      flowsManager.default.__setCurrentFlow({
+        id: "target-flow",
+        name: "Target Flow",
+      });
+      const scopedKey = getGlobalVariablesQueryKey({ flowId: "target-flow" });
+      queryClient.setQueryData(scopedKey, []);
+      void queryClient.invalidateQueries({
+        queryKey: scopedKey,
+        refetchType: "none",
+      });
+
+      act(() => {
+        useFlowStore.setState({ currentFlow: undefined });
+        useFlowStore
+          .getState()
+          .paste(
+            { nodes: [createCredentialNode("PROJECT_KEY")], edges: [] },
+            { x: 0, y: 0, paneX: 1, paneY: 1 },
+          );
+      });
+
+      const pastedField =
+        useFlowStore.getState().nodes[0].data.node?.template.api_key;
+      expect(pastedField?.value).toBe("PROJECT_KEY");
+      expect(pastedField?.load_from_db).toBe(true);
+      flowsManager.default.__setCurrentFlow(undefined);
+    });
+
+    it("does not trust a flow-scoped credential snapshot during refetch", () => {
+      const flowsManager = jest.requireMock("../flowsManagerStore") as {
+        default: {
+          __setCurrentFlow: (
+            flow: { id: string; name: string } | undefined,
+          ) => void;
+        };
+      };
+      flowsManager.default.__setCurrentFlow({
+        id: "target-flow",
+        name: "Target Flow",
+      });
+      const scopedKey = getGlobalVariablesQueryKey({ flowId: "target-flow" });
+      queryClient.setQueryData(scopedKey, []);
+      const scopedQuery = queryClient.getQueryCache().find({
+        queryKey: scopedKey,
+      });
+      scopedQuery?.setState({
+        ...scopedQuery.state,
+        fetchStatus: "fetching",
+      });
+
+      act(() => {
+        useFlowStore.setState({ currentFlow: undefined });
+        useFlowStore
+          .getState()
+          .paste(
+            { nodes: [createCredentialNode("PROJECT_KEY")], edges: [] },
+            { x: 0, y: 0, paneX: 1, paneY: 1 },
+          );
+      });
+
+      const pastedField =
+        useFlowStore.getState().nodes[0].data.node?.template.api_key;
+      expect(pastedField?.value).toBe("PROJECT_KEY");
+      expect(pastedField?.load_from_db).toBe(true);
+      flowsManager.default.__setCurrentFlow(undefined);
     });
   });
 

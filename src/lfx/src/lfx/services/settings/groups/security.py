@@ -360,8 +360,14 @@ class SecuritySettings(BaseModel):
     @classmethod
     def validate_sandbox_backend(cls, value):
         """Reject unknown backends at startup so a typo cannot silently disable sandboxing."""
+        # Sourced from the sandbox module rather than repeated here: a second
+        # hand-maintained list would let the two drift, and a name accepted by
+        # only one of them either fails at startup or reaches a dispatch that
+        # cannot serve it.
+        from lfx.utils.sandbox import known_sandbox_backends
+
         normalized = str(value).strip().lower() if value is not None else "none"
-        allowed = {"none", "exec-sandbox"}
+        allowed = set(known_sandbox_backends())
         if normalized not in allowed:
             msg = f"sandbox_backend must be one of {sorted(allowed)}, got {value!r}"
             raise ValueError(msg)
