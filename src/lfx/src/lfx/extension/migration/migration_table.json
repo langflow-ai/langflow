@@ -4955,6 +4955,11 @@
       "bare_class_name": "MrscraperRunManualScraper",
       "target": "ext:mrscraper:MrscraperRunManualScraper@official",
       "added_in": "1.12.0"
+    },
+    {
+      "bare_class_name": "VolcengineModelComponent",
+      "target": "ext:volcengine:VolcengineModelComponent@official",
+      "added_in": "1.12.0"
     }
   ],
   "ambiguous_bare_names": [

@@ -525,6 +525,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "vLLM", name: "vllm", icon: "vLLM" },
   { display_name: "Weaviate", name: "weaviate", icon: "Weaviate" },
   { display_name: "Vertex AI", name: "vertexai", icon: "VertexAI" },
+  { display_name: "Volcengine Ark", name: "volcengine", icon: "Volcengine" },
   { display_name: "Wikipedia", name: "wikipedia", icon: "Wikipedia" },
   {
     display_name: "WolframAlpha",

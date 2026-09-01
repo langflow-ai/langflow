@@ -53,6 +53,7 @@ GUARDED_MODULES: dict[str, set[str]] = {
     "litellm/litellm_proxy.py": {"ssrf_safe_httpx_get", "ssrf_protected_openai_clients_for_url"},
     "lmstudio/lmstudioembeddings.py": {"ssrf_safe_async_get", "validate_url_for_ssrf_or_raise"},
     "lmstudio/lmstudiomodel.py": {"ssrf_safe_async_get", "ssrf_protected_openai_clients_for_url"},
+    "volcengine/volcengine.py": {"ssrf_safe_httpx_get", "ssrf_protected_openai_clients_for_url"},
     "xai/xai.py": {"ssrf_safe_httpx_get", "ssrf_protected_openai_clients_for_url"},
 }
 

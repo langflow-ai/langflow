@@ -520,6 +520,10 @@ export const lazyIconsMapping = {
     import("@/icons/vectorstores").then((mod) => ({
       default: mod.VectorStoresIcon,
     })),
+  Volcengine: () =>
+    import("@/icons/Volcengine").then((mod) => ({
+      default: mod.VolcengineIcon,
+    })),
   Windsurf: () =>
     import("@/icons/Windsurf").then((mod) => ({ default: mod.WindsurfIcon })),
   Wolfram: () =>
